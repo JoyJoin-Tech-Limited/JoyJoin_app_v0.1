@@ -1,0 +1,97 @@
+Brand and naming system
+- Lockup: 悦聚 JoyJoin (primary CN, secondary EN). Short alias: 悦聚·Joy.
+- Tagline: “小局·好能量” / “Small circles, big energy.”
+- Vibe taxonomy: create 6–8 canonical vibe tags with emojis for quick scanning (e.g., Chill 😌, Playful 🎈, High-Energy ⚡, Curious 🧠, Cozy 🕯️, Adventurous 🧗).
+
+Event discovery UI (cards and feed)
+- Card layout: bold hero photo/video loop + overlaid vibe chip row. Keep text minimal.
+  - Top-left: vibe chips (max 3) with emojis.
+  - Top-right: match score badge (e.g., 86% Fit | Group Spark: High).
+  - Bottom: event title (2–3 words), micro-details (time • area • price), spots left.
+- Visual hierarchy: use color to encode vibe (e.g., High-Energy = neon coral, Cozy = warm amber). Keep backgrounds neutral for contrast.
+- Motion: subtle hover/tap micro-animations on vibe chips and match badge to feel lively without clutter.
+- Social proof nudge: “3 friends-of-friends joined” or “Host favorite” micro-labels.
+
+Event detail page (make the vibe outstanding)
+- Above the fold:
+  - Vibe banner: gradient tied to primary vibe + icon + one-liner (“High-Energy • Playful • Social”).
+  - 3-line pitch: “Fast-paced games + craft beers. Expect laughs, team rotation, and a friendly host.”
+  - Host intro chip: photo + “Host Luna • Energizer & icebreaker pro.”
+- Attendee preview:
+  - “Tonight’s Mix” meter: Energy Balance bar (Energizers vs. Reflectors) + Diverse Interests indicator.
+  - Avatars with micro-tags: “Board games · Foodie · EN/CN bilingual.”
+- Run-of-show:
+  - Timeline with playful labels: Warm-Up, Break the Ice, Team Switch, Wind-Down.
+- Safety & comfort:
+  - Clear signals: accessibility, dietary, code of conduct in a collapsible section.
+- CTA:
+  - Primary: “Join this Vibe.”
+  - Secondary: “Shortlist 3 more like this” to train recommendations.
+
+Tone and copy (less formal, more playful)
+- Replace rigid labels with warm microcopy:
+  - “Availability” → “When the party starts”
+  - “Attendees” → “Who’s coming”
+  - “Notes” → “What to expect”
+- Use positive, energetic verbs:
+  - “Jump in,” “Bring a friend,” “We’ll break the ice for you.”
+- Inclusive phrasing for varied audiences:
+  - “New in town? Couple up? Riding solo? You’re in.”
+
+Match score: from solo-fit to group-dynamics fit
+- Two-part score:
+  - My Fit: how the event matches the user’s vibe/constraints.
+  - Group Spark: predicted group chemistry given current RSVP mix.
+- Explainability chips under the score:
+  - “You + 2 Energizers = great momentum.”
+  - “Shared interests: board games, izakaya.”
+  - “Balance: 3 high-energy, 4 reflective.”
+- Dynamic updates:
+  - As RSVPs change, Group Spark recalculates; notify users if the mix improves (“Tonight’s mix just got spicier: +1 Energizer”).
+- Constraints:
+  - Maintain 1–2 Energizers, 2–3 Connectors (moderate energy), 2–4 Reflectors.
+  - Cap similarity to avoid echo chambers; aim for 60–70% shared-interest overlap.
+
+Participant mix design (well-rounded groups)
+- Roles taxonomy:
+  - Energizers (kickstart fun), Connectors (keep flow), Reflectors (deepen convo), Hosts (facilitate).
+- Matching objective:
+  - Maximize collective enjoyment = f(My Fit, Group Spark, Diversity, Safety).
+- Safeguards:
+  - Avoid all-Energizer or all-Reflector groups.
+  - Ensure at least one topic bridge (shared interest) across every pair.
+  - Respect comfort zones (noise sensitivity, alcohol-free, introvert-friendly tables).
+
+Onboarding and vibe capture
+- 3-minute quiz with playful sliders and forced choices:
+  - Energy in groups (Quiet—Amped), Conversation style (Deep—Playful), Pace (Chill—Fast), Social goals (Friends—Explore—Romance-neutral).
+  - Boundaries: alcohol/noise/dietary/accessibility.
+- Instant feedback:
+  - “You’re a Connector ⚖️ + Cozy/Playful mix.” Provide opt-in to adjust.
+
+Pricing and conversion nudges
+- Per-event vs. subscription:
+  - Subscription perks: Priority match, “Spark Boost” (move waitlist up), “Bring-a-friend” passes, Host-Picked Exclusives.
+- FOMO-friendly but kind:
+  - “2 spots left for a high-spark mix tonight.”
+
+Host tools (to amplify vibe)
+- Pre-briefing: attendee vibe summary, suggested games/icebreakers, seating rotation plan.
+- Real-time cues: if group energy dips, prompt a quick switch activity.
+
+Visual design system
+- Color: bold, candy-pastel gradients tied to vibe tags; dark text for readability.
+- Typography: round, friendly headline font; clean sans serif for body.
+- Chips & badges: pill shapes with soft shadows; tactile tap states.
+- Avatars: playful ring colors indicating vibe role (⚡ Energizer, 🌿 Reflector, 🤝 Connector).
+
+Metrics to validate improvements
+- Card click-through rate by vibe tag and color scheme.
+- Conversion lift from two-part score vs. single score.
+- Post-event “Would you meet this group again?” and “Energy balance felt right?” ratings.
+- Time-to-first-booking and repeat booking within 30 days.
+
+Sample copy snippets
+- “High-Energy Taco Run — Laughs, bites, and mini challenges. Come as you are.”
+- “Cozy Game Night — Low-key chats, high-key fun. Mocktails welcome.”
+- “Double-Date Dumplings — Team-up tastings and couple-to-couple mixers.”

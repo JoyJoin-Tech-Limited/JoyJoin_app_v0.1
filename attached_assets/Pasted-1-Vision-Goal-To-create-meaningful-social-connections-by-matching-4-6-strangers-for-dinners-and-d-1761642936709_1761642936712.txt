@@ -1,0 +1,128 @@
+1. Vision & Goal
+To create meaningful social connections by matching 4-6 strangers for dinners and drinks. We achieve this through a fast, insightful onboarding process that builds a rich social profile, enabling our algorithm to form balanced groups primed for great conversation.
+
+2. Success Metrics (90-Day Targets)
+Onboarding Completion Rate: ≥ 85%
+
+Median Onboarding Time: ≤ 3 minutes
+
+User Satisfaction: First-event match rating ≥ 4.3/5
+
+User Retention: Repeat booking rate within 30 days ≥ 35%
+
+Event Reliability: No-show rate ≤ 8%
+
+3. User Experience & Flow
+The user journey is a simple, three-step process designed for mobile completion in under 3 minutes.
+
+Step 1: The Essentials (Target: 75-90 seconds)
+
+Core demographic, background, and location information.
+
+Step 2: Interests & Topics (Target: 30-45 seconds)
+
+What you love to do and talk about.
+
+Step 3: Social Vibe Quiz (Target: 60-90 seconds)
+
+A fun, card-based quiz to understand your conversational style.
+
+Post-Onboarding:
+
+Users select an event (date/location) or join a waitlist.
+
+The matching engine runs 24 hours before the event.
+
+On the day of the event, users receive their table assignment and hosts receive a detailed briefing.
+
+4. Detailed Feature Requirements
+4.1 Step 1: The Essentials
+Objective: Collect foundational profile data with a strong emphasis on user privacy and control.
+
+Data Fields & Logic:
+
+Section	Field	Type	Rules & Notes
+Identity	name_display	Text	Required.
+birthdate	Date	Required; private. Used to compute age_band.
+age_band	Enum	Auto-computed: 18-22, 23-27, 28-34, 35-44, 45-54, 55+
+age_visibility	Toggle	Default: show_band_only. Options: hide_all, show_band_only, show_exact_age.
+gender	Select	Options: Woman, Man, Nonbinary, Self-describe (text), Prefer not to say.
+pronouns	Select	Options: She/Her, He/Him, They/Them, Self-describe, Prefer not to say.
+Background	relationship_status	Select	Single, In a relationship, Married/Partnered, It’s complicated, Prefer not to say.
+children	Select	No kids, Expecting, 0-5, 6-12, 13-18, Adult, Prefer not to say.
+Education	education_level	Select	High school/below, Some college/Associate, Bachelor’s, Master’s, Doctorate, Trade/Vocational, Prefer not to say.
+study_locale	Select	Local, Overseas, Both, Prefer not to say.
+overseas_regions	Multi-select	Conditional (if study_locale is not Local). Options: NA, Europe, East Asia, SE Asia, etc.
+field_of_study	Select	Business, Engineering, CS, Arts/Design, etc.
+education_visibility	Toggle	Default: hide_all. Options: hide_all, show_level_only, show_level_and_field.
+Work	industry	Select	Coarse taxonomy; required.
+role_title_short	Text	Optional; short text.
+seniority	Select	Intern, Junior, Mid, Senior, Founder, Executive.
+work_visibility	Toggle	Default: show_industry_only. Options: hide_all, show_industry_only.
+Culture & Language	hometown_country	Select	Required.
+hometown_region_city	Text	Optional; autocomplete.
+hometown_affinity_optin	Boolean	"Happy to meet others from my hometown/region."
+languages_comfort	Multi-select	e.g., English, Mandarin, Cantonese, etc.
+Access & Safety	accessibility_needs	Text	Optional; short text.
+safety_note_host	Text	Optional; private note to the host.
+UX & Design Requirements:
+
+Layout: Single scrolling page with grouped sections.
+
+Interaction: Chip selectors for enumerations; autocomplete for city/language fields.
+
+Privacy: Inline tooltips explain what each visibility toggle controls.
+
+Validation: Required fields must be completed to proceed; all others are skippable.
+
+4.2 Step 2: Interests & Topics
+Objective: Understand user passions and conversation preferences to facilitate common ground and diverse perspectives.
+
+Data Fields & Logic:
+
+Section	Field	Type	Rules & Notes
+Interests	interests_top	Multi-select	User selects 3-7 from a predefined list (Foodie, Coffee/Tea, Books, Tech, etc.). Includes "Other" with free-text.
+interests_ranked_top3	Drag-to-rank	From the selected interests, user ranks their top 3.
+Conversation	topics_happy	Multi-select	Topics user enjoys: Light banter, Career, Travel, Philosophy, Deep stories, etc.
+topics_avoid	Multi-select	Topics to avoid: Politics, Religion, Dating, Money, Health, etc. Includes "Other" with free-text.
+UX & Design Requirements:
+
+Layout: Two distinct sections with grids of chip selectors.
+
+Guidance: A progress meter indicates the minimum 3 interests.
+
+Clarity: A "Why we ask" tooltip explains: "Helps us seat you with people who share at least one passion—and at least one different one for great conversation."
+
+4.3 Step 3: Social Vibe Quiz
+Objective: Generate a user's social "Vibe Vector" and "Archetype" to balance group dynamics.
+
+Model:
+
+12-item quiz, primarily A/B choice cards with some 1-7 sliders.
+
+Outputs:
+
+vibe_vector: [energy, conversation_style, initiative, novelty, humor] scored 0-1.
+
+archetype: Categorical label (e.g., Radiator, Anchor, Explorer, Storyteller, Sage).
+
+debate_comfort: Scored 1-7.
+
+UX & Design Requirements:
+
+Interaction: One question per card; tap-to-select for A/B or slider for scaled questions.
+
+Feedback: A progress bar with estimated time remaining.
+
+Reward: Upon completion, show a results screen: "You're a [Archetype]" with 3 descriptive bullets and a shareable card.
+
+5. Privacy, Consent & Display Rules
+Age: Birthdate is private; only the age band is used for matching/display by default.
+
+Backgrounds: Education and Work details are hidden by default. Users can opt to reveal level/field or industry.
+
+No Status Signaling: Specific school or company names are never collected.
+
+Gender & Matching: Gender data is not used for matching unless a user explicitly opts-in (e.g., for a themed "Women's Night" event).
+
+Data Control: Users have access to download their data and request its deletion via Settings.

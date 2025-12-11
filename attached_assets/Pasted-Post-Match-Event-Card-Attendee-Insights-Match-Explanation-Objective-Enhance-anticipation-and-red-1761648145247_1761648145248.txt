@@ -1,0 +1,66 @@
+Post-Match Event Card: Attendee Insights & Match Explanation
+Objective: Enhance anticipation and reduce no-shows by providing compelling previews of table dynamics and the matching rationale.
+
+Implementation: Display this section on the confirmed event card after matching is complete (T-24h).
+
+A. "Meet Your Table" Preview
+A curated glimpse into fellow attendees, designed to build curiosity while strictly respecting privacy settings.
+
+Content & Layout:
+
+Format: Horizontal scrollable cards or a compact grid.
+
+Per-Attendee Card Includes:
+
+Name (name_display)
+
+Archetype (e.g., The Explorer, The Storyteller)
+
+Top Interest(s) (1-2 icons or tags from their interests_ranked_top3)
+
+Optional Context: Age Band and/or Industry, only if the user has allowed this visibility in their privacy settings.
+
+Design Principle:
+
+Visual & Snackable: Use icons for interests and archetypes to create a quick, visually engaging scan.
+
+Privacy-First: Contextual details like age and industry are dynamically included based on each individual's privacy toggles (age_visibility, work_visibility). If hidden, the card elegantly omits this line.
+
+Example Card:
+
+Alex
+🧭 The Explorer
+🎬 Film, ✈️ Travel
+*28-34 • Tech*
+
+B. "Why This Table?" Explanation
+A concise, auto-generated narrative that reveals the matching logic, making users feel uniquely placed and understood.
+
+Content Logic:
+
+Length: 2-3 sentences.
+
+Structure:
+
+The Common Thread: Highlight 1-2 key shared interests or complementary vibes.
+
+The Dynamic Mix: Explain how the combination of archetypes creates a promising social environment.
+
+Copy Template & Examples:
+
+Based on Shared Interests:
+
+"This table brings together a shared passion for indie film and culinary adventures. We've balanced the energetic curiosity of The Explorer with the thoughtful depth of The Anchor to ensure conversations are both lively and meaningful."
+
+Based on Complementary Vibes:
+
+"We've created a space for philosophical debates and personal stories by mixing deep thinkers with engaging storytellers. Your comfort with discussion pairs well with others who enjoy going beyond surface-level chat."
+
+Based on Diverse Backgrounds:
+
+"This group is a blend of tech, arts, and academia, all united by an interest in cross-cultural experiences. The mix of backgrounds promises a unique exchange of perspectives you won't find elsewhere."
+
+User Experience:
+
+This section should feel like an exclusive "insider brief," reinforcing the user's decision to attend and building genuine excitement about the conversations to come.
+
