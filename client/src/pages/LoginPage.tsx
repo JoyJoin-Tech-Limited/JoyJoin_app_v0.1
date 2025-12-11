@@ -15,6 +15,7 @@ import {
   Shield, Quote, MapPin, CheckCircle2, ArrowRight,
   Flower2, Target, Sun
 } from "lucide-react";
+import joyJoinLogo from "@assets/JoyJoinapp_logo_chi_Fuludouti_1765444760154.png";
 import { SiWechat } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -313,9 +314,12 @@ export default function LoginPage() {
             transition={{ duration: 0.5 }}
           >
             <div className="flex justify-center mb-6">
-              <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/70 flex items-center justify-center shadow-lg">
-                <Sparkles className="h-10 w-10 text-primary-foreground" />
-              </div>
+              <img 
+                src={joyJoinLogo} 
+                alt="悦聚 JoyJoin Logo" 
+                className="h-28 w-auto"
+                data-testid="img-logo"
+              />
             </div>
             
             <h1 className="text-4xl font-display font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent" data-testid="text-brand-name">
