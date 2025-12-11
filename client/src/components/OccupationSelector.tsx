@@ -23,6 +23,7 @@ import {
   getIndustryById,
   getOccupationsByIndustry,
   getOccupationGuidance,
+  getSuggestedFieldsOfStudy,
   type Occupation,
   type WorkMode,
 } from "@shared/occupations";
@@ -64,6 +65,7 @@ interface OccupationSelectorProps {
   socialIntent: string | null;
   onOccupationChange: (occupationId: string, industryId: string) => void;
   onWorkModeChange: (workMode: WorkMode) => void;
+  onFieldOfStudySuggestion?: (suggestion: string) => void;
   className?: string;
 }
 
@@ -75,6 +77,7 @@ export function OccupationSelector({
   socialIntent,
   onOccupationChange,
   onWorkModeChange,
+  onFieldOfStudySuggestion,
   className = "",
 }: OccupationSelectorProps) {
   const { toast } = useToast();
@@ -84,6 +87,7 @@ export function OccupationSelector({
   const [showWorkModeStep, setShowWorkModeStep] = useState(false);
   const [expandedIndustry, setExpandedIndustry] = useState<string | null>(null);
   const [showAllIndustries, setShowAllIndustries] = useState(false);
+  const [showIndustryBrowser, setShowIndustryBrowser] = useState(true);
 
   const guidance = useMemo(() => {
     return getOccupationGuidance(socialIntent || "flexible");
@@ -104,6 +108,11 @@ export function OccupationSelector({
     return getIndustryById(selectedOccupation.industryId);
   }, [selectedOccupation]);
 
+  const suggestedFields = useMemo(() => {
+    if (!selectedOccupationId) return [];
+    return getSuggestedFieldsOfStudy(selectedOccupationId);
+  }, [selectedOccupationId]);
+
   const quickIndustries = useMemo(() => {
     return INDUSTRIES.filter(ind => QUICK_INDUSTRIES.includes(ind.id));
   }, []);
@@ -117,7 +126,13 @@ export function OccupationSelector({
     setSearchQuery("");
     setShowWorkModeStep(true);
     setExpandedIndustry(null);
-  }, [onOccupationChange]);
+    setShowIndustryBrowser(false);
+    
+    const suggestions = getSuggestedFieldsOfStudy(occupation.id);
+    if (suggestions.length > 0 && onFieldOfStudySuggestion) {
+      onFieldOfStudySuggestion(suggestions[0]);
+    }
+  }, [onOccupationChange, onFieldOfStudySuggestion]);
 
   const handleRequestSubmit = useCallback(() => {
     if (!requestOccupation.trim()) return;
@@ -232,12 +247,32 @@ export function OccupationSelector({
               onClick={() => {
                 onOccupationChange("", "");
                 setShowWorkModeStep(false);
+                setShowIndustryBrowser(true);
               }}
               data-testid="button-change-occupation"
             >
               更改
             </Button>
           </div>
+          
+          {suggestedFields.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-primary/20">
+              <p className="text-xs text-muted-foreground mb-2">推荐专业领域：</p>
+              <div className="flex flex-wrap gap-1.5">
+                {suggestedFields.map((field, idx) => (
+                  <Badge
+                    key={field}
+                    variant={idx === 0 ? "default" : "secondary"}
+                    className={idx === 0 ? "bg-primary/20 text-primary border-primary/30" : ""}
+                    data-testid={`field-suggestion-${idx}`}
+                  >
+                    {field}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          
           <div className="mt-3 pt-3 border-t border-primary/20">
             <p className="text-sm text-primary/80">{guidance.matchPreview}</p>
           </div>
@@ -292,7 +327,7 @@ export function OccupationSelector({
             )}
           </AnimatePresence>
 
-          {!searchQuery && (
+          {!searchQuery && showIndustryBrowser && (
             <div className="space-y-3">
               <p className="text-sm font-medium text-muted-foreground">快速浏览</p>
               <div className="space-y-2">
@@ -327,6 +362,20 @@ export function OccupationSelector({
                 )}
               </div>
             </div>
+          )}
+          
+          {!searchQuery && !showIndustryBrowser && selectedOccupation && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full text-muted-foreground"
+              onClick={() => setShowIndustryBrowser(true)}
+              data-testid="button-expand-industries"
+            >
+              浏览其他行业
+              <ChevronDown className="h-4 w-4 ml-1" />
+            </Button>
           )}
 
           <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>

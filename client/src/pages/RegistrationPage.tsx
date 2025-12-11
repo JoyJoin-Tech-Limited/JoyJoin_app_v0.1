@@ -894,6 +894,12 @@ export default function RegistrationPage() {
                     onWorkModeChange={(workMode) => {
                       form.setValue("workMode", workMode);
                     }}
+                    onFieldOfStudySuggestion={(suggestion) => {
+                      const currentField = form.watch("fieldOfStudy");
+                      if (!currentField || currentField.trim() === "") {
+                        form.setValue("fieldOfStudy", suggestion);
+                      }
+                    }}
                   />
                   {(form.formState.errors.occupationId || form.formState.errors.workMode) && (
                     <p className="text-sm text-orange-600 dark:text-orange-400">

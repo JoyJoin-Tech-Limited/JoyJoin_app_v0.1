@@ -69,21 +69,21 @@ export const INDUSTRIES: Industry[] = [
 // 130+ 职业数据
 export const OCCUPATIONS: Occupation[] = [
   // ========== 科技互联网 (tech) ==========
-  { id: "software_engineer", displayName: "软件工程师", industryId: "tech", synonyms: ["程序员", "码农", "开发工程师", "研发工程师", "coder", "developer"], keywords: ["编程", "代码", "开发"], hot: true },
-  { id: "frontend_engineer", displayName: "前端工程师", industryId: "tech", synonyms: ["前端开发", "web开发", "H5开发", "React开发"], keywords: ["网页", "界面"], hot: true },
-  { id: "backend_engineer", displayName: "后端工程师", industryId: "tech", synonyms: ["后端开发", "服务端开发", "Java开发", "Python开发", "Go开发"], keywords: ["服务器", "接口"], hot: false },
-  { id: "fullstack_engineer", displayName: "全栈工程师", industryId: "tech", synonyms: ["全栈开发", "Full Stack", "前后端开发"], keywords: ["全栈", "开发"], hot: true },
-  { id: "mobile_engineer", displayName: "移动端工程师", industryId: "tech", synonyms: ["iOS开发", "Android开发", "App开发", "客户端开发", "Flutter开发"], keywords: ["手机", "App"], hot: false },
+  { id: "software_engineer", displayName: "软件工程师", industryId: "tech", synonyms: ["程序员", "码农", "开发工程师", "研发工程师", "coder", "developer", "大厂", "互联网", "字节", "腾讯", "阿里", "百度", "美团", "京东", "拼多多", "快手", "网易", "华为", "小米", "BAT", "TMD", "打工人", "社畜"], keywords: ["编程", "代码", "开发", "大厂", "互联网"], hot: true },
+  { id: "frontend_engineer", displayName: "前端工程师", industryId: "tech", synonyms: ["前端开发", "web开发", "H5开发", "React开发", "Vue开发", "大厂", "互联网"], keywords: ["网页", "界面", "前端"], hot: true },
+  { id: "backend_engineer", displayName: "后端工程师", industryId: "tech", synonyms: ["后端开发", "服务端开发", "Java开发", "Python开发", "Go开发", "大厂", "互联网"], keywords: ["服务器", "接口", "后端"], hot: false },
+  { id: "fullstack_engineer", displayName: "全栈工程师", industryId: "tech", synonyms: ["全栈开发", "Full Stack", "前后端开发", "大厂"], keywords: ["全栈", "开发"], hot: true },
+  { id: "mobile_engineer", displayName: "移动端工程师", industryId: "tech", synonyms: ["iOS开发", "Android开发", "App开发", "客户端开发", "Flutter开发", "大厂"], keywords: ["手机", "App", "移动端"], hot: false },
   { id: "blockchain_engineer", displayName: "区块链工程师", industryId: "tech", synonyms: ["Web3开发", "智能合约", "Solidity", "链上开发"], keywords: ["区块链", "Web3"], hot: true },
   { id: "web3_product", displayName: "Web3产品经理", industryId: "tech", synonyms: ["Crypto PM", "区块链产品", "DeFi产品", "NFT产品"], keywords: ["Web3", "Crypto"], hot: false },
   { id: "crypto_trader", displayName: "加密货币交易员", industryId: "tech", synonyms: ["币圈", "数字货币", "量化交易", "加密货币"], keywords: ["加密", "交易"], hot: false },
-  { id: "product_manager", displayName: "产品经理", industryId: "tech", synonyms: ["PM", "产品", "产品狗", "产品负责人"], keywords: ["需求", "功能"], hot: true },
-  { id: "ui_designer", displayName: "UI设计师", industryId: "tech", synonyms: ["界面设计师", "视觉设计师", "UI/UX"], keywords: ["界面", "视觉"], hot: true },
-  { id: "ux_designer", displayName: "UX设计师", industryId: "tech", synonyms: ["用户体验设计师", "交互设计师", "体验设计"], keywords: ["交互", "体验"], hot: false },
-  { id: "qa_engineer", displayName: "测试工程师", industryId: "tech", synonyms: ["QA", "质量工程师", "测试"], keywords: ["测试", "质量"], hot: false },
-  { id: "devops_engineer", displayName: "运维工程师", industryId: "tech", synonyms: ["DevOps", "SRE", "系统运维", "云架构师"], keywords: ["服务器", "部署"], hot: false },
+  { id: "product_manager", displayName: "产品经理", industryId: "tech", synonyms: ["PM", "产品", "产品狗", "产品负责人", "大厂产品", "互联网产品"], keywords: ["需求", "功能", "产品"], hot: true },
+  { id: "ui_designer", displayName: "UI设计师", industryId: "tech", synonyms: ["界面设计师", "视觉设计师", "UI/UX", "大厂设计"], keywords: ["界面", "视觉", "UI"], hot: true },
+  { id: "ux_designer", displayName: "UX设计师", industryId: "tech", synonyms: ["用户体验设计师", "交互设计师", "体验设计"], keywords: ["交互", "体验", "UX"], hot: false },
+  { id: "qa_engineer", displayName: "测试工程师", industryId: "tech", synonyms: ["QA", "质量工程师", "测试", "测试开发"], keywords: ["测试", "质量"], hot: false },
+  { id: "devops_engineer", displayName: "运维工程师", industryId: "tech", synonyms: ["DevOps", "SRE", "系统运维", "云架构师", "运维开发"], keywords: ["服务器", "部署", "运维"], hot: false },
   { id: "security_engineer", displayName: "安全工程师", industryId: "tech", synonyms: ["网络安全", "信息安全", "渗透测试", "白帽子"], keywords: ["安全", "渗透"], hot: false },
-  { id: "tech_lead", displayName: "技术负责人", industryId: "tech", synonyms: ["技术总监", "CTO", "架构师", "Tech Lead"], keywords: ["架构", "技术管理"], hot: false },
+  { id: "tech_lead", displayName: "技术负责人", industryId: "tech", synonyms: ["技术总监", "CTO", "架构师", "Tech Lead", "技术VP"], keywords: ["架构", "技术管理"], hot: false },
   
   // ========== AI/大数据 (ai) ==========
   { id: "data_analyst", displayName: "数据分析师", industryId: "ai", synonyms: ["数据分析", "BI分析师", "业务分析师"], keywords: ["数据", "分析", "报表"], hot: true },
@@ -106,22 +106,22 @@ export const OCCUPATIONS: Occupation[] = [
   { id: "ecom_manager", displayName: "电商负责人", industryId: "ecommerce", synonyms: ["电商总监", "运营总监", "电商经理", "店长"], keywords: ["管理", "电商"], hot: false },
   
   // ========== 金融投资 (finance) ==========
-  { id: "finance_analyst", displayName: "金融分析师", industryId: "finance", synonyms: ["投资分析师", "研究员", "行研"], keywords: ["分析", "研究"], hot: true },
-  { id: "banker", displayName: "银行职员", industryId: "finance", synonyms: ["银行经理", "客户经理", "理财经理", "柜员"], keywords: ["银行", "理财"], hot: true },
-  { id: "investment_banker", displayName: "投行分析师", industryId: "finance", synonyms: ["IBD", "投行", "并购分析师"], keywords: ["投行", "并购", "IPO"], hot: true },
-  { id: "pe_vc", displayName: "PE/VC投资", industryId: "finance", synonyms: ["投资经理", "风投", "私募", "基金经理"], keywords: ["投资", "基金"], hot: true },
-  { id: "securities", displayName: "证券从业", industryId: "finance", synonyms: ["券商", "股票分析师", "交易员", "经纪人"], keywords: ["证券", "股票"], hot: false },
-  { id: "insurance", displayName: "保险从业", industryId: "finance", synonyms: ["保险经纪", "保险顾问", "精算师"], keywords: ["保险", "精算"], hot: false },
-  { id: "fund_manager", displayName: "基金经理", industryId: "finance", synonyms: ["资产管理", "投资总监", "Portfolio Manager"], keywords: ["基金", "资产"], hot: false },
-  { id: "accountant", displayName: "会计师", industryId: "finance", synonyms: ["会计", "审计师", "CPA", "财务"], keywords: ["会计", "审计", "财务"], hot: true },
-  { id: "cfo", displayName: "财务负责人", industryId: "finance", synonyms: ["CFO", "财务总监", "财务经理"], keywords: ["财务", "管理"], hot: false },
+  { id: "finance_analyst", displayName: "金融分析师", industryId: "finance", synonyms: ["投资分析师", "研究员", "行研", "金融分析", "股票分析", "行业研究员"], keywords: ["分析", "研究", "金融"], hot: true },
+  { id: "banker", displayName: "银行职员", industryId: "finance", synonyms: ["银行经理", "客户经理", "理财经理", "柜员", "银行家", "银行从业"], keywords: ["银行", "理财"], hot: true },
+  { id: "investment_banker", displayName: "投行分析师", industryId: "finance", synonyms: ["IBD", "投行", "并购分析师", "投资银行", "投资银行家", "中金", "中信证券", "高盛", "摩根", "JP Morgan"], keywords: ["投行", "并购", "IPO", "投资银行"], hot: true },
+  { id: "pe_vc", displayName: "PE/VC投资", industryId: "finance", synonyms: ["投资经理", "风投", "私募", "基金经理", "红杉", "高瓴", "IDG", "经纬", "真格"], keywords: ["投资", "基金", "风险投资"], hot: true },
+  { id: "securities", displayName: "证券从业", industryId: "finance", synonyms: ["券商", "股票分析师", "交易员", "经纪人", "证券公司"], keywords: ["证券", "股票"], hot: false },
+  { id: "insurance", displayName: "保险从业", industryId: "finance", synonyms: ["保险经纪", "保险顾问", "精算师", "保险代理"], keywords: ["保险", "精算"], hot: false },
+  { id: "fund_manager", displayName: "基金经理", industryId: "finance", synonyms: ["资产管理", "投资总监", "Portfolio Manager", "公募基金", "私募基金"], keywords: ["基金", "资产"], hot: false },
+  { id: "accountant", displayName: "会计师", industryId: "finance", synonyms: ["会计", "审计师", "CPA", "财务", "四大", "德勤", "普华永道", "安永", "毕马威", "PWC", "EY", "KPMG", "Deloitte", "Big4"], keywords: ["会计", "审计", "财务", "四大"], hot: true },
+  { id: "cfo", displayName: "财务负责人", industryId: "finance", synonyms: ["CFO", "财务总监", "财务经理", "财务VP"], keywords: ["财务", "管理"], hot: false },
   
   // ========== 咨询服务 (consulting) ==========
-  { id: "management_consultant", displayName: "管理咨询顾问", industryId: "consulting", synonyms: ["战略咨询", "MBB", "咨询师", "顾问"], keywords: ["咨询", "战略"], hot: true },
-  { id: "it_consultant", displayName: "IT咨询顾问", industryId: "consulting", synonyms: ["技术咨询", "数字化咨询", "系统实施"], keywords: ["IT", "系统"], hot: false },
-  { id: "hr_consultant", displayName: "人力咨询顾问", industryId: "consulting", synonyms: ["猎头", "招聘顾问", "HR顾问", "人才顾问"], keywords: ["招聘", "人才"], hot: true },
-  { id: "hr_manager", displayName: "HR经理", industryId: "consulting", synonyms: ["人力资源", "HRBP", "人事经理", "招聘经理"], keywords: ["HR", "人事"], hot: true },
-  { id: "admin_manager", displayName: "行政经理", industryId: "consulting", synonyms: ["行政", "办公室主任", "综合管理"], keywords: ["行政", "办公"], hot: false },
+  { id: "management_consultant", displayName: "管理咨询顾问", industryId: "consulting", synonyms: ["战略咨询", "MBB", "咨询师", "顾问", "麦肯锡", "BCG", "贝恩", "McKinsey", "波士顿咨询", "Bain"], keywords: ["咨询", "战略", "麦肯锡", "BCG", "贝恩"], hot: true },
+  { id: "it_consultant", displayName: "IT咨询顾问", industryId: "consulting", synonyms: ["技术咨询", "数字化咨询", "系统实施", "埃森哲", "Accenture", "IBM咨询", "德勤咨询"], keywords: ["IT", "系统", "数字化"], hot: false },
+  { id: "hr_consultant", displayName: "人力咨询顾问", industryId: "consulting", synonyms: ["猎头", "招聘顾问", "HR顾问", "人才顾问", "猎聘", "智联", "前程无忧"], keywords: ["招聘", "人才", "猎头"], hot: true },
+  { id: "hr_manager", displayName: "HR经理", industryId: "consulting", synonyms: ["人力资源", "HRBP", "人事经理", "招聘经理", "人事"], keywords: ["HR", "人事", "人力资源"], hot: true },
+  { id: "admin_manager", displayName: "行政经理", industryId: "consulting", synonyms: ["行政", "办公室主任", "综合管理", "行政主管"], keywords: ["行政", "办公"], hot: false },
   
   // ========== 市场营销 (marketing) ==========
   { id: "marketing_manager", displayName: "市场经理", industryId: "marketing", synonyms: ["市场营销", "Marketing", "品牌经理", "市场总监"], keywords: ["市场", "营销"], hot: true },
@@ -165,15 +165,15 @@ export const OCCUPATIONS: Occupation[] = [
   { id: "podcast_host", displayName: "播客主理人", industryId: "media", synonyms: ["播客", "主播", "电台主持", "音频创作"], keywords: ["播客", "音频"], hot: false },
   
   // ========== 医疗健康 (medical) ==========
-  { id: "doctor", displayName: "医生", industryId: "medical", synonyms: ["医师", "主治医师", "专科医生", "全科医生"], keywords: ["医生", "诊疗"], hot: true },
-  { id: "nurse", displayName: "护士", industryId: "medical", synonyms: ["护理", "护理师", "ICU护士", "手术室护士"], keywords: ["护士", "护理"], hot: true },
-  { id: "pharmacist", displayName: "药剂师", industryId: "medical", synonyms: ["药师", "临床药师", "药房"], keywords: ["药剂", "药房"], hot: false },
-  { id: "therapist", displayName: "心理咨询师", industryId: "medical", synonyms: ["心理治疗师", "心理医生", "咨询师"], keywords: ["心理", "咨询"], hot: true },
-  { id: "nutritionist", displayName: "营养师", industryId: "medical", synonyms: ["营养咨询", "健康管理师", "饮食顾问"], keywords: ["营养", "健康"], hot: false },
-  { id: "dentist", displayName: "牙医", industryId: "medical", synonyms: ["口腔医生", "正畸医生", "种植医生"], keywords: ["牙科", "口腔"], hot: false },
-  { id: "tcm_doctor", displayName: "中医师", industryId: "medical", synonyms: ["中医", "针灸师", "推拿师"], keywords: ["中医", "针灸"], hot: false },
-  { id: "medical_device", displayName: "医疗器械", industryId: "medical", synonyms: ["器械销售", "医疗设备", "IVD"], keywords: ["器械", "设备"], hot: false },
-  { id: "pharma", displayName: "医药代表", industryId: "medical", synonyms: ["药代", "医药销售", "临床推广"], keywords: ["医药", "销售"], hot: false },
+  { id: "doctor", displayName: "医生", industryId: "medical", synonyms: ["医师", "主治医师", "专科医生", "全科医生", "大夫", "医护", "临床医生"], keywords: ["医生", "诊疗", "大夫", "看病"], hot: true },
+  { id: "nurse", displayName: "护士", industryId: "medical", synonyms: ["护理", "护理师", "ICU护士", "手术室护士", "护理人员", "白衣天使"], keywords: ["护士", "护理"], hot: true },
+  { id: "pharmacist", displayName: "药剂师", industryId: "medical", synonyms: ["药师", "临床药师", "药房", "配药师"], keywords: ["药剂", "药房"], hot: false },
+  { id: "therapist", displayName: "心理咨询师", industryId: "medical", synonyms: ["心理治疗师", "心理医生", "咨询师", "心理辅导", "心理咨询"], keywords: ["心理", "咨询", "情绪"], hot: true },
+  { id: "nutritionist", displayName: "营养师", industryId: "medical", synonyms: ["营养咨询", "健康管理师", "饮食顾问", "营养顾问"], keywords: ["营养", "健康", "饮食"], hot: false },
+  { id: "dentist", displayName: "牙医", industryId: "medical", synonyms: ["口腔医生", "正畸医生", "种植医生", "牙科医生"], keywords: ["牙科", "口腔", "牙齿"], hot: false },
+  { id: "tcm_doctor", displayName: "中医师", industryId: "medical", synonyms: ["中医", "针灸师", "推拿师", "中医大夫"], keywords: ["中医", "针灸"], hot: false },
+  { id: "medical_device", displayName: "医疗器械", industryId: "medical", synonyms: ["器械销售", "医疗设备", "IVD", "医疗器械销售"], keywords: ["器械", "设备"], hot: false },
+  { id: "pharma", displayName: "医药代表", industryId: "medical", synonyms: ["药代", "医药销售", "临床推广", "医药公司"], keywords: ["医药", "销售"], hot: false },
   
   // ========== 教育培训 (education) ==========
   { id: "teacher", displayName: "教师", industryId: "education", synonyms: ["老师", "教员", "班主任", "学科老师", "中小学老师"], keywords: ["教学", "学校"], hot: true },
@@ -229,20 +229,23 @@ export const OCCUPATIONS: Occupation[] = [
   { id: "personal_shopper", displayName: "私人买手", industryId: "lifestyle", synonyms: ["代购", "买手", "时尚买手", "采购顾问"], keywords: ["买手", "代购"], hot: false },
   
   // ========== 其他行业 (other) ==========
-  { id: "entrepreneur", displayName: "创业者", industryId: "other", synonyms: ["创业", "老板", "企业主", "自己做生意"], keywords: ["创业", "老板"], hot: true },
-  { id: "freelancer", displayName: "自由职业者", industryId: "other", synonyms: ["自由职业", "独立工作者", "Freelance", "接私活"], keywords: ["自由", "独立"], hot: true },
-  { id: "civil_servant", displayName: "公务员", industryId: "other", synonyms: ["政府", "事业单位", "国企员工", "体制内"], keywords: ["公务员", "政府"], hot: true },
-  { id: "social_worker", displayName: "社工", industryId: "other", synonyms: ["社会工作者", "NGO", "公益", "志愿者"], keywords: ["社工", "公益"], hot: false },
-  { id: "military", displayName: "军人", industryId: "other", synonyms: ["现役军人", "退伍军人", "部队"], keywords: ["军人", "部队"], hot: false },
-  { id: "operations_manager", displayName: "运营经理", industryId: "other", synonyms: ["运营总监", "运营", "COO"], keywords: ["运营", "管理"], hot: true },
-  { id: "supply_chain", displayName: "供应链管理", industryId: "other", synonyms: ["采购", "物流管理", "供应链经理"], keywords: ["供应链", "采购"], hot: false },
-  { id: "manufacturing", displayName: "生产制造", industryId: "other", synonyms: ["工厂", "生产经理", "车间主任", "质量管理"], keywords: ["生产", "制造"], hot: false },
-  { id: "translator", displayName: "翻译", industryId: "other", synonyms: ["口译", "笔译", "同声传译", "翻译员"], keywords: ["翻译", "语言"], hot: false },
-  { id: "secretary", displayName: "秘书助理", industryId: "other", synonyms: ["行政助理", "总裁助理", "EA"], keywords: ["助理", "秘书"], hot: false },
-  { id: "student_grad", displayName: "在校学生", industryId: "other", synonyms: ["大学生", "研究生", "博士生", "留学生"], keywords: ["学生", "在读"], hot: true },
-  { id: "gap_year", displayName: "Gap中", industryId: "other", synonyms: ["待业", "求职中", "Career Break", "休息中"], keywords: ["Gap", "待业"], hot: false },
-  { id: "homemaker", displayName: "全职家庭", industryId: "other", synonyms: ["全职妈妈", "全职爸爸", "家庭主妇", "家庭主夫"], keywords: ["家庭", "全职"], hot: false },
-  { id: "retired", displayName: "退休人士", industryId: "other", synonyms: ["退休", "提前退休", "FIRE"], keywords: ["退休"], hot: false },
+  { id: "entrepreneur", displayName: "创业者", industryId: "other", synonyms: ["创业", "老板", "企业主", "自己做生意", "CEO", "创始人", "合伙人", "开公司"], keywords: ["创业", "老板", "自己干"], hot: true },
+  { id: "freelancer", displayName: "自由职业者", industryId: "other", synonyms: ["自由职业", "独立工作者", "Freelance", "接私活", "斜杠青年", "自由工作"], keywords: ["自由", "独立", "灵活"], hot: true },
+  { id: "civil_servant", displayName: "公务员", industryId: "other", synonyms: ["政府", "事业单位", "国企员工", "体制内", "国企", "央企", "公职"], keywords: ["公务员", "政府", "体制"], hot: true },
+  { id: "foreign_company", displayName: "外企员工", industryId: "other", synonyms: ["外企", "外资", "500强", "世界500强", "跨国公司", "MNC"], keywords: ["外企", "外资", "500强"], hot: true },
+  { id: "social_worker", displayName: "社工", industryId: "other", synonyms: ["社会工作者", "NGO", "公益", "志愿者", "慈善"], keywords: ["社工", "公益"], hot: false },
+  { id: "military", displayName: "军人", industryId: "other", synonyms: ["现役军人", "退伍军人", "部队", "武警"], keywords: ["军人", "部队"], hot: false },
+  { id: "operations_manager", displayName: "运营经理", industryId: "other", synonyms: ["运营总监", "运营", "COO", "业务运营"], keywords: ["运营", "管理"], hot: true },
+  { id: "supply_chain", displayName: "供应链管理", industryId: "other", synonyms: ["采购", "物流管理", "供应链经理", "采购经理", "供应商管理"], keywords: ["供应链", "采购"], hot: false },
+  { id: "manufacturing", displayName: "生产制造", industryId: "other", synonyms: ["工厂", "生产经理", "车间主任", "质量管理", "制造业", "工业", "工程"], keywords: ["生产", "制造", "工厂", "制造业"], hot: false },
+  { id: "retail", displayName: "零售行业", industryId: "other", synonyms: ["零售", "门店", "店长", "超市", "便利店", "零售管理", "卖场"], keywords: ["零售", "门店", "店铺"], hot: true },
+  { id: "catering", displayName: "餐饮行业", industryId: "other", synonyms: ["餐饮", "餐厅", "饭店", "餐饮管理", "餐厅经理", "餐饮老板", "开店", "开餐厅"], keywords: ["餐饮", "餐厅", "饭店"], hot: true },
+  { id: "translator", displayName: "翻译", industryId: "other", synonyms: ["口译", "笔译", "同声传译", "翻译员", "英语翻译"], keywords: ["翻译", "语言"], hot: false },
+  { id: "secretary", displayName: "秘书助理", industryId: "other", synonyms: ["行政助理", "总裁助理", "EA", "总助", "助理"], keywords: ["助理", "秘书"], hot: false },
+  { id: "student_grad", displayName: "在校学生", industryId: "other", synonyms: ["大学生", "研究生", "博士生", "留学生", "本科生", "硕士生"], keywords: ["学生", "在读", "读书"], hot: true },
+  { id: "gap_year", displayName: "Gap中", industryId: "other", synonyms: ["待业", "求职中", "Career Break", "休息中", "找工作", "离职"], keywords: ["Gap", "待业", "求职"], hot: false },
+  { id: "homemaker", displayName: "全职家庭", industryId: "other", synonyms: ["全职妈妈", "全职爸爸", "家庭主妇", "家庭主夫", "带娃"], keywords: ["家庭", "全职"], hot: false },
+  { id: "retired", displayName: "退休人士", industryId: "other", synonyms: ["退休", "提前退休", "FIRE", "财务自由"], keywords: ["退休", "FIRE"], hot: false },
 ];
 
 // ========== 拼音首字母映射 ==========
@@ -487,23 +490,62 @@ export const PINYIN_MAP: Record<string, string[]> = {
   "gwy": ["civil_servant"], // 公务员
   "sydw": ["civil_servant"], // 事业单位
   "tzn": ["civil_servant"], // 体制内
+  "gq": ["civil_servant"], // 国企
+  "yq": ["civil_servant"], // 央企
+  "wq": ["foreign_company"], // 外企
+  "wz": ["foreign_company"], // 外资
+  "500q": ["foreign_company"], // 500强
+  "kggs": ["foreign_company"], // 跨国公司
   "yg": ["entrepreneur"], // 创业
   "cy": ["entrepreneur"], // 创业
+  "lb": ["entrepreneur"], // 老板
+  "ceo": ["entrepreneur", "tech_lead"], // CEO
+  "csz": ["entrepreneur"], // 创始人
   "gygl": ["supply_chain"], // 供应链管理
   "cg": ["supply_chain"], // 采购
   "sczz": ["manufacturing"], // 生产制造
+  "gc": ["manufacturing"], // 工厂
+  "zzr": ["manufacturing"], // 制造业
+  "ls_retail": ["retail"], // 零售
+  "md": ["retail"], // 门店
+  "dz": ["retail"], // 店长
+  "cy_food": ["catering"], // 餐饮
+  "ct": ["catering"], // 餐厅
+  "fd": ["catering"], // 饭店
   "fy": ["translator"], // 翻译
   "mszl": ["secretary"], // 秘书助理
   "ea": ["secretary"],
+  "zz": ["secretary"], // 总助
   "zxxs": ["student_grad"], // 在校学生
   "xs": ["student_grad"], // 学生
   "dxs": ["student_grad"], // 大学生
   "yjs_student": ["student_grad"], // 研究生
+  "lxs": ["student_grad"], // 留学生
   "gap": ["gap_year"],
+  "dy_job": ["gap_year"], // 待业
+  "qz": ["gap_year"], // 求职
   "qzjt": ["homemaker"], // 全职家庭
   "qzmm": ["homemaker"], // 全职妈妈
   "tx": ["retired"], // 退休
   "fire": ["retired"],
+  "cwzy": ["retired"], // 财务自由
+  
+  // 口语化表达
+  "dc": ["software_engineer", "product_manager", "ui_designer"], // 大厂
+  "hlw": ["software_engineer", "product_manager"], // 互联网
+  "bat": ["software_engineer"], // BAT
+  "tmd": ["software_engineer"], // TMD
+  "dgr": ["software_engineer"], // 打工人
+  "sc": ["software_engineer"], // 社畜
+  "sd": ["accountant"], // 四大
+  "mkx": ["management_consultant"], // 麦肯锡
+  "bcg": ["management_consultant"], // BCG
+  "be": ["management_consultant"], // 贝恩
+  "tzyh": ["investment_banker"], // 投资银行
+  "gs": ["investment_banker"], // 高盛
+  "mogen": ["investment_banker"], // 摩根
+  "jpmorgan": ["investment_banker"], // JP Morgan
+  "zj": ["investment_banker"], // 中金
 };
 
 // ========== 辅助函数 ==========
@@ -710,4 +752,200 @@ export function getIndustryDisplayLabel(
   
   const industry = getIndustryById(occupation.industryId);
   return industry?.label || fallback;
+}
+
+// ========== 职业→专业领域映射 ==========
+// 根据职业智能推荐专业领域，用于自动填充表单
+
+export const OCCUPATION_TO_FIELD_SUGGESTIONS: Record<string, string[]> = {
+  // 科技互联网
+  software_engineer: ["计算机科学", "软件工程", "信息技术"],
+  frontend_engineer: ["计算机科学", "软件工程", "数字媒体"],
+  backend_engineer: ["计算机科学", "软件工程", "信息技术"],
+  fullstack_engineer: ["计算机科学", "软件工程"],
+  mobile_engineer: ["计算机科学", "软件工程", "移动开发"],
+  blockchain_engineer: ["计算机科学", "密码学", "金融科技"],
+  web3_product: ["计算机科学", "金融科技", "产品管理"],
+  crypto_trader: ["金融学", "经济学", "计算机科学"],
+  product_manager: ["计算机科学", "工商管理", "心理学"],
+  ui_designer: ["视觉设计", "数字媒体", "艺术设计"],
+  ux_designer: ["交互设计", "心理学", "人机交互"],
+  qa_engineer: ["计算机科学", "软件工程", "质量管理"],
+  devops_engineer: ["计算机科学", "网络工程", "系统管理"],
+  security_engineer: ["网络安全", "计算机科学", "密码学"],
+  tech_lead: ["计算机科学", "软件工程", "系统架构"],
+  
+  // AI/大数据
+  data_analyst: ["数据科学", "统计学", "商业分析"],
+  data_scientist: ["数据科学", "机器学习", "统计学"],
+  ai_engineer: ["人工智能", "机器学习", "计算机科学"],
+  prompt_engineer: ["人工智能", "语言学", "计算机科学"],
+  aigc_designer: ["数字媒体", "人工智能", "艺术设计"],
+  llm_engineer: ["人工智能", "自然语言处理", "计算机科学"],
+  data_engineer: ["数据工程", "计算机科学", "大数据"],
+  ai_product_manager: ["人工智能", "产品管理", "商业分析"],
+  ai_researcher: ["人工智能", "机器学习", "数学"],
+  
+  // 跨境电商
+  ecom_operator: ["电子商务", "市场营销", "国际贸易"],
+  ecom_product: ["电子商务", "供应链管理", "市场营销"],
+  ecom_independent: ["电子商务", "创业学", "市场营销"],
+  ecom_ads: ["市场营销", "广告学", "数字营销"],
+  ecom_logistics: ["物流管理", "供应链管理", "国际贸易"],
+  ecom_customer: ["客户服务", "商务英语", "电子商务"],
+  ecom_manager: ["电子商务", "工商管理", "市场营销"],
+  
+  // 金融投资
+  finance_analyst: ["金融学", "经济学", "会计学"],
+  banker: ["金融学", "经济学", "工商管理"],
+  investment_banker: ["金融学", "经济学", "工商管理"],
+  pe_vc: ["金融学", "投资学", "工商管理"],
+  securities: ["金融学", "证券投资", "经济学"],
+  insurance: ["保险学", "精算学", "金融学"],
+  fund_manager: ["金融学", "投资学", "经济学"],
+  accountant: ["会计学", "财务管理", "审计学"],
+  cfo: ["财务管理", "会计学", "工商管理"],
+  
+  // 咨询服务
+  management_consultant: ["工商管理", "战略管理", "经济学"],
+  it_consultant: ["信息技术", "管理信息系统", "计算机科学"],
+  hr_consultant: ["人力资源管理", "心理学", "工商管理"],
+  hr_manager: ["人力资源管理", "心理学", "工商管理"],
+  admin_manager: ["行政管理", "工商管理", "公共管理"],
+  
+  // 市场营销
+  marketing_manager: ["市场营销", "工商管理", "传播学"],
+  brand_manager: ["市场营销", "品牌管理", "广告学"],
+  digital_marketing: ["数字营销", "市场营销", "电子商务"],
+  social_media: ["新媒体传播", "市场营销", "传播学"],
+  pr_manager: ["公共关系", "传播学", "新闻学"],
+  sales_manager: ["市场营销", "工商管理", "商务管理"],
+  event_planner: ["活动策划", "市场营销", "酒店管理"],
+  
+  // 创意设计
+  graphic_designer: ["平面设计", "视觉传达", "艺术设计"],
+  illustrator: ["插画", "美术", "数字艺术"],
+  "3d_artist": ["三维设计", "数字媒体", "动画"],
+  game_designer: ["游戏设计", "数字媒体", "计算机科学"],
+  game_artist: ["游戏美术", "数字艺术", "动画"],
+  motion_designer: ["动态设计", "数字媒体", "影视后期"],
+  vr_ar_designer: ["虚拟现实", "交互设计", "数字媒体"],
+  photographer: ["摄影", "视觉艺术", "数字媒体"],
+  videographer: ["影视制作", "摄影", "导演"],
+  video_editor: ["影视后期", "数字媒体", "视频制作"],
+  interior_designer: ["室内设计", "环境艺术", "建筑学"],
+  industrial_designer: ["工业设计", "产品设计", "机械工程"],
+  jewelry_designer: ["珠宝设计", "艺术设计", "工艺美术"],
+  fashion_designer: ["服装设计", "时尚管理", "纺织工程"],
+  model: ["表演", "时尚管理", "艺术"],
+  makeup_artist: ["化妆造型", "美容", "艺术"],
+  dancer: ["舞蹈", "表演艺术", "舞蹈编导"],
+  actor: ["表演", "戏剧影视", "导演"],
+  host: ["播音主持", "传播学", "表演"],
+  musician: ["音乐", "音乐表演", "作曲"],
+  sound_engineer: ["音频工程", "录音艺术", "电子音乐"],
+  
+  // 传媒内容
+  journalist: ["新闻学", "传播学", "中文"],
+  content_creator: ["新媒体传播", "传播学", "数字媒体"],
+  copywriter: ["广告学", "中文", "传播学"],
+  content_operator: ["新媒体运营", "传播学", "市场营销"],
+  live_streamer: ["传播学", "表演", "市场营销"],
+  live_operator: ["新媒体运营", "传播学", "市场营销"],
+  podcast_host: ["传播学", "新闻学", "播音主持"],
+  
+  // 医疗健康
+  doctor: ["临床医学", "医学", "基础医学"],
+  nurse: ["护理学", "医学", "临床护理"],
+  pharmacist: ["药学", "临床药学", "药物化学"],
+  therapist: ["心理学", "临床心理", "心理咨询"],
+  nutritionist: ["营养学", "食品科学", "公共卫生"],
+  dentist: ["口腔医学", "牙科", "医学"],
+  tcm_doctor: ["中医学", "中药学", "针灸推拿"],
+  medical_device: ["生物医学工程", "医疗器械", "市场营销"],
+  pharma: ["药学", "市场营销", "医药管理"],
+  
+  // 教育培训
+  teacher: ["教育学", "学科教育", "师范"],
+  trainer: ["教育学", "人力资源", "培训管理"],
+  tutor: ["教育学", "学科教育", "心理学"],
+  education_consultant: ["教育学", "心理学", "咨询"],
+  professor: ["学科专业", "教育学", "研究"],
+  researcher: ["学科专业", "科研方法", "研究"],
+  online_educator: ["教育技术", "在线教育", "教育学"],
+  
+  // 法律合规
+  lawyer: ["法学", "法律", "国际法"],
+  paralegal: ["法学", "法律事务", "行政管理"],
+  legal_counsel: ["法学", "企业法务", "合规管理"],
+  compliance: ["法学", "合规管理", "风险管理"],
+  ip_attorney: ["知识产权法", "法学", "专利"],
+  
+  // 地产建筑
+  architect: ["建筑学", "城市规划", "土木工程"],
+  civil_engineer: ["土木工程", "结构工程", "工程管理"],
+  real_estate_agent: ["房地产", "市场营销", "工商管理"],
+  property_manager: ["物业管理", "工商管理", "房地产"],
+  project_manager: ["工程管理", "项目管理", "土木工程"],
+  landscape_designer: ["景观设计", "园林", "城市规划"],
+  
+  // 航空酒店旅游
+  flight_attendant: ["旅游管理", "空乘", "服务管理"],
+  pilot: ["飞行技术", "航空", "航空工程"],
+  ground_staff: ["旅游管理", "航空服务", "物流管理"],
+  hotel_manager: ["酒店管理", "旅游管理", "工商管理"],
+  tour_guide: ["旅游管理", "导游", "历史"],
+  travel_planner: ["旅游管理", "市场营销", "策划"],
+  
+  // 生活方式
+  fitness_coach: ["体育", "运动科学", "健身"],
+  yoga_instructor: ["瑜伽", "运动科学", "健康管理"],
+  barista: ["餐饮管理", "咖啡", "服务管理"],
+  bartender: ["餐饮管理", "调酒", "酒店管理"],
+  tea_master: ["茶学", "文化", "餐饮管理"],
+  chef: ["烹饪", "餐饮管理", "食品科学"],
+  pastry_chef: ["烘焙", "西点", "餐饮管理"],
+  sommelier: ["葡萄酒", "餐饮管理", "酒店管理"],
+  beautician: ["美容", "皮肤管理", "医学美容"],
+  hairstylist: ["美发", "形象设计", "时尚"],
+  nail_artist: ["美甲", "美容", "艺术"],
+  tattoo_artist: ["纹身艺术", "美术", "设计"],
+  massage_therapist: ["中医推拿", "康复", "健康管理"],
+  pet_groomer: ["宠物美容", "动物护理", "兽医"],
+  pet_trainer: ["动物行为", "动物训练", "兽医"],
+  veterinarian: ["兽医学", "动物医学", "动物科学"],
+  florist: ["花艺", "园艺", "设计"],
+  dj: ["音乐", "电子音乐", "音频工程"],
+  personal_shopper: ["时尚管理", "市场营销", "零售管理"],
+  
+  // 其他行业
+  entrepreneur: ["创业学", "工商管理", "经济学"],
+  freelancer: ["专业技能", "自由职业", "项目管理"],
+  civil_servant: ["公共管理", "行政管理", "法学"],
+  foreign_company: ["工商管理", "国际商务", "外语"],
+  social_worker: ["社会工作", "心理学", "公共管理"],
+  military: ["军事", "管理", "体育"],
+  operations_manager: ["运营管理", "工商管理", "供应链"],
+  supply_chain: ["供应链管理", "物流管理", "工商管理"],
+  manufacturing: ["制造工程", "工业工程", "机械工程"],
+  retail: ["零售管理", "市场营销", "工商管理"],
+  catering: ["餐饮管理", "酒店管理", "工商管理"],
+  translator: ["翻译", "外语", "语言学"],
+  secretary: ["行政管理", "秘书学", "工商管理"],
+  student_grad: ["在读专业", "学科教育", "研究"],
+  gap_year: ["待定", "职业规划", "自我探索"],
+  homemaker: ["家政", "育儿", "生活管理"],
+  retired: ["原专业", "兴趣爱好", "终身学习"],
+};
+
+// 根据职业获取推荐专业领域
+export function getSuggestedFieldsOfStudy(occupationId: string | null | undefined): string[] {
+  if (!occupationId) return [];
+  return OCCUPATION_TO_FIELD_SUGGESTIONS[occupationId] || [];
+}
+
+// 根据职业获取第一个推荐专业领域（用于自动填充）
+export function getDefaultFieldOfStudy(occupationId: string | null | undefined): string {
+  const suggestions = getSuggestedFieldsOfStudy(occupationId);
+  return suggestions[0] || "";
 }
