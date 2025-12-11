@@ -302,6 +302,7 @@ export default function RegistrationPage() {
         setTimeout(() => {
           setStep(step + 1);
           setShowCelebration(false);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 400);
       } else {
         form.handleSubmit((data) => registerMutation.mutate(data))();
@@ -313,6 +314,7 @@ export default function RegistrationPage() {
     if (step > 1) {
       setDirection("backward");
       setStep(step - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -867,19 +869,9 @@ export default function RegistrationPage() {
                       placeholder="例如：计算机科学、金融学、心理学"
                       data-testid="input-field-of-study"
                     />
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {["计算机", "金融", "商业管理", "法律", "医学", "生物医药", "设计", "传媒", "心理学", "教育", "建筑", "公共管理"].map(field => (
-                        <button
-                          key={field}
-                          type="button"
-                          onClick={() => form.setValue("fieldOfStudy", field)}
-                          className="px-3 py-1 text-xs rounded-full bg-muted hover-elevate"
-                          data-testid={`chip-field-${field}`}
-                        >
-                          {field}
-                        </button>
-                      ))}
-                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      填写职业后会自动识别专业领域
+                    </p>
                   </div>
 
                 </div>
