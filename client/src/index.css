@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 福芦豇豆体 - 品牌标题字体 */
+@font-face {
+  font-family: 'FLJiangdou';
+  src: url('/attached_assets/FLjiangdouti-Regular-2_1765451707522.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0,0,0, .10);

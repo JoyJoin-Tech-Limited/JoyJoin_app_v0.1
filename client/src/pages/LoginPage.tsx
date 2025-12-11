@@ -353,11 +353,11 @@ export default function LoginPage() {
               />
             </motion.div>
             
-            <h1 className="text-4xl font-display font-bold text-white drop-shadow-lg" data-testid="text-brand-name">
+            <h1 className="text-4xl font-jiangdou text-white drop-shadow-lg" data-testid="text-brand-name">
               悦聚·JoyJoin
             </h1>
             
-            <p className="text-xl font-medium text-white/90 mt-2 drop-shadow-md">
+            <p className="text-2xl font-jiangdou text-white/90 mt-2 drop-shadow-md">
               小局·好能量
             </p>
             

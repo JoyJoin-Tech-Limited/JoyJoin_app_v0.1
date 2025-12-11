@@ -85,6 +85,7 @@ export default {
       fontFamily: {
         sans: ["Inter", "var(--font-sans)"],
         display: ["Outfit", "sans-serif"],
+        jiangdou: ["FLJiangdou", "Outfit", "sans-serif"],
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
       },
