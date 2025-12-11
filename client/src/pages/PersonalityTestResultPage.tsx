@@ -151,113 +151,138 @@ export default function PersonalityTestResultPage() {
     }
   };
 
-  // Countdown Reveal Animation
+  // Animation phase state: 'countdown' | 'reveal'
+  const [animationPhase, setAnimationPhase] = useState<'countdown' | 'reveal'>('countdown');
+
+  // Transition to reveal phase after countdown finishes
+  useEffect(() => {
+    if (countdown === 0 && animationPhase === 'countdown') {
+      // Brief pause before revealing
+      const timer = setTimeout(() => {
+        setAnimationPhase('reveal');
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown, animationPhase]);
+
+  // Countdown Reveal Animation - Separated into two phases
   const CountdownReveal = () => (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
       className="fixed inset-0 bg-background z-50 flex items-center justify-center"
     >
       <div className="text-center space-y-8">
-        <AnimatePresence mode="wait">
-          {countdown > 0 ? (
+        {/* Phase 1: Countdown Numbers - Completely separate layer */}
+        {animationPhase === 'countdown' && (
+          <AnimatePresence mode="wait">
             <motion.div
               key={countdown}
               initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: [0.5, 1.2, 1], opacity: 1 }}
-              exit={{ scale: 1.5, opacity: 0 }}
-              transition={{ duration: 0.8 }}
+              animate={{ scale: [0.5, 1.15, 1], opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ 
+                duration: 0.5,
+                ease: "easeOut"
+              }}
               className="text-9xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
+              style={{ willChange: 'transform, opacity' }}
             >
-              {countdown}
+              {countdown > 0 ? countdown : ''}
             </motion.div>
-          ) : (
+          </AnimatePresence>
+        )}
+
+        {/* Phase 2: Reveal Animation - Only renders after countdown phase ends */}
+        {animationPhase === 'reveal' && (
+          <motion.div
+            key="reveal"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="space-y-6"
+          >
             <motion.div
-              key="reveal"
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              className="space-y-6"
+              animate={{
+                scale: [1, 1.08, 1],
+                rotate: [0, 3, -3, 0],
+              }}
+              transition={{
+                duration: 0.5,
+                ease: "easeInOut"
+              }}
+              className="flex justify-center"
             >
-              <motion.div
-                animate={{
-                  scale: [1, 1.1, 1],
-                  rotate: [0, 5, -5, 0],
-                }}
-                transition={{
-                  duration: 0.6,
-                  ease: "easeInOut"
-                }}
-                className="flex justify-center"
-              >
-                {primaryAvatar ? (
-                  <img
-                    src={primaryAvatar}
-                    alt={result.primaryRole}
-                    className="w-28 h-28 md:w-36 md:h-36 rounded-full object-cover shadow-lg"
-                  />
-                ) : (
-                  <span className="text-9xl">🌟</span>
-                )}
-              </motion.div>
-              
-              {/* Particle explosion effect */}
-              <div className="relative">
-                {[...Array(20)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ 
-                      x: 0, 
-                      y: 0, 
-                      scale: 1,
-                      opacity: 1 
-                    }}
-                    animate={{
-                      x: Math.cos((i * 360 / 20) * Math.PI / 180) * 150,
-                      y: Math.sin((i * 360 / 20) * Math.PI / 180) * 150,
-                      scale: 0,
-                      opacity: 0
-                    }}
-                    transition={{
-                      duration: 0.8,
-                      ease: "easeOut"
-                    }}
-                    className="absolute left-1/2 top-1/2 w-2 h-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"
-                    style={{
-                      transformOrigin: 'center'
-                    }}
-                  />
-                ))}
-              </div>
-              
-              <motion.h2
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className={`text-4xl font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}
-              >
-                {result.primaryRole}
-              </motion.h2>
-              
-              <motion.p
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.5 }}
-                className="text-lg text-muted-foreground"
-              >
-                {result.roleSubtype}
-              </motion.p>
+              {primaryAvatar ? (
+                <img
+                  src={primaryAvatar}
+                  alt={result.primaryRole}
+                  className="w-28 h-28 md:w-36 md:h-36 rounded-full object-cover shadow-lg"
+                />
+              ) : (
+                <Sparkles className="w-28 h-28 md:w-36 md:h-36 text-primary" />
+              )}
             </motion.div>
-          )}
-        </AnimatePresence>
+            
+            {/* Particle explosion effect */}
+            <div className="relative">
+              {[...Array(16)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ 
+                    x: 0, 
+                    y: 0, 
+                    scale: 1,
+                    opacity: 0.8 
+                  }}
+                  animate={{
+                    x: Math.cos((i * 360 / 16) * Math.PI / 180) * 120,
+                    y: Math.sin((i * 360 / 16) * Math.PI / 180) * 120,
+                    scale: 0,
+                    opacity: 0
+                  }}
+                  transition={{
+                    duration: 0.6,
+                    ease: "easeOut",
+                    delay: i * 0.02
+                  }}
+                  className="absolute left-1/2 top-1/2 w-2 h-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"
+                  style={{
+                    willChange: 'transform, opacity'
+                  }}
+                />
+              ))}
+            </div>
+            
+            <motion.h2
+              initial={{ y: 15, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.3 }}
+              className={`text-4xl font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}
+            >
+              {result.primaryRole}
+            </motion.h2>
+            
+            <motion.p
+              initial={{ y: 15, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.35, duration: 0.3 }}
+              className="text-lg text-muted-foreground"
+            >
+              {result.roleSubtype}
+            </motion.p>
+          </motion.div>
+        )}
         
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.3 }}
           className="text-sm text-muted-foreground"
         >
-          {countdown > 0 ? '即将揭晓你的社交角色...' : '✨ 你的独特社交DNA已解锁！'}
+          {animationPhase === 'countdown' ? '即将揭晓你的社交角色...' : '你的独特社交DNA已解锁！'}
         </motion.p>
       </div>
     </motion.div>
