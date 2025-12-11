@@ -6,6 +6,29 @@ JoyJoin (悦聚·Joy) is a social networking platform designed to connect indivi
 
 ## Recent Changes
 
+### December 11, 2025 - Occupation Selector UX Improvements
+
+**Occupation Search Enhancements:**
+- Added comprehensive search synonyms for hot occupations (金融: 投资银行/四大/德勤/普华/安永/毕马威, 咨询: MBB/麦肯锡/BCG/贝恩, 科技: 大厂/BAT/字节/腾讯/阿里, 医疗: 大夫)
+- Added traditional industries (餐饮从业/零售从业/制造业) and casual expressions (创业者/自由职业者/外企员工/打工人)
+- Fixed duplicate pinyin mapping conflict (摩根 changed from "mg" to "mgs")
+
+**Occupation→Field-of-Study Intelligent Mapping:**
+- Created `getSuggestedFieldsOfStudy()` function in shared/occupations.ts
+- 28 occupation categories mapped to relevant academic fields
+- First suggestion auto-fills empty fieldOfStudy input on RegistrationPage
+
+**OccupationSelector Component Updates:**
+- Added `onFieldOfStudySuggestion` callback prop for parent form integration
+- Feedback card now displays recommended field-of-study tags (first highlighted as primary)
+- Industry browser auto-collapses after occupation selection for cleaner UI
+- "浏览其他行业" button to re-expand collapsed industry list
+- "更改" button restores industry browser visibility
+
+**Files Modified:** shared/occupations.ts, client/src/components/OccupationSelector.tsx, client/src/pages/RegistrationPage.tsx
+
+---
+
 ### November 24, 2025 - Event Feedback Flow Redesign & Registration Enhancements
 
 🚀 **24-Hour Update Summary:**
