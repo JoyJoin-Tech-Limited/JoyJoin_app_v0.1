@@ -3906,6 +3906,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ PRICING MANAGEMENT ============
+
+  // Public API - Get active pricing settings (for payment page)
+  app.get("/api/pricing", async (req, res) => {
+    try {
+      const settings = await storage.getActivePricingSettings();
+      const formatted = settings.map(s => ({
+        id: s.id,
+        planType: s.planType,
+        name: s.displayName,
+        nameEn: s.displayNameEn,
+        description: s.description,
+        price: s.priceInCents / 100,
+        originalPrice: s.originalPriceInCents ? s.originalPriceInCents / 100 : null,
+        durationDays: s.durationDays,
+        isFeatured: s.isFeatured,
+      }));
+      res.json(formatted);
+    } catch (error) {
+      console.error("Error fetching pricing:", error);
+      res.status(500).json({ message: "Failed to fetch pricing" });
+    }
+  });
+
+  // Admin - Get all pricing settings
+  app.get("/api/admin/pricing", requireAdmin, async (req, res) => {
+    try {
+      const settings = await storage.getAllPricingSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching pricing settings:", error);
+      res.status(500).json({ message: "Failed to fetch pricing settings" });
+    }
+  });
+
+  // Admin - Get single pricing setting
+  app.get("/api/admin/pricing/:id", requireAdmin, async (req, res) => {
+    try {
+      const setting = await storage.getPricingSetting(req.params.id);
+      if (!setting) {
+        return res.status(404).json({ message: "Pricing setting not found" });
+      }
+      res.json(setting);
+    } catch (error) {
+      console.error("Error fetching pricing setting:", error);
+      res.status(500).json({ message: "Failed to fetch pricing setting" });
+    }
+  });
+
+  // Admin - Update pricing setting
+  app.patch("/api/admin/pricing/:id", requireAdmin, async (req, res) => {
+    try {
+      const { displayName, displayNameEn, description, priceInCents, originalPriceInCents, durationDays, sortOrder, isActive, isFeatured } = req.body;
+      
+      const setting = await storage.updatePricingSetting(req.params.id, {
+        displayName,
+        displayNameEn,
+        description,
+        priceInCents,
+        originalPriceInCents,
+        durationDays,
+        sortOrder,
+        isActive,
+        isFeatured,
+      });
+      
+      res.json(setting);
+    } catch (error) {
+      console.error("Error updating pricing setting:", error);
+      res.status(500).json({ message: "Failed to update pricing setting" });
+    }
+  });
+
   // Venue Management - Get all venues
   app.get("/api/admin/venues", requireAdmin, async (req, res) => {
     try {

@@ -48,6 +48,11 @@ const menuItems = [
     icon: CreditCard,
   },
   {
+    title: "定价管理",
+    url: "/admin/pricing",
+    icon: DollarSign,
+  },
+  {
     title: "优惠券",
     url: "/admin/coupons",
     icon: Tag,

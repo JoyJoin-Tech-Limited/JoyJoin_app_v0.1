@@ -8,8 +8,10 @@ import {
   type DirectMessageThread, type DirectMessage, type InsertDirectMessageThread, type InsertDirectMessage,
   type Content, type InsertContent,
   type ChatReport, type InsertChatReport, type ChatLog, type InsertChatLog,
+  type PricingSetting,
   users, events, eventAttendance, chatMessages, eventFeedback, blindBoxEvents, testResponses, roleResults, notifications,
-  directMessageThreads, directMessages, payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs
+  directMessageThreads, directMessages, payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs,
+  pricingSettings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
@@ -220,6 +222,12 @@ export interface IStorage {
   getActiveMatchingConfig(): Promise<any | undefined>;
   updateMatchingConfig(config: any): Promise<any>;
   saveMatchingResult(result: any): Promise<any>;
+
+  // Pricing Settings operations
+  getAllPricingSettings(): Promise<PricingSetting[]>;
+  getPricingSetting(id: string): Promise<PricingSetting | undefined>;
+  updatePricingSetting(id: string, updates: Partial<PricingSetting>): Promise<PricingSetting>;
+  getActivePricingSettings(): Promise<PricingSetting[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2722,6 +2730,57 @@ export class DatabaseStorage implements IStorage {
       warnings: parseInt(row.warnings) || 0,
       info: parseInt(row.info) || 0,
     };
+  }
+
+  // ============ PRICING SETTINGS OPERATIONS ============
+
+  async getAllPricingSettings(): Promise<PricingSetting[]> {
+    return await db
+      .select()
+      .from(pricingSettings)
+      .orderBy(pricingSettings.sortOrder);
+  }
+
+  async getPricingSetting(id: string): Promise<PricingSetting | undefined> {
+    const [setting] = await db
+      .select()
+      .from(pricingSettings)
+      .where(eq(pricingSettings.id, id));
+    return setting;
+  }
+
+  async updatePricingSetting(id: string, updates: Partial<PricingSetting>): Promise<PricingSetting> {
+    const result = await db.execute(sql`
+      UPDATE pricing_settings 
+      SET 
+        display_name = COALESCE(${updates.displayName ?? null}, display_name),
+        display_name_en = COALESCE(${updates.displayNameEn ?? null}, display_name_en),
+        description = COALESCE(${updates.description ?? null}, description),
+        price_in_cents = COALESCE(${updates.priceInCents ?? null}, price_in_cents),
+        original_price_in_cents = CASE 
+          WHEN ${updates.originalPriceInCents === undefined}::boolean THEN original_price_in_cents 
+          ELSE ${updates.originalPriceInCents ?? null}::integer 
+        END,
+        duration_days = CASE 
+          WHEN ${updates.durationDays === undefined}::boolean THEN duration_days 
+          ELSE ${updates.durationDays ?? null}::integer 
+        END,
+        sort_order = COALESCE(${updates.sortOrder ?? null}, sort_order),
+        is_active = COALESCE(${updates.isActive ?? null}, is_active),
+        is_featured = COALESCE(${updates.isFeatured ?? null}, is_featured),
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `);
+    return result.rows[0] as PricingSetting;
+  }
+
+  async getActivePricingSettings(): Promise<PricingSetting[]> {
+    return await db
+      .select()
+      .from(pricingSettings)
+      .where(eq(pricingSettings.isActive, true))
+      .orderBy(pricingSettings.sortOrder);
   }
 }
 
