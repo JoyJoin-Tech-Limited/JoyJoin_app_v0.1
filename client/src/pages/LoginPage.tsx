@@ -340,7 +340,7 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* Section 2: Promo Video */}
+      {/* Section 2: Promo Video - Optimized for Mini-Program */}
       <section className="py-8 px-6" data-testid="section-promo-video">
         <div className="max-w-lg mx-auto">
           <motion.div
@@ -352,9 +352,13 @@ export default function LoginPage() {
             {/* Video placeholder - replace src with actual video file when ready */}
             {/* To add your video: upload .mp4 file to attached_assets and import it */}
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-              <div className="h-16 w-16 rounded-full bg-primary/90 flex items-center justify-center mb-4 shadow-lg">
-                <Play className="h-8 w-8 text-primary-foreground ml-1" />
-              </div>
+              <button 
+                className="min-h-[56px] min-w-[56px] h-14 w-14 rounded-full bg-primary/90 flex items-center justify-center mb-4 shadow-lg active:scale-95 transition-transform"
+                data-testid="button-video-play"
+                aria-label="播放视频"
+              >
+                <Play className="h-7 w-7 text-primary-foreground ml-1" />
+              </button>
               <p className="text-muted-foreground text-sm">宣传视频即将上线</p>
               <p className="text-muted-foreground/60 text-xs mt-1">30秒精彩预览</p>
             </div>
@@ -373,20 +377,45 @@ export default function LoginPage() {
               您的浏览器不支持视频播放
             </video>
             
-            <Button
-              size="icon"
-              variant="secondary"
-              className="absolute bottom-3 right-3 h-8 w-8 rounded-full bg-black/50 hover:bg-black/70"
+            <button
+              className="absolute bottom-4 right-4 min-h-[44px] min-w-[44px] h-11 w-11 rounded-full bg-black/60 flex items-center justify-center active:bg-black/80 transition-colors"
               onClick={() => setIsVideoMuted(!isVideoMuted)}
               data-testid="button-video-mute"
+              aria-label={isVideoMuted ? "开启声音" : "静音"}
             >
               {isVideoMuted ? (
-                <VolumeX className="h-4 w-4 text-white" />
+                <VolumeX className="h-5 w-5 text-white" />
               ) : (
-                <Volume2 className="h-4 w-4 text-white" />
+                <Volume2 className="h-5 w-5 text-white" />
               )}
-            </Button>
+            </button>
             */}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Section 2.5: 小悦AI Assistant Mascot */}
+      <section className="py-6 px-6" data-testid="section-xiaoyue-ai">
+        <div className="max-w-lg mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20"
+          >
+            {/* AI Mascot Placeholder - replace with actual image when ready */}
+            <div className="flex-shrink-0 h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg">
+              <Brain className="h-8 w-8 text-primary-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-base">小悦AI</h3>
+                <Badge variant="secondary" className="text-xs">智能匹配</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                我是你的专属社交助理，帮你找到最合拍的小伙伴！
+              </p>
+            </div>
           </motion.div>
         </div>
       </section>
