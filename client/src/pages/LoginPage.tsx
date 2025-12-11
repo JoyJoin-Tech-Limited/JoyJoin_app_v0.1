@@ -13,7 +13,8 @@ import {
 import { 
   Users, Brain, Gift, Sparkles, Star, Heart, 
   Shield, Quote, MapPin, CheckCircle2, ArrowRight,
-  Flower2, Target, Sun, Play, Volume2, VolumeX
+  Flower2, Target, Sun, Play, Volume2, VolumeX,
+  FileText, ShieldCheck, Utensils
 } from "lucide-react";
 import joyJoinLogo from "@assets/JoyJoinapp_logo_chi_Fuludouti_1765444760154.png";
 import { SiWechat } from "react-icons/si";
@@ -95,36 +96,36 @@ const FAQ_ITEMS = [
 
 const FEATURES = [
   {
-    icon: Users,
+    icon: Utensils,
     number: "4-6",
     unit: "人",
-    title: "精品小局",
-    subtitle: "刚刚好的社交人数",
+    title: "精品饭局·酒局",
+    subtitle: "严选餐厅酒吧",
     color: "from-purple-500 to-purple-600",
-  },
-  {
-    icon: Brain,
-    number: "6",
-    unit: "维",
-    title: "AI画像匹配",
-    subtitle: "多维度精准连接",
-    color: "from-blue-500 to-blue-600",
   },
   {
     icon: Gift,
     number: "",
     unit: "",
-    title: "盲盒惊喜",
-    subtitle: "翻卡解锁神秘饭友",
+    title: "同频惊喜",
+    subtitle: "盲盒玩法，AI确保合拍",
     color: "from-pink-500 to-pink-600",
   },
   {
-    icon: MapPin,
+    icon: FileText,
     number: "",
     unit: "",
-    title: "港深双城",
-    subtitle: "跨境社交新体验",
-    color: "from-orange-500 to-orange-600",
+    title: "破冰说明书",
+    subtitle: "快速进入聊天节奏",
+    color: "from-blue-500 to-blue-600",
+  },
+  {
+    icon: ShieldCheck,
+    number: "",
+    unit: "",
+    title: "不满意退款",
+    subtitle: "全额退款保障",
+    color: "from-green-500 to-green-600",
   },
 ];
 
