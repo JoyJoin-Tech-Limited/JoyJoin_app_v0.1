@@ -381,34 +381,36 @@ export default function LoginPage() {
       </section>
 
       {/* Section 2: Promotion Banner Carousel */}
-      <PromotionBannerCarousel 
-        placement="landing" 
-        className="px-4"
-      />
+      <div className="py-8 px-4" data-testid="section-banners">
+        <PromotionBannerCarousel 
+          placement="landing" 
+          className="px-0"
+        />
+      </div>
 
       {/* Section 3: 小悦AI introduces Features */}
-      <section className="py-10 px-6" data-testid="section-features">
-        <div className="max-w-lg mx-auto">
+      <section className="py-12 px-6 bg-gradient-to-b from-primary/5 to-transparent" data-testid="section-features">
+        <div className="max-w-lg mx-auto space-y-6">
           {/* 小悦AI Header with speech bubble */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="flex items-start gap-3 mb-6"
+            className="flex items-start gap-3"
           >
             {/* AI Mascot Avatar */}
-            <div className="flex-shrink-0 h-14 w-14 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg">
-              <Brain className="h-7 w-7 text-primary-foreground" />
+            <div className="flex-shrink-0 h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg">
+              <Brain className="h-8 w-8 text-primary-foreground" />
             </div>
             
             {/* Speech bubble */}
-            <div className="flex-1 relative">
-              <div className="bg-primary/10 rounded-2xl rounded-tl-sm p-4 border border-primary/20">
+            <div className="flex-1 relative pt-1">
+              <div className="bg-white dark:bg-card rounded-2xl rounded-tl-sm p-4 shadow-sm border border-primary/10">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="font-semibold text-base">小悦</span>
                   <Badge variant="secondary" className="text-xs">AI助理</Badge>
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <p className="text-sm text-foreground leading-relaxed">
                   嗨～我是小悦！让我告诉你为什么大家都爱悦聚吧~
                 </p>
               </div>
@@ -425,7 +427,7 @@ export default function LoginPage() {
                 transition={{ delay: index * 0.1 }}
                 viewport={{ once: true }}
               >
-                <Card className="h-full hover-elevate transition-all">
+                <Card className="h-full hover-elevate transition-all bg-white dark:bg-card">
                   <CardContent className="p-4 text-center">
                     <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center text-white mx-auto mb-3`}>
                       <feature.icon className="h-6 w-6" />
