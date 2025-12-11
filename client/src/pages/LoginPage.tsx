@@ -11,7 +11,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { 
-  Users, Brain, Gift, Smile, Sparkles, Star, Heart, 
+  Users, Brain, Gift, Sparkles, Star, Heart, 
   Shield, Quote, MapPin, CheckCircle2, ArrowRight,
   Flower2, Target, Sun, Play, Volume2, VolumeX
 } from "lucide-react";
@@ -96,26 +96,34 @@ const FAQ_ITEMS = [
 const FEATURES = [
   {
     icon: Users,
-    title: "4-6人精品小局",
-    subtitle: "神秘饭局 · 深度社交 · 小而美的聚会",
+    number: "4-6",
+    unit: "人",
+    title: "精品小局",
+    subtitle: "刚刚好的社交人数",
     color: "from-purple-500 to-purple-600",
   },
   {
     icon: Brain,
-    title: "AI智能匹配",
-    subtitle: "8维画像 · 精准连接 · 志趣相投",
+    number: "6",
+    unit: "维",
+    title: "AI画像匹配",
+    subtitle: "多维度精准连接",
     color: "from-blue-500 to-blue-600",
   },
   {
     icon: Gift,
-    title: "神秘盲盒体验",
-    subtitle: "翻卡解锁 · 惊喜相遇 · 每次都是新冒险",
+    number: "",
+    unit: "",
+    title: "盲盒惊喜",
+    subtitle: "翻卡解锁神秘饭友",
     color: "from-pink-500 to-pink-600",
   },
   {
-    icon: Smile,
-    title: "包开心有趣",
-    subtitle: "轻松氛围 · 愉悦体验 · 笑声不断",
+    icon: MapPin,
+    number: "",
+    unit: "",
+    title: "港深双城",
+    subtitle: "跨境社交新体验",
     color: "from-orange-500 to-orange-600",
   },
 ];
@@ -417,7 +425,7 @@ export default function LoginPage() {
             </div>
           </motion.div>
 
-          {/* Features Grid */}
+          {/* Features Grid - Option A: Big icons + key numbers */}
           <div className="grid grid-cols-2 gap-3">
             {FEATURES.map((feature, index) => (
               <motion.div
@@ -429,11 +437,27 @@ export default function LoginPage() {
               >
                 <Card className="h-full hover-elevate transition-all bg-white dark:bg-card">
                   <CardContent className="p-4 text-center">
-                    <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center text-white mx-auto mb-3`}>
-                      <feature.icon className="h-6 w-6" />
+                    {/* Icon with optional number overlay */}
+                    <div className="relative mx-auto mb-3 w-fit">
+                      <div className={`h-14 w-14 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center text-white shadow-md`}>
+                        {feature.number ? (
+                          <div className="flex items-baseline">
+                            <span className="text-xl font-bold">{feature.number}</span>
+                            <span className="text-xs ml-0.5">{feature.unit}</span>
+                          </div>
+                        ) : (
+                          <feature.icon className="h-7 w-7" />
+                        )}
+                      </div>
+                      {/* Small icon badge for numbered items */}
+                      {feature.number && (
+                        <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-white dark:bg-card border-2 border-primary/20 flex items-center justify-center shadow-sm">
+                          <feature.icon className="h-3 w-3 text-primary" />
+                        </div>
+                      )}
                     </div>
-                    <h3 className="font-semibold text-sm mb-1">{feature.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
+                    <h3 className="font-semibold text-sm mb-0.5">{feature.title}</h3>
+                    <p className="text-xs text-muted-foreground">
                       {feature.subtitle}
                     </p>
                   </CardContent>
