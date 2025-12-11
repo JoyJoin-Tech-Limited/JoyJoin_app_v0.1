@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,7 @@ import {
 import { 
   Users, Brain, Gift, Smile, Sparkles, Star, Heart, 
   Shield, Quote, MapPin, CheckCircle2, ArrowRight,
-  Flower2, Target, Sun
+  Flower2, Target, Sun, Play, Volume2, VolumeX
 } from "lucide-react";
 import joyJoinLogo from "@assets/JoyJoinapp_logo_chi_Fuludouti_1765444760154.png";
 import { SiWechat } from "react-icons/si";
@@ -153,6 +153,8 @@ export default function LoginPage() {
   const [verificationCode, setVerificationCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [isVideoMuted, setIsVideoMuted] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const detectedCode = detectDefaultAreaCode();
@@ -338,13 +340,64 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* Section 2: Promotion Banner Carousel */}
+      {/* Section 2: Promo Video */}
+      <section className="py-8 px-6" data-testid="section-promo-video">
+        <div className="max-w-lg mx-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="relative rounded-2xl overflow-hidden shadow-xl bg-muted aspect-video"
+          >
+            {/* Video placeholder - replace src with actual video file when ready */}
+            {/* To add your video: upload .mp4 file to attached_assets and import it */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+              <div className="h-16 w-16 rounded-full bg-primary/90 flex items-center justify-center mb-4 shadow-lg">
+                <Play className="h-8 w-8 text-primary-foreground ml-1" />
+              </div>
+              <p className="text-muted-foreground text-sm">宣传视频即将上线</p>
+              <p className="text-muted-foreground/60 text-xs mt-1">30秒精彩预览</p>
+            </div>
+            
+            {/* Uncomment below when video is ready:
+            <video
+              ref={videoRef}
+              className="w-full h-full object-cover"
+              autoPlay
+              loop
+              muted={isVideoMuted}
+              playsInline
+              poster="/video-poster.jpg"
+            >
+              <source src={promoVideo} type="video/mp4" />
+              您的浏览器不支持视频播放
+            </video>
+            
+            <Button
+              size="icon"
+              variant="secondary"
+              className="absolute bottom-3 right-3 h-8 w-8 rounded-full bg-black/50 hover:bg-black/70"
+              onClick={() => setIsVideoMuted(!isVideoMuted)}
+              data-testid="button-video-mute"
+            >
+              {isVideoMuted ? (
+                <VolumeX className="h-4 w-4 text-white" />
+              ) : (
+                <Volume2 className="h-4 w-4 text-white" />
+              )}
+            </Button>
+            */}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Section 3: Promotion Banner Carousel */}
       <PromotionBannerCarousel 
         placement="landing" 
-        className="px-4 -mt-4"
+        className="px-4"
       />
 
-      {/* Section 3: Features */}
+      {/* Section 4: Features */}
       <section className="py-12 px-6" data-testid="section-features">
         <div className="max-w-lg mx-auto space-y-4">
           <motion.div
