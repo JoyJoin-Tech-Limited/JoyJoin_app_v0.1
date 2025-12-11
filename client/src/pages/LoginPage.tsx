@@ -348,14 +348,19 @@ export default function LoginPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="flex justify-center mb-6">
+            <motion.div 
+              className="flex justify-center mb-6"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring", stiffness: 200, damping: 15, duration: 0.6 }}
+            >
               <img 
                 src={joyJoinLogo} 
                 alt="悦聚 JoyJoin Logo" 
-                className="h-28 w-auto drop-shadow-lg"
+                className="h-36 w-auto drop-shadow-xl"
                 data-testid="img-logo"
               />
-            </div>
+            </motion.div>
             
             <h1 className="text-4xl font-display font-bold text-white drop-shadow-lg" data-testid="text-brand-name">
               悦聚·JoyJoin
