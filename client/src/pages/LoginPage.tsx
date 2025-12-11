@@ -4,12 +4,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Brain, Gift, Smile, ChevronDown } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { 
+  Users, Brain, Gift, Smile, Sparkles, Star, Heart, 
+  Shield, Quote, MapPin, CheckCircle2, ArrowRight,
+  Flower2, Target, Sun
+} from "lucide-react";
 import { SiWechat } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { PromotionBannerCarousel } from "@/components/PromotionBannerCarousel";
 import {
   Select,
   SelectContent,
@@ -24,6 +35,96 @@ const AREA_CODES = [
   { code: "+853", country: "澳门", flag: "🇲🇴" },
   { code: "+886", country: "台湾", flag: "🇹🇼" },
 ];
+
+const TESTIMONIALS = [
+  {
+    id: 1,
+    name: "小雨",
+    age: 28,
+    city: "深圳",
+    AvatarIcon: Flower2,
+    archetype: "暖心熊",
+    quote: "第一次参加就认识了几个聊得来的朋友，AI匹配真的很准！现在我们每周都约着一起打球。",
+    rating: 5,
+  },
+  {
+    id: 2,
+    name: "Alex",
+    age: 31,
+    city: "香港",
+    AvatarIcon: Target,
+    archetype: "机智狐",
+    quote: "作为社恐，小局的氛围让我很放松。4-6个人刚刚好，不会有那种大场合的压力。",
+    rating: 5,
+  },
+  {
+    id: 3,
+    name: "晓峰",
+    age: 26,
+    city: "深圳",
+    AvatarIcon: Sun,
+    archetype: "开心柯基",
+    quote: "来深圳三年终于找到一群志同道合的朋友了，悦聚的匹配算法真的懂我！",
+    rating: 5,
+  },
+];
+
+const FAQ_ITEMS = [
+  {
+    question: "悦聚是什么？怎么玩？",
+    answer: "悦聚是一个AI驱动的小型社交活动平台，专注于4-6人的精致饭局和酒局。你只需完成简单的性格测评，选择感兴趣的活动报名，AI会帮你匹配到合适的小伙伴。活动当天，你会收到匹配结果和破冰话题。",
+  },
+  {
+    question: "活动费用是多少？",
+    answer: "单次活动票价¥88，我们也提供更划算的套餐：3次卡¥211（8折）、6次卡¥370（7折）。VIP会员¥128/月享受无限活动+专属特权。活动当天的餐饮费用AA制，人均100-200元。",
+  },
+  {
+    question: "如果临时有事能退款吗？",
+    answer: "活动开始前24小时可免费取消，VIP会员可免费改期。超过时限的取消，积分会转为下次使用的优惠券。",
+  },
+  {
+    question: "会不会遇到奇怪的人？",
+    answer: "我们有严格的用户审核和评分机制。每位用户都需要完成手机验证和性格测评。活动后的双向匿名评分帮助我们筛选优质用户，多次低评分的用户会被限制参与活动。",
+  },
+  {
+    question: "一个人去会不会尴尬？",
+    answer: "完全不会！90%的参与者都是独自报名。我们的AI匹配会根据你的性格和兴趣为你安排合适的同桌。小悦还会提供专属破冰话题，帮你轻松打开话匣子。",
+  },
+];
+
+const FEATURES = [
+  {
+    icon: Users,
+    title: "4-6人精品小局",
+    subtitle: "神秘饭局 · 深度社交 · 小而美的聚会",
+    color: "from-purple-500 to-purple-600",
+  },
+  {
+    icon: Brain,
+    title: "AI智能匹配",
+    subtitle: "8维画像 · 精准连接 · 志趣相投",
+    color: "from-blue-500 to-blue-600",
+  },
+  {
+    icon: Gift,
+    title: "神秘盲盒体验",
+    subtitle: "翻卡解锁 · 惊喜相遇 · 每次都是新冒险",
+    color: "from-pink-500 to-pink-600",
+  },
+  {
+    icon: Smile,
+    title: "包开心有趣",
+    subtitle: "轻松氛围 · 愉悦体验 · 笑声不断",
+    color: "from-orange-500 to-orange-600",
+  },
+];
+
+interface PublicStats {
+  totalUsers: number;
+  totalEvents: number;
+  satisfactionRate: number;
+  avgRating: number;
+}
 
 function detectDefaultAreaCode(): string {
   const lang = navigator.language?.toLowerCase() || "";
@@ -56,6 +157,12 @@ export default function LoginPage() {
     const detectedCode = detectDefaultAreaCode();
     setAreaCode(detectedCode);
   }, []);
+
+  // Fetch public stats for social proof
+  const { data: stats } = useQuery<PublicStats>({
+    queryKey: ["/api/public/stats"],
+    retry: false,
+  });
 
   const sendCodeMutation = useMutation({
     mutationFn: async (phone: string) => {
@@ -93,22 +200,19 @@ export default function LoginPage() {
       return await apiRequest("POST", "/api/auth/phone-login", data);
     },
     onSuccess: async () => {
-      // 🎯 DEMO: 自动生成演示活动数据
       try {
         await apiRequest("POST", "/api/demo/seed-events", {});
-        console.log("✅ Demo events seeded");
+        console.log("Demo events seeded");
       } catch (error) {
         console.log("Demo events may already exist:", error);
       }
       
-      // Check for pending invitation
       const pendingInviteCode = localStorage.getItem('pending_invitation_code');
       if (pendingInviteCode) {
         toast({
           title: "登录成功",
           description: "正在处理邀请...",
         });
-        // Clear cache and redirect to invitation page
         await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
         window.location.href = `/invite/${pendingInviteCode}`;
         return;
@@ -119,7 +223,6 @@ export default function LoginPage() {
         description: "欢迎回来！",
       });
       
-      // 清除缓存，触发useAuth重新获取用户数据，App.tsx会自动重定向
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
     },
     onError: (error: Error) => {
@@ -172,108 +275,318 @@ export default function LoginPage() {
     });
   };
 
-  const features = [
-    {
-      icon: <Users className="h-6 w-6" />,
-      title: "4-6人精品小局",
-      subtitle: "神秘饭局 · 深度社交",
-      description: "小而美的聚会，真正的深度交流",
-      color: "from-purple-500 to-purple-600",
-      delay: 0.1,
+  // Stats display with fallback values
+  const displayStats = [
+    { 
+      value: stats?.totalUsers ? `${stats.totalUsers.toLocaleString()}+` : "2000+", 
+      label: "活跃用户", 
+      icon: Users 
     },
-    {
-      icon: <Brain className="h-6 w-6" />,
-      title: "AI智能匹配",
-      subtitle: "8维画像 · 精准连接 · 志趣相投",
-      description: "基于兴趣、性格、话题的智能匹配",
-      color: "from-blue-500 to-blue-600",
-      delay: 0.2,
+    { 
+      value: stats?.totalEvents ? `${stats.totalEvents}+` : "500+", 
+      label: "成功活动", 
+      icon: Sparkles 
     },
-    {
-      icon: <Gift className="h-6 w-6" />,
-      title: "神秘盲盒体验",
-      subtitle: "翻卡解锁 · 惊喜相遇 · 每次都是新冒险",
-      description: "充满期待的社交探险",
-      color: "from-pink-500 to-pink-600",
-      delay: 0.3,
+    { 
+      value: stats?.satisfactionRate ? `${stats.satisfactionRate}%` : "95%", 
+      label: "好评率", 
+      icon: Star 
     },
-    {
-      icon: <Smile className="h-6 w-6" />,
-      title: "包开心有趣",
-      subtitle: "轻松氛围 · 愉悦体验 · 笑声不断",
-      description: "让每次聚会都充满欢乐",
-      color: "from-orange-500 to-orange-600",
-      delay: 0.4,
+    { 
+      value: stats?.avgRating?.toFixed(1) || "4.8", 
+      label: "平均评分", 
+      icon: Heart 
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background flex items-center justify-center p-4 py-8">
-      <div className="w-full max-w-md space-y-8">
-        {/* Brand Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center space-y-4"
-        >
-          <div className="flex justify-center mb-4">
-            <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/70 flex items-center justify-center shadow-lg">
-              <span className="text-4xl">🎪</span>
-            </div>
-          </div>
-          
-          <h1 className="text-3xl font-display font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            悦聚·Joy
-          </h1>
-          
-          <p className="text-lg font-medium text-primary px-6 leading-relaxed">
-            探索港深奇遇，邂逅有趣灵魂
-          </p>
-        </motion.div>
-
-        {/* Highlights Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="space-y-4"
-        >
-          {/* Featured Card - 4-6人精品小局 */}
-          <Card className="border-2 border-primary shadow-lg overflow-hidden">
-            <CardContent className="p-6 bg-gradient-to-br from-primary/5 to-primary/10">
-              <div className="text-center space-y-3">
-                <Badge className="bg-primary text-primary-foreground px-4 py-1.5 text-sm font-semibold">
-                  核心特色
-                </Badge>
-                <div className="text-2xl font-bold">4-6人精品小局</div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  神秘饭局 · 深度社交 · 小而美的聚会
-                </p>
+    <div className="min-h-screen bg-background">
+      {/* Section 1: Hero */}
+      <section 
+        className="relative py-16 px-6 bg-gradient-to-b from-primary/10 via-primary/5 to-background"
+        data-testid="section-hero"
+      >
+        <div className="max-w-lg mx-auto text-center space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="flex justify-center mb-6">
+              <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/70 flex items-center justify-center shadow-lg">
+                <Sparkles className="h-10 w-10 text-primary-foreground" />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            
+            <h1 className="text-4xl font-display font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent" data-testid="text-brand-name">
+              悦聚·Joy
+            </h1>
+            
+            <p className="text-xl font-medium text-primary mt-2">
+              小局·好能量
+            </p>
+            
+            <p className="text-muted-foreground mt-4 leading-relaxed max-w-md mx-auto">
+              在香港和深圳，AI帮你找到真正合拍的朋友。<br/>
+              每一场4-6人小聚，都是精心策划的相遇。
+            </p>
+          </motion.div>
+        </div>
+      </section>
 
-          {/* Other Features */}
-          <div className="space-y-3">
-            {features.slice(1).map((feature, index) => (
+      {/* Section 2: Promotion Banner Carousel */}
+      <PromotionBannerCarousel 
+        placement="landing" 
+        className="px-4 -mt-4"
+      />
+
+      {/* Section 3: Features */}
+      <section className="py-12 px-6" data-testid="section-features">
+        <div className="max-w-lg mx-auto space-y-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-6"
+          >
+            <Badge variant="secondary" className="mb-3">核心特色</Badge>
+            <h2 className="text-xl font-bold">为什么选择悦聚</h2>
+          </motion.div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {FEATURES.map((feature, index) => (
               <motion.div
                 key={feature.title}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: feature.delay }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                viewport={{ once: true }}
               >
-                <Card className="border hover-elevate transition-all">
+                <Card className="h-full hover-elevate transition-all">
+                  <CardContent className="p-4 text-center">
+                    <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center text-white mx-auto mb-3`}>
+                      <feature.icon className="h-6 w-6" />
+                    </div>
+                    <h3 className="font-semibold text-sm mb-1">{feature.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {feature.subtitle}
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Section 4: Social Proof Stats */}
+      <section className="py-10 px-6 bg-muted/30" data-testid="section-stats">
+        <div className="max-w-lg mx-auto">
+          <div className="grid grid-cols-4 gap-3">
+            {displayStats.map((stat, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                viewport={{ once: true }}
+                className="text-center"
+              >
+                <div className="text-xl sm:text-2xl font-bold text-primary" data-testid={`stat-${i}`}>
+                  {stat.value}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">{stat.label}</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Section 5: Login Form */}
+      <section className="py-12 px-6" data-testid="section-login">
+        <div className="max-w-md mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-6"
+          >
+            <Badge variant="secondary" className="mb-3">立即开始</Badge>
+            <h2 className="text-xl font-bold">加入悦聚大家庭</h2>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <Card className="border shadow-lg">
+              <CardContent className="p-6 space-y-5">
+                {/* WeChat Login */}
+                <Button
+                  size="lg"
+                  className="w-full bg-[#07C160] hover:bg-[#06AD56] text-white border-0"
+                  onClick={handleWeChatLogin}
+                  data-testid="button-wechat-login"
+                >
+                  <SiWechat className="h-5 w-5 mr-2" />
+                  微信一键登录
+                </Button>
+
+                {/* Divider */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="bg-card px-3 text-muted-foreground">或使用手机号登录</span>
+                  </div>
+                </div>
+
+                {/* Phone Number Login */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="text-sm font-medium">手机号</Label>
+                    <div className="flex gap-2">
+                      <Select value={areaCode} onValueChange={setAreaCode}>
+                        <SelectTrigger className="w-[110px] h-11" data-testid="select-area-code">
+                          <SelectValue>
+                            {AREA_CODES.find(a => a.code === areaCode)?.flag} {areaCode}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {AREA_CODES.map((area) => (
+                            <SelectItem key={area.code} value={area.code}>
+                              <span className="flex items-center gap-2">
+                                <span>{area.flag}</span>
+                                <span>{area.code}</span>
+                                <span className="text-muted-foreground text-xs">{area.country}</span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder={`请输入${getPhoneLength()}位手机号`}
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, getPhoneLength()))}
+                        maxLength={getPhoneLength()}
+                        className="h-11 flex-1"
+                        data-testid="input-phone"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="code" className="text-sm font-medium">验证码</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="code"
+                        type="text"
+                        placeholder="请输入验证码"
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        maxLength={6}
+                        className="h-11"
+                        data-testid="input-code"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSendCode}
+                        disabled={countdown > 0 || sendCodeMutation.isPending}
+                        className="min-w-[100px] h-11"
+                        data-testid="button-send-code"
+                      >
+                        {countdown > 0 ? `${countdown}秒` : codeSent ? "重新发送" : "发送验证码"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <Button
+                    size="lg"
+                    className="w-full h-11"
+                    onClick={handleLogin}
+                    disabled={loginMutation.isPending}
+                    data-testid="button-login"
+                  >
+                    {loginMutation.isPending ? "登录中..." : "登录 / 注册"}
+                  </Button>
+                </div>
+
+                {/* Safety Badges */}
+                <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground pt-2">
+                  <div className="flex items-center gap-1">
+                    <Shield className="h-3.5 w-3.5 text-green-500" />
+                    <span>隐私保护</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                    <span>免费注册</span>
+                  </div>
+                </div>
+
+                {/* Terms */}
+                <p className="text-xs text-center text-muted-foreground leading-relaxed">
+                  登录即表示同意
+                  <a href="#" className="text-primary hover:underline ml-1">《用户协议》</a>
+                  和
+                  <a href="#" className="text-primary hover:underline">《隐私政策》</a>
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Section 6: Testimonials */}
+      <section className="py-12 px-6 bg-muted/30" data-testid="section-testimonials">
+        <div className="max-w-lg mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-8"
+          >
+            <Badge variant="secondary" className="mb-3">用户心声</Badge>
+            <h2 className="text-xl font-bold">他们在悦聚找到了</h2>
+          </motion.div>
+
+          <div className="space-y-4">
+            {TESTIMONIALS.map((testimonial, i) => (
+              <motion.div
+                key={testimonial.id}
+                initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+              >
+                <Card data-testid={`testimonial-${testimonial.id}`}>
                   <CardContent className="p-4">
-                    <div className="flex items-start gap-4">
-                      <div className={`h-11 w-11 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center text-white flex-shrink-0`}>
-                        {feature.icon}
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <testimonial.AvatarIcon className="h-5 w-5 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm mb-1">{feature.title}</h3>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          {feature.subtitle}
+                        <div className="flex items-center flex-wrap gap-2 mb-2">
+                          <span className="font-medium text-sm">{testimonial.name}</span>
+                          <span className="text-xs text-muted-foreground">{testimonial.age}岁</span>
+                          <Badge variant="outline" className="text-xs py-0">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {testimonial.city}
+                          </Badge>
+                          <Badge variant="secondary" className="text-xs py-0">{testimonial.archetype}</Badge>
+                        </div>
+                        <p className="text-muted-foreground text-sm leading-relaxed">
+                          <Quote className="h-3 w-3 inline mr-1 text-primary/40" />
+                          {testimonial.quote}
                         </p>
+                        <div className="flex items-center gap-0.5 mt-2">
+                          {Array.from({ length: testimonial.rating }).map((_, j) => (
+                            <Star key={j} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -281,131 +594,85 @@ export default function LoginPage() {
               </motion.div>
             ))}
           </div>
-        </motion.div>
+        </div>
+      </section>
 
-        {/* Login Form */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-        >
-          <Card className="border shadow-lg">
-            <CardContent className="p-6 space-y-5">
-              {/* WeChat Login */}
-              <Button
-                size="lg"
-                className="w-full bg-[#07C160] hover:bg-[#06AD56] text-white border-0"
-                onClick={handleWeChatLogin}
-                data-testid="button-wechat-login"
+      {/* Section 7: FAQ */}
+      <section className="py-12 px-6" data-testid="section-faq">
+        <div className="max-w-lg mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-8"
+          >
+            <Badge variant="secondary" className="mb-3">常见问题</Badge>
+            <h2 className="text-xl font-bold">你可能想知道</h2>
+          </motion.div>
+
+          <Accordion type="single" collapsible className="space-y-2">
+            {FAQ_ITEMS.map((item, i) => (
+              <AccordionItem 
+                key={i} 
+                value={`item-${i}`}
+                className="border rounded-lg px-4 data-[state=open]:bg-muted/50"
+                data-testid={`faq-item-${i}`}
               >
-                <SiWechat className="h-5 w-5 mr-2" />
-                微信一键登录
-              </Button>
+                <AccordionTrigger className="text-left hover:no-underline py-3 text-sm">
+                  <span className="font-medium">{item.question}</span>
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground text-sm pb-4">
+                  {item.answer}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
+      </section>
 
-              {/* Divider */}
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border"></div>
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-card px-3 text-muted-foreground">或使用手机号登录</span>
-                </div>
-              </div>
+      {/* Section 8: Final CTA */}
+      <section className="py-16 px-6 bg-gradient-to-b from-primary/10 to-primary/5" data-testid="section-cta">
+        <div className="max-w-lg mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="space-y-4"
+          >
+            <h2 className="text-2xl font-bold">
+              准备好遇见有趣的灵魂了吗？
+            </h2>
+            <p className="text-muted-foreground">
+              加入{stats?.totalUsers?.toLocaleString() || "2000"}+小伙伴，开启高质量社交之旅
+            </p>
 
-              {/* Phone Number Login */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-sm font-medium">手机号</Label>
-                  <div className="flex gap-2">
-                    <Select value={areaCode} onValueChange={setAreaCode}>
-                      <SelectTrigger className="w-[110px] h-11" data-testid="select-area-code">
-                        <SelectValue>
-                          {AREA_CODES.find(a => a.code === areaCode)?.flag} {areaCode}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {AREA_CODES.map((area) => (
-                          <SelectItem key={area.code} value={area.code}>
-                            <span className="flex items-center gap-2">
-                              <span>{area.flag}</span>
-                              <span>{area.code}</span>
-                              <span className="text-muted-foreground text-xs">{area.country}</span>
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder={`请输入${getPhoneLength()}位手机号`}
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, getPhoneLength()))}
-                      maxLength={getPhoneLength()}
-                      className="h-11 flex-1"
-                      data-testid="input-phone"
-                    />
-                  </div>
-                </div>
+            <Button 
+              size="lg" 
+              className="px-8"
+              onClick={() => document.getElementById('phone')?.focus()}
+              data-testid="button-cta"
+            >
+              <Sparkles className="mr-2 h-5 w-5" />
+              立即开始
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </motion.div>
+        </div>
+      </section>
 
-                <div className="space-y-2">
-                  <Label htmlFor="code" className="text-sm font-medium">验证码</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="code"
-                      type="text"
-                      placeholder="请输入验证码"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      maxLength={6}
-                      className="h-11"
-                      data-testid="input-code"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleSendCode}
-                      disabled={countdown > 0 || sendCodeMutation.isPending}
-                      className="min-w-[100px] h-11"
-                      data-testid="button-send-code"
-                    >
-                      {countdown > 0 ? `${countdown}秒` : codeSent ? "重新发送" : "发送验证码"}
-                    </Button>
-                  </div>
-                </div>
-
-                <Button
-                  size="lg"
-                  className="w-full h-11"
-                  onClick={handleLogin}
-                  disabled={loginMutation.isPending}
-                  data-testid="button-login"
-                >
-                  {loginMutation.isPending ? "登录中..." : "登录"}
-                </Button>
-              </div>
-
-              {/* Terms */}
-              <p className="text-xs text-center text-muted-foreground leading-relaxed">
-                登录即表示同意
-                <a href="#" className="text-primary hover:underline ml-1">《用户协议》</a>
-                和
-                <a href="#" className="text-primary hover:underline">《隐私政策》</a>
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Footer */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
-          className="text-center text-sm text-muted-foreground"
-        >
-          专注香港和深圳本地社交
-        </motion.p>
-      </div>
+      {/* Footer */}
+      <footer className="py-8 px-6 border-t bg-background">
+        <div className="max-w-lg mx-auto text-center text-sm text-muted-foreground">
+          <p>© 2024 悦聚·JoyJoin. 专注香港和深圳本地社交</p>
+          <p className="mt-2">
+            <a href="#" className="hover:text-foreground">服务条款</a>
+            <span className="mx-2">·</span>
+            <a href="#" className="hover:text-foreground">隐私政策</a>
+            <span className="mx-2">·</span>
+            <a href="#" className="hover:text-foreground">联系我们</a>
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

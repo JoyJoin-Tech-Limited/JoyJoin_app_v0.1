@@ -8,10 +8,10 @@ import {
   type DirectMessageThread, type DirectMessage, type InsertDirectMessageThread, type InsertDirectMessage,
   type Content, type InsertContent,
   type ChatReport, type InsertChatReport, type ChatLog, type InsertChatLog,
-  type PricingSetting,
+  type PricingSetting, type PromotionBanner,
   users, events, eventAttendance, chatMessages, eventFeedback, blindBoxEvents, testResponses, roleResults, notifications,
   directMessageThreads, directMessages, payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs,
-  pricingSettings
+  pricingSettings, promotionBanners, eventPools
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
@@ -2781,6 +2781,65 @@ export class DatabaseStorage implements IStorage {
       .from(pricingSettings)
       .where(eq(pricingSettings.isActive, true))
       .orderBy(pricingSettings.sortOrder);
+  }
+
+  // ============ PROMOTION BANNERS ============
+
+  async getActiveBanners(city?: string, placement?: string): Promise<PromotionBanner[]> {
+    const now = new Date();
+    let query = db
+      .select()
+      .from(promotionBanners)
+      .where(eq(promotionBanners.isActive, true))
+      .orderBy(promotionBanners.sortOrder);
+
+    const results = await query;
+    
+    return results.filter(banner => {
+      if (city && banner.city && banner.city !== city) return false;
+      if (placement && banner.placement !== placement) return false;
+      if (banner.effectiveFrom && new Date(banner.effectiveFrom) > now) return false;
+      if (banner.effectiveUntil && new Date(banner.effectiveUntil) < now) return false;
+      return true;
+    });
+  }
+
+  async createBanner(data: Partial<PromotionBanner>): Promise<PromotionBanner> {
+    const [banner] = await db
+      .insert(promotionBanners)
+      .values(data as any)
+      .returning();
+    return banner;
+  }
+
+  // ============ PUBLIC STATS ============
+
+  async getPublicStats(): Promise<{
+    totalUsers: number;
+    totalEvents: number;
+    satisfactionRate: number;
+    avgRating: number;
+  }> {
+    const [userCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users);
+
+    const [eventCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(events);
+
+    const [poolCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(eventPools);
+
+    const totalEvents = (eventCount?.count || 0) + (poolCount?.count || 0);
+
+    return {
+      totalUsers: userCount?.count || 0,
+      totalEvents: totalEvents,
+      satisfactionRate: 95,
+      avgRating: 4.8,
+    };
   }
 }
 

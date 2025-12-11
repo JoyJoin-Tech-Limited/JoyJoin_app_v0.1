@@ -3906,6 +3906,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ PUBLIC STATS ============
+
+  // Public API - Get platform stats for landing page
+  app.get("/api/public/stats", async (req, res) => {
+    try {
+      const stats = await storage.getPublicStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching public stats:", error);
+      res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  // ============ PROMOTION BANNERS ============
+
+  // Public API - Get active banners
+  app.get("/api/banners", async (req, res) => {
+    try {
+      const { city, placement } = req.query;
+      const banners = await storage.getActiveBanners(
+        city as string | undefined,
+        placement as string | undefined
+      );
+      res.json(banners);
+    } catch (error) {
+      console.error("Error fetching banners:", error);
+      res.status(500).json({ message: "Failed to fetch banners" });
+    }
+  });
+
   // ============ PRICING MANAGEMENT ============
 
   // Public API - Get active pricing settings (for payment page)
