@@ -33,9 +33,7 @@ import {
 
 const AREA_CODES = [
   { code: "+86", country: "中国大陆", flag: "🇨🇳" },
-  { code: "+852", country: "香港", flag: "🇭🇰" },
-  { code: "+853", country: "澳门", flag: "🇲🇴" },
-  { code: "+886", country: "台湾", flag: "🇹🇼" },
+  { code: "+852", country: "中国香港", flag: "🇭🇰" },
 ];
 
 const TESTIMONIALS = [
@@ -140,16 +138,8 @@ function detectDefaultAreaCode(): string {
   const lang = navigator.language?.toLowerCase() || "";
   const languages = navigator.languages?.map(l => l.toLowerCase()) || [];
   
-  if (lang.includes("zh-tw") || languages.some(l => l.includes("zh-tw"))) {
-    return "+886";
-  }
-  
   if (lang.includes("zh-hk") || languages.some(l => l.includes("zh-hk"))) {
     return "+852";
-  }
-  
-  if (lang.includes("zh-mo") || languages.some(l => l.includes("zh-mo"))) {
-    return "+853";
   }
   
   return "+86";
