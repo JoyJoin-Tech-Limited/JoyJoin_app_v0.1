@@ -380,51 +380,42 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* Section 2.5: 小悦AI Assistant Mascot */}
-      <section className="py-6 px-6" data-testid="section-xiaoyue-ai">
-        <div className="max-w-lg mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20"
-          >
-            {/* AI Mascot Placeholder - replace with actual image when ready */}
-            <div className="flex-shrink-0 h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg">
-              <Brain className="h-8 w-8 text-primary-foreground" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-base">小悦AI</h3>
-                <Badge variant="secondary" className="text-xs">智能匹配</Badge>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                我是你的专属社交助理，帮你找到最合拍的小伙伴！
-              </p>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Section 3: Promotion Banner Carousel */}
+      {/* Section 2: Promotion Banner Carousel */}
       <PromotionBannerCarousel 
         placement="landing" 
         className="px-4"
       />
 
-      {/* Section 4: Features */}
-      <section className="py-12 px-6" data-testid="section-features">
-        <div className="max-w-lg mx-auto space-y-4">
+      {/* Section 3: 小悦AI introduces Features */}
+      <section className="py-10 px-6" data-testid="section-features">
+        <div className="max-w-lg mx-auto">
+          {/* 小悦AI Header with speech bubble */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-6"
+            className="flex items-start gap-3 mb-6"
           >
-            <Badge variant="secondary" className="mb-3">核心特色</Badge>
-            <h2 className="text-xl font-bold">为什么选择悦聚</h2>
+            {/* AI Mascot Avatar */}
+            <div className="flex-shrink-0 h-14 w-14 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg">
+              <Brain className="h-7 w-7 text-primary-foreground" />
+            </div>
+            
+            {/* Speech bubble */}
+            <div className="flex-1 relative">
+              <div className="bg-primary/10 rounded-2xl rounded-tl-sm p-4 border border-primary/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-semibold text-base">小悦</span>
+                  <Badge variant="secondary" className="text-xs">AI助理</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  嗨～我是小悦！让我告诉你为什么大家都爱悦聚吧~
+                </p>
+              </div>
+            </div>
           </motion.div>
 
+          {/* Features Grid */}
           <div className="grid grid-cols-2 gap-3">
             {FEATURES.map((feature, index) => (
               <motion.div
