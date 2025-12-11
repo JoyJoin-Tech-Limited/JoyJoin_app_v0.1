@@ -304,12 +304,36 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Section 1: Hero */}
+      {/* Section 1: Hero with Video Background */}
       <section 
-        className="relative py-16 px-6 bg-gradient-to-b from-primary/10 via-primary/5 to-background"
+        className="relative min-h-[70vh] flex items-center justify-center overflow-hidden"
         data-testid="section-hero"
       >
-        <div className="max-w-lg mx-auto text-center space-y-6">
+        {/* Video Background Layer */}
+        <div className="absolute inset-0 z-0">
+          {/* Placeholder gradient until video is ready */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10" />
+          
+          {/* Uncomment when video is ready:
+          <video
+            ref={videoRef}
+            className="w-full h-full object-cover"
+            autoPlay
+            loop
+            muted
+            playsInline
+            poster="/video-poster.jpg"
+          >
+            <source src={promoVideo} type="video/mp4" />
+          </video>
+          */}
+          
+          {/* Dark wash overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
+        </div>
+
+        {/* Content Layer */}
+        <div className="relative z-10 max-w-lg mx-auto text-center space-y-6 px-6 py-16">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -319,78 +343,40 @@ export default function LoginPage() {
               <img 
                 src={joyJoinLogo} 
                 alt="悦聚 JoyJoin Logo" 
-                className="h-28 w-auto"
+                className="h-28 w-auto drop-shadow-lg"
                 data-testid="img-logo"
               />
             </div>
             
-            <h1 className="text-4xl font-display font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent" data-testid="text-brand-name">
-              悦聚·Joy
+            <h1 className="text-4xl font-display font-bold text-white drop-shadow-lg" data-testid="text-brand-name">
+              悦聚·JoyJoin
             </h1>
             
-            <p className="text-xl font-medium text-primary mt-2">
+            <p className="text-xl font-medium text-white/90 mt-2 drop-shadow-md">
               小局·好能量
             </p>
             
-            <p className="text-muted-foreground mt-4 leading-relaxed max-w-md mx-auto">
+            <p className="text-white/80 mt-4 leading-relaxed max-w-md mx-auto drop-shadow-sm">
               在香港和深圳，AI帮你找到真正合拍的朋友。<br/>
               每一场4-6人小聚，都是精心策划的相遇。
             </p>
           </motion.div>
-        </div>
-      </section>
 
-      {/* Section 2: Promo Video - Optimized for Mini-Program */}
-      <section className="py-8 px-6" data-testid="section-promo-video">
-        <div className="max-w-lg mx-auto">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="relative rounded-2xl overflow-hidden shadow-xl bg-muted aspect-video"
+          {/* Mute button for video - show when video is active */}
+          {/* Uncomment when video is ready:
+          <button
+            className="absolute bottom-6 right-6 min-h-[44px] min-w-[44px] h-11 w-11 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center active:bg-black/70 transition-colors"
+            onClick={() => setIsVideoMuted(!isVideoMuted)}
+            data-testid="button-video-mute"
+            aria-label={isVideoMuted ? "开启声音" : "静音"}
           >
-            {/* Video placeholder - replace src with actual video file when ready */}
-            {/* To add your video: upload .mp4 file to attached_assets and import it */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-              <button 
-                className="min-h-[56px] min-w-[56px] h-14 w-14 rounded-full bg-primary/90 flex items-center justify-center mb-4 shadow-lg active:scale-95 transition-transform"
-                data-testid="button-video-play"
-                aria-label="播放视频"
-              >
-                <Play className="h-7 w-7 text-primary-foreground ml-1" />
-              </button>
-              <p className="text-muted-foreground text-sm">宣传视频即将上线</p>
-              <p className="text-muted-foreground/60 text-xs mt-1">30秒精彩预览</p>
-            </div>
-            
-            {/* Uncomment below when video is ready:
-            <video
-              ref={videoRef}
-              className="w-full h-full object-cover"
-              autoPlay
-              loop
-              muted={isVideoMuted}
-              playsInline
-              poster="/video-poster.jpg"
-            >
-              <source src={promoVideo} type="video/mp4" />
-              您的浏览器不支持视频播放
-            </video>
-            
-            <button
-              className="absolute bottom-4 right-4 min-h-[44px] min-w-[44px] h-11 w-11 rounded-full bg-black/60 flex items-center justify-center active:bg-black/80 transition-colors"
-              onClick={() => setIsVideoMuted(!isVideoMuted)}
-              data-testid="button-video-mute"
-              aria-label={isVideoMuted ? "开启声音" : "静音"}
-            >
-              {isVideoMuted ? (
-                <VolumeX className="h-5 w-5 text-white" />
-              ) : (
-                <Volume2 className="h-5 w-5 text-white" />
-              )}
-            </button>
-            */}
-          </motion.div>
+            {isVideoMuted ? (
+              <VolumeX className="h-5 w-5 text-white" />
+            ) : (
+              <Volume2 className="h-5 w-5 text-white" />
+            )}
+          </button>
+          */}
         </div>
       </section>
 
