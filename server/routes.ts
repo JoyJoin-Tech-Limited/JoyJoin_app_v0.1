@@ -3086,29 +3086,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .map(([interest]) => interest)
         .slice(0, 5);
 
-      // Map interests to question categories
+      // Map interests to question categories (expanded from 21 to 55+ interests)
       const interestToCategoryMap: Record<string, string[]> = {
+        // 旅行与户外 (travel)
         "旅行": ["travel"],
-        "户外": ["travel"],
-        "摄影": ["creativity", "travel"],
+        "户外": ["travel", "passions"],
+        "露营": ["travel", "passions"],
+        "徒步": ["travel", "passions"],
+        "滑雪": ["travel", "passions"],
+        "潜水": ["travel", "passions"],
+        "冲浪": ["travel", "passions"],
+        "攀岩": ["travel", "passions"],
+        "骑行": ["travel", "passions"],
+        "自驾": ["travel"],
+        
+        // 美食与生活 (dining, city_life)
         "美食": ["dining"],
         "烹饪": ["dining"],
         "咖啡": ["dining", "city_life"],
+        "烘焙": ["dining", "creativity"],
+        "调酒": ["dining", "city_life"],
+        "品酒": ["dining", "city_life"],
+        "茶道": ["dining", "personal"],
+        "探店": ["dining", "city_life"],
+        
+        // 艺术与创意 (creativity)
+        "摄影": ["creativity", "travel"],
         "电影": ["creativity"],
         "音乐": ["creativity"],
         "阅读": ["creativity", "personal"],
         "艺术": ["creativity"],
+        "时尚": ["creativity"],
+        "设计": ["creativity"],
+        "绘画": ["creativity"],
+        "手工": ["creativity"],
+        "写作": ["creativity", "personal"],
+        "追剧": ["creativity", "lighthearted"],
+        "综艺": ["lighthearted"],
+        "动漫": ["creativity", "passions"],
+        "播客": ["creativity", "innovation"],
+        
+        // 科技与创新 (innovation)
         "科技": ["innovation"],
         "创业": ["innovation", "personal"],
-        "投资": ["innovation"],
+        "投资": ["innovation", "personal"],
+        "数字营销": ["innovation"],
+        "自媒体": ["innovation", "creativity"],
+        "AI": ["innovation"],
+        "编程": ["innovation"],
+        "产品": ["innovation"],
+        "金融": ["innovation", "personal"],
+        
+        // 运动与健康 (passions)
         "健身": ["passions"],
         "瑜伽": ["passions", "personal"],
         "运动": ["passions"],
-        "游戏": ["passions"],
-        "桌游": ["passions"],
+        "游戏": ["passions", "lighthearted"],
+        "桌游": ["passions", "lighthearted"],
+        "电竞": ["passions"],
+        "跑步": ["passions"],
+        "篮球": ["passions"],
+        "足球": ["passions"],
+        "网球": ["passions"],
+        "高尔夫": ["passions", "city_life"],
+        "舞蹈": ["passions", "creativity"],
+        "冥想": ["passions", "personal"],
+        
+        // 生活方式 (lighthearted, personal)
         "宠物": ["lighthearted"],
-        "时尚": ["creativity"],
-        "设计": ["creativity"],
+        "园艺": ["lighthearted", "personal"],
+        "钓鱼": ["lighthearted", "passions"],
+        "花艺": ["creativity", "lighthearted"],
+        "育儿": ["personal"],
+        "占星": ["lighthearted"],
+        "塔罗": ["lighthearted"],
+        
+        // 知识与思考 (personal, values)
+        "心理学": ["personal", "values"],
+        "哲学": ["values", "personal"],
+        "历史": ["personal", "creativity"],
+        "政治": ["values"],
+        "教育": ["personal", "values"],
+        "法律": ["innovation", "personal"],
+        "医学": ["innovation", "personal"],
       };
 
       // Determine which categories to prioritize based on common interests
@@ -3134,66 +3194,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
         values: "deep",
       };
 
-      // All available categories for full coverage
+      // All available categories for full coverage - shuffled for fairness
       const allCategories = Object.keys(icebreakerQuestions);
       
-      // Build category order: prioritized first, then fill with defaults
-      let categoryOrder: string[];
-      if (prioritizedCategories.length > 0) {
-        // Include prioritized categories + ensure variety
-        categoryOrder = ["lighthearted", ...new Set(prioritizedCategories), "passions", "personal", "travel", "creativity"];
-      } else {
-        // No match data or interests - use all categories for variety
-        categoryOrder = ["lighthearted", "dining", "passions", "travel", "creativity", "city_life", "innovation", "personal"];
-      }
-      const uniqueCategories = [...new Set(categoryOrder)];
-
-      // Select questions from categories - target 8-10 topics
+      // Build balanced category selection with weighted distribution
+      // Goal: Ensure all 9 categories get fair representation, not just lighthearted
+      const TARGET_TOPICS = 8;
       const curatedTopics: { question: string; category: string; difficulty: DifficultyLevel }[] = [];
       const usedQuestions = new Set<string>();
-      const TARGET_TOPICS = 8;
+      const categoryUsageCount: Record<string, number> = {};
+      
+      // Initialize category usage tracking
+      for (const cat of allCategories) {
+        categoryUsageCount[cat] = 0;
+      }
 
-      // First pass: get 1 question from each category to ensure variety
-      for (const category of uniqueCategories) {
+      // Define balanced category pools for different difficulty levels
+      const easyCategories = ["lighthearted", "dining", "city_life"];
+      const mediumCategories = ["passions", "travel", "creativity", "innovation"];
+      const deepCategories = ["personal", "values"];
+      
+      // Target distribution: 2 easy, 4 medium, 2 deep = 8 topics
+      const targetDistribution = [
+        { pool: easyCategories, count: 2 },
+        { pool: mediumCategories, count: 4 },
+        { pool: deepCategories, count: 2 },
+      ];
+
+      // Helper function to pick a question from a category
+      const pickFromCategory = (category: string): boolean => {
         const questions = icebreakerQuestions[category as keyof typeof icebreakerQuestions];
-        if (questions && questions.length > 0) {
-          const shuffled = [...questions].sort(() => Math.random() - 0.5);
-          const categoryInfo = categoryLabels[category] || { name: "话题", color: "gray" };
-          
-          for (const q of shuffled) {
-            if (!usedQuestions.has(q)) {
-              usedQuestions.add(q);
-              curatedTopics.push({
-                question: q,
-                category: categoryInfo.name,
-                difficulty: categoryDifficulty[category] || "medium",
-              });
-              break;
-            }
+        if (!questions || questions.length === 0) return false;
+        
+        const shuffled = [...questions].sort(() => Math.random() - 0.5);
+        const categoryInfo = categoryLabels[category] || { name: "话题", color: "gray" };
+        
+        for (const q of shuffled) {
+          if (!usedQuestions.has(q)) {
+            usedQuestions.add(q);
+            curatedTopics.push({
+              question: q,
+              category: categoryInfo.name,
+              difficulty: categoryDifficulty[category] || "medium",
+            });
+            categoryUsageCount[category]++;
+            return true;
+          }
+        }
+        return false;
+      };
+
+      // First: If we have prioritized categories from common interests, use them first
+      if (prioritizedCategories.length > 0) {
+        const uniquePrioritized = [...new Set(prioritizedCategories)];
+        // Pick up to 3 topics from prioritized categories
+        let prioritizedCount = 0;
+        for (const category of uniquePrioritized) {
+          if (prioritizedCount >= 3) break;
+          if (pickFromCategory(category)) {
+            prioritizedCount++;
           }
         }
       }
 
-      // Second pass: add more questions until we reach target
-      for (const category of allCategories) {
-        if (curatedTopics.length >= TARGET_TOPICS) break;
+      // Second: Fill remaining slots with balanced distribution
+      for (const { pool, count } of targetDistribution) {
+        // Shuffle the pool for randomness
+        const shuffledPool = [...pool].sort(() => Math.random() - 0.5);
+        let picked = 0;
         
-        const questions = icebreakerQuestions[category as keyof typeof icebreakerQuestions];
-        if (questions && questions.length > 0) {
-          const shuffled = [...questions].sort(() => Math.random() - 0.5);
-          const categoryInfo = categoryLabels[category] || { name: "话题", color: "gray" };
+        // Count how many we already have from this pool
+        for (const cat of pool) {
+          picked += categoryUsageCount[cat];
+        }
+        
+        // Pick remaining needed from this pool
+        for (const category of shuffledPool) {
+          if (picked >= count) break;
+          if (curatedTopics.length >= TARGET_TOPICS) break;
           
-          for (const q of shuffled) {
-            if (!usedQuestions.has(q) && curatedTopics.length < TARGET_TOPICS) {
-              usedQuestions.add(q);
-              curatedTopics.push({
-                question: q,
-                category: categoryInfo.name,
-                difficulty: categoryDifficulty[category] || "medium",
-              });
-            }
-            if (curatedTopics.length >= TARGET_TOPICS) break;
+          // Avoid over-selecting from any single category
+          if (categoryUsageCount[category] >= 2) continue;
+          
+          if (pickFromCategory(category)) {
+            picked++;
           }
+        }
+      }
+
+      // Third: If still under target, fill from any category (shuffled for fairness)
+      if (curatedTopics.length < TARGET_TOPICS) {
+        const shuffledAll = [...allCategories].sort(() => Math.random() - 0.5);
+        for (const category of shuffledAll) {
+          if (curatedTopics.length >= TARGET_TOPICS) break;
+          // Max 2 per category to ensure diversity
+          if (categoryUsageCount[category] >= 2) continue;
+          pickFromCategory(category);
         }
       }
 
