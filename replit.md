@@ -10,6 +10,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Curated Icebreaker Topics API (Dec 12, 2025):**
+  - Implemented `/api/icebreakers/curated/:eventId` endpoint for personalized conversation topics
+  - Returns 8+ topics across 9 categories sorted by difficulty (easy/medium/deep)
+  - Categories: lighthearted, dining, city_life, passions, travel, creativity, innovation, personal, values
+  - Maps user interests to prioritized categories when match data exists
+  - Always returns topics with graceful fallback to balanced generic selection
+
 - **小悦 Mascot for Blind Box Guide (Dec 12, 2025):**
   - Updated BlindBoxInfoSheet to show 小悦 as the guide explaining blind box mode
   - Added chat-bubble style introduction with avatar placeholder (XIAOYUE_AVATAR_PLACEHOLDER)
