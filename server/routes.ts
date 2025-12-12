@@ -3051,7 +3051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get the blind box event with match data
-      const event = await storage.getBlindBoxEvent(eventId);
+      const event = await storage.getBlindBoxEventById(eventId, userId);
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
