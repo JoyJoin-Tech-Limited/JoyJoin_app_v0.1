@@ -3,8 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { X, ChevronUp, Sparkles, MessageCircle, Heart, Lightbulb } from "lucide-react";
-import { motion } from "framer-motion";
+import { ChevronLeft, ChevronUp, Sparkles, MessageCircle, Heart, Lightbulb } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -120,7 +119,7 @@ export default function IcebreakerCardsSheet({
     loop: true,
     align: "center",
     skipSnaps: false,
-    duration: 30,
+    duration: 25,
     dragFree: false,
   });
   
@@ -205,33 +204,6 @@ export default function IcebreakerCardsSheet({
       >
         <div className="relative h-full overflow-hidden">
           <div className={`absolute inset-0 bg-gradient-to-t ${sceneConfig.particles} pointer-events-none`} />
-          {!reducedMotion && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {[...Array(isDimEnvironment ? 3 : 6)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className={`absolute w-32 h-32 rounded-full blur-2xl ${
-                    isDimEnvironment ? "bg-white/3" : "bg-white/5"
-                  }`}
-                  animate={{
-                    x: [0, 30, 0],
-                    y: [0, -20, 0],
-                    scale: [1, 1.1, 1],
-                  }}
-                  transition={{
-                    duration: 4 + i,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: i * 0.5,
-                  }}
-                  style={{
-                    left: `${10 + i * 15}%`,
-                    top: `${20 + (i % 3) * 25}%`,
-                  }}
-                />
-              ))}
-            </div>
-          )}
 
           <div className="relative z-10 flex flex-col h-full p-4">
             <SheetHeader className="flex-shrink-0">
@@ -253,15 +225,6 @@ export default function IcebreakerCardsSheet({
                     </p>
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-white/80 hover:text-white hover:bg-white/10"
-                  onClick={() => onOpenChange(false)}
-                  data-testid="button-close-icebreaker"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
               </div>
             </SheetHeader>
 
