@@ -8,6 +8,13 @@ JoyJoin (悦聚·Joy) is a social networking platform designed to connect indivi
 
 ### December 12, 2025 - Registration UX Simplification
 
+**Work Mode Options Expanded (4 → 6):**
+- Added "transitioning" (职业过渡期): 求职中、休整、职业转型
+- Added "caregiver_retired" (家庭照护/退休): 全职家长、照顾家人、已退休
+- Updated "student" label to "学生/实习" to cover interns
+- Work mode selector now always visible (can switch anytime, no need to reset)
+- Selected work mode highlighted with purple border/background
+
 **Field-of-Study Removed from Registration:**
 - Removed manual fieldOfStudy input section entirely from RegistrationPage
 - Made fieldOfStudy optional in schema (defaults to undefined)
@@ -20,7 +27,7 @@ JoyJoin (悦聚·Joy) is a social networking platform designed to connect indivi
 - Removed unused showWorkModeStep state and onFieldOfStudySuggestion callback
 - Simplified component architecture while maintaining all functionality
 
-**Files Modified:** RegistrationPage.tsx, OccupationSelector.tsx, shared/schema.ts
+**Files Modified:** RegistrationPage.tsx, OccupationSelector.tsx, shared/schema.ts, shared/constants.ts, shared/occupations.ts
 
 ---
 

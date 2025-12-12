@@ -16,7 +16,7 @@ export const SENIORITY_OPTIONS = ["实习生", "初级", "中级", "高级", "�
 export type Seniority = typeof SENIORITY_OPTIONS[number];
 
 // Work mode options (new standardized occupation system)
-export const WORK_MODE_OPTIONS = ["founder", "self_employed", "employed", "student"] as const;
+export const WORK_MODE_OPTIONS = ["founder", "self_employed", "employed", "student", "transitioning", "caregiver_retired"] as const;
 export type WorkMode = typeof WORK_MODE_OPTIONS[number];
 
 // Work mode display labels (Chinese)
@@ -24,7 +24,9 @@ export const WORK_MODE_LABELS: Record<WorkMode, string> = {
   founder: "创始人/合伙人",
   self_employed: "自由职业",
   employed: "在职员工",
-  student: "学生",
+  student: "学生/实习",
+  transitioning: "职业过渡期",
+  caregiver_retired: "家庭照护/退休",
 };
 
 // Work mode descriptions (Chinese)
@@ -32,7 +34,9 @@ export const WORK_MODE_DESCRIPTIONS: Record<WorkMode, string> = {
   founder: "创业中，自己当老板",
   self_employed: "独立工作，灵活接活",
   employed: "在公司/机构工作",
-  student: "在读或Gap中",
+  student: "在读、实习或Gap中",
+  transitioning: "求职中、休整、职业转型",
+  caregiver_retired: "全职家长、照顾家人、已退休",
 };
 
 // Relationship status options
