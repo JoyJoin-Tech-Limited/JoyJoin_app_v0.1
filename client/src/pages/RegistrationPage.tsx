@@ -165,8 +165,12 @@ export default function RegistrationPage() {
   const [selectedCity, setSelectedCity] = useState<string>("");
   const availableCities = selectedProvince ? getCitiesByProvince(selectedProvince) : [];
 
-  // 年份倒序：从2000年开始往前，更符合25-35岁用户的使用习惯
-  const years = Array.from({ length: 41 }, (_, i) => 2000 - i);
+  // 年份倒序：从当前年份-18岁开始往前到1960年，支持00后用户
+  const currentYear = new Date().getFullYear();
+  const minAge = 18;
+  const maxYear = currentYear - minAge; // 例如2025年时，maxYear=2007
+  const minYear = 1960;
+  const years = Array.from({ length: maxYear - minYear + 1 }, (_, i) => maxYear - i);
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
   const getDaysInMonth = (year: number, month: number) => new Date(year, month, 0).getDate();
   const days = birthYear && birthMonth 
