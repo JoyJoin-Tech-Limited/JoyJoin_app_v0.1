@@ -12,8 +12,12 @@ import {
   getRelationshipDisplay,
   getChildrenDisplay,
   getIntentDisplay,
+  getUserPrimaryInterests,
+  getUserTopicAvoidances,
+  getUserTopicsHappy,
 } from "@/lib/userFieldMappings";
 import { getOccupationDisplayLabel, getIndustryDisplayLabel, WORK_MODE_TO_LABEL, type WorkMode } from "@shared/occupations";
+import { getInterestLabel, getTopicLabel } from "@/data/interestsTopicsData";
 
 export default function EditProfilePage() {
   const [, setLocation] = useLocation();
@@ -95,7 +99,7 @@ export default function EditProfilePage() {
       fields: [
         { label: "默认活动意图", value: user.intent ? getIntentDisplay(user.intent) : null },
       ],
-      hint: "💡 提示：这是默认设置，加入活动时可以调整",
+      hint: "提示：这是默认设置，加入活动时可以调整",
     },
     {
       id: "interests",
@@ -103,9 +107,18 @@ export default function EditProfilePage() {
       icon: <Star className="h-4 w-4" />,
       path: "/profile/edit/interests",
       fields: [
-        { label: "兴趣爱好", value: user.interestsTop?.join(", ") },
-        { label: "喜欢聊的话题", value: user.topicsHappy?.join(", ") },
-        { label: "避免的话题", value: user.topicsAvoid?.join(", ") },
+        { 
+          label: "主要兴趣", 
+          value: getUserPrimaryInterests(user).length > 0 
+            ? getUserPrimaryInterests(user).map(id => getInterestLabel(id)).join(", ") 
+            : null 
+        },
+        { 
+          label: "话题排斥", 
+          value: getUserTopicAvoidances(user).length > 0 
+            ? getUserTopicAvoidances(user).map(id => getTopicLabel(id)).join(", ") 
+            : null 
+        },
       ],
     },
   ];
