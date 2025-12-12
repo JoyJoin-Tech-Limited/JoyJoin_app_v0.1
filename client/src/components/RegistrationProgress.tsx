@@ -18,16 +18,17 @@ export default function RegistrationProgress({
   ];
 
   const stageIndex = stages.findIndex((s) => s.id === currentStage);
-  const overallProgress = ((stageIndex + 1) / stages.length) * 100;
-
+  
   // 计算当前阶段的进度百分比
   let stageProgress = 0;
-  if (currentStage === "basic" && totalSteps > 0) {
+  if (totalSteps > 0) {
     stageProgress = (currentStep / totalSteps) * 100;
-  } else if (currentStage === "interests" && totalSteps > 0) {
-    stageProgress = (currentStep / totalSteps) * 100;
-  } else if (currentStage === "personality") {
-    stageProgress = 100;
+  }
+
+  // 计算整体进度：已完成阶段 + 当前阶段的进度
+  let overallProgress = (stageIndex / stages.length) * 100;
+  if (totalSteps > 0) {
+    overallProgress += ((currentStep / totalSteps) * 100) / stages.length;
   }
 
   return (
