@@ -10,6 +10,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Personalized Topic Recommend Reasons (Dec 12, 2025):**
+  - Added `recommendReason` field to each curated icebreaker topic
+  - Smart reason generation based on: common interests (e.g., "你们3人都爱旅行"), archetype composition (活力组合/温馨组合), difficulty level
+  - Priority logic: common interests → archetype energy mix → difficulty/category fallback
+  - Frontend displays reason with Sparkles icon below each topic question
+  - Enhances user understanding of why 小悦 selected each topic for their group
+
 - **Enhanced Icebreaker Topic Selection Algorithm (Dec 12, 2025):**
   - Expanded interest-to-category mapping from 21 to 55+ interests (travel, dining, creativity, innovation, etc.)
   - Implemented balanced category distribution: 2 easy + 4 medium + 2 deep topics per session
