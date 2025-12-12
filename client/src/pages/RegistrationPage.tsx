@@ -19,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, ChevronDown, Check, Shield, Sparkles, User, Briefcase, Heart, MapPin, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Check, Shield, Sparkles, User, Briefcase, Heart, MapPin, Loader2, GraduationCap, MessageCircle, Target, Users, PawPrint } from "lucide-react";
 import { getCurrentLocation } from "@/lib/gpsUtils";
 import { intentOptions } from "@/lib/userFieldMappings";
 import { Separator } from "@/components/ui/separator";
@@ -28,8 +28,12 @@ import RegistrationProgress from "@/components/RegistrationProgress";
 import { chinaRegions, getCitiesByProvince, formatHometown } from "@/data/chinaRegions";
 import CelebrationConfetti from "@/components/CelebrationConfetti";
 import { OccupationSelector } from "@/components/OccupationSelector";
-import { getOccupationById } from "@shared/occupations";
+import { getOccupationById, getIndustryDisplayLabel } from "@shared/occupations";
 import type { WorkMode } from "@shared/constants";
+import { calculateAge, getAgeRange } from "@shared/utils";
+import { WORK_MODE_LABELS } from "@shared/constants";
+import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const stepNames = ["基本信息", "背景信息", "偏好设置"];
 
@@ -351,27 +355,11 @@ export default function RegistrationPage() {
 
   const progress = (step / totalSteps) * 100;
 
-  const languageOptions = [
-    "普通话",
-    "粤语",
-    "英语",
-    "四川话",
-    "东北话",
-    "河南话",
-    "山东话",
-    "湖北话",
-    "湖南话",
-    "闽南话",
-    "上海话",
-    "客家话",
-    "潮汕话",
-    "温州话",
-    "日语",
-    "韩语",
-    "法语",
-    "德语",
-    "西班牙语",
-  ];
+  // 语言分组
+  const mainLanguages = ["普通话", "粤语", "英语"];
+  const dialects = ["四川话", "东北话", "河南话", "山东话", "湖北话", "湖南话", "闽南话", "上海话", "客家话", "潮汕话", "温州话"];
+  const foreignLanguages = ["日语", "韩语", "法语", "德语", "西班牙语"];
+  const [showDialects, setShowDialects] = useState(false);
 
   const overseasRegionOptions = [
     "美国",
@@ -1074,8 +1062,10 @@ export default function RegistrationPage() {
                     <p className="text-xs text-muted-foreground mb-2">
                       选择你可以舒适交流的语言
                     </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {languageOptions.map((lang) => {
+                    
+                    {/* 主要语言 */}
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      {mainLanguages.map((lang) => {
                         const isSelected = (form.watch("languagesComfort") || []).includes(lang);
                         return renderGridOptionButton(
                           lang,
@@ -1086,6 +1076,55 @@ export default function RegistrationPage() {
                         );
                       })}
                     </div>
+                    
+                    {/* 方言折叠区 */}
+                    <Collapsible open={showDialects} onOpenChange={setShowDialects}>
+                      <CollapsibleTrigger asChild>
+                        <button
+                          type="button"
+                          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
+                          data-testid="button-toggle-dialects"
+                        >
+                          <ChevronDown className={`h-4 w-4 transition-transform ${showDialects ? "rotate-180" : ""}`} />
+                          我会方言
+                          {(form.watch("languagesComfort") || []).filter(l => dialects.includes(l)).length > 0 && (
+                            <Badge variant="secondary" className="ml-1 text-xs">
+                              {(form.watch("languagesComfort") || []).filter(l => dialects.includes(l)).length}
+                            </Badge>
+                          )}
+                        </button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="grid grid-cols-3 gap-2 mb-3 pl-2 border-l-2 border-primary/20">
+                          {dialects.map((lang) => {
+                            const isSelected = (form.watch("languagesComfort") || []).includes(lang);
+                            return renderGridOptionButton(
+                              lang,
+                              lang,
+                              isSelected,
+                              () => toggleLanguage(lang),
+                              `button-lang-${lang}`
+                            );
+                          })}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                    
+                    {/* 外语 */}
+                    <p className="text-xs text-muted-foreground mb-2 mt-3">其他外语</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {foreignLanguages.map((lang) => {
+                        const isSelected = (form.watch("languagesComfort") || []).includes(lang);
+                        return renderGridOptionButton(
+                          lang,
+                          lang,
+                          isSelected,
+                          () => toggleLanguage(lang),
+                          `button-lang-${lang}`
+                        );
+                      })}
+                    </div>
+                    
                     {form.formState.errors.languagesComfort && (
                       <p className="text-sm text-orange-600 dark:text-orange-400 mt-2">
                         请至少选择一种语言
@@ -1095,51 +1134,150 @@ export default function RegistrationPage() {
 
                   <Separator className="my-4" />
 
-                  <div className="rounded-lg border p-4 bg-muted/30" data-testid="profile-preview-card">
-                    <h3 className="font-medium mb-3 text-sm">个人资料预览</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">昵称</span>
-                        <span>{form.watch("displayName") || "-"}</span>
+                  <div className="rounded-xl border-2 border-primary/20 p-4 bg-gradient-to-br from-primary/5 to-background" data-testid="profile-preview-card">
+                    {/* 标题 */}
+                    <div className="flex items-center gap-2 mb-4">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <h3 className="font-medium text-sm text-primary">你的社交画像</h3>
+                    </div>
+                    
+                    {/* 头像+基本信息 */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold text-lg">
+                        {(form.watch("displayName") || "?").charAt(0).toUpperCase()}
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">性别</span>
-                        <span>{form.watch("gender") === "女性" ? "女性" : form.watch("gender") === "男性" ? "男性" : "-"}</span>
+                      <div>
+                        <div className="font-medium">{form.watch("displayName") || "昵称"}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {form.watch("birthdate") ? (
+                            <>
+                              {calculateAge(form.watch("birthdate"))}岁
+                              {form.watch("ageVisibility") !== "hide_all" && (
+                                <span className="text-xs ml-1">(对外: {getAgeRange(calculateAge(form.watch("birthdate")))})</span>
+                              )}
+                            </>
+                          ) : "-"}
+                          {" · "}
+                          {form.watch("gender") || "-"}
+                          {" · "}
+                          {form.watch("relationshipStatus") || "-"}
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">关系状态</span>
-                        <span>{form.watch("relationshipStatus") || "-"}</span>
+                    </div>
+                    
+                    {/* 匹配维度 */}
+                    <div className="space-y-3">
+                      <div className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                        <span className="w-8 h-px bg-border"></span>
+                        匹配维度
+                        <span className="flex-1 h-px bg-border"></span>
                       </div>
-                      {form.watch("educationLevel") && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">学历</span>
-                          <span>{form.watch("educationLevel")}</span>
+                      
+                      <div className="space-y-1.5 text-sm">
+                        {/* 学历 */}
+                        {form.watch("educationLevel") && (
+                          <div className="flex items-center gap-2">
+                            <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                            <span>
+                              {form.watch("educationLevel")}
+                              {form.watch("studyLocale") === "海外" && " · 海归"}
+                              {form.watch("studyLocale") === "都有" && " · 有海外经历"}
+                            </span>
+                          </div>
+                        )}
+                        
+                        {/* 行业 + 职业 */}
+                        {(form.watch("occupationId") || form.watch("industry")) && (
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="h-4 w-4 text-muted-foreground" />
+                            <span>
+                              {getIndustryDisplayLabel(form.watch("occupationId")) || form.watch("industry") || "-"}
+                              {form.watch("occupationId") && getOccupationById(form.watch("occupationId")) && (
+                                <> · {getOccupationById(form.watch("occupationId"))?.displayName}</>
+                              )}
+                              {form.watch("workMode") && WORK_MODE_LABELS[form.watch("workMode") as WorkMode] && (
+                                <> · {WORK_MODE_LABELS[form.watch("workMode") as WorkMode]}</>
+                              )}
+                            </span>
+                          </div>
+                        )}
+                        
+                        {/* 地域轨迹 */}
+                        {(form.watch("hometownRegionCity") || form.watch("currentCity")) && (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <span>
+                              {form.watch("hometownRegionCity")}
+                              {form.watch("hometownRegionCity") && form.watch("currentCity") && " → "}
+                              {form.watch("currentCity")}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* 生活方式 */}
+                    {(form.watch("hasPets") !== undefined || form.watch("hasSiblings") !== undefined) && (
+                      <div className="space-y-3 mt-4">
+                        <div className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                          <span className="w-8 h-px bg-border"></span>
+                          生活方式
+                          <span className="flex-1 h-px bg-border"></span>
                         </div>
-                      )}
-                      {form.watch("fieldOfStudy") && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">专业</span>
-                          <span>{form.watch("fieldOfStudy")}</span>
+                        
+                        <div className="flex flex-wrap gap-2 text-sm">
+                          {form.watch("hasPets") !== undefined && (
+                            <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                              <PawPrint className="h-3 w-3" />
+                              {form.watch("hasPets") ? "有毛孩子" : "无毛孩子"}
+                            </Badge>
+                          )}
+                          {form.watch("hasSiblings") !== undefined && (
+                            <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              {form.watch("hasSiblings") ? "有兄弟姐妹" : "独生子女"}
+                            </Badge>
+                          )}
                         </div>
-                      )}
-                      {form.watch("industry") && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">行业</span>
-                          <span>{form.watch("industry")}</span>
+                      </div>
+                    )}
+                    
+                    {/* 社交偏好 */}
+                    {((form.watch("languagesComfort") || []).length > 0 || (form.watch("intent") || []).length > 0) && (
+                      <div className="space-y-3 mt-4">
+                        <div className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                          <span className="w-8 h-px bg-border"></span>
+                          社交偏好
+                          <span className="flex-1 h-px bg-border"></span>
                         </div>
-                      )}
-                      {form.watch("currentCity") && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">现居</span>
-                          <span>{form.watch("currentCity")}</span>
+                        
+                        <div className="space-y-1.5 text-sm">
+                          {(form.watch("languagesComfort") || []).length > 0 && (
+                            <div className="flex items-center gap-2">
+                              <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                              <span>{(form.watch("languagesComfort") || []).join(" · ")}</span>
+                            </div>
+                          )}
+                          {(form.watch("intent") || []).length > 0 && (
+                            <div className="flex items-center gap-2">
+                              <Target className="h-4 w-4 text-muted-foreground" />
+                              <span>
+                                {(form.watch("intent") || []).map(i => 
+                                  intentOptions.find(o => o.value === i)?.label || i
+                                ).join(" · ")}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {(form.watch("languagesComfort") || []).length > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">语言</span>
-                          <span>{(form.watch("languagesComfort") || []).join(", ")}</span>
-                        </div>
-                      )}
+                      </div>
+                    )}
+                    
+                    {/* 引导提示 */}
+                    <div className="mt-4 pt-3 border-t border-primary/10">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" />
+                        完成兴趣填写后，解锁更精准的话题匹配
+                      </p>
                     </div>
                   </div>
                 </div>
