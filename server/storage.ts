@@ -450,6 +450,7 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({
         hasCompletedPersonalityTest: true,
+        hasCompletedProfileSetup: true, // displayName already collected during registration
         updatedAt: new Date(),
       })
       .where(eq(users.id, id));

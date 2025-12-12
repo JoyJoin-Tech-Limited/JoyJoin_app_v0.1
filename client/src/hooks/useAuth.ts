@@ -19,6 +19,7 @@ export function useAuth() {
     needsRegistration: user && !user.hasCompletedRegistration,
     needsInterestsTopics: user && user.hasCompletedRegistration && !user.hasCompletedInterestsTopics,
     needsPersonalityTest: user && user.hasCompletedRegistration && user.hasCompletedInterestsTopics && !user.hasCompletedPersonalityTest,
-    needsProfileSetup: user && user.hasCompletedPersonalityTest && !user.hasCompletedProfileSetup,
+    // ProfileSetup no longer needed - displayName collected during registration
+    needsProfileSetup: false,
   };
 }
