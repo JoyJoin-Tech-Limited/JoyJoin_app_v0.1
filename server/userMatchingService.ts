@@ -66,33 +66,54 @@ function calculatePersonalityScore(user1: Partial<User>, user2: Partial<User>): 
 }
 
 /**
- * 获取用户的有效兴趣列表（优先使用新字段primaryInterests，兼容旧字段interestsTop）
+ * 获取用户的有效兴趣列表（合并新旧字段，去重）
+ * 新字段primaryInterests优先显示，但保留旧字段interestsTop的数据
  */
 function getUserInterests(user: Partial<User>): string[] {
-  return user.primaryInterests || user.interestsTop || [];
+  const primary = user.primaryInterests || [];
+  const legacy = user.interestsTop || [];
+  // 合并去重，保持primary在前
+  const combined = [...primary, ...legacy.filter(i => !primary.includes(i))];
+  return combined;
 }
 
 /**
- * 获取用户的话题排斥列表（优先使用新字段topicAvoidances，兼容旧字段topicsAvoid）
+ * 获取用户的话题排斥列表（合并新旧字段，去重）
  */
 function getUserTopicAvoidances(user: Partial<User>): string[] {
-  return user.topicAvoidances || user.topicsAvoid || [];
+  const newAvoid = user.topicAvoidances || [];
+  const legacyAvoid = user.topicsAvoid || [];
+  const combined = [...newAvoid, ...legacyAvoid.filter(i => !newAvoid.includes(i))];
+  return combined;
+}
+
+/**
+ * 获取用户喜欢聊的话题（合并新旧字段）
+ */
+function getUserHappyTopics(user: Partial<User>): string[] {
+  const legacy = user.topicsHappy || [];
+  // 新系统中primaryInterests也代表用户喜欢聊的方向
+  const primary = user.primaryInterests || [];
+  const combined = [...legacy, ...primary.filter(i => !legacy.includes(i))];
+  return combined;
 }
 
 /**
  * 检测话题冲突：user1喜欢聊的话题 vs user2排斥的话题
+ * 使用统一访问器确保覆盖新旧字段
  * 返回冲突话题数量
  */
 function detectTopicConflicts(user1: Partial<User>, user2: Partial<User>): number {
-  const user1TopicsHappy = user1.topicsHappy || [];
+  const user1HappyTopics = getUserHappyTopics(user1);
   const user2Avoidances = getUserTopicAvoidances(user2);
   
-  return user1TopicsHappy.filter(topic => user2Avoidances.includes(topic)).length;
+  return user1HappyTopics.filter(topic => user2Avoidances.includes(topic)).length;
 }
 
 /**
  * 计算两个用户之间的兴趣匹配分数
  * 增强版：支持primaryInterests加权匹配 + 话题排斥惩罚
+ * 分数计算公式重新平衡，避免分数饱和
  */
 function calculateInterestsScore(user1: Partial<User>, user2: Partial<User>): number {
   const interests1 = getUserInterests(user1);
@@ -104,28 +125,29 @@ function calculateInterestsScore(user1: Partial<User>, user2: Partial<User>): nu
   const commonInterests = interests1.filter(i => interests2.includes(i));
   const matchRatio = commonInterests.length / Math.max(interests1.length, interests2.length);
   
-  // 基础分数
-  let score = Math.round(matchRatio * 100 + 30);
+  // 基础分数：20分基础 + 最多50分匹配分 = 20-70分区间
+  let score = Math.round(20 + matchRatio * 50);
   
   // 主要兴趣匹配加分：如果双方的primaryInterests有交集，额外加分
+  // 最多加15分（3个主要兴趣 x 5分）
   const primary1 = user1.primaryInterests || [];
   const primary2 = user2.primaryInterests || [];
   const commonPrimary = primary1.filter(i => primary2.includes(i));
   if (commonPrimary.length > 0) {
-    score += commonPrimary.length * 10; // 每个共同主要兴趣加10分
+    score += Math.min(commonPrimary.length * 5, 15);
   }
   
   // 话题排斥惩罚：双向检测
+  // 最多扣25分，确保惩罚有效果
   const conflictsFromUser1 = detectTopicConflicts(user1, user2);
   const conflictsFromUser2 = detectTopicConflicts(user2, user1);
   const totalConflicts = conflictsFromUser1 + conflictsFromUser2;
   
   if (totalConflicts > 0) {
-    // 每个冲突话题扣10分，最多扣30分
-    score -= Math.min(totalConflicts * 10, 30);
+    score -= Math.min(totalConflicts * 10, 25);
   }
   
-  // 确保分数在有效范围内
+  // 确保分数在有效范围内（0-100）
   return Math.min(100, Math.max(0, score));
 }
 
