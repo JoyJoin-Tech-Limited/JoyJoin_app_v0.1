@@ -59,11 +59,21 @@ export type Pronouns = typeof PRONOUNS_OPTIONS[number];
 export const AGE_VISIBILITY_OPTIONS = ["hide_all", "show_age_range"] as const;
 export type AgeVisibility = typeof AGE_VISIBILITY_OPTIONS[number];
 
-// Age visibility display labels
-export const AGE_VISIBILITY_LABELS: Record<AgeVisibility, string> = {
+// Age visibility display labels (includes legacy value fallbacks)
+export const AGE_VISIBILITY_LABELS: Record<string, string> = {
   hide_all: "完全隐藏",
   show_age_range: "显示年龄段给同桌人",
+  // Legacy values - map to current options
+  show_generation: "显示年龄段给同桌人",
+  show_exact_age: "显示年龄段给同桌人",
 };
+
+// Normalize legacy ageVisibility values to new binary options
+export function normalizeAgeVisibility(value: string | null | undefined): AgeVisibility {
+  if (!value || value === "hide_all") return "hide_all";
+  // All other values (show_age_range, show_generation, show_exact_age) map to show_age_range
+  return "show_age_range";
+}
 
 // Work visibility options
 export const WORK_VISIBILITY_OPTIONS = ["完全隐藏", "仅显示行业"] as const;

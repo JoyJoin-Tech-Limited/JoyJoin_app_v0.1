@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, ChevronDown, Check, Shield, Sparkles, User, Briefcase, Heart, MapPin, Loader2 } from "lucide-react";
@@ -122,7 +123,7 @@ export default function RegistrationPage() {
     defaultValues: {
       displayName: "",
       birthdate: "",
-      ageVisibility: "hide_all",
+      ageVisibility: "show_age_range",
       gender: undefined,
       pronouns: undefined,
       relationshipStatus: undefined,
@@ -626,25 +627,20 @@ export default function RegistrationPage() {
                     )}
                   </div>
 
-                  <div>
-                    <Label>年龄显示设置</Label>
-                    <Select
-                      value={form.watch("ageVisibility")}
-                      onValueChange={(value: any) => form.setValue("ageVisibility", value)}
-                    >
-                      <SelectTrigger data-testid="select-age-visibility">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="hide_all">完全隐藏</SelectItem>
-                        <SelectItem value="show_generation">显示年代（如90后）</SelectItem>
-                        <SelectItem value="show_age_range">显示年龄段（如25-30）</SelectItem>
-                        <SelectItem value="show_exact_age">显示精确年龄</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      控制其他人能看到你的年龄信息
-                    </p>
+                  <div className="flex items-center justify-between py-2">
+                    <div className="space-y-0.5">
+                      <Label>显示年龄段给同桌人</Label>
+                      <p className="text-xs text-muted-foreground">
+                        如"25-30岁"，帮助破冰聊天
+                      </p>
+                    </div>
+                    <Switch
+                      checked={form.watch("ageVisibility") === "show_age_range"}
+                      onCheckedChange={(checked) => 
+                        form.setValue("ageVisibility", checked ? "show_age_range" : "hide_all")
+                      }
+                      data-testid="switch-age-visibility"
+                    />
                   </div>
 
                   <div>

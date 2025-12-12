@@ -51,7 +51,7 @@ export const users = pgTable("users", {
   // Registration fields - Identity
   birthdate: date("birthdate"), // Used to calculate age
   age: integer("age"), // Deprecated - calculated from birthdate
-  ageVisibility: varchar("age_visibility").default("hide_all"), // hide_all, show_exact_age
+  ageVisibility: varchar("age_visibility").default("show_age_range"), // hide_all, show_age_range (legacy: show_generation, show_exact_age)
   gender: varchar("gender"), // 女性, 男性, 不透露
   pronouns: varchar("pronouns"), // 她/She, 他/He, 它们/They, 自定义, 不透露
   
