@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Check, Star, Info, Flame, Sparkles } from "lucide-react";
+import { Check, Star, Info, Flame, Sparkles, Ban } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { motion, AnimatePresence } from "framer-motion";
 import RegistrationProgress from "@/components/RegistrationProgress";
@@ -97,9 +97,8 @@ export default function InterestsTopicsPage() {
   const [showMoreInterests, setShowMoreInterests] = useState(false);
 
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
-  const [favoriteInterest, setFavoriteInterest] = useState<string | null>(null);
-  const [selectedTopicsHappy, setSelectedTopicsHappy] = useState<string[]>([]);
-  const [selectedTopicsAvoid, setSelectedTopicsAvoid] = useState<string[]>([]);
+  const [primaryInterests, setPrimaryInterests] = useState<string[]>([]);
+  const [topicAvoidances, setTopicAvoidances] = useState<string[]>([]);
 
   // Celebration effect when step 1 completes
   useEffect(() => {
@@ -113,9 +112,8 @@ export default function InterestsTopicsPage() {
     resolver: zodResolver(interestsTopicsSchema),
     defaultValues: {
       interestsTop: [],
-      interestFavorite: "",
-      topicsHappy: [],
-      topicsAvoid: [],
+      primaryInterests: [],
+      topicAvoidances: [],
     },
   });
 
@@ -124,8 +122,6 @@ export default function InterestsTopicsPage() {
       return await apiRequest("POST", "/api/user/interests-topics", data);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      
       setShowMajorCelebration(true);
       
       toast({
@@ -133,9 +129,12 @@ export default function InterestsTopicsPage() {
         description: "接下来是趣味性格测试",
       });
       
+      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/auth/user'] });
+      
       setTimeout(() => {
         setLocation("/personality-test");
-      }, 1500);
+      }, 1200);
     },
     onError: (error: Error) => {
       toast({
@@ -147,85 +146,55 @@ export default function InterestsTopicsPage() {
   });
 
   const toggleInterest = (interestId: string) => {
-    setSelectedInterests(prev => {
-      if (prev.includes(interestId)) {
-        // Remove from selected
-        const newSelected = prev.filter(id => id !== interestId);
-        // Also remove from favorite if it was the favorite
-        if (favoriteInterest === interestId) {
-          setFavoriteInterest(null);
-          toast({
-            title: "已取消最爱标记",
-            description: "请重新选择一个最爱的兴趣",
-          });
-        }
-        return newSelected;
-      } else {
-        // Add to selected (max 7)
-        if (prev.length >= 7) {
-          toast({
-            title: "最多选择7个兴趣",
-            variant: "destructive",
-          });
-          return prev;
-        }
-        return [...prev, interestId];
-      }
-    });
-  };
-
-  const setAsFavorite = (interestId: string) => {
     if (selectedInterests.includes(interestId)) {
-      if (favoriteInterest === interestId) {
-        // Un-favoriting - show toast
-        setFavoriteInterest(null);
-        toast({
-          title: "已取消最爱标记",
-          description: "请重新选择一个最爱的兴趣",
-        });
-      } else {
-        // Setting as favorite
-        setFavoriteInterest(interestId);
+      const newSelected = selectedInterests.filter(id => id !== interestId);
+      setSelectedInterests(newSelected);
+      // Also remove from primary if it was primary
+      if (primaryInterests.includes(interestId)) {
+        setPrimaryInterests(primaryInterests.filter(id => id !== interestId));
       }
+    } else {
+      if (selectedInterests.length >= 7) {
+        toast({
+          title: "最多选择7个兴趣",
+          variant: "destructive",
+        });
+        return;
+      }
+      setSelectedInterests([...selectedInterests, interestId]);
     }
   };
 
-  const toggleTopicHappy = (topicId: string) => {
-    setSelectedTopicsHappy(prev => {
-      if (prev.includes(topicId)) {
-        return prev.filter(id => id !== topicId);
-      } else {
-        if (prev.length >= 5) {
-          toast({
-            title: "最多选择5个喜欢的话题",
-            variant: "destructive",
-          });
-          return prev;
-        }
-        // Remove from avoid list if it was there
-        setSelectedTopicsAvoid(avoid => avoid.filter(id => id !== topicId));
-        return [...prev, topicId];
+  const togglePrimaryInterest = (interestId: string) => {
+    if (!selectedInterests.includes(interestId)) return;
+    
+    if (primaryInterests.includes(interestId)) {
+      setPrimaryInterests(primaryInterests.filter(id => id !== interestId));
+    } else {
+      if (primaryInterests.length >= 3) {
+        toast({
+          title: "最多标记3个主要兴趣",
+          variant: "destructive",
+        });
+        return;
       }
-    });
+      setPrimaryInterests([...primaryInterests, interestId]);
+    }
   };
 
-  const toggleTopicAvoid = (topicId: string) => {
-    setSelectedTopicsAvoid(prev => {
-      if (prev.includes(topicId)) {
-        return prev.filter(id => id !== topicId);
-      } else {
-        if (prev.length >= 2) {
-          toast({
-            title: "最多选择2个不想聊的话题",
-            variant: "destructive",
-          });
-          return prev;
-        }
-        // Remove from happy list if it was there
-        setSelectedTopicsHappy(happy => happy.filter(id => id !== topicId));
-        return [...prev, topicId];
+  const toggleTopicAvoidance = (topicId: string) => {
+    if (topicAvoidances.includes(topicId)) {
+      setTopicAvoidances(topicAvoidances.filter(id => id !== topicId));
+    } else {
+      if (topicAvoidances.length >= 4) {
+        toast({
+          title: "最多选择4个",
+          variant: "destructive",
+        });
+        return;
       }
-    });
+      setTopicAvoidances([...topicAvoidances, topicId]);
+    }
   };
 
   const handleNext = () => {
@@ -238,9 +207,9 @@ export default function InterestsTopicsPage() {
         });
         return;
       }
-      if (!favoriteInterest) {
+      if (primaryInterests.length < 1) {
         toast({
-          title: "请点击星标选出你最喜欢的1个兴趣",
+          title: "请点击星标标记1-3个主要兴趣",
           variant: "destructive",
         });
         return;
@@ -248,21 +217,11 @@ export default function InterestsTopicsPage() {
       setShowCelebration(true);
       setTimeout(() => setStep(2), 400);
     } else {
-      // Validate topics step
-      if (selectedTopicsHappy.length < 3) {
-        toast({
-          title: "请至少选择3个喜欢的话题",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Submit the form (favoriteInterest is guaranteed to be set from step 1 validation)
+      // Step 2 - topic avoidances (optional, can skip with empty or "都OK")
       saveMutation.mutate({
         interestsTop: selectedInterests,
-        interestFavorite: favoriteInterest!,
-        topicsHappy: selectedTopicsHappy,
-        topicsAvoid: selectedTopicsAvoid.length > 0 ? selectedTopicsAvoid : undefined,
+        primaryInterests: primaryInterests,
+        topicAvoidances: topicAvoidances.length > 0 ? topicAvoidances : undefined,
       });
     }
   };
@@ -285,7 +244,7 @@ export default function InterestsTopicsPage() {
   const hiddenInterests = INTERESTS_OPTIONS.slice(10);
 
   // Calculate similar users count (simulated for now)
-  const similarUsersCount = Math.floor(150 + selectedInterests.length * 30 + (favoriteInterest ? 50 : 0));
+  const similarUsersCount = Math.floor(150 + selectedInterests.length * 30 + (primaryInterests.length * 50));
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -322,7 +281,7 @@ export default function InterestsTopicsPage() {
               <div className="flex items-start gap-2 bg-primary/5 p-3 rounded-md border border-primary/20">
                 <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                 <p className="text-xs text-muted-foreground">
-                  选择你感兴趣的3-7个，然后点击 <Star className="h-3 w-3 inline text-amber-500" /> 标记你最爱的1个，小悦会优先匹配同频的人。
+                  选择你感兴趣的3-7个，然后点击 <Star className="h-3 w-3 inline text-amber-500" /> 标记1-3个主要兴趣，小悦会优先匹配同频的人。
                   <span className="text-muted-foreground/70">（热度基于平台大数据）</span>
                 </p>
               </div>
@@ -342,14 +301,14 @@ export default function InterestsTopicsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   {visibleInterests.map((interest) => {
                     const isSelected = selectedInterests.includes(interest.id);
-                    const isFavorite = favoriteInterest === interest.id;
+                    const isPrimary = primaryInterests.includes(interest.id);
                     return (
                       <div
                         key={interest.id}
                         className={`
                           relative px-4 py-2.5 rounded-lg border-2 transition-all
                           ${isSelected 
-                            ? isFavorite 
+                            ? isPrimary 
                               ? 'border-amber-500 bg-amber-500/10' 
                               : 'border-primary bg-primary/5' 
                             : 'border-border hover-elevate'
@@ -376,10 +335,10 @@ export default function InterestsTopicsPage() {
                         {isSelected && (
                           <motion.button
                             type="button"
-                            onClick={() => setAsFavorite(interest.id)}
+                            onClick={() => togglePrimaryInterest(interest.id)}
                             data-testid={`button-star-${interest.id}`}
                             className="absolute top-1 right-1 p-1"
-                            animate={!favoriteInterest && !isFavorite ? {
+                            animate={primaryInterests.length === 0 && !isPrimary ? {
                               scale: [1, 1.2, 1],
                               opacity: [0.6, 1, 0.6],
                             } : {}}
@@ -391,7 +350,7 @@ export default function InterestsTopicsPage() {
                           >
                             <Star 
                               className={`h-4 w-4 transition-colors ${
-                                isFavorite 
+                                isPrimary 
                                   ? 'text-amber-500 fill-amber-500' 
                                   : 'text-muted-foreground hover:text-amber-400'
                               }`} 
@@ -427,14 +386,14 @@ export default function InterestsTopicsPage() {
                       <div className="grid grid-cols-2 gap-3 mt-3">
                         {hiddenInterests.map((interest) => {
                           const isSelected = selectedInterests.includes(interest.id);
-                          const isFavorite = favoriteInterest === interest.id;
+                          const isPrimary = primaryInterests.includes(interest.id);
                           return (
                             <div
                               key={interest.id}
                               className={`
                                 relative px-4 py-2.5 rounded-lg border-2 transition-all
                                 ${isSelected 
-                                  ? isFavorite 
+                                  ? isPrimary 
                                     ? 'border-amber-500 bg-amber-500/10' 
                                     : 'border-primary bg-primary/5' 
                                   : 'border-border hover-elevate'
@@ -455,10 +414,10 @@ export default function InterestsTopicsPage() {
                               {isSelected && (
                                 <motion.button
                                   type="button"
-                                  onClick={() => setAsFavorite(interest.id)}
+                                  onClick={() => togglePrimaryInterest(interest.id)}
                                   data-testid={`button-star-${interest.id}`}
                                   className="absolute top-1 right-1 p-1"
-                                  animate={!favoriteInterest && !isFavorite ? {
+                                  animate={primaryInterests.length === 0 && !isPrimary ? {
                                     scale: [1, 1.2, 1],
                                     opacity: [0.6, 1, 0.6],
                                   } : {}}
@@ -470,7 +429,7 @@ export default function InterestsTopicsPage() {
                                 >
                                   <Star 
                                     className={`h-4 w-4 transition-colors ${
-                                      isFavorite 
+                                      isPrimary 
                                         ? 'text-amber-500 fill-amber-500' 
                                         : 'text-muted-foreground hover:text-amber-400'
                                     }`} 
@@ -486,8 +445,8 @@ export default function InterestsTopicsPage() {
                 </AnimatePresence>
               </div>
 
-              {/* Favorite indicator */}
-              {favoriteInterest && (
+              {/* Primary interests indicator */}
+              {primaryInterests.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -495,7 +454,8 @@ export default function InterestsTopicsPage() {
                 >
                   <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
                   <span className="text-sm">
-                    你的最爱：<span className="font-semibold">{getInterestLabel(favoriteInterest)}</span>
+                    主要兴趣（{primaryInterests.length}/3）：
+                    <span className="font-semibold">{primaryInterests.map(id => getInterestLabel(id)).join('、')}</span>
                   </span>
                 </motion.div>
               )}
@@ -513,99 +473,71 @@ export default function InterestsTopicsPage() {
             </div>
           )}
 
-          {/* Step 2: Topics Preferences */}
+          {/* Step 2: Topic Avoidances (排斥法) */}
           {step === 2 && (
             <div className="space-y-6 animate-in fade-in-50 duration-300">
               <div>
-                <h2 className="text-xl font-bold mb-2">聊天话题偏好</h2>
+                <h2 className="text-xl font-bold mb-2">话题雷区</h2>
                 <p className="text-sm text-muted-foreground">
-                  话题 = 你喜欢聊什么（吃饭时）
+                  有些话题不适合在饭桌上聊？告诉小悦，帮你避开尴尬
                 </p>
               </div>
 
               <div className="flex items-start gap-2 bg-primary/5 p-3 rounded-md border border-primary/20">
                 <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                 <p className="text-xs text-muted-foreground">
-                  选择3-5个喜欢聊的话题，小悦会匹配聊得来的人。「不想聊」是可选的，最多2个。
+                  选择最多4个你不想在饭局上聊的话题（可选）。没有特别排斥的话题？直接点「完成」跳过
                 </p>
               </div>
 
-              {/* Topics by group */}
-              {Object.entries(TOPICS_GROUPS).map(([groupKey, group]) => (
-                <div key={groupKey}>
-                  <div className="mb-3">
-                    <h3 className="font-semibold text-base">{group.name}</h3>
-                    <p className="text-xs text-muted-foreground">{group.description}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {group.topics.map((topic) => {
-                      const isHappy = selectedTopicsHappy.includes(topic.id);
-                      const isAvoid = selectedTopicsAvoid.includes(topic.id);
-                      return (
-                        <div
-                          key={topic.id}
-                          className={`
-                            relative px-3 py-2 rounded-lg border transition-all text-sm
-                            ${isHappy 
-                              ? 'border-green-500 bg-green-500/10 text-green-700 dark:text-green-400' 
-                              : isAvoid
-                              ? 'border-red-400 bg-red-400/10 text-red-600 dark:text-red-400'
-                              : 'border-border hover-elevate'
-                            }
-                          `}
-                        >
-                          <div className="flex items-center justify-between gap-1">
-                            <button
-                              type="button"
-                              onClick={() => toggleTopicHappy(topic.id)}
-                              data-testid={`button-topic-happy-${topic.id}`}
-                              className="flex items-center gap-1.5 flex-1 text-left"
-                            >
-                              <span>{topic.mood}</span>
+              {/* Topic avoidance options */}
+              <div className="space-y-4">
+                {Object.entries(TOPICS_GROUPS).map(([groupKey, group]) => (
+                  <div key={groupKey}>
+                    <div className="mb-2">
+                      <h3 className="font-medium text-sm text-muted-foreground">{group.name}</h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {group.topics.map((topic) => {
+                        const isAvoided = topicAvoidances.includes(topic.id);
+                        return (
+                          <button
+                            key={topic.id}
+                            type="button"
+                            onClick={() => toggleTopicAvoidance(topic.id)}
+                            data-testid={`button-topic-avoid-${topic.id}`}
+                            className={`
+                              px-3 py-2.5 rounded-lg border-2 transition-all text-sm text-left
+                              ${isAvoided 
+                                ? 'border-red-400 bg-red-400/10 text-red-600 dark:text-red-400' 
+                                : 'border-border hover-elevate'
+                              }
+                            `}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Ban className={`h-4 w-4 ${isAvoided ? 'text-red-500' : 'text-muted-foreground/50'}`} />
                               <span>{topic.label}</span>
-                              {topic.heat >= 50 && (
-                                <span className="text-xs text-orange-500 flex items-center">
-                                  <Flame className="h-2.5 w-2.5" />
-                                  {topic.heat}%
-                                </span>
-                              )}
-                            </button>
-                            {/* Only show avoid button for sensitive topics or if already selected */}
-                            {(groupKey === 'sensitive' || isAvoid) && !isHappy && (
-                              <button
-                                type="button"
-                                onClick={() => toggleTopicAvoid(topic.id)}
-                                data-testid={`button-topic-avoid-${topic.id}`}
-                                className={`text-xs px-1.5 py-0.5 rounded ${
-                                  isAvoid 
-                                    ? 'bg-red-500 text-white' 
-                                    : 'bg-muted text-muted-foreground hover:bg-red-100 dark:hover:bg-red-900'
-                                }`}
-                              >
-                                {isAvoid ? '已避' : '避'}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {groupKey !== 'sensitive' && <Separator className="my-3" />}
                   </div>
-                  {groupKey !== 'sensitive' && <Separator className="my-4" />}
-                </div>
-              ))}
+                ))}
+              </div>
 
               {/* Selection summary */}
               <div className="space-y-2 pt-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">喜欢聊的话题</span>
-                  <span className={selectedTopicsHappy.length >= 3 ? 'text-green-600' : 'text-muted-foreground'}>
-                    {selectedTopicsHappy.length}/5 {selectedTopicsHappy.length >= 3 && <Check className="h-3 w-3 inline" />}
-                  </span>
-                </div>
-                {selectedTopicsAvoid.length > 0 && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">不想聊的话题</span>
-                    <span className="text-red-500">{selectedTopicsAvoid.length}/2</span>
+                {topicAvoidances.length > 0 ? (
+                  <div className="flex items-center gap-2 text-sm text-red-500">
+                    <Ban className="h-4 w-4" />
+                    <span>已选 {topicAvoidances.length}/4 个不想聊的话题</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="h-4 w-4 text-green-500" />
+                    <span>都OK，没有特别排斥的话题</span>
                   </div>
                 )}
               </div>

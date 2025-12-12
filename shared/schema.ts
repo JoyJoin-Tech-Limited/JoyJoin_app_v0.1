@@ -107,10 +107,12 @@ export const users = pgTable("users", {
   
   // Interests & Topics (Step 2)
   interestsTop: text("interests_top").array(), // 3-7 selected interests
-  interestFavorite: text("interest_favorite"), // Single favorite interest (starred)
+  interestFavorite: text("interest_favorite"), // Deprecated: Single favorite interest - use primaryInterests
+  primaryInterests: text("primary_interests").array(), // 1-3 starred main interests for matching priority
   interestsRankedTop3: text("interests_ranked_top3").array(), // Deprecated: Top 3 ranked interests
-  topicsHappy: text("topics_happy").array(), // Topics user enjoys discussing
-  topicsAvoid: text("topics_avoid").array(), // Topics to avoid (optional, max 2)
+  topicsHappy: text("topics_happy").array(), // Deprecated: Topics user enjoys discussing - moving to simpler model
+  topicsAvoid: text("topics_avoid").array(), // Deprecated: Topics to avoid - use topicAvoidances
+  topicAvoidances: text("topic_avoidances").array(), // 饭局酒局不自在话题: politics, dating_pressure, workplace_gossip, money_finance, or empty for "都OK"
   
   // Personality data (Step 3 - Vibe Vector)
   vibeVector: jsonb("vibe_vector"), // {energy, conversation_style, initiative, novelty, humor} scored 0-1
@@ -750,9 +752,12 @@ export const registerUserSchema = z.object({
 // Interests & Topics schema (Step 2)
 export const interestsTopicsSchema = z.object({
   interestsTop: z.array(z.string()).min(3, "请至少选择3个兴趣").max(7, "最多选择7个兴趣"),
-  interestFavorite: z.string().min(1, "请选择你最喜欢的1个兴趣"),
-  topicsHappy: z.array(z.string()).min(3, "请至少选择3个喜欢的话题").max(5, "最多选择5个话题"),
-  topicsAvoid: z.array(z.string()).max(2, "最多选择2个不想聊的话题").optional(),
+  primaryInterests: z.array(z.string()).min(1, "请至少标记1个主要兴趣").max(3, "最多标记3个主要兴趣"),
+  topicAvoidances: z.array(z.string()).max(4, "最多选择4个").optional(),
+  // Deprecated fields kept for backward compatibility
+  interestFavorite: z.string().optional(),
+  topicsHappy: z.array(z.string()).optional(),
+  topicsAvoid: z.array(z.string()).optional(),
 });
 
 // Test response schema

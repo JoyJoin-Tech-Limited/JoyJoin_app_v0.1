@@ -421,7 +421,10 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({
         interestsTop: data.interestsTop,
-        interestsRankedTop3: data.interestsRankedTop3,
+        primaryInterests: data.primaryInterests,
+        topicAvoidances: data.topicAvoidances,
+        // Backward compatibility: also update deprecated fields
+        interestFavorite: data.primaryInterests?.[0] || data.interestFavorite,
         topicsHappy: data.topicsHappy,
         topicsAvoid: data.topicsAvoid,
         hasCompletedInterestsTopics: true,
