@@ -11,6 +11,7 @@ interface CuratedTopic {
   question: string;
   category: string;
   difficulty: "easy" | "medium" | "deep";
+  recommendReason?: string;
 }
 
 interface CuratedTopicsResponse {
@@ -290,7 +291,16 @@ export default function IcebreakerCardsSheet({
                             {topic.question}
                           </p>
 
-                          <div className={`mt-6 pt-4 border-t ${cardStyles.borderColor}`}>
+                          {topic.recommendReason && (
+                            <div className={`mt-4 flex items-center gap-1.5 ${
+                              isDimEnvironment ? "text-white/70" : "text-muted-foreground"
+                            }`}>
+                              <Sparkles className="h-3 w-3 flex-shrink-0" />
+                              <span className="text-xs">{topic.recommendReason}</span>
+                            </div>
+                          )}
+
+                          <div className={`mt-4 pt-4 border-t ${cardStyles.borderColor}`}>
                             <div className={`flex items-center justify-between text-xs ${cardStyles.mutedColor}`}>
                               <span>{idx + 1} / {totalTopics}</span>
                               <div className="flex items-center gap-1">

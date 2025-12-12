@@ -3171,12 +3171,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "医学": ["innovation", "personal"],
       };
 
+      // Build interest-to-category reverse mapping for smart reason generation
+      const categoryToInterests: Record<string, string[]> = {};
+      for (const [interest, categories] of Object.entries(interestToCategoryMap)) {
+        for (const cat of categories) {
+          if (!categoryToInterests[cat]) categoryToInterests[cat] = [];
+          categoryToInterests[cat].push(interest);
+        }
+      }
+
       // Determine which categories to prioritize based on common interests
       const prioritizedCategories: string[] = [];
+      const commonInterestsByCategory: Record<string, string[]> = {};
+      
       for (const interest of commonInterests) {
         const categories = interestToCategoryMap[interest];
         if (categories) {
           prioritizedCategories.push(...categories);
+          // Track which common interests map to which categories
+          for (const cat of categories) {
+            if (!commonInterestsByCategory[cat]) commonInterestsByCategory[cat] = [];
+            if (!commonInterestsByCategory[cat].includes(interest)) {
+              commonInterestsByCategory[cat].push(interest);
+            }
+          }
         }
       }
 
@@ -3194,15 +3212,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         values: "deep",
       };
 
+      // Category display names in Chinese
+      const categoryDisplayNames: Record<string, string> = {
+        lighthearted: "轻松话题",
+        dining: "美食话题",
+        city_life: "城市生活",
+        passions: "热爱话题",
+        travel: "旅行话题",
+        creativity: "创意话题",
+        innovation: "创新话题",
+        personal: "个人话题",
+        values: "价值话题",
+      };
+
       // All available categories for full coverage - shuffled for fairness
       const allCategories = Object.keys(icebreakerQuestions);
       
       // Build balanced category selection with weighted distribution
       // Goal: Ensure all 9 categories get fair representation, not just lighthearted
       const TARGET_TOPICS = 8;
-      const curatedTopics: { question: string; category: string; difficulty: DifficultyLevel }[] = [];
+      const curatedTopics: { question: string; category: string; difficulty: DifficultyLevel; recommendReason: string }[] = [];
       const usedQuestions = new Set<string>();
       const categoryUsageCount: Record<string, number> = {};
+      
+      // Track which interests matched which categories for smart reason generation
+      const categoryToMatchedInterests: Record<string, string[]> = {};
       
       // Initialize category usage tracking
       for (const cat of allCategories) {
@@ -3221,13 +3255,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { pool: deepCategories, count: 2 },
       ];
 
+      // Generate smart recommend reason based on context
+      const generateRecommendReason = (category: string, difficulty: DifficultyLevel, isPrioritized: boolean): string => {
+        // Priority 1: If this category was selected because of common interests
+        const matchedInterests = commonInterestsByCategory[category];
+        if (matchedInterests && matchedInterests.length > 0) {
+          const interestCount = matchedInterests.length;
+          const peopleWithInterest = Object.entries(interestCounts)
+            .filter(([interest]) => matchedInterests.includes(interest))
+            .reduce((max, [_, count]) => Math.max(max, count), 0);
+          
+          if (peopleWithInterest >= 2) {
+            const interestDisplay = matchedInterests[0];
+            if (peopleWithInterest === attendeeCount) {
+              return `你们${attendeeCount}人都爱${interestDisplay}`;
+            }
+            return `${peopleWithInterest}人都喜欢${interestDisplay}`;
+          }
+          return `契合你们对${matchedInterests[0]}的兴趣`;
+        }
+        
+        // Priority 2: Based on archetype composition
+        const energeticArchetypes = allArchetypes.filter(a => 
+          a?.includes("开心柯基") || a?.includes("太阳鸡") || a?.includes("夸夸豚")
+        );
+        const warmArchetypes = allArchetypes.filter(a => 
+          a?.includes("暖心熊") || a?.includes("淡定海豚")
+        );
+        const thoughtfulArchetypes = allArchetypes.filter(a => 
+          a?.includes("沉思猫头鹰") || a?.includes("稳如龟")
+        );
+        
+        if (difficulty === "easy") {
+          if (energeticArchetypes.length > 0) {
+            return "适合活力组合破冰";
+          }
+          return "轻松开场暖场话题";
+        }
+        
+        if (difficulty === "medium") {
+          if (energeticArchetypes.length >= 2) {
+            return "适合你们的热闹氛围";
+          }
+          if (warmArchetypes.length > 0) {
+            return "温馨交流的好话题";
+          }
+          return "聊起来正好的话题";
+        }
+        
+        if (difficulty === "deep") {
+          if (thoughtfulArchetypes.length > 0) {
+            return "适合深度交流的组合";
+          }
+          if (warmArchetypes.length >= 2) {
+            return "走心聊天的契合话题";
+          }
+          return "加深了解的好机会";
+        }
+        
+        return "小悦为你们精选";
+      };
+
       // Helper function to pick a question from a category
-      const pickFromCategory = (category: string): boolean => {
+      const pickFromCategory = (category: string, isPrioritized: boolean = false): boolean => {
         const questions = icebreakerQuestions[category as keyof typeof icebreakerQuestions];
         if (!questions || questions.length === 0) return false;
         
         const shuffled = [...questions].sort(() => Math.random() - 0.5);
         const categoryInfo = categoryLabels[category] || { name: "话题", color: "gray" };
+        const difficulty = categoryDifficulty[category] || "medium";
         
         for (const q of shuffled) {
           if (!usedQuestions.has(q)) {
@@ -3235,7 +3331,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             curatedTopics.push({
               question: q,
               category: categoryInfo.name,
-              difficulty: categoryDifficulty[category] || "medium",
+              difficulty,
+              recommendReason: generateRecommendReason(category, difficulty, isPrioritized),
             });
             categoryUsageCount[category]++;
             return true;
@@ -3251,7 +3348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let prioritizedCount = 0;
         for (const category of uniquePrioritized) {
           if (prioritizedCount >= 3) break;
-          if (pickFromCategory(category)) {
+          if (pickFromCategory(category, true)) {
             prioritizedCount++;
           }
         }
