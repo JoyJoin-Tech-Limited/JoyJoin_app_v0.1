@@ -26,11 +26,11 @@ export default function JoyJoinLogo({ size = "md", showEnglish = true }: JoyJoin
         className={`${logoSizes[size]} w-auto object-contain`}
       />
       <div className="flex items-center gap-1.5">
-        <span className={`${textSizes[size]} font-bold`} style={{ fontFamily: 'FLJiangdou' }}>悦聚</span>
+        <span className={`${textSizes[size]} font-bold`} style={{ fontFamily: '"ZCOOL KuaiLe", "Noto Sans SC", sans-serif' }}>悦聚</span>
         {showEnglish && (
           <>
             <span className="text-muted-foreground">·</span>
-            <span className={`${textSizes[size]} font-semibold text-muted-foreground`} style={{ fontFamily: 'FLJiangdou' }}>JoyJoin</span>
+            <span className={`${textSizes[size]} font-semibold text-muted-foreground`} style={{ fontFamily: '"ZCOOL KuaiLe", "Outfit", sans-serif' }}>JoyJoin</span>
           </>
         )}
       </div>

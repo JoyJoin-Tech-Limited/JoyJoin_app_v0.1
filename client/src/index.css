@@ -2,14 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 福芦豇豆体 - 品牌标题字体 */
-@font-face {
-  font-family: 'FLJiangdou';
-  src: url('../../../attached_assets/FLjiangdouti-Regular-2_1765451707522.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
+/* 品牌标题字体 - 使用 ZCOOL KuaiLe (圆润可爱风格) */
+/* FLJiangdou 字体文件格式有问题，使用 Google Fonts 替代 */
 
 /* LIGHT MODE */
 :root {
