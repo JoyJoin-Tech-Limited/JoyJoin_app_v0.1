@@ -277,29 +277,22 @@ export default function IcebreakerCardsSheet({
                   <motion.div
                     key={currentIndex}
                     className="relative w-full max-w-sm"
-                    initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 50, scale: 0.95 }}
-                    animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-                    exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -50, scale: 0.95 }}
+                    initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 30 }}
+                    animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                    exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -30 }}
                     transition={reducedMotion 
-                      ? { duration: 0.1 } 
-                      : { type: "tween", duration: 0.2, ease: "easeOut" }
+                      ? { duration: 0.08 } 
+                      : { type: "tween", duration: 0.15, ease: "easeOut" }
                     }
+                    style={{ willChange: "transform, opacity" }}
                   >
-                    {!reducedMotion && (
-                      <>
-                        <div className="absolute -bottom-2 left-4 right-4 h-full rounded-2xl bg-white/10" />
-                        <div className="absolute -bottom-4 left-8 right-8 h-full rounded-2xl bg-white/5" />
-                      </>
-                    )}
-                    
                     <motion.div
-                      className={`relative ${cardStyles.cardBg} backdrop-blur-md rounded-2xl p-6 shadow-lg cursor-grab active:cursor-grabbing ${
+                      className={`relative ${cardStyles.cardBg} backdrop-blur-md rounded-2xl p-6 shadow-md cursor-grab active:cursor-grabbing ${
                         isDimEnvironment ? "ring-1 ring-white/10" : ""
                       }`}
-                      style={reducedMotion ? {} : { y, opacity, scale }}
                       drag={reducedMotion ? false : true}
-                      dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
-                      dragElastic={0.15}
+                      dragConstraints={{ top: 50, bottom: 50, left: 100, right: 100 }}
+                      dragElastic={0.2}
                       onDragEnd={handleDragEnd}
                       whileTap={reducedMotion ? {} : { scale: 0.98 }}
                       data-testid="card-icebreaker-topic"
