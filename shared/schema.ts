@@ -1062,6 +1062,63 @@ export const invitationUses = pgTable("invitation_uses", {
   matchedAt: timestamp("matched_at"), // 匹配成功时间
 });
 
+// ============ 用户推荐系统 - User Referral System ============
+
+// Referral Codes table - 用户专属邀请码（与活动无关）
+export const referralCodes = pgTable("referral_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // 用户关联（每人一个唯一邀请码）
+  userId: varchar("user_id").notNull().references(() => users.id).unique(),
+  
+  // 邀请码（唯一短码）
+  code: varchar("code").notNull().unique(), // e.g., "abc123"
+  
+  // 统计
+  totalClicks: integer("total_clicks").default(0),
+  totalConversions: integer("total_conversions").default(0), // 成功注册人数
+  
+  // 元数据
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Referral Conversions table - 推荐转化记录
+export const referralConversions = pgTable("referral_conversions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // 关联邀请码
+  referralCodeId: varchar("referral_code_id").notNull().references(() => referralCodes.id),
+  
+  // 被邀请人
+  invitedUserId: varchar("invited_user_id").notNull().references(() => users.id),
+  
+  // 奖励状态
+  inviterRewardIssued: boolean("inviter_reward_issued").default(false), // 邀请人是否已获得奖励
+  inviteeRewardIssued: boolean("invitee_reward_issued").default(false), // 被邀请人是否已获得奖励
+  
+  // 元数据
+  convertedAt: timestamp("converted_at").defaultNow(),
+});
+
+// Insert schemas for referral system
+export const insertReferralCodeSchema = createInsertSchema(referralCodes).omit({
+  id: true,
+  createdAt: true,
+  totalClicks: true,
+  totalConversions: true,
+});
+
+export const insertReferralConversionSchema = createInsertSchema(referralConversions).omit({
+  id: true,
+  convertedAt: true,
+});
+
+// Types for referral system
+export type InsertReferralCode = z.infer<typeof insertReferralCodeSchema>;
+export type ReferralCode = typeof referralCodes.$inferSelect;
+export type InsertReferralConversion = z.infer<typeof insertReferralConversionSchema>;
+export type ReferralConversion = typeof referralConversions.$inferSelect;
+
 // Insert schemas for admin tables
 export const insertVenueSchema = createInsertSchema(venues).omit({
   id: true,

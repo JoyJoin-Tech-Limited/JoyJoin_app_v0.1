@@ -13,7 +13,7 @@ import { roleTraits, roleInsights } from "./archetypeConfig";
 import { processTestV2, type AnswerV2 } from "./personalityMatchingV2";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, type User } from "@shared/schema";
 import { db } from "./db";
 import { eq, or, and, desc, inArray, isNotNull, gt, sql } from "drizzle-orm";
 
@@ -3526,6 +3526,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating invitation:", error);
       res.status(500).json({ message: "Failed to create invitation" });
+    }
+  });
+
+  // ============ User Referral System API ============
+
+  // GET /api/referrals/stats - Get user's referral code and stats
+  app.get('/api/referrals/stats', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      // Check if user already has a referral code
+      let [existingCode] = await db
+        .select()
+        .from(referralCodes)
+        .where(eq(referralCodes.userId, userId))
+        .limit(1);
+
+      // If no code exists, create one
+      if (!existingCode) {
+        // Generate unique 6-char code
+        const generateCode = () => {
+          const chars = 'abcdefghjkmnpqrstuvwxyz23456789'; // No confusing chars
+          let code = '';
+          for (let i = 0; i < 6; i++) {
+            code += chars[Math.floor(Math.random() * chars.length)];
+          }
+          return code;
+        };
+
+        let code = generateCode();
+        let attempts = 0;
+        while (attempts < 5) {
+          const [existing] = await db
+            .select({ id: referralCodes.id })
+            .from(referralCodes)
+            .where(eq(referralCodes.code, code))
+            .limit(1);
+          if (!existing) break;
+          code = generateCode();
+          attempts++;
+        }
+
+        [existingCode] = await db.insert(referralCodes).values({
+          userId,
+          code,
+        }).returning();
+      }
+
+      // Count conversions for this user
+      const conversions = await db
+        .select({ id: referralConversions.id })
+        .from(referralConversions)
+        .where(eq(referralConversions.referralCodeId, existingCode.id));
+
+      const successfulInvites = conversions.length;
+
+      // Platform-wide stats (for social proof) - count all conversions
+      const allConversions = await db
+        .select({ id: referralConversions.id })
+        .from(referralConversions);
+
+      const platformTotal = allConversions.length;
+
+      res.json({
+        referralCode: existingCode.code,
+        successfulInvites,
+        platformTotal
+      });
+    } catch (error: any) {
+      console.error("Error fetching referral stats:", error);
+      res.status(500).json({ message: "Failed to fetch referral stats" });
+    }
+  });
+
+  // GET /api/referrals/:code - Get referral info for landing page (public)
+  app.get('/api/referrals/:code', async (req, res) => {
+    try {
+      const { code } = req.params;
+
+      const [referral] = await db
+        .select({
+          id: referralCodes.id,
+          code: referralCodes.code,
+          userId: referralCodes.userId,
+        })
+        .from(referralCodes)
+        .where(eq(referralCodes.code, code))
+        .limit(1);
+
+      if (!referral) {
+        return res.status(404).json({ message: "Referral code not found" });
+      }
+
+      // Get inviter info
+      const [inviter] = await db
+        .select({
+          id: users.id,
+          displayName: users.displayName,
+          firstName: users.firstName,
+        })
+        .from(users)
+        .where(eq(users.id, referral.userId))
+        .limit(1);
+
+      // Increment click count
+      await db.update(referralCodes)
+        .set({ totalClicks: sql`${referralCodes.totalClicks} + 1` })
+        .where(eq(referralCodes.id, referral.id));
+
+      res.json({
+        code: referral.code,
+        inviter: {
+          displayName: inviter?.displayName || inviter?.firstName || '好友',
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching referral:", error);
+      res.status(500).json({ message: "Failed to fetch referral" });
     }
   });
 

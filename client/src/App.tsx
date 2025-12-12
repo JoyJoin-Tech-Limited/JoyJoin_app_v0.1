@@ -31,6 +31,7 @@ import BlindBoxEventDetailPage from "@/pages/BlindBoxEventDetailPage";
 import EventPoolRegistrationPage from "@/pages/EventPoolRegistrationPage";
 import PoolGroupDetailPage from "@/pages/PoolGroupDetailPage";
 import InvitationLandingPage from "@/pages/InvitationLandingPage";
+import InvitePage from "@/pages/InvitePage";
 import EventFeedbackFlow from "@/pages/EventFeedbackFlow";
 import DeepFeedbackFlow from "@/pages/DeepFeedbackFlow";
 import AdminLayout from "@/pages/admin/AdminLayout";
@@ -139,6 +140,7 @@ function AuthenticatedRouter() {
       <Route path="/profile/edit/intent" component={EditIntentPage} />
       <Route path="/profile/edit/interests" component={EditInterestsPage} />
       <Route path="/event/:id" component={EventDetailPage} />
+      <Route path="/invite" component={InvitePage} />
       <Route path="/personality-test" component={PersonalityTestPage} />
       <Route path="/personality-test/results" component={PersonalityTestResultPage} />
       <Route component={NotFound} />
