@@ -8,6 +8,21 @@ JoyJoin (悦聚·Joy) is a social networking platform that connects individuals 
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+- **Logo Size Enhancement (Dec 12, 2025):** Increased Logo component sizes by 2x:
+  - sm: h-6 → h-12
+  - md: h-8 → h-16  
+  - lg: h-10 → h-20
+  - Corresponding text sizes also doubled (text-lg/xl/2xl → text-2xl/3xl/4xl)
+  - MobileHeader height adjusted (h-14 → h-16) to accommodate larger logo
+
+- **Matching Algorithm Enhancement (Dec 12, 2025):** 
+  - Implemented unified field accessors (getUserInterests, getUserTopicAvoidances, getUserHappyTopics) for backward-compatible data merging
+  - Enhanced topic conflict detection with bidirectional checks
+  - Rebalanced scoring formula: 20-70 base + max 15 bonus - max 25 penalty to prevent saturation
+  - Fixed edge cases where legacy-only users would get zero scores
+
 ## System Architecture
 
 ### Frontend
