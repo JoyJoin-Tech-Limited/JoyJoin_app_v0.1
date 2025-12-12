@@ -135,10 +135,25 @@ export default function IcebreakerCardsSheet({
   const totalTopics = topics.length;
 
   const handleDragEnd = (_: any, info: PanInfo) => {
-    if (info.offset.y < -50 && !isAnimating && currentIndex < totalTopics - 1) {
+    if (isAnimating) return;
+    
+    // Horizontal swipe: left = next, right = previous
+    if (Math.abs(info.offset.x) > 50) {
+      setIsAnimating(true);
+      if (info.offset.x < -50) {
+        // Swiped left - go to next topic
+        setCurrentIndex(prev => prev < totalTopics - 1 ? prev + 1 : 0);
+      } else if (info.offset.x > 50) {
+        // Swiped right - go to previous topic
+        setCurrentIndex(prev => prev > 0 ? prev - 1 : totalTopics - 1);
+      }
+      setTimeout(() => setIsAnimating(false), 200);
+    }
+    // Vertical swipe: up = next topic
+    else if (info.offset.y < -50 && currentIndex < totalTopics - 1) {
       setIsAnimating(true);
       setCurrentIndex(prev => prev + 1);
-      setTimeout(() => setIsAnimating(false), 300);
+      setTimeout(() => setIsAnimating(false), 200);
     }
   };
 
@@ -146,7 +161,7 @@ export default function IcebreakerCardsSheet({
     if (!isAnimating && currentIndex < totalTopics - 1) {
       setIsAnimating(true);
       setCurrentIndex(prev => prev + 1);
-      setTimeout(() => setIsAnimating(false), 300);
+      setTimeout(() => setIsAnimating(false), 200);
     } else if (currentIndex >= totalTopics - 1) {
       setCurrentIndex(0);
     }
@@ -258,33 +273,33 @@ export default function IcebreakerCardsSheet({
                   <p className="text-white/70 text-sm">小悦正在精选话题...</p>
                 </div>
               ) : currentTopic ? (
-                <AnimatePresence mode="wait">
+                <AnimatePresence mode="popLayout">
                   <motion.div
                     key={currentIndex}
                     className="relative w-full max-w-sm"
-                    initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 50, scale: 0.9 }}
+                    initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 50, scale: 0.95 }}
                     animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-                    exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -100, scale: 0.9 }}
+                    exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -50, scale: 0.95 }}
                     transition={reducedMotion 
-                      ? { duration: 0.15 } 
-                      : { type: "spring", stiffness: 300, damping: 25 }
+                      ? { duration: 0.1 } 
+                      : { type: "tween", duration: 0.2, ease: "easeOut" }
                     }
                   >
                     {!reducedMotion && (
                       <>
-                        <div className="absolute -bottom-2 left-4 right-4 h-full rounded-2xl bg-white/10 backdrop-blur-sm" />
-                        <div className="absolute -bottom-4 left-8 right-8 h-full rounded-2xl bg-white/5 backdrop-blur-sm" />
+                        <div className="absolute -bottom-2 left-4 right-4 h-full rounded-2xl bg-white/10" />
+                        <div className="absolute -bottom-4 left-8 right-8 h-full rounded-2xl bg-white/5" />
                       </>
                     )}
                     
                     <motion.div
-                      className={`relative ${cardStyles.cardBg} backdrop-blur-xl rounded-2xl p-6 shadow-2xl cursor-grab active:cursor-grabbing ${
+                      className={`relative ${cardStyles.cardBg} backdrop-blur-md rounded-2xl p-6 shadow-lg cursor-grab active:cursor-grabbing ${
                         isDimEnvironment ? "ring-1 ring-white/10" : ""
                       }`}
                       style={reducedMotion ? {} : { y, opacity, scale }}
-                      drag={reducedMotion ? false : "y"}
-                      dragConstraints={{ top: 0, bottom: 0 }}
-                      dragElastic={0.2}
+                      drag={reducedMotion ? false : true}
+                      dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
+                      dragElastic={0.15}
                       onDragEnd={handleDragEnd}
                       whileTap={reducedMotion ? {} : { scale: 0.98 }}
                       data-testid="card-icebreaker-topic"
@@ -326,7 +341,7 @@ export default function IcebreakerCardsSheet({
                           <span>{currentIndex + 1} / {totalTopics}</span>
                           <div className="flex items-center gap-1">
                             <ChevronUp className="h-3 w-3" />
-                            <span>{reducedMotion ? "点击换话题" : "上滑换话题"}</span>
+                            <span>{reducedMotion ? "点击换话题" : "滑动换话题"}</span>
                           </div>
                         </div>
                       </div>
