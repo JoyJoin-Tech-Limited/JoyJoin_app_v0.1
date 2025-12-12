@@ -3040,6 +3040,201 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Curated icebreakers based on event attendees' personalities and interests
+  app.get('/api/icebreakers/curated/:eventId', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const userId = req.session.userId;
+      
+      if (!eventId) {
+        return res.status(400).json({ message: "Event ID required" });
+      }
+
+      // Get the blind box event with match data
+      const event = await storage.getBlindBoxEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Get matched attendees from event
+      const matchedAttendees = event.matchedAttendees || [];
+      const attendeeCount = matchedAttendees.length;
+
+      // Collect interests from all attendees (check multiple possible field names)
+      const allInterests: string[] = [];
+      const allArchetypes: string[] = [];
+      
+      for (const attendee of matchedAttendees) {
+        // Check various interest field names for compatibility
+        const interests = attendee.interests || attendee.primaryInterests || [];
+        if (Array.isArray(interests)) {
+          allInterests.push(...interests);
+        }
+        if (attendee.archetype) {
+          allArchetypes.push(attendee.archetype);
+        }
+      }
+
+      // Find common interests (appear more than once)
+      const interestCounts: Record<string, number> = {};
+      for (const interest of allInterests) {
+        interestCounts[interest] = (interestCounts[interest] || 0) + 1;
+      }
+      const commonInterests = Object.entries(interestCounts)
+        .filter(([_, count]) => count > 1)
+        .sort((a, b) => b[1] - a[1])
+        .map(([interest]) => interest)
+        .slice(0, 5);
+
+      // Map interests to question categories
+      const interestToCategoryMap: Record<string, string[]> = {
+        "旅行": ["travel"],
+        "户外": ["travel"],
+        "摄影": ["creativity", "travel"],
+        "美食": ["dining"],
+        "烹饪": ["dining"],
+        "咖啡": ["dining", "city_life"],
+        "电影": ["creativity"],
+        "音乐": ["creativity"],
+        "阅读": ["creativity", "personal"],
+        "艺术": ["creativity"],
+        "科技": ["innovation"],
+        "创业": ["innovation", "personal"],
+        "投资": ["innovation"],
+        "健身": ["passions"],
+        "瑜伽": ["passions", "personal"],
+        "运动": ["passions"],
+        "游戏": ["passions"],
+        "桌游": ["passions"],
+        "宠物": ["lighthearted"],
+        "时尚": ["creativity"],
+        "设计": ["creativity"],
+      };
+
+      // Determine which categories to prioritize based on common interests
+      const prioritizedCategories: string[] = [];
+      for (const interest of commonInterests) {
+        const categories = interestToCategoryMap[interest];
+        if (categories) {
+          prioritizedCategories.push(...categories);
+        }
+      }
+
+      // Map category to difficulty
+      type DifficultyLevel = "easy" | "medium" | "deep";
+      const categoryDifficulty: Record<string, DifficultyLevel> = {
+        lighthearted: "easy",
+        dining: "easy",
+        city_life: "easy",
+        passions: "medium",
+        travel: "medium",
+        creativity: "medium",
+        innovation: "medium",
+        personal: "deep",
+        values: "deep",
+      };
+
+      // All available categories for full coverage
+      const allCategories = Object.keys(icebreakerQuestions);
+      
+      // Build category order: prioritized first, then fill with defaults
+      let categoryOrder: string[];
+      if (prioritizedCategories.length > 0) {
+        // Include prioritized categories + ensure variety
+        categoryOrder = ["lighthearted", ...new Set(prioritizedCategories), "passions", "personal", "travel", "creativity"];
+      } else {
+        // No match data or interests - use all categories for variety
+        categoryOrder = ["lighthearted", "dining", "passions", "travel", "creativity", "city_life", "innovation", "personal"];
+      }
+      const uniqueCategories = [...new Set(categoryOrder)];
+
+      // Select questions from categories - target 8-10 topics
+      const curatedTopics: { question: string; category: string; difficulty: DifficultyLevel }[] = [];
+      const usedQuestions = new Set<string>();
+      const TARGET_TOPICS = 8;
+
+      // First pass: get 1 question from each category to ensure variety
+      for (const category of uniqueCategories) {
+        const questions = icebreakerQuestions[category as keyof typeof icebreakerQuestions];
+        if (questions && questions.length > 0) {
+          const shuffled = [...questions].sort(() => Math.random() - 0.5);
+          const categoryInfo = categoryLabels[category] || { name: "话题", color: "gray" };
+          
+          for (const q of shuffled) {
+            if (!usedQuestions.has(q)) {
+              usedQuestions.add(q);
+              curatedTopics.push({
+                question: q,
+                category: categoryInfo.name,
+                difficulty: categoryDifficulty[category] || "medium",
+              });
+              break;
+            }
+          }
+        }
+      }
+
+      // Second pass: add more questions until we reach target
+      for (const category of allCategories) {
+        if (curatedTopics.length >= TARGET_TOPICS) break;
+        
+        const questions = icebreakerQuestions[category as keyof typeof icebreakerQuestions];
+        if (questions && questions.length > 0) {
+          const shuffled = [...questions].sort(() => Math.random() - 0.5);
+          const categoryInfo = categoryLabels[category] || { name: "话题", color: "gray" };
+          
+          for (const q of shuffled) {
+            if (!usedQuestions.has(q) && curatedTopics.length < TARGET_TOPICS) {
+              usedQuestions.add(q);
+              curatedTopics.push({
+                question: q,
+                category: categoryInfo.name,
+                difficulty: categoryDifficulty[category] || "medium",
+              });
+            }
+            if (curatedTopics.length >= TARGET_TOPICS) break;
+          }
+        }
+      }
+
+      // Sort by difficulty: easy -> medium -> deep
+      const difficultyOrder: Record<DifficultyLevel, number> = { easy: 0, medium: 1, deep: 2 };
+      curatedTopics.sort((a, b) => difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty]);
+
+      // Generate atmosphere prediction based on archetypes
+      let atmosphereType = "balanced";
+      let atmosphereTitle = "温馨愉快的氛围";
+      let atmosphereDescription = "这群伙伴的组合会带来有趣而深入的对话";
+      
+      if (allArchetypes.some(a => a?.includes("开心柯基") || a?.includes("太阳鸡"))) {
+        atmosphereType = "energetic";
+        atmosphereTitle = "活力四射的聚会";
+        atmosphereDescription = "有开心柯基或太阳鸡在，气氛一定很热闹！";
+      } else if (allArchetypes.some(a => a?.includes("暖心熊") || a?.includes("淡定海豚"))) {
+        atmosphereType = "warm";
+        atmosphereTitle = "温暖舒适的交流";
+        atmosphereDescription = "暖心熊和淡定海豚会让大家感到放松和被接纳";
+      }
+
+      res.json({
+        atmospherePrediction: {
+          type: atmosphereType,
+          title: atmosphereTitle,
+          description: atmosphereDescription,
+          energyScore: Math.min(100, 60 + attendeeCount * 5),
+          highlight: commonInterests.length > 0 ? `共同兴趣：${commonInterests.slice(0, 2).join("、")}` : "期待有趣的对话！",
+          suggestedTopics: curatedTopics.slice(0, 3).map(t => t.question),
+        },
+        curatedTopics,
+        isArchitectCurated: true,
+        commonInterests: commonInterests.length > 0 ? commonInterests : undefined,
+      });
+    } catch (error) {
+      console.error("Error fetching curated icebreakers:", error);
+      res.status(500).json({ message: "Failed to fetch curated icebreakers" });
+    }
+  });
+
   // Notification endpoints
   app.get('/api/notifications/counts', isPhoneAuthenticated, async (req: any, res) => {
     try {
