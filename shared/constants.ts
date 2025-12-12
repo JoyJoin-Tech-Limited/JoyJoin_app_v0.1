@@ -23,7 +23,7 @@ export type WorkMode = typeof WORK_MODE_OPTIONS[number];
 export const WORK_MODE_LABELS: Record<WorkMode, string> = {
   founder: "创始人/合伙人",
   self_employed: "自由职业",
-  employed: "在职员工",
+  employed: "在职人士",
   student: "学生/实习",
   transitioning: "职业过渡期",
   caregiver_retired: "家庭为主",
@@ -33,7 +33,7 @@ export const WORK_MODE_LABELS: Record<WorkMode, string> = {
 export const WORK_MODE_DESCRIPTIONS: Record<WorkMode, string> = {
   founder: "创业中，自己当老板",
   self_employed: "独立工作，灵活接活",
-  employed: "在公司/机构工作",
+  employed: "在企业、机构或组织任职",
   student: "在读、实习或Gap中",
   transitioning: "求职中、休整、转型、预备接班",
   caregiver_retired: "全职家长、照顾家人、退休、在家躺平",

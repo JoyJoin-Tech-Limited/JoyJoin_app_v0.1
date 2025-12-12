@@ -43,7 +43,7 @@ export interface WorkModeOption {
 export const WORK_MODES: WorkModeOption[] = [
   { value: "founder", label: "创始人/合伙人", description: "创业中，自己当老板" },
   { value: "self_employed", label: "自由职业", description: "独立工作，灵活接活" },
-  { value: "employed", label: "在职员工", description: "在公司/机构工作" },
+  { value: "employed", label: "在职人士", description: "在企业、机构或组织任职" },
   { value: "student", label: "学生/实习", description: "在读、实习或Gap中" },
   { value: "transitioning", label: "职业过渡期", description: "求职中、休整、转型、预备接班" },
   { value: "caregiver_retired", label: "家庭为主", description: "全职家长、照顾家人、退休、在家躺平" },
@@ -805,7 +805,7 @@ export const OCCUPATION_TO_FIELD_SUGGESTIONS: Record<string, string[]> = {
   investment_banker: ["金融学", "经济学", "工商管理"],
   pe_vc: ["金融学", "投资学", "工商管理"],
   securities: ["金融学", "证券投资", "经济学"],
-  insurance: ["保险学", "精算学", "金融学"],
+  insurance: ["保险与精算", "风险管理", "金融学"],
   fund_manager: ["金融学", "投资学", "经济学"],
   accountant: ["会计学", "财务管理", "审计学"],
   cfo: ["财务管理", "会计学", "工商管理"],
