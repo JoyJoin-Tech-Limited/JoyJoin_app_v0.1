@@ -8,6 +8,10 @@ JoyJoin (悦聚·Joy) is a social networking platform designed to connect indivi
 
 ### December 12, 2025 - Occupation Taxonomy Overhaul for Shenzhen Market
 
+**New Occupation Categories:**
+- 战投/CVC (cvc_strategic): 战投、战略投资、并购、CVC、腾讯投资、字节战投、阿里战投等大厂战投部门
+- 投行(IBD): 从"投行分析师"改为"投行(IBD)"，去掉junior岗位称呼
+
 **New Industries Added (15 → 18):**
 - 硬科技/芯片 (hardware): 芯片工程师、芯片验证、硬件工程师、嵌入式工程师、工艺工程师、硬件产品经理
 - 新能源汽车 (new_energy): 新能源汽车工程师、电池工程师、自动驾驶工程师、整车工程师、充电桩/储能、汽车销售
@@ -19,14 +23,20 @@ JoyJoin (悦聚·Joy) is a social networking platform designed to connect indivi
 **Terminology Updates:**
 - "在职员工" → "在职人士" (88-92% acceptance across all seniority levels)
 - "保险学" → "保险与精算/风险管理" (field-of-study mapping)
+- "投行分析师" → "投行(IBD)" (去掉junior称呼)
 
 **Synonym Expansion for Shenzhen/HK Market:**
 - 法律: Added 红圈所 (金杜/君合/中伦/方达/海问), 魔圈 (Magic Circle), 美所 (Kirkland/Latham/Skadden)
-- 金融: Expanded IBD (中金/华泰/国君/高盛/摩根士丹利/瑞银), PE/VC (红杉/高瓴/IDG/黑石/KKR/淡马锡)
+- 金融: Expanded IBD (中金/华泰/国君/高盛/摩根士丹利/瑞银), PE/VC (红杉/高瓴/IDG/黑石/KKR/淡马锡), 新增战投/CVC
 - 咨询: Added MBB全称 (McKinsey/Boston Consulting/Bain), 二梯队 (罗兰贝格/奥纬/科尔尼)
 - 科技: Shenzhen giants (深信服/迈瑞/大疆/比亚迪/中兴/传音), 外企 (Microsoft/Google/Apple/Meta)
 
-**Files Modified:** shared/occupations.ts, shared/constants.ts
+**OccupationSelector UI Simplification:**
+- 反馈卡片从"推荐专业领域"改为"同桌可见标签：行业"
+- 新增 getIndustryLabel() 和 getIndustryId() 辅助函数
+- 移除 getSuggestedFieldsOfStudy 在UI的使用（后台保留）
+
+**Files Modified:** shared/occupations.ts, client/src/components/OccupationSelector.tsx
 
 ---
 
