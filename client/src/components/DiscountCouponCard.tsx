@@ -3,12 +3,17 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Clock } from "lucide-react";
 
 interface DiscountCouponCardProps {
-  discount: number;
+  discountType: "percentage" | "fixed_amount";
+  discountValue: number;
   reason: string;
   expiresIn?: string;
 }
 
-export default function DiscountCouponCard({ discount, reason, expiresIn }: DiscountCouponCardProps) {
+export default function DiscountCouponCard({ discountType, discountValue, reason, expiresIn }: DiscountCouponCardProps) {
+  const displayDiscount = discountType === "percentage" 
+    ? `-${discountValue}%` 
+    : `-¥${discountValue}`;
+    
   return (
     <Card className="border-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent overflow-hidden">
       <CardContent className="p-4">
@@ -27,7 +32,7 @@ export default function DiscountCouponCard({ discount, reason, expiresIn }: Disc
             )}
           </div>
           <Badge className="bg-primary text-primary-foreground text-lg font-bold px-3 py-1">
-            -{discount}%
+            {displayDiscount}
           </Badge>
         </div>
       </CardContent>
