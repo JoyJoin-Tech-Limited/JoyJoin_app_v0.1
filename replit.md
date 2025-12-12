@@ -6,6 +6,24 @@ JoyJoin (悦聚·Joy) is a social networking platform designed to connect indivi
 
 ## Recent Changes
 
+### December 12, 2025 - Registration UX Simplification
+
+**Field-of-Study Removed from Registration:**
+- Removed manual fieldOfStudy input section entirely from RegistrationPage
+- Made fieldOfStudy optional in schema (defaults to undefined)
+- Added cleanup logic in mutation to strip empty strings before submission
+- Field-of-study now suggestion-only, displayed in OccupationSelector feedback card
+
+**OccupationSelector Immediate Feedback:**
+- Feedback card now shows immediately after occupation selection (no waiting for work mode)
+- Work mode selector embedded inside feedback card for streamlined flow
+- Removed unused showWorkModeStep state and onFieldOfStudySuggestion callback
+- Simplified component architecture while maintaining all functionality
+
+**Files Modified:** RegistrationPage.tsx, OccupationSelector.tsx, shared/schema.ts
+
+---
+
 ### December 11, 2025 - Occupation Selector UX Improvements
 
 **Occupation Search Enhancements:**
@@ -16,11 +34,10 @@ JoyJoin (悦聚·Joy) is a social networking platform designed to connect indivi
 **Occupation→Field-of-Study Intelligent Mapping:**
 - Created `getSuggestedFieldsOfStudy()` function in shared/occupations.ts
 - 28 occupation categories mapped to relevant academic fields
-- First suggestion auto-fills empty fieldOfStudy input on RegistrationPage
+- Suggestions displayed as recommended tags in OccupationSelector feedback card
 
 **OccupationSelector Component Updates:**
-- Added `onFieldOfStudySuggestion` callback prop for parent form integration
-- Feedback card now displays recommended field-of-study tags (first highlighted as primary)
+- Feedback card displays recommended field-of-study tags (first highlighted as primary)
 - Industry browser auto-collapses after occupation selection for cleaner UI
 - "浏览其他行业" button to re-expand collapsed industry list
 - "更改" button restores industry browser visibility
