@@ -9,7 +9,7 @@ import BlindBoxGuide from "@/components/BlindBoxGuide";
 import InviteFriendCard from "@/components/InviteFriendCard";
 import JourneyProgressCard from "@/components/JourneyProgressCard";
 import { Sparkles } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { useQuery } from "@tanstack/react-query";
@@ -54,7 +54,8 @@ export default function DiscoverPage() {
   const [selectedCity, setSelectedCity] = useState<"香港" | "深圳">("深圳");
   const [selectedArea, setSelectedArea] = useState<string>("南山区");
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
-  const markAsRead = useMarkNotificationsAsRead();
+  const { mutate: markDiscoverAsRead } = useMarkNotificationsAsRead();
+  const hasMarkedRef = useRef(false);
 
   // Fetch event pools with client-side caching (毫秒级加载)
   const { data: eventPools = [], isLoading } = useQuery<EventPool[]>({
@@ -89,13 +90,16 @@ export default function DiscoverPage() {
     return undefined;
   };
 
-  // 异步清理通知 - 不阻塞UI
+  // 异步清理通知 - 不阻塞UI (仅执行一次)
   useEffect(() => {
+    if (!isAuthenticated || hasMarkedRef.current) return;
+    
     const timer = setTimeout(() => {
-      markAsRead.mutate('discover');
+      markDiscoverAsRead('discover');
+      hasMarkedRef.current = true;
     }, 100);
     return () => clearTimeout(timer);
-  }, [markAsRead]);
+  }, [isAuthenticated, markDiscoverAsRead]);
 
   const handleLocationSave = (city: "香港" | "深圳", area: string) => {
     setSelectedCity(city);
