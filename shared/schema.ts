@@ -695,7 +695,7 @@ export const registerUserSchema = z.object({
   // Identity
   displayName: z.string().min(1, "请输入昵称"),
   birthdate: z.string().min(1, "请选择生日"), // ISO date string - now required
-  ageVisibility: z.enum(["hide_all", "show_generation", "show_age_range", "show_exact_age"]).default("hide_all"),
+  ageVisibility: z.enum(["hide_all", "show_age_range"]).default("show_age_range"),
   gender: z.enum(GENDER_OPTIONS, {
     errorMap: () => ({ message: "请选择性别" }),
   }),

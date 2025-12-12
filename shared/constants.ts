@@ -55,9 +55,15 @@ export type StudyLocale = typeof STUDY_LOCALE_OPTIONS[number];
 export const PRONOUNS_OPTIONS = ["她/She", "他/He", "它们/They", "自定义", "不透露"] as const;
 export type Pronouns = typeof PRONOUNS_OPTIONS[number];
 
-// Age visibility options
-export const AGE_VISIBILITY_OPTIONS = ["完全隐藏", "仅显示年龄段", "显示具体年龄"] as const;
+// Age visibility options (simplified: default shows age range to matched attendees)
+export const AGE_VISIBILITY_OPTIONS = ["hide_all", "show_age_range"] as const;
 export type AgeVisibility = typeof AGE_VISIBILITY_OPTIONS[number];
+
+// Age visibility display labels
+export const AGE_VISIBILITY_LABELS: Record<AgeVisibility, string> = {
+  hide_all: "完全隐藏",
+  show_age_range: "显示年龄段给同桌人",
+};
 
 // Work visibility options
 export const WORK_VISIBILITY_OPTIONS = ["完全隐藏", "仅显示行业"] as const;
