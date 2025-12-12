@@ -147,8 +147,8 @@ export const personalityQuestionsV2: QuestionV2[] = [
   {
     id: 4,
     category: "想法表达",
-    scenarioText: "💭 聊着聊着，有人问「你们最近有没有想学点什么新东西？」",
-    questionText: "你会怎么回应？",
+    scenarioText: "🌟 大家在讨论：「如果能开一家梦想小店，你会开什么？」",
+    questionText: "你的大脑会？",
     questionType: "single",
     options: [
       { 
@@ -165,13 +165,13 @@ export const personalityQuestionsV2: QuestionV2[] = [
       },
       { 
         value: "C", 
-        text: "「好像有...让我想想」边想边组织语言", 
+        text: "「嗯...让我想想」边想边组织语言，斟酌后才开口", 
         traitScores: { C: 2, E: 1, P: 1 },
         tag: "稳健思考"
       },
       { 
         value: "D", 
-        text: "「你们呢？我先听听你们想学啥」", 
+        text: "「你们呢？我先听听大家的想法」", 
         traitScores: { A: 1, O: 1, X: 1 },
         tag: "倾听优先"
       },
