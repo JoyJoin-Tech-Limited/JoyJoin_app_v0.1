@@ -3,41 +3,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   User, Briefcase, RotateCw, GraduationCap, MapPin, Globe, Sparkles,
-  Zap, Sun, Search, Waves, Users, Heart, Lightbulb, Brain, Anchor, Shield, Eye,
   Film, Plane, Utensils, Music, Palette, Activity, BookOpen, Gamepad2, Camera, Dumbbell, Monitor,
-  Compass, MessageSquare, Target, Scale, type LucideIcon
+  type LucideIcon
 } from "lucide-react";
 import {
-  calculateCommonInterestsWithUser,
   archetypeDescriptions,
   generateSparkPredictions,
   normalizeInterestName,
   type AttendeeData,
 } from "@/lib/attendeeAnalytics";
 import { getOccupationDisplayLabel, getIndustryDisplayLabel } from "@shared/occupations";
-
-const ARCHETYPE_ICONS: Record<string, LucideIcon> = {
-  "火花塞": Zap,
-  "探索者": Compass,
-  "故事家": MessageSquare,
-  "挑战者": Target,
-  "连接者": Heart,
-  "协调者": Scale,
-  "氛围组": Sparkles,
-  "肯定者": Users,
-  "开心柯基": Zap,
-  "太阳鸡": Sun,
-  "夸夸豚": Sparkles,
-  "机智狐": Search,
-  "淡定海豚": Waves,
-  "织网蛛": Users,
-  "暖心熊": Heart,
-  "灵感章鱼": Lightbulb,
-  "沉思猫头鹰": Brain,
-  "定心大象": Anchor,
-  "稳如龟": Shield,
-  "隐身猫": Eye,
-};
+import { getArchetypeImage } from "@/lib/archetypeImages";
 
 const INTEREST_ICONS: Record<string, LucideIcon> = {
   "Film": Film,
@@ -109,9 +85,7 @@ export default function AttendeePreviewCard({
   userLanguages,
 }: AttendeePreviewCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
-  const ArchetypeIconComponent = attendee.archetype
-    ? ARCHETYPE_ICONS[attendee.archetype] || Sparkles
-    : Sparkles;
+  const archetypeImage = getArchetypeImage(attendee.archetype);
 
   const topInterests = (attendee.topInterests || []).slice(0, 3);
   const archetypeDescription = attendee.archetype 
@@ -186,9 +160,13 @@ export default function AttendeePreviewCard({
               <RotateCw className="h-4 w-4 text-muted-foreground" />
             </div>
 
-            {attendee.archetype && (
+            {attendee.archetype && archetypeImage && (
               <div className="flex items-center justify-center mb-1">
-                <ArchetypeIconComponent className="h-16 w-16 text-primary" />
+                <img 
+                  src={archetypeImage} 
+                  alt={attendee.archetype} 
+                  className="h-16 w-16 object-contain"
+                />
               </div>
             )}
 
