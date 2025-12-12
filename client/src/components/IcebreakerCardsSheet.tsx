@@ -276,12 +276,12 @@ export default function IcebreakerCardsSheet({
                   <p className="text-white/70 text-sm">小悦正在精选话题...</p>
                 </div>
               ) : totalTopics > 0 ? (
-                <div className="w-full max-w-sm" ref={emblaRef}>
+                <div className="w-full max-w-sm overflow-hidden" ref={emblaRef}>
                   <div className="flex touch-pan-y" style={{ touchAction: "pan-y" }}>
                     {topics.map((topic, idx) => (
                       <div
                         key={idx}
-                        className="min-w-0 w-full flex items-center justify-center p-4"
+                        className="min-w-full flex items-center justify-center flex-shrink-0 p-4"
                         style={{ willChange: "transform" }}
                       >
                         <div
