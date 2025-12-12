@@ -130,7 +130,8 @@ export const OCCUPATIONS: Occupation[] = [
   // ========== 金融投资 (finance) ==========
   { id: "finance_analyst", displayName: "金融分析师", industryId: "finance", synonyms: ["投资分析师", "研究员", "行研", "金融分析", "股票分析", "行业研究员"], keywords: ["分析", "研究", "金融"], hot: true },
   { id: "banker", displayName: "银行职员", industryId: "finance", synonyms: ["银行经理", "客户经理", "理财经理", "柜员", "银行家", "银行从业"], keywords: ["银行", "理财"], hot: true },
-  { id: "investment_banker", displayName: "投行分析师", industryId: "finance", synonyms: ["IBD", "投行", "并购分析师", "投资银行", "投资银行家", "中金", "中金公司", "CICC", "中信证券", "华泰证券", "国泰君安", "海通证券", "招商证券", "广发证券", "高盛", "Goldman", "GS", "摩根士丹利", "Morgan Stanley", "MS", "摩根大通", "JP Morgan", "JPM", "瑞银", "UBS", "瑞信", "Credit Suisse", "花旗", "Citi", "美银", "BofA", "巴克莱", "Barclays", "德银", "Deutsche Bank"], keywords: ["投行", "并购", "IPO", "投资银行"], hot: true },
+  { id: "investment_banker", displayName: "投行(IBD)", industryId: "finance", synonyms: ["IBD", "投行", "投资银行", "投资银行家", "中金", "中金公司", "CICC", "中信证券", "华泰证券", "国泰君安", "海通证券", "招商证券", "广发证券", "高盛", "Goldman", "GS", "摩根士丹利", "Morgan Stanley", "MS", "摩根大通", "JP Morgan", "JPM", "瑞银", "UBS", "瑞信", "Credit Suisse", "花旗", "Citi", "美银", "BofA", "巴克莱", "Barclays", "德银", "Deutsche Bank"], keywords: ["投行", "IPO", "投资银行"], hot: true },
+  { id: "cvc_strategic", displayName: "战投/CVC", industryId: "finance", synonyms: ["战投", "战略投资", "企业投资", "CVC", "Corporate VC", "并购", "M&A", "腾讯投资", "字节战投", "阿里战投", "美团战投", "百度战投", "京东战投", "快手战投", "小米战投", "滴滴战投", "网易战投", "B站战投", "拼多多战投", "华为投资"], keywords: ["战投", "并购", "战略投资", "CVC"], hot: true },
   { id: "pe_vc", displayName: "PE/VC投资", industryId: "finance", synonyms: ["投资经理", "风投", "私募", "基金经理", "红杉", "Sequoia", "高瓴", "Hillhouse", "IDG", "经纬", "真格", "源码资本", "GGV", "光速", "Lightspeed", "启明创投", "北极光", "晨兴", "五源资本", "今日资本", "软银", "Softbank", "老虎环球", "Tiger Global", "DST", "Coatue", "博裕", "KKR", "黑石", "Blackstone", "凯雷", "Carlyle", "TPG", "华平", "Warburg Pincus", "鼎晖", "弘毅", "淡马锡", "Temasek", "GIC"], keywords: ["投资", "基金", "风险投资", "PE", "VC"], hot: true },
   { id: "securities", displayName: "证券从业", industryId: "finance", synonyms: ["券商", "股票分析师", "交易员", "经纪人", "证券公司"], keywords: ["证券", "股票"], hot: false },
   { id: "insurance", displayName: "保险从业", industryId: "finance", synonyms: ["保险经纪", "保险顾问", "精算师", "保险代理"], keywords: ["保险", "精算"], hot: false },
@@ -366,6 +367,15 @@ export const PINYIN_MAP: Record<string, string[]> = {
   "jrfxs": ["finance_analyst"], // 金融分析师
   "yhzy": ["banker"], // 银行职员
   "th": ["investment_banker"], // 投行
+  "ibd": ["investment_banker"],
+  "zt": ["cvc_strategic"], // 战投
+  "zhantou": ["cvc_strategic"],
+  "cvc": ["cvc_strategic"],
+  "bg": ["cvc_strategic"], // 并购
+  "binggou": ["cvc_strategic"],
+  "zltz": ["cvc_strategic"], // 战略投资
+  "txtz": ["cvc_strategic"], // 腾讯投资
+  "zjzt": ["cvc_strategic"], // 字节战投
   "tzyy": ["pe_vc"], // 投资
   "pevc": ["pe_vc"],
   "vc": ["pe_vc"],
@@ -878,6 +888,7 @@ export const OCCUPATION_TO_FIELD_SUGGESTIONS: Record<string, string[]> = {
   finance_analyst: ["金融学", "经济学", "会计学"],
   banker: ["金融学", "经济学", "工商管理"],
   investment_banker: ["金融学", "经济学", "工商管理"],
+  cvc_strategic: ["金融学", "工商管理", "战略管理"],
   pe_vc: ["金融学", "投资学", "工商管理"],
   securities: ["金融学", "证券投资", "经济学"],
   insurance: ["保险与精算", "风险管理", "金融学"],
