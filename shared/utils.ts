@@ -19,7 +19,7 @@ export function calculateAge(birthdate: string | Date): number {
 }
 
 /**
- * Get age range bracket for display (e.g., "25-30岁")
+ * Get age range bracket for display (e.g., "25-29岁")
  */
 export function getAgeRange(age: number): string {
   if (age < 20) return "20岁以下";
@@ -30,6 +30,28 @@ export function getAgeRange(age: number): string {
   if (age < 45) return "40-44岁";
   if (age < 50) return "45-49岁";
   return "50岁以上";
+}
+
+/**
+ * Get generation label from birthdate (e.g., "95后", "00后")
+ * @param birthdate - ISO date string (YYYY-MM-DD) or Date object
+ * @returns Generation label or null if invalid
+ */
+export function getGenerationLabel(birthdate: string | Date | null | undefined): string | null {
+  if (!birthdate) return null;
+  
+  const birth = typeof birthdate === 'string' ? new Date(birthdate) : birthdate;
+  const birthYear = birth.getFullYear();
+  
+  // Generation labels based on birth year
+  if (birthYear >= 2005) return "05后";
+  if (birthYear >= 2000) return "00后";
+  if (birthYear >= 1995) return "95后";
+  if (birthYear >= 1990) return "90后";
+  if (birthYear >= 1985) return "85后";
+  if (birthYear >= 1980) return "80后";
+  if (birthYear >= 1975) return "75后";
+  return "70后";
 }
 
 /**
