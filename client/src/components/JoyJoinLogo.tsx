@@ -20,7 +20,7 @@ export default function JoyJoinLogo({ size = "md", showEnglish = true }: JoyJoin
         {showEnglish && (
           <>
             <span className="text-muted-foreground">·</span>
-            <span className={`${sizes[size]} font-display font-semibold text-muted-foreground`}>Joy</span>
+            <span className={`${sizes[size]} font-display font-semibold text-muted-foreground`}>JoyJoin</span>
           </>
         )}
       </div>
