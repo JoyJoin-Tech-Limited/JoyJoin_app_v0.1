@@ -7,15 +7,15 @@ interface JoyJoinLogoProps {
 
 export default function JoyJoinLogo({ size = "md", showEnglish = true }: JoyJoinLogoProps) {
   const logoSizes = {
-    sm: "h-12",
-    md: "h-16",
-    lg: "h-20"
+    sm: "h-16",
+    md: "h-20",
+    lg: "h-24"
   };
 
   const textSizes = {
-    sm: "text-2xl",
-    md: "text-3xl",
-    lg: "text-4xl"
+    sm: "text-lg",
+    md: "text-xl",
+    lg: "text-2xl"
   };
 
   return (
