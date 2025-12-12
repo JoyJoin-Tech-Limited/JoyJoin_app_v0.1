@@ -65,7 +65,6 @@ interface OccupationSelectorProps {
   socialIntent: string | null;
   onOccupationChange: (occupationId: string, industryId: string) => void;
   onWorkModeChange: (workMode: WorkMode) => void;
-  onFieldOfStudySuggestion?: (suggestion: string) => void;
   className?: string;
 }
 
@@ -77,14 +76,12 @@ export function OccupationSelector({
   socialIntent,
   onOccupationChange,
   onWorkModeChange,
-  onFieldOfStudySuggestion,
   className = "",
 }: OccupationSelectorProps) {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const [requestOccupation, setRequestOccupation] = useState("");
-  const [showWorkModeStep, setShowWorkModeStep] = useState(false);
   const [expandedIndustry, setExpandedIndustry] = useState<string | null>(null);
   const [showAllIndustries, setShowAllIndustries] = useState(false);
   const [showIndustryBrowser, setShowIndustryBrowser] = useState(true);
@@ -124,15 +121,9 @@ export function OccupationSelector({
   const handleOccupationSelect = useCallback((occupation: Occupation) => {
     onOccupationChange(occupation.id, occupation.industryId);
     setSearchQuery("");
-    setShowWorkModeStep(true);
     setExpandedIndustry(null);
     setShowIndustryBrowser(false);
-    
-    const suggestions = getSuggestedFieldsOfStudy(occupation.id);
-    if (suggestions.length > 0 && onFieldOfStudySuggestion) {
-      onFieldOfStudySuggestion(suggestions[0]);
-    }
-  }, [onOccupationChange, onFieldOfStudySuggestion]);
+  }, [onOccupationChange]);
 
   const handleRequestSubmit = useCallback(() => {
     if (!requestOccupation.trim()) return;
@@ -220,7 +211,7 @@ export function OccupationSelector({
         </p>
       </div>
 
-      {selectedOccupation && selectedWorkMode ? (
+      {selectedOccupation ? (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -228,13 +219,17 @@ export function OccupationSelector({
         >
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Check className="h-4 w-4 text-primary" />
                 <span className="font-medium">{selectedOccupation.displayName}</span>
-                <span className="text-muted-foreground">·</span>
-                <span className="text-muted-foreground">
-                  {WORK_MODE_LABELS[selectedWorkMode]}
-                </span>
+                {selectedWorkMode && (
+                  <>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="text-muted-foreground">
+                      {WORK_MODE_LABELS[selectedWorkMode]}
+                    </span>
+                  </>
+                )}
               </div>
               <p className="text-sm text-muted-foreground mt-1">
                 {selectedIndustry?.label}
@@ -246,7 +241,6 @@ export function OccupationSelector({
               size="sm"
               onClick={() => {
                 onOccupationChange("", "");
-                setShowWorkModeStep(false);
                 setShowIndustryBrowser(true);
               }}
               data-testid="button-change-occupation"
@@ -273,9 +267,38 @@ export function OccupationSelector({
             </div>
           )}
           
-          <div className="mt-3 pt-3 border-t border-primary/20">
-            <p className="text-sm text-primary/80">{guidance.matchPreview}</p>
-          </div>
+          {!selectedWorkMode && (
+            <div className="mt-3 pt-3 border-t border-primary/20 space-y-3">
+              <div>
+                <p className="text-sm font-medium">你的身份是？</p>
+                <p className="text-xs text-muted-foreground mt-0.5">不同身份有不同的社交节奏</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {WORK_MODE_OPTIONS.map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => onWorkModeChange(mode)}
+                    className="p-2.5 rounded-lg border border-border hover-elevate text-left"
+                    data-testid={`workmode-${mode}`}
+                  >
+                    <div className="font-medium text-sm">
+                      {WORK_MODE_LABELS[mode]}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {WORK_MODE_DESCRIPTIONS[mode]}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {selectedWorkMode && (
+            <div className="mt-3 pt-3 border-t border-primary/20">
+              <p className="text-sm text-primary/80">{guidance.matchPreview}</p>
+            </div>
+          )}
         </motion.div>
       ) : (
         <>
@@ -427,48 +450,6 @@ export function OccupationSelector({
             </DialogContent>
           </Dialog>
 
-          <AnimatePresence>
-            {showWorkModeStep && selectedOccupation && !selectedWorkMode && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-3 pt-4 border-t"
-              >
-                <div>
-                  <Label className="text-base font-medium">你的身份是？</Label>
-                  <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
-                    <Lightbulb className="h-4 w-4 text-primary" />
-                    不同身份有不同的社交节奏
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {WORK_MODE_OPTIONS.map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => onWorkModeChange(mode)}
-                      className={`
-                        p-3 rounded-lg border transition-all text-left
-                        ${selectedWorkMode === mode
-                          ? "border-primary bg-primary/10"
-                          : "border-border hover-elevate"
-                        }
-                      `}
-                      data-testid={`workmode-${mode}`}
-                    >
-                      <div className="font-medium text-sm">
-                        {WORK_MODE_LABELS[mode]}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {WORK_MODE_DESCRIPTIONS[mode]}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </>
       )}
     </div>

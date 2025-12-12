@@ -717,7 +717,7 @@ export const registerUserSchema = z.object({
     errorMap: () => ({ message: "请选择学习地点" }),
   }),
   overseasRegions: z.array(z.string()).optional(),
-  fieldOfStudy: z.string().min(1, "请输入专业领域"),
+  fieldOfStudy: z.string().optional(), // Now optional - auto-derived from occupation
   
   // Work - New standardized occupation system
   occupationId: z.string().min(1, "请选择职业"),

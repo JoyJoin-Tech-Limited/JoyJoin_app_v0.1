@@ -130,7 +130,7 @@ export default function RegistrationPage() {
       educationLevel: undefined,
       studyLocale: undefined,
       overseasRegions: [],
-      fieldOfStudy: "",
+      fieldOfStudy: undefined,
       occupationId: "",
       workMode: undefined,
       industry: "",
@@ -272,8 +272,13 @@ export default function RegistrationPage() {
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterUser) => {
-      console.log("[Frontend] Sending registration data:", data);
-      return await apiRequest("POST", "/api/user/register", data);
+      // Clean up empty strings to undefined
+      const cleanedData = {
+        ...data,
+        fieldOfStudy: data.fieldOfStudy?.trim() || undefined,
+      };
+      console.log("[Frontend] Sending registration data:", cleanedData);
+      return await apiRequest("POST", "/api/user/register", cleanedData);
     },
     onSuccess: async () => {
       localStorage.removeItem('registration_progress');
@@ -333,7 +338,7 @@ export default function RegistrationPage() {
         return step1Fields;
       case 2:
         // Step 2: 背景信息 (Education + Work)
-        const step2Fields: string[] = ["educationLevel", "studyLocale", "fieldOfStudy", "occupationId", "workMode"];
+        const step2Fields: string[] = ["educationLevel", "studyLocale", "occupationId", "workMode"];
         return step2Fields;
       case 3:
         // Step 3: 偏好设置 (Intent + Location + Language)
@@ -865,19 +870,6 @@ export default function RegistrationPage() {
                     )}
                   </AnimatePresence>
 
-                  <div>
-                    <Label htmlFor="fieldOfStudy">专业领域 *</Label>
-                    <Input
-                      id="fieldOfStudy"
-                      {...form.register("fieldOfStudy")}
-                      placeholder="例如：计算机科学、金融学、心理学"
-                      data-testid="input-field-of-study"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      填写职业后会自动识别专业领域
-                    </p>
-                  </div>
-
                 </div>
 
                 <Separator className="my-4" />
@@ -897,12 +889,6 @@ export default function RegistrationPage() {
                     }}
                     onWorkModeChange={(workMode) => {
                       form.setValue("workMode", workMode);
-                    }}
-                    onFieldOfStudySuggestion={(suggestion) => {
-                      const currentField = form.watch("fieldOfStudy");
-                      if (!currentField || currentField.trim() === "") {
-                        form.setValue("fieldOfStudy", suggestion);
-                      }
                     }}
                   />
                   {(form.formState.errors.occupationId || form.formState.errors.workMode) && (
