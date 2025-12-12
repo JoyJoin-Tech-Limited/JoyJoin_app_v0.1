@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Referral System Implementation (Dec 12, 2025):**
+  - New database tables: `referralCodes` and `referralConversions` for tracking user referrals
+  - API endpoints: `/api/referrals/stats` (get user's code + stats), `/api/referrals/check/:code`, `/api/referrals/:code`
+  - InvitePage (`/invite`) displays user's referral code, tier rewards, and share functionality
+  - ReferralLandingPage for new user acquisition flow with new user benefits display
+  - InviteLandingRouter intelligently routes `/invite/:code` to appropriate landing page (referral vs event invitation)
+  - Tiered rewards: 1 invite = 7折券, 3 invites = 5折券x2, 5 invites = 免费月卡
+
 - **Personalized Topic Recommend Reasons (Dec 12, 2025):**
   - Added `recommendReason` field to each curated icebreaker topic
   - Smart reason generation based on: common interests (e.g., "你们3人都爱旅行"), archetype composition (活力组合/温馨组合), difficulty level
