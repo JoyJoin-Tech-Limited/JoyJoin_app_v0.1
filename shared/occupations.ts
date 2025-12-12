@@ -73,7 +73,7 @@ export const INDUSTRIES: Industry[] = [
 // 130+ 职业数据
 export const OCCUPATIONS: Occupation[] = [
   // ========== 科技互联网 (tech) ==========
-  { id: "software_engineer", displayName: "软件工程师", industryId: "tech", synonyms: ["程序员", "码农", "开发工程师", "研发工程师", "coder", "developer", "大厂", "互联网", "字节", "腾讯", "阿里", "百度", "美团", "京东", "拼多多", "快手", "网易", "华为", "小米", "BAT", "TMD", "打工人", "社畜"], keywords: ["编程", "代码", "开发", "大厂", "互联网"], hot: true },
+  { id: "software_engineer", displayName: "软件工程师", industryId: "tech", synonyms: ["程序员", "码农", "开发工程师", "研发工程师", "coder", "developer", "大厂", "互联网", "字节", "字节跳动", "ByteDance", "腾讯", "Tencent", "阿里", "阿里巴巴", "Alibaba", "百度", "Baidu", "美团", "Meituan", "京东", "JD", "拼多多", "PDD", "快手", "Kuaishou", "网易", "NetEase", "华为", "Huawei", "小米", "Xiaomi", "OPPO", "vivo", "荣耀", "Honor", "深信服", "迈瑞", "大疆", "DJI", "比亚迪", "BYD", "中兴", "ZTE", "TCL", "传音", "Transsion", "BAT", "TMD", "打工人", "社畜", "微软", "Microsoft", "谷歌", "Google", "亚马逊", "Amazon", "苹果", "Apple", "Meta", "Facebook"], keywords: ["编程", "代码", "开发", "大厂", "互联网"], hot: true },
   { id: "frontend_engineer", displayName: "前端工程师", industryId: "tech", synonyms: ["前端开发", "web开发", "H5开发", "React开发", "Vue开发", "大厂", "互联网"], keywords: ["网页", "界面", "前端"], hot: true },
   { id: "backend_engineer", displayName: "后端工程师", industryId: "tech", synonyms: ["后端开发", "服务端开发", "Java开发", "Python开发", "Go开发", "大厂", "互联网"], keywords: ["服务器", "接口", "后端"], hot: false },
   { id: "fullstack_engineer", displayName: "全栈工程师", industryId: "tech", synonyms: ["全栈开发", "Full Stack", "前后端开发", "大厂"], keywords: ["全栈", "开发"], hot: true },
@@ -130,8 +130,8 @@ export const OCCUPATIONS: Occupation[] = [
   // ========== 金融投资 (finance) ==========
   { id: "finance_analyst", displayName: "金融分析师", industryId: "finance", synonyms: ["投资分析师", "研究员", "行研", "金融分析", "股票分析", "行业研究员"], keywords: ["分析", "研究", "金融"], hot: true },
   { id: "banker", displayName: "银行职员", industryId: "finance", synonyms: ["银行经理", "客户经理", "理财经理", "柜员", "银行家", "银行从业"], keywords: ["银行", "理财"], hot: true },
-  { id: "investment_banker", displayName: "投行分析师", industryId: "finance", synonyms: ["IBD", "投行", "并购分析师", "投资银行", "投资银行家", "中金", "中信证券", "高盛", "摩根", "JP Morgan"], keywords: ["投行", "并购", "IPO", "投资银行"], hot: true },
-  { id: "pe_vc", displayName: "PE/VC投资", industryId: "finance", synonyms: ["投资经理", "风投", "私募", "基金经理", "红杉", "高瓴", "IDG", "经纬", "真格"], keywords: ["投资", "基金", "风险投资"], hot: true },
+  { id: "investment_banker", displayName: "投行分析师", industryId: "finance", synonyms: ["IBD", "投行", "并购分析师", "投资银行", "投资银行家", "中金", "中金公司", "CICC", "中信证券", "华泰证券", "国泰君安", "海通证券", "招商证券", "广发证券", "高盛", "Goldman", "GS", "摩根士丹利", "Morgan Stanley", "MS", "摩根大通", "JP Morgan", "JPM", "瑞银", "UBS", "瑞信", "Credit Suisse", "花旗", "Citi", "美银", "BofA", "巴克莱", "Barclays", "德银", "Deutsche Bank"], keywords: ["投行", "并购", "IPO", "投资银行"], hot: true },
+  { id: "pe_vc", displayName: "PE/VC投资", industryId: "finance", synonyms: ["投资经理", "风投", "私募", "基金经理", "红杉", "Sequoia", "高瓴", "Hillhouse", "IDG", "经纬", "真格", "源码资本", "GGV", "光速", "Lightspeed", "启明创投", "北极光", "晨兴", "五源资本", "今日资本", "软银", "Softbank", "老虎环球", "Tiger Global", "DST", "Coatue", "博裕", "KKR", "黑石", "Blackstone", "凯雷", "Carlyle", "TPG", "华平", "Warburg Pincus", "鼎晖", "弘毅", "淡马锡", "Temasek", "GIC"], keywords: ["投资", "基金", "风险投资", "PE", "VC"], hot: true },
   { id: "securities", displayName: "证券从业", industryId: "finance", synonyms: ["券商", "股票分析师", "交易员", "经纪人", "证券公司"], keywords: ["证券", "股票"], hot: false },
   { id: "insurance", displayName: "保险从业", industryId: "finance", synonyms: ["保险经纪", "保险顾问", "精算师", "保险代理"], keywords: ["保险", "精算"], hot: false },
   { id: "fund_manager", displayName: "基金经理", industryId: "finance", synonyms: ["资产管理", "投资总监", "Portfolio Manager", "公募基金", "私募基金"], keywords: ["基金", "资产"], hot: false },
@@ -139,8 +139,8 @@ export const OCCUPATIONS: Occupation[] = [
   { id: "cfo", displayName: "财务负责人", industryId: "finance", synonyms: ["CFO", "财务总监", "财务经理", "财务VP"], keywords: ["财务", "管理"], hot: false },
   
   // ========== 咨询服务 (consulting) ==========
-  { id: "management_consultant", displayName: "管理咨询顾问", industryId: "consulting", synonyms: ["战略咨询", "MBB", "咨询师", "顾问", "麦肯锡", "BCG", "贝恩", "McKinsey", "波士顿咨询", "Bain"], keywords: ["咨询", "战略", "麦肯锡", "BCG", "贝恩"], hot: true },
-  { id: "it_consultant", displayName: "IT咨询顾问", industryId: "consulting", synonyms: ["技术咨询", "数字化咨询", "系统实施", "埃森哲", "Accenture", "IBM咨询", "德勤咨询"], keywords: ["IT", "系统", "数字化"], hot: false },
+  { id: "management_consultant", displayName: "管理咨询顾问", industryId: "consulting", synonyms: ["战略咨询", "MBB", "咨询师", "顾问", "麦肯锡", "McKinsey", "BCG", "Boston Consulting", "波士顿咨询", "贝恩", "Bain", "罗兰贝格", "Roland Berger", "奥纬", "Oliver Wyman", "科尔尼", "AT Kearney", "Monitor", "LEK", "Parthenon", "Strategy&"], keywords: ["咨询", "战略", "MBB"], hot: true },
+  { id: "it_consultant", displayName: "IT咨询顾问", industryId: "consulting", synonyms: ["技术咨询", "数字化咨询", "系统实施", "埃森哲", "Accenture", "IBM咨询", "德勤咨询", "Deloitte Digital", "凯捷", "Capgemini", "Infosys", "TCS", "思略特", "SAP咨询", "Oracle咨询", "Salesforce咨询"], keywords: ["IT", "系统", "数字化"], hot: false },
   { id: "hr_consultant", displayName: "人力咨询顾问", industryId: "consulting", synonyms: ["猎头", "招聘顾问", "HR顾问", "人才顾问", "猎聘", "智联", "前程无忧"], keywords: ["招聘", "人才", "猎头"], hot: true },
   { id: "hr_manager", displayName: "HR经理", industryId: "consulting", synonyms: ["人力资源", "HRBP", "人事经理", "招聘经理", "人事"], keywords: ["HR", "人事", "人力资源"], hot: true },
   { id: "admin_manager", displayName: "行政经理", industryId: "consulting", synonyms: ["行政", "办公室主任", "综合管理", "行政主管"], keywords: ["行政", "办公"], hot: false },
@@ -207,11 +207,11 @@ export const OCCUPATIONS: Occupation[] = [
   { id: "online_educator", displayName: "在线教育", industryId: "education", synonyms: ["网课老师", "知识付费", "线上讲师", "网红老师"], keywords: ["在线", "网课"], hot: true },
   
   // ========== 法律合规 (legal) ==========
-  { id: "lawyer", displayName: "律师", industryId: "legal", synonyms: ["执业律师", "法律顾问", "诉讼律师", "非诉律师"], keywords: ["法律", "诉讼"], hot: true },
-  { id: "paralegal", displayName: "律师助理", industryId: "legal", synonyms: ["法务助理", "律所助理"], keywords: ["法务", "助理"], hot: false },
-  { id: "legal_counsel", displayName: "企业法务", industryId: "legal", synonyms: ["法务经理", "合规经理", "法律总监"], keywords: ["法务", "合规"], hot: false },
-  { id: "compliance", displayName: "合规专员", industryId: "legal", synonyms: ["风控", "内控", "合规管理"], keywords: ["合规", "风控"], hot: false },
-  { id: "ip_attorney", displayName: "知识产权", industryId: "legal", synonyms: ["专利代理", "商标代理", "IP律师"], keywords: ["专利", "商标"], hot: false },
+  { id: "lawyer", displayName: "律师", industryId: "legal", synonyms: ["执业律师", "法律顾问", "诉讼律师", "非诉律师", "并购律师", "M&A律师", "红圈所", "金杜", "君合", "中伦", "方达", "海问", "通商", "环球", "汉坤", "竞天公诚", "天元", "世辉", "达辉", "Kirkland", "Latham", "Skadden", "Sullivan", "White & Case", "Davis Polk", "Simpson Thacher", "Baker McKenzie", "Clifford Chance", "Allen & Overy", "Linklaters", "Freshfields", "Herbert Smith", "Hogan Lovells", "魔圈", "Magic Circle"], keywords: ["法律", "诉讼", "律所"], hot: true },
+  { id: "paralegal", displayName: "律师助理", industryId: "legal", synonyms: ["法务助理", "律所助理", "法律秘书"], keywords: ["法务", "助理"], hot: false },
+  { id: "legal_counsel", displayName: "企业法务", industryId: "legal", synonyms: ["法务经理", "合规经理", "法律总监", "Legal Counsel", "GC", "General Counsel", "CLO", "法务VP"], keywords: ["法务", "合规"], hot: true },
+  { id: "compliance", displayName: "合规专员", industryId: "legal", synonyms: ["风控", "内控", "合规管理", "反洗钱", "AML", "KYC", "数据合规", "隐私合规", "GDPR"], keywords: ["合规", "风控"], hot: false },
+  { id: "ip_attorney", displayName: "知识产权", industryId: "legal", synonyms: ["专利代理", "商标代理", "IP律师", "知产律师", "专利工程师"], keywords: ["专利", "商标"], hot: false },
   
   // ========== 地产建筑 (realestate) ==========
   { id: "architect", displayName: "建筑师", industryId: "realestate", synonyms: ["建筑设计", "方案设计师", "注册建筑师"], keywords: ["建筑", "设计"], hot: true },
@@ -317,7 +317,7 @@ export const PINYIN_MAP: Record<string, string[]> = {
   "jqr": ["robotics_engineer"], // 机器人
   "jszn": ["embodied_ai", "robotics_engineer"], // 具身智能
   "robotics": ["robotics_engineer"],
-  "dj": ["robotics_engineer"], // 大疆
+  "dajiang": ["robotics_engineer"], // 大疆
   "ybs": ["robotics_engineer"], // 优必选
   
   // 硬科技/芯片
