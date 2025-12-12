@@ -31,6 +31,7 @@ import BlindBoxEventDetailPage from "@/pages/BlindBoxEventDetailPage";
 import EventPoolRegistrationPage from "@/pages/EventPoolRegistrationPage";
 import PoolGroupDetailPage from "@/pages/PoolGroupDetailPage";
 import InvitationLandingPage from "@/pages/InvitationLandingPage";
+import InviteLandingRouter from "@/pages/InviteLandingRouter";
 import InvitePage from "@/pages/InvitePage";
 import EventFeedbackFlow from "@/pages/EventFeedbackFlow";
 import DeepFeedbackFlow from "@/pages/DeepFeedbackFlow";
@@ -163,9 +164,9 @@ function Router() {
     );
   }
 
-  // Invitation landing page is publicly accessible
+  // Invite landing page is publicly accessible (handles both referrals and event invitations)
   if (location.startsWith("/invite/")) {
-    return <Route path="/invite/:code" component={InvitationLandingPage} />;
+    return <Route path="/invite/:code" component={InviteLandingRouter} />;
   }
 
   // Admin login is always accessible (even when not authenticated)

@@ -3603,6 +3603,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/referrals/check/:code - Check if a code is a referral code (public)
+  app.get('/api/referrals/check/:code', async (req, res) => {
+    try {
+      const { code } = req.params;
+
+      const [referral] = await db
+        .select({ id: referralCodes.id })
+        .from(referralCodes)
+        .where(eq(referralCodes.code, code))
+        .limit(1);
+
+      res.json({ exists: !!referral });
+    } catch (error: any) {
+      console.error("Error checking referral code:", error);
+      res.status(500).json({ error: "Failed to check referral code" });
+    }
+  });
+
   // GET /api/referrals/:code - Get referral info for landing page (public)
   app.get('/api/referrals/:code', async (req, res) => {
     try {
