@@ -10,14 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-- **Optimized Icebreaker Cards UI/UX (Dec 12, 2025):**
-  - Optimized animation performance: Changed from spring (300ms) to tween (200ms) for snappier transitions
-  - Switched AnimatePresence mode to "popLayout" for smoother layout shifts
-  - Reduced backdrop-blur from `backdrop-blur-xl` to `backdrop-blur-md` and shadow from `shadow-2xl` to `shadow-lg`
-  - Added multi-directional swipe gestures: Left swipe = next topic, Right swipe = previous topic, Up swipe = next
-  - Changed drag from "y" only to full drag support with updated drag constraints
-  - All animations now use GPU-accelerated transforms for mobile smoothness
-  - Updated hint text to "滑动换话题" (swipe to change topic)
+- **Migrated Icebreaker Cards to Embla Carousel (Dec 12, 2025):**
+  - Replaced Framer Motion AnimatePresence with Embla Carousel for zero-layout-thrash performance
+  - Removed backdrop-blur effect (high performance cost on low-end devices and WeChat mini-programs)
+  - Implemented GPU-accelerated CSS transforms with `touch-action: pan-y` optimization
+  - Only renders visible 3 cards (prev/current/next) with Embla virtualization
+  - Supports smooth horizontal swipe with loop and snap modes
+  - Optimized for app and WeChat mini-program deployment with strict performance/memory limits
+  - Fixed HMR issues and validated imports for production build
 
 - **Curated Icebreaker Topics API (Dec 12, 2025):**
   - Implemented `/api/icebreakers/curated/:eventId` endpoint for personalized conversation topics

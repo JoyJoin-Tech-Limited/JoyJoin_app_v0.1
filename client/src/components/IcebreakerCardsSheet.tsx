@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { X, ChevronUp, Sparkles, MessageCircle, Heart, Lightbulb } from "lucide-react";
-import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from "framer-motion";
+import { motion } from "framer-motion";
+import useEmblaCarousel from "embla-carousel-react";
+import Autoplay from "embla-carousel-autoplay";
 import { useQuery } from "@tanstack/react-query";
 
 interface CuratedTopic {
@@ -115,15 +117,21 @@ export default function IcebreakerCardsSheet({
   reducedMotion = false,
   venueIsDim,
 }: IcebreakerCardsSheetProps) {
+  const [emblaRef, emblaApi] = useEmblaCarousel(
+    {
+      loop: true,
+      align: "center",
+      skipSnaps: false,
+      duration: 20,
+      dragFree: false,
+    },
+    [Autoplay({ delay: 0, stopOnInteraction: true, stopOnMouseEnter: false })]
+  );
+  
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
   
   const sceneConfig = isGirlsNight ? GIRLS_NIGHT_CONFIG : SCENE_CONFIG[eventType];
   const isDimEnvironment = venueIsDim ?? sceneConfig.isDarkVenue;
-  
-  const y = useMotionValue(0);
-  const opacity = reducedMotion ? undefined : useTransform(y, [-100, 0], [0.5, 1]);
-  const scale = reducedMotion ? undefined : useTransform(y, [-100, 0], [0.95, 1]);
 
   const { data: curatedData, isLoading } = useQuery<CuratedTopicsResponse>({
     queryKey: ["/api/icebreakers/curated", eventId],
@@ -134,38 +142,30 @@ export default function IcebreakerCardsSheet({
   const currentTopic = topics[currentIndex];
   const totalTopics = topics.length;
 
-  const handleDragEnd = (_: any, info: PanInfo) => {
-    if (isAnimating) return;
-    
-    // Horizontal swipe: left = next, right = previous
-    if (Math.abs(info.offset.x) > 50) {
-      setIsAnimating(true);
-      if (info.offset.x < -50) {
-        // Swiped left - go to next topic
-        setCurrentIndex(prev => prev < totalTopics - 1 ? prev + 1 : 0);
-      } else if (info.offset.x > 50) {
-        // Swiped right - go to previous topic
-        setCurrentIndex(prev => prev > 0 ? prev - 1 : totalTopics - 1);
-      }
-      setTimeout(() => setIsAnimating(false), 200);
+  const onSelect = useCallback(() => {
+    if (emblaApi && topics.length > 0) {
+      const index = emblaApi.selectedScrollSnap();
+      setCurrentIndex(index % topics.length);
     }
-    // Vertical swipe: up = next topic
-    else if (info.offset.y < -50 && currentIndex < totalTopics - 1) {
-      setIsAnimating(true);
-      setCurrentIndex(prev => prev + 1);
-      setTimeout(() => setIsAnimating(false), 200);
-    }
-  };
+  }, [emblaApi, topics.length]);
 
-  const handleNextTopic = () => {
-    if (!isAnimating && currentIndex < totalTopics - 1) {
-      setIsAnimating(true);
-      setCurrentIndex(prev => prev + 1);
-      setTimeout(() => setIsAnimating(false), 200);
-    } else if (currentIndex >= totalTopics - 1) {
+  useEffect(() => {
+    if (!emblaApi) return;
+    onSelect();
+    emblaApi.on("select", onSelect);
+    return () => {
+      emblaApi.off("select", onSelect);
+    };
+  }, [emblaApi, onSelect]);
+
+  useEffect(() => {
+    if (open) {
       setCurrentIndex(0);
+      if (emblaApi) {
+        emblaApi.scrollTo(0);
+      }
     }
-  };
+  }, [open, emblaApi]);
 
   const getCardStyles = () => {
     if (isDimEnvironment) {
@@ -187,15 +187,18 @@ export default function IcebreakerCardsSheet({
   };
   
   const cardStyles = getCardStyles();
-
-  useEffect(() => {
-    if (open) {
-      setCurrentIndex(0);
-    }
-  }, [open]);
-
   const difficultyConfig = currentTopic ? DIFFICULTY_CONFIG[currentTopic.difficulty] : DIFFICULTY_CONFIG.easy;
   const CategoryIcon = currentTopic?.category ? (CATEGORY_ICONS[currentTopic.category] || Sparkles) : Sparkles;
+
+  const handleNextTopic = () => {
+    if (emblaApi) {
+      if (currentIndex >= totalTopics - 1) {
+        emblaApi.scrollTo(0);
+      } else {
+        emblaApi.scrollNext();
+      }
+    }
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -266,81 +269,73 @@ export default function IcebreakerCardsSheet({
               </div>
             </SheetHeader>
 
-            <div className="flex-1 flex flex-col items-center justify-center py-6">
+            <div className="flex-1 flex flex-col items-center justify-center py-6 overflow-hidden">
               {isLoading ? (
                 <div className="flex flex-col items-center gap-4">
                   <div className="h-8 w-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <p className="text-white/70 text-sm">小悦正在精选话题...</p>
                 </div>
-              ) : currentTopic ? (
-                <AnimatePresence mode="popLayout">
-                  <motion.div
-                    key={currentIndex}
-                    className="relative w-full max-w-sm"
-                    initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 30 }}
-                    animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                    exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -30 }}
-                    transition={reducedMotion 
-                      ? { duration: 0.08 } 
-                      : { type: "tween", duration: 0.15, ease: "easeOut" }
-                    }
-                    style={{ willChange: "transform, opacity" }}
-                  >
-                    <motion.div
-                      className={`relative ${cardStyles.cardBg} backdrop-blur-md rounded-2xl p-6 shadow-md cursor-grab active:cursor-grabbing ${
-                        isDimEnvironment ? "ring-1 ring-white/10" : ""
-                      }`}
-                      drag={reducedMotion ? false : true}
-                      dragConstraints={{ top: 50, bottom: 50, left: 100, right: 100 }}
-                      dragElastic={0.2}
-                      onDragEnd={handleDragEnd}
-                      whileTap={reducedMotion ? {} : { scale: 0.98 }}
-                      data-testid="card-icebreaker-topic"
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                          <CategoryIcon className={`h-4 w-4 ${
-                            isDimEnvironment ? "text-white" : difficultyConfig.color
-                          }`} />
-                          <Badge 
-                            variant="secondary" 
-                            className={`text-xs border-0 ${
-                              isDimEnvironment 
-                                ? "bg-white/20 text-white" 
-                                : `${difficultyConfig.bgColor} ${difficultyConfig.color}`
-                            }`}
-                          >
-                            {difficultyConfig.label}
-                          </Badge>
-                        </div>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs ${
-                            isDimEnvironment 
-                              ? "text-white/80 border-white/30" 
-                              : "text-muted-foreground"
+              ) : totalTopics > 0 ? (
+                <div className="w-full max-w-sm" ref={emblaRef}>
+                  <div className="flex touch-pan-y" style={{ touchAction: "pan-y" }}>
+                    {topics.map((topic, idx) => (
+                      <div
+                        key={idx}
+                        className="min-w-0 w-full flex items-center justify-center p-4"
+                        style={{ willChange: "transform" }}
+                      >
+                        <div
+                          className={`relative ${cardStyles.cardBg} rounded-2xl p-6 shadow-md w-full ${
+                            isDimEnvironment ? "ring-1 ring-white/10" : ""
                           }`}
+                          data-testid={`card-icebreaker-topic-${idx}`}
                         >
-                          {currentTopic.category}
-                        </Badge>
-                      </div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <CategoryIcon className={`h-4 w-4 ${
+                                isDimEnvironment ? "text-white" : DIFFICULTY_CONFIG[topic.difficulty].color
+                              }`} />
+                              <Badge 
+                                variant="secondary" 
+                                className={`text-xs border-0 ${
+                                  isDimEnvironment 
+                                    ? "bg-white/20 text-white" 
+                                    : `${DIFFICULTY_CONFIG[topic.difficulty].bgColor} ${DIFFICULTY_CONFIG[topic.difficulty].color}`
+                                }`}
+                              >
+                                {DIFFICULTY_CONFIG[topic.difficulty].label}
+                              </Badge>
+                            </div>
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ${
+                                isDimEnvironment 
+                                  ? "text-white/80 border-white/30" 
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {topic.category}
+                            </Badge>
+                          </div>
 
-                      <p className={`${cardStyles.fontSize} font-medium ${cardStyles.textColor} leading-relaxed min-h-[80px] flex items-center`}>
-                        {currentTopic.question}
-                      </p>
+                          <p className={`${cardStyles.fontSize} font-medium ${cardStyles.textColor} leading-relaxed min-h-[80px] flex items-center`}>
+                            {topic.question}
+                          </p>
 
-                      <div className={`mt-6 pt-4 border-t ${cardStyles.borderColor}`}>
-                        <div className={`flex items-center justify-between text-xs ${cardStyles.mutedColor}`}>
-                          <span>{currentIndex + 1} / {totalTopics}</span>
-                          <div className="flex items-center gap-1">
-                            <ChevronUp className="h-3 w-3" />
-                            <span>{reducedMotion ? "点击换话题" : "滑动换话题"}</span>
+                          <div className={`mt-6 pt-4 border-t ${cardStyles.borderColor}`}>
+                            <div className={`flex items-center justify-between text-xs ${cardStyles.mutedColor}`}>
+                              <span>{idx + 1} / {totalTopics}</span>
+                              <div className="flex items-center gap-1">
+                                <ChevronUp className="h-3 w-3" />
+                                <span>滑动换话题</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </motion.div>
-                  </motion.div>
-                </AnimatePresence>
+                    ))}
+                  </div>
+                </div>
               ) : (
                 <div className="text-center text-white/70">
                   <p>暂无话题</p>
@@ -351,36 +346,22 @@ export default function IcebreakerCardsSheet({
             <div className="flex-shrink-0 space-y-4">
               <div className="flex justify-center gap-1.5">
                 {topics.map((_, idx) => (
-                  reducedMotion ? (
-                    <div
-                      key={idx}
-                      className={`h-1.5 rounded-full transition-all ${
-                        idx === currentIndex 
-                          ? "w-6 bg-white" 
-                          : idx < currentIndex 
-                            ? "w-1.5 bg-white/50" 
-                            : "w-1.5 bg-white/30"
-                      }`}
-                    />
-                  ) : (
-                    <motion.div
-                      key={idx}
-                      className={`h-1.5 rounded-full transition-all ${
-                        idx === currentIndex 
-                          ? "w-6 bg-white" 
-                          : idx < currentIndex 
-                            ? "w-1.5 bg-white/50" 
-                            : "w-1.5 bg-white/30"
-                      }`}
-                      layoutId={`dot-${idx}`}
-                    />
-                  )
+                  <div
+                    key={idx}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      idx === currentIndex 
+                        ? "w-6 bg-white" 
+                        : idx < currentIndex 
+                          ? "w-1.5 bg-white/50" 
+                          : "w-1.5 bg-white/30"
+                    }`}
+                  />
                 ))}
               </div>
 
               <Button
                 variant="secondary"
-                className="w-full bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
+                className="w-full bg-white/20 hover:bg-white/30 text-white border-0"
                 onClick={handleNextTopic}
                 data-testid="button-next-topic"
               >
