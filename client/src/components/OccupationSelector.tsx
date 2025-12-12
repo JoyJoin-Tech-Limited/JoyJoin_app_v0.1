@@ -267,38 +267,40 @@ export function OccupationSelector({
             </div>
           )}
           
-          {!selectedWorkMode && (
-            <div className="mt-3 pt-3 border-t border-primary/20 space-y-3">
-              <div>
-                <p className="text-sm font-medium">你的身份是？</p>
-                <p className="text-xs text-muted-foreground mt-0.5">不同身份有不同的社交节奏</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {WORK_MODE_OPTIONS.map((mode) => (
+          <div className="mt-3 pt-3 border-t border-primary/20 space-y-3">
+            <div>
+              <p className="text-sm font-medium">你的身份是？</p>
+              <p className="text-xs text-muted-foreground mt-0.5">不同身份有不同的社交节奏</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {WORK_MODE_OPTIONS.map((mode) => {
+                const isSelected = selectedWorkMode === mode;
+                return (
                   <button
                     key={mode}
                     type="button"
                     onClick={() => onWorkModeChange(mode)}
-                    className="p-2.5 rounded-lg border border-border hover-elevate text-left"
+                    className={`p-2.5 rounded-lg border text-left transition-all ${
+                      isSelected 
+                        ? "border-primary bg-primary/10 ring-1 ring-primary/30" 
+                        : "border-border hover-elevate"
+                    }`}
                     data-testid={`workmode-${mode}`}
                   >
-                    <div className="font-medium text-sm">
+                    <div className={`font-medium text-sm ${isSelected ? "text-primary" : ""}`}>
                       {WORK_MODE_LABELS[mode]}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
+                    <div className={`text-xs mt-0.5 ${isSelected ? "text-primary/70" : "text-muted-foreground"}`}>
                       {WORK_MODE_DESCRIPTIONS[mode]}
                     </div>
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
-          )}
-          
-          {selectedWorkMode && (
-            <div className="mt-3 pt-3 border-t border-primary/20">
-              <p className="text-sm text-primary/80">{guidance.matchPreview}</p>
-            </div>
-          )}
+            {selectedWorkMode && (
+              <p className="text-sm text-primary/80 pt-2">{guidance.matchPreview}</p>
+            )}
+          </div>
         </motion.div>
       ) : (
         <>
