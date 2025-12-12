@@ -199,7 +199,7 @@ export default function IcebreakerCardsSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
         side="bottom" 
-        className={`h-[95vh] rounded-t-3xl border-0 p-0 ${sceneConfig.background}`}
+        className={`h-[95vh] rounded-t-3xl border-0 p-0 ${sceneConfig.background} [&>button]:hidden`}
         data-testid="sheet-icebreaker-cards"
       >
         <div className="relative h-full overflow-hidden">
