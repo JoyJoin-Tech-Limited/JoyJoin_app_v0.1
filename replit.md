@@ -14,6 +14,7 @@ JoyJoin (悦聚·Joy) is a social networking platform designed to connect indivi
 - New options: show_age_range (default), hide_all
 - Legacy values (show_generation, show_exact_age) handled with backward compatibility
 - Age displayed as range brackets: "25-29岁", "30-34岁" etc.
+- Added getGenerationLabel() for alternative display: "95后", "00后" etc.
 - Files: constants.ts, schema.ts, utils.ts, RegistrationPage.tsx
 
 **Work Mode Options Refined (labels updated):**
