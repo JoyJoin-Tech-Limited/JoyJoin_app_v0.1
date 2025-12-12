@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ChevronLeft, ChevronUp, Sparkles, MessageCircle, Heart, Lightbulb } from "lucide-react";
+import { X, ChevronUp, Sparkles, MessageCircle, Heart, Lightbulb } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -225,6 +225,15 @@ export default function IcebreakerCardsSheet({
                     </p>
                   </div>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white/80 hover:text-white hover:bg-white/10 relative z-50"
+                  onClick={() => onOpenChange(false)}
+                  data-testid="button-close-icebreaker"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
             </SheetHeader>
 
