@@ -6,6 +6,30 @@ JoyJoin (悦聚·Joy) is a social networking platform designed to connect indivi
 
 ## Recent Changes
 
+### December 12, 2025 - Occupation Taxonomy Overhaul for Shenzhen Market
+
+**New Industries Added (15 → 18):**
+- 硬科技/芯片 (hardware): 芯片工程师、芯片验证、硬件工程师、嵌入式工程师、工艺工程师、硬件产品经理
+- 新能源汽车 (new_energy): 新能源汽车工程师、电池工程师、自动驾驶工程师、整车工程师、充电桩/储能、汽车销售
+
+**AI Industry Expanded:**
+- 机器人工程师 (robotics_engineer): 优必选、大疆、宇树、Figure、Tesla Bot
+- 具身智能研发 (embodied_ai): Embodied AI、运动控制、感知算法
+
+**Terminology Updates:**
+- "在职员工" → "在职人士" (88-92% acceptance across all seniority levels)
+- "保险学" → "保险与精算/风险管理" (field-of-study mapping)
+
+**Synonym Expansion for Shenzhen/HK Market:**
+- 法律: Added 红圈所 (金杜/君合/中伦/方达/海问), 魔圈 (Magic Circle), 美所 (Kirkland/Latham/Skadden)
+- 金融: Expanded IBD (中金/华泰/国君/高盛/摩根士丹利/瑞银), PE/VC (红杉/高瓴/IDG/黑石/KKR/淡马锡)
+- 咨询: Added MBB全称 (McKinsey/Boston Consulting/Bain), 二梯队 (罗兰贝格/奥纬/科尔尼)
+- 科技: Shenzhen giants (深信服/迈瑞/大疆/比亚迪/中兴/传音), 外企 (Microsoft/Google/Apple/Meta)
+
+**Files Modified:** shared/occupations.ts, shared/constants.ts
+
+---
+
 ### December 12, 2025 - Registration UX Simplification
 
 **Age Visibility Simplified (4 → 2 options):**
