@@ -3,8 +3,11 @@ export interface AttendeeData {
   displayName: string;
   archetype?: string;
   topInterests?: string[];
+  primaryInterests?: string[];
+  interestFavorite?: string;
   topicsHappy?: string[];
   topicsAvoid?: string[];
+  topicAvoidances?: string[];
   debateComfort?: number;
   age?: number;
   birthdate?: string;
@@ -218,8 +221,10 @@ const sparkPredictions: Record<string, string> = {
 
 export interface SparkPredictionContext {
   userInterests?: string[];
+  userPrimaryInterests?: string[];
   userTopicsHappy?: string[];
   userTopicsAvoid?: string[];
+  userTopicAvoidances?: string[];
   userDebateComfort?: number;
   userEducationLevel?: string;
   userIndustry?: string;
