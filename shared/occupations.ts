@@ -45,8 +45,8 @@ export const WORK_MODES: WorkModeOption[] = [
   { value: "self_employed", label: "自由职业", description: "独立工作，灵活接活" },
   { value: "employed", label: "在职员工", description: "在公司/机构工作" },
   { value: "student", label: "学生/实习", description: "在读、实习或Gap中" },
-  { value: "transitioning", label: "职业过渡期", description: "求职中、休整、职业转型" },
-  { value: "caregiver_retired", label: "家庭照护/退休", description: "全职家长、照顾家人、已退休" },
+  { value: "transitioning", label: "职业过渡期", description: "求职中、休整、转型、预备接班" },
+  { value: "caregiver_retired", label: "家庭为主", description: "全职家长、照顾家人、退休、在家躺平" },
 ];
 
 // 15个行业分类
@@ -711,7 +711,7 @@ export const WORK_MODE_TO_LABEL: Record<WorkMode, string> = {
   employed: "在职",
   student: "学生/实习",
   transitioning: "过渡期",
-  caregiver_retired: "家庭/退休",
+  caregiver_retired: "家庭为主",
 };
 
 // 获取用户职业显示标签（组合职业+身份）

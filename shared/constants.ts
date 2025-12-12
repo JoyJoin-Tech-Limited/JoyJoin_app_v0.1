@@ -26,7 +26,7 @@ export const WORK_MODE_LABELS: Record<WorkMode, string> = {
   employed: "在职员工",
   student: "学生/实习",
   transitioning: "职业过渡期",
-  caregiver_retired: "家庭照护/退休",
+  caregiver_retired: "家庭为主",
 };
 
 // Work mode descriptions (Chinese)
@@ -35,8 +35,8 @@ export const WORK_MODE_DESCRIPTIONS: Record<WorkMode, string> = {
   self_employed: "独立工作，灵活接活",
   employed: "在公司/机构工作",
   student: "在读、实习或Gap中",
-  transitioning: "求职中、休整、职业转型",
-  caregiver_retired: "全职家长、照顾家人、已退休",
+  transitioning: "求职中、休整、转型、预备接班",
+  caregiver_retired: "全职家长、照顾家人、退休、在家躺平",
 };
 
 // Relationship status options
