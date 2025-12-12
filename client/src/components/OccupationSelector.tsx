@@ -23,7 +23,6 @@ import {
   getIndustryById,
   getOccupationsByIndustry,
   getOccupationGuidance,
-  getSuggestedFieldsOfStudy,
   type Occupation,
   type WorkMode,
 } from "@shared/occupations";
@@ -104,11 +103,6 @@ export function OccupationSelector({
     if (!selectedOccupation) return null;
     return getIndustryById(selectedOccupation.industryId);
   }, [selectedOccupation]);
-
-  const suggestedFields = useMemo(() => {
-    if (!selectedOccupationId) return [];
-    return getSuggestedFieldsOfStudy(selectedOccupationId);
-  }, [selectedOccupationId]);
 
   const quickIndustries = useMemo(() => {
     return INDUSTRIES.filter(ind => QUICK_INDUSTRIES.includes(ind.id));
@@ -249,20 +243,17 @@ export function OccupationSelector({
             </Button>
           </div>
           
-          {suggestedFields.length > 0 && (
+          {selectedIndustry && (
             <div className="mt-3 pt-3 border-t border-primary/20">
-              <p className="text-xs text-muted-foreground mb-2">推荐专业领域：</p>
+              <p className="text-xs text-muted-foreground mb-2">同桌可见标签：</p>
               <div className="flex flex-wrap gap-1.5">
-                {suggestedFields.map((field, idx) => (
-                  <Badge
-                    key={field}
-                    variant={idx === 0 ? "default" : "secondary"}
-                    className={idx === 0 ? "bg-primary/20 text-primary border-primary/30" : ""}
-                    data-testid={`field-suggestion-${idx}`}
-                  >
-                    {field}
-                  </Badge>
-                ))}
+                <Badge
+                  variant="default"
+                  className="bg-primary/20 text-primary border-primary/30"
+                  data-testid="industry-tag"
+                >
+                  {selectedIndustry.label}
+                </Badge>
               </div>
             </div>
           )}

@@ -1039,3 +1039,19 @@ export function getDefaultFieldOfStudy(occupationId: string | null | undefined):
   const suggestions = getSuggestedFieldsOfStudy(occupationId);
   return suggestions[0] || "";
 }
+
+// 根据职业ID获取行业标签
+export function getIndustryLabel(occupationId: string | null | undefined): string | null {
+  if (!occupationId) return null;
+  const occupation = OCCUPATIONS.find(o => o.id === occupationId);
+  if (!occupation) return null;
+  const industry = INDUSTRIES.find(i => i.id === occupation.industryId);
+  return industry?.label || null;
+}
+
+// 根据职业ID获取行业ID
+export function getIndustryId(occupationId: string | null | undefined): string | null {
+  if (!occupationId) return null;
+  const occupation = OCCUPATIONS.find(o => o.id === occupationId);
+  return occupation?.industryId || null;
+}
