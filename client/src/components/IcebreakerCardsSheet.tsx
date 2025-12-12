@@ -6,7 +6,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { X, ChevronUp, Sparkles, MessageCircle, Heart, Lightbulb } from "lucide-react";
 import { motion } from "framer-motion";
 import useEmblaCarousel from "embla-carousel-react";
-import Autoplay from "embla-carousel-autoplay";
 import { useQuery } from "@tanstack/react-query";
 
 interface CuratedTopic {
@@ -117,16 +116,13 @@ export default function IcebreakerCardsSheet({
   reducedMotion = false,
   venueIsDim,
 }: IcebreakerCardsSheetProps) {
-  const [emblaRef, emblaApi] = useEmblaCarousel(
-    {
-      loop: true,
-      align: "center",
-      skipSnaps: false,
-      duration: 20,
-      dragFree: false,
-    },
-    [Autoplay({ delay: 0, stopOnInteraction: true, stopOnMouseEnter: false })]
-  );
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop: true,
+    align: "center",
+    skipSnaps: false,
+    duration: 30,
+    dragFree: false,
+  });
   
   const [currentIndex, setCurrentIndex] = useState(0);
   
