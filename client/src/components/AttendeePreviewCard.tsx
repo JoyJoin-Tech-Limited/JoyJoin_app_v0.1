@@ -160,13 +160,17 @@ export default function AttendeePreviewCard({
               <RotateCw className="h-4 w-4 text-muted-foreground" />
             </div>
 
-            {attendee.archetype && archetypeImage && (
+            {attendee.archetype && (
               <div className="flex items-center justify-center mb-1">
-                <img 
-                  src={archetypeImage} 
-                  alt={attendee.archetype} 
-                  className="h-16 w-16 object-contain"
-                />
+                {archetypeImage ? (
+                  <img 
+                    src={archetypeImage} 
+                    alt={attendee.archetype} 
+                    className="h-16 w-16 object-contain"
+                  />
+                ) : (
+                  <Sparkles className="h-16 w-16 text-primary" />
+                )}
               </div>
             )}
 

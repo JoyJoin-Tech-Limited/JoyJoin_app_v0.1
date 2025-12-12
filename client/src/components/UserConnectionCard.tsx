@@ -4,14 +4,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   User, GraduationCap, Briefcase, MapPin, RotateCw, Globe, Star,
-  Zap, Compass, MessageCircle, Target, Heart, Scale, Music, ThumbsUp,
-  Dog, Sun, Sparkles, Search, Anchor, Network, Bird, Brain, Shell, Shield, PartyPopper, MessageSquare
+  PartyPopper, MessageSquare, Sparkles
 } from "lucide-react";
 import EnergyRing from "./EnergyRing";
 import MysteryBadge from "./MysteryBadge";
 import type { AttendeeData } from "@/lib/attendeeAnalytics";
 import { calculateMatchQuality } from "@/lib/attendeeAnalytics";
 import { getInterestLabel, getTopicLabel } from "@/data/interestsTopicsData";
+import { getArchetypeImage } from "@/lib/archetypeImages";
 
 interface ConnectionTag {
   icon: string;
@@ -26,108 +26,20 @@ interface UserConnectionCardProps {
   topicMatchCount?: number;
 }
 
-// 12动物原型系统 - Lucide图标和颜色配置
-const archetypeConfig: Record<string, { IconComponent: typeof Zap; color: string; bgColor: string }> = {
-  "开心柯基": {
-    IconComponent: Dog,
-    color: "text-orange-600 dark:text-orange-400",
-    bgColor: "bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/40 dark:to-orange-950/40"
-  },
-  "太阳鸡": {
-    IconComponent: Sun,
-    color: "text-amber-600 dark:text-amber-400",
-    bgColor: "bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/40 dark:to-yellow-950/40"
-  },
-  "夸夸豚": {
-    IconComponent: ThumbsUp,
-    color: "text-pink-600 dark:text-pink-400",
-    bgColor: "bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950/40 dark:to-rose-950/40"
-  },
-  "机智狐": {
-    IconComponent: Search,
-    color: "text-orange-600 dark:text-orange-400",
-    bgColor: "bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/40 dark:to-amber-950/40"
-  },
-  "淡定海豚": {
-    IconComponent: Anchor,
-    color: "text-cyan-600 dark:text-cyan-400",
-    bgColor: "bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-950/40 dark:to-blue-950/40"
-  },
-  "织网蛛": {
-    IconComponent: Network,
-    color: "text-violet-600 dark:text-violet-400",
-    bgColor: "bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/40 dark:to-purple-950/40"
-  },
-  "暖心熊": {
-    IconComponent: Heart,
-    color: "text-rose-600 dark:text-rose-400",
-    bgColor: "bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-950/40 dark:to-pink-950/40"
-  },
-  "灵感章鱼": {
-    IconComponent: Sparkles,
-    color: "text-purple-600 dark:text-purple-400",
-    bgColor: "bg-gradient-to-br from-purple-50 to-fuchsia-50 dark:from-purple-950/40 dark:to-fuchsia-950/40"
-  },
-  "沉思猫头鹰": {
-    IconComponent: Brain,
-    color: "text-indigo-600 dark:text-indigo-400",
-    bgColor: "bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/40 dark:to-blue-950/40"
-  },
-  "定心大象": {
-    IconComponent: Shield,
-    color: "text-slate-600 dark:text-slate-400",
-    bgColor: "bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/40 dark:to-gray-950/40"
-  },
-  "稳如龟": {
-    IconComponent: Shell,
-    color: "text-emerald-600 dark:text-emerald-400",
-    bgColor: "bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/40 dark:to-green-950/40"
-  },
-  "隐身猫": {
-    IconComponent: Bird,
-    color: "text-gray-600 dark:text-gray-400",
-    bgColor: "bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-950/40 dark:to-slate-950/40"
-  },
-  "火花塞": {
-    IconComponent: Zap,
-    color: "text-orange-600 dark:text-orange-400",
-    bgColor: "bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/40 dark:to-orange-950/40"
-  },
-  "探索者": {
-    IconComponent: Compass,
-    color: "text-cyan-600 dark:text-cyan-400",
-    bgColor: "bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/40 dark:to-cyan-950/40"
-  },
-  "故事家": {
-    IconComponent: MessageCircle,
-    color: "text-purple-600 dark:text-purple-400",
-    bgColor: "bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/40 dark:to-pink-950/40"
-  },
-  "挑战者": {
-    IconComponent: Target,
-    color: "text-red-600 dark:text-red-400",
-    bgColor: "bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/40 dark:to-rose-950/40"
-  },
-  "连接者": {
-    IconComponent: Heart,
-    color: "text-emerald-600 dark:text-emerald-400",
-    bgColor: "bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/40 dark:to-emerald-950/40"
-  },
-  "协调者": {
-    IconComponent: Scale,
-    color: "text-indigo-600 dark:text-indigo-400",
-    bgColor: "bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/40 dark:to-blue-950/40"
-  },
-  "氛围组": {
-    IconComponent: Music,
-    color: "text-fuchsia-600 dark:text-fuchsia-400",
-    bgColor: "bg-gradient-to-br from-pink-50 to-fuchsia-50 dark:from-pink-950/40 dark:to-fuchsia-950/40"
-  },
-  "肯定者": {
-    IconComponent: ThumbsUp,
-    color: "text-teal-600 dark:text-teal-400",
-    bgColor: "bg-gradient-to-br from-teal-50 to-green-50 dark:from-teal-950/40 dark:to-green-950/40"
-  },
+// 12动物原型系统 - 背景颜色配置
+const archetypeBgColors: Record<string, string> = {
+  "开心柯基": "bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/40 dark:to-orange-950/40",
+  "太阳鸡": "bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/40 dark:to-yellow-950/40",
+  "夸夸豚": "bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950/40 dark:to-rose-950/40",
+  "机智狐": "bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/40 dark:to-amber-950/40",
+  "淡定海豚": "bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-950/40 dark:to-blue-950/40",
+  "织网蛛": "bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/40 dark:to-purple-950/40",
+  "暖心熊": "bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-950/40 dark:to-pink-950/40",
+  "灵感章鱼": "bg-gradient-to-br from-purple-50 to-fuchsia-50 dark:from-purple-950/40 dark:to-fuchsia-950/40",
+  "沉思猫头鹰": "bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/40 dark:to-blue-950/40",
+  "定心大象": "bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/40 dark:to-gray-950/40",
+  "稳如龟": "bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/40 dark:to-green-950/40",
+  "隐身猫": "bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-950/40 dark:to-slate-950/40",
 };
 
 export default function UserConnectionCard({
@@ -138,9 +50,10 @@ export default function UserConnectionCard({
   const [isFlipped, setIsFlipped] = useState(false);
   const [revealedBadges, setRevealedBadges] = useState<Set<number>>(new Set());
 
-  const archetypeData = attendee.archetype && archetypeConfig[attendee.archetype]
-    ? archetypeConfig[attendee.archetype]
-    : { IconComponent: Sparkles, color: "text-muted-foreground", bgColor: "bg-muted/20" };
+  const archetypeBgColor = attendee.archetype && archetypeBgColors[attendee.archetype]
+    ? archetypeBgColors[attendee.archetype]
+    : "bg-muted/20";
+  const archetypeImage = getArchetypeImage(attendee.archetype);
 
   // Calculate match quality based on rarity
   const sparkPredictions = connectionTags.map(tag => ({
@@ -211,10 +124,14 @@ export default function UserConnectionCard({
                 <div className="flex gap-3 items-start">
                   {/* Left: Archetype Icon */}
                   <div className="flex-shrink-0 flex flex-col items-center gap-1">
-                    <div className={`w-14 h-14 rounded-xl ${archetypeData.bgColor} flex items-center justify-center`}>
-                      <archetypeData.IconComponent className={`h-7 w-7 ${archetypeData.color}`} />
+                    <div className={`w-14 h-14 rounded-xl ${archetypeBgColor} flex items-center justify-center p-1`}>
+                      {archetypeImage ? (
+                        <img src={archetypeImage} alt={attendee.archetype || ""} className="h-full w-full object-contain" />
+                      ) : (
+                        <User className="h-7 w-7 text-muted-foreground" />
+                      )}
                     </div>
-                    <div className={`text-xs font-semibold text-center ${archetypeData.color}`}>
+                    <div className="text-xs font-semibold text-center text-primary">
                       {attendee.archetype}
                     </div>
                   </div>
