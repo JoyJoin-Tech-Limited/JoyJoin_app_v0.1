@@ -243,3 +243,73 @@ export function getArchetypeNickname(archetype: string | null | undefined): stri
   if (!archetype) return "";
   return archetypeNicknameMap[archetype] || "";
 }
+
+// ============================================
+// 兴趣/话题字段统一访问接口
+// 支持新旧字段的向后兼容
+// ============================================
+
+interface UserWithInterests {
+  primaryInterests?: string[] | null;
+  interestsTop?: string[] | null;
+  interestFavorite?: string | null;
+  topicAvoidances?: string[] | null;
+  topicsAvoid?: string[] | null;
+  topicsHappy?: string[] | null;
+}
+
+/**
+ * 获取用户主要兴趣（优先使用新字段 primaryInterests）
+ * 向后兼容旧字段 interestsTop
+ */
+export function getUserPrimaryInterests(user: UserWithInterests | null | undefined): string[] {
+  if (!user) return [];
+  return user.primaryInterests || user.interestsTop || [];
+}
+
+/**
+ * 获取用户话题排斥（优先使用新字段 topicAvoidances）
+ * 向后兼容旧字段 topicsAvoid
+ */
+export function getUserTopicAvoidances(user: UserWithInterests | null | undefined): string[] {
+  if (!user) return [];
+  return user.topicAvoidances || user.topicsAvoid || [];
+}
+
+/**
+ * 获取用户喜欢的话题（旧字段，仅用于兼容）
+ * 新流程使用"排斥法"，不再收集喜欢的话题
+ */
+export function getUserTopicsHappy(user: UserWithInterests | null | undefined): string[] {
+  if (!user) return [];
+  return user.topicsHappy || [];
+}
+
+/**
+ * 获取用户所有兴趣（包含主要兴趣和普通兴趣）
+ */
+export function getUserAllInterests(user: UserWithInterests | null | undefined): string[] {
+  if (!user) return [];
+  const primary = user.primaryInterests || [];
+  const all = user.interestsTop || [];
+  // 合并去重，主要兴趣排前面
+  const combined = [...primary];
+  for (const interest of all) {
+    if (!combined.includes(interest)) {
+      combined.push(interest);
+    }
+  }
+  return combined;
+}
+
+/**
+ * 检查用户是否有话题冲突
+ * 用于匹配算法：A喜欢的话题 vs B排斥的话题
+ */
+export function hasTopicConflict(
+  userATopicsHappy: string[] | null | undefined,
+  userBTopicAvoidances: string[] | null | undefined
+): boolean {
+  if (!userATopicsHappy || !userBTopicAvoidances) return false;
+  return userATopicsHappy.some(topic => userBTopicAvoidances.includes(topic));
+}
