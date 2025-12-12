@@ -66,20 +66,67 @@ function calculatePersonalityScore(user1: Partial<User>, user2: Partial<User>): 
 }
 
 /**
+ * 获取用户的有效兴趣列表（优先使用新字段primaryInterests，兼容旧字段interestsTop）
+ */
+function getUserInterests(user: Partial<User>): string[] {
+  return user.primaryInterests || user.interestsTop || [];
+}
+
+/**
+ * 获取用户的话题排斥列表（优先使用新字段topicAvoidances，兼容旧字段topicsAvoid）
+ */
+function getUserTopicAvoidances(user: Partial<User>): string[] {
+  return user.topicAvoidances || user.topicsAvoid || [];
+}
+
+/**
+ * 检测话题冲突：user1喜欢聊的话题 vs user2排斥的话题
+ * 返回冲突话题数量
+ */
+function detectTopicConflicts(user1: Partial<User>, user2: Partial<User>): number {
+  const user1TopicsHappy = user1.topicsHappy || [];
+  const user2Avoidances = getUserTopicAvoidances(user2);
+  
+  return user1TopicsHappy.filter(topic => user2Avoidances.includes(topic)).length;
+}
+
+/**
  * 计算两个用户之间的兴趣匹配分数
+ * 增强版：支持primaryInterests加权匹配 + 话题排斥惩罚
  */
 function calculateInterestsScore(user1: Partial<User>, user2: Partial<User>): number {
-  const interests1 = user1.interestsTop || [];
-  const interests2 = user2.interestsTop || [];
+  const interests1 = getUserInterests(user1);
+  const interests2 = getUserInterests(user2);
   
   if (interests1.length === 0 || interests2.length === 0) return 50;
   
-  // 计算交集
+  // 计算兴趣交集
   const commonInterests = interests1.filter(i => interests2.includes(i));
   const matchRatio = commonInterests.length / Math.max(interests1.length, interests2.length);
   
-  // 转换为0-100分数
-  return Math.min(100, Math.round(matchRatio * 100 + 30)); // 至少30分基础分
+  // 基础分数
+  let score = Math.round(matchRatio * 100 + 30);
+  
+  // 主要兴趣匹配加分：如果双方的primaryInterests有交集，额外加分
+  const primary1 = user1.primaryInterests || [];
+  const primary2 = user2.primaryInterests || [];
+  const commonPrimary = primary1.filter(i => primary2.includes(i));
+  if (commonPrimary.length > 0) {
+    score += commonPrimary.length * 10; // 每个共同主要兴趣加10分
+  }
+  
+  // 话题排斥惩罚：双向检测
+  const conflictsFromUser1 = detectTopicConflicts(user1, user2);
+  const conflictsFromUser2 = detectTopicConflicts(user2, user1);
+  const totalConflicts = conflictsFromUser1 + conflictsFromUser2;
+  
+  if (totalConflicts > 0) {
+    // 每个冲突话题扣10分，最多扣30分
+    score -= Math.min(totalConflicts * 10, 30);
+  }
+  
+  // 确保分数在有效范围内
+  return Math.min(100, Math.max(0, score));
 }
 
 /**
@@ -196,11 +243,19 @@ export function calculateUserMatchScore(
     matchPoints.push(`性格高度互补 (${personalityScore}分)`);
   }
   if (interestsScore >= 70) {
-    const common = (user1.interestsTop || []).filter(i => 
-      (user2.interestsTop || []).includes(i)
-    );
+    const interests1 = getUserInterests(user1);
+    const interests2 = getUserInterests(user2);
+    const common = interests1.filter(i => interests2.includes(i));
     if (common.length > 0) {
       matchPoints.push(`共同兴趣：${common.slice(0, 2).join('、')}`);
+    }
+    
+    // 主要兴趣加分说明
+    const primary1 = user1.primaryInterests || [];
+    const primary2 = user2.primaryInterests || [];
+    const commonPrimary = primary1.filter(i => primary2.includes(i));
+    if (commonPrimary.length > 0) {
+      matchPoints.push(`核心兴趣一致：${commonPrimary.join('、')}`);
     }
   }
   if (intentScore >= 75) {
