@@ -1,6 +1,6 @@
 import { Drawer } from "vaul";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Sparkles, ChevronDown, Users, HelpCircle, DollarSign } from "lucide-react";
+import { Calendar, MapPin, Sparkles, ChevronDown, Users, HelpCircle, DollarSign, Bot } from "lucide-react";
 import { useState } from "react";
 import {
   Collapsible,
@@ -8,6 +8,9 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { getCurrencySymbol } from "@/lib/currency";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+const XIAOYUE_AVATAR_PLACEHOLDER = null;
 
 interface BlindBoxInfoSheetProps {
   open: boolean;
@@ -62,14 +65,34 @@ export default function BlindBoxInfoSheet({
           
           {/* 可滚动内容 */}
           <div className="overflow-y-auto flex-1 px-4 pb-6">
-            {/* 标题 */}
-            <div className="mb-6">
-              <Drawer.Title className="text-xl font-bold mb-2" data-testid="text-sheet-title">
-                什么是盲盒模式？
-              </Drawer.Title>
-              <p className="text-sm text-muted-foreground">
-                详情在成局后解锁
-              </p>
+            {/* 小悦介绍区 */}
+            <div className="mb-6 flex items-start gap-3">
+              <Avatar className="h-12 w-12 flex-shrink-0 border-2 border-primary/20">
+                {XIAOYUE_AVATAR_PLACEHOLDER ? (
+                  <AvatarImage src={XIAOYUE_AVATAR_PLACEHOLDER} alt="小悦" />
+                ) : null}
+                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20">
+                  <Bot className="h-6 w-6 text-primary" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <Drawer.Title className="text-base font-semibold" data-testid="text-sheet-title">
+                    小悦
+                  </Drawer.Title>
+                  <Badge variant="secondary" className="text-xs">
+                    悦聚助手
+                  </Badge>
+                </div>
+                <div className="bg-muted/50 rounded-lg rounded-tl-none p-3">
+                  <p className="text-sm">
+                    嗨～我是小悦！让我来告诉你<span className="font-medium text-primary">盲盒模式</span>是怎么玩的吧～
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    详情在成局后解锁哦
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* 1. 顶部摘要条 */}
