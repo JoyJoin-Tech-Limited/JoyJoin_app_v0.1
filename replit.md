@@ -10,6 +10,11 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **小悦 Mascot for Blind Box Guide (Dec 12, 2025):**
+  - Updated BlindBoxInfoSheet to show 小悦 as the guide explaining blind box mode
+  - Added chat-bubble style introduction with avatar placeholder (XIAOYUE_AVATAR_PLACEHOLDER)
+  - Uses Bot icon as fallback until real 小悦 avatar is provided
+
 - **12-Archetype Animal PNG Avatars (Dec 12, 2025):**
   - Created `client/src/lib/archetypeImages.ts` mapping 12 archetype names to PNG graphics
   - Updated AttendeePreviewCard and UserConnectionCard to display PNG images instead of lucide icons
