@@ -10,6 +10,11 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **12-Archetype Animal PNG Avatars (Dec 12, 2025):**
+  - Created `client/src/lib/archetypeImages.ts` mapping 12 archetype names to PNG graphics
+  - Updated AttendeePreviewCard and UserConnectionCard to display PNG images instead of lucide icons
+  - Maintained backward compatibility with Sparkles icon fallback for unmapped archetypes
+
 - **Logo Size Enhancement (Dec 12, 2025):** Increased Logo component sizes by 2x:
   - sm: h-6 → h-12
   - md: h-8 → h-16  
