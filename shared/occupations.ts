@@ -49,23 +49,25 @@ export const WORK_MODES: WorkModeOption[] = [
   { value: "caregiver_retired", label: "家庭为主", description: "全职家长、照顾家人、退休、在家躺平" },
 ];
 
-// 15个行业分类
+// 18个行业分类
 export const INDUSTRIES: Industry[] = [
   { id: "tech", label: "科技互联网", icon: "💻", priority: 1 },
   { id: "ai", label: "AI/大数据", icon: "🤖", priority: 2 },
-  { id: "ecommerce", label: "跨境电商", icon: "🌏", priority: 3 },
-  { id: "finance", label: "金融投资", icon: "📈", priority: 4 },
-  { id: "consulting", label: "咨询服务", icon: "💼", priority: 5 },
-  { id: "marketing", label: "市场营销", icon: "📣", priority: 6 },
-  { id: "creative", label: "创意设计", icon: "🎨", priority: 7 },
-  { id: "media", label: "传媒内容", icon: "📺", priority: 8 },
-  { id: "medical", label: "医疗健康", icon: "🏥", priority: 9 },
-  { id: "education", label: "教育培训", icon: "📚", priority: 10 },
-  { id: "legal", label: "法律合规", icon: "⚖️", priority: 11 },
-  { id: "realestate", label: "地产建筑", icon: "🏗️", priority: 12 },
-  { id: "hospitality", label: "航空酒店旅游", icon: "✈️", priority: 13 },
-  { id: "lifestyle", label: "生活方式", icon: "☕", priority: 14 },
-  { id: "other", label: "其他行业", icon: "🔧", priority: 15 },
+  { id: "hardware", label: "硬科技/芯片", icon: "🔬", priority: 3 },
+  { id: "new_energy", label: "新能源汽车", icon: "🔋", priority: 4 },
+  { id: "ecommerce", label: "跨境电商", icon: "🌏", priority: 5 },
+  { id: "finance", label: "金融投资", icon: "📈", priority: 6 },
+  { id: "consulting", label: "咨询服务", icon: "💼", priority: 7 },
+  { id: "marketing", label: "市场营销", icon: "📣", priority: 8 },
+  { id: "creative", label: "创意设计", icon: "🎨", priority: 9 },
+  { id: "media", label: "传媒内容", icon: "📺", priority: 10 },
+  { id: "medical", label: "医疗健康", icon: "🏥", priority: 11 },
+  { id: "education", label: "教育培训", icon: "📚", priority: 12 },
+  { id: "legal", label: "法律合规", icon: "⚖️", priority: 13 },
+  { id: "realestate", label: "地产建筑", icon: "🏗️", priority: 14 },
+  { id: "hospitality", label: "航空酒店旅游", icon: "✈️", priority: 15 },
+  { id: "lifestyle", label: "生活方式", icon: "☕", priority: 16 },
+  { id: "other", label: "其他行业", icon: "🔧", priority: 17 },
 ];
 
 // 130+ 职业数据
@@ -97,6 +99,24 @@ export const OCCUPATIONS: Occupation[] = [
   { id: "data_engineer", displayName: "数据工程师", industryId: "ai", synonyms: ["大数据工程师", "ETL工程师", "数仓工程师"], keywords: ["数据仓库", "管道"], hot: false },
   { id: "ai_product_manager", displayName: "AI产品经理", industryId: "ai", synonyms: ["算法产品经理", "数据产品经理", "AIGC产品经理"], keywords: ["AI产品", "算法产品"], hot: false },
   { id: "ai_researcher", displayName: "AI研究员", industryId: "ai", synonyms: ["算法研究员", "科研工程师", "Research Scientist"], keywords: ["AI研究", "论文"], hot: false },
+  { id: "robotics_engineer", displayName: "机器人工程师", industryId: "ai", synonyms: ["具身智能", "机器人", "Robotics", "自动化", "机械臂", "人形机器人", "优必选", "大疆", "宇树", "Figure", "Tesla Bot", "波士顿动力"], keywords: ["机器人", "自动化", "具身"], hot: true },
+  { id: "embodied_ai", displayName: "具身智能研发", industryId: "ai", synonyms: ["Embodied AI", "机器人AI", "运动控制", "感知算法", "自主导航"], keywords: ["具身", "智能体", "AI"], hot: true },
+  
+  // ========== 硬科技/芯片 (hardware) ==========
+  { id: "chip_engineer", displayName: "芯片工程师", industryId: "hardware", synonyms: ["IC设计", "芯片设计", "半导体", "集成电路", "ASIC", "FPGA", "华为海思", "中芯国际", "紫光", "寒武纪", "地平线", "英伟达", "高通", "台积电", "联发科"], keywords: ["芯片", "半导体", "IC"], hot: true },
+  { id: "chip_verification", displayName: "芯片验证工程师", industryId: "hardware", synonyms: ["IC验证", "DV工程师", "验证工程师", "芯片测试"], keywords: ["验证", "测试", "芯片"], hot: false },
+  { id: "hardware_engineer", displayName: "硬件工程师", industryId: "hardware", synonyms: ["电子工程师", "嵌入式硬件", "PCB设计", "电路设计", "硬件开发"], keywords: ["硬件", "电子", "电路"], hot: true },
+  { id: "embedded_engineer", displayName: "嵌入式工程师", industryId: "hardware", synonyms: ["嵌入式开发", "单片机", "MCU开发", "固件工程师", "Firmware", "STM32", "Arduino"], keywords: ["嵌入式", "固件", "单片机"], hot: true },
+  { id: "semiconductor_process", displayName: "工艺工程师", industryId: "hardware", synonyms: ["半导体工艺", "制程工程师", "Fab工程师", "晶圆制造"], keywords: ["工艺", "制程", "晶圆"], hot: false },
+  { id: "hardware_pm", displayName: "硬件产品经理", industryId: "hardware", synonyms: ["消费电子产品经理", "IoT产品经理", "智能硬件产品"], keywords: ["硬件产品", "智能设备"], hot: false },
+  
+  // ========== 新能源汽车 (new_energy) ==========
+  { id: "ev_engineer", displayName: "新能源汽车工程师", industryId: "new_energy", synonyms: ["电动汽车", "EV工程师", "三电系统", "电池工程师", "电机工程师", "BYD", "比亚迪", "特斯拉", "Tesla", "蔚来", "NIO", "理想", "小鹏", "极氪", "华为汽车", "问界", "小米汽车"], keywords: ["新能源", "电动车", "汽车"], hot: true },
+  { id: "battery_engineer", displayName: "电池工程师", industryId: "new_energy", synonyms: ["动力电池", "电芯工程师", "BMS工程师", "宁德时代", "CATL", "比亚迪电池", "亿纬锂能"], keywords: ["电池", "储能", "BMS"], hot: true },
+  { id: "autonomous_driving", displayName: "自动驾驶工程师", industryId: "new_energy", synonyms: ["自动驾驶", "无人驾驶", "ADAS", "感知算法", "规控算法", "百度Apollo", "华为ADS", "小鹏XPILOT", "Waymo", "Cruise"], keywords: ["自动驾驶", "无人驾驶", "智驾"], hot: true },
+  { id: "vehicle_engineer", displayName: "整车工程师", industryId: "new_energy", synonyms: ["车辆工程师", "底盘工程师", "车身工程师", "NVH工程师", "汽车工程"], keywords: ["整车", "汽车工程"], hot: false },
+  { id: "charging_infra", displayName: "充电桩/储能", industryId: "new_energy", synonyms: ["充电桩", "储能系统", "充电网络", "特来电", "星星充电", "国家电网充电"], keywords: ["充电", "储能"], hot: false },
+  { id: "ev_sales", displayName: "新能源汽车销售", industryId: "new_energy", synonyms: ["汽车销售", "新能源销售顾问", "4S店", "直营店"], keywords: ["汽车销售", "新能源"], hot: false },
   
   // ========== 跨境电商 (ecommerce) ==========
   { id: "ecom_operator", displayName: "电商运营", industryId: "ecommerce", synonyms: ["跨境电商运营", "亚马逊运营", "Shopify运营", "站点运营", "店铺运营", "做电商", "淘宝运营", "天猫运营", "拼多多运营"], keywords: ["运营", "店铺", "销售", "电商"], hot: true },
@@ -293,12 +313,49 @@ export const PINYIN_MAP: Record<string, string[]> = {
   "sjgcs": ["data_engineer"], // 数据工程师
   "aicpjl": ["ai_product_manager"], // AI产品经理
   "aiyjy": ["ai_researcher"], // AI研究员
+  "jqrgcs": ["robotics_engineer"], // 机器人工程师
+  "jqr": ["robotics_engineer"], // 机器人
+  "jszn": ["embodied_ai", "robotics_engineer"], // 具身智能
+  "robotics": ["robotics_engineer"],
+  "dj": ["robotics_engineer"], // 大疆
+  "ybs": ["robotics_engineer"], // 优必选
+  
+  // 硬科技/芯片
+  "xpgcs": ["chip_engineer"], // 芯片工程师
+  "xp": ["chip_engineer", "ecom_product"], // 芯片 (also matches ecom_product for 选品)
+  "bdt": ["chip_engineer", "semiconductor_process"], // 半导体
+  "ic": ["chip_engineer", "chip_verification"], // IC
+  "asic": ["chip_engineer"],
+  "fpga": ["chip_engineer"],
+  "hwhs": ["chip_engineer"], // 华为海思
+  "zxgj": ["chip_engineer"], // 中芯国际
+  "yjgcs": ["hardware_engineer"], // 硬件工程师
+  "qrsgcs": ["embedded_engineer"], // 嵌入式工程师
+  "qrs": ["embedded_engineer"], // 嵌入式
+  "gygcs": ["semiconductor_process"], // 工艺工程师
+  "yjcpjl": ["hardware_pm"], // 硬件产品经理
+  
+  // 新能源汽车
+  "xnyqc": ["ev_engineer", "battery_engineer", "autonomous_driving"], // 新能源汽车
+  "byd": ["ev_engineer", "battery_engineer"], // 比亚迪
+  "tsla": ["ev_engineer", "autonomous_driving"], // 特斯拉
+  "dcgcs": ["battery_engineer"], // 电池工程师
+  "bms": ["battery_engineer"],
+  "catl": ["battery_engineer"], // 宁德时代
+  "zdjs": ["autonomous_driving"], // 自动驾驶
+  "adas": ["autonomous_driving"],
+  "wl": ["ev_engineer"], // 蔚来
+  "lx": ["ev_engineer"], // 理想
+  "xpqc": ["ev_engineer"], // 小鹏
+  "zcgcs": ["vehicle_engineer"], // 整车工程师
+  "cdz": ["charging_infra"], // 充电桩
+  "cn": ["charging_infra"], // 储能
+  "qcxs": ["ev_sales"], // 汽车销售
   
   // 跨境电商
   "dsyy": ["ecom_operator"], // 电商运营
   "kjdsyy": ["ecom_operator"], // 跨境电商运营
   "zds": ["ecom_independent"], // 做电商
-  "xp": ["ecom_product"], // 选品
   "dlz": ["ecom_independent"], // 独立站
   "ggtf": ["ecom_ads"], // 广告投放
   "dswl": ["ecom_logistics"], // 电商物流
@@ -789,6 +846,24 @@ export const OCCUPATION_TO_FIELD_SUGGESTIONS: Record<string, string[]> = {
   data_engineer: ["数据工程", "计算机科学", "大数据"],
   ai_product_manager: ["人工智能", "产品管理", "商业分析"],
   ai_researcher: ["人工智能", "机器学习", "数学"],
+  robotics_engineer: ["机器人工程", "自动化", "机械工程"],
+  embodied_ai: ["人工智能", "机器人工程", "控制工程"],
+  
+  // 硬科技/芯片
+  chip_engineer: ["微电子", "集成电路设计", "电子工程"],
+  chip_verification: ["微电子", "电子工程", "计算机科学"],
+  hardware_engineer: ["电子工程", "通信工程", "自动化"],
+  embedded_engineer: ["嵌入式系统", "电子工程", "计算机科学"],
+  semiconductor_process: ["微电子", "材料科学", "化学工程"],
+  hardware_pm: ["电子工程", "产品管理", "工商管理"],
+  
+  // 新能源汽车
+  ev_engineer: ["车辆工程", "电气工程", "新能源"],
+  battery_engineer: ["材料科学", "电化学", "新能源"],
+  autonomous_driving: ["人工智能", "车辆工程", "计算机科学"],
+  vehicle_engineer: ["车辆工程", "机械工程", "汽车工程"],
+  charging_infra: ["电气工程", "新能源", "电力系统"],
+  ev_sales: ["市场营销", "汽车工程", "工商管理"],
   
   // 跨境电商
   ecom_operator: ["电子商务", "市场营销", "国际贸易"],
