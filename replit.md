@@ -8,10 +8,17 @@ JoyJoin (悦聚·Joy) is a social networking platform designed to connect indivi
 
 ### December 12, 2025 - Registration UX Simplification
 
-**Work Mode Options Expanded (4 → 6):**
-- Added "transitioning" (职业过渡期): 求职中、休整、职业转型
-- Added "caregiver_retired" (家庭照护/退休): 全职家长、照顾家人、已退休
-- Updated "student" label to "学生/实习" to cover interns
+**Age Visibility Simplified (4 → 2 options):**
+- Reduced from dropdown with 4 options to simple Switch toggle
+- Default: ON (显示年龄段给同桌人)
+- New options: show_age_range (default), hide_all
+- Legacy values (show_generation, show_exact_age) handled with backward compatibility
+- Age displayed as range brackets: "25-29岁", "30-34岁" etc.
+- Files: constants.ts, schema.ts, utils.ts, RegistrationPage.tsx
+
+**Work Mode Options Refined (labels updated):**
+- "transitioning": 描述改为"求职中、休整、转型、预备接班" (覆盖厂二代)
+- "caregiver_retired": 标签改为"家庭为主"，描述改为"全职家长、照顾家人、退休、在家躺平"
 - Work mode selector now always visible (can switch anytime, no need to reset)
 - Selected work mode highlighted with purple border/background
 
