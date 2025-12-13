@@ -107,20 +107,6 @@ export default function ProfilePage() {
   };
 
   const hasCompletedQuiz = !!user?.hasCompletedPersonalityTest;
-  
-  const personalityData = hasCompletedQuiz && personalityResults ? {
-    traits: [
-      { name: "亲和力", score: personalityResults.affinityScore || 0, maxScore: 10 },
-      { name: "开放性", score: personalityResults.opennessScore || 0, maxScore: 10 },
-      { name: "责任心", score: personalityResults.conscientiousnessScore || 0, maxScore: 10 },
-      { name: "外向性", score: personalityResults.extraversionScore || 0, maxScore: 10 },
-      { name: "情绪稳定性", score: personalityResults.emotionalStabilityScore || 0, maxScore: 10 },
-      { name: "正能量性", score: personalityResults.positivityScore || 0, maxScore: 10 }
-    ],
-    challenges: personalityResults.challenges ? [personalityResults.challenges] : [],
-    idealMatch: personalityResults.idealFriendTypes?.join('、') || personalityResults.idealFriendTypes?.[0] || "",
-    energyLevel: 75 // Default energy level for now
-  } : null;
 
   const handleStartQuiz = () => {
     setLocation("/personality-test");
@@ -307,7 +293,7 @@ export default function ProfilePage() {
           </Card>
         )}
 
-        {!hasCompletedQuiz ? (
+        {!hasCompletedQuiz && (
           <Card className="border shadow-sm bg-gradient-to-br from-primary/10 to-transparent cursor-pointer hover-elevate active-elevate-2" onClick={() => setShowQuizIntro(true)}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between gap-3">
@@ -326,15 +312,7 @@ export default function ProfilePage() {
               </div>
             </CardContent>
           </Card>
-        ) : personalityData ? (
-          <PersonalityProfile
-            traits={personalityData.traits}
-            challenges={personalityData.challenges}
-            idealMatch={personalityData.idealMatch}
-            energyLevel={personalityData.energyLevel}
-            onRetakeQuiz={handleStartQuiz}
-          />
-        ) : null}
+        )}
 
         <Card className="border shadow-sm">
           <CardHeader className="pb-3">
