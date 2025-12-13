@@ -13,6 +13,9 @@ import IcebreakerCardsSheet from "@/components/IcebreakerCardsSheet";
 import PostMatchEventCard from "@/components/PostMatchEventCard";
 import ReunionButton from "@/components/ReunionButton";
 import MatchRevealAnimation from "@/components/MatchRevealAnimation";
+import MysteryWaitingCard from "@/components/MysteryWaitingCard";
+import MysteryLocationCard from "@/components/MysteryLocationCard";
+import MatchCelebrationOverlay from "@/components/MatchCelebrationOverlay";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { invalidateCacheForEvent } from "@/lib/cacheInvalidation";
@@ -24,6 +27,7 @@ import { preloadArchetypeImages } from "@/hooks/usePreloadImages";
 import { archetypeAvatars } from "@/lib/archetypeAvatars";
 import { detectDevice } from "@/lib/deviceDetection";
 import { getOrAssignVariant } from "@/lib/abTestingFramework";
+import { useRevealStatus } from "@/hooks/useRevealStatus";
 
 interface AnimationStatus {
   hasViewed: boolean;
@@ -50,10 +54,14 @@ export default function BlindBoxEventDetailPage() {
   const [allowReplay, setAllowReplay] = useState(false);
   const [icebreakerSheetOpen, setIcebreakerSheetOpen] = useState(false);
   const [hasAutoShownIcebreaker, setHasAutoShownIcebreaker] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const { data: event, isLoading } = useQuery<BlindBoxEvent>({
     queryKey: ["/api/blind-box-events", eventId],
   });
+
+  // Use reveal status to determine if match details should be shown
+  const { isRevealed } = useRevealStatus(event?.dateTime);
 
   // Query animation status for matched events
   const { data: animationStatus } = useQuery<AnimationStatus>({
@@ -427,34 +435,42 @@ export default function BlindBoxEventDetailPage() {
         </Card>
 
         {/* 地点信息 (仅已匹配或已完成显示) */}
-        {event && (event.status === "matched" || event.status === "completed") && event.restaurantName ? (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">地点信息</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="font-medium">{event.restaurantName}</p>
-                    <p className="text-sm text-muted-foreground">{event.restaurantAddress}</p>
-                    <p className="text-xs text-muted-foreground">{event.city}•{event.district}</p>
+        {event && (event.status === "matched" || event.status === "completed") ? (
+          isRevealed && event.restaurantName ? (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">地点信息</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="font-medium">{event.restaurantName}</p>
+                      <p className="text-sm text-muted-foreground">{event.restaurantAddress}</p>
+                      <p className="text-xs text-muted-foreground">{event.city}•{event.district}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={handleNavigation}
-                data-testid="button-navigate"
-              >
-                <Navigation className="h-4 w-4 mr-2" />
-                到这去
-              </Button>
-            </CardContent>
-          </Card>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={handleNavigation}
+                  data-testid="button-navigate"
+                >
+                  <Navigation className="h-4 w-4 mr-2" />
+                  到这去
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <MysteryLocationCard 
+              eventDateTime={event.dateTime}
+              city={event.city}
+              district={event.district}
+            />
+          )
         ) : null}
 
         {/* 预算与菜式 */}
@@ -483,34 +499,41 @@ export default function BlindBoxEventDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Post-Match Event Card: Attendee Insights & Match Explanation */}
-        {event && (event.status === "matched" || event.status === "completed") && event.matchedAttendees && Array.isArray(event.matchedAttendees) && event.matchedAttendees.length > 0 ? (
-          <PostMatchEventCard 
-            matchedAttendees={event.matchedAttendees as Array<{
-              userId: string;
-              displayName: string;
-              archetype?: string;
-              topInterests?: string[];
-              industry?: string;
-              ageVisible?: boolean;
-              industryVisible?: boolean;
-            }>}
-            matchExplanation={event.matchExplanation || undefined}
-            userInterests={(user?.interestsTop as string[] | undefined) || ["film_entertainment", "travel_exploration"]}
-            userEducationLevel={user?.educationLevel || "Master's"}
-            userIndustry={user?.industry || "科技"}
-            userAge={user?.birthdate ? calculateAge(user.birthdate) : undefined}
-            userGender={user?.gender || undefined}
-            userRelationshipStatus={user?.relationshipStatus || "Single"}
-            userChildren={user?.children || undefined}
-            userStudyLocale={user?.studyLocale || "Overseas"}
-            userOverseasRegions={user?.overseasRegions as string[] | undefined}
-            userSeniority={user?.seniority || "Mid"}
-            userFieldOfStudy={user?.fieldOfStudy || undefined}
-            userLanguages={user?.languagesComfort as string[] | undefined}
-            userHometownCountry={user?.hometownCountry || undefined}
-            userHometownRegionCity={user?.hometownRegionCity || undefined}
-          />
+        {/* Post-Match Event Card or Mystery Waiting Card */}
+        {event && (event.status === "matched" || event.status === "completed") ? (
+          isRevealed && event.matchedAttendees && Array.isArray(event.matchedAttendees) && event.matchedAttendees.length > 0 ? (
+            <PostMatchEventCard 
+              matchedAttendees={event.matchedAttendees as Array<{
+                userId: string;
+                displayName: string;
+                archetype?: string;
+                topInterests?: string[];
+                industry?: string;
+                ageVisible?: boolean;
+                industryVisible?: boolean;
+              }>}
+              matchExplanation={event.matchExplanation || undefined}
+              userInterests={(user?.interestsTop as string[] | undefined) || ["film_entertainment", "travel_exploration"]}
+              userEducationLevel={user?.educationLevel || "Master's"}
+              userIndustry={user?.industry || "科技"}
+              userAge={user?.birthdate ? calculateAge(user.birthdate) : undefined}
+              userGender={user?.gender || undefined}
+              userRelationshipStatus={user?.relationshipStatus || "Single"}
+              userChildren={user?.children || undefined}
+              userStudyLocale={user?.studyLocale || "Overseas"}
+              userOverseasRegions={user?.overseasRegions as string[] | undefined}
+              userSeniority={user?.seniority || "Mid"}
+              userFieldOfStudy={user?.fieldOfStudy || undefined}
+              userLanguages={user?.languagesComfort as string[] | undefined}
+              userHometownCountry={user?.hometownCountry || undefined}
+              userHometownRegionCity={user?.hometownRegionCity || undefined}
+            />
+          ) : (
+            <MysteryWaitingCard 
+              eventDateTime={event.dateTime}
+              participantCount={event.totalParticipants || 4}
+            />
+          )
         ) : null}
 
         {/* 小悦话题入口按钮 (仅已匹配或已完成显示) */}
