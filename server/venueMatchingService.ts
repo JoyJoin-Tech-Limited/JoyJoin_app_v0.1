@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { format, addHours } from "date-fns";
 
 /**
  * Venue Matching Service
@@ -9,6 +10,7 @@ import { storage } from "./storage";
  * - Location preferences
  * - Cuisine preferences (for dining events)
  * - Venue capacity and availability
+ * - Time slot availability (integrated with venueTimeSlots)
  */
 
 export interface VenueMatchingCriteria {
@@ -20,37 +22,111 @@ export interface VenueMatchingCriteria {
   cuisinePreferences?: string[];
   priceRange?: string;
   dateTime?: Date;
+  durationHours?: number; // Event duration in hours (default 3)
 }
 
 export interface VenueMatchResult {
   venue: any;
   matchScore: number;
   reasons: string[];
+  availableTimeSlots?: Array<{ startTime: string; endTime: string }>;
 }
 
 export class VenueMatchingService {
   /**
    * Find the best matching venues for an event
    * Returns top 5 venues sorted by match score
+   * Now integrates with venue time slots when dateTime is provided
    */
   async findMatchingVenues(criteria: VenueMatchingCriteria): Promise<VenueMatchResult[]> {
-    const allVenues = await storage.getAllVenues();
+    let candidateVenues: Array<{ venue: any; availableSlots?: any[] }> = [];
     
-    // Filter only active venues
-    const activeVenues = allVenues.filter(v => v.isActive);
+    // If dateTime is provided, enforce time slot availability constraint
+    if (criteria.dateTime) {
+      const dateStr = format(criteria.dateTime, "yyyy-MM-dd");
+      const hours = criteria.dateTime.getHours();
+      const minutes = criteria.dateTime.getMinutes();
+      const startTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      
+      // Validate and sanitize durationHours (min 1, max 12 hours for practical events)
+      const rawDuration = criteria.durationHours || 3;
+      const durationHours = Math.max(1, Math.min(12, rawDuration));
+      
+      // Calculate end time and check for midnight rollover
+      const endDate = addHours(criteria.dateTime, durationHours);
+      const endDateStr = format(endDate, "yyyy-MM-dd");
+      
+      // Reject events that cross midnight - they need to be handled as separate day bookings
+      if (endDateStr !== dateStr) {
+        console.warn(`[VenueMatching] Event crosses midnight (${dateStr} ${startTime} + ${durationHours}h). Cross-day events not supported.`);
+        return [];
+      }
+      
+      const endHours = endDate.getHours();
+      const endMinutes = endDate.getMinutes();
+      const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+      
+      console.log(`[VenueMatching] Filtering by time slot availability: ${dateStr} ${startTime}-${endTime}`);
+      
+      // If no city is specified, we need to search all cities and aggregate
+      if (criteria.preferredCity) {
+        const availableVenuesWithSlots = await storage.getAvailableVenuesForDateTime(
+          criteria.preferredCity,
+          criteria.preferredDistrict,
+          dateStr,
+          startTime,
+          endTime
+        );
+        
+        candidateVenues = availableVenuesWithSlots.map(({ venue, availableSlots }) => ({
+          venue,
+          availableSlots,
+        }));
+      } else {
+        // Search both cities if no preference specified
+        const cities = ["深圳", "香港"];
+        for (const city of cities) {
+          const availableVenuesWithSlots = await storage.getAvailableVenuesForDateTime(
+            city,
+            criteria.preferredDistrict,
+            dateStr,
+            startTime,
+            endTime
+          );
+          candidateVenues.push(...availableVenuesWithSlots.map(({ venue, availableSlots }) => ({
+            venue,
+            availableSlots,
+          })));
+        }
+      }
+      
+      console.log(`[VenueMatching] Found ${candidateVenues.length} venues with available time slots`);
+      
+      // STRICT ENFORCEMENT: If no venues have available time slots, return empty
+      // This prevents assigning venues without confirmed availability
+      if (candidateVenues.length === 0) {
+        console.warn(`[VenueMatching] No venues with available time slots for ${dateStr} ${startTime}-${endTime}`);
+        return [];
+      }
+    } else {
+      // No dateTime specified, use all active venues (for planning/browsing without booking)
+      const allVenues = await storage.getAllVenues();
+      candidateVenues = allVenues.filter(v => v.isActive).map(venue => ({ venue }));
+    }
     
-    if (activeVenues.length === 0) {
+    if (candidateVenues.length === 0) {
       console.warn("[VenueMatching] No active venues available");
       return [];
     }
     
     // Score each venue
-    const scoredVenues = activeVenues.map(venue => {
-      const { score, reasons } = this.calculateVenueScore(venue, criteria);
+    const scoredVenues = candidateVenues.map(({ venue, availableSlots }) => {
+      const { score, reasons } = this.calculateVenueScore(venue, criteria, !!availableSlots);
       return {
         venue,
         matchScore: score,
         reasons,
+        availableTimeSlots: availableSlots?.map(s => ({ startTime: s.startTime, endTime: s.endTime })),
       };
     });
     
@@ -68,8 +144,9 @@ export class VenueMatchingService {
   /**
    * Calculate match score for a single venue
    * Score range: 0-100
+   * @param hasTimeSlotAvailability - Whether the venue has confirmed time slot availability
    */
-  private calculateVenueScore(venue: any, criteria: VenueMatchingCriteria): { score: number; reasons: string[] } {
+  private calculateVenueScore(venue: any, criteria: VenueMatchingCriteria, hasTimeSlotAvailability: boolean = false): { score: number; reasons: string[] } {
     let score = 0;
     const reasons: string[] = [];
     
@@ -119,13 +196,15 @@ export class VenueMatchingService {
       score += 5; // Partial points if no price preference
     }
     
-    // 6. Availability bonus (10 points)
-    // Check if venue has capacity for concurrent events
-    if (venue.maxConcurrentEvents > 1) {
-      score += 10;
-      reasons.push("场地可同时举办多场活动");
-    } else {
+    // 6. Time slot availability bonus (15 points) - replaces old availability check
+    // This is a significant bonus for venues with confirmed time slot availability
+    if (hasTimeSlotAvailability) {
+      score += 15;
+      reasons.push("已确认有可用时间段");
+    } else if (venue.maxConcurrentEvents > 1) {
+      // Fallback to old availability check if no time slot data
       score += 5;
+      reasons.push("场地可同时举办多场活动");
     }
     
     return { score: Math.min(100, score), reasons };
