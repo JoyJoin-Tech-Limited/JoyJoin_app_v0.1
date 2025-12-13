@@ -128,10 +128,16 @@ export interface IStorage {
   // Admin Coupon operations
   getAllCoupons(): Promise<any[]>;
   getCoupon(id: string): Promise<any | undefined>;
+  getCouponByCode(code: string): Promise<any | undefined>;
   createCoupon(data: any): Promise<any>;
   updateCoupon(id: string, updates: any): Promise<any>;
   getCouponUsageStats(couponId: string): Promise<any>;
   recordCouponUsage(data: { couponId: string; userId: string; paymentId: string; discountApplied: number }): Promise<void>;
+  
+  // User Coupon operations (rewards, promotions)
+  getUserCoupons(userId: string): Promise<any[]>;
+  createUserCoupon(data: { userId: string; couponId: string; source: string; sourceId?: string }): Promise<any>;
+  markUserCouponUsed(userCouponId: string): Promise<any>;
 
   // Admin Payment operations
   getAllPayments(): Promise<any[]>;
@@ -1362,6 +1368,44 @@ export class DatabaseStorage implements IStorage {
     await db.execute(sql`
       UPDATE coupons SET current_uses = current_uses + 1 WHERE id = ${data.couponId}
     `);
+  }
+
+  async getCouponByCode(code: string): Promise<any | undefined> {
+    const result = await db.execute(sql`
+      SELECT * FROM coupons WHERE code = ${code} AND is_active = true LIMIT 1
+    `);
+    return result.rows[0];
+  }
+
+  // ============ USER COUPONS ============
+  async getUserCoupons(userId: string): Promise<any[]> {
+    const result = await db.execute(sql`
+      SELECT uc.*, c.code, c.name, c.description, c.discount_type, c.discount_value, c.valid_from, c.valid_until
+      FROM user_coupons uc
+      LEFT JOIN coupons c ON uc.coupon_id = c.id
+      WHERE uc.user_id = ${userId}
+      ORDER BY uc.created_at DESC
+    `);
+    return result.rows;
+  }
+
+  async createUserCoupon(data: { userId: string; couponId: string; source: string; sourceId?: string }): Promise<any> {
+    const result = await db.execute(sql`
+      INSERT INTO user_coupons (user_id, coupon_id, source, source_id)
+      VALUES (${data.userId}, ${data.couponId}, ${data.source}, ${data.sourceId || null})
+      RETURNING *
+    `);
+    return result.rows[0];
+  }
+
+  async markUserCouponUsed(userCouponId: string): Promise<any> {
+    const result = await db.execute(sql`
+      UPDATE user_coupons 
+      SET is_used = true, used_at = NOW() 
+      WHERE id = ${userCouponId}
+      RETURNING *
+    `);
+    return result.rows[0];
   }
 
   // ============ PAYMENTS ============

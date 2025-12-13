@@ -495,6 +495,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Mark personality test as complete
       await storage.markPersonalityTestComplete(userId);
 
+      // Award registration welcome coupon (6折 = 40% off)
+      try {
+        const welcomeCoupon = await storage.getCouponByCode('WELCOME40');
+        if (welcomeCoupon) {
+          // Check if user already has this coupon
+          const existingCoupons = await storage.getUserCoupons(userId);
+          const alreadyHas = existingCoupons.some((uc: any) => uc.coupon_id === welcomeCoupon.id);
+          if (!alreadyHas) {
+            await storage.createUserCoupon({
+              userId,
+              couponId: welcomeCoupon.id,
+              source: 'registration_complete',
+            });
+            console.log(`[Registration] Awarded welcome coupon to user ${userId}`);
+          }
+        }
+      } catch (couponError) {
+        console.error("Error awarding welcome coupon:", couponError);
+      }
+
       res.json({
         ...roleResult,
         matchDetails: {
@@ -502,10 +522,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           secondaryDistance: matchResult.secondaryDistance,
           userTraits: matchResult.userTraits,
         },
+        welcomeCouponAwarded: true,
       });
     } catch (error) {
       console.error("Error submitting V2 personality test:", error);
       res.status(500).json({ message: "Failed to submit V2 personality test" });
+    }
+  });
+
+  // Get user's coupons
+  app.get('/api/user/coupons', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const coupons = await storage.getUserCoupons(userId);
+      res.json(coupons);
+    } catch (error) {
+      console.error("Error fetching user coupons:", error);
+      res.status(500).json({ message: "Failed to fetch coupons" });
     }
   });
 
@@ -5556,6 +5589,41 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
       // 过滤掉已经报名过的池子
       const visiblePools = pools.filter((p) => !registeredPoolIds.has(p.id));
 
+      // 获取每个池子的报名人数和前3个报名者的原型
+      const poolsWithSocialProof = await Promise.all(
+        visiblePools.map(async (pool) => {
+          const registrations = await db
+            .select({
+              id: eventPoolRegistrations.id,
+              userId: eventPoolRegistrations.userId,
+            })
+            .from(eventPoolRegistrations)
+            .where(eq(eventPoolRegistrations.poolId, pool.id))
+            .limit(10);
+
+          // 获取前3个报名者的原型信息
+          const sampleUserIds = registrations.slice(0, 3).map(r => r.userId);
+          let sampleArchetypes: string[] = [];
+          
+          if (sampleUserIds.length > 0) {
+            const sampleUsers = await db
+              .select({ archetype: users.archetype })
+              .from(users)
+              .where(inArray(users.id, sampleUserIds));
+            sampleArchetypes = sampleUsers
+              .map(u => u.archetype)
+              .filter((a): a is string => a !== null);
+          }
+
+          return {
+            ...pool,
+            registrationCount: registrations.length,
+            spotsLeft: ((pool.minGroupSize || 4) * (pool.targetGroups || 1)) - registrations.length,
+            sampleArchetypes,
+          };
+        })
+      );
+
       console.log("[EventPools] visible pools for user:", {
         userId,
         total: pools.length,
@@ -5563,7 +5631,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         visibleCount: visiblePools.length,
       });
 
-      return res.json(visiblePools);
+      return res.json(poolsWithSocialProof);
     } catch (error) {
       console.error("Error fetching event pools:", error);
       return res.status(500).json({ message: "Failed to fetch event pools" });

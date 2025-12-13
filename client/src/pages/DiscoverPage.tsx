@@ -28,6 +28,7 @@ interface EventPool {
   registrationCount: number;
   spotsLeft: number;
   genderRestriction?: string;
+  sampleArchetypes?: string[];
 }
 
 interface UserCoupon {
@@ -137,6 +138,8 @@ export default function DiscoverPage() {
         mysteryTitle,
         isAA: true, // Event pools default to AA
         isGirlsNight,
+        registrationCount: pool.registrationCount || 0,
+        sampleArchetypes: pool.sampleArchetypes || [],
       };
     } catch (error) {
       console.error("Error transforming event pool:", pool, error);

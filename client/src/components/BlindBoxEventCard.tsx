@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Sparkles, Users } from "lucide-react";
 import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
 import JoinBlindBoxSheet from "./JoinBlindBoxSheet";
+import { getArchetypeImage } from "@/lib/archetypeImages";
 
 type PriceTier = "100元以下" | "100-200" | "200-300" | "300-500" | "500+";
 
@@ -21,7 +22,9 @@ interface BlindBoxEventCardProps {
   isAA?: boolean;
   city?: "香港" | "深圳";
   isGirlsNight?: boolean;
-  poolId?: string; // <-- add this line
+  poolId?: string;
+  registrationCount?: number;
+  sampleArchetypes?: string[];
 }
 
 export default function BlindBoxEventCard({
@@ -36,6 +39,8 @@ export default function BlindBoxEventCard({
   city,
   isGirlsNight,
   poolId,
+  registrationCount = 0,
+  sampleArchetypes = [],
 }: BlindBoxEventCardProps) {
   const [infoSheetOpen, setInfoSheetOpen] = useState(false);
   const [joinSheetOpen, setJoinSheetOpen] = useState(false);
@@ -93,12 +98,41 @@ export default function BlindBoxEventCard({
             <span>{area}</span>
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Users className="h-4 w-4" />
-            <span>4-6人</span>
-            <span className="text-xs">
-              • {isGirlsNight ? "仅限女生" : "尽量保持男女比例平衡"}
-            </span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Users className="h-4 w-4" />
+              <span>4-6人</span>
+              <span className="text-xs">
+                • {isGirlsNight ? "仅限女生" : "尽量保持男女比例平衡"}
+              </span>
+            </div>
+            
+            {/* 社交证明：报名人数 + 原型头像叠合 */}
+            {registrationCount > 0 && (
+              <div className="flex items-center gap-1.5" data-testid={`social-proof-${id}`}>
+                <div className="flex -space-x-2">
+                  {sampleArchetypes.slice(0, 3).map((archetype, index) => {
+                    const imgSrc = getArchetypeImage(archetype);
+                    return imgSrc ? (
+                      <div
+                        key={index}
+                        className="w-6 h-6 rounded-full border-2 border-background bg-muted overflow-hidden"
+                        style={{ zIndex: 3 - index }}
+                      >
+                        <img 
+                          src={imgSrc} 
+                          alt={archetype}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">
+                  {registrationCount}人已报名
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2 pt-1">

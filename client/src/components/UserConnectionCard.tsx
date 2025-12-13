@@ -24,6 +24,8 @@ interface UserConnectionCardProps {
   attendee: AttendeeData;
   connectionTags: ConnectionTag[];
   topicMatchCount?: number;
+  threadId?: string;
+  onMessageClick?: (userId: string, threadId: string) => void;
 }
 
 // 12动物原型系统 - 背景颜色配置
@@ -46,6 +48,8 @@ export default function UserConnectionCard({
   attendee,
   connectionTags,
   topicMatchCount = 0,
+  threadId,
+  onMessageClick,
 }: UserConnectionCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [revealedBadges, setRevealedBadges] = useState<Set<number>>(new Set());
@@ -270,16 +274,31 @@ export default function UserConnectionCard({
                     </div>
                   </EnergyRing>
 
-                  <motion.button
-                    onClick={() => setIsFlipped(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover-elevate active-elevate-2 text-sm font-medium"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    data-testid={`button-flip-${attendee.userId}`}
-                  >
-                    <RotateCw className="h-4 w-4" />
-                    点击翻转探索
-                  </motion.button>
+                  <div className="flex gap-2">
+                    <motion.button
+                      onClick={() => setIsFlipped(true)}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover-elevate active-elevate-2 text-sm font-medium"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      data-testid={`button-flip-${attendee.userId}`}
+                    >
+                      <RotateCw className="h-4 w-4" />
+                      翻转探索
+                    </motion.button>
+                    
+                    {threadId && onMessageClick && (
+                      <motion.button
+                        onClick={() => onMessageClick(attendee.userId, threadId)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover-elevate active-elevate-2 text-sm font-medium"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        data-testid={`button-message-${attendee.userId}`}
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        发消息
+                      </motion.button>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
