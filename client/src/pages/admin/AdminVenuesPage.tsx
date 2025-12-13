@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Store, Plus, Edit, Trash2, Building, TrendingUp, Calendar, DollarSign, Clock, X } from "lucide-react";
+import { Store, Plus, Edit, Trash2, Building, TrendingUp, Calendar, DollarSign, Clock, X, CalendarDays, LayoutGrid } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -101,6 +102,12 @@ const PRICE_RANGES = [
 const TAGS = ["cozy", "lively", "upscale", "casual"];
 const CUISINES = ["粤菜", "川菜", "日料", "西餐", "酒吧"];
 
+interface AllTimeSlot extends VenueTimeSlot {
+  venueName: string;
+  venueCity: string;
+  venueDistrict: string;
+}
+
 export default function AdminVenuesPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -108,6 +115,7 @@ export default function AdminVenuesPage() {
   const [showTimeSlotsDialog, setShowTimeSlotsDialog] = useState(false);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [filterType, setFilterType] = useState<"all" | "restaurant" | "bar">("all");
+  const [viewMode, setViewMode] = useState<"venues" | "calendar">("venues");
   
   // Time slot form state
   const [timeSlotMode, setTimeSlotMode] = useState<"weekly" | "specific">("weekly");
@@ -139,6 +147,24 @@ export default function AdminVenuesPage() {
   const { data: venues = [], isLoading } = useQuery<Venue[]>({
     queryKey: ["/api/admin/venues"],
   });
+
+  // Query for all time slots (for calendar view)
+  const { data: allTimeSlots = [], isLoading: allTimeSlotsLoading } = useQuery<AllTimeSlot[]>({
+    queryKey: ["/api/admin/time-slots/all"],
+    queryFn: () => fetch("/api/admin/time-slots/all", { credentials: "include" }).then(r => r.json()),
+    enabled: viewMode === "calendar",
+  });
+
+  // Group time slots by day of week for calendar display
+  const slotsByDay = useMemo(() => {
+    const grouped: Record<number, AllTimeSlot[]> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+    allTimeSlots.forEach(slot => {
+      if (slot.dayOfWeek !== null) {
+        grouped[slot.dayOfWeek].push(slot);
+      }
+    });
+    return grouped;
+  }, [allTimeSlots]);
 
   const createMutation = useMutation({
     mutationFn: (data: any) =>
@@ -595,15 +621,90 @@ export default function AdminVenuesPage() {
         </Card>
       </div>
 
-      <Tabs value={filterType} onValueChange={(v) => setFilterType(v as any)}>
-        <TabsList>
-          <TabsTrigger value="all" data-testid="filter-all">全部</TabsTrigger>
-          <TabsTrigger value="restaurant" data-testid="filter-restaurant">餐厅</TabsTrigger>
-          <TabsTrigger value="bar" data-testid="filter-bar">酒吧</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <Tabs value={filterType} onValueChange={(v) => setFilterType(v as any)}>
+          <TabsList>
+            <TabsTrigger value="all" data-testid="filter-all">全部</TabsTrigger>
+            <TabsTrigger value="restaurant" data-testid="filter-restaurant">餐厅</TabsTrigger>
+            <TabsTrigger value="bar" data-testid="filter-bar">酒吧</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === "venues" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("venues")}
+            data-testid="view-venues"
+          >
+            <LayoutGrid className="h-4 w-4 mr-2" />
+            场地列表
+          </Button>
+          <Button
+            variant={viewMode === "calendar" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("calendar")}
+            data-testid="view-calendar"
+          >
+            <CalendarDays className="h-4 w-4 mr-2" />
+            时间总览
+          </Button>
+        </div>
+      </div>
 
-      {isLoading ? (
+      {viewMode === "calendar" ? (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CalendarDays className="h-5 w-5" />
+              每周时间段容量一览
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {allTimeSlotsLoading ? (
+              <div className="text-center py-8 text-muted-foreground">加载中...</div>
+            ) : allTimeSlots.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">暂无时间段数据，请先在各场地添加时间段</div>
+            ) : (
+              <ScrollArea className="w-full">
+                <div className="min-w-[800px]">
+                  <div className="grid grid-cols-7 gap-2">
+                    {DAYS_OF_WEEK.map(day => (
+                      <div key={day.value} className="text-center">
+                        <div className="font-semibold py-2 bg-muted rounded-t-md">{day.label}</div>
+                        <div className="border rounded-b-md min-h-[200px] p-2 space-y-2">
+                          {slotsByDay[day.value].length === 0 ? (
+                            <div className="text-xs text-muted-foreground py-4">无时间段</div>
+                          ) : (
+                            slotsByDay[day.value].map(slot => (
+                              <div 
+                                key={slot.id} 
+                                className="p-2 bg-primary/10 rounded text-xs space-y-1"
+                                data-testid={`calendar-slot-${slot.id}`}
+                              >
+                                <div className="font-medium truncate" title={slot.venueName}>
+                                  {slot.venueName}
+                                </div>
+                                <div className="text-muted-foreground">
+                                  {slot.startTime} - {slot.endTime}
+                                </div>
+                                <Badge variant="secondary" className="text-[10px]">
+                                  容量: {slot.maxConcurrentEvents}
+                                </Badge>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            )}
+          </CardContent>
+        </Card>
+      ) : isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="animate-pulse">

@@ -231,6 +231,7 @@ export interface IStorage {
   getActivePricingSettings(): Promise<PricingSetting[]>;
 
   // Venue Time Slots operations
+  getAllVenueTimeSlotsWithVenue(): Promise<Array<VenueTimeSlot & { venueName: string; venueCity: string; venueDistrict: string }>>;
   getVenueTimeSlots(venueId: string): Promise<VenueTimeSlot[]>;
   createVenueTimeSlot(data: InsertVenueTimeSlot): Promise<VenueTimeSlot>;
   batchCreateVenueTimeSlots(venueId: string, slots: Array<Omit<InsertVenueTimeSlot, 'venueId'>>): Promise<VenueTimeSlot[]>;
@@ -2856,6 +2857,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ============ VENUE TIME SLOTS ============
+
+  async getAllVenueTimeSlotsWithVenue(): Promise<Array<VenueTimeSlot & { venueName: string; venueCity: string; venueDistrict: string }>> {
+    const result = await db.execute(sql`
+      SELECT 
+        vts.*,
+        v.name as venue_name,
+        v.city as venue_city,
+        v.district as venue_district
+      FROM venue_time_slots vts
+      JOIN venues v ON v.id = vts.venue_id
+      WHERE vts.is_active = true AND v.is_active = true
+      ORDER BY vts.day_of_week NULLS LAST, vts.start_time
+    `);
+    
+    return (result.rows as any[]).map(row => ({
+      id: row.id,
+      venueId: row.venue_id,
+      dayOfWeek: row.day_of_week,
+      specificDate: row.specific_date,
+      startTime: row.start_time,
+      endTime: row.end_time,
+      maxConcurrentEvents: row.max_concurrent_events,
+      isActive: row.is_active,
+      notes: row.notes,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      venueName: row.venue_name,
+      venueCity: row.venue_city,
+      venueDistrict: row.venue_district,
+    }));
+  }
 
   async getVenueTimeSlots(venueId: string): Promise<VenueTimeSlot[]> {
     return await db

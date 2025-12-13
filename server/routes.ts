@@ -4719,6 +4719,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ Venue Time Slots Management ============
   
+  // Get all time slots across all venues (for calendar overview)
+  app.get("/api/admin/time-slots/all", requireAdmin, async (req, res) => {
+    try {
+      const timeSlots = await storage.getAllVenueTimeSlotsWithVenue();
+      res.json(timeSlots);
+    } catch (error) {
+      console.error("Error fetching all venue time slots:", error);
+      res.status(500).json({ message: "Failed to fetch all venue time slots" });
+    }
+  });
+  
   // Get all time slots for a venue
   app.get("/api/admin/venues/:venueId/time-slots", requireAdmin, async (req, res) => {
     try {
