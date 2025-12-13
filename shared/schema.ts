@@ -146,6 +146,10 @@ export const users = pgTable("users", {
   // Match Reveal Animation tracking
   viewedEventAnimations: text("viewed_event_animations").array(), // Event IDs where animation was already viewed
   
+  // A/B Testing tracking
+  registrationMethod: varchar("registration_method"), // 'form' or 'chat' for A/B testing
+  registrationCompletedAt: timestamp("registration_completed_at"), // When registration was completed
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

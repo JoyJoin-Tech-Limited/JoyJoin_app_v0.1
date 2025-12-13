@@ -7,6 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import LoginPage from "@/pages/LoginPage";
 import RegistrationPage from "@/pages/RegistrationPage";
+import RegistrationMethodPage from "@/pages/RegistrationMethodPage";
+import ChatRegistrationPage from "@/pages/ChatRegistrationPage";
 import InterestsTopicsPage from "@/pages/InterestsTopicsPage";
 import PersonalityTestPage from "@/pages/PersonalityTestPage";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
@@ -83,7 +85,9 @@ function AuthenticatedRouter() {
   if (needsRegistration) {
     return (
       <Switch>
-        <Route path="/registration" component={RegistrationPage} />
+        <Route path="/registration" component={RegistrationMethodPage} />
+        <Route path="/registration/form" component={RegistrationPage} />
+        <Route path="/registration/chat" component={ChatRegistrationPage} />
         <Route path="*" component={RedirectToRegistration} />
       </Switch>
     );

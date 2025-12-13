@@ -314,6 +314,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ AI Chat Registration Routes (小悦对话注册) ============
+  
+  app.post('/api/registration/chat/start', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { startXiaoyueChat } = await import('./deepseekClient');
+      const result = await startXiaoyueChat();
+      res.json(result);
+    } catch (error) {
+      console.error("Error starting chat registration:", error);
+      res.status(500).json({ message: "Failed to start chat" });
+    }
+  });
+
+  app.post('/api/registration/chat/message', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { message, conversationHistory } = req.body;
+      const { continueXiaoyueChat } = await import('./deepseekClient');
+      const result = await continueXiaoyueChat(message, conversationHistory);
+      res.json(result);
+    } catch (error) {
+      console.error("Error in chat registration:", error);
+      res.status(500).json({ message: "Failed to process message" });
+    }
+  });
+
+  app.post('/api/registration/chat/complete', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { conversationHistory, collectedInfo } = req.body;
+      const { summarizeAndExtractInfo } = await import('./deepseekClient');
+      
+      // Extract final info from conversation
+      const extractedInfo = await summarizeAndExtractInfo(conversationHistory);
+      const finalInfo = { ...extractedInfo, ...collectedInfo };
+      
+      // Map collected info to user registration fields
+      const registrationData: any = {
+        displayName: finalInfo.displayName || '',
+        gender: finalInfo.gender || '不透露',
+        currentCity: finalInfo.currentCity || '',
+        registrationMethod: 'chat', // Track A/B testing
+      };
+      
+      // Set birthdate if birth year provided
+      if (finalInfo.birthYear) {
+        registrationData.birthdate = `${finalInfo.birthYear}-01-01`;
+      }
+      
+      // Set interests if provided
+      if (finalInfo.interestsTop && finalInfo.interestsTop.length > 0) {
+        registrationData.interestsTop = finalInfo.interestsTop;
+      }
+      
+      // Update user with collected info
+      await db.update(users).set({
+        ...registrationData,
+        hasCompletedRegistration: true,
+        updatedAt: new Date(),
+      }).where(eq(users.id, userId));
+      
+      const updatedUser = await storage.getUser(userId);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error completing chat registration:", error);
+      res.status(500).json({ message: "Failed to complete registration" });
+    }
+  });
+
   // Registration routes
   app.post('/api/user/register', isPhoneAuthenticated, async (req: any, res) => {
     try {
