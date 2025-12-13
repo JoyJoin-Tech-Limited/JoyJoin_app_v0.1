@@ -1,12 +1,13 @@
 import MobileHeader from "@/components/MobileHeader";
 import BottomNav from "@/components/BottomNav";
 import SocialRoleCard from "@/components/SocialRoleCard";
+import PersonalityRadarChart from "@/components/PersonalityRadarChart";
 import QuizIntro from "@/components/QuizIntro";
 import EditFullProfileDialog from "@/components/EditFullProfileDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target } from "lucide-react";
+import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -197,6 +198,62 @@ export default function ProfilePage() {
             primaryRoleScore={personalityResults.primaryRoleScore}
             secondaryRoleScore={personalityResults.secondaryRoleScore}
           />
+        )}
+
+        {/* Personality Traits Card - Radar Chart + 6-Dimension Scores */}
+        {hasCompletedQuiz && personalityResults && (
+          <Card className="border shadow-sm">
+            <CardContent className="p-4 space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-semibold">性格特质</h3>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setLocation("/personality-test")}
+                  data-testid="button-retake-quiz"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  重新测试
+                </Button>
+              </div>
+
+              <PersonalityRadarChart 
+                affinityScore={personalityResults.affinityScore || 0}
+                opennessScore={personalityResults.opennessScore || 0}
+                conscientiousnessScore={personalityResults.conscientiousnessScore || 0}
+                emotionalStabilityScore={personalityResults.emotionalStabilityScore || 0}
+                extraversionScore={personalityResults.extraversionScore || 0}
+                positivityScore={personalityResults.positivityScore || 0}
+              />
+
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">亲和力</span>
+                  <span className="font-medium">{personalityResults.affinityScore || 0}/100</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">开放性</span>
+                  <span className="font-medium">{personalityResults.opennessScore || 0}/100</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">责任心</span>
+                  <span className="font-medium">{personalityResults.conscientiousnessScore || 0}/100</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">情绪稳定性</span>
+                  <span className="font-medium">{personalityResults.emotionalStabilityScore || 0}/100</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">外向性</span>
+                  <span className="font-medium">{personalityResults.extraversionScore || 0}/100</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">正能量性</span>
+                  <span className="font-medium">{personalityResults.positivityScore || 0}/100</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Role Details Card - Show rich archetype content */}
