@@ -1,4 +1,4 @@
-import logoImage from "@assets/JoyJoinapp_logo_Chinese_FuLuDouTi_1765450433449.png";
+import logoImage from "@assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi_1765650184831.png";
 
 interface JoyJoinLogoProps {
   size?: "sm" | "md" | "lg";
