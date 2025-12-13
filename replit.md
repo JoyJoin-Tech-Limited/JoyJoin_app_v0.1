@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Venue Style Preference Feature (Dec 13, 2025):**
+  - Added `venueStyleRating` field to eventFeedback table for collecting user venue satisfaction (like/neutral/dislike)
+  - Updated insertEventFeedbackSchema with enum validation for venueStyleRating values
+  - EventFeedbackFlow includes venue style rating step with 喜欢/一般/不喜欢 options
+  - AdminVenuesPage supports decorStyle field management (轻奢现代风, 绿植花园风, 复古工业风, 温馨日式风)
+  - venueMatchingService.matchDecorStyle() uses decorStylePreferences for venue scoring (+10 points max)
+  - Complete end-to-end data flow: user feedback → storage → matching algorithm
+
 - **Enriched Topic Recommendation Reasons (Dec 13, 2025):**
   - Expanded fallback reason variants: 6 variants per difficulty level (easy/medium/deep)
   - All reasons now use complete sentence structure with "小悦觉得..." or "这是..." pattern
