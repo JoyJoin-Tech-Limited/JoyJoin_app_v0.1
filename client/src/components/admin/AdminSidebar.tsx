@@ -4,8 +4,6 @@ import {
   CreditCard,
   Tag,
   MapPin,
-  LayoutTemplate,
-  Calendar,
   Layers,
   DollarSign,
   BarChart3,
@@ -61,16 +59,6 @@ const menuItems = [
     title: "场地管理",
     url: "/admin/venues",
     icon: MapPin,
-  },
-  {
-    title: "活动模板",
-    url: "/admin/templates",
-    icon: LayoutTemplate,
-  },
-  {
-    title: "活动管理",
-    url: "/admin/events",
-    icon: Calendar,
   },
   {
     title: "活动池管理",
