@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **小悦对话注册优化 - 信息维度对齐与追问逻辑 (Dec 13, 2025):**
+  - Enhanced XiaoyueCollectedInfo interface with new fields: intent, hasPets, petTypes, hasSiblings, relationshipStatus, hometown, languagesComfort
+  - Upgraded 职业/行业 and 活动意图 from optional to required fields for better matching
+  - Added comprehensive "追问技巧 (Dig Deeper)" section with specific follow-up examples for interests, city/hometown, occupation
+  - Added 用户类型适应策略 for handling talkative vs brief users
+  - Updated summarizeAndExtractInfo prompt to extract all new fields with intent mapping
+  - 进阶收集 section now includes: 毛孩子, 独生子女, 感情状态, 家乡, 语言偏好
+
 - **小悦对话注册 AI Chat Registration (Dec 13, 2025):**
   - New AI-powered conversational registration flow using DeepSeek API as alternative to traditional form
   - `server/deepseekClient.ts`: 小悦 character prompt, chat continuation, and info extraction functions
@@ -17,7 +25,7 @@ Preferred communication style: Simple, everyday language.
   - `RegistrationMethodPage.tsx`: User can choose between AI chat or traditional form registration
   - `ChatRegistrationPage.tsx`: Chat UI with 小悦 mascot, typing indicators, and progress tracking
   - Server-side info extraction using `summarizeAndExtractInfo()` for security (doesn't trust client-sent data)
-  - Collects: displayName, gender, birthYear, currentCity, interestsTop, venueStylePreference, topicAvoidances
+  - Collects: displayName, gender, birthYear, currentCity, interestsTop, venueStylePreference, topicAvoidances, intent, hasPets, hasSiblings, relationshipStatus, hometown
   - `registrationMethod` field in users table tracks A/B testing between 'chat' and 'form' methods
   - Conversation history preserves raw assistant messages for accurate LLM extraction
 
