@@ -16,7 +16,7 @@ import {
   getUserTopicAvoidances,
   getUserTopicsHappy,
 } from "@/lib/userFieldMappings";
-import { getOccupationDisplayLabel, getIndustryDisplayLabel, WORK_MODE_TO_LABEL, type WorkMode } from "@shared/occupations";
+import { getOccupationDisplayLabel, getIndustryDisplayLabel, WORK_MODE_TO_LABEL, INDUSTRY_ID_TO_LABEL, type WorkMode } from "@shared/occupations";
 import { getInterestLabel, getTopicLabel } from "@/data/interestsTopicsData";
 
 export default function EditProfilePage() {
@@ -86,8 +86,8 @@ export default function EditProfilePage() {
       icon: <Briefcase className="h-4 w-4" />,
       path: "/profile/edit/work",
       fields: [
-        { label: "职业", value: getOccupationDisplayLabel(user.occupationId, user.workMode, { showWorkMode: true }) || user.industry },
-        { label: "行业", value: getIndustryDisplayLabel(user.occupationId) || (user.industry && !user.occupationId ? user.industry : null) },
+        { label: "职业", value: getOccupationDisplayLabel(user.occupationId, user.workMode, { showWorkMode: true }) || (user.industry ? INDUSTRY_ID_TO_LABEL[user.industry] || user.industry : null) },
+        { label: "行业", value: getIndustryDisplayLabel(user.occupationId) || (user.industry ? INDUSTRY_ID_TO_LABEL[user.industry] || user.industry : null) },
         { label: "工作身份", value: user.workMode ? WORK_MODE_TO_LABEL[user.workMode as WorkMode] : null },
       ],
     },
