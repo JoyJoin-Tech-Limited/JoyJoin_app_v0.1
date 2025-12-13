@@ -340,7 +340,7 @@ export default function ProfilePage() {
           <CardContent>
             <Button 
               variant="default" 
-              className="w-full text-destructive" 
+              className="w-full text-white" 
               data-testid="button-logout"
               onClick={handleLogout}
               disabled={logoutMutation.isPending}
