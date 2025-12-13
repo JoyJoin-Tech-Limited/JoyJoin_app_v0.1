@@ -10,6 +10,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Enriched Topic Recommendation Reasons (Dec 13, 2025):**
+  - Expanded fallback reason variants: 6 variants per difficulty level (easy/medium/deep)
+  - All reasons now use complete sentence structure with "小悦觉得..." or "这是..." pattern
+  - Added category-specific reason templates for 9 categories (30% trigger probability)
+  - Added archetype-based reason variants (energetic/warm/thoughtful combinations)
+  - Implemented batch-wide deduplication using `usedReasons` Set
+  - Interest-based reasons use rotating templates to avoid repetition
+  - Ensures each topic in a batch has a unique, meaningful recommendation reason
+
 - **Referral System Implementation (Dec 12, 2025):**
   - New database tables: `referralCodes` and `referralConversions` for tracking user referrals
   - API endpoints: `/api/referrals/stats` (get user's code + stats), `/api/referrals/check/:code`, `/api/referrals/:code`
