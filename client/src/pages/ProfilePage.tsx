@@ -218,12 +218,7 @@ export default function ProfilePage() {
               </div>
 
               <PersonalityRadarChart 
-                affinityScore={personalityResults.affinityScore || 0}
-                opennessScore={personalityResults.opennessScore || 0}
-                conscientiousnessScore={personalityResults.conscientiousnessScore || 0}
-                emotionalStabilityScore={personalityResults.emotionalStabilityScore || 0}
-                extraversionScore={personalityResults.extraversionScore || 0}
-                positivityScore={personalityResults.positivityScore || 0}
+                archetype={personalityResults.primaryRole}
               />
             </CardContent>
           </Card>
