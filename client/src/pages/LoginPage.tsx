@@ -156,6 +156,7 @@ export default function LoginPage() {
   const [countdown, setCountdown] = useState(0);
   const [isVideoMuted, setIsVideoMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const isDevelopment = import.meta.env.DEV;
 
   // Test shortcut: press 't' to go to registration
   useEffect(() => {
@@ -616,6 +617,30 @@ export default function LoginPage() {
                     {loginMutation.isPending ? "登录中..." : "登录 / 注册"}
                   </Button>
                 </div>
+
+                {/* Development Mode A/B Testing Buttons */}
+                {isDevelopment && (
+                  <div className="space-y-2 pt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full text-xs"
+                      onClick={() => setLocation('/registration/chat')}
+                      data-testid="button-test-chat-registration"
+                    >
+                      测试·小悦对话注册
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full text-xs"
+                      onClick={() => setLocation('/register')}
+                      data-testid="button-test-form-registration"
+                    >
+                      测试·传统问卷注册
+                    </Button>
+                  </div>
+                )}
 
                 {/* Safety Badges */}
                 <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground pt-2">
