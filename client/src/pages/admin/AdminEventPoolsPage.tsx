@@ -35,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Users, Eye } from "lucide-react";
+import { Calendar, Users, Eye, MapPin, Clock, Store } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -43,6 +43,29 @@ import { zhCN } from "date-fns/locale";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface AvailableVenueSlot {
+  id: string;
+  startTime: string;
+  endTime: string;
+  maxConcurrentEvents: number;
+}
+
+interface AvailableVenue {
+  venue: {
+    id: string;
+    name: string;
+    venueType: string;
+    address: string;
+    city: string;
+    area: string;
+    priceRange: string | null;
+    tags: string[] | null;
+    cuisines: string[] | null;
+  };
+  availableSlots: AvailableVenueSlot[];
+}
 
 // ====== Form schema：简化版，只保留我们现在用得到的字段 ======
 const createPoolSchema = z.object({
@@ -207,7 +230,39 @@ export default function AdminEventPoolsPage() {
   });
 
   const currentCity = form.watch("city") as "深圳" | "香港";
+  const currentDistrict = form.watch("district");
+  const currentDateTime = form.watch("dateTime");
   const currentCityDistricts = CITY_DISTRICTS[currentCity] ?? [];
+
+  // Query for available venues based on selected city, district, and dateTime
+  const { data: availableVenues = [], isLoading: isLoadingVenues, isError: isVenuesError } = useQuery<AvailableVenue[]>({
+    queryKey: ["/api/admin/available-venues", currentCity, currentDistrict, currentDateTime],
+    queryFn: async () => {
+      if (!currentCity || !currentDateTime) return [];
+      const dateObj = new Date(currentDateTime);
+      // Use local date format to avoid UTC conversion issues
+      const dateStr = format(dateObj, "yyyy-MM-dd");
+      const hours = dateObj.getHours();
+      const minutes = dateObj.getMinutes();
+      const startTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      // Handle hour wrap-around for end time (3 hour duration)
+      const endHours = (hours + 3) % 24;
+      const endTime = `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      
+      const params = new URLSearchParams({
+        city: currentCity,
+        date: dateStr,
+        startTime,
+        endTime,
+      });
+      if (currentDistrict) {
+        params.append("district", currentDistrict);
+      }
+      const res = await apiRequest("GET", `/api/admin/available-venues?${params}`);
+      return res as AvailableVenue[];
+    },
+    enabled: showCreateDialog && !!currentCity && !!currentDateTime,
+  });
 
   // 选中池子的报名情况
   const {
@@ -566,6 +621,73 @@ export default function AdminEventPoolsPage() {
                     )}
                   />
                 </div>
+
+                {/* 可用场地提示 */}
+                {currentCity && currentDateTime && (
+                  <div className="border-t pt-4 mt-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Store className="h-4 w-4 text-primary" />
+                      <h3 className="font-semibold">可用场地</h3>
+                      {isLoadingVenues && <span className="text-xs text-muted-foreground">加载中...</span>}
+                    </div>
+                    
+                    {isVenuesError && (
+                      <div className="text-sm text-destructive bg-destructive/10 rounded-md p-3">
+                        加载可用场地失败，请检查网络连接后重试
+                      </div>
+                    )}
+                    
+                    {!isLoadingVenues && !isVenuesError && availableVenues.length === 0 && (
+                      <div className="text-sm text-muted-foreground bg-muted/50 rounded-md p-3">
+                        {currentDistrict 
+                          ? `${currentCity} ${currentDistrict} 在所选时间暂无可用场地，请调整区域或时间`
+                          : `${currentCity} 在所选时间暂无可用场地，请先选择区域或调整时间`
+                        }
+                      </div>
+                    )}
+                    
+                    {!isLoadingVenues && availableVenues.length > 0 && (
+                      <ScrollArea className="h-[160px] rounded-md border p-2">
+                        <div className="space-y-2">
+                          {availableVenues.map(({ venue, availableSlots }) => (
+                            <div 
+                              key={venue.id} 
+                              className="p-3 bg-muted/30 rounded-md"
+                              data-testid={`available-venue-${venue.id}`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <div className="font-medium text-sm">{venue.name}</div>
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                    <MapPin className="h-3 w-3" />
+                                    <span>{venue.area}</span>
+                                    {venue.priceRange && (
+                                      <>
+                                        <span className="mx-1">·</span>
+                                        <span>¥{venue.priceRange}/人</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                                <Badge variant="outline" className="text-xs shrink-0">
+                                  {venue.venueType === "restaurant" ? "餐厅" : "酒吧"}
+                                </Badge>
+                              </div>
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {availableSlots.map(slot => (
+                                  <Badge key={slot.id} variant="secondary" className="text-xs">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    {slot.startTime}-{slot.endTime}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
+                  </div>
+                )}
 
                 {/* 组局配置 */}
                 <div className="border-t pt-4 mt-4">
