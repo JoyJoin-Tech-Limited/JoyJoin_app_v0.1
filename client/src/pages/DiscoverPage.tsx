@@ -1,7 +1,6 @@
 import MobileHeader from "@/components/MobileHeader";
 import BottomNav from "@/components/BottomNav";
 import BlindBoxEventCard from "@/components/BlindBoxEventCard";
-import DiscountCouponCard from "@/components/DiscountCouponCard";
 import HeroWelcome from "@/components/HeroWelcome";
 import LocationPickerSheet from "@/components/LocationPickerSheet";
 import { PromotionBannerCarousel } from "@/components/PromotionBannerCarousel";
@@ -183,28 +182,22 @@ export default function DiscoverPage() {
           </div>
         )}
 
-        {/* 推广横幅轮播 */}
+        {/* 推广横幅轮播（含优惠券） */}
         <PromotionBannerCarousel 
           city={selectedCity} 
           placement="discover"
           className="mt-2"
+          coupon={bestCoupon ? {
+            type: "coupon",
+            discountType: bestCoupon.discountType as "percentage" | "fixed_amount",
+            discountValue: bestCoupon.discountValue,
+            expiresIn: getExpiryText(bestCoupon.validUntil),
+          } : undefined}
         />
 
-        {/* 分割线 */}
-        <div className="h-px bg-border/50 mx-4" />
-
         <div className="px-4 space-y-4">
-          {/* 动态优惠券卡片 - 有券显示优惠券，无券显示邀请引导 */}
-          {bestCoupon ? (
-            <DiscountCouponCard 
-              discountType={bestCoupon.discountType as "percentage" | "fixed_amount"}
-              discountValue={bestCoupon.discountValue}
-              reason={bestCoupon.assignedToUser ? "专属奖励优惠券" : "活动能量奖励"}
-              expiresIn={getExpiryText(bestCoupon.validUntil)}
-            />
-          ) : (
-            <InviteFriendCard />
-          )}
+          {/* 无券时显示邀请好友卡片 */}
+          {!bestCoupon && <InviteFriendCard />}
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Sparkles className="h-4 w-4 text-primary" />

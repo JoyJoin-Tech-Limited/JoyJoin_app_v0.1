@@ -292,11 +292,19 @@ export default function IcebreakerCardsSheet({
                           </p>
 
                           {topic.recommendReason && (
-                            <div className={`mt-4 flex items-center gap-1.5 ${
-                              isDimEnvironment ? "text-white/70" : "text-muted-foreground"
+                            <div className={`mt-4 rounded-xl p-3 ${
+                              isDimEnvironment 
+                                ? "bg-white/10 backdrop-blur-sm" 
+                                : "bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10"
                             }`}>
-                              <Sparkles className="h-3 w-3 flex-shrink-0" />
-                              <span className="text-xs">{topic.recommendReason}</span>
+                              <div className={`flex items-start gap-2 ${
+                                isDimEnvironment ? "text-white/90" : "text-foreground/80"
+                              }`}>
+                                <Sparkles className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
+                                  isDimEnvironment ? "text-yellow-300" : "text-primary"
+                                }`} />
+                                <span className="text-sm leading-relaxed">{topic.recommendReason}</span>
+                              </div>
                             </div>
                           )}
 
