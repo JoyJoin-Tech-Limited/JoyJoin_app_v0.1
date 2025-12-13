@@ -413,6 +413,9 @@ export const eventFeedback = pgTable("event_feedback", {
   improvementAreas: text("improvement_areas").array(), // Max 3 areas
   improvementOther: text("improvement_other"), // Custom improvement suggestion
   
+  // Dimension 5: Venue Style Rating
+  venueStyleRating: varchar("venue_style_rating"), // "like" | "neutral" | "dislike" - 场地风格满意度
+  
   // Gamification & Rewards
   completedAt: timestamp("completed_at"),
   rewardsClaimed: boolean("rewards_claimed").default(false),
@@ -572,6 +575,9 @@ export const insertEventFeedbackSchema = createInsertSchema(eventFeedback).omit(
   connectionStatus: z.enum(["已交换联系方式", "有但还没联系", "没有但很愉快", "没有不太合适"]).optional(),
   improvementAreas: z.array(z.string()).max(3).optional(),
   improvementOther: z.string().optional(),
+  
+  // Venue style rating validation
+  venueStyleRating: z.enum(["like", "neutral", "dislike"]).optional(),
 });
 
 // Blind Box Events table

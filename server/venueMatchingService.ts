@@ -23,6 +23,7 @@ export interface VenueMatchingCriteria {
   priceRange?: string;
   dateTime?: Date;
   durationHours?: number; // Event duration in hours (default 3)
+  decorStylePreferences?: string[]; // User's preferred venue decoration styles
 }
 
 export interface VenueMatchResult {
@@ -196,10 +197,21 @@ export class VenueMatchingService {
       score += 5; // Partial points if no price preference
     }
     
-    // 6. Time slot availability bonus (15 points) - replaces old availability check
-    // This is a significant bonus for venues with confirmed time slot availability
+    // 6. Decor style match (10 points)
+    if (criteria.decorStylePreferences && criteria.decorStylePreferences.length > 0) {
+      const decorMatch = this.matchDecorStyle(venue, criteria.decorStylePreferences);
+      score += decorMatch.score;
+      if (decorMatch.reason) {
+        reasons.push(decorMatch.reason);
+      }
+    } else {
+      score += 5; // Partial points if no decor preference specified
+    }
+    
+    // 7. Time slot availability bonus (10 points) - replaces old availability check
+    // This is a bonus for venues with confirmed time slot availability
     if (hasTimeSlotAvailability) {
-      score += 15;
+      score += 10;
       reasons.push("已确认有可用时间段");
     } else if (venue.maxConcurrentEvents > 1) {
       // Fallback to old availability check if no time slot data
@@ -328,6 +340,36 @@ export class VenueMatchingService {
     }
     
     return { score: 2, reason: undefined };
+  }
+  
+  /**
+   * Match decoration style preferences
+   */
+  private matchDecorStyle(venue: any, decorStylePreferences: string[]): { score: number; reason?: string } {
+    // Check if venue has decorStyle field
+    if (!venue.decorStyle || venue.decorStyle.length === 0) {
+      return { score: 3, reason: undefined }; // Partial points if venue has no decor style tags
+    }
+    
+    // Check for "都可以" (any style is fine) preference - always matches
+    if (decorStylePreferences.includes("都可以")) {
+      return { score: 10, reason: `风格适配` };
+    }
+    
+    // Find matching styles
+    const matchingStyles = venue.decorStyle.filter((style: string) => 
+      decorStylePreferences.includes(style)
+    );
+    
+    if (matchingStyles.length > 0) {
+      const score = Math.min(10, matchingStyles.length * 5);
+      return { 
+        score, 
+        reason: `装修风格「${matchingStyles[0]}」符合偏好` 
+      };
+    }
+    
+    return { score: 2, reason: undefined }; // Small points for having style data even if no match
   }
   
   /**

@@ -74,6 +74,7 @@ interface Venue {
   commissionRate: number;
   tags: string[] | null;
   cuisines: string[] | null;
+  decorStyle: string[] | null;
   priceRange: string | null;
   maxConcurrentEvents: number;
   isActive: boolean;
@@ -101,6 +102,7 @@ const PRICE_RANGES = [
 
 const TAGS = ["cozy", "lively", "upscale", "casual"];
 const CUISINES = ["粤菜", "川菜", "日料", "西餐", "酒吧"];
+const DECOR_STYLES = ["轻奢现代风", "绿植花园风", "复古工业风", "温馨日式风"];
 
 interface AllTimeSlot extends VenueTimeSlot {
   venueName: string;
@@ -158,6 +160,7 @@ export default function AdminVenuesPage() {
     maxConcurrentEvents: "1",
     tags: [] as string[],
     cuisines: [] as string[],
+    decorStyle: [] as string[],
     notes: "",
   });
 
@@ -445,6 +448,7 @@ export default function AdminVenuesPage() {
       maxConcurrentEvents: "1",
       tags: [],
       cuisines: [],
+      decorStyle: [],
       notes: "",
     });
   };
@@ -472,6 +476,7 @@ export default function AdminVenuesPage() {
       maxConcurrentEvents: parseInt(formData.maxConcurrentEvents),
       tags: formData.tags.length > 0 ? formData.tags : undefined,
       cuisines: formData.cuisines.length > 0 ? formData.cuisines : undefined,
+      decorStyle: formData.decorStyle.length > 0 ? formData.decorStyle : undefined,
       notes: formData.notes || undefined,
     });
   };
@@ -491,6 +496,7 @@ export default function AdminVenuesPage() {
       maxConcurrentEvents: venue.maxConcurrentEvents.toString(),
       tags: venue.tags || [],
       cuisines: venue.cuisines || [],
+      decorStyle: venue.decorStyle || [],
       notes: venue.notes || "",
     });
     setShowEditDialog(true);
@@ -514,6 +520,7 @@ export default function AdminVenuesPage() {
         maxConcurrentEvents: parseInt(formData.maxConcurrentEvents),
         tags: formData.tags.length > 0 ? formData.tags : null,
         cuisines: formData.cuisines.length > 0 ? formData.cuisines : null,
+        decorStyle: formData.decorStyle.length > 0 ? formData.decorStyle : null,
         notes: formData.notes || null,
       },
     });
@@ -552,6 +559,15 @@ export default function AdminVenuesPage() {
       cuisines: prev.cuisines.includes(cuisine)
         ? prev.cuisines.filter(c => c !== cuisine)
         : [...prev.cuisines, cuisine]
+    }));
+  };
+
+  const toggleDecorStyle = (style: string) => {
+    setFormData(prev => ({
+      ...prev,
+      decorStyle: prev.decorStyle.includes(style)
+        ? prev.decorStyle.filter(s => s !== style)
+        : [...prev.decorStyle, style]
     }));
   };
 
@@ -1089,6 +1105,23 @@ export default function AdminVenuesPage() {
             </div>
 
             <div className="space-y-2">
+              <Label>装修风格</Label>
+              <div className="flex flex-wrap gap-2">
+                {DECOR_STYLES.map(style => (
+                  <Badge
+                    key={style}
+                    variant={formData.decorStyle.includes(style) ? "default" : "outline"}
+                    className="cursor-pointer hover-elevate active-elevate-2"
+                    onClick={() => toggleDecorStyle(style)}
+                    data-testid={`decorStyle-${style}`}
+                  >
+                    {style}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="notes">备注</Label>
               <Textarea
                 id="notes"
@@ -1280,6 +1313,23 @@ export default function AdminVenuesPage() {
                     data-testid={`edit-cuisine-${cuisine}`}
                   >
                     {cuisine}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>装修风格</Label>
+              <div className="flex flex-wrap gap-2">
+                {DECOR_STYLES.map(style => (
+                  <Badge
+                    key={style}
+                    variant={formData.decorStyle.includes(style) ? "default" : "outline"}
+                    className="cursor-pointer hover-elevate active-elevate-2"
+                    onClick={() => toggleDecorStyle(style)}
+                    data-testid={`edit-decorStyle-${style}`}
+                  >
+                    {style}
                   </Badge>
                 ))}
               </div>

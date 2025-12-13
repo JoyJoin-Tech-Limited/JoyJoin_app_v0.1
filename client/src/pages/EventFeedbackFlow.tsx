@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, Sparkles, UtensilsCrossed, Wine, Calendar, Clock, MapPin, Users, Gift, Star, Target, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Sparkles, UtensilsCrossed, Wine, Calendar, Clock, MapPin, Users, Gift, Star, Target, CheckCircle2, Home, ThumbsUp, Meh, ThumbsDown } from "lucide-react";
 import { motion } from "framer-motion";
 import type { BlindBoxEvent, EventFeedback } from "@shared/schema";
 import AtmosphereThermometer from "@/components/feedback/AtmosphereThermometer";
@@ -14,12 +14,13 @@ import SelectConnectionsStep from "@/components/feedback/SelectConnectionsStep";
 import ImprovementCards from "@/components/feedback/ImprovementCards";
 import FeedbackCompletion from "@/components/feedback/FeedbackCompletion";
 
-type FeedbackStep = "intro" | "atmosphere" | "selectConnections" | "improvement" | "completion";
+type FeedbackStep = "intro" | "atmosphere" | "selectConnections" | "venueStyle" | "improvement" | "completion";
 
 interface FeedbackData {
   atmosphereScore?: number;
   atmosphereNote?: string;
   connections?: string[];
+  venueStyleRating?: "like" | "neutral" | "dislike";
   improvementAreas?: string[];
   improvementOther?: string;
 }
@@ -80,7 +81,7 @@ export default function EventFeedbackFlow() {
     },
   });
 
-  const steps: FeedbackStep[] = ["intro", "atmosphere", "selectConnections", "improvement", "completion"];
+  const steps: FeedbackStep[] = ["intro", "atmosphere", "selectConnections", "venueStyle", "improvement", "completion"];
   const currentStepIndex = steps.indexOf(currentStep);
   const progressPercentage = (currentStepIndex / (steps.length - 1)) * 100;
 
@@ -90,7 +91,8 @@ export default function EventFeedbackFlow() {
 
     if (currentStep === "intro") setCurrentStep("atmosphere");
     else if (currentStep === "atmosphere") setCurrentStep("selectConnections");
-    else if (currentStep === "selectConnections") setCurrentStep("improvement");
+    else if (currentStep === "selectConnections") setCurrentStep("venueStyle");
+    else if (currentStep === "venueStyle") setCurrentStep("improvement");
     else if (currentStep === "improvement") {
       // Submit feedback
       submitMutation.mutate(updatedData);
@@ -100,7 +102,8 @@ export default function EventFeedbackFlow() {
   const handleBack = () => {
     if (currentStep === "atmosphere") setCurrentStep("intro");
     else if (currentStep === "selectConnections") setCurrentStep("atmosphere");
-    else if (currentStep === "improvement") setCurrentStep("selectConnections");
+    else if (currentStep === "venueStyle") setCurrentStep("selectConnections");
+    else if (currentStep === "improvement") setCurrentStep("venueStyle");
     else if (currentStep === "intro") navigate("/events");
   };
 
@@ -201,6 +204,14 @@ export default function EventFeedbackFlow() {
             onNext={handleNext}
           />
         ) : null}
+        
+        {currentStep === "venueStyle" && (
+          <VenueStyleStep
+            venueName={event.restaurantName}
+            initialRating={feedbackData.venueStyleRating}
+            onNext={handleNext}
+          />
+        )}
         
         {currentStep === "improvement" && (
           <ImprovementCards
@@ -305,6 +316,107 @@ function IntroStep({ event, onNext }: { event: BlindBoxEvent; onNext: () => void
           data-testid="button-start-feedback"
         >
           开始反馈
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Venue Style Step Component - Simple rating for venue decoration style
+function VenueStyleStep({ 
+  venueName, 
+  initialRating, 
+  onNext 
+}: { 
+  venueName?: string | null; 
+  initialRating?: "like" | "neutral" | "dislike"; 
+  onNext: (data: { venueStyleRating: "like" | "neutral" | "dislike" }) => void;
+}) {
+  const [rating, setRating] = useState<"like" | "neutral" | "dislike" | null>(initialRating || null);
+
+  const handleSubmit = () => {
+    if (rating) {
+      onNext({ venueStyleRating: rating });
+    }
+  };
+
+  const ratingOptions = [
+    { value: "like" as const, label: "喜欢", icon: ThumbsUp, color: "text-green-500", bgColor: "bg-green-500/10", borderColor: "border-green-500" },
+    { value: "neutral" as const, label: "一般", icon: Meh, color: "text-amber-500", bgColor: "bg-amber-500/10", borderColor: "border-amber-500" },
+    { value: "dislike" as const, label: "不太喜欢", icon: ThumbsDown, color: "text-red-500", bgColor: "bg-red-500/10", borderColor: "border-red-500" },
+  ];
+
+  return (
+    <Card className="max-w-md mx-auto">
+      <CardContent className="p-6 space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <motion.div 
+            className="mx-auto w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.4, ease: "backOut" }}
+          >
+            <Home className="h-7 w-7 text-primary" />
+          </motion.div>
+          <motion.h1 
+            className="text-xl font-bold"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            场地风格评价
+          </motion.h1>
+          <motion.p 
+            className="text-sm text-muted-foreground"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            {venueName ? `你觉得「${venueName}」的装修风格如何？` : "你喜欢这次活动场地的装修风格吗？"}
+          </motion.p>
+        </div>
+
+        {/* Rating Options */}
+        <div className="space-y-3">
+          {ratingOptions.map((option, index) => {
+            const IconComponent = option.icon;
+            const isSelected = rating === option.value;
+            
+            return (
+              <motion.button
+                key={option.value}
+                className={`w-full p-4 rounded-lg border-2 transition-all flex items-center gap-4
+                  ${isSelected 
+                    ? `${option.borderColor} ${option.bgColor}` 
+                    : "border-muted hover-elevate"
+                  }`}
+                onClick={() => setRating(option.value)}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 + index * 0.1 }}
+                data-testid={`button-venue-style-${option.value}`}
+              >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${option.bgColor}`}>
+                  <IconComponent className={`h-5 w-5 ${option.color}`} />
+                </div>
+                <span className={`text-base font-medium ${isSelected ? option.color : ""}`}>
+                  {option.label}
+                </span>
+              </motion.button>
+            );
+          })}
+        </div>
+
+        {/* Next Button */}
+        <Button 
+          onClick={handleSubmit}
+          disabled={!rating}
+          size="lg" 
+          className="w-full"
+          data-testid="button-venue-style-next"
+        >
+          下一步
         </Button>
       </CardContent>
     </Card>
