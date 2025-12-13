@@ -225,15 +225,6 @@ export default function ProfilePage() {
                 extraversionScore={personalityResults.extraversionScore || 0}
                 positivityScore={personalityResults.positivityScore || 0}
               />
-
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2">
-                <div className="text-xs text-muted-foreground">亲和力</div>
-                <div className="text-xs text-muted-foreground">开放性</div>
-                <div className="text-xs text-muted-foreground">责任心</div>
-                <div className="text-xs text-muted-foreground">情绪稳定性</div>
-                <div className="text-xs text-muted-foreground">外向性</div>
-                <div className="text-xs text-muted-foreground">正能量性</div>
-              </div>
             </CardContent>
           </Card>
         )}
@@ -351,23 +342,15 @@ export default function ProfilePage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">账户</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <Button variant="ghost" className="w-full justify-start" data-testid="button-safety">
-              <Shield className="h-4 w-4 mr-3" />
-              安全与隐私
-            </Button>
-            <Button variant="ghost" className="w-full justify-start" data-testid="button-help">
-              <HelpCircle className="h-4 w-4 mr-3" />
-              帮助与支持
-            </Button>
+          <CardContent>
             <Button 
-              variant="ghost" 
-              className="w-full justify-start text-destructive" 
+              variant="default" 
+              className="w-full text-destructive" 
               data-testid="button-logout"
               onClick={handleLogout}
               disabled={logoutMutation.isPending}
             >
-              <LogOut className="h-4 w-4 mr-3" />
+              <LogOut className="h-4 w-4 mr-2" />
               {logoutMutation.isPending ? "退出中..." : "退出登录"}
             </Button>
           </CardContent>
