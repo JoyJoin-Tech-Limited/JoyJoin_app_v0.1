@@ -26,7 +26,10 @@ export default function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t z-50 safe-area-pb">
       <div className="flex items-center justify-around h-16">
         {navItems.map((item) => {
-          const isActive = location === item.path;
+          // For discover tab, match both "/" and "/discover"
+          const isActive = item.path === "/" 
+            ? (location === "/" || location === "/discover")
+            : location === item.path;
           const badgeCount = item.badgeCategory && notificationCounts 
             ? notificationCounts[item.badgeCategory] 
             : 0;
