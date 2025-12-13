@@ -25,7 +25,7 @@ export default function HeroWelcome({
   return (
     <div className="px-4 py-6 space-y-3">
       {/* 问候语 */}
-      <h1 className="text-3xl font-bold" data-testid="text-hero-greeting">
+      <h1 className="text-3xl font-bold font-brand" data-testid="text-hero-greeting">
         Hi {userName} 👋
       </h1>
       

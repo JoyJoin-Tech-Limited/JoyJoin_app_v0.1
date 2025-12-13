@@ -333,7 +333,7 @@ function MatchRevealAnimationComponent({
                 </motion.div>
               </motion.div>
               <motion.p
-                className="mt-6 text-lg text-muted-foreground"
+                className="mt-6 text-lg text-muted-foreground font-brand"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
@@ -407,8 +407,8 @@ function MatchRevealAnimationComponent({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
               >
-                <p className="text-2xl font-bold">{userArchetype}</p>
-                <p className="text-muted-foreground mt-1">{userName}，这就是你</p>
+                <p className="text-2xl font-bold font-brand">{userArchetype}</p>
+                <p className="text-muted-foreground mt-1 font-brand">{userName}，这就是你</p>
               </motion.div>
             </motion.div>
           )}
@@ -536,7 +536,7 @@ function MatchRevealAnimationComponent({
               </div>
 
               <motion.p
-                className="mt-6 text-lg text-muted-foreground"
+                className="mt-6 text-lg text-muted-foreground font-brand"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.5 }}

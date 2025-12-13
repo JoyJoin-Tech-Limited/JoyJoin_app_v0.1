@@ -55,7 +55,7 @@ export default function BlindBoxEventCard({
         <div className="p-4 space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
-              <h3 className="font-display font-bold text-lg text-muted-foreground/60 mb-2">
+              <h3 className="font-brand font-bold text-lg text-muted-foreground/60 mb-2">
                 {mysteryTitle}
               </h3>
 

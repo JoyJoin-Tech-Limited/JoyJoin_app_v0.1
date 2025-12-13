@@ -37,7 +37,7 @@ export default function BlindBoxGuide({ className }: BlindBoxGuideProps) {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm">什么是盲盒模式？</span>
+                  <span className="font-semibold text-sm font-brand">什么是盲盒模式？</span>
                   <Sparkles className="h-3.5 w-3.5 text-primary" />
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">

@@ -17,7 +17,7 @@ export default function InviteFriendCard({ className }: InviteFriendCardProps) {
               <UserPlus className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <div className="flex items-center gap-2 font-medium text-sm">
+              <div className="flex items-center gap-2 font-medium text-sm font-brand">
                 <span>邀请好友，一起玩</span>
                 <Gift className="h-4 w-4 text-primary" />
               </div>

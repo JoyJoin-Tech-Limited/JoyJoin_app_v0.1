@@ -417,4 +417,9 @@
   .animate-progress-fill {
     animation: progressFill 0.6s ease-out forwards;
   }
+
+  /* 品牌字体 - 用于情感时刻的标题 */
+  .font-brand {
+    font-family: 'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif;
+  }
 }
