@@ -15,6 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { archetypeConfig } from "@/lib/archetypes";
 import { archetypeGradients, archetypeAvatars, archetypeEmojis } from "@/lib/archetypeAvatars";
+import { getArchetypeImage } from "@/lib/archetypeImages";
 import { getTopCompatibleArchetypes, getCompatibilityCategory } from "@/lib/archetypeCompatibility";
 import {
   getGenderDisplay,
@@ -263,28 +264,6 @@ export default function ProfilePage() {
           </Card>
         )}
 
-        {/* Social Proof Card */}
-        {hasCompletedQuiz && personalityResults && roleDistribution && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-primary" />
-                全平台社群分布
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-center py-3">
-                <div className="text-3xl font-bold text-primary mb-2">
-                  {roleDistribution[personalityResults.primaryRole] || 8}%
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  全平台<span className="font-semibold text-foreground">{roleDistribution[personalityResults.primaryRole] || 8}%</span>的用户也是<span className="font-semibold text-foreground">{personalityResults.primaryRole}</span>
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Archetype Compatibility Preview Card */}
         {hasCompletedQuiz && personalityResults && (
           <Card>
@@ -302,11 +281,19 @@ export default function ProfilePage() {
                 {getTopCompatibleArchetypes(personalityResults.primaryRole, 3).map((match) => (
                   <div key={match.archetype} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                     <div className="flex items-center gap-3 flex-1">
-                      <img 
-                        src={archetypeAvatars[match.archetype]} 
-                        alt={match.archetype}
-                        className="h-10 w-10 rounded-full object-cover"
-                      />
+                      {getArchetypeImage(match.archetype) ? (
+                        <img 
+                          src={getArchetypeImage(match.archetype)!} 
+                          alt={match.archetype}
+                          className="h-10 w-10 rounded-full object-contain"
+                        />
+                      ) : (
+                        <img 
+                          src={archetypeAvatars[match.archetype]} 
+                          alt={match.archetype}
+                          className="h-10 w-10 rounded-full object-cover"
+                        />
+                      )}
                       <div>
                         <div className="font-semibold text-sm">{match.archetype}</div>
                         <div className="text-xs text-muted-foreground">{getCompatibilityCategory(match.score)}</div>

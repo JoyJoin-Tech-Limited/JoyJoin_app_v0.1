@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Zap, Sun, Search, Waves, Users, Heart, Lightbulb, Brain, Anchor, Shield, Eye } from "lucide-react";
 import { archetypeConfig, ARCHETYPE_ICONS } from "@/lib/archetypes";
+import { getArchetypeImage } from "@/lib/archetypeImages";
 import type { LucideIcon } from "lucide-react";
 
 interface SocialRoleCardProps {
@@ -104,8 +105,16 @@ export default function SocialRoleCard({
         <div className="flex items-start gap-4 mb-4">
           {/* Avatar */}
           <div className="relative flex-shrink-0">
-            <div className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${primaryConfig.color} flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-300`} data-testid="text-primary-role-emoji">
-              <primaryConfig.IconComponent className="h-12 w-12 text-white" />
+            <div className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${primaryConfig.color} flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-300 overflow-hidden`} data-testid="text-primary-role-emoji">
+              {getArchetypeImage(primaryRole) ? (
+                <img 
+                  src={getArchetypeImage(primaryRole)!} 
+                  alt={primaryRole}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <primaryConfig.IconComponent className="h-12 w-12 text-white" />
+              )}
             </div>
             {/* Score Badge */}
             <div className="absolute -bottom-2 -right-2 bg-background border-2 border-primary rounded-full px-2 py-0.5 shadow-md">
@@ -137,7 +146,15 @@ export default function SocialRoleCard({
         {secondaryRole && secondaryConfig && (
           <div className="mb-4 flex items-center gap-2">
             <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/60 border border-border/50 backdrop-blur-sm`}>
-              <secondaryConfig.IconComponent className="h-4 w-4" />
+              {getArchetypeImage(secondaryRole) ? (
+                <img 
+                  src={getArchetypeImage(secondaryRole)!} 
+                  alt={secondaryRole}
+                  className="h-5 w-5 rounded-full object-contain"
+                />
+              ) : (
+                <secondaryConfig.IconComponent className="h-4 w-4" />
+              )}
               <span className="text-sm text-muted-foreground">带点</span>
               <span className="text-sm font-medium text-foreground" data-testid="text-secondary-role">
                 {secondaryRole}

@@ -61,7 +61,7 @@ export default function PersonalityRadarChart({
   });
 
   return (
-    <div className="flex items-center justify-center w-full py-4 overflow-visible">
+    <div className="flex flex-col items-center justify-center w-full py-4 overflow-visible">
       <svg width="320" height="320" viewBox="0 0 300 300" className="max-w-full overflow-visible">
         <defs>
           <radialGradient id="radarGradient" cx="50%" cy="50%" r="50%">
@@ -168,19 +168,6 @@ export default function PersonalityRadarChart({
           );
         })}
       </svg>
-      
-      {/* 维度说明图例 */}
-      <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground px-2">
-        {traits.map((trait) => (
-          <div key={trait.name} className="flex items-start gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-primary/60 mt-1 flex-shrink-0" />
-            <div>
-              <span className="font-medium text-foreground">{trait.name}</span>
-              <span className="hidden sm:inline">: {traitDescriptions[trait.name]}</span>
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

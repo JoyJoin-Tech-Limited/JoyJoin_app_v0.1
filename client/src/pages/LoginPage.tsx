@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -147,6 +148,7 @@ function detectDefaultAreaCode(): string {
 
 export default function LoginPage() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [areaCode, setAreaCode] = useState("+86");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
@@ -154,6 +156,17 @@ export default function LoginPage() {
   const [countdown, setCountdown] = useState(0);
   const [isVideoMuted, setIsVideoMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Test shortcut: press 't' to go to registration
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 't' || e.key === 'T') {
+        setLocation('/registration/method');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setLocation]);
 
   useEffect(() => {
     const detectedCode = detectDefaultAreaCode();
@@ -226,6 +239,8 @@ export default function LoginPage() {
       });
       
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      // Redirect to home after successful login
+      setTimeout(() => setLocation("/"), 500);
     },
     onError: (error: Error) => {
       toast({
