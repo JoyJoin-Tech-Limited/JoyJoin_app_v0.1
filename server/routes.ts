@@ -3256,23 +3256,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
 
       // Generate smart recommend reason based on context
+      // Track ALL used reasons to avoid repetition within a batch
+      const usedReasons = new Set<string>();
+      
+      // All variants are complete sentences with subject/verb structure
+      const easyFallbackVariants = [
+        "小悦觉得这个话题很适合暖场",
+        "这是一个轻松愉快的开场话题",
+        "聊这个完全没压力，很适合破冰",
+        "小悦为你们挑了这个轻松话题",
+        "这个话题很适合刚认识的朋友聊",
+        "这是让气氛活跃起来的好话题",
+      ];
+      
+      const mediumFallbackVariants = [
+        "小悦觉得这个话题深度刚刚好",
+        "这是一个恰到好处的聊天话题",
+        "这个话题有趣又不会太深入",
+        "小悦为你们挑了这个适合畅聊的话题",
+        "这是一个很好的聊天素材",
+        "小悦觉得这个话题能让你们聊得开心",
+      ];
+      
+      const deepFallbackVariants = [
+        "小悦觉得这是加深了解的好机会",
+        "这是一个适合走心交流的话题",
+        "小悦为你们挑了这个深度话题",
+        "这是真诚分享彼此的好时刻",
+        "这个话题值得你们细细聊聊",
+        "小悦觉得这能帮你们更了解彼此",
+      ];
+      
+      const defaultFallbackVariants = [
+        "小悦为你们精心挑选了这个话题",
+        "这是今日特选的精彩话题",
+        "小悦觉得这个话题很适合你们",
+        "这是一个值得聊聊的话题",
+        "小悦为你们准备的交流话题",
+      ];
+      
+      // Category-specific full-sentence reason templates
+      const categoryReasonTemplates: Record<string, string[]> = {
+        "lighthearted": ["小悦觉得这个轻松话题很适合你们", "这是一个让氛围活跃的话题", "小悦为你们挑了这个开心话题"],
+        "dining": ["小悦觉得你们可以聊聊美食", "这是一个吃货必聊的话题", "小悦为你们挑了这个美食话题"],
+        "city_life": ["小悦觉得你们可以聊聊城市生活", "这是都市人很有共鸣的话题", "小悦为你们挑了这个城市话题"],
+        "passions": ["小悦觉得你们可以分享各自的热爱", "这是一个聊心头好的机会", "小悦为你们挑了这个兴趣话题"],
+        "travel": ["小悦觉得你们可以聊聊旅行", "这是一个关于远方的话题", "小悦为你们挑了这个旅行话题"],
+        "creativity": ["小悦觉得这个话题能激发创意", "这是一个脑洞时间的话题", "小悦为你们挑了这个创意话题"],
+        "innovation": ["小悦觉得你们可以聊聊新鲜事", "这是一个关于未来的话题", "小悦为你们挑了这个前沿话题"],
+        "personal": ["小悦觉得这能帮你们认识彼此", "这是一个自我探索的话题", "小悦为你们挑了这个了解话题"],
+        "values": ["小悦觉得这是深度交流的好机会", "这是一个关于价值观的话题", "小悦为你们挑了这个走心话题"],
+      };
+      
+      // Helper to pick an unused reason from variants
+      const pickUnusedReason = (variants: string[]): string => {
+        const unused = variants.filter(r => !usedReasons.has(r));
+        if (unused.length > 0) {
+          const picked = unused[Math.floor(Math.random() * unused.length)];
+          usedReasons.add(picked);
+          return picked;
+        }
+        // All used, just pick random
+        return variants[Math.floor(Math.random() * variants.length)];
+      };
+      
+      // Archetype-based reason variants (all complete sentences)
+      const energeticEasyReasons = [
+        "你们中有活力型伙伴，这个话题很适合破冰",
+        "小悦觉得这个话题能让活力组合更嗨",
+        "有开心果在，这个话题能让气氛更活跃",
+      ];
+      const energeticMediumReasons = [
+        "你们是热闹组合，这个话题正适合",
+        "小悦觉得这个话题配你们的热闹氛围",
+        "有活力担当在，聊这个一定很开心",
+      ];
+      const warmMediumReasons = [
+        "你们中有暖心伙伴，这个话题很适合温馨交流",
+        "小悦觉得这个话题配你们的暖心氛围",
+        "有暖心担当在，聊这个会很舒服",
+      ];
+      const thoughtfulDeepReasons = [
+        "你们中有思考型伙伴，这个话题适合深聊",
+        "小悦觉得这个话题配你们的深度组合",
+        "有思考担当在，聊这个会很有收获",
+      ];
+      const warmDeepReasons = [
+        "你们是暖心组合，这个话题适合走心交流",
+        "小悦觉得这个话题能让你们真诚分享",
+        "有暖心担当在，聊这个会很真诚",
+      ];
+      
+      // Interest-based reason variants (templates with placeholder)
+      const interestReasonTemplates = [
+        (count: number, total: number, interest: string) => count === total ? `你们${total}人都爱${interest}，聊这个正合适` : `${count}人都喜欢${interest}，可以一起聊`,
+        (count: number, total: number, interest: string) => count === total ? `小悦发现你们都对${interest}感兴趣` : `小悦发现${count}位伙伴都喜欢${interest}`,
+        (count: number, total: number, interest: string) => count === total ? `你们的共同爱好${interest}，聊起来很有共鸣` : `${interest}是你们的共同话题`,
+      ];
+      let interestTemplateIndex = 0;
+      
       const generateRecommendReason = (category: string, difficulty: DifficultyLevel, isPrioritized: boolean): string => {
         // Priority 1: If this category was selected because of common interests
         const matchedInterests = commonInterestsByCategory[category];
         if (matchedInterests && matchedInterests.length > 0) {
-          const interestCount = matchedInterests.length;
           const peopleWithInterest = Object.entries(interestCounts)
             .filter(([interest]) => matchedInterests.includes(interest))
             .reduce((max, [_, count]) => Math.max(max, count), 0);
           
           if (peopleWithInterest >= 2) {
             const interestDisplay = matchedInterests[0];
-            if (peopleWithInterest === attendeeCount) {
-              return `你们${attendeeCount}人都爱${interestDisplay}`;
-            }
-            return `${peopleWithInterest}人都喜欢${interestDisplay}`;
+            // Use rotating templates to avoid repetition
+            const template = interestReasonTemplates[interestTemplateIndex % interestReasonTemplates.length];
+            interestTemplateIndex++;
+            const reason = template(peopleWithInterest, attendeeCount, interestDisplay);
+            usedReasons.add(reason);
+            return reason;
           }
-          return `契合你们对${matchedInterests[0]}的兴趣`;
+          // Fallback for single-person interest match
+          const singleInterestReasons = [
+            `这个话题契合你们对${matchedInterests[0]}的兴趣`,
+            `小悦发现你们对${matchedInterests[0]}都有兴趣`,
+            `${matchedInterests[0]}相关的话题，很适合你们`,
+          ];
+          return pickUnusedReason(singleInterestReasons);
         }
         
         // Priority 2: Based on archetype composition
@@ -3286,34 +3392,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
           a?.includes("沉思猫头鹰") || a?.includes("稳如龟")
         );
         
+        // Priority 3: Category-specific reasons (30% chance if no archetype match)
+        const categoryReasons = categoryReasonTemplates[category];
+        const useCategoryReason = categoryReasons && Math.random() < 0.3;
+        
         if (difficulty === "easy") {
           if (energeticArchetypes.length > 0) {
-            return "适合活力组合破冰";
+            return pickUnusedReason(energeticEasyReasons);
           }
-          return "轻松开场暖场话题";
+          if (useCategoryReason) {
+            return pickUnusedReason(categoryReasons);
+          }
+          return pickUnusedReason(easyFallbackVariants);
         }
         
         if (difficulty === "medium") {
           if (energeticArchetypes.length >= 2) {
-            return "适合你们的热闹氛围";
+            return pickUnusedReason(energeticMediumReasons);
           }
           if (warmArchetypes.length > 0) {
-            return "温馨交流的好话题";
+            return pickUnusedReason(warmMediumReasons);
           }
-          return "聊起来正好的话题";
+          if (useCategoryReason) {
+            return pickUnusedReason(categoryReasons);
+          }
+          return pickUnusedReason(mediumFallbackVariants);
         }
         
         if (difficulty === "deep") {
           if (thoughtfulArchetypes.length > 0) {
-            return "适合深度交流的组合";
+            return pickUnusedReason(thoughtfulDeepReasons);
           }
           if (warmArchetypes.length >= 2) {
-            return "走心聊天的契合话题";
+            return pickUnusedReason(warmDeepReasons);
           }
-          return "加深了解的好机会";
+          if (useCategoryReason) {
+            return pickUnusedReason(categoryReasons);
+          }
+          return pickUnusedReason(deepFallbackVariants);
         }
         
-        return "小悦为你们精选";
+        return pickUnusedReason(defaultFallbackVariants);
       };
 
       // Helper function to pick a question from a category
