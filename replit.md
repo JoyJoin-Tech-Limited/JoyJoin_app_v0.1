@@ -10,6 +10,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **小悦对话注册 AI Chat Registration (Dec 13, 2025):**
+  - New AI-powered conversational registration flow using DeepSeek API as alternative to traditional form
+  - `server/deepseekClient.ts`: 小悦 character prompt, chat continuation, and info extraction functions
+  - Routes: `/api/registration/chat/start`, `/api/registration/chat/message`, `/api/registration/chat/complete`
+  - `RegistrationMethodPage.tsx`: User can choose between AI chat or traditional form registration
+  - `ChatRegistrationPage.tsx`: Chat UI with 小悦 mascot, typing indicators, and progress tracking
+  - Server-side info extraction using `summarizeAndExtractInfo()` for security (doesn't trust client-sent data)
+  - Collects: displayName, gender, birthYear, currentCity, interestsTop, venueStylePreference, topicAvoidances
+  - `registrationMethod` field in users table tracks A/B testing between 'chat' and 'form' methods
+  - Conversation history preserves raw assistant messages for accurate LLM extraction
+
 - **Venue Style Preference Feature (Dec 13, 2025):**
   - Added `venueStyleRating` field to eventFeedback table for collecting user venue satisfaction (like/neutral/dislike)
   - Updated insertEventFeedbackSchema with enum validation for venueStyleRating values
