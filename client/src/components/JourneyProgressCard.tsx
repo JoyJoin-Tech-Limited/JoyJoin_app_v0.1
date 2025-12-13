@@ -25,12 +25,14 @@ interface JourneyProgressCardProps {
   isLoggedIn: boolean;
   hasCompletedPersonalityTest: boolean;
   hasRegisteredEvent: boolean;
+  onSelectEvent?: () => void;
 }
 
 export default function JourneyProgressCard({
   isLoggedIn,
   hasCompletedPersonalityTest,
   hasRegisteredEvent,
+  onSelectEvent,
 }: JourneyProgressCardProps) {
   const steps: JourneyStep[] = [
     {
@@ -54,7 +56,7 @@ export default function JourneyProgressCard({
       title: "报名首场活动",
       completed: hasRegisteredEvent,
       icon: CalendarPlus,
-      actionLabel: "浏览活动",
+      actionLabel: "立即选择 ↓",
       actionPath: "/discover",
     },
   ];
@@ -113,17 +115,31 @@ export default function JourneyProgressCard({
               </div>
 
               {!step.completed && nextStep?.id === step.id && step.actionPath && (
-                <Link href={step.actionPath}>
-                  <Button 
-                    size="sm" 
-                    variant="default"
-                    className="h-7 text-xs"
-                    data-testid={`button-journey-${step.id}`}
-                  >
-                    {step.actionLabel}
-                    <ArrowRight className="h-3 w-3 ml-1" />
-                  </Button>
-                </Link>
+                <>
+                  {step.id === "first-event" && onSelectEvent ? (
+                    <Button 
+                      size="sm" 
+                      variant="default"
+                      className="h-7 text-xs"
+                      data-testid={`button-journey-${step.id}`}
+                      onClick={onSelectEvent}
+                    >
+                      {step.actionLabel}
+                    </Button>
+                  ) : (
+                    <Link href={step.actionPath}>
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                        className="h-7 text-xs"
+                        data-testid={`button-journey-${step.id}`}
+                      >
+                        {step.actionLabel}
+                        <ArrowRight className="h-3 w-3 ml-1" />
+                      </Button>
+                    </Link>
+                  )}
+                </>
               )}
             </div>
           ))}

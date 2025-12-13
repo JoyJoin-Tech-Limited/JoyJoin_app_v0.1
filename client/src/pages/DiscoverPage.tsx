@@ -56,6 +56,11 @@ export default function DiscoverPage() {
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const { mutate: markDiscoverAsRead } = useMarkNotificationsAsRead();
   const hasMarkedRef = useRef(false);
+  const eventListRef = useRef<HTMLDivElement>(null);
+
+  const handleSelectEvent = () => {
+    eventListRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // Fetch event pools with client-side caching (毫秒级加载)
   const { data: eventPools = [], isLoading } = useQuery<EventPool[]>({
@@ -173,6 +178,7 @@ export default function DiscoverPage() {
               isLoggedIn={isAuthenticated}
               hasCompletedPersonalityTest={user?.hasCompletedPersonalityTest || false}
               hasRegisteredEvent={registrations.length > 0}
+              onSelectEvent={handleSelectEvent}
             />
           </div>
         )}
@@ -205,7 +211,7 @@ export default function DiscoverPage() {
             <span className="font-medium">盲盒模式</span>
           </div>
 
-          <div className="space-y-5">
+          <div className="space-y-5" ref={eventListRef}>
             {isLoading ? (
               <div className="text-center py-8">
                 <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
