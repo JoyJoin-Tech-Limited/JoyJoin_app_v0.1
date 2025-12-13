@@ -63,6 +63,7 @@ export default function EditProfilePage() {
         { label: "毛孩子", value: user.hasPets === true ? "有" : user.hasPets === false ? "没有" : null },
         { label: "兄弟姐妹", value: user.hasSiblings === true ? "有" : user.hasSiblings === false ? "独生子女" : null },
         { label: "现居城市", value: user.currentCity || null },
+        { label: "家乡", value: user.hometownRegionCity || null },
       ],
       hint: "提示：此信息仅自己可见",
     },
