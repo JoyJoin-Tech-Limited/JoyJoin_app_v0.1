@@ -1,6 +1,6 @@
 /**
  * 小悦对话注册模拟测试脚本
- * 用于A/B测试评估对话式注册的用户体验
+ * 模拟不同用户画像与小悦进行注册对话，评估系统性能
  */
 
 import OpenAI from 'openai';
@@ -10,70 +10,149 @@ const deepseekClient = new OpenAI({
   baseURL: 'https://api.deepseek.com',
 });
 
-// 50个用户画像
-const userProfiles = [
-  // 年轻职场人 (10个)
-  { name: "小美", age: 24, gender: "女", city: "深圳", job: "互联网产品经理", interests: ["旅行", "美食", "摄影"], style: "活泼健谈" },
-  { name: "阿杰", age: 26, gender: "男", city: "深圳", job: "程序员", interests: ["游戏", "健身", "电影"], style: "内向简短" },
-  { name: "莉莉", age: 25, gender: "女", city: "香港", job: "金融分析师", interests: ["红酒", "瑜伽", "看书"], style: "专业正式" },
-  { name: "小王", age: 28, gender: "男", city: "广州", job: "创业者", interests: ["商业", "高尔夫", "投资"], style: "直接高效" },
-  { name: "晓晓", age: 23, gender: "女", city: "深圳", job: "设计师", interests: ["艺术", "咖啡", "逛展"], style: "文艺感性" },
-  { name: "大伟", age: 27, gender: "男", city: "香港", job: "律师", interests: ["阅读", "辩论", "威士忌"], style: "理性逻辑" },
-  { name: "小雨", age: 24, gender: "女", city: "深圳", job: "市场营销", interests: ["社交", "KTV", "购物"], style: "热情外向" },
-  { name: "阿明", age: 29, gender: "男", city: "广州", job: "销售总监", interests: ["高尔夫", "品酒", "networking"], style: "商务社交" },
-  { name: "琪琪", age: 22, gender: "女", city: "深圳", job: "应届生", interests: ["追剧", "逛街", "小红书"], style: "可爱撒娇" },
-  { name: "小陈", age: 30, gender: "男", city: "香港", job: "投行", interests: ["健身", "赛车", "旅行"], style: "精英简洁" },
-  
-  // 成熟职场人 (10个)
-  { name: "张姐", age: 35, gender: "女", city: "深圳", job: "HR总监", interests: ["茶道", "烘焙", "亲子"], style: "温和稳重" },
-  { name: "李哥", age: 38, gender: "男", city: "广州", job: "企业高管", interests: ["钓鱼", "品茶", "书法"], style: "成熟稳健" },
-  { name: "王姐", age: 33, gender: "女", city: "香港", job: "医生", interests: ["音乐", "烹饪", "养生"], style: "专业关怀" },
-  { name: "老周", age: 40, gender: "男", city: "深圳", job: "技术总监", interests: ["摄影", "徒步", "科技"], style: "技术geek" },
-  { name: "陈姐", age: 36, gender: "女", city: "深圳", job: "律所合伙人", interests: ["旅行", "红酒", "艺术"], style: "干练优雅" },
-  { name: "刘哥", age: 42, gender: "男", city: "香港", job: "基金经理", interests: ["高尔夫", "古董", "投资"], style: "沉稳精准" },
-  { name: "黄姐", age: 34, gender: "女", city: "广州", job: "创业者", interests: ["商业", "社交", "健身"], style: "自信果断" },
-  { name: "赵哥", age: 37, gender: "男", city: "深圳", job: "建筑师", interests: ["设计", "摄影", "旅行"], style: "艺术创意" },
-  { name: "孙姐", age: 32, gender: "女", city: "深圳", job: "咨询顾问", interests: ["阅读", "瑜伽", "心理学"], style: "理性分析" },
-  { name: "吴哥", age: 39, gender: "男", city: "香港", job: "银行家", interests: ["红酒", "马术", "收藏"], style: "精英严谨" },
-  
-  // 个性鲜明 (10个)
-  { name: "疯狂小张", age: 25, gender: "男", city: "深圳", job: "自媒体", interests: ["脱口秀", "密室逃脱", "剧本杀"], style: "幽默搞笑" },
-  { name: "佛系小林", age: 27, gender: "女", city: "广州", job: "自由职业", interests: ["冥想", "素食", "瑜伽"], style: "佛系淡然" },
-  { name: "社恐小李", age: 23, gender: "男", city: "深圳", job: "程序员", interests: ["游戏", "动漫", "宅"], style: "害羞回避" },
-  { name: "话痨小陈", age: 26, gender: "女", city: "香港", job: "主播", interests: ["化妆", "唱歌", "社交"], style: "话多热情" },
-  { name: "冷淡风", age: 28, gender: "男", city: "深圳", job: "独立音乐人", interests: ["音乐", "咖啡", "独处"], style: "高冷简短" },
-  { name: "撒娇怪", age: 22, gender: "女", city: "深圳", job: "学生", interests: ["萌宠", "甜品", "追星"], style: "撒娇卖萌" },
-  { name: "理工男", age: 29, gender: "男", city: "广州", job: "工程师", interests: ["数码", "编程", "科幻"], style: "逻辑直男" },
-  { name: "文艺青年", age: 24, gender: "女", city: "深圳", job: "编辑", interests: ["写作", "电影", "诗歌"], style: "文艺深沉" },
-  { name: "运动达人", age: 26, gender: "男", city: "香港", job: "健身教练", interests: ["健身", "跑步", "户外"], style: "阳光积极" },
-  { name: "吃货小姐姐", age: 25, gender: "女", city: "深圳", job: "美食博主", interests: ["美食", "探店", "烹饪"], style: "热爱生活" },
-  
-  // 特殊场景 (10个)
-  { name: "匿名用户", age: 30, gender: "不透露", city: "深圳", job: "不想说", interests: ["隐私"], style: "保护隐私" },
-  { name: "急性子", age: 27, gender: "男", city: "深圳", job: "销售", interests: ["快"], style: "极度简短" },
-  { name: "质疑者", age: 32, gender: "女", city: "香港", job: "记者", interests: ["真相"], style: "质疑怀疑" },
-  { name: "跑题王", age: 24, gender: "男", city: "广州", job: "学生", interests: ["闲聊"], style: "经常跑题" },
-  { name: "完美主义", age: 29, gender: "女", city: "深圳", job: "设计师", interests: ["细节"], style: "追求完美" },
-  { name: "懒惰型", age: 26, gender: "男", city: "深圳", job: "无业", interests: ["躺平"], style: "敷衍了事" },
-  { name: "热心肠", age: 35, gender: "女", city: "香港", job: "社工", interests: ["公益", "帮助他人"], style: "热情过度" },
-  { name: "技术控", age: 28, gender: "男", city: "深圳", job: "AI工程师", interests: ["AI", "机器人"], style: "测试系统" },
-  { name: "新手妈妈", age: 31, gender: "女", city: "广州", job: "全职妈妈", interests: ["育儿", "亲子", "烘焙"], style: "温柔耐心" },
-  { name: "海归精英", age: 33, gender: "男", city: "香港", job: "咨询", interests: ["国际视野", "投资"], style: "中英混搭" },
-  
-  // 边缘测试 (10个)
-  { name: "表情包达人", age: 21, gender: "女", city: "深圳", job: "学生", interests: ["表情包"], style: "大量emoji" },
-  { name: "方言王", age: 45, gender: "男", city: "广州", job: "生意人", interests: ["茶", "麻将"], style: "粤语夹杂" },
-  { name: "极简主义", age: 30, gender: "女", city: "深圳", job: "设计师", interests: ["简单"], style: "一个字回复" },
-  { name: "信息过载", age: 28, gender: "男", city: "香港", job: "产品经理", interests: ["什么都喜欢"], style: "信息过多" },
-  { name: "选择困难", age: 25, gender: "女", city: "深圳", job: "行政", interests: ["不确定"], style: "纠结犹豫" },
-  { name: "反问王", age: 27, gender: "男", city: "广州", job: "律师", interests: ["辩论"], style: "反问一切" },
-  { name: "故事型", age: 35, gender: "女", city: "深圳", job: "作家", interests: ["写作"], style: "长篇大论" },
-  { name: "数字控", age: 29, gender: "男", city: "香港", job: "数据分析", interests: ["数据"], style: "精确数字" },
-  { name: "怀旧派", age: 40, gender: "女", city: "广州", job: "老师", interests: ["怀旧"], style: "怀念过去" },
-  { name: "未来派", age: 22, gender: "男", city: "深圳", job: "学生", interests: ["元宇宙", "AI"], style: "科技未来" },
+// ============ 50 用户画像定义 ============
+interface UserPersona {
+  id: string;
+  name: string;
+  category: string;
+  truthData: {
+    displayName: string;
+    gender: string;
+    birthYear: number;
+    currentCity: string;
+    interests: string[];
+    occupation?: string;
+  };
+  behaviorStyle: {
+    verbosity: 'minimal' | 'normal' | 'verbose';
+    privacyLevel: 'open' | 'selective' | 'guarded';
+    responseSpeed: 'quick' | 'thoughtful';
+    language: 'formal' | 'casual' | 'mixed';
+  };
+  specialTraits: string[];
+}
+
+const USER_PERSONAS: UserPersona[] = [
+  // ===== 1-10: 标准用户（不同城市、性别、年龄段）=====
+  { id: 'std-1', name: '深圳白领女', category: '标准', truthData: { displayName: '小雨', gender: '女性', birthYear: 1995, currentCity: '深圳', interests: ['美食', '旅行', '摄影'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'open', responseSpeed: 'quick', language: 'casual' }, specialTraits: [] },
+  { id: 'std-2', name: '香港金融男', category: '标准', truthData: { displayName: 'Alex', gender: '男性', birthYear: 1990, currentCity: '香港', interests: ['投资', '健身', '红酒'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'selective', responseSpeed: 'thoughtful', language: 'mixed' }, specialTraits: ['中英混用'] },
+  { id: 'std-3', name: '广州创意女', category: '标准', truthData: { displayName: '晓晓', gender: '女性', birthYear: 1998, currentCity: '广州', interests: ['手工', '咖啡', '阅读'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'open', responseSpeed: 'thoughtful', language: 'casual' }, specialTraits: [] },
+  { id: 'std-4', name: '深圳科技男', category: '标准', truthData: { displayName: '阿明', gender: '男性', birthYear: 1992, currentCity: '深圳', interests: ['编程', '游戏', '数码'] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'selective', responseSpeed: 'quick', language: 'casual' }, specialTraits: [] },
+  { id: 'std-5', name: '香港设计女', category: '标准', truthData: { displayName: 'Lily', gender: '女性', birthYear: 1993, currentCity: '香港', interests: ['设计', '艺术', '电影'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'open', responseSpeed: 'quick', language: 'mixed' }, specialTraits: [] },
+  { id: 'std-6', name: '广州教师男', category: '标准', truthData: { displayName: '张老师', gender: '男性', birthYear: 1985, currentCity: '广州', interests: ['历史', '书法', '围棋'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'open', responseSpeed: 'thoughtful', language: 'formal' }, specialTraits: ['礼貌正式'] },
+  { id: 'std-7', name: '深圳95后女', category: '标准', truthData: { displayName: '糖糖', gender: '女性', birthYear: 2000, currentCity: '深圳', interests: ['追星', '汉服', '剧本杀'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'open', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['网络用语多'] },
+  { id: 'std-8', name: '香港律师男', category: '标准', truthData: { displayName: 'David', gender: '男性', birthYear: 1988, currentCity: '香港', interests: ['法律', '高尔夫', '威士忌'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'guarded', responseSpeed: 'thoughtful', language: 'formal' }, specialTraits: ['谨慎'] },
+  { id: 'std-9', name: '广州医生女', category: '标准', truthData: { displayName: '林医生', gender: '女性', birthYear: 1991, currentCity: '广州', interests: ['瑜伽', '烹饪', '心理学'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'selective', responseSpeed: 'thoughtful', language: 'formal' }, specialTraits: [] },
+  { id: 'std-10', name: '深圳自由职业', category: '标准', truthData: { displayName: '小风', gender: '不透露', birthYear: 1994, currentCity: '深圳', interests: ['写作', '旅行', '冥想'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'selective', responseSpeed: 'thoughtful', language: 'casual' }, specialTraits: ['性别模糊'] },
+
+  // ===== 11-20: 极简用户（回答简短）=====
+  { id: 'min-1', name: '惜字如金男', category: '极简', truthData: { displayName: '阿杰', gender: '男性', birthYear: 1996, currentCity: '深圳', interests: ['篮球', '音乐'] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'selective', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['一两个字回答'] },
+  { id: 'min-2', name: '忙碌职场女', category: '极简', truthData: { displayName: 'Amy', gender: '女性', birthYear: 1989, currentCity: '香港', interests: ['健身'] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'guarded', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['时间紧迫感'] },
+  { id: 'min-3', name: '社恐内向男', category: '极简', truthData: { displayName: '小陈', gender: '男性', birthYear: 1997, currentCity: '广州', interests: ['游戏', '动漫'] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'guarded', responseSpeed: 'thoughtful', language: 'casual' }, specialTraits: ['不愿多说'] },
+  { id: 'min-4', name: '测试心态用户', category: '极简', truthData: { displayName: '路人', gender: '男性', birthYear: 1993, currentCity: '深圳', interests: ['随便'] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'guarded', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['敷衍态度'] },
+  { id: 'min-5', name: '只关心结果女', category: '极简', truthData: { displayName: '直接点', gender: '女性', birthYear: 1990, currentCity: '香港', interests: ['效率'] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'selective', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['跳过问题'] },
+  { id: 'min-6', name: '谨慎观望男', category: '极简', truthData: { displayName: '观察者', gender: '男性', birthYear: 1987, currentCity: '深圳', interests: ['未知'] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'guarded', responseSpeed: 'thoughtful', language: 'formal' }, specialTraits: ['反问多'] },
+  { id: 'min-7', name: '表情包用户', category: '极简', truthData: { displayName: '😊', gender: '不透露', birthYear: 1999, currentCity: '广州', interests: ['emoji'] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'open', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['用emoji回复'] },
+  { id: 'min-8', name: '问号用户', category: '极简', truthData: { displayName: '？？', gender: '男性', birthYear: 1995, currentCity: '深圳', interests: ['不确定'] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'guarded', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['回复问号'] },
+  { id: 'min-9', name: '嗯啊用户', category: '极简', truthData: { displayName: '嗯嗯', gender: '女性', birthYear: 1998, currentCity: '香港', interests: ['都行'] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'selective', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['语气词回复'] },
+  { id: 'min-10', name: '数字用户', category: '极简', truthData: { displayName: '007', gender: '男性', birthYear: 1992, currentCity: '深圳', interests: ['1'] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'guarded', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['用数字回答'] },
+
+  // ===== 21-30: 健谈用户（详细分享）=====
+  { id: 'ver-1', name: '社交达人女', category: '健谈', truthData: { displayName: '晴天', gender: '女性', birthYear: 1994, currentCity: '深圳', interests: ['社交', '派对', '美妆', '购物', '旅行'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'open', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['主动分享故事'] },
+  { id: 'ver-2', name: '创业者男', category: '健谈', truthData: { displayName: '老王', gender: '男性', birthYear: 1986, currentCity: '深圳', interests: ['创业', '投资', '人脉', '商业'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'open', responseSpeed: 'thoughtful', language: 'formal' }, specialTraits: ['爱讲道理'] },
+  { id: 'ver-3', name: '文艺青年女', category: '健谈', truthData: { displayName: '诗诗', gender: '女性', birthYear: 1997, currentCity: '广州', interests: ['诗歌', '话剧', '咖啡馆', '独立音乐'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'open', responseSpeed: 'thoughtful', language: 'formal' }, specialTraits: ['文艺表达'] },
+  { id: 'ver-4', name: '旅行博主男', category: '健谈', truthData: { displayName: '浪子', gender: '男性', birthYear: 1991, currentCity: '香港', interests: ['旅行', '摄影', '美食', '户外'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'open', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['分享旅行经历'] },
+  { id: 'ver-5', name: '育儿妈妈', category: '健谈', truthData: { displayName: '辣妈', gender: '女性', birthYear: 1988, currentCity: '深圳', interests: ['育儿', '烘焙', '亲子', '教育'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'open', responseSpeed: 'thoughtful', language: 'casual' }, specialTraits: ['聊孩子'] },
+  { id: 'ver-6', name: '美食家男', category: '健谈', truthData: { displayName: '吃货阿东', gender: '男性', birthYear: 1993, currentCity: '广州', interests: ['美食', '探店', '烹饪', '红酒'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'open', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['详细描述食物'] },
+  { id: 'ver-7', name: '健身教练女', category: '健谈', truthData: { displayName: 'Coco', gender: '女性', birthYear: 1995, currentCity: '深圳', interests: ['健身', '营养', '瑜伽', '舞蹈'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'open', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['推广健身'] },
+  { id: 'ver-8', name: '心理咨询师', category: '健谈', truthData: { displayName: '静姐', gender: '女性', birthYear: 1985, currentCity: '香港', interests: ['心理学', '冥想', '阅读', '自我成长'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'selective', responseSpeed: 'thoughtful', language: 'formal' }, specialTraits: ['深度交流'] },
+  { id: 'ver-9', name: '摄影师男', category: '健谈', truthData: { displayName: '光影', gender: '男性', birthYear: 1990, currentCity: '深圳', interests: ['摄影', '电影', '艺术', '设计'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'open', responseSpeed: 'thoughtful', language: 'casual' }, specialTraits: ['视觉描述'] },
+  { id: 'ver-10', name: '音乐人', category: '健谈', truthData: { displayName: '小乐', gender: '不透露', birthYear: 1996, currentCity: '广州', interests: ['音乐', '创作', '演出', '乐器'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'open', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['聊音乐'] },
+
+  // ===== 31-40: 特殊行为用户 =====
+  { id: 'sp-1', name: '隐私敏感用户', category: '特殊', truthData: { displayName: '匿名', gender: '不透露', birthYear: 1990, currentCity: '不方便说', interests: ['隐私'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'guarded', responseSpeed: 'thoughtful', language: 'formal' }, specialTraits: ['拒绝透露信息', '质疑数据用途'] },
+  { id: 'sp-2', name: '跑题用户', category: '特殊', truthData: { displayName: '跑题王', gender: '男性', birthYear: 1994, currentCity: '深圳', interests: ['聊天'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'open', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['话题跑偏', '问无关问题'] },
+  { id: 'sp-3', name: '纠错用户', category: '特殊', truthData: { displayName: '较真哥', gender: '男性', birthYear: 1987, currentCity: '深圳', interests: ['纠错'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'selective', responseSpeed: 'thoughtful', language: 'formal' }, specialTraits: ['纠正小悦', '挑刺'] },
+  { id: 'sp-4', name: '调戏AI用户', category: '特殊', truthData: { displayName: '皮皮', gender: '男性', birthYear: 1999, currentCity: '广州', interests: ['整蛊'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'open', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['测试AI边界', '开玩笑'] },
+  { id: 'sp-5', name: '犹豫不决用户', category: '特殊', truthData: { displayName: '纠结', gender: '女性', birthYear: 1993, currentCity: '可能深圳', interests: ['不确定', '可能喜欢', '也许'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'open', responseSpeed: 'thoughtful', language: 'casual' }, specialTraits: ['频繁改答案'] },
+  { id: 'sp-6', name: '复制粘贴用户', category: '特殊', truthData: { displayName: 'test', gender: '男性', birthYear: 1995, currentCity: 'test', interests: ['test'] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'guarded', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['复制同样内容'] },
+  { id: 'sp-7', name: '多语言用户', category: '特殊', truthData: { displayName: 'Kevin', gender: '男性', birthYear: 1992, currentCity: 'Hong Kong', interests: ['travel', '美食'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'open', responseSpeed: 'quick', language: 'mixed' }, specialTraits: ['中英粤混用'] },
+  { id: 'sp-8', name: '负面情绪用户', category: '特殊', truthData: { displayName: '算了', gender: '女性', birthYear: 1991, currentCity: '深圳', interests: ['没什么'] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'guarded', responseSpeed: 'thoughtful', language: 'casual' }, specialTraits: ['消极回应'] },
+  { id: 'sp-9', name: '质疑平台用户', category: '特殊', truthData: { displayName: '怀疑论者', gender: '男性', birthYear: 1988, currentCity: '广州', interests: ['质疑'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'guarded', responseSpeed: 'thoughtful', language: 'formal' }, specialTraits: ['质疑平台安全性'] },
+  { id: 'sp-10', name: '超长回复用户', category: '特殊', truthData: { displayName: '长篇大论', gender: '女性', birthYear: 1994, currentCity: '深圳', interests: ['写作', '分享', '表达', '交流', '思考'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'open', responseSpeed: 'thoughtful', language: 'formal' }, specialTraits: ['每次回复很长'] },
+
+  // ===== 41-50: 边界测试用户 =====
+  { id: 'edge-1', name: '空白回复', category: '边界', truthData: { displayName: '', gender: '', birthYear: 0, currentCity: '', interests: [] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'guarded', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['发送空格或空白'] },
+  { id: 'edge-2', name: '特殊字符用户', category: '边界', truthData: { displayName: '🎉✨🌟', gender: '🚀', birthYear: 1995, currentCity: '💎深圳💎', interests: ['🎮', '🎵'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'open', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['大量emoji'] },
+  { id: 'edge-3', name: '数字昵称', category: '边界', truthData: { displayName: '12345', gender: '男性', birthYear: 1996, currentCity: '深圳', interests: ['数字'] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'selective', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['纯数字回复'] },
+  { id: 'edge-4', name: '超长昵称', category: '边界', truthData: { displayName: '这是一个非常非常非常长的昵称你能接受吗', gender: '女性', birthYear: 1997, currentCity: '广州', interests: ['测试'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'open', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['超长输入'] },
+  { id: 'edge-5', name: '年龄边界老', category: '边界', truthData: { displayName: '资深用户', gender: '男性', birthYear: 1950, currentCity: '香港', interests: ['太极', '书法'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'open', responseSpeed: 'thoughtful', language: 'formal' }, specialTraits: ['高龄用户'] },
+  { id: 'edge-6', name: '年龄边界小', category: '边界', truthData: { displayName: '小朋友', gender: '女性', birthYear: 2010, currentCity: '深圳', interests: ['玩具'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'open', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['未成年暗示'] },
+  { id: 'edge-7', name: '多城市用户', category: '边界', truthData: { displayName: '飞人', gender: '男性', birthYear: 1990, currentCity: '深圳香港广州都有', interests: ['商务'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'selective', responseSpeed: 'quick', language: 'formal' }, specialTraits: ['多地居住'] },
+  { id: 'edge-8', name: '兴趣超多用户', category: '边界', truthData: { displayName: '兴趣广泛', gender: '女性', birthYear: 1993, currentCity: '深圳', interests: ['读书', '电影', '音乐', '旅行', '美食', '摄影', '运动', '游戏', '手工', '烹饪', '园艺', '宠物'] }, behaviorStyle: { verbosity: 'verbose', privacyLevel: 'open', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['列举大量兴趣'] },
+  { id: 'edge-9', name: '无兴趣用户', category: '边界', truthData: { displayName: '佛系', gender: '男性', birthYear: 1995, currentCity: '广州', interests: [] }, behaviorStyle: { verbosity: 'minimal', privacyLevel: 'selective', responseSpeed: 'thoughtful', language: 'casual' }, specialTraits: ['声称无爱好'] },
+  { id: 'edge-10', name: '完美配合用户', category: '边界', truthData: { displayName: '模范用户', gender: '女性', birthYear: 1994, currentCity: '深圳', interests: ['配合', '友好', '积极'] }, behaviorStyle: { verbosity: 'normal', privacyLevel: 'open', responseSpeed: 'quick', language: 'casual' }, specialTraits: ['完美回答所有问题'] },
 ];
 
-// 小悦系统提示词
+// ============ 模拟用户回复生成 ============
+async function generateUserResponse(
+  persona: UserPersona,
+  xiaoyueMessage: string,
+  conversationContext: string[],
+  turnNumber: number
+): Promise<string> {
+  const personaPrompt = `你正在扮演一个用户，与名为"小悦"的AI进行注册对话。
+
+## 你的角色设定
+- 昵称: ${persona.truthData.displayName}
+- 性别: ${persona.truthData.gender}
+- 出生年份: ${persona.truthData.birthYear}
+- 所在城市: ${persona.truthData.currentCity}
+- 兴趣爱好: ${persona.truthData.interests.join('、')}
+- 职业: ${persona.truthData.occupation || '未设定'}
+
+## 你的行为风格
+- 话多程度: ${persona.behaviorStyle.verbosity === 'minimal' ? '惜字如金，回答简短' : persona.behaviorStyle.verbosity === 'verbose' ? '健谈，喜欢详细分享' : '正常'}
+- 隐私态度: ${persona.behaviorStyle.privacyLevel === 'guarded' ? '谨慎，不愿透露太多' : persona.behaviorStyle.privacyLevel === 'open' ? '开放，愿意分享' : '有选择性分享'}
+- 语言风格: ${persona.behaviorStyle.language === 'formal' ? '正式礼貌' : persona.behaviorStyle.language === 'mixed' ? '中英混用' : '随意口语化'}
+- 特殊特点: ${persona.specialTraits.join('、') || '无'}
+
+## 当前对话轮次: ${turnNumber}
+如果是第1-2轮，主要回答昵称问题。
+如果是第3-4轮，可以回答性别和年龄问题。
+如果是第5轮以后，可以分享兴趣和城市信息。
+
+## 小悦刚才说:
+${xiaoyueMessage}
+
+## 之前的对话:
+${conversationContext.slice(-4).join('\n')}
+
+请以这个用户的身份回复小悦。只输出用户的回复内容，不要加任何解释。`;
+
+  try {
+    const response = await deepseekClient.chat.completions.create({
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: '你是一个角色扮演助手，扮演指定的用户角色进行对话。' },
+        { role: 'user', content: personaPrompt }
+      ],
+      temperature: 0.9,
+      max_tokens: 200,
+    });
+    return response.choices[0]?.message?.content || '嗯';
+  } catch (error) {
+    console.error('Error generating user response:', error);
+    return '好的';
+  }
+}
+
+// ============ 小悦对话API调用 ============
+interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
 const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，JoyJoin平台的AI社交助手。你的任务是通过轻松愉快的对话，帮助新用户完成注册信息收集。
 
 ## 你的人设
@@ -88,11 +167,26 @@ const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，JoyJoin平台的AI社交助手�
 4. **幽默调侃**：适当开玩笑但要把握分寸，不要让人尴尬
 5. **尊重隐私**：如果用户不愿回答某个问题，优雅地跳过
 
-## 需要收集的信息
-1. 昵称 2. 性别 3. 年龄段 4. 所在城市 5. 职业/行业 6. 兴趣爱好 7. 场地风格偏好 8. 不想聊的话题
+## 需要收集的信息（按优先级）
+1. **昵称**：怎么称呼ta
+2. **性别**：女性/男性/不透露
+3. **年龄段**：大概出生年份
+4. **所在城市**：香港/深圳/广州/其他
+5. **兴趣爱好**：3-7个兴趣标签
+
+## 输出格式
+每次回复包含两部分：
+1. 自然的对话内容（给用户看的）
+2. 如果这轮对话收集到了新信息，在回复最后用特殊标记包裹收集到的JSON信息：
+   \`\`\`collected_info
+   {"field": "value"}
+   \`\`\`
 
 ## 结束信号
-当收集到足够信息（至少昵称+性别+城市+2个兴趣），标记 \`\`\`registration_complete\ntrue\n\`\`\``;
+当你认为收集到足够信息（至少昵称+性别+城市+2个兴趣），在回复中加入：
+\`\`\`registration_complete
+true
+\`\`\``;
 
 const XIAOYUE_OPENING = `嘿～欢迎来到JoyJoin！我是小悦，你的社交向导 ✨
 
@@ -100,193 +194,437 @@ const XIAOYUE_OPENING = `嘿～欢迎来到JoyJoin！我是小悦，你的社交
 
 我先来认识一下你吧～你希望大家怎么称呼你呀？可以是真名，也可以是你喜欢的昵称～`;
 
-// 模拟用户回复生成器
-async function generateUserResponse(
-  profile: typeof userProfiles[0],
-  conversationHistory: { role: string; content: string }[],
-  turnNumber: number
-): Promise<string> {
-  const prompt = `你现在扮演一个正在注册社交App的用户，以下是你的人物设定：
-  
-姓名：${profile.name}
-年龄：${profile.age}岁
-性别：${profile.gender}
-城市：${profile.city}
-职业：${profile.job}
-兴趣：${profile.interests.join('、')}
-说话风格：${profile.style}
+async function xiaoyueRespond(conversationHistory: ChatMessage[]): Promise<{
+  message: string;
+  rawMessage: string;
+  isComplete: boolean;
+  collectedInfo: any;
+}> {
+  try {
+    const response = await deepseekClient.chat.completions.create({
+      model: 'deepseek-chat',
+      messages: conversationHistory.map(msg => ({
+        role: msg.role as 'system' | 'user' | 'assistant',
+        content: msg.content
+      })),
+      temperature: 0.8,
+      max_tokens: 800,
+    });
 
-这是你与AI助手"小悦"的对话历史：
-${conversationHistory.map(m => `${m.role === 'assistant' ? '小悦' : '你'}: ${m.content}`).join('\n')}
+    const rawMessage = response.choices[0]?.message?.content || '抱歉，我走神了一下';
+    const isComplete = rawMessage.includes('```registration_complete');
+    
+    // Extract collected info
+    const infoMatch = rawMessage.match(/```collected_info\s*([\s\S]*?)```/);
+    let collectedInfo = {};
+    if (infoMatch) {
+      try {
+        collectedInfo = JSON.parse(infoMatch[1].trim());
+      } catch {}
+    }
 
-现在轮到你回复了。请根据你的人设风格，自然地回答小悦的问题。
-- 如果小悦问了你的信息，就根据人设回答
-- 保持你的说话风格特点
-- 回复长度适中，像真实聊天
-- 这是第${turnNumber}轮对话
+    const cleanMessage = rawMessage
+      .replace(/```collected_info[\s\S]*?```/g, '')
+      .replace(/```registration_complete[\s\S]*?```/g, '')
+      .trim();
 
-直接输出你的回复，不要加任何解释或引号：`;
-
-  const response = await deepseekClient.chat.completions.create({
-    model: 'deepseek-chat',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.9,
-    max_tokens: 200,
-  });
-
-  return response.choices[0]?.message?.content || '好的';
+    return { message: cleanMessage, rawMessage, isComplete, collectedInfo };
+  } catch (error) {
+    console.error('Xiaoyue API error:', error);
+    throw error;
+  }
 }
 
-// 模拟单次对话
-async function simulateConversation(profile: typeof userProfiles[0]): Promise<{
+// ============ 单次模拟对话 ============
+interface SimulationResult {
+  personaId: string;
+  personaName: string;
+  category: string;
   success: boolean;
-  turns: number;
+  turnCount: number;
   collectedFields: string[];
-  transcript: string[];
-  error?: string;
-}> {
-  const transcript: string[] = [];
-  const conversationHistory: { role: string; content: string }[] = [
+  extractedInfo: any;
+  truthData: any;
+  extractionAccuracy: number;
+  conversationLog: string[];
+  errors: string[];
+  durationMs: number;
+}
+
+async function simulateConversation(persona: UserPersona): Promise<SimulationResult> {
+  const startTime = Date.now();
+  const conversationHistory: ChatMessage[] = [
     { role: 'system', content: XIAOYUE_SYSTEM_PROMPT },
     { role: 'assistant', content: XIAOYUE_OPENING }
   ];
-  
-  transcript.push(`小悦: ${XIAOYUE_OPENING}`);
-  
-  const maxTurns = 15;
-  let turns = 0;
+  const conversationLog: string[] = [`[小悦] ${XIAOYUE_OPENING}`];
+  const collectedFields: string[] = [];
+  const errors: string[] = [];
+  let turnCount = 0;
   let isComplete = false;
-  
+  let allCollectedInfo: any = {};
+
+  const MAX_TURNS = 15;
+
   try {
-    for (let i = 0; i < maxTurns; i++) {
-      turns++;
+    while (!isComplete && turnCount < MAX_TURNS) {
+      turnCount++;
+
+      // Generate user response
+      const userResponse = await generateUserResponse(
+        persona,
+        conversationHistory[conversationHistory.length - 1].content,
+        conversationLog,
+        turnCount
+      );
       
-      // 生成用户回复
-      const userMessage = await generateUserResponse(profile, conversationHistory, turns);
-      conversationHistory.push({ role: 'user', content: userMessage });
-      transcript.push(`${profile.name}: ${userMessage}`);
-      
-      // 获取小悦回复
-      const response = await deepseekClient.chat.completions.create({
-        model: 'deepseek-chat',
-        messages: conversationHistory.map(m => ({
-          role: m.role as 'system' | 'user' | 'assistant',
-          content: m.content
-        })),
-        temperature: 0.8,
-        max_tokens: 500,
-      });
-      
-      const assistantMessage = response.choices[0]?.message?.content || '';
-      const cleanMessage = assistantMessage
-        .replace(/```collected_info[\s\S]*?```/g, '')
-        .replace(/```registration_complete[\s\S]*?```/g, '')
-        .trim();
-      
-      conversationHistory.push({ role: 'assistant', content: cleanMessage });
-      transcript.push(`小悦: ${cleanMessage}`);
-      
-      if (assistantMessage.includes('registration_complete')) {
-        isComplete = true;
-        break;
+      conversationLog.push(`[用户] ${userResponse}`);
+      conversationHistory.push({ role: 'user', content: userResponse });
+
+      // Get Xiaoyue's response
+      const xiaoyueResult = await xiaoyueRespond(conversationHistory);
+      conversationLog.push(`[小悦] ${xiaoyueResult.message}`);
+      conversationHistory.push({ role: 'assistant', content: xiaoyueResult.rawMessage });
+
+      // Track collected info
+      if (xiaoyueResult.collectedInfo && Object.keys(xiaoyueResult.collectedInfo).length > 0) {
+        Object.keys(xiaoyueResult.collectedInfo).forEach(key => {
+          if (!collectedFields.includes(key)) {
+            collectedFields.push(key);
+          }
+        });
+        allCollectedInfo = { ...allCollectedInfo, ...xiaoyueResult.collectedInfo };
+      }
+
+      isComplete = xiaoyueResult.isComplete;
+
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // Calculate extraction accuracy
+    let matchCount = 0;
+    let totalFields = 0;
+    
+    if (persona.truthData.displayName && allCollectedInfo.displayName) {
+      totalFields++;
+      if (allCollectedInfo.displayName.includes(persona.truthData.displayName) || 
+          persona.truthData.displayName.includes(allCollectedInfo.displayName)) {
+        matchCount++;
       }
     }
-    
-    // 分析收集到的字段
-    const collectedFields: string[] = [];
-    const fullText = transcript.join(' ');
-    if (fullText.includes(profile.name) || fullText.match(/叫|称呼/)) collectedFields.push('displayName');
-    if (fullText.includes(profile.gender)) collectedFields.push('gender');
-    if (fullText.includes(profile.city)) collectedFields.push('city');
-    if (fullText.includes(profile.job)) collectedFields.push('occupation');
-    if (profile.interests.some(i => fullText.includes(i))) collectedFields.push('interests');
-    
+    if (persona.truthData.gender) {
+      totalFields++;
+      if (allCollectedInfo.gender === persona.truthData.gender) {
+        matchCount++;
+      }
+    }
+    if (persona.truthData.currentCity) {
+      totalFields++;
+      if (allCollectedInfo.currentCity?.includes(persona.truthData.currentCity) ||
+          persona.truthData.currentCity.includes(allCollectedInfo.currentCity || '')) {
+        matchCount++;
+      }
+    }
+
+    const extractionAccuracy = totalFields > 0 ? (matchCount / totalFields) * 100 : 0;
+
     return {
+      personaId: persona.id,
+      personaName: persona.name,
+      category: persona.category,
       success: isComplete,
-      turns,
+      turnCount,
       collectedFields,
-      transcript,
+      extractedInfo: allCollectedInfo,
+      truthData: persona.truthData,
+      extractionAccuracy,
+      conversationLog,
+      errors,
+      durationMs: Date.now() - startTime
     };
   } catch (error: any) {
+    errors.push(error.message || 'Unknown error');
     return {
+      personaId: persona.id,
+      personaName: persona.name,
+      category: persona.category,
       success: false,
-      turns,
-      collectedFields: [],
-      transcript,
-      error: error.message,
+      turnCount,
+      collectedFields,
+      extractedInfo: allCollectedInfo,
+      truthData: persona.truthData,
+      extractionAccuracy: 0,
+      conversationLog,
+      errors,
+      durationMs: Date.now() - startTime
     };
   }
 }
 
-// 运行批量测试
-async function runSimulation(count: number = 20) {
-  console.log(`\n🚀 开始模拟测试 - 共 ${count} 次对话\n`);
-  console.log('='.repeat(60));
-  
-  const results: {
-    success: boolean;
-    turns: number;
-    collectedFields: string[];
-    profileName: string;
-    style: string;
-  }[] = [];
-  
-  const startTime = Date.now();
-  
-  for (let i = 0; i < count; i++) {
-    const profile = userProfiles[i % userProfiles.length];
-    console.log(`\n[${i + 1}/${count}] 测试用户: ${profile.name} (${profile.style})`);
-    
-    const result = await simulateConversation(profile);
-    results.push({
-      success: result.success,
-      turns: result.turns,
-      collectedFields: result.collectedFields,
-      profileName: profile.name,
-      style: profile.style,
-    });
-    
-    console.log(`  ✓ 完成: ${result.success ? '成功' : '未完成'}, ${result.turns}轮, 收集${result.collectedFields.length}项`);
-    
-    // 避免速率限制
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-  
-  const endTime = Date.now();
-  
-  // 生成报告
-  console.log('\n' + '='.repeat(60));
-  console.log('\n📊 模拟测试报告\n');
-  
-  const successCount = results.filter(r => r.success).length;
-  const avgTurns = results.reduce((sum, r) => sum + r.turns, 0) / results.length;
-  const avgFields = results.reduce((sum, r) => sum + r.collectedFields.length, 0) / results.length;
-  
-  console.log(`测试数量: ${count}`);
-  console.log(`完成率: ${(successCount / count * 100).toFixed(1)}%`);
-  console.log(`平均对话轮数: ${avgTurns.toFixed(1)}`);
-  console.log(`平均收集信息项: ${avgFields.toFixed(1)}`);
-  console.log(`总耗时: ${((endTime - startTime) / 1000).toFixed(1)}秒`);
-  
-  // 按风格分组统计
-  console.log('\n按用户风格分组统计:');
-  const byStyle = new Map<string, { success: number; total: number; turns: number[] }>();
-  results.forEach(r => {
-    const existing = byStyle.get(r.style) || { success: 0, total: 0, turns: [] };
-    existing.total++;
-    if (r.success) existing.success++;
-    existing.turns.push(r.turns);
-    byStyle.set(r.style, existing);
-  });
-  
-  byStyle.forEach((data, style) => {
-    const avgT = data.turns.reduce((a, b) => a + b, 0) / data.turns.length;
-    console.log(`  ${style}: ${data.success}/${data.total} 成功, 平均${avgT.toFixed(1)}轮`);
-  });
-  
-  console.log('\n✅ 测试完成!\n');
+// ============ 批量测试运行 ============
+interface TestReport {
+  totalTests: number;
+  successCount: number;
+  failureCount: number;
+  completionRate: number;
+  averageTurns: number;
+  averageExtractionAccuracy: number;
+  categoryBreakdown: Record<string, { success: number; total: number; avgTurns: number }>;
+  fieldCoverage: Record<string, number>;
+  commonErrors: string[];
+  results: SimulationResult[];
+  timestamp: string;
+  durationMinutes: number;
 }
 
-// 主入口
-const testCount = parseInt(process.argv[2] || '20');
-runSimulation(testCount).catch(console.error);
+async function runSimulationBatch(
+  personas: UserPersona[],
+  concurrency: number = 2
+): Promise<TestReport> {
+  const startTime = Date.now();
+  const results: SimulationResult[] = [];
+  
+  console.log(`\n🚀 开始模拟测试: ${personas.length} 个用户画像\n`);
+  console.log('='.repeat(60));
+
+  // Process in batches to control concurrency
+  for (let i = 0; i < personas.length; i += concurrency) {
+    const batch = personas.slice(i, i + concurrency);
+    console.log(`\n📊 处理批次 ${Math.floor(i / concurrency) + 1}/${Math.ceil(personas.length / concurrency)}`);
+    
+    const batchResults = await Promise.all(
+      batch.map(async (persona, idx) => {
+        console.log(`  ▸ 测试 [${persona.id}] ${persona.name}...`);
+        const result = await simulateConversation(persona);
+        console.log(`  ${result.success ? '✅' : '❌'} [${persona.id}] ${result.turnCount}轮, ${result.collectedFields.length}字段`);
+        return result;
+      })
+    );
+    
+    results.push(...batchResults);
+    
+    // Delay between batches
+    if (i + concurrency < personas.length) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+
+  // Calculate statistics
+  const successCount = results.filter(r => r.success).length;
+  const totalTurns = results.reduce((sum, r) => sum + r.turnCount, 0);
+  const totalAccuracy = results.reduce((sum, r) => sum + r.extractionAccuracy, 0);
+
+  const categoryBreakdown: Record<string, { success: number; total: number; avgTurns: number }> = {};
+  results.forEach(r => {
+    if (!categoryBreakdown[r.category]) {
+      categoryBreakdown[r.category] = { success: 0, total: 0, avgTurns: 0 };
+    }
+    categoryBreakdown[r.category].total++;
+    if (r.success) categoryBreakdown[r.category].success++;
+    categoryBreakdown[r.category].avgTurns += r.turnCount;
+  });
+  Object.keys(categoryBreakdown).forEach(cat => {
+    categoryBreakdown[cat].avgTurns /= categoryBreakdown[cat].total;
+  });
+
+  const fieldCoverage: Record<string, number> = {};
+  results.forEach(r => {
+    r.collectedFields.forEach(field => {
+      fieldCoverage[field] = (fieldCoverage[field] || 0) + 1;
+    });
+  });
+
+  const allErrors = results.flatMap(r => r.errors);
+  const errorCounts: Record<string, number> = {};
+  allErrors.forEach(err => {
+    errorCounts[err] = (errorCounts[err] || 0) + 1;
+  });
+  const commonErrors = Object.entries(errorCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([err, count]) => `${err} (${count}次)`);
+
+  const report: TestReport = {
+    totalTests: results.length,
+    successCount,
+    failureCount: results.length - successCount,
+    completionRate: (successCount / results.length) * 100,
+    averageTurns: totalTurns / results.length,
+    averageExtractionAccuracy: totalAccuracy / results.length,
+    categoryBreakdown,
+    fieldCoverage,
+    commonErrors,
+    results,
+    timestamp: new Date().toISOString(),
+    durationMinutes: (Date.now() - startTime) / 60000
+  };
+
+  return report;
+}
+
+// ============ 报告生成 ============
+function generateReportMarkdown(report: TestReport): string {
+  let md = `# 小悦对话注册模拟测试报告
+
+## 测试概览
+
+| 指标 | 数值 |
+|------|------|
+| 测试时间 | ${report.timestamp} |
+| 测试总数 | ${report.totalTests} |
+| 成功数 | ${report.successCount} |
+| 失败数 | ${report.failureCount} |
+| **完成率** | **${report.completionRate.toFixed(1)}%** |
+| 平均对话轮数 | ${report.averageTurns.toFixed(1)} |
+| 平均信息提取准确率 | ${report.averageExtractionAccuracy.toFixed(1)}% |
+| 测试耗时 | ${report.durationMinutes.toFixed(1)} 分钟 |
+
+## 分类表现
+
+| 用户类型 | 成功/总数 | 成功率 | 平均轮数 |
+|----------|-----------|--------|----------|
+`;
+
+  Object.entries(report.categoryBreakdown).forEach(([cat, data]) => {
+    const rate = ((data.success / data.total) * 100).toFixed(1);
+    md += `| ${cat} | ${data.success}/${data.total} | ${rate}% | ${data.avgTurns.toFixed(1)} |\n`;
+  });
+
+  md += `
+## 字段收集覆盖率
+
+| 字段 | 收集次数 | 覆盖率 |
+|------|----------|--------|
+`;
+
+  Object.entries(report.fieldCoverage)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([field, count]) => {
+      const rate = ((count / report.totalTests) * 100).toFixed(1);
+      md += `| ${field} | ${count} | ${rate}% |\n`;
+    });
+
+  if (report.commonErrors.length > 0) {
+    md += `
+## 常见错误
+
+`;
+    report.commonErrors.forEach(err => {
+      md += `- ${err}\n`;
+    });
+  }
+
+  md += `
+## 详细结果
+
+<details>
+<summary>点击展开全部 ${report.results.length} 个测试结果</summary>
+
+`;
+
+  report.results.forEach((r, idx) => {
+    const status = r.success ? '✅' : '❌';
+    md += `### ${idx + 1}. ${status} [${r.personaId}] ${r.personaName}
+
+- **分类**: ${r.category}
+- **轮数**: ${r.turnCount}
+- **收集字段**: ${r.collectedFields.join(', ') || '无'}
+- **提取准确率**: ${r.extractionAccuracy.toFixed(1)}%
+${r.errors.length > 0 ? `- **错误**: ${r.errors.join(', ')}` : ''}
+
+<details>
+<summary>对话记录</summary>
+
+\`\`\`
+${r.conversationLog.join('\n\n')}
+\`\`\`
+
+</details>
+
+---
+
+`;
+  });
+
+  md += `</details>
+
+## 结论与建议
+
+### 优势
+- 完成率: ${report.completionRate >= 80 ? '良好' : report.completionRate >= 60 ? '中等' : '需改进'}
+- 平均对话轮数: ${report.averageTurns <= 8 ? '高效' : report.averageTurns <= 12 ? '正常' : '偏长'}
+
+### 改进建议
+${report.completionRate < 80 ? '- 优化对简短回复的处理能力\n' : ''}${report.averageTurns > 10 ? '- 提高信息收集效率，减少对话轮数\n' : ''}${Object.keys(report.fieldCoverage).length < 5 ? '- 增强兴趣爱好等字段的收集率\n' : ''}
+
+---
+*报告生成时间: ${report.timestamp}*
+`;
+
+  return md;
+}
+
+// ============ 主函数 ============
+async function main() {
+  const args = process.argv.slice(2);
+  const testCount = parseInt(args[0]) || 30; // Default to 30 for smoke test
+  
+  console.log('\n' + '='.repeat(60));
+  console.log('     小悦对话注册 - 模拟测试系统');
+  console.log('='.repeat(60));
+  
+  // Select personas based on test count
+  let selectedPersonas: UserPersona[];
+  if (testCount >= 50) {
+    // Full test - use all personas, potentially multiple times
+    const repetitions = Math.ceil(testCount / 50);
+    selectedPersonas = [];
+    for (let i = 0; i < repetitions; i++) {
+      selectedPersonas.push(...USER_PERSONAS.slice(0, Math.min(testCount - selectedPersonas.length, 50)));
+    }
+  } else {
+    // Stratified sampling - ensure coverage of all categories
+    const categories = ['标准', '极简', '健谈', '特殊', '边界'];
+    const perCategory = Math.ceil(testCount / categories.length);
+    selectedPersonas = [];
+    categories.forEach(cat => {
+      const catPersonas = USER_PERSONAS.filter(p => p.category === cat);
+      selectedPersonas.push(...catPersonas.slice(0, perCategory));
+    });
+    selectedPersonas = selectedPersonas.slice(0, testCount);
+  }
+  
+  console.log(`\n📋 选择了 ${selectedPersonas.length} 个测试用户画像`);
+  console.log(`   分布: ${['标准', '极简', '健谈', '特殊', '边界'].map(cat => 
+    `${cat}(${selectedPersonas.filter(p => p.category === cat).length})`
+  ).join(', ')}`);
+
+  // Run simulations
+  const report = await runSimulationBatch(selectedPersonas, 2);
+
+  // Generate and save report
+  const reportMd = generateReportMarkdown(report);
+  const reportPath = `scripts/simulation_report_${new Date().toISOString().slice(0, 10)}.md`;
+  
+  const fs = await import('fs');
+  fs.writeFileSync(reportPath, reportMd);
+  
+  console.log('\n' + '='.repeat(60));
+  console.log('                    测试完成！');
+  console.log('='.repeat(60));
+  console.log(`\n📊 测试结果摘要:`);
+  console.log(`   完成率: ${report.completionRate.toFixed(1)}%`);
+  console.log(`   平均轮数: ${report.averageTurns.toFixed(1)}`);
+  console.log(`   平均准确率: ${report.averageExtractionAccuracy.toFixed(1)}%`);
+  console.log(`   测试耗时: ${report.durationMinutes.toFixed(1)} 分钟`);
+  console.log(`\n📄 详细报告已保存: ${reportPath}`);
+  console.log('='.repeat(60) + '\n');
+
+  // Also output JSON for programmatic access
+  const jsonPath = `scripts/simulation_results_${new Date().toISOString().slice(0, 10)}.json`;
+  fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2));
+  console.log(`📦 JSON数据已保存: ${jsonPath}\n`);
+}
+
+main().catch(console.error);
