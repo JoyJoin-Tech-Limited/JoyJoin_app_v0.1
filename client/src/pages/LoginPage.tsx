@@ -17,7 +17,7 @@ import {
   Flower2, Target, Sun, Play, Volume2, VolumeX,
   FileText, ShieldCheck, Utensils
 } from "lucide-react";
-import joyJoinLogo from "@assets/JoyJoinapp_logo_Chinese_FuLuDouTi_1765450433449.png";
+import joyJoinLogo from "@assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi_1765650184831.png";
 import { SiWechat } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
