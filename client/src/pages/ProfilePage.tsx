@@ -227,30 +227,12 @@ export default function ProfilePage() {
               />
 
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">亲和力</span>
-                  <span className="font-medium">{personalityResults.affinityScore || 0}/100</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">开放性</span>
-                  <span className="font-medium">{personalityResults.opennessScore || 0}/100</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">责任心</span>
-                  <span className="font-medium">{personalityResults.conscientiousnessScore || 0}/100</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">情绪稳定性</span>
-                  <span className="font-medium">{personalityResults.emotionalStabilityScore || 0}/100</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">外向性</span>
-                  <span className="font-medium">{personalityResults.extraversionScore || 0}/100</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">正能量性</span>
-                  <span className="font-medium">{personalityResults.positivityScore || 0}/100</span>
-                </div>
+                <div className="text-xs text-muted-foreground">亲和力</div>
+                <div className="text-xs text-muted-foreground">开放性</div>
+                <div className="text-xs text-muted-foreground">责任心</div>
+                <div className="text-xs text-muted-foreground">情绪稳定性</div>
+                <div className="text-xs text-muted-foreground">外向性</div>
+                <div className="text-xs text-muted-foreground">正能量性</div>
               </div>
             </CardContent>
           </Card>
