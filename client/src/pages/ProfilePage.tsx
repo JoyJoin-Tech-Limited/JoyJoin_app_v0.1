@@ -1,13 +1,12 @@
 import MobileHeader from "@/components/MobileHeader";
 import BottomNav from "@/components/BottomNav";
-import PersonalityProfile from "@/components/PersonalityProfile";
 import SocialRoleCard from "@/components/SocialRoleCard";
 import QuizIntro from "@/components/QuizIntro";
 import EditFullProfileDialog from "@/components/EditFullProfileDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Edit, LogOut, Shield, HelpCircle, Sparkles, User, GraduationCap, Briefcase, Heart, Star, Quote, Target, Users } from "lucide-react";
+import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -45,11 +44,6 @@ export default function ProfilePage() {
   const { data: stats, isLoading: statsLoading } = useQuery<{ eventsCompleted: number; connectionsMade: number }>({
     queryKey: ["/api/profile/stats"],
     enabled: !!user,
-  });
-
-  const { data: roleDistribution } = useQuery<Record<string, number>>({
-    queryKey: ["/api/personality/role-distribution"],
-    enabled: !!personalityResults?.primaryRole,
   });
 
   const updateProfileMutation = useMutation({
