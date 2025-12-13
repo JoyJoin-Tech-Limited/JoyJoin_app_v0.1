@@ -454,18 +454,84 @@ export default function AdminModerationPage() {
                             <span className="text-xs text-muted-foreground" data-testid={`text-created-at-${report.id}`}>
                               {formatDateTime(report.created_at)}
                             </span>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenReport(report);
-                              }}
-                              data-testid={`button-review-${report.id}`}
-                            >
-                              <Eye className="h-3 w-3 mr-1" />
-                              审核
-                            </Button>
+                            {report.status === "pending" ? (
+                              <div className="flex gap-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="secondary"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    createLogMutation.mutate({
+                                      action: "warn",
+                                      target_user_id: report.reported_user_id,
+                                      reason: `举报: ${REPORT_TYPE_MAP[report.report_type]?.label}`,
+                                      notes: report.description,
+                                    });
+                                    updateReportMutation.mutate({
+                                      id: report.id,
+                                      data: { status: "resolved", admin_notes: "已警告用户" },
+                                    });
+                                  }}
+                                  disabled={createLogMutation.isPending || updateReportMutation.isPending}
+                                  data-testid={`button-warn-quick-${report.id}`}
+                                >
+                                  <AlertOctagon className="h-3 w-3 mr-1" />
+                                  警告
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    banUserMutation.mutate(report.reported_user_id);
+                                    createLogMutation.mutate({
+                                      action: "ban",
+                                      target_user_id: report.reported_user_id,
+                                      reason: `举报: ${REPORT_TYPE_MAP[report.report_type]?.label}`,
+                                      notes: report.description,
+                                    });
+                                    updateReportMutation.mutate({
+                                      id: report.id,
+                                      data: { status: "resolved", admin_notes: "已封禁用户" },
+                                    });
+                                  }}
+                                  disabled={banUserMutation.isPending || updateReportMutation.isPending}
+                                  data-testid={`button-ban-quick-${report.id}`}
+                                >
+                                  <Ban className="h-3 w-3 mr-1" />
+                                  封禁
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateReportMutation.mutate({
+                                      id: report.id,
+                                      data: { status: "dismissed", admin_notes: "已驳回" },
+                                    });
+                                  }}
+                                  disabled={updateReportMutation.isPending}
+                                  data-testid={`button-dismiss-quick-${report.id}`}
+                                >
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  驳回
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenReport(report);
+                                }}
+                                data-testid={`button-review-${report.id}`}
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                查看详情
+                              </Button>
+                            )}
                           </div>
                         </CardContent>
                       </Card>

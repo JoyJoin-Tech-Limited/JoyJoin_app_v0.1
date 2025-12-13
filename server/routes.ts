@@ -4155,6 +4155,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return acc;
       }, {});
 
+      // Calculate weekly matching satisfaction and low-scoring matches
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      let weeklyMatchingSatisfaction = 70; // Default value
+      let lowScoringMatches = 0;
+      
+      try {
+        // Get recent pool matching logs from past 7 days
+        const recentLogs = await db
+          .select()
+          .from(poolMatchingLogs)
+          .where(gt(poolMatchingLogs.createdAt, sevenDaysAgo));
+        
+        if (recentLogs.length > 0) {
+          // Calculate average satisfaction from matchScores (assuming > 70 is satisfied)
+          const totalScore = recentLogs.reduce((sum: number, log: any) => {
+            const score = typeof log.matchScore === 'number' ? log.matchScore : 0;
+            return sum + score;
+          }, 0);
+          weeklyMatchingSatisfaction = Math.round(totalScore / recentLogs.length);
+          
+          // Count low-scoring matches (< 50)
+          lowScoringMatches = recentLogs.filter((log: any) => {
+            const score = typeof log.matchScore === 'number' ? log.matchScore : 0;
+            return score < 50;
+          }).length;
+        }
+      } catch (err) {
+        console.warn("Error calculating matching metrics:", err);
+        // Use defaults if calculation fails
+      }
+
       res.json({
         totalUsers,
         subscribedUsers,
@@ -4163,6 +4196,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         newUsersThisWeek,
         userGrowth,
         personalityDistribution,
+        weeklyMatchingSatisfaction,
+        lowScoringMatches,
       });
     } catch (error) {
       console.error("Error fetching admin stats:", error);

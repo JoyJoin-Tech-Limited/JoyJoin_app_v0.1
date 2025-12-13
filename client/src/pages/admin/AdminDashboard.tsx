@@ -11,6 +11,8 @@ interface AdminStats {
   newUsersThisWeek: number;
   userGrowth: number;
   personalityDistribution: Record<string, number>;
+  weeklyMatchingSatisfaction?: number;
+  lowScoringMatches?: number;
 }
 
 export default function AdminDashboard() {
@@ -127,7 +129,41 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
+      <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className={stats?.weeklyMatchingSatisfaction && stats.weeklyMatchingSatisfaction < 70 ? "border-orange-200 bg-orange-50/50" : ""}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">本周匹配满意度</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="stat-value-matching-satisfaction">
+              {stats?.weeklyMatchingSatisfaction ?? 0}%
+            </div>
+            <p className="text-xs text-muted-foreground">用户反馈评分</p>
+            {stats?.weeklyMatchingSatisfaction && stats.weeklyMatchingSatisfaction < 70 && (
+              <p className="text-xs text-orange-600 mt-1">⚠️ 需关注</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className={stats?.lowScoringMatches && stats.lowScoringMatches > 0 ? "border-red-200" : ""}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">低分匹配预警</CardTitle>
+            <AlertCircle className={`h-4 w-4 ${stats?.lowScoringMatches && stats.lowScoringMatches > 0 ? "text-red-500" : "text-muted-foreground"}`} />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600" data-testid="stat-value-low-matches">
+              {stats?.lowScoringMatches ?? 0}
+            </div>
+            <p className="text-xs text-muted-foreground">匹配得分 &lt; 50</p>
+            {stats?.lowScoringMatches && stats.lowScoringMatches > 0 && (
+              <Button size="sm" variant="ghost" className="mt-2 h-6 text-xs" data-testid="button-view-low-matches">
+                查看详情 →
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>性格类型分布</CardTitle>
@@ -145,21 +181,10 @@ export default function AdminDashboard() {
                     </div>
                   ))
               ) : (
-                <div className="flex h-[200px] items-center justify-center text-muted-foreground">
+                <div className="flex h-[120px] items-center justify-center text-muted-foreground text-xs">
                   暂无数据
                 </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>用户增长趋势</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex h-[200px] items-center justify-center text-muted-foreground">
-              数据图表开发中
             </div>
           </CardContent>
         </Card>

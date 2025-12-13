@@ -35,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Users, Eye, MapPin, Clock, Store } from "lucide-react";
+import { Calendar, Users, Eye, MapPin, Clock, Store, Copy, Check } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -204,6 +204,7 @@ export default function AdminEventPoolsPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedPool, setSelectedPool] = useState<EventPool | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [copiedPoolId, setCopiedPoolId] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -387,6 +388,31 @@ export default function AdminEventPoolsPage() {
     } catch {
       return dateTimeStr;
     }
+  };
+
+  const handleCopyPool = (pool: EventPool) => {
+    // 快速复制：将池子信息填充到表单
+    form.reset({
+      title: `${pool.title} (副本)`,
+      description: pool.description || "",
+      eventType: pool.eventType as any,
+      city: pool.city as any,
+      district: pool.district || "",
+      dateTime: pool.dateTime,
+      registrationDeadline: pool.registrationDeadline,
+      minGroupSize: pool.minGroupSize,
+      maxGroupSize: pool.maxGroupSize,
+      targetGroups: pool.targetGroups,
+    });
+    setShowCreateDialog(true);
+    setCopiedPoolId(pool.id);
+    
+    toast({
+      title: "已复制池配置",
+      description: "编辑后点击创建即可生成新池",
+    });
+    
+    setTimeout(() => setCopiedPoolId(null), 2000);
   };
 
   // 根据池子状态 + 有无人 / 有无活动，生成对人友好的标签
@@ -979,6 +1005,24 @@ export default function AdminEventPoolsPage() {
                     >
                       <Eye className="h-4 w-4 mr-1" />
                       查看详情 / 池内用户
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCopyPool(pool)}
+                      data-testid={`button-copy-${pool.id}`}
+                    >
+                      {copiedPoolId === pool.id ? (
+                        <>
+                          <Check className="h-4 w-4 mr-1" />
+                          已复制
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4 mr-1" />
+                          快速复制
+                        </>
+                      )}
                     </Button>
                   </div>
                 </CardContent>
