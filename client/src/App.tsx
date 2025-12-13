@@ -188,7 +188,17 @@ function Router() {
 
   // Regular user routes
   if (!isAuthenticated) {
-    return <Route path="*" component={LoginPage} />;
+    return (
+      <Switch>
+        {/* Allow unauthenticated users to access registration routes directly */}
+        <Route path="/registration/method" component={RegistrationMethodPage} />
+        <Route path="/registration/form" component={RegistrationPage} />
+        <Route path="/registration/chat" component={ChatRegistrationPage} />
+        <Route path="/register" component={RegistrationPage} />
+        {/* All other routes show login page */}
+        <Route path="*" component={LoginPage} />
+      </Switch>
+    );
   }
 
   return <AuthenticatedRouter />;
