@@ -92,6 +92,7 @@ export async function continueXiaoyueChat(
   conversationHistory: ChatMessage[]
 ): Promise<{
   message: string;
+  rawMessage: string;
   collectedInfo: Partial<XiaoyueCollectedInfo>;
   isComplete: boolean;
   conversationHistory: ChatMessage[];
@@ -124,11 +125,12 @@ export async function continueXiaoyueChat(
 
     const finalHistory: ChatMessage[] = [
       ...updatedHistory,
-      { role: 'assistant', content: cleanMessage }
+      { role: 'assistant', content: assistantMessage }
     ];
 
     return {
       message: cleanMessage,
+      rawMessage: assistantMessage,
       collectedInfo,
       isComplete,
       conversationHistory: finalHistory

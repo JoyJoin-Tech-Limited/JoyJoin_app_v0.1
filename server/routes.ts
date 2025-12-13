@@ -342,35 +342,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/registration/chat/complete', isPhoneAuthenticated, async (req: any, res) => {
     try {
       const userId = req.session.userId;
-      const { conversationHistory, collectedInfo } = req.body;
+      const { conversationHistory } = req.body;
+      
+      // Validate conversation has sufficient content
+      if (!conversationHistory || conversationHistory.length < 4) {
+        return res.status(400).json({ message: "对话记录不完整，请继续和小悦聊天" });
+      }
+      
       const { summarizeAndExtractInfo } = await import('./deepseekClient');
       
-      // Extract final info from conversation
+      // Server-side extraction from conversation history (more secure than trusting client)
       const extractedInfo = await summarizeAndExtractInfo(conversationHistory);
-      const finalInfo = { ...extractedInfo, ...collectedInfo };
+      
+      // Validate required field
+      if (!extractedInfo.displayName) {
+        return res.status(400).json({ message: "请告诉小悦你希望大家怎么称呼你" });
+      }
       
       // Map collected info to user registration fields
       const registrationData: any = {
-        displayName: finalInfo.displayName || '',
-        gender: finalInfo.gender || '不透露',
-        currentCity: finalInfo.currentCity || '',
-        registrationMethod: 'chat', // Track A/B testing
+        displayName: extractedInfo.displayName,
+        gender: extractedInfo.gender || '不透露',
+        currentCity: extractedInfo.currentCity || '',
+        registrationMethod: 'chat',
       };
       
       // Set birthdate if birth year provided
-      if (finalInfo.birthYear) {
-        registrationData.birthdate = `${finalInfo.birthYear}-01-01`;
+      if (extractedInfo.birthYear) {
+        registrationData.birthdate = `${extractedInfo.birthYear}-01-01`;
       }
       
       // Set interests if provided
-      if (finalInfo.interestsTop && finalInfo.interestsTop.length > 0) {
-        registrationData.interestsTop = finalInfo.interestsTop;
+      if (extractedInfo.interestsTop && extractedInfo.interestsTop.length > 0) {
+        registrationData.interestsTop = extractedInfo.interestsTop;
       }
       
       // Update user with collected info
       await db.update(users).set({
         ...registrationData,
         hasCompletedRegistration: true,
+        registrationCompletedAt: new Date(),
         updatedAt: new Date(),
       }).where(eq(users.id, userId));
       
@@ -378,7 +389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedUser);
     } catch (error) {
       console.error("Error completing chat registration:", error);
-      res.status(500).json({ message: "Failed to complete registration" });
+      res.status(500).json({ message: "注册失败，请稍后再试" });
     }
   });
 
