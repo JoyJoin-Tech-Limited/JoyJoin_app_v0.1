@@ -1380,7 +1380,7 @@ export class DatabaseStorage implements IStorage {
   // ============ USER COUPONS ============
   async getUserCoupons(userId: string): Promise<any[]> {
     const result = await db.execute(sql`
-      SELECT uc.*, c.code, c.name, c.description, c.discount_type, c.discount_value, c.valid_from, c.valid_until
+      SELECT uc.*, c.code, c.discount_type, c.discount_value, c.valid_from, c.valid_until
       FROM user_coupons uc
       LEFT JOIN coupons c ON uc.coupon_id = c.id
       WHERE uc.user_id = ${userId}
