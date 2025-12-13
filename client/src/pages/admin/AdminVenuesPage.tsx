@@ -33,9 +33,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Store, Plus, Edit, Trash2, Building, TrendingUp, Calendar, DollarSign } from "lucide-react";
+import { Store, Plus, Edit, Trash2, Building, TrendingUp, Calendar, DollarSign, Clock, X } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
+
+interface VenueTimeSlot {
+  id: string;
+  venueId: string;
+  dayOfWeek: number | null;
+  specificDate: string | null;
+  startTime: string;
+  endTime: string;
+  maxConcurrentEvents: number;
+  isActive: boolean;
+  notes: string | null;
+  createdAt: string;
+}
+
+const DAYS_OF_WEEK = [
+  { value: 0, label: "周日" },
+  { value: 1, label: "周一" },
+  { value: 2, label: "周二" },
+  { value: 3, label: "周三" },
+  { value: 4, label: "周四" },
+  { value: 5, label: "周五" },
+  { value: 6, label: "周六" },
+];
 
 interface Venue {
   id: string;
@@ -81,8 +105,18 @@ export default function AdminVenuesPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showTimeSlotsDialog, setShowTimeSlotsDialog] = useState(false);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [filterType, setFilterType] = useState<"all" | "restaurant" | "bar">("all");
+  
+  // Time slot form state
+  const [timeSlotMode, setTimeSlotMode] = useState<"weekly" | "specific">("weekly");
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [specificDate, setSpecificDate] = useState("");
+  const [timeSlotStart, setTimeSlotStart] = useState("18:00");
+  const [timeSlotEnd, setTimeSlotEnd] = useState("22:00");
+  const [timeSlotCapacity, setTimeSlotCapacity] = useState("1");
+  const [timeSlotNotes, setTimeSlotNotes] = useState("");
   
   const [formData, setFormData] = useState({
     name: "",
@@ -181,6 +215,122 @@ export default function AdminVenuesPage() {
       });
     },
   });
+
+  // Time slots query - only fetch when dialog is open and venue is selected
+  const { data: timeSlots = [], isLoading: timeSlotsLoading, refetch: refetchTimeSlots } = useQuery<VenueTimeSlot[]>({
+    queryKey: ["/api/admin/venues", selectedVenue?.id, "time-slots"],
+    queryFn: () => selectedVenue 
+      ? fetch(`/api/admin/venues/${selectedVenue.id}/time-slots`, { credentials: "include" }).then(r => r.json())
+      : Promise.resolve([]),
+    enabled: showTimeSlotsDialog && !!selectedVenue,
+  });
+
+  // Create time slot batch mutation
+  const createTimeSlotsMutation = useMutation({
+    mutationFn: (data: { venueId: string; timeSlots: any[] }) =>
+      fetch(`/api/admin/venues/${data.venueId}/time-slots/batch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ timeSlots: data.timeSlots }),
+      }).then((r) => r.json()),
+    onSuccess: () => {
+      if (selectedVenue) {
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/venues", selectedVenue.id, "time-slots"] });
+      }
+      resetTimeSlotForm();
+      toast({
+        title: "时间段创建成功",
+        description: "时间段已添加",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "创建失败",
+        description: "无法创建时间段，请重试",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create single time slot mutation
+  const createSingleTimeSlotMutation = useMutation({
+    mutationFn: (data: { venueId: string; timeSlot: any }) =>
+      fetch(`/api/admin/venues/${data.venueId}/time-slots`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data.timeSlot),
+      }).then((r) => r.json()),
+    onSuccess: () => {
+      if (selectedVenue) {
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/venues", selectedVenue.id, "time-slots"] });
+      }
+      resetTimeSlotForm();
+      toast({
+        title: "时间段创建成功",
+        description: "时间段已添加",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "创建失败",
+        description: "无法创建时间段，请重试",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete time slot mutation
+  const deleteTimeSlotMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetch(`/api/admin/time-slots/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      }).then((r) => r.json()),
+    onSuccess: () => {
+      if (selectedVenue) {
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/venues", selectedVenue.id, "time-slots"] });
+      }
+      toast({
+        title: "删除成功",
+        description: "时间段已删除",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "删除失败",
+        description: "无法删除时间段，请重试",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Toggle time slot active status mutation
+  const toggleTimeSlotMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      fetch(`/api/admin/time-slots/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ isActive }),
+      }).then((r) => r.json()),
+    onSuccess: () => {
+      if (selectedVenue) {
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/venues", selectedVenue.id, "time-slots"] });
+      }
+    },
+  });
+
+  const resetTimeSlotForm = () => {
+    setTimeSlotMode("weekly");
+    setSelectedDays([]);
+    setSpecificDate("");
+    setTimeSlotStart("18:00");
+    setTimeSlotEnd("22:00");
+    setTimeSlotCapacity("1");
+    setTimeSlotNotes("");
+  };
 
   const resetForm = () => {
     setFormData({
@@ -304,6 +454,74 @@ export default function AdminVenuesPage() {
         ? prev.cuisines.filter(c => c !== cuisine)
         : [...prev.cuisines, cuisine]
     }));
+  };
+
+  const handleManageTimeSlots = (venue: Venue) => {
+    setSelectedVenue(venue);
+    resetTimeSlotForm();
+    setShowTimeSlotsDialog(true);
+  };
+
+  const toggleDay = (day: number) => {
+    setSelectedDays(prev => 
+      prev.includes(day) 
+        ? prev.filter(d => d !== day)
+        : [...prev, day]
+    );
+  };
+
+  const handleCreateTimeSlots = () => {
+    if (!selectedVenue) return;
+
+    if (timeSlotMode === "weekly") {
+      if (selectedDays.length === 0) {
+        toast({
+          title: "请选择日期",
+          description: "请至少选择一个星期几",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const timeSlotData = selectedDays.map(day => ({
+        dayOfWeek: day,
+        specificDate: null,
+        startTime: timeSlotStart,
+        endTime: timeSlotEnd,
+        maxConcurrentEvents: parseInt(timeSlotCapacity),
+        notes: timeSlotNotes || null,
+      }));
+
+      createTimeSlotsMutation.mutate({
+        venueId: selectedVenue.id,
+        timeSlots: timeSlotData,
+      });
+    } else {
+      if (!specificDate) {
+        toast({
+          title: "请选择日期",
+          description: "请输入具体日期",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      createSingleTimeSlotMutation.mutate({
+        venueId: selectedVenue.id,
+        timeSlot: {
+          dayOfWeek: null,
+          specificDate,
+          startTime: timeSlotStart,
+          endTime: timeSlotEnd,
+          maxConcurrentEvents: parseInt(timeSlotCapacity),
+          notes: timeSlotNotes || null,
+        },
+      });
+    }
+  };
+
+  const getDayLabel = (day: number) => {
+    return DAYS_OF_WEEK.find(d => d.value === day)?.label || `Day ${day}`;
   };
 
   const getTypeLabel = (type: string) => {
@@ -480,6 +698,15 @@ export default function AdminVenuesPage() {
                     </span>
                   </div>
                   <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleManageTimeSlots(venue)}
+                      data-testid={`button-timeslots-${venue.id}`}
+                      title="管理时间段"
+                    >
+                      <Clock className="h-3 w-3" />
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -919,6 +1146,186 @@ export default function AdminVenuesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={showTimeSlotsDialog} onOpenChange={setShowTimeSlotsDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>管理时间段 - {selectedVenue?.name}</DialogTitle>
+            <DialogDescription>设置场地可用时间段，支持每周固定或特定日期</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">添加时间段</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Tabs value={timeSlotMode} onValueChange={(v) => setTimeSlotMode(v as "weekly" | "specific")}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="weekly" data-testid="tab-weekly">每周固定</TabsTrigger>
+                    <TabsTrigger value="specific" data-testid="tab-specific">特定日期</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+
+                {timeSlotMode === "weekly" ? (
+                  <div className="space-y-3">
+                    <Label>选择星期 (可多选)</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {DAYS_OF_WEEK.map(day => (
+                        <Badge
+                          key={day.value}
+                          variant={selectedDays.includes(day.value) ? "default" : "outline"}
+                          className="cursor-pointer hover-elevate active-elevate-2"
+                          onClick={() => toggleDay(day.value)}
+                          data-testid={`day-${day.value}`}
+                        >
+                          {day.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="specific-date">具体日期</Label>
+                    <Input
+                      id="specific-date"
+                      type="date"
+                      value={specificDate}
+                      onChange={(e) => setSpecificDate(e.target.value)}
+                      data-testid="input-specific-date"
+                    />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="start-time">开始时间</Label>
+                    <Input
+                      id="start-time"
+                      type="time"
+                      value={timeSlotStart}
+                      onChange={(e) => setTimeSlotStart(e.target.value)}
+                      data-testid="input-start-time"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="end-time">结束时间</Label>
+                    <Input
+                      id="end-time"
+                      type="time"
+                      value={timeSlotEnd}
+                      onChange={(e) => setTimeSlotEnd(e.target.value)}
+                      data-testid="input-end-time"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="capacity">可容纳活动数</Label>
+                    <Input
+                      id="capacity"
+                      type="number"
+                      min="1"
+                      value={timeSlotCapacity}
+                      onChange={(e) => setTimeSlotCapacity(e.target.value)}
+                      data-testid="input-capacity"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="slot-notes">备注 (可选)</Label>
+                  <Input
+                    id="slot-notes"
+                    placeholder="如：周末人流量大"
+                    value={timeSlotNotes}
+                    onChange={(e) => setTimeSlotNotes(e.target.value)}
+                    data-testid="input-slot-notes"
+                  />
+                </div>
+
+                <Button 
+                  onClick={handleCreateTimeSlots}
+                  disabled={createTimeSlotsMutation.isPending || createSingleTimeSlotMutation.isPending}
+                  data-testid="button-add-timeslot"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {createTimeSlotsMutation.isPending || createSingleTimeSlotMutation.isPending 
+                    ? "添加中..." 
+                    : timeSlotMode === "weekly" 
+                      ? `添加 ${selectedDays.length} 个时间段`
+                      : "添加时间段"
+                  }
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">已设置的时间段</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {timeSlotsLoading ? (
+                  <div className="text-center py-4 text-muted-foreground">加载中...</div>
+                ) : timeSlots.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground">暂无时间段，请添加</div>
+                ) : (
+                  <div className="space-y-2">
+                    {timeSlots.map((slot) => (
+                      <div 
+                        key={slot.id} 
+                        className="flex items-center justify-between p-3 border rounded-md"
+                        data-testid={`timeslot-${slot.id}`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="min-w-[80px]">
+                            {slot.dayOfWeek !== null ? (
+                              <Badge variant="outline">{getDayLabel(slot.dayOfWeek)}</Badge>
+                            ) : (
+                              <Badge variant="secondary">{slot.specificDate}</Badge>
+                            )}
+                          </div>
+                          <div className="text-sm">
+                            <span className="font-medium">{slot.startTime} - {slot.endTime}</span>
+                            <span className="text-muted-foreground ml-2">
+                              (容量: {slot.maxConcurrentEvents})
+                            </span>
+                          </div>
+                          {slot.notes && (
+                            <span className="text-xs text-muted-foreground">{slot.notes}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={slot.isActive}
+                            onCheckedChange={(checked) => 
+                              toggleTimeSlotMutation.mutate({ id: slot.id, isActive: checked })
+                            }
+                            data-testid={`toggle-slot-${slot.id}`}
+                          />
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => deleteTimeSlotMutation.mutate(slot.id)}
+                            disabled={deleteTimeSlotMutation.isPending}
+                            data-testid={`delete-slot-${slot.id}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTimeSlotsDialog(false)} data-testid="button-close-timeslots">
+              关闭
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

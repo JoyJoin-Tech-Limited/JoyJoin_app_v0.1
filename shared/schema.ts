@@ -1620,3 +1620,72 @@ export const insertPromotionBannerSchema = createInsertSchema(promotionBanners).
 
 export type PromotionBanner = typeof promotionBanners.$inferSelect;
 export type InsertPromotionBanner = z.infer<typeof insertPromotionBannerSchema>;
+
+// ============ 场地时间段管理系统 ============
+
+// Venue Time Slots table - 场地可用时间段（支持每周固定+具体日期两种模式）
+export const venueTimeSlots = pgTable("venue_time_slots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // 关联场地
+  venueId: varchar("venue_id").notNull().references(() => venues.id),
+  
+  // 时间配置（二选一）
+  // 每周固定模式：设置 dayOfWeek，specificDate 为 null
+  // 具体日期模式：设置 specificDate，dayOfWeek 为 null
+  dayOfWeek: integer("day_of_week"), // 0-6 (周日=0, 周一=1, ... 周六=6)
+  specificDate: date("specific_date"), // 具体日期，如 2025-01-15
+  
+  // 时间段
+  startTime: varchar("start_time").notNull(), // "18:00" 格式
+  endTime: varchar("end_time").notNull(), // "22:00" 格式
+  
+  // 容量管理
+  maxConcurrentEvents: integer("max_concurrent_events").default(1), // 此时间段可容纳的活动数
+  
+  // 状态
+  isActive: boolean("is_active").default(true),
+  
+  // 备注
+  notes: text("notes"), // 管理员备注
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Venue Time Slot Bookings table - 时间段预订记录（用于追踪已占用容量）
+export const venueTimeSlotBookings = pgTable("venue_time_slot_bookings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // 关联
+  timeSlotId: varchar("time_slot_id").notNull().references(() => venueTimeSlots.id),
+  eventPoolId: varchar("event_pool_id").references(() => eventPools.id), // 关联的活动池
+  eventGroupId: varchar("event_group_id").references(() => eventPoolGroups.id), // 关联的具体小组
+  
+  // 预订日期（对于每周固定时间段，需要记录具体预订的是哪一天）
+  bookingDate: date("booking_date").notNull(),
+  
+  // 状态
+  status: varchar("status").default("confirmed"), // confirmed | cancelled | completed
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert schemas for venue time slots
+export const insertVenueTimeSlotSchema = createInsertSchema(venueTimeSlots).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVenueTimeSlotBookingSchema = createInsertSchema(venueTimeSlotBookings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type VenueTimeSlot = typeof venueTimeSlots.$inferSelect;
+export type VenueTimeSlotBooking = typeof venueTimeSlotBookings.$inferSelect;
+export type InsertVenueTimeSlot = z.infer<typeof insertVenueTimeSlotSchema>;
+export type InsertVenueTimeSlotBooking = z.infer<typeof insertVenueTimeSlotBookingSchema>;

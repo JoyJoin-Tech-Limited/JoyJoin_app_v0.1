@@ -9,9 +9,10 @@ import {
   type Content, type InsertContent,
   type ChatReport, type InsertChatReport, type ChatLog, type InsertChatLog,
   type PricingSetting, type PromotionBanner,
+  type VenueTimeSlot, type InsertVenueTimeSlot, type VenueTimeSlotBooking, type InsertVenueTimeSlotBooking,
   users, events, eventAttendance, chatMessages, eventFeedback, blindBoxEvents, testResponses, roleResults, notifications,
   directMessageThreads, directMessages, payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs,
-  pricingSettings, promotionBanners, eventPools
+  pricingSettings, promotionBanners, eventPools, venueTimeSlots, venueTimeSlotBookings, venues
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
@@ -228,6 +229,14 @@ export interface IStorage {
   getPricingSetting(id: string): Promise<PricingSetting | undefined>;
   updatePricingSetting(id: string, updates: Partial<PricingSetting>): Promise<PricingSetting>;
   getActivePricingSettings(): Promise<PricingSetting[]>;
+
+  // Venue Time Slots operations
+  getVenueTimeSlots(venueId: string): Promise<VenueTimeSlot[]>;
+  createVenueTimeSlot(data: InsertVenueTimeSlot): Promise<VenueTimeSlot>;
+  batchCreateVenueTimeSlots(venueId: string, slots: Array<Omit<InsertVenueTimeSlot, 'venueId'>>): Promise<VenueTimeSlot[]>;
+  updateVenueTimeSlot(id: string, updates: Partial<VenueTimeSlot>): Promise<VenueTimeSlot>;
+  deleteVenueTimeSlot(id: string): Promise<void>;
+  getAvailableVenuesForDateTime(city: string, district: string | undefined, date: string, startTime?: string, endTime?: string): Promise<Array<{ venue: any; availableSlots: VenueTimeSlot[] }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2844,6 +2853,118 @@ export class DatabaseStorage implements IStorage {
       satisfactionRate: 95,
       avgRating: 4.8,
     };
+  }
+
+  // ============ VENUE TIME SLOTS ============
+
+  async getVenueTimeSlots(venueId: string): Promise<VenueTimeSlot[]> {
+    return await db
+      .select()
+      .from(venueTimeSlots)
+      .where(eq(venueTimeSlots.venueId, venueId))
+      .orderBy(venueTimeSlots.dayOfWeek, venueTimeSlots.startTime);
+  }
+
+  async createVenueTimeSlot(data: InsertVenueTimeSlot): Promise<VenueTimeSlot> {
+    const [slot] = await db
+      .insert(venueTimeSlots)
+      .values(data)
+      .returning();
+    return slot;
+  }
+
+  async batchCreateVenueTimeSlots(venueId: string, slots: Array<Omit<InsertVenueTimeSlot, 'venueId'>>): Promise<VenueTimeSlot[]> {
+    if (slots.length === 0) return [];
+    
+    const slotsWithVenueId = slots.map(slot => ({
+      ...slot,
+      venueId,
+    }));
+
+    const createdSlots = await db
+      .insert(venueTimeSlots)
+      .values(slotsWithVenueId)
+      .returning();
+    
+    return createdSlots;
+  }
+
+  async updateVenueTimeSlot(id: string, updates: Partial<VenueTimeSlot>): Promise<VenueTimeSlot> {
+    const [slot] = await db
+      .update(venueTimeSlots)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(venueTimeSlots.id, id))
+      .returning();
+    return slot;
+  }
+
+  async deleteVenueTimeSlot(id: string): Promise<void> {
+    await db.delete(venueTimeSlots).where(eq(venueTimeSlots.id, id));
+  }
+
+  async getAvailableVenuesForDateTime(
+    city: string,
+    district: string | undefined,
+    date: string,
+    startTime?: string,
+    endTime?: string
+  ): Promise<Array<{ venue: any; availableSlots: VenueTimeSlot[] }>> {
+    const dayOfWeek = new Date(date).getDay();
+
+    let venueQuery = db.select().from(venues).where(
+      and(
+        eq(venues.city, city),
+        eq(venues.isActive, true),
+        district ? eq(venues.area, district) : undefined
+      )
+    );
+
+    const allVenues = await venueQuery;
+    const result: Array<{ venue: any; availableSlots: VenueTimeSlot[] }> = [];
+
+    for (const venue of allVenues) {
+      const slots = await db
+        .select()
+        .from(venueTimeSlots)
+        .where(
+          and(
+            eq(venueTimeSlots.venueId, venue.id),
+            eq(venueTimeSlots.isActive, true),
+            or(
+              eq(venueTimeSlots.dayOfWeek, dayOfWeek),
+              eq(venueTimeSlots.specificDate, date)
+            )
+          )
+        );
+
+      let filteredSlots = slots;
+      if (startTime && endTime) {
+        filteredSlots = slots.filter(slot => 
+          slot.startTime <= startTime && slot.endTime >= endTime
+        );
+      }
+
+      const bookings = await db
+        .select()
+        .from(venueTimeSlotBookings)
+        .where(
+          and(
+            eq(venueTimeSlotBookings.bookingDate, date),
+            eq(venueTimeSlotBookings.status, "confirmed")
+          )
+        );
+
+      const availableSlots = filteredSlots.filter(slot => {
+        const slotBookings = bookings.filter(b => b.timeSlotId === slot.id);
+        return slotBookings.length < (slot.maxConcurrentEvents || 1);
+      });
+
+      if (availableSlots.length > 0) {
+        result.push({ venue, availableSlots });
+      }
+    }
+
+    return result;
   }
 }
 

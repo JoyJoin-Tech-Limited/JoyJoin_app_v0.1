@@ -4717,6 +4717,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ Venue Time Slots Management ============
+  
+  // Get all time slots for a venue
+  app.get("/api/admin/venues/:venueId/time-slots", requireAdmin, async (req, res) => {
+    try {
+      const timeSlots = await storage.getVenueTimeSlots(req.params.venueId);
+      res.json(timeSlots);
+    } catch (error) {
+      console.error("Error fetching venue time slots:", error);
+      res.status(500).json({ message: "Failed to fetch venue time slots" });
+    }
+  });
+
+  // Create a time slot for a venue
+  app.post("/api/admin/venues/:venueId/time-slots", requireAdmin, async (req, res) => {
+    try {
+      const { dayOfWeek, specificDate, startTime, endTime, maxConcurrentEvents, notes } = req.body;
+      
+      if (!startTime || !endTime) {
+        return res.status(400).json({ message: "Start time and end time are required" });
+      }
+      
+      if (dayOfWeek === undefined && !specificDate) {
+        return res.status(400).json({ message: "Either dayOfWeek or specificDate is required" });
+      }
+
+      const timeSlot = await storage.createVenueTimeSlot({
+        venueId: req.params.venueId,
+        dayOfWeek: dayOfWeek !== undefined ? dayOfWeek : null,
+        specificDate: specificDate || null,
+        startTime,
+        endTime,
+        maxConcurrentEvents: maxConcurrentEvents || 1,
+        notes: notes || null,
+        isActive: true,
+      });
+
+      res.json(timeSlot);
+    } catch (error) {
+      console.error("Error creating venue time slot:", error);
+      res.status(500).json({ message: "Failed to create venue time slot" });
+    }
+  });
+
+  // Batch create time slots (for weekly recurring)
+  app.post("/api/admin/venues/:venueId/time-slots/batch", requireAdmin, async (req, res) => {
+    try {
+      const { timeSlots } = req.body;
+      
+      if (!Array.isArray(timeSlots) || timeSlots.length === 0) {
+        return res.status(400).json({ message: "timeSlots array is required" });
+      }
+
+      const createdSlots = await storage.batchCreateVenueTimeSlots(
+        req.params.venueId,
+        timeSlots
+      );
+
+      res.json(createdSlots);
+    } catch (error) {
+      console.error("Error batch creating venue time slots:", error);
+      res.status(500).json({ message: "Failed to batch create venue time slots" });
+    }
+  });
+
+  // Update a time slot
+  app.patch("/api/admin/time-slots/:id", requireAdmin, async (req, res) => {
+    try {
+      const timeSlot = await storage.updateVenueTimeSlot(req.params.id, req.body);
+      res.json(timeSlot);
+    } catch (error) {
+      console.error("Error updating venue time slot:", error);
+      res.status(500).json({ message: "Failed to update venue time slot" });
+    }
+  });
+
+  // Delete a time slot
+  app.delete("/api/admin/time-slots/:id", requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteVenueTimeSlot(req.params.id);
+      res.json({ message: "Time slot deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting venue time slot:", error);
+      res.status(500).json({ message: "Failed to delete venue time slot" });
+    }
+  });
+
+  // Get available venues for a specific date/time (for event pool creation)
+  app.get("/api/admin/available-venues", requireAdmin, async (req, res) => {
+    try {
+      const { city, district, date, startTime, endTime } = req.query;
+      
+      if (!city || !date) {
+        return res.status(400).json({ message: "City and date are required" });
+      }
+
+      const availableVenues = await storage.getAvailableVenuesForDateTime(
+        city as string,
+        district as string | undefined,
+        date as string,
+        startTime as string | undefined,
+        endTime as string | undefined
+      );
+
+      res.json(availableVenues);
+    } catch (error) {
+      console.error("Error fetching available venues:", error);
+      res.status(500).json({ message: "Failed to fetch available venues" });
+    }
+  });
+
   // Event Templates - Get all templates
   app.get("/api/admin/event-templates", requireAdmin, async (req, res) => {
     try {
