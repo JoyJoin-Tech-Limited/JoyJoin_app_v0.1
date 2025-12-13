@@ -316,7 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ AI Chat Registration Routes (小悦对话注册) ============
   
-  app.post('/api/registration/chat/start', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/registration/chat/start', async (req: any, res) => {
     try {
       const { startXiaoyueChat } = await import('./deepseekClient');
       const result = await startXiaoyueChat();
@@ -327,7 +327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/registration/chat/message', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/registration/chat/message', async (req: any, res) => {
     try {
       const { message, conversationHistory } = req.body;
       const { continueXiaoyueChat } = await import('./deepseekClient');
@@ -339,10 +339,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/registration/chat/complete', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/registration/chat/complete', async (req: any, res) => {
     try {
-      const userId = req.session.userId;
-      const { conversationHistory } = req.body;
+      const { conversationHistory, phoneNumber } = req.body;
       
       // Validate conversation has sufficient content
       if (!conversationHistory || conversationHistory.length < 4) {
@@ -377,16 +376,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         registrationData.interestsTop = extractedInfo.interestsTop;
       }
       
-      // Update user with collected info
-      await db.update(users).set({
-        ...registrationData,
-        hasCompletedRegistration: true,
-        registrationCompletedAt: new Date(),
-        updatedAt: new Date(),
-      }).where(eq(users.id, userId));
-      
-      const updatedUser = await storage.getUser(userId);
-      res.json(updatedUser);
+      // Return collected info (actual user creation will happen through phone auth -> /api/user/register flow)
+      res.json({
+        success: true,
+        message: "对话注册完成，请通过电话验证完成注册",
+        registrationData,
+      });
     } catch (error) {
       console.error("Error completing chat registration:", error);
       res.status(500).json({ message: "注册失败，请稍后再试" });
