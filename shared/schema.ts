@@ -243,6 +243,7 @@ export const eventPoolRegistrations = pgTable("event_pool_registrations", {
   cuisinePreferences: text("cuisine_preferences").array(), // 饮食偏好：["中餐", "川菜", "粤菜", "日料", "西餐"]
   dietaryRestrictions: text("dietary_restrictions").array(), // 忌口：["素食", "不吃辣", "清真"]
   tasteIntensity: text("taste_intensity").array(), // 口味强度：["爱吃辣", "不辣/清淡为主"]
+  decorStylePreferences: text("decor_style_preferences").array(), // 场地风格偏好：["轻奢现代风", "绿植花园风", "复古工业风", "温馨日式风"]
   
   // 匹配结果
   matchStatus: varchar("match_status").default("pending"), // pending | matched | unmatched
@@ -790,6 +791,7 @@ export const venues = pgTable("venues", {
   tags: text("tags").array(), // atmosphere tags: cozy, lively, upscale, casual
   cuisines: text("cuisines").array(), // 粤菜, 川菜, 日料, 西餐 etc.
   priceRange: text("price_range"), // 100-200, 200-300, 300+ per person
+  decorStyle: text("decor_style").array(), // 装修风格: 轻奢现代风, 绿植花园风, 复古工业风, 温馨日式风
   
   // Capacity management
   capacity: integer("capacity").default(1), // How many events can run at same time
