@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Store, Plus, Edit, Trash2, Building, TrendingUp, Calendar, DollarSign, Clock, X, CalendarDays, LayoutGrid } from "lucide-react";
+import { Store, Plus, Edit, Trash2, Building, TrendingUp, Calendar, DollarSign, Clock, X, CalendarDays, LayoutGrid, AlertTriangle, ArrowRightLeft } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -108,12 +108,31 @@ interface AllTimeSlot extends VenueTimeSlot {
   venueDistrict: string;
 }
 
+interface ActiveBooking {
+  id: string;
+  venue_id: string;
+  event_id: string;
+  booking_date: string;
+  booking_time: string;
+  participant_count: number;
+  event_title?: string;
+}
+
+interface VenueAlternative {
+  venue: Venue;
+  matchScore: number;
+  reasons: string[];
+}
+
 export default function AdminVenuesPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showTimeSlotsDialog, setShowTimeSlotsDialog] = useState(false);
+  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<ActiveBooking | null>(null);
+  const [migrationReason, setMigrationReason] = useState("");
   const [filterType, setFilterType] = useState<"all" | "restaurant" | "bar">("all");
   const [viewMode, setViewMode] = useState<"venues" | "calendar">("venues");
   
@@ -347,6 +366,60 @@ export default function AdminVenuesPage() {
       }
     },
   });
+
+  // Active bookings query for migration
+  const { data: activeBookings = [], isLoading: activeBookingsLoading } = useQuery<ActiveBooking[]>({
+    queryKey: ["/api/admin/venues", selectedVenue?.id, "active-bookings"],
+    queryFn: () => selectedVenue 
+      ? fetch(`/api/admin/venues/${selectedVenue.id}/active-bookings`, { credentials: "include" }).then(r => r.json())
+      : Promise.resolve([]),
+    enabled: showMigrationDialog && !!selectedVenue,
+  });
+
+  // Alternative venues query for migration
+  const { data: alternatives = [], isLoading: alternativesLoading } = useQuery<VenueAlternative[]>({
+    queryKey: ["/api/admin/venues/bookings", selectedBooking?.id, "alternatives"],
+    queryFn: () => selectedBooking
+      ? fetch(`/api/admin/venues/bookings/${selectedBooking.id}/alternatives`, { credentials: "include" }).then(r => r.json())
+      : Promise.resolve([]),
+    enabled: !!selectedBooking,
+  });
+
+  // Migration mutation
+  const migrateMutation = useMutation({
+    mutationFn: ({ bookingId, newVenueId, reason }: { bookingId: string; newVenueId: string; reason: string }) =>
+      fetch(`/api/admin/venues/bookings/${bookingId}/migrate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ newVenueId, reason }),
+      }).then((r) => {
+        if (!r.ok) throw new Error("Migration failed");
+        return r.json();
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/venues"] });
+      if (selectedVenue) {
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/venues", selectedVenue.id, "active-bookings"] });
+      }
+      setSelectedBooking(null);
+      setMigrationReason("");
+      toast({ title: "迁移成功", description: "预订已迁移到新场地" });
+    },
+    onError: () => {
+      toast({ title: "迁移失败", description: "无法迁移预订，请重试", variant: "destructive" });
+    },
+  });
+
+  const handleMigration = (venue: Venue) => {
+    setSelectedVenue(venue);
+    setShowMigrationDialog(true);
+  };
+
+  const executeMigration = (newVenueId: string) => {
+    if (!selectedBooking) return;
+    migrateMutation.mutate({ bookingId: selectedBooking.id, newVenueId, reason: migrationReason });
+  };
 
   const resetTimeSlotForm = () => {
     setTimeSlotMode("weekly");
@@ -807,6 +880,16 @@ export default function AdminVenuesPage() {
                       title="管理时间段"
                     >
                       <Clock className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleMigration(venue)}
+                      data-testid={`button-migrate-${venue.id}`}
+                      title="应急迁移"
+                      className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                    >
+                      <ArrowRightLeft className="h-3 w-3" />
                     </Button>
                     <Button
                       size="sm"
@@ -1422,6 +1505,113 @@ export default function AdminVenuesPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTimeSlotsDialog(false)} data-testid="button-close-timeslots">
+              关闭
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showMigrationDialog} onOpenChange={(open) => { setShowMigrationDialog(open); if (!open) { setSelectedBooking(null); setMigrationReason(""); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-500" />
+              应急场地迁移 - {selectedVenue?.name}
+            </DialogTitle>
+            <DialogDescription>
+              将此场地的活动预订迁移到其他可用场地
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {activeBookingsLoading ? (
+              <div className="text-center py-4 text-muted-foreground">加载中...</div>
+            ) : activeBookings.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                此场地没有待迁移的活动预订
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>选择需要迁移的预订</Label>
+                <div className="border rounded-lg divide-y">
+                  {activeBookings.map((booking) => (
+                    <div
+                      key={booking.id}
+                      className={`p-3 cursor-pointer transition-colors ${selectedBooking?.id === booking.id ? 'bg-orange-50 border-orange-200' : 'hover:bg-muted/50'}`}
+                      onClick={() => setSelectedBooking(booking)}
+                      data-testid={`booking-${booking.id}`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="font-medium">{booking.event_title || `活动 #${booking.event_id.slice(0,8)}`}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {new Date(booking.booking_date).toLocaleDateString('zh-CN')} {booking.booking_time} · {booking.participant_count}人
+                          </div>
+                        </div>
+                        {selectedBooking?.id === booking.id && (
+                          <Badge className="bg-orange-500">已选择</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedBooking && (
+              <>
+                <div className="space-y-2">
+                  <Label>迁移原因</Label>
+                  <Input
+                    placeholder="例：场地临时装修、商家取消合作等"
+                    value={migrationReason}
+                    onChange={(e) => setMigrationReason(e.target.value)}
+                    data-testid="input-migration-reason"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>可用替代场地</Label>
+                  {alternativesLoading ? (
+                    <div className="text-center py-4 text-muted-foreground">搜索中...</div>
+                  ) : alternatives.length === 0 ? (
+                    <div className="text-center py-4 text-muted-foreground border rounded-lg">
+                      没有找到符合条件的替代场地
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg divide-y">
+                      {alternatives.map((alt) => (
+                        <div key={alt.venue.id} className="p-3 flex justify-between items-center">
+                          <div>
+                            <div className="font-medium">{alt.venue.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {alt.venue.city} {alt.venue.district} · 匹配度 {alt.matchScore}%
+                            </div>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {alt.reasons.slice(0, 2).map((r, i) => (
+                                <Badge key={i} variant="secondary" className="text-xs">{r}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => executeMigration(alt.venue.id)}
+                            disabled={migrateMutation.isPending}
+                            data-testid={`migrate-to-${alt.venue.id}`}
+                          >
+                            迁移至此
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMigrationDialog(false)} data-testid="button-close-migration">
               关闭
             </Button>
           </DialogFooter>

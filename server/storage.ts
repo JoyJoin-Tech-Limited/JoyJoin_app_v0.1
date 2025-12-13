@@ -1622,6 +1622,72 @@ export class DatabaseStorage implements IStorage {
     return result.rows[0];
   }
 
+  async migrateVenueBooking(bookingId: string, newVenueId: string, reason?: string): Promise<any> {
+    const existingBooking = await db.execute(sql`
+      SELECT * FROM venue_bookings WHERE id = ${bookingId}
+    `);
+    
+    if (existingBooking.rows.length === 0) {
+      throw new Error('Booking not found');
+    }
+    
+    const booking = existingBooking.rows[0];
+    
+    const newVenue = await this.getVenue(newVenueId);
+    if (!newVenue) {
+      throw new Error('New venue not found');
+    }
+    
+    const isAvailable = await this.checkVenueAvailability(
+      newVenueId, 
+      new Date(booking.booking_date), 
+      booking.booking_time
+    );
+    
+    if (!isAvailable) {
+      throw new Error('New venue is not available at the requested time');
+    }
+    
+    await db.execute(sql`
+      UPDATE venue_bookings
+      SET status = 'migrated', updated_at = NOW()
+      WHERE id = ${bookingId}
+    `);
+    
+    const newBooking = await db.execute(sql`
+      INSERT INTO venue_bookings (
+        venue_id, event_id, booking_date, booking_time,
+        participant_count, estimated_revenue, status
+      )
+      VALUES (
+        ${newVenueId}, ${booking.event_id}, ${booking.booking_date}::timestamp, ${booking.booking_time},
+        ${booking.participant_count}, ${booking.estimated_revenue}, 'confirmed'
+      )
+      RETURNING *
+    `);
+    
+    console.log(`[VenueMigration] Booking ${bookingId} migrated from venue to ${newVenueId}. Reason: ${reason || 'N/A'}`);
+    
+    return {
+      oldBooking: { ...booking, status: 'migrated' },
+      newBooking: newBooking.rows[0],
+      newVenue
+    };
+  }
+
+  async getActiveBookingsForVenue(venueId: string): Promise<any[]> {
+    const result = await db.execute(sql`
+      SELECT vb.*, e.title as event_title, e.event_date, e.event_time
+      FROM venue_bookings vb
+      LEFT JOIN blind_box_events e ON vb.event_id = e.id
+      WHERE vb.venue_id = ${venueId}
+        AND vb.status IN ('confirmed', 'pending')
+        AND vb.booking_date >= CURRENT_DATE
+      ORDER BY vb.booking_date ASC, vb.booking_time ASC
+    `);
+    return result.rows;
+  }
+
   // ============ EVENT TEMPLATES ============
   async getAllEventTemplates(): Promise<any[]> {
     const result = await db.execute(sql`

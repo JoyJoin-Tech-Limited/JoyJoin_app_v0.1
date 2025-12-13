@@ -4717,6 +4717,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ Emergency Venue Migration ============
+  
+  // Get active bookings for a venue (for migration planning)
+  app.get("/api/admin/venues/:venueId/active-bookings", requireAdmin, async (req, res) => {
+    try {
+      const bookings = await storage.getActiveBookingsForVenue(req.params.venueId);
+      res.json(bookings);
+    } catch (error) {
+      console.error("Error fetching active venue bookings:", error);
+      res.status(500).json({ message: "Failed to fetch active venue bookings" });
+    }
+  });
+
+  // Migrate a booking to a new venue
+  app.post("/api/admin/venues/bookings/:bookingId/migrate", requireAdmin, async (req, res) => {
+    try {
+      const { newVenueId, reason } = req.body;
+      
+      if (!newVenueId) {
+        return res.status(400).json({ message: "newVenueId is required" });
+      }
+
+      const result = await storage.migrateVenueBooking(req.params.bookingId, newVenueId, reason);
+      res.json({
+        success: true,
+        message: "Booking migrated successfully",
+        ...result
+      });
+    } catch (error: any) {
+      console.error("Error migrating venue booking:", error);
+      res.status(400).json({ message: error.message || "Failed to migrate venue booking" });
+    }
+  });
+
+  // Find alternative venues for a booking
+  app.get("/api/admin/venues/bookings/:bookingId/alternatives", requireAdmin, async (req, res) => {
+    try {
+      const booking = await db.execute(sql`
+        SELECT vb.*, v.city, v.district, e.event_type
+        FROM venue_bookings vb
+        LEFT JOIN venues v ON vb.venue_id = v.id
+        LEFT JOIN blind_box_events e ON vb.event_id = e.id
+        WHERE vb.id = ${req.params.bookingId}
+      `);
+      
+      if (booking.rows.length === 0) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      
+      const bookingData = booking.rows[0];
+      
+      const alternatives = await venueMatchingService.findMatchingVenues({
+        eventType: bookingData.event_type || "dining",
+        participantCount: bookingData.participant_count || 8,
+        preferredCity: bookingData.city,
+        preferredDistrict: bookingData.district,
+        dateTime: new Date(bookingData.booking_date),
+        durationHours: 3
+      });
+      
+      const filteredAlternatives = alternatives.filter(a => a.venue.id !== bookingData.venue_id);
+      
+      res.json(filteredAlternatives);
+    } catch (error) {
+      console.error("Error finding alternative venues:", error);
+      res.status(500).json({ message: "Failed to find alternative venues" });
+    }
+  });
+
   // ============ Venue Time Slots Management ============
   
   // Get all time slots across all venues (for calendar overview)
