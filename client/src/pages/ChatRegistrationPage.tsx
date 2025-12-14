@@ -331,7 +331,16 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       { text: "90后" },
       { text: "85后" }
     ],
-    priority: 86  // 年龄优先级提高
+    priority: 86
+  },
+  {
+    keywords: ["对外", "显示", "年龄显示", "怎么显示", "隐藏", "年代", "区间"],
+    options: [
+      { text: "只显示年代（如95后）" },
+      { text: "显示年龄区间（如25-30岁）" },
+      { text: "完全隐藏" }
+    ],
+    priority: 87
   },
   {
     keywords: ["性别", "男生", "女生", "小哥哥", "小姐姐"],
@@ -983,9 +992,10 @@ interface CollectedInfo {
   children?: string;
   educationLevel?: string;
   fieldOfStudy?: string;
+  ageDisplayPreference?: string;
 }
 
-const TOTAL_PROFILE_ITEMS = 22;
+const TOTAL_PROFILE_ITEMS = 23;
 
 // 可选兴趣标签 - 与InterestsTopicsPage对齐
 const interestOptions = [
