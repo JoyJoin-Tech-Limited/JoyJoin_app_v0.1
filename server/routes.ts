@@ -2513,12 +2513,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ EVENT SESSION (ICEBREAKER) ROUTES ============
   
-  // GET /api/events/:eventId/session - Get existing icebreaker session for an event
+  // GET /api/events/:eventId/session - Get existing icebreaker session for a blind box event
   app.get('/api/events/:eventId/session', isPhoneAuthenticated, async (req: any, res) => {
     try {
       const { eventId } = req.params;
       
-      const session = await storage.getIcebreakerSessionByEventId(eventId);
+      // Use blindBoxEventId for blind box events (no foreign key constraint)
+      const session = await storage.getIcebreakerSessionByBlindBoxEventId(eventId);
       
       if (session) {
         res.json({ sessionId: session.id });
@@ -2531,14 +2532,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/events/:eventId/session - Create new icebreaker session for an event
+  // POST /api/events/:eventId/session - Create new icebreaker session for a blind box event
   app.post('/api/events/:eventId/session', isPhoneAuthenticated, async (req: any, res) => {
     try {
       const { eventId } = req.params;
       const userId = req.session.userId;
       
-      // Check if session already exists
-      const existingSession = await storage.getIcebreakerSessionByEventId(eventId);
+      // Check if session already exists (using blindBoxEventId)
+      const existingSession = await storage.getIcebreakerSessionByBlindBoxEventId(eventId);
       if (existingSession) {
         return res.json({ sessionId: existingSession.id });
       }
@@ -2556,9 +2557,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const eventData = event[0];
       
-      // Create new session
+      // Create new session using blindBoxEventId (no foreign key constraint)
       const newSession = await storage.createIcebreakerSession({
-        eventId,
+        blindBoxEventId: eventId,
         currentPhase: 'warmup',
         expectedAttendees: eventData.totalParticipants || 4,
         atmosphereType: eventData.eventType === '酒局' ? 'lively' : 'balanced',

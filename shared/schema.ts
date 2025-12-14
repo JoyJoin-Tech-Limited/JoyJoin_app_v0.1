@@ -1715,9 +1715,10 @@ export type InsertVenueTimeSlotBooking = z.infer<typeof insertVenueTimeSlotBooki
 export const icebreakerSessions = pgTable("icebreaker_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   
-  // 关联（二选一：eventId用于旧系统，groupId用于新的eventPool系统）
+  // 关联（三选一：eventId用于旧系统，groupId用于新的eventPool系统，blindBoxEventId用于盲盒活动）
   eventId: varchar("event_id").references(() => events.id),
   groupId: varchar("group_id").references(() => eventPoolGroups.id),
+  blindBoxEventId: varchar("blind_box_event_id"), // 盲盒活动ID（无外键约束，因为blindBoxEvents表独立）
   
   // 会话状态
   currentPhase: varchar("current_phase").default("waiting"), // waiting | checkin | number_assign | icebreaker | ended

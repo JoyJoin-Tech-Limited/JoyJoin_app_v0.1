@@ -252,6 +252,7 @@ export interface IStorage {
   getIcebreakerSession(id: string): Promise<IcebreakerSession | undefined>;
   getIcebreakerSessionByEventId(eventId: string): Promise<IcebreakerSession | undefined>;
   getIcebreakerSessionByGroupId(groupId: string): Promise<IcebreakerSession | undefined>;
+  getIcebreakerSessionByBlindBoxEventId(blindBoxEventId: string): Promise<IcebreakerSession | undefined>;
   createIcebreakerSession(data: InsertIcebreakerSession): Promise<IcebreakerSession>;
   updateIcebreakerSession(id: string, updates: Partial<IcebreakerSession>): Promise<IcebreakerSession>;
   
@@ -3150,6 +3151,11 @@ export class DatabaseStorage implements IStorage {
 
   async getIcebreakerSessionByGroupId(groupId: string): Promise<IcebreakerSession | undefined> {
     const [session] = await db.select().from(icebreakerSessions).where(eq(icebreakerSessions.groupId, groupId));
+    return session;
+  }
+
+  async getIcebreakerSessionByBlindBoxEventId(blindBoxEventId: string): Promise<IcebreakerSession | undefined> {
+    const [session] = await db.select().from(icebreakerSessions).where(eq(icebreakerSessions.blindBoxEventId, blindBoxEventId));
     return session;
   }
 
