@@ -17,6 +17,7 @@ import {
   Palette,
   Heart,
   Target,
+  RefreshCw,
 } from 'lucide-react';
 import type { TopicCard } from '@shared/topicCards';
 import { icebreakerGames, gameCategories, getRandomGame, type IcebreakerGame } from '@shared/icebreakerGames';
@@ -38,6 +39,9 @@ interface IcebreakerToolkitProps {
   isReady: boolean;
   onReady: (isAutoVote?: boolean) => void;
   autoReadyTimeoutSeconds?: number;
+  onRefreshTopics?: () => void;
+  isRefreshingTopics?: boolean;
+  isOffline?: boolean;
 }
 
 const difficultyColors = {
@@ -65,6 +69,9 @@ export function IcebreakerToolkit({
   isReady,
   onReady,
   autoReadyTimeoutSeconds = 60,
+  onRefreshTopics,
+  isRefreshingTopics = false,
+  isOffline = false,
 }: IcebreakerToolkitProps) {
   const [activeTab, setActiveTab] = useState<'topics' | 'games'>('topics');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -100,13 +107,24 @@ export function IcebreakerToolkit({
   }, [selectedCategory]);
 
   const handleRandomTopic = () => {
-    if (topics.length === 0) return;
+    if (isOffline || topics.length === 0) return;
     const randomTopic = topics[Math.floor(Math.random() * topics.length)];
     onSelectTopic(randomTopic);
   };
 
   const handleRandomGame = () => {
+    if (isOffline) return;
     const game = getRandomGame();
+    onSelectGame(game);
+  };
+
+  const handleTopicClick = (topic: TopicCard) => {
+    if (isOffline) return;
+    onSelectTopic(topic);
+  };
+
+  const handleGameClick = (game: IcebreakerGame) => {
+    if (isOffline) return;
     onSelectGame(game);
   };
 
@@ -128,13 +146,13 @@ export function IcebreakerToolkit({
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'topics' | 'games')} className="flex-1 flex flex-col">
+      <Tabs value={activeTab} onValueChange={(v) => !isOffline && setActiveTab(v as 'topics' | 'games')} className="flex-1 flex flex-col">
         <TabsList className="grid w-full grid-cols-2 mx-4 mt-2" style={{ width: 'calc(100% - 2rem)' }}>
-          <TabsTrigger value="topics" className="flex items-center gap-2" data-testid="tab-topics">
+          <TabsTrigger value="topics" disabled={isOffline} className="flex items-center gap-2" data-testid="tab-topics">
             <MessageCircle className="w-4 h-4" />
             话题卡
           </TabsTrigger>
-          <TabsTrigger value="games" className="flex items-center gap-2" data-testid="tab-games">
+          <TabsTrigger value="games" disabled={isOffline} className="flex items-center gap-2" data-testid="tab-games">
             <Gamepad2 className="w-4 h-4" />
             小游戏
           </TabsTrigger>
@@ -146,6 +164,7 @@ export function IcebreakerToolkit({
               variant="outline"
               size="sm"
               onClick={handleRandomTopic}
+              disabled={isOffline}
               className="w-full"
               data-testid="button-random-topic"
             >
@@ -157,10 +176,25 @@ export function IcebreakerToolkit({
           <ScrollArea className="flex-1 px-4 pb-20">
             {recommendedTopics && recommendedTopics.length > 0 && (
               <div className="mb-4">
-                <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-primary" />
-                  小悦推荐
-                </h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    小悦推荐
+                  </h3>
+                  {onRefreshTopics && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onRefreshTopics}
+                      disabled={isRefreshingTopics || isOffline}
+                      className="text-xs text-primary"
+                      data-testid="button-refresh-topics"
+                    >
+                      <RefreshCw className={`w-3 h-3 mr-1 ${isRefreshingTopics ? 'animate-spin' : ''}`} />
+                      换一批
+                    </Button>
+                  )}
+                </div>
                 <div className="space-y-2">
                   {recommendedTopics.map((rec, idx) => (
                     <motion.div
@@ -170,8 +204,8 @@ export function IcebreakerToolkit({
                       transition={{ delay: idx * 0.05 }}
                     >
                       <Card 
-                        className="cursor-pointer hover-elevate border-primary/30"
-                        onClick={() => onSelectTopic(rec.topic)}
+                        className={`${isOffline ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover-elevate'} border-primary/30`}
+                        onClick={() => handleTopicClick(rec.topic)}
                         data-testid={`recommended-topic-${idx}`}
                       >
                         <CardContent className="p-3">
@@ -205,8 +239,8 @@ export function IcebreakerToolkit({
                       transition={{ delay: idx * 0.02 }}
                     >
                       <Card 
-                        className="cursor-pointer hover-elevate"
-                        onClick={() => onSelectTopic(topic)}
+                        className={`${isOffline ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover-elevate'}`}
+                        onClick={() => handleTopicClick(topic)}
                         data-testid={`topic-card-${idx}`}
                       >
                         <CardContent className="p-3">
@@ -235,6 +269,7 @@ export function IcebreakerToolkit({
               variant="outline"
               size="sm"
               onClick={handleRandomGame}
+              disabled={isOffline}
               className="w-full"
               data-testid="button-random-game"
             >
@@ -247,6 +282,7 @@ export function IcebreakerToolkit({
                 variant={selectedCategory === null ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setSelectedCategory(null)}
+                disabled={isOffline}
                 data-testid="filter-all"
               >
                 全部
@@ -259,6 +295,7 @@ export function IcebreakerToolkit({
                     variant={selectedCategory === key ? 'default' : 'ghost'}
                     size="sm"
                     onClick={() => setSelectedCategory(key)}
+                    disabled={isOffline}
                     data-testid={`filter-${key}`}
                   >
                     {Icon && <Icon className="w-3 h-3 mr-1" />}
@@ -283,8 +320,8 @@ export function IcebreakerToolkit({
                       transition={{ delay: idx * 0.03 }}
                     >
                       <Card 
-                        className="cursor-pointer hover-elevate"
-                        onClick={() => onSelectGame(game)}
+                        className={`${isOffline ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover-elevate'}`}
+                        onClick={() => handleGameClick(game)}
                         data-testid={`game-card-${game.id}`}
                       >
                         <CardHeader className="p-3 pb-1">
@@ -382,10 +419,10 @@ export function IcebreakerToolkit({
           className="w-full"
           size="lg"
           onClick={() => onReady(false)}
-          disabled={isReady}
+          disabled={isReady || isOffline}
           data-testid="button-ready-next"
         >
-          {isReady ? '等待其他人准备...' : '准备好了，结束破冰'}
+          {isOffline ? '网络已断开...' : isReady ? '等待其他人准备...' : '准备好了，结束破冰'}
         </Button>
       </div>
     </div>

@@ -1,13 +1,16 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Heart, Star, Clock, Users, PartyPopper } from 'lucide-react';
+import { Sparkles, Heart, Star, Clock, Users, PartyPopper, Share2, Download, Loader2 } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { useToast } from '@/hooks/use-toast';
 
 interface IcebreakerEndingScreenProps {
   closingMessage?: string | null;
   durationMinutes: number;
   participantCount: number;
   onLeave: () => void;
+  eventName?: string;
 }
 
 function seededRandom(seed: number): number {
@@ -98,7 +101,124 @@ export function IcebreakerEndingScreen({
   durationMinutes,
   participantCount,
   onLeave,
+  eventName = 'JoyJoin 悦聚',
 }: IcebreakerEndingScreenProps) {
+  const shareCardRef = useRef<HTMLDivElement>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const { toast } = useToast();
+
+  const generateShareImage = useCallback(async (): Promise<Blob | null> => {
+    if (!shareCardRef.current) return null;
+    
+    try {
+      const canvas = await html2canvas(shareCardRef.current, {
+        backgroundColor: null,
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      
+      return new Promise((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/png', 1.0);
+      });
+    } catch (error) {
+      console.error('Failed to generate image:', error);
+      return null;
+    }
+  }, []);
+
+  const handleShare = useCallback(async () => {
+    setIsGenerating(true);
+    
+    try {
+      const blob = await generateShareImage();
+      if (!blob) {
+        toast({
+          title: '生成失败',
+          description: '无法生成分享图片，请稍后重试',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const file = new File([blob], `joyjoin-icebreaker-${Date.now()}.png`, { type: 'image/png' });
+
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `${eventName} - 破冰完成！`,
+          text: `我在${eventName}完成了破冰环节！和${participantCount}位小伙伴度过了美好的${durationMinutes}分钟。`,
+          files: [file],
+        });
+        toast({
+          title: '分享成功',
+          description: '已成功分享到其他应用',
+        });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `joyjoin-icebreaker-${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast({
+          title: '图片已保存',
+          description: '分享图片已下载到您的设备',
+        });
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        toast({
+          title: '分享失败',
+          description: '请稍后重试',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [generateShareImage, eventName, participantCount, durationMinutes, toast]);
+
+  const handleDownload = useCallback(async () => {
+    setIsGenerating(true);
+    
+    try {
+      const blob = await generateShareImage();
+      if (!blob) {
+        toast({
+          title: '生成失败',
+          description: '无法生成图片，请稍后重试',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `joyjoin-icebreaker-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: '保存成功',
+        description: '图片已下载到您的设备',
+      });
+    } catch (error) {
+      toast({
+        title: '下载失败',
+        description: '请稍后重试',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [generateShareImage, toast]);
+
   const colors = [
     'bg-primary/70 dark:bg-primary/50',
     'bg-purple-400 dark:bg-purple-600', 
@@ -178,81 +298,120 @@ export function IcebreakerEndingScreen({
       </div>
 
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-6">
-        <motion.div
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: 'spring', duration: 0.8 }}
-          className="mb-6"
-        >
-          <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-            <PartyPopper className="w-12 h-12 text-white" />
-          </div>
-        </motion.div>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="text-3xl md:text-4xl font-bold text-white text-center mb-4"
-          data-testid="text-ending-title"
-        >
-          破冰完成！
-        </motion.h1>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="flex flex-wrap items-center justify-center gap-4 mb-6"
-        >
-          <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-            <Users className="w-4 h-4 text-white" />
-            <span className="text-white font-medium" data-testid="text-participant-count">
-              {participantCount} 人参与
-            </span>
-          </div>
-          <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-            <Clock className="w-4 h-4 text-white" />
-            <span className="text-white font-medium" data-testid="text-duration">
-              {durationMinutes} 分钟
-            </span>
-          </div>
-        </motion.div>
-
-        {closingMessage && (
+        <div ref={shareCardRef} className="flex flex-col items-center p-6 rounded-3xl" style={{ background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.9) 0%, rgba(236, 72, 153, 0.9) 50%, rgba(251, 146, 60, 0.9) 100%)' }}>
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.7 }}
-            className="max-w-md mb-8"
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', duration: 0.8 }}
+            className="mb-6"
           >
-            <div className="bg-white/20 backdrop-blur-md rounded-2xl p-6 border border-white/30">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-white/90 font-medium">小悦说</span>
-              </div>
-              <p 
-                className="text-white text-lg leading-relaxed"
-                data-testid="text-closing-message"
-              >
-                {closingMessage}
-              </p>
+            <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <PartyPopper className="w-12 h-12 text-white" />
             </div>
           </motion.div>
-        )}
+
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-3xl md:text-4xl font-bold text-white text-center mb-4"
+            data-testid="text-ending-title"
+          >
+            破冰完成！
+          </motion.h1>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="flex flex-wrap items-center justify-center gap-4 mb-6"
+          >
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+              <Users className="w-4 h-4 text-white" />
+              <span className="text-white font-medium" data-testid="text-participant-count">
+                {participantCount} 人参与
+              </span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+              <Clock className="w-4 h-4 text-white" />
+              <span className="text-white font-medium" data-testid="text-duration">
+                {durationMinutes} 分钟
+              </span>
+            </div>
+          </motion.div>
+
+          {closingMessage && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.7 }}
+              className="max-w-md mb-6"
+            >
+              <div className="bg-white/20 backdrop-blur-md rounded-2xl p-6 border border-white/30">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-white/90 font-medium">小悦说</span>
+                </div>
+                <p 
+                  className="text-white text-lg leading-relaxed"
+                  data-testid="text-closing-message"
+                >
+                  {closingMessage}
+                </p>
+              </div>
+            </motion.div>
+          )}
+
+          <div className="flex items-center gap-2 text-white/80 text-sm mb-2">
+            <Heart className="w-4 h-4" />
+            <span>期待下次相遇</span>
+            <Star className="w-4 h-4" />
+          </div>
+          
+          <div className="text-white/60 text-xs">
+            {eventName}
+          </div>
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.9 }}
-          className="flex flex-col items-center gap-4"
+          className="flex flex-col items-center gap-4 mt-6"
         >
-          <div className="flex items-center gap-2 text-white/80 text-sm">
-            <Heart className="w-4 h-4" />
-            <span>期待下次相遇</span>
-            <Star className="w-4 h-4" />
+          <div className="flex items-center gap-3">
+            <Button 
+              onClick={handleShare}
+              disabled={isGenerating}
+              size="default"
+              variant="outline"
+              className="bg-white/20 border-white/40 text-white hover:bg-white/30"
+              data-testid="button-share"
+            >
+              {isGenerating ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Share2 className="w-4 h-4 mr-2" />
+              )}
+              分享
+            </Button>
+            <Button 
+              onClick={handleDownload}
+              disabled={isGenerating}
+              size="default"
+              variant="outline"
+              className="bg-white/20 border-white/40 text-white hover:bg-white/30"
+              data-testid="button-download"
+            >
+              {isGenerating ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 mr-2" />
+              )}
+              保存图片
+            </Button>
           </div>
           
           <Button 

@@ -11,6 +11,7 @@ import { NumberPlateDisplay } from '@/components/icebreaker/NumberPlateDisplay';
 import { IcebreakerToolkit } from '@/components/icebreaker/IcebreakerToolkit';
 import { GameDetailView } from '@/components/icebreaker/GameDetailView';
 import { IcebreakerEndingScreen } from '@/components/icebreaker/IcebreakerEndingScreen';
+import { NetworkStatusBanner } from '@/components/icebreaker/NetworkStatusBanner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, WifiOff, RefreshCcw } from 'lucide-react';
@@ -63,10 +64,12 @@ export default function IcebreakerSessionPage() {
     isLoading: topicsLoading,
     isAIPowered,
     isFallback,
+    refreshTopics,
+    isRefreshing: isRefreshingTopics,
   } = useIcebreakerTopics(
     participantProfiles,
     sessionData?.atmosphereType || 'balanced',
-    participantProfiles.length > 0
+    true
   );
 
   const welcomeParticipants = participantProfiles.map(p => ({
@@ -120,35 +123,71 @@ export default function IcebreakerSessionPage() {
     },
   });
 
+  const isOffline = !isConnected && !isReconnecting;
+
   const handleCheckin = useCallback(() => {
+    if (isOffline) {
+      toast({
+        title: '网络已断开',
+        description: '请检查网络连接后重试',
+        variant: 'destructive',
+      });
+      return;
+    }
     checkin();
     toast({
       title: '签到成功',
       description: '请等待其他小伙伴签到...',
     });
-  }, [checkin, toast]);
+  }, [checkin, toast, isOffline]);
 
   const handleSelectTopic = useCallback((topic: TopicCard) => {
+    if (isOffline) {
+      toast({
+        title: '网络已断开',
+        description: '请检查网络连接后重试',
+        variant: 'destructive',
+      });
+      return;
+    }
     selectTopic(topic.question, topic.question);
     toast({
       title: '话题已选择',
       description: topic.question,
     });
-  }, [selectTopic, toast]);
+  }, [selectTopic, toast, isOffline]);
 
   const handleSelectGame = useCallback((game: IcebreakerGame) => {
     setSelectedGame(game);
   }, []);
 
   const handleStartGame = useCallback((game: IcebreakerGame) => {
+    if (isOffline) {
+      toast({
+        title: '网络已断开',
+        description: '请检查网络连接后重试',
+        variant: 'destructive',
+      });
+      return;
+    }
     startGame(game.id, game.name);
     toast({
       title: '游戏开始',
       description: game.name,
     });
-  }, [startGame, toast]);
+  }, [startGame, toast, isOffline]);
 
   const handleReady = useCallback((isAutoVote: boolean = false) => {
+    if (isOffline) {
+      if (!isAutoVote) {
+        toast({
+          title: '网络已断开',
+          description: '请检查网络连接后重试',
+          variant: 'destructive',
+        });
+      }
+      return;
+    }
     voteReady('icebreaker', isAutoVote);
     setHasVotedReady(true);
     if (!isAutoVote) {
@@ -157,12 +196,14 @@ export default function IcebreakerSessionPage() {
         description: '等待其他人准备...',
       });
     }
-  }, [voteReady, toast]);
+  }, [voteReady, toast, isOffline]);
 
   const handleLeave = useCallback(() => {
-    leave();
+    if (!isOffline) {
+      leave();
+    }
     setLocation('/events');
-  }, [leave, setLocation]);
+  }, [leave, setLocation, isOffline]);
 
   useEffect(() => {
     if (icebreakerState.phase === 'ended' && !closingMessage && !closingMutation.isPending) {
@@ -204,23 +245,6 @@ export default function IcebreakerSessionPage() {
     );
   }
 
-  if (!isConnected && !isReconnecting) {
-    return (
-      <div className="flex items-center justify-center min-h-screen" data-testid="icebreaker-disconnected">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <WifiOff className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-lg font-medium">连接已断开</p>
-            <p className="text-muted-foreground mb-4">请检查网络连接后重试</p>
-            <Button onClick={() => window.location.reload()}>
-              <RefreshCcw className="w-4 h-4 mr-2" />
-              重新连接
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background" data-testid="icebreaker-session-page">
@@ -322,6 +346,9 @@ export default function IcebreakerSessionPage() {
                   isReady={hasVotedReady}
                   onReady={handleReady}
                   autoReadyTimeoutSeconds={60}
+                  onRefreshTopics={refreshTopics}
+                  isRefreshingTopics={isRefreshingTopics}
+                  isOffline={isOffline}
                 />
               </>
             )}
@@ -362,14 +389,11 @@ export default function IcebreakerSessionPage() {
         )}
       </AnimatePresence>
 
-      {isReconnecting && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
-          <div className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-4 py-2 rounded-full text-sm flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            正在重新连接...
-          </div>
-        </div>
-      )}
+      <NetworkStatusBanner 
+        isConnected={isConnected} 
+        isReconnecting={isReconnecting}
+        onRetry={() => window.location.reload()}
+      />
     </div>
   );
 }
