@@ -324,6 +324,17 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 82
   },
   {
+    keywords: ["方向", "领域", "细分", "ai", "web3", "产品", "技术", "运营", "设计", "开发"],
+    options: [
+      { text: "互联网/科技", icon: Briefcase },
+      { text: "金融", icon: Briefcase },
+      { text: "学生", icon: Book },
+      { text: "自由职业", icon: Sparkles },
+      { text: "其他行业", icon: Briefcase }
+    ],
+    priority: 83  // 比基础职业问题优先级高，确保follow-up也显示职业选项
+  },
+  {
     keywords: ["想要", "期待", "目的", "意图", "来这里", "JoyJoin"],
     options: [
       { text: "交朋友", icon: Heart },
