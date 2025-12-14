@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import MobileHeader from "@/components/MobileHeader";
+import EvolvingAvatar, { calculateClarityLevel } from "@/components/EvolvingAvatar";
 
 // 时间氛围主题
 type TimeTheme = "morning" | "afternoon" | "evening" | "night";
@@ -527,11 +528,13 @@ function MessageBubble({
   message, 
   isLatest,
   userGender,
+  collectedInfo,
   onTypingComplete 
 }: { 
   message: ChatMessage; 
   isLatest: boolean;
   userGender?: string;
+  collectedInfo?: CollectedInfo;
   onTypingComplete?: () => void;
 }) {
   // 短消息（≤20字）跳过打字动画
@@ -561,7 +564,11 @@ function MessageBubble({
       {message.role === "assistant" ? (
         <XiaoyueAvatar emotion={emotion} />
       ) : (
-        <UserAvatar gender={userGender} />
+        <EvolvingAvatar 
+          clarityLevel={calculateClarityLevel(collectedInfo || {})}
+          gender={userGender === '女性' || userGender === '女生' ? 'female' : userGender === '男性' || userGender === '男生' ? 'male' : 'unknown'}
+          size={32}
+        />
       )}
       <Card className={`max-w-[80%] p-3 ${
         message.role === "user" 
@@ -1210,6 +1217,7 @@ export default function ChatRegistrationPage() {
               message={msg}
               isLatest={index === messages.length - 1}
               userGender={collectedInfo.gender}
+              collectedInfo={collectedInfo}
               onTypingComplete={() => {
                 setMessages(prev => prev.map((m, i) => 
                   i === index ? { ...m, isTypingAnimation: false } : m
