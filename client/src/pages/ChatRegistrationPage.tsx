@@ -770,17 +770,18 @@ function MessageBubble({
   }
 
   // AI消息：动画完成后，每行成为单独的气泡
-  // 使用原始message.content进行分割，确保稳定性
-  const originalLines = useMemo(() => 
-    message.content.split('\n').filter(line => line.trim() !== ''),
-    [message.content]
-  );
+  // 但包含流程标签（【】）的消息不分割，保持为一个气泡
+  const containsFlowTags = message.content.includes('【');
+  const originalLines = useMemo(() => {
+    if (containsFlowTags) return [message.content]; // 不分割含有【】的消息
+    return message.content.split('\n').filter(line => line.trim() !== '');
+  }, [message.content, containsFlowTags]);
   
   // 逐行显示状态 - 用于多行消息逐条出现效果
   const [visibleLineCount, setVisibleLineCount] = useState(0);
   
-  // 是否应该显示逐行效果：打字完成且有多行
-  const shouldShowMultiLine = originalLines.length > 1 && (!shouldAnimate || isComplete);
+  // 是否应该显示逐行效果：打字完成且有多行且不含流程标签
+  const shouldShowMultiLine = originalLines.length > 1 && (!shouldAnimate || isComplete) && !containsFlowTags;
   
   // 逐行显示效果：打字动画完成后，每350ms显示下一行
   useEffect(() => {
@@ -802,8 +803,8 @@ function MessageBubble({
     setVisibleLineCount(0);
   }, [message.content]);
   
-  // 正在打字动画中或只有一行时，显示单个气泡
-  if ((shouldAnimate && !isComplete) || originalLines.length <= 1) {
+  // 正在打字动画中或只有一行或包含流程标签时，显示单个气泡
+  if ((shouldAnimate && !isComplete) || originalLines.length <= 1 || containsFlowTags) {
     return (
       <SingleBubble
         content={content}
@@ -1074,24 +1075,27 @@ export default function ChatRegistrationPage() {
       let currentBlock: string[] = [];
       
       for (const para of rawParagraphs) {
-        if (para.trim().startsWith('【') && para.trim().endsWith('】') || 
-            (para.trim().startsWith('【') && para.includes('】'))) {
+        // 检查是否是【标签】格式的流程信息行
+        const isProcessInfo = para.trim().startsWith('【');
+        
+        if (isProcessInfo) {
           // 这是一个【标签】段落，加入当前块
           currentBlock.push(para);
         } else {
           // 这不是【标签】段落
           if (currentBlock.length > 0) {
-            // 先把之前的块添加为一个段落
-            paragraphs.push(currentBlock.join('\n'));
+            // 先把之前的块（【标签】们）添加为一个段落，用换行连接
+            paragraphs.push(currentBlock.join('\n\n'));
             currentBlock = [];
           }
+          // 添加这个非【标签】段落
           paragraphs.push(para);
         }
       }
       
       // 处理剩余的块
       if (currentBlock.length > 0) {
-        paragraphs.push(currentBlock.join('\n'));
+        paragraphs.push(currentBlock.join('\n\n'));
       }
       
       // 总是分段显示开场白，每段都带打字动画
