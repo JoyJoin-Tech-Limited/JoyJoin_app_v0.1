@@ -296,7 +296,8 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     options: [
       { text: "日料", icon: Coffee },
       { text: "粤菜/港式", icon: Coffee },
-      { text: "火锅/川湘菜", icon: Coffee },
+      { text: "火锅", icon: Coffee },
+      { text: "川湘菜", icon: Coffee },
       { text: "西餐", icon: Coffee },
       { text: "东南亚菜", icon: Coffee },
       { text: "韩餐", icon: Coffee },
@@ -411,12 +412,22 @@ interface QuickReplyResult {
 }
 
 // 检测最后一条消息是否匹配快捷回复
-// 关键改进：只按换行符分割，取最后一段落进行检测（避免问号/句号把问句拆开）
+// 关键改进：提取最后一个问句进行关键词匹配
 function detectQuickReplies(lastMessage: string): QuickReplyResult {
-  // 只按换行符分割，取最后一段进行检测
-  const segments = lastMessage.split(/\n/).filter(s => s.trim());
-  const lastSegment = segments.length > 0 ? segments[segments.length - 1] : lastMessage;
-  const lowerMsg = lastSegment.toLowerCase();
+  // 提取最后一个问句（以？结尾的句子）
+  const questionMatches = lastMessage.match(/[^。！？\n]*[？?][^。！？\n]*/g);
+  let textToAnalyze: string;
+  
+  if (questionMatches && questionMatches.length > 0) {
+    // 取最后一个问句
+    textToAnalyze = questionMatches[questionMatches.length - 1].trim();
+  } else {
+    // 没有问句时，取最后一段
+    const segments = lastMessage.split(/\n/).filter(s => s.trim());
+    textToAnalyze = segments.length > 0 ? segments[segments.length - 1] : lastMessage;
+  }
+  
+  const lowerMsg = textToAnalyze.toLowerCase();
   
   const matches: Array<{ config: QuickReplyConfig; score: number }> = [];
   
