@@ -7,7 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Send, Loader2, User, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star } from "lucide-react";
+import { Send, Loader2, User, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import MobileHeader from "@/components/MobileHeader";
 
 // 时间氛围主题
@@ -520,6 +524,290 @@ interface CollectedInfo {
   socialStyle?: string;
 }
 
+// 可选兴趣标签
+const interestOptions = [
+  "美食探店", "户外运动", "看电影", "阅读", "桌游剧本杀", 
+  "音乐", "摄影", "旅行", "健身", "咖啡", "艺术展览", "宠物"
+];
+
+// 信息确认卡片组件
+function InfoConfirmationCard({ 
+  info, 
+  onUpdate, 
+  onConfirm, 
+  onCancel,
+  isPending 
+}: { 
+  info: CollectedInfo; 
+  onUpdate: (info: CollectedInfo) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isPending: boolean;
+}) {
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [tempValue, setTempValue] = useState("");
+
+  const startEdit = (field: string, value: string) => {
+    setEditingField(field);
+    setTempValue(value);
+  };
+
+  const saveEdit = (field: keyof CollectedInfo) => {
+    if (tempValue.trim()) {
+      onUpdate({ ...info, [field]: field === "birthYear" ? parseInt(tempValue) : tempValue });
+    }
+    setEditingField(null);
+    setTempValue("");
+  };
+
+  const cancelEdit = () => {
+    setEditingField(null);
+    setTempValue("");
+  };
+
+  const toggleInterest = (interest: string) => {
+    const current = info.interestsTop || [];
+    const updated = current.includes(interest)
+      ? current.filter(i => i !== interest)
+      : [...current, interest];
+    onUpdate({ ...info, interestsTop: updated });
+  };
+
+  const getYearLabel = (year?: number) => {
+    if (!year) return "未填写";
+    if (year >= 2000) return `00后 (${year}年)`;
+    if (year >= 1995) return `95后 (${year}年)`;
+    if (year >= 1990) return `90后 (${year}年)`;
+    if (year >= 1985) return `85后 (${year}年)`;
+    return `${year}年`;
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm overflow-y-auto"
+    >
+      <div className="min-h-screen flex flex-col">
+        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <h2 className="font-semibold text-lg">确认你的信息</h2>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onCancel} data-testid="button-cancel-confirmation">
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">检查一下小悦收集的信息是否正确，点击可修改</p>
+        </div>
+
+        <div className="flex-1 p-4 space-y-4">
+          {/* 昵称 */}
+          <Card className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <Label className="text-xs text-muted-foreground">昵称</Label>
+                {editingField === "displayName" ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      value={tempValue}
+                      onChange={(e) => setTempValue(e.target.value)}
+                      className="h-8"
+                      autoFocus
+                      data-testid="input-edit-displayName"
+                    />
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => saveEdit("displayName")} data-testid="button-save-displayName">
+                      <Check className="w-4 h-4 text-green-600" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={cancelEdit} data-testid="button-cancel-displayName">
+                      <X className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div 
+                    className="flex items-center gap-2 mt-1 cursor-pointer group"
+                    onClick={() => startEdit("displayName", info.displayName || "")}
+                    data-testid="field-displayName"
+                  >
+                    <span className="text-base font-medium">{info.displayName || "未填写"}</span>
+                    <Edit2 className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                )}
+              </div>
+              <User className="w-5 h-5 text-muted-foreground" />
+            </div>
+          </Card>
+
+          {/* 性别和年龄 */}
+          <div className="grid grid-cols-2 gap-3">
+            <Card className="p-4">
+              <Label className="text-xs text-muted-foreground">性别</Label>
+              <Select 
+                value={info.gender || ""} 
+                onValueChange={(v) => onUpdate({ ...info, gender: v })}
+              >
+                <SelectTrigger className="mt-1 h-9" data-testid="select-gender">
+                  <SelectValue placeholder="选择性别" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="女性">女性</SelectItem>
+                  <SelectItem value="男性">男性</SelectItem>
+                  <SelectItem value="不透露">不透露</SelectItem>
+                </SelectContent>
+              </Select>
+            </Card>
+
+            <Card className="p-4">
+              <Label className="text-xs text-muted-foreground">年龄段</Label>
+              <Select 
+                value={info.birthYear?.toString() || ""} 
+                onValueChange={(v) => onUpdate({ ...info, birthYear: parseInt(v) })}
+              >
+                <SelectTrigger className="mt-1 h-9" data-testid="select-birthYear">
+                  <SelectValue placeholder="选择年代">{info.birthYear ? getYearLabel(info.birthYear) : "选择年代"}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2002">00后</SelectItem>
+                  <SelectItem value="1997">95后</SelectItem>
+                  <SelectItem value="1992">90后</SelectItem>
+                  <SelectItem value="1987">85后</SelectItem>
+                </SelectContent>
+              </Select>
+            </Card>
+          </div>
+
+          {/* 城市和职业 */}
+          <div className="grid grid-cols-2 gap-3">
+            <Card className="p-4">
+              <Label className="text-xs text-muted-foreground">城市</Label>
+              <Select 
+                value={info.currentCity || ""} 
+                onValueChange={(v) => onUpdate({ ...info, currentCity: v })}
+              >
+                <SelectTrigger className="mt-1 h-9" data-testid="select-city">
+                  <SelectValue placeholder="选择城市" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="深圳">深圳</SelectItem>
+                  <SelectItem value="香港">香港</SelectItem>
+                  <SelectItem value="广州">广州</SelectItem>
+                  <SelectItem value="其他">其他城市</SelectItem>
+                </SelectContent>
+              </Select>
+            </Card>
+
+            <Card className="p-4">
+              <div className="flex-1">
+                <Label className="text-xs text-muted-foreground">职业</Label>
+                {editingField === "occupationDescription" ? (
+                  <div className="flex items-center gap-1 mt-1">
+                    <Input
+                      value={tempValue}
+                      onChange={(e) => setTempValue(e.target.value)}
+                      className="h-8 text-sm"
+                      autoFocus
+                      data-testid="input-edit-occupation"
+                    />
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit("occupationDescription")} data-testid="button-save-occupation">
+                      <Check className="w-3 h-3 text-green-600" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={cancelEdit} data-testid="button-cancel-occupation">
+                      <X className="w-3 h-3 text-red-500" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div 
+                    className="flex items-center gap-1.5 mt-1 cursor-pointer group"
+                    onClick={() => startEdit("occupationDescription", info.occupationDescription || "")}
+                    data-testid="field-occupation"
+                  >
+                    <span className="text-sm truncate">{info.occupationDescription || "未填写"}</span>
+                    <Edit2 className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+
+          {/* 兴趣爱好 */}
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-xs text-muted-foreground">兴趣爱好（点击添加/移除）</Label>
+              <span className="text-xs text-muted-foreground">{info.interestsTop?.length || 0} 个已选</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {interestOptions.map(interest => {
+                const isSelected = info.interestsTop?.includes(interest);
+                return (
+                  <Badge
+                    key={interest}
+                    variant={isSelected ? "default" : "outline"}
+                    className={`cursor-pointer transition-all ${isSelected ? "" : "hover:bg-primary/10"}`}
+                    onClick={() => toggleInterest(interest)}
+                    data-testid={`interest-${interest}`}
+                  >
+                    {interest}
+                  </Badge>
+                );
+              })}
+            </div>
+            {/* 显示自定义兴趣 */}
+            {info.interestsTop?.filter(i => !interestOptions.includes(i)).map(custom => (
+              <Badge
+                key={custom}
+                variant="default"
+                className="mt-2 cursor-pointer"
+                onClick={() => toggleInterest(custom)}
+                data-testid={`interest-custom-${custom}`}
+              >
+                {custom} <X className="w-3 h-3 ml-1" />
+              </Badge>
+            ))}
+          </Card>
+        </div>
+
+        {/* 底部确认按钮 */}
+        <div className="sticky bottom-0 p-4 border-t bg-background">
+          <Button 
+            className="w-full" 
+            onClick={() => {
+              const trimmedName = info.displayName?.trim();
+              const trimmedCity = info.currentCity?.trim();
+              const validInterests = info.interestsTop?.filter(i => i.trim());
+              
+              if (!trimmedName || !trimmedCity || !validInterests?.length) {
+                return;
+              }
+              onUpdate({
+                ...info,
+                displayName: trimmedName,
+                currentCity: trimmedCity,
+                interestsTop: validInterests
+              });
+              onConfirm();
+            }}
+            disabled={isPending || !info.displayName?.trim() || !info.currentCity?.trim() || !info.interestsTop?.filter(i => i.trim()).length}
+            data-testid="button-confirm-and-submit"
+          >
+            {isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : (
+              <Check className="w-4 h-4 mr-2" />
+            )}
+            确认无误，继续下一步
+          </Button>
+          {(!info.displayName?.trim() || !info.currentCity?.trim() || !info.interestsTop?.filter(i => i.trim()).length) && (
+            <p className="text-xs text-destructive text-center mt-2">
+              请确保昵称、城市和兴趣都已填写
+            </p>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function ChatRegistrationPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -542,6 +830,9 @@ export default function ChatRegistrationPage() {
   
   // 多选快捷回复状态
   const [selectedQuickReplies, setSelectedQuickReplies] = useState<Set<string>>(new Set());
+  
+  // 信息确认弹窗状态
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -744,6 +1035,10 @@ export default function ChatRegistrationPage() {
   };
 
   const handleComplete = () => {
+    setShowConfirmation(true);
+  };
+
+  const handleConfirmAndSubmit = () => {
     submitRegistrationMutation.mutate();
   };
 
@@ -806,6 +1101,18 @@ export default function ChatRegistrationPage() {
 
   return (
     <div className={`min-h-screen bg-gradient-to-b ${themeConfig.gradient} flex flex-col`}>
+      {/* 信息确认卡片 */}
+      <AnimatePresence>
+        {showConfirmation && (
+          <InfoConfirmationCard
+            info={collectedInfo}
+            onUpdate={setCollectedInfo}
+            onConfirm={handleConfirmAndSubmit}
+            onCancel={() => setShowConfirmation(false)}
+            isPending={submitRegistrationMutation.isPending}
+          />
+        )}
+      </AnimatePresence>
       <MobileHeader title="和小悦聊聊" action={
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
