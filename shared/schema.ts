@@ -1701,3 +1701,122 @@ export type VenueTimeSlot = typeof venueTimeSlots.$inferSelect;
 export type VenueTimeSlotBooking = typeof venueTimeSlotBookings.$inferSelect;
 export type InsertVenueTimeSlot = z.infer<typeof insertVenueTimeSlotSchema>;
 export type InsertVenueTimeSlotBooking = z.infer<typeof insertVenueTimeSlotBookingSchema>;
+
+// ============ AI驱动破冰流程系统 ============
+
+// Icebreaker Sessions table - 活动破冰会话（关联到活动组）
+export const icebreakerSessions = pgTable("icebreaker_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // 关联（二选一：eventId用于旧系统，groupId用于新的eventPool系统）
+  eventId: varchar("event_id").references(() => events.id),
+  groupId: varchar("group_id").references(() => eventPoolGroups.id),
+  
+  // 会话状态
+  currentPhase: varchar("current_phase").default("waiting"), // waiting | checkin | number_assign | icebreaker | ended
+  phaseStartedAt: timestamp("phase_started_at"),
+  
+  // 参与者信息
+  expectedAttendees: integer("expected_attendees").default(0), // 预期人数
+  checkedInCount: integer("checked_in_count").default(0), // 已签到人数
+  
+  // AI生成内容缓存
+  aiWelcomeMessage: text("ai_welcome_message"), // 个性化欢迎语
+  aiClosingMessage: text("ai_closing_message"), // 结束总结语
+  recommendedTopics: jsonb("recommended_topics"), // [{topicId, reason, priority}]
+  
+  // 会话配置
+  autoAdvanceTimeout: integer("auto_advance_timeout").default(60), // 自动推进超时（秒）
+  minReadyRatio: integer("min_ready_ratio").default(50), // 最小准备就绪比例（百分比）
+  
+  // 元数据
+  startedAt: timestamp("started_at"),
+  endedAt: timestamp("ended_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Icebreaker Checkins table - 签到记录
+export const icebreakerCheckins = pgTable("icebreaker_checkins", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  sessionId: varchar("session_id").notNull().references(() => icebreakerSessions.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // 号码牌（签到后随机分配）
+  numberPlate: integer("number_plate"), // 1, 2, 3... 用于自我介绍顺序
+  
+  // 签到状态
+  checkedInAt: timestamp("checked_in_at").defaultNow(),
+  isOnline: boolean("is_online").default(true), // WebSocket连接状态
+  lastSeenAt: timestamp("last_seen_at").defaultNow(), // 最后活跃时间
+  
+  // 用户原型信息（冗余存储用于AI分析）
+  userArchetype: varchar("user_archetype"), // 用户的动物原型
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Icebreaker Ready Votes table - 准备就绪投票
+export const icebreakerReadyVotes = pgTable("icebreaker_ready_votes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  sessionId: varchar("session_id").notNull().references(() => icebreakerSessions.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // 投票阶段（每个阶段都需要投票推进）
+  phase: varchar("phase").notNull(), // number_assign | icebreaker
+  
+  // 投票时间
+  votedAt: timestamp("voted_at").defaultNow(),
+  
+  // 是否为超时自动投票
+  isAutoVote: boolean("is_auto_vote").default(false),
+});
+
+// Icebreaker Activity Logs table - 活动日志（用于AI分析和用户行为追踪）
+export const icebreakerActivityLogs = pgTable("icebreaker_activity_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  sessionId: varchar("session_id").notNull().references(() => icebreakerSessions.id),
+  userId: varchar("user_id").references(() => users.id), // null for system events
+  
+  // 活动类型
+  activityType: varchar("activity_type").notNull(), // checkin | ready_vote | topic_select | game_start | phase_advance | disconnect | reconnect
+  
+  // 活动详情
+  details: jsonb("details"), // 活动相关数据，如 {topicId: "xxx", gameId: "yyy"}
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas for icebreaker tables
+export const insertIcebreakerSessionSchema = createInsertSchema(icebreakerSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertIcebreakerCheckinSchema = createInsertSchema(icebreakerCheckins).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertIcebreakerReadyVoteSchema = createInsertSchema(icebreakerReadyVotes).omit({
+  id: true,
+});
+
+export const insertIcebreakerActivityLogSchema = createInsertSchema(icebreakerActivityLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for icebreaker tables
+export type IcebreakerSession = typeof icebreakerSessions.$inferSelect;
+export type IcebreakerCheckin = typeof icebreakerCheckins.$inferSelect;
+export type IcebreakerReadyVote = typeof icebreakerReadyVotes.$inferSelect;
+export type IcebreakerActivityLog = typeof icebreakerActivityLogs.$inferSelect;
+export type InsertIcebreakerSession = z.infer<typeof insertIcebreakerSessionSchema>;
+export type InsertIcebreakerCheckin = z.infer<typeof insertIcebreakerCheckinSchema>;
+export type InsertIcebreakerReadyVote = z.infer<typeof insertIcebreakerReadyVoteSchema>;
+export type InsertIcebreakerActivityLog = z.infer<typeof insertIcebreakerActivityLogSchema>;

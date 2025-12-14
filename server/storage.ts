@@ -10,9 +10,12 @@ import {
   type ChatReport, type InsertChatReport, type ChatLog, type InsertChatLog,
   type PricingSetting, type PromotionBanner,
   type VenueTimeSlot, type InsertVenueTimeSlot, type VenueTimeSlotBooking, type InsertVenueTimeSlotBooking,
+  type IcebreakerSession, type IcebreakerCheckin, type IcebreakerReadyVote, type IcebreakerActivityLog,
+  type InsertIcebreakerSession, type InsertIcebreakerCheckin, type InsertIcebreakerReadyVote, type InsertIcebreakerActivityLog,
   users, events, eventAttendance, chatMessages, eventFeedback, blindBoxEvents, testResponses, roleResults, notifications,
   directMessageThreads, directMessages, payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs,
-  pricingSettings, promotionBanners, eventPools, venueTimeSlots, venueTimeSlotBookings, venues
+  pricingSettings, promotionBanners, eventPools, venueTimeSlots, venueTimeSlotBookings, venues,
+  icebreakerSessions, icebreakerCheckins, icebreakerReadyVotes, icebreakerActivityLogs
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
@@ -244,6 +247,30 @@ export interface IStorage {
   updateVenueTimeSlot(id: string, updates: Partial<VenueTimeSlot>): Promise<VenueTimeSlot>;
   deleteVenueTimeSlot(id: string): Promise<void>;
   getAvailableVenuesForDateTime(city: string, district: string | undefined, date: string, startTime?: string, endTime?: string): Promise<Array<{ venue: any; availableSlots: VenueTimeSlot[] }>>;
+
+  // Icebreaker Session operations
+  getIcebreakerSession(id: string): Promise<IcebreakerSession | undefined>;
+  getIcebreakerSessionByEventId(eventId: string): Promise<IcebreakerSession | undefined>;
+  getIcebreakerSessionByGroupId(groupId: string): Promise<IcebreakerSession | undefined>;
+  createIcebreakerSession(data: InsertIcebreakerSession): Promise<IcebreakerSession>;
+  updateIcebreakerSession(id: string, updates: Partial<IcebreakerSession>): Promise<IcebreakerSession>;
+  
+  // Icebreaker Checkin operations
+  getSessionCheckins(sessionId: string): Promise<Array<IcebreakerCheckin & { user: User }>>;
+  getUserCheckin(sessionId: string, userId: string): Promise<IcebreakerCheckin | undefined>;
+  createCheckin(data: InsertIcebreakerCheckin): Promise<IcebreakerCheckin>;
+  updateCheckin(id: string, updates: Partial<IcebreakerCheckin>): Promise<IcebreakerCheckin>;
+  assignNumberPlates(sessionId: string): Promise<IcebreakerCheckin[]>;
+  
+  // Icebreaker Ready Vote operations
+  getSessionReadyVotes(sessionId: string, phase: string): Promise<IcebreakerReadyVote[]>;
+  getUserReadyVote(sessionId: string, userId: string, phase: string): Promise<IcebreakerReadyVote | undefined>;
+  createReadyVote(data: InsertIcebreakerReadyVote): Promise<IcebreakerReadyVote>;
+  getReadyVoteCount(sessionId: string, phase: string): Promise<number>;
+  
+  // Icebreaker Activity Log operations
+  createActivityLog(data: InsertIcebreakerActivityLog): Promise<IcebreakerActivityLog>;
+  getSessionActivityLogs(sessionId: string): Promise<IcebreakerActivityLog[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3107,6 +3134,150 @@ export class DatabaseStorage implements IStorage {
     }
 
     return result;
+  }
+
+  // ============ Icebreaker Session operations ============
+  
+  async getIcebreakerSession(id: string): Promise<IcebreakerSession | undefined> {
+    const [session] = await db.select().from(icebreakerSessions).where(eq(icebreakerSessions.id, id));
+    return session;
+  }
+
+  async getIcebreakerSessionByEventId(eventId: string): Promise<IcebreakerSession | undefined> {
+    const [session] = await db.select().from(icebreakerSessions).where(eq(icebreakerSessions.eventId, eventId));
+    return session;
+  }
+
+  async getIcebreakerSessionByGroupId(groupId: string): Promise<IcebreakerSession | undefined> {
+    const [session] = await db.select().from(icebreakerSessions).where(eq(icebreakerSessions.groupId, groupId));
+    return session;
+  }
+
+  async createIcebreakerSession(data: InsertIcebreakerSession): Promise<IcebreakerSession> {
+    const [session] = await db.insert(icebreakerSessions).values(data).returning();
+    return session;
+  }
+
+  async updateIcebreakerSession(id: string, updates: Partial<IcebreakerSession>): Promise<IcebreakerSession> {
+    const [session] = await db
+      .update(icebreakerSessions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(icebreakerSessions.id, id))
+      .returning();
+    return session;
+  }
+
+  // ============ Icebreaker Checkin operations ============
+
+  async getSessionCheckins(sessionId: string): Promise<Array<IcebreakerCheckin & { user: User }>> {
+    const checkins = await db
+      .select()
+      .from(icebreakerCheckins)
+      .innerJoin(users, eq(icebreakerCheckins.userId, users.id))
+      .where(eq(icebreakerCheckins.sessionId, sessionId))
+      .orderBy(icebreakerCheckins.numberPlate);
+    
+    return checkins.map(row => ({
+      ...row.icebreaker_checkins,
+      user: row.users
+    }));
+  }
+
+  async getUserCheckin(sessionId: string, userId: string): Promise<IcebreakerCheckin | undefined> {
+    const [checkin] = await db
+      .select()
+      .from(icebreakerCheckins)
+      .where(and(
+        eq(icebreakerCheckins.sessionId, sessionId),
+        eq(icebreakerCheckins.userId, userId)
+      ));
+    return checkin;
+  }
+
+  async createCheckin(data: InsertIcebreakerCheckin): Promise<IcebreakerCheckin> {
+    const [checkin] = await db.insert(icebreakerCheckins).values(data).returning();
+    return checkin;
+  }
+
+  async updateCheckin(id: string, updates: Partial<IcebreakerCheckin>): Promise<IcebreakerCheckin> {
+    const [checkin] = await db
+      .update(icebreakerCheckins)
+      .set(updates)
+      .where(eq(icebreakerCheckins.id, id))
+      .returning();
+    return checkin;
+  }
+
+  async assignNumberPlates(sessionId: string): Promise<IcebreakerCheckin[]> {
+    const checkins = await db
+      .select()
+      .from(icebreakerCheckins)
+      .where(eq(icebreakerCheckins.sessionId, sessionId));
+    
+    // Shuffle checkins randomly
+    const shuffled = [...checkins].sort(() => Math.random() - 0.5);
+    
+    // Assign number plates
+    const updated: IcebreakerCheckin[] = [];
+    for (let i = 0; i < shuffled.length; i++) {
+      const [checkin] = await db
+        .update(icebreakerCheckins)
+        .set({ numberPlate: i + 1 })
+        .where(eq(icebreakerCheckins.id, shuffled[i].id))
+        .returning();
+      updated.push(checkin);
+    }
+    
+    return updated.sort((a, b) => (a.numberPlate || 0) - (b.numberPlate || 0));
+  }
+
+  // ============ Icebreaker Ready Vote operations ============
+
+  async getSessionReadyVotes(sessionId: string, phase: string): Promise<IcebreakerReadyVote[]> {
+    return db
+      .select()
+      .from(icebreakerReadyVotes)
+      .where(and(
+        eq(icebreakerReadyVotes.sessionId, sessionId),
+        eq(icebreakerReadyVotes.phase, phase)
+      ));
+  }
+
+  async getUserReadyVote(sessionId: string, userId: string, phase: string): Promise<IcebreakerReadyVote | undefined> {
+    const [vote] = await db
+      .select()
+      .from(icebreakerReadyVotes)
+      .where(and(
+        eq(icebreakerReadyVotes.sessionId, sessionId),
+        eq(icebreakerReadyVotes.userId, userId),
+        eq(icebreakerReadyVotes.phase, phase)
+      ));
+    return vote;
+  }
+
+  async createReadyVote(data: InsertIcebreakerReadyVote): Promise<IcebreakerReadyVote> {
+    const [vote] = await db.insert(icebreakerReadyVotes).values(data).returning();
+    return vote;
+  }
+
+  async getReadyVoteCount(sessionId: string, phase: string): Promise<number> {
+    const votes = await this.getSessionReadyVotes(sessionId, phase);
+    return votes.length;
+  }
+
+  // ============ Icebreaker Activity Log operations ============
+
+  async createActivityLog(data: InsertIcebreakerActivityLog): Promise<IcebreakerActivityLog> {
+    const [log] = await db.insert(icebreakerActivityLogs).values(data).returning();
+    return log;
+  }
+
+  async getSessionActivityLogs(sessionId: string): Promise<IcebreakerActivityLog[]> {
+    return db
+      .select()
+      .from(icebreakerActivityLogs)
+      .where(eq(icebreakerActivityLogs.sessionId, sessionId))
+      .orderBy(desc(icebreakerActivityLogs.createdAt));
   }
 }
 

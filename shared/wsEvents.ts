@@ -14,7 +14,20 @@ export type WSEventType =
   | "MATCH_PROGRESS_UPDATE"
   | "ADMIN_ACTION"
   | "PING"
-  | "PONG";
+  | "PONG"
+  // Icebreaker events
+  | "ICEBREAKER_JOIN_SESSION"
+  | "ICEBREAKER_CHECKIN"
+  | "ICEBREAKER_CHECKIN_UPDATE"
+  | "ICEBREAKER_PHASE_CHANGE"
+  | "ICEBREAKER_NUMBER_ASSIGNED"
+  | "ICEBREAKER_READY_VOTE"
+  | "ICEBREAKER_READY_COUNT_UPDATE"
+  | "ICEBREAKER_TOPIC_SELECTED"
+  | "ICEBREAKER_GAME_STARTED"
+  | "ICEBREAKER_SESSION_ENDED"
+  | "ICEBREAKER_USER_OFFLINE"
+  | "ICEBREAKER_USER_RECONNECTED";
 
 export interface WSMessage {
   type: WSEventType;
@@ -89,4 +102,82 @@ export interface PoolMatchedData {
   matchScore: number;
   memberCount: number;
   temperatureLevel: string; // fire | warm | mild | cold
+}
+
+// ============ 破冰流程事件数据 ============
+
+// 加入破冰会话
+export interface IcebreakerJoinSessionData {
+  sessionId: string;
+  userId: string;
+}
+
+// 签到更新
+export interface IcebreakerCheckinUpdateData {
+  sessionId: string;
+  checkedInCount: number;
+  expectedAttendees: number;
+  checkins: Array<{
+    userId: string;
+    displayName: string;
+    archetype: string | null;
+    numberPlate: number | null;
+  }>;
+}
+
+// 流程阶段变更
+export interface IcebreakerPhaseChangeData {
+  sessionId: string;
+  phase: 'waiting' | 'checkin' | 'number_assign' | 'icebreaker' | 'ended';
+  previousPhase: string;
+}
+
+// 号码牌分配
+export interface IcebreakerNumberAssignedData {
+  sessionId: string;
+  assignments: Array<{
+    userId: string;
+    displayName: string;
+    numberPlate: number;
+  }>;
+}
+
+// 准备就绪投票计数更新
+export interface IcebreakerReadyCountUpdateData {
+  sessionId: string;
+  phase: string;
+  readyCount: number;
+  totalCount: number;
+  readyRatio: number;
+}
+
+// 话题选择
+export interface IcebreakerTopicSelectedData {
+  sessionId: string;
+  topicId: string;
+  topicTitle: string;
+  selectedBy: string;
+}
+
+// 游戏开始
+export interface IcebreakerGameStartedData {
+  sessionId: string;
+  gameId: string;
+  gameName: string;
+  startedBy: string;
+}
+
+// 会话结束
+export interface IcebreakerSessionEndedData {
+  sessionId: string;
+  aiClosingMessage?: string;
+  duration: number;
+}
+
+// 用户离线/重连
+export interface IcebreakerUserStatusData {
+  sessionId: string;
+  userId: string;
+  displayName: string;
+  isOnline: boolean;
 }
