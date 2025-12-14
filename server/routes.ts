@@ -2522,7 +2522,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const session = await storage.getIcebreakerSessionByBlindBoxEventId(eventId);
       
       if (session) {
-        res.json({ sessionId: session.id });
+        // Get check-in count
+        const checkins = await storage.getSessionCheckins(session.id);
+        res.json({ 
+          sessionId: session.id,
+          checkedInCount: checkins.length,
+          expectedAttendees: session.expectedAttendees || 0,
+          currentPhase: session.currentPhase
+        });
       } else {
         res.json(null);
       }
