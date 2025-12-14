@@ -343,7 +343,7 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 85
   },
   {
-    keywords: ["方向", "领域", "细分", "ai", "web3", "产品", "技术", "运营", "设计", "开发"],
+    keywords: ["方向", "领域", "细分", "ai", "web3", "产品", "技术", "运营", "设计", "开发", "哪个", "具体"],
     options: [
       { text: "互联网/科技", icon: Briefcase },
       { text: "金融", icon: Briefcase },
@@ -351,10 +351,10 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       { text: "自由职业", icon: Sparkles },
       { text: "其他行业", icon: Briefcase }
     ],
-    priority: 83  // 比基础职业问题优先级高，确保follow-up也显示职业选项
+    priority: 83
   },
   {
-    keywords: ["工作", "职业", "做什么", "行业", "从事"],
+    keywords: ["工作", "职业", "做什么", "行业", "从事", "干什么", "什么工作", "忙什么", "哪行", "上班"],
     options: [
       { text: "互联网/科技", icon: Briefcase },
       { text: "金融", icon: Briefcase },
@@ -616,278 +616,115 @@ const interestOptions = [
   "撸铁运动", "看展看剧", "打游戏", "吸猫撸狗", "看书充电", "桌游卡牌"
 ];
 
-// 信息确认卡片组件
-function InfoConfirmationCard({ 
-  info, 
-  onUpdate, 
-  onConfirm, 
-  onCancel,
-  isPending 
-}: { 
-  info: CollectedInfo; 
-  onUpdate: (info: CollectedInfo) => void;
-  onConfirm: () => void;
-  onCancel: () => void;
-  isPending: boolean;
-}) {
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [tempValue, setTempValue] = useState("");
-
-  const startEdit = (field: string, value: string) => {
-    setEditingField(field);
-    setTempValue(value);
-  };
-
-  const saveEdit = (field: keyof CollectedInfo) => {
-    if (tempValue.trim()) {
-      onUpdate({ ...info, [field]: field === "birthYear" ? parseInt(tempValue) : tempValue });
-    }
-    setEditingField(null);
-    setTempValue("");
-  };
-
-  const cancelEdit = () => {
-    setEditingField(null);
-    setTempValue("");
-  };
-
-  const toggleInterest = (interest: string) => {
-    const current = info.interestsTop || [];
-    const updated = current.includes(interest)
-      ? current.filter(i => i !== interest)
-      : [...current, interest];
-    onUpdate({ ...info, interestsTop: updated });
-  };
-
+// 社交名片卡片组件 - 紫色渐变商务卡片风格
+function SocialProfileCard({ info }: { info: CollectedInfo }) {
   const getYearLabel = (year?: number) => {
-    if (!year) return "未填写";
-    if (year >= 2000) return `00后 (${year}年)`;
-    if (year >= 1995) return `95后 (${year}年)`;
-    if (year >= 1990) return `90后 (${year}年)`;
-    if (year >= 1985) return `85后 (${year}年)`;
+    if (!year) return "";
+    if (year >= 2000) return "00后";
+    if (year >= 1995) return "95后";
+    if (year >= 1990) return "90后";
+    if (year >= 1985) return "85后";
     return `${year}年`;
+  };
+
+  const getGenderIcon = () => {
+    if (info.gender === "女性" || info.gender === "女生") return "♀";
+    if (info.gender === "男性" || info.gender === "男生") return "♂";
+    return "";
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm overflow-y-auto"
+      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+      className="relative w-full max-w-[85%] mx-auto my-2"
+      data-testid="social-profile-card"
     >
-      <div className="min-h-screen flex flex-col">
-        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              <h2 className="font-semibold text-lg">确认你的信息</h2>
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-4 shadow-xl">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-50" />
+        
+        <motion.div 
+          className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div 
+          className="absolute -bottom-8 -left-8 w-24 h-24 bg-pink-400/20 rounded-full blur-xl"
+          animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.4, 0.2] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        />
+
+        <div className="relative z-10 flex items-start gap-3">
+          <div className="flex-shrink-0">
+            <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 shadow-lg">
+              <span className="text-2xl font-bold text-white">
+                {info.displayName?.charAt(0) || "?"}
+              </span>
             </div>
-            <Button variant="ghost" size="icon" onClick={onCancel} data-testid="button-cancel-confirmation">
-              <X className="w-5 h-5" />
-            </Button>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">检查一下小悦收集的信息是否正确，点击可修改</p>
-        </div>
-
-        <div className="flex-1 p-4 space-y-4">
-          {/* 昵称 */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <Label className="text-xs text-muted-foreground">昵称</Label>
-                {editingField === "displayName" ? (
-                  <div className="flex items-center gap-2 mt-1">
-                    <Input
-                      value={tempValue}
-                      onChange={(e) => setTempValue(e.target.value)}
-                      className="h-8"
-                      autoFocus
-                      data-testid="input-edit-displayName"
-                    />
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => saveEdit("displayName")} data-testid="button-save-displayName">
-                      <Check className="w-4 h-4 text-green-600" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={cancelEdit} data-testid="button-cancel-displayName">
-                      <X className="w-4 h-4 text-red-500" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div 
-                    className="flex items-center gap-2 mt-1 cursor-pointer group"
-                    onClick={() => startEdit("displayName", info.displayName || "")}
-                    data-testid="field-displayName"
-                  >
-                    <span className="text-base font-medium">{info.displayName || "未填写"}</span>
-                    <Edit2 className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                )}
-              </div>
-              <User className="w-5 h-5 text-muted-foreground" />
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-lg font-bold text-white truncate">
+                {info.displayName || "神秘访客"}
+              </h3>
+              {getGenderIcon() && (
+                <span className="text-white/80 text-sm">{getGenderIcon()}</span>
+              )}
+              {info.birthYear && (
+                <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded-full backdrop-blur-sm">
+                  {getYearLabel(info.birthYear)}
+                </span>
+              )}
             </div>
-          </Card>
-
-          {/* 性别和年龄 */}
-          <div className="grid grid-cols-2 gap-3">
-            <Card className="p-4">
-              <Label className="text-xs text-muted-foreground">性别</Label>
-              <Select 
-                value={info.gender || ""} 
-                onValueChange={(v) => onUpdate({ ...info, gender: v })}
-              >
-                <SelectTrigger className="mt-1 h-9" data-testid="select-gender">
-                  <SelectValue placeholder="选择性别" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="女性">女性</SelectItem>
-                  <SelectItem value="男性">男性</SelectItem>
-                  <SelectItem value="不透露">不透露</SelectItem>
-                </SelectContent>
-              </Select>
-            </Card>
-
-            <Card className="p-4">
-              <Label className="text-xs text-muted-foreground">年龄段</Label>
-              <Select 
-                value={info.birthYear?.toString() || ""} 
-                onValueChange={(v) => onUpdate({ ...info, birthYear: parseInt(v) })}
-              >
-                <SelectTrigger className="mt-1 h-9" data-testid="select-birthYear">
-                  <SelectValue placeholder="选择年代">{info.birthYear ? getYearLabel(info.birthYear) : "选择年代"}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2002">00后</SelectItem>
-                  <SelectItem value="1997">95后</SelectItem>
-                  <SelectItem value="1992">90后</SelectItem>
-                  <SelectItem value="1987">85后</SelectItem>
-                </SelectContent>
-              </Select>
-            </Card>
-          </div>
-
-          {/* 城市和职业 */}
-          <div className="grid grid-cols-2 gap-3">
-            <Card className="p-4">
-              <Label className="text-xs text-muted-foreground">城市</Label>
-              <Select 
-                value={info.currentCity || ""} 
-                onValueChange={(v) => onUpdate({ ...info, currentCity: v })}
-              >
-                <SelectTrigger className="mt-1 h-9" data-testid="select-city">
-                  <SelectValue placeholder="选择城市" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="深圳">深圳</SelectItem>
-                  <SelectItem value="香港">香港</SelectItem>
-                  <SelectItem value="广州">广州</SelectItem>
-                  <SelectItem value="其他">其他城市</SelectItem>
-                </SelectContent>
-              </Select>
-            </Card>
-
-            <Card className="p-4">
-              <div className="flex-1">
-                <Label className="text-xs text-muted-foreground">职业</Label>
-                {editingField === "occupationDescription" ? (
-                  <div className="flex items-center gap-1 mt-1">
-                    <Input
-                      value={tempValue}
-                      onChange={(e) => setTempValue(e.target.value)}
-                      className="h-8 text-sm"
-                      autoFocus
-                      data-testid="input-edit-occupation"
-                    />
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => saveEdit("occupationDescription")} data-testid="button-save-occupation">
-                      <Check className="w-3 h-3 text-green-600" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={cancelEdit} data-testid="button-cancel-occupation">
-                      <X className="w-3 h-3 text-red-500" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div 
-                    className="flex items-center gap-1.5 mt-1 cursor-pointer group"
-                    onClick={() => startEdit("occupationDescription", info.occupationDescription || "")}
-                    data-testid="field-occupation"
-                  >
-                    <span className="text-sm truncate">{info.occupationDescription || "未填写"}</span>
-                    <Edit2 className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                  </div>
-                )}
-              </div>
-            </Card>
-          </div>
-
-          {/* 兴趣爱好 */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Label className="text-xs text-muted-foreground">兴趣爱好（点击添加/移除）</Label>
-              <span className="text-xs text-muted-foreground">{info.interestsTop?.length || 0} 个已选</span>
+            
+            <div className="flex items-center gap-2 mt-1 text-white/80 text-sm">
+              {info.currentCity && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  {info.currentCity}
+                </span>
+              )}
+              {info.occupationDescription && (
+                <>
+                  <span className="text-white/40">·</span>
+                  <span className="flex items-center gap-1">
+                    <Briefcase className="w-3 h-3" />
+                    {info.occupationDescription}
+                  </span>
+                </>
+              )}
             </div>
-            <div className="flex flex-wrap gap-2">
-              {interestOptions.map(interest => {
-                const isSelected = info.interestsTop?.includes(interest);
-                return (
-                  <Badge
-                    key={interest}
-                    variant={isSelected ? "default" : "outline"}
-                    className={`cursor-pointer transition-all ${isSelected ? "" : "hover:bg-primary/10"}`}
-                    onClick={() => toggleInterest(interest)}
-                    data-testid={`interest-${interest}`}
+
+            {info.interestsTop && info.interestsTop.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {info.interestsTop.slice(0, 4).map((interest, i) => (
+                  <motion.span 
+                    key={i}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.1 }}
+                    className="text-xs bg-white/15 text-white/90 px-2 py-0.5 rounded-full backdrop-blur-sm border border-white/10"
                   >
                     {interest}
-                  </Badge>
-                );
-              })}
-            </div>
-            {/* 显示自定义兴趣 */}
-            {info.interestsTop?.filter(i => !interestOptions.includes(i)).map(custom => (
-              <Badge
-                key={custom}
-                variant="default"
-                className="mt-2 cursor-pointer"
-                onClick={() => toggleInterest(custom)}
-                data-testid={`interest-custom-${custom}`}
-              >
-                {custom} <X className="w-3 h-3 ml-1" />
-              </Badge>
-            ))}
-          </Card>
+                  </motion.span>
+                ))}
+                {info.interestsTop.length > 4 && (
+                  <span className="text-xs text-white/60 px-1">+{info.interestsTop.length - 4}</span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* 底部确认按钮 */}
-        <div className="sticky bottom-0 p-4 border-t bg-background">
-          <Button 
-            className="w-full" 
-            onClick={() => {
-              const trimmedName = info.displayName?.trim();
-              const trimmedCity = info.currentCity?.trim();
-              const validInterests = info.interestsTop?.filter(i => i.trim());
-              
-              if (!trimmedName || !trimmedCity || !validInterests?.length) {
-                return;
-              }
-              onUpdate({
-                ...info,
-                displayName: trimmedName,
-                currentCity: trimmedCity,
-                interestsTop: validInterests
-              });
-              onConfirm();
-            }}
-            disabled={isPending || !info.displayName?.trim() || !info.currentCity?.trim() || !info.interestsTop?.filter(i => i.trim()).length}
-            data-testid="button-confirm-and-submit"
+        <div className="absolute top-2 right-2">
+          <motion.div
+            animate={{ rotate: [0, 10, -10, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           >
-            {isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : (
-              <Check className="w-4 h-4 mr-2" />
-            )}
-            确认无误，继续下一步
-          </Button>
-          {(!info.displayName?.trim() || !info.currentCity?.trim() || !info.interestsTop?.filter(i => i.trim()).length) && (
-            <p className="text-xs text-destructive text-center mt-2">
-              请确保昵称、城市和兴趣都已填写
-            </p>
-          )}
+            <Sparkles className="w-4 h-4 text-yellow-300/70" />
+          </motion.div>
         </div>
       </div>
     </motion.div>
@@ -917,8 +754,6 @@ export default function ChatRegistrationPage() {
   // 多选快捷回复状态
   const [selectedQuickReplies, setSelectedQuickReplies] = useState<Set<string>>(new Set());
   
-  // 信息确认弹窗状态
-  const [showConfirmation, setShowConfirmation] = useState(false);
   
   // 对话开始时间（用于计算completionSpeed）
   const [chatStartTime] = useState<string>(() => new Date().toISOString());
@@ -1026,9 +861,13 @@ export default function ChatRegistrationPage() {
                 
                 if (data.type === 'content' && data.content) {
                   streamedContent += data.content;
-                  const cleanContent = streamedContent
+                  // 实时过滤代码块（包括不完整的代码块）
+                  let cleanContent = streamedContent
                     .replace(/```collected_info[\s\S]*?```/g, '')
                     .replace(/```registration_complete[\s\S]*?```/g, '')
+                    .replace(/```collected_info[\s\S]*$/g, '') // 过滤不完整的代码块
+                    .replace(/```registration_complete[\s\S]*$/g, '')
+                    .replace(/```[a-z_]*\s*$/g, '') // 过滤刚开始的代码块标记
                     .trim();
                   
                   setMessages(prev => prev.map((m, i) => 
@@ -1125,10 +964,6 @@ export default function ChatRegistrationPage() {
   };
 
   const handleComplete = () => {
-    setShowConfirmation(true);
-  };
-
-  const handleConfirmAndSubmit = () => {
     submitRegistrationMutation.mutate();
   };
 
@@ -1191,18 +1026,6 @@ export default function ChatRegistrationPage() {
 
   return (
     <div className={`min-h-screen bg-gradient-to-b ${themeConfig.gradient} flex flex-col`}>
-      {/* 信息确认卡片 */}
-      <AnimatePresence>
-        {showConfirmation && (
-          <InfoConfirmationCard
-            info={collectedInfo}
-            onUpdate={setCollectedInfo}
-            onConfirm={handleConfirmAndSubmit}
-            onCancel={() => setShowConfirmation(false)}
-            isPending={submitRegistrationMutation.isPending}
-          />
-        )}
-      </AnimatePresence>
       <MobileHeader title="和小悦聊聊" action={
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -1253,6 +1076,10 @@ export default function ChatRegistrationPage() {
               </div>
             </Card>
           </motion.div>
+        )}
+
+        {isComplete && collectedInfo.displayName && (
+          <SocialProfileCard info={collectedInfo} />
         )}
 
         <div ref={messagesEndRef} />
