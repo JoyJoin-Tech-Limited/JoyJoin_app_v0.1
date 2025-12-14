@@ -343,7 +343,119 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 85
   },
   {
-    keywords: ["方向", "领域", "细分", "ai", "web3", "产品", "技术", "运营", "设计", "开发", "哪个", "具体"],
+    keywords: ["金融", "银行", "证券", "基金", "投资", "PE", "VC", "创投", "资管", "保险"],
+    options: [
+      { text: "银行", icon: Briefcase },
+      { text: "证券/投行", icon: Briefcase },
+      { text: "公募/私募基金", icon: Briefcase },
+      { text: "PE/VC创投", icon: Briefcase },
+      { text: "保险", icon: Briefcase },
+      { text: "资产管理", icon: Briefcase },
+      { text: "财富管理", icon: Briefcase },
+      { text: "金融科技", icon: Briefcase }
+    ],
+    priority: 94
+  },
+  {
+    keywords: ["互联网", "科技", "技术", "开发", "产品", "运营", "技术开发"],
+    options: [
+      { text: "产品经理", icon: Briefcase },
+      { text: "技术开发", icon: Briefcase },
+      { text: "运营", icon: Briefcase },
+      { text: "设计", icon: Briefcase },
+      { text: "数据分析", icon: Briefcase },
+      { text: "项目管理", icon: Briefcase },
+      { text: "市场营销", icon: Briefcase },
+      { text: "HR/行政", icon: Briefcase }
+    ],
+    priority: 93
+  },
+  {
+    keywords: ["咨询", "四大", "MBB", "战略", "管理咨询"],
+    options: [
+      { text: "战略咨询", icon: Briefcase },
+      { text: "管理咨询", icon: Briefcase },
+      { text: "财务咨询", icon: Briefcase },
+      { text: "IT咨询", icon: Briefcase },
+      { text: "人力咨询", icon: Briefcase },
+      { text: "法律咨询", icon: Briefcase }
+    ],
+    priority: 93
+  },
+  {
+    keywords: ["医疗", "医药", "健康", "医生", "护士", "药"],
+    options: [
+      { text: "临床医生", icon: Briefcase },
+      { text: "医药研发", icon: Briefcase },
+      { text: "医药销售", icon: Briefcase },
+      { text: "医疗器械", icon: Briefcase },
+      { text: "医院管理", icon: Briefcase },
+      { text: "健康管理", icon: Briefcase },
+      { text: "生物科技", icon: Briefcase }
+    ],
+    priority: 93
+  },
+  {
+    keywords: ["教育", "老师", "培训", "教学", "学校"],
+    options: [
+      { text: "K12教育", icon: Book },
+      { text: "高等教育", icon: Book },
+      { text: "职业培训", icon: Book },
+      { text: "在线教育", icon: Book },
+      { text: "教育科技", icon: Book },
+      { text: "留学咨询", icon: Book }
+    ],
+    priority: 93
+  },
+  {
+    keywords: ["设计", "创意", "UI", "UX", "平面", "视觉"],
+    options: [
+      { text: "UI/UX设计", icon: Briefcase },
+      { text: "平面设计", icon: Briefcase },
+      { text: "品牌设计", icon: Briefcase },
+      { text: "室内设计", icon: Briefcase },
+      { text: "工业设计", icon: Briefcase },
+      { text: "动画/影视", icon: Briefcase }
+    ],
+    priority: 93
+  },
+  {
+    keywords: ["传媒", "媒体", "内容", "记者", "编辑", "自媒体"],
+    options: [
+      { text: "新闻媒体", icon: Briefcase },
+      { text: "自媒体/KOL", icon: Briefcase },
+      { text: "影视制作", icon: Briefcase },
+      { text: "广告公关", icon: Briefcase },
+      { text: "内容运营", icon: Briefcase },
+      { text: "MCN机构", icon: Briefcase }
+    ],
+    priority: 93
+  },
+  {
+    keywords: ["法律", "律师", "法务", "合规"],
+    options: [
+      { text: "律所律师", icon: Briefcase },
+      { text: "企业法务", icon: Briefcase },
+      { text: "合规风控", icon: Briefcase },
+      { text: "知识产权", icon: Briefcase },
+      { text: "公证/仲裁", icon: Briefcase }
+    ],
+    priority: 93
+  },
+  {
+    keywords: ["地产", "建筑", "房产", "工程", "装修"],
+    options: [
+      { text: "房地产开发", icon: Briefcase },
+      { text: "建筑设计", icon: Briefcase },
+      { text: "工程施工", icon: Briefcase },
+      { text: "物业管理", icon: Briefcase },
+      { text: "房产经纪", icon: Briefcase },
+      { text: "装修设计", icon: Briefcase }
+    ],
+    priority: 93
+  },
+  {
+    keywords: ["方向", "领域", "细分", "ai", "web3", "哪个", "具体"],
     options: [
       { text: "科技互联网", icon: Briefcase },
       { text: "AI/大数据", icon: Briefcase },
@@ -859,7 +971,21 @@ interface CollectedInfo {
   venueStylePreference?: string;
   topicAvoidances?: string[];
   socialStyle?: string;
+  intent?: string[];
+  hasPets?: boolean;
+  petTypes?: string[];
+  hasSiblings?: boolean;
+  relationshipStatus?: string;
+  hometown?: string;
+  languagesComfort?: string[];
+  cuisinePreference?: string[];
+  favoriteRestaurant?: string;
+  children?: string;
+  educationLevel?: string;
+  fieldOfStudy?: string;
 }
+
+const TOTAL_PROFILE_ITEMS = 22;
 
 // 可选兴趣标签 - 与InterestsTopicsPage对齐
 const interestOptions = [
@@ -1453,11 +1579,11 @@ export default function ChatRegistrationPage() {
         <div className="px-4 py-2 bg-background/80 backdrop-blur-sm border-t">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <ProgressRing progress={infoCount} total={8} showStar={showProgressStar} />
+              <ProgressRing progress={infoCount} total={TOTAL_PROFILE_ITEMS} showStar={showProgressStar} />
               <div className="flex flex-col">
                 <span className="text-xs font-medium">档案完善中</span>
                 <span className="text-xs text-muted-foreground">
-                  {infoCount}/8 项信息
+                  {infoCount}/{TOTAL_PROFILE_ITEMS} 项信息
                 </span>
               </div>
             </div>
