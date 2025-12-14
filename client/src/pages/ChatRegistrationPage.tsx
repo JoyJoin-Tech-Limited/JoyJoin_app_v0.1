@@ -710,13 +710,13 @@ function MessageBubble({
   collectedInfo?: CollectedInfo;
   onTypingComplete?: () => void;
 }) {
-  // 短消息（≤20字）跳过打字动画
-  const isShortMessage = message.content.length <= 20;
+  // 短消息（≤15字）跳过打字动画
+  const isShortMessage = message.content.length <= 15;
   const shouldAnimate = message.role === "assistant" && isLatest && message.isTypingAnimation && !isShortMessage;
   const { displayedText, isComplete } = useTypingEffect(
     message.content, 
     shouldAnimate || false,
-    12 // 每个字12ms（加快一倍）
+    30 // 每个字30ms - 增加呼吸感
   );
 
   // Ref guard to ensure onTypingComplete is called exactly once per message
@@ -1069,74 +1069,64 @@ export default function ChatRegistrationPage() {
       // 按双换行分割成多个段落
       const paragraphs = fullMessage.split('\n\n').filter(p => p.trim());
       
-      // 如果只有1-2段，作为一条消息显示
-      if (paragraphs.length <= 2) {
+      // 总是分段显示开场白，每段都带打字动画
+      const showParagraphsSequentially = async () => {
+        // 第一段立即显示（带打字动画）
         setMessages([{
           role: "assistant",
-          content: fullMessage,
+          content: paragraphs[0],
           timestamp: new Date(),
           isTypingAnimation: true
         }]);
-      } else {
-        // 多段开场白：使用async loop依次显示每个段落（每个都带打字动画）
-        const showParagraphsSequentially = async () => {
-          // 第一段立即显示（带打字动画）
-          setMessages([{
+        
+        // 后续段落依次添加，等待真正的typing完成
+        for (let i = 1; i < paragraphs.length; i++) {
+          // 检查是否被取消
+          if (abortController.signal.aborted) return;
+          
+          // 等待前一条消息的打字动画真正完成
+          await new Promise<void>((resolve, reject) => {
+            // 存储resolve函数，会在onTypingComplete回调时被调用
+            typingCompleteResolverRef.current = resolve;
+            
+            // 安全超时：最多等10秒（防止意外情况）
+            const timeoutId = setTimeout(() => {
+              typingCompleteResolverRef.current = null;
+              resolve();
+            }, 10000);
+            
+            abortController.signal.addEventListener('abort', () => {
+              clearTimeout(timeoutId);
+              typingCompleteResolverRef.current = null;
+              reject(new Error('Aborted'));
+            }, { once: true });
+          }).catch(() => {});
+          
+          // 再次检查是否被取消
+          if (abortController.signal.aborted) return;
+          
+          // 添加600ms间隔让用户有时间阅读前一条消息
+          await new Promise<void>((resolve, reject) => {
+            const timeoutId = setTimeout(resolve, 600);
+            abortController.signal.addEventListener('abort', () => {
+              clearTimeout(timeoutId);
+              reject(new Error('Aborted'));
+            }, { once: true });
+          }).catch(() => {});
+          
+          if (abortController.signal.aborted) return;
+          
+          // 添加下一条消息（带打字动画）
+          setMessages(prev => [...prev, {
             role: "assistant",
-            content: paragraphs[0],
+            content: paragraphs[i],
             timestamp: new Date(),
             isTypingAnimation: true
           }]);
-          
-          // 后续段落依次添加，等待真正的typing完成
-          for (let i = 1; i < paragraphs.length; i++) {
-            // 检查是否被取消
-            if (abortController.signal.aborted) return;
-            
-            // 等待前一条消息的打字动画真正完成
-            await new Promise<void>((resolve, reject) => {
-              // 存储resolve函数，会在onTypingComplete回调时被调用
-              typingCompleteResolverRef.current = resolve;
-              
-              // 安全超时：最多等5秒（防止意外情况）
-              const timeoutId = setTimeout(() => {
-                typingCompleteResolverRef.current = null;
-                resolve();
-              }, 5000);
-              
-              abortController.signal.addEventListener('abort', () => {
-                clearTimeout(timeoutId);
-                typingCompleteResolverRef.current = null;
-                reject(new Error('Aborted'));
-              }, { once: true });
-            }).catch(() => {});
-            
-            // 再次检查是否被取消
-            if (abortController.signal.aborted) return;
-            
-            // 添加400ms间隔让用户有时间阅读
-            await new Promise<void>((resolve, reject) => {
-              const timeoutId = setTimeout(resolve, 400);
-              abortController.signal.addEventListener('abort', () => {
-                clearTimeout(timeoutId);
-                reject(new Error('Aborted'));
-              }, { once: true });
-            }).catch(() => {});
-            
-            if (abortController.signal.aborted) return;
-            
-            // 添加下一条消息（带打字动画）
-            setMessages(prev => [...prev, {
-              role: "assistant",
-              content: paragraphs[i],
-              timestamp: new Date(),
-              isTypingAnimation: true
-            }]);
-          }
-        };
-        
-        showParagraphsSequentially();
-      }
+        }
+      };
+      
+      showParagraphsSequentially();
       
       setConversationHistory(data.conversationHistory);
     },
