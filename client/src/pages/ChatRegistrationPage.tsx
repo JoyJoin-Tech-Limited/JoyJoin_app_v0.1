@@ -629,9 +629,21 @@ function shouldBeMultiSelect(options: QuickReply[], message: string): boolean {
   return false;
 }
 
+// 需要用户自由输入的关键词（不应显示快捷选项）
+const freeInputKeywords = ["称呼", "昵称", "名字", "怎么叫", "叫什么"];
+
 // 检测最后一条消息是否匹配快捷回复
-// 改进：优先从消息中智能提取选项，关键词匹配作为后备
+// 改进：优先检查是否需要自由输入，然后从消息中智能提取选项，关键词匹配作为后备
 function detectQuickReplies(lastMessage: string): QuickReplyResult {
+  // 第零步：检查是否需要用户自由输入（如称呼问题）
+  const lowerMessage = lastMessage.toLowerCase();
+  for (const kw of freeInputKeywords) {
+    if (lowerMessage.includes(kw)) {
+      // 这类问题需要用户自由输入，不显示快捷选项
+      return { options: [], multiSelect: false };
+    }
+  }
+  
   // 第一步：尝试从消息中智能提取选项
   const extractedOptions = extractOptionsFromMessage(lastMessage);
   
@@ -1379,9 +1391,15 @@ export default function ChatRegistrationPage() {
                     .trim();
                   
                   // 根据streamId找到并更新对应的消息
-                  setMessages(prev => prev.map(m => 
-                    m.streamId === streamMessageId ? { ...m, content: cleanContent } : m
-                  ));
+                  // 只有当cleanContent有内容时才更新，避免消息内容变空
+                  setMessages(prev => prev.map(m => {
+                    if (m.streamId === streamMessageId) {
+                      // 只有当新内容不为空，或者当前内容为空时才更新
+                      const newContent = cleanContent || m.content;
+                      return { ...m, content: newContent };
+                    }
+                    return m;
+                  }));
                 } else if (data.type === 'done') {
                   if (data.conversationHistory) {
                     setConversationHistory(data.conversationHistory);
