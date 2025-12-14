@@ -38,6 +38,7 @@ import InvitePage from "@/pages/InvitePage";
 import EventFeedbackFlow from "@/pages/EventFeedbackFlow";
 import DeepFeedbackFlow from "@/pages/DeepFeedbackFlow";
 import IcebreakerSessionPage from "@/pages/IcebreakerSessionPage";
+import IcebreakerDemoPage from "@/pages/IcebreakerDemoPage";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import NotFound from "@/pages/not-found";
@@ -173,6 +174,11 @@ function Router() {
   // Invite landing page is publicly accessible (handles both referrals and event invitations)
   if (location.startsWith("/invite/")) {
     return <Route path="/invite/:code" component={InviteLandingRouter} />;
+  }
+
+  // Icebreaker demo is publicly accessible for testing
+  if (location === "/icebreaker-demo") {
+    return <Route path="/icebreaker-demo" component={IcebreakerDemoPage} />;
   }
 
   // Admin login is always accessible (even when not authenticated)
