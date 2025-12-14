@@ -701,6 +701,7 @@ interface ChatMessage {
   content: string;
   timestamp: Date;
   isTypingAnimation?: boolean; // 是否正在逐字显示
+  streamId?: string; // 流式消息的唯一标识
 }
 
 // 逐字打字效果Hook
@@ -1307,7 +1308,8 @@ export default function ChatRegistrationPage() {
 
   const sendStreamingMessage = async (message: string) => {
     let streamedContent = '';
-    let actualMessageIndex = -1;
+    // 使用唯一ID来标识这条流式消息
+    const streamMessageId = `stream-${Date.now()}`;
     
     // 防护：检查conversationHistory是否已初始化
     if (!conversationHistory || conversationHistory.length === 0) {
@@ -1320,16 +1322,14 @@ export default function ChatRegistrationPage() {
       return;
     }
     
-    // 使用函数式更新并捕获正确的索引
-    setMessages(prev => {
-      actualMessageIndex = prev.length; // 新消息将在这个索引
-      return [...prev, {
-        role: "assistant",
-        content: '',
-        timestamp: new Date(),
-        isTypingAnimation: false
-      }];
-    });
+    // 添加一个带唯一ID的空消息
+    setMessages(prev => [...prev, {
+      role: "assistant",
+      content: '',
+      timestamp: new Date(),
+      isTypingAnimation: false,
+      streamId: streamMessageId
+    }]);
 
     try {
       const res = await fetch("/api/registration/chat/message/stream", {
@@ -1373,8 +1373,9 @@ export default function ChatRegistrationPage() {
                     .replace(/```[a-z_]*\s*$/g, '') // 过滤刚开始的代码块标记
                     .trim();
                   
-                  setMessages(prev => prev.map((m, i) => 
-                    i === actualMessageIndex ? { ...m, content: cleanContent } : m
+                  // 根据streamId找到并更新对应的消息
+                  setMessages(prev => prev.map(m => 
+                    m.streamId === streamMessageId ? { ...m, content: cleanContent } : m
                   ));
                 } else if (data.type === 'done') {
                   if (data.conversationHistory) {
@@ -1397,7 +1398,8 @@ export default function ChatRegistrationPage() {
         }
       }
     } catch (error) {
-      setMessages(prev => prev.filter((_, i) => i !== actualMessageIndex));
+      // 根据streamId移除失败的消息
+      setMessages(prev => prev.filter(m => m.streamId !== streamMessageId));
       toast({
         title: "发送失败",
         description: "小悦暂时走神了，请重试",
