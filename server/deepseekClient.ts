@@ -29,6 +29,19 @@ export interface XiaoyueCollectedInfo {
   cuisinePreference?: string[]; // 菜系偏好：日料/粤菜/火锅/西餐/东南亚等
   favoriteRestaurant?: string; // 宝藏餐厅推荐
   favoriteRestaurantReason?: string; // 喜欢这家店的原因
+  // 新增字段：教育背景与家庭
+  children?: string; // 有孩子/没有/不透露
+  educationLevel?: string; // 高中/大专/本科/硕士/博士
+  fieldOfStudy?: string; // 专业领域
+  // 对话行为画像（隐性信号收集）
+  conversationalProfile?: {
+    responseLength: 'brief' | 'moderate' | 'detailed';
+    emojiUsage: 'none' | 'few' | 'many';
+    formalityLevel: 'casual' | 'neutral' | 'formal';
+    proactiveness: 'passive' | 'neutral' | 'proactive';
+    registrationTime: string;
+    completionSpeed: 'fast' | 'medium' | 'slow';
+  };
 }
 
 export interface ChatMessage {
@@ -83,6 +96,9 @@ const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，JoyJoin平台的AI社交助手�
 13. **场地风格偏好**：轻奢现代风/绿植花园风/复古工业风/温馨日式风
 14. **不想聊的话题**：政治/相亲压力/职场八卦/金钱财务，或者都OK
 15. **社交风格**：喜欢大家一起聊还是小组深聊
+16. **有无孩子**：有孩子/没有/不透露（轻松问，不做判断）
+17. **学历背景**：本科/硕士/博士/大专/高中（如果对话自然提到）
+18. **专业领域**：理工科/文史哲/商科/艺术设计等（学生党或专业型用户）
 
 ## 追问技巧（Dig Deeper）
 不要满足于用户的第一个回答，用追问挖掘更多：
@@ -134,6 +150,45 @@ const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，JoyJoin平台的AI社交助手�
 - 用户回复≤5个字 连续2次以上
 - 用户直接回复选项字母
 - 用户表达想快点完成（"快点"、"直接问"、"简单点"等）
+
+## 方言亲切感（老乡加分！）
+当用户说出家乡，用一句方言或俏皮话拉近距离：
+- 四川人："安逸嘛～那你讲四川话不嘛？"
+- 东北人："老铁整挺好！东北话还溜不？"
+- 广东人："叻仔/叻女喔～粤语讲得溜不？"
+- 山东人："恁好啊～山东话还会说不？"
+- 湖南人："霸蛮咧～湖南话还能讲不？"
+- 上海人："老灵额～上海话会讲伐？"
+- 北京人："得嘞您～北京话还能侃不？"
+- 河南人："中不中？河南话还会说不？"
+- 重庆人："巴适得很～重庆话还摆不？"
+
+## 亲切感提升技巧
+
+**时段问候**：根据对话时间打招呼
+- 深夜(23:00-5:00)："夜猫子呀～这么晚还在～"
+- 清晨(5:00-8:00)："早起的鸟儿有虫吃！这么早精神真好～"
+- 午休(12:00-14:00)："午休时间来逛逛呀～"
+- 下班后(18:00-21:00)："下班啦～辛苦一天了！"
+
+**职业共鸣**：
+- 互联网人："懂懂懂，互联网人的996我太懂了～"
+- 金融人："金融圈精英呀！压力大不？"
+- 设计师："设计师的审美肯定很厉害！"
+- 老师："老师真的辛苦，桃李满天下～"
+- 医护人员："医护人员太伟大了，致敬！"
+
+**兴趣共鸣**：
+- 猫奴："铲屎官握爪！我也超爱猫～"
+- 旅行爱好者："说走就走的旅行最棒了！"
+- 美食党："吃货团团员你好！"
+- 健身达人："自律的人最帅/美了！"
+
+**称呼记忆**：收集到昵称后，后续对话用昵称称呼用户，更有亲切感
+
+**进度鼓励**：
+- 信息收集过半时："聊得真开心，咱们快聊完啦～"
+- 快结束时："最后一两个小问题就搞定啦～"
 
 ## 信息确认环节
 在收集完必须信息后、结束对话前，简短确认一下：
@@ -470,6 +525,73 @@ function validateAndNormalizeInfo(info: Partial<XiaoyueCollectedInfo>): XiaoyueC
     normalized.additionalNotes = info.additionalNotes.trim();
   }
 
+  // cuisinePreference
+  if (info.cuisinePreference && Array.isArray(info.cuisinePreference)) {
+    const cuisine = info.cuisinePreference.filter(c => typeof c === 'string' && c.trim());
+    if (cuisine.length > 0) {
+      normalized.cuisinePreference = cuisine;
+    }
+  }
+
+  // favoriteRestaurant
+  if (info.favoriteRestaurant && typeof info.favoriteRestaurant === 'string') {
+    const rest = info.favoriteRestaurant.trim();
+    if (rest) {
+      normalized.favoriteRestaurant = rest;
+    }
+  }
+
+  // favoriteRestaurantReason
+  if (info.favoriteRestaurantReason && typeof info.favoriteRestaurantReason === 'string') {
+    const reason = info.favoriteRestaurantReason.trim();
+    if (reason) {
+      normalized.favoriteRestaurantReason = reason;
+    }
+  }
+
+  // children
+  if (info.children && typeof info.children === 'string') {
+    const child = info.children.trim();
+    if (child) {
+      normalized.children = child;
+    }
+  }
+
+  // educationLevel
+  if (info.educationLevel && typeof info.educationLevel === 'string') {
+    const edu = info.educationLevel.trim();
+    if (edu) {
+      normalized.educationLevel = edu;
+    }
+  }
+
+  // fieldOfStudy
+  if (info.fieldOfStudy && typeof info.fieldOfStudy === 'string') {
+    const field = info.fieldOfStudy.trim();
+    if (field) {
+      normalized.fieldOfStudy = field;
+    }
+  }
+
+  // conversationalProfile - with type guards for proper validation
+  if (info.conversationalProfile && typeof info.conversationalProfile === 'object') {
+    const cp = info.conversationalProfile;
+    const validResponseLength = ['brief', 'moderate', 'detailed'];
+    const validEmojiUsage = ['none', 'few', 'many'];
+    const validFormalityLevel = ['casual', 'neutral', 'formal'];
+    const validProactiveness = ['passive', 'neutral', 'proactive'];
+    
+    const profile: XiaoyueCollectedInfo['conversationalProfile'] = {
+      responseLength: validResponseLength.includes(cp.responseLength) ? cp.responseLength : 'moderate',
+      emojiUsage: validEmojiUsage.includes(cp.emojiUsage) ? cp.emojiUsage : 'few',
+      formalityLevel: validFormalityLevel.includes(cp.formalityLevel) ? cp.formalityLevel : 'neutral',
+      proactiveness: validProactiveness.includes(cp.proactiveness) ? cp.proactiveness : 'neutral',
+      registrationTime: cp.registrationTime || new Date().toISOString(),
+      completionSpeed: ['fast', 'medium', 'slow'].includes(cp.completionSpeed) ? cp.completionSpeed : 'medium'
+    };
+    normalized.conversationalProfile = profile;
+  }
+
   return normalized;
 }
 
@@ -525,8 +647,24 @@ ${conversationHistory.filter(m => m.role !== 'system').map(m => `${m.role === 'u
   "socialStyle": "群聊型/小组深聊型",
   "cuisinePreference": ["日料", "粤菜", "火锅"],
   "favoriteRestaurant": "用户推荐的宝藏餐厅名称",
-  "favoriteRestaurantReason": "喜欢这家店的原因（环境/口味/性价比等）"
+  "favoriteRestaurantReason": "喜欢这家店的原因（环境/口味/性价比等）",
+  "children": "有孩子/没有/不透露",
+  "educationLevel": "高中/大专/本科/硕士/博士",
+  "fieldOfStudy": "专业领域描述",
+  "conversationalProfile": {
+    "responseLength": "brief/moderate/detailed",
+    "emojiUsage": "none/few/many",
+    "formalityLevel": "casual/neutral/formal",
+    "proactiveness": "passive/neutral/proactive"
+  }
 }
+
+conversationalProfile字段说明（根据用户消息分析推断）：
+- responseLength: 分析用户所有回复的平均长度（brief=<20字, moderate=20-80字, detailed=>80字）
+- emojiUsage: 统计用户消息中emoji使用频率（none=没有, few=偶尔1-2个, many=每条都有）
+- formalityLevel: 分析用户用语风格（casual=很口语化/网络语/缩写, neutral=普通, formal=较书面/礼貌用语多）
+- proactiveness: 分析用户分享意愿（passive=只回答问题不多说, neutral=偶尔主动补充, proactive=经常主动分享额外信息）
+注意：registrationTime和completionSpeed由服务端记录，无需在此提取
 
 intent字段的有效值映射：
 - networking: 拓展人脉/职业社交/认识同行

@@ -901,6 +901,9 @@ export default function ChatRegistrationPage() {
   
   // 信息确认弹窗状态
   const [showConfirmation, setShowConfirmation] = useState(false);
+  
+  // 对话开始时间（用于计算completionSpeed）
+  const [chatStartTime] = useState<string>(() => new Date().toISOString());
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1056,7 +1059,8 @@ export default function ChatRegistrationPage() {
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/registration/chat/complete", {
         conversationHistory,
-        collectedInfo
+        collectedInfo,
+        startTime: chatStartTime
       });
       return res.json();
     },

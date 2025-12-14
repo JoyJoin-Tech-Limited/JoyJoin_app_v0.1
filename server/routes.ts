@@ -369,7 +369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/registration/chat/complete', async (req: any, res) => {
     try {
-      const { conversationHistory, phoneNumber } = req.body;
+      const { conversationHistory, phoneNumber, startTime } = req.body;
       
       // Validate conversation has sufficient content
       if (!conversationHistory || conversationHistory.length < 4) {
@@ -385,6 +385,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!extractedInfo.displayName) {
         return res.status(400).json({ message: "请告诉小悦你希望大家怎么称呼你" });
       }
+      
+      // Calculate server-side conversationalProfile metrics
+      const registrationTime = new Date().toISOString();
+      let completionSpeed: 'fast' | 'medium' | 'slow' = 'medium';
+      if (startTime) {
+        const durationMinutes = (Date.now() - new Date(startTime).getTime()) / 60000;
+        if (durationMinutes < 3) {
+          completionSpeed = 'fast';
+        } else if (durationMinutes > 10) {
+          completionSpeed = 'slow';
+        }
+      }
+      
+      // Always create conversationalProfile with server metrics, merging LLM behavioral data when available
+      const conversationalProfile = {
+        responseLength: extractedInfo.conversationalProfile?.responseLength || 'moderate',
+        emojiUsage: extractedInfo.conversationalProfile?.emojiUsage || 'few',
+        formalityLevel: extractedInfo.conversationalProfile?.formalityLevel || 'neutral',
+        proactiveness: extractedInfo.conversationalProfile?.proactiveness || 'neutral',
+        registrationTime,
+        completionSpeed
+      };
+      extractedInfo.conversationalProfile = conversationalProfile as any;
       
       // Map collected info to user registration fields
       const registrationData: any = {
@@ -409,6 +432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         message: "对话注册完成，请通过电话验证完成注册",
         registrationData,
+        conversationalProfile: extractedInfo.conversationalProfile,
       });
     } catch (error) {
       console.error("Error completing chat registration:", error);
