@@ -697,6 +697,7 @@ function detectQuickReplies(lastMessage: string): QuickReplyResult {
 }
 
 interface ChatMessage {
+  id: string; // 稳定的消息ID
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
@@ -1240,6 +1241,7 @@ export default function ChatRegistrationPage() {
       const showParagraphsSequentially = async () => {
         // 第一段立即显示（带打字动画）
         setMessages([{
+          id: `msg-${Date.now()}-0`,
           role: "assistant",
           content: paragraphs[0],
           timestamp: new Date(),
@@ -1285,6 +1287,7 @@ export default function ChatRegistrationPage() {
           
           // 添加下一条消息（带打字动画）
           setMessages(prev => [...prev, {
+            id: `msg-${Date.now()}-${i}`,
             role: "assistant",
             content: paragraphs[i],
             timestamp: new Date(),
@@ -1324,6 +1327,7 @@ export default function ChatRegistrationPage() {
     
     // 添加一个带唯一ID的空消息
     setMessages(prev => [...prev, {
+      id: streamMessageId,
       role: "assistant",
       content: '',
       timestamp: new Date(),
@@ -1452,6 +1456,7 @@ export default function ChatRegistrationPage() {
 
     const userMessage = inputValue.trim();
     setMessages(prev => [...prev, {
+      id: `msg-${Date.now()}`,
       role: "user",
       content: userMessage,
       timestamp: new Date()
@@ -1505,6 +1510,7 @@ export default function ChatRegistrationPage() {
     
     // 单选模式，立即发送
     setMessages(prev => [...prev, {
+      id: `msg-${Date.now()}`,
       role: "user",
       content: text,
       timestamp: new Date()
@@ -1518,6 +1524,7 @@ export default function ChatRegistrationPage() {
     if (isTyping || selectedQuickReplies.size === 0) return;
     const selectedText = Array.from(selectedQuickReplies).join("、");
     setMessages(prev => [...prev, {
+      id: `msg-${Date.now()}`,
       role: "user",
       content: selectedText,
       timestamp: new Date()
@@ -1550,17 +1557,17 @@ export default function ChatRegistrationPage() {
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         <AnimatePresence>
-          {messages.map((msg, index) => (
+          {messages.map((msg) => (
             <MessageBubble
-              key={index}
+              key={msg.id}
               message={msg}
-              isLatest={index === messages.length - 1}
+              isLatest={msg === messages[messages.length - 1]}
               userGender={collectedInfo.gender}
               collectedInfo={collectedInfo}
               onTypingComplete={() => {
                 // 标记该消息的打字动画已完成
-                setMessages(prev => prev.map((m, i) => 
-                  i === index ? { ...m, isTypingAnimation: false } : m
+                setMessages(prev => prev.map((m) => 
+                  m.id === msg.id ? { ...m, isTypingAnimation: false } : m
                 ));
                 // 通知等待中的开场白序列可以继续
                 if (typingCompleteResolverRef.current) {
