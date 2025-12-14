@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **小悦对话注册交互优化 (Dec 14, 2025):**
+  - Fixed quick reply sync issue: detectQuickReplies now prioritizes keywords appearing later in the message
+  - Split "看书电影" into separate options: "看电影" and "阅读", added "旅行" option
+  - Updated opening message to explain 4-6 person blind box dinner/bar concept
+  - Added smooth ending guidance to transition users to personality test
+  - Added "追问注意事项" section to prevent awkward parenthetical questions
+  - Gender-aware UserAvatar component: Heart icon (pink) for female, Smile icon (blue) for male
+
 - **小悦对话注册优化 - 信息维度对齐与追问逻辑 (Dec 13, 2025):**
   - Enhanced XiaoyueCollectedInfo interface with new fields: intent, hasPets, petTypes, hasSiblings, relationshipStatus, hometown, languagesComfort
   - Upgraded 职业/行业 and 活动意图 from optional to required fields for better matching
