@@ -664,8 +664,9 @@ function detectQuickReplies(lastMessage: string): QuickReplyResult {
     let foundCount = 0;
     
     // 找到该配置中所有关键词在消息中最后出现的位置
+    // 注意：将关键词也转为小写以进行不区分大小写的匹配
     for (const kw of config.keywords) {
-      const pos = lowerMsg.lastIndexOf(kw);
+      const pos = lowerMsg.lastIndexOf(kw.toLowerCase());
       if (pos >= 0) {
         foundCount++;
         if (pos > maxPosition) {
