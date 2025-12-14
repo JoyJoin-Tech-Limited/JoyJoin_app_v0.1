@@ -719,11 +719,38 @@ function MessageBubble({
     12 // 每个字12ms（加快一倍）
   );
 
+  // Ref guard to ensure onTypingComplete is called exactly once per message
+  const hasCalledCompleteRef = useRef(false);
+  
+  // Reset the guard when message content changes
   useEffect(() => {
+    hasCalledCompleteRef.current = false;
+  }, [message.content]);
+  
+  // Call onTypingComplete when:
+  // 1. Typing animation completes naturally (isComplete && shouldAnimate)
+  // 2. OR message had isTypingAnimation=true but it became false (interrupted or short message)
+  useEffect(() => {
+    if (hasCalledCompleteRef.current) return;
+    
+    // Natural completion: typing finished while still animating
     if (isComplete && shouldAnimate && onTypingComplete) {
+      hasCalledCompleteRef.current = true;
       onTypingComplete();
     }
   }, [isComplete, shouldAnimate, onTypingComplete]);
+  
+  // Handle case where message.isTypingAnimation becomes false (marked as completed externally)
+  useEffect(() => {
+    if (hasCalledCompleteRef.current) return;
+    
+    // If this was an assistant message that was supposed to animate but isTypingAnimation is now false
+    // (either short message or interrupted), call completion
+    if (message.role === "assistant" && !message.isTypingAnimation && onTypingComplete) {
+      hasCalledCompleteRef.current = true;
+      onTypingComplete();
+    }
+  }, [message.role, message.isTypingAnimation, onTypingComplete]);
 
   const content = shouldAnimate ? displayedText : message.content;
   const emotion = message.role === "assistant" ? detectEmotion(message.content) : "neutral";
@@ -749,8 +776,34 @@ function MessageBubble({
     [message.content]
   );
   
+  // 逐行显示状态 - 用于多行消息逐条出现效果
+  const [visibleLineCount, setVisibleLineCount] = useState(0);
+  
+  // 是否应该显示逐行效果：打字完成且有多行
+  const shouldShowMultiLine = originalLines.length > 1 && (!shouldAnimate || isComplete);
+  
+  // 逐行显示效果：打字动画完成后，每350ms显示下一行
+  useEffect(() => {
+    if (shouldShowMultiLine) {
+      if (visibleLineCount === 0) {
+        // 初始显示第一行
+        setVisibleLineCount(1);
+      } else if (visibleLineCount < originalLines.length) {
+        const timer = setTimeout(() => {
+          setVisibleLineCount(prev => prev + 1);
+        }, 350); // 350ms 间隔
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [shouldShowMultiLine, originalLines.length, visibleLineCount]);
+  
+  // 重置：当消息内容变化时重置计数
+  useEffect(() => {
+    setVisibleLineCount(0);
+  }, [message.content]);
+  
   // 正在打字动画中或只有一行时，显示单个气泡
-  if (shouldAnimate || originalLines.length <= 1) {
+  if ((shouldAnimate && !isComplete) || originalLines.length <= 1) {
     return (
       <SingleBubble
         content={content}
@@ -764,19 +817,27 @@ function MessageBubble({
     );
   }
 
-  // 动画完成后，多行分别显示为独立气泡
+  // 动画完成后，多行逐条显示为独立气泡
+  const visibleLines = originalLines.slice(0, visibleLineCount);
+  
   return (
     <div className="space-y-2">
-      {originalLines.map((line, idx) => (
-        <SingleBubble
+      {visibleLines.map((line, idx) => (
+        <motion.div
           key={idx}
-          content={line}
-          role="assistant"
-          showAvatar={idx === 0}
-          emotion={emotion}
-          userGender={userGender}
-          collectedInfo={collectedInfo}
-        />
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+        >
+          <SingleBubble
+            content={line}
+            role="assistant"
+            showAvatar={idx === 0}
+            emotion={emotion}
+            userGender={userGender}
+            collectedInfo={collectedInfo}
+          />
+        </motion.div>
       ))}
     </div>
   );
@@ -970,12 +1031,20 @@ export default function ChatRegistrationPage() {
     }
   }, [infoCount, prevInfoCount]);
 
+  // AbortController for opening message sequence
+  const openingAbortRef = useRef<AbortController | null>(null);
+  
+  // Typing completion promise resolver for sequential message display
+  const typingCompleteResolverRef = useRef<(() => void) | null>(null);
+  
   // 清理timeout在组件卸载时
   useEffect(() => {
     return () => {
       if (starTimeoutRef.current) {
         clearTimeout(starTimeoutRef.current);
       }
+      // 取消开场白序列
+      openingAbortRef.current?.abort();
     };
   }, []);
 
@@ -985,12 +1054,86 @@ export default function ChatRegistrationPage() {
       return res.json();
     },
     onSuccess: (data) => {
-      setMessages([{
-        role: "assistant",
-        content: data.message,
-        timestamp: new Date(),
-        isTypingAnimation: true
-      }]);
+      // 取消之前正在进行的开场白序列
+      openingAbortRef.current?.abort();
+      const abortController = new AbortController();
+      openingAbortRef.current = abortController;
+      
+      // 将开场白分割成多条消息逐条显示
+      const fullMessage = data.message as string;
+      
+      // 按双换行分割成多个段落
+      const paragraphs = fullMessage.split('\n\n').filter(p => p.trim());
+      
+      // 如果只有1-2段，作为一条消息显示
+      if (paragraphs.length <= 2) {
+        setMessages([{
+          role: "assistant",
+          content: fullMessage,
+          timestamp: new Date(),
+          isTypingAnimation: true
+        }]);
+      } else {
+        // 多段开场白：使用async loop依次显示每个段落（每个都带打字动画）
+        const showParagraphsSequentially = async () => {
+          // 第一段立即显示（带打字动画）
+          setMessages([{
+            role: "assistant",
+            content: paragraphs[0],
+            timestamp: new Date(),
+            isTypingAnimation: true
+          }]);
+          
+          // 后续段落依次添加，等待真正的typing完成
+          for (let i = 1; i < paragraphs.length; i++) {
+            // 检查是否被取消
+            if (abortController.signal.aborted) return;
+            
+            // 等待前一条消息的打字动画真正完成
+            await new Promise<void>((resolve, reject) => {
+              // 存储resolve函数，会在onTypingComplete回调时被调用
+              typingCompleteResolverRef.current = resolve;
+              
+              // 安全超时：最多等5秒（防止意外情况）
+              const timeoutId = setTimeout(() => {
+                typingCompleteResolverRef.current = null;
+                resolve();
+              }, 5000);
+              
+              abortController.signal.addEventListener('abort', () => {
+                clearTimeout(timeoutId);
+                typingCompleteResolverRef.current = null;
+                reject(new Error('Aborted'));
+              }, { once: true });
+            }).catch(() => {});
+            
+            // 再次检查是否被取消
+            if (abortController.signal.aborted) return;
+            
+            // 添加400ms间隔让用户有时间阅读
+            await new Promise<void>((resolve, reject) => {
+              const timeoutId = setTimeout(resolve, 400);
+              abortController.signal.addEventListener('abort', () => {
+                clearTimeout(timeoutId);
+                reject(new Error('Aborted'));
+              }, { once: true });
+            }).catch(() => {});
+            
+            if (abortController.signal.aborted) return;
+            
+            // 添加下一条消息（带打字动画）
+            setMessages(prev => [...prev, {
+              role: "assistant",
+              content: paragraphs[i],
+              timestamp: new Date(),
+              isTypingAnimation: true
+            }]);
+          }
+        };
+        
+        showParagraphsSequentially();
+      }
+      
       setConversationHistory(data.conversationHistory);
     },
     onError: () => {
@@ -1238,9 +1381,15 @@ export default function ChatRegistrationPage() {
               userGender={collectedInfo.gender}
               collectedInfo={collectedInfo}
               onTypingComplete={() => {
+                // 标记该消息的打字动画已完成
                 setMessages(prev => prev.map((m, i) => 
                   i === index ? { ...m, isTypingAnimation: false } : m
                 ));
+                // 通知等待中的开场白序列可以继续
+                if (typingCompleteResolverRef.current) {
+                  typingCompleteResolverRef.current();
+                  typingCompleteResolverRef.current = null;
+                }
               }}
             />
           ))}
