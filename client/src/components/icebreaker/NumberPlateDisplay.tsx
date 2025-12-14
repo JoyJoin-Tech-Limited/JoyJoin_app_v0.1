@@ -19,10 +19,11 @@ interface NumberPlateDisplayProps {
   myUserId: string;
   assignments: NumberAssignment[];
   currentSpeaker?: number;
-  onReady?: () => void;
+  onReady?: (isAutoVote?: boolean) => void;
   isReady?: boolean;
   readyCount: number;
   totalCount: number;
+  autoReadyTimeoutSeconds?: number;
 }
 
 export function NumberPlateDisplay({
@@ -34,9 +35,12 @@ export function NumberPlateDisplay({
   isReady = false,
   readyCount,
   totalCount,
+  autoReadyTimeoutSeconds = 60,
 }: NumberPlateDisplayProps) {
   const [showReveal, setShowReveal] = useState(true);
   const [revealComplete, setRevealComplete] = useState(false);
+  const [countdown, setCountdown] = useState(autoReadyTimeoutSeconds);
+  const [autoVoteTriggered, setAutoVoteTriggered] = useState(false);
   const isMyTurn = myNumberPlate === currentSpeaker;
   const sortedAssignments = [...assignments].sort((a, b) => a.numberPlate - b.numberPlate);
 
@@ -48,6 +52,31 @@ export function NumberPlateDisplay({
       return () => clearTimeout(timer);
     }
   }, [myNumberPlate]);
+
+  useEffect(() => {
+    if (isReady) {
+      return;
+    }
+    
+    setCountdown(autoReadyTimeoutSeconds);
+    setAutoVoteTriggered(false);
+    
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          if (onReady) {
+            setAutoVoteTriggered(true);
+            onReady(true);
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [isReady, autoReadyTimeoutSeconds, onReady]);
 
   const getArchetypeInitial = (archetype: string | null | undefined): string => {
     if (!archetype) return '';
@@ -237,15 +266,49 @@ export function NumberPlateDisplay({
             <motion.div
               className="h-full bg-primary"
               initial={{ width: 0 }}
-              animate={{ width: `${(readyCount / totalCount) * 100}%` }}
+              animate={{ width: `${(readyCount / Math.max(totalCount, 1)) * 100}%` }}
             />
           </div>
         </div>
         
+        {!isReady && countdown > 0 && (
+          <div className="flex items-center justify-center gap-2 mb-3 text-sm text-muted-foreground">
+            <div className="relative w-6 h-6">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-muted/30"
+                />
+                <motion.circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  className={countdown <= 10 ? 'text-orange-500' : 'text-primary'}
+                  strokeDasharray={2 * Math.PI * 10}
+                  animate={{ strokeDashoffset: 2 * Math.PI * 10 * (1 - countdown / autoReadyTimeoutSeconds) }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                />
+              </svg>
+            </div>
+            <span className={countdown <= 10 ? 'text-orange-500 font-medium' : ''} data-testid="text-countdown">
+              {countdown}秒后自动准备
+            </span>
+          </div>
+        )}
+        
         <Button
           className="w-full"
           size="lg"
-          onClick={onReady}
+          onClick={() => onReady?.(false)}
           disabled={isReady}
           data-testid="button-ready"
         >

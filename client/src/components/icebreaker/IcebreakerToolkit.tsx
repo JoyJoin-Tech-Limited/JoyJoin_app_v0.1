@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,8 @@ interface IcebreakerToolkitProps {
   readyCount: number;
   totalCount: number;
   isReady: boolean;
-  onReady: () => void;
+  onReady: (isAutoVote?: boolean) => void;
+  autoReadyTimeoutSeconds?: number;
 }
 
 const difficultyColors = {
@@ -62,9 +63,35 @@ export function IcebreakerToolkit({
   totalCount,
   isReady,
   onReady,
+  autoReadyTimeoutSeconds = 60,
 }: IcebreakerToolkitProps) {
   const [activeTab, setActiveTab] = useState<'topics' | 'games'>('topics');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(autoReadyTimeoutSeconds);
+  const [autoVoteTriggered, setAutoVoteTriggered] = useState(false);
+
+  useEffect(() => {
+    if (isReady) {
+      return;
+    }
+    
+    setCountdown(autoReadyTimeoutSeconds);
+    setAutoVoteTriggered(false);
+    
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setAutoVoteTriggered(true);
+          onReady(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [isReady, autoReadyTimeoutSeconds, onReady]);
 
   const filteredGames = useMemo(() => {
     if (!selectedCategory) return icebreakerGames;
@@ -316,10 +343,44 @@ export function IcebreakerToolkit({
           </div>
         </div>
         
+        {!isReady && countdown > 0 && (
+          <div className="flex items-center justify-center gap-2 mb-3 text-sm text-muted-foreground">
+            <div className="relative w-6 h-6">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-muted/30"
+                />
+                <motion.circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  className={countdown <= 10 ? 'text-orange-500' : 'text-primary'}
+                  strokeDasharray={2 * Math.PI * 10}
+                  animate={{ strokeDashoffset: 2 * Math.PI * 10 * (1 - countdown / autoReadyTimeoutSeconds) }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                />
+              </svg>
+            </div>
+            <span className={countdown <= 10 ? 'text-orange-500 font-medium' : ''} data-testid="text-countdown">
+              {countdown}秒后自动准备
+            </span>
+          </div>
+        )}
+        
         <Button
           className="w-full"
           size="lg"
-          onClick={onReady}
+          onClick={() => onReady(false)}
           disabled={isReady}
           data-testid="button-ready-next"
         >
