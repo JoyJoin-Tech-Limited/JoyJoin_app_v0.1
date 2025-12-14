@@ -834,9 +834,10 @@ function MessageBubble({
   collectedInfo?: CollectedInfo;
   onTypingComplete?: () => void;
 }) {
-  // 短消息（≤15字）跳过打字动画
+  // 空消息或短消息（≤15字）跳过打字动画
+  const isEmptyMessage = !message.content.trim();
   const isShortMessage = message.content.length <= 15;
-  const shouldAnimate = message.role === "assistant" && isLatest && message.isTypingAnimation && !isShortMessage;
+  const shouldAnimate = message.role === "assistant" && isLatest && message.isTypingAnimation && !isShortMessage && !isEmptyMessage;
   const { displayedText, isComplete } = useTypingEffect(
     message.content, 
     shouldAnimate || false,
@@ -1481,7 +1482,8 @@ export default function ChatRegistrationPage() {
   const quickReplyResult = useMemo(() => {
     if (isTyping || isComplete || messages.length === 0) return { options: [], multiSelect: false };
     const lastAssistantMessage = [...messages].reverse().find(m => m.role === "assistant");
-    if (!lastAssistantMessage) return { options: [], multiSelect: false };
+    // 只有当消息有实际内容时才显示快捷选项
+    if (!lastAssistantMessage || !lastAssistantMessage.content.trim()) return { options: [], multiSelect: false };
     return detectQuickReplies(lastAssistantMessage.content);
   }, [messages, isTyping, isComplete]);
 
