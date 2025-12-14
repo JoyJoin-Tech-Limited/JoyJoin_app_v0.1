@@ -313,6 +313,20 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 88
   },
   {
+    keywords: ["菜系", "日料", "粤菜", "火锅", "西餐", "川菜", "湘菜", "东南亚", "韩餐", "偏好", "口味"],
+    options: [
+      { text: "日料", icon: Coffee },
+      { text: "粤菜/港式", icon: Coffee },
+      { text: "火锅/川湘菜", icon: Coffee },
+      { text: "西餐", icon: Coffee },
+      { text: "东南亚菜", icon: Coffee },
+      { text: "韩餐", icon: Coffee },
+      { text: "各种都爱", icon: Sparkles }
+    ],
+    multiSelect: true,
+    priority: 89  // 比通用兴趣高，确保问菜系时显示菜系选项
+  },
+  {
     keywords: ["工作", "职业", "做什么", "行业", "从事"],
     options: [
       { text: "互联网/科技", icon: Briefcase },
