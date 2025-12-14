@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useIcebreakerTopics, type ParticipantProfile } from '@/hooks/use-icebreaker-topics';
 import { IcebreakerCheckinModal } from '@/components/icebreaker/IcebreakerCheckinModal';
 import { NumberPlateDisplay } from '@/components/icebreaker/NumberPlateDisplay';
-import { IcebreakerToolkit } from '@/components/icebreaker/IcebreakerToolkit';
+import { IcebreakerGallery } from '@/components/icebreaker/IcebreakerGallery';
 import { GameDetailView } from '@/components/icebreaker/GameDetailView';
 import { IcebreakerEndingScreen } from '@/components/icebreaker/IcebreakerEndingScreen';
 import { Button } from '@/components/ui/button';
@@ -227,9 +227,9 @@ export default function IcebreakerDemoPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="h-screen relative pt-4"
+              className="h-screen relative"
             >
-              <IcebreakerToolkit
+              <IcebreakerGallery
                 topics={allTopics}
                 recommendedTopics={recommendedTopics}
                 onSelectTopic={handleSelectTopic}
