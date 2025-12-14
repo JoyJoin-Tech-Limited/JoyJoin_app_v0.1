@@ -1309,6 +1309,17 @@ export default function ChatRegistrationPage() {
     const messageIndex = messages.length;
     let streamedContent = '';
     
+    // 防护：检查conversationHistory是否已初始化
+    if (!conversationHistory || conversationHistory.length === 0) {
+      toast({
+        title: "准备中",
+        description: "小悦还在准备回复，请稍候...",
+        variant: "destructive"
+      });
+      setIsTyping(false);
+      return;
+    }
+    
     setMessages(prev => [...prev, {
       role: "assistant",
       content: '',
