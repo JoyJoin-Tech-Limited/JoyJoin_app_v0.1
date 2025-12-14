@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Clock, CheckCircle2, Sparkles, ChevronRight } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface EventSessionBannerProps {
   eventId: string;
@@ -28,6 +29,7 @@ export default function EventSessionBanner({ eventId, eventDateTime, eventStatus
   const [, setLocation] = useLocation();
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [isVisible, setIsVisible] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const eventTime = new Date(eventDateTime).getTime();
@@ -58,6 +60,14 @@ export default function EventSessionBanner({ eventId, eventDateTime, eventStatus
     },
     onSuccess: (data: { sessionId: string }) => {
       setLocation(`/icebreaker/${data.sessionId}`);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "签到失败",
+        description: "无法创建活动会话，请稍后重试",
+        variant: "destructive",
+      });
+      console.error("[Checkin] Error:", error);
     },
   });
 
@@ -143,6 +153,7 @@ export default function EventSessionBanner({ eventId, eventDateTime, eventStatus
 export function FloatingCheckinButton({ eventId, eventDateTime, eventStatus }: EventSessionBannerProps) {
   const [, setLocation] = useLocation();
   const [isVisible, setIsVisible] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     // Show floating button whenever event status is "matched"
@@ -161,6 +172,14 @@ export function FloatingCheckinButton({ eventId, eventDateTime, eventStatus }: E
     },
     onSuccess: (data: { sessionId: string }) => {
       setLocation(`/icebreaker/${data.sessionId}`);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "签到失败",
+        description: "无法创建活动会话，请稍后重试",
+        variant: "destructive",
+      });
+      console.error("[Checkin] Error:", error);
     },
   });
 
