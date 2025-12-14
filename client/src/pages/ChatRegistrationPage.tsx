@@ -345,8 +345,15 @@ const quickReplyConfigs: QuickReplyConfig[] = [
   {
     keywords: ["方向", "领域", "细分", "ai", "web3", "产品", "技术", "运营", "设计", "开发", "哪个", "具体"],
     options: [
-      { text: "互联网/科技", icon: Briefcase },
-      { text: "金融", icon: Briefcase },
+      { text: "科技互联网", icon: Briefcase },
+      { text: "AI/大数据", icon: Briefcase },
+      { text: "金融投资", icon: Briefcase },
+      { text: "咨询服务", icon: Briefcase },
+      { text: "市场营销", icon: Briefcase },
+      { text: "创意设计", icon: Briefcase },
+      { text: "传媒内容", icon: Briefcase },
+      { text: "医疗健康", icon: Briefcase },
+      { text: "教育培训", icon: Book },
       { text: "学生", icon: Book },
       { text: "自由职业", icon: Sparkles },
       { text: "其他行业", icon: Briefcase }
@@ -356,8 +363,22 @@ const quickReplyConfigs: QuickReplyConfig[] = [
   {
     keywords: ["工作", "职业", "做什么", "行业", "从事", "干什么", "什么工作", "忙什么", "哪行", "上班"],
     options: [
-      { text: "互联网/科技", icon: Briefcase },
-      { text: "金融", icon: Briefcase },
+      { text: "科技互联网", icon: Briefcase },
+      { text: "AI/大数据", icon: Briefcase },
+      { text: "硬科技/芯片", icon: Briefcase },
+      { text: "新能源汽车", icon: Briefcase },
+      { text: "跨境电商", icon: Briefcase },
+      { text: "金融投资", icon: Briefcase },
+      { text: "咨询服务", icon: Briefcase },
+      { text: "市场营销", icon: Briefcase },
+      { text: "创意设计", icon: Briefcase },
+      { text: "传媒内容", icon: Briefcase },
+      { text: "医疗健康", icon: Briefcase },
+      { text: "教育培训", icon: Book },
+      { text: "法律合规", icon: Briefcase },
+      { text: "地产建筑", icon: Briefcase },
+      { text: "航空酒店旅游", icon: Briefcase },
+      { text: "生活方式", icon: Briefcase },
       { text: "学生", icon: Book },
       { text: "自由职业", icon: Sparkles },
       { text: "其他行业", icon: Briefcase }
@@ -620,7 +641,62 @@ function UserAvatar({ gender }: { gender?: string }) {
   );
 }
 
+// 单行气泡组件
+function SingleBubble({ 
+  content, 
+  role, 
+  showAvatar, 
+  emotion, 
+  userGender, 
+  collectedInfo,
+  isTyping
+}: { 
+  content: string;
+  role: "user" | "assistant";
+  showAvatar: boolean;
+  emotion: XiaoyueEmotion;
+  userGender?: string;
+  collectedInfo?: CollectedInfo;
+  isTyping?: boolean;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className={`flex gap-3 ${role === "user" ? "flex-row-reverse" : ""}`}
+    >
+      {role === "assistant" ? (
+        showAvatar ? (
+          <XiaoyueAvatar emotion={emotion} />
+        ) : (
+          <div className="w-8 flex-shrink-0" />
+        )
+      ) : (
+        <EvolvingAvatar 
+          clarityLevel={calculateClarityLevel(collectedInfo || {})}
+          gender={userGender === '女性' || userGender === '女生' ? 'female' : userGender === '男性' || userGender === '男生' ? 'male' : 'unknown'}
+          size={36}
+        />
+      )}
+      <Card className={`max-w-[80%] p-3 ${
+        role === "user" 
+          ? "bg-primary text-primary-foreground" 
+          : "bg-muted"
+      }`}>
+        <p className="text-sm whitespace-pre-wrap">
+          {content}
+          {isTyping && (
+            <span className="inline-block w-0.5 h-4 bg-current ml-0.5 animate-pulse" />
+          )}
+        </p>
+      </Card>
+    </motion.div>
+  );
+}
+
 // 单条消息组件（支持打字效果和小悦表情）
+// 对于AI消息，每行成为单独的气泡
 function MessageBubble({ 
   message, 
   isLatest,
@@ -652,34 +728,57 @@ function MessageBubble({
   const content = shouldAnimate ? displayedText : message.content;
   const emotion = message.role === "assistant" ? detectEmotion(message.content) : "neutral";
 
+  // 用户消息：单个气泡
+  if (message.role === "user") {
+    return (
+      <SingleBubble
+        content={content}
+        role="user"
+        showAvatar={true}
+        emotion={emotion}
+        userGender={userGender}
+        collectedInfo={collectedInfo}
+      />
+    );
+  }
+
+  // AI消息：动画完成后，每行成为单独的气泡
+  // 使用原始message.content进行分割，确保稳定性
+  const originalLines = useMemo(() => 
+    message.content.split('\n').filter(line => line.trim() !== ''),
+    [message.content]
+  );
+  
+  // 正在打字动画中或只有一行时，显示单个气泡
+  if (shouldAnimate || originalLines.length <= 1) {
+    return (
+      <SingleBubble
+        content={content}
+        role="assistant"
+        showAvatar={true}
+        emotion={emotion}
+        userGender={userGender}
+        collectedInfo={collectedInfo}
+        isTyping={shouldAnimate && !isComplete}
+      />
+    );
+  }
+
+  // 动画完成后，多行分别显示为独立气泡
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`flex gap-3 ${message.role === "user" ? "flex-row-reverse" : ""}`}
-    >
-      {message.role === "assistant" ? (
-        <XiaoyueAvatar emotion={emotion} />
-      ) : (
-        <EvolvingAvatar 
-          clarityLevel={calculateClarityLevel(collectedInfo || {})}
-          gender={userGender === '女性' || userGender === '女生' ? 'female' : userGender === '男性' || userGender === '男生' ? 'male' : 'unknown'}
-          size={36}
+    <div className="space-y-2">
+      {originalLines.map((line, idx) => (
+        <SingleBubble
+          key={idx}
+          content={line}
+          role="assistant"
+          showAvatar={idx === 0}
+          emotion={emotion}
+          userGender={userGender}
+          collectedInfo={collectedInfo}
         />
-      )}
-      <Card className={`max-w-[80%] p-3 ${
-        message.role === "user" 
-          ? "bg-primary text-primary-foreground" 
-          : "bg-muted"
-      }`}>
-        <p className="text-sm whitespace-pre-wrap">
-          {content}
-          {shouldAnimate && !isComplete && (
-            <span className="inline-block w-0.5 h-4 bg-current ml-0.5 animate-pulse" />
-          )}
-        </p>
-      </Card>
-    </motion.div>
+      ))}
+    </div>
   );
 }
 
