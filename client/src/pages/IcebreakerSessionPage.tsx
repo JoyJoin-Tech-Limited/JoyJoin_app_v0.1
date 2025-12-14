@@ -5,13 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { useIcebreakerWebSocket, type IcebreakerPhase } from '@/hooks/useIcebreakerWebSocket';
 import { useIcebreakerTopics, type ParticipantProfile } from '@/hooks/use-icebreaker-topics';
+import { useWelcomeMessage, useClosingMessage } from '@/hooks/use-icebreaker-messages';
 import { IcebreakerCheckinModal } from '@/components/icebreaker/IcebreakerCheckinModal';
 import { NumberPlateDisplay } from '@/components/icebreaker/NumberPlateDisplay';
 import { IcebreakerToolkit } from '@/components/icebreaker/IcebreakerToolkit';
 import { GameDetailView } from '@/components/icebreaker/GameDetailView';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, WifiOff, RefreshCcw } from 'lucide-react';
+import { Loader2, WifiOff, RefreshCcw, Sparkles } from 'lucide-react';
 import type { TopicCard } from '@shared/topicCards';
 import type { IcebreakerGame } from '@shared/icebreakerGames';
 
@@ -66,6 +67,21 @@ export default function IcebreakerSessionPage() {
     sessionData?.atmosphereType || 'balanced',
     participantProfiles.length > 0
   );
+
+  const welcomeParticipants = participantProfiles.map(p => ({
+    displayName: p.displayName,
+    archetype: p.archetype || null,
+    interests: p.interests,
+  }));
+  
+  const { data: welcomeData } = useWelcomeMessage(
+    welcomeParticipants,
+    sessionData?.eventId,
+    participantProfiles.length > 0
+  );
+  
+  const closingMutation = useClosingMessage();
+  const [closingMessage, setClosingMessage] = useState<string | null>(null);
 
   const {
     state: icebreakerState,
@@ -139,6 +155,20 @@ export default function IcebreakerSessionPage() {
     leave();
     setLocation('/events');
   }, [leave, setLocation]);
+
+  useEffect(() => {
+    if (icebreakerState.phase === 'ended' && !closingMessage && !closingMutation.isPending) {
+      const durationMinutes = Math.max(1, Math.round((icebreakerState.duration || 60) / 60));
+      closingMutation.mutate({
+        participants: welcomeParticipants.length > 0 ? welcomeParticipants : [{ displayName: '参与者', archetype: null }],
+        durationMinutes,
+      }, {
+        onSuccess: (data) => {
+          setClosingMessage(data.message);
+        },
+      });
+    }
+  }, [icebreakerState.phase, icebreakerState.duration, closingMessage, welcomeParticipants]);
 
   if (!sessionId) {
     return (
@@ -222,6 +252,7 @@ export default function IcebreakerSessionPage() {
               isReconnecting={isReconnecting}
               hasCheckedIn={icebreakerState.checkins.some(c => c.userId === user?.id)}
               onCheckin={handleCheckin}
+              welcomeMessage={welcomeData?.message}
               eventTitle={sessionData?.eventId}
             />
           </motion.div>
@@ -318,10 +349,13 @@ export default function IcebreakerSessionPage() {
               <CardContent className="p-6 text-center">
                 <div className="text-4xl mb-4">🎉</div>
                 <h2 className="text-xl font-bold mb-2">破冰结束</h2>
-                {icebreakerState.aiClosingMessage && (
-                  <p className="text-muted-foreground mb-4">
-                    {icebreakerState.aiClosingMessage}
-                  </p>
+                {(icebreakerState.aiClosingMessage || closingMessage) && (
+                  <div className="flex items-center justify-center gap-1 mb-4">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <p className="text-muted-foreground">
+                      {icebreakerState.aiClosingMessage || closingMessage}
+                    </p>
+                  </div>
                 )}
                 <p className="text-sm text-muted-foreground mb-6">
                   活动时长：{Math.round(icebreakerState.duration / 60)} 分钟

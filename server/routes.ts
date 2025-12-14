@@ -3757,6 +3757,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI-powered welcome message for icebreaker session
+  app.post('/api/icebreaker/welcome-message', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { participants, eventTitle } = req.body;
+      
+      if (!participants || !Array.isArray(participants)) {
+        return res.status(400).json({ message: "participants array is required" });
+      }
+      
+      const { generateWelcomeMessage, generateQuickWelcome } = await import('./icebreakerAIService');
+      
+      // Try AI generation, fallback to quick generation
+      let message: string;
+      try {
+        message = await generateWelcomeMessage(participants, eventTitle);
+      } catch {
+        const archetypes = participants.map((p: any) => p.archetype).filter(Boolean);
+        message = await generateQuickWelcome(participants.length, archetypes);
+      }
+      
+      res.json({ message });
+    } catch (error) {
+      console.error("Error generating welcome message:", error);
+      res.status(500).json({ message: "Failed to generate welcome message" });
+    }
+  });
+
+  // AI-powered closing message for icebreaker session
+  app.post('/api/icebreaker/closing-message', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { participants, durationMinutes, topicsDiscussed, gamesPlayed } = req.body;
+      
+      if (!participants || !Array.isArray(participants)) {
+        return res.status(400).json({ message: "participants array is required" });
+      }
+      
+      const { generateClosingMessage } = await import('./icebreakerAIService');
+      
+      const message = await generateClosingMessage(
+        participants,
+        durationMinutes || 0,
+        topicsDiscussed,
+        gamesPlayed
+      );
+      
+      res.json({ message });
+    } catch (error) {
+      console.error("Error generating closing message:", error);
+      res.status(500).json({ message: "Failed to generate closing message" });
+    }
+  });
+
   // Notification endpoints
   app.get('/api/notifications/counts', isPhoneAuthenticated, async (req: any, res) => {
     try {
