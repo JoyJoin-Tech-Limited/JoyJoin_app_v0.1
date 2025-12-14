@@ -2568,7 +2568,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json({ sessionId: newSession.id });
-    } catch (error) {
+    } catch (error: any) {
+      // Handle unique constraint violation (concurrent creation)
+      if (error?.code === '23505' || error?.message?.includes('unique constraint')) {
+        console.log("[EventSession] Unique constraint hit, returning existing session");
+        // Another request already created the session, fetch and return it
+        const existingSession = await storage.getIcebreakerSessionByBlindBoxEventId(req.params.eventId);
+        if (existingSession) {
+          return res.json({ sessionId: existingSession.id });
+        }
+      }
       console.error("[EventSession] Error creating session:", error);
       res.status(500).json({ message: "Failed to create session" });
     }
