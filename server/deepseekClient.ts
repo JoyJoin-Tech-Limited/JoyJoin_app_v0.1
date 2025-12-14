@@ -110,11 +110,18 @@ const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，JoyJoin平台的AI社交助手�
 - 对他们的分享表示真诚兴趣
 - 可以聊得更深入一些
 
-**简短型用户**（回复1-2个字或很简单）：
-- 提供选项降低门槛
-- 不要连续追问太多次
-- 用"A/B/C选择"或"是/否"问题
-- 例如："你平时喜欢什么类型的活动呀？A.美食探店 B.户外运动 C.文艺看展 D.桌游电影，直接回字母就行～"
+**简短型用户**（连续2-3轮回复都很简短，如1-5个字）：
+- **立即切换到快问快答模式**，不再追问细节
+- 每个问题都提供选项，用户直接选就行
+- 一轮可以问多个信息，用选项组合：
+  - "来快问快答～ 城市：A.深圳 B.香港 C.广州 D.其他｜年代：E.00后 F.95后 G.90后 H.85后，回复字母组合就行，比如AE～"
+- 减少寒暄和追问，直奔主题
+- 目标是5轮内完成核心信息收集
+
+**快问快答模式触发条件**：
+- 用户回复≤5个字 连续2次以上
+- 用户直接回复选项字母
+- 用户表达想快点完成（"快点"、"直接问"、"简单点"等）
 
 ## 信息确认环节
 在收集完必须信息后、结束对话前，简短确认一下：
@@ -125,14 +132,10 @@ const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，JoyJoin平台的AI社交助手�
 开场要轻松有趣，先自我介绍，然后自然地问第一个问题（昵称）。
 
 ## 输出格式
-每次回复包含两部分：
-1. 自然的对话内容（给用户看的）
-2. 如果这轮对话收集到了新信息，在回复最后用特殊标记包裹收集到的JSON信息：
-   \`\`\`collected_info
-   {"field": "value"}
-   \`\`\`
+只需要输出自然的对话内容（给用户看的），**不需要输出任何JSON格式的信息**。
+系统会在对话结束后自动从对话历史中提取用户信息，你只需要专注于自然流畅的对话即可。
 
-可用字段：displayName, gender, birthYear, currentCity, occupationDescription, interestsTop, intent, hasPets, petTypes, hasSiblings, relationshipStatus, hometown, languagesComfort, venueStylePreference, topicAvoidances, socialStyle
+**重要**：不要在回复中包含 \`\`\`collected_info 或任何JSON代码块，这会让用户困惑。
 
 ## 结束信号
 **必须同时满足以下条件才能结束**：
@@ -298,6 +301,182 @@ export async function* continueXiaoyueChatStream(
   }
 }
 
+// 字段校验和规范化
+function validateAndNormalizeInfo(info: Partial<XiaoyueCollectedInfo>): XiaoyueCollectedInfo {
+  const normalized: XiaoyueCollectedInfo = {};
+
+  // displayName - 去除空白，过滤无效值
+  if (info.displayName && typeof info.displayName === 'string') {
+    const name = info.displayName.trim();
+    if (name && name !== '保密' && name !== '不透露' && name.length >= 1) {
+      normalized.displayName = name;
+    }
+  }
+
+  // gender - 规范化性别表达
+  if (info.gender && typeof info.gender === 'string') {
+    const g = info.gender.toLowerCase();
+    if (g.includes('女') || g === 'female') {
+      normalized.gender = '女性';
+    } else if (g.includes('男') || g === 'male') {
+      normalized.gender = '男性';
+    } else if (g.includes('保密') || g.includes('不透露')) {
+      normalized.gender = '不透露';
+    } else {
+      normalized.gender = info.gender;
+    }
+  }
+
+  // birthYear - 规范化年龄/年代表达
+  if (info.birthYear !== undefined) {
+    let year = info.birthYear;
+    // 如果是两位数年份(如95)，转换为完整年份
+    if (typeof year === 'number' && year < 100) {
+      year = year >= 0 && year <= 25 ? 2000 + year : 1900 + year;
+    }
+    // 如果是字符串如"95后"
+    if (typeof year === 'string') {
+      const match = (year as string).match(/(\d{2,4})/);
+      if (match) {
+        let y = parseInt(match[1], 10);
+        if (y < 100) {
+          y = y >= 0 && y <= 25 ? 2000 + y : 1900 + y;
+        }
+        year = y;
+      }
+    }
+    if (typeof year === 'number' && year >= 1960 && year <= 2010) {
+      normalized.birthYear = year;
+    }
+  }
+
+  // currentCity - 规范化城市
+  if (info.currentCity && typeof info.currentCity === 'string') {
+    const city = info.currentCity.trim();
+    if (city && city !== '保密' && city !== '不透露') {
+      normalized.currentCity = city;
+    }
+  }
+
+  // occupationDescription - 职业描述
+  if (info.occupationDescription && typeof info.occupationDescription === 'string') {
+    const occ = info.occupationDescription.trim();
+    if (occ && occ !== '保密' && occ !== '不透露' && occ.length >= 1) {
+      normalized.occupationDescription = occ;
+    }
+  }
+
+  // interestsTop - 兴趣数组
+  if (info.interestsTop && Array.isArray(info.interestsTop)) {
+    const interests = info.interestsTop
+      .filter(i => typeof i === 'string' && i.trim())
+      .map(i => i.trim());
+    if (interests.length > 0) {
+      normalized.interestsTop = interests;
+    }
+  }
+
+  // primaryInterests
+  if (info.primaryInterests && Array.isArray(info.primaryInterests)) {
+    const primary = info.primaryInterests
+      .filter(i => typeof i === 'string' && i.trim())
+      .map(i => i.trim());
+    if (primary.length > 0) {
+      normalized.primaryInterests = primary;
+    }
+  }
+
+  // intent - 活动意图
+  const validIntents = ['networking', 'friends', 'discussion', 'fun', 'romance', 'flexible'];
+  if (info.intent && Array.isArray(info.intent)) {
+    const intents = info.intent.filter(i => validIntents.includes(i));
+    if (intents.length > 0) {
+      normalized.intent = intents;
+    }
+  }
+
+  // hasPets
+  if (typeof info.hasPets === 'boolean') {
+    normalized.hasPets = info.hasPets;
+  }
+
+  // petTypes
+  if (info.petTypes && Array.isArray(info.petTypes)) {
+    const pets = info.petTypes.filter(p => typeof p === 'string' && p.trim());
+    if (pets.length > 0) {
+      normalized.petTypes = pets;
+    }
+  }
+
+  // hasSiblings
+  if (typeof info.hasSiblings === 'boolean') {
+    normalized.hasSiblings = info.hasSiblings;
+  }
+
+  // relationshipStatus
+  if (info.relationshipStatus && typeof info.relationshipStatus === 'string') {
+    normalized.relationshipStatus = info.relationshipStatus.trim();
+  }
+
+  // hometown
+  if (info.hometown && typeof info.hometown === 'string') {
+    const ht = info.hometown.trim();
+    if (ht && ht !== '保密' && ht !== '不透露') {
+      normalized.hometown = ht;
+    }
+  }
+
+  // languagesComfort
+  if (info.languagesComfort && Array.isArray(info.languagesComfort)) {
+    const langs = info.languagesComfort.filter(l => typeof l === 'string' && l.trim());
+    if (langs.length > 0) {
+      normalized.languagesComfort = langs;
+    }
+  }
+
+  // venueStylePreference
+  if (info.venueStylePreference && typeof info.venueStylePreference === 'string') {
+    normalized.venueStylePreference = info.venueStylePreference.trim();
+  }
+
+  // topicAvoidances
+  if (info.topicAvoidances && Array.isArray(info.topicAvoidances)) {
+    const avoid = info.topicAvoidances.filter(t => typeof t === 'string' && t.trim());
+    if (avoid.length > 0) {
+      normalized.topicAvoidances = avoid;
+    }
+  }
+
+  // socialStyle
+  if (info.socialStyle && typeof info.socialStyle === 'string') {
+    normalized.socialStyle = info.socialStyle.trim();
+  }
+
+  // additionalNotes
+  if (info.additionalNotes && typeof info.additionalNotes === 'string') {
+    normalized.additionalNotes = info.additionalNotes.trim();
+  }
+
+  return normalized;
+}
+
+// 检查是否满足最低有效信息要求
+export function checkMinimumInfoRequirement(info: XiaoyueCollectedInfo): {
+  isValid: boolean;
+  missingFields: string[];
+} {
+  const missingFields: string[] = [];
+  
+  if (!info.displayName) missingFields.push('昵称');
+  if (!info.currentCity) missingFields.push('城市');
+  if (!info.interestsTop || info.interestsTop.length === 0) missingFields.push('兴趣爱好');
+  
+  return {
+    isValid: missingFields.length === 0,
+    missingFields
+  };
+}
+
 export async function summarizeAndExtractInfo(
   conversationHistory: ChatMessage[]
 ): Promise<XiaoyueCollectedInfo> {
@@ -306,16 +485,22 @@ export async function summarizeAndExtractInfo(
 对话历史：
 ${conversationHistory.filter(m => m.role !== 'system').map(m => `${m.role === 'user' ? '用户' : '小悦'}: ${m.content}`).join('\n')}
 
+请仔细阅读对话，提取用户提供的所有信息。注意：
+1. 如果用户说"95后"、"00后"等，birthYear应该是对应的年份(如1995、2000)
+2. 如果用户说"女生"、"男生"，请规范化为"女性"、"男性"
+3. 兴趣爱好要尽量提取完整，包括用户提到的所有爱好
+4. 活动意图请映射为标准值：networking/friends/discussion/fun/romance/flexible
+
 请返回以下格式的JSON（只包含用户明确提供的信息，没有提供的字段不要包含）：
 {
   "displayName": "用户昵称",
   "gender": "女性/男性/不透露",
   "birthYear": 1995,
-  "currentCity": "深圳/香港/广州/其他",
+  "currentCity": "深圳/香港/广州/其他城市名",
   "occupationDescription": "职业描述",
-  "interestsTop": ["兴趣1", "兴趣2"],
+  "interestsTop": ["兴趣1", "兴趣2", "兴趣3"],
   "primaryInterests": ["主要兴趣"],
-  "intent": ["friends", "networking"], // 活动意图：networking/friends/discussion/fun/romance/flexible
+  "intent": ["friends", "networking"],
   "hasPets": true,
   "petTypes": ["猫", "狗"],
   "hasSiblings": true,
@@ -327,13 +512,13 @@ ${conversationHistory.filter(m => m.role !== 'system').map(m => `${m.role === 'u
   "socialStyle": "群聊型/小组深聊型"
 }
 
-intent字段的有效值：
-- networking: 拓展人脉/职业社交
-- friends: 交朋友/找玩伴
-- discussion: 深度讨论/聊人生
-- fun: 纯玩/吃喝玩乐
-- romance: 浪漫邂逅/脱单
-- flexible: 随缘都可以
+intent字段的有效值映射：
+- networking: 拓展人脉/职业社交/认识同行
+- friends: 交朋友/找玩伴/认识新朋友
+- discussion: 深度讨论/聊人生/聊话题
+- fun: 纯玩/吃喝玩乐/放松
+- romance: 浪漫邂逅/脱单/找对象
+- flexible: 随缘都可以/都行/看情况
 
 只返回JSON，不要其他内容。`;
 
@@ -341,17 +526,19 @@ intent字段的有效值：
     const response = await deepseekClient.chat.completions.create({
       model: 'deepseek-chat',
       messages: [
-        { role: 'system', content: '你是一个信息提取助手，根据对话历史提取结构化信息。' },
+        { role: 'system', content: '你是一个信息提取助手，根据对话历史准确提取用户提供的结构化信息。请仔细阅读每一条用户消息，不要遗漏任何信息。' },
         { role: 'user', content: summaryPrompt }
       ],
-      temperature: 0.3,
-      max_tokens: 500,
+      temperature: 0.2, // 降低温度提高准确性
+      max_tokens: 600,
     });
 
     const content = response.choices[0]?.message?.content || '{}';
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      const rawInfo = JSON.parse(jsonMatch[0]);
+      // 校验和规范化提取的信息
+      return validateAndNormalizeInfo(rawInfo);
     }
     return {};
   } catch (error) {

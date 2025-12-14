@@ -254,6 +254,7 @@ interface QuickReply {
 interface QuickReplyConfig {
   keywords: string[];
   options: QuickReply[];
+  multiSelect?: boolean; // 是否支持多选
 }
 
 const quickReplyConfigs: QuickReplyConfig[] = [
@@ -298,7 +299,8 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       { text: "音乐", icon: Music },
       { text: "摄影", icon: Camera },
       { text: "旅行", icon: MapPin }
-    ]
+    ],
+    multiSelect: true
   },
   {
     keywords: ["工作", "职业", "做什么", "行业", "从事"],
@@ -347,9 +349,15 @@ const quickReplyConfigs: QuickReplyConfig[] = [
   }
 ];
 
+// 检测结果接口
+interface QuickReplyResult {
+  options: QuickReply[];
+  multiSelect: boolean;
+}
+
 // 检测最后一条消息是否匹配快捷回复
 // 策略：找到最后出现的关键词，因为那通常是当前正在问的问题
-function detectQuickReplies(lastMessage: string): QuickReply[] {
+function detectQuickReplies(lastMessage: string): QuickReplyResult {
   const lowerMsg = lastMessage.toLowerCase();
   
   let bestMatch: { config: QuickReplyConfig; lastPosition: number } | null = null;
@@ -370,7 +378,9 @@ function detectQuickReplies(lastMessage: string): QuickReply[] {
     }
   }
   
-  return bestMatch ? bestMatch.config.options : [];
+  return bestMatch 
+    ? { options: bestMatch.config.options, multiSelect: bestMatch.config.multiSelect || false }
+    : { options: [], multiSelect: false };
 }
 
 interface ChatMessage {
@@ -529,6 +539,9 @@ export default function ChatRegistrationPage() {
   const timeTheme = useMemo(() => getTimeTheme(), []);
   const themeConfig = timeThemeConfig[timeTheme];
   const starTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // 多选快捷回复状态
+  const [selectedQuickReplies, setSelectedQuickReplies] = useState<Set<string>>(new Set());
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -735,16 +748,37 @@ export default function ChatRegistrationPage() {
   };
 
   // 检测快捷回复选项
-  const quickReplies = useMemo(() => {
-    if (isTyping || isComplete || messages.length === 0) return [];
+  const quickReplyResult = useMemo(() => {
+    if (isTyping || isComplete || messages.length === 0) return { options: [], multiSelect: false };
     const lastAssistantMessage = [...messages].reverse().find(m => m.role === "assistant");
-    if (!lastAssistantMessage) return [];
+    if (!lastAssistantMessage) return { options: [], multiSelect: false };
     return detectQuickReplies(lastAssistantMessage.content);
   }, [messages, isTyping, isComplete]);
+
+  // 当问题变化时清空已选
+  useEffect(() => {
+    setSelectedQuickReplies(new Set());
+  }, [quickReplyResult.options]);
 
   // 快捷回复点击处理
   const handleQuickReply = (text: string) => {
     if (isTyping) return;
+    
+    // 如果是多选模式，切换选中状态而不是立即发送
+    if (quickReplyResult.multiSelect) {
+      setSelectedQuickReplies(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(text)) {
+          newSet.delete(text);
+        } else {
+          newSet.add(text);
+        }
+        return newSet;
+      });
+      return;
+    }
+    
+    // 单选模式，立即发送
     setMessages(prev => [...prev, {
       role: "user",
       content: text,
@@ -752,6 +786,20 @@ export default function ChatRegistrationPage() {
     }]);
     setIsTyping(true);
     sendMessageMutation.mutate(text);
+  };
+
+  // 多选确认发送
+  const handleMultiSelectSend = () => {
+    if (isTyping || selectedQuickReplies.size === 0) return;
+    const selectedText = Array.from(selectedQuickReplies).join("、");
+    setMessages(prev => [...prev, {
+      role: "user",
+      content: selectedText,
+      timestamp: new Date()
+    }]);
+    setSelectedQuickReplies(new Set());
+    setIsTyping(true);
+    sendMessageMutation.mutate(selectedText);
   };
 
   const TimeIcon = themeConfig.icon;
@@ -848,17 +896,33 @@ export default function ChatRegistrationPage() {
 
       {/* 快捷回复气泡 */}
       <AnimatePresence>
-        {quickReplies.length > 0 && !isTyping && (
+        {quickReplyResult.options.length > 0 && !isTyping && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             className="px-4 py-3 border-t bg-muted/30"
           >
-            <p className="text-xs text-muted-foreground mb-2">快捷回复：</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-muted-foreground">
+                {quickReplyResult.multiSelect ? "可多选（点击选择后发送）：" : "快捷回复："}
+              </p>
+              {quickReplyResult.multiSelect && selectedQuickReplies.size > 0 && (
+                <Button
+                  size="sm"
+                  onClick={handleMultiSelectSend}
+                  className="h-7 text-xs"
+                  data-testid="button-send-multi-select"
+                >
+                  <Send className="w-3 h-3 mr-1" />
+                  发送 ({selectedQuickReplies.size})
+                </Button>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
-              {quickReplies.map((reply, index) => {
+              {quickReplyResult.options.map((reply, index) => {
                 const IconComponent = reply.icon;
+                const isSelected = selectedQuickReplies.has(reply.text);
                 return (
                   <motion.button
                     key={reply.text}
@@ -866,10 +930,14 @@ export default function ChatRegistrationPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.05 }}
                     onClick={() => handleQuickReply(reply.text)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-background border border-border hover:border-primary hover:bg-primary/5 transition-all text-sm"
+                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full border transition-all text-sm ${
+                      isSelected 
+                        ? "bg-primary text-primary-foreground border-primary" 
+                        : "bg-background border-border hover:border-primary hover:bg-primary/5"
+                    }`}
                     data-testid={`quick-reply-${reply.text}`}
                   >
-                    {IconComponent && <IconComponent className="w-3.5 h-3.5 text-primary" />}
+                    {IconComponent && <IconComponent className={`w-3.5 h-3.5 ${isSelected ? "" : "text-primary"}`} />}
                     <span>{reply.text}</span>
                   </motion.button>
                 );
