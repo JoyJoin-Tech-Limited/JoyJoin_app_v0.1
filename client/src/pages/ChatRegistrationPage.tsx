@@ -567,7 +567,7 @@ function MessageBubble({
         <EvolvingAvatar 
           clarityLevel={calculateClarityLevel(collectedInfo || {})}
           gender={userGender === '女性' || userGender === '女生' ? 'female' : userGender === '男性' || userGender === '男生' ? 'male' : 'unknown'}
-          size={32}
+          size={36}
         />
       )}
       <Card className={`max-w-[80%] p-3 ${

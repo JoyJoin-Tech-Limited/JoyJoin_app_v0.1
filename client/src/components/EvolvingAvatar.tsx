@@ -65,12 +65,12 @@ export default function EvolvingAvatar({
   }, [clarityLevel]);
 
   const getOpacity = () => {
-    const opacityMap = [0.15, 0.28, 0.45, 0.65, 0.82, 0.9];
+    const opacityMap = [0.55, 0.65, 0.75, 0.82, 0.88, 0.95];
     return opacityMap[Math.min(clarityLevel, 5)];
   };
 
   const getBlur = () => {
-    const blurMap = [8, 6, 4, 2, 0.5, 0];
+    const blurMap = [3, 2, 1.5, 1, 0.5, 0];
     return blurMap[Math.min(clarityLevel, 5)];
   };
 
@@ -111,16 +111,16 @@ export default function EvolvingAvatar({
 
           {clarityLevel === 0 && (
             <g className="animate-pulse">
-              <circle cx="50" cy="50" r="35" fill="none" stroke={baseColor.primary} strokeWidth="0.5" opacity="0.3" />
-              <circle cx="50" cy="50" r="28" fill="none" stroke={baseColor.secondary} strokeWidth="0.3" opacity="0.2" />
+              <circle cx="50" cy="50" r="35" fill="none" stroke={baseColor.primary} strokeWidth="1.5" opacity="0.6" />
+              <circle cx="50" cy="50" r="28" fill="none" stroke={baseColor.secondary} strokeWidth="1" opacity="0.5" />
               {[...Array(8)].map((_, i) => (
                 <circle
                   key={i}
                   cx={50 + Math.cos(i * Math.PI / 4) * 20}
                   cy={50 + Math.sin(i * Math.PI / 4) * 20}
-                  r="1.5"
+                  r="2.5"
                   fill={baseColor.primary}
-                  opacity="0.4"
+                  opacity="0.7"
                 />
               ))}
               <motion.circle
@@ -128,7 +128,7 @@ export default function EvolvingAvatar({
                 cy="50"
                 r="25"
                 fill={`url(#faceGradient-${gender})`}
-                opacity="0.15"
+                opacity="0.4"
                 animate={{ scale: [1, 1.03, 1] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
               />
@@ -137,20 +137,20 @@ export default function EvolvingAvatar({
 
           {clarityLevel === 1 && (
             <g>
-              <ellipse cx="50" cy="48" rx="28" ry="32" fill={`url(#faceGradient-${gender})`} opacity="0.4" />
-              <ellipse cx="50" cy="35" rx="22" ry="12" fill={baseColor.primary} opacity="0.2" />
-              <rect x="35" y="42" width="30" height="8" rx="4" fill={baseColor.secondary} opacity="0.15" />
+              <ellipse cx="50" cy="48" rx="28" ry="32" fill={`url(#faceGradient-${gender})`} opacity="0.7" />
+              <ellipse cx="50" cy="35" rx="22" ry="12" fill={baseColor.primary} opacity="0.45" />
+              <rect x="35" y="42" width="30" height="8" rx="4" fill={baseColor.secondary} opacity="0.35" />
             </g>
           )}
 
           {clarityLevel === 2 && (
             <g>
-              <ellipse cx="50" cy="50" rx="30" ry="35" fill={`url(#faceGradient-${gender})`} opacity="0.5" />
-              <ellipse cx="50" cy="32" rx="25" ry="15" fill={baseColor.primary} opacity="0.35" />
-              <ellipse cx="40" cy="45" rx="5" ry="3" fill={baseColor.primary} opacity="0.3" />
-              <ellipse cx="60" cy="45" rx="5" ry="3" fill={baseColor.primary} opacity="0.3" />
-              <ellipse cx="50" cy="55" rx="3" ry="2" fill={baseColor.primary} opacity="0.25" />
-              <path d="M 42 65 Q 50 70 58 65" stroke={baseColor.primary} strokeWidth="2" fill="none" opacity="0.25" />
+              <ellipse cx="50" cy="50" rx="30" ry="35" fill={`url(#faceGradient-${gender})`} opacity="0.75" />
+              <ellipse cx="50" cy="32" rx="25" ry="15" fill={baseColor.primary} opacity="0.55" />
+              <ellipse cx="40" cy="45" rx="5" ry="3" fill={baseColor.primary} opacity="0.5" />
+              <ellipse cx="60" cy="45" rx="5" ry="3" fill={baseColor.primary} opacity="0.5" />
+              <ellipse cx="50" cy="55" rx="3" ry="2" fill={baseColor.primary} opacity="0.45" />
+              <path d="M 42 65 Q 50 70 58 65" stroke={baseColor.primary} strokeWidth="2" fill="none" opacity="0.45" />
             </g>
           )}
 
