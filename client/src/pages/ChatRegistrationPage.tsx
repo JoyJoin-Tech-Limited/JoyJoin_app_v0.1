@@ -258,13 +258,15 @@ interface QuickReply {
 interface QuickReplyConfig {
   keywords: string[];
   options: QuickReply[];
-  multiSelect?: boolean; // 是否支持多选
+  multiSelect?: boolean;
+  priority?: number;
 }
 
 const quickReplyConfigs: QuickReplyConfig[] = [
   {
     keywords: ["称呼", "昵称", "名字", "怎么叫"],
-    options: [] // 昵称需要用户输入，不提供快捷选项
+    options: [],
+    priority: 90 // 昵称需要用户输入，不提供快捷选项
   },
   {
     keywords: ["性别", "男生", "女生", "小哥哥", "小姐姐"],
@@ -272,7 +274,8 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       { text: "女生", icon: Heart },
       { text: "男生", icon: Smile },
       { text: "保密", icon: Sparkles }
-    ]
+    ],
+    priority: 85
   },
   {
     keywords: ["年龄", "年代", "几几年", "多大", "岁", "后"],
@@ -281,7 +284,8 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       { text: "95后" },
       { text: "90后" },
       { text: "85后" }
-    ]
+    ],
+    priority: 80
   },
   {
     keywords: ["城市", "哪里", "在哪", "深圳", "香港", "广州"],
@@ -290,7 +294,8 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       { text: "香港", icon: MapPin },
       { text: "广州", icon: MapPin },
       { text: "其他城市", icon: MapPin }
-    ]
+    ],
+    priority: 75
   },
   {
     keywords: ["兴趣", "爱好", "喜欢", "平时", "活动"],
@@ -304,7 +309,8 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       { text: "摄影", icon: Camera },
       { text: "旅行", icon: MapPin }
     ],
-    multiSelect: true
+    multiSelect: true,
+    priority: 88
   },
   {
     keywords: ["工作", "职业", "做什么", "行业", "从事"],
@@ -314,7 +320,8 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       { text: "学生", icon: Book },
       { text: "自由职业", icon: Sparkles },
       { text: "其他行业", icon: Briefcase }
-    ]
+    ],
+    priority: 82
   },
   {
     keywords: ["想要", "期待", "目的", "意图", "来这里", "JoyJoin"],
@@ -323,7 +330,8 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       { text: "拓展人脉", icon: Briefcase },
       { text: "吃喝玩乐", icon: Coffee },
       { text: "随缘都可以", icon: Sparkles }
-    ]
+    ],
+    priority: 78
   },
   {
     keywords: ["宠物", "毛孩子", "猫", "狗", "养"],
@@ -332,7 +340,8 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       { text: "有狗狗🐕" },
       { text: "都有！" },
       { text: "没有养" }
-    ]
+    ],
+    priority: 70
   },
   {
     keywords: ["感情", "单身", "恋爱", "对象", "另一半"],
@@ -341,7 +350,8 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       { text: "恋爱中" },
       { text: "已婚" },
       { text: "保密" }
-    ]
+    ],
+    priority: 70
   },
   {
     keywords: ["确认", "对吗", "没问题", "有要改"],
@@ -349,7 +359,8 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       { text: "没问题！" },
       { text: "对的~" },
       { text: "需要改一下" }
-    ]
+    ],
+    priority: 50
   }
 ];
 
@@ -360,30 +371,44 @@ interface QuickReplyResult {
 }
 
 // 检测最后一条消息是否匹配快捷回复
-// 策略：找到最后出现的关键词，因为那通常是当前正在问的问题
 function detectQuickReplies(lastMessage: string): QuickReplyResult {
   const lowerMsg = lastMessage.toLowerCase();
   
-  let bestMatch: { config: QuickReplyConfig; lastPosition: number } | null = null;
+  const matches: Array<{ config: QuickReplyConfig; score: number }> = [];
   
   for (const config of quickReplyConfigs) {
-    // 找到该配置中所有关键词在消息中最后出现的位置
     let maxPosition = -1;
+    let foundCount = 0;
+    
+    // 找到该配置中所有关键词在消息中最后出现的位置
     for (const kw of config.keywords) {
       const pos = lowerMsg.lastIndexOf(kw);
-      if (pos > maxPosition) {
-        maxPosition = pos;
+      if (pos >= 0) {
+        foundCount++;
+        if (pos > maxPosition) {
+          maxPosition = pos;
+        }
       }
     }
     
-    // 如果找到关键词，且位置比当前最佳匹配更靠后
-    if (maxPosition >= 0 && (!bestMatch || maxPosition > bestMatch.lastPosition)) {
-      bestMatch = { config, lastPosition: maxPosition };
+    // 如果找到关键词，计算分数
+    if (maxPosition >= 0) {
+      const positionScore = maxPosition; // 后出现的位置更高
+      const priority = config.priority || 0;
+      const matchScore = priority * 1000 + positionScore;
+      matches.push({ config, score: matchScore });
     }
   }
   
+  // 按分数排序，取分数最高的配置
+  matches.sort((a, b) => b.score - a.score);
+  
+  const bestMatch = matches[0];
   return bestMatch 
-    ? { options: bestMatch.config.options, multiSelect: bestMatch.config.multiSelect || false }
+    ? { 
+        options: bestMatch.config.options.filter(o => o.text), 
+        multiSelect: bestMatch.config.multiSelect || false 
+      }
     : { options: [], multiSelect: false };
 }
 
