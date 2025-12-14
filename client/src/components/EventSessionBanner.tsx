@@ -37,10 +37,8 @@ export default function EventSessionBanner({ eventId, eventDateTime, eventStatus
       const diff = eventTime - now;
       setTimeRemaining(diff);
       
-      const twoHoursInMs = 2 * 60 * 60 * 1000;
-      const twoHoursAfterEventMs = -2 * 60 * 60 * 1000; // Allow 2 hours after event start for check-in
-      // Show banner: 2 hours before event until 2 hours after event starts
-      setIsVisible(eventStatus === "matched" && diff <= twoHoursInMs && diff >= twoHoursAfterEventMs);
+      // Show banner whenever event status is "matched" (until event is completed)
+      setIsVisible(eventStatus === "matched");
     };
 
     updateTime();
@@ -147,20 +145,9 @@ export function FloatingCheckinButton({ eventId, eventDateTime, eventStatus }: E
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const eventTime = new Date(eventDateTime).getTime();
-    const twoHoursInMs = 2 * 60 * 60 * 1000;
-    const twoHoursAfterEventMs = -2 * 60 * 60 * 1000; // Allow 2 hours after event start
-    
-    const checkVisibility = () => {
-      const diff = eventTime - Date.now();
-      // Show button: 2 hours before event until 2 hours after event starts
-      setIsVisible(eventStatus === "matched" && diff <= twoHoursInMs && diff >= twoHoursAfterEventMs);
-    };
-
-    checkVisibility();
-    const interval = setInterval(checkVisibility, 1000 * 30);
-    return () => clearInterval(interval);
-  }, [eventDateTime, eventStatus]);
+    // Show floating button whenever event status is "matched"
+    setIsVisible(eventStatus === "matched");
+  }, [eventStatus]);
 
   const { data: sessionData } = useQuery<{ sessionId: string } | null>({
     queryKey: ["/api/events", eventId, "session"],
