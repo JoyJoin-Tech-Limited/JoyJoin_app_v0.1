@@ -219,6 +219,12 @@ const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，JoyJoin平台的AI社交助手�
 ## 输出格式
 每轮对话结束，在你的自然对话内容之后，**必须添加一个代码块**来总结目前收集到的用户信息。
 
+**【最重要的规则】**：
+1. 每次回复必须先输出给用户看的对话内容（至少一句话）
+2. 对话内容必须在代码块之前
+3. 绝对禁止只输出代码块而没有对话内容！
+4. 如果用户的回答你已经记录了，也要说一句话回应，比如"好的，记下了～"或"嗯嗯，了解～"
+
 格式如下（严格按照这个格式输出）：
 \`\`\`collected_info
 {"displayName": "用户提供的昵称（如果有）", "gender": "女生/男生/保密（如果提到了）", "birthYear": 1995, "currentCity": "深圳", "occupationDescription": "职业描述", "interestsTop": ["兴趣1", "兴趣2"], "intent": ["交朋友", "拓展人脉"], "hometown": "老家位置", "hasPets": true, "relationshipStatus": "单身"}
@@ -229,6 +235,7 @@ const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，JoyJoin平台的AI社交助手�
 - 对于数组字段（如interestsTop、intent），按用户选择的顺序列出
 - 年份如果是"95后"这样的形式，转换成对应年份数字（如1995）
 - **关键**：代码块必须以\`\`\`collected_info开头，以\`\`\`结尾，中间只有JSON数据
+- **再次强调**：代码块之前必须有对话内容！用户必须能看到你的回复！
 
 ## 结束信号
 **必须同时满足以下条件才能结束**：
@@ -309,10 +316,16 @@ export async function continueXiaoyueChat(
     const collectedInfo = extractCollectedInfo(assistantMessage);
     const isComplete = assistantMessage.includes('```registration_complete');
     
-    const cleanMessage = assistantMessage
+    let cleanMessage = assistantMessage
       .replace(/```collected_info[\s\S]*?```/g, '')
       .replace(/```registration_complete[\s\S]*?```/g, '')
       .trim();
+    
+    // Fallback: 如果AI只输出了代码块没有对话内容，提供默认回复
+    if (!cleanMessage) {
+      console.log('[WARN] AI response had no visible dialogue content, using fallback');
+      cleanMessage = '好的，记下了～我们继续吧～';
+    }
 
     const finalHistory: ChatMessage[] = [
       ...updatedHistory,
@@ -357,7 +370,7 @@ function extractCollectedInfo(message: string): Partial<XiaoyueCollectedInfo> {
 export async function* continueXiaoyueChatStream(
   userMessage: string,
   conversationHistory: ChatMessage[]
-): AsyncGenerator<{ type: 'content' | 'done' | 'error'; content?: string; collectedInfo?: Partial<XiaoyueCollectedInfo>; isComplete?: boolean; rawMessage?: string; conversationHistory?: ChatMessage[] }> {
+): AsyncGenerator<{ type: 'content' | 'done' | 'error'; content?: string; collectedInfo?: Partial<XiaoyueCollectedInfo>; isComplete?: boolean; rawMessage?: string; cleanMessage?: string; conversationHistory?: ChatMessage[] }> {
   const updatedHistory: ChatMessage[] = [
     ...conversationHistory,
     { role: 'user', content: userMessage }
@@ -387,10 +400,16 @@ export async function* continueXiaoyueChatStream(
     const collectedInfo = extractCollectedInfo(fullContent);
     const isComplete = fullContent.includes('```registration_complete');
     
-    const cleanMessage = fullContent
+    let cleanMessage = fullContent
       .replace(/```collected_info[\s\S]*?```/g, '')
       .replace(/```registration_complete[\s\S]*?```/g, '')
       .trim();
+    
+    // Fallback: 如果AI只输出了代码块没有对话内容，提供默认回复
+    if (!cleanMessage) {
+      console.log('[WARN] AI streaming response had no visible dialogue content, using fallback');
+      cleanMessage = '好的，记下了～我们继续吧～';
+    }
 
     const finalHistory: ChatMessage[] = [
       ...updatedHistory,
@@ -402,6 +421,7 @@ export async function* continueXiaoyueChatStream(
       collectedInfo, 
       isComplete, 
       rawMessage: fullContent,
+      cleanMessage,  // 添加cleanMessage到done事件
       conversationHistory: finalHistory 
     };
   } catch (error) {

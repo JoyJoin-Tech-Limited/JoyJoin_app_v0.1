@@ -1324,6 +1324,7 @@ export default function ChatRegistrationPage() {
 
   const sendStreamingMessage = async (message: string) => {
     let streamedContent = '';
+    let lastValidContent = ''; // 追踪最后一次有效的非空内容
     // 使用唯一ID来标识这条流式消息
     const streamMessageId = `stream-${Date.now()}`;
     
@@ -1363,6 +1364,7 @@ export default function ChatRegistrationPage() {
 
       const decoder = new TextDecoder();
       let buffer = '';
+      let finalConversationHistory: any[] | null = null;
       
       while (true) {
         const { done, value } = await reader.read();
@@ -1390,19 +1392,36 @@ export default function ChatRegistrationPage() {
                     .replace(/```[a-z_]*\s*$/g, '') // 过滤刚开始的代码块标记
                     .trim();
                   
+                  // 只有当cleanContent有内容时才更新lastValidContent
+                  if (cleanContent) {
+                    lastValidContent = cleanContent;
+                  }
+                  
                   // 根据streamId找到并更新对应的消息
-                  // 只有当cleanContent有内容时才更新，避免消息内容变空
-                  setMessages(prev => prev.map(m => {
-                    if (m.streamId === streamMessageId) {
-                      // 只有当新内容不为空，或者当前内容为空时才更新
-                      const newContent = cleanContent || m.content;
-                      return { ...m, content: newContent };
-                    }
-                    return m;
-                  }));
+                  // 使用lastValidContent确保不会显示空内容
+                  if (lastValidContent) {
+                    setMessages(prev => prev.map(m => {
+                      if (m.streamId === streamMessageId) {
+                        return { ...m, content: lastValidContent };
+                      }
+                      return m;
+                    }));
+                  }
                 } else if (data.type === 'done') {
+                  // 保存原始conversationHistory供后端使用（保留代码块以便AI继续对话）
                   if (data.conversationHistory) {
+                    finalConversationHistory = data.conversationHistory;
                     setConversationHistory(data.conversationHistory);
+                  }
+                  // 使用后端返回的cleanMessage更新UI显示（不修改conversationHistory）
+                  if (data.cleanMessage && !lastValidContent) {
+                    lastValidContent = data.cleanMessage;
+                    setMessages(prev => prev.map(m => {
+                      if (m.streamId === streamMessageId) {
+                        return { ...m, content: data.cleanMessage };
+                      }
+                      return m;
+                    }));
                   }
                   if (data.collectedInfo) {
                     setCollectedInfo(prev => ({ ...prev, ...data.collectedInfo }));
@@ -1417,6 +1436,33 @@ export default function ChatRegistrationPage() {
                 // Skip invalid JSON lines
               }
             }
+          }
+        }
+      }
+      
+      // 流结束后，如果消息内容仍为空，从conversationHistory中提取AI的最新回复
+      if (!lastValidContent && finalConversationHistory && finalConversationHistory.length > 0) {
+        // 找到最后一条assistant消息
+        const lastAssistantMsg = [...finalConversationHistory].reverse().find(
+          (msg: any) => msg.role === 'assistant'
+        );
+        if (lastAssistantMsg && lastAssistantMsg.content) {
+          // 过滤代码块后提取可见内容
+          let fallbackContent = lastAssistantMsg.content
+            .replace(/```collected_info[\s\S]*?```/g, '')
+            .replace(/```registration_complete[\s\S]*?```/g, '')
+            .trim();
+          
+          if (fallbackContent) {
+            setMessages(prev => prev.map(m => {
+              if (m.streamId === streamMessageId) {
+                return { ...m, content: fallbackContent };
+              }
+              return m;
+            }));
+          } else {
+            // 如果过滤后仍为空，移除这条空消息
+            setMessages(prev => prev.filter(m => m.streamId !== streamMessageId));
           }
         }
       }
