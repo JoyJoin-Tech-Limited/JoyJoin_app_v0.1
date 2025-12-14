@@ -1067,7 +1067,32 @@ export default function ChatRegistrationPage() {
       const fullMessage = data.message as string;
       
       // 按双换行分割成多个段落
-      const paragraphs = fullMessage.split('\n\n').filter(p => p.trim());
+      let rawParagraphs = fullMessage.split('\n\n').filter(p => p.trim());
+      
+      // 合并流程信息块：把【标签】格式的连续段落合并为一个
+      const paragraphs: string[] = [];
+      let currentBlock: string[] = [];
+      
+      for (const para of rawParagraphs) {
+        if (para.trim().startsWith('【') && para.trim().endsWith('】') || 
+            (para.trim().startsWith('【') && para.includes('】'))) {
+          // 这是一个【标签】段落，加入当前块
+          currentBlock.push(para);
+        } else {
+          // 这不是【标签】段落
+          if (currentBlock.length > 0) {
+            // 先把之前的块添加为一个段落
+            paragraphs.push(currentBlock.join('\n'));
+            currentBlock = [];
+          }
+          paragraphs.push(para);
+        }
+      }
+      
+      // 处理剩余的块
+      if (currentBlock.length > 0) {
+        paragraphs.push(currentBlock.join('\n'));
+      }
       
       // 总是分段显示开场白，每段都带打字动画
       const showParagraphsSequentially = async () => {
