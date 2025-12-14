@@ -821,24 +821,28 @@ function MessageBubble({
   const visibleLines = originalLines.slice(0, visibleLineCount);
   
   return (
-    <div className="space-y-2">
-      {visibleLines.map((line, idx) => (
-        <motion.div
-          key={idx}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-        >
-          <SingleBubble
-            content={line}
-            role="assistant"
-            showAvatar={idx === 0}
-            emotion={emotion}
-            userGender={userGender}
-            collectedInfo={collectedInfo}
-          />
-        </motion.div>
-      ))}
+    <div>
+      <AnimatePresence>
+        {visibleLines.map((line, idx) => (
+          <motion.div
+            key={`${message.content}-line-${idx}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="mb-2"
+          >
+            <SingleBubble
+              content={line}
+              role="assistant"
+              showAvatar={idx === 0}
+              emotion={emotion}
+              userGender={userGender}
+              collectedInfo={collectedInfo}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 }
