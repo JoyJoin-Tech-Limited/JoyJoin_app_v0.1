@@ -218,13 +218,16 @@ const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，JoyJoin平台的AI社交助手�
 ## 输出格式
 每轮对话结束，在你的自然对话内容之后，**必须添加一个代码块**来总结目前收集到的用户信息。
 
-格式如下（用3个反引号开头，collected_info，JSON内容，3个反引号结尾）：
+格式如下（严格按照这个格式输出）：
+\`\`\`collected_info
 {"displayName": "用户提供的昵称（如果有）", "gender": "女生/男生/保密（如果提到了）", "birthYear": 1995, "currentCity": "深圳", "occupationDescription": "职业描述", "interestsTop": ["兴趣1", "兴趣2"], "intent": ["交朋友", "拓展人脉"], "hometown": "老家位置", "hasPets": true, "relationshipStatus": "单身"}
+\`\`\`
 
 **重要说明**：这个代码块只用于系统后台提取用户信息（更新头像清晰度等），不会显示给用户看。用户看到的只是你上面的自然对话内容。
 - 只输出用户已经明确提供或提到的字段，没提到的字段不要加
 - 对于数组字段（如interestsTop、intent），按用户选择的顺序列出
 - 年份如果是"95后"这样的形式，转换成对应年份数字（如1995）
+- **关键**：代码块必须以\`\`\`collected_info开头，以\`\`\`结尾，中间只有JSON数据
 
 ## 结束信号
 **必须同时满足以下条件才能结束**：
@@ -330,12 +333,22 @@ export async function continueXiaoyueChat(
 
 function extractCollectedInfo(message: string): Partial<XiaoyueCollectedInfo> {
   const match = message.match(/```collected_info\s*([\s\S]*?)```/);
-  if (!match) return {};
+  
+  // Debug日志
+  if (!match) {
+    console.log('[DEBUG] extractCollectedInfo: No match found');
+    console.log('[DEBUG] Message preview:', message.substring(0, 300));
+    return {};
+  }
   
   try {
     const jsonStr = match[1].trim();
-    return JSON.parse(jsonStr);
-  } catch {
+    console.log('[DEBUG] extractCollectedInfo: Found JSON block:', jsonStr.substring(0, 200));
+    const result = JSON.parse(jsonStr);
+    console.log('[DEBUG] extractCollectedInfo: Parsed successfully:', Object.keys(result));
+    return result;
+  } catch (error) {
+    console.log('[DEBUG] extractCollectedInfo: JSON parse failed:', error);
     return {};
   }
 }
