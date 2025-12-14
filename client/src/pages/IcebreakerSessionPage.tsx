@@ -10,9 +10,10 @@ import { IcebreakerCheckinModal } from '@/components/icebreaker/IcebreakerChecki
 import { NumberPlateDisplay } from '@/components/icebreaker/NumberPlateDisplay';
 import { IcebreakerToolkit } from '@/components/icebreaker/IcebreakerToolkit';
 import { GameDetailView } from '@/components/icebreaker/GameDetailView';
+import { IcebreakerEndingScreen } from '@/components/icebreaker/IcebreakerEndingScreen';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, WifiOff, RefreshCcw, Sparkles } from 'lucide-react';
+import { Loader2, WifiOff, RefreshCcw } from 'lucide-react';
 import type { TopicCard } from '@shared/topicCards';
 import type { IcebreakerGame } from '@shared/icebreakerGames';
 
@@ -108,6 +109,13 @@ export default function IcebreakerSessionPage() {
       toast({
         title: '号码牌已分配',
         description: `你的号码牌是 ${icebreakerState.myNumberPlate}`,
+      });
+    },
+    onRateLimited: (data) => {
+      toast({
+        title: '操作过于频繁',
+        description: data.message,
+        variant: 'destructive',
       });
     },
   });
@@ -340,31 +348,16 @@ export default function IcebreakerSessionPage() {
         {icebreakerState.phase === 'ended' && (
           <motion.div
             key="ended"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex items-center justify-center min-h-screen p-4"
           >
-            <Card className="max-w-md w-full">
-              <CardContent className="p-6 text-center">
-                <div className="text-4xl mb-4">🎉</div>
-                <h2 className="text-xl font-bold mb-2">破冰结束</h2>
-                {(icebreakerState.aiClosingMessage || closingMessage) && (
-                  <div className="flex items-center justify-center gap-1 mb-4">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    <p className="text-muted-foreground">
-                      {icebreakerState.aiClosingMessage || closingMessage}
-                    </p>
-                  </div>
-                )}
-                <p className="text-sm text-muted-foreground mb-6">
-                  活动时长：{Math.round(icebreakerState.duration / 60)} 分钟
-                </p>
-                <Button onClick={handleLeave} className="w-full">
-                  返回活动
-                </Button>
-              </CardContent>
-            </Card>
+            <IcebreakerEndingScreen
+              closingMessage={icebreakerState.aiClosingMessage || closingMessage}
+              durationMinutes={Math.max(1, Math.round(icebreakerState.duration / 60))}
+              participantCount={icebreakerState.checkedInCount}
+              onLeave={handleLeave}
+            />
           </motion.div>
         )}
       </AnimatePresence>

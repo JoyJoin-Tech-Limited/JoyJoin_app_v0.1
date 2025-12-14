@@ -6,7 +6,22 @@ import { storage } from './storage';
 interface AuthenticatedWebSocket extends WebSocket {
   userId?: string;
   isAlive?: boolean;
+  messageTimestamps?: number[];
+  isBlocked?: boolean;
+  blockedUntil?: number;
 }
+
+interface RateLimitConfig {
+  maxMessages: number;
+  windowMs: number;
+  blockDurationMs: number;
+}
+
+const RATE_LIMIT_CONFIG: RateLimitConfig = {
+  maxMessages: 30,
+  windowMs: 10000,
+  blockDurationMs: 60000,
+};
 
 interface IcebreakerSessionInfo {
   sessionId: string;
@@ -83,7 +98,52 @@ class WebSocketService {
     console.log('[WS] WebSocket server initialized');
   }
 
+  private checkRateLimit(ws: AuthenticatedWebSocket): boolean {
+    const now = Date.now();
+    
+    if (ws.isBlocked) {
+      if (ws.blockedUntil && now < ws.blockedUntil) {
+        return false;
+      }
+      ws.isBlocked = false;
+      ws.blockedUntil = undefined;
+      ws.messageTimestamps = [];
+    }
+
+    if (!ws.messageTimestamps) {
+      ws.messageTimestamps = [];
+    }
+
+    ws.messageTimestamps = ws.messageTimestamps.filter(
+      timestamp => now - timestamp < RATE_LIMIT_CONFIG.windowMs
+    );
+
+    if (ws.messageTimestamps.length >= RATE_LIMIT_CONFIG.maxMessages) {
+      ws.isBlocked = true;
+      ws.blockedUntil = now + RATE_LIMIT_CONFIG.blockDurationMs;
+      console.warn(`[WS] Rate limit exceeded for user ${ws.userId}, blocking for ${RATE_LIMIT_CONFIG.blockDurationMs}ms`);
+      
+      this.sendToClient(ws, {
+        type: 'RATE_LIMITED',
+        data: {
+          message: '消息发送过于频繁，请稍后再试',
+          retryAfterMs: RATE_LIMIT_CONFIG.blockDurationMs,
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return false;
+    }
+
+    ws.messageTimestamps.push(now);
+    return true;
+  }
+
   private handleMessage(ws: AuthenticatedWebSocket, message: WSMessage) {
+    const isHeartbeat = message.type === 'PING' || message.type === 'PONG';
+    if (!isHeartbeat && !this.checkRateLimit(ws)) {
+      return;
+    }
+
     switch (message.type) {
       case 'PING':
         this.sendToClient(ws, { type: 'PONG', timestamp: new Date().toISOString() });

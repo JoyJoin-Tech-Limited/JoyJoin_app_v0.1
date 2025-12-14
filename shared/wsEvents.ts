@@ -27,7 +27,8 @@ export type WSEventType =
   | "ICEBREAKER_GAME_STARTED"
   | "ICEBREAKER_SESSION_ENDED"
   | "ICEBREAKER_USER_OFFLINE"
-  | "ICEBREAKER_USER_RECONNECTED";
+  | "ICEBREAKER_USER_RECONNECTED"
+  | "RATE_LIMITED";
 
 export interface WSMessage {
   type: WSEventType;
@@ -180,4 +181,10 @@ export interface IcebreakerUserStatusData {
   userId: string;
   displayName: string;
   isOnline: boolean;
+}
+
+// 频率限制
+export interface RateLimitedData {
+  message: string;
+  retryAfterMs: number;
 }

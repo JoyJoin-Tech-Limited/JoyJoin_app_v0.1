@@ -10,6 +10,7 @@ import type {
   IcebreakerGameStartedData,
   IcebreakerSessionEndedData,
   IcebreakerUserStatusData,
+  RateLimitedData,
 } from '@/../../shared/wsEvents';
 
 export type IcebreakerPhase = 'waiting' | 'checkin' | 'number_assign' | 'icebreaker' | 'ended';
@@ -52,6 +53,7 @@ interface UseIcebreakerWebSocketOptions {
   onSessionEnded?: (data: IcebreakerSessionEndedData) => void;
   onUserOffline?: (data: IcebreakerUserStatusData) => void;
   onUserReconnected?: (data: IcebreakerUserStatusData) => void;
+  onRateLimited?: (data: RateLimitedData) => void;
 }
 
 export function useIcebreakerWebSocket(options: UseIcebreakerWebSocketOptions) {
@@ -68,6 +70,7 @@ export function useIcebreakerWebSocket(options: UseIcebreakerWebSocketOptions) {
     onSessionEnded,
     onUserOffline,
     onUserReconnected,
+    onRateLimited,
   } = options;
 
   const [state, setState] = useState<IcebreakerState>({
@@ -202,8 +205,14 @@ export function useIcebreakerWebSocket(options: UseIcebreakerWebSocketOptions) {
         }
         break;
       }
+
+      case 'RATE_LIMITED': {
+        const data = message.data as RateLimitedData;
+        onRateLimited?.(data);
+        break;
+      }
     }
-  }, [sessionId, userId, onPhaseChange, onCheckinUpdate, onNumberAssigned, onReadyCountUpdate, onTopicSelected, onGameStarted, onSessionEnded, onUserOffline, onUserReconnected]);
+  }, [sessionId, userId, onPhaseChange, onCheckinUpdate, onNumberAssigned, onReadyCountUpdate, onTopicSelected, onGameStarted, onSessionEnded, onUserOffline, onUserReconnected, onRateLimited]);
 
   const { isConnected, isReconnecting, send, subscribe, disconnect } = useWebSocket({
     userId,
