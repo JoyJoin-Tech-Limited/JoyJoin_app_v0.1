@@ -1306,8 +1306,8 @@ export default function ChatRegistrationPage() {
   });
 
   const sendStreamingMessage = async (message: string) => {
-    const messageIndex = messages.length;
     let streamedContent = '';
+    let actualMessageIndex = -1;
     
     // 防护：检查conversationHistory是否已初始化
     if (!conversationHistory || conversationHistory.length === 0) {
@@ -1320,12 +1320,16 @@ export default function ChatRegistrationPage() {
       return;
     }
     
-    setMessages(prev => [...prev, {
-      role: "assistant",
-      content: '',
-      timestamp: new Date(),
-      isTypingAnimation: false
-    }]);
+    // 使用函数式更新并捕获正确的索引
+    setMessages(prev => {
+      actualMessageIndex = prev.length; // 新消息将在这个索引
+      return [...prev, {
+        role: "assistant",
+        content: '',
+        timestamp: new Date(),
+        isTypingAnimation: false
+      }];
+    });
 
     try {
       const res = await fetch("/api/registration/chat/message/stream", {
@@ -1370,7 +1374,7 @@ export default function ChatRegistrationPage() {
                     .trim();
                   
                   setMessages(prev => prev.map((m, i) => 
-                    i === messageIndex ? { ...m, content: cleanContent } : m
+                    i === actualMessageIndex ? { ...m, content: cleanContent } : m
                   ));
                 } else if (data.type === 'done') {
                   if (data.conversationHistory) {
@@ -1393,7 +1397,7 @@ export default function ChatRegistrationPage() {
         }
       }
     } catch (error) {
-      setMessages(prev => prev.filter((_, i) => i !== messageIndex));
+      setMessages(prev => prev.filter((_, i) => i !== actualMessageIndex));
       toast({
         title: "发送失败",
         description: "小悦暂时走神了，请重试",
