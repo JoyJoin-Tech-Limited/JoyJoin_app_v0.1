@@ -339,6 +339,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/registration/chat/message/stream', async (req: any, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    
+    const { message, conversationHistory } = req.body;
+    
+    if (!message || !conversationHistory) {
+      res.write(`data: ${JSON.stringify({ type: 'error', content: '缺少必要参数' })}\n\n`);
+      res.end();
+      return;
+    }
+    
+    try {
+      const { continueXiaoyueChatStream } = await import('./deepseekClient');
+      
+      for await (const chunk of continueXiaoyueChatStream(message, conversationHistory)) {
+        res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      }
+    } catch (error) {
+      console.error("Error in streaming chat:", error);
+      res.write(`data: ${JSON.stringify({ type: 'error', content: '小悦暂时走神了，请重试' })}\n\n`);
+    }
+    
+    res.end();
+  });
+
   app.post('/api/registration/chat/complete', async (req: any, res) => {
     try {
       const { conversationHistory, phoneNumber } = req.body;

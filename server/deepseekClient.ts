@@ -231,6 +231,62 @@ function extractCollectedInfo(message: string): Partial<XiaoyueCollectedInfo> {
   }
 }
 
+export async function* continueXiaoyueChatStream(
+  userMessage: string,
+  conversationHistory: ChatMessage[]
+): AsyncGenerator<{ type: 'content' | 'done' | 'error'; content?: string; collectedInfo?: Partial<XiaoyueCollectedInfo>; isComplete?: boolean; rawMessage?: string; conversationHistory?: ChatMessage[] }> {
+  const updatedHistory: ChatMessage[] = [
+    ...conversationHistory,
+    { role: 'user', content: userMessage }
+  ];
+
+  try {
+    const stream = await deepseekClient.chat.completions.create({
+      model: 'deepseek-chat',
+      messages: updatedHistory.map(msg => ({
+        role: msg.role as 'system' | 'user' | 'assistant',
+        content: msg.content
+      })),
+      temperature: 0.8,
+      max_tokens: 800,
+      stream: true,
+    });
+
+    let fullContent = '';
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || '';
+      if (content) {
+        fullContent += content;
+        yield { type: 'content', content };
+      }
+    }
+
+    const collectedInfo = extractCollectedInfo(fullContent);
+    const isComplete = fullContent.includes('```registration_complete');
+    
+    const cleanMessage = fullContent
+      .replace(/```collected_info[\s\S]*?```/g, '')
+      .replace(/```registration_complete[\s\S]*?```/g, '')
+      .trim();
+
+    const finalHistory: ChatMessage[] = [
+      ...updatedHistory,
+      { role: 'assistant', content: fullContent }
+    ];
+
+    yield { 
+      type: 'done', 
+      collectedInfo, 
+      isComplete, 
+      rawMessage: fullContent,
+      conversationHistory: finalHistory 
+    };
+  } catch (error) {
+    console.error('DeepSeek streaming API error:', error);
+    yield { type: 'error', content: '小悦暂时有点忙，请稍后再试～' };
+  }
+}
+
 export async function summarizeAndExtractInfo(
   conversationHistory: ChatMessage[]
 ): Promise<XiaoyueCollectedInfo> {

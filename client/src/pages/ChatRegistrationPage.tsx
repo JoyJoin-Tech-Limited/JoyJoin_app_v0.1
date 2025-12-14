@@ -544,37 +544,94 @@ export default function ChatRegistrationPage() {
     }
   });
 
-  const sendMessageMutation = useMutation({
-    mutationFn: async (message: string) => {
-      const res = await apiRequest("POST", "/api/registration/chat/message", {
-        message,
-        conversationHistory
+  const sendStreamingMessage = async (message: string) => {
+    const messageIndex = messages.length;
+    let streamedContent = '';
+    
+    setMessages(prev => [...prev, {
+      role: "assistant",
+      content: '',
+      timestamp: new Date(),
+      isTypingAnimation: false
+    }]);
+
+    try {
+      const res = await fetch("/api/registration/chat/message/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, conversationHistory }),
+        credentials: "include"
       });
-      return res.json();
-    },
-    onSuccess: (data) => {
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: data.message,
-        timestamp: new Date(),
-        isTypingAnimation: true
-      }]);
-      setConversationHistory(data.conversationHistory);
-      if (data.collectedInfo) {
-        setCollectedInfo(prev => ({ ...prev, ...data.collectedInfo }));
+
+      if (!res.ok) throw new Error('Stream request failed');
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('No reader available');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+
+        for (const part of parts) {
+          const lines = part.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                
+                if (data.type === 'content' && data.content) {
+                  streamedContent += data.content;
+                  const cleanContent = streamedContent
+                    .replace(/```collected_info[\s\S]*?```/g, '')
+                    .replace(/```registration_complete[\s\S]*?```/g, '')
+                    .trim();
+                  
+                  setMessages(prev => prev.map((m, i) => 
+                    i === messageIndex ? { ...m, content: cleanContent } : m
+                  ));
+                } else if (data.type === 'done') {
+                  if (data.conversationHistory) {
+                    setConversationHistory(data.conversationHistory);
+                  }
+                  if (data.collectedInfo) {
+                    setCollectedInfo(prev => ({ ...prev, ...data.collectedInfo }));
+                  }
+                  if (data.isComplete) {
+                    setIsComplete(true);
+                  }
+                } else if (data.type === 'error') {
+                  throw new Error(data.content || '请求失败');
+                }
+              } catch (parseError) {
+                // Skip invalid JSON lines
+              }
+            }
+          }
+        }
       }
-      if (data.isComplete) {
-        setIsComplete(true);
-      }
-      setIsTyping(false);
-    },
-    onError: () => {
-      setIsTyping(false);
+    } catch (error) {
+      setMessages(prev => prev.filter((_, i) => i !== messageIndex));
       toast({
         title: "发送失败",
         description: "小悦暂时走神了，请重试",
         variant: "destructive"
       });
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (message: string) => {
+      await sendStreamingMessage(message);
+      return { success: true };
     }
   });
 
