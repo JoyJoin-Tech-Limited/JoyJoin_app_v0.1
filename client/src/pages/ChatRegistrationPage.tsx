@@ -292,10 +292,12 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     options: [
       { text: "美食探店", icon: Coffee },
       { text: "户外运动", icon: Dumbbell },
-      { text: "看书电影", icon: Book },
+      { text: "看电影", icon: Camera },
+      { text: "阅读", icon: Book },
       { text: "桌游剧本杀", icon: Gamepad2 },
+      { text: "音乐", icon: Music },
       { text: "摄影", icon: Camera },
-      { text: "音乐", icon: Music }
+      { text: "旅行", icon: MapPin }
     ]
   },
   {
@@ -346,14 +348,29 @@ const quickReplyConfigs: QuickReplyConfig[] = [
 ];
 
 // 检测最后一条消息是否匹配快捷回复
+// 策略：找到最后出现的关键词，因为那通常是当前正在问的问题
 function detectQuickReplies(lastMessage: string): QuickReply[] {
   const lowerMsg = lastMessage.toLowerCase();
+  
+  let bestMatch: { config: QuickReplyConfig; lastPosition: number } | null = null;
+  
   for (const config of quickReplyConfigs) {
-    if (config.keywords.some(kw => lowerMsg.includes(kw))) {
-      return config.options;
+    // 找到该配置中所有关键词在消息中最后出现的位置
+    let maxPosition = -1;
+    for (const kw of config.keywords) {
+      const pos = lowerMsg.lastIndexOf(kw);
+      if (pos > maxPosition) {
+        maxPosition = pos;
+      }
+    }
+    
+    // 如果找到关键词，且位置比当前最佳匹配更靠后
+    if (maxPosition >= 0 && (!bestMatch || maxPosition > bestMatch.lastPosition)) {
+      bestMatch = { config, lastPosition: maxPosition };
     }
   }
-  return [];
+  
+  return bestMatch ? bestMatch.config.options : [];
 }
 
 interface ChatMessage {
@@ -395,14 +412,44 @@ function useTypingEffect(text: string, isActive: boolean, speed: number = 30) {
   return { displayedText, isComplete };
 }
 
+// 用户头像组件 - 根据性别动态切换
+function UserAvatar({ gender }: { gender?: string }) {
+  const getAvatarStyle = () => {
+    if (gender === "女生" || gender === "女性") {
+      return { bg: "bg-pink-100 dark:bg-pink-900/30", iconColor: "text-pink-500", border: "border-pink-200 dark:border-pink-800", icon: Heart };
+    }
+    if (gender === "男生" || gender === "男性") {
+      return { bg: "bg-blue-100 dark:bg-blue-900/30", iconColor: "text-blue-500", border: "border-blue-200 dark:border-blue-800", icon: Smile };
+    }
+    return { bg: "bg-muted", iconColor: "", border: "border-muted-foreground/20", icon: User };
+  };
+  
+  const style = getAvatarStyle();
+  const IconComponent = style.icon;
+  
+  return (
+    <motion.div 
+      className={`w-8 h-8 rounded-full ${style.bg} flex items-center justify-center flex-shrink-0 border ${style.border}`}
+      key={gender || "default"}
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 300 }}
+    >
+      <IconComponent className={`w-4 h-4 ${style.iconColor}`} />
+    </motion.div>
+  );
+}
+
 // 单条消息组件（支持打字效果和小悦表情）
 function MessageBubble({ 
   message, 
   isLatest,
+  userGender,
   onTypingComplete 
 }: { 
   message: ChatMessage; 
   isLatest: boolean;
+  userGender?: string;
   onTypingComplete?: () => void;
 }) {
   // 短消息（≤20字）跳过打字动画
@@ -432,9 +479,7 @@ function MessageBubble({
       {message.role === "assistant" ? (
         <XiaoyueAvatar emotion={emotion} />
       ) : (
-        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-          <User className="w-4 h-4" />
-        </div>
+        <UserAvatar gender={userGender} />
       )}
       <Card className={`max-w-[80%] p-3 ${
         message.role === "user" 
@@ -737,6 +782,7 @@ export default function ChatRegistrationPage() {
               key={index}
               message={msg}
               isLatest={index === messages.length - 1}
+              userGender={collectedInfo.gender}
               onTypingComplete={() => {
                 setMessages(prev => prev.map((m, i) => 
                   i === index ? { ...m, isTypingAnimation: false } : m
