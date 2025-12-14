@@ -266,36 +266,40 @@ const quickReplyConfigs: QuickReplyConfig[] = [
   {
     keywords: ["称呼", "昵称", "名字", "怎么叫"],
     options: [],
-    priority: 90 // 昵称需要用户输入，不提供快捷选项
+    priority: 95 // 昵称需要用户输入，不提供快捷选项
   },
   {
-    keywords: ["性别", "男生", "女生", "小哥哥", "小姐姐"],
+    keywords: ["想要", "期待", "目的", "意图", "来这里", "JoyJoin", "拓展人脉", "交朋友", "想来"],
     options: [
-      { text: "女生", icon: Heart },
-      { text: "男生", icon: Smile },
-      { text: "保密", icon: Sparkles }
+      { text: "交朋友", icon: Heart },
+      { text: "拓展人脉", icon: Briefcase },
+      { text: "吃喝玩乐", icon: Coffee },
+      { text: "随缘都可以", icon: Sparkles }
     ],
-    priority: 85
+    priority: 92  // 社交意图最高优先级
   },
   {
-    keywords: ["年龄", "年代", "几几年", "多大", "岁", "后"],
+    keywords: ["经常去", "到处探索", "深圳玩", "香港工作", "两边跑", "常跑", "常去"],
     options: [
-      { text: "00后" },
-      { text: "95后" },
-      { text: "90后" },
-      { text: "85后" }
+      { text: "是的，经常去", icon: MapPin },
+      { text: "偶尔去", icon: MapPin },
+      { text: "很少去", icon: MapPin }
     ],
-    priority: 80
+    priority: 91  // 城市follow-up高优先级
   },
   {
-    keywords: ["城市", "哪里", "在哪", "深圳", "香港", "广州"],
+    keywords: ["菜系", "日料", "粤菜", "火锅", "西餐", "川菜", "湘菜", "东南亚", "韩餐", "偏好", "口味"],
     options: [
-      { text: "深圳", icon: MapPin },
-      { text: "香港", icon: MapPin },
-      { text: "广州", icon: MapPin },
-      { text: "其他城市", icon: MapPin }
+      { text: "日料", icon: Coffee },
+      { text: "粤菜/港式", icon: Coffee },
+      { text: "火锅/川湘菜", icon: Coffee },
+      { text: "西餐", icon: Coffee },
+      { text: "东南亚菜", icon: Coffee },
+      { text: "韩餐", icon: Coffee },
+      { text: "各种都爱", icon: Sparkles }
     ],
-    priority: 75
+    multiSelect: true,
+    priority: 89  // 比通用兴趣高，确保问菜系时显示菜系选项
   },
   {
     keywords: ["兴趣", "爱好", "喜欢", "平时", "活动"],
@@ -313,29 +317,23 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 88
   },
   {
-    keywords: ["菜系", "日料", "粤菜", "火锅", "西餐", "川菜", "湘菜", "东南亚", "韩餐", "偏好", "口味"],
+    keywords: ["年龄", "年代", "几几年", "多大", "岁", "后", "哪年"],
     options: [
-      { text: "日料", icon: Coffee },
-      { text: "粤菜/港式", icon: Coffee },
-      { text: "火锅/川湘菜", icon: Coffee },
-      { text: "西餐", icon: Coffee },
-      { text: "东南亚菜", icon: Coffee },
-      { text: "韩餐", icon: Coffee },
-      { text: "各种都爱", icon: Sparkles }
+      { text: "00后" },
+      { text: "95后" },
+      { text: "90后" },
+      { text: "85后" }
     ],
-    multiSelect: true,
-    priority: 89  // 比通用兴趣高，确保问菜系时显示菜系选项
+    priority: 86  // 年龄优先级提高
   },
   {
-    keywords: ["工作", "职业", "做什么", "行业", "从事"],
+    keywords: ["性别", "男生", "女生", "小哥哥", "小姐姐"],
     options: [
-      { text: "互联网/科技", icon: Briefcase },
-      { text: "金融", icon: Briefcase },
-      { text: "学生", icon: Book },
-      { text: "自由职业", icon: Sparkles },
-      { text: "其他行业", icon: Briefcase }
+      { text: "女生", icon: Heart },
+      { text: "男生", icon: Smile },
+      { text: "保密", icon: Sparkles }
     ],
-    priority: 82
+    priority: 85
   },
   {
     keywords: ["方向", "领域", "细分", "ai", "web3", "产品", "技术", "运营", "设计", "开发"],
@@ -349,14 +347,25 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 83  // 比基础职业问题优先级高，确保follow-up也显示职业选项
   },
   {
-    keywords: ["想要", "期待", "目的", "意图", "来这里", "JoyJoin"],
+    keywords: ["工作", "职业", "做什么", "行业", "从事"],
     options: [
-      { text: "交朋友", icon: Heart },
-      { text: "拓展人脉", icon: Briefcase },
-      { text: "吃喝玩乐", icon: Coffee },
-      { text: "随缘都可以", icon: Sparkles }
+      { text: "互联网/科技", icon: Briefcase },
+      { text: "金融", icon: Briefcase },
+      { text: "学生", icon: Book },
+      { text: "自由职业", icon: Sparkles },
+      { text: "其他行业", icon: Briefcase }
     ],
-    priority: 78
+    priority: 82
+  },
+  {
+    keywords: ["城市", "哪里", "在哪", "深圳", "香港", "广州"],
+    options: [
+      { text: "深圳", icon: MapPin },
+      { text: "香港", icon: MapPin },
+      { text: "广州", icon: MapPin },
+      { text: "其他城市", icon: MapPin }
+    ],
+    priority: 75
   },
   {
     keywords: ["宠物", "毛孩子", "猫", "狗", "养"],
@@ -396,8 +405,12 @@ interface QuickReplyResult {
 }
 
 // 检测最后一条消息是否匹配快捷回复
+// 关键改进：只检测最后一个问句/段落，避免前面内容干扰
 function detectQuickReplies(lastMessage: string): QuickReplyResult {
-  const lowerMsg = lastMessage.toLowerCase();
+  // 按问号或换行分割，取最后一段进行检测
+  const segments = lastMessage.split(/[？?。\n]/).filter(s => s.trim());
+  const lastSegment = segments.length > 0 ? segments[segments.length - 1] : lastMessage;
+  const lowerMsg = lastSegment.toLowerCase();
   
   const matches: Array<{ config: QuickReplyConfig; score: number }> = [];
   
