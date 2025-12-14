@@ -2511,6 +2511,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ EVENT SESSION (ICEBREAKER) ROUTES ============
+  
+  // GET /api/events/:eventId/session - Get existing icebreaker session for an event
+  app.get('/api/events/:eventId/session', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      
+      const session = await storage.getIcebreakerSessionByEventId(eventId);
+      
+      if (session) {
+        res.json({ sessionId: session.id });
+      } else {
+        res.json(null);
+      }
+    } catch (error) {
+      console.error("[EventSession] Error getting session:", error);
+      res.status(500).json({ message: "Failed to get session" });
+    }
+  });
+
+  // POST /api/events/:eventId/session - Create new icebreaker session for an event
+  app.post('/api/events/:eventId/session', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const userId = req.session.userId;
+      
+      // Check if session already exists
+      const existingSession = await storage.getIcebreakerSessionByEventId(eventId);
+      if (existingSession) {
+        return res.json({ sessionId: existingSession.id });
+      }
+      
+      // Get the event to get attendee count
+      const event = await db
+        .select()
+        .from(blindBoxEvents)
+        .where(eq(blindBoxEvents.id, eventId))
+        .limit(1);
+      
+      if (!event || event.length === 0) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const eventData = event[0];
+      
+      // Create new session
+      const newSession = await storage.createIcebreakerSession({
+        eventId,
+        currentPhase: 'warmup',
+        expectedAttendees: eventData.totalParticipants || 4,
+        atmosphereType: eventData.eventType === '酒局' ? 'lively' : 'balanced',
+        hostUserId: userId,
+        startedAt: new Date(),
+      });
+      
+      res.json({ sessionId: newSession.id });
+    } catch (error) {
+      console.error("[EventSession] Error creating session:", error);
+      res.status(500).json({ message: "Failed to create session" });
+    }
+  });
 
   // ============ ADMIN BLIND BOX EVENT ROUTES ============
   // ============ ADMIN BLIND BOX EVENT ROUTES ============

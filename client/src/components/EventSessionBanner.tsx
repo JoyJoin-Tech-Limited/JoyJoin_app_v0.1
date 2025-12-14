@@ -38,7 +38,9 @@ export default function EventSessionBanner({ eventId, eventDateTime, eventStatus
       setTimeRemaining(diff);
       
       const twoHoursInMs = 2 * 60 * 60 * 1000;
-      setIsVisible(eventStatus === "matched" && diff <= twoHoursInMs);
+      const twoHoursAfterEventMs = -2 * 60 * 60 * 1000; // Allow 2 hours after event start for check-in
+      // Show banner: 2 hours before event until 2 hours after event starts
+      setIsVisible(eventStatus === "matched" && diff <= twoHoursInMs && diff >= twoHoursAfterEventMs);
     };
 
     updateTime();
@@ -147,10 +149,12 @@ export function FloatingCheckinButton({ eventId, eventDateTime, eventStatus }: E
   useEffect(() => {
     const eventTime = new Date(eventDateTime).getTime();
     const twoHoursInMs = 2 * 60 * 60 * 1000;
+    const twoHoursAfterEventMs = -2 * 60 * 60 * 1000; // Allow 2 hours after event start
     
     const checkVisibility = () => {
       const diff = eventTime - Date.now();
-      setIsVisible(eventStatus === "matched" && diff <= twoHoursInMs);
+      // Show button: 2 hours before event until 2 hours after event starts
+      setIsVisible(eventStatus === "matched" && diff <= twoHoursInMs && diff >= twoHoursAfterEventMs);
     };
 
     checkVisibility();
@@ -196,6 +200,7 @@ export function FloatingCheckinButton({ eventId, eventDateTime, eventStatus }: E
         className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white px-5 py-3 rounded-full shadow-lg font-semibold"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
+        data-testid="button-floating-checkin"
         animate={{ 
           boxShadow: [
             "0 4px 14px rgba(147, 51, 234, 0.3)",

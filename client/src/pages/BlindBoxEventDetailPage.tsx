@@ -28,6 +28,7 @@ import { archetypeAvatars } from "@/lib/archetypeAvatars";
 import { detectDevice } from "@/lib/deviceDetection";
 import { getOrAssignVariant } from "@/lib/abTestingFramework";
 import { useRevealStatus } from "@/hooks/useRevealStatus";
+import EventSessionBanner, { FloatingCheckinButton } from "@/components/EventSessionBanner";
 
 interface AnimationStatus {
   hasViewed: boolean;
@@ -406,6 +407,15 @@ export default function BlindBoxEventDetailPage() {
         </div>
 
         <div className="px-4 py-4 space-y-4">
+        {/* 签到横幅 - 活动2小时内显示 */}
+        {event && eventId && event.status === "matched" && (
+          <EventSessionBanner
+            eventId={eventId}
+            eventDateTime={event.dateTime.toString()}
+            eventStatus={event.status}
+          />
+        )}
+
         {/* 顶部摘要 */}
         <Card>
           <CardContent className="p-4 space-y-3">
@@ -617,6 +627,15 @@ export default function BlindBoxEventDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+        {/* 浮动签到按钮 - 滚动后的备用入口 */}
+        {event && eventId && event.status === "matched" && (
+          <FloatingCheckinButton
+            eventId={eventId}
+            eventDateTime={event.dateTime.toString()}
+            eventStatus={event.status}
+          />
+        )}
       </div>
     </>
   );
