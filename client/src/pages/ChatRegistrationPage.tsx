@@ -405,11 +405,13 @@ function MessageBubble({
   isLatest: boolean;
   onTypingComplete?: () => void;
 }) {
-  const shouldAnimate = message.role === "assistant" && isLatest && message.isTypingAnimation;
+  // 短消息（≤20字）跳过打字动画
+  const isShortMessage = message.content.length <= 20;
+  const shouldAnimate = message.role === "assistant" && isLatest && message.isTypingAnimation && !isShortMessage;
   const { displayedText, isComplete } = useTypingEffect(
     message.content, 
     shouldAnimate || false,
-    25 // 每个字25ms
+    12 // 每个字12ms（加快一倍）
   );
 
   useEffect(() => {
