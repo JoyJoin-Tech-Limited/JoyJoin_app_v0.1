@@ -143,6 +143,13 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").default(false),
   isBanned: boolean("is_banned").default(false),
   
+  // Anti-abuse & Rate Limiting
+  violationCount: integer("violation_count").default(0), // 累计违规次数
+  dailyTokenUsed: integer("daily_token_used").default(0), // 今日已用token数
+  lastTokenResetDate: date("last_token_reset_date"), // 上次token计数重置日期
+  aiFrozenUntil: timestamp("ai_frozen_until"), // AI功能冻结到什么时候（null=未冻结）
+  lastViolationReason: varchar("last_violation_reason"), // 最近一次违规原因
+  
   // Match Reveal Animation tracking
   viewedEventAnimations: text("viewed_event_animations").array(), // Event IDs where animation was already viewed
   

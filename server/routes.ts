@@ -11,6 +11,7 @@ import { broadcastEventStatusChanged, broadcastAdminAction } from "./eventBroadc
 import { matchEventPool, saveMatchResults } from "./poolMatchingService";
 import { roleTraits, roleInsights } from "./archetypeConfig";
 import { processTestV2, type AnswerV2 } from "./personalityMatchingV2";
+import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, type User } from "@shared/schema";
@@ -318,6 +319,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/registration/chat/start', async (req: any, res) => {
     try {
+      const userId = req.session?.userId;
+      if (userId) {
+        resetConversationTurns(userId);
+      }
+      
       const { startXiaoyueChat } = await import('./deepseekClient');
       const result = await startXiaoyueChat();
       res.json(result);
@@ -330,8 +336,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/registration/chat/message', async (req: any, res) => {
     try {
       const { message, conversationHistory } = req.body;
+      const userId = req.session?.userId;
+      
+      if (userId) {
+        const abuseCheck = await checkUserAbuse(userId, message);
+        if (!abuseCheck.allowed) {
+          return res.status(abuseCheck.action === 'ban' ? 403 : 429).json({ 
+            message: abuseCheck.message,
+            action: abuseCheck.action,
+            violationType: abuseCheck.violationType
+          });
+        }
+        if (abuseCheck.action === 'warn' && abuseCheck.message) {
+          console.log(`[Abuse Detection] Warning for user ${userId}: ${abuseCheck.message}`);
+        }
+      }
+      
       const { continueXiaoyueChat } = await import('./deepseekClient');
       const result = await continueXiaoyueChat(message, conversationHistory);
+      
+      if (userId && result.usage?.totalTokens) {
+        await recordTokenUsage(userId, result.usage.totalTokens);
+      }
+      
       res.json(result);
     } catch (error) {
       console.error("Error in chat registration:", error);
@@ -346,6 +373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.setHeader('X-Accel-Buffering', 'no');
     
     const { message, conversationHistory } = req.body;
+    const userId = req.session?.userId;
     
     if (!message || !conversationHistory) {
       res.write(`data: ${JSON.stringify({ type: 'error', content: '缺少必要参数' })}\n\n`);
@@ -353,11 +381,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return;
     }
     
+    if (userId) {
+      const abuseCheck = await checkUserAbuse(userId, message);
+      if (!abuseCheck.allowed) {
+        res.write(`data: ${JSON.stringify({ 
+          type: 'error', 
+          content: abuseCheck.message,
+          action: abuseCheck.action,
+          violationType: abuseCheck.violationType
+        })}\n\n`);
+        res.end();
+        return;
+      }
+      if (abuseCheck.action === 'warn' && abuseCheck.message) {
+        res.write(`data: ${JSON.stringify({ 
+          type: 'warning', 
+          content: abuseCheck.message 
+        })}\n\n`);
+      }
+    }
+    
     try {
       const { continueXiaoyueChatStream } = await import('./deepseekClient');
+      let finalTokens = 0;
       
       for await (const chunk of continueXiaoyueChatStream(message, conversationHistory)) {
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+        if (chunk.type === 'done' && chunk.usage?.totalTokens) {
+          finalTokens = chunk.usage.totalTokens;
+        }
+      }
+      
+      if (userId && finalTokens > 0) {
+        await recordTokenUsage(userId, finalTokens);
       }
     } catch (error) {
       console.error("Error in streaming chat:", error);
