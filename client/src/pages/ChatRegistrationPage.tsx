@@ -273,9 +273,12 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     options: [
       { text: "交朋友", icon: Heart },
       { text: "拓展人脉", icon: Briefcase },
+      { text: "深度讨论", icon: Book },
       { text: "吃喝玩乐", icon: Coffee },
+      { text: "浪漫邂逅", icon: Heart },
       { text: "随缘都可以", icon: Sparkles }
     ],
+    multiSelect: true,
     priority: 92  // 社交意图最高优先级
   },
   {
@@ -305,13 +308,15 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     keywords: ["兴趣", "爱好", "喜欢", "平时", "活动"],
     options: [
       { text: "美食探店", icon: Coffee },
-      { text: "户外运动", icon: Dumbbell },
-      { text: "看电影", icon: Camera },
-      { text: "阅读", icon: Book },
-      { text: "桌游剧本杀", icon: Gamepad2 },
-      { text: "音乐", icon: Music },
-      { text: "摄影", icon: Camera },
-      { text: "旅行", icon: MapPin }
+      { text: "说走就走", icon: MapPin },
+      { text: "City Walk", icon: MapPin },
+      { text: "喝酒小酌", icon: Coffee },
+      { text: "音乐Live", icon: Music },
+      { text: "拍拍拍", icon: Camera },
+      { text: "撸铁运动", icon: Dumbbell },
+      { text: "看展看剧", icon: Camera },
+      { text: "吸猫撸狗", icon: Heart },
+      { text: "桌游卡牌", icon: Gamepad2 }
     ],
     multiSelect: true,
     priority: 88
@@ -405,10 +410,10 @@ interface QuickReplyResult {
 }
 
 // 检测最后一条消息是否匹配快捷回复
-// 关键改进：只检测最后一个问句/段落，避免前面内容干扰
+// 关键改进：只按换行符分割，取最后一段落进行检测（避免问号/句号把问句拆开）
 function detectQuickReplies(lastMessage: string): QuickReplyResult {
-  // 按问号或换行分割，取最后一段进行检测
-  const segments = lastMessage.split(/[？?。\n]/).filter(s => s.trim());
+  // 只按换行符分割，取最后一段进行检测
+  const segments = lastMessage.split(/\n/).filter(s => s.trim());
   const lastSegment = segments.length > 0 ? segments[segments.length - 1] : lastMessage;
   const lowerMsg = lastSegment.toLowerCase();
   
@@ -587,10 +592,10 @@ interface CollectedInfo {
   socialStyle?: string;
 }
 
-// 可选兴趣标签
+// 可选兴趣标签 - 与InterestsTopicsPage对齐
 const interestOptions = [
-  "美食探店", "户外运动", "看电影", "阅读", "桌游剧本杀", 
-  "音乐", "摄影", "旅行", "健身", "咖啡", "艺术展览", "宠物"
+  "美食探店", "说走就走", "City Walk", "喝酒小酌", "音乐Live", "拍拍拍",
+  "撸铁运动", "看展看剧", "打游戏", "吸猫撸狗", "看书充电", "桌游卡牌"
 ];
 
 // 信息确认卡片组件
