@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **小悦对话注册信息确认环节 (Dec 14, 2025):**
+  - Added InfoConfirmationCard component: full-screen editable confirmation before registration submission
+  - Editable fields: displayName (inline), gender/birthYear/city (select dropdowns), occupation (inline), interests (toggleable badges)
+  - Validation with trimming: ensures displayName, currentCity, and interests are properly filled before submission
+  - Error feedback with destructive color when required fields missing
+  - Smooth animation with AnimatePresence for overlay appearance
+  - Users can cancel and return to chat or confirm and proceed
+
 - **小悦对话注册交互优化 (Dec 14, 2025):**
   - Fixed quick reply sync issue: detectQuickReplies now prioritizes keywords appearing later in the message
   - Split "看书电影" into separate options: "看电影" and "阅读", added "旅行" option
