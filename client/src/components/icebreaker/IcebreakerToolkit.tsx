@@ -21,9 +21,10 @@ import {
 import type { TopicCard } from '@shared/topicCards';
 import { icebreakerGames, gameCategories, getRandomGame, type IcebreakerGame } from '@shared/icebreakerGames';
 
-interface RecommendedTopic {
+export interface RecommendedTopic {
   topic: TopicCard;
   reason: string;
+  score?: number;
 }
 
 interface IcebreakerToolkitProps {

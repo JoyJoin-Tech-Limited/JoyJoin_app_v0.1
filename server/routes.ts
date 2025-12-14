@@ -3706,6 +3706,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI-powered topic recommendations for icebreaker toolkit
+  app.post('/api/icebreaker/ai-topics', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { participants, atmosphereType = 'balanced', count = 5 } = req.body;
+      
+      if (!participants || !Array.isArray(participants)) {
+        return res.status(400).json({ message: "participants array is required" });
+      }
+      
+      const { getAIRecommendedTopics, getQuickRecommendedTopics, getAllTopicsForToolkit } = await import('./topicRecommendationService');
+      
+      // Get AI recommendations with personalized reasons
+      const recommendedTopics = await getAIRecommendedTopics(participants, atmosphereType, count);
+      
+      // Get all available topics for the full toolkit
+      const archetypes = participants.map((p: any) => p.archetype).filter(Boolean);
+      const allTopics = getAllTopicsForToolkit(archetypes, atmosphereType);
+      
+      res.json({
+        recommendedTopics,
+        allTopics,
+      });
+    } catch (error) {
+      console.error("Error fetching AI topic recommendations:", error);
+      res.status(500).json({ message: "Failed to fetch AI topic recommendations" });
+    }
+  });
+
+  // Quick (non-AI) topic recommendations for faster loading
+  app.post('/api/icebreaker/quick-topics', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { archetypes = [], atmosphereType = 'balanced', count = 5 } = req.body;
+      
+      const { getQuickRecommendedTopics, getAllTopicsForToolkit } = await import('./topicRecommendationService');
+      
+      // Get quick local recommendations (no AI call)
+      const recommendedTopics = getQuickRecommendedTopics(archetypes, atmosphereType, count);
+      
+      // Get all available topics
+      const allTopics = getAllTopicsForToolkit(archetypes, atmosphereType);
+      
+      res.json({
+        recommendedTopics,
+        allTopics,
+      });
+    } catch (error) {
+      console.error("Error fetching quick topic recommendations:", error);
+      res.status(500).json({ message: "Failed to fetch quick topic recommendations" });
+    }
+  });
+
   // Notification endpoints
   app.get('/api/notifications/counts', isPhoneAuthenticated, async (req: any, res) => {
     try {
