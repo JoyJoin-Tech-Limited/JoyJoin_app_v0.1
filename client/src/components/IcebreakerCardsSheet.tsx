@@ -287,7 +287,7 @@ export default function IcebreakerCardsSheet({
                             </Badge>
                           </div>
 
-                          <p className={`${cardStyles.fontSize} font-medium ${cardStyles.textColor} leading-relaxed min-h-[80px] flex items-center`}>
+                          <p className={`${cardStyles.fontSize} font-medium ${cardStyles.textColor} leading-relaxed min-h-[80px] flex items-center break-words whitespace-pre-wrap overflow-hidden`}>
                             {topic.question}
                           </p>
 
