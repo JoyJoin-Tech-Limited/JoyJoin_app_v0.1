@@ -44,7 +44,7 @@ export default function BottomNav() {
               }`}
               data-testid={item.testId}
             >
-              <div className="relative w-5">
+              <div className="relative h-5 w-5">
                 <item.icon className={`h-5 w-5 ${isActive ? "fill-primary/20" : ""}`} />
                 {showBadge && (
                   <Badge 
