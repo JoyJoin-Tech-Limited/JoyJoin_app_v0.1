@@ -632,9 +632,33 @@ function shouldBeMultiSelect(options: QuickReply[], message: string): boolean {
 // 需要用户自由输入的关键词（不应显示快捷选项）
 const freeInputKeywords = ["称呼", "昵称", "名字", "怎么叫", "叫什么"];
 
+// 开场白/介绍类消息的关键词组合（这类消息不应显示快捷选项）
+const introductionPatterns = [
+  { required: ["欢迎", "流程"], any: [] },
+  { required: ["你好", "小悦"], any: ["介绍", "开始", "帮你"] },
+  { required: ["JoyJoin"], any: ["欢迎", "流程", "步骤", "开始"] }
+];
+
+function isIntroductionMessage(message: string): boolean {
+  const lowerMsg = message.toLowerCase();
+  for (const pattern of introductionPatterns) {
+    const allRequired = pattern.required.every(kw => lowerMsg.includes(kw.toLowerCase()));
+    const hasAny = pattern.any.length === 0 || pattern.any.some(kw => lowerMsg.includes(kw.toLowerCase()));
+    if (allRequired && hasAny) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // 检测最后一条消息是否匹配快捷回复
 // 改进：优先检查是否需要自由输入，然后从消息中智能提取选项，关键词匹配作为后备
 function detectQuickReplies(lastMessage: string): QuickReplyResult {
+  // 第负一步：检查是否是开场白/介绍类消息（不显示快捷选项）
+  if (isIntroductionMessage(lastMessage)) {
+    return { options: [], multiSelect: false };
+  }
+  
   // 第零步：检查是否需要用户自由输入（如称呼问题）
   const lowerMessage = lastMessage.toLowerCase();
   for (const kw of freeInputKeywords) {
@@ -1413,8 +1437,8 @@ export default function ChatRegistrationPage() {
                     finalConversationHistory = data.conversationHistory;
                     setConversationHistory(data.conversationHistory);
                   }
-                  // 使用后端返回的cleanMessage更新UI显示（不修改conversationHistory）
-                  if (data.cleanMessage && !lastValidContent) {
+                  // 使用后端返回的cleanMessage更新UI显示（始终使用后端清理后的消息）
+                  if (data.cleanMessage) {
                     lastValidContent = data.cleanMessage;
                     setMessages(prev => prev.map(m => {
                       if (m.streamId === streamMessageId) {
