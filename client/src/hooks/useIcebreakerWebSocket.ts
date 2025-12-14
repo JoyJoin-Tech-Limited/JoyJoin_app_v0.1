@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useWebSocket } from './useWebSocket';
 import type { 
   WSMessage,
@@ -14,6 +14,9 @@ import type {
 } from '@/../../shared/wsEvents';
 
 export type IcebreakerPhase = 'waiting' | 'checkin' | 'number_assign' | 'icebreaker' | 'ended';
+
+const isDevelopment = import.meta.env.DEV;
+const DEMO_MODE_TIMEOUT = 3000; // Switch to demo mode if WS doesn't connect in 3s
 
 export interface IcebreakerState {
   sessionId: string;
@@ -88,6 +91,9 @@ export function useIcebreakerWebSocket(options: UseIcebreakerWebSocketOptions) {
     aiClosingMessage: null,
     duration: 0,
   });
+
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const demoModeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleMessage = useCallback((message: WSMessage) => {
     switch (message.type) {
@@ -220,6 +226,48 @@ export function useIcebreakerWebSocket(options: UseIcebreakerWebSocketOptions) {
     autoConnect: true,
   });
 
+  // Demo mode: In development, if WS doesn't connect within timeout, switch to demo mode
+  useEffect(() => {
+    if (isDevelopment && !isConnected && !isDemoMode) {
+      demoModeTimeoutRef.current = setTimeout(() => {
+        console.log('[Icebreaker] WebSocket not available, switching to demo mode');
+        setIsDemoMode(true);
+        // Set initial demo state - go directly to icebreaker phase
+        setState(prev => ({
+          ...prev,
+          phase: 'icebreaker',
+          checkedInCount: 1,
+          expectedAttendees: Math.max(1, prev.expectedAttendees),
+          myNumberPlate: 1,
+          numberAssignments: [{
+            userId: userId || 'demo-user',
+            displayName: 'Demo User',
+            numberPlate: 1,
+          }],
+          checkins: [{
+            userId: userId || 'demo-user',
+            displayName: 'Demo User',
+            archetype: null,
+            numberPlate: 1,
+          }],
+        }));
+      }, DEMO_MODE_TIMEOUT);
+    }
+
+    // Clear timeout if connected
+    if (isConnected && demoModeTimeoutRef.current) {
+      clearTimeout(demoModeTimeoutRef.current);
+      demoModeTimeoutRef.current = null;
+      setIsDemoMode(false);
+    }
+
+    return () => {
+      if (demoModeTimeoutRef.current) {
+        clearTimeout(demoModeTimeoutRef.current);
+      }
+    };
+  }, [isConnected, isDemoMode, userId]);
+
   useEffect(() => {
     if (isConnected && sessionId && userId) {
       send({
@@ -275,6 +323,7 @@ export function useIcebreakerWebSocket(options: UseIcebreakerWebSocketOptions) {
     state,
     isConnected,
     isReconnecting,
+    isDemoMode,
     checkin,
     voteReady,
     selectTopic,

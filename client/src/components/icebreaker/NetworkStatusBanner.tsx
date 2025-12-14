@@ -1,23 +1,47 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { WifiOff, RefreshCw, Wifi } from 'lucide-react';
+import { WifiOff, RefreshCw, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface NetworkStatusBannerProps {
   isConnected: boolean;
   isReconnecting: boolean;
   onRetry?: () => void;
+  isDemoMode?: boolean;
 }
+
+const isDevelopment = import.meta.env.DEV;
 
 export function NetworkStatusBanner({ 
   isConnected, 
   isReconnecting,
-  onRetry 
+  onRetry,
+  isDemoMode = false,
 }: NetworkStatusBannerProps) {
-  const showBanner = !isConnected || isReconnecting;
+  // In development mode with demo mode enabled, show a friendlier banner
+  // Demo mode takes precedence over error banner - ignoring isReconnecting state
+  const showDemoBanner = isDevelopment && isDemoMode && !isConnected;
+  const showErrorBanner = !showDemoBanner && (!isConnected || isReconnecting);
 
   return (
     <AnimatePresence>
-      {showBanner && (
+      {showDemoBanner && (
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -50 }}
+          transition={{ duration: 0.3 }}
+          className="fixed top-0 left-0 right-0 z-50"
+          data-testid="network-status-banner-demo"
+        >
+          <div className="px-4 py-2 flex items-center justify-center gap-2 bg-purple-500/90 dark:bg-purple-600/90 backdrop-blur-sm">
+            <Monitor className="w-4 h-4 text-white" />
+            <span className="text-white text-sm font-medium">
+              离线演示模式 - 可自由探索界面
+            </span>
+          </div>
+        </motion.div>
+      )}
+      {showErrorBanner && (
         <motion.div
           initial={{ opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}

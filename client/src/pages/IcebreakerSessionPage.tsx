@@ -91,6 +91,7 @@ export default function IcebreakerSessionPage() {
     state: icebreakerState,
     isConnected,
     isReconnecting,
+    isDemoMode,
     checkin,
     voteReady,
     selectTopic,
@@ -392,6 +393,7 @@ export default function IcebreakerSessionPage() {
       <NetworkStatusBanner 
         isConnected={isConnected} 
         isReconnecting={isReconnecting}
+        isDemoMode={isDemoMode}
         onRetry={() => window.location.reload()}
       />
     </div>
