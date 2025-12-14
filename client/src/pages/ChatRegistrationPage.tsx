@@ -411,9 +411,95 @@ interface QuickReplyResult {
   multiSelect: boolean;
 }
 
+// 智能提取AI消息中的选项列表
+function extractOptionsFromMessage(message: string): QuickReply[] {
+  const options: QuickReply[] = [];
+  
+  // 模式1: 顿号分隔的选项 "交朋友、拓展人脉、深度讨论"
+  // 查找包含多个顿号分隔项的句子
+  const dunhaoPattern = /(?:想要|选择|可以|比如|包括|有)?[：:]?\s*([^。！？\n]+[、][^。！？\n]+)/g;
+  let match;
+  while ((match = dunhaoPattern.exec(message)) !== null) {
+    const segment = match[1];
+    // 提取顿号分隔的选项
+    const items = segment.split(/[、，,]/).map(s => s.trim()).filter(s => {
+      // 过滤掉太长或太短的项，以及包含问号的项
+      return s.length >= 2 && s.length <= 15 && !s.includes('？') && !s.includes('?');
+    });
+    if (items.length >= 2) {
+      items.forEach(item => {
+        // 清理选项文本，去掉开头的"还是"等连接词
+        let cleanItem = item.replace(/^(还是|或者|或|以及|和|跟)/, '').trim();
+        // 去掉末尾的标点
+        cleanItem = cleanItem.replace(/[。！？,.!?]$/, '').trim();
+        if (cleanItem.length >= 2 && cleanItem.length <= 12 && !options.find(o => o.text === cleanItem)) {
+          options.push({ text: cleanItem });
+        }
+      });
+    }
+  }
+  
+  // 模式2: "还是xxx"格式的最后选项
+  const haishiPattern = /还是([^？?。！\n]+)[？?]/g;
+  while ((match = haishiPattern.exec(message)) !== null) {
+    const item = match[1].trim().replace(/[。！？,.!?]$/, '').trim();
+    if (item.length >= 2 && item.length <= 12 && !options.find(o => o.text === item)) {
+      options.push({ text: item });
+    }
+  }
+  
+  // 模式3: 字母/数字序号格式 "a. xxx b. xxx" 或 "1. xxx 2. xxx"
+  const numberedPattern = /(?:^|\n|[。！？])\s*(?:[a-eA-E1-5][.、)）]\s*)([^\n。！？]+)/g;
+  while ((match = numberedPattern.exec(message)) !== null) {
+    const item = match[1].trim().replace(/[。！？,.!?]$/, '').trim();
+    if (item.length >= 2 && item.length <= 15 && !options.find(o => o.text === item)) {
+      options.push({ text: item });
+    }
+  }
+  
+  // 去重并限制数量
+  return options.slice(0, 8);
+}
+
+// 根据选项内容判断是否应该多选
+function shouldBeMultiSelect(options: QuickReply[], message: string): boolean {
+  const multiSelectKeywords = ["兴趣", "爱好", "喜欢", "活动", "菜系", "想要", "期待", "目的"];
+  const lowerMsg = message.toLowerCase();
+  
+  for (const kw of multiSelectKeywords) {
+    if (lowerMsg.includes(kw)) {
+      return true;
+    }
+  }
+  
+  // 如果选项数量多（>=4），可能是多选
+  if (options.length >= 4) {
+    // 检查是否是典型的单选问题
+    const singleSelectKeywords = ["性别", "年龄", "城市", "单身", "确认"];
+    for (const kw of singleSelectKeywords) {
+      if (lowerMsg.includes(kw)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  return false;
+}
+
 // 检测最后一条消息是否匹配快捷回复
-// 关键改进：提取最后一个问句进行关键词匹配
+// 改进：优先从消息中智能提取选项，关键词匹配作为后备
 function detectQuickReplies(lastMessage: string): QuickReplyResult {
+  // 第一步：尝试从消息中智能提取选项
+  const extractedOptions = extractOptionsFromMessage(lastMessage);
+  
+  if (extractedOptions.length >= 2) {
+    // 成功提取到选项，判断是否多选
+    const multiSelect = shouldBeMultiSelect(extractedOptions, lastMessage);
+    return { options: extractedOptions, multiSelect };
+  }
+  
+  // 第二步：后备方案 - 使用关键词匹配
   // 提取最后一个问句（以？结尾的句子）
   const questionMatches = lastMessage.match(/[^。！？\n]*[？?][^。！？\n]*/g);
   let textToAnalyze: string;
