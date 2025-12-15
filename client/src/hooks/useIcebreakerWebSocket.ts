@@ -94,6 +94,7 @@ export function useIcebreakerWebSocket(options: UseIcebreakerWebSocketOptions) {
 
   const [isDemoMode, setIsDemoMode] = useState(false);
   const demoModeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const demoPhaseTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
 
   const handleMessage = useCallback((message: WSMessage) => {
     switch (message.type) {
@@ -226,47 +227,100 @@ export function useIcebreakerWebSocket(options: UseIcebreakerWebSocketOptions) {
     autoConnect: true,
   });
 
+  // Helper to clear all demo phase timeouts
+  const clearDemoTimeouts = useCallback(() => {
+    if (demoModeTimeoutRef.current) {
+      clearTimeout(demoModeTimeoutRef.current);
+      demoModeTimeoutRef.current = null;
+    }
+    demoPhaseTimeoutsRef.current.forEach(t => clearTimeout(t));
+    demoPhaseTimeoutsRef.current = [];
+  }, []);
+
   // Demo mode: In development, if WS doesn't connect within timeout, switch to demo mode
+  // Simulate phase transitions for a complete demo experience
   useEffect(() => {
+    // Only start demo mode timer if not connected and not already in demo mode
     if (isDevelopment && !isConnected && !isDemoMode) {
       demoModeTimeoutRef.current = setTimeout(() => {
         console.log('[Icebreaker] WebSocket not available, switching to demo mode');
-        setIsDemoMode(true);
-        // Set initial demo state - go directly to icebreaker phase
+        
+        const demoUserId = userId || 'demo-user';
+        const demoCheckins = [{
+          userId: demoUserId,
+          displayName: 'Demo User',
+          archetype: null,
+          numberPlate: null as number | null,
+        }];
+        const demoAssignments = [{
+          userId: demoUserId,
+          displayName: 'Demo User',
+          numberPlate: 1,
+        }];
+        
+        // Phase 1: Start at 'checkin' phase
         setState(prev => ({
           ...prev,
-          phase: 'icebreaker',
+          phase: 'checkin',
           checkedInCount: 1,
           expectedAttendees: Math.max(1, prev.expectedAttendees),
-          myNumberPlate: 1,
-          numberAssignments: [{
-            userId: userId || 'demo-user',
-            displayName: 'Demo User',
-            numberPlate: 1,
-          }],
-          checkins: [{
-            userId: userId || 'demo-user',
-            displayName: 'Demo User',
-            archetype: null,
-            numberPlate: 1,
-          }],
+          checkins: demoCheckins,
         }));
+        onPhaseChange?.('checkin', 'waiting');
+        
+        // Phase 2: After 1.5s, move to 'number_assign' phase
+        const phase2Timeout = setTimeout(() => {
+          setState(prev => ({
+            ...prev,
+            phase: 'number_assign',
+            myNumberPlate: 1,
+            numberAssignments: demoAssignments,
+            checkins: demoCheckins.map(c => ({ ...c, numberPlate: 1 })),
+          }));
+          onPhaseChange?.('number_assign', 'checkin');
+          
+          // Phase 3: After another 2s, move to 'icebreaker' phase
+          const phase3Timeout = setTimeout(() => {
+            setState(prev => ({
+              ...prev,
+              phase: 'icebreaker',
+            }));
+            onPhaseChange?.('icebreaker', 'number_assign');
+          }, 2000);
+          demoPhaseTimeoutsRef.current.push(phase3Timeout);
+        }, 1500);
+        demoPhaseTimeoutsRef.current.push(phase2Timeout);
+        
+        // Set demo mode after scheduling all phase transitions
+        setIsDemoMode(true);
       }, DEMO_MODE_TIMEOUT);
+      
+      // Cleanup only the initial timeout if effect re-runs before demo starts
+      return () => {
+        if (demoModeTimeoutRef.current) {
+          clearTimeout(demoModeTimeoutRef.current);
+          demoModeTimeoutRef.current = null;
+        }
+      };
     }
+    
+    return undefined;
+  }, [isConnected, isDemoMode, userId, onPhaseChange]);
 
-    // Clear timeout if connected
-    if (isConnected && demoModeTimeoutRef.current) {
-      clearTimeout(demoModeTimeoutRef.current);
-      demoModeTimeoutRef.current = null;
+  // Separate effect: Clear all demo timeouts when real connection opens
+  useEffect(() => {
+    if (isConnected && isDemoMode) {
+      clearDemoTimeouts();
       setIsDemoMode(false);
     }
+  }, [isConnected, isDemoMode, clearDemoTimeouts]);
 
+  // Cleanup all demo timeouts on unmount
+  useEffect(() => {
     return () => {
-      if (demoModeTimeoutRef.current) {
-        clearTimeout(demoModeTimeoutRef.current);
-      }
+      clearDemoTimeouts();
     };
-  }, [isConnected, isDemoMode, userId]);
+  }, [clearDemoTimeouts]);
 
   useEffect(() => {
     if (isConnected && sessionId && userId) {

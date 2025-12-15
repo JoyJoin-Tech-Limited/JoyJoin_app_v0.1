@@ -4,9 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useIcebreakerTopics, type ParticipantProfile } from '@/hooks/use-icebreaker-topics';
 import { IcebreakerCheckinModal } from '@/components/icebreaker/IcebreakerCheckinModal';
 import { NumberPlateDisplay } from '@/components/icebreaker/NumberPlateDisplay';
-import { IcebreakerGallery } from '@/components/icebreaker/IcebreakerGallery';
+import { IcebreakerToolkit } from '@/components/icebreaker/IcebreakerToolkit';
 import { GameDetailView } from '@/components/icebreaker/GameDetailView';
 import { IcebreakerEndingScreen } from '@/components/icebreaker/IcebreakerEndingScreen';
+import { PhaseTransition, type TransitionType } from '@/components/icebreaker/PhaseTransition';
 import type { TopicCard } from '@shared/topicCards';
 import type { IcebreakerGame } from '@shared/icebreakerGames';
 
@@ -28,6 +29,9 @@ export default function IcebreakerDemoPage() {
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const [hasVotedReady, setHasVotedReady] = useState(false);
   const [selectedGame, setSelectedGame] = useState<IcebreakerGame | null>(null);
+  const [showTransition, setShowTransition] = useState(false);
+  const [transitionType, setTransitionType] = useState<TransitionType | null>(null);
+  const [icebreakerStartTime, setIcebreakerStartTime] = useState<number | null>(null);
 
   const participantProfiles: ParticipantProfile[] = DEMO_PARTICIPANTS.map(p => ({
     displayName: p.displayName,
@@ -48,7 +52,12 @@ export default function IcebreakerDemoPage() {
     setCheckedInCount(prev => Math.min(prev + 1, 5));
     setTimeout(() => {
       setCheckedInCount(5);
-      setTimeout(() => setPhase('number_assign'), 1000);
+      setTimeout(() => {
+        setTransitionType('checkin_to_number');
+        setShowTransition(true);
+        setTimeout(() => setShowTransition(false), 1500);
+        setPhase('number_assign');
+      }, 1000);
     }, 1500);
   }, []);
 
@@ -63,7 +72,11 @@ export default function IcebreakerDemoPage() {
   const handleReady = useCallback(() => {
     setHasVotedReady(true);
     setTimeout(() => {
+      setTransitionType('number_to_icebreaker');
+      setShowTransition(true);
+      setTimeout(() => setShowTransition(false), 1500);
       setPhase('icebreaker');
+      setIcebreakerStartTime(Date.now());
     }, 1500);
   }, []);
 
@@ -143,7 +156,9 @@ export default function IcebreakerDemoPage() {
               exit={{ opacity: 0 }}
               className="h-screen relative"
             >
-              <IcebreakerGallery
+              <IcebreakerToolkit
+                open={true}
+                onOpenChange={() => {}}
                 topics={allTopics}
                 recommendedTopics={recommendedTopics}
                 onSelectTopic={handleSelectTopic}
@@ -157,6 +172,7 @@ export default function IcebreakerDemoPage() {
                 onRefreshTopics={refreshTopics}
                 isRefreshingTopics={isRefreshingTopics}
                 isOffline={false}
+                sessionStartTime={icebreakerStartTime || undefined}
               />
             </motion.div>
           )}
@@ -195,6 +211,14 @@ export default function IcebreakerDemoPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {transitionType && (
+        <PhaseTransition
+          type={transitionType}
+          isVisible={showTransition}
+          onComplete={() => setTransitionType(null)}
+        />
+      )}
     </div>
   );
 }
