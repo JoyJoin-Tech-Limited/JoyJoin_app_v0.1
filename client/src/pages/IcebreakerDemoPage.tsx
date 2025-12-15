@@ -280,6 +280,10 @@ export default function IcebreakerDemoPage() {
                 onBack={() => setSelectedGame(null)}
                 onGameChange={(game: IcebreakerGame) => setSelectedGame(game)}
                 participantCount={5}
+                participants={DEMO_PARTICIPANTS.map(p => ({
+                  id: p.userId,
+                  name: p.displayName,
+                }))}
               />
             </motion.div>
           )}
