@@ -58,7 +58,7 @@ export default function IcebreakerDemoPage() {
 
   const [recommendedGame, setRecommendedGame] = useState<{ gameId: string; gameName: string; reason: string } | null>(null);
 
-  const handleRecommendGame = useCallback(async () => {
+  const handleRecommendGame = useCallback(async (excludeGameIds?: string[]) => {
     resetGameRecommendation();
     setRecommendedGame(null);
     const participants = DEMO_PARTICIPANTS.map(p => ({
@@ -68,7 +68,7 @@ export default function IcebreakerDemoPage() {
     }));
     return new Promise<{ gameId: string; gameName: string; reason: string } | null>((resolve) => {
       recommendGame(
-        { participants, scene: 'both' },
+        { participants, scene: 'both', excludeGameIds },
         {
           onSuccess: (data) => {
             setRecommendedGame(data);

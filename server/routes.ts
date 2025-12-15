@@ -3946,7 +3946,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI-powered game recommendation (小悦推荐)
   app.post('/api/icebreaker/recommend-game', isPhoneAuthenticated, async (req: any, res) => {
     try {
-      const { participants, scene } = req.body;
+      const { participants, scene, excludeGameIds } = req.body;
       
       if (!participants || !Array.isArray(participants) || participants.length === 0) {
         return res.status(400).json({ message: "participants array with at least one participant is required" });
@@ -3959,7 +3959,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { icebreakerGames } = await import('@shared/icebreakerGames');
       const { recommendGameForParticipants } = await import('./icebreakerAIService');
       
-      const games = icebreakerGames.map(g => ({
+      let games = icebreakerGames.map(g => ({
         id: g.id,
         name: g.name,
         scene: g.scene,
@@ -3969,6 +3969,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         maxPlayers: g.maxPlayers,
         description: g.description
       }));
+      
+      if (excludeGameIds && Array.isArray(excludeGameIds) && excludeGameIds.length > 0) {
+        games = games.filter(g => !excludeGameIds.includes(g.id));
+      }
+      
+      if (games.length === 0) {
+        return res.status(400).json({ message: "All games have been excluded, no more recommendations available" });
+      }
       
       const recommendation = await recommendGameForParticipants(participants, games, scene);
       

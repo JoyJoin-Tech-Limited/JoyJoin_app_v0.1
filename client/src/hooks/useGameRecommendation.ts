@@ -16,6 +16,7 @@ export interface GameRecommendation {
 interface RecommendGameParams {
   participants: ParticipantInfo[];
   scene?: 'dinner' | 'bar' | 'both';
+  excludeGameIds?: string[];
 }
 
 export function useGameRecommendation() {

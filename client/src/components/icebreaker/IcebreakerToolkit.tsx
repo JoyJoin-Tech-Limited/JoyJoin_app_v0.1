@@ -73,7 +73,7 @@ interface IcebreakerToolkitProps {
   isOffline?: boolean;
   sessionStartTime?: number;
   onEndIcebreaker?: () => void;
-  onRecommendGame?: () => Promise<GameRecommendation | null>;
+  onRecommendGame?: (excludeGameIds?: string[]) => Promise<GameRecommendation | null>;
   isRecommendingGame?: boolean;
   recommendedGame?: GameRecommendation | null;
 }
@@ -146,6 +146,13 @@ export function IcebreakerToolkit({
   const [showEndButton, setShowEndButton] = useState(false);
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
   const [usedItemId, setUsedItemId] = useState<string | null>(null);
+  const [recommendedHistory, setRecommendedHistory] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      setRecommendedHistory([]);
+    }
+  }, [open]);
 
   const galleryItems = useMemo(() => {
     const items: GalleryItem[] = [];
@@ -291,17 +298,21 @@ export function IcebreakerToolkit({
   }, [isOffline, emblaApi, galleryItems, handleCardClick]);
 
   const [recommendError, setRecommendError] = useState(false);
+  const [allGamesRecommended, setAllGamesRecommended] = useState(false);
 
   const handleAIRecommend = useCallback(async () => {
     if (isOffline || !onRecommendGame || !emblaApi) return;
     
     setRecommendError(false);
+    setAllGamesRecommended(false);
+    
     try {
-      const recommendation = await onRecommendGame();
+      const recommendation = await onRecommendGame(recommendedHistory);
       if (recommendation === undefined) {
         return;
       }
       if (recommendation) {
+        setRecommendedHistory(prev => [...prev, recommendation.gameId]);
         const gameIndex = galleryItems.findIndex(
           item => item.type === 'game' && item.id === `game-${recommendation.gameId}`
         );
@@ -309,14 +320,20 @@ export function IcebreakerToolkit({
           emblaApi.scrollTo(gameIndex);
         }
       } else {
+        setAllGamesRecommended(true);
+        setTimeout(() => setAllGamesRecommended(false), 3000);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (errorMessage.includes('excluded') || errorMessage.includes('no more') || errorMessage.includes('all games')) {
+        setAllGamesRecommended(true);
+        setTimeout(() => setAllGamesRecommended(false), 3000);
+      } else {
         setRecommendError(true);
         setTimeout(() => setRecommendError(false), 3000);
       }
-    } catch {
-      setRecommendError(true);
-      setTimeout(() => setRecommendError(false), 3000);
     }
-  }, [isOffline, onRecommendGame, emblaApi, galleryItems]);
+  }, [isOffline, onRecommendGame, emblaApi, galleryItems, recommendedHistory]);
 
   const content = (
     <div className="flex flex-col h-full overflow-hidden rounded-t-3xl" data-testid="icebreaker-toolkit">
@@ -574,41 +591,71 @@ export function IcebreakerToolkit({
           </div>
         )}
 
-        <div className="flex items-center gap-3">
-          <Button
-            variant={recommendError ? "destructive" : "outline"}
-            onClick={onRecommendGame ? handleAIRecommend : handleRandomPick}
-            disabled={isOffline || isRecommendingGame}
-            className="flex-1"
-            data-testid="button-ai-recommend"
-          >
-            {isRecommendingGame ? (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                小悦思考中...
-              </>
-            ) : recommendError ? (
-              <>
-                <Shuffle className="w-4 h-4 mr-2" />
-                推荐失败，再试一次
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                小悦推荐
-              </>
-            )}
-          </Button>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span data-testid="text-ready-count">{readyCount}/{totalCount}</span>
-            <div className="w-16 h-2 bg-muted rounded-full overflow-hidden" data-testid="progress-ready">
-              <motion.div
-                className="h-full bg-primary"
-                initial={{ width: 0 }}
-                animate={{ width: `${(readyCount / Math.max(totalCount, 1)) * 100}%` }}
-              />
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <Button
+              variant={recommendError ? "destructive" : allGamesRecommended ? "secondary" : "outline"}
+              onClick={onRecommendGame ? handleAIRecommend : handleRandomPick}
+              disabled={isOffline || isRecommendingGame}
+              className="flex-1"
+              data-testid="button-ai-recommend"
+            >
+              {isRecommendingGame ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  小悦思考中...
+                </>
+              ) : recommendError ? (
+                <>
+                  <Shuffle className="w-4 h-4 mr-2" />
+                  推荐失败，再试一次
+                </>
+              ) : allGamesRecommended ? (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  已推荐全部游戏
+                </>
+              ) : recommendedHistory.length > 0 ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  换一个推荐
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  小悦推荐
+                </>
+              )}
+            </Button>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span data-testid="text-ready-count">{readyCount}/{totalCount}</span>
+              <div className="w-16 h-2 bg-muted rounded-full overflow-hidden" data-testid="progress-ready">
+                <motion.div
+                  className="h-full bg-primary"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(readyCount / Math.max(totalCount, 1)) * 100}%` }}
+                />
+              </div>
             </div>
           </div>
+          
+          {recommendedGame && !allGamesRecommended && (
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-primary/10 rounded-lg p-2"
+              data-testid="recommendation-reason"
+            >
+              <div className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 text-xs text-primary">
+                  悦
+                </div>
+                <p className="text-sm text-foreground/80 leading-relaxed">
+                  {recommendedGame.reason}
+                </p>
+              </div>
+            </motion.div>
+          )}
         </div>
         
         {!isReady && countdown > 0 && (

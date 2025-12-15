@@ -118,7 +118,7 @@ export default function IcebreakerSessionPage() {
 
   const [recommendedGame, setRecommendedGame] = useState<{ gameId: string; gameName: string; reason: string } | null>(null);
 
-  const handleRecommendGame = useCallback(async () => {
+  const handleRecommendGame = useCallback(async (excludeGameIds?: string[]) => {
     const participants = (sessionData?.participants || []).map(p => ({
       displayName: p.displayName,
       archetype: p.archetype,
@@ -129,7 +129,7 @@ export default function IcebreakerSessionPage() {
     setRecommendedGame(null);
     return new Promise<{ gameId: string; gameName: string; reason: string } | null>((resolve) => {
       recommendGame(
-        { participants, scene: 'both' },
+        { participants, scene: 'both', excludeGameIds },
         {
           onSuccess: (data) => {
             setRecommendedGame(data);
