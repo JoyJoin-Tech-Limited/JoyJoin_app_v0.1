@@ -686,7 +686,7 @@ export function IcebreakerToolkit({
               data-testid="button-end-icebreaker"
             >
               <LogOut className="w-4 h-4 mr-2" />
-              结束破冰
+              {elapsedMinutes >= 60 ? '活动结束' : '结束破冰'}
             </Button>
           </motion.div>
         )}
