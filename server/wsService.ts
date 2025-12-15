@@ -631,6 +631,23 @@ class WebSocketService {
           ...(nextPhase === 'ended' ? { endedAt: new Date() } : {}),
         });
 
+        // When session ends, mark all checked-in participants as attended
+        if (nextPhase === 'ended') {
+          if (session.eventId) {
+            // For traditional event sessions, update eventAttendance
+            await storage.markSessionAttendanceCompleted(sessionId, session.eventId);
+            console.log(`[WS] Session ${sessionId} ended - marked attendance as completed for event ${session.eventId}`);
+          } else if (session.blindBoxEventId) {
+            // For blind box events, update status to 'completed'
+            await storage.markBlindBoxEventCompleted(session.blindBoxEventId);
+            console.log(`[WS] Session ${sessionId} ended - marked blind box event ${session.blindBoxEventId} as completed`);
+          } else if (session.groupId) {
+            // For event pool group sessions, update status to 'completed'
+            await storage.markEventPoolGroupCompleted(session.groupId);
+            console.log(`[WS] Session ${sessionId} ended - marked group ${session.groupId} as completed`);
+          }
+        }
+
         this.broadcastToIcebreakerSession(sessionId, {
           type: 'ICEBREAKER_PHASE_CHANGE',
           data: { sessionId, phase: nextPhase, previousPhase: phase },

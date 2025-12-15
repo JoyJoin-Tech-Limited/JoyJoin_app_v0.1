@@ -14,7 +14,7 @@ import {
   type InsertIcebreakerSession, type InsertIcebreakerCheckin, type InsertIcebreakerReadyVote, type InsertIcebreakerActivityLog,
   users, events, eventAttendance, chatMessages, eventFeedback, blindBoxEvents, testResponses, roleResults, notifications,
   directMessageThreads, directMessages, payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs,
-  pricingSettings, promotionBanners, eventPools, venueTimeSlots, venueTimeSlotBookings, venues,
+  pricingSettings, promotionBanners, eventPools, eventPoolGroups, venueTimeSlots, venueTimeSlotBookings, venues,
   icebreakerSessions, icebreakerCheckins, icebreakerReadyVotes, icebreakerActivityLogs
 } from "@shared/schema";
 import { db } from "./db";
@@ -272,6 +272,11 @@ export interface IStorage {
   // Icebreaker Activity Log operations
   createActivityLog(data: InsertIcebreakerActivityLog): Promise<IcebreakerActivityLog>;
   getSessionActivityLogs(sessionId: string): Promise<IcebreakerActivityLog[]>;
+  
+  // Event completion operations
+  markSessionAttendanceCompleted(sessionId: string, eventId: string): Promise<void>;
+  markEventPoolGroupCompleted(groupId: string): Promise<void>;
+  markBlindBoxEventCompleted(blindBoxEventId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -687,6 +692,7 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...feedback,
         userId,
+        completedAt: new Date(),
       })
       .returning();
     return newFeedback;
@@ -3284,6 +3290,45 @@ export class DatabaseStorage implements IStorage {
       .from(icebreakerActivityLogs)
       .where(eq(icebreakerActivityLogs.sessionId, sessionId))
       .orderBy(desc(icebreakerActivityLogs.createdAt));
+  }
+
+  async markSessionAttendanceCompleted(sessionId: string, eventId: string): Promise<void> {
+    // Get all checked-in users for this session
+    const checkins = await this.getSessionCheckins(sessionId);
+    const userIds = checkins.map(c => c.userId);
+    
+    if (userIds.length === 0) return;
+    
+    // Update eventAttendance status to 'attended' for all these users
+    await db
+      .update(eventAttendance)
+      .set({ status: 'attended' })
+      .where(
+        and(
+          eq(eventAttendance.eventId, eventId),
+          sql`${eventAttendance.userId} = ANY(${userIds})`
+        )
+      );
+    
+    console.log(`[Storage] Marked ${userIds.length} users as attended for event ${eventId}`);
+  }
+
+  async markEventPoolGroupCompleted(groupId: string): Promise<void> {
+    await db
+      .update(eventPoolGroups)
+      .set({ status: 'completed', updatedAt: new Date() })
+      .where(eq(eventPoolGroups.id, groupId));
+    
+    console.log(`[Storage] Marked event pool group ${groupId} as completed`);
+  }
+
+  async markBlindBoxEventCompleted(blindBoxEventId: string): Promise<void> {
+    await db
+      .update(blindBoxEvents)
+      .set({ status: 'completed', updatedAt: new Date() })
+      .where(eq(blindBoxEvents.id, blindBoxEventId));
+    
+    console.log(`[Storage] Marked blind box event ${blindBoxEventId} as completed`);
   }
 }
 
