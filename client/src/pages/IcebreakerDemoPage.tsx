@@ -210,6 +210,8 @@ export default function IcebreakerDemoPage() {
               exit={{ opacity: 0 }}
             >
               <NumberPlateDisplay
+                open={true}
+                onOpenChange={() => {}}
                 myNumberPlate={5}
                 myUserId="demo-you"
                 assignments={numberAssignments}
@@ -217,6 +219,7 @@ export default function IcebreakerDemoPage() {
                 totalCount={5}
                 onReady={handleReady}
                 isReady={hasVotedReady}
+                eventTitle="周末咖啡局"
               />
             </motion.div>
           )}

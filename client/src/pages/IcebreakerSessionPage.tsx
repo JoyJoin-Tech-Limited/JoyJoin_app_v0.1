@@ -299,6 +299,8 @@ export default function IcebreakerSessionPage() {
             exit={{ opacity: 0 }}
           >
             <NumberPlateDisplay
+              open={true}
+              onOpenChange={() => {}}
               myNumberPlate={icebreakerState.myNumberPlate}
               myUserId={user?.id || ''}
               assignments={icebreakerState.numberAssignments}
@@ -306,6 +308,7 @@ export default function IcebreakerSessionPage() {
               totalCount={icebreakerState.checkedInCount}
               onReady={handleReady}
               isReady={hasVotedReady}
+              eventTitle={sessionData?.eventId}
             />
           </motion.div>
         )}

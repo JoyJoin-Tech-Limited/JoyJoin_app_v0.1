@@ -74,6 +74,8 @@ interface NumberAssignment {
 }
 
 interface NumberPlateDisplayProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   myNumberPlate: number | null;
   myUserId: string;
   assignments: NumberAssignment[];
@@ -83,9 +85,12 @@ interface NumberPlateDisplayProps {
   readyCount: number;
   totalCount: number;
   autoReadyTimeoutSeconds?: number;
+  eventTitle?: string;
 }
 
 export function NumberPlateDisplay({
+  open = true,
+  onOpenChange,
   myNumberPlate,
   myUserId,
   assignments,
@@ -95,6 +100,7 @@ export function NumberPlateDisplay({
   readyCount,
   totalCount,
   autoReadyTimeoutSeconds = 60,
+  eventTitle,
 }: NumberPlateDisplayProps) {
   const [showReveal, setShowReveal] = useState(true);
   const [revealComplete, setRevealComplete] = useState(false);
@@ -102,6 +108,8 @@ export function NumberPlateDisplay({
   const [autoVoteTriggered, setAutoVoteTriggered] = useState(false);
   const isMyTurn = myNumberPlate === currentSpeaker;
   const sortedAssignments = [...assignments].sort((a, b) => a.numberPlate - b.numberPlate);
+  
+  const currentSpeakerInfo = assignments.find(a => a.numberPlate === currentSpeaker);
 
   useEffect(() => {
     if (myNumberPlate !== null) {
@@ -189,133 +197,174 @@ export function NumberPlateDisplay({
     );
   }
 
-  return (
-    <div className="p-4 space-y-6" data-testid="number-plate-display">
-      <div className="text-center">
-        <div className="flex items-center justify-center gap-3 mb-2">
-          <div 
-            className="w-16 h-16 rounded-full bg-primary flex items-center justify-center"
-            data-testid="badge-my-number"
+  const content = (
+    <div className="flex flex-col h-full overflow-hidden rounded-t-3xl">
+      <div className="relative">
+        <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto mt-3 mb-2" />
+        {onOpenChange && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 right-2"
+            onClick={() => onOpenChange(false)}
+            data-testid="button-close-numberplate"
           >
-            <span className="text-3xl font-bold text-primary-foreground">
-              {myNumberPlate || '?'}
-            </span>
-          </div>
-        </div>
-        <p className="text-sm text-muted-foreground">我的号码</p>
+            <X className="w-5 h-5" />
+          </Button>
+        )}
       </div>
 
-      {isMyTurn && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-primary/10 border border-primary/30 rounded-lg p-4 text-center"
-          data-testid="my-turn-banner"
-        >
-          <div className="flex items-center justify-center gap-2 text-primary mb-2">
-            <Mic className="w-5 h-5" />
-            <span className="text-lg font-semibold">轮到你啦！</span>
+      <div className="flex-1 overflow-y-auto px-4 pb-32">
+        <div className="text-center mb-4">
+          {eventTitle && (
+            <h2 className="text-lg font-semibold text-primary mb-2" data-testid="text-event-title">
+              {eventTitle}
+            </h2>
+          )}
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <div 
+              className="w-16 h-16 rounded-full bg-primary flex items-center justify-center"
+              data-testid="badge-my-number"
+            >
+              <span className="text-3xl font-bold text-primary-foreground">
+                {myNumberPlate || '?'}
+              </span>
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            向大家介绍一下自己吧，说你想说的～
-          </p>
-        </motion.div>
-      )}
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            今天的小伙伴们
-          </h3>
-          <Badge variant="outline">
-            当前: {currentSpeaker}号
-          </Badge>
+          <p className="text-sm text-muted-foreground">我的号码</p>
         </div>
 
-        <div className="grid gap-2">
-          <AnimatePresence>
-            {sortedAssignments.map((assignment, index) => {
-              const isMe = assignment.userId === myUserId;
-              const isSpeaking = assignment.numberPlate === currentSpeaker;
-              const hasPassed = assignment.numberPlate < currentSpeaker;
-              
-              return (
-                <motion.div
-                  key={assignment.userId}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  data-testid={`participant-row-${assignment.userId}`}
-                >
-                  <Card className={`transition-all ${
-                    isSpeaking 
-                      ? 'border-primary bg-primary/5 shadow-lg' 
-                      : hasPassed 
-                        ? 'opacity-60' 
-                        : ''
-                  } ${isMe ? 'ring-2 ring-primary/30' : ''}`}>
-                    <CardContent className="p-3 flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
-                        isSpeaking 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {assignment.numberPlate}
-                      </div>
-                      
-                      <div className="relative flex flex-col items-center">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                          {getArchetypeImage(assignment.archetype) ? (
-                            <img 
-                              src={getArchetypeImage(assignment.archetype)!} 
-                              alt={getArchetypeName(assignment.archetype)}
-                              className="w-8 h-8 object-contain"
-                            />
-                          ) : (
-                            <span className="text-primary text-sm font-medium">
-                              {assignment.displayName.slice(0, 1)}
+        {isMyTurn ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-primary/10 border border-primary/30 rounded-lg p-4 text-center mb-4"
+            data-testid="my-turn-banner"
+          >
+            <div className="flex items-center justify-center gap-2 text-primary mb-2">
+              <Mic className="w-5 h-5" />
+              <span className="text-lg font-semibold">轮到你啦！</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              向大家介绍一下自己吧，说你想说的～
+            </p>
+          </motion.div>
+        ) : currentSpeakerInfo && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-center mb-4"
+            data-testid="speaker-guide-banner"
+          >
+            <div className="flex items-center justify-center gap-2 text-primary/80">
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                <Mic className="w-4 h-4" />
+              </motion.div>
+              <span className="text-sm font-medium" data-testid="text-speaker-guide">
+                {currentSpeakerInfo.displayName} 正在自我介绍中～
+              </span>
+            </div>
+          </motion.div>
+        )}
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              今天的小伙伴们
+            </h3>
+            <Badge variant="outline">
+              当前: {currentSpeaker}号
+            </Badge>
+          </div>
+
+          <div className="grid gap-2">
+            <AnimatePresence>
+              {sortedAssignments.map((assignment, index) => {
+                const isMe = assignment.userId === myUserId;
+                const isSpeaking = assignment.numberPlate === currentSpeaker;
+                const hasPassed = assignment.numberPlate < currentSpeaker;
+                
+                return (
+                  <motion.div
+                    key={assignment.userId}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    data-testid={`participant-row-${assignment.userId}`}
+                  >
+                    <Card className={`transition-all ${
+                      isSpeaking 
+                        ? 'border-primary bg-primary/5 shadow-lg' 
+                        : hasPassed 
+                          ? 'opacity-60' 
+                          : ''
+                    } ${isMe ? 'ring-2 ring-primary/30' : ''}`}>
+                      <CardContent className="p-3 flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
+                          isSpeaking 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {assignment.numberPlate}
+                        </div>
+                        
+                        <div className="relative flex flex-col items-center">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                            {getArchetypeImage(assignment.archetype) ? (
+                              <img 
+                                src={getArchetypeImage(assignment.archetype)!} 
+                                alt={getArchetypeName(assignment.archetype)}
+                                className="w-8 h-8 object-contain"
+                              />
+                            ) : (
+                              <span className="text-primary text-sm font-medium">
+                                {assignment.displayName.slice(0, 1)}
+                              </span>
+                            )}
+                          </div>
+                          {assignment.archetype && (
+                            <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[10px] text-primary/80 whitespace-nowrap bg-primary/10 px-1 rounded">
+                              {getArchetypeName(assignment.archetype)}
                             </span>
                           )}
                         </div>
-                        {assignment.archetype && (
-                          <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[10px] text-primary/80 whitespace-nowrap bg-primary/10 px-1 rounded">
-                            {getArchetypeName(assignment.archetype)}
-                          </span>
-                        )}
-                      </div>
 
-                      <div className="flex-1 min-w-0">
-                        <p className={`font-medium truncate ${isMe ? 'text-primary' : ''}`}>
-                          {assignment.displayName}
-                          {isMe && <span className="ml-1 text-xs">(我)</span>}
-                        </p>
-                        {assignment.archetype && (
-                          <p className="text-xs text-muted-foreground truncate">
-                            {assignment.archetype}
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-medium truncate ${isMe ? 'text-primary' : ''}`}>
+                            {assignment.displayName}
+                            {isMe && <span className="ml-1 text-xs">(我)</span>}
                           </p>
-                        )}
-                      </div>
+                          {assignment.archetype && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {assignment.archetype}
+                            </p>
+                          )}
+                        </div>
 
-                      {isSpeaking && (
-                        <motion.div
-                          animate={{ scale: [1, 1.2, 1] }}
-                          transition={{ duration: 1, repeat: Infinity }}
-                        >
-                          <Mic className="w-5 h-5 text-primary" />
-                        </motion.div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+                        {isSpeaking && (
+                          <motion.div
+                            animate={{ scale: [1, 1.2, 1] }}
+                            transition={{ duration: 1, repeat: Infinity }}
+                          >
+                            <Mic className="w-5 h-5 text-primary" />
+                          </motion.div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t">
-        <div className="flex items-center justify-between mb-3">
+      <div className="absolute bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t">
+        <div className="flex items-center justify-between gap-2 mb-3">
           <span className="text-sm text-muted-foreground">
             {readyCount} / {totalCount} 人已准备好
           </span>
@@ -380,5 +429,31 @@ export function NumberPlateDisplay({
         </Button>
       </div>
     </div>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent 
+        className="m-0 p-0 border-0 bg-gradient-to-b from-primary/10 via-background to-background"
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          top: 'auto',
+          height: '80vh',
+          borderRadius: '1.5rem 1.5rem 0 0',
+          zIndex: 50,
+          transform: 'none'
+        }}
+        data-testid="number-plate-display"
+        aria-describedby={undefined}
+      >
+        <VisuallyHidden>
+          <DialogTitle>号码牌分配</DialogTitle>
+        </VisuallyHidden>
+        {content}
+      </DialogContent>
+    </Dialog>
   );
 }
