@@ -778,16 +778,16 @@ function LocalKingGame({
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="space-y-3"
+                  className="space-y-3 pb-6"
                 >
-                  <h4 className="font-medium text-sm">选择目标号码</h4>
-                  <div className="flex flex-wrap gap-2 justify-center">
+                  <h4 className="font-medium text-sm text-center">选择目标号码</h4>
+                  <div className="flex flex-wrap gap-3 justify-center">
                     {Array.from({ length: playerCount }, (_, i) => i + 1).map(num => (
                       <Button
                         key={num}
-                        variant="outline"
+                        variant="default"
                         size="lg"
-                        className="w-14 h-14 text-xl font-bold"
+                        className="w-16 h-16 text-2xl font-bold bg-gradient-to-br from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white shadow-lg"
                         onClick={() => handleSelectTarget(num)}
                         data-testid={`target-${num}`}
                       >

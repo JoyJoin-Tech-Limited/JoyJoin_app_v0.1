@@ -64,22 +64,32 @@ export function SpinWheel({
     setShowResult(false);
     setSelectedIndex(null);
 
-    const randomIndex = Math.floor(Math.random() * participants.length);
     const spins = 5 + Math.random() * 3;
-    // Calculate target position: center of selected segment should be at top (0°)
-    const targetPosition = 360 - randomIndex * segmentAngle - segmentAngle / 2;
-    // Account for current rotation position to calculate correct delta
-    const currentPosition = rotation % 360;
-    const delta = (targetPosition - currentPosition + 360) % 360;
-    const targetAngle = spins * 360 + delta;
+    const randomExtraAngle = Math.random() * 360;
+    const totalSpinAngle = spins * 360 + randomExtraAngle;
+    const newRotation = rotation + totalSpinAngle;
     
-    setRotation(prev => prev + targetAngle);
+    setRotation(newRotation);
 
     setTimeout(() => {
       setIsSpinning(false);
-      setSelectedIndex(randomIndex);
+      // Calculate which segment is at top based on ACTUAL final rotation
+      // Segment i center is at angle: (i + 0.5) * segmentAngle from top (clockwise)
+      // After rotation R, segment at angle θ appears at (θ + R) mod 360
+      // For segment to be at top (0°): (θ + R) ≡ 0, so θ ≡ -R ≡ (360 - R) mod 360
+      // So the segment at top has center angle = (360 - R) mod 360
+      // Solving for i: (i + 0.5) * segmentAngle = (360 - R) mod 360
+      // i = ((360 - R mod 360) / segmentAngle - 0.5)
+      const finalMod360 = ((newRotation % 360) + 360) % 360;
+      const angleAtTop = (360 - finalMod360 + 360) % 360;
+      const n = participants.length;
+      let actualIndex = Math.round((angleAtTop / segmentAngle - 0.5 + n) % n);
+      if (actualIndex < 0) actualIndex += n;
+      if (actualIndex >= n) actualIndex = actualIndex % n;
+      
+      setSelectedIndex(actualIndex);
       setShowResult(true);
-      onSelect?.(participantsWithColors[randomIndex]);
+      onSelect?.(participantsWithColors[actualIndex]);
     }, 4000);
   }, [isSpinning, participants.length, segmentAngle, onSelect, participantsWithColors, rotation]);
 
