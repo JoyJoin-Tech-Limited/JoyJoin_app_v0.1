@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import type { TopicCard } from '@shared/topicCards';
 import type { IcebreakerGame } from '@shared/icebreakerGames';
+import { QuickReactionBar } from './QuickReactionBar';
 
 interface ActivitySpotlightProps {
   open: boolean;
@@ -443,6 +444,14 @@ export function ActivitySpotlight({
                       <ThumbsDown className="w-8 h-8" />
                       <span className="text-sm">不太好</span>
                     </Button>
+                  </div>
+
+                  {/* Quick Reaction Bar */}
+                  <div className="pt-2">
+                    <QuickReactionBar 
+                      activityName={item?.type === 'topic' ? (item.data as TopicCard).question : (item?.data as IcebreakerGame)?.name}
+                      compact
+                    />
                   </div>
 
                   <div className="space-y-3 pt-4">

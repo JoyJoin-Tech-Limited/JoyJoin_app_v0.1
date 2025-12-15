@@ -29,6 +29,10 @@ import { Wine, Utensils, Globe } from 'lucide-react';
 import { ActivitySpotlight } from './ActivitySpotlight';
 import { GameDetailView } from './GameDetailView';
 import { KingGameController } from './KingGameController';
+import { QuickReactionBar } from './QuickReactionBar';
+import { SpinWheel } from './SpinWheel';
+import { StreakMeter } from './StreakMeter';
+import { RotateCw, Flame } from 'lucide-react';
 
 export interface RecommendedTopic {
   topic: TopicCard;
@@ -157,10 +161,20 @@ export function IcebreakerToolkit({
   const [spotlightOpen, setSpotlightOpen] = useState(false);
   const [selectedDetailItem, setSelectedDetailItem] = useState<GalleryItem | null>(null);
   const [showKingGame, setShowKingGame] = useState(false);
+  const [showSpinWheel, setShowSpinWheel] = useState(false);
+  const [showStreakMeter, setShowStreakMeter] = useState(false);
+  const [activitiesCompleted, setActivitiesCompleted] = useState(0);
+  const [currentStreak, setCurrentStreak] = useState(0);
 
   useEffect(() => {
     if (open) {
       setRecommendedHistory([]);
+    } else {
+      // Reset engagement tool states when dialog closes
+      setShowSpinWheel(false);
+      setShowStreakMeter(false);
+      setSelectedDetailItem(null);
+      setShowKingGame(false);
     }
   }, [open]);
 
@@ -317,12 +331,32 @@ export function IcebreakerToolkit({
     setShowKingGame(false);
   }, []);
 
+  const handleSpinWheelBack = useCallback(() => {
+    setShowSpinWheel(false);
+  }, []);
+
+  const handleActivityComplete = useCallback(() => {
+    setActivitiesCompleted(prev => prev + 1);
+    setCurrentStreak(prev => prev + 1);
+  }, []);
+
+  const spinWheelParticipants = useMemo(() => 
+    Array.from({ length: participantCount }, (_, i) => ({
+      id: `${i + 1}`,
+      name: `${i + 1}号`,
+    })),
+    [participantCount]
+  );
+
   const handleSpotlightClose = useCallback(() => {
     setSpotlightOpen(false);
     setSpotlightItem(null);
   }, []);
 
   const handleSpotlightFeedback = useCallback((rating: 'good' | 'neutral' | 'bad') => {
+    // Increment activity streak when feedback is given (activity completed)
+    setActivitiesCompleted(prev => prev + 1);
+    setCurrentStreak(prev => prev + 1);
     setSpotlightOpen(false);
     setSpotlightItem(null);
   }, []);
@@ -762,6 +796,43 @@ export function IcebreakerToolkit({
           </div>
         )}
         
+        {/* Engagement Tools Bar */}
+        <div className="flex items-center gap-2 mb-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowSpinWheel(true)}
+            className="flex-1"
+            data-testid="button-open-spin-wheel"
+          >
+            <RotateCw className="w-4 h-4 mr-2" />
+            随机选人
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowStreakMeter(!showStreakMeter)}
+            className="flex-1"
+            data-testid="button-toggle-streak"
+          >
+            <Flame className="w-4 h-4 mr-2" />
+            活跃度
+            {currentStreak > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs">{currentStreak}</Badge>
+            )}
+          </Button>
+        </div>
+
+        {showStreakMeter && (
+          <div className="mb-3">
+            <StreakMeter
+              currentStreak={currentStreak}
+              participantCount={participantCount}
+              activitiesCompleted={activitiesCompleted}
+            />
+          </div>
+        )}
+
         <Button
           className="w-full"
           size="lg"
@@ -788,7 +859,30 @@ export function IcebreakerToolkit({
             <VisuallyHidden>
               <DialogPrimitive.Title>破冰工具箱</DialogPrimitive.Title>
             </VisuallyHidden>
-            {showKingGame ? (
+            {showSpinWheel ? (
+              <div className="h-full flex flex-col">
+                <div className="px-4 py-3 border-b bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
+                  <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" onClick={handleSpinWheelBack} data-testid="button-back-spin-wheel">
+                      <ChevronLeft className="w-5 h-5" />
+                    </Button>
+                    <div className="flex-1">
+                      <h2 className="text-lg font-semibold flex items-center gap-2">
+                        <RotateCw className="w-5 h-5 text-primary" />
+                        随机选人转盘
+                      </h2>
+                      <p className="text-xs text-muted-foreground">随机选择下一个发言人或任务执行者</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-auto p-4">
+                  <SpinWheel 
+                    participants={spinWheelParticipants}
+                    title="谁来执行任务?"
+                  />
+                </div>
+              </div>
+            ) : showKingGame ? (
               <KingGameController
                 onBack={handleKingGameBack}
                 participantCount={participantCount}
