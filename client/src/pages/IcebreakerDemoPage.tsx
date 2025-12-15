@@ -101,8 +101,9 @@ export default function IcebreakerDemoPage() {
     // Topic selection handled visually in the UI
   }, []);
 
-  const handleSelectGame = useCallback((game: IcebreakerGame) => {
-    setSelectedGame(game);
+  const handleSelectGame = useCallback((_game: IcebreakerGame) => {
+    // Game selection handled in ActivitySpotlight - do not set selectedGame
+    // to avoid overlapping with GameDetailView during demo
   }, []);
 
   const handleReady = useCallback(() => {
