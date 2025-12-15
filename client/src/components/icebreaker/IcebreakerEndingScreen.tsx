@@ -301,7 +301,9 @@ export function IcebreakerEndingScreen({
         ))}
       </div>
 
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-6">
+      <div className="relative z-10 flex flex-col h-screen">
+        {/* Scrollable content area */}
+        <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-6 pb-48">
         <div ref={shareCardRef} className="flex flex-col items-center p-6 rounded-3xl" style={{ background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.9) 0%, rgba(236, 72, 153, 0.9) 50%, rgba(251, 146, 60, 0.9) 100%)' }}>
           <motion.div
             initial={{ scale: 0, rotate: -180 }}
@@ -389,12 +391,14 @@ export function IcebreakerEndingScreen({
             {eventName}
           </div>
         </div>
+        </div>
 
+        {/* Fixed buttons at bottom */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.9 }}
-          className="flex flex-col items-center gap-4 mt-6"
+          className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-purple-600/95 via-purple-600/90 to-transparent pt-8 pb-[max(1.5rem,env(safe-area-inset-bottom))] px-6 flex flex-col items-center gap-3"
         >
           <div className="flex items-center gap-3">
             <Button 
@@ -464,8 +468,6 @@ export function IcebreakerEndingScreen({
           )}
         </motion.div>
       </div>
-
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/20 to-transparent" />
     </div>
   );
 }
