@@ -13,7 +13,7 @@ interface PokerCardProps {
 
 const sizeClasses = {
   sm: 'w-16 h-24',
-  md: 'w-20 h-30',
+  md: 'w-20 h-28',
   lg: 'w-24 h-36',
 };
 
