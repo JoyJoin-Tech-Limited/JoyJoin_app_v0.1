@@ -21,6 +21,7 @@ import type { IcebreakerGame } from '@shared/icebreakerGames';
 interface SessionData {
   id: string;
   eventId: string;
+  eventTitle?: string;
   expectedAttendees: number;
   atmosphereType: string;
   participants: Array<{
@@ -31,6 +32,13 @@ interface SessionData {
     topicsHappy?: string[];
     topicsAvoid?: string[];
   }>;
+}
+
+interface BlindBoxEventData {
+  id: string;
+  title: string;
+  eventType: string;
+  dateTime: string;
 }
 
 export default function IcebreakerSessionPage() {
@@ -49,6 +57,17 @@ export default function IcebreakerSessionPage() {
     queryKey: ['/api/icebreaker/session', sessionId],
     enabled: !!sessionId,
   });
+
+  // Get blind box event details for title (silently fails for non-blind-box events)
+  const { data: eventData } = useQuery<BlindBoxEventData>({
+    queryKey: ['/api/blind-box-events', sessionData?.eventId],
+    enabled: !!sessionData?.eventId,
+    retry: false,
+    staleTime: Infinity,
+  });
+
+  // Use event title from blind box event, fallback to session eventTitle or default
+  const eventTitle = eventData?.title || sessionData?.eventTitle || '活动';
 
   const participantProfiles: ParticipantProfile[] = (sessionData?.participants || []).map(p => ({
     displayName: p.displayName,
@@ -286,7 +305,7 @@ export default function IcebreakerSessionPage() {
               hasCheckedIn={icebreakerState.checkins.some(c => c.userId === user?.id)}
               onCheckin={handleCheckin}
               welcomeMessage={welcomeData?.message}
-              eventTitle={sessionData?.eventId}
+              eventTitle={eventTitle}
             />
           </motion.div>
         )}
@@ -308,7 +327,7 @@ export default function IcebreakerSessionPage() {
               totalCount={icebreakerState.checkedInCount}
               onReady={handleReady}
               isReady={hasVotedReady}
-              eventTitle={sessionData?.eventId}
+              eventTitle={eventTitle}
             />
           </motion.div>
         )}

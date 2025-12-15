@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -199,19 +199,19 @@ export function NumberPlateDisplay({
 
   const content = (
     <div className="flex flex-col h-full overflow-hidden rounded-t-3xl">
-      <div className="relative">
-        <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto mt-3 mb-2" />
-        {onOpenChange && (
+      <div className="relative flex items-center justify-center">
+        <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mt-3 mb-4" />
+        <DialogClose asChild>
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-2 right-2"
-            onClick={() => onOpenChange(false)}
+            className="absolute right-2 top-2"
             data-testid="button-close-numberplate"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
+            <span className="sr-only">关闭</span>
           </Button>
-        )}
+        </DialogClose>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-32">
@@ -312,7 +312,7 @@ export function NumberPlateDisplay({
                           {assignment.numberPlate}
                         </div>
                         
-                        <div className="relative flex flex-col items-center">
+                        <div className="flex flex-col items-center gap-0.5">
                           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
                             {getArchetypeImage(assignment.archetype) ? (
                               <img 
@@ -327,7 +327,7 @@ export function NumberPlateDisplay({
                             )}
                           </div>
                           {assignment.archetype && (
-                            <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[10px] text-primary/80 whitespace-nowrap bg-primary/10 px-1 rounded">
+                            <span className="text-[10px] text-primary/80 whitespace-nowrap bg-primary/10 px-1.5 py-0.5 rounded-full">
                               {getArchetypeName(assignment.archetype)}
                             </span>
                           )}

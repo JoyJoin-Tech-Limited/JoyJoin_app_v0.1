@@ -86,6 +86,9 @@ export default function IcebreakerDemoPage() {
       title: '已准备好',
       description: '等待其他人准备...',
     });
+    setTimeout(() => {
+      setPhase('icebreaker');
+    }, 1500);
   }, [toast]);
 
   const handleLeave = useCallback(() => {

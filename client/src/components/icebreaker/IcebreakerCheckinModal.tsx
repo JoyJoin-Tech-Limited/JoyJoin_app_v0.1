@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, Loader2, Users, Sparkles, X } from 'lucide-react';
@@ -130,17 +130,19 @@ export function IcebreakerCheckinModal({
           <DialogTitle>活动签到</DialogTitle>
         </VisuallyHidden>
         <div className="flex flex-col h-full overflow-hidden rounded-t-3xl">
-          <div className="relative">
-            <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto mt-3 mb-2" />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-2"
-              onClick={() => onOpenChange(false)}
-              data-testid="button-close-checkin"
-            >
-              <X className="w-5 h-5" />
-            </Button>
+          <div className="relative flex items-center justify-center">
+            <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mt-3 mb-4" />
+            <DialogClose asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-2 top-2"
+                data-testid="button-close-checkin"
+              >
+                <X className="w-4 h-4" />
+                <span className="sr-only">关闭</span>
+              </Button>
+            </DialogClose>
           </div>
 
           <div className="flex-1 flex flex-col items-center justify-center px-6 py-6 overflow-y-auto">
