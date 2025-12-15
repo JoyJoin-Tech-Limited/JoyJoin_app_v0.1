@@ -111,7 +111,18 @@ export function IcebreakerCheckinModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="w-full max-w-lg h-[75vh] max-h-[75vh] m-0 p-0 rounded-t-3xl border-0 bg-gradient-to-b from-primary/10 via-background to-background fixed bottom-0 left-1/2 -translate-x-1/2 top-auto"
+        className="m-0 p-0 border-0 bg-gradient-to-b from-primary/10 via-background to-background"
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          top: 'auto',
+          height: '75vh',
+          borderRadius: '1.5rem 1.5rem 0 0',
+          zIndex: 50,
+          transform: 'none'
+        }}
         data-testid="icebreaker-checkin-modal"
         aria-describedby={undefined}
       >
