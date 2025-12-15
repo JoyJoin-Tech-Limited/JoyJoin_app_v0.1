@@ -23,7 +23,8 @@ import {
   Play,
 } from 'lucide-react';
 import type { TopicCard } from '@shared/topicCards';
-import { icebreakerGames, type IcebreakerGame } from '@shared/icebreakerGames';
+import { icebreakerGames, sceneLabels, type IcebreakerGame } from '@shared/icebreakerGames';
+import { Wine, Utensils, Globe } from 'lucide-react';
 
 export interface RecommendedTopic {
   topic: TopicCard;
@@ -43,6 +44,8 @@ interface GalleryItem {
   data: TopicCard | IcebreakerGame;
   isRecommended?: boolean;
   reason?: string;
+  scene?: 'dinner' | 'bar' | 'both';
+  drinkingWarning?: string;
 }
 
 interface IcebreakerToolkitProps {
@@ -73,12 +76,17 @@ const gradients = {
     'from-indigo-600 via-purple-500 to-pink-400',
     'from-pink-600 via-rose-500 to-orange-400',
   ],
-  game: {
-    quick: 'from-yellow-500 via-orange-500 to-red-500',
-    creative: 'from-pink-500 via-purple-500 to-indigo-500',
-    deep: 'from-blue-600 via-indigo-500 to-purple-600',
-    active: 'from-green-500 via-emerald-500 to-teal-500',
+  scene: {
+    dinner: 'from-amber-500 via-orange-400 to-yellow-500',
+    bar: 'from-fuchsia-500 via-purple-500 to-indigo-500',
+    both: 'from-purple-600 via-violet-500 to-pink-500',
   },
+};
+
+const sceneIcons = {
+  dinner: Utensils,
+  bar: Wine,
+  both: Globe,
 };
 
 const categoryIcons = {
@@ -146,8 +154,8 @@ export function IcebreakerToolkit({
       });
     }
     
-    icebreakerGames.forEach((game, idx) => {
-      const CategoryIcon = categoryIcons[game.category] || Gamepad2;
+    icebreakerGames.forEach((game) => {
+      const SceneIcon = sceneIcons[game.scene] || Globe;
       items.push({
         id: `game-${game.id}`,
         type: 'game',
@@ -155,9 +163,11 @@ export function IcebreakerToolkit({
         subtitle: game.description,
         category: game.category,
         difficulty: game.difficulty,
-        gradient: gradients.game[game.category],
-        icon: CategoryIcon,
+        gradient: gradients.scene[game.scene],
+        icon: SceneIcon,
         data: game,
+        scene: game.scene,
+        drinkingWarning: game.drinkingWarning,
       });
     });
     
@@ -377,9 +387,18 @@ export function IcebreakerToolkit({
                       
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge className="bg-white/20 text-white border-0 text-xs">
-                            {item.category}
-                          </Badge>
+                          {item.scene && (
+                            <Badge className={`border-0 text-xs flex items-center gap-1 ${
+                              item.scene === 'dinner' ? 'bg-amber-600/80 text-white' :
+                              item.scene === 'bar' ? 'bg-fuchsia-600/80 text-white' :
+                              'bg-white/30 text-white'
+                            }`}>
+                              {item.scene === 'dinner' && <Utensils className="w-3 h-3" />}
+                              {item.scene === 'bar' && <Wine className="w-3 h-3" />}
+                              {item.scene === 'both' && <Globe className="w-3 h-3" />}
+                              {sceneLabels[item.scene]?.label || '通用'}
+                            </Badge>
+                          )}
                           <Badge className="bg-white/30 text-white border-0 text-xs">
                             {difficultyLabels[item.difficulty as keyof typeof difficultyLabels] || item.difficulty}
                           </Badge>
@@ -396,6 +415,19 @@ export function IcebreakerToolkit({
                             </>
                           )}
                         </div>
+                        
+                        {item.drinkingWarning && isSelected && (
+                          <div className="bg-white/20 rounded-lg p-2 mt-1 animate-in fade-in duration-150">
+                            <div className="flex items-start gap-2">
+                              <div className="w-6 h-6 rounded-full bg-amber-400 flex items-center justify-center flex-shrink-0 text-xs">
+                                悦
+                              </div>
+                              <p className="text-white/90 text-xs leading-relaxed">
+                                {item.drinkingWarning}
+                              </p>
+                            </div>
+                          </div>
+                        )}
                         
                         {isSelected && (
                           <div className="animate-in fade-in slide-in-from-bottom-2 duration-150">
