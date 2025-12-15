@@ -27,6 +27,7 @@ import type { TopicCard } from '@shared/topicCards';
 import { icebreakerGames, sceneLabels, type IcebreakerGame } from '@shared/icebreakerGames';
 import { Wine, Utensils, Globe } from 'lucide-react';
 import { ActivitySpotlight } from './ActivitySpotlight';
+import { GameDetailView } from './GameDetailView';
 
 export interface RecommendedTopic {
   topic: TopicCard;
@@ -153,6 +154,7 @@ export function IcebreakerToolkit({
     data: TopicCard | IcebreakerGame;
   } | null>(null);
   const [spotlightOpen, setSpotlightOpen] = useState(false);
+  const [selectedDetailItem, setSelectedDetailItem] = useState<GalleryItem | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -283,37 +285,36 @@ export function IcebreakerToolkit({
     if (isOffline) return;
     
     setUsedItemId(item.id);
+    setSelectedDetailItem(item);
+  }, [isOffline]);
+
+  const handleDetailBack = useCallback(() => {
+    setSelectedDetailItem(null);
+  }, []);
+
+  const handleStartActivity = useCallback(() => {
+    if (!selectedDetailItem) return;
+    
     setSpotlightItem({
-      type: item.type,
-      data: item.data,
+      type: selectedDetailItem.type,
+      data: selectedDetailItem.data,
     });
     setSpotlightOpen(true);
-  }, [isOffline]);
+  }, [selectedDetailItem]);
 
   const handleSpotlightClose = useCallback(() => {
     setSpotlightOpen(false);
-    if (spotlightItem) {
-      if (spotlightItem.type === 'topic') {
-        onSelectTopic(spotlightItem.data as TopicCard);
-      } else {
-        onSelectGame(spotlightItem.data as IcebreakerGame);
-      }
-    }
-  }, [spotlightItem, onSelectTopic, onSelectGame]);
+    setSpotlightItem(null);
+  }, []);
 
   const handleSpotlightFeedback = useCallback((rating: 'good' | 'neutral' | 'bad') => {
     setSpotlightOpen(false);
-    if (spotlightItem) {
-      if (spotlightItem.type === 'topic') {
-        onSelectTopic(spotlightItem.data as TopicCard);
-      } else {
-        onSelectGame(spotlightItem.data as IcebreakerGame);
-      }
-    }
-  }, [spotlightItem, onSelectTopic, onSelectGame]);
+    setSpotlightItem(null);
+  }, []);
 
   const handleNextRecommendation = useCallback(async () => {
     setSpotlightOpen(false);
+    setSpotlightItem(null);
     
     if (onRecommendGame && emblaApi) {
       try {
@@ -772,7 +773,45 @@ export function IcebreakerToolkit({
             <VisuallyHidden>
               <DialogPrimitive.Title>破冰工具箱</DialogPrimitive.Title>
             </VisuallyHidden>
-            {content}
+            {selectedDetailItem && selectedDetailItem.type === 'game' ? (
+              <GameDetailView
+                game={selectedDetailItem.data as IcebreakerGame}
+                onBack={handleDetailBack}
+                onGameChange={(game) => {
+                  setSelectedDetailItem({
+                    ...selectedDetailItem,
+                    data: game,
+                    title: game.name,
+                    subtitle: game.description,
+                  });
+                }}
+                participantCount={participantCount}
+                onStartActivity={handleStartActivity}
+              />
+            ) : selectedDetailItem && selectedDetailItem.type === 'topic' ? (
+              <div className="h-full flex flex-col">
+                <div className="px-4 py-3 border-b bg-muted/30 flex items-center gap-3">
+                  <Button variant="ghost" size="icon" onClick={handleDetailBack} data-testid="button-back-topic">
+                    <ChevronLeft className="w-5 h-5" />
+                  </Button>
+                  <div className="flex-1">
+                    <h2 className="text-lg font-semibold">话题详情</h2>
+                  </div>
+                </div>
+                <div className="flex-1 p-4 space-y-4">
+                  <div className={`rounded-xl p-6 bg-gradient-to-br ${selectedDetailItem.gradient} text-white`}>
+                    <h3 className="text-xl font-bold mb-2">{selectedDetailItem.title}</h3>
+                    <p className="text-white/80">{selectedDetailItem.subtitle}</p>
+                  </div>
+                  <Button className="w-full" size="lg" onClick={handleStartActivity} data-testid="button-start-topic">
+                    <Play className="w-4 h-4 mr-2" />
+                    发起话题
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              content
+            )}
           </DialogPrimitive.Content>
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>

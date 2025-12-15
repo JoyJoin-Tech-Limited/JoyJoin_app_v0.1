@@ -16,6 +16,7 @@ import {
   Target,
   Lightbulb,
   CheckCircle2,
+  Play,
 } from 'lucide-react';
 import { icebreakerGames, getRandomGame, type IcebreakerGame } from '@shared/icebreakerGames';
 
@@ -24,6 +25,7 @@ interface GameDetailViewProps {
   onBack: () => void;
   onGameChange: (game: IcebreakerGame) => void;
   participantCount?: number;
+  onStartActivity?: () => void;
 }
 
 const difficultyColors = {
@@ -51,6 +53,7 @@ export function GameDetailView({
   onBack,
   onGameChange,
   participantCount = 0,
+  onStartActivity,
 }: GameDetailViewProps) {
   const [currentRuleIndex, setCurrentRuleIndex] = useState(0);
   const [showAllRules, setShowAllRules] = useState(false);
@@ -259,7 +262,18 @@ export function GameDetailView({
         </div>
       </ScrollArea>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t space-y-3">
+        {onStartActivity && (
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={onStartActivity}
+            data-testid="button-start-game"
+          >
+            <Play className="w-4 h-4 mr-2" />
+            发起游戏
+          </Button>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <Button
             variant="outline"
