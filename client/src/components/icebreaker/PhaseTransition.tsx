@@ -207,9 +207,9 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
           </div>
 
           <div className="absolute inset-0 pointer-events-none motion-reduce:hidden">
-            <GlowRing delay={0} size={120} colorClass={`border-${config.color.replace('text-', '')}/30`} />
-            <GlowRing delay={0.5} size={160} colorClass={`border-${config.color.replace('text-', '')}/20`} />
-            <GlowRing delay={1} size={200} colorClass={`border-${config.color.replace('text-', '')}/10`} />
+            <GlowRing delay={0} size={120} colorClass="border-purple-400/30" />
+            <GlowRing delay={0.5} size={160} colorClass="border-purple-400/20" />
+            <GlowRing delay={1} size={200} colorClass="border-purple-400/10" />
           </div>
           
           <motion.div
