@@ -30,7 +30,6 @@ import { ActivitySpotlight } from './ActivitySpotlight';
 import { GameDetailView } from './GameDetailView';
 import { KingGameController } from './KingGameController';
 import { QuickReactionBar } from './QuickReactionBar';
-import { StreakMeter } from './StreakMeter';
 import { Flame } from 'lucide-react';
 
 export interface RecommendedTopic {
@@ -162,7 +161,6 @@ export function IcebreakerToolkit({
   const [spotlightOpen, setSpotlightOpen] = useState(false);
   const [selectedDetailItem, setSelectedDetailItem] = useState<GalleryItem | null>(null);
   const [showKingGame, setShowKingGame] = useState(false);
-  const [showStreakMeter, setShowStreakMeter] = useState(false);
   const [activitiesCompleted, setActivitiesCompleted] = useState(0);
   const [currentStreak, setCurrentStreak] = useState(0);
 
@@ -171,7 +169,6 @@ export function IcebreakerToolkit({
       setRecommendedHistory([]);
     } else {
       // Reset engagement tool states when dialog closes
-      setShowStreakMeter(false);
       setSelectedDetailItem(null);
       setShowKingGame(false);
     }
@@ -447,6 +444,14 @@ export function IcebreakerToolkit({
           <Badge variant="outline" className="flex items-center gap-1" data-testid="badge-participant-count">
             <Users className="w-3 h-3" />
             {participantCount} 人
+          </Badge>
+          <Badge 
+            variant={currentStreak > 0 ? "default" : "secondary"} 
+            className={`flex items-center gap-1 ${currentStreak >= 3 ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
+            data-testid="badge-activity-streak"
+          >
+            <Flame className={`w-3 h-3 ${currentStreak >= 3 ? 'animate-pulse' : ''}`} />
+            {activitiesCompleted}次
           </Badge>
           {onRefreshTopics && (
             <Button
@@ -784,33 +789,6 @@ export function IcebreakerToolkit({
           </div>
         )}
         
-        {/* Engagement Tools Bar */}
-        <div className="flex items-center gap-2 mb-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowStreakMeter(!showStreakMeter)}
-            className="flex-1"
-            data-testid="button-toggle-streak"
-          >
-            <Flame className="w-4 h-4 mr-2" />
-            活跃度
-            {currentStreak > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs">{currentStreak}</Badge>
-            )}
-          </Button>
-        </div>
-
-        {showStreakMeter && (
-          <div className="mb-3">
-            <StreakMeter
-              currentStreak={currentStreak}
-              participantCount={participantCount}
-              activitiesCompleted={activitiesCompleted}
-            />
-          </div>
-        )}
-
         <Button
           className="w-full"
           size="lg"
@@ -856,6 +834,7 @@ export function IcebreakerToolkit({
                 }}
                 participantCount={participantCount}
                 onStartActivity={handleStartActivity}
+                onActivityComplete={handleActivityComplete}
               />
             ) : selectedDetailItem && selectedDetailItem.type === 'topic' ? (
               <div className="h-full flex flex-col">
