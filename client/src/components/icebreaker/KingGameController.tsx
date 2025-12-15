@@ -148,12 +148,18 @@ function MultiDeviceKingGame({
     displayName,
     playerCount: participantCount,
     onDealStart: () => {
-      setHasDrawn(false);
-      setSelectedCommand(null);
+      // Only reset in non-demo mode; demo mode handles its own state
+      if (!isDemoMode) {
+        setHasDrawn(false);
+        setSelectedCommand(null);
+      }
     },
     onRoundComplete: () => {
-      setHasDrawn(false);
-      setSelectedCommand(null);
+      // Only reset in non-demo mode; demo mode handles its own state
+      if (!isDemoMode) {
+        setHasDrawn(false);
+        setSelectedCommand(null);
+      }
     },
   });
 
@@ -190,11 +196,8 @@ function MultiDeviceKingGame({
   // Demo mode: Auto-ready simulated players after user is ready
   useEffect(() => {
     if (!isDemoMode) return;
-    
-    const myReady = demoState.simulatedPlayers.length > 0 && 
-      state.players.find(p => p.userId === userId)?.isReady;
-    
-    if (!myReady) return;
+    if (!demoState.myIsReady) return;
+    if (demoState.simulatedPlayers.length === 0) return;
 
     const unreadyPlayers = demoState.simulatedPlayers.filter(p => !p.isReady);
     const timers: NodeJS.Timeout[] = [];
@@ -211,23 +214,28 @@ function MultiDeviceKingGame({
     });
 
     return () => timers.forEach(t => clearTimeout(t));
-  }, [isDemoMode, state.players, userId, demoState.simulatedPlayers]);
+  }, [isDemoMode, demoState.myIsReady, demoState.simulatedPlayers]);
 
   // Demo mode: Auto start dealing when all ready
   useEffect(() => {
     if (!isDemoMode) return;
     if (demoState.phase !== 'waiting') return;
+    if (!demoState.myIsReady) return;
     
     const allSimulatedReady = demoState.simulatedPlayers.length >= participantCount - 1 &&
       demoState.simulatedPlayers.every(p => p.isReady);
-    const myPlayer = state.players.find(p => p.userId === userId);
     
-    if (allSimulatedReady && myPlayer?.isReady) {
+    if (allSimulatedReady) {
       setTimeout(() => {
         setDemoState(prev => ({ ...prev, phase: 'dealing' }));
       }, 800);
     }
-  }, [isDemoMode, demoState.simulatedPlayers, demoState.phase, state.players, userId, participantCount]);
+  }, [isDemoMode, demoState.simulatedPlayers, demoState.phase, demoState.myIsReady, participantCount]);
+
+  // Demo mode: Handle set ready
+  const handleDemoSetReady = useCallback(() => {
+    setDemoState(prev => ({ ...prev, myIsReady: true }));
+  }, []);
 
   // Demo mode: Handle draw card
   const handleDemoDrawCard = useCallback(() => {
@@ -236,16 +244,31 @@ function MultiDeviceKingGame({
     const totalPlayers = demoState.simulatedPlayers.length + 1;
     const isKing = Math.random() < (1 / totalPlayers);
     const cardNumber = isKing ? null : Math.floor(Math.random() * (totalPlayers - 1)) + 1;
+    const mysteryNum = Math.floor(Math.random() * (totalPlayers - 1)) + 1;
+    
+    let kingId: string;
+    let kingName: string;
+    if (isKing) {
+      kingId = userId;
+      kingName = displayName;
+    } else {
+      const randomKing = demoState.simulatedPlayers[Math.floor(Math.random() * demoState.simulatedPlayers.length)];
+      kingId = randomKing?.id || userId;
+      kingName = randomKing?.name || displayName;
+    }
     
     setDemoState(prev => ({
       ...prev,
       myCardNumber: cardNumber,
       myIsKing: isKing,
-      kingPlayerId: isKing ? userId : demoPlayers[Math.floor(Math.random() * prev.simulatedPlayers.length)]?.id,
+      kingPlayerId: kingId,
+      kingDisplayName: kingName,
+      mysteryNumber: mysteryNum,
+      drawnCount: totalPlayers,
       phase: 'commanding',
     }));
     setHasDrawn(true);
-  }, [hasDrawn, demoState.simulatedPlayers.length, userId]);
+  }, [hasDrawn, demoState.simulatedPlayers, userId, displayName]);
 
   // Demo mode: Handle issue command
   const handleDemoIssueCommand = useCallback((command: string, target: number) => {
@@ -264,9 +287,13 @@ function MultiDeviceKingGame({
       phase: 'waiting',
       myCardNumber: null,
       myIsKing: false,
+      myIsReady: false,
       kingPlayerId: null,
+      kingDisplayName: null,
       targetNumber: null,
       currentCommand: null,
+      mysteryNumber: null,
+      drawnCount: 0,
       roundNumber: prev.roundNumber + 1,
       simulatedPlayers: prev.simulatedPlayers.map(p => ({ ...p, isReady: false })),
     }));
@@ -274,30 +301,37 @@ function MultiDeviceKingGame({
     setSelectedCommand(null);
   }, []);
 
+  // Reset hasDrawn/selectedCommand when phase changes (only for non-demo mode)
   useEffect(() => {
+    if (isDemoMode) return; // Demo mode handles its own state
     if (state.phase === 'waiting' || state.phase === 'dealing') {
       setHasDrawn(false);
       setSelectedCommand(null);
     }
-  }, [state.phase]);
+  }, [isDemoMode, state.phase]);
 
-  // For demo mode, merge simulated players into state
+  // For demo mode, create fully self-contained state (no dependency on WebSocket state)
   const effectiveState = isDemoMode ? {
-    ...state,
+    sessionId,
     phase: demoState.phase as KingGamePhase,
     playerCount: 1 + demoState.simulatedPlayers.length,
+    requiredPlayers: participantCount,
     players: [
-      { userId, displayName, isReady: state.players.find(p => p.userId === userId)?.isReady || false },
+      { userId, displayName, isReady: demoState.myIsReady },
       ...demoState.simulatedPlayers.map(p => ({ userId: p.id, displayName: p.name, isReady: p.isReady })),
     ],
-    readyCount: (state.players.find(p => p.userId === userId)?.isReady ? 1 : 0) + demoState.simulatedPlayers.filter(p => p.isReady).length,
-    myCardNumber: demoState.myCardNumber,
-    myIsKing: demoState.myIsKing,
+    readyCount: (demoState.myIsReady ? 1 : 0) + demoState.simulatedPlayers.filter(p => p.isReady).length,
+    roundNumber: demoState.roundNumber,
+    dealerId: null,
+    dealerName: '系统',
     kingUserId: demoState.kingPlayerId,
-    kingDisplayName: demoState.myIsKing ? displayName : demoState.simulatedPlayers.find(p => p.id === demoState.kingPlayerId)?.name || null,
+    kingDisplayName: demoState.kingDisplayName,
+    mysteryNumber: demoState.mysteryNumber,
     currentCommand: demoState.currentCommand,
     targetNumber: demoState.targetNumber,
-    roundNumber: demoState.roundNumber,
+    myCardNumber: demoState.myCardNumber,
+    myIsKing: demoState.myIsKing,
+    drawnCount: demoState.drawnCount,
   } : state;
 
   const myPlayer = useMemo(() => 
@@ -449,7 +483,7 @@ function MultiDeviceKingGame({
                 <Button
                   size="lg"
                   className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white"
-                  onClick={setReady}
+                  onClick={isDemoMode ? handleDemoSetReady : setReady}
                   data-testid="button-ready"
                 >
                   <UserCheck className="w-5 h-5 mr-2" />
