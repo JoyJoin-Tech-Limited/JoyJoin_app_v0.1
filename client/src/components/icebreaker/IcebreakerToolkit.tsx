@@ -83,6 +83,7 @@ interface IcebreakerToolkitProps {
   onRecommendGame?: (excludeGameIds?: string[]) => Promise<GameRecommendation | null>;
   isRecommendingGame?: boolean;
   recommendedGame?: GameRecommendation | null;
+  demoMode?: boolean;
 }
 
 const gradients = {
@@ -141,6 +142,7 @@ export function IcebreakerToolkit({
   onRecommendGame,
   isRecommendingGame = false,
   recommendedGame,
+  demoMode = false,
 }: IcebreakerToolkitProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ 
     loop: false, 
@@ -255,6 +257,11 @@ export function IcebreakerToolkit({
   }, [emblaApi]);
 
   useEffect(() => {
+    if (demoMode) {
+      setShowEndButton(true);
+      return;
+    }
+    
     if (!sessionStartTime) return;
     
     const checkElapsed = () => {
@@ -268,7 +275,7 @@ export function IcebreakerToolkit({
     checkElapsed();
     const timer = setInterval(checkElapsed, 60000);
     return () => clearInterval(timer);
-  }, [sessionStartTime]);
+  }, [sessionStartTime, demoMode]);
 
   useEffect(() => {
     if (isReady) return;

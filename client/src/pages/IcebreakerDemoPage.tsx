@@ -233,6 +233,7 @@ export default function IcebreakerDemoPage() {
                 onRecommendGame={handleRecommendGame}
                 isRecommendingGame={isRecommendingGame}
                 recommendedGame={recommendedGame}
+                demoMode={true}
               />
             </motion.div>
           )}
