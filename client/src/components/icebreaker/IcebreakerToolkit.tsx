@@ -21,6 +21,7 @@ import {
   RefreshCw,
   LogOut,
   Play,
+  Check,
 } from 'lucide-react';
 import type { TopicCard } from '@shared/topicCards';
 import { icebreakerGames, sceneLabels, type IcebreakerGame } from '@shared/icebreakerGames';
@@ -144,6 +145,7 @@ export function IcebreakerToolkit({
   const [countdown, setCountdown] = useState(autoReadyTimeoutSeconds);
   const [showEndButton, setShowEndButton] = useState(false);
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
+  const [usedItemId, setUsedItemId] = useState<string | null>(null);
 
   const galleryItems = useMemo(() => {
     const items: GalleryItem[] = [];
@@ -267,6 +269,8 @@ export function IcebreakerToolkit({
   const handleCardClick = useCallback((item: GalleryItem) => {
     if (isOffline) return;
     
+    setUsedItemId(item.id);
+    
     if (item.type === 'topic') {
       onSelectTopic(item.data as TopicCard);
     } else {
@@ -376,6 +380,7 @@ export function IcebreakerToolkit({
           <div className="flex h-full items-center gap-4">
             {galleryItems.map((item, index) => {
               const isSelected = index === selectedIndex;
+              const isUsed = usedItemId === item.id;
               const Icon = item.icon;
               
               return (
@@ -394,9 +399,9 @@ export function IcebreakerToolkit({
                     onClick={() => handleCardClick(item)}
                     className={`
                       relative h-[45vh] min-h-[280px] max-h-[400px] rounded-2xl overflow-hidden
-                      cursor-pointer transition-shadow duration-200
+                      cursor-pointer transition-all duration-200
                       ${isOffline ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}
-                      ${isSelected ? 'shadow-2xl ring-2 ring-white/30' : 'shadow-lg'}
+                      ${isUsed ? 'shadow-2xl ring-3 ring-green-400/80' : isSelected ? 'shadow-2xl ring-2 ring-white/30' : 'shadow-lg'}
                     `}
                   >
                     <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient}`} />
@@ -404,10 +409,16 @@ export function IcebreakerToolkit({
                     <div className="relative h-full flex flex-col p-4">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          {item.isRecommended && (
+                          {isUsed && (
+                            <Badge className="bg-green-500/80 text-white border-0 text-xs">
+                              <Check className="w-3 h-3 mr-1" />
+                              已使用
+                            </Badge>
+                          )}
+                          {item.isRecommended && !isUsed && (
                             <Badge className="bg-white/30 text-white border-0 text-xs">
                               <Sparkles className="w-3 h-3 mr-1" />
-                              推荐
+                              小悦推荐
                             </Badge>
                           )}
                           <Badge className="bg-white/30 text-white border-0 text-xs">
@@ -475,7 +486,11 @@ export function IcebreakerToolkit({
                         {isSelected && (
                           <div className="animate-in fade-in slide-in-from-bottom-2 duration-150">
                             <Button
-                              className="w-full bg-white/30 hover:bg-white/40 text-white border-0"
+                              className={`w-full border-0 ${
+                                isUsed 
+                                  ? 'bg-green-500/80 hover:bg-green-500/90 text-white' 
+                                  : 'bg-white/30 hover:bg-white/40 text-white'
+                              }`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleCardClick(item);
@@ -483,8 +498,17 @@ export function IcebreakerToolkit({
                               disabled={isOffline}
                               data-testid={`button-select-${item.id}`}
                             >
-                              <Play className="w-4 h-4 mr-2" />
-                              {item.type === 'topic' ? '使用这个话题' : '开始这个游戏'}
+                              {isUsed ? (
+                                <>
+                                  <Check className="w-4 h-4 mr-2" />
+                                  {item.type === 'topic' ? '已选择此话题' : '已选择此游戏'}
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="w-4 h-4 mr-2" />
+                                  {item.type === 'topic' ? '使用这个话题' : '开始这个游戏'}
+                                </>
+                              )}
                             </Button>
                           </div>
                         )}
