@@ -30,9 +30,8 @@ import { ActivitySpotlight } from './ActivitySpotlight';
 import { GameDetailView } from './GameDetailView';
 import { KingGameController } from './KingGameController';
 import { QuickReactionBar } from './QuickReactionBar';
-import { SpinWheel } from './SpinWheel';
 import { StreakMeter } from './StreakMeter';
-import { RotateCw, Flame } from 'lucide-react';
+import { Flame } from 'lucide-react';
 
 export interface RecommendedTopic {
   topic: TopicCard;
@@ -163,7 +162,6 @@ export function IcebreakerToolkit({
   const [spotlightOpen, setSpotlightOpen] = useState(false);
   const [selectedDetailItem, setSelectedDetailItem] = useState<GalleryItem | null>(null);
   const [showKingGame, setShowKingGame] = useState(false);
-  const [showSpinWheel, setShowSpinWheel] = useState(false);
   const [showStreakMeter, setShowStreakMeter] = useState(false);
   const [activitiesCompleted, setActivitiesCompleted] = useState(0);
   const [currentStreak, setCurrentStreak] = useState(0);
@@ -173,7 +171,6 @@ export function IcebreakerToolkit({
       setRecommendedHistory([]);
     } else {
       // Reset engagement tool states when dialog closes
-      setShowSpinWheel(false);
       setShowStreakMeter(false);
       setSelectedDetailItem(null);
       setShowKingGame(false);
@@ -338,22 +335,10 @@ export function IcebreakerToolkit({
     setShowKingGame(false);
   }, []);
 
-  const handleSpinWheelBack = useCallback(() => {
-    setShowSpinWheel(false);
-  }, []);
-
   const handleActivityComplete = useCallback(() => {
     setActivitiesCompleted(prev => prev + 1);
     setCurrentStreak(prev => prev + 1);
   }, []);
-
-  const spinWheelParticipants = useMemo(() => 
-    Array.from({ length: participantCount }, (_, i) => ({
-      id: `${i + 1}`,
-      name: `${i + 1}号`,
-    })),
-    [participantCount]
-  );
 
   const handleSpotlightClose = useCallback(() => {
     setSpotlightOpen(false);
@@ -449,12 +434,8 @@ export function IcebreakerToolkit({
   }, [isOffline, onRecommendGame, emblaApi, galleryItems, recommendedHistory]);
 
   const content = (
-    <div className="flex flex-col h-full overflow-hidden rounded-t-3xl" data-testid="icebreaker-toolkit">
-      <div className="flex items-center justify-center">
-        <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mt-3 mb-2" />
-      </div>
-      
-      <div className="px-4 py-2 flex items-center justify-between">
+    <div className="flex flex-col h-full overflow-hidden" data-testid="icebreaker-toolkit">
+      <div className="px-4 py-3 flex items-center justify-between border-b bg-background/80">
         <div>
           <h2 className="text-lg font-bold flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
@@ -808,16 +789,6 @@ export function IcebreakerToolkit({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setShowSpinWheel(true)}
-            className="flex-1"
-            data-testid="button-open-spin-wheel"
-          >
-            <RotateCw className="w-4 h-4 mr-2" />
-            随机选人
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
             onClick={() => setShowStreakMeter(!showStreakMeter)}
             className="flex-1"
             data-testid="button-toggle-streak"
@@ -859,37 +830,14 @@ export function IcebreakerToolkit({
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
           <DialogPrimitive.Content 
-            className="fixed bottom-0 left-0 right-0 z-50 h-[85vh] bg-gradient-to-b from-primary/10 via-background to-background rounded-t-3xl shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom duration-300"
+            className="fixed inset-0 z-50 bg-gradient-to-b from-primary/10 via-background to-background shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-300"
             data-testid="icebreaker-toolkit-dialog"
             aria-describedby={undefined}
           >
             <VisuallyHidden>
               <DialogPrimitive.Title>破冰工具箱</DialogPrimitive.Title>
             </VisuallyHidden>
-            {showSpinWheel ? (
-              <div className="h-full flex flex-col">
-                <div className="px-4 py-3 border-b bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
-                  <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" onClick={handleSpinWheelBack} data-testid="button-back-spin-wheel">
-                      <ChevronLeft className="w-5 h-5" />
-                    </Button>
-                    <div className="flex-1">
-                      <h2 className="text-lg font-semibold flex items-center gap-2">
-                        <RotateCw className="w-5 h-5 text-primary" />
-                        随机选人转盘
-                      </h2>
-                      <p className="text-xs text-muted-foreground">随机选择下一个发言人或任务执行者</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex-1 overflow-auto p-4">
-                  <SpinWheel 
-                    participants={spinWheelParticipants}
-                    title="谁来执行任务?"
-                  />
-                </div>
-              </div>
-            ) : showKingGame ? (
+            {showKingGame ? (
               <KingGameController
                 onBack={handleKingGameBack}
                 participantCount={participantCount}
