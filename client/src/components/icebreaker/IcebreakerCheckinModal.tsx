@@ -202,6 +202,7 @@ export function IcebreakerCheckinModal({
                 <motion.div
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
+                  className="outline-none"
                 >
                   <Button
                     size="lg"
