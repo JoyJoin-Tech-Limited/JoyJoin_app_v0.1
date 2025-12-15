@@ -2,9 +2,66 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ChevronRight, Sparkles, Users, Volume2 } from 'lucide-react';
+import { ChevronRight, Sparkles, Users, Mic } from 'lucide-react';
+
+import kaiXinKeJi from '@assets/开心柯基_transparent_1_1765650619462.png';
+import jiZhiHu from '@assets/机智狐_transparent_2_1765650619453.png';
+import nuanXinXiong from '@assets/暖心熊_transparent_3_1765650619461.png';
+import zhiWangZhu from '@assets/织网蛛_transparent_4_1765650619463.png';
+import kuaKuaTun from '@assets/夸夸豚_transparent_5_1765650619478.png';
+import taiYangJi from '@assets/太阳鸡_transparent_6_1765650619458.png';
+import danDingHaiTun from '@assets/淡定海豚_transparent_7_1765650619477.png';
+import chenSiMaoTouYing from '@assets/沉思猫头鹰_transparent_8_1765650619459.png';
+import wenRuGui from '@assets/稳如龟_transparent_9_1765650619461.png';
+import yinShenMao from '@assets/隐身猫_transparent_10_1765650619464.png';
+import dingXinDaXiang from '@assets/定心大象_transparent_11_1765650619460.png';
+import lingGanZhangYu from '@assets/灵感章鱼_transparent_12_1765650619464.png';
+
+const ARCHETYPE_IMAGES: Record<string, string> = {
+  '开心柯基': kaiXinKeJi,
+  '机智狐': jiZhiHu,
+  '暖心熊': nuanXinXiong,
+  '织网蛛': zhiWangZhu,
+  '夸夸豚': kuaKuaTun,
+  '太阳鸡': taiYangJi,
+  '淡定海豚': danDingHaiTun,
+  '沉思猫头鹰': chenSiMaoTouYing,
+  '稳如龟': wenRuGui,
+  '隐身猫': yinShenMao,
+  '定心大象': dingXinDaXiang,
+  '灵感章鱼': lingGanZhangYu,
+};
+
+const ARCHETYPES = Object.keys(ARCHETYPE_IMAGES);
+
+function getArchetypeImage(archetype: string | null | undefined): string | null {
+  if (!archetype) return null;
+  if (ARCHETYPE_IMAGES[archetype]) {
+    return ARCHETYPE_IMAGES[archetype];
+  }
+  for (const key of ARCHETYPES) {
+    if (archetype.includes(key) || key.includes(archetype)) {
+      return ARCHETYPE_IMAGES[key];
+    }
+  }
+  const index = Math.abs(archetype.charCodeAt(0)) % ARCHETYPES.length;
+  return ARCHETYPE_IMAGES[ARCHETYPES[index]];
+}
+
+function getArchetypeName(archetype: string | null | undefined): string {
+  if (!archetype) return '';
+  if (ARCHETYPE_IMAGES[archetype]) {
+    return archetype;
+  }
+  for (const key of ARCHETYPES) {
+    if (archetype.includes(key) || key.includes(archetype)) {
+      return key;
+    }
+  }
+  const index = Math.abs(archetype.charCodeAt(0)) % ARCHETYPES.length;
+  return ARCHETYPES[index];
+}
 
 interface NumberAssignment {
   userId: string;
@@ -77,15 +134,6 @@ export function NumberPlateDisplay({
     
     return () => clearInterval(timer);
   }, [isReady, autoReadyTimeoutSeconds, onReady]);
-
-  const getArchetypeInitial = (archetype: string | null | undefined): string => {
-    if (!archetype) return '';
-    return archetype.slice(0, 1);
-  };
-
-  const getInitials = (name: string) => {
-    return name.slice(0, 2).toUpperCase();
-  };
 
   if (showReveal && myNumberPlate !== null && !revealComplete) {
     return (
@@ -163,7 +211,7 @@ export function NumberPlateDisplay({
           data-testid="my-turn-banner"
         >
           <div className="flex items-center justify-center gap-2 text-primary mb-2">
-            <Volume2 className="w-5 h-5" />
+            <Mic className="w-5 h-5" />
             <span className="text-lg font-semibold">轮到你啦！</span>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -214,16 +262,23 @@ export function NumberPlateDisplay({
                         {assignment.numberPlate}
                       </div>
                       
-                      <div className="relative">
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src={assignment.profileImageUrl} />
-                          <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                            {getInitials(assignment.displayName)}
-                          </AvatarFallback>
-                        </Avatar>
+                      <div className="relative flex flex-col items-center">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                          {getArchetypeImage(assignment.archetype) ? (
+                            <img 
+                              src={getArchetypeImage(assignment.archetype)!} 
+                              alt={getArchetypeName(assignment.archetype)}
+                              className="w-8 h-8 object-contain"
+                            />
+                          ) : (
+                            <span className="text-primary text-sm font-medium">
+                              {assignment.displayName.slice(0, 1)}
+                            </span>
+                          )}
+                        </div>
                         {assignment.archetype && (
-                          <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center font-medium">
-                            {getArchetypeInitial(assignment.archetype)}
+                          <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[10px] text-primary/80 whitespace-nowrap bg-primary/10 px-1 rounded">
+                            {getArchetypeName(assignment.archetype)}
                           </span>
                         )}
                       </div>
@@ -245,7 +300,7 @@ export function NumberPlateDisplay({
                           animate={{ scale: [1, 1.2, 1] }}
                           transition={{ duration: 1, repeat: Infinity }}
                         >
-                          <Volume2 className="w-5 h-5 text-primary" />
+                          <Mic className="w-5 h-5 text-primary" />
                         </motion.div>
                       )}
                     </CardContent>
