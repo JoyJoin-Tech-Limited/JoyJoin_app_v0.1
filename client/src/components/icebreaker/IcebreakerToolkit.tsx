@@ -543,6 +543,13 @@ export function IcebreakerToolkit({
           </motion.div>
         )}
 
+        {sessionStartTime && elapsedMinutes > 0 && (
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
+            <Clock className="w-4 h-4" />
+            <span data-testid="text-elapsed-time">已破冰 {elapsedMinutes} 分钟</span>
+          </div>
+        )}
+
         <div className="flex items-center gap-3">
           <Button
             variant={recommendError ? "destructive" : "outline"}

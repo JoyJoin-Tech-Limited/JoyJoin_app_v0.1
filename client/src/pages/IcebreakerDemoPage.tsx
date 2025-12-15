@@ -9,6 +9,8 @@ import { IcebreakerToolkit } from '@/components/icebreaker/IcebreakerToolkit';
 import { GameDetailView } from '@/components/icebreaker/GameDetailView';
 import { IcebreakerEndingScreen } from '@/components/icebreaker/IcebreakerEndingScreen';
 import { PhaseTransition, type TransitionType } from '@/components/icebreaker/PhaseTransition';
+import { Button } from '@/components/ui/button';
+import { LogOut, Clock } from 'lucide-react';
 import type { TopicCard } from '@shared/topicCards';
 import type { IcebreakerGame } from '@shared/icebreakerGames';
 
@@ -118,6 +120,13 @@ export default function IcebreakerDemoPage() {
     setLocation('/');
   }, [setLocation]);
 
+  const handleEndIcebreaker = useCallback(() => {
+    setTransitionType('icebreaker_to_end');
+    setShowTransition(true);
+    setTimeout(() => setShowTransition(false), 1500);
+    setPhase('ended');
+  }, []);
+
   const numberAssignments = DEMO_PARTICIPANTS.map((p, i) => ({
     userId: p.userId,
     displayName: p.displayName,
@@ -190,6 +199,18 @@ export default function IcebreakerDemoPage() {
               exit={{ opacity: 0 }}
               className="h-screen relative"
             >
+              <div className="absolute top-4 right-4 z-20">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEndIcebreaker}
+                  className="bg-background/80 backdrop-blur-sm"
+                  data-testid="button-demo-end"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  模拟结束
+                </Button>
+              </div>
               <IcebreakerToolkit
                 open={true}
                 onOpenChange={() => {}}
@@ -207,6 +228,7 @@ export default function IcebreakerDemoPage() {
                 isRefreshingTopics={isRefreshingTopics}
                 isOffline={false}
                 sessionStartTime={icebreakerStartTime || undefined}
+                onEndIcebreaker={handleEndIcebreaker}
                 onRecommendGame={handleRecommendGame}
                 isRecommendingGame={isRecommendingGame}
                 recommendedGame={recommendedGame}
