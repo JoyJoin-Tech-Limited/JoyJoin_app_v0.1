@@ -3,12 +3,14 @@ export interface IcebreakerGame {
   name: string;
   description: string;
   category: 'quick' | 'creative' | 'deep' | 'active';
+  scene: 'dinner' | 'bar' | 'both';
   minPlayers: number;
   maxPlayers: number;
   duration: string;
   difficulty: 'easy' | 'medium' | 'hard';
   rules: string[];
   tips?: string[];
+  drinkingWarning?: string;
 }
 
 export const icebreakerGames: IcebreakerGame[] = [
@@ -17,8 +19,9 @@ export const icebreakerGames: IcebreakerGame[] = [
     name: '两真一假',
     description: '每人说三件关于自己的事，其中一件是假的，大家猜哪个是假的',
     category: 'quick',
-    minPlayers: 3,
-    maxPlayers: 12,
+    scene: 'both',
+    minPlayers: 4,
+    maxPlayers: 6,
     duration: '10-15分钟',
     difficulty: 'easy',
     rules: [
@@ -33,28 +36,13 @@ export const icebreakerGames: IcebreakerGame[] = [
     ],
   },
   {
-    id: 'word-association',
-    name: '词语接龙',
-    description: '快速反应游戏，说出与前一个词相关的词',
-    category: 'quick',
-    minPlayers: 3,
-    maxPlayers: 10,
-    duration: '5-10分钟',
-    difficulty: 'easy',
-    rules: [
-      '主持人说出第一个词',
-      '下一个人在3秒内说出相关的词',
-      '依次循环，不能重复已说过的词',
-      '超时或重复的人出局',
-    ],
-  },
-  {
     id: 'would-you-rather',
     name: '你会选择...',
     description: '在两个有趣的选项中做选择，并分享理由',
     category: 'quick',
-    minPlayers: 2,
-    maxPlayers: 15,
+    scene: 'both',
+    minPlayers: 4,
+    maxPlayers: 6,
     duration: '10-20分钟',
     difficulty: 'easy',
     rules: [
@@ -67,10 +55,11 @@ export const icebreakerGames: IcebreakerGame[] = [
   {
     id: 'story-chain',
     name: '故事接龙',
-    description: '一起创作一个故事，每人接一句',
+    description: '一起创作一个故事，每人接一句，适合创意型朋友',
     category: 'creative',
+    scene: 'dinner',
     minPlayers: 4,
-    maxPlayers: 10,
+    maxPlayers: 6,
     duration: '10-15分钟',
     difficulty: 'medium',
     rules: [
@@ -89,8 +78,9 @@ export const icebreakerGames: IcebreakerGame[] = [
     name: '我说你猜',
     description: '用语言描述一个词，让队友猜出来',
     category: 'active',
+    scene: 'both',
     minPlayers: 4,
-    maxPlayers: 12,
+    maxPlayers: 6,
     duration: '15-20分钟',
     difficulty: 'medium',
     rules: [
@@ -104,10 +94,11 @@ export const icebreakerGames: IcebreakerGame[] = [
   {
     id: 'unpopular-opinions',
     name: '小众观点',
-    description: '分享一个你持有的"少数派"观点',
+    description: '分享一个你持有的"少数派"观点，适合深度交流',
     category: 'deep',
-    minPlayers: 3,
-    maxPlayers: 8,
+    scene: 'bar',
+    minPlayers: 4,
+    maxPlayers: 6,
     duration: '15-25分钟',
     difficulty: 'medium',
     rules: [
@@ -124,10 +115,11 @@ export const icebreakerGames: IcebreakerGame[] = [
   {
     id: 'highs-and-lows',
     name: '高光与低谷',
-    description: '分享最近的一个开心时刻和一个小挑战',
+    description: '分享最近的一个开心时刻和一个小挑战，真诚分享',
     category: 'deep',
-    minPlayers: 3,
-    maxPlayers: 8,
+    scene: 'dinner',
+    minPlayers: 4,
+    maxPlayers: 6,
     duration: '15-20分钟',
     difficulty: 'easy',
     rules: [
@@ -137,32 +129,180 @@ export const icebreakerGames: IcebreakerGame[] = [
     ],
   },
   {
-    id: 'speed-networking',
-    name: '快速交流',
-    description: '两两配对，快速交流后换人',
-    category: 'active',
+    id: 'homophone-chain',
+    name: '谐音梗接龙',
+    description: '用谐音词来接龙，笑点满满',
+    category: 'quick',
+    scene: 'dinner',
     minPlayers: 4,
-    maxPlayers: 20,
-    duration: '15-25分钟',
+    maxPlayers: 6,
+    duration: '5-10分钟',
     difficulty: 'easy',
     rules: [
-      '两两配对进行2-3分钟的对话',
-      '可以用提供的话题引导',
-      '时间到后换一个搭档',
-      '确保每个人都和不同的人聊过',
+      '第一人说出一个词或短语',
+      '下一个人用谐音说出一个新词',
+      '例如："不想上班" → "布香尚班"',
+      '说不出来或重复的人出局',
+      '最后留下的人获胜',
+    ],
+    tips: [
+      '可以用网络流行梗作为开头',
+      '允许方言谐音增加趣味性',
+    ],
+  },
+  {
+    id: 'most-likely-to',
+    name: '最xxx的人',
+    description: '"在座谁最可能..."投票游戏',
+    category: 'quick',
+    scene: 'dinner',
+    minPlayers: 4,
+    maxPlayers: 6,
+    duration: '10-15分钟',
+    difficulty: 'easy',
+    rules: [
+      '主持人提出一个问题，如"在座谁最可能成为百万富翁"',
+      '大家同时指向自己认为的那个人',
+      '被指最多的人可以解释或反驳',
+      '轮流当主持人提问',
+    ],
+    tips: [
+      '问题可以轻松有趣，如"谁最可能忘带钥匙"',
+      '避免太尖锐或冒犯性的问题',
+    ],
+  },
+  {
+    id: 'if-i-were',
+    name: '如果我是...',
+    description: '假设性问题，激发想象力',
+    category: 'creative',
+    scene: 'dinner',
+    minPlayers: 4,
+    maxPlayers: 6,
+    duration: '10-15分钟',
+    difficulty: 'easy',
+    rules: [
+      '主持人提出假设性问题，如"如果你是一种动物，你会是什么？"',
+      '每人回答并解释理由',
+      '其他人可以提问或评论',
+      '轮流出题',
+    ],
+    tips: [
+      '问题示例：如果你能穿越时空、如果你中了彩票',
+      '鼓励有创意的回答',
+    ],
+  },
+  {
+    id: 'spy-game',
+    name: '谁是卧底',
+    description: '经典推理游戏，找出拿到不同词的卧底',
+    category: 'active',
+    scene: 'bar',
+    minPlayers: 4,
+    maxPlayers: 6,
+    duration: '15-20分钟',
+    difficulty: 'medium',
+    rules: [
+      '随机分配词语，大部分人拿到相同的词，一人拿到相似但不同的词（卧底）',
+      '每人轮流用一个词描述自己拿到的词',
+      '描述后投票选出疑似卧底',
+      '被投出的人亮出身份，如果是卧底则平民胜，否则继续',
+      '卧底存活到最后两人则卧底获胜',
+    ],
+    tips: [
+      '描述时要既不太明显也不太模糊',
+      '仔细观察别人的反应找线索',
+    ],
+  },
+  {
+    id: 'kings-game',
+    name: '国王游戏',
+    description: '抽牌指派任务的经典酒局游戏',
+    category: 'active',
+    scene: 'bar',
+    minPlayers: 4,
+    maxPlayers: 6,
+    duration: '15-25分钟',
+    difficulty: 'medium',
+    rules: [
+      '准备与人数相同的扑克牌，其中一张为"国王"（如大王或指定花色）',
+      '每人抽一张牌，不让别人看到',
+      '抽到国王的人可以指定任意两个号码完成任务',
+      '例如："3号和5号碰杯"或"2号给4号讲个笑话"',
+      '完成后收回牌重新洗牌开始下一轮',
+    ],
+    tips: [
+      '任务可以轻松有趣，避免太为难人',
+      '可以准备一些任务卡片供参考',
+    ],
+    drinkingWarning: '这个游戏可能会让大家喝比较多哦～记得量力而行，开心最重要！',
+  },
+  {
+    id: 'number-bomb',
+    name: '数字炸弹',
+    description: '猜数字，踩到"炸弹"的人喝酒',
+    category: 'quick',
+    scene: 'bar',
+    minPlayers: 4,
+    maxPlayers: 6,
+    duration: '10-15分钟',
+    difficulty: 'easy',
+    rules: [
+      '主持人心里想一个1-100之间的数字（炸弹）',
+      '玩家轮流猜一个数字',
+      '主持人告诉玩家是"大了"还是"小了"，缩小范围',
+      '猜中炸弹数字的人喝酒',
+      '换人当主持人继续',
+    ],
+    tips: [
+      '可以增加难度，如"三的倍数不能说"',
+      '范围可以根据人数调整',
+    ],
+    drinkingWarning: '这个游戏可能会让大家喝比较多哦～记得量力而行，开心最重要！',
+  },
+  {
+    id: 'mind-link',
+    name: '心有灵犀',
+    description: '两人同时说答案，看默契程度',
+    category: 'quick',
+    scene: 'bar',
+    minPlayers: 4,
+    maxPlayers: 6,
+    duration: '10-15分钟',
+    difficulty: 'easy',
+    rules: [
+      '主持人提出一个问题，如"说一种水果"',
+      '两名玩家同时喊出答案',
+      '如果答案相同，两人都安全',
+      '如果答案不同，两人都喝酒',
+      '轮流换人配对',
+    ],
+    tips: [
+      '问题可以越来越具体增加难度',
+      '可以指定特定搭档增加互动',
     ],
   },
 ];
 
 export const gameCategories = {
-  quick: { label: '快速破冰', icon: '⚡', description: '5-10分钟的快速游戏' },
-  creative: { label: '创意游戏', icon: '🎨', description: '发挥想象力的游戏' },
-  deep: { label: '深度交流', icon: '💬', description: '促进深入了解的活动' },
-  active: { label: '活力互动', icon: '🎯', description: '需要更多互动的游戏' },
+  quick: { label: '快速破冰', description: '5-10分钟的快速游戏' },
+  creative: { label: '创意游戏', description: '发挥想象力的游戏' },
+  deep: { label: '深度交流', description: '促进深入了解的活动' },
+  active: { label: '活力互动', description: '需要更多互动的游戏' },
+};
+
+export const sceneLabels = {
+  dinner: { label: '饭局', description: '适合正餐聚会' },
+  bar: { label: '酒局', description: '适合酒吧/夜场' },
+  both: { label: '通用', description: '各种场合都适合' },
 };
 
 export function getGamesByCategory(category: IcebreakerGame['category']): IcebreakerGame[] {
   return icebreakerGames.filter(g => g.category === category);
+}
+
+export function getGamesByScene(scene: IcebreakerGame['scene']): IcebreakerGame[] {
+  return icebreakerGames.filter(g => g.scene === scene || g.scene === 'both');
 }
 
 export function getRandomGame(): IcebreakerGame {
@@ -171,6 +311,12 @@ export function getRandomGame(): IcebreakerGame {
 
 export function getRandomGameByCategory(category: IcebreakerGame['category']): IcebreakerGame | null {
   const games = getGamesByCategory(category);
+  if (games.length === 0) return null;
+  return games[Math.floor(Math.random() * games.length)];
+}
+
+export function getRandomGameByScene(scene: IcebreakerGame['scene']): IcebreakerGame | null {
+  const games = getGamesByScene(scene);
   if (games.length === 0) return null;
   return games[Math.floor(Math.random() * games.length)];
 }

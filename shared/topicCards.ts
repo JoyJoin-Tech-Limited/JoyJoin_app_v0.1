@@ -732,8 +732,8 @@ export function filterTopicsByPreferences(
   }
   
   // 去重
-  const uniqueHappy = [...new Set(topicsHappy)];
-  const uniqueAvoid = [...new Set(topicsAvoid)];
+  const uniqueHappy = Array.from(new Set(topicsHappy));
+  const uniqueAvoid = Array.from(new Set(topicsAvoid));
   
   // 构建喜欢的类别集合
   const happyCategories = new Set<string>();
@@ -791,4 +791,124 @@ export function filterTopicsByPreferences(
   }
   
   return filtered.slice(0, maxCount).map(({ topic }) => topic);
+}
+
+// 场景话题卡类型
+export interface SceneTopicCard extends TopicCard {
+  scene: 'dinner' | 'bar' | 'both';
+}
+
+// 饭局话题卡（暖橙色）
+export const dinnerSceneTopics: SceneTopicCard[] = [
+  {
+    question: "如果有一天可以跟任何人共进晚餐，你选谁？",
+    category: "脑洞问题",
+    targetDynamic: "激发想象力，分享价值观",
+    difficulty: "easy",
+    scene: "dinner",
+  },
+  {
+    question: "你人生中最意外的转折点是什么？",
+    category: "人生经历",
+    targetDynamic: "深度分享，建立信任",
+    difficulty: "medium",
+    scene: "dinner",
+  },
+  {
+    question: "描述一个你改变观点的时刻",
+    category: "人生感悟",
+    targetDynamic: "展示成长，引发共鸣",
+    difficulty: "medium",
+    scene: "dinner",
+  },
+  {
+    question: "你最想体验的一种完全不同的生活是？",
+    category: "理想生活",
+    targetDynamic: "轻松有趣，发现彼此的向往",
+    difficulty: "easy",
+    scene: "dinner",
+  },
+  {
+    question: "如果可以给10年前的自己一个建议，你会说什么？",
+    category: "人生感悟",
+    targetDynamic: "分享智慧和经历",
+    difficulty: "medium",
+    scene: "dinner",
+  },
+  {
+    question: "你最珍贵的家传物品或家族故事是什么？",
+    category: "家庭回忆",
+    targetDynamic: "分享温暖故事，建立情感连接",
+    difficulty: "easy",
+    scene: "dinner",
+  },
+];
+
+// 酒局话题卡（紫红霓虹）
+export const barSceneTopics: SceneTopicCard[] = [
+  {
+    question: "你做过最疯狂的事是什么？",
+    category: "人生经历",
+    targetDynamic: "打开话匣子，分享冒险故事",
+    difficulty: "easy",
+    scene: "bar",
+  },
+  {
+    question: "你藏着什么奇怪的技能？",
+    category: "隐藏技能",
+    targetDynamic: "发现彼此有趣的一面",
+    difficulty: "easy",
+    scene: "bar",
+  },
+  {
+    question: "最尴尬的社死瞬间？",
+    category: "趣味分享",
+    targetDynamic: "制造欢乐，拉近距离",
+    difficulty: "easy",
+    scene: "bar",
+  },
+  {
+    question: "你最后悔没做的事是什么？",
+    category: "人生感悟",
+    targetDynamic: "深度交流，发现遗憾和渴望",
+    difficulty: "medium",
+    scene: "bar",
+  },
+  {
+    question: "如果明天是世界末日，你今晚会做什么？",
+    category: "脑洞问题",
+    targetDynamic: "放开聊，激发真实想法",
+    difficulty: "easy",
+    scene: "bar",
+  },
+  {
+    question: "你暗恋过谁？怎么结束的？",
+    category: "情感故事",
+    targetDynamic: "分享青涩故事，增进亲密感",
+    difficulty: "medium",
+    scene: "bar",
+  },
+  {
+    question: "喝醉后做过最搞笑的事？",
+    category: "趣味分享",
+    targetDynamic: "欢乐氛围，分享糗事",
+    difficulty: "easy",
+    scene: "bar",
+  },
+];
+
+// 获取场景话题卡
+export function getSceneTopics(scene: 'dinner' | 'bar' | 'both'): SceneTopicCard[] {
+  if (scene === 'dinner') {
+    return dinnerSceneTopics;
+  } else if (scene === 'bar') {
+    return barSceneTopics;
+  }
+  return [...dinnerSceneTopics, ...barSceneTopics];
+}
+
+// 获取随机场景话题卡
+export function getRandomSceneTopic(scene: 'dinner' | 'bar' | 'both'): SceneTopicCard {
+  const topics = getSceneTopics(scene);
+  return topics[Math.floor(Math.random() * topics.length)];
 }
