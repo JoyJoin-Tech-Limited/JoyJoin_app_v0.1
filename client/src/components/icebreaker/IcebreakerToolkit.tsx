@@ -554,7 +554,7 @@ export function IcebreakerToolkit({
         </div>
       </div>
 
-      <div className="p-4 bg-background/95 backdrop-blur-sm border-t space-y-3">
+      <div className="p-3 bg-background/95 backdrop-blur-sm border-t space-y-2">
         {showEndButton && onEndIcebreaker && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
@@ -643,17 +643,15 @@ export function IcebreakerToolkit({
             <motion.div
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-primary/10 rounded-lg p-2"
+              className="flex items-center gap-2 bg-primary/10 rounded-lg px-2 py-1.5"
               data-testid="recommendation-reason"
             >
-              <div className="flex items-start gap-2">
-                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 text-xs text-primary">
-                  悦
-                </div>
-                <p className="text-sm text-foreground/80 leading-relaxed">
-                  {recommendedGame.reason}
-                </p>
+              <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 text-[10px] text-primary">
+                悦
               </div>
+              <p className="text-xs text-foreground/80 line-clamp-1">
+                {recommendedGame.reason}
+              </p>
             </motion.div>
           )}
         </div>
