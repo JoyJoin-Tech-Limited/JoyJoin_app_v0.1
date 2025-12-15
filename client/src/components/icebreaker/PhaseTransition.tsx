@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Users, MessageCircle, PartyPopper, Star } from 'lucide-react';
+import { Sparkles, Users, MessageCircle, PartyPopper, Star, Check, ClipboardCheck, Hash, Coffee, Heart } from 'lucide-react';
 
 export type TransitionType = 'checkin_to_number' | 'number_to_icebreaker' | 'icebreaker_to_end';
 
@@ -10,33 +10,43 @@ interface PhaseTransitionProps {
   onComplete?: () => void;
 }
 
+const JOURNEY_STEPS = [
+  { id: 'checkin', label: '签到', icon: ClipboardCheck },
+  { id: 'number', label: '号码牌', icon: Hash },
+  { id: 'icebreaker', label: '破冰', icon: Coffee },
+  { id: 'end', label: '结束', icon: Heart },
+];
+
 const transitionConfig = {
   checkin_to_number: {
     icon: Users,
     title: '签到完成',
     subtitle: '即将分配号码牌...',
-    xiaoYueMessage: '签到完成啦，马上分配号码牌~',
+    xiaoYueMessage: '太棒了！大家都到齐啦，马上给你们分配专属号码牌~',
     color: 'text-primary',
     bgGradient: 'from-primary/20 via-primary/10 to-transparent',
     particleColors: ['bg-purple-400', 'bg-pink-400', 'bg-indigo-400'],
+    currentStep: 1,
   },
   number_to_icebreaker: {
     icon: MessageCircle,
     title: '准备开始破冰',
     subtitle: '让我们开始愉快的交流吧！',
-    xiaoYueMessage: '号码牌已分配，破冰即将开始！',
+    xiaoYueMessage: '号码牌已就位！准备好认识新朋友了吗？让我们开始愉快的破冰之旅吧~',
     color: 'text-green-500',
     bgGradient: 'from-green-500/20 via-green-500/10 to-transparent',
     particleColors: ['bg-green-400', 'bg-emerald-400', 'bg-teal-400'],
+    currentStep: 2,
   },
   icebreaker_to_end: {
     icon: PartyPopper,
     title: '破冰结束',
     subtitle: '感谢大家的参与！',
-    xiaoYueMessage: '精彩的破冰结束啦~',
+    xiaoYueMessage: '今天的破冰圆满结束啦！希望你们都交到了新朋友，期待下次再见~',
     color: 'text-amber-500',
     bgGradient: 'from-amber-500/20 via-amber-500/10 to-transparent',
     particleColors: ['bg-amber-400', 'bg-orange-400', 'bg-yellow-400'],
+    currentStep: 3,
   },
 };
 
@@ -160,6 +170,99 @@ function GlowRing({ delay, size, colorClass }: { delay: number; size: number; co
   );
 }
 
+function JourneyProgress({ currentStep }: { currentStep: number }) {
+  return (
+    <motion.div
+      className="flex items-center justify-center gap-1 sm:gap-2 mb-6"
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.1 }}
+    >
+      {JOURNEY_STEPS.map((step, index) => {
+        const StepIcon = step.icon;
+        const isCompleted = index < currentStep;
+        const isCurrent = index === currentStep;
+        const isPending = index > currentStep;
+
+        return (
+          <div key={step.id} className="flex items-center">
+            <motion.div
+              className={`relative flex flex-col items-center ${
+                isCurrent ? 'scale-110' : ''
+              }`}
+              initial={isCompleted ? { scale: 0 } : { scale: 1 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', delay: index * 0.1 }}
+            >
+              <motion.div
+                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center relative ${
+                  isCompleted
+                    ? 'bg-green-500 text-white'
+                    : isCurrent
+                    ? 'bg-primary text-white'
+                    : 'bg-muted text-muted-foreground'
+                }`}
+                animate={
+                  isCurrent
+                    ? {
+                        boxShadow: [
+                          '0 0 0 0 rgba(139, 92, 246, 0.4)',
+                          '0 0 0 8px rgba(139, 92, 246, 0)',
+                        ],
+                      }
+                    : {}
+                }
+                transition={
+                  isCurrent
+                    ? { duration: 1.5, repeat: Infinity, ease: 'easeOut' }
+                    : {}
+                }
+              >
+                {isCompleted ? (
+                  <motion.div
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: 'spring', duration: 0.5, bounce: 0.5 }}
+                  >
+                    <Check className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </motion.div>
+                ) : (
+                  <StepIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                )}
+              </motion.div>
+              <span
+                className={`text-xs mt-1 whitespace-nowrap ${
+                  isCompleted
+                    ? 'text-green-500 font-medium'
+                    : isCurrent
+                    ? 'text-primary font-medium'
+                    : 'text-muted-foreground'
+                }`}
+              >
+                {step.label}
+              </span>
+            </motion.div>
+
+            {index < JOURNEY_STEPS.length - 1 && (
+              <div className="flex items-center mx-1 sm:mx-2 -mt-4">
+                <motion.div
+                  className={`h-0.5 w-4 sm:w-8 ${
+                    index < currentStep ? 'bg-green-500' : 'bg-muted'
+                  }`}
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ delay: index * 0.1 + 0.2 }}
+                  style={{ originX: 0 }}
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </motion.div>
+  );
+}
+
 export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransitionProps) {
   const config = transitionConfig[type];
   const Icon = config.icon;
@@ -182,7 +285,7 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
     if (isVisible && onComplete) {
       const timer = setTimeout(() => {
         onComplete();
-      }, 2500);
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, [isVisible, onComplete]);
@@ -213,14 +316,16 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
           </div>
           
           <motion.div
-            className="relative flex flex-col items-center text-center px-8"
+            className="relative flex flex-col items-center text-center px-4 sm:px-8"
             initial={{ scale: 0.8, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.8, y: -20 }}
             transition={{ type: 'spring', duration: 0.5, bounce: 0.3 }}
           >
+            <JourneyProgress currentStep={config.currentStep} />
+            
             <motion.div
-              className={`w-24 h-24 rounded-full bg-background shadow-xl flex items-center justify-center mb-6 ${config.color} relative`}
+              className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-background shadow-xl flex items-center justify-center mb-4 sm:mb-6 ${config.color} relative`}
               initial={{ rotate: -180, scale: 0 }}
               animate={{ rotate: 0, scale: 1 }}
               transition={{ type: 'spring', duration: 0.6, delay: 0.1, bounce: 0.4 }}

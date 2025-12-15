@@ -173,7 +173,7 @@ export default function IcebreakerSessionPage() {
         if (transition) {
           setTransitionType(transition);
           setShowTransition(true);
-          setTimeout(() => setShowTransition(false), 1500);
+          setTimeout(() => setShowTransition(false), 3000);
         }
         setPreviousPhase(phase);
       }

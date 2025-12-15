@@ -91,7 +91,7 @@ export default function IcebreakerDemoPage() {
       setTimeout(() => {
         setTransitionType('checkin_to_number');
         setShowTransition(true);
-        setTimeout(() => setShowTransition(false), 1500);
+        setTimeout(() => setShowTransition(false), 3000);
         setPhase('number_assign');
       }, 1000);
     }, 1500);
@@ -110,7 +110,7 @@ export default function IcebreakerDemoPage() {
     setTimeout(() => {
       setTransitionType('number_to_icebreaker');
       setShowTransition(true);
-      setTimeout(() => setShowTransition(false), 1500);
+      setTimeout(() => setShowTransition(false), 3000);
       setPhase('icebreaker');
       setIcebreakerStartTime(Date.now());
     }, 1500);
@@ -123,7 +123,7 @@ export default function IcebreakerDemoPage() {
   const handleEndIcebreaker = useCallback(() => {
     setTransitionType('icebreaker_to_end');
     setShowTransition(true);
-    setTimeout(() => setShowTransition(false), 1500);
+    setTimeout(() => setShowTransition(false), 3000);
     setPhase('ended');
   }, []);
 
