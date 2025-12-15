@@ -28,6 +28,7 @@ import { icebreakerGames, sceneLabels, type IcebreakerGame } from '@shared/icebr
 import { Wine, Utensils, Globe } from 'lucide-react';
 import { ActivitySpotlight } from './ActivitySpotlight';
 import { GameDetailView } from './GameDetailView';
+import { KingGameController } from './KingGameController';
 
 export interface RecommendedTopic {
   topic: TopicCard;
@@ -155,6 +156,7 @@ export function IcebreakerToolkit({
   } | null>(null);
   const [spotlightOpen, setSpotlightOpen] = useState(false);
   const [selectedDetailItem, setSelectedDetailItem] = useState<GalleryItem | null>(null);
+  const [showKingGame, setShowKingGame] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -295,12 +297,25 @@ export function IcebreakerToolkit({
   const handleStartActivity = useCallback(() => {
     if (!selectedDetailItem) return;
     
+    // Check if this is the King Game - show the special controller
+    if (selectedDetailItem.type === 'game') {
+      const game = selectedDetailItem.data as IcebreakerGame;
+      if (game.id === 'kings-game') {
+        setShowKingGame(true);
+        return;
+      }
+    }
+    
     setSpotlightItem({
       type: selectedDetailItem.type,
       data: selectedDetailItem.data,
     });
     setSpotlightOpen(true);
   }, [selectedDetailItem]);
+  
+  const handleKingGameBack = useCallback(() => {
+    setShowKingGame(false);
+  }, []);
 
   const handleSpotlightClose = useCallback(() => {
     setSpotlightOpen(false);
@@ -773,7 +788,12 @@ export function IcebreakerToolkit({
             <VisuallyHidden>
               <DialogPrimitive.Title>破冰工具箱</DialogPrimitive.Title>
             </VisuallyHidden>
-            {selectedDetailItem && selectedDetailItem.type === 'game' ? (
+            {showKingGame ? (
+              <KingGameController
+                onBack={handleKingGameBack}
+                participantCount={participantCount}
+              />
+            ) : selectedDetailItem && selectedDetailItem.type === 'game' ? (
               <GameDetailView
                 game={selectedDetailItem.data as IcebreakerGame}
                 onBack={handleDetailBack}
