@@ -82,6 +82,10 @@ interface IcebreakerToolkitProps {
   isRecommendingGame?: boolean;
   recommendedGame?: GameRecommendation | null;
   demoMode?: boolean;
+  sessionId?: string;
+  icebreakerSessionId?: string;
+  userId?: string;
+  displayName?: string;
 }
 
 const gradients = {
@@ -141,6 +145,10 @@ export function IcebreakerToolkit({
   isRecommendingGame = false,
   recommendedGame,
   demoMode = false,
+  sessionId,
+  icebreakerSessionId,
+  userId,
+  displayName,
 }: IcebreakerToolkitProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ 
     loop: false, 
@@ -819,6 +827,11 @@ export function IcebreakerToolkit({
               <KingGameController
                 onBack={handleKingGameBack}
                 participantCount={participantCount}
+                sessionId={sessionId}
+                icebreakerSessionId={icebreakerSessionId}
+                userId={userId}
+                displayName={displayName}
+                useWebSocket={!!(sessionId && icebreakerSessionId && userId && displayName)}
               />
             ) : selectedDetailItem && selectedDetailItem.type === 'game' ? (
               <GameDetailView

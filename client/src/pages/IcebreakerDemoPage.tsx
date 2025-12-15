@@ -259,6 +259,10 @@ export default function IcebreakerDemoPage() {
                 isRecommendingGame={isRecommendingGame}
                 recommendedGame={recommendedGame}
                 demoMode={true}
+                sessionId="demo-session"
+                icebreakerSessionId="demo-icebreaker-session"
+                userId="demo-you"
+                displayName="你"
               />
             </motion.div>
           )}
