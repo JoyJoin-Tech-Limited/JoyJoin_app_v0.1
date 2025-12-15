@@ -288,31 +288,58 @@ export function IcebreakerToolkit({
       data: item.data,
     });
     setSpotlightOpen(true);
-    
-    if (item.type === 'topic') {
-      onSelectTopic(item.data as TopicCard);
-    } else {
-      onSelectGame(item.data as IcebreakerGame);
-    }
-  }, [isOffline, onSelectTopic, onSelectGame]);
+  }, [isOffline]);
 
   const handleSpotlightClose = useCallback(() => {
     setSpotlightOpen(false);
-  }, []);
+    if (spotlightItem) {
+      if (spotlightItem.type === 'topic') {
+        onSelectTopic(spotlightItem.data as TopicCard);
+      } else {
+        onSelectGame(spotlightItem.data as IcebreakerGame);
+      }
+    }
+  }, [spotlightItem, onSelectTopic, onSelectGame]);
 
   const handleSpotlightFeedback = useCallback((rating: 'good' | 'neutral' | 'bad') => {
-    console.log('Activity feedback:', rating, spotlightItem);
     setSpotlightOpen(false);
-  }, [spotlightItem]);
+    if (spotlightItem) {
+      if (spotlightItem.type === 'topic') {
+        onSelectTopic(spotlightItem.data as TopicCard);
+      } else {
+        onSelectGame(spotlightItem.data as IcebreakerGame);
+      }
+    }
+  }, [spotlightItem, onSelectTopic, onSelectGame]);
 
-  const handleNextRecommendation = useCallback(() => {
+  const handleNextRecommendation = useCallback(async () => {
     setSpotlightOpen(false);
-    if (emblaApi && galleryItems.length > 0) {
+    
+    if (onRecommendGame && emblaApi) {
+      try {
+        const recommendation = await onRecommendGame(recommendedHistory);
+        if (recommendation) {
+          setRecommendedHistory(prev => [...prev, recommendation.gameId]);
+          const gameIndex = galleryItems.findIndex(
+            item => item.type === 'game' && item.id === `game-${recommendation.gameId}`
+          );
+          if (gameIndex !== -1) {
+            emblaApi.scrollTo(gameIndex);
+          }
+        }
+      } catch {
+        if (emblaApi && galleryItems.length > 0) {
+          const currentIndex = emblaApi.selectedScrollSnap();
+          const nextIndex = (currentIndex + 1) % galleryItems.length;
+          emblaApi.scrollTo(nextIndex);
+        }
+      }
+    } else if (emblaApi && galleryItems.length > 0) {
       const currentIndex = emblaApi.selectedScrollSnap();
       const nextIndex = (currentIndex + 1) % galleryItems.length;
       emblaApi.scrollTo(nextIndex);
     }
-  }, [emblaApi, galleryItems]);
+  }, [emblaApi, galleryItems, onRecommendGame, recommendedHistory]);
 
   const handleRandomPick = useCallback(() => {
     if (isOffline || !emblaApi || galleryItems.length === 0) return;

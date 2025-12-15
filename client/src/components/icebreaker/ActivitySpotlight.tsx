@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +40,7 @@ interface ActivitySpotlightProps {
 
 const COUNTDOWN_DURATION = 180;
 const TIP_INTERVAL = 60;
+const READY_COUNTDOWN = 5;
 
 const xiaoYueTips = [
   '聊得怎么样？记得让每个人都有机会分享哦～',
@@ -91,22 +92,38 @@ export function ActivitySpotlight({
   onNextRecommendation,
 }: ActivitySpotlightProps) {
   const [phase, setPhase] = useState<'ready' | 'active' | 'ended'>('ready');
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(READY_COUNTDOWN);
   const [timeRemaining, setTimeRemaining] = useState(COUNTDOWN_DURATION);
   const [isPaused, setIsPaused] = useState(false);
   const [currentTipIndex, setCurrentTipIndex] = useState(-1);
   const [showTip, setShowTip] = useState(false);
+  
+  const tipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const clearTipTimeout = useCallback(() => {
+    if (tipTimeoutRef.current) {
+      clearTimeout(tipTimeoutRef.current);
+      tipTimeoutRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) {
       setPhase('ready');
-      setCountdown(5);
+      setCountdown(READY_COUNTDOWN);
       setTimeRemaining(COUNTDOWN_DURATION);
       setIsPaused(false);
       setCurrentTipIndex(-1);
       setShowTip(false);
+      clearTipTimeout();
     }
-  }, [open]);
+  }, [open, clearTipTimeout]);
+
+  useEffect(() => {
+    return () => {
+      clearTipTimeout();
+    };
+  }, [clearTipTimeout]);
 
   useEffect(() => {
     if (!open || phase !== 'ready') return;
@@ -142,7 +159,11 @@ export function ActivitySpotlight({
         if (tipIndex >= 0 && tipIndex < xiaoYueTips.length && tipIndex !== currentTipIndex) {
           setCurrentTipIndex(tipIndex);
           setShowTip(true);
-          setTimeout(() => setShowTip(false), 5000);
+          
+          clearTipTimeout();
+          tipTimeoutRef.current = setTimeout(() => {
+            setShowTip(false);
+          }, 5000);
         }
         
         return prev - 1;
@@ -150,22 +171,30 @@ export function ActivitySpotlight({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [open, phase, isPaused, currentTipIndex]);
+  }, [open, phase, isPaused, currentTipIndex, clearTipTimeout]);
 
   const handlePauseToggle = useCallback(() => {
     setIsPaused((prev) => !prev);
   }, []);
 
   const handleReset = useCallback(() => {
+    clearTipTimeout();
     setTimeRemaining(COUNTDOWN_DURATION);
     setCurrentTipIndex(-1);
     setShowTip(false);
     setIsPaused(false);
-  }, []);
+  }, [clearTipTimeout]);
 
   const handleSkipToEnd = useCallback(() => {
+    clearTipTimeout();
     setPhase('ended');
-  }, []);
+  }, [clearTipTimeout]);
+
+  const handleFeedbackClick = useCallback((rating: 'good' | 'neutral' | 'bad') => {
+    if (onFeedback) {
+      onFeedback(rating);
+    }
+  }, [onFeedback]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -184,7 +213,6 @@ export function ActivitySpotlight({
     : gradients.topic;
 
   const SceneIcon = isGame && game ? sceneIcons[game.scene] : MessageCircle;
-  const CategoryIcon = isGame && game ? categoryIcons[game.category] : MessageCircle;
 
   return (
     <AnimatePresence>
@@ -389,7 +417,7 @@ export function ActivitySpotlight({
                   <div className="flex items-center justify-center gap-4">
                     <Button
                       variant="ghost"
-                      onClick={() => onFeedback?.('good')}
+                      onClick={() => handleFeedbackClick('good')}
                       className="flex flex-col items-center gap-2 text-white hover:bg-white/20 h-auto py-4 px-6"
                       data-testid="button-feedback-good"
                     >
@@ -398,7 +426,7 @@ export function ActivitySpotlight({
                     </Button>
                     <Button
                       variant="ghost"
-                      onClick={() => onFeedback?.('neutral')}
+                      onClick={() => handleFeedbackClick('neutral')}
                       className="flex flex-col items-center gap-2 text-white hover:bg-white/20 h-auto py-4 px-6"
                       data-testid="button-feedback-neutral"
                     >
@@ -407,7 +435,7 @@ export function ActivitySpotlight({
                     </Button>
                     <Button
                       variant="ghost"
-                      onClick={() => onFeedback?.('bad')}
+                      onClick={() => handleFeedbackClick('bad')}
                       className="flex flex-col items-center gap-2 text-white hover:bg-white/20 h-auto py-4 px-6"
                       data-testid="button-feedback-bad"
                     >
