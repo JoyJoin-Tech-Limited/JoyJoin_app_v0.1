@@ -81,7 +81,7 @@ export function SpinWheel({
       setShowResult(true);
       onSelect?.(participantsWithColors[randomIndex]);
     }, 4000);
-  }, [isSpinning, participants.length, segmentAngle, onSelect, participantsWithColors]);
+  }, [isSpinning, participants.length, segmentAngle, onSelect, participantsWithColors, rotation]);
 
   const handleReset = useCallback(() => {
     setShowResult(false);
