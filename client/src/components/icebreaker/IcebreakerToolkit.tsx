@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Button } from '@/components/ui/button';
@@ -321,123 +321,104 @@ export function IcebreakerToolkit({
 
         <div className="h-full overflow-hidden px-4" ref={emblaRef}>
           <div className="flex h-full items-center gap-4">
-            <AnimatePresence mode="popLayout">
-              {galleryItems.map((item, index) => {
-                const isSelected = index === selectedIndex;
-                const Icon = item.icon;
-                
-                return (
-                  <motion.div
-                    key={item.id}
-                    className="flex-shrink-0"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ 
-                      opacity: 1, 
-                      scale: isSelected ? 1 : 0.85,
-                    }}
-                    transition={{ 
-                      duration: 0.3,
-                      ease: 'easeOut',
-                    }}
-                    style={{
-                      width: 'min(75vw, 300px)',
-                      minWidth: 'min(75vw, 300px)',
-                    }}
-                    data-testid={`gallery-card-${item.id}`}
+            {galleryItems.map((item, index) => {
+              const isSelected = index === selectedIndex;
+              const Icon = item.icon;
+              
+              return (
+                <div
+                  key={item.id}
+                  className={`flex-shrink-0 transition-transform duration-200 ease-out will-change-transform ${
+                    isSelected ? 'scale-100' : 'scale-[0.85]'
+                  }`}
+                  style={{
+                    width: 'min(75vw, 300px)',
+                    minWidth: 'min(75vw, 300px)',
+                  }}
+                  data-testid={`gallery-card-${item.id}`}
+                >
+                  <div
+                    onClick={() => handleCardClick(item)}
+                    className={`
+                      relative h-[45vh] min-h-[280px] max-h-[400px] rounded-2xl overflow-hidden
+                      cursor-pointer transition-shadow duration-200
+                      ${isOffline ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}
+                      ${isSelected ? 'shadow-2xl ring-2 ring-white/30' : 'shadow-lg'}
+                    `}
                   >
-                    <div
-                      onClick={() => handleCardClick(item)}
-                      className={`
-                        relative h-[45vh] min-h-[280px] max-h-[400px] rounded-2xl overflow-hidden
-                        cursor-pointer transition-all duration-300
-                        ${isOffline ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}
-                        ${isSelected ? 'shadow-2xl ring-2 ring-white/30' : 'shadow-lg'}
-                      `}
-                    >
-                      <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient}`} />
-                      
-                      <div className="absolute inset-0 opacity-20">
-                        <div className="absolute top-4 right-4 w-32 h-32 rounded-full bg-white/20 blur-2xl" />
-                        <div className="absolute bottom-8 left-4 w-24 h-24 rounded-full bg-white/10 blur-xl" />
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full bg-black/10 blur-3xl" />
+                    <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient}`} />
+                    
+                    <div className="relative h-full flex flex-col p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {item.isRecommended && (
+                            <Badge className="bg-white/30 text-white border-0 text-xs">
+                              <Sparkles className="w-3 h-3 mr-1" />
+                              推荐
+                            </Badge>
+                          )}
+                          <Badge className="bg-white/30 text-white border-0 text-xs">
+                            {item.type === 'topic' ? '话题' : '游戏'}
+                          </Badge>
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-white/30 flex items-center justify-center">
+                          <Icon className="w-5 h-5 text-white" />
+                        </div>
                       </div>
                       
-                      <div className="relative h-full flex flex-col p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {item.isRecommended && (
-                              <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm text-xs">
-                                <Sparkles className="w-3 h-3 mr-1" />
-                                推荐
+                      <div className="flex-1 flex flex-col justify-center py-3">
+                        <h3 className="text-xl font-bold text-white leading-tight mb-2 line-clamp-3">
+                          {item.title}
+                        </h3>
+                        <p className="text-white/80 text-sm line-clamp-2">
+                          {item.subtitle}
+                        </p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge className="bg-white/20 text-white border-0 text-xs">
+                            {item.category}
+                          </Badge>
+                          <Badge className="bg-white/30 text-white border-0 text-xs">
+                            {difficultyLabels[item.difficulty as keyof typeof difficultyLabels] || item.difficulty}
+                          </Badge>
+                          {item.type === 'game' && (
+                            <>
+                              <Badge className="bg-white/20 text-white border-0 text-xs flex items-center gap-1">
+                                <Users className="w-3 h-3" />
+                                {(item.data as IcebreakerGame).minPlayers}-{(item.data as IcebreakerGame).maxPlayers}人
                               </Badge>
-                            )}
-                            <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm text-xs">
-                              {item.type === 'topic' ? '话题' : '游戏'}
-                            </Badge>
-                          </div>
-                          <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                            <Icon className="w-5 h-5 text-white" />
-                          </div>
-                        </div>
-                        
-                        <div className="flex-1 flex flex-col justify-center py-3">
-                          <h3 className="text-xl font-bold text-white leading-tight mb-2 line-clamp-3">
-                            {item.title}
-                          </h3>
-                          <p className="text-white/80 text-sm line-clamp-2">
-                            {item.subtitle}
-                          </p>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge className="bg-white/20 text-white border-0 text-xs">
-                              {item.category}
-                            </Badge>
-                            <Badge className="bg-white/30 text-white border-0 text-xs">
-                              {difficultyLabels[item.difficulty as keyof typeof difficultyLabels] || item.difficulty}
-                            </Badge>
-                            {item.type === 'game' && (
-                              <>
-                                <Badge className="bg-white/20 text-white border-0 text-xs flex items-center gap-1">
-                                  <Users className="w-3 h-3" />
-                                  {(item.data as IcebreakerGame).minPlayers}-{(item.data as IcebreakerGame).maxPlayers}人
-                                </Badge>
-                                <Badge className="bg-white/20 text-white border-0 text-xs flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {(item.data as IcebreakerGame).duration}
-                                </Badge>
-                              </>
-                            )}
-                          </div>
-                          
-                          {isSelected && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.1 }}
-                            >
-                              <Button
-                                className="w-full bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCardClick(item);
-                                }}
-                                disabled={isOffline}
-                                data-testid={`button-select-${item.id}`}
-                              >
-                                <Play className="w-4 h-4 mr-2" />
-                                {item.type === 'topic' ? '使用这个话题' : '开始这个游戏'}
-                              </Button>
-                            </motion.div>
+                              <Badge className="bg-white/20 text-white border-0 text-xs flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {(item.data as IcebreakerGame).duration}
+                              </Badge>
+                            </>
                           )}
                         </div>
+                        
+                        {isSelected && (
+                          <div className="animate-in fade-in slide-in-from-bottom-2 duration-150">
+                            <Button
+                              className="w-full bg-white/30 hover:bg-white/40 text-white border-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCardClick(item);
+                              }}
+                              disabled={isOffline}
+                              data-testid={`button-select-${item.id}`}
+                            >
+                              <Play className="w-4 h-4 mr-2" />
+                              {item.type === 'topic' ? '使用这个话题' : '开始这个游戏'}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
