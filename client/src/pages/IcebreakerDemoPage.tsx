@@ -164,7 +164,7 @@ export default function IcebreakerDemoPage() {
                 hasCheckedIn={hasCheckedIn}
                 onCheckin={handleCheckin}
                 welcomeMessage="欢迎来到今天的小聚！我是小悦，很高兴认识大家。看到这么多有趣的朋友聚在一起，今天一定会很开心！"
-                eventTitle="周末咖啡局"
+                eventTitle="周三南山神秘饭局"
               />
             </motion.div>
           )}
@@ -186,7 +186,7 @@ export default function IcebreakerDemoPage() {
                 totalCount={5}
                 onReady={handleReady}
                 isReady={hasVotedReady}
-                eventTitle="周末咖啡局"
+                eventTitle="周三南山神秘饭局"
               />
             </motion.div>
           )}
