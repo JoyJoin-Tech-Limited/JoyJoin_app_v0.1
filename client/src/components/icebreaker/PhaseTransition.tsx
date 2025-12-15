@@ -285,7 +285,7 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
     if (isVisible && onComplete) {
       const timer = setTimeout(() => {
         onComplete();
-      }, 3000);
+      }, 4000);
       return () => clearTimeout(timer);
     }
   }, [isVisible, onComplete]);
