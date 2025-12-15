@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +31,8 @@ export interface RecommendedTopic {
 }
 
 interface IcebreakerToolkitProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   topics: TopicCard[];
   recommendedTopics?: RecommendedTopic[];
   onSelectTopic: (topic: TopicCard) => void;
@@ -59,6 +63,8 @@ const categoryIcons = {
 };
 
 export function IcebreakerToolkit({
+  open = true,
+  onOpenChange,
   topics,
   recommendedTopics,
   onSelectTopic,

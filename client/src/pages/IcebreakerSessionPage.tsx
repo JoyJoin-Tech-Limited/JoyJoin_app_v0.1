@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useToast } from '@/hooks/use-toast';
 import { useIcebreakerWebSocket, type IcebreakerPhase } from '@/hooks/useIcebreakerWebSocket';
 import { useIcebreakerTopics, type ParticipantProfile } from '@/hooks/use-icebreaker-topics';
 import { useWelcomeMessage, useClosingMessage } from '@/hooks/use-icebreaker-messages';
@@ -44,7 +43,6 @@ interface BlindBoxEventData {
 export default function IcebreakerSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
   
   const [selectedGame, setSelectedGame] = useState<IcebreakerGame | null>(null);
   const [hasVotedReady, setHasVotedReady] = useState(false);
@@ -121,25 +119,13 @@ export default function IcebreakerSessionPage() {
     userId: user?.id || '',
     expectedAttendees: sessionData?.expectedAttendees || 0,
     onPhaseChange: (phase, previousPhase) => {
-      if (phase === 'ended') {
-        toast({
-          title: '破冰结束',
-          description: '感谢参与，希望大家玩得开心！',
-        });
-      }
+      // Phase transitions handled visually
     },
     onNumberAssigned: () => {
-      toast({
-        title: '号码牌已分配',
-        description: `你的号码牌是 ${icebreakerState.myNumberPlate}`,
-      });
+      // Number assignment shown in UI
     },
     onRateLimited: (data) => {
-      toast({
-        title: '操作过于频繁',
-        description: data.message,
-        variant: 'destructive',
-      });
+      // Rate limit handled silently
     },
   });
 
@@ -147,35 +133,17 @@ export default function IcebreakerSessionPage() {
 
   const handleCheckin = useCallback(() => {
     if (isOffline) {
-      toast({
-        title: '网络已断开',
-        description: '请检查网络连接后重试',
-        variant: 'destructive',
-      });
       return;
     }
     checkin();
-    toast({
-      title: '签到成功',
-      description: '请等待其他小伙伴签到...',
-    });
-  }, [checkin, toast, isOffline]);
+  }, [checkin, isOffline]);
 
   const handleSelectTopic = useCallback((topic: TopicCard) => {
     if (isOffline) {
-      toast({
-        title: '网络已断开',
-        description: '请检查网络连接后重试',
-        variant: 'destructive',
-      });
       return;
     }
     selectTopic(topic.question, topic.question);
-    toast({
-      title: '话题已选择',
-      description: topic.question,
-    });
-  }, [selectTopic, toast, isOffline]);
+  }, [selectTopic, isOffline]);
 
   const handleSelectGame = useCallback((game: IcebreakerGame) => {
     setSelectedGame(game);
@@ -183,40 +151,18 @@ export default function IcebreakerSessionPage() {
 
   const handleStartGame = useCallback((game: IcebreakerGame) => {
     if (isOffline) {
-      toast({
-        title: '网络已断开',
-        description: '请检查网络连接后重试',
-        variant: 'destructive',
-      });
       return;
     }
     startGame(game.id, game.name);
-    toast({
-      title: '游戏开始',
-      description: game.name,
-    });
-  }, [startGame, toast, isOffline]);
+  }, [startGame, isOffline]);
 
   const handleReady = useCallback((isAutoVote: boolean = false) => {
     if (isOffline) {
-      if (!isAutoVote) {
-        toast({
-          title: '网络已断开',
-          description: '请检查网络连接后重试',
-          variant: 'destructive',
-        });
-      }
       return;
     }
     voteReady('icebreaker', isAutoVote);
     setHasVotedReady(true);
-    if (!isAutoVote) {
-      toast({
-        title: '已准备好',
-        description: '等待其他人准备...',
-      });
-    }
-  }, [voteReady, toast, isOffline]);
+  }, [voteReady, isOffline]);
 
   const handleLeave = useCallback(() => {
     if (!isOffline) {

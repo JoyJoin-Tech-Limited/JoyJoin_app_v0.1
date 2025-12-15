@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -209,19 +209,8 @@ export function NumberPlateDisplay({
 
   const content = (
     <div className="flex flex-col h-full overflow-hidden rounded-t-3xl">
-      <div className="relative flex items-center justify-center">
+      <div className="flex items-center justify-center">
         <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mt-3 mb-4" />
-        <DialogClose asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-2 top-2"
-            data-testid="button-close-numberplate"
-          >
-            <X className="w-4 h-4" />
-            <span className="sr-only">关闭</span>
-          </Button>
-        </DialogClose>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-32">
