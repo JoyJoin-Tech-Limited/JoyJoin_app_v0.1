@@ -224,11 +224,18 @@ export function ActivitySpotlight({
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[60] flex flex-col"
           data-testid="activity-spotlight"
-          onClick={onClose}
         >
-          <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} onClick={e => e.stopPropagation()} />
+          {/* Background layer - clicking here closes the spotlight */}
+          <div 
+            className={`absolute inset-0 bg-gradient-to-br ${gradient}`} 
+            onClick={onClose}
+          />
           
-          <div className="relative flex-1 flex flex-col p-4 pt-safe pb-safe overflow-hidden" onClick={e => e.stopPropagation()}>
+          {/* Content layer - clicks here don't close */}
+          <div 
+            className="relative flex-1 flex flex-col p-4 pt-safe pb-safe overflow-hidden pointer-events-auto"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
               <Button
                 variant="ghost"
