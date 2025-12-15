@@ -227,7 +227,7 @@ export function ActivitySpotlight({
         >
           <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} onClick={e => e.stopPropagation()} />
           
-          <div className="relative flex-1 flex flex-col p-4 pt-safe pb-safe overflow-hidden">
+          <div className="relative flex-1 flex flex-col p-4 pt-safe pb-safe overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <Button
                 variant="ghost"
