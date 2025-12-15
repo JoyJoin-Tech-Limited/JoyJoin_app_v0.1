@@ -26,6 +26,7 @@ import {
 import type { TopicCard } from '@shared/topicCards';
 import { icebreakerGames, sceneLabels, type IcebreakerGame } from '@shared/icebreakerGames';
 import { Wine, Utensils, Globe } from 'lucide-react';
+import { ActivitySpotlight } from './ActivitySpotlight';
 
 export interface RecommendedTopic {
   topic: TopicCard;
@@ -147,6 +148,11 @@ export function IcebreakerToolkit({
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
   const [usedItemId, setUsedItemId] = useState<string | null>(null);
   const [recommendedHistory, setRecommendedHistory] = useState<string[]>([]);
+  const [spotlightItem, setSpotlightItem] = useState<{
+    type: 'topic' | 'game';
+    data: TopicCard | IcebreakerGame;
+  } | null>(null);
+  const [spotlightOpen, setSpotlightOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -277,6 +283,11 @@ export function IcebreakerToolkit({
     if (isOffline) return;
     
     setUsedItemId(item.id);
+    setSpotlightItem({
+      type: item.type,
+      data: item.data,
+    });
+    setSpotlightOpen(true);
     
     if (item.type === 'topic') {
       onSelectTopic(item.data as TopicCard);
@@ -284,6 +295,24 @@ export function IcebreakerToolkit({
       onSelectGame(item.data as IcebreakerGame);
     }
   }, [isOffline, onSelectTopic, onSelectGame]);
+
+  const handleSpotlightClose = useCallback(() => {
+    setSpotlightOpen(false);
+  }, []);
+
+  const handleSpotlightFeedback = useCallback((rating: 'good' | 'neutral' | 'bad') => {
+    console.log('Activity feedback:', rating, spotlightItem);
+    setSpotlightOpen(false);
+  }, [spotlightItem]);
+
+  const handleNextRecommendation = useCallback(() => {
+    setSpotlightOpen(false);
+    if (emblaApi && galleryItems.length > 0) {
+      const currentIndex = emblaApi.selectedScrollSnap();
+      const nextIndex = (currentIndex + 1) % galleryItems.length;
+      emblaApi.scrollTo(nextIndex);
+    }
+  }, [emblaApi, galleryItems]);
 
   const handleRandomPick = useCallback(() => {
     if (isOffline || !emblaApi || galleryItems.length === 0) return;
@@ -704,20 +733,31 @@ export function IcebreakerToolkit({
   );
 
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <DialogPrimitive.Content 
-          className="fixed bottom-0 left-0 right-0 z-50 h-[85vh] bg-gradient-to-b from-primary/10 via-background to-background rounded-t-3xl shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom duration-300"
-          data-testid="icebreaker-toolkit-dialog"
-          aria-describedby={undefined}
-        >
-          <VisuallyHidden>
-            <DialogPrimitive.Title>破冰工具箱</DialogPrimitive.Title>
-          </VisuallyHidden>
-          {content}
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+    <>
+      <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <DialogPrimitive.Content 
+            className="fixed bottom-0 left-0 right-0 z-50 h-[85vh] bg-gradient-to-b from-primary/10 via-background to-background rounded-t-3xl shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom duration-300"
+            data-testid="icebreaker-toolkit-dialog"
+            aria-describedby={undefined}
+          >
+            <VisuallyHidden>
+              <DialogPrimitive.Title>破冰工具箱</DialogPrimitive.Title>
+            </VisuallyHidden>
+            {content}
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
+
+      <ActivitySpotlight
+        open={spotlightOpen}
+        onClose={handleSpotlightClose}
+        item={spotlightItem}
+        participantCount={participantCount}
+        onFeedback={handleSpotlightFeedback}
+        onNextRecommendation={handleNextRecommendation}
+      />
+    </>
   );
 }
