@@ -5,7 +5,7 @@ import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronRight, Sparkles, Users, Mic, X } from 'lucide-react';
+import { ChevronRight, Sparkles, Users, Mic } from 'lucide-react';
 
 import kaiXinKeJi from '@assets/开心柯基_transparent_1_1765650619462.png';
 import jiZhiHu from '@assets/机智狐_transparent_2_1765650619453.png';
@@ -151,16 +151,6 @@ export function NumberPlateDisplay({
         className="fixed inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center z-50"
         data-testid="number-plate-reveal"
       >
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-4 top-4"
-          onClick={() => onOpenChange?.(false)}
-          data-testid="button-close-reveal"
-        >
-          <X className="w-5 h-5" />
-          <span className="sr-only">关闭</span>
-        </Button>
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
@@ -440,7 +430,7 @@ export function NumberPlateDisplay({
           left: 0,
           right: 0,
           top: 'auto',
-          height: '80vh',
+          height: '85vh',
           borderRadius: '1.5rem 1.5rem 0 0',
           zIndex: 50,
           transform: 'none'

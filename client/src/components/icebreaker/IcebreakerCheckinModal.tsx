@@ -118,7 +118,7 @@ export function IcebreakerCheckinModal({
           left: 0,
           right: 0,
           top: 'auto',
-          height: '80vh',
+          height: '85vh',
           borderRadius: '1.5rem 1.5rem 0 0',
           zIndex: 50,
           transform: 'none'
