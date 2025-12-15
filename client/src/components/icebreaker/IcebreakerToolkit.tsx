@@ -522,7 +522,7 @@ export function IcebreakerToolkit({
                   <div
                     onClick={() => handleCardClick(item)}
                     className={`
-                      relative h-[45vh] min-h-[280px] max-h-[400px] rounded-2xl overflow-hidden
+                      relative h-[55vh] min-h-[340px] max-h-[480px] rounded-2xl overflow-hidden
                       cursor-pointer transition-all duration-200
                       ${isOffline ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}
                       ${isUsed ? 'shadow-2xl ring-3 ring-green-400/80' : isSelected ? 'shadow-2xl ring-2 ring-white/30' : 'shadow-lg'}

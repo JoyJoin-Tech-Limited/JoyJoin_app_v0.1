@@ -79,6 +79,13 @@ const categoryLabels = {
 
 type LocalGamePhase = 'setup' | 'playing' | 'commanding' | 'executing';
 
+const demoPlayers = [
+  { id: 'demo-player-1', name: '小明' },
+  { id: 'demo-player-2', name: '小红' },
+  { id: 'demo-player-3', name: '小刚' },
+  { id: 'demo-player-4', name: '小美' },
+];
+
 function MultiDeviceKingGame({
   onBack,
   sessionId,
@@ -96,6 +103,35 @@ function MultiDeviceKingGame({
 }) {
   const [selectedCommand, setSelectedCommand] = useState<Command | null>(null);
   const [hasDrawn, setHasDrawn] = useState(false);
+  const [demoState, setDemoState] = useState<{
+    simulatedPlayers: { id: string; name: string; isReady: boolean }[];
+    phase: 'waiting' | 'dealing' | 'commanding' | 'executing';
+    myCardNumber: number | null;
+    myIsKing: boolean;
+    myIsReady: boolean;
+    kingPlayerId: string | null;
+    kingDisplayName: string | null;
+    targetNumber: number | null;
+    currentCommand: string | null;
+    mysteryNumber: number | null;
+    roundNumber: number;
+    drawnCount: number;
+  }>({
+    simulatedPlayers: [],
+    phase: 'waiting',
+    myCardNumber: null,
+    myIsKing: false,
+    myIsReady: false,
+    kingPlayerId: null,
+    kingDisplayName: null,
+    targetNumber: null,
+    currentCommand: null,
+    mysteryNumber: null,
+    roundNumber: 1,
+    drawnCount: 0,
+  });
+
+  const isDemoMode = sessionId.includes('demo');
 
   const {
     state,
@@ -121,6 +157,123 @@ function MultiDeviceKingGame({
     },
   });
 
+  // Demo mode: Simulate players joining
+  useEffect(() => {
+    if (!isDemoMode) return;
+    if (demoState.simulatedPlayers.length > 0) return; // Already initialized
+    
+    const playersNeeded = Math.min(participantCount - 1, demoPlayers.length);
+
+    // Add players with staggered delays
+    const timers: NodeJS.Timeout[] = [];
+    for (let i = 0; i < playersNeeded; i++) {
+      timers.push(setTimeout(() => {
+        setDemoState(prev => {
+          // Check if player already exists
+          if (prev.simulatedPlayers.some(p => p.id === demoPlayers[i].id)) {
+            return prev;
+          }
+          return {
+            ...prev,
+            simulatedPlayers: [
+              ...prev.simulatedPlayers,
+              { ...demoPlayers[i], isReady: false }
+            ]
+          };
+        });
+      }, 800 + i * 600));
+    }
+
+    return () => timers.forEach(t => clearTimeout(t));
+  }, [isDemoMode, participantCount, demoState.simulatedPlayers.length]);
+
+  // Demo mode: Auto-ready simulated players after user is ready
+  useEffect(() => {
+    if (!isDemoMode) return;
+    
+    const myReady = demoState.simulatedPlayers.length > 0 && 
+      state.players.find(p => p.userId === userId)?.isReady;
+    
+    if (!myReady) return;
+
+    const unreadyPlayers = demoState.simulatedPlayers.filter(p => !p.isReady);
+    const timers: NodeJS.Timeout[] = [];
+    
+    unreadyPlayers.forEach((player, idx) => {
+      timers.push(setTimeout(() => {
+        setDemoState(prev => ({
+          ...prev,
+          simulatedPlayers: prev.simulatedPlayers.map(p =>
+            p.id === player.id ? { ...p, isReady: true } : p
+          )
+        }));
+      }, 500 + idx * 400));
+    });
+
+    return () => timers.forEach(t => clearTimeout(t));
+  }, [isDemoMode, state.players, userId, demoState.simulatedPlayers]);
+
+  // Demo mode: Auto start dealing when all ready
+  useEffect(() => {
+    if (!isDemoMode) return;
+    if (demoState.phase !== 'waiting') return;
+    
+    const allSimulatedReady = demoState.simulatedPlayers.length >= participantCount - 1 &&
+      demoState.simulatedPlayers.every(p => p.isReady);
+    const myPlayer = state.players.find(p => p.userId === userId);
+    
+    if (allSimulatedReady && myPlayer?.isReady) {
+      setTimeout(() => {
+        setDemoState(prev => ({ ...prev, phase: 'dealing' }));
+      }, 800);
+    }
+  }, [isDemoMode, demoState.simulatedPlayers, demoState.phase, state.players, userId, participantCount]);
+
+  // Demo mode: Handle draw card
+  const handleDemoDrawCard = useCallback(() => {
+    if (hasDrawn) return;
+    
+    const totalPlayers = demoState.simulatedPlayers.length + 1;
+    const isKing = Math.random() < (1 / totalPlayers);
+    const cardNumber = isKing ? null : Math.floor(Math.random() * (totalPlayers - 1)) + 1;
+    
+    setDemoState(prev => ({
+      ...prev,
+      myCardNumber: cardNumber,
+      myIsKing: isKing,
+      kingPlayerId: isKing ? userId : demoPlayers[Math.floor(Math.random() * prev.simulatedPlayers.length)]?.id,
+      phase: 'commanding',
+    }));
+    setHasDrawn(true);
+  }, [hasDrawn, demoState.simulatedPlayers.length, userId]);
+
+  // Demo mode: Handle issue command
+  const handleDemoIssueCommand = useCallback((command: string, target: number) => {
+    setDemoState(prev => ({
+      ...prev,
+      currentCommand: command,
+      targetNumber: target,
+      phase: 'executing',
+    }));
+  }, []);
+
+  // Demo mode: Complete round
+  const handleDemoCompleteRound = useCallback(() => {
+    setDemoState(prev => ({
+      ...prev,
+      phase: 'waiting',
+      myCardNumber: null,
+      myIsKing: false,
+      kingPlayerId: null,
+      targetNumber: null,
+      currentCommand: null,
+      roundNumber: prev.roundNumber + 1,
+      simulatedPlayers: prev.simulatedPlayers.map(p => ({ ...p, isReady: false })),
+    }));
+    setHasDrawn(false);
+    setSelectedCommand(null);
+  }, []);
+
   useEffect(() => {
     if (state.phase === 'waiting' || state.phase === 'dealing') {
       setHasDrawn(false);
@@ -128,33 +281,62 @@ function MultiDeviceKingGame({
     }
   }, [state.phase]);
 
+  // For demo mode, merge simulated players into state
+  const effectiveState = isDemoMode ? {
+    ...state,
+    phase: demoState.phase as KingGamePhase,
+    playerCount: 1 + demoState.simulatedPlayers.length,
+    players: [
+      { userId, displayName, isReady: state.players.find(p => p.userId === userId)?.isReady || false },
+      ...demoState.simulatedPlayers.map(p => ({ userId: p.id, displayName: p.name, isReady: p.isReady })),
+    ],
+    readyCount: (state.players.find(p => p.userId === userId)?.isReady ? 1 : 0) + demoState.simulatedPlayers.filter(p => p.isReady).length,
+    myCardNumber: demoState.myCardNumber,
+    myIsKing: demoState.myIsKing,
+    kingUserId: demoState.kingPlayerId,
+    kingDisplayName: demoState.myIsKing ? displayName : demoState.simulatedPlayers.find(p => p.id === demoState.kingPlayerId)?.name || null,
+    currentCommand: demoState.currentCommand,
+    targetNumber: demoState.targetNumber,
+    roundNumber: demoState.roundNumber,
+  } : state;
+
   const myPlayer = useMemo(() => 
-    state.players.find(p => p.userId === userId),
-    [state.players, userId]
+    effectiveState.players.find(p => p.userId === userId),
+    [effectiveState.players, userId]
   );
 
-  const isKing = state.kingUserId === userId;
-  const hasEnoughPlayers = state.playerCount >= state.requiredPlayers;
-  const allReady = hasEnoughPlayers && state.readyCount >= state.playerCount;
+  const isKing = effectiveState.kingUserId === userId;
+  const hasEnoughPlayers = effectiveState.playerCount >= effectiveState.requiredPlayers;
+  const allReady = hasEnoughPlayers && effectiveState.readyCount >= effectiveState.playerCount;
 
   const handleDrawCard = useCallback(() => {
-    if (!hasDrawn) {
+    if (isDemoMode) {
+      handleDemoDrawCard();
+    } else if (!hasDrawn) {
       drawCard();
       setHasDrawn(true);
     }
-  }, [hasDrawn, drawCard]);
+  }, [isDemoMode, hasDrawn, drawCard, handleDemoDrawCard]);
 
   const handleSelectTarget = useCallback((num: number) => {
     if (selectedCommand && isKing) {
-      issueCommand(selectedCommand.text, num);
+      if (isDemoMode) {
+        handleDemoIssueCommand(selectedCommand.text, num);
+      } else {
+        issueCommand(selectedCommand.text, num);
+      }
     }
-  }, [selectedCommand, isKing, issueCommand]);
+  }, [selectedCommand, isKing, isDemoMode, issueCommand, handleDemoIssueCommand]);
 
   const handleCompleteRound = useCallback(() => {
-    completeRound();
-    setSelectedCommand(null);
-    setHasDrawn(false);
-  }, [completeRound]);
+    if (isDemoMode) {
+      handleDemoCompleteRound();
+    } else {
+      completeRound();
+      setSelectedCommand(null);
+      setHasDrawn(false);
+    }
+  }, [isDemoMode, completeRound, handleDemoCompleteRound]);
 
   return (
     <div className="flex flex-col h-full" data-testid="king-game-controller">
@@ -176,13 +358,18 @@ function MultiDeviceKingGame({
               <div>
                 <h2 className="text-lg font-semibold">国王游戏</h2>
                 <p className="text-xs text-muted-foreground">
-                  第 {state.roundNumber} 轮 · {state.playerCount}/{state.requiredPlayers} 人
+                  第 {effectiveState.roundNumber} 轮 · {effectiveState.playerCount}/{effectiveState.requiredPlayers} 人
                 </p>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {isConnected ? (
+            {isDemoMode ? (
+              <Badge variant="outline" className="text-purple-600 border-purple-300">
+                <Sparkles className="w-3 h-3 mr-1" />
+                演示模式
+              </Badge>
+            ) : isConnected ? (
               <Badge variant="outline" className="text-green-600 border-green-300">
                 <Wifi className="w-3 h-3 mr-1" />
                 已连接
@@ -204,7 +391,7 @@ function MultiDeviceKingGame({
 
       <ScrollArea className="flex-1">
         <AnimatePresence mode="wait">
-          {state.phase === 'waiting' && (
+          {effectiveState.phase === 'waiting' && (
             <motion.div
               key="waiting"
               initial={{ opacity: 0, y: 20 }}
@@ -216,10 +403,10 @@ function MultiDeviceKingGame({
                 <CardContent className="p-4 space-y-3">
                   <h3 className="font-semibold flex items-center gap-2">
                     <Users className="w-4 h-4 text-amber-500" />
-                    玩家列表 ({state.playerCount}/{state.requiredPlayers})
+                    玩家列表 ({effectiveState.playerCount}/{effectiveState.requiredPlayers})
                   </h3>
                   <div className="space-y-2">
-                    {state.players.map((player, idx) => (
+                    {effectiveState.players.map((player, idx) => (
                       <div 
                         key={player.userId} 
                         className="flex items-center gap-3 p-2 rounded-lg bg-muted/50"
@@ -248,7 +435,7 @@ function MultiDeviceKingGame({
                         )}
                       </div>
                     ))}
-                    {state.playerCount < state.requiredPlayers && (
+                    {effectiveState.playerCount < effectiveState.requiredPlayers && (
                       <div className="text-center py-4 text-muted-foreground text-sm">
                         <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
                         等待其他玩家加入...
@@ -273,7 +460,7 @@ function MultiDeviceKingGame({
               {myPlayer?.isReady && !allReady && (
                 <div className="text-center py-4">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-amber-500" />
-                  <p className="text-muted-foreground">等待其他玩家准备... ({state.readyCount}/{state.requiredPlayers})</p>
+                  <p className="text-muted-foreground">等待其他玩家准备... ({effectiveState.readyCount}/{effectiveState.requiredPlayers})</p>
                 </div>
               )}
 
@@ -286,7 +473,7 @@ function MultiDeviceKingGame({
             </motion.div>
           )}
 
-          {state.phase === 'dealing' && (
+          {effectiveState.phase === 'dealing' && (
             <motion.div
               key="dealing"
               initial={{ opacity: 0 }}
@@ -297,7 +484,7 @@ function MultiDeviceKingGame({
               <div className="text-center py-4">
                 <h3 className="text-lg font-semibold mb-2">发牌阶段</h3>
                 <p className="text-muted-foreground text-sm">
-                  {state.dealerName} 正在发牌
+                  {isDemoMode ? '系统' : effectiveState.dealerName} 正在发牌
                 </p>
               </div>
 
@@ -334,32 +521,32 @@ function MultiDeviceKingGame({
                     className="inline-block"
                   >
                     <div className={`w-24 h-32 rounded-lg flex items-center justify-center shadow-lg ${
-                      state.myIsKing 
+                      effectiveState.myIsKing 
                         ? 'bg-gradient-to-br from-amber-400 to-yellow-500' 
                         : 'bg-white dark:bg-gray-800 border-2'
                     }`}>
-                      {state.myIsKing ? (
+                      {effectiveState.myIsKing ? (
                         <Crown className="w-10 h-10 text-white" />
                       ) : (
-                        <span className="text-4xl font-bold">{state.myCardNumber}</span>
+                        <span className="text-4xl font-bold">{effectiveState.myCardNumber}</span>
                       )}
                     </div>
                   </motion.div>
                   <p className="text-lg font-semibold">
-                    {state.myIsKing ? '你是国王! 👑' : `你的号码: ${state.myCardNumber}`}
+                    {effectiveState.myIsKing ? '你是国王! 👑' : `你的号码: ${effectiveState.myCardNumber}`}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    记住你的{state.myIsKing ? '身份' : '号码'}，不要让别人看到!
+                    记住你的{effectiveState.myIsKing ? '身份' : '号码'}，不要让别人看到!
                   </p>
                   <div className="text-sm text-muted-foreground">
-                    等待其他玩家抽牌... ({state.drawnCount}/{state.playerCount})
+                    等待其他玩家抽牌... ({effectiveState.drawnCount}/{effectiveState.playerCount})
                   </div>
                 </div>
               )}
             </motion.div>
           )}
 
-          {state.phase === 'commanding' && (
+          {effectiveState.phase === 'commanding' && (
             <motion.div
               key="commanding"
               initial={{ opacity: 0, y: 20 }}
@@ -377,14 +564,14 @@ function MultiDeviceKingGame({
                   <Crown className="w-8 h-8 text-amber-600" />
                 </motion.div>
                 <h3 className="text-xl font-bold">
-                  {isKing ? '你是国王! 发号施令吧!' : `${state.kingDisplayName} 是国王!`}
+                  {isKing ? '你是国王! 发号施令吧!' : `${effectiveState.kingDisplayName} 是国王!`}
                 </h3>
                 <p className="text-muted-foreground">
                   {isKing ? '选择一个命令和目标号码' : '等待国王发号施令...'}
                 </p>
-                {state.mysteryNumber && !isKing && (
+                {effectiveState.mysteryNumber && !isKing && (
                   <p className="text-sm text-amber-600 mt-2">
-                    神秘牌号码: {state.mysteryNumber} (国王的号码)
+                    神秘牌号码: {effectiveState.mysteryNumber} (国王的号码)
                   </p>
                 )}
               </div>
@@ -448,7 +635,7 @@ function MultiDeviceKingGame({
                     >
                       <h4 className="font-medium text-sm">选择目标号码</h4>
                       <div className="flex flex-wrap gap-2 justify-center">
-                        {Array.from({ length: state.requiredPlayers }, (_, i) => i + 1).map(num => (
+                        {Array.from({ length: effectiveState.requiredPlayers }, (_, i) => i + 1).map(num => (
                           <Button
                             key={num}
                             variant="outline"
@@ -462,7 +649,7 @@ function MultiDeviceKingGame({
                         ))}
                       </div>
                       <p className="text-xs text-muted-foreground text-center">
-                        你的号码是神秘牌({state.mysteryNumber})，小心别点到自己~
+                        你的号码是神秘牌({effectiveState.mysteryNumber})，小心别点到自己~
                       </p>
                     </motion.div>
                   )}
@@ -474,14 +661,14 @@ function MultiDeviceKingGame({
                   <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-amber-500" />
                   <p className="text-muted-foreground">等待国王发号施令...</p>
                   <p className="text-sm text-muted-foreground mt-2">
-                    你的号码是 <span className="font-bold">{state.myCardNumber}</span>
+                    你的号码是 <span className="font-bold">{effectiveState.myCardNumber}</span>
                   </p>
                 </div>
               )}
             </motion.div>
           )}
 
-          {state.phase === 'executing' && (
+          {effectiveState.phase === 'executing' && (
             <motion.div
               key="executing"
               initial={{ opacity: 0, scale: 0.9 }}
@@ -497,12 +684,12 @@ function MultiDeviceKingGame({
                   className="space-y-4"
                 >
                   <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary text-primary-foreground text-4xl font-bold">
-                    {state.targetNumber}
+                    {effectiveState.targetNumber}
                   </div>
                   <h3 className="text-2xl font-bold">
-                    {state.targetNumber}号!
+                    {effectiveState.targetNumber}号!
                   </h3>
-                  {state.myCardNumber === state.targetNumber && (
+                  {effectiveState.myCardNumber === effectiveState.targetNumber && (
                     <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
                       就是你!
                     </Badge>
@@ -513,7 +700,7 @@ function MultiDeviceKingGame({
               <Card className="border-2 border-primary">
                 <CardContent className="p-6 text-center">
                   <p className="text-lg font-medium">
-                    {state.currentCommand}
+                    {effectiveState.currentCommand}
                   </p>
                 </CardContent>
               </Card>
@@ -523,7 +710,7 @@ function MultiDeviceKingGame({
                   被点到的人请执行命令~
                 </p>
                 <p className="text-sm text-amber-600">
-                  国王的号码是: {state.mysteryNumber}
+                  国王的号码是: {effectiveState.mysteryNumber}
                 </p>
                 <Button
                   size="lg"
