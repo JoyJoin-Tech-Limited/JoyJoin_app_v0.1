@@ -305,6 +305,8 @@ export default function IcebreakerSessionPage() {
                   </div>
                 )}
                 <IcebreakerToolkit
+                  open={true}
+                  onOpenChange={() => {}}
                   topics={allTopics}
                   recommendedTopics={recommendedTopics}
                   onSelectTopic={handleSelectTopic}

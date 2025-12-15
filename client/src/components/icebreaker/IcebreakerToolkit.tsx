@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,8 +31,8 @@ export interface RecommendedTopic {
 }
 
 interface IcebreakerToolkitProps {
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   topics: TopicCard[];
   recommendedTopics?: RecommendedTopic[];
   onSelectTopic: (topic: TopicCard) => void;
@@ -63,7 +63,7 @@ const categoryIcons = {
 };
 
 export function IcebreakerToolkit({
-  open = true,
+  open,
   onOpenChange,
   topics,
   recommendedTopics,
@@ -134,9 +134,13 @@ export function IcebreakerToolkit({
     onSelectGame(game);
   };
 
-  return (
-    <div className="flex flex-col h-full" data-testid="icebreaker-toolkit">
-      <div className="px-4 py-3 border-b bg-muted/30">
+  const content = (
+    <div className="flex flex-col h-full overflow-hidden rounded-t-3xl" data-testid="icebreaker-toolkit">
+      <div className="flex items-center justify-center">
+        <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mt-3 mb-2" />
+      </div>
+      
+      <div className="px-4 py-2 border-b bg-muted/30">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -373,8 +377,8 @@ export function IcebreakerToolkit({
         </TabsContent>
       </Tabs>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t">
-        <div className="flex items-center justify-between mb-3">
+      <div className="absolute bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t">
+        <div className="flex items-center justify-between gap-2 mb-3">
           <span className="text-sm text-muted-foreground">
             {readyCount} / {totalCount} 人已准备进入下一环节
           </span>
@@ -432,5 +436,23 @@ export function IcebreakerToolkit({
         </Button>
       </div>
     </div>
+  );
+
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <DialogPrimitive.Content 
+          className="fixed bottom-0 left-0 right-0 z-50 h-[85vh] bg-gradient-to-b from-primary/10 via-background to-background rounded-t-3xl shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom duration-300"
+          data-testid="icebreaker-toolkit-dialog"
+          aria-describedby={undefined}
+        >
+          <VisuallyHidden>
+            <DialogPrimitive.Title>破冰工具包</DialogPrimitive.Title>
+          </VisuallyHidden>
+          {content}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
