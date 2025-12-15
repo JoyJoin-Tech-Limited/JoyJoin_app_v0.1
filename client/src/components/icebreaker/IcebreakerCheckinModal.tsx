@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Loader2, Users, Sparkles } from 'lucide-react';
+import { CheckCircle2, Loader2, Users, Sparkles, X } from 'lucide-react';
 
 import kaiXinKeJi from '@assets/开心柯基_transparent_1_1765650619462.png';
 import jiZhiHu from '@assets/机智狐_transparent_2_1765650619453.png';
@@ -130,7 +130,18 @@ export function IcebreakerCheckinModal({
           <DialogTitle>活动签到</DialogTitle>
         </VisuallyHidden>
         <div className="flex flex-col h-full overflow-hidden rounded-t-3xl">
-          <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto mt-3 mb-2" />
+          <div className="relative">
+            <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto mt-3 mb-2" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2"
+              onClick={() => onOpenChange(false)}
+              data-testid="button-close-checkin"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
 
           <div className="flex-1 flex flex-col items-center justify-center px-6 py-6 overflow-y-auto">
             <motion.div

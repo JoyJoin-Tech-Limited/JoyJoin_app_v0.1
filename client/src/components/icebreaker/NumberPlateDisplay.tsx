@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronRight, Sparkles, Users, Mic } from 'lucide-react';
+import { ChevronRight, Sparkles, Users, Mic, X } from 'lucide-react';
 
 import kaiXinKeJi from '@assets/开心柯基_transparent_1_1765650619462.png';
 import jiZhiHu from '@assets/机智狐_transparent_2_1765650619453.png';
