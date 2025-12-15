@@ -302,10 +302,7 @@ export default function IcebreakerDemoPage() {
                 onLeave={handleLeave}
                 eventName="周三南山神秘饭局"
                 onBack={handleLeave}
-                onFeedback={() => {
-                  // In demo mode, show a toast instead of navigating to real feedback
-                  console.log('Demo: 反馈问卷功能');
-                }}
+                eventId="demo"
               />
             </motion.div>
           )}

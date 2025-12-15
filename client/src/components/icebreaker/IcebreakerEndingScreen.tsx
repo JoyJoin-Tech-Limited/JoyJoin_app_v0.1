@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Heart, Star, Clock, Users, PartyPopper, Share2, Download, Loader2, ArrowLeft, ClipboardList } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -12,7 +13,7 @@ interface IcebreakerEndingScreenProps {
   onLeave: () => void;
   eventName?: string;
   onBack?: () => void;
-  onFeedback?: () => void;
+  eventId?: number | string;
 }
 
 function seededRandom(seed: number): number {
@@ -105,11 +106,18 @@ export function IcebreakerEndingScreen({
   onLeave,
   eventName = 'JoyJoin 悦聚',
   onBack,
-  onFeedback,
+  eventId,
 }: IcebreakerEndingScreenProps) {
   const shareCardRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  const handleFeedback = useCallback(() => {
+    if (eventId) {
+      setLocation(`/events/${eventId}/feedback`);
+    }
+  }, [eventId, setLocation]);
 
   const generateShareImage = useCallback(async (): Promise<Blob | null> => {
     if (!shareCardRef.current) return null;
@@ -433,9 +441,9 @@ export function IcebreakerEndingScreen({
             </Button>
           </div>
           
-          {onFeedback && (
+          {eventId && (
             <Button 
-              onClick={onFeedback}
+              onClick={handleFeedback}
               size="lg"
               variant="outline"
               className="w-full max-w-xs bg-white/20 border-white/40 text-white hover:bg-white/30"

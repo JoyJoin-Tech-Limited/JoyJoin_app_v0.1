@@ -422,6 +422,7 @@ export default function IcebreakerSessionPage() {
               durationMinutes={Math.max(1, Math.round(icebreakerState.duration / 60))}
               participantCount={icebreakerState.checkedInCount}
               onLeave={handleLeave}
+              eventId={sessionData?.eventId}
             />
           </motion.div>
         )}
