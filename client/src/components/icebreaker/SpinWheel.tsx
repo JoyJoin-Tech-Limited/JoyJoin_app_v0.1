@@ -66,7 +66,12 @@ export function SpinWheel({
 
     const randomIndex = Math.floor(Math.random() * participants.length);
     const spins = 5 + Math.random() * 3;
-    const targetAngle = spins * 360 + (360 - randomIndex * segmentAngle - segmentAngle / 2);
+    // Calculate target position: center of selected segment should be at top (0°)
+    const targetPosition = 360 - randomIndex * segmentAngle - segmentAngle / 2;
+    // Account for current rotation position to calculate correct delta
+    const currentPosition = rotation % 360;
+    const delta = (targetPosition - currentPosition + 360) % 360;
+    const targetAngle = spins * 360 + delta;
     
     setRotation(prev => prev + targetAngle);
 

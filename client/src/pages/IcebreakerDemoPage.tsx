@@ -10,7 +10,8 @@ import { GameDetailView } from '@/components/icebreaker/GameDetailView';
 import { IcebreakerEndingScreen } from '@/components/icebreaker/IcebreakerEndingScreen';
 import { PhaseTransition, type TransitionType } from '@/components/icebreaker/PhaseTransition';
 import { Button } from '@/components/ui/button';
-import { LogOut, Clock } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { LogOut, Clock, Info, Smartphone, Wifi } from 'lucide-react';
 import type { TopicCard } from '@shared/topicCards';
 import type { IcebreakerGame } from '@shared/icebreakerGames';
 
@@ -144,6 +145,30 @@ export default function IcebreakerDemoPage() {
 
   return (
     <div className="min-h-screen bg-background" data-testid="icebreaker-demo-page">
+      {phase === 'checkin' && (
+        <div className="absolute top-4 left-4 right-4 z-20">
+          <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div className="space-y-2 text-sm">
+                  <h4 className="font-semibold text-blue-900 dark:text-blue-100">演示模式说明</h4>
+                  <div className="space-y-1 text-blue-800 dark:text-blue-200">
+                    <div className="flex items-center gap-2">
+                      <Smartphone className="w-4 h-4" />
+                      <span><strong>单设备模式</strong>：一台设备上操作，适合现场演示（如国王游戏本地模式）</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Wifi className="w-4 h-4" />
+                      <span><strong>多设备模式</strong>：每人一台设备，通过 WebSocket 实时同步（如国王游戏多设备模式）</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       <div className="">
         <AnimatePresence mode="wait">
           {phase === 'checkin' && (
@@ -267,6 +292,12 @@ export default function IcebreakerDemoPage() {
                 durationMinutes={25}
                 participantCount={5}
                 onLeave={handleLeave}
+                eventName="周三南山神秘饭局"
+                onBack={handleLeave}
+                onFeedback={() => {
+                  // In demo mode, show a toast instead of navigating to real feedback
+                  console.log('Demo: 反馈问卷功能');
+                }}
               />
             </motion.div>
           )}

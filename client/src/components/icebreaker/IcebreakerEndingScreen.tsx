@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Heart, Star, Clock, Users, PartyPopper, Share2, Download, Loader2 } from 'lucide-react';
+import { Sparkles, Heart, Star, Clock, Users, PartyPopper, Share2, Download, Loader2, ArrowLeft, ClipboardList } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 
@@ -11,6 +11,8 @@ interface IcebreakerEndingScreenProps {
   participantCount: number;
   onLeave: () => void;
   eventName?: string;
+  onBack?: () => void;
+  onFeedback?: () => void;
 }
 
 function seededRandom(seed: number): number {
@@ -102,6 +104,8 @@ export function IcebreakerEndingScreen({
   participantCount,
   onLeave,
   eventName = 'JoyJoin 悦聚',
+  onBack,
+  onFeedback,
 }: IcebreakerEndingScreenProps) {
   const shareCardRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -317,7 +321,7 @@ export function IcebreakerEndingScreen({
             className="text-3xl md:text-4xl font-bold text-white text-center mb-4"
             data-testid="text-ending-title"
           >
-            破冰完成！
+            {eventName} 完成！
           </motion.h1>
 
           <motion.div
@@ -425,6 +429,19 @@ export function IcebreakerEndingScreen({
             </Button>
           </div>
           
+          {onFeedback && (
+            <Button 
+              onClick={onFeedback}
+              size="lg"
+              variant="outline"
+              className="w-full max-w-xs bg-white/20 border-white/40 text-white hover:bg-white/30"
+              data-testid="button-feedback"
+            >
+              <ClipboardList className="w-4 h-4 mr-2" />
+              填写反馈问卷
+            </Button>
+          )}
+          
           <Button 
             onClick={onLeave}
             size="lg"
@@ -433,6 +450,18 @@ export function IcebreakerEndingScreen({
           >
             返回活动
           </Button>
+
+          {onBack && (
+            <Button 
+              onClick={onBack}
+              variant="ghost"
+              className="text-white/70 hover:text-white hover:bg-white/10"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              退出
+            </Button>
+          )}
         </motion.div>
       </div>
 
