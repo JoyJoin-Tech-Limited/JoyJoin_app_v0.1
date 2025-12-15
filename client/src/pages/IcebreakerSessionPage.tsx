@@ -11,6 +11,7 @@ import { IcebreakerToolkit } from '@/components/icebreaker/IcebreakerToolkit';
 import { GameDetailView } from '@/components/icebreaker/GameDetailView';
 import { IcebreakerEndingScreen } from '@/components/icebreaker/IcebreakerEndingScreen';
 import { NetworkStatusBanner } from '@/components/icebreaker/NetworkStatusBanner';
+import { PhaseTransition, type TransitionType } from '@/components/icebreaker/PhaseTransition';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, WifiOff, RefreshCcw } from 'lucide-react';
@@ -46,6 +47,10 @@ export default function IcebreakerSessionPage() {
   
   const [selectedGame, setSelectedGame] = useState<IcebreakerGame | null>(null);
   const [hasVotedReady, setHasVotedReady] = useState(false);
+  const [showTransition, setShowTransition] = useState(false);
+  const [transitionType, setTransitionType] = useState<TransitionType | null>(null);
+  const [previousPhase, setPreviousPhase] = useState<IcebreakerPhase | null>(null);
+  const [icebreakerStartTime, setIcebreakerStartTime] = useState<number | null>(null);
 
   const { data: user } = useQuery<{ id: string; displayName: string }>({
     queryKey: ['/api/auth/user'],
@@ -118,8 +123,25 @@ export default function IcebreakerSessionPage() {
     sessionId: sessionId || '',
     userId: user?.id || '',
     expectedAttendees: sessionData?.expectedAttendees || 0,
-    onPhaseChange: (phase, previousPhase) => {
-      // Phase transitions handled visually
+    onPhaseChange: (phase, prevPhase) => {
+      if (prevPhase && prevPhase !== phase) {
+        let transition: TransitionType | null = null;
+        if (prevPhase === 'checkin' && phase === 'number_assign') {
+          transition = 'checkin_to_number';
+        } else if (prevPhase === 'number_assign' && phase === 'icebreaker') {
+          transition = 'number_to_icebreaker';
+          setIcebreakerStartTime(Date.now());
+        } else if (phase === 'ended') {
+          transition = 'icebreaker_to_end';
+        }
+        
+        if (transition) {
+          setTransitionType(transition);
+          setShowTransition(true);
+          setTimeout(() => setShowTransition(false), 1500);
+        }
+        setPreviousPhase(phase);
+      }
     },
     onNumberAssigned: () => {
       // Number assignment shown in UI
@@ -170,6 +192,11 @@ export default function IcebreakerSessionPage() {
     }
     setLocation('/events');
   }, [leave, setLocation, isOffline]);
+
+  const handleEndIcebreaker = useCallback(() => {
+    if (isOffline) return;
+    voteReady('ended', false);
+  }, [voteReady, isOffline]);
 
   useEffect(() => {
     if (icebreakerState.phase === 'ended' && !closingMessage && !closingMutation.isPending) {
@@ -320,6 +347,8 @@ export default function IcebreakerSessionPage() {
                   onRefreshTopics={refreshTopics}
                   isRefreshingTopics={isRefreshingTopics}
                   isOffline={isOffline}
+                  sessionStartTime={icebreakerStartTime || undefined}
+                  onEndIcebreaker={handleEndIcebreaker}
                 />
               </>
             )}
@@ -366,6 +395,14 @@ export default function IcebreakerSessionPage() {
         isDemoMode={isDemoMode}
         onRetry={() => window.location.reload()}
       />
+
+      {transitionType && (
+        <PhaseTransition
+          type={transitionType}
+          isVisible={showTransition}
+          onComplete={() => setTransitionType(null)}
+        />
+      )}
     </div>
   );
 }

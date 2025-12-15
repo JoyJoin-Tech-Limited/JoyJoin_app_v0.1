@@ -364,6 +364,17 @@ export function IcebreakerEndingScreen({
             </motion.div>
           )}
 
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 mb-4 max-w-xs text-center"
+          >
+            <p className="text-white/90 text-sm">
+              不用着急当场交换联系方式哦！活动结束后可以在 App 里互相添加好友
+            </p>
+          </motion.div>
+
           <div className="flex items-center gap-2 text-white/80 text-sm mb-2">
             <Heart className="w-4 h-4" />
             <span>期待下次相遇</span>

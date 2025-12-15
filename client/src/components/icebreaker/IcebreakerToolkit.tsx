@@ -20,6 +20,7 @@ import {
   Heart,
   Target,
   RefreshCw,
+  LogOut,
 } from 'lucide-react';
 import type { TopicCard } from '@shared/topicCards';
 import { icebreakerGames, gameCategories, getRandomGame, type IcebreakerGame } from '@shared/icebreakerGames';
@@ -46,6 +47,8 @@ interface IcebreakerToolkitProps {
   onRefreshTopics?: () => void;
   isRefreshingTopics?: boolean;
   isOffline?: boolean;
+  sessionStartTime?: number;
+  onEndIcebreaker?: () => void;
 }
 
 const difficultyColors = {
@@ -78,11 +81,31 @@ export function IcebreakerToolkit({
   onRefreshTopics,
   isRefreshingTopics = false,
   isOffline = false,
+  sessionStartTime,
+  onEndIcebreaker,
 }: IcebreakerToolkitProps) {
   const [activeTab, setActiveTab] = useState<'topics' | 'games'>('topics');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(autoReadyTimeoutSeconds);
   const [autoVoteTriggered, setAutoVoteTriggered] = useState(false);
+  const [showEndButton, setShowEndButton] = useState(false);
+  const [elapsedMinutes, setElapsedMinutes] = useState(0);
+
+  useEffect(() => {
+    if (!sessionStartTime) return;
+    
+    const checkElapsed = () => {
+      const elapsed = Math.floor((Date.now() - sessionStartTime) / 60000);
+      setElapsedMinutes(elapsed);
+      if (elapsed >= 60) {
+        setShowEndButton(true);
+      }
+    };
+    
+    checkElapsed();
+    const timer = setInterval(checkElapsed, 60000);
+    return () => clearInterval(timer);
+  }, [sessionStartTime]);
 
   useEffect(() => {
     if (isReady) {
@@ -378,6 +401,35 @@ export function IcebreakerToolkit({
       </Tabs>
 
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t">
+        {showEndButton && onEndIcebreaker && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="mb-3"
+          >
+            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 mb-2">
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span className="text-sm font-medium text-amber-800 dark:text-amber-200">小悦提示</span>
+              </div>
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                已破冰 {elapsedMinutes} 分钟啦！如果大家聊得开心，可以延长到 90 或 120 分钟哦~
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-900/30"
+              onClick={onEndIcebreaker}
+              disabled={isOffline}
+              data-testid="button-end-icebreaker"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              结束破冰
+            </Button>
+          </motion.div>
+        )}
+
         <div className="flex items-center justify-between gap-2 mb-3">
           <span className="text-sm text-muted-foreground">
             {readyCount} / {totalCount} 人已准备进入下一环节
