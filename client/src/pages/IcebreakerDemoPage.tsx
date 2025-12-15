@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useIcebreakerTopics, type ParticipantProfile } from '@/hooks/use-icebreaker-topics';
+import { useGameRecommendation } from '@/hooks/useGameRecommendation';
 import { IcebreakerCheckinModal } from '@/components/icebreaker/IcebreakerCheckinModal';
 import { NumberPlateDisplay } from '@/components/icebreaker/NumberPlateDisplay';
 import { IcebreakerToolkit } from '@/components/icebreaker/IcebreakerToolkit';
@@ -46,6 +47,39 @@ export default function IcebreakerDemoPage() {
     refreshTopics,
     isRefreshing: isRefreshingTopics,
   } = useIcebreakerTopics(participantProfiles, 'balanced', true);
+
+  const {
+    recommend: recommendGame,
+    isLoading: isRecommendingGame,
+    reset: resetGameRecommendation,
+  } = useGameRecommendation();
+
+  const [recommendedGame, setRecommendedGame] = useState<{ gameId: string; gameName: string; reason: string } | null>(null);
+
+  const handleRecommendGame = useCallback(async () => {
+    resetGameRecommendation();
+    setRecommendedGame(null);
+    const participants = DEMO_PARTICIPANTS.map(p => ({
+      displayName: p.displayName,
+      archetype: p.archetype,
+      interests: p.interests,
+    }));
+    return new Promise<{ gameId: string; gameName: string; reason: string } | null>((resolve) => {
+      recommendGame(
+        { participants, scene: 'both' },
+        {
+          onSuccess: (data) => {
+            setRecommendedGame(data);
+            resolve(data);
+          },
+          onError: () => {
+            setRecommendedGame(null);
+            resolve(null);
+          },
+        }
+      );
+    });
+  }, [recommendGame, resetGameRecommendation]);
 
   const handleCheckin = useCallback(() => {
     setHasCheckedIn(true);
@@ -173,6 +207,9 @@ export default function IcebreakerDemoPage() {
                 isRefreshingTopics={isRefreshingTopics}
                 isOffline={false}
                 sessionStartTime={icebreakerStartTime || undefined}
+                onRecommendGame={handleRecommendGame}
+                isRecommendingGame={isRecommendingGame}
+                recommendedGame={recommendedGame}
               />
             </motion.div>
           )}

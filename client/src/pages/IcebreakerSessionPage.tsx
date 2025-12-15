@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useIcebreakerWebSocket, type IcebreakerPhase } from '@/hooks/useIcebreakerWebSocket';
 import { useIcebreakerTopics, type ParticipantProfile } from '@/hooks/use-icebreaker-topics';
 import { useWelcomeMessage, useClosingMessage } from '@/hooks/use-icebreaker-messages';
+import { useGameRecommendation } from '@/hooks/useGameRecommendation';
 import { IcebreakerCheckinModal } from '@/components/icebreaker/IcebreakerCheckinModal';
 import { NumberPlateDisplay } from '@/components/icebreaker/NumberPlateDisplay';
 import { IcebreakerToolkit } from '@/components/icebreaker/IcebreakerToolkit';
@@ -108,6 +109,40 @@ export default function IcebreakerSessionPage() {
   
   const closingMutation = useClosingMessage();
   const [closingMessage, setClosingMessage] = useState<string | null>(null);
+
+  const {
+    recommend: recommendGame,
+    isLoading: isRecommendingGame,
+    reset: resetGameRecommendation,
+  } = useGameRecommendation();
+
+  const [recommendedGame, setRecommendedGame] = useState<{ gameId: string; gameName: string; reason: string } | null>(null);
+
+  const handleRecommendGame = useCallback(async () => {
+    const participants = (sessionData?.participants || []).map(p => ({
+      displayName: p.displayName,
+      archetype: p.archetype,
+      interests: p.interests,
+    }));
+    if (participants.length === 0) return undefined;
+    resetGameRecommendation();
+    setRecommendedGame(null);
+    return new Promise<{ gameId: string; gameName: string; reason: string } | null>((resolve) => {
+      recommendGame(
+        { participants, scene: 'both' },
+        {
+          onSuccess: (data) => {
+            setRecommendedGame(data);
+            resolve(data);
+          },
+          onError: () => {
+            setRecommendedGame(null);
+            resolve(null);
+          },
+        }
+      );
+    });
+  }, [recommendGame, resetGameRecommendation, sessionData?.participants]);
 
   const {
     state: icebreakerState,
@@ -349,6 +384,9 @@ export default function IcebreakerSessionPage() {
                   isOffline={isOffline}
                   sessionStartTime={icebreakerStartTime || undefined}
                   onEndIcebreaker={handleEndIcebreaker}
+                  onRecommendGame={handleRecommendGame}
+                  isRecommendingGame={isRecommendingGame}
+                  recommendedGame={recommendedGame}
                 />
               </>
             )}

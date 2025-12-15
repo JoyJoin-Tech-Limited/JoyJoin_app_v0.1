@@ -48,6 +48,12 @@ interface GalleryItem {
   drinkingWarning?: string;
 }
 
+interface GameRecommendation {
+  gameId: string;
+  gameName: string;
+  reason: string;
+}
+
 interface IcebreakerToolkitProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -66,6 +72,9 @@ interface IcebreakerToolkitProps {
   isOffline?: boolean;
   sessionStartTime?: number;
   onEndIcebreaker?: () => void;
+  onRecommendGame?: () => Promise<GameRecommendation | null>;
+  isRecommendingGame?: boolean;
+  recommendedGame?: GameRecommendation | null;
 }
 
 const gradients = {
@@ -121,6 +130,9 @@ export function IcebreakerToolkit({
   isOffline = false,
   sessionStartTime,
   onEndIcebreaker,
+  onRecommendGame,
+  isRecommendingGame = false,
+  recommendedGame,
 }: IcebreakerToolkitProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ 
     loop: false, 
@@ -156,11 +168,12 @@ export function IcebreakerToolkit({
     
     icebreakerGames.forEach((game) => {
       const SceneIcon = sceneIcons[game.scene] || Globe;
+      const isAIRecommended = recommendedGame?.gameId === game.id;
       items.push({
         id: `game-${game.id}`,
         type: 'game',
         title: game.name,
-        subtitle: game.description,
+        subtitle: isAIRecommended ? recommendedGame.reason : game.description,
         category: game.category,
         difficulty: game.difficulty,
         gradient: gradients.scene[game.scene],
@@ -168,6 +181,8 @@ export function IcebreakerToolkit({
         data: game,
         scene: game.scene,
         drinkingWarning: game.drinkingWarning,
+        isRecommended: isAIRecommended,
+        reason: isAIRecommended ? recommendedGame.reason : undefined,
       });
     });
     
@@ -189,7 +204,7 @@ export function IcebreakerToolkit({
     });
     
     return items;
-  }, [topics, recommendedTopics]);
+  }, [topics, recommendedTopics, recommendedGame]);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -270,6 +285,34 @@ export function IcebreakerToolkit({
       handleCardClick(item);
     }, 500);
   }, [isOffline, emblaApi, galleryItems, handleCardClick]);
+
+  const [recommendError, setRecommendError] = useState(false);
+
+  const handleAIRecommend = useCallback(async () => {
+    if (isOffline || !onRecommendGame || !emblaApi) return;
+    
+    setRecommendError(false);
+    try {
+      const recommendation = await onRecommendGame();
+      if (recommendation === undefined) {
+        return;
+      }
+      if (recommendation) {
+        const gameIndex = galleryItems.findIndex(
+          item => item.type === 'game' && item.id === `game-${recommendation.gameId}`
+        );
+        if (gameIndex !== -1) {
+          emblaApi.scrollTo(gameIndex);
+        }
+      } else {
+        setRecommendError(true);
+        setTimeout(() => setRecommendError(false), 3000);
+      }
+    } catch {
+      setRecommendError(true);
+      setTimeout(() => setRecommendError(false), 3000);
+    }
+  }, [isOffline, onRecommendGame, emblaApi, galleryItems]);
 
   const content = (
     <div className="flex flex-col h-full overflow-hidden rounded-t-3xl" data-testid="icebreaker-toolkit">
@@ -502,14 +545,28 @@ export function IcebreakerToolkit({
 
         <div className="flex items-center gap-3">
           <Button
-            variant="outline"
-            onClick={handleRandomPick}
-            disabled={isOffline}
+            variant={recommendError ? "destructive" : "outline"}
+            onClick={onRecommendGame ? handleAIRecommend : handleRandomPick}
+            disabled={isOffline || isRecommendingGame}
             className="flex-1"
-            data-testid="button-random-pick"
+            data-testid="button-ai-recommend"
           >
-            <Shuffle className="w-4 h-4 mr-2" />
-            随机一个
+            {isRecommendingGame ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                小悦思考中...
+              </>
+            ) : recommendError ? (
+              <>
+                <Shuffle className="w-4 h-4 mr-2" />
+                推荐失败，再试一次
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                小悦推荐
+              </>
+            )}
           </Button>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span data-testid="text-ready-count">{readyCount}/{totalCount}</span>

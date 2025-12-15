@@ -3943,6 +3943,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI-powered game recommendation (小悦推荐)
+  app.post('/api/icebreaker/recommend-game', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { participants, scene } = req.body;
+      
+      if (!participants || !Array.isArray(participants) || participants.length === 0) {
+        return res.status(400).json({ message: "participants array with at least one participant is required" });
+      }
+      
+      if (scene && !['dinner', 'bar', 'both'].includes(scene)) {
+        return res.status(400).json({ message: "scene must be 'dinner', 'bar', or 'both'" });
+      }
+      
+      const { icebreakerGames } = await import('@shared/icebreakerGames');
+      const { recommendGameForParticipants } = await import('./icebreakerAIService');
+      
+      const games = icebreakerGames.map(g => ({
+        id: g.id,
+        name: g.name,
+        scene: g.scene,
+        category: g.category,
+        difficulty: g.difficulty,
+        minPlayers: g.minPlayers,
+        maxPlayers: g.maxPlayers,
+        description: g.description
+      }));
+      
+      const recommendation = await recommendGameForParticipants(participants, games, scene);
+      
+      if (!recommendation || !recommendation.gameId || !recommendation.gameName) {
+        return res.status(500).json({ message: "Failed to generate valid recommendation" });
+      }
+      
+      res.json(recommendation);
+    } catch (error) {
+      console.error("Error recommending game:", error);
+      res.status(500).json({ message: "Failed to recommend game" });
+    }
+  });
+
   // Notification endpoints
   app.get('/api/notifications/counts', isPhoneAuthenticated, async (req: any, res) => {
     try {

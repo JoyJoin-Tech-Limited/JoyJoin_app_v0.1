@@ -190,3 +190,150 @@ export async function generateQuickWelcome(
   }
   return `${participantCount}位小伙伴都到齐啦！准备好开始有趣的破冰了吗？Let's go！`;
 }
+
+const GAME_RECOMMENDATION_PROMPT = `你是"小悦"，JoyJoin平台的智能破冰助手。你需要根据参与者的画像，从游戏列表中推荐最适合当前群体氛围的破冰游戏。
+
+## 可选游戏列表
+以下是所有可选的破冰游戏（格式：id | 名称 | 场景 | 类型 | 难度 | 人数 | 描述）：
+{GAMES_LIST}
+
+## 社交原型特点
+- 开心柯基/太阳鸡/夸夸豚：高能量、活跃气氛、喜欢热闹互动
+- 暖心熊：温暖、善于倾听、喜欢深度交流
+- 隐身猫/稳如龟：内敛、偏好安静、适合低压力游戏
+- 沉思猫头鹰：深度思考者、喜欢有意义的话题
+- 灵感章鱼/机智狐：创意型、好奇心强、喜欢脑洞游戏
+- 织网蛛/淡定海豚：社交达人、适应力强
+- 定心大象：稳重可靠、适合引导型游戏
+
+## 推荐原则
+1. 人数匹配：游戏的minPlayers和maxPlayers要覆盖当前参与人数
+2. 氛围匹配：根据群体原型组合推荐合适的游戏类型
+   - 高能量群体 → 推荐 active/quick 类型
+   - 内敛群体 → 推荐 deep/creative 类型，避免太激烈的游戏
+   - 混合群体 → 推荐 both 场景的通用游戏
+3. 场景考虑：dinner场景适合安静一些，bar场景可以更活跃
+4. 难度平衡：首次破冰建议选择 easy 或 medium 难度
+
+## 输出格式
+请严格按以下JSON格式输出，不要有任何其他内容：
+{"gameId": "游戏ID", "reason": "推荐理由（20-40字，口语化，提及群体特点）"}`;
+
+export interface GameRecommendationResult {
+  gameId: string;
+  gameName: string;
+  reason: string;
+}
+
+interface GameInfo {
+  id: string;
+  name: string;
+  scene: string;
+  category: string;
+  difficulty: string;
+  minPlayers: number;
+  maxPlayers: number;
+  description: string;
+}
+
+export async function recommendGameForParticipants(
+  participants: ParticipantInfo[],
+  games: GameInfo[],
+  scene?: 'dinner' | 'bar' | 'both'
+): Promise<GameRecommendationResult> {
+  const participantCount = participants.length;
+  
+  const eligibleGames = games.filter(g => 
+    g.minPlayers <= participantCount && 
+    g.maxPlayers >= participantCount &&
+    (!scene || scene === 'both' || g.scene === scene || g.scene === 'both')
+  );
+  
+  if (eligibleGames.length === 0) {
+    const fallbackGame = games[0];
+    return {
+      gameId: fallbackGame.id,
+      gameName: fallbackGame.name,
+      reason: `${participantCount}人刚刚好可以玩这个游戏，简单有趣，先热热场！`
+    };
+  }
+
+  const gamesListStr = eligibleGames.map(g => 
+    `${g.id} | ${g.name} | ${g.scene} | ${g.category} | ${g.difficulty} | ${g.minPlayers}-${g.maxPlayers}人 | ${g.description}`
+  ).join('\n');
+
+  const archetypes = participants.map(p => p.archetype).filter((a): a is string => !!a);
+  const allInterests = participants.flatMap(p => p.interests || []);
+  const uniqueInterests = Array.from(new Set(allInterests)).slice(0, 5);
+
+  const userPrompt = `## 参与者信息
+人数：${participantCount}人
+社交原型：${archetypes.length > 0 ? archetypes.join('、') : '未知'}
+共同兴趣：${uniqueInterests.length > 0 ? uniqueInterests.join('、') : '未知'}
+场景：${scene === 'dinner' ? '饭局' : scene === 'bar' ? '酒局' : '通用'}
+
+请从游戏列表中推荐最适合这个群体的游戏。`;
+
+  const systemPrompt = GAME_RECOMMENDATION_PROMPT.replace('{GAMES_LIST}', gamesListStr);
+
+  try {
+    const response = await deepseekClient.chat.completions.create({
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 200,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    if (content) {
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          const recommendedGame = eligibleGames.find(g => g.id === parsed.gameId);
+          if (recommendedGame) {
+            return {
+              gameId: parsed.gameId,
+              gameName: recommendedGame.name,
+              reason: parsed.reason || `这个游戏很适合${participantCount}人一起玩！`
+            };
+          }
+        }
+      } catch (parseError) {
+        console.error('Failed to parse AI game recommendation:', parseError);
+      }
+    }
+  } catch (error) {
+    console.error('AI game recommendation error:', error);
+  }
+
+  const fallbackGame = eligibleGames[Math.floor(Math.random() * eligibleGames.length)];
+  return {
+    gameId: fallbackGame.id,
+    gameName: fallbackGame.name,
+    reason: getDefaultGameReason(fallbackGame, participantCount, archetypes)
+  };
+}
+
+function getDefaultGameReason(game: GameInfo, count: number, archetypes: string[]): string {
+  const hasHighEnergy = archetypes.some(a => 
+    ['开心柯基', '太阳鸡', '夸夸豚'].some(t => a.includes(t))
+  );
+  const hasCreative = archetypes.some(a => 
+    ['灵感章鱼', '机智狐'].some(t => a.includes(t))
+  );
+  
+  if (game.category === 'quick') {
+    return `${count}人玩这个刚刚好，快速热场，${hasHighEnergy ? '活力派会很喜欢！' : '简单有趣！'}`;
+  }
+  if (game.category === 'creative') {
+    return `看到有${hasCreative ? '创意型选手' : '小伙伴'}，这个脑洞游戏很适合你们！`;
+  }
+  if (game.category === 'deep') {
+    return `这个游戏可以让大家更深入地了解彼此，${count}人聊起来刚刚好～`;
+  }
+  return `${count}人一起玩这个游戏，互动感十足！`;
+}
