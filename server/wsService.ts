@@ -30,11 +30,37 @@ interface IcebreakerSessionInfo {
   lastSeenAt: Date;
 }
 
+interface KingGamePlayerInfo {
+  sessionId: string;
+  ws: AuthenticatedWebSocket;
+  userId: string;
+  displayName: string;
+  isReady: boolean;
+  hasDrawnCard: boolean;
+  cardNumber: number | null;
+  isKing: boolean;
+}
+
+interface KingGameRoomState {
+  icebreakerSessionId: string;
+  playerCount: number;
+  roundNumber: number;
+  phase: 'waiting' | 'dealing' | 'commanding' | 'executing' | 'completed';
+  dealerId: string | null;
+  kingUserId: string | null;
+  mysteryNumber: number | null;
+  currentCommand: string | null;
+  targetNumber: number | null;
+  cardAssignments: Map<string, { cardNumber: number | null; isKing: boolean }>;
+  players: Map<string, KingGamePlayerInfo>;
+}
+
 class WebSocketService {
   private wss: WebSocketServer | null = null;
   private clients: Map<string, Set<AuthenticatedWebSocket>> = new Map();
   private eventRooms: Map<string, Set<AuthenticatedWebSocket>> = new Map();
   private icebreakerRooms: Map<string, Map<string, IcebreakerSessionInfo>> = new Map();
+  private kingGameRooms: Map<string, KingGameRoomState> = new Map();
 
   initialize(server: Server) {
     this.wss = new WebSocketServer({ server, path: '/ws' });
@@ -217,6 +243,63 @@ class WebSocketService {
             timestamp: new Date().toISOString(),
           });
           console.log(`[WS] Game ${message.data.gameId} started in session ${message.data.sessionId}`);
+        }
+        break;
+
+      // ============ King Game handlers ============
+      case 'KING_GAME_JOIN':
+        if (message.userId && message.data?.sessionId) {
+          ws.userId = message.userId;
+          this.addClientToUser(message.userId, ws);
+          this.handleKingGameJoin(
+            message.data.sessionId,
+            message.data.icebreakerSessionId,
+            message.userId,
+            message.data.displayName || 'Player',
+            message.data.playerCount || 5,
+            ws
+          );
+        }
+        break;
+
+      case 'KING_GAME_PLAYER_READY':
+        if (message.userId && message.data?.sessionId) {
+          this.handleKingGamePlayerReady(message.data.sessionId, message.userId);
+        }
+        break;
+
+      case 'KING_GAME_START_DEAL':
+        if (message.userId && message.data?.sessionId) {
+          this.handleKingGameStartDeal(message.data.sessionId, message.userId);
+        }
+        break;
+
+      case 'KING_GAME_CARD_DEALT':
+        if (message.userId && message.data?.sessionId) {
+          this.handleKingGameCardDrawn(message.data.sessionId, message.userId);
+        }
+        break;
+
+      case 'KING_GAME_COMMAND_ISSUED':
+        if (message.userId && message.data?.sessionId) {
+          this.handleKingGameCommand(
+            message.data.sessionId,
+            message.userId,
+            message.data.command,
+            message.data.targetNumber
+          );
+        }
+        break;
+
+      case 'KING_GAME_ROUND_COMPLETE':
+        if (message.userId && message.data?.sessionId) {
+          this.handleKingGameRoundComplete(message.data.sessionId);
+        }
+        break;
+
+      case 'KING_GAME_STATE_SYNC':
+        if (message.userId && message.data?.sessionId) {
+          this.sendKingGameStateSync(message.data.sessionId, message.userId, ws);
         }
         break;
 
@@ -566,7 +649,392 @@ class WebSocketService {
       uniqueUsers: this.clients.size,
       activeEventRooms: this.eventRooms.size,
       activeIcebreakerSessions: this.icebreakerRooms.size,
+      activeKingGameSessions: this.kingGameRooms.size,
     };
+  }
+
+  // ============ 国王游戏多设备同步 ============
+
+  private handleKingGameJoin(
+    sessionId: string,
+    icebreakerSessionId: string,
+    userId: string,
+    displayName: string,
+    playerCount: number,
+    ws: AuthenticatedWebSocket
+  ) {
+    let room = this.kingGameRooms.get(sessionId);
+    if (!room) {
+      room = {
+        icebreakerSessionId,
+        playerCount,
+        roundNumber: 1,
+        phase: 'waiting',
+        dealerId: null,
+        kingUserId: null,
+        mysteryNumber: null,
+        currentCommand: null,
+        targetNumber: null,
+        cardAssignments: new Map(),
+        players: new Map(),
+      };
+      this.kingGameRooms.set(sessionId, room);
+    }
+
+    room.players.set(userId, {
+      sessionId,
+      ws,
+      userId,
+      displayName,
+      isReady: false,
+      hasDrawnCard: false,
+      cardNumber: null,
+      isKing: false,
+    });
+
+    console.log(`[WS] User ${userId} joined King Game ${sessionId}, players: ${room.players.size}`);
+
+    // Broadcast player list to all
+    this.broadcastKingGamePlayerList(sessionId);
+    
+    // Send state sync to new joiner
+    this.sendKingGameStateSync(sessionId, userId, ws);
+  }
+
+  private handleKingGamePlayerReady(sessionId: string, userId: string) {
+    const room = this.kingGameRooms.get(sessionId);
+    if (!room) return;
+
+    const player = room.players.get(userId);
+    if (player) {
+      player.isReady = true;
+    }
+
+    const readyCount = Array.from(room.players.values()).filter(p => p.isReady).length;
+    const totalPlayers = room.players.size;
+
+    // Broadcast ready status
+    this.broadcastToKingGameRoom(sessionId, {
+      type: 'KING_GAME_PLAYER_READY',
+      data: {
+        sessionId,
+        userId,
+        isReady: true,
+        readyCount,
+        totalPlayers,
+      },
+      timestamp: new Date().toISOString(),
+    });
+
+    // If all ready and enough players, auto-select dealer and start
+    if (readyCount >= room.playerCount && room.phase === 'waiting') {
+      this.selectDealerAndStartDeal(sessionId);
+    }
+  }
+
+  private selectDealerAndStartDeal(sessionId: string) {
+    const room = this.kingGameRooms.get(sessionId);
+    if (!room) return;
+
+    const playerIds = Array.from(room.players.keys());
+    
+    // Only select random dealer on first round; otherwise use rotated dealer from advanceDealer
+    if (!room.dealerId || !playerIds.includes(room.dealerId)) {
+      const dealerIndex = Math.floor(Math.random() * playerIds.length);
+      room.dealerId = playerIds[dealerIndex];
+    }
+    const dealerId = room.dealerId;
+
+    // Generate card assignments (N+1 cards for N players)
+    const playerCount = room.players.size;
+    const cards: Array<{ cardNumber: number | null; isKing: boolean }> = [];
+    
+    // Cards 1 to N (number cards)
+    for (let i = 1; i <= playerCount; i++) {
+      cards.push({ cardNumber: i, isKing: false });
+    }
+    // King card
+    cards.push({ cardNumber: null, isKing: true });
+
+    // Shuffle cards
+    for (let i = cards.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [cards[i], cards[j]] = [cards[j], cards[i]];
+    }
+
+    // Assign cards to players (one card left as mystery)
+    let cardIndex = 0;
+    for (const playerId of playerIds) {
+      room.cardAssignments.set(playerId, cards[cardIndex]);
+      if (cards[cardIndex].isKing) {
+        room.kingUserId = playerId;
+      }
+      cardIndex++;
+    }
+
+    // The remaining card is the mystery number
+    const mysteryCard = cards[cardIndex];
+    room.mysteryNumber = mysteryCard.cardNumber; // Could be null if king is mystery (edge case)
+
+    room.phase = 'dealing';
+
+    const dealerPlayer = room.players.get(dealerId);
+
+    // Broadcast deal start
+    this.broadcastToKingGameRoom(sessionId, {
+      type: 'KING_GAME_START_DEAL',
+      data: {
+        sessionId,
+        dealerId,
+        dealerName: dealerPlayer?.displayName || 'Player',
+        playerCount,
+      },
+      timestamp: new Date().toISOString(),
+    });
+
+    console.log(`[WS] King Game ${sessionId} dealing started, dealer: ${dealerId}, mystery: ${room.mysteryNumber}`);
+  }
+
+  private handleKingGameStartDeal(sessionId: string, userId: string) {
+    const room = this.kingGameRooms.get(sessionId);
+    if (!room || room.dealerId !== userId) return;
+
+    // Dealer confirms deal - cards are already assigned, just update phase
+    if (room.phase === 'waiting') {
+      this.selectDealerAndStartDeal(sessionId);
+    }
+  }
+
+  private handleKingGameCardDrawn(sessionId: string, userId: string) {
+    const room = this.kingGameRooms.get(sessionId);
+    if (!room || room.phase !== 'dealing') return;
+
+    const player = room.players.get(userId);
+    if (!player || player.hasDrawnCard) return;
+
+    const assignment = room.cardAssignments.get(userId);
+    if (!assignment) return;
+
+    player.hasDrawnCard = true;
+    player.cardNumber = assignment.cardNumber;
+    player.isKing = assignment.isKing;
+
+    // Send private card info to this player only
+    this.sendToClient(player.ws, {
+      type: 'KING_GAME_CARD_DEALT',
+      data: {
+        sessionId,
+        userId,
+        cardNumber: assignment.cardNumber,
+        isKing: assignment.isKing,
+        drawnCount: Array.from(room.players.values()).filter(p => p.hasDrawnCard).length,
+        totalPlayers: room.players.size,
+      },
+      timestamp: new Date().toISOString(),
+    });
+
+    // Broadcast draw progress (not the card content)
+    const drawnCount = Array.from(room.players.values()).filter(p => p.hasDrawnCard).length;
+    this.broadcastToKingGameRoom(sessionId, {
+      type: 'KING_GAME_ALL_CARDS_DRAWN',
+      data: {
+        sessionId,
+        drawnCount,
+        totalPlayers: room.players.size,
+        allDrawn: drawnCount === room.players.size,
+      },
+      timestamp: new Date().toISOString(),
+    });
+
+    // If all drawn, reveal king
+    if (drawnCount === room.players.size) {
+      this.revealKing(sessionId);
+    }
+  }
+
+  private revealKing(sessionId: string) {
+    const room = this.kingGameRooms.get(sessionId);
+    if (!room || !room.kingUserId) return;
+
+    room.phase = 'commanding';
+    const kingPlayer = room.players.get(room.kingUserId);
+
+    this.broadcastToKingGameRoom(sessionId, {
+      type: 'KING_GAME_KING_REVEALED',
+      data: {
+        sessionId,
+        kingUserId: room.kingUserId,
+        kingDisplayName: kingPlayer?.displayName || 'King',
+        mysteryNumber: room.mysteryNumber,
+      },
+      timestamp: new Date().toISOString(),
+    });
+
+    console.log(`[WS] King Game ${sessionId} king revealed: ${room.kingUserId}, mystery: ${room.mysteryNumber}`);
+  }
+
+  private handleKingGameCommand(
+    sessionId: string,
+    userId: string,
+    command: string,
+    targetNumber: number
+  ) {
+    const room = this.kingGameRooms.get(sessionId);
+    if (!room || room.kingUserId !== userId || room.phase !== 'commanding') return;
+
+    room.currentCommand = command;
+    room.targetNumber = targetNumber;
+    room.phase = 'executing';
+
+    this.broadcastToKingGameRoom(sessionId, {
+      type: 'KING_GAME_COMMAND_ISSUED',
+      data: {
+        sessionId,
+        command,
+        targetNumber,
+        kingUserId: userId,
+      },
+      timestamp: new Date().toISOString(),
+    });
+
+    console.log(`[WS] King Game ${sessionId} command: ${command} -> #${targetNumber}`);
+  }
+
+  private handleKingGameRoundComplete(sessionId: string) {
+    const room = this.kingGameRooms.get(sessionId);
+    if (!room) return;
+
+    // Find executor (player with targetNumber)
+    let executorUserId: string | null = null;
+    for (const [playerId, player] of room.players) {
+      if (player.cardNumber === room.targetNumber) {
+        executorUserId = playerId;
+        break;
+      }
+    }
+
+    this.broadcastToKingGameRoom(sessionId, {
+      type: 'KING_GAME_ROUND_COMPLETE',
+      data: {
+        sessionId,
+        roundNumber: room.roundNumber,
+        targetNumber: room.targetNumber,
+        executorUserId,
+        command: room.currentCommand,
+      },
+      timestamp: new Date().toISOString(),
+    });
+
+    // Reset for next round
+    room.roundNumber++;
+    room.phase = 'waiting';
+    room.kingUserId = null;
+    room.mysteryNumber = null;
+    room.currentCommand = null;
+    room.targetNumber = null;
+    room.cardAssignments.clear();
+    
+    for (const player of room.players.values()) {
+      player.isReady = false;
+      player.hasDrawnCard = false;
+      player.cardNumber = null;
+      player.isKing = false;
+    }
+
+    // Rotate dealer to next player
+    this.advanceDealer(sessionId);
+
+    console.log(`[WS] King Game ${sessionId} round ${room.roundNumber - 1} complete, next dealer: ${room.dealerId}`);
+  }
+
+  private advanceDealer(sessionId: string) {
+    const room = this.kingGameRooms.get(sessionId);
+    if (!room) return;
+
+    const playerIds = Array.from(room.players.keys());
+    if (playerIds.length === 0) return;
+
+    if (!room.dealerId) {
+      // First round - randomly select dealer
+      room.dealerId = playerIds[Math.floor(Math.random() * playerIds.length)];
+    } else {
+      // Rotate to next player in order
+      const currentIndex = playerIds.indexOf(room.dealerId);
+      const nextIndex = (currentIndex + 1) % playerIds.length;
+      room.dealerId = playerIds[nextIndex];
+    }
+  }
+
+  private sendKingGameStateSync(sessionId: string, userId: string, ws: AuthenticatedWebSocket) {
+    const room = this.kingGameRooms.get(sessionId);
+    if (!room) return;
+
+    const myPlayer = room.players.get(userId);
+    // PRIVACY: Only include public info - never reveal isKing or cardNumber for other players
+    const players = Array.from(room.players.values()).map(p => ({
+      userId: p.userId,
+      displayName: p.displayName,
+      isReady: p.isReady,
+      hasDrawnCard: p.hasDrawnCard,
+      isDealer: room.dealerId === p.userId,
+    }));
+
+    this.sendToClient(ws, {
+      type: 'KING_GAME_STATE_SYNC',
+      data: {
+        sessionId,
+        phase: room.phase,
+        playerCount: room.playerCount,
+        roundNumber: room.roundNumber,
+        players,
+        dealerId: room.dealerId,
+        // PRIVACY: Only reveal kingUserId after the reveal phase
+        kingUserId: room.phase === 'commanding' || room.phase === 'executing' ? room.kingUserId : null,
+        mysteryNumber: room.phase === 'commanding' || room.phase === 'executing' ? room.mysteryNumber : null,
+        currentCommand: room.currentCommand,
+        targetNumber: room.targetNumber,
+        myCardNumber: myPlayer?.cardNumber ?? null,
+        myIsKing: myPlayer?.isKing ?? false,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  private broadcastKingGamePlayerList(sessionId: string) {
+    const room = this.kingGameRooms.get(sessionId);
+    if (!room) return;
+
+    const players = Array.from(room.players.values()).map(p => ({
+      userId: p.userId,
+      displayName: p.displayName,
+      isReady: p.isReady,
+      isDealer: room.dealerId === p.userId,
+    }));
+
+    this.broadcastToKingGameRoom(sessionId, {
+      type: 'KING_GAME_PLAYER_JOINED',
+      data: {
+        sessionId,
+        players,
+        playerCount: room.players.size,
+        requiredPlayers: room.playerCount,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  private broadcastToKingGameRoom(sessionId: string, message: WSMessage) {
+    const room = this.kingGameRooms.get(sessionId);
+    if (!room) return;
+
+    for (const player of room.players.values()) {
+      this.sendToClient(player.ws, message);
+    }
+    console.log(`[WS] Broadcast to King Game ${sessionId}: ${message.type} to ${room.players.size} players`);
+  }
+
+  getKingGameRoom(sessionId: string): KingGameRoomState | undefined {
+    return this.kingGameRooms.get(sessionId);
   }
 }
 

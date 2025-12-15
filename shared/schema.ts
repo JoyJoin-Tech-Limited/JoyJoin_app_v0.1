@@ -1828,3 +1828,75 @@ export type InsertIcebreakerSession = z.infer<typeof insertIcebreakerSessionSche
 export type InsertIcebreakerCheckin = z.infer<typeof insertIcebreakerCheckinSchema>;
 export type InsertIcebreakerReadyVote = z.infer<typeof insertIcebreakerReadyVoteSchema>;
 export type InsertIcebreakerActivityLog = z.infer<typeof insertIcebreakerActivityLogSchema>;
+
+// ============ 国王游戏多设备同步系统 ============
+
+// King Game Sessions table - 国王游戏会话（多设备同步）
+export const kingGameSessions = pgTable("king_game_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // 关联到破冰会话
+  icebreakerSessionId: varchar("icebreaker_session_id").notNull().references(() => icebreakerSessions.id),
+  
+  // 游戏配置
+  playerCount: integer("player_count").notNull(), // 4-6人
+  roundNumber: integer("round_number").default(1), // 当前轮次
+  
+  // 牌分配（服务端随机生成）
+  cardAssignments: jsonb("card_assignments"), // [{participantId, cardNumber, isKing}]
+  mysteryNumber: integer("mystery_number"), // 神秘牌号码（国王的号码）
+  
+  // 发牌员（随机选择的玩家）
+  dealerId: varchar("dealer_id").references(() => users.id),
+  
+  // 游戏阶段
+  phase: varchar("phase").default("waiting"), // waiting | dealing | commanding | executing | completed
+  
+  // 国王命令
+  kingUserId: varchar("king_user_id").references(() => users.id), // 当前国王
+  currentCommand: text("current_command"), // 选择的命令
+  targetNumber: integer("target_number"), // 目标号码
+  
+  // 元数据
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// King Game Players table - 参与玩家状态
+export const kingGamePlayers = pgTable("king_game_players", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  sessionId: varchar("session_id").notNull().references(() => kingGameSessions.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // 玩家状态
+  isReady: boolean("is_ready").default(false), // 是否准备好
+  hasDrawnCard: boolean("has_drawn_card").default(false), // 是否已抽牌
+  cardNumber: integer("card_number"), // 抽到的牌号（只有本人和服务端知道）
+  isKing: boolean("is_king").default(false), // 是否是国王
+  
+  // 显示名称（冗余存储）
+  displayName: varchar("display_name"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas for King Game tables
+export const insertKingGameSessionSchema = createInsertSchema(kingGameSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertKingGamePlayerSchema = createInsertSchema(kingGamePlayers).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for King Game tables
+export type KingGameSession = typeof kingGameSessions.$inferSelect;
+export type KingGamePlayer = typeof kingGamePlayers.$inferSelect;
+export type InsertKingGameSession = z.infer<typeof insertKingGameSessionSchema>;
+export type InsertKingGamePlayer = z.infer<typeof insertKingGamePlayerSchema>;

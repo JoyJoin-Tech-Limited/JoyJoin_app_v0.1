@@ -28,7 +28,18 @@ export type WSEventType =
   | "ICEBREAKER_SESSION_ENDED"
   | "ICEBREAKER_USER_OFFLINE"
   | "ICEBREAKER_USER_RECONNECTED"
-  | "RATE_LIMITED";
+  | "RATE_LIMITED"
+  // King Game events
+  | "KING_GAME_JOIN"
+  | "KING_GAME_PLAYER_JOINED"
+  | "KING_GAME_PLAYER_READY"
+  | "KING_GAME_START_DEAL"
+  | "KING_GAME_CARD_DEALT"
+  | "KING_GAME_ALL_CARDS_DRAWN"
+  | "KING_GAME_KING_REVEALED"
+  | "KING_GAME_COMMAND_ISSUED"
+  | "KING_GAME_ROUND_COMPLETE"
+  | "KING_GAME_STATE_SYNC";
 
 export interface WSMessage {
   type: WSEventType;
@@ -187,4 +198,109 @@ export interface IcebreakerUserStatusData {
 export interface RateLimitedData {
   message: string;
   retryAfterMs: number;
+}
+
+// ============ 国王游戏多设备同步事件数据 ============
+
+// 加入国王游戏会话
+export interface KingGameJoinData {
+  sessionId: string;
+  icebreakerSessionId: string;
+  userId: string;
+  displayName: string;
+}
+
+// 玩家加入通知
+export interface KingGamePlayerJoinedData {
+  sessionId: string;
+  players: Array<{
+    userId: string;
+    displayName: string;
+    isReady: boolean;
+    isDealer: boolean;
+  }>;
+  playerCount: number;
+  requiredPlayers: number;
+}
+
+// 玩家准备状态
+export interface KingGamePlayerReadyData {
+  sessionId: string;
+  userId: string;
+  isReady: boolean;
+  readyCount: number;
+  totalPlayers: number;
+}
+
+// 开始发牌
+export interface KingGameStartDealData {
+  sessionId: string;
+  dealerId: string;
+  dealerName: string;
+  playerCount: number;
+}
+
+// 发牌（私密，每人只收到自己的牌）
+export interface KingGameCardDealtData {
+  sessionId: string;
+  userId: string;
+  cardNumber: number | null; // null = 国王牌
+  isKing: boolean;
+  drawnCount: number;
+  totalPlayers: number;
+}
+
+// 所有人已抽牌（广播进度）
+export interface KingGameAllCardsDrawnData {
+  sessionId: string;
+  drawnCount: number;
+  totalPlayers: number;
+  allDrawn: boolean;
+}
+
+// 国王揭晓（抽牌阶段结束后，所有人都知道谁是国王）
+export interface KingGameKingRevealedData {
+  sessionId: string;
+  kingUserId: string;
+  kingDisplayName: string;
+  mysteryNumber: number | null; // 神秘牌号码（国王的号码），极端情况下可能为null
+}
+
+// 国王发号施令
+export interface KingGameCommandIssuedData {
+  sessionId: string;
+  command: string;
+  targetNumber: number;
+  kingUserId: string;
+}
+
+// 回合完成
+export interface KingGameRoundCompleteData {
+  sessionId: string;
+  roundNumber: number;
+  targetNumber: number;
+  executorUserId: string | null; // 执行者（如果能确定的话）
+  command: string;
+}
+
+// 状态同步（用于重连或初始化）
+export interface KingGameStateSyncData {
+  sessionId: string;
+  phase: 'waiting' | 'dealing' | 'commanding' | 'executing' | 'completed';
+  playerCount: number;
+  roundNumber: number;
+  players: Array<{
+    userId: string;
+    displayName: string;
+    isReady: boolean;
+    hasDrawnCard: boolean;
+    isDealer: boolean;
+  }>;
+  dealerId: string | null;
+  kingUserId: string | null;
+  mysteryNumber: number | null;
+  currentCommand: string | null;
+  targetNumber: number | null;
+  myCardNumber: number | null; // 只有本人能看到自己的牌
+  myIsKing: boolean;
 }
