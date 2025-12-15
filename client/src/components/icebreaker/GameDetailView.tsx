@@ -126,9 +126,9 @@ export function GameDetailView({
   }, []);
   
   const handleStartGame = useCallback(() => {
+    // Directly show the spin wheel - skip ActivitySpotlight countdown/timer
     setShowSpinWheel(true);
-    onStartActivity?.();
-  }, [onStartActivity]);
+  }, []);
   
   const handleSpin = useCallback(() => {
     if (isSpinning) return;

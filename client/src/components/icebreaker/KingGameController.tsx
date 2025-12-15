@@ -1,10 +1,10 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Crown, 
   Shuffle, 
@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { KingGameCardDeck } from './KingGameCardDeck';
 import { useKingGameWebSocket, KingGameState, KingGamePhase } from '@/hooks/useKingGameWebSocket';
+import { archetypeAvatars } from '@/lib/archetypeAvatars';
 
 interface KingGameControllerProps {
   onBack: () => void;
@@ -80,10 +81,10 @@ const categoryLabels = {
 type LocalGamePhase = 'setup' | 'playing' | 'commanding' | 'executing';
 
 const demoPlayers = [
-  { id: 'demo-player-1', name: '小明' },
-  { id: 'demo-player-2', name: '小红' },
-  { id: 'demo-player-3', name: '小刚' },
-  { id: 'demo-player-4', name: '小美' },
+  { id: 'demo-player-1', name: '小明', archetype: '开心柯基' },
+  { id: 'demo-player-2', name: '小红', archetype: '灵感章鱼' },
+  { id: 'demo-player-3', name: '小刚', archetype: '太阳鸡' },
+  { id: 'demo-player-4', name: '小美', archetype: '暖心熊' },
 ];
 
 function MultiDeviceKingGame({
@@ -104,7 +105,7 @@ function MultiDeviceKingGame({
   const [selectedCommand, setSelectedCommand] = useState<Command | null>(null);
   const [hasDrawn, setHasDrawn] = useState(false);
   const [demoState, setDemoState] = useState<{
-    simulatedPlayers: { id: string; name: string; isReady: boolean }[];
+    simulatedPlayers: { id: string; name: string; archetype?: string; isReady: boolean }[];
     phase: 'waiting' | 'dealing' | 'commanding' | 'executing';
     myCardNumber: number | null;
     myIsKing: boolean;
@@ -132,6 +133,7 @@ function MultiDeviceKingGame({
   });
 
   const isDemoMode = sessionId.includes('demo');
+  const demoInitializedRef = useRef(false);
 
   const {
     state,
@@ -163,17 +165,17 @@ function MultiDeviceKingGame({
     },
   });
 
-  // Demo mode: Simulate players joining
+  // Demo mode: Simulate players joining (runs only once)
   useEffect(() => {
     if (!isDemoMode) return;
-    if (demoState.simulatedPlayers.length > 0) return; // Already initialized
+    if (demoInitializedRef.current) return; // Already initialized
+    demoInitializedRef.current = true;
     
     const playersNeeded = Math.min(participantCount - 1, demoPlayers.length);
 
     // Add players with staggered delays
-    const timers: NodeJS.Timeout[] = [];
     for (let i = 0; i < playersNeeded; i++) {
-      timers.push(setTimeout(() => {
+      setTimeout(() => {
         setDemoState(prev => {
           // Check if player already exists
           if (prev.simulatedPlayers.some(p => p.id === demoPlayers[i].id)) {
@@ -187,11 +189,9 @@ function MultiDeviceKingGame({
             ]
           };
         });
-      }, 800 + i * 600));
+      }, 800 + i * 600);
     }
-
-    return () => timers.forEach(t => clearTimeout(t));
-  }, [isDemoMode, participantCount, demoState.simulatedPlayers.length]);
+  }, [isDemoMode, participantCount]);
 
   // Demo mode: Auto-ready simulated players after user is ready
   useEffect(() => {
@@ -317,8 +317,8 @@ function MultiDeviceKingGame({
     playerCount: 1 + demoState.simulatedPlayers.length,
     requiredPlayers: participantCount,
     players: [
-      { userId, displayName, isReady: demoState.myIsReady },
-      ...demoState.simulatedPlayers.map(p => ({ userId: p.id, displayName: p.name, isReady: p.isReady })),
+      { userId, displayName, isReady: demoState.myIsReady, archetype: '暖心熊' },
+      ...demoState.simulatedPlayers.map(p => ({ userId: p.id, displayName: p.name, isReady: p.isReady, archetype: p.archetype })),
     ],
     readyCount: (demoState.myIsReady ? 1 : 0) + demoState.simulatedPlayers.filter(p => p.isReady).length,
     roundNumber: demoState.roundNumber,
@@ -440,13 +440,19 @@ function MultiDeviceKingGame({
                     玩家列表 ({effectiveState.playerCount}/{effectiveState.requiredPlayers})
                   </h3>
                   <div className="space-y-2">
-                    {effectiveState.players.map((player, idx) => (
+                    {effectiveState.players.map((player, idx) => {
+                      const playerWithArchetype = player as typeof player & { archetype?: string };
+                      const avatarSrc = playerWithArchetype.archetype ? archetypeAvatars[playerWithArchetype.archetype] : undefined;
+                      return (
                       <div 
                         key={player.userId} 
                         className="flex items-center gap-3 p-2 rounded-lg bg-muted/50"
                         data-testid={`player-item-${idx}`}
                       >
                         <Avatar className="w-8 h-8">
+                          {avatarSrc ? (
+                            <AvatarImage src={avatarSrc} alt={playerWithArchetype.archetype} />
+                          ) : null}
                           <AvatarFallback className="text-xs bg-primary/10">
                             {player.displayName.slice(0, 2)}
                           </AvatarFallback>
@@ -468,7 +474,8 @@ function MultiDeviceKingGame({
                           </Badge>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                     {effectiveState.playerCount < effectiveState.requiredPlayers && (
                       <div className="text-center py-4 text-muted-foreground text-sm">
                         <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
