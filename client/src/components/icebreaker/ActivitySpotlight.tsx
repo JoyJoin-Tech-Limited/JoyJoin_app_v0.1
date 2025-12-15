@@ -221,7 +221,7 @@ export function ActivitySpotlight({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex flex-col"
+          className="fixed inset-0 z-[60] flex flex-col"
           data-testid="activity-spotlight"
         >
           <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} />
