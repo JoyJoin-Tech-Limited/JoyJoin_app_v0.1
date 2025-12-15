@@ -520,8 +520,8 @@ export function IcebreakerToolkit({
                     isSelected ? 'scale-100' : 'scale-[0.85]'
                   }`}
                   style={{
-                    width: 'min(75vw, 300px)',
-                    minWidth: 'min(75vw, 300px)',
+                    width: 'min(70vw, 280px)',
+                    minWidth: 'min(70vw, 280px)',
                   }}
                   data-testid={`gallery-card-${item.id}`}
                 >
