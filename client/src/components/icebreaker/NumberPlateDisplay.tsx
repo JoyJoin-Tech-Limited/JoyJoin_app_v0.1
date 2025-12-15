@@ -301,23 +301,16 @@ export function NumberPlateDisplay({
                           {assignment.numberPlate}
                         </div>
                         
-                        <div className="flex flex-col items-center gap-0.5">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                            {getArchetypeImage(assignment.archetype) ? (
-                              <img 
-                                src={getArchetypeImage(assignment.archetype)!} 
-                                alt={getArchetypeName(assignment.archetype)}
-                                className="w-8 h-8 object-contain"
-                              />
-                            ) : (
-                              <span className="text-primary text-sm font-medium">
-                                {assignment.displayName.slice(0, 1)}
-                              </span>
-                            )}
-                          </div>
-                          {assignment.archetype && (
-                            <span className="text-[10px] text-primary/80 whitespace-nowrap bg-primary/10 px-1.5 py-0.5 rounded-full">
-                              {getArchetypeName(assignment.archetype)}
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {getArchetypeImage(assignment.archetype) ? (
+                            <img 
+                              src={getArchetypeImage(assignment.archetype)!} 
+                              alt={getArchetypeName(assignment.archetype)}
+                              className="w-8 h-8 object-contain"
+                            />
+                          ) : (
+                            <span className="text-primary text-sm font-medium">
+                              {assignment.displayName.slice(0, 1)}
                             </span>
                           )}
                         </div>
@@ -329,7 +322,7 @@ export function NumberPlateDisplay({
                           </p>
                           {assignment.archetype && (
                             <p className="text-xs text-muted-foreground truncate">
-                              {assignment.archetype}
+                              {getArchetypeName(assignment.archetype)}
                             </p>
                           )}
                         </div>

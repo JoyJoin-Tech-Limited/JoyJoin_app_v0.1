@@ -398,7 +398,7 @@ export function IcebreakerEndingScreen({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.9 }}
-          className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-purple-600/95 via-purple-600/90 to-transparent pt-8 pb-[max(1.5rem,env(safe-area-inset-bottom))] px-6 flex flex-col items-center gap-3"
+          className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-purple-600 via-purple-600/98 to-purple-600/90 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] px-6 flex flex-col items-center gap-3"
         >
           <div className="flex items-center gap-3">
             <Button 
@@ -452,7 +452,7 @@ export function IcebreakerEndingScreen({
             className="bg-white text-purple-600 hover:bg-white/90 font-semibold px-8"
             data-testid="button-leave-session"
           >
-            返回活动
+            返回主页
           </Button>
 
           {onBack && (
