@@ -687,35 +687,6 @@ export function IcebreakerToolkit({
       </div>
 
       <div className="p-3 bg-background/95 backdrop-blur-sm border-t space-y-2">
-        {showEndButton && onEndIcebreaker && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            className="mb-2"
-          >
-            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 mb-2">
-              <div className="flex items-center gap-2 mb-1">
-                <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <span className="text-sm font-medium text-amber-800 dark:text-amber-200">小悦提示</span>
-              </div>
-              <p className="text-xs text-amber-700 dark:text-amber-300">
-                已交流 {elapsedMinutes} 分钟啦！如果大家聊得开心，可以延长到 90 或 120 分钟哦~
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-900/30"
-              onClick={() => setShowEndConfirmModal(true)}
-              disabled={isOffline}
-              data-testid="button-end-icebreaker"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              结束活动
-            </Button>
-          </motion.div>
-        )}
-
         {sessionStartTime && elapsedMinutes > 0 && (
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
             <Clock className="w-4 h-4" />
@@ -787,50 +758,6 @@ export function IcebreakerToolkit({
             </motion.div>
           )}
         </div>
-        
-        {!isReady && countdown > 0 && (
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <div className="relative w-5 h-5">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="10"
-                  cy="10"
-                  r="8"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="text-muted/30"
-                />
-                <motion.circle
-                  cx="10"
-                  cy="10"
-                  r="8"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  className={countdown <= 10 ? 'text-orange-500' : 'text-primary'}
-                  strokeDasharray={2 * Math.PI * 8}
-                  animate={{ strokeDashoffset: 2 * Math.PI * 8 * (1 - countdown / autoReadyTimeoutSeconds) }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                />
-              </svg>
-            </div>
-            <span className={countdown <= 10 ? 'text-orange-500 font-medium' : ''} data-testid="text-countdown">
-              {countdown}秒后自动确认
-            </span>
-          </div>
-        )}
-        
-        <Button
-          className="w-full"
-          size="lg"
-          onClick={() => onReady(false)}
-          disabled={isReady || isOffline}
-          data-testid="button-ready-next"
-        >
-          {isOffline ? '网络已断开...' : isReady ? '等待其他人确认...' : '结束活动'}
-        </Button>
       </div>
     </div>
   );

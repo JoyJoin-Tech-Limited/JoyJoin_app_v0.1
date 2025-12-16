@@ -112,11 +112,17 @@ export default function IcebreakerDemoPage() {
     setTimeout(() => {
       setTransitionType('number_to_icebreaker');
       setShowTransition(true);
-      setTimeout(() => setShowTransition(false), 4000);
-      setPhase('icebreaker');
-      setIcebreakerStartTime(Date.now());
     }, 1500);
   }, []);
+
+  const handleTransitionComplete = useCallback(() => {
+    setShowTransition(false);
+    setTransitionType(null);
+    if (phase === 'number_assign') {
+      setPhase('icebreaker');
+      setIcebreakerStartTime(Date.now());
+    }
+  }, [phase]);
 
   const handleLeave = useCallback(() => {
     setLocation('/');
@@ -313,7 +319,7 @@ export default function IcebreakerDemoPage() {
         <PhaseTransition
           type={transitionType}
           isVisible={showTransition}
-          onComplete={() => setTransitionType(null)}
+          onComplete={handleTransitionComplete}
         />
       )}
     </div>
