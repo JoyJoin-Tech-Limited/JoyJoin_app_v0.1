@@ -8,7 +8,7 @@ export type TransitionType = 'checkin_to_number' | 'number_to_icebreaker' | 'ice
 interface PhaseTransitionProps {
   type: TransitionType;
   isVisible: boolean;
-  onComplete?: () => void;
+  onComplete?: (type: TransitionType) => void;
 }
 
 const JOURNEY_STEPS = [
@@ -372,11 +372,11 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
   useEffect(() => {
     if (isVisible && !config.requiresConfirmation && onComplete) {
       const timer = setTimeout(() => {
-        onComplete();
+        onComplete(type);
       }, 4000);
       return () => clearTimeout(timer);
     }
-  }, [isVisible, onComplete, config.requiresConfirmation]);
+  }, [isVisible, onComplete, config.requiresConfirmation, type]);
 
   useEffect(() => {
     if (isVisible && config.requiresConfirmation) {
@@ -390,7 +390,7 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
   }, [isVisible, config.requiresConfirmation]);
 
   const handleConfirm = () => {
-    onComplete?.();
+    onComplete?.(type);
   };
 
   return (
