@@ -439,7 +439,10 @@ export default function IcebreakerSessionPage() {
         <PhaseTransition
           type={transitionType}
           isVisible={showTransition}
-          onComplete={() => setTransitionType(null)}
+          onComplete={() => {
+            setShowTransition(false);
+            setTransitionType(null);
+          }}
         />
       )}
     </div>
