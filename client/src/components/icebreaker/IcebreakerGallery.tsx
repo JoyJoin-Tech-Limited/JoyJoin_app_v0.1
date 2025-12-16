@@ -239,7 +239,7 @@ export function IcebreakerGallery({
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2" data-testid="text-gallery-title">
             <Sparkles className="w-5 h-5 text-primary" />
-            破冰工具箱
+            活动工具包
           </h2>
           <p className="text-sm text-muted-foreground">左右滑动选择话题或游戏</p>
         </div>

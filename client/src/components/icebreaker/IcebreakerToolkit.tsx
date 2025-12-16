@@ -30,6 +30,8 @@ import { ActivitySpotlight } from './ActivitySpotlight';
 import { GameDetailView } from './GameDetailView';
 import { KingGameController } from './KingGameController';
 import { QuickReactionBar } from './QuickReactionBar';
+import { EndActivityConfirmModal } from './EndActivityConfirmModal';
+import { AtmosphereCheckModal, type AtmosphereRating } from './AtmosphereCheckModal';
 import { Flame } from 'lucide-react';
 
 export interface RecommendedTopic {
@@ -171,16 +173,33 @@ export function IcebreakerToolkit({
   const [showKingGame, setShowKingGame] = useState(false);
   const [activitiesCompleted, setActivitiesCompleted] = useState(0);
   const [currentStreak, setCurrentStreak] = useState(0);
+  const [showEndConfirmModal, setShowEndConfirmModal] = useState(false);
+  const [showAtmosphereModal, setShowAtmosphereModal] = useState(false);
+  const [atmosphereChecked, setAtmosphereChecked] = useState(false);
+  const [autoEndTriggered, setAutoEndTriggered] = useState(false);
 
   useEffect(() => {
     if (open) {
       setRecommendedHistory([]);
     } else {
-      // Reset engagement tool states when dialog closes
       setSelectedDetailItem(null);
       setShowKingGame(false);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!sessionStartTime || demoMode) return;
+    
+    if (elapsedMinutes >= 60 && !atmosphereChecked) {
+      setShowAtmosphereModal(true);
+      setAtmosphereChecked(true);
+    }
+    
+    if (elapsedMinutes >= 120 && !autoEndTriggered && onEndIcebreaker) {
+      setAutoEndTriggered(true);
+      onEndIcebreaker();
+    }
+  }, [elapsedMinutes, atmosphereChecked, autoEndTriggered, sessionStartTime, demoMode, onEndIcebreaker]);
 
   const galleryItems = useMemo(() => {
     const items: GalleryItem[] = [];
@@ -444,7 +463,7 @@ export function IcebreakerToolkit({
         <div>
           <h2 className="text-lg font-bold flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            破冰工具箱
+            活动工具包
           </h2>
           <p className="text-sm text-muted-foreground">左右滑动选择话题或游戏</p>
         </div>
@@ -548,6 +567,12 @@ export function IcebreakerToolkit({
                           <Badge className="bg-white/30 text-white border-0 text-xs">
                             {item.type === 'topic' ? '话题' : '游戏'}
                           </Badge>
+                          {((item.type === 'game' && ((item.data as IcebreakerGame).category === 'quick' || (item.data as IcebreakerGame).difficulty === 'easy')) ||
+                            (item.type === 'topic' && item.difficulty === 'easy')) && (
+                            <Badge className="bg-cyan-500/80 text-white border-0 text-xs">
+                              适合破冰
+                            </Badge>
+                          )}
                         </div>
                         <div className="w-10 h-10 rounded-xl bg-white/30 flex items-center justify-center">
                           <Icon className="w-5 h-5 text-white" />
@@ -674,19 +699,19 @@ export function IcebreakerToolkit({
                 <span className="text-sm font-medium text-amber-800 dark:text-amber-200">小悦提示</span>
               </div>
               <p className="text-xs text-amber-700 dark:text-amber-300">
-                已破冰 {elapsedMinutes} 分钟啦！如果大家聊得开心，可以延长到 90 或 120 分钟哦~
+                已交流 {elapsedMinutes} 分钟啦！如果大家聊得开心，可以延长到 90 或 120 分钟哦~
               </p>
             </div>
             <Button
               variant="outline"
               size="sm"
               className="w-full border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-900/30"
-              onClick={onEndIcebreaker}
+              onClick={() => setShowEndConfirmModal(true)}
               disabled={isOffline}
               data-testid="button-end-icebreaker"
             >
               <LogOut className="w-4 h-4 mr-2" />
-              {elapsedMinutes >= 60 ? '活动结束' : '结束破冰'}
+              结束活动
             </Button>
           </motion.div>
         )}
@@ -694,7 +719,7 @@ export function IcebreakerToolkit({
         {sessionStartTime && elapsedMinutes > 0 && (
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
             <Clock className="w-4 h-4" />
-            <span data-testid="text-elapsed-time">已破冰 {elapsedMinutes} 分钟</span>
+            <span data-testid="text-elapsed-time">已交流 {elapsedMinutes} 分钟</span>
           </div>
         )}
 
@@ -725,12 +750,12 @@ export function IcebreakerToolkit({
               ) : recommendedHistory.length > 0 ? (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2" />
-                  换一个推荐
+                  再推荐一个
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 mr-2" />
-                  小悦推荐
+                  小悦帮我推荐一个
                 </>
               )}
             </Button>
@@ -792,7 +817,7 @@ export function IcebreakerToolkit({
               </svg>
             </div>
             <span className={countdown <= 10 ? 'text-orange-500 font-medium' : ''} data-testid="text-countdown">
-              {countdown}秒后自动准备
+              {countdown}秒后自动确认
             </span>
           </div>
         )}
@@ -804,7 +829,7 @@ export function IcebreakerToolkit({
           disabled={isReady || isOffline}
           data-testid="button-ready-next"
         >
-          {isOffline ? '网络已断开...' : isReady ? '等待其他人准备...' : '准备好了，结束破冰'}
+          {isOffline ? '网络已断开...' : isReady ? '等待其他人确认...' : '结束活动'}
         </Button>
       </div>
     </div>
@@ -821,7 +846,7 @@ export function IcebreakerToolkit({
             aria-describedby={undefined}
           >
             <VisuallyHidden>
-              <DialogPrimitive.Title>破冰工具箱</DialogPrimitive.Title>
+              <DialogPrimitive.Title>活动工具包</DialogPrimitive.Title>
             </VisuallyHidden>
             {showKingGame ? (
               <KingGameController
@@ -884,6 +909,27 @@ export function IcebreakerToolkit({
         participantCount={participantCount}
         onFeedback={handleSpotlightFeedback}
         onNextRecommendation={handleNextRecommendation}
+      />
+
+      <EndActivityConfirmModal
+        open={showEndConfirmModal}
+        onConfirm={() => {
+          setShowEndConfirmModal(false);
+          if (onEndIcebreaker) {
+            onEndIcebreaker();
+          }
+        }}
+        onCancel={() => setShowEndConfirmModal(false)}
+        elapsedMinutes={elapsedMinutes}
+      />
+
+      <AtmosphereCheckModal
+        open={showAtmosphereModal}
+        onSubmit={(rating: AtmosphereRating) => {
+          setShowAtmosphereModal(false);
+          console.log('Atmosphere feedback:', rating);
+        }}
+        onSkip={() => setShowAtmosphereModal(false)}
       />
     </>
   );

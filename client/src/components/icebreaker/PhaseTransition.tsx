@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Users, MessageCircle, PartyPopper, Star, Check, ClipboardCheck, Hash, Coffee, Heart } from 'lucide-react';
+import { Sparkles, Users, MessageCircle, PartyPopper, Star, Check, ClipboardCheck, Hash, Coffee, Heart, Lightbulb, Gamepad2, HelpCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export type TransitionType = 'checkin_to_number' | 'number_to_icebreaker' | 'icebreaker_to_end';
 
@@ -13,7 +14,7 @@ interface PhaseTransitionProps {
 const JOURNEY_STEPS = [
   { id: 'checkin', label: '签到', icon: ClipboardCheck },
   { id: 'number', label: '号码牌', icon: Hash },
-  { id: 'icebreaker', label: '破冰', icon: Coffee },
+  { id: 'icebreaker', label: '交流', icon: Coffee },
   { id: 'end', label: '结束', icon: Heart },
 ];
 
@@ -27,28 +28,49 @@ const transitionConfig = {
     bgGradient: 'from-primary/20 via-primary/10 to-transparent',
     particleColors: ['bg-purple-400', 'bg-pink-400', 'bg-indigo-400'],
     currentStep: 1,
+    requiresConfirmation: false,
   },
   number_to_icebreaker: {
     icon: MessageCircle,
-    title: '准备开始破冰',
-    subtitle: '让我们开始愉快的交流吧！',
-    xiaoYueMessage: '号码牌已就位！准备好认识新朋友了吗？让我们开始愉快的破冰之旅吧~',
+    title: '准备开始交流',
+    subtitle: '了解一下活动工具包',
+    xiaoYueMessage: '自我介绍结束啦！接下来我为你准备了一些有趣的工具，可以帮助大家打破僵局、活跃气氛~',
     color: 'text-green-500',
     bgGradient: 'from-green-500/20 via-green-500/10 to-transparent',
     particleColors: ['bg-green-400', 'bg-emerald-400', 'bg-teal-400'],
     currentStep: 2,
+    requiresConfirmation: true,
   },
   icebreaker_to_end: {
     icon: PartyPopper,
-    title: '破冰结束',
+    title: '活动结束',
     subtitle: '感谢大家的参与！',
-    xiaoYueMessage: '今天的破冰圆满结束啦！希望你们都交到了新朋友，期待下次再见~',
+    xiaoYueMessage: '今天的活动圆满结束啦！希望你们都交到了新朋友，期待下次再见~',
     color: 'text-amber-500',
     bgGradient: 'from-amber-500/20 via-amber-500/10 to-transparent',
     particleColors: ['bg-amber-400', 'bg-orange-400', 'bg-yellow-400'],
     currentStep: 3,
+    requiresConfirmation: false,
   },
 };
+
+const toolkitFeatures = [
+  {
+    icon: MessageCircle,
+    title: '话题推荐',
+    description: '小悦根据大家的性格精选话题',
+  },
+  {
+    icon: Gamepad2,
+    title: '互动游戏',
+    description: '轻松有趣的破冰小游戏',
+  },
+  {
+    icon: Lightbulb,
+    title: '气氛调节',
+    description: '遇到冷场？随时切换新话题',
+  },
+];
 
 function seededRandom(seed: number): number {
   const x = Math.sin(seed * 9999) * 10000;
@@ -182,7 +204,6 @@ function JourneyProgress({ currentStep }: { currentStep: number }) {
         const StepIcon = step.icon;
         const isCompleted = index < currentStep;
         const isCurrent = index === currentStep;
-        const isPending = index > currentStep;
 
         return (
           <div key={step.id} className="flex items-center">
@@ -263,9 +284,76 @@ function JourneyProgress({ currentStep }: { currentStep: number }) {
   );
 }
 
+function ToolkitGuide({ onConfirm }: { onConfirm: () => void }) {
+  return (
+    <motion.div
+      className="w-full max-w-sm space-y-4"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.4 }}
+    >
+      <div className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-pink-500/10 backdrop-blur-sm rounded-2xl p-4 border border-primary/20">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg">
+            <Sparkles className="w-4 h-4 text-white" />
+          </div>
+          <span className="text-sm font-medium text-primary">小悦说</span>
+        </div>
+        <p className="text-sm text-foreground/90 leading-relaxed mb-4" data-testid="text-xiaoyue-message">
+          自我介绍结束啦！接下来我为你准备了一些有趣的工具，可以帮助大家打破僵局、活跃气氛~
+        </p>
+
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+            <HelpCircle className="w-3 h-3" />
+            活动工具包可以帮你：
+          </p>
+          {toolkitFeatures.map((feature, index) => {
+            const FeatureIcon = feature.icon;
+            return (
+              <motion.div
+                key={feature.title}
+                className="flex items-start gap-3 bg-background/50 rounded-lg p-2"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 + index * 0.1 }}
+              >
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <FeatureIcon className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{feature.title}</p>
+                  <p className="text-xs text-muted-foreground">{feature.description}</p>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8 }}
+      >
+        <Button
+          className="w-full"
+          size="lg"
+          onClick={onConfirm}
+          data-testid="button-understood"
+        >
+          <Sparkles className="w-4 h-4 mr-2" />
+          明白了！
+        </Button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransitionProps) {
   const config = transitionConfig[type];
   const Icon = config.icon;
+  const [showGuide, setShowGuide] = useState(false);
 
   const particles = useMemo(() => {
     const items: ParticleProps[] = [];
@@ -282,13 +370,28 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
   }, [config.particleColors]);
 
   useEffect(() => {
-    if (isVisible && onComplete) {
+    if (isVisible && !config.requiresConfirmation && onComplete) {
       const timer = setTimeout(() => {
         onComplete();
       }, 4000);
       return () => clearTimeout(timer);
     }
-  }, [isVisible, onComplete]);
+  }, [isVisible, onComplete, config.requiresConfirmation]);
+
+  useEffect(() => {
+    if (isVisible && config.requiresConfirmation) {
+      const timer = setTimeout(() => {
+        setShowGuide(true);
+      }, 800);
+      return () => clearTimeout(timer);
+    } else {
+      setShowGuide(false);
+    }
+  }, [isVisible, config.requiresConfirmation]);
+
+  const handleConfirm = () => {
+    onComplete?.();
+  };
 
   return (
     <AnimatePresence>
@@ -316,7 +419,7 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
           </div>
           
           <motion.div
-            className="relative flex flex-col items-center text-center px-4 sm:px-8"
+            className="relative flex flex-col items-center text-center px-4 sm:px-8 max-h-[90vh] overflow-y-auto"
             initial={{ scale: 0.8, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.8, y: -20 }}
@@ -325,7 +428,7 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
             <JourneyProgress currentStep={config.currentStep} />
             
             <motion.div
-              className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-background shadow-xl flex items-center justify-center mb-4 sm:mb-6 ${config.color} relative`}
+              className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-background shadow-xl flex items-center justify-center mb-3 sm:mb-4 ${config.color} relative`}
               initial={{ rotate: -180, scale: 0 }}
               animate={{ rotate: 0, scale: 1 }}
               transition={{ type: 'spring', duration: 0.6, delay: 0.1, bounce: 0.4 }}
@@ -341,11 +444,11 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
                 }}
                 transition={{ duration: 1.5, repeat: Infinity }}
               />
-              <Icon className="w-12 h-12 relative z-10" />
+              <Icon className="w-8 h-8 sm:w-10 sm:h-10 relative z-10" />
             </motion.div>
 
             <motion.div
-              className="flex items-center gap-2 mb-2"
+              className="flex items-center gap-2 mb-1"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -354,19 +457,19 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
                 animate={{ rotate: [0, 15, -15, 0] }}
                 transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 1 }}
               >
-                <Sparkles className="w-5 h-5 text-primary" />
+                <Sparkles className="w-4 h-4 text-primary" />
               </motion.div>
-              <h2 className="text-2xl font-bold">{config.title}</h2>
+              <h2 className="text-xl sm:text-2xl font-bold">{config.title}</h2>
               <motion.div
                 animate={{ rotate: [0, -15, 15, 0] }}
                 transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 1 }}
               >
-                <Sparkles className="w-5 h-5 text-primary" />
+                <Sparkles className="w-4 h-4 text-primary" />
               </motion.div>
             </motion.div>
 
             <motion.p
-              className="text-muted-foreground mb-4"
+              className="text-sm text-muted-foreground mb-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
@@ -374,45 +477,74 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
               {config.subtitle}
             </motion.p>
 
-            <motion.div
-              className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-pink-500/10 backdrop-blur-sm rounded-2xl p-4 border border-primary/20 max-w-xs"
-              initial={{ opacity: 0, y: 20, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: 0.5, type: 'spring' }}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-sm font-medium text-primary">小悦说</span>
-              </div>
-              <p className="text-sm text-foreground/90 leading-relaxed" data-testid="text-xiaoyue-message">
-                {config.xiaoYueMessage}
-              </p>
-            </motion.div>
-
-            <motion.div
-              className="mt-8 flex gap-1.5"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-            >
-              {[0, 1, 2].map((i) => (
+            {config.requiresConfirmation && showGuide ? (
+              <ToolkitGuide onConfirm={handleConfirm} />
+            ) : !config.requiresConfirmation ? (
+              <>
                 <motion.div
-                  key={i}
-                  className={`w-2.5 h-2.5 rounded-full ${config.color.replace('text-', 'bg-')}`}
-                  animate={{
-                    scale: [1, 1.3, 1],
-                    opacity: [0.5, 1, 0.5],
-                  }}
-                  transition={{
-                    duration: 0.8,
-                    repeat: Infinity,
-                    delay: i * 0.2,
-                  }}
-                />
-              ))}
-            </motion.div>
+                  className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-pink-500/10 backdrop-blur-sm rounded-2xl p-4 border border-primary/20 max-w-xs"
+                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ delay: 0.5, type: 'spring' }}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg">
+                      <Sparkles className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-primary">小悦说</span>
+                  </div>
+                  <p className="text-sm text-foreground/90 leading-relaxed" data-testid="text-xiaoyue-message">
+                    {config.xiaoYueMessage}
+                  </p>
+                </motion.div>
+
+                <motion.div
+                  className="mt-6 flex gap-1.5"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                >
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={i}
+                      className={`w-2.5 h-2.5 rounded-full ${config.color.replace('text-', 'bg-')}`}
+                      animate={{
+                        scale: [1, 1.3, 1],
+                        opacity: [0.5, 1, 0.5],
+                      }}
+                      transition={{
+                        duration: 0.8,
+                        repeat: Infinity,
+                        delay: i * 0.2,
+                      }}
+                    />
+                  ))}
+                </motion.div>
+              </>
+            ) : (
+              <motion.div
+                className="mt-4 flex gap-1.5"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                {[0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    className={`w-2 h-2 rounded-full ${config.color.replace('text-', 'bg-')}`}
+                    animate={{
+                      scale: [1, 1.3, 1],
+                      opacity: [0.5, 1, 0.5],
+                    }}
+                    transition={{
+                      duration: 0.8,
+                      repeat: Infinity,
+                      delay: i * 0.2,
+                    }}
+                  />
+                ))}
+              </motion.div>
+            )}
           </motion.div>
         </motion.div>
       )}

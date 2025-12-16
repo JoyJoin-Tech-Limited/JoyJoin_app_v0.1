@@ -1,10 +1,8 @@
-import { useMemo, useRef, useState, useCallback } from 'react';
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Heart, Star, Clock, Users, PartyPopper, Share2, Download, Loader2, ArrowLeft, ClipboardList } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import { useToast } from '@/hooks/use-toast';
+import { Sparkles, Heart, Star, Clock, Users, PartyPopper, ArrowLeft, ClipboardList, MessageSquareHeart } from 'lucide-react';
 
 interface IcebreakerEndingScreenProps {
   closingMessage?: string | null;
@@ -108,128 +106,13 @@ export function IcebreakerEndingScreen({
   onBack,
   eventId,
 }: IcebreakerEndingScreenProps) {
-  const shareCardRef = useRef<HTMLDivElement>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  const handleFeedback = useCallback(() => {
+  const handleFeedback = () => {
     if (eventId) {
       setLocation(`/events/${eventId}/feedback`);
     }
-  }, [eventId, setLocation]);
-
-  const generateShareImage = useCallback(async (): Promise<Blob | null> => {
-    if (!shareCardRef.current) return null;
-    
-    try {
-      const canvas = await html2canvas(shareCardRef.current, {
-        backgroundColor: null,
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      });
-      
-      return new Promise((resolve) => {
-        canvas.toBlob((blob) => resolve(blob), 'image/png', 1.0);
-      });
-    } catch (error) {
-      console.error('Failed to generate image:', error);
-      return null;
-    }
-  }, []);
-
-  const handleShare = useCallback(async () => {
-    setIsGenerating(true);
-    
-    try {
-      const blob = await generateShareImage();
-      if (!blob) {
-        toast({
-          title: '生成失败',
-          description: '无法生成分享图片，请稍后重试',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const file = new File([blob], `joyjoin-icebreaker-${Date.now()}.png`, { type: 'image/png' });
-
-      if (navigator.share && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: `${eventName} - 破冰完成！`,
-          text: `我在${eventName}完成了破冰环节！和${participantCount}位小伙伴度过了美好的${durationMinutes}分钟。`,
-          files: [file],
-        });
-        toast({
-          title: '分享成功',
-          description: '已成功分享到其他应用',
-        });
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `joyjoin-icebreaker-${Date.now()}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        toast({
-          title: '图片已保存',
-          description: '分享图片已下载到您的设备',
-        });
-      }
-    } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        toast({
-          title: '分享失败',
-          description: '请稍后重试',
-          variant: 'destructive',
-        });
-      }
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [generateShareImage, eventName, participantCount, durationMinutes, toast]);
-
-  const handleDownload = useCallback(async () => {
-    setIsGenerating(true);
-    
-    try {
-      const blob = await generateShareImage();
-      if (!blob) {
-        toast({
-          title: '生成失败',
-          description: '无法生成图片，请稍后重试',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `joyjoin-icebreaker-${Date.now()}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      toast({
-        title: '保存成功',
-        description: '图片已下载到您的设备',
-      });
-    } catch (error) {
-      toast({
-        title: '下载失败',
-        description: '请稍后重试',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [generateShareImage, toast]);
+  };
 
   const colors = [
     'bg-primary/70 dark:bg-primary/50',
@@ -312,7 +195,7 @@ export function IcebreakerEndingScreen({
       <div className="relative z-10 flex flex-col h-screen">
         {/* Scrollable content area */}
         <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-6 pb-48">
-        <div ref={shareCardRef} className="flex flex-col items-center p-6 rounded-3xl" style={{ background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.9) 0%, rgba(236, 72, 153, 0.9) 50%, rgba(251, 146, 60, 0.9) 100%)' }}>
+        <div className="flex flex-col items-center p-6 rounded-3xl" style={{ background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.9) 0%, rgba(236, 72, 153, 0.9) 50%, rgba(251, 146, 60, 0.9) 100%)' }}>
           <motion.div
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
@@ -408,56 +291,30 @@ export function IcebreakerEndingScreen({
           transition={{ delay: 0.9 }}
           className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-purple-600 via-purple-600/98 to-purple-600/90 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] px-6 flex flex-col items-center gap-3"
         >
-          <div className="flex items-center gap-3">
-            <Button 
-              onClick={handleShare}
-              disabled={isGenerating}
-              size="default"
-              variant="outline"
-              className="bg-white/20 border-white/40 text-white hover:bg-white/30"
-              data-testid="button-share"
-            >
-              {isGenerating ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Share2 className="w-4 h-4 mr-2" />
-              )}
-              分享
-            </Button>
-            <Button 
-              onClick={handleDownload}
-              disabled={isGenerating}
-              size="default"
-              variant="outline"
-              className="bg-white/20 border-white/40 text-white hover:bg-white/30"
-              data-testid="button-download"
-            >
-              {isGenerating ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4 mr-2" />
-              )}
-              保存图片
-            </Button>
-          </div>
-          
           {eventId && (
-            <Button 
-              onClick={handleFeedback}
-              size="lg"
-              variant="outline"
-              className="w-full max-w-xs bg-white/20 border-white/40 text-white hover:bg-white/30"
-              data-testid="button-feedback"
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              transition={{ repeat: Infinity, repeatType: "reverse", duration: 1.5 }}
+              className="w-full max-w-xs"
             >
-              <ClipboardList className="w-4 h-4 mr-2" />
-              填写反馈问卷
-            </Button>
+              <Button 
+                onClick={handleFeedback}
+                size="lg"
+                className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white font-bold shadow-lg"
+                data-testid="button-feedback"
+              >
+                <MessageSquareHeart className="w-5 h-5 mr-2" />
+                留个反馈，帮我们做得更好
+              </Button>
+            </motion.div>
           )}
           
           <Button 
             onClick={onLeave}
             size="lg"
-            className="bg-white text-purple-600 hover:bg-white/90 font-semibold px-8"
+            variant="outline"
+            className="w-full max-w-xs bg-white/20 border-white/40 text-white hover:bg-white/30"
             data-testid="button-leave-session"
           >
             返回主页

@@ -348,7 +348,7 @@ export function NumberPlateDisplay({
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t">
         <div className="flex items-center justify-between gap-2 mb-3">
           <span className="text-sm text-muted-foreground">
-            {readyCount} / {totalCount} 人已准备好
+            {readyCount} / {totalCount} 人已完成自我介绍
           </span>
           <div className="h-2 flex-1 mx-4 bg-muted rounded-full overflow-hidden">
             <motion.div
@@ -388,7 +388,7 @@ export function NumberPlateDisplay({
               </svg>
             </div>
             <span className={countdown <= 10 ? 'text-orange-500 font-medium' : ''} data-testid="text-countdown">
-              {countdown}秒后自动准备
+              {countdown}秒后自动确认
             </span>
           </div>
         )}
@@ -401,10 +401,10 @@ export function NumberPlateDisplay({
           data-testid="button-ready"
         >
           {isReady ? (
-            '等待其他人准备好...'
+            '等待其他人完成自我介绍...'
           ) : (
             <>
-              准备好了，进入破冰环节
+              完成自我介绍
               <ChevronRight className="w-5 h-5 ml-2" />
             </>
           )}
