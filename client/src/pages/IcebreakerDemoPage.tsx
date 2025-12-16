@@ -180,7 +180,7 @@ export default function IcebreakerDemoPage() {
           </Card>
         </div>
       )}
-      <div className="">
+      <div className={showTransition ? 'pointer-events-none' : ''}>
         <AnimatePresence mode="wait">
           {phase === 'checkin' && (
             <motion.div
