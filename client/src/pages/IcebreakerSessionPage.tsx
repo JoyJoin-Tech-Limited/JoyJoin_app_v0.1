@@ -279,7 +279,8 @@ export default function IcebreakerSessionPage() {
     <IcebreakerOverlayProvider>
       <div className="min-h-screen bg-background" data-testid="icebreaker-session-page">
         <IcebreakerSurface>
-          <AnimatePresence mode="wait">
+          {!showTransition && (
+            <AnimatePresence mode="wait">
             {icebreakerState.phase === 'waiting' && (
               <motion.div
                 key="waiting"
@@ -429,7 +430,8 @@ export default function IcebreakerSessionPage() {
                 />
               </motion.div>
             )}
-          </AnimatePresence>
+            </AnimatePresence>
+          )}
         </IcebreakerSurface>
 
         <NetworkStatusBanner 

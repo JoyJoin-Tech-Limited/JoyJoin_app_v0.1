@@ -183,7 +183,8 @@ export default function IcebreakerDemoPage() {
           </div>
         )}
         <IcebreakerSurface>
-        <AnimatePresence mode="wait">
+          {!showTransition && (
+            <AnimatePresence mode="wait">
           {phase === 'checkin' && (
             <motion.div
               key="checkin"
@@ -319,7 +320,8 @@ export default function IcebreakerDemoPage() {
               />
             </motion.div>
           )}
-        </AnimatePresence>
+            </AnimatePresence>
+          )}
         </IcebreakerSurface>
 
         {transitionType && (
