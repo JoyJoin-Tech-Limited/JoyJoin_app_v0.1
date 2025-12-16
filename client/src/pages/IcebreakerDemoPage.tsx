@@ -115,14 +115,21 @@ export default function IcebreakerDemoPage() {
     }, 1500);
   }, []);
 
-  const handleTransitionComplete = useCallback(() => {
+  const handleTransitionComplete = useCallback((currentTransitionType?: TransitionType | null) => {
     setShowTransition(false);
-    setTransitionType(null);
-    if (phase === 'number_assign') {
+    const transType = currentTransitionType || transitionType;
+    
+    if (transType === 'number_to_icebreaker') {
       setPhase('icebreaker');
       setIcebreakerStartTime(Date.now());
+    } else if (transType === 'checkin_to_number') {
+      setPhase('number_assign');
+    } else if (transType === 'icebreaker_to_end') {
+      setPhase('ended');
     }
-  }, [phase]);
+    
+    setTransitionType(null);
+  }, [transitionType]);
 
   const handleLeave = useCallback(() => {
     setLocation('/');
