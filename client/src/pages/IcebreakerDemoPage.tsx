@@ -90,10 +90,10 @@ export default function IcebreakerDemoPage() {
     setTimeout(() => {
       setCheckedInCount(5);
       setTimeout(() => {
+        // Set phase first so NumberPlateDisplay renders behind the transition overlay
+        setPhase('number_assign');
         setTransitionType('checkin_to_number');
         setShowTransition(true);
-        setTimeout(() => setShowTransition(false), 4000);
-        setPhase('number_assign');
       }, 1000);
     }, 1500);
   }, []);
@@ -110,23 +110,22 @@ export default function IcebreakerDemoPage() {
   const handleReady = useCallback(() => {
     setHasVotedReady(true);
     setTimeout(() => {
+      // Set phase first so IcebreakerToolkit renders behind the transition overlay as preview
+      setPhase('icebreaker');
+      setIcebreakerStartTime(Date.now());
       setTransitionType('number_to_icebreaker');
       setShowTransition(true);
     }, 1500);
   }, []);
 
   const handleTransitionComplete = useCallback((completedType: TransitionType) => {
-    console.log('[IcebreakerDemoPage] handleTransitionComplete called with:', completedType);
+    // Phase is already set before showing transition (for preview effect)
+    // Just close the transition overlay
     setShowTransition(false);
     setTransitionType(null);
     
-    if (completedType === 'number_to_icebreaker') {
-      console.log('[IcebreakerDemoPage] Setting phase to icebreaker');
-      setPhase('icebreaker');
-      setIcebreakerStartTime(Date.now());
-    } else if (completedType === 'checkin_to_number') {
-      setPhase('number_assign');
-    } else if (completedType === 'icebreaker_to_end') {
+    // Handle special case for icebreaker_to_end which doesn't have preview
+    if (completedType === 'icebreaker_to_end') {
       setPhase('ended');
     }
   }, []);
@@ -138,8 +137,7 @@ export default function IcebreakerDemoPage() {
   const handleEndIcebreaker = useCallback(() => {
     setTransitionType('icebreaker_to_end');
     setShowTransition(true);
-    setTimeout(() => setShowTransition(false), 4000);
-    setPhase('ended');
+    // icebreaker_to_end doesn't need preview, phase set in handleTransitionComplete
   }, []);
 
   const numberAssignments = DEMO_PARTICIPANTS.map((p, i) => ({
