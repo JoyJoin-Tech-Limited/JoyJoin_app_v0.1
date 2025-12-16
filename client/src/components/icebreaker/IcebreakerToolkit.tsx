@@ -7,32 +7,28 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
   MessageCircle, 
-  Gamepad2, 
-  Shuffle, 
   Clock, 
   Users, 
   ChevronLeft,
-  ChevronRight,
   Sparkles,
   Zap,
   Palette,
   Heart,
   Target,
   RefreshCw,
-  LogOut,
   Play,
   Check,
+  Wine,
+  Utensils,
+  Globe,
 } from 'lucide-react';
 import type { TopicCard } from '@shared/topicCards';
 import { icebreakerGames, sceneLabels, type IcebreakerGame } from '@shared/icebreakerGames';
-import { Wine, Utensils, Globe } from 'lucide-react';
 import { ActivitySpotlight } from './ActivitySpotlight';
 import { GameDetailView } from './GameDetailView';
 import { KingGameController } from './KingGameController';
-import { QuickReactionBar } from './QuickReactionBar';
 import { EndActivityConfirmModal } from './EndActivityConfirmModal';
 import { AtmosphereCheckModal, type AtmosphereRating } from './AtmosphereCheckModal';
-import { Flame } from 'lucide-react';
 
 export interface RecommendedTopic {
   topic: TopicCard;
@@ -317,13 +313,6 @@ export function IcebreakerToolkit({
     return () => clearInterval(timer);
   }, [isReady, autoReadyTimeoutSeconds, onReady]);
 
-  const scrollPrev = useCallback(() => {
-    if (emblaApi) emblaApi.scrollPrev();
-  }, [emblaApi]);
-
-  const scrollNext = useCallback(() => {
-    if (emblaApi) emblaApi.scrollNext();
-  }, [emblaApi]);
 
   const handleCardClick = useCallback((item: GalleryItem) => {
     if (isOffline) return;
@@ -467,58 +456,13 @@ export function IcebreakerToolkit({
           </h2>
           <p className="text-sm text-muted-foreground">左右滑动选择话题或游戏</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="flex items-center gap-1" data-testid="badge-participant-count">
-            <Users className="w-3 h-3" />
-            {participantCount} 人
-          </Badge>
-          <Badge 
-            variant={currentStreak > 0 ? "default" : "secondary"} 
-            className={`flex items-center gap-1 ${currentStreak >= 3 ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
-            data-testid="badge-activity-streak"
-          >
-            <Flame className={`w-3 h-3 ${currentStreak >= 3 ? 'animate-pulse' : ''}`} />
-            {activitiesCompleted}次
-          </Badge>
-          {onRefreshTopics && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onRefreshTopics}
-              disabled={isRefreshingTopics || isOffline}
-              data-testid="button-refresh"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshingTopics ? 'animate-spin' : ''}`} />
-            </Button>
-          )}
-        </div>
+        <Badge variant="outline" className="flex items-center gap-1" data-testid="badge-participant-count">
+          <Users className="w-3 h-3" />
+          {participantCount} 人
+        </Badge>
       </div>
 
       <div className="flex-1 relative overflow-hidden">
-        <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={scrollPrev}
-            className="rounded-full bg-background/80 backdrop-blur-sm shadow-lg h-10 w-10"
-            data-testid="button-scroll-prev"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </Button>
-        </div>
-        
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={scrollNext}
-            className="rounded-full bg-background/80 backdrop-blur-sm shadow-lg h-10 w-10"
-            data-testid="button-scroll-next"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </Button>
-        </div>
-
         <div className="h-full overflow-hidden px-4" ref={emblaRef}>
           <div className="flex h-full items-center gap-4">
             {galleryItems.map((item, index) => {
@@ -633,32 +577,8 @@ export function IcebreakerToolkit({
                         )}
                         
                         {isSelected && (
-                          <div className="animate-in fade-in slide-in-from-bottom-2 duration-150">
-                            <Button
-                              className={`w-full border-0 ${
-                                isUsed 
-                                  ? 'bg-green-500/80 hover:bg-green-500/90 text-white' 
-                                  : 'bg-white/30 hover:bg-white/40 text-white'
-                              }`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCardClick(item);
-                              }}
-                              disabled={isOffline}
-                              data-testid={`button-select-${item.id}`}
-                            >
-                              {isUsed ? (
-                                <>
-                                  <Check className="w-4 h-4 mr-2" />
-                                  {item.type === 'topic' ? '已选择此话题' : '已选择此游戏'}
-                                </>
-                              ) : (
-                                <>
-                                  <Play className="w-4 h-4 mr-2" />
-                                  {item.type === 'topic' ? '使用这个话题' : '开始这个游戏'}
-                                </>
-                              )}
-                            </Button>
+                          <div className="animate-in fade-in slide-in-from-bottom-2 duration-150 text-center">
+                            <p className="text-white/70 text-xs">点击卡片查看详情</p>
                           </div>
                         )}
                       </div>
@@ -670,94 +590,56 @@ export function IcebreakerToolkit({
           </div>
         </div>
 
-        <div className="flex justify-center gap-1.5 py-3">
-          {galleryItems.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => emblaApi?.scrollTo(index)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                index === selectedIndex 
-                  ? 'w-6 bg-primary' 
-                  : 'w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50'
-              }`}
-              data-testid={`dot-${index}`}
-            />
-          ))}
-        </div>
       </div>
 
       <div className="p-3 bg-background/95 backdrop-blur-sm border-t space-y-2">
-        {sessionStartTime && elapsedMinutes > 0 && (
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
-            <Clock className="w-4 h-4" />
-            <span data-testid="text-elapsed-time">已交流 {elapsedMinutes} 分钟</span>
-          </div>
+        {/* Show recommendation reason below cards */}
+        {recommendedGame && !allGamesRecommended && (
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-start gap-2 bg-primary/10 rounded-lg px-3 py-2"
+            data-testid="recommendation-reason"
+          >
+            <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 text-xs text-primary font-medium">
+              悦
+            </div>
+            <p className="text-sm text-foreground/80 leading-relaxed line-clamp-2">
+              {recommendedGame.reason}
+            </p>
+          </motion.div>
         )}
 
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <Button
-              variant={recommendError ? "destructive" : allGamesRecommended ? "secondary" : "outline"}
-              onClick={onRecommendGame ? handleAIRecommend : handleRandomPick}
-              disabled={isOffline || isRecommendingGame}
-              className="flex-1"
-              data-testid="button-ai-recommend"
-            >
-              {isRecommendingGame ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  小悦思考中...
-                </>
-              ) : recommendError ? (
-                <>
-                  <Shuffle className="w-4 h-4 mr-2" />
-                  推荐失败，再试一次
-                </>
-              ) : allGamesRecommended ? (
-                <>
-                  <Check className="w-4 h-4 mr-2" />
-                  已推荐全部游戏
-                </>
-              ) : recommendedHistory.length > 0 ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  再推荐一个
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  小悦帮我推荐一个
-                </>
-              )}
-            </Button>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span data-testid="text-ready-count">{readyCount}/{totalCount}</span>
-              <div className="w-16 h-2 bg-muted rounded-full overflow-hidden" data-testid="progress-ready">
-                <motion.div
-                  className="h-full bg-primary"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(readyCount / Math.max(totalCount, 1)) * 100}%` }}
-                />
-              </div>
-            </div>
-          </div>
-          
-          {recommendedGame && !allGamesRecommended && (
-            <motion.div
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 bg-primary/10 rounded-lg px-2 py-1.5"
-              data-testid="recommendation-reason"
-            >
-              <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 text-[10px] text-primary">
-                悦
-              </div>
-              <p className="text-xs text-foreground/80 line-clamp-1">
-                {recommendedGame.reason}
-              </p>
-            </motion.div>
+        <Button
+          variant={recommendError ? "destructive" : allGamesRecommended ? "secondary" : "ghost"}
+          onClick={onRecommendGame ? handleAIRecommend : handleRandomPick}
+          disabled={isOffline || isRecommendingGame}
+          className="w-full text-muted-foreground"
+          size="sm"
+          data-testid="button-ai-recommend"
+        >
+          {isRecommendingGame ? (
+            <>
+              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              小悦思考中...
+            </>
+          ) : recommendError ? (
+            <>
+              <Sparkles className="w-4 h-4 mr-2" />
+              推荐失败，再试一次
+            </>
+          ) : allGamesRecommended ? (
+            <>
+              <Check className="w-4 h-4 mr-2" />
+              已推荐全部
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4 mr-2" />
+              让小悦再推荐一个
+            </>
           )}
-        </div>
+        </Button>
       </div>
     </div>
   );
