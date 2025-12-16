@@ -89,7 +89,7 @@ export default function CompletedEventCard({ event, feedback }: CompletedEventCa
             ) : (
               <Badge 
                 variant="secondary" 
-                className="rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-semibold px-3 py-1 shadow-sm"
+                className="rounded-full bg-emerald-500 text-white border-emerald-600 font-semibold px-3 py-1 shadow-md"
               >
                 <CheckCircle2 className="h-3 w-3 mr-1" />
                 已完成
