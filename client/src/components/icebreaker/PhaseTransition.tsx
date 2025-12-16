@@ -417,7 +417,7 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
           transition={{ duration: 0.3 }}
           data-testid={`phase-transition-${type}`}
         >
-          <div className={`absolute inset-0 bg-gradient-radial ${config.bgGradient}`} />
+          <div className={`absolute inset-0 pointer-events-none bg-gradient-radial ${config.bgGradient}`} />
           
           <div className="absolute inset-0 pointer-events-none motion-reduce:hidden">
             {particles.map((particle) => (
