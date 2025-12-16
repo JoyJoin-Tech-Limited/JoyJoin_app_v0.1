@@ -116,10 +116,12 @@ export default function IcebreakerDemoPage() {
   }, []);
 
   const handleTransitionComplete = useCallback((completedType: TransitionType) => {
+    console.log('[IcebreakerDemoPage] handleTransitionComplete called with:', completedType);
     setShowTransition(false);
     setTransitionType(null);
     
     if (completedType === 'number_to_icebreaker') {
+      console.log('[IcebreakerDemoPage] Setting phase to icebreaker');
       setPhase('icebreaker');
       setIcebreakerStartTime(Date.now());
     } else if (completedType === 'checkin_to_number') {

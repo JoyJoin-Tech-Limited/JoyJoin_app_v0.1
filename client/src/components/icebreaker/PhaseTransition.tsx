@@ -390,6 +390,7 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
   }, [isVisible, config.requiresConfirmation]);
 
   const handleConfirm = () => {
+    console.log('[PhaseTransition] Button clicked, type:', type, 'onComplete:', !!onComplete);
     onComplete?.(type);
   };
 
