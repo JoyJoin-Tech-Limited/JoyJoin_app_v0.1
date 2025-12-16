@@ -42,11 +42,17 @@ export function IcebreakerOverlayProvider({ children }: IcebreakerOverlayProvide
       surface.style.overflow = 'hidden';
       surface.setAttribute('aria-hidden', 'true');
       surface.setAttribute('inert', '');
+      // 阻止 body 滚动
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
     } else {
       surface.style.pointerEvents = '';
       surface.style.overflow = '';
       surface.removeAttribute('aria-hidden');
       surface.removeAttribute('inert');
+      // 恢复 body 滚动
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     }
   }, [isOverlayActive]);
 
