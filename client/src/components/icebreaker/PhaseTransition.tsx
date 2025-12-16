@@ -357,19 +357,14 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
   const Icon = config.icon;
   const [showGuide, setShowGuide] = useState(false);
   
-  // Try to use overlay provider if available (graceful fallback if not wrapped)
-  let registerOverlay: (() => () => void) | undefined;
-  try {
-    const overlay = useIcebreakerOverlay();
-    registerOverlay = overlay.registerOverlay;
-  } catch {
-    // Provider not available, overlay blocking won't be centralized
-  }
+  // Use overlay provider - component must be wrapped in IcebreakerOverlayProvider
+  const { registerOverlay } = useIcebreakerOverlay();
 
   // Register with overlay provider when visible
   useEffect(() => {
-    if (isVisible && registerOverlay) {
-      return registerOverlay();
+    if (isVisible) {
+      const unregister = registerOverlay();
+      return unregister;
     }
   }, [isVisible, registerOverlay]);
 

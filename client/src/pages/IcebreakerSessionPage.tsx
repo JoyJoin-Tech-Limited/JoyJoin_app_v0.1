@@ -13,6 +13,7 @@ import { GameDetailView } from '@/components/icebreaker/GameDetailView';
 import { IcebreakerEndingScreen } from '@/components/icebreaker/IcebreakerEndingScreen';
 import { NetworkStatusBanner } from '@/components/icebreaker/NetworkStatusBanner';
 import { PhaseTransition, type TransitionType } from '@/components/icebreaker/PhaseTransition';
+import { IcebreakerOverlayProvider, IcebreakerSurface } from '@/components/icebreaker/IcebreakerOverlayProvider';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, WifiOff, RefreshCcw } from 'lucide-react';
@@ -275,176 +276,180 @@ export default function IcebreakerSessionPage() {
 
 
   return (
-    <div className="min-h-screen bg-background" data-testid="icebreaker-session-page">
-      <AnimatePresence mode="wait">
-        {icebreakerState.phase === 'waiting' && (
-          <motion.div
-            key="waiting"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex items-center justify-center min-h-screen"
-          >
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
-                <p className="mt-4">等待活动开始...</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+    <IcebreakerOverlayProvider>
+      <div className="min-h-screen bg-background" data-testid="icebreaker-session-page">
+        <IcebreakerSurface>
+          <AnimatePresence mode="wait">
+            {icebreakerState.phase === 'waiting' && (
+              <motion.div
+                key="waiting"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center justify-center min-h-screen"
+              >
+                <Card>
+                  <CardContent className="p-6 text-center">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+                    <p className="mt-4">等待活动开始...</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
 
-        {icebreakerState.phase === 'checkin' && (
-          <motion.div
-            key="checkin"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <IcebreakerCheckinModal
-              open={true}
-              onOpenChange={() => {}}
-              sessionId={sessionId || ''}
-              checkedInCount={icebreakerState.checkedInCount}
-              expectedAttendees={icebreakerState.expectedAttendees}
-              checkins={icebreakerState.checkins}
-              isConnected={isConnected}
-              isReconnecting={isReconnecting}
-              hasCheckedIn={icebreakerState.checkins.some(c => c.userId === user?.id)}
-              onCheckin={handleCheckin}
-              welcomeMessage={welcomeData?.message}
-              eventTitle={eventTitle}
-            />
-          </motion.div>
-        )}
-
-        {icebreakerState.phase === 'number_assign' && icebreakerState.myNumberPlate && (
-          <motion.div
-            key="number_assign"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <NumberPlateDisplay
-              open={true}
-              onOpenChange={() => {}}
-              myNumberPlate={icebreakerState.myNumberPlate}
-              myUserId={user?.id || ''}
-              assignments={icebreakerState.numberAssignments}
-              readyCount={icebreakerState.readyCount}
-              totalCount={icebreakerState.checkedInCount}
-              onReady={handleReady}
-              isReady={hasVotedReady}
-              eventTitle={eventTitle}
-            />
-          </motion.div>
-        )}
-
-        {icebreakerState.phase === 'icebreaker' && !selectedGame && (
-          <motion.div
-            key="icebreaker"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="h-screen relative"
-          >
-            {topicsLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {isAIPowered ? '小悦正在为你们挑选话题...' : '加载话题中...'}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <>
-                {isFallback && (
-                  <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
-                    <div className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-3 py-1 rounded-full text-xs">
-                      使用本地推荐模式
-                    </div>
-                  </div>
-                )}
-                <IcebreakerToolkit
+            {icebreakerState.phase === 'checkin' && (
+              <motion.div
+                key="checkin"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <IcebreakerCheckinModal
                   open={true}
                   onOpenChange={() => {}}
-                  topics={allTopics}
-                  recommendedTopics={recommendedTopics}
-                  onSelectTopic={handleSelectTopic}
-                  onSelectGame={handleSelectGame}
-                  participantCount={icebreakerState.checkedInCount}
+                  sessionId={sessionId || ''}
+                  checkedInCount={icebreakerState.checkedInCount}
+                  expectedAttendees={icebreakerState.expectedAttendees}
+                  checkins={icebreakerState.checkins}
+                  isConnected={isConnected}
+                  isReconnecting={isReconnecting}
+                  hasCheckedIn={icebreakerState.checkins.some(c => c.userId === user?.id)}
+                  onCheckin={handleCheckin}
+                  welcomeMessage={welcomeData?.message}
+                  eventTitle={eventTitle}
+                />
+              </motion.div>
+            )}
+
+            {icebreakerState.phase === 'number_assign' && icebreakerState.myNumberPlate && (
+              <motion.div
+                key="number_assign"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <NumberPlateDisplay
+                  open={true}
+                  onOpenChange={() => {}}
+                  myNumberPlate={icebreakerState.myNumberPlate}
+                  myUserId={user?.id || ''}
+                  assignments={icebreakerState.numberAssignments}
                   readyCount={icebreakerState.readyCount}
                   totalCount={icebreakerState.checkedInCount}
-                  isReady={hasVotedReady}
                   onReady={handleReady}
-                  autoReadyTimeoutSeconds={60}
-                  onRefreshTopics={refreshTopics}
-                  isRefreshingTopics={isRefreshingTopics}
-                  isOffline={isOffline}
-                  sessionStartTime={icebreakerStartTime || undefined}
-                  onEndIcebreaker={handleEndIcebreaker}
-                  onRecommendGame={handleRecommendGame}
-                  isRecommendingGame={isRecommendingGame}
-                  recommendedGame={recommendedGame}
+                  isReady={hasVotedReady}
+                  eventTitle={eventTitle}
                 />
-              </>
+              </motion.div>
             )}
-          </motion.div>
-        )}
 
-        {selectedGame && (
-          <motion.div
-            key="game-detail"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            className="h-screen"
-          >
-            <GameDetailView
-              game={selectedGame}
-              onBack={() => setSelectedGame(null)}
-              onGameChange={(game: IcebreakerGame) => setSelectedGame(game)}
-              participantCount={icebreakerState.checkedInCount}
-            />
-          </motion.div>
-        )}
+            {icebreakerState.phase === 'icebreaker' && !selectedGame && (
+              <motion.div
+                key="icebreaker"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="h-screen relative"
+              >
+                {topicsLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {isAIPowered ? '小悦正在为你们挑选话题...' : '加载话题中...'}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {isFallback && (
+                      <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
+                        <div className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-3 py-1 rounded-full text-xs">
+                          使用本地推荐模式
+                        </div>
+                      </div>
+                    )}
+                    <IcebreakerToolkit
+                      open={true}
+                      onOpenChange={() => {}}
+                      topics={allTopics}
+                      recommendedTopics={recommendedTopics}
+                      onSelectTopic={handleSelectTopic}
+                      onSelectGame={handleSelectGame}
+                      participantCount={icebreakerState.checkedInCount}
+                      readyCount={icebreakerState.readyCount}
+                      totalCount={icebreakerState.checkedInCount}
+                      isReady={hasVotedReady}
+                      onReady={handleReady}
+                      autoReadyTimeoutSeconds={60}
+                      onRefreshTopics={refreshTopics}
+                      isRefreshingTopics={isRefreshingTopics}
+                      isOffline={isOffline}
+                      sessionStartTime={icebreakerStartTime || undefined}
+                      onEndIcebreaker={handleEndIcebreaker}
+                      onRecommendGame={handleRecommendGame}
+                      isRecommendingGame={isRecommendingGame}
+                      recommendedGame={recommendedGame}
+                    />
+                  </>
+                )}
+              </motion.div>
+            )}
 
-        {icebreakerState.phase === 'ended' && (
-          <motion.div
-            key="ended"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <IcebreakerEndingScreen
-              closingMessage={icebreakerState.aiClosingMessage || closingMessage}
-              durationMinutes={Math.max(1, Math.round(icebreakerState.duration / 60))}
-              participantCount={icebreakerState.checkedInCount}
-              onLeave={handleLeave}
-              eventId={sessionData?.eventId}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {selectedGame && (
+              <motion.div
+                key="game-detail"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                className="h-screen"
+              >
+                <GameDetailView
+                  game={selectedGame}
+                  onBack={() => setSelectedGame(null)}
+                  onGameChange={(game: IcebreakerGame) => setSelectedGame(game)}
+                  participantCount={icebreakerState.checkedInCount}
+                />
+              </motion.div>
+            )}
 
-      <NetworkStatusBanner 
-        isConnected={isConnected} 
-        isReconnecting={isReconnecting}
-        isDemoMode={isDemoMode}
-        onRetry={() => window.location.reload()}
-      />
+            {icebreakerState.phase === 'ended' && (
+              <motion.div
+                key="ended"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <IcebreakerEndingScreen
+                  closingMessage={icebreakerState.aiClosingMessage || closingMessage}
+                  durationMinutes={Math.max(1, Math.round(icebreakerState.duration / 60))}
+                  participantCount={icebreakerState.checkedInCount}
+                  onLeave={handleLeave}
+                  eventId={sessionData?.eventId}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </IcebreakerSurface>
 
-      {transitionType && (
-        <PhaseTransition
-          type={transitionType}
-          isVisible={showTransition}
-          onComplete={() => {
-            setShowTransition(false);
-            setTransitionType(null);
-          }}
+        <NetworkStatusBanner 
+          isConnected={isConnected} 
+          isReconnecting={isReconnecting}
+          isDemoMode={isDemoMode}
+          onRetry={() => window.location.reload()}
         />
-      )}
-    </div>
+
+        {transitionType && (
+          <PhaseTransition
+            type={transitionType}
+            isVisible={showTransition}
+            onComplete={() => {
+              setShowTransition(false);
+              setTransitionType(null);
+            }}
+          />
+        )}
+      </div>
+    </IcebreakerOverlayProvider>
   );
 }

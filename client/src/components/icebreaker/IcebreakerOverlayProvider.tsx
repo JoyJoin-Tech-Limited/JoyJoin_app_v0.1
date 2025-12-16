@@ -39,10 +39,12 @@ export function IcebreakerOverlayProvider({ children }: IcebreakerOverlayProvide
 
     if (isOverlayActive) {
       surface.style.pointerEvents = 'none';
+      surface.style.overflow = 'hidden';
       surface.setAttribute('aria-hidden', 'true');
       surface.setAttribute('inert', '');
     } else {
       surface.style.pointerEvents = '';
+      surface.style.overflow = '';
       surface.removeAttribute('aria-hidden');
       surface.removeAttribute('inert');
     }
