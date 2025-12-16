@@ -1,10 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, DollarSign, Users, Star, MessageSquare, CheckCircle2, Sparkles } from "lucide-react";
+import { MapPin, DollarSign, Users, Star, MessageSquare, Check, Gift, Trophy } from "lucide-react";
 import type { BlindBoxEvent, EventFeedback } from "@shared/schema";
 import { getCurrencySymbol } from "@/lib/currency";
 import { useLocation } from "wouter";
+import { motion } from "framer-motion";
 
 interface CompletedEventCardProps {
   event: BlindBoxEvent;
@@ -70,45 +71,92 @@ export default function CompletedEventCard({ event, feedback }: CompletedEventCa
 
   return (
     <Card 
-      className="border shadow-sm hover-elevate active-elevate-2 cursor-pointer relative overflow-hidden" 
+      className={`relative overflow-visible cursor-pointer transition-all duration-300 ${
+        hasFeedback 
+          ? "border-2 shadow-lg" 
+          : "border-2 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.3)]"
+      }`}
+      style={hasFeedback ? {
+        borderImage: "linear-gradient(135deg, #a855f7, #ec4899, #f97316, #eab308, #22c55e, #3b82f6, #a855f7) 1",
+        borderImageSlice: 1,
+      } : undefined}
       onClick={() => setLocation(`/blind-box-events/${event.id}`)}
       data-testid={`card-completed-${event.id}`}
     >
-      {/* Status Badge - Top Right Corner */}
-      <div className="absolute top-0 right-0 z-10">
-        <div className="relative">
-          <div className="absolute -top-1 -right-1">
-            {hasFeedback ? (
-              <Badge 
-                variant="secondary" 
-                className="rounded-full bg-primary/10 text-primary border-primary/30 font-semibold px-3 py-1 shadow-sm"
-              >
-                <Sparkles className="h-3 w-3 mr-1" />
-                已反馈
+      {/* Animated Corner Badge */}
+      <div className="absolute -top-3 -right-3 z-20">
+        {hasFeedback ? (
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 260, damping: 20 }}
+            className="relative"
+          >
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center shadow-lg">
+              <Check className="h-8 w-8 text-white stroke-[3]" />
+            </div>
+            <motion.div
+              className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 opacity-50"
+              animate={{ scale: [1, 1.3, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            animate={{ 
+              scale: [1, 1.05, 1],
+              boxShadow: [
+                "0 0 10px rgba(251, 191, 36, 0.4)",
+                "0 0 20px rgba(251, 191, 36, 0.6)",
+                "0 0 10px rgba(251, 191, 36, 0.4)"
+              ]
+            }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            className="relative"
+          >
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+              <Gift className="h-7 w-7 text-white" />
+            </div>
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap">
+              <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0 font-bold shadow-md">
+                +50
               </Badge>
-            ) : (
-              <Badge 
-                variant="secondary" 
-                className="rounded-full bg-emerald-500 text-white border-emerald-600 font-semibold px-3 py-1 shadow-md"
-              >
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                已完成
-              </Badge>
-            )}
-          </div>
-        </div>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       <CardContent className="p-4 space-y-3">
+        {/* Status Banner */}
+        {hasFeedback ? (
+          <div className="flex items-center gap-2 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-orange-500/10 rounded-lg px-3 py-2 border border-purple-200 dark:border-purple-800">
+            <Trophy className="h-5 w-5 text-purple-500" />
+            <span className="font-semibold text-purple-600 dark:text-purple-400">完美收官</span>
+            <span className="text-xs text-muted-foreground ml-auto">感谢你的反馈</span>
+          </div>
+        ) : (
+          <motion.div 
+            className="flex items-center gap-2 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-lg px-3 py-2 border border-amber-300 dark:border-amber-700"
+            animate={{ 
+              borderColor: ["rgba(251, 191, 36, 0.5)", "rgba(251, 191, 36, 1)", "rgba(251, 191, 36, 0.5)"]
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <Gift className="h-5 w-5 text-amber-500" />
+            <span className="font-semibold text-amber-600 dark:text-amber-400">积分待领</span>
+            <Badge className="ml-auto bg-amber-500 text-white text-xs">50积分</Badge>
+          </motion.div>
+        )}
+
         {/* 标题 */}
-        <div className="space-y-1 pr-20">
+        <div className="space-y-1">
           <div className="flex items-start justify-between gap-3">
             <h3 className="text-base font-semibold flex-1">
               {formatDate(event.dateTime)} · {event.eventType}
             </h3>
             {event.isGirlsNight && (
-              <Badge className="text-xs bg-pink-500 hover:bg-pink-600">
-                👭 Girls Night
+              <Badge className="text-xs bg-pink-500 hover:bg-pink-600 no-default-hover-elevate no-default-active-elevate">
+                Girls Night
               </Badge>
             )}
           </div>
@@ -190,16 +238,15 @@ export default function CompletedEventCard({ event, feedback }: CompletedEventCa
           {!hasFeedback && (
             <Button 
               size="sm" 
-              variant="default"
-              className="flex-1"
+              className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md"
               onClick={(e) => {
                 e.stopPropagation();
                 setLocation(`/events/${event.id}/feedback`);
               }}
               data-testid={`button-give-feedback-${event.id}`}
             >
-              <MessageSquare className="h-4 w-4 mr-2" />
-              分享反馈
+              <Gift className="h-4 w-4 mr-2" />
+              领取积分
             </Button>
           )}
           
@@ -216,17 +263,6 @@ export default function CompletedEventCard({ event, feedback }: CompletedEventCa
             查看详情
           </Button>
         </div>
-
-        {/* Feedback Incentive (only if no feedback) */}
-        {!hasFeedback && (
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
-            <span className="text-2xl">🎁</span>
-            <div className="flex-1">
-              <p className="text-xs font-medium text-primary">分享体验获得50积分</p>
-              <p className="text-xs text-muted-foreground">帮助我们做得更好</p>
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
