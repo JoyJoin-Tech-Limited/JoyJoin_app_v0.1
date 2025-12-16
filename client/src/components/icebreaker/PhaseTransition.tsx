@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Users, MessageCircle, PartyPopper, Star, Check, ClipboardCheck, Hash, Coffee, Heart, Lightbulb, Gamepad2, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useIcebreakerOverlay } from './IcebreakerOverlayProvider';
 
 export type TransitionType = 'checkin_to_number' | 'number_to_icebreaker' | 'icebreaker_to_end';
 
@@ -354,6 +356,22 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
   const config = transitionConfig[type];
   const Icon = config.icon;
   const [showGuide, setShowGuide] = useState(false);
+  
+  // Try to use overlay provider if available (graceful fallback if not wrapped)
+  let registerOverlay: (() => () => void) | undefined;
+  try {
+    const overlay = useIcebreakerOverlay();
+    registerOverlay = overlay.registerOverlay;
+  } catch {
+    // Provider not available, overlay blocking won't be centralized
+  }
+
+  // Register with overlay provider when visible
+  useEffect(() => {
+    if (isVisible && registerOverlay) {
+      return registerOverlay();
+    }
+  }, [isVisible, registerOverlay]);
 
   const particles = useMemo(() => {
     const items: ParticleProps[] = [];
@@ -393,7 +411,7 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
     onComplete?.(type);
   };
 
-  return (
+  const overlayContent = (
     <AnimatePresence>
       {isVisible && (
         <motion.div
@@ -403,9 +421,6 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
           data-testid={`phase-transition-${type}`}
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
         >
           <div className={`absolute inset-0 bg-gradient-radial ${config.bgGradient}`} />
           
@@ -553,4 +568,7 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
       )}
     </AnimatePresence>
   );
+
+  // Render via portal to document.body to ensure it's always on top of all layers
+  return createPortal(overlayContent, document.body);
 }

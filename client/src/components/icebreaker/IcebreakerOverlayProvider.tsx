@@ -1,0 +1,71 @@
+import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+
+interface IcebreakerOverlayContextValue {
+  registerOverlay: () => () => void;
+  isOverlayActive: boolean;
+  surfaceRef: React.RefObject<HTMLDivElement>;
+}
+
+const IcebreakerOverlayContext = createContext<IcebreakerOverlayContextValue | null>(null);
+
+export function useIcebreakerOverlay() {
+  const context = useContext(IcebreakerOverlayContext);
+  if (!context) {
+    throw new Error('useIcebreakerOverlay must be used within IcebreakerOverlayProvider');
+  }
+  return context;
+}
+
+interface IcebreakerOverlayProviderProps {
+  children: React.ReactNode;
+}
+
+export function IcebreakerOverlayProvider({ children }: IcebreakerOverlayProviderProps) {
+  const [overlayCount, setOverlayCount] = useState(0);
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  
+  const isOverlayActive = overlayCount > 0;
+
+  const registerOverlay = useCallback(() => {
+    setOverlayCount(prev => prev + 1);
+    return () => {
+      setOverlayCount(prev => Math.max(0, prev - 1));
+    };
+  }, []);
+
+  useEffect(() => {
+    const surface = surfaceRef.current;
+    if (!surface) return;
+
+    if (isOverlayActive) {
+      surface.style.pointerEvents = 'none';
+      surface.setAttribute('aria-hidden', 'true');
+      surface.setAttribute('inert', '');
+    } else {
+      surface.style.pointerEvents = '';
+      surface.removeAttribute('aria-hidden');
+      surface.removeAttribute('inert');
+    }
+  }, [isOverlayActive]);
+
+  return (
+    <IcebreakerOverlayContext.Provider value={{ registerOverlay, isOverlayActive, surfaceRef }}>
+      {children}
+    </IcebreakerOverlayContext.Provider>
+  );
+}
+
+interface IcebreakerSurfaceProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function IcebreakerSurface({ children, className = '' }: IcebreakerSurfaceProps) {
+  const { surfaceRef } = useIcebreakerOverlay();
+  
+  return (
+    <div ref={surfaceRef} className={className} data-icebreaker-surface>
+      {children}
+    </div>
+  );
+}
