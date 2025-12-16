@@ -403,6 +403,9 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
           data-testid={`phase-transition-${type}`}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
         >
           <div className={`absolute inset-0 bg-gradient-radial ${config.bgGradient}`} />
           
