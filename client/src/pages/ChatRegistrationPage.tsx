@@ -1129,8 +1129,10 @@ function MessageBubble({
     setVisibleLineCount(0);
   }, [message.content]);
   
-  // 正在打字动画中或只有一行或包含流程标签时，显示单个气泡
-  if ((shouldAnimate && !isComplete) || originalLines.length <= 1 || containsFlowTags) {
+  // 流式消息（有streamId）、正在打字动画中、只有一行、或包含流程标签时，显示单个气泡
+  // 流式消息使用单气泡模式避免多行分割导致的闪烁问题
+  const isStreamingMessage = !!message.streamId;
+  if (isStreamingMessage || (shouldAnimate && !isComplete) || originalLines.length <= 1 || containsFlowTags) {
     return (
       <SingleBubble
         content={content}
