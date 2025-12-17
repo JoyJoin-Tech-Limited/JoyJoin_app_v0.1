@@ -46,6 +46,15 @@ export interface XiaoyueCollectedInfo {
     registrationTime: string;
     completionSpeed: 'fast' | 'medium' | 'slow';
   };
+  // 社交能量维度（新增）
+  energyRechargeMethod?: string; // alone/small_group/exercise/sleep - 能量恢复方式
+  idealSocialDuration?: string; // 1h/2h/3h_plus/flexible - 理想社交时长
+  socialFrequency?: string; // weekly/biweekly/monthly/flexible - 社交频率需求
+  // 社交场景偏好（新增）
+  idealGroupSize?: string; // small_4/medium_6/flexible - 理想人数
+  activityPace?: string; // slow_deep/fast_varied/flexible - 活动节奏偏好
+  breakingIceRole?: string; // initiator/follower/observer - 破冰角色
+  socialContinuity?: string; // fixed_circle/new_faces/flexible - 社交延续偏好
 }
 
 export interface ChatMessage {
