@@ -197,11 +197,11 @@ export default function PersonalityTestPage() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="space-y-3 mb-8"
+          className="space-y-3 mb-6"
         >
           <h1 className="text-2xl font-bold">发现你的社交角色</h1>
           <p className="text-muted-foreground max-w-sm">
-            通过12道情景题，小悦将为你匹配聊得来的同桌
+            12种社交动物原型等你揭晓，帮你匹配聊得来的同桌
           </p>
         </motion.div>
 
@@ -209,35 +209,40 @@ export default function PersonalityTestPage() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.6 }}
-          className="w-full max-w-sm space-y-3 mb-8"
+          className="w-full max-w-sm space-y-3 mb-6"
         >
-          <Card className="p-4 border-0 bg-muted/50">
+          <p className="text-sm text-muted-foreground mb-2">选择你喜欢的测试方式</p>
+          
+          <Card 
+            className="p-4 border-2 border-primary/20 bg-primary/5 cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={handleStartTest}
+            data-testid="button-questionnaire-mode"
+          >
             <div className="flex items-center gap-3">
-              <Clock className="w-5 h-5 text-primary flex-shrink-0" />
-              <div className="text-left">
-                <p className="font-medium text-sm">约2分钟</p>
-                <p className="text-xs text-muted-foreground">轻松完成，可随时暂停</p>
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-5 h-5 text-primary" />
               </div>
+              <div className="text-left flex-1">
+                <p className="font-medium">问卷模式</p>
+                <p className="text-xs text-muted-foreground">12道情景题 · 约2分钟</p>
+              </div>
+              <Badge variant="secondary" className="text-xs">推荐</Badge>
             </div>
           </Card>
 
-          <Card className="p-4 border-0 bg-muted/50">
+          <Card 
+            className="p-4 border opacity-50 cursor-not-allowed"
+            data-testid="button-chat-mode"
+          >
             <div className="flex items-center gap-3">
-              <Users className="w-5 h-5 text-primary flex-shrink-0" />
-              <div className="text-left">
-                <p className="font-medium text-sm">精准匹配同桌</p>
-                <p className="text-xs text-muted-foreground">性格互补，兴趣相投</p>
+              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                <Users className="w-5 h-5 text-muted-foreground" />
               </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 border-0 bg-muted/50">
-            <div className="flex items-center gap-3">
-              <Sparkles className="w-5 h-5 text-primary flex-shrink-0" />
-              <div className="text-left">
-                <p className="font-medium text-sm">解锁专属角色</p>
-                <p className="text-xs text-muted-foreground">12种社交动物原型等你揭晓</p>
+              <div className="text-left flex-1">
+                <p className="font-medium text-muted-foreground">和小悦聊聊</p>
+                <p className="text-xs text-muted-foreground">对话式测试 · 约3分钟</p>
               </div>
+              <Badge variant="outline" className="text-xs">即将推出</Badge>
             </div>
           </Card>
         </motion.div>
@@ -246,18 +251,13 @@ export default function PersonalityTestPage() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.8 }}
-          className="w-full max-w-sm"
+          className="w-full max-w-sm space-y-3"
         >
-          <Button 
-            onClick={handleStartTest} 
-            className="w-full" 
-            size="lg"
-            data-testid="button-start-personality-test"
-          >
-            开始测试
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-          <p className="text-xs text-muted-foreground mt-3">
+          <div className="flex items-center gap-2 justify-center text-sm text-muted-foreground">
+            <Users className="w-4 h-4" />
+            <span>精准匹配同桌，性格互补</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
             没有对错之分，选择最符合你的选项
           </p>
         </motion.div>

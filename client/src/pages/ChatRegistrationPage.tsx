@@ -1646,7 +1646,8 @@ export default function ChatRegistrationPage() {
         title: "注册成功",
         description: "欢迎加入 JoyJoin！"
       });
-      setLocation("/interests-topics");
+      // 导航到性格测试页面
+      setLocation("/personality-test");
     },
     onError: () => {
       toast({
@@ -1891,7 +1892,26 @@ export default function ChatRegistrationPage() {
       </AnimatePresence>
 
       {isComplete ? (
-        <div className="p-4 border-t bg-background">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 border-t bg-muted/50"
+        >
+          <div className="text-center mb-3">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground mb-2"
+            >
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span>基础信息已收集完成</span>
+              <Sparkles className="w-4 h-4 text-primary" />
+            </motion.div>
+            <p className="text-xs text-muted-foreground">
+              接下来做个小测试，帮你匹配更合拍的局友
+            </p>
+          </div>
           <Button 
             className="w-full" 
             onClick={handleComplete}
@@ -1903,9 +1923,9 @@ export default function ChatRegistrationPage() {
             ) : (
               <ArrowRight className="w-4 h-4 mr-2" />
             )}
-            继续下一步
+            开始性格测试
           </Button>
-        </div>
+        </motion.div>
       ) : (
         <div className="p-4 border-t bg-background">
           <div className="flex gap-2">
