@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,9 +14,67 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import MobileHeader from "@/components/MobileHeader";
 import EvolvingAvatar, { calculateClarityLevel } from "@/components/EvolvingAvatar";
+import type { User as UserType } from "@shared/schema";
 
 // 注册模式配置
-type RegistrationMode = "express" | "standard" | "deep" | "all_in_one";
+type RegistrationMode = "express" | "standard" | "deep" | "all_in_one" | "enrichment";
+
+// 资料补充模式的上下文
+interface EnrichmentContext {
+  existingProfile: {
+    displayName?: string;
+    gender?: string;
+    birthdate?: string;
+    currentCity?: string;
+    occupation?: string;
+    topInterests?: string[];
+    educationLevel?: string;
+    relationshipStatus?: string;
+    intent?: string;
+    hometownCountry?: string;
+    languagesComfort?: string[];
+    socialStyle?: string;
+  };
+  missingFields: string[];
+}
+
+// 计算缺失字段
+function calculateMissingFields(user: UserType | null | undefined): { missingFields: string[]; existingProfile: EnrichmentContext['existingProfile'] } {
+  if (!user) return { missingFields: [], existingProfile: {} };
+  
+  const fieldsToCheck = [
+    { key: 'displayName', label: '昵称' },
+    { key: 'gender', label: '性别' },
+    { key: 'birthdate', label: '出生日期' },
+    { key: 'currentCity', label: '城市' },
+    { key: 'occupation', label: '职业' },
+    { key: 'topInterests', label: '兴趣爱好', isArray: true },
+    { key: 'educationLevel', label: '学历' },
+    { key: 'relationshipStatus', label: '感情状态' },
+    { key: 'intent', label: '社交意向' },
+    { key: 'hometownCountry', label: '家乡' },
+    { key: 'languagesComfort', label: '语言', isArray: true },
+    { key: 'socialStyle', label: '社交风格' },
+  ];
+  
+  const missingFields: string[] = [];
+  const existingProfile: EnrichmentContext['existingProfile'] = {};
+  
+  fieldsToCheck.forEach(field => {
+    const value = (user as any)[field.key];
+    const isFilled = field.isArray 
+      ? Array.isArray(value) && value.length > 0
+      : value !== undefined && value !== null && value !== '';
+    
+    if (isFilled) {
+      (existingProfile as any)[field.key] = value;
+    } else {
+      missingFields.push(field.label);
+    }
+  });
+  
+  return { missingFields, existingProfile };
+}
 
 interface ModeConfig {
   id: RegistrationMode;
@@ -1349,6 +1407,22 @@ export default function ChatRegistrationPage() {
   // 检查URL参数是否有预设模式（从其他页面跳转时使用）
   const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const presetMode = urlParams.get('mode') as RegistrationMode | null;
+  const isEnrichmentMode = presetMode === 'enrichment';
+  
+  // 获取用户数据（仅在enrichment模式下需要）
+  const { data: userData, isLoading: isUserDataLoading } = useQuery<UserType>({
+    queryKey: ['/api/auth/user'],
+    enabled: isEnrichmentMode,
+  });
+  
+  // Enrichment模式加载状态
+  const isEnrichmentLoading = isEnrichmentMode && (isUserDataLoading || !userData);
+  
+  // 计算enrichment上下文（基于用户数据）
+  const enrichmentContext = useMemo(() => {
+    if (!isEnrichmentMode || !userData) return null;
+    return calculateMissingFields(userData);
+  }, [isEnrichmentMode, userData]);
   
   // 模式选择状态
   const [showModeSelection, setShowModeSelection] = useState(!presetMode);
@@ -1374,7 +1448,7 @@ export default function ChatRegistrationPage() {
     setSelectedMode(mode);
     setShowModeSelection(false);
     // 开始对话，传入模式
-    startChatMutation.mutate(mode);
+    startChatMutation.mutate({ mode, enrichmentContext: null });
   };
 
   const scrollToBottom = () => {
@@ -1478,15 +1552,27 @@ export default function ChatRegistrationPage() {
   const hasStartedFromPreset = useRef(false);
   useEffect(() => {
     if (presetMode && !hasStartedFromPreset.current) {
+      // 对于enrichment模式，等待用户数据加载完成
+      if (isEnrichmentMode && !enrichmentContext) return;
+      
       hasStartedFromPreset.current = true;
-      startChatMutation.mutate(presetMode);
+      startChatMutation.mutate({ mode: presetMode, enrichmentContext });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presetMode]);
+  }, [presetMode, isEnrichmentMode, enrichmentContext]);
 
   const startChatMutation = useMutation({
-    mutationFn: async (mode: RegistrationMode) => {
-      const res = await apiRequest("POST", "/api/registration/chat/start", { mode });
+    mutationFn: async ({ mode, enrichmentContext: ctx }: { mode: RegistrationMode; enrichmentContext?: EnrichmentContext | null }) => {
+      // 防护：enrichment模式必须有context
+      if (mode === 'enrichment' && !ctx) {
+        throw new Error('Enrichment mode requires context');
+      }
+      
+      const payload: any = { mode };
+      if (mode === 'enrichment' && ctx) {
+        payload.enrichmentContext = ctx;
+      }
+      const res = await apiRequest("POST", "/api/registration/chat/start", payload);
       return res.json();
     },
     onSuccess: (data) => {
@@ -1934,6 +2020,27 @@ export default function ChatRegistrationPage() {
               </div>
             </CardContent>
           </Card>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // 显示enrichment模式加载界面
+  if (isEnrichmentLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center space-y-4"
+        >
+          <div className="w-16 h-16 rounded-full bg-muted mx-auto flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold">正在加载你的资料...</h2>
+            <p className="text-sm text-muted-foreground">马上就好～</p>
+          </div>
         </motion.div>
       </div>
     );

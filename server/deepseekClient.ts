@@ -405,6 +405,129 @@ export async function startXiaoyueChat(mode: RegistrationMode = 'standard'): Pro
   };
 }
 
+export interface EnrichmentContext {
+  existingProfile: {
+    displayName?: string;
+    gender?: string;
+    birthdate?: string;
+    currentCity?: string;
+    occupation?: string;
+    topInterests?: string[];
+    educationLevel?: string;
+    relationshipStatus?: string;
+    intent?: string;
+    hometownCountry?: string;
+    languagesComfort?: string[];
+    socialStyle?: string;
+  };
+  missingFields: string[];
+}
+
+const ENRICHMENT_SYSTEM_ADDITION = `
+## 【资料补充模式】
+这是一位老用户回来补充资料。你已经知道ta的部分信息，现在要帮ta完善剩余信息。
+
+**你已经知道的信息（不需要再问）**：
+{KNOWN_INFO}
+
+**需要收集的信息（重点关注）**：
+{MISSING_FIELDS}
+
+**对话策略**：
+1. 热情但不过分：老朋友回来聊天的感觉
+2. 不要重复问已知信息
+3. 自然地引导到缺失的信息
+4. 可以根据已知信息建立联系，比如"上次你说在深圳做互联网，那有没有..."
+5. 每轮只问一个问题，保持轻松节奏
+
+**开场语风格**：
+- "欢迎回来呀～上次聊得挺开心的，今天想再了解你多一点～"
+- 可以根据已知信息个性化开场
+
+**结束条件**：
+- 收集到至少3个新信息后可以结束
+- 用户表示不想继续时也可以结束
+- 结束时发送 \`\`\`registration_complete\`\`\`
+`;
+
+function buildEnrichmentPrompt(context: EnrichmentContext): string {
+  const { existingProfile, missingFields } = context;
+  
+  const knownInfoLines: string[] = [];
+  if (existingProfile.displayName) knownInfoLines.push(`- 昵称：${existingProfile.displayName}`);
+  if (existingProfile.gender) knownInfoLines.push(`- 性别：${existingProfile.gender}`);
+  if (existingProfile.birthdate) knownInfoLines.push(`- 生日：${existingProfile.birthdate}`);
+  if (existingProfile.currentCity) knownInfoLines.push(`- 城市：${existingProfile.currentCity}`);
+  if (existingProfile.occupation) knownInfoLines.push(`- 职业：${existingProfile.occupation}`);
+  if (existingProfile.topInterests?.length) knownInfoLines.push(`- 兴趣：${existingProfile.topInterests.join('、')}`);
+  if (existingProfile.educationLevel) knownInfoLines.push(`- 学历：${existingProfile.educationLevel}`);
+  if (existingProfile.relationshipStatus) knownInfoLines.push(`- 感情状态：${existingProfile.relationshipStatus}`);
+  if (existingProfile.intent) knownInfoLines.push(`- 社交意向：${existingProfile.intent}`);
+  if (existingProfile.hometownCountry) knownInfoLines.push(`- 家乡：${existingProfile.hometownCountry}`);
+  if (existingProfile.languagesComfort?.length) knownInfoLines.push(`- 语言：${existingProfile.languagesComfort.join('、')}`);
+  if (existingProfile.socialStyle) knownInfoLines.push(`- 社交风格：${existingProfile.socialStyle}`);
+
+  const knownInfo = knownInfoLines.length > 0 ? knownInfoLines.join('\n') : '（暂无已知信息）';
+  const missing = missingFields.length > 0 ? missingFields.map(f => `- ${f}`).join('\n') : '（无缺失信息）';
+
+  return ENRICHMENT_SYSTEM_ADDITION
+    .replace('{KNOWN_INFO}', knownInfo)
+    .replace('{MISSING_FIELDS}', missing);
+}
+
+function generateEnrichmentOpening(context: EnrichmentContext): string {
+  const { existingProfile, missingFields } = context;
+  const name = existingProfile.displayName || '朋友';
+  
+  const greetings = [
+    `${name}，好久不见呀～今天想再聊聊，了解你多一点～`,
+    `欢迎回来呀～${name}，之前聊得挺开心的，今天继续？`,
+    `嘿${name}～想跟你多聊几句，完善一下你的资料～`
+  ];
+  
+  let opening = greetings[Math.floor(Math.random() * greetings.length)];
+  
+  if (missingFields.length > 0) {
+    const fieldHints: Record<string, string> = {
+      '职业': '话说你现在是做什么工作的呀？',
+      '兴趣爱好': '平时休闲的时候喜欢做什么呀？',
+      '学历': '读的什么专业呀？',
+      '感情状态': '现在是一个人还是有伴儿呀？',
+      '社交意向': '来JoyJoin主要想找什么样的活动呢？',
+      '家乡': '老家是哪里的呀？',
+      '语言': '平时说普通话多还是粤语多呀？',
+      '社交风格': '参加活动的话，喜欢大家一起聊还是小组深聊？'
+    };
+    
+    const firstMissing = missingFields[0];
+    const hint = fieldHints[firstMissing];
+    if (hint) {
+      opening += `\n\n${hint}`;
+    }
+  }
+  
+  return opening;
+}
+
+export async function startXiaoyueChatEnrichment(context: EnrichmentContext): Promise<{ 
+  message: string; 
+  conversationHistory: ChatMessage[];
+  mode: 'enrichment';
+}> {
+  const enrichmentAddition = buildEnrichmentPrompt(context);
+  const fullSystemPrompt = XIAOYUE_SYSTEM_PROMPT + enrichmentAddition;
+  const opening = generateEnrichmentOpening(context);
+  
+  return {
+    message: opening,
+    conversationHistory: [
+      { role: 'system', content: fullSystemPrompt },
+      { role: 'assistant', content: opening }
+    ],
+    mode: 'enrichment'
+  };
+}
+
 export async function continueXiaoyueChat(
   userMessage: string,
   conversationHistory: ChatMessage[]

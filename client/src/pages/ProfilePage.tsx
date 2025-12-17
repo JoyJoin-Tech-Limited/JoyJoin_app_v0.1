@@ -280,7 +280,7 @@ export default function ProfilePage() {
                   variant="outline" 
                   size="sm" 
                   className="w-full"
-                  onClick={() => setLocation('/chat-registration?mode=deep')}
+                  onClick={() => setLocation('/chat-registration?mode=enrichment')}
                   data-testid="button-chat-with-xiaoyue"
                 >
                   <MessageCircle className="w-4 h-4 mr-2" />

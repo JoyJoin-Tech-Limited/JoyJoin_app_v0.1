@@ -320,10 +320,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/registration/chat/start', async (req: any, res) => {
     try {
       const userId = req.session?.userId;
-      const { mode } = req.body; // 接收模式参数: express | standard | deep | all_in_one
+      const { mode, enrichmentContext } = req.body; // 接收模式参数: express | standard | deep | all_in_one | enrichment
       
       if (userId) {
         resetConversationTurns(userId);
+      }
+      
+      // 如果是资料补充模式，使用专门的enrichment函数
+      if (mode === 'enrichment' && enrichmentContext) {
+        const { startXiaoyueChatEnrichment } = await import('./deepseekClient');
+        const result = await startXiaoyueChatEnrichment(enrichmentContext);
+        res.json(result);
+        return;
       }
       
       const { startXiaoyueChat } = await import('./deepseekClient');
