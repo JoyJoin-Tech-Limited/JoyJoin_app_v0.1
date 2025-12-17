@@ -59,8 +59,13 @@ export const users = pgTable("users", {
   relationshipStatus: varchar("relationship_status"), // 单身, 恋爱中, 已婚/伴侣, 离异, 丧偶, 不透露
   children: varchar("children"), // 无孩子, 期待中, 0-5岁, 6-12岁, 13-18岁, 成年, 不透露
   hasPets: boolean("has_pets"), // 是否有毛孩子
+  petTypes: text("pet_types").array(), // 宠物类型: 猫, 狗, 兔子, 仓鼠, etc.
   hasSiblings: boolean("has_siblings"), // 是否有亲兄弟姐妹 (false = 独生子女)
   hasKids: boolean("has_kids"), // Deprecated in favor of children
+  
+  // Registration fields - Life Stage & Age Preferences
+  lifeStage: varchar("life_stage"), // 学生党, 职场新人, 职场老手, 创业中, 自由职业
+  ageMatchPreference: varchar("age_match_preference"), // 同龄人, 偏年轻, 偏成熟, 都可以
   
   // Registration fields - Education
   educationLevel: varchar("education_level"), // 高中及以下, 大专, 本科, 硕士, 博士, 职业培训
@@ -113,6 +118,13 @@ export const users = pgTable("users", {
   topicsHappy: text("topics_happy").array(), // Deprecated: Topics user enjoys discussing - moving to simpler model
   topicsAvoid: text("topics_avoid").array(), // Deprecated: Topics to avoid - use topicAvoidances
   topicAvoidances: text("topic_avoidances").array(), // 饭局酒局不自在话题: politics, dating_pressure, workplace_gossip, money_finance, or empty for "都OK"
+  
+  // Registration fields - Social & Venue Preferences (collected via AI chat)
+  socialStyle: varchar("social_style"), // 社交风格: 外向活泼, 内敛沉稳, 看情况
+  venueStylePreference: varchar("venue_style_preference"), // 场地偏好: 安静咖啡馆, 热闹酒吧, 户外活动, etc.
+  cuisinePreference: text("cuisine_preference").array(), // 菜系偏好: 粤菜, 日料, 西餐, etc.
+  favoriteRestaurant: varchar("favorite_restaurant"), // 宝藏餐厅推荐
+  favoriteRestaurantReason: text("favorite_restaurant_reason"), // 喜欢这家餐厅的原因
   
   // Personality data (Step 3 - Vibe Vector)
   vibeVector: jsonb("vibe_vector"), // {energy, conversation_style, initiative, novelty, humor} scored 0-1

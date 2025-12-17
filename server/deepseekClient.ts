@@ -541,6 +541,31 @@ function validateAndNormalizeInfo(info: Partial<XiaoyueCollectedInfo>): XiaoyueC
     }
   }
 
+  // lifeStage - 人生阶段
+  if (info.lifeStage && typeof info.lifeStage === 'string') {
+    normalized.lifeStage = info.lifeStage.trim();
+  }
+
+  // ageMatchPreference - 年龄匹配偏好
+  const validAgePrefs = ['same_generation', 'younger', 'older', 'flexible'];
+  if (info.ageMatchPreference && typeof info.ageMatchPreference === 'string') {
+    const agePref = info.ageMatchPreference.trim().toLowerCase().replace(/\s+/g, '_');
+    if (validAgePrefs.includes(agePref)) {
+      normalized.ageMatchPreference = agePref;
+    } else {
+      normalized.ageMatchPreference = info.ageMatchPreference.trim();
+    }
+  }
+
+  // ageDisplayPreference - 年龄显示偏好
+  const validDisplayPrefs = ['decade', 'range', 'hidden'];
+  if (info.ageDisplayPreference && typeof info.ageDisplayPreference === 'string') {
+    const displayPref = info.ageDisplayPreference.trim().toLowerCase();
+    if (validDisplayPrefs.includes(displayPref)) {
+      normalized.ageDisplayPreference = displayPref;
+    }
+  }
+
   // hasPets
   if (typeof info.hasPets === 'boolean') {
     normalized.hasPets = info.hasPets;
@@ -714,6 +739,9 @@ ${conversationHistory.filter(m => m.role !== 'system').map(m => `${m.role === 'u
   "interestsTop": ["兴趣1", "兴趣2", "兴趣3"],
   "primaryInterests": ["主要兴趣"],
   "intent": ["friends", "networking"],
+  "lifeStage": "学生党/职场新人/职场老手/创业中/自由职业",
+  "ageMatchPreference": "same_generation/younger/older/flexible",
+  "ageDisplayPreference": "decade/range/hidden",
   "hasPets": true,
   "petTypes": ["猫", "狗"],
   "hasSiblings": true,

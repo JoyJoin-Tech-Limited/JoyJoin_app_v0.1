@@ -49,16 +49,26 @@ const timeThemeConfig: Record<TimeTheme, { gradient: string; icon: any; greeting
   }
 };
 
-// 小悦表情类型
-type XiaoyueEmotion = "happy" | "thinking" | "excited" | "wink" | "neutral";
+// 小悦表情类型 - 随聊天深入逐渐变化
+type XiaoyueEmotion = "happy" | "thinking" | "excited" | "wink" | "neutral" | "warm" | "familiar";
 
-function detectEmotion(message: string): XiaoyueEmotion {
+// 基于聊天进度的表情渐变
+function getProgressEmotion(infoCount: number): XiaoyueEmotion {
+  if (infoCount >= 12) return "familiar"; // 很熟悉了
+  if (infoCount >= 8) return "warm"; // 渐渐熟悉
+  if (infoCount >= 4) return "happy"; // 开始热络
+  return "neutral"; // 刚开始
+}
+
+function detectEmotion(message: string, infoCount: number = 0): XiaoyueEmotion {
   const lowerMsg = message.toLowerCase();
+  // 基于消息内容检测
   if (lowerMsg.includes("太棒了") || lowerMsg.includes("很高兴") || lowerMsg.includes("欢迎") || lowerMsg.includes("开心")) return "happy";
   if (lowerMsg.includes("嗯") || lowerMsg.includes("让我想想") || lowerMsg.includes("那么") || lowerMsg.includes("?") || lowerMsg.includes("？")) return "thinking";
   if (lowerMsg.includes("哇") || lowerMsg.includes("厉害") || lowerMsg.includes("有趣") || lowerMsg.includes("！")) return "excited";
   if (lowerMsg.includes("嘻") || lowerMsg.includes("哈哈") || lowerMsg.includes("~")) return "wink";
-  return "neutral";
+  // 基于聊天进度的默认表情
+  return getProgressEmotion(infoCount);
 }
 
 const emotionEmojis: Record<XiaoyueEmotion, string> = {
@@ -66,8 +76,119 @@ const emotionEmojis: Record<XiaoyueEmotion, string> = {
   thinking: "🤔",
   excited: "🤩",
   wink: "😉",
-  neutral: "🙂"
+  neutral: "🙂",
+  warm: "🥰",
+  familiar: "💜"
 };
+
+// 成就系统配置
+interface Achievement {
+  id: string;
+  title: string;
+  icon: string;
+  condition: (info: CollectedInfo) => boolean;
+}
+
+const achievements: Achievement[] = [
+  { id: "pet_lover", title: "铲屎官认证", icon: "🐾", condition: (info) => info.hasPets === true },
+  { id: "foodie", title: "美食家", icon: "🍜", condition: (info) => !!info.cuisinePreference && info.cuisinePreference.length > 0 },
+  { id: "social_butterfly", title: "社交达人", icon: "🦋", condition: (info) => !!info.interestsTop && info.interestsTop.length >= 3 },
+  { id: "local_expert", title: "本地通", icon: "📍", condition: (info) => !!info.currentCity && !!info.hometown },
+  { id: "multi_lingual", title: "语言达人", icon: "🗣️", condition: (info) => !!info.languagesComfort && info.languagesComfort.length >= 2 },
+  { id: "open_book", title: "坦诚相待", icon: "📖", condition: (info) => !!info.relationshipStatus },
+];
+
+// 成就弹出组件
+function AchievementToast({ achievement, onComplete }: { achievement: Achievement; onComplete: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onComplete, 2500);
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 50, scale: 0.8 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -20, scale: 0.9 }}
+      className="fixed bottom-32 left-1/2 -translate-x-1/2 z-50"
+    >
+      <div className="bg-gradient-to-r from-primary/90 to-purple-600/90 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <motion.span 
+          className="text-2xl"
+          animate={{ rotate: [0, -10, 10, -10, 0], scale: [1, 1.2, 1] }}
+          transition={{ duration: 0.5 }}
+        >
+          {achievement.icon}
+        </motion.span>
+        <div>
+          <p className="text-xs opacity-80">成就解锁</p>
+          <p className="font-medium">{achievement.title}</p>
+        </div>
+        <motion.div
+          animate={{ scale: [1, 1.3, 1] }}
+          transition={{ duration: 0.3, repeat: 2 }}
+        >
+          <Sparkles className="w-4 h-4" />
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+}
+
+// 实时标签云组件
+function TagCloud({ info }: { info: CollectedInfo }) {
+  const tags: { text: string; type: "primary" | "secondary" | "accent" }[] = [];
+  
+  if (info.currentCity) tags.push({ text: info.currentCity, type: "primary" });
+  if (info.gender) tags.push({ text: info.gender, type: "secondary" });
+  if (info.birthYear) tags.push({ text: `${info.birthYear}后`, type: "secondary" });
+  if (info.occupationDescription) tags.push({ text: info.occupationDescription, type: "accent" });
+  if (info.interestsTop) {
+    info.interestsTop.slice(0, 2).forEach(i => tags.push({ text: i, type: "primary" }));
+  }
+  if (info.hasPets) tags.push({ text: "有毛孩子", type: "accent" });
+  
+  if (tags.length === 0) return null;
+  
+  return (
+    <motion.div 
+      className="flex flex-wrap gap-1.5 justify-center py-2"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.3 }}
+    >
+      <AnimatePresence mode="popLayout">
+        {tags.slice(0, 6).map((tag, i) => (
+          <motion.span
+            key={tag.text}
+            initial={{ opacity: 0, scale: 0, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0 }}
+            transition={{ delay: i * 0.1, type: "spring", stiffness: 300 }}
+            className={`text-xs px-2 py-1 rounded-full ${
+              tag.type === "primary" 
+                ? "bg-primary/15 text-primary" 
+                : tag.type === "accent"
+                ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {tag.text}
+          </motion.span>
+        ))}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// 聊天氛围背景渐变（随进度变暖）
+function getWarmthGradient(infoCount: number): string {
+  // 从冷色调逐渐变暖
+  if (infoCount >= 15) return "from-pink-50/40 via-purple-50/30 to-background"; // 很熟悉
+  if (infoCount >= 10) return "from-purple-50/35 via-pink-50/25 to-background"; // 熟悉
+  if (infoCount >= 5) return "from-violet-50/30 via-purple-50/20 to-background"; // 渐熟
+  return "from-slate-50/20 via-gray-50/10 to-background"; // 初识
+}
 
 // 小悦头像组件
 function XiaoyueAvatar({ emotion, size = "md" }: { emotion: XiaoyueEmotion; size?: "sm" | "md" }) {
@@ -85,170 +206,6 @@ function XiaoyueAvatar({ emotion, size = "md" }: { emotion: XiaoyueEmotion; size
   );
 }
 
-// 渐进式进度环组件
-function ProgressRing({ progress, total, showStar }: { progress: number; total: number; showStar: boolean }) {
-  const percentage = Math.min((progress / total) * 100, 100);
-  const radius = 18;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
-
-  return (
-    <div className="relative w-12 h-12 flex items-center justify-center">
-      <svg className="w-12 h-12 transform -rotate-90">
-        <circle
-          cx="24"
-          cy="24"
-          r={radius}
-          stroke="currentColor"
-          strokeWidth="3"
-          fill="none"
-          className="text-muted/30"
-        />
-        <motion.circle
-          cx="24"
-          cy="24"
-          r={radius}
-          stroke="currentColor"
-          strokeWidth="3"
-          fill="none"
-          strokeLinecap="round"
-          className="text-primary"
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          style={{ strokeDasharray: circumference }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <AnimatePresence mode="wait">
-          {showStar ? (
-            <motion.div
-              key="star"
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              exit={{ scale: 0, rotate: 180 }}
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              <Sparkles className="w-4 h-4 text-primary" />
-            </motion.div>
-          ) : (
-            <motion.span 
-              key="count"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-xs font-medium text-primary"
-            >
-              {progress}
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-}
-
-// 个性卡片实时预览组件
-function ProfilePreviewCard({ info, isExpanded, onToggle }: { 
-  info: CollectedInfo; 
-  isExpanded: boolean;
-  onToggle: () => void;
-}) {
-  const hasInfo = Object.keys(info).some(k => info[k as keyof CollectedInfo] !== undefined);
-  if (!hasInfo) return null;
-
-  return (
-    <motion.div 
-      className="fixed bottom-24 right-4 z-50"
-      initial={{ opacity: 0, scale: 0.8, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-    >
-      <motion.button
-        onClick={onToggle}
-        className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shadow-lg"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        data-testid="button-toggle-preview"
-      >
-        <User className="w-5 h-5 text-primary" />
-      </motion.button>
-
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 10 }}
-            className="absolute bottom-14 right-0 w-56 bg-background border rounded-lg shadow-xl p-3 space-y-2"
-          >
-            <p className="text-xs font-medium text-muted-foreground mb-2">个人档案预览</p>
-            
-            {info.displayName && (
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-2"
-              >
-                <span className="text-xs text-muted-foreground">昵称:</span>
-                <span className="text-sm font-medium">{info.displayName}</span>
-              </motion.div>
-            )}
-            
-            {info.gender && (
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.05 }}
-                className="flex items-center gap-2"
-              >
-                <span className="text-xs text-muted-foreground">性别:</span>
-                <span className="text-sm">{info.gender}</span>
-              </motion.div>
-            )}
-            
-            {info.birthYear && (
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 }}
-                className="flex items-center gap-2"
-              >
-                <span className="text-xs text-muted-foreground">年龄段:</span>
-                <span className="text-sm">{info.birthYear}后</span>
-              </motion.div>
-            )}
-            
-            {info.currentCity && (
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.15 }}
-                className="flex items-center gap-2"
-              >
-                <MapPin className="w-3 h-3 text-muted-foreground" />
-                <span className="text-sm">{info.currentCity}</span>
-              </motion.div>
-            )}
-            
-            {info.interestsTop && info.interestsTop.length > 0 && (
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                className="flex flex-wrap gap-1 mt-1"
-              >
-                {info.interestsTop.slice(0, 3).map((interest, i) => (
-                  <span key={i} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                    {interest}
-                  </span>
-                ))}
-              </motion.div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
 
 // 快捷回复配置
 interface QuickReply {
@@ -1029,13 +986,14 @@ interface CollectedInfo {
   languagesComfort?: string[];
   cuisinePreference?: string[];
   favoriteRestaurant?: string;
+  favoriteRestaurantReason?: string;
   children?: string;
   educationLevel?: string;
   fieldOfStudy?: string;
+  lifeStage?: string;
+  ageMatchPreference?: string;
   ageDisplayPreference?: string;
 }
-
-const TOTAL_PROFILE_ITEMS = 23;
 
 // 可选兴趣标签 - 与InterestsTopicsPage对齐
 const interestOptions = [
@@ -1170,16 +1128,16 @@ export default function ChatRegistrationPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
-  // 新功能状态
-  const [showProgressStar, setShowProgressStar] = useState(false);
-  const [prevInfoCount, setPrevInfoCount] = useState(0);
-  const [profileExpanded, setProfileExpanded] = useState(false);
+  // 时间主题
   const timeTheme = useMemo(() => getTimeTheme(), []);
   const themeConfig = timeThemeConfig[timeTheme];
-  const starTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // 多选快捷回复状态
   const [selectedQuickReplies, setSelectedQuickReplies] = useState<Set<string>>(new Set());
+  
+  // 成就系统状态
+  const [unlockedAchievements, setUnlockedAchievements] = useState<Set<string>>(new Set());
+  const [currentAchievement, setCurrentAchievement] = useState<Achievement | null>(null);
   
   
   // 对话开始时间（用于计算completionSpeed）
@@ -1193,24 +1151,28 @@ export default function ChatRegistrationPage() {
     scrollToBottom();
   }, [messages]);
 
-  // 信息收集进度变化时显示星星动画
+  // 信息收集进度
   const infoCount = Object.keys(collectedInfo).filter(k => 
     collectedInfo[k as keyof CollectedInfo] !== undefined
   ).length;
   
+  // 动态背景渐变（随聊天进度变暖）
+  const warmthGradient = useMemo(() => getWarmthGradient(infoCount), [infoCount]);
+
+  // 成就检测
   useEffect(() => {
-    if (infoCount > prevInfoCount) {
-      // 清除之前的timeout
-      if (starTimeoutRef.current) {
-        clearTimeout(starTimeoutRef.current);
+    for (const achievement of achievements) {
+      if (!unlockedAchievements.has(achievement.id) && achievement.condition(collectedInfo)) {
+        setUnlockedAchievements(prev => {
+          const newSet = new Set(Array.from(prev));
+          newSet.add(achievement.id);
+          return newSet;
+        });
+        setCurrentAchievement(achievement);
+        break; // 一次只显示一个成就
       }
-      setShowProgressStar(true);
-      setPrevInfoCount(infoCount);
-      starTimeoutRef.current = setTimeout(() => {
-        setShowProgressStar(false);
-      }, 1500);
     }
-  }, [infoCount, prevInfoCount]);
+  }, [collectedInfo, unlockedAchievements]);
 
   // AbortController for opening message sequence
   const openingAbortRef = useRef<AbortController | null>(null);
@@ -1218,12 +1180,9 @@ export default function ChatRegistrationPage() {
   // Typing completion promise resolver for sequential message display
   const typingCompleteResolverRef = useRef<(() => void) | null>(null);
   
-  // 清理timeout在组件卸载时
+  // 清理资源在组件卸载时
   useEffect(() => {
     return () => {
-      if (starTimeoutRef.current) {
-        clearTimeout(starTimeoutRef.current);
-      }
       // 取消开场白序列
       openingAbortRef.current?.abort();
     };
@@ -1627,7 +1586,18 @@ export default function ChatRegistrationPage() {
   const TimeIcon = themeConfig.icon;
 
   return (
-    <div className={`min-h-screen bg-gradient-to-b ${themeConfig.gradient} flex flex-col`}>
+    <div className={`min-h-screen flex flex-col relative overflow-hidden`}>
+      {/* 动态背景渐变层 - 随聊天进度变暖 */}
+      <motion.div 
+        className={`absolute inset-0 bg-gradient-to-b ${warmthGradient} pointer-events-none z-0`}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1.5, ease: "easeOut" }}
+        key={warmthGradient}
+      />
+      {/* 时间主题背景层 */}
+      <div className={`absolute inset-0 bg-gradient-to-b ${themeConfig.gradient} pointer-events-none z-0 opacity-50`} />
+      
+      <div className="relative z-10 flex flex-col min-h-screen">
       <MobileHeader title="和小悦聊聊" action={
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -1644,6 +1614,11 @@ export default function ChatRegistrationPage() {
           </Button>
         </div>
       } />
+      
+      {/* 实时标签云 */}
+      {infoCount >= 3 && !isComplete && (
+        <TagCloud info={collectedInfo} />
+      )}
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         <AnimatePresence>
@@ -1692,40 +1667,6 @@ export default function ChatRegistrationPage() {
 
         <div ref={messagesEndRef} />
       </div>
-
-      {/* 进度环和个性卡片预览 */}
-      <ProfilePreviewCard 
-        info={collectedInfo} 
-        isExpanded={profileExpanded}
-        onToggle={() => setProfileExpanded(!profileExpanded)}
-      />
-
-      {infoCount > 0 && (
-        <div className="px-4 py-2 bg-background/80 backdrop-blur-sm border-t">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <ProgressRing progress={infoCount} total={TOTAL_PROFILE_ITEMS} showStar={showProgressStar} />
-              <div className="flex flex-col">
-                <span className="text-xs font-medium">档案完善中</span>
-                <span className="text-xs text-muted-foreground">
-                  {infoCount}/{TOTAL_PROFILE_ITEMS} 项信息
-                </span>
-              </div>
-            </div>
-            {showProgressStar && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0 }}
-                className="flex items-center gap-1 text-primary"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span className="text-xs font-medium">+1</span>
-              </motion.div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* 快捷回复气泡 */}
       <AnimatePresence>
@@ -1824,6 +1765,17 @@ export default function ChatRegistrationPage() {
           </div>
         </div>
       )}
+      </div>
+      
+      {/* 成就弹窗 */}
+      <AnimatePresence>
+        {currentAchievement && (
+          <AchievementToast 
+            achievement={currentAchievement} 
+            onComplete={() => setCurrentAchievement(null)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

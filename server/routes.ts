@@ -483,6 +483,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
         registrationData.interestsTop = extractedInfo.interestsTop;
       }
       
+      // Map new fields from AI chat extraction
+      if (extractedInfo.primaryInterests && extractedInfo.primaryInterests.length > 0) {
+        registrationData.primaryInterests = extractedInfo.primaryInterests;
+      }
+      if (extractedInfo.intent && extractedInfo.intent.length > 0) {
+        registrationData.intent = extractedInfo.intent;
+      }
+      if (extractedInfo.lifeStage) {
+        registrationData.lifeStage = extractedInfo.lifeStage;
+      }
+      if (extractedInfo.ageMatchPreference) {
+        registrationData.ageMatchPreference = extractedInfo.ageMatchPreference;
+      }
+      if (extractedInfo.hasPets !== undefined) {
+        registrationData.hasPets = extractedInfo.hasPets;
+      }
+      if (extractedInfo.petTypes && extractedInfo.petTypes.length > 0) {
+        registrationData.petTypes = extractedInfo.petTypes;
+      }
+      if (extractedInfo.hasSiblings !== undefined) {
+        registrationData.hasSiblings = extractedInfo.hasSiblings;
+      }
+      if (extractedInfo.relationshipStatus) {
+        registrationData.relationshipStatus = extractedInfo.relationshipStatus;
+      }
+      if (extractedInfo.socialStyle) {
+        registrationData.socialStyle = extractedInfo.socialStyle;
+      }
+      if (extractedInfo.venueStylePreference) {
+        registrationData.venueStylePreference = extractedInfo.venueStylePreference;
+      }
+      if (extractedInfo.cuisinePreference && extractedInfo.cuisinePreference.length > 0) {
+        registrationData.cuisinePreference = extractedInfo.cuisinePreference;
+      }
+      if (extractedInfo.favoriteRestaurant) {
+        registrationData.favoriteRestaurant = extractedInfo.favoriteRestaurant;
+      }
+      if (extractedInfo.favoriteRestaurantReason) {
+        registrationData.favoriteRestaurantReason = extractedInfo.favoriteRestaurantReason;
+      }
+      if (extractedInfo.children) {
+        registrationData.children = extractedInfo.children;
+      }
+      if (extractedInfo.educationLevel) {
+        registrationData.educationLevel = extractedInfo.educationLevel;
+      }
+      if (extractedInfo.fieldOfStudy) {
+        registrationData.fieldOfStudy = extractedInfo.fieldOfStudy;
+      }
+      if (extractedInfo.topicAvoidances && extractedInfo.topicAvoidances.length > 0) {
+        registrationData.topicAvoidances = extractedInfo.topicAvoidances;
+      }
+      if (extractedInfo.languagesComfort && extractedInfo.languagesComfort.length > 0) {
+        registrationData.languagesComfort = extractedInfo.languagesComfort;
+      }
+      if (extractedInfo.hometown) {
+        registrationData.hometownRegionCity = extractedInfo.hometown;
+      }
+      if (extractedInfo.ageDisplayPreference) {
+        registrationData.ageDisplayPreference = extractedInfo.ageDisplayPreference;
+      }
+      if (extractedInfo.occupationDescription) {
+        registrationData.occupationDescription = extractedInfo.occupationDescription;
+      }
+      
       // Return collected info (actual user creation will happen through phone auth -> /api/user/register flow)
       res.json({
         success: true,
