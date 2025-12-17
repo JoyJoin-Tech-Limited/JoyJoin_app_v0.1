@@ -4,10 +4,10 @@ import { useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Send, Loader2, User, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond } from "lucide-react";
+import { Send, Loader2, User, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -1266,6 +1266,70 @@ function SocialProfileCard({ info }: { info: CollectedInfo }) {
   );
 }
 
+// localStorage key for conversation persistence
+const CHAT_STORAGE_KEY = 'joyjoin_chat_registration_state';
+
+interface SavedChatState {
+  messages: ChatMessage[];
+  conversationHistory: any[];
+  collectedInfo: CollectedInfo;
+  selectedMode: RegistrationMode;
+  savedAt: string;
+}
+
+// Helper to save chat state to localStorage
+function saveChatState(state: Omit<SavedChatState, 'savedAt'>) {
+  try {
+    const saveData: SavedChatState = {
+      ...state,
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(saveData));
+  } catch (e) {
+    console.warn('Failed to save chat state:', e);
+  }
+}
+
+// Helper to load saved chat state
+function loadSavedChatState(): SavedChatState | null {
+  try {
+    const saved = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (!saved) return null;
+    
+    const state = JSON.parse(saved) as SavedChatState;
+    
+    // Check if saved state is less than 24 hours old
+    const savedAt = new Date(state.savedAt);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - savedAt.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursDiff > 24) {
+      localStorage.removeItem(CHAT_STORAGE_KEY);
+      return null;
+    }
+    
+    // Restore Date objects in messages
+    state.messages = state.messages.map(m => ({
+      ...m,
+      timestamp: new Date(m.timestamp),
+    }));
+    
+    return state;
+  } catch (e) {
+    console.warn('Failed to load saved chat state:', e);
+    return null;
+  }
+}
+
+// Helper to clear saved chat state
+function clearSavedChatState() {
+  try {
+    localStorage.removeItem(CHAT_STORAGE_KEY);
+  } catch (e) {
+    console.warn('Failed to clear chat state:', e);
+  }
+}
+
 export default function ChatRegistrationPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -1277,6 +1341,10 @@ export default function ChatRegistrationPage() {
   const [isComplete, setIsComplete] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  // 断点续聊状态
+  const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [savedState, setSavedState] = useState<SavedChatState | null>(null);
   
   // 检查URL参数是否有预设模式（从其他页面跳转时使用）
   const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -1353,6 +1421,58 @@ export default function ChatRegistrationPage() {
       openingAbortRef.current?.abort();
     };
   }, []);
+  
+  // 检查是否有保存的对话状态（断点续聊）
+  useEffect(() => {
+    // 如果有预设模式（从其他页面跳转），不检查保存状态
+    if (presetMode) return;
+    
+    const saved = loadSavedChatState();
+    if (saved && saved.messages.length > 0) {
+      setSavedState(saved);
+      setShowResumePrompt(true);
+      setShowModeSelection(false); // 隐藏模式选择，显示续聊提示
+    }
+  }, [presetMode]);
+  
+  // 恢复保存的对话状态
+  const handleResumeChat = () => {
+    if (!savedState) return;
+    
+    setMessages(savedState.messages);
+    setConversationHistory(savedState.conversationHistory);
+    setCollectedInfo(savedState.collectedInfo);
+    setSelectedMode(savedState.selectedMode);
+    setShowResumePrompt(false);
+    setShowModeSelection(false);
+    
+    toast({
+      title: "对话已恢复",
+      description: "继续和小悦聊天吧",
+    });
+  };
+  
+  // 开始新对话（清除保存状态）
+  const handleStartFresh = () => {
+    clearSavedChatState();
+    setSavedState(null);
+    setShowResumePrompt(false);
+    setShowModeSelection(true);
+  };
+  
+  // 保存对话状态（每次消息更新时调用）
+  useEffect(() => {
+    // 只有当对话已开始且有消息时才保存
+    // 不在续聊提示显示时保存，避免覆盖
+    if (selectedMode && messages.length > 0 && !isComplete && !showResumePrompt) {
+      saveChatState({
+        messages,
+        conversationHistory,
+        collectedInfo,
+        selectedMode,
+      });
+    }
+  }, [messages, conversationHistory, collectedInfo, selectedMode, isComplete, showResumePrompt]);
   
   // 如果有预设模式（从URL参数），自动开始对话
   const hasStartedFromPreset = useRef(false);
@@ -1587,6 +1707,7 @@ export default function ChatRegistrationPage() {
                   }
                   if (data.isComplete) {
                     setIsComplete(true);
+                    clearSavedChatState(); // 完成后清除保存的对话状态
                   }
                 } else if (data.type === 'error') {
                   throw new Error(data.content || '请求失败');
@@ -1759,6 +1880,64 @@ export default function ChatRegistrationPage() {
   };
 
   const TimeIcon = themeConfig.icon;
+
+  // 显示断点续聊提示
+  if (showResumePrompt && savedState) {
+    const savedMessageCount = savedState.messages.length;
+    const savedInfoCount = Object.keys(savedState.collectedInfo).filter(k => 
+      savedState.collectedInfo[k as keyof CollectedInfo] !== undefined
+    ).length;
+    const savedTime = new Date(savedState.savedAt);
+    const timeAgo = Math.floor((new Date().getTime() - savedTime.getTime()) / (1000 * 60));
+    const timeAgoText = timeAgo < 60 
+      ? `${timeAgo}分钟前` 
+      : timeAgo < 1440 
+        ? `${Math.floor(timeAgo / 60)}小时前` 
+        : '昨天';
+
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-sm w-full"
+        >
+          <Card className="border shadow-sm">
+            <CardContent className="p-6 space-y-4">
+              <div className="text-center space-y-2">
+                <div className="w-12 h-12 rounded-full bg-muted mx-auto flex items-center justify-center">
+                  <RotateCcw className="w-6 h-6 text-primary" />
+                </div>
+                <h2 className="text-lg font-semibold">发现未完成的对话</h2>
+                <p className="text-sm text-muted-foreground">
+                  {timeAgoText}你和小悦聊了{savedMessageCount}条消息，已收集{savedInfoCount}项信息
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Button 
+                  className="w-full" 
+                  onClick={handleResumeChat}
+                  data-testid="button-resume-chat"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  继续聊天
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={handleStartFresh}
+                  data-testid="button-start-fresh"
+                >
+                  重新开始
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
 
   // 显示模式选择界面
   if (showModeSelection) {
