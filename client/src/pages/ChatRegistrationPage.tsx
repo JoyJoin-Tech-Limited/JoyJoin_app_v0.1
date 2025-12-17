@@ -17,6 +17,12 @@ import EvolvingAvatar, { calculateClarityLevel } from "@/components/EvolvingAvat
 import type { User as UserType } from "@shared/schema";
 import { INTERESTS_OPTIONS } from "@/data/interestsTopicsData";
 import { INDUSTRIES, WORK_MODES } from "@shared/occupations";
+import { 
+  LANGUAGES_COMFORT_OPTIONS, 
+  RELATIONSHIP_STATUS_OPTIONS, 
+  EDUCATION_LEVEL_OPTIONS, 
+  CHILDREN_OPTIONS 
+} from "@shared/constants";
 
 // 注册模式配置
 type RegistrationMode = "express" | "standard" | "deep" | "all_in_one" | "enrichment";
@@ -437,17 +443,59 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 95 // 昵称需要用户输入，不提供快捷选项
   },
   {
-    keywords: ["想要", "期待", "目的", "意图", "来这里", "JoyJoin", "拓展人脉", "交朋友", "想来"],
+    keywords: ["想要", "期待", "目的", "意图", "来这里", "JoyJoin", "拓展人脉", "交朋友", "想来", "为什么来", "什么目的"],
     options: [
       { text: "交朋友", icon: Heart },
       { text: "拓展人脉", icon: Briefcase },
-      { text: "深度讨论", icon: Book },
+      { text: "聊天交流", icon: Book },
       { text: "吃喝玩乐", icon: Coffee },
-      { text: "浪漫邂逅", icon: Heart },
+      { text: "脱单恋爱", icon: Heart },
       { text: "随缘都可以", icon: Sparkles }
     ],
     multiSelect: true,
-    priority: 92  // 社交意图最高优先级
+    priority: 92
+  },
+  {
+    keywords: ["语言", "方言", "会说", "普通话", "粤语", "英语", "母语", "口音"],
+    options: LANGUAGES_COMFORT_OPTIONS.slice(0, 12).map(lang => ({ text: lang, icon: Book })),
+    multiSelect: true,
+    priority: 78
+  },
+  {
+    keywords: ["不聊", "避免", "不太想聊", "敏感", "尴尬", "话题"],
+    options: [
+      { text: "政治时事", icon: Sparkles },
+      { text: "催婚催恋", icon: Heart },
+      { text: "职场八卦", icon: Briefcase },
+      { text: "金钱财务", icon: Briefcase },
+      { text: "都OK没禁忌", icon: Sparkles }
+    ],
+    multiSelect: true,
+    priority: 76
+  },
+  {
+    keywords: ["海外", "留学", "国外", "出国", "留过学", "在哪读的"],
+    options: [
+      { text: "北美", icon: MapPin },
+      { text: "欧洲", icon: MapPin },
+      { text: "英国", icon: MapPin },
+      { text: "澳洲/新西兰", icon: MapPin },
+      { text: "东亚（日韩）", icon: MapPin },
+      { text: "东南亚", icon: MapPin },
+      { text: "没有海外经历", icon: MapPin }
+    ],
+    multiSelect: true,
+    priority: 74
+  },
+  {
+    keywords: ["学历", "读到", "什么学历", "毕业", "读书", "上学"],
+    options: EDUCATION_LEVEL_OPTIONS.map(level => ({ text: level, icon: Book })),
+    priority: 73
+  },
+  {
+    keywords: ["孩子", "小孩", "娃", "宝宝", "生娃"],
+    options: CHILDREN_OPTIONS.map(opt => ({ text: opt, icon: Heart })),
+    priority: 72
   },
   {
     keywords: ["经常去", "到处探索", "深圳玩", "香港工作", "两边跑", "常跑", "常去"],
@@ -668,21 +716,19 @@ const quickReplyConfigs: QuickReplyConfig[] = [
   {
     keywords: ["宠物", "毛孩子", "猫", "狗", "养"],
     options: [
-      { text: "有猫咪🐱" },
-      { text: "有狗狗🐕" },
-      { text: "都有！" },
-      { text: "没有养" }
+      { text: "猫咪", icon: Heart },
+      { text: "狗狗", icon: Heart },
+      { text: "兔子", icon: Heart },
+      { text: "仓鼠/小宠", icon: Heart },
+      { text: "猫狗都有", icon: Heart },
+      { text: "没有养", icon: Sparkles }
     ],
+    multiSelect: true,
     priority: 70
   },
   {
-    keywords: ["感情", "单身", "恋爱", "对象", "另一半"],
-    options: [
-      { text: "单身" },
-      { text: "恋爱中" },
-      { text: "已婚" },
-      { text: "保密" }
-    ],
+    keywords: ["感情", "单身", "恋爱", "对象", "另一半", "婚姻"],
+    options: RELATIONSHIP_STATUS_OPTIONS.map(status => ({ text: status, icon: Heart })),
     priority: 70
   },
   {
