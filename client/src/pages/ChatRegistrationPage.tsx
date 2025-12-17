@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle } from "lucide-react";
+import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -740,13 +740,12 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 68
   },
   {
-    keywords: ["确认", "对吗", "没问题", "有要改"],
+    keywords: ["确认", "对吗", "没问题", "对不对", "有问题吗"],
     options: [
-      { text: "没问题！" },
-      { text: "对的~" },
-      { text: "需要改一下" }
+      { text: "确认无误", icon: Check },
+      { text: "有问题", icon: AlertCircle }
     ],
-    priority: 50
+    priority: 92
   }
 ];
 
