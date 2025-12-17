@@ -1517,6 +1517,7 @@ export default function ChatRegistrationPage() {
   }, [messages]);
   const [collectedInfo, setCollectedInfo] = useState<CollectedInfo>({});
   const [isComplete, setIsComplete] = useState(false);
+  const [infoConfirmed, setInfoConfirmed] = useState(false); // 用户确认信息无误
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
@@ -2039,18 +2040,28 @@ export default function ChatRegistrationPage() {
 
   // 检测快捷回复选项
   // 只有当不在打字、不在逐行显示、且消息有内容时才检测
+  // 特殊情况：isComplete但未确认时仍需显示确认选项
   const quickReplyResult = useMemo(() => {
-    if (isTyping || isComplete || isSequentialDisplaying || messages.length === 0) return { options: [], multiSelect: false };
+    if (isTyping || isSequentialDisplaying || messages.length === 0) return { options: [], multiSelect: false };
+    // 已确认后不再显示快捷选项
+    if (isComplete && infoConfirmed) return { options: [], multiSelect: false };
     const lastAssistantMessage = [...messages].reverse().find(m => m.role === "assistant");
     // 只有当消息有实际内容时才显示快捷选项
     if (!lastAssistantMessage || !lastAssistantMessage.content.trim()) return { options: [], multiSelect: false };
     return detectQuickReplies(lastAssistantMessage.content);
-  }, [messages, isTyping, isComplete, isSequentialDisplaying]);
+  }, [messages, isTyping, isComplete, infoConfirmed, isSequentialDisplaying]);
 
   // 当问题变化时清空已选
   useEffect(() => {
     setSelectedQuickReplies(new Set());
   }, [quickReplyResult.options]);
+
+  // 性格测试介绍消息（Nick Wilde风格）
+  const personalityTestIntro = `稳了。基础信息到手。
+
+接下来是性格测试——12道题，2分钟搞定。
+
+这玩意能测出你的社交原型，帮我把你配到chemistry对的桌子上。值得花这两分钟。`;
 
   // 快捷回复点击处理
   const handleQuickReply = (text: string) => {
@@ -2067,6 +2078,34 @@ export default function ChatRegistrationPage() {
         }
         return newSet;
       });
+      return;
+    }
+    
+    // 特殊处理：用户确认信息无误
+    if (text === "确认无误" && isComplete && !infoConfirmed) {
+      // 添加用户确认消息
+      setMessages(prev => [...prev, {
+        id: `msg-${Date.now()}`,
+        role: "user",
+        content: text,
+        timestamp: new Date()
+      }]);
+      
+      // 添加小悦的性格测试介绍（延迟显示以模拟思考）
+      setTimeout(() => {
+        const introMsgId = `msg-intro-${Date.now()}`;
+        setMessages(prev => [...prev, {
+          id: introMsgId,
+          role: "assistant",
+          content: personalityTestIntro,
+          timestamp: new Date()
+        }]);
+        // 启用逐行显示
+        setIsSequentialDisplaying(true);
+        setSequentialDisplayMessageId(introMsgId);
+        // 确认完成后设置状态
+        setInfoConfirmed(true);
+      }, 500);
       return;
     }
     
@@ -2329,7 +2368,7 @@ export default function ChatRegistrationPage() {
         )}
       </AnimatePresence>
 
-      {isComplete ? (
+      {isComplete && infoConfirmed ? (
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -2346,9 +2385,6 @@ export default function ChatRegistrationPage() {
               <span>基础信息已收集完成</span>
               <Sparkles className="w-4 h-4 text-primary" />
             </motion.div>
-            <p className="text-xs text-muted-foreground">
-              接下来做个小测试，帮你匹配更合拍的局友
-            </p>
           </div>
           <Button 
             className="w-full" 
@@ -2364,6 +2400,12 @@ export default function ChatRegistrationPage() {
             开始性格测试
           </Button>
         </motion.div>
+      ) : isComplete && !infoConfirmed ? (
+        <div className="p-4 border-t bg-background">
+          <p className="text-xs text-center text-muted-foreground">
+            请确认以上信息是否正确
+          </p>
+        </div>
       ) : (
         <div className="p-4 border-t bg-background">
           <div className="flex gap-2">
