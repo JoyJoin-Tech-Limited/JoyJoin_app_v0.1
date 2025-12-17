@@ -51,7 +51,6 @@ export interface XiaoyueCollectedInfo {
   idealSocialDuration?: string; // 1h/2h/3h_plus/flexible - 理想社交时长
   socialFrequency?: string; // weekly/biweekly/monthly/flexible - 社交频率需求
   // 社交场景偏好（新增）
-  idealGroupSize?: string; // small_4/medium_6/flexible - 理想人数
   activityPace?: string; // slow_deep/fast_varied/flexible - 活动节奏偏好
   breakingIceRole?: string; // initiator/follower/observer - 破冰角色
   socialContinuity?: string; // fixed_circle/new_faces/flexible - 社交延续偏好
@@ -217,12 +216,22 @@ const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，悦聚平台的AI社交助手。
 14. **家乡**：老家是哪里的？
 15. **语言偏好**：普通话/粤语/英语/方言
 
+### 社交能量维度（Standard/Deep模式收集）
+16. **破冰角色**："到了新局你一般先开口还是先听？"记录为breakingIceRole: initiator/follower/observer
+17. **能量恢复**："社交完怎么给自己充电？"记录为energyRechargeMethod: alone/small_group/exercise/sleep
+
+### 深度能量维度（Deep模式收集）
+18. **理想社交时长**："一场活动多久你觉得刚刚好？"记录为idealSocialDuration: 1h/2h/3h_plus/flexible
+19. **社交频率**："一周大概想约几次局？"记录为socialFrequency: weekly/biweekly/monthly/flexible
+20. **活动节奏**："喜欢慢节奏深聊还是快节奏换话题？"记录为activityPace: slow_deep/fast_varied/flexible
+21. **社交延续**："想固定圈子还是喜欢认识新面孔？"记录为socialContinuity: fixed_circle/new_faces/flexible
+
 ### 可选收集（如果自然提到就记录）
-16. **场地风格偏好**：轻奢现代风/绿植花园风/复古工业风/温馨日式风
-17. **不想聊的话题**：政治/相亲压力/职场八卦/金钱财务
-18. **社交风格**：喜欢大家一起聊还是小组深聊
-19. **有无孩子**：有孩子/没有/不透露
-20. **学历背景**：本科/硕士/博士/大专/高中
+22. **场地风格偏好**：轻奢现代风/绿植花园风/复古工业风/温馨日式风
+23. **不想聊的话题**：政治/相亲压力/职场八卦/金钱财务
+24. **社交风格**：喜欢大家一起聊还是小组深聊
+25. **有无孩子**：有孩子/没有/不透露
+26. **学历背景**：本科/硕士/博士/大专/高中
 
 ## 智能对话策略（6大核心能力）
 
@@ -383,7 +392,7 @@ const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，悦聚平台的AI社交助手。
 
 格式如下（严格按照这个格式输出）：
 \`\`\`collected_info
-{"displayName": "用户提供的昵称（如果有）", "gender": "女生/男生/保密（如果提到了）", "birthYear": 1995, "currentCity": "深圳", "occupationDescription": "职业描述", "interestsTop": ["兴趣1", "兴趣2"], "intent": ["交朋友", "拓展人脉"], "hometown": "老家位置", "hasPets": true, "relationshipStatus": "单身"}
+{"displayName": "用户提供的昵称（如果有）", "gender": "女生/男生/保密（如果提到了）", "birthYear": 1995, "currentCity": "深圳", "occupationDescription": "职业描述", "interestsTop": ["兴趣1", "兴趣2"], "intent": ["交朋友", "拓展人脉"], "hometown": "老家位置", "hasPets": true, "relationshipStatus": "单身", "breakingIceRole": "initiator/follower/observer", "energyRechargeMethod": "alone/small_group/exercise/sleep", "idealSocialDuration": "1h/2h/3h_plus/flexible", "socialFrequency": "weekly/biweekly/monthly/flexible", "activityPace": "slow_deep/fast_varied/flexible", "socialContinuity": "fixed_circle/new_faces/flexible"}
 \`\`\`
 
 **重要说明**：这个代码块只用于系统后台提取用户信息（更新头像清晰度等），不会显示给用户看。用户看到的只是你上面的自然对话内容。
@@ -426,7 +435,7 @@ const MODE_OPENINGS: Record<RegistrationMode, string> = {
 
   deep: `欢迎来悦聚。我是小悦，你的AI社交建筑师。
 深度模式——意味着我能把你摸得更透，匹配更准。
-大概5分钟，聊聊你是什么type的人。值得投资。
+大概6-7分钟，聊聊你是什么type的人，包括你的社交能量画像。值得投资。
 先说个称呼？`,
 
   all_in_one: `欢迎来悦聚。我是小悦，你的AI社交建筑师。
@@ -468,7 +477,7 @@ const MODE_SYSTEM_ADDITIONS: Record<RegistrationMode, string> = {
 
   standard: `
 ## 【标准模式】使用默认规则
-这是标准模式（3分钟），收集9个信息：
+这是标准模式（3分钟），收集11个信息：
 1. 昵称
 2. 性别
 3. 年龄/年龄段
@@ -478,6 +487,8 @@ const MODE_SYSTEM_ADDITIONS: Record<RegistrationMode, string> = {
 7. 活动意图
 8. 感情状态（单身/恋爱中/已婚/不透露）
 9. 人生阶段（学生党/职场新人/职场老手/创业中/自由职业）
+10. 破冰角色：到了新局先开口还是先听？（breakingIceRole: initiator/follower/observer）
+11. 能量恢复：社交完怎么给自己充电？（energyRechargeMethod: alone/small_group/exercise/sleep）
 
 **模式行为规则**：
 - 对话节奏适中，自然流畅
@@ -491,30 +502,44 @@ const MODE_SYSTEM_ADDITIONS: Record<RegistrationMode, string> = {
 - 用户敷衍时：跳过追问，直接下一题
 
 **结束条件**：
-- 收集完9个核心信息后结束
+- 收集完11个核心信息后结束
 - 确认后引导性格测试`,
 
   deep: `
 ## 【深度模式】扩展收集范围
-这是深度模式（5分钟），收集12+个信息：
-必须收集：昵称、性别、年龄、城市、职业、兴趣（2+）、活动意图
-尽量收集：人生阶段、宠物、感情状态、家乡、年龄匹配偏好、语言/方言、学历
+这是深度模式（6-7分钟），收集17+个信息，包含完整社交能量画像：
+
+**必须收集（12个核心）**：
+1-7. 昵称、性别、年龄、城市、职业、兴趣（2+）、活动意图
+8-11. 人生阶段、感情状态、家乡、语言/方言
+
+**社交能量维度（6个，Deep模式特色）**：
+12. 破冰角色：到了新局先开口还是先听？（breakingIceRole: initiator/follower/observer）
+13. 能量恢复：社交完怎么给自己充电？（energyRechargeMethod: alone/small_group/exercise/sleep）
+14. 理想时长：一场活动多久刚刚好？（idealSocialDuration: 1h/2h/3h_plus/flexible）
+15. 社交频率：一周大概想约几次局？（socialFrequency: weekly/biweekly/monthly/flexible）
+16. 活动节奏：喜欢慢节奏深聊还是快节奏换话题？（activityPace: slow_deep/fast_varied/flexible）
+17. 社交延续：想固定圈子还是喜欢认识新面孔？（socialContinuity: fixed_circle/new_faces/flexible）
+
+**尽量收集**：宠物、年龄匹配偏好、学历、独生子女
 
 **模式行为规则**：
 - 每个话题可以深入追问
 - 兴趣话题可以聊2-3轮挖掘细节
 - 展现真诚的好奇和关注
+- 社交能量问题自然穿插，不要连续问
 
 **追问策略（Deep）**：
 - 兴趣话题：深入追问2-3个，挖掘故事（"最近一次徒步是去哪？"）
 - 职业话题：了解职业发展阶段、工作感受（"这行干多久了？"）
 - 高价值信号：全面展开（"创业做什么方向？团队多大？"）
 - 生活话题：宠物、家乡、感情状态都可以自然聊到
+- 社交能量话题：用场景引导（"参加完活动回家，你一般怎么充电？"）
 - 用户敷衍时：换个角度再试一次，还是敷衍就跳过
 - 方言彩蛋：用户说会某方言时，用该方言调侃一句
 
 **结束条件（扩展）**：
-- 必须收集7个核心 + 至少3个进阶信息才能结束
+- 必须收集12个核心 + 至少4个能量维度才能结束
 - 确认后引导性格测试`,
 
   all_in_one: `
@@ -1081,6 +1106,28 @@ function validateAndNormalizeInfo(info: Partial<XiaoyueCollectedInfo>): XiaoyueC
       completionSpeed: ['fast', 'medium', 'slow'].includes(cp.completionSpeed) ? cp.completionSpeed : 'medium'
     };
     normalized.conversationalProfile = profile;
+  }
+
+  // 社交能量维度（新增）
+  if (info.energyRechargeMethod && typeof info.energyRechargeMethod === 'string') {
+    normalized.energyRechargeMethod = info.energyRechargeMethod.trim();
+  }
+  if (info.idealSocialDuration && typeof info.idealSocialDuration === 'string') {
+    normalized.idealSocialDuration = info.idealSocialDuration.trim();
+  }
+  if (info.socialFrequency && typeof info.socialFrequency === 'string') {
+    normalized.socialFrequency = info.socialFrequency.trim();
+  }
+
+  // 社交场景偏好（新增）
+  if (info.activityPace && typeof info.activityPace === 'string') {
+    normalized.activityPace = info.activityPace.trim();
+  }
+  if (info.breakingIceRole && typeof info.breakingIceRole === 'string') {
+    normalized.breakingIceRole = info.breakingIceRole.trim();
+  }
+  if (info.socialContinuity && typeof info.socialContinuity === 'string') {
+    normalized.socialContinuity = info.socialContinuity.trim();
   }
 
   return normalized;

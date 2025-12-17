@@ -117,7 +117,7 @@ const registrationModes: ModeConfig[] = [
     time: "3分钟",
     stars: 4,
     maxStars: 5,
-    description: "推荐起点，收集更全面（+意图、感情、阶段）",
+    description: "推荐起点（+意图、感情、破冰角色、能量恢复）",
     gradient: "from-purple-500 to-pink-500",
     recommended: true
   },
@@ -126,10 +126,10 @@ const registrationModes: ModeConfig[] = [
     icon: Diamond,
     title: "深度了解",
     subtitle: "起步就更懂你",
-    time: "5分钟",
-    stars: 4,
+    time: "6-7分钟",
+    stars: 5,
     maxStars: 5,
-    description: "详细画像，匹配更精准",
+    description: "详细画像+社交能量，匹配最精准",
     gradient: "from-blue-500 to-cyan-500"
   }
 ];
