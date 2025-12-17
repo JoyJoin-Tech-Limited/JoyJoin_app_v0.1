@@ -1395,6 +1395,14 @@ export default function ChatRegistrationPage() {
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [conversationHistory, setConversationHistory] = useState<any[]>([]);
+  
+  // Debug: Log messages state changes
+  useEffect(() => {
+    console.log('[DEBUG] Messages state changed:', messages.length, 'messages');
+    messages.forEach((m, i) => {
+      console.log(`[DEBUG] Message ${i}: role=${m.role}, content="${m.content?.substring(0, 30)}...", streamId=${m.streamId || 'none'}`);
+    });
+  }, [messages]);
   const [collectedInfo, setCollectedInfo] = useState<CollectedInfo>({});
   const [isComplete, setIsComplete] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -1705,16 +1713,21 @@ export default function ChatRegistrationPage() {
     }
     
     // 添加一个带唯一ID的空消息
-    setMessages(prev => [...prev, {
-      id: streamMessageId,
-      role: "assistant",
-      content: '',
-      timestamp: new Date(),
-      isTypingAnimation: false,
-      streamId: streamMessageId
-    }]);
+    console.log('[STREAM DEBUG] Creating empty message with streamId:', streamMessageId);
+    setMessages(prev => {
+      console.log('[STREAM DEBUG] Current messages count:', prev.length);
+      return [...prev, {
+        id: streamMessageId,
+        role: "assistant",
+        content: '',
+        timestamp: new Date(),
+        isTypingAnimation: false,
+        streamId: streamMessageId
+      }];
+    });
 
     try {
+      console.log('[STREAM DEBUG] Starting fetch with conversationHistory length:', conversationHistory?.length);
       const res = await fetch("/api/registration/chat/message/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1722,10 +1735,12 @@ export default function ChatRegistrationPage() {
         credentials: "include"
       });
 
+      console.log('[STREAM DEBUG] Fetch response received, status:', res.status);
       if (!res.ok) throw new Error('Stream request failed');
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error('No reader available');
+      console.log('[STREAM DEBUG] Got reader, starting to read stream');
 
       const decoder = new TextDecoder();
       let buffer = '';
@@ -1748,45 +1763,41 @@ export default function ChatRegistrationPage() {
                 
                 if (data.type === 'content' && data.content) {
                   streamedContent += data.content;
-                  // 实时过滤代码块（包括不完整的代码块）
+                  // 实时过滤代码块
                   let cleanContent = streamedContent
                     .replace(/```collected_info[\s\S]*?```/g, '')
                     .replace(/```registration_complete[\s\S]*?```/g, '')
-                    .replace(/```collected_info[\s\S]*$/g, '') // 过滤不完整的代码块
+                    .replace(/```collected_info[\s\S]*$/g, '')
                     .replace(/```registration_complete[\s\S]*$/g, '')
-                    .replace(/```[a-z_]*\s*$/g, '') // 过滤刚开始的代码块标记
+                    .replace(/```[a-z_]*\s*$/g, '')
                     .trim();
                   
-                  // 只有当cleanContent有内容时才更新lastValidContent
                   if (cleanContent) {
                     lastValidContent = cleanContent;
-                  }
-                  
-                  // 根据streamId找到并更新对应的消息
-                  // 使用lastValidContent确保不会显示空内容
-                  if (lastValidContent) {
-                    setMessages(prev => prev.map(m => {
-                      if (m.streamId === streamMessageId) {
-                        return { ...m, content: lastValidContent };
-                      }
-                      return m;
-                    }));
+                    // 实时更新消息内容（每次有新内容就更新）
+                    const contentToUse = cleanContent;
+                    setMessages(prev => prev.map(m => 
+                      m.streamId === streamMessageId 
+                        ? { ...m, content: contentToUse } 
+                        : m
+                    ));
                   }
                 } else if (data.type === 'done') {
-                  // 保存原始conversationHistory供后端使用（保留代码块以便AI继续对话）
+                  console.log('[STREAM DEBUG] Done event received');
+                  // 保存conversationHistory
                   if (data.conversationHistory) {
                     finalConversationHistory = data.conversationHistory;
                     setConversationHistory(data.conversationHistory);
                   }
-                  // 使用后端返回的cleanMessage更新UI显示（始终使用后端清理后的消息）
-                  if (data.cleanMessage) {
-                    lastValidContent = data.cleanMessage;
-                    setMessages(prev => prev.map(m => {
-                      if (m.streamId === streamMessageId) {
-                        return { ...m, content: data.cleanMessage };
-                      }
-                      return m;
-                    }));
+                  // 使用后端返回的cleanMessage作为最终内容
+                  const finalContent = data.cleanMessage || lastValidContent;
+                  if (finalContent) {
+                    lastValidContent = finalContent;
+                    setMessages(prev => prev.map(m => 
+                      m.streamId === streamMessageId 
+                        ? { ...m, content: finalContent } 
+                        : m
+                    ));
                   }
                   if (data.collectedInfo) {
                     setCollectedInfo(prev => ({ ...prev, ...data.collectedInfo }));
@@ -1799,13 +1810,14 @@ export default function ChatRegistrationPage() {
                   throw new Error(data.content || '请求失败');
                 }
               } catch (parseError) {
-                // Skip invalid JSON lines
+                console.log('[STREAM DEBUG] Parse error for line:', line, parseError);
               }
             }
           }
         }
       }
       
+      console.log('[STREAM DEBUG] Stream ended. lastValidContent:', lastValidContent?.substring(0, 50));
       // 流结束后，如果消息内容仍为空，从conversationHistory中提取AI的最新回复
       if (!lastValidContent && finalConversationHistory && finalConversationHistory.length > 0) {
         // 找到最后一条assistant消息
@@ -1847,7 +1859,9 @@ export default function ChatRegistrationPage() {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (message: string) => {
+      console.log('[MUTATION DEBUG] Starting sendStreamingMessage for:', message);
       await sendStreamingMessage(message);
+      console.log('[MUTATION DEBUG] Completed sendStreamingMessage');
       return { success: true };
     }
   });
