@@ -20,7 +20,7 @@ export interface TopicGroup {
 
 export const INTERESTS_OPTIONS: InterestOption[] = [
   { id: "food_dining", label: "美食探店", heat: 82 },
-  { id: "travel", label: "说走就走", heat: 75 },
+  { id: "travel", label: "去旅游", heat: 75 },
   { id: "city_walk", label: "City Walk", heat: 68 },
   { id: "drinks_bar", label: "喝酒小酌", heat: 62 },
   { id: "music_live", label: "音乐Live", heat: 58 },

@@ -443,7 +443,7 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 95 // 昵称需要用户输入，不提供快捷选项
   },
   {
-    keywords: ["想要", "期待", "目的", "意图", "来这里", "JoyJoin", "拓展人脉", "交朋友", "想来", "为什么来", "什么目的"],
+    keywords: ["想要", "期待", "目的", "意图", "来这里", "悦聚", "拓展人脉", "交朋友", "想来", "为什么来", "什么目的"],
     options: [
       { text: "交朋友", icon: Heart },
       { text: "拓展人脉", icon: Briefcase },
@@ -829,7 +829,7 @@ const freeInputKeywords = ["称呼", "昵称", "名字", "怎么叫", "叫什么
 const introductionPatterns = [
   { required: ["欢迎", "流程"], any: [] },
   { required: ["你好", "小悦"], any: ["介绍", "开始", "帮你"] },
-  { required: ["JoyJoin"], any: ["欢迎", "流程", "步骤", "开始"] }
+  { required: ["悦聚"], any: ["欢迎", "流程", "步骤", "开始"] }
 ];
 
 function isIntroductionMessage(message: string): boolean {
@@ -844,8 +844,19 @@ function isIntroductionMessage(message: string): boolean {
   return false;
 }
 
+// 需要优先使用预定义选项的高优先级字段（不从AI文本提取）
+const predefinedOptionKeywords = [
+  "想要", "期待", "目的", "意图", "拓展人脉", "交朋友", "为什么来", // intent
+  "性别", "男生", "女生", "小哥哥", "小姐姐", // gender
+  "语言", "方言", "普通话", "粤语", // language
+  "不聊", "避免", "敏感话题", // topic avoidances
+  "孩子", "小孩", "娃", // children
+  "学历", "毕业", // education
+  "感情", "单身", "恋爱", "已婚" // relationship
+];
+
 // 检测最后一条消息是否匹配快捷回复
-// 改进：优先检查是否需要自由输入，然后从消息中智能提取选项，关键词匹配作为后备
+// 改进：对于有预定义选项的字段，优先使用预定义选项而不是从AI文本提取
 function detectQuickReplies(lastMessage: string): QuickReplyResult {
   // 第负一步：检查是否是开场白/介绍类消息（不显示快捷选项）
   if (isIntroductionMessage(lastMessage)) {
@@ -861,16 +872,20 @@ function detectQuickReplies(lastMessage: string): QuickReplyResult {
     }
   }
   
-  // 第一步：尝试从消息中智能提取选项
-  const extractedOptions = extractOptionsFromMessage(lastMessage);
+  // 第一步：检查是否匹配需要预定义选项的字段
+  // 对于intent、gender等重要字段，必须使用预定义选项，不从AI文本提取
+  const hasPredefinedKeyword = predefinedOptionKeywords.some(kw => lowerMessage.includes(kw));
   
-  if (extractedOptions.length >= 2) {
-    // 成功提取到选项，判断是否多选
-    const multiSelect = shouldBeMultiSelect(extractedOptions, lastMessage);
-    return { options: extractedOptions, multiSelect };
+  // 如果没有匹配预定义关键词，才尝试从消息中智能提取选项
+  if (!hasPredefinedKeyword) {
+    const extractedOptions = extractOptionsFromMessage(lastMessage);
+    if (extractedOptions.length >= 2) {
+      const multiSelect = shouldBeMultiSelect(extractedOptions, lastMessage);
+      return { options: extractedOptions, multiSelect };
+    }
   }
   
-  // 第二步：后备方案 - 使用关键词匹配
+  // 第二步：使用关键词匹配预定义选项
   // 提取最后一个问句（以？结尾的句子）
   const questionMatches = lastMessage.match(/[^。！？\n]*[？?][^。！？\n]*/g);
   let textToAnalyze: string;
