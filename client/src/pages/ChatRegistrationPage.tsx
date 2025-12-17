@@ -561,8 +561,7 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     keywords: ["性别", "男生", "女生", "小哥哥", "小姐姐"],
     options: [
       { text: "女生", icon: Heart },
-      { text: "男生", icon: Smile },
-      { text: "保密", icon: Sparkles }
+      { text: "男生", icon: Smile }
     ],
     priority: 85
   },
