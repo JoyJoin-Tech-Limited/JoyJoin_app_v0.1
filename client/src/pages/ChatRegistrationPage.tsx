@@ -1278,9 +1278,13 @@ export default function ChatRegistrationPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
+  // 检查URL参数是否有预设模式（从其他页面跳转时使用）
+  const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
+  const presetMode = urlParams.get('mode') as RegistrationMode | null;
+  
   // 模式选择状态
-  const [showModeSelection, setShowModeSelection] = useState(true);
-  const [selectedMode, setSelectedMode] = useState<RegistrationMode | null>(null);
+  const [showModeSelection, setShowModeSelection] = useState(!presetMode);
+  const [selectedMode, setSelectedMode] = useState<RegistrationMode | null>(presetMode);
   
   // 时间主题
   const timeTheme = useMemo(() => getTimeTheme(), []);
@@ -1349,6 +1353,16 @@ export default function ChatRegistrationPage() {
       openingAbortRef.current?.abort();
     };
   }, []);
+  
+  // 如果有预设模式（从URL参数），自动开始对话
+  const hasStartedFromPreset = useRef(false);
+  useEffect(() => {
+    if (presetMode && !hasStartedFromPreset.current) {
+      hasStartedFromPreset.current = true;
+      startChatMutation.mutate(presetMode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetMode]);
 
   const startChatMutation = useMutation({
     mutationFn: async (mode: RegistrationMode) => {

@@ -7,7 +7,8 @@ import EditFullProfileDialog from "@/components/EditFullProfileDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target, RefreshCw } from "lucide-react";
+import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target, RefreshCw, MessageCircle, Star } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -30,6 +31,53 @@ import {
 } from "@/lib/userFieldMappings";
 
 type SectionType = "basic" | "education" | "work" | "personal" | "interests";
+
+// Calculate profile completion based on key fields
+function calculateProfileCompletion(user: any): { percentage: number; stars: number; missingFields: string[] } {
+  if (!user) return { percentage: 0, stars: 0, missingFields: [] };
+  
+  const fieldsToCheck = [
+    { key: 'displayName', label: '昵称' },
+    { key: 'gender', label: '性别' },
+    { key: 'birthdate', label: '出生日期' },
+    { key: 'currentCity', label: '城市' },
+    { key: 'occupation', label: '职业' },
+    { key: 'topInterests', label: '兴趣爱好', isArray: true },
+    { key: 'educationLevel', label: '学历' },
+    { key: 'relationshipStatus', label: '感情状态' },
+    { key: 'intent', label: '社交意向' },
+    { key: 'hometownCountry', label: '家乡' },
+    { key: 'languagesComfort', label: '语言', isArray: true },
+    { key: 'socialStyle', label: '社交风格' },
+  ];
+  
+  let filledCount = 0;
+  const missingFields: string[] = [];
+  
+  fieldsToCheck.forEach(field => {
+    const value = user[field.key];
+    const isFilled = field.isArray 
+      ? Array.isArray(value) && value.length > 0
+      : value !== undefined && value !== null && value !== '';
+    
+    if (isFilled) {
+      filledCount++;
+    } else {
+      missingFields.push(field.label);
+    }
+  });
+  
+  const percentage = Math.round((filledCount / fieldsToCheck.length) * 100);
+  
+  // Star rating: 1-2 stars (0-40%), 3 stars (40-70%), 4 stars (70-90%), 5 stars (90-100%)
+  let stars = 1;
+  if (percentage >= 90) stars = 5;
+  else if (percentage >= 70) stars = 4;
+  else if (percentage >= 40) stars = 3;
+  else if (percentage >= 20) stars = 2;
+  
+  return { percentage, stars, missingFields };
+}
 
 export default function ProfilePage() {
   const [, setLocation] = useLocation();
@@ -189,6 +237,59 @@ export default function ProfilePage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Profile Completion Card */}
+        {!userLoading && user && (() => {
+          const completion = calculateProfileCompletion(user);
+          // Only show if profile is less than 90% complete
+          if (completion.percentage >= 90) return null;
+          
+          return (
+            <Card className="border shadow-sm">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <span className="font-medium text-sm">资料完善度</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((starNum) => (
+                      <Star 
+                        key={starNum}
+                        className={`w-3.5 h-3.5 ${
+                          starNum <= completion.stars 
+                            ? 'text-yellow-500 fill-yellow-500' 
+                            : 'text-muted-foreground/30'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="space-y-1.5">
+                  <Progress value={completion.percentage} className="h-2" />
+                  <p className="text-xs text-muted-foreground">
+                    已完成 {completion.percentage}%
+                    {completion.missingFields.length > 0 && (
+                      <span> · 缺少: {completion.missingFields.slice(0, 3).join('、')}{completion.missingFields.length > 3 ? '等' : ''}</span>
+                    )}
+                  </p>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => setLocation('/chat-registration?mode=deep')}
+                  data-testid="button-chat-with-xiaoyue"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  和小悦聊聊，补充资料
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Social Role Card - Show if test completed */}
         {hasCompletedQuiz && personalityResults && (
