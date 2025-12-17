@@ -1160,22 +1160,8 @@ function MessageBubble({
     );
   }
 
-  // AI消息：动画完成后，每行成为单独的气泡
-  // 但包含流程标签（【】）的消息不分割，保持为一个气泡
-  const containsFlowTags = message.content.includes('【');
-  const originalLines = useMemo(() => {
-    if (containsFlowTags) return [message.content]; // 不分割含有【】的消息
-    return message.content.split('\n').filter(line => line.trim() !== '');
-  }, [message.content, containsFlowTags]);
-  
-  // 逐行显示状态 - 用于多行消息逐条出现效果
-  const [visibleLineCount, setVisibleLineCount] = useState(0);
-  
-  // 是否应该显示逐行效果：打字完成且有多行且不含流程标签
-  const shouldShowMultiLine = originalLines.length > 1 && (!shouldAnimate || isComplete) && !containsFlowTags;
-  
-  // 逐行显示效果：打字动画完成后，每350ms显示下一行
-  // 用 ref 追踪是否已触发完成回调
+  // AI消息：统一使用单气泡显示，保持streaming打字效果的流畅性
+  // 不再分割成多行独立气泡，避免打字完成后的延迟感
   const hasCalledSequentialCompleteRef = useRef(false);
   
   // 重置：当消息内容变化时重置回调标记
@@ -1183,77 +1169,24 @@ function MessageBubble({
     hasCalledSequentialCompleteRef.current = false;
   }, [message.content]);
   
+  // 打字完成后触发回调
   useEffect(() => {
-    if (shouldShowMultiLine) {
-      if (visibleLineCount === 0) {
-        // 初始显示第一行
-        setVisibleLineCount(1);
-      } else if (visibleLineCount < originalLines.length) {
-        const timer = setTimeout(() => {
-          setVisibleLineCount(prev => prev + 1);
-        }, 350); // 350ms 间隔
-        return () => clearTimeout(timer);
-      } else if (visibleLineCount >= originalLines.length && !hasCalledSequentialCompleteRef.current) {
-        // 所有行都显示完成，触发回调
-        hasCalledSequentialCompleteRef.current = true;
-        onSequentialDisplayComplete?.();
-      }
-    } else if (originalLines.length <= 1 && !hasCalledSequentialCompleteRef.current) {
-      // 单行消息，直接触发完成回调
+    if (!hasCalledSequentialCompleteRef.current && (!shouldAnimate || isComplete)) {
       hasCalledSequentialCompleteRef.current = true;
       onSequentialDisplayComplete?.();
     }
-  }, [shouldShowMultiLine, originalLines.length, visibleLineCount, onSequentialDisplayComplete]);
-  
-  // 重置：当消息内容变化时重置计数
-  useEffect(() => {
-    setVisibleLineCount(0);
-  }, [message.content]);
-  
-  // 流式消息（有streamId）、正在打字动画中、只有一行、或包含流程标签时，显示单个气泡
-  // 流式消息使用单气泡模式避免多行分割导致的闪烁问题
-  const isStreamingMessage = !!message.streamId;
-  if (isStreamingMessage || (shouldAnimate && !isComplete) || originalLines.length <= 1 || containsFlowTags) {
-    return (
-      <SingleBubble
-        content={content}
-        role="assistant"
-        showAvatar={true}
-        emotion={emotion}
-        userGender={userGender}
-        collectedInfo={collectedInfo}
-        isTyping={shouldAnimate && !isComplete}
-      />
-    );
-  }
-
-  // 动画完成后，多行逐条显示为独立气泡
-  const visibleLines = originalLines.slice(0, visibleLineCount);
+  }, [shouldAnimate, isComplete, onSequentialDisplayComplete]);
   
   return (
-    <div>
-      <AnimatePresence>
-        {visibleLines.map((line, idx) => (
-          <motion.div
-            key={`${message.content}-line-${idx}`}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="mb-2"
-          >
-            <SingleBubble
-              content={line}
-              role="assistant"
-              showAvatar={idx === 0}
-              emotion={emotion}
-              userGender={userGender}
-              collectedInfo={collectedInfo}
-            />
-          </motion.div>
-        ))}
-      </AnimatePresence>
-    </div>
+    <SingleBubble
+      content={content}
+      role="assistant"
+      showAvatar={true}
+      emotion={emotion}
+      userGender={userGender}
+      collectedInfo={collectedInfo}
+      isTyping={shouldAnimate && !isComplete}
+    />
   );
 }
 
@@ -1699,103 +1632,17 @@ export default function ChatRegistrationPage() {
     onSuccess: (data) => {
       // 取消之前正在进行的开场白序列
       openingAbortRef.current?.abort();
-      const abortController = new AbortController();
-      openingAbortRef.current = abortController;
       
-      // 将开场白分割成多条消息逐条显示
+      // 开场白作为单条消息，使用逐字打印效果（streaming风格）
       const fullMessage = data.message as string;
       
-      // 按双换行分割成多个段落
-      let rawParagraphs = fullMessage.split('\n\n').filter(p => p.trim());
-      
-      // 合并流程信息块：把【标签】格式的连续段落合并为一个
-      const paragraphs: string[] = [];
-      let currentBlock: string[] = [];
-      
-      for (const para of rawParagraphs) {
-        // 检查是否是【标签】格式的流程信息行
-        const isProcessInfo = para.trim().startsWith('【');
-        
-        if (isProcessInfo) {
-          // 这是一个【标签】段落，加入当前块
-          currentBlock.push(para);
-        } else {
-          // 这不是【标签】段落
-          if (currentBlock.length > 0) {
-            // 先把之前的块（【标签】们）添加为一个段落，用换行连接
-            paragraphs.push(currentBlock.join('\n\n'));
-            currentBlock = [];
-          }
-          // 添加这个非【标签】段落
-          paragraphs.push(para);
-        }
-      }
-      
-      // 处理剩余的块
-      if (currentBlock.length > 0) {
-        paragraphs.push(currentBlock.join('\n\n'));
-      }
-      
-      // 总是分段显示开场白，每段都带打字动画
-      const showParagraphsSequentially = async () => {
-        // 第一段立即显示（带打字动画）
-        setMessages([{
-          id: `msg-${Date.now()}-0`,
-          role: "assistant",
-          content: paragraphs[0],
-          timestamp: new Date(),
-          isTypingAnimation: true
-        }]);
-        
-        // 后续段落依次添加，等待真正的typing完成
-        for (let i = 1; i < paragraphs.length; i++) {
-          // 检查是否被取消
-          if (abortController.signal.aborted) return;
-          
-          // 等待前一条消息的打字动画真正完成
-          await new Promise<void>((resolve, reject) => {
-            // 存储resolve函数，会在onTypingComplete回调时被调用
-            typingCompleteResolverRef.current = resolve;
-            
-            // 安全超时：最多等10秒（防止意外情况）
-            const timeoutId = setTimeout(() => {
-              typingCompleteResolverRef.current = null;
-              resolve();
-            }, 10000);
-            
-            abortController.signal.addEventListener('abort', () => {
-              clearTimeout(timeoutId);
-              typingCompleteResolverRef.current = null;
-              reject(new Error('Aborted'));
-            }, { once: true });
-          }).catch(() => {});
-          
-          // 再次检查是否被取消
-          if (abortController.signal.aborted) return;
-          
-          // 添加600ms间隔让用户有时间阅读前一条消息
-          await new Promise<void>((resolve, reject) => {
-            const timeoutId = setTimeout(resolve, 600);
-            abortController.signal.addEventListener('abort', () => {
-              clearTimeout(timeoutId);
-              reject(new Error('Aborted'));
-            }, { once: true });
-          }).catch(() => {});
-          
-          if (abortController.signal.aborted) return;
-          
-          // 添加下一条消息（带打字动画）
-          setMessages(prev => [...prev, {
-            id: `msg-${Date.now()}-${i}`,
-            role: "assistant",
-            content: paragraphs[i],
-            timestamp: new Date(),
-            isTypingAnimation: true
-          }]);
-        }
-      };
-      
-      showParagraphsSequentially();
+      setMessages([{
+        id: `msg-${Date.now()}-opening`,
+        role: "assistant",
+        content: fullMessage,
+        timestamp: new Date(),
+        isTypingAnimation: true  // 启用逐字打印动画
+      }]);
       
       setConversationHistory(data.conversationHistory);
     },
