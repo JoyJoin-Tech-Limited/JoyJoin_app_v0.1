@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Send, Loader2, User, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle } from "lucide-react";
+import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -732,6 +732,15 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 70
   },
   {
+    keywords: ["兄弟", "姐妹", "独生", "一个人", "老大", "老二", "老幺", "排行"],
+    options: [
+      { text: "独生子女", icon: Users },
+      { text: "有兄弟姐妹", icon: Users },
+      { text: "不方便说", icon: Sparkles }
+    ],
+    priority: 68
+  },
+  {
     keywords: ["确认", "对吗", "没问题", "有要改"],
     options: [
       { text: "没问题！" },
@@ -829,14 +838,19 @@ const freeInputKeywords = ["称呼", "昵称", "名字", "怎么叫", "叫什么
 const introductionPatterns = [
   { required: ["欢迎", "流程"], any: [] },
   { required: ["你好", "小悦"], any: ["介绍", "开始", "帮你"] },
-  { required: ["悦聚"], any: ["欢迎", "流程", "步骤", "开始"] },
+  { required: ["悦聚"], any: ["欢迎", "流程", "步骤", "开始", "小悦", "负责", "配局"] },
   { required: ["精品小局"], any: [] }, // 开场白片段
-  { required: ["算法精选"], any: [] }, // 开场白片段
+  { required: ["算法挑过"], any: [] }, // 开场白片段（新）
   { required: ["陌生人组合"], any: [] }, // 开场白片段
   { required: ["轻松来"], any: [] }, // 开场白片段
-  { required: ["分钟"], any: ["左右", "聊聊"] }, // 3分钟左右、6-7分钟
+  { required: ["分钟"], any: ["左右", "聊聊", "大概"] }, // 3分钟左右、6-7分钟
   { required: ["原型动物"], any: [] }, // 12原型动物匹配系统
-  { required: ["怎么称呼"], any: [] } // 昵称问题（即使逐条显示也不显示快捷选项）
+  { required: ["怎么称呼"], any: [] }, // 昵称问题
+  { required: ["极速模式"], any: [] }, // express模式开场
+  { required: ["深度模式"], any: [] }, // deep模式开场
+  { required: ["一键搞定"], any: [] }, // all_in_one模式开场
+  { required: ["负责帮你配局"], any: [] }, // standard模式片段
+  { required: ["值得投资"], any: [] } // deep模式片段
 ];
 
 function isIntroductionMessage(message: string): boolean {
@@ -859,7 +873,8 @@ const predefinedOptionKeywords = [
   "不聊", "避免", "敏感话题", // topic avoidances
   "孩子", "小孩", "娃", // children
   "学历", "毕业", // education
-  "感情", "单身", "恋爱", "已婚" // relationship
+  "感情", "单身", "恋爱", "已婚", // relationship
+  "兄弟", "姐妹", "独生", "排行" // siblings
 ];
 
 // 检测最后一条消息是否匹配快捷回复
