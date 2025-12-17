@@ -15,6 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import MobileHeader from "@/components/MobileHeader";
 import EvolvingAvatar, { calculateClarityLevel } from "@/components/EvolvingAvatar";
 import type { User as UserType } from "@shared/schema";
+import { INTERESTS_OPTIONS } from "@/data/interestsTopicsData";
+import { INDUSTRIES, WORK_MODES } from "@shared/occupations";
 
 // 注册模式配置
 type RegistrationMode = "express" | "standard" | "deep" | "all_in_one" | "enrichment";
@@ -473,18 +475,18 @@ const quickReplyConfigs: QuickReplyConfig[] = [
   },
   {
     keywords: ["兴趣", "爱好", "喜欢做", "平时做", "活动", "最常做", "工作之外", "业余", "闲暇"],
-    options: [
-      { text: "美食探店", icon: Coffee },
-      { text: "说走就走", icon: MapPin },
-      { text: "City Walk", icon: MapPin },
-      { text: "喝酒小酌", icon: Coffee },
-      { text: "音乐Live", icon: Music },
-      { text: "拍拍拍", icon: Camera },
-      { text: "撸铁运动", icon: Dumbbell },
-      { text: "看展看剧", icon: Camera },
-      { text: "吸猫撸狗", icon: Heart },
-      { text: "桌游卡牌", icon: Gamepad2 }
-    ],
+    options: INTERESTS_OPTIONS.map(opt => {
+      const iconMap: Record<string, any> = {
+        "food_dining": Coffee, "travel": MapPin, "city_walk": MapPin,
+        "drinks_bar": Coffee, "music_live": Music, "photography": Camera,
+        "sports_fitness": Dumbbell, "arts_culture": Camera, "games_video": Gamepad2,
+        "pets_animals": Heart, "reading_books": Book, "tech_gadgets": Sparkles,
+        "outdoor_adventure": MapPin, "games_board": Gamepad2, "entrepreneurship": Briefcase,
+        "investing": Briefcase, "diy_crafts": Heart, "volunteering": Heart,
+        "meditation": Sparkles, "languages": Book
+      };
+      return { text: opt.label, icon: iconMap[opt.id] || Sparkles };
+    }),
     multiSelect: true,
     priority: 88
   },
@@ -629,6 +631,11 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 93
   },
   {
+    keywords: ["身份", "状态", "创业", "在职", "学生", "自由", "gap", "过渡", "待业"],
+    options: WORK_MODES.map(m => ({ text: m.label, icon: m.value === "student" ? Book : Sparkles })),
+    priority: 84
+  },
+  {
     keywords: ["方向", "领域", "细分", "ai", "web3", "具体做什么", "哪个方向"],
     options: [
       { text: "科技互联网", icon: Briefcase },
@@ -639,36 +646,13 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       { text: "创意设计", icon: Briefcase },
       { text: "传媒内容", icon: Briefcase },
       { text: "医疗健康", icon: Briefcase },
-      { text: "教育培训", icon: Book },
-      { text: "学生", icon: Book },
-      { text: "自由职业", icon: Sparkles },
-      { text: "其他行业", icon: Briefcase }
+      { text: "教育培训", icon: Book }
     ],
     priority: 83
   },
   {
     keywords: ["工作", "职业", "做什么", "行业", "从事", "干什么", "什么工作", "忙什么", "哪行", "上班"],
-    options: [
-      { text: "科技互联网", icon: Briefcase },
-      { text: "AI/大数据", icon: Briefcase },
-      { text: "硬科技/芯片", icon: Briefcase },
-      { text: "新能源汽车", icon: Briefcase },
-      { text: "跨境电商", icon: Briefcase },
-      { text: "金融投资", icon: Briefcase },
-      { text: "咨询服务", icon: Briefcase },
-      { text: "市场营销", icon: Briefcase },
-      { text: "创意设计", icon: Briefcase },
-      { text: "传媒内容", icon: Briefcase },
-      { text: "医疗健康", icon: Briefcase },
-      { text: "教育培训", icon: Book },
-      { text: "法律合规", icon: Briefcase },
-      { text: "地产建筑", icon: Briefcase },
-      { text: "航空酒店旅游", icon: Briefcase },
-      { text: "生活方式", icon: Briefcase },
-      { text: "学生", icon: Book },
-      { text: "自由职业", icon: Sparkles },
-      { text: "其他行业", icon: Briefcase }
-    ],
+    options: INDUSTRIES.map(ind => ({ text: ind.label, icon: Briefcase })),
     priority: 82
   },
   {
@@ -1203,11 +1187,8 @@ interface CollectedInfo {
   ageDisplayPreference?: string;
 }
 
-// 可选兴趣标签 - 与InterestsTopicsPage对齐
-const interestOptions = [
-  "美食探店", "说走就走", "City Walk", "喝酒小酌", "音乐Live", "拍拍拍",
-  "撸铁运动", "看展看剧", "打游戏", "吸猫撸狗", "看书充电", "桌游卡牌"
-];
+// 可选兴趣标签 - 直接使用问卷数据源
+const interestOptions = INTERESTS_OPTIONS.map(opt => opt.label);
 
 // 社交名片卡片组件 - 紫色渐变商务卡片风格
 function SocialProfileCard({ info }: { info: CollectedInfo }) {
