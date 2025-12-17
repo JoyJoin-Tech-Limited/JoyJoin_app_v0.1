@@ -1077,13 +1077,15 @@ function MessageBubble({
   isLatest,
   userGender,
   collectedInfo,
-  onTypingComplete 
+  onTypingComplete,
+  onSequentialDisplayComplete
 }: { 
   message: ChatMessage; 
   isLatest: boolean;
   userGender?: string;
   collectedInfo?: CollectedInfo;
   onTypingComplete?: () => void;
+  onSequentialDisplayComplete?: () => void;
 }) {
   // 空消息或短消息（≤15字）跳过打字动画
   const isEmptyMessage = !message.content.trim();
@@ -1160,6 +1162,14 @@ function MessageBubble({
   const shouldShowMultiLine = originalLines.length > 1 && (!shouldAnimate || isComplete) && !containsFlowTags;
   
   // 逐行显示效果：打字动画完成后，每350ms显示下一行
+  // 用 ref 追踪是否已触发完成回调
+  const hasCalledSequentialCompleteRef = useRef(false);
+  
+  // 重置：当消息内容变化时重置回调标记
+  useEffect(() => {
+    hasCalledSequentialCompleteRef.current = false;
+  }, [message.content]);
+  
   useEffect(() => {
     if (shouldShowMultiLine) {
       if (visibleLineCount === 0) {
@@ -1170,9 +1180,17 @@ function MessageBubble({
           setVisibleLineCount(prev => prev + 1);
         }, 350); // 350ms 间隔
         return () => clearTimeout(timer);
+      } else if (visibleLineCount >= originalLines.length && !hasCalledSequentialCompleteRef.current) {
+        // 所有行都显示完成，触发回调
+        hasCalledSequentialCompleteRef.current = true;
+        onSequentialDisplayComplete?.();
       }
+    } else if (originalLines.length <= 1 && !hasCalledSequentialCompleteRef.current) {
+      // 单行消息，直接触发完成回调
+      hasCalledSequentialCompleteRef.current = true;
+      onSequentialDisplayComplete?.();
     }
-  }, [shouldShowMultiLine, originalLines.length, visibleLineCount]);
+  }, [shouldShowMultiLine, originalLines.length, visibleLineCount, onSequentialDisplayComplete]);
   
   // 重置：当消息内容变化时重置计数
   useEffect(() => {
@@ -1443,7 +1461,39 @@ export default function ChatRegistrationPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [isSequentialDisplaying, setIsSequentialDisplaying] = useState(false); // 正在逐行显示中
+  const [sequentialDisplayMessageId, setSequentialDisplayMessageId] = useState<string | null>(null); // 正在逐行显示的消息ID
   const [conversationHistory, setConversationHistory] = useState<any[]>([]);
+  
+  // 防护性超时：确保 isSequentialDisplaying 不会永远卡住
+  // 根据消息行数动态计算超时时间：每行350ms + 3秒缓冲
+  useEffect(() => {
+    if (isSequentialDisplaying && sequentialDisplayMessageId) {
+      // 找到目标消息并计算所需时间
+      const targetMessage = messages.find(m => m.id === sequentialDisplayMessageId);
+      if (!targetMessage) {
+        // 消息不存在，立即重置
+        setIsSequentialDisplaying(false);
+        setSequentialDisplayMessageId(null);
+        return;
+      }
+      
+      // 计算消息行数和所需显示时间
+      const lines = targetMessage.content.split('\n').filter(line => line.trim() !== '');
+      const lineCount = lines.length;
+      // 使用 (lineCount + 2) * 350 + 6秒大缓冲，确保覆盖极端情况
+      // 例如：30行消息需要 (30+2)*350 + 6000 = 17200ms
+      const dynamicTimeout = Math.max((lineCount + 2) * 350 + 6000, 8000);
+      
+      const timeout = setTimeout(() => {
+        console.log('[SEQUENTIAL DEBUG] Safety timeout triggered after', dynamicTimeout, 'ms, resetting isSequentialDisplaying');
+        setIsSequentialDisplaying(false);
+        setSequentialDisplayMessageId(null);
+        setSelectedQuickReplies(new Set());
+      }, dynamicTimeout);
+      return () => clearTimeout(timeout);
+    }
+  }, [isSequentialDisplaying, sequentialDisplayMessageId, messages]);
   
   // Debug: Log messages state changes
   useEffect(() => {
@@ -1842,9 +1892,13 @@ export default function ChatRegistrationPage() {
                   const finalContent = data.cleanMessage || lastValidContent;
                   if (finalContent) {
                     lastValidContent = finalContent;
+                    // 流式完成：清除 streamId 触发逐行显示，同时设置 isSequentialDisplaying
+                    // 保存触发逐行显示的消息 ID，确保回调匹配
+                    setIsSequentialDisplaying(true);
+                    setSequentialDisplayMessageId(streamMessageId);
                     setMessages(prev => prev.map(m => 
                       m.streamId === streamMessageId 
-                        ? { ...m, content: finalContent } 
+                        ? { ...m, content: finalContent, streamId: undefined } 
                         : m
                     ));
                   }
@@ -1971,13 +2025,14 @@ export default function ChatRegistrationPage() {
   };
 
   // 检测快捷回复选项
+  // 只有当不在打字、不在逐行显示、且消息有内容时才检测
   const quickReplyResult = useMemo(() => {
-    if (isTyping || isComplete || messages.length === 0) return { options: [], multiSelect: false };
+    if (isTyping || isComplete || isSequentialDisplaying || messages.length === 0) return { options: [], multiSelect: false };
     const lastAssistantMessage = [...messages].reverse().find(m => m.role === "assistant");
     // 只有当消息有实际内容时才显示快捷选项
     if (!lastAssistantMessage || !lastAssistantMessage.content.trim()) return { options: [], multiSelect: false };
     return detectQuickReplies(lastAssistantMessage.content);
-  }, [messages, isTyping, isComplete]);
+  }, [messages, isTyping, isComplete, isSequentialDisplaying]);
 
   // 当问题变化时清空已选
   useEffect(() => {
@@ -2171,6 +2226,13 @@ export default function ChatRegistrationPage() {
                 if (typingCompleteResolverRef.current) {
                   typingCompleteResolverRef.current();
                   typingCompleteResolverRef.current = null;
+                }
+              }}
+              onSequentialDisplayComplete={() => {
+                // 只有当这条消息是触发逐行显示的那条消息时，才结束逐行显示状态
+                if (sequentialDisplayMessageId && sequentialDisplayMessageId === msg.id) {
+                  setIsSequentialDisplaying(false);
+                  setSequentialDisplayMessageId(null);
                 }
               }}
             />
