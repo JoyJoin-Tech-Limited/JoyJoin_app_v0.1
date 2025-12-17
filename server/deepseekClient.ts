@@ -374,13 +374,13 @@ type RegistrationMode = 'express' | 'standard' | 'deep' | 'all_in_one';
 
 // 不同模式的开场白（Nick Wilde风格：简洁有力）
 const MODE_OPENINGS: Record<RegistrationMode, string> = {
-  express: `悦聚。我是小悦。
+  express: `欢迎来悦聚。我是小悦。
 
 极速模式是吧？4个问题，90秒，搞定。
 
 先报个称呼。`,
 
-  standard: `悦聚。我是小悦，负责帮你配局。
+  standard: `欢迎来悦聚。我是小悦，负责帮你配局。
 
 我们做4-6人小局，每桌都是算法挑过的陌生人组合。
 
@@ -388,7 +388,7 @@ const MODE_OPENINGS: Record<RegistrationMode, string> = {
 
 怎么称呼？`,
 
-  deep: `悦聚。我是小悦。
+  deep: `欢迎来悦聚。我是小悦。
 
 深度模式——意味着我能把你摸得更透，匹配更准。
 
@@ -396,7 +396,7 @@ const MODE_OPENINGS: Record<RegistrationMode, string> = {
 
 先说个称呼？`,
 
-  all_in_one: `悦聚。我是小悦。
+  all_in_one: `欢迎来悦聚。我是小悦。
 
 一键搞定模式——注册加性格测试，一波流。效率党respect。
 

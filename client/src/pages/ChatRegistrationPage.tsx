@@ -836,13 +836,13 @@ const freeInputKeywords = ["称呼", "昵称", "名字", "怎么叫", "叫什么
 
 // 开场白/介绍类消息的关键词组合（这类消息不应显示快捷选项）
 const introductionPatterns = [
+  { required: ["欢迎来悦聚"], any: [] }, // 新开场白
   { required: ["欢迎", "流程"], any: [] },
   { required: ["你好", "小悦"], any: ["介绍", "开始", "帮你"] },
   { required: ["悦聚"], any: ["欢迎", "流程", "步骤", "开始", "小悦", "负责", "配局"] },
   { required: ["精品小局"], any: [] }, // 开场白片段
-  { required: ["算法挑过"], any: [] }, // 开场白片段（新）
+  { required: ["算法挑过"], any: [] }, // 开场白片段
   { required: ["陌生人组合"], any: [] }, // 开场白片段
-  { required: ["轻松来"], any: [] }, // 开场白片段
   { required: ["分钟"], any: ["左右", "聊聊", "大概"] }, // 3分钟左右、6-7分钟
   { required: ["原型动物"], any: [] }, // 12原型动物匹配系统
   { required: ["怎么称呼"], any: [] }, // 昵称问题
