@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle } from "lucide-react";
+import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -438,6 +438,15 @@ interface QuickReplyConfig {
 
 const quickReplyConfigs: QuickReplyConfig[] = [
   {
+    // 确认模式 - 最高优先级，当AI收尾确认时触发
+    keywords: ["对吗", "确认一下", "核对一下", "信息对吗", "没问题吗", "有错吗", "需要改吗"],
+    options: [
+      { text: "对的，确认", icon: Check },
+      { text: "需要修改", icon: Pencil }
+    ],
+    priority: 100 // 最高优先级，不被其他关键词覆盖
+  },
+  {
     keywords: ["称呼", "昵称", "名字", "怎么叫"],
     options: [],
     priority: 95 // 昵称需要用户输入，不提供快捷选项
@@ -527,11 +536,11 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       const iconMap: Record<string, any> = {
         "food_dining": Coffee, "travel": MapPin, "city_walk": MapPin,
         "drinks_bar": Coffee, "music_live": Music, "photography": Camera,
-        "sports_fitness": Dumbbell, "arts_culture": Camera, "games_video": Gamepad2,
-        "pets_animals": Heart, "reading_books": Book, "tech_gadgets": Sparkles,
-        "outdoor_adventure": MapPin, "games_board": Gamepad2, "entrepreneurship": Briefcase,
-        "investing": Briefcase, "diy_crafts": Heart, "volunteering": Heart,
-        "meditation": Sparkles, "languages": Book
+        "sports_fitness": Dumbbell, "movies": Camera, "exhibitions": Camera, "tv_shows": Camera,
+        "games_video": Gamepad2, "pets_animals": Heart, "reading_books": Book, 
+        "tech_gadgets": Sparkles, "outdoor_adventure": MapPin, "games_board": Gamepad2, 
+        "entrepreneurship": Briefcase, "investing": Briefcase, "diy_crafts": Heart, 
+        "volunteering": Heart, "meditation": Sparkles, "languages": Book
       };
       return { text: opt.label, icon: iconMap[opt.id] || Sparkles };
     }),
@@ -1246,8 +1255,17 @@ interface CollectedInfo {
 // 可选兴趣标签 - 直接使用问卷数据源
 const interestOptions = INTERESTS_OPTIONS.map(opt => opt.label);
 
+// 模式标签配置
+const MODE_LABELS: Record<RegistrationMode, { icon: any; label: string; color: string }> = {
+  express: { icon: Zap, label: "极速模式", color: "bg-yellow-400/20 text-yellow-200 border-yellow-400/30" },
+  standard: { icon: Sun, label: "标准模式", color: "bg-blue-400/20 text-blue-200 border-blue-400/30" },
+  deep: { icon: Diamond, label: "深度模式", color: "bg-purple-300/20 text-purple-200 border-purple-300/30" },
+  all_in_one: { icon: Star, label: "一站式", color: "bg-pink-400/20 text-pink-200 border-pink-400/30" },
+  enrichment: { icon: Edit2, label: "资料补充", color: "bg-green-400/20 text-green-200 border-green-400/30" }
+};
+
 // 社交名片卡片组件 - 紫色渐变商务卡片风格
-function SocialProfileCard({ info }: { info: CollectedInfo }) {
+function SocialProfileCard({ info, mode }: { info: CollectedInfo; mode?: RegistrationMode }) {
   const getYearLabel = (year?: number) => {
     if (!year) return "";
     if (year >= 2000) return "00后";
@@ -1348,13 +1366,28 @@ function SocialProfileCard({ info }: { info: CollectedInfo }) {
           </div>
         </div>
 
+        {/* 模式水印 */}
         <div className="absolute top-2 right-2">
-          <motion.div
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <Sparkles className="w-4 h-4 text-yellow-300/70" />
-          </motion.div>
+          {mode && MODE_LABELS[mode] ? (
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border backdrop-blur-sm ${MODE_LABELS[mode].color}`}
+            >
+              {(() => {
+                const IconComp = MODE_LABELS[mode].icon;
+                return <IconComp className="w-3 h-3" />;
+              })()}
+              <span>{MODE_LABELS[mode].label}</span>
+            </motion.div>
+          ) : (
+            <motion.div
+              animate={{ rotate: [0, 10, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Sparkles className="w-4 h-4 text-yellow-300/70" />
+            </motion.div>
+          )}
         </div>
       </div>
     </motion.div>
@@ -2260,7 +2293,7 @@ export default function ChatRegistrationPage() {
         )}
 
         {isComplete && collectedInfo.displayName && (
-          <SocialProfileCard info={collectedInfo} />
+          <SocialProfileCard info={collectedInfo} mode={selectedMode || undefined} />
         )}
 
         <div ref={messagesEndRef} />
@@ -2352,11 +2385,40 @@ export default function ChatRegistrationPage() {
           </Button>
         </motion.div>
       ) : isComplete && !infoConfirmed ? (
-        <div className="p-4 border-t bg-background">
-          <p className="text-xs text-center text-muted-foreground">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 border-t bg-background"
+        >
+          <p className="text-xs text-center text-muted-foreground mb-3">
             请确认以上信息是否正确
           </p>
-        </div>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1 h-11"
+              onClick={() => {
+                // 发送需要修改的消息，重新进入对话模式
+                setIsComplete(false);
+                sendMessageMutation.mutate("需要修改一些信息");
+              }}
+              data-testid="button-need-modify"
+            >
+              <Pencil className="w-4 h-4 mr-2" />
+              需要修改
+            </Button>
+            <Button
+              className="flex-1 h-11 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg"
+              onClick={() => {
+                setInfoConfirmed(true);
+              }}
+              data-testid="button-confirm-info"
+            >
+              <Check className="w-4 h-4 mr-2" />
+              确认正确
+            </Button>
+          </div>
+        </motion.div>
       ) : (
         <div className="p-4 border-t bg-background">
           <div className="flex gap-2">
