@@ -7,13 +7,177 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Send, Loader2, User, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X } from "lucide-react";
+import { Send, Loader2, User, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import MobileHeader from "@/components/MobileHeader";
 import EvolvingAvatar, { calculateClarityLevel } from "@/components/EvolvingAvatar";
+
+// 注册模式配置
+type RegistrationMode = "express" | "standard" | "deep" | "all_in_one";
+
+interface ModeConfig {
+  id: RegistrationMode;
+  icon: any;
+  title: string;
+  subtitle: string;
+  time: string;
+  stars: number;
+  maxStars: number;
+  description: string;
+  gradient: string;
+  recommended?: boolean;
+}
+
+const registrationModes: ModeConfig[] = [
+  {
+    id: "express",
+    icon: Zap,
+    title: "极速体验",
+    subtitle: "先看看有啥活动",
+    time: "90秒",
+    stars: 2,
+    maxStars: 5,
+    description: "收集基础信息，后续可补充",
+    gradient: "from-amber-500 to-orange-500"
+  },
+  {
+    id: "standard",
+    icon: Clock,
+    title: "轻松聊聊",
+    subtitle: "大多数人选这个",
+    time: "3分钟",
+    stars: 3,
+    maxStars: 5,
+    description: "推荐起点，聊得更深入",
+    gradient: "from-purple-500 to-pink-500",
+    recommended: true
+  },
+  {
+    id: "deep",
+    icon: Diamond,
+    title: "深度了解",
+    subtitle: "起步就更懂你",
+    time: "5分钟",
+    stars: 4,
+    maxStars: 5,
+    description: "详细画像，匹配更精准",
+    gradient: "from-blue-500 to-cyan-500"
+  }
+];
+
+// 星级显示组件
+function StarRating({ filled, total }: { filled: number; total: number }) {
+  return (
+    <div className="flex gap-0.5">
+      {Array.from({ length: total }).map((_, i) => (
+        <Star
+          key={i}
+          className={`w-3.5 h-3.5 ${
+            i < filled 
+              ? "fill-yellow-400 text-yellow-400" 
+              : "fill-muted text-muted"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+// 模式选择界面组件
+function ModeSelectionScreen({ 
+  onSelectMode 
+}: { 
+  onSelectMode: (mode: RegistrationMode) => void 
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[80vh] p-6">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center mb-8"
+      >
+        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 mx-auto mb-4 flex items-center justify-center">
+          <Sparkles className="w-8 h-8 text-white" />
+        </div>
+        <h1 className="text-2xl font-bold mb-2">嗨，我是小悦</h1>
+        <p className="text-muted-foreground">
+          让我们聊聊，帮你找到合拍的活动伙伴
+        </p>
+      </motion.div>
+
+      <motion.div 
+        className="w-full max-w-sm space-y-3"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
+        {registrationModes.map((mode, index) => (
+          <motion.div
+            key={mode.id}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 + index * 0.1 }}
+          >
+            <Card
+              className={`p-4 cursor-pointer hover-elevate active-elevate-2 transition-all ${
+                mode.recommended ? "ring-2 ring-primary ring-offset-2" : ""
+              }`}
+              onClick={() => onSelectMode(mode.id)}
+              data-testid={`mode-card-${mode.id}`}
+            >
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${mode.gradient} flex items-center justify-center flex-shrink-0`}>
+                  <mode.icon className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-semibold">{mode.title}</span>
+                    <span className="text-xs text-muted-foreground">({mode.time})</span>
+                    {mode.recommended && (
+                      <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                        推荐
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-1.5">{mode.subtitle}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">初始画像</span>
+                    <StarRating filled={mode.stars} total={mode.maxStars} />
+                  </div>
+                </div>
+                <ArrowRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              </div>
+            </Card>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      <motion.p 
+        className="text-xs text-muted-foreground text-center mt-6 max-w-xs"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.7 }}
+      >
+        匹配会随着你参加活动越来越精准哦
+      </motion.p>
+
+      <motion.button
+        className="mt-4 text-sm text-primary hover:underline flex items-center gap-1"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.8 }}
+        onClick={() => onSelectMode("all_in_one")}
+        data-testid="button-all-in-one"
+      >
+        <Zap className="w-3.5 h-3.5" />
+        赶时间？一键搞定（注册+性格测试，约6分钟）
+      </motion.button>
+    </div>
+  );
+}
 
 // 时间氛围主题
 type TimeTheme = "morning" | "afternoon" | "evening" | "night";
@@ -49,36 +213,22 @@ const timeThemeConfig: Record<TimeTheme, { gradient: string; icon: any; greeting
   }
 };
 
-// 小悦表情类型 - 随聊天深入逐渐变化
-type XiaoyueEmotion = "happy" | "thinking" | "excited" | "wink" | "neutral" | "warm" | "familiar";
+// 小悦表情类型 - 简化版，保持友好一致
+type XiaoyueEmotion = "happy" | "thinking" | "neutral";
 
-// 基于聊天进度的表情渐变
-function getProgressEmotion(infoCount: number): XiaoyueEmotion {
-  if (infoCount >= 12) return "familiar"; // 很熟悉了
-  if (infoCount >= 8) return "warm"; // 渐渐熟悉
-  if (infoCount >= 4) return "happy"; // 开始热络
-  return "neutral"; // 刚开始
-}
-
-function detectEmotion(message: string, infoCount: number = 0): XiaoyueEmotion {
+// 简化的表情检测 - 不再随进度变化（用户研究反馈该功能评分较低4.55/10）
+function detectEmotion(message: string): XiaoyueEmotion {
   const lowerMsg = message.toLowerCase();
-  // 基于消息内容检测
-  if (lowerMsg.includes("太棒了") || lowerMsg.includes("很高兴") || lowerMsg.includes("欢迎") || lowerMsg.includes("开心")) return "happy";
-  if (lowerMsg.includes("嗯") || lowerMsg.includes("让我想想") || lowerMsg.includes("那么") || lowerMsg.includes("?") || lowerMsg.includes("？")) return "thinking";
-  if (lowerMsg.includes("哇") || lowerMsg.includes("厉害") || lowerMsg.includes("有趣") || lowerMsg.includes("！")) return "excited";
-  if (lowerMsg.includes("嘻") || lowerMsg.includes("哈哈") || lowerMsg.includes("~")) return "wink";
-  // 基于聊天进度的默认表情
-  return getProgressEmotion(infoCount);
+  if (lowerMsg.includes("？") || lowerMsg.includes("?") || lowerMsg.includes("呢") || lowerMsg.includes("吗")) {
+    return "thinking"; // 提问时
+  }
+  return "happy"; // 默认友好表情
 }
 
 const emotionEmojis: Record<XiaoyueEmotion, string> = {
   happy: "😊",
   thinking: "🤔",
-  excited: "🤩",
-  wink: "😉",
-  neutral: "🙂",
-  warm: "🥰",
-  familiar: "💜"
+  neutral: "🙂"
 };
 
 // 成就系统配置
@@ -1128,6 +1278,10 @@ export default function ChatRegistrationPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
+  // 模式选择状态
+  const [showModeSelection, setShowModeSelection] = useState(true);
+  const [selectedMode, setSelectedMode] = useState<RegistrationMode | null>(null);
+  
   // 时间主题
   const timeTheme = useMemo(() => getTimeTheme(), []);
   const themeConfig = timeThemeConfig[timeTheme];
@@ -1142,6 +1296,14 @@ export default function ChatRegistrationPage() {
   
   // 对话开始时间（用于计算completionSpeed）
   const [chatStartTime] = useState<string>(() => new Date().toISOString());
+  
+  // 处理模式选择
+  const handleModeSelect = (mode: RegistrationMode) => {
+    setSelectedMode(mode);
+    setShowModeSelection(false);
+    // 开始对话，传入模式
+    startChatMutation.mutate(mode);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1189,8 +1351,8 @@ export default function ChatRegistrationPage() {
   }, []);
 
   const startChatMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/registration/chat/start");
+    mutationFn: async (mode: RegistrationMode) => {
+      const res = await apiRequest("POST", "/api/registration/chat/start", { mode });
       return res.json();
     },
     onSuccess: (data) => {
@@ -1495,9 +1657,7 @@ export default function ChatRegistrationPage() {
     }
   });
 
-  useEffect(() => {
-    startChatMutation.mutate();
-  }, []);
+  // 不再自动开始对话，由模式选择触发
 
   const handleSend = () => {
     if (!inputValue.trim() || isTyping) return;
@@ -1584,6 +1744,15 @@ export default function ChatRegistrationPage() {
   };
 
   const TimeIcon = themeConfig.icon;
+
+  // 显示模式选择界面
+  if (showModeSelection) {
+    return (
+      <div className="min-h-screen bg-background">
+        <ModeSelectionScreen onSelectMode={handleModeSelect} />
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen flex flex-col relative overflow-hidden`}>

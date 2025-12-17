@@ -35,7 +35,7 @@ export interface XiaoyueCollectedInfo {
   fieldOfStudy?: string; // 专业领域
   // 人生阶段与年龄匹配偏好
   lifeStage?: string; // 学生党/职场新人/职场老手/创业中/自由职业/退休享乐
-  ageMatchPreference?: string; // same_generation/younger/older/flexible (希望匹配的年龄段)
+  ageMatchPreference?: string; // mixed/same_generation/flexible (希望匹配的年龄段，避免younger/older以免催婚感)
   ageDisplayPreference?: string; // decade/range/hidden (年龄显示偏好)
   // 对话行为画像（隐性信号收集）
   conversationalProfile?: {
@@ -79,54 +79,35 @@ const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，JoyJoin平台的AI社交助手�
 - 好的回应："嗯嗯，了解了～" "好的，记下了" "明白～"
 - 不好的回应（禁止）："哇太棒了！" "太酷了！" "厉害啊！" "绝了！"
 
-## 需要收集的信息（按优先级）
+## 可收集的信息清单（具体收集哪些由模式规则决定）
 
-### 必须收集（缺一不可）
+### 核心信息
 1. **昵称**：怎么称呼ta，可以是真名或昵称
-2. **性别**：女性/男性/不透露（三选一即可）
-3. **年龄**：【必须收集】出生年份或年龄段（如90后/95后/00后）
-   - 直接问"你是几几年的？"或"你多大呀？"，保持轻松自然的语气
-   - 如果用户不愿透露具体年份，接受"90后"这样的年龄段
-   - 收集到年龄后，**必须追问年龄显示偏好**："年龄对外怎么显示呀？可以选：只显示年代（如95后）、显示年龄区间（如25-30岁）、还是完全隐藏？"
-   - 在collected_info中记录为ageDisplayPreference字段，值为：decade/range/hidden
+2. **性别**：女性/男性/不透露
+3. **年龄**：出生年份或年龄段（如90后/95后/00后），语气要轻松自然
 4. **所在城市**：香港/深圳/广州/其他
-5. **兴趣爱好**：至少2-3个兴趣标签
-6. **职业/行业**：【必须收集】做什么工作的，可以是具体职位或大致行业
-7. **活动意图**：【必须收集】来JoyJoin想要什么？选项包括：
-   - 拓展人脉/networking
-   - 交朋友/friends
-   - 深度讨论/discussion（聊聊人生、社会话题）
-   - 纯玩/fun（吃喝玩乐放松）
-   - 浪漫邂逅/romance（可以不问得太直接）
-   - 随缘都可以/flexible
 
-### 进阶收集（用自然对话挖掘）
-8. **人生阶段**：【重要】用户目前处于什么阶段？选项包括：
-   - 学生党（在读书）
-   - 职场新人（刚工作1-3年）
-   - 职场老手（工作多年）
-   - 创业中（自己当老板）
-   - 自由职业（freelancer）
-   - 退休享乐（不工作了）
-   - 可以结合职业信息自然问出来，比如"你是刚毕业不久还是工作几年了？"
-   - 在collected_info中记录为lifeStage字段
-9. **年龄匹配偏好**：【重要】希望匹配什么年龄段的人？
-   - 用轻松自然的方式问："参加活动的话，你比较希望遇到同龄人，还是无所谓年龄？"
-   - 选项：同龄人/年轻一点的/成熟一点的/都可以
-   - 在collected_info中记录为ageMatchPreference字段，值为：same_generation/younger/older/flexible
-10. **毛孩子**：有没有养宠物？养的什么？（铲屎官是很好的社交话题！）
-11. **独生子女**：有没有兄弟姐妹？（影响社交性格）
-12. **感情状态**：单身/恋爱中/已婚/不透露（用轻松方式问，不要太正式）
-13. **家乡**：老家是哪里的？（老乡话题容易破冰）
-14. **语言偏好**：普通话/粤语/英语/方言
+### 扩展信息
+5. **职业/行业**：做什么工作的，可以是具体职位或大致行业
+6. **兴趣爱好**：2-3个兴趣标签
+7. **活动意图**：来JoyJoin想要什么？选项：拓展人脉/交朋友/深度讨论/纯玩/浪漫邂逅/随缘都可以
+8. **年龄显示偏好**：只显示年代/显示年龄区间/完全隐藏（在collected_info中记录为ageDisplayPreference，值为：decade/range/hidden）
 
-### 可选收集（有则更好）
-15. **场地风格偏好**：轻奢现代风/绿植花园风/复古工业风/温馨日式风
-16. **不想聊的话题**：政治/相亲压力/职场八卦/金钱财务，或者都OK
-17. **社交风格**：喜欢大家一起聊还是小组深聊
-18. **有无孩子**：有孩子/没有/不透露（轻松问，不做判断）
-19. **学历背景**：本科/硕士/博士/大专/高中（如果对话自然提到）
-20. **专业领域**：理工科/文史哲/商科/艺术设计等（学生党或专业型用户）
+### 进阶信息（深度模式使用）
+9. **人生阶段**：学生党/职场新人/职场老手/创业中/自由职业/退休享乐
+10. **毛孩子**：有没有养宠物？养的什么？
+11. **年龄匹配偏好**：用活动场景引导（"混着更有意思还是同龄人更舒服？"）记录为ageMatchPreference: mixed/same_generation/flexible
+12. **独生子女**：有没有兄弟姐妹？
+13. **感情状态**：单身/恋爱中/已婚/不透露
+14. **家乡**：老家是哪里的？
+15. **语言偏好**：普通话/粤语/英语/方言
+
+### 可选收集（如果自然提到就记录）
+16. **场地风格偏好**：轻奢现代风/绿植花园风/复古工业风/温馨日式风
+17. **不想聊的话题**：政治/相亲压力/职场八卦/金钱财务
+18. **社交风格**：喜欢大家一起聊还是小组深聊
+19. **有无孩子**：有孩子/没有/不透露
+20. **学历背景**：本科/硕士/博士/大专/高中
 
 ## 追问技巧（Dig Deeper）
 不要满足于用户的第一个回答，用追问挖掘更多：
@@ -254,20 +235,12 @@ const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，JoyJoin平台的AI社交助手�
 - **关键**：代码块必须以\`\`\`collected_info开头，以\`\`\`结尾，中间只有JSON数据
 - **再次强调**：代码块之前必须有对话内容！用户必须能看到你的回复！
 
-## 结束信号
-**必须同时满足以下条件才能结束**：
-1. 收集到：昵称 + 性别 + 年龄/年龄段 + 城市 + 至少2个兴趣 + 职业 + 活动意图
-2. 已经向用户确认过收集到的信息
-
-满足条件后，用轻松愉快的方式引导用户进入下一步——氛围测试，**务必告知预计用时**：
-- 例如："完美！基础信息都收集好啦～接下来还有一个超有趣的小测试，大概2分钟就能完成，帮我们了解你的社交氛围风格，这样才能给你匹配最合拍的局友！准备好了吗？"
-- 例如："搞定！最后还有一个2分钟的性格小测试，做完就可以开始匹配啦～相信我，这个测试结果会让你很惊喜！"
-- 例如："OK！信息确认完毕～还差最后一步，一个2分钟的小测试，测完就可以开始你的JoyJoin之旅啦！"
-
-然后在回复中加入：
+## 结束信号机制
+满足当前模式的结束条件后，用轻松愉快的方式确认收集到的信息，然后在回复中加入：
 \`\`\`registration_complete
 true
 \`\`\`
+**重要**：具体需要收集哪些信息、何时可以结束，请严格参考下方的"模式规则"部分。
 
 ## 追问注意事项（避免突兀）
 - **禁止在括号里追问**：不要写"xxxx（对了你有没有养宠物呀？）"这种格式，追问要自然地放在句子结尾
@@ -278,7 +251,20 @@ true
 
 记住：你的目标是让用户在轻松愉快的氛围中自愿分享更多信息，而不是机械地填表！年龄是匹配的核心要素，务必收集到，但要用灵活展示的承诺打消用户顾虑。好的对话应该像朋友聊天一样自然，而不是问卷调查！`;
 
-const XIAOYUE_OPENING = `嘿～欢迎来到JoyJoin！我是小悦，接下来我会通过简短的对话了解你 ✨
+// 注册模式类型
+type RegistrationMode = 'express' | 'standard' | 'deep' | 'all_in_one';
+
+// 不同模式的开场白
+const MODE_OPENINGS: Record<RegistrationMode, string> = {
+  express: `嘿～欢迎来到JoyJoin！我是小悦 ✨
+
+我们专门组织4-6人的精品小局，帮你认识有趣的朋友！
+
+你选了极速模式，我就问几个简单问题：
+
+你希望大家怎么称呼你呀？`,
+
+  standard: `嘿～欢迎来到JoyJoin！我是小悦，接下来我会通过简短的对话了解你 ✨
 
 我们专门组织4-6人的精品小局，每一局都是精心匹配的陌生人组合，拒绝尬聊，只交有趣的朋友！
 
@@ -287,18 +273,135 @@ const XIAOYUE_OPENING = `嘿～欢迎来到JoyJoin！我是小悦，接下来我
 【聊天内容】基本信息 + 兴趣爱好 + 社交期待
 【小建议】想到什么说什么就好，不用字斟句酌～
 
-那我们开始吧，你希望大家怎么称呼你呀？`;
+那我们开始吧，你希望大家怎么称呼你呀？`,
 
-export async function startXiaoyueChat(): Promise<{ 
+  deep: `嘿～欢迎来到JoyJoin！我是小悦 ✨
+
+很高兴你选了深度模式！这样我能更好地了解你，帮你找到真正合拍的活动伙伴。
+
+我们专门组织4-6人的精品小局，每一局都是精心匹配的陌生人组合～
+
+先跟你说一下接下来的流程：
+【预计用时】5-6分钟
+【聊天内容】详细了解你的背景、兴趣、社交偏好
+【好处】初始画像更完整，匹配更精准！
+
+那我们开始吧，你希望大家怎么称呼你呀？`,
+
+  all_in_one: `嘿～欢迎来到JoyJoin！我是小悦 ✨
+
+你选了一键搞定模式，太有效率了！我们一次把注册和性格测试都搞定～
+
+我们专门组织4-6人的精品小局，用12原型动物系统来匹配合拍的陌生人！
+
+先跟你说一下接下来的流程：
+【预计用时】6-7分钟
+【聊天内容】基本信息 + 兴趣爱好 + 性格测试
+【好处】一次搞定，直接进入活动列表！
+
+那我们开始吧，你希望大家怎么称呼你呀？`
+};
+
+// 不同模式的系统提示补充
+const MODE_SYSTEM_ADDITIONS: Record<RegistrationMode, string> = {
+  express: `
+## 【极速模式】覆盖默认规则
+这是极速模式（90秒），只收集4个核心信息：
+1. 昵称
+2. 性别（女生/男生/保密）
+3. 年龄或年龄段（如95后）
+4. 所在城市
+
+**模式行为规则**：
+- 每轮回复控制在1-2句话，简洁高效
+- 不追问细节，不收集进阶信息
+- 可以组合问题，如"你是女生还是男生呀？在哪个城市？"
+
+**结束条件（覆盖默认）**：
+- 收集完4个核心信息后立即结束
+- 简短确认："好啦，记下了：小雨、女生、95后、深圳～对吗？"
+- 用户确认后发送registration_complete
+
+**结束引导语**：
+"极速注册搞定！接下来可以做个2分钟性格测试，帮你匹配更合拍的局友～"`,
+
+  standard: `
+## 【标准模式】使用默认规则
+这是标准模式（3分钟），收集7个信息：
+1. 昵称
+2. 性别
+3. 年龄/年龄段
+4. 城市
+5. 职业/行业
+6. 兴趣爱好（至少2个）
+7. 活动意图
+
+**模式行为规则**：
+- 对话节奏适中，自然流畅
+- 可以适当追问1-2个兴趣细节
+- 进阶信息（宠物、感情状态等）如自然提到就记录
+
+**结束条件**：
+- 收集完7个核心信息后结束
+- 确认后引导性格测试`,
+
+  deep: `
+## 【深度模式】扩展收集范围
+这是深度模式（5分钟），收集12+个信息：
+必须收集：昵称、性别、年龄、城市、职业、兴趣（2+）、活动意图
+尽量收集：人生阶段、宠物、感情状态、家乡、年龄匹配偏好
+
+**模式行为规则**：
+- 每个话题可以深入追问
+- 兴趣话题可以聊2-3轮挖掘细节
+- 展现真诚的好奇和关注
+
+**结束条件（扩展）**：
+- 必须收集7个核心 + 至少3个进阶信息才能结束
+- 确认后引导性格测试`,
+
+  all_in_one: `
+## 【一键搞定模式】注册+性格测试融合
+这是一键搞定模式（6分钟），注册和性格测试无缝衔接。
+
+**第一阶段：信息收集**（约3分钟）
+- 按标准模式收集7个核心信息
+- 收集完后不发送registration_complete
+- 自然过渡到性格测试
+
+**过渡语示例**：
+"太棒了，基础信息都收集好啦！接下来我们玩个有趣的～我会给你几个场景，你选一个最像你的选项就好～"
+
+**第二阶段：性格测试**（约3分钟）
+- 用场景题形式进行10-12道性格测试
+- 每题给出A/B/C/D四个选项
+- 记录用户选择用于后续匹配
+
+**结束条件（特殊）**：
+- 必须完成信息收集 + 至少10道性格测试题
+- 全部完成后才发送registration_complete
+- 结束语："完美！注册+测试一步到位，你现在可以开始浏览活动啦～"`
+};
+
+// 保留兼容性的默认开场白
+const XIAOYUE_OPENING = MODE_OPENINGS.standard;
+
+export async function startXiaoyueChat(mode: RegistrationMode = 'standard'): Promise<{ 
   message: string; 
   conversationHistory: ChatMessage[];
+  mode: RegistrationMode;
 }> {
+  const opening = MODE_OPENINGS[mode] || MODE_OPENINGS.standard;
+  const modeAddition = MODE_SYSTEM_ADDITIONS[mode] || '';
+  const fullSystemPrompt = XIAOYUE_SYSTEM_PROMPT + modeAddition;
+  
   return {
-    message: XIAOYUE_OPENING,
+    message: opening,
     conversationHistory: [
-      { role: 'system', content: XIAOYUE_SYSTEM_PROMPT },
-      { role: 'assistant', content: XIAOYUE_OPENING }
-    ]
+      { role: 'system', content: fullSystemPrompt },
+      { role: 'assistant', content: opening }
+    ],
+    mode
   };
 }
 
@@ -546,14 +649,19 @@ function validateAndNormalizeInfo(info: Partial<XiaoyueCollectedInfo>): XiaoyueC
     normalized.lifeStage = info.lifeStage.trim();
   }
 
-  // ageMatchPreference - 年龄匹配偏好
-  const validAgePrefs = ['same_generation', 'younger', 'older', 'flexible'];
+  // ageMatchPreference - 年龄匹配偏好 (更新：用mixed替代younger/older以减少催婚感)
+  const validAgePrefs = ['mixed', 'same_generation', 'flexible'];
   if (info.ageMatchPreference && typeof info.ageMatchPreference === 'string') {
     const agePref = info.ageMatchPreference.trim().toLowerCase().replace(/\s+/g, '_');
     if (validAgePrefs.includes(agePref)) {
       normalized.ageMatchPreference = agePref;
     } else {
-      normalized.ageMatchPreference = info.ageMatchPreference.trim();
+      // 兼容旧值：younger/older 映射到 mixed
+      if (agePref === 'younger' || agePref === 'older') {
+        normalized.ageMatchPreference = 'mixed';
+      } else {
+        normalized.ageMatchPreference = info.ageMatchPreference.trim();
+      }
     }
   }
 
@@ -740,7 +848,7 @@ ${conversationHistory.filter(m => m.role !== 'system').map(m => `${m.role === 'u
   "primaryInterests": ["主要兴趣"],
   "intent": ["friends", "networking"],
   "lifeStage": "学生党/职场新人/职场老手/创业中/自由职业",
-  "ageMatchPreference": "same_generation/younger/older/flexible",
+  "ageMatchPreference": "mixed/same_generation/flexible",
   "ageDisplayPreference": "decade/range/hidden",
   "hasPets": true,
   "petTypes": ["猫", "狗"],

@@ -320,12 +320,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/registration/chat/start', async (req: any, res) => {
     try {
       const userId = req.session?.userId;
+      const { mode } = req.body; // 接收模式参数: express | standard | deep | all_in_one
+      
       if (userId) {
         resetConversationTurns(userId);
       }
       
       const { startXiaoyueChat } = await import('./deepseekClient');
-      const result = await startXiaoyueChat();
+      const result = await startXiaoyueChat(mode || 'standard');
       res.json(result);
     } catch (error) {
       console.error("Error starting chat registration:", error);
