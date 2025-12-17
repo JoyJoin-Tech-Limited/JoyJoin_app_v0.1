@@ -1939,10 +1939,14 @@ export default function ChatRegistrationPage() {
   };
 
   // 检测快捷回复选项
-  // 只有当不在打字、不在逐行显示、且消息有内容时才检测
+  // 只有当不在API请求中、且消息有内容时才检测
+  // 开场白序列（前4条消息）需等待逐行显示完成，后续消息不等待打字动画
   // 特殊情况：isComplete但未确认时仍需显示确认选项
   const quickReplyResult = useMemo(() => {
-    if (isTyping || isSequentialDisplaying || messages.length === 0) return { options: [], multiSelect: false };
+    if (isTyping || messages.length === 0) return { options: [], multiSelect: false };
+    // 开场白期间（前4条助手消息）需要等待逐行显示完成，避免过早显示选项
+    const assistantMsgCount = messages.filter(m => m.role === 'assistant').length;
+    if (isSequentialDisplaying && assistantMsgCount <= 4) return { options: [], multiSelect: false };
     // 已确认后不再显示快捷选项
     if (isComplete && infoConfirmed) return { options: [], multiSelect: false };
     const lastAssistantMessage = [...messages].reverse().find(m => m.role === "assistant");
