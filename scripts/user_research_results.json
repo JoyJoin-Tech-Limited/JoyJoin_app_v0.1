@@ -1,0 +1,3926 @@
+{
+  "results": [
+    {
+      "profileId": 1,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "创业者",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "普通用户",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 6,
+        "tagCloud": 7,
+        "moodProgression": 5,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我这个社恐不用费心组织语言，选择起来很轻松",
+        "mostAnnoyingQuestion": "人生阶段+年龄匹配偏好捆绑问，感觉有点被催婚的压力，虽然知道是匹配算法需要",
+        "dropOffRisk": "如果问到太私人的问题比如收入、感情状况，或者流程明显超过3分钟我就会放弃",
+        "suggestions": [
+          "第7轮的人生阶段问题可以更中性一些，比如用'生活重心'代替，减少社恐的抵触感",
+          "深圳的快捷按钮应该细分到区域（南山、福田等），方便匹配附近活动",
+          "成就系统可以更实用些，比如'创业者社交认证'比'铲屎官'对我更有吸引力"
+        ]
+      }
+    },
+    {
+      "profileId": 2,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "女性",
+        "occupation": "传统行业",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 3,
+        "moodProgression": 2,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮，不用打字很方便",
+        "mostAnnoyingQuestion": "人生阶段和年龄偏好捆绑问，感觉像在催婚",
+        "dropOffRisk": "问到第5轮还看不到尽头，又弹出宠物这种无关问题的时候",
+        "suggestions": [
+          "把10轮对话压缩到5轮以内，急性子真的没耐心",
+          "别问宠物、人生阶段这种私人问题，社恐不想聊这些",
+          "标签云和心情变化太花哨了，看着头晕，简单直接点更好"
+        ]
+      }
+    },
+    {
+      "profileId": 3,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "女性",
+        "occupation": "学生",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "上海"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 5,
+        "quickReplyDesign": 9,
+        "achievementSystem": 8,
+        "tagCloud": 6,
+        "moodProgression": 7,
+        "earlyExitOption": 9,
+        "privacyComfort": 8
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很贴心，不用打字就能快速选择，特别适合我这种急性子。",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点压力，好像急着要给我配对似的。",
+        "dropOffRisk": "如果中间卡在某个问题需要我打字输入，或者问题太啰嗦超过3分钟，我可能会直接退出。",
+        "suggestions": [
+          "建议把第7轮的问题拆开，先问人生阶段，等注册完成后再在个人设置里补充匹配偏好，这样压力小一点。",
+          "第9轮的宠物问题虽然是可选的，但放在注册流程里还是有点突兀，建议移到后面的‘完善资料’环节。",
+          "标签云的动态效果可以更明显一点，现在可能容易被忽略，加点动画会更吸引眼球。"
+        ]
+      }
+    },
+    {
+      "profileId": 4,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "男性",
+        "occupation": "传统行业",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 4,
+        "moodProgression": 3,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，对不熟悉App操作的人来说很方便",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲网站填资料，有点尴尬",
+        "dropOffRisk": "如果问太多关于宠物、个人生活细节的问题，我会觉得被冒犯而放弃",
+        "suggestions": [
+          "第6轮的活动意图选项可以增加'偶尔参加活动'或'先看看'这类更轻松的选项，不要让人感觉压力大",
+          "小悦心情渐变和背景氛围变化对我来说意义不大，不如简化界面，让注册过程更直接清晰",
+          "成就系统太花哨，像游戏，建议在注册完成后再展示，不要干扰注册流程"
+        ]
+      }
+    },
+    {
+      "profileId": 5,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "女性",
+        "occupation": "公务员/国企",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "科技达人",
+        "city": "上海"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 9,
+        "achievementSystem": 5,
+        "tagCloud": 8,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "实时标签云让我能直观看到自己的兴趣画像，感觉很清晰高效。",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄匹配偏好捆绑提问，感觉有点被催婚的压迫感。",
+        "dropOffRisk": "如果AI表情变化太刻意或成就系统显得幼稚，会让我觉得产品不够成熟专业。",
+        "suggestions": [
+          "建议将第7轮问题拆分，先问人生阶段（如：职场新人/稳定期/探索期），再单独询问对活动伙伴的年龄偏好，避免给人刻板印象。",
+          "小悦心情渐变可以更subtle一些，比如用颜色深浅或微动画，而不是明显的表情符号变化，符合科技达人对简洁UI的偏好。"
+        ]
+      }
+    },
+    {
+      "profileId": 6,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "男性",
+        "occupation": "公务员/国企",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 8,
+        "quickReplyDesign": 9,
+        "achievementSystem": 5,
+        "tagCloud": 6,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，对不熟悉App操作的人很友好",
+        "mostAnnoyingQuestion": "人生阶段+年龄匹配偏好这种捆绑问题，感觉像在查户口，有点压力",
+        "dropOffRisk": "如果问到太多私人信息比如具体职业单位或者收入相关，我会立刻退出",
+        "suggestions": [
+          "职业选择不要用开放式提问，提供公务员/国企/事业单位等具体选项",
+          "减少花哨的动画效果（心情渐变、背景渐变），简洁明了更适合我们这类用户",
+          "宠物问题放在可选位置很好，但成就徽章名字太网络化，建议更正式些"
+        ]
+      }
+    },
+    {
+      "profileId": 7,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "女性",
+        "occupation": "公务员/国企",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "科技达人",
+        "city": "上海"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 8,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 7,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计很贴心，减少了打字负担，适合我这种慢热型的人",
+        "mostAnnoyingQuestion": "人生阶段+年龄匹配偏好捆绑问，感觉有点被催婚的压力，作为85后女性不太舒服",
+        "dropOffRisk": "如果问太多私人化问题（比如宠物、情感状态），或者感觉被标签化太明显时",
+        "suggestions": [
+          "第7轮的人生阶段问题建议拆开，不要和年龄偏好捆绑，可以改成开放式询问‘希望认识什么年龄段的朋友’",
+          "成就系统可以更成熟些，‘铲屎官认证’这类称呼对35+女性略显幼稚，建议增加‘文化探索者’‘美食鉴赏家’等更符合年龄段的徽章",
+          "隐私舒适度需要提升，建议在问职业/身份时明确说明信息用途，并增加‘跳过此问题’的选项"
+        ]
+      }
+    },
+    {
+      "profileId": 8,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "男性",
+        "occupation": "学生",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "科技达人",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 8,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 7,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很智能，能快速选择又保留了自由输入的选项，适合我这种既想高效又希望表达准确的人",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲软件填资料，对内向慢热的人来说有点压力",
+        "dropOffRisk": "如果问太多像‘宠物/其他个性化问题’这种看似可选但实际会引导你回答的隐私问题时，我会直接退出",
+        "suggestions": [
+          "建议把第7轮拆分成两个独立问题，先问人生阶段（求学/工作初期等），再在后续对话中自然了解交友偏好，减少压迫感",
+          "成就系统可以更实用些，比如‘本地生存指南’徽章能关联到实际活动推荐，而不是纯趣味展示"
+        ]
+      }
+    },
+    {
+      "profileId": 9,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "女性",
+        "occupation": "金融从业者",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "普通用户",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "提前结束选项让我感觉有掌控感，不会被迫回答所有问题",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点冒犯，特别是对单身人士",
+        "dropOffRisk": "如果被问到太多关于婚姻状况或感情状态的问题，我会觉得隐私被侵犯而放弃",
+        "suggestions": [
+          "建议把人生阶段和年龄偏好分开问，或者把人生阶段改成更中性的‘当前生活重心’",
+          "金融从业者这个职业选项可能太宽泛，可以细分或提供自由填写选项",
+          "广州的快捷按钮应该包含天河、越秀等具体区域，而不只是城市名"
+        ]
+      }
+    },
+    {
+      "profileId": 10,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "男性",
+        "occupation": "公务员/国企",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "普通用户",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 6,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很方便，不用打字，适合我这种不太会表达的人。",
+        "mostAnnoyingQuestion": "第7轮‘人生阶段+年龄匹配偏好’这种捆绑问题，感觉有点被催着找对象，我只是想交朋友。",
+        "dropOffRisk": "如果问太多关于‘人生阶段’‘匹配偏好’这种暗示性很强的问题，我会觉得压力大直接退出。",
+        "suggestions": [
+          "第7轮的问题可以拆开，或者明确说明这些信息只是用于推荐活动而非匹配对象，减少社交压力。",
+          "成就系统和心情渐变对我来说有点幼稚，可以设置一个‘简洁模式’关掉这些动画效果。",
+          "职业选择部分，希望能有‘公务员/国企’的快捷按钮，而不是每次都打字。"
+        ]
+      }
+    },
+    {
+      "profileId": 11,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "男性",
+        "occupation": "学生",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 3,
+        "tagCloud": 5,
+        "moodProgression": 2,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，社恐友好",
+        "mostAnnoyingQuestion": "第7轮人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲网站填资料",
+        "dropOffRisk": "如果第6轮后还问太多可选问题（宠物/美食偏好），我会直接点提前结束",
+        "suggestions": [
+          "把10轮压缩到5-6轮核心信息，急性子没耐心聊这么久",
+          "去掉小悦心情渐变和成就系统，对35岁男性来说太幼稚",
+          "第7轮分开问，别捆绑‘人生阶段’这种敏感问题"
+        ]
+      }
+    },
+    {
+      "profileId": 12,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "男性",
+        "occupation": "学生",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "普通用户",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字就能快速选择，省时省力",
+        "mostAnnoyingQuestion": "第7轮的人生阶段和年龄匹配偏好捆绑问题，感觉有点被审视和分类",
+        "dropOffRisk": "如果中间出现需要我打字回答的开放式问题，或者问题太私人化",
+        "suggestions": [
+          "第9轮的宠物问题可以设为可选而不是默认出现，不是所有人都有宠物",
+          "成就系统可以更实用些，比如给些本地活动优惠券而不是虚拟徽章"
+        ]
+      }
+    },
+    {
+      "profileId": 13,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "女性",
+        "occupation": "公务员/国企",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "科技达人",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 5,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很精准，能让我快速完成信息输入，节省时间。",
+        "mostAnnoyingQuestion": "人生阶段+年龄匹配偏好捆绑问题，感觉有点被审视和分类的压力，作为社恐不太舒服。",
+        "dropOffRisk": "如果中途遇到需要我长篇大论打字描述的问题，或者流程明显超过3分钟，我会直接退出。",
+        "suggestions": [
+          "建议将第7轮的人生阶段和年龄偏好问题拆开或提供更模糊的选项（如‘随缘’），减少社恐用户的压迫感。",
+          "小悦心情渐变和背景氛围变化对急性子用户来说有点‘戏多’，建议提供简洁模式开关，或者默认减少这些动画效果。"
+        ]
+      }
+    },
+    {
+      "profileId": 14,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "女性",
+        "occupation": "学生",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 4,
+        "quickReplyDesign": 9,
+        "achievementSystem": 8,
+        "tagCloud": 6,
+        "moodProgression": 7,
+        "earlyExitOption": 9,
+        "privacyComfort": 8
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字就能快速完成注册，太适合我这种急性子了！",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄偏好捆绑在一起问，感觉有点啰嗦，急性子想快点过",
+        "dropOffRisk": "如果问题太多或者需要我打字输入太多信息，我可能会中途放弃",
+        "suggestions": [
+          "把第7轮的两个问题拆开或者简化成一个问题，减少对话轮数",
+          "广州的快捷按钮应该放在更显眼的位置，毕竟我在广州"
+        ]
+      }
+    },
+    {
+      "profileId": 15,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "男性",
+        "occupation": "创业者",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "不太熟悉App",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 6,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，效率高，适合我这种不太熟悉App操作的人",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点突兀，而且人生阶段这种问题对创业者来说太笼统",
+        "dropOffRisk": "如果问太多像宠物、个性化这种可选问题，我会觉得浪费时间直接跳过或退出",
+        "suggestions": [
+          "建议把第7轮拆开，先问年龄匹配偏好，人生阶段可以放在更后面作为可选问题",
+          "成就系统可以更实用些，比如‘创业者社交认证’比‘铲屎官认证’对我更有吸引力",
+          "背景和表情渐变效果可以简化，我关注的是快速完成注册，不是这些花哨的动画"
+        ]
+      }
+    },
+    {
+      "profileId": 16,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "男性",
+        "occupation": "学生",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "不太熟悉App",
+        "city": "上海"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 9,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 8,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "成就解锁系统挺有意思的，像玩游戏一样有成就感",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄偏好捆绑在一起问，感觉有点复杂，想简单点",
+        "dropOffRisk": "如果中间某个问题选项里没有我想要的，又必须打字回答，可能会不耐烦退出",
+        "suggestions": [
+          "第7轮可以拆成两个简单问题，不要捆绑在一起问",
+          "希望美食/场地偏好的选项能更具体些，比如加上‘火锅’‘烧烤’这种上海年轻人常去的类型",
+          "小悦心情渐变有点太文艺了，可以更活泼点，比如用emoji表情包那种"
+        ]
+      }
+    },
+    {
+      "profileId": 17,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "女性",
+        "occupation": "大厂打工人",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "上海"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 3,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，选一下就行，很方便",
+        "mostAnnoyingQuestion": "人生阶段和年龄匹配偏好捆绑问，感觉像在查户口，有点不舒服",
+        "dropOffRisk": "如果问到第5轮还没完，我可能就直接关掉App了，太长了",
+        "suggestions": [
+          "能不能压缩到5轮以内？急性子真的没耐心聊10轮",
+          "宠物和个性化问题改成可选而不是默认问，社恐不想被问太多私人信息",
+          "小悦心情渐变和背景变化有点花哨，不如直接点完成注册"
+        ]
+      }
+    },
+    {
+      "profileId": 18,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "男性",
+        "occupation": "大厂打工人",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "科技达人",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 8,
+        "flowLength": 7,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 5,
+        "earlyExitOption": 9,
+        "privacyComfort": 8
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计很高效，特别适合我这种工作间隙想快速注册的用户",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点突兀和刻意",
+        "dropOffRisk": "如果中间某个问题需要我打字输入太多内容，或者问题太矫情（比如宠物问题问得太细），我可能会直接退出",
+        "suggestions": [
+          "建议把第7轮拆分成两个独立问题，先问人生阶段（比如‘目前更关注事业发展还是家庭生活’），再自然过渡到年龄偏好",
+          "成就系统可以更‘硬核’一些，比如‘深圳通勤王者’、‘大厂生存专家’这类更符合我们这群人自嘲风格的徽章，现在的有点太萌了",
+          "小悦心情渐变和背景色变化可以更克制些，或者给个开关让用户选择是否显示，我们这种直男可能不太在意这些花哨的效果"
+        ]
+      }
+    },
+    {
+      "profileId": 19,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "男性",
+        "occupation": "自由职业",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "不太熟悉App",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 9,
+        "achievementSystem": 5,
+        "tagCloud": 6,
+        "moodProgression": 4,
+        "earlyExitOption": 8,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很方便，不用打字就能快速选择",
+        "mostAnnoyingQuestion": "人生阶段和年龄匹配偏好捆绑在一起问，感觉有点被催婚的压力",
+        "dropOffRisk": "如果问太多可选问题或者成就系统太花哨，会觉得浪费时间",
+        "suggestions": [
+          "把人生阶段和年龄偏好分开问，别让人感觉在相亲",
+          "简化成就系统，别搞太多花里胡哨的徽章",
+          "城市选择可以加个搜索框，北京太大了不同区差别很大"
+        ]
+      }
+    },
+    {
+      "profileId": 20,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "男性",
+        "occupation": "金融从业者",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "科技达人",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 8,
+        "quickReplyDesign": 9,
+        "achievementSystem": 5,
+        "tagCloud": 8,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计高效，符合我作为金融从业者对效率的追求。",
+        "mostAnnoyingQuestion": "人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲平台被审视，对内向慢热型不友好。",
+        "dropOffRisk": "如果被追问过多私人情感状态或强制要求上传照片，我会立即退出。",
+        "suggestions": [
+          "第7轮的人生阶段问题建议拆解，先问活动偏好再自然过渡到匹配范围，避免压迫感。",
+          "成就系统可增加‘深度交流者’、‘行业洞察’等更符合85后专业人士的徽章，减少低龄化趣味标签。",
+          "背景氛围渐变从冷色调开始很好，但渐变到暖紫色略显轻浮，建议采用更沉稳的蓝灰渐变。"
+        ]
+      }
+    },
+    {
+      "profileId": 21,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "公务员/国企",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 8,
+        "quickReplyDesign": 9,
+        "achievementSystem": 5,
+        "tagCloud": 6,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，很方便，尤其是城市和兴趣爱好的选择。",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点冒昧和直接，像在催婚。",
+        "dropOffRisk": "如果问太多关于宠物、人生阶段等感觉太私人的问题，或者要求我上传照片，我可能会放弃。",
+        "suggestions": [
+          "建议把第7轮的人生阶段和年龄偏好问题分开，或者用更委婉的方式询问交友目的，比如‘您希望认识什么样的人？’而不是直接问年龄匹配。",
+          "成就系统和心情渐变对我来说有点花哨，不太实用，建议可以简化或者让用户选择是否开启这些动画效果。",
+          "在问职业时，希望能有‘体制内/公务员’的快捷选项，而不是只有开放式输入，这样更符合我的背景。"
+        ]
+      }
+    },
+    {
+      "profileId": 22,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "女性",
+        "occupation": "传统行业",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 5,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 4,
+        "earlyExitOption": 10,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，对社恐很友好",
+        "mostAnnoyingQuestion": "第7轮人生阶段+年龄匹配偏好捆绑问，感觉像相亲软件查户口",
+        "dropOffRisk": "如果问太多私人问题或者要我反复打字输入就会放弃",
+        "suggestions": [
+          "把第7轮拆开问，不要捆绑人生阶段和年龄偏好，太像相亲了",
+          "减少一轮对话，把宠物问题合并到兴趣爱好里作为可选",
+          "小悦心情渐变可以去掉，急性子没耐心看这些动画效果"
+        ]
+      }
+    },
+    {
+      "profileId": 23,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "女性",
+        "occupation": "自由职业",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "科技达人",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 8,
+        "flowLength": 6,
+        "quickReplyDesign": 9,
+        "achievementSystem": 7,
+        "tagCloud": 8,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "实时标签云让我能直观看到自己的兴趣画像，很有科技感和掌控感",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄偏好捆绑问，感觉有点被定义和限制，作为00后不喜欢被贴标签",
+        "dropOffRisk": "如果中途出现重复确认或需要手动输入太多信息，我可能会直接退出",
+        "suggestions": [
+          "建议把第7轮拆成两个问题，先问人生阶段再问匹配偏好，避免捆绑感",
+          "可以增加深圳本地特色的快捷按钮，比如‘周末去香港’‘深圳湾骑行’等更具体的活动选项",
+          "小悦心情渐变有点幼稚，建议换成更酷的科技感动画或深圳城市元素变化"
+        ]
+      }
+    },
+    {
+      "profileId": 24,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "大厂打工人",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "普通用户",
+        "city": "上海"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 9,
+        "achievementSystem": 8,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我这种社恐不用费心想怎么回答，压力小很多",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄偏好捆绑问，感觉有点被催婚的压力",
+        "dropOffRisk": "如果问到收入、具体公司名称或者要求上传太多个人照片，我会立刻退出",
+        "suggestions": [
+          "第7轮建议把人生阶段和年龄偏好分开问，或者给个‘随缘’的选项",
+          "希望宠物问题能放在更靠前的位置，因为养宠物的人可能更想找同类",
+          "城市选择可以增加‘附近’或‘通勤方便区域’的选项，上海太大了"
+        ]
+      }
+    },
+    {
+      "profileId": 25,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "男性",
+        "occupation": "大厂打工人",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "科技达人",
+        "city": "上海"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 5,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很精准，能让我这种急性子快速完成信息填写",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲软件填资料，社恐瞬间警觉",
+        "dropOffRisk": "如果第9轮开始问宠物/其他个性化问题，感觉像在查户口，会直接点提前结束",
+        "suggestions": [
+          "把10轮对话压缩到5-6轮，急性子真的没耐心跟AI聊这么久，核心信息（城市、兴趣、意图）够了就行",
+          "第7轮的人生阶段问题太敏感，建议改成更中性的‘希望认识什么年龄段的朋友’，别用‘匹配偏好’这种词",
+          "成就系统太幼稚，什么‘铲屎官认证’对我们大厂打工人毫无吸引力，改成‘效率达人’‘精准社交’这类更酷的徽章",
+          "小悦心情渐变和背景色变化完全没注意到，急性子只会盯着按钮点，这种设计对科技达人来说太花哨没意义"
+        ]
+      }
+    },
+    {
+      "profileId": 26,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "男性",
+        "occupation": "学生",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "普通用户",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，省事很多",
+        "mostAnnoyingQuestion": "人生阶段和年龄匹配偏好捆绑问，感觉像在相亲网站",
+        "dropOffRisk": "如果问太多个人隐私或者感觉像在查户口，我可能会直接关掉",
+        "suggestions": [
+          "第7轮的人生阶段问题可以更自然一点，不要那么直接",
+          "成就系统感觉有点幼稚，可以设计得更符合90后审美",
+          "小悦心情渐变太花哨了，不如简洁一点"
+        ]
+      }
+    },
+    {
+      "profileId": 27,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "女性",
+        "occupation": "传统行业",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "不太熟悉App",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 6,
+        "moodProgression": 7,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，很省心",
+        "mostAnnoyingQuestion": "人生阶段和年龄匹配偏好捆绑问，感觉有点被催着找对象",
+        "dropOffRisk": "如果问太多私人问题或者感觉像在查户口，我会直接退出",
+        "suggestions": [
+          "第7轮的问题可以拆开问，不要捆绑，不然压力有点大",
+          "职业选项最好有传统行业的分类，比如行政、文员这些，不要只有互联网相关"
+        ]
+      }
+    },
+    {
+      "profileId": 28,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "学生",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "普通用户",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 9,
+        "achievementSystem": 8,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 8,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，社恐友好",
+        "mostAnnoyingQuestion": "第7轮人生阶段+年龄匹配偏好捆绑问，感觉像相亲软件",
+        "dropOffRisk": "如果问太多私人问题比如收入或感情状况，我会立刻退出",
+        "suggestions": [
+          "第7轮分开问，先问人生阶段，匹配偏好可以放在后面或可选",
+          "增加更多广州本地化的兴趣选项，比如‘饮早茶’‘行花街’",
+          "宠物问题可以提前说明是可选，避免社恐用户担心被强制回答"
+        ]
+      }
+    },
+    {
+      "profileId": 29,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "男性",
+        "occupation": "公务员/国企",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "普通用户",
+        "city": "香港"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我这种社恐不用费心打字，减少社交压力",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲App被审问",
+        "dropOffRisk": "如果被问到太多私人问题（比如收入、感情状况）或者感觉像在填表格",
+        "suggestions": [
+          "第7轮的人生阶段问题可以更自然，比如问‘现阶段想认识什么样的人’而不是直接问年龄偏好",
+          "成就系统可以更低调些，‘铲屎官认证’这种标签公开显示可能会让社恐尴尬",
+          "建议在第4轮职业问题提供‘公务员/国企’的快捷选项，避免需要自己打字暴露太多"
+        ]
+      }
+    },
+    {
+      "profileId": 30,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "男性",
+        "occupation": "金融从业者",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "科技达人",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 4,
+        "quickReplyDesign": 9,
+        "achievementSystem": 5,
+        "tagCloud": 8,
+        "moodProgression": 3,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计高效，符合我快速完成的需求",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲网站填表",
+        "dropOffRisk": "如果第6轮后还问太多可选问题（如宠物），我会直接点提前结束",
+        "suggestions": [
+          "将核心信息收集压缩到5轮内，可选问题放在注册后引导完善",
+          "去掉小悦心情渐变和成就系统这些花哨功能，金融从业者更看重效率",
+          "第7轮问题拆分，人生阶段和匹配偏好分开问会更自然"
+        ]
+      }
+    },
+    {
+      "profileId": 31,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "男性",
+        "occupation": "金融从业者",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "普通用户",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我这种社恐不用费心组织语言，直接点选很省心",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲软件填资料，有点压力",
+        "dropOffRisk": "如果问到太私人的问题比如收入、具体住址，或者感觉像在查户口时会放弃",
+        "suggestions": [
+          "第7轮的人生阶段问题可以更委婉，比如问‘现阶段更关注什么’而不是直接问婚恋状态",
+          "金融从业者这个职业选项下可以细分（投行/银行/证券等），方便找到同行交流",
+          "成就系统可以更实用些，比如‘金融圈社交达人’比‘铲屎官认证’对我更有吸引力"
+        ]
+      }
+    },
+    {
+      "profileId": 32,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "公务员/国企",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "普通用户",
+        "city": "香港"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，很方便，特别是问城市和兴趣爱好的时候。",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点被催婚的压力，而且我才刚注册。",
+        "dropOffRisk": "如果问太多关于个人生活阶段或者婚姻状况的问题，我会觉得隐私被侵犯而放弃。",
+        "suggestions": [
+          "建议把第7轮的人生阶段问题改成可选，或者放在更后面，刚认识就问这个有点太快。",
+          "成就系统里的‘铲屎官认证’这类标签太幼稚了，可以设计更符合职场人身份的徽章，比如‘美食探索家’或‘城市活动达人’。"
+        ]
+      }
+    },
+    {
+      "profileId": 33,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "金融从业者",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "科技达人",
+        "city": "香港"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 9,
+        "achievementSystem": 5,
+        "tagCloud": 8,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很好，特别是职业和兴趣爱好的选项，让我这种社恐不用费力打字就能表达自己。",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉太像传统相亲软件了，我只是想交朋友，不想一开始就被贴上婚恋标签。",
+        "dropOffRisk": "如果发现需要填写太多个人隐私信息，或者感觉平台用户画像明显偏向婚恋而非兴趣社交，我会立刻退出。",
+        "suggestions": [
+          "建议将第7轮的人生阶段问题改为可选，或者明确说明这些数据仅用于匹配同频朋友而非婚恋对象。",
+          "成就系统可以更实用些，比如‘金融圈社交达人’、‘中环午餐搭子认证’这类与职业生活相关的徽章，比‘铲屎官’更有吸引力。",
+          "小悦的心情渐变和背景色变化有点幼稚，作为科技达人和金融从业者，我更喜欢简洁专业的设计，或者至少提供关闭动画的选项。"
+        ]
+      }
+    },
+    {
+      "profileId": 34,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "男性",
+        "occupation": "自由职业",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 3,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，省事很多。",
+        "mostAnnoyingQuestion": "第9轮那些宠物或其他个性化问题，感觉有点多余，跟社交活动关系不大。",
+        "dropOffRisk": "如果问太多无关紧要的问题，或者流程拖到超过3分钟，我可能就直接退出了。",
+        "suggestions": [
+          "把10轮对话压缩到5-6轮，只问最核心的信息（昵称、城市、兴趣、意图），其他可以注册后再补。",
+          "第7轮人生阶段和年龄偏好捆绑问，感觉有点压力，可以分开或者放后面选填。",
+          "小悦心情渐变和背景变化对我来说没什么用，不如直接显示进度条让我知道还剩多少问题。"
+        ]
+      }
+    },
+    {
+      "profileId": 35,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "公务员/国企",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "科技达人",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 8,
+        "flowLength": 7,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 7,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很贴心，特别是现居城市和兴趣爱好的多选按钮，让我这种社恐不用费心打字就能快速完成",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，作为90后女性在深圳，被问年龄相关还是会有点敏感和压力",
+        "dropOffRisk": "如果中途出现需要上传照片或者要求填写过于详细的个人隐私信息（比如具体收入、家庭情况），我会立刻退出",
+        "suggestions": [
+          "建议把第7轮的人生阶段和年龄偏好问题拆开，或者用更委婉的方式询问，比如‘你希望认识什么年龄段的朋友’而不是直接问‘年龄匹配偏好’",
+          "成就系统可以更实用一些，现在的‘铲屎官认证’这类趣味徽章对科技达人来说有点幼稚，建议增加‘深圳本地通’‘活动达人’等更有实际价值的成就",
+          "在职业/身份问题中，建议增加‘国企/公务员’的快捷按钮选项，而不是只有开放式输入，这样更符合我们的身份认同"
+        ]
+      }
+    },
+    {
+      "profileId": 36,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "女性",
+        "occupation": "学生",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "普通用户",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，对内向的人来说压力小很多",
+        "mostAnnoyingQuestion": "第7轮的人生阶段和年龄匹配偏好捆绑问题，感觉有点被审视和分类的不适",
+        "dropOffRisk": "如果问到太私人的问题比如具体职业单位或者要求上传照片，我可能会直接退出",
+        "suggestions": [
+          "第7轮的问题可以拆开问，不要捆绑‘人生阶段’这么重的标签",
+          "宠物问题放在可选很好，但建议放在更后面，先确保核心信息收集完",
+          "成就系统的趣味徽章对35+的普通用户吸引力不大，可以考虑更实用的奖励比如首次活动优惠"
+        ]
+      }
+    },
+    {
+      "profileId": 37,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "女性",
+        "occupation": "传统行业",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "不太熟悉App",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 6,
+        "tagCloud": 7,
+        "moodProgression": 5,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，社恐友好",
+        "mostAnnoyingQuestion": "第7轮的人生阶段和年龄匹配偏好捆绑问题，感觉像在相亲",
+        "dropOffRisk": "如果问到太多个人隐私问题，比如具体职业单位或者收入相关",
+        "suggestions": [
+          "第7轮的问题可以拆开，不要捆绑‘人生阶段’和‘年龄匹配偏好’，前者让我有压力",
+          "可以增加一个‘跳过’按钮在每轮问题旁边，而不是只能提前结束"
+        ]
+      }
+    },
+    {
+      "profileId": 38,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "男性",
+        "occupation": "学生",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 3,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，选一下就行，挺方便的",
+        "mostAnnoyingQuestion": "第7轮的人生阶段和年龄匹配偏好捆绑问，感觉有点被催着找对象，社恐不想聊这个",
+        "dropOffRisk": "如果问太多个人细节或者感觉像在查户口，我可能中途就关掉了",
+        "suggestions": [
+          "把10轮对话压缩到5-6轮，急性子没耐心聊这么久",
+          "把人生阶段和宠物这种可选问题放到最后，或者标清楚可以不答",
+          "成就系统太花哨了，不如直接告诉我注册成功，别搞那些徽章动画"
+        ]
+      }
+    },
+    {
+      "profileId": 39,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "金融从业者",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "不太熟悉App",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 6,
+        "tagCloud": 7,
+        "moodProgression": 5,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮很方便，不用打字，特别适合我这种不太熟悉App操作的人",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄偏好捆绑在一起问，感觉有点冒犯，而且问得太细了",
+        "dropOffRisk": "如果问太多个人隐私问题，比如具体收入、家庭情况，我肯定会放弃",
+        "suggestions": [
+          "第7轮的问题建议拆开问，或者改成更委婉的方式，比如先问'希望认识什么年龄段的朋友'",
+          "金融从业者这个职业选项在快捷按钮里最好加上，现在要打字输入有点麻烦",
+          "背景颜色渐变和表情变化对我来说没什么感觉，可以简化或者让用户选择关闭"
+        ]
+      }
+    },
+    {
+      "profileId": 40,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "女性",
+        "occupation": "公务员/国企",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 3,
+        "tagCloud": 5,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，省事很多",
+        "mostAnnoyingQuestion": "人生阶段和年龄匹配偏好捆绑问，感觉被催婚催生，很不舒服",
+        "dropOffRisk": "如果问太多私人问题或者感觉在浪费时间，我会直接关掉",
+        "suggestions": [
+          "把第7轮的人生阶段问题改成可选，或者放在更后面",
+          "3分钟太长了，最好能1-2分钟搞定，急性子没耐心",
+          "成就系统对我们这个年纪的公务员来说太幼稚了，可以简化或隐藏"
+        ]
+      }
+    },
+    {
+      "profileId": 41,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "男性",
+        "occupation": "大厂打工人",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "香港"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 5,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，对社恐很友好",
+        "mostAnnoyingQuestion": "人生阶段+年龄匹配偏好这种捆绑问题，感觉像在相亲app",
+        "dropOffRisk": "如果问到太多个人隐私或需要打很多字的问题，我会直接关掉",
+        "suggestions": [
+          "第7轮的人生阶段问题可以更自然，不要像查户口",
+          "香港的快捷按钮要细分区域（港岛/九龙/新界），不要只有一个‘香港’",
+          "成就系统可以更实用些，比如‘港岛美食家’比‘铲屎官认证’更吸引我"
+        ]
+      }
+    },
+    {
+      "profileId": 42,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "女性",
+        "occupation": "大厂打工人",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "不太熟悉App",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 9,
+        "achievementSystem": 5,
+        "tagCloud": 4,
+        "moodProgression": 3,
+        "earlyExitOption": 8,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，特别方便，尤其下班后懒得动脑的时候。",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄偏好捆绑问，感觉有点被催婚的压力，不太舒服。",
+        "dropOffRisk": "如果问太多私人细节（比如具体收入、感情状况），或者弹出一堆花哨动画让我手机卡顿，我会直接退出。",
+        "suggestions": [
+          "把人生阶段和年龄偏好分开问，或者把人生阶段改成更中性的选项，比如‘目前生活重心’（工作/家庭/自我成长等）。",
+          "简化那些花哨的动画效果（心情渐变、背景渐变），我们这种不太懂科技的人会觉得是手机出问题了，或者担心耗电。"
+        ]
+      }
+    },
+    {
+      "profileId": 43,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "女性",
+        "occupation": "公务员/国企",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "科技达人",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 4,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 5,
+        "earlyExitOption": 10,
+        "privacyComfort": 8
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很精准，点几下就能选完，特别适合我这种急性子。",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄偏好捆绑问，感觉有点被审视，而且选项可能不够贴切（比如我可能只想找玩伴，不想被定义在某个‘阶段’）。",
+        "dropOffRisk": "如果中途网络卡顿或者某个问题选项里没有我想要的，又必须手动打字，我可能会直接退出。",
+        "suggestions": [
+          "建议把第7轮拆开，或者把‘人生阶段’这种标签化的问题改成更轻松的问法，比如‘你希望认识什么样的小伙伴？’",
+          "第9轮的宠物等个性化问题可以更前置或整合到兴趣里，作为可选加分项，别在最后才突然冒出来，节奏有点拖。",
+          "作为科技达人，希望能在注册后有个‘一键补全资料’的入口，比如关联豆瓣/小红书账号直接导入兴趣标签，现在纯手动还是有点累。",
+          "小悦的心情渐变和背景色变化对我来说有点幼稚，不如把动画效果做得更简洁酷炫一点，或者让我能自定义对话气泡的颜色/主题。"
+        ]
+      }
+    },
+    {
+      "profileId": 44,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "男性",
+        "occupation": "自由职业",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "科技达人",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 8,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 5,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "标签云实时显示收集的兴趣偏好，让我清楚知道系统在记录什么，有掌控感",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲平台被审问，有点压力",
+        "dropOffRisk": "如果被问到太多关于情感状态或未来规划这种私人问题，我会直接退出",
+        "suggestions": [
+          "把第7轮的人生阶段和年龄偏好拆成两个问题，或者让年龄偏好可选，不要捆绑",
+          "成就系统可以更实用些，比如‘科技达人认证’‘深圳本地通’这种，而不是‘铲屎官’这种卖萌标签",
+          "小悦心情渐变有点幼稚，建议换成更简洁的进度条或数字提示，我们00后科技达人更看重效率"
+        ]
+      }
+    },
+    {
+      "profileId": 45,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "男性",
+        "occupation": "自由职业",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 5,
+        "quickReplyDesign": 9,
+        "achievementSystem": 4,
+        "tagCloud": 6,
+        "moodProgression": 3,
+        "earlyExitOption": 8,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，效率高",
+        "mostAnnoyingQuestion": "人生阶段和年龄偏好捆绑问，感觉像在查户口",
+        "dropOffRisk": "如果问太多个人化问题（比如宠物），我会直接退出",
+        "suggestions": [
+          "把10轮对话压缩到5-6轮，急性子没耐心聊这么久",
+          "减少花哨的动画和成就系统，直接问核心信息就行",
+          "把城市选择放在更前面，广州本地活动匹配对我更重要"
+        ]
+      }
+    },
+    {
+      "profileId": 46,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "男性",
+        "occupation": "自由职业",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "科技达人",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 8,
+        "flowLength": 7,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 5,
+        "earlyExitOption": 9,
+        "privacyComfort": 8
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很聪明，特别是城市和兴趣爱好的多选，省时又直观，符合我这种科技达人的效率需求。",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点强行关联，我可能只想交朋友，不一定想立刻被限定在某个‘阶段’里。",
+        "dropOffRisk": "如果中间有太多开放式问题需要我打字，或者感觉问题在窥探隐私（比如问收入、家庭），我可能会直接退出。",
+        "suggestions": [
+          "建议把第7轮拆开，人生阶段和年龄偏好分开问，或者把年龄偏好做成更灵活的滑块/范围选择，别一开始就框死。",
+          "小悦的心情渐变（🌱→🌿→🌳→🌸→💮）有点幼稚，对我这种00后科技男来说吸引力不大，不如换成更酷的科技感进度条或动态数据可视化。"
+        ]
+      }
+    },
+    {
+      "profileId": 47,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "女性",
+        "occupation": "公务员/国企",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "普通用户",
+        "city": "香港"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 8,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 7,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，对社恐很友好",
+        "mostAnnoyingQuestion": "人生阶段+年龄匹配偏好捆绑问，感觉像在相亲app",
+        "dropOffRisk": "如果问太多私人问题比如收入或感情状况，我会立刻退出",
+        "suggestions": [
+          "第7轮的人生阶段问题可以更模糊些，比如用'生活重心'代替'人生阶段'",
+          "职业选项应该有'公务员/国企'的快捷按钮，而不是让我打字",
+          "宠物问题对部分人可能敏感，建议放在更后面或设为可选"
+        ]
+      }
+    },
+    {
+      "profileId": 48,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "女性",
+        "occupation": "大厂打工人",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "科技达人",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 5,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 4,
+        "earlyExitOption": 10,
+        "privacyComfort": 8
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很精准，点几下就能填完，特别适合我这种急性子",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄偏好捆绑问，感觉有点被定义和限制，而且问得有点深了",
+        "dropOffRisk": "如果中间卡在某个问题非要我打字才能继续，或者加载慢，我可能就直接退出了",
+        "suggestions": [
+          "第7轮拆成两个简单问题，或者直接给年龄范围滑动条选择，别问人生阶段这么沉重的话题",
+          "背景渐变和小悦表情变化可以更明显或者直接去掉，我根本不会注意这些，只想快点完成",
+          "成就系统可以更实用点，比如解锁后直接给推荐活动优惠券，比虚拟徽章更有吸引力"
+        ]
+      }
+    },
+    {
+      "profileId": 49,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "学生",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 5
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，对不熟悉App的人来说很方便",
+        "mostAnnoyingQuestion": "第7轮的人生阶段和年龄匹配偏好捆绑问题，感觉像在相亲App，让我不舒服",
+        "dropOffRisk": "如果问太多私人问题或者感觉像在查户口，我会直接退出",
+        "suggestions": [
+          "把第7轮的人生阶段问题改成可选，或者放在更后面让用户自己决定是否回答",
+          "减少一轮对话，把宠物等个性化问题合并或设为完全可选",
+          "在开始前明确说明需要多少时间，并且可以随时跳过问题"
+        ]
+      }
+    },
+    {
+      "profileId": 50,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "女性",
+        "occupation": "金融从业者",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "普通用户",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 8,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 7,
+        "moodProgression": 5,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，对内向的人来说压力小很多",
+        "mostAnnoyingQuestion": "第7轮的人生阶段和年龄匹配偏好捆绑问题，感觉有点被催着找对象",
+        "dropOffRisk": "如果问太多私人问题比如具体收入、家庭情况，或者感觉AI在评判我的选择时",
+        "suggestions": [
+          "第7轮的问题可以拆开，先问人生阶段，过几轮再问匹配偏好，现在这样太直接了",
+          "成就系统可以更低调些，金融行业的人对‘铲屎官认证’这种太萌的称号可能无感",
+          "宠物问题放在可选位置很好，但应该更早说明哪些问题是必填哪些可选"
+        ]
+      }
+    },
+    {
+      "profileId": 51,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "大厂打工人",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "科技达人",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 8,
+        "flowLength": 7,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 7,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计很贴心，特别是对内向慢热的人来说，减少了社交压力",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉有点被催婚的压力，作为90后女性对这种标签化比较敏感",
+        "dropOffRisk": "如果问太多关于情感状态或人生规划的私人问题，会让我觉得被冒犯而放弃",
+        "suggestions": [
+          "建议将第7轮的人生阶段问题改为可选，或者用更轻松的方式询问，比如‘现阶段更关注什么’而不是直接问人生阶段",
+          "成就系统可以更实用一些，比如‘大厂生存指南’‘深圳探店达人’这类与职业城市相关的徽章，比‘铲屎官’更有吸引力"
+        ]
+      }
+    },
+    {
+      "profileId": 52,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "大厂打工人",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "上海"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 6,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，很方便，特别是城市和兴趣爱好的选择",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉有点被催着找对象，我只是想交朋友",
+        "dropOffRisk": "如果问太多个人隐私问题，比如具体收入、家庭情况，或者感觉像在查户口",
+        "suggestions": [
+          "第7轮的人生阶段和年龄偏好建议分开问，或者明确说明这是为了匹配活动伙伴而非婚恋",
+          "小悦心情渐变有点幼稚，可以换成更简洁的进度条，我们90后更看重效率",
+          "成就系统像游戏，但‘铲屎官认证’这种名字不太适合正式社交场合，建议更成熟些",
+          "建议在注册前简单说明数据用途，比如‘仅用于推荐合适活动’，增加信任感"
+        ]
+      }
+    },
+    {
+      "profileId": 53,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "男性",
+        "occupation": "金融从业者",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "科技达人",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 3,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮和提前结束选项，让我这种急性子能快速跳过不想回答的问题",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，社恐不想一上来就被匹配压力绑架",
+        "dropOffRisk": "如果第6轮后还问太多可选问题（如第8、9轮），我会直接点提前结束或退出",
+        "suggestions": [
+          "把核心问题压缩到5轮内，急性子没耐心聊10轮",
+          "把匹配偏好问题放到注册后，别一开始就问，社恐有压力",
+          "成就系统太幼稚，金融从业者更想要‘高效社交者’‘人脉开拓者’这类专业感徽章"
+        ]
+      }
+    },
+    {
+      "profileId": 54,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "男性",
+        "occupation": "金融从业者",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "不太熟悉App",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 9,
+        "achievementSystem": 5,
+        "tagCloud": 6,
+        "moodProgression": 4,
+        "earlyExitOption": 8,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，对不熟悉App操作的人很友好",
+        "mostAnnoyingQuestion": "人生阶段+年龄匹配偏好这种捆绑问题，感觉像在相亲App被审问",
+        "dropOffRisk": "如果被问到太多个人隐私或情感状态相关的问题，我会直接退出",
+        "suggestions": [
+          "金融从业者这种职业选项应该放在快捷按钮里，而不是让我打字输入",
+          "成就系统太花哨了，像游戏一样，对我们这种内向务实的人没什么吸引力",
+          "能不能把城市选择做成广州具体区域（天河、越秀等）的快捷按钮，更实用"
+        ]
+      }
+    },
+    {
+      "profileId": 55,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "男性",
+        "occupation": "传统行业",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "科技达人",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 8,
+        "flowLength": 6,
+        "quickReplyDesign": 9,
+        "achievementSystem": 7,
+        "tagCloud": 8,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 8
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计很高效，特别是城市和兴趣爱好的选项，省去了打字麻烦",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉有点刻意和公式化",
+        "dropOffRisk": "如果中间出现网络卡顿或者需要反复确认信息，我会直接退出",
+        "suggestions": [
+          "建议把第7轮的人生阶段问题拆开或者简化，直接问年龄偏好就好，不用扯人生阶段这么沉重",
+          "可以增加一些广州本地特色的快捷选项，比如‘饮早茶’‘行花街’这类地域性兴趣标签"
+        ]
+      }
+    },
+    {
+      "profileId": 56,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "男性",
+        "occupation": "创业者",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "科技达人",
+        "city": "上海"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 9,
+        "achievementSystem": 5,
+        "tagCloud": 8,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮和提前结束选项，让我能高效完成必要信息输入。",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲平台被审问。",
+        "dropOffRisk": "如果被追问过多私人生活细节（如宠物、人生阶段），我会觉得越界并退出。",
+        "suggestions": [
+          "将第7轮问题拆分为可选模块，明确标注‘用于匹配推荐，可跳过’，给内向用户更多控制感。",
+          "减少或合并第8、9轮的可选问题，创业者的时间很碎片化，3分钟是心理上限。",
+          "成就系统的趣味徽章（如‘铲屎官认证’）对务实型用户吸引力低，建议增加‘行业洞察者’、‘城市探索家’等更中性、有价值的成就。",
+          "小悦心情渐变（🌱→🌿→🌳）和背景色变化过于‘萌系’，建议提供简洁模式开关，或改用更克制的视觉反馈。"
+        ]
+      }
+    },
+    {
+      "profileId": 57,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "自由职业",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "不太熟悉App",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 9,
+        "achievementSystem": 8,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，对社恐很友好",
+        "mostAnnoyingQuestion": "人生阶段+年龄匹配偏好捆绑问，感觉像在相亲软件被审问",
+        "dropOffRisk": "如果问太多私人问题比如具体职业细节或收入，我会立刻退出",
+        "suggestions": [
+          "第7轮问题分开问，不要捆绑年龄偏好，社恐很怕被贴上‘找对象’标签",
+          "城市选择增加‘天河区’‘越秀区’等更细选项，广州很大不同区活动差很多",
+          "职业问题提供‘自由职业/创作者’这类更符合现状的快捷选项，而不是只有传统职业"
+        ]
+      }
+    },
+    {
+      "profileId": 58,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "女性",
+        "occupation": "公务员/国企",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 4,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 5,
+        "moodProgression": 3,
+        "earlyExitOption": 8,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，选一下就行，特别方便",
+        "mostAnnoyingQuestion": "第9轮问宠物那些个性化问题，感觉跟注册关系不大，有点浪费时间",
+        "dropOffRisk": "如果问到第6、7轮还没完，我就可能直接退出了，急性子受不了太长的流程",
+        "suggestions": [
+          "把10轮对话压缩到5-6轮，急性子真的没耐心聊这么久",
+          "第7轮的人生阶段和年龄偏好可以合并或者简化，问得太细了",
+          "广州的快捷按钮要放在城市选择最前面，别让我翻找"
+        ]
+      }
+    },
+    {
+      "profileId": 59,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "女性",
+        "occupation": "公务员/国企",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "普通用户",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计很贴心，省去了打字麻烦，特别是城市和兴趣爱好的选择",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉有点被催婚的压力，作为85后女性这个问题有点敏感",
+        "dropOffRisk": "如果被问到太多个人隐私问题，比如收入、婚姻状况，或者感觉被贴标签太明显时会放弃",
+        "suggestions": [
+          "建议把人生阶段和年龄偏好分开问，不要捆绑，这样压力小一些",
+          "职业选项应该增加'公务员/事业单位'这类明确选项，而不是只有开放式或通用快捷按钮",
+          "成就系统对35+用户吸引力不大，建议增加更成熟的徽章类型，如'城市探索家'、'文化鉴赏者'"
+        ]
+      }
+    },
+    {
+      "profileId": 60,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "男性",
+        "occupation": "大厂打工人",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "普通用户",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很好，社恐不用想太多就能选",
+        "mostAnnoyingQuestion": "第7轮人生阶段+年龄匹配偏好捆绑问，感觉像在查户口，有点压力",
+        "dropOffRisk": "如果问太多个人隐私或者要求上传照片，会立刻关掉",
+        "suggestions": [
+          "第7轮的人生阶段问题可以更委婉，比如问‘现阶段更关注什么’而不是直接问人生阶段",
+          "成就系统有点幼稚，可以设计更符合90后打工人审美的徽章，比如‘周末战士’、‘咖啡续命者’"
+        ]
+      }
+    },
+    {
+      "profileId": 61,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "男性",
+        "occupation": "学生",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "普通用户",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计很实用，特别是城市和兴趣爱好的选择，省去了打字麻烦",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉有点被催婚的压力，作为学生更想先交朋友",
+        "dropOffRisk": "如果问到太多关于收入、家庭背景或者明显是婚恋导向的问题，我会觉得不适合我而放弃",
+        "suggestions": [
+          "建议把第7轮的人生阶段问题改成可选，或者明确说明这是为了匹配活动类型而非婚恋",
+          "职业选项应该增加‘在校学生’的快捷按钮，现在开放式提问让我需要思考怎么描述比较合适",
+          "深圳的快捷城市按钮应该放在前面，很多同类应用都把深圳放在显眼位置"
+        ]
+      }
+    },
+    {
+      "profileId": 62,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "男性",
+        "occupation": "自由职业",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "科技达人",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 4,
+        "quickReplyDesign": 9,
+        "achievementSystem": 5,
+        "tagCloud": 8,
+        "moodProgression": 3,
+        "earlyExitOption": 10,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很高效，特别是城市和兴趣爱好的选项，让我这种急性子能快速完成选择。",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点被审视和分类的压力，作为社恐不太舒服。",
+        "dropOffRisk": "如果中途出现太多开放式问题需要打字，或者问太多个人隐私（比如收入、婚姻状况），我会直接关掉。",
+        "suggestions": [
+          "把10轮对话压缩到5-6轮，急性子没耐心，核心信息（昵称、城市、兴趣、意图）就够了，其他可以注册后补。",
+          "第7轮的人生阶段和年龄匹配问题分开，或者改成更中性的选项（比如‘希望认识什么年龄段的朋友’），避免让社恐感到被judge。",
+          "小悦心情渐变和成就系统对我这种务实派吸引力不大，可以考虑简化或允许用户关闭动画效果，提升加载速度。"
+        ]
+      }
+    },
+    {
+      "profileId": 63,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "女性",
+        "occupation": "学生",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "科技达人",
+        "city": "上海"
+      },
+      "ratings": {
+        "overallSatisfaction": 8,
+        "flowLength": 7,
+        "quickReplyDesign": 9,
+        "achievementSystem": 8,
+        "tagCloud": 6,
+        "moodProgression": 7,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很贴心，社恐不用费心想怎么打字回复",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉有点被催着找对象",
+        "dropOffRisk": "如果问太多关于个人情感状态或者要求上传照片，我会立刻退出",
+        "suggestions": [
+          "第7轮的问题可以拆开，先问人生阶段，再问是否愿意开启匹配偏好（默认关闭）",
+          "增加更多上海本地小众兴趣选项，比如看脱口秀、逛中古店、citywalk路线探索",
+          "标签云可以做成动态的，点击能看同城有相同标签的人（不显示具体信息，只显示数量）",
+          "成就系统可以加入‘社恐第一步’这种鼓励性徽章，更有共鸣"
+        ]
+      }
+    },
+    {
+      "profileId": 64,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "男性",
+        "occupation": "大厂打工人",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "科技达人",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 5,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 8
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很精准，点几下就能选完，不用打字太爽了。",
+        "mostAnnoyingQuestion": "第9轮那个宠物/其他个性化问题，感觉有点多余，急性子只想快点进App看看活动。",
+        "dropOffRisk": "如果中间卡顿或者加载慢，我绝对会直接关掉，没耐心等。",
+        "suggestions": [
+          "把第7轮和第9轮合并或做成可选，核心信息收齐后直接让我进App，成就徽章可以后面再弹。",
+          "背景和表情渐变可以再快一点，或者给我个选项关掉动画，我们这种科技达人更在乎效率和流畅度。"
+        ]
+      }
+    },
+    {
+      "profileId": 65,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "女性",
+        "occupation": "自由职业",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 4,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 5,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮真的很方便，不用打字就能快速选完，适合我这种急性子",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄偏好捆绑在一起问，感觉有点被催婚的压力，而且问得太细了",
+        "dropOffRisk": "如果中间出现需要我打很多字的问题，或者问太多个人隐私（比如具体收入、家庭情况），我可能就直接退出了",
+        "suggestions": [
+          "把第7轮拆开，人生阶段和年龄偏好分开问，或者把人生阶段改成更轻松的问题，比如‘最近的生活重心’",
+          "第9轮的宠物问题可以提前到兴趣爱好附近，和美食探店这些放一起会更自然，现在放在最后有点突兀",
+          "小悦的心情渐变和背景变化其实我没太注意，急性子只想快点完成，建议可以更低调或者让用户选择关闭这些动画效果"
+        ]
+      }
+    },
+    {
+      "profileId": 66,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "男性",
+        "occupation": "大厂打工人",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "香港"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 4,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 5,
+        "earlyExitOption": 10,
+        "privacyComfort": 8
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很好，点几下就能填完大部分信息，不用打字很省事",
+        "mostAnnoyingQuestion": "第9轮问宠物和其他个性化问题，感觉有点多余，注册个社交App而已，又不是填简历",
+        "dropOffRisk": "如果中途发现要回答的问题太多，或者问得太细（比如收入、家庭状况这种），我可能就直接关掉了",
+        "suggestions": [
+          "把10轮对话压缩到5-6轮，急性子真的没耐心聊这么久，核心信息（昵称、城市、兴趣、意图）就够了",
+          "第7轮的人生阶段和年龄匹配偏好可以合并或者放到后面，注册时先让我用起来更重要",
+          "香港的快捷按钮选项要够全，除了港岛九龙新界，最好有具体区域（铜锣湾、旺角、观塘等），本地人很看重这个"
+        ]
+      }
+    },
+    {
+      "profileId": 67,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "女性",
+        "occupation": "创业者",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "上海"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 4,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 5,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，效率很高",
+        "mostAnnoyingQuestion": "第9轮的宠物问题，对不养宠物的人来说是浪费时间",
+        "dropOffRisk": "如果中途发现要回答太多无关紧要的细节问题，我会直接退出",
+        "suggestions": [
+          "把10轮对话压缩到6-7轮，急性子没耐心聊这么久",
+          "第7轮的人生阶段和年龄偏好应该分开问，捆绑在一起让我觉得被贴标签",
+          "可选问题（如第8、9轮）应该放在最后，并且明确标注'可选'，让我知道可以跳过",
+          "成就系统对创业者吸引力不大，建议增加'社交达人'、'行业连接者'这类更成熟的徽章"
+        ]
+      }
+    },
+    {
+      "profileId": 68,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "男性",
+        "occupation": "创业者",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 3,
+        "tagCloud": 5,
+        "moodProgression": 2,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，省事",
+        "mostAnnoyingQuestion": "人生阶段和年龄匹配偏好这种捆绑问题，感觉像在查户口",
+        "dropOffRisk": "如果问太多个人化问题或者流程超过2分钟，我可能就直接退出了",
+        "suggestions": [
+          "把10轮对话压缩到5轮以内，急性子没耐心聊这么久",
+          "去掉那些花哨的动画和成就系统，创业者更看重效率而不是游戏化",
+          "隐私问题要更明确，比如说明这些信息会怎么用、会不会公开",
+          "城市选择应该默认定位北京，别让我再选一次"
+        ]
+      }
+    },
+    {
+      "profileId": 69,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "男性",
+        "occupation": "大厂打工人",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "普通用户",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 9,
+        "achievementSystem": 5,
+        "tagCloud": 8,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我这种社恐不用费心组织语言，点一下就行",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲App被审问",
+        "dropOffRisk": "如果第9轮还问太多宠物/个性化问题，我会觉得太啰嗦直接退出",
+        "suggestions": [
+          "第7轮的人生阶段问题可以更自然些，比如问‘最近生活重心是什么’而不是直接问人生阶段",
+          "背景氛围渐变有点花哨，社恐更喜欢简洁干净的界面"
+        ]
+      }
+    },
+    {
+      "profileId": 70,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "创业者",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 3,
+        "tagCloud": 5,
+        "moodProgression": 2,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，对不熟悉App的我来说很友好",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好，作为内向的人觉得被审视，而且急性子觉得问题太多",
+        "dropOffRisk": "如果第5轮之后还在问可选问题（比如宠物），我会直接点提前结束，甚至可能放弃",
+        "suggestions": [
+          "把10轮压缩到5-6轮核心问题（昵称、城市、兴趣、意图），其他作为注册后可选补充",
+          "去掉小悦心情渐变和成就系统，对急性子和内向者来说是干扰，只想快速完成"
+        ]
+      }
+    },
+    {
+      "profileId": 71,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "男性",
+        "occupation": "自由职业",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "普通用户",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "隐私舒适度": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字就能快速选择，对内向的人来说很友好",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉有点被催着找对象的意思",
+        "dropOffRisk": "如果问太多关于个人生活阶段或情感状态的问题，我会觉得隐私被侵犯而放弃",
+        "suggestions": [
+          "把第7轮的人生阶段问题改成可选，或者更委婉地询问社交目的",
+          "减少一些花哨的动画效果（如心情渐变），简洁点更好",
+          "在问城市时增加‘海淀’‘朝阳’等北京具体区域的快捷选项"
+        ]
+      }
+    },
+    {
+      "profileId": 72,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "创业者",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "普通用户",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很清晰，不用打字就能快速选择，适合我这种内向慢热的人",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉有点被催着找对象的意思，作为创业者我更看重兴趣和价值观匹配",
+        "dropOffRisk": "如果问太多关于个人情感状态或婚姻计划的问题，我会觉得隐私被侵犯而放弃",
+        "suggestions": [
+          "建议把第7轮的人生阶段和年龄偏好问题分开，或者让用户选择是否回答这类敏感问题",
+          "希望增加更多关于职业发展、行业交流的选项，而不仅仅是娱乐休闲类",
+          "成就系统可以更实用些，比如'创业者认证'、'行业洞察者'这类，而不是'铲屎官'这种娱乐性太强的"
+        ]
+      }
+    },
+    {
+      "profileId": 73,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "女性",
+        "occupation": "传统行业",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "上海"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 5,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 7,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很好，不用打字就能快速选择，特别适合我这种急性子。",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点冒犯，社恐不想这么快被贴上标签。",
+        "dropOffRisk": "如果问太多关于个人隐私或人生阶段的问题，我会觉得压力大直接退出。",
+        "suggestions": [
+          "把第7轮拆分成两个问题，先问人生阶段（可选），再问匹配偏好，给‘跳过’选项",
+          "在第3轮城市选择时，默认显示‘上海’作为快捷按钮，省去滚动查找时间",
+          "成就系统可以更实用些，比如‘本地探店达人’比‘铲屎官认证’对我更有吸引力"
+        ]
+      }
+    },
+    {
+      "profileId": 74,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "男性",
+        "occupation": "传统行业",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 6,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮很方便，不用打字就能选，适合我这种不太熟悉App操作的人",
+        "mostAnnoyingQuestion": "第7轮的人生阶段和年龄匹配偏好捆绑问题，感觉有点直接，像是相亲软件才会问的",
+        "dropOffRisk": "如果问太多个人隐私或者感觉像在查户口，我可能会中途退出",
+        "suggestions": [
+          "第7轮的人生阶段问题可以更委婉一些，比如问‘现阶段的生活重心是什么’而不是直接问人生阶段",
+          "成就系统可以更实用一些，比如‘北京美食达人’这种实际点的徽章，而不是‘铲屎官认证’这种太花哨的",
+          "小悦心情渐变和背景变化对我来说意义不大，不如把界面做得更简洁直接"
+        ]
+      }
+    },
+    {
+      "profileId": 75,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "男性",
+        "occupation": "创业者",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "科技达人",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 3,
+        "tagCloud": 7,
+        "moodProgression": 2,
+        "earlyExitOption": 9,
+        "privacyComfort": 5
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮和提前结束选项，让我能快速跳过不想回答的问题",
+        "mostAnnoyingQuestion": "第9轮的宠物/其他个性化问题，感觉和核心注册目的无关，浪费时间",
+        "dropOffRisk": "如果发现需要回答超过5个问题，或者遇到太多花哨的动画效果拖慢速度",
+        "suggestions": [
+          "把10轮对话压缩到5轮以内，急性子没耐心看心情渐变动画",
+          "去掉成就系统和表情变化，科技达人更看重效率和数据隐私，不是游戏化体验",
+          "把人生阶段和年龄偏好分开问，捆绑问题让我觉得被强行匹配",
+          "增加广州本地的快捷选项，比如天河、珠江新城等具体区域"
+        ]
+      }
+    },
+    {
+      "profileId": 76,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "男性",
+        "occupation": "公务员/国企",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "普通用户",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我这种社恐不用费心组织语言，直接点选很轻松",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲软件被审问",
+        "dropOffRisk": "如果问太多私人问题比如具体收入、家庭情况，我会立刻退出",
+        "suggestions": [
+          "第7轮问题可以拆开或放在更后面，一开始就问匹配偏好压力太大",
+          "成就系统太花哨，公务员身份让我对‘铲屎官认证’这类标签有点尴尬，建议更中性些",
+          "广州的快捷按钮应该细分到天河、越秀等主要区域，而不是只选城市"
+        ]
+      }
+    },
+    {
+      "profileId": 77,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "女性",
+        "occupation": "自由职业",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "不太熟悉App",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 6,
+        "moodProgression": 7,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，很方便，特别是选城市和兴趣爱好的时候",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉有点被催着找对象，我只是想交朋友",
+        "dropOffRisk": "如果问太多私人问题比如具体职业细节或者要求上传照片，我可能会直接退出",
+        "suggestions": [
+          "把人生阶段和年龄匹配偏好分开问，不要捆绑在一起，感觉压力大",
+          "第9轮的宠物问题可以放在更后面作为可选，不是每个人都养宠物",
+          "成就系统那些趣味徽章对我来说吸引力不大，可以简化或者让用户选择是否开启",
+          "标签云显示的时候可以解释一下用途，我不太明白那个是干什么用的"
+        ]
+      }
+    },
+    {
+      "profileId": 78,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "男性",
+        "occupation": "传统行业",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 3,
+        "tagCloud": 5,
+        "moodProgression": 2,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，省事",
+        "mostAnnoyingQuestion": "人生阶段和年龄匹配偏好这种捆绑问题，感觉像在查户口",
+        "dropOffRisk": "如果问太多可选问题（比如宠物）或者看到太多花哨的动画，我会直接退出",
+        "suggestions": [
+          "把10轮对话压缩到5轮以内，急性子没耐心聊这么久",
+          "去掉小悦心情渐变和背景渐变这些花哨效果，看着眼晕",
+          "成就系统太幼稚了，改成实用点的奖励比如注册完送张优惠券"
+        ]
+      }
+    },
+    {
+      "profileId": 79,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "男性",
+        "occupation": "公务员/国企",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 3,
+        "tagCloud": 5,
+        "moodProgression": 2,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，效率高",
+        "mostAnnoyingQuestion": "第7轮的人生阶段和年龄偏好捆绑问题，感觉像在查户口",
+        "dropOffRisk": "如果第6轮后还没结束，还要问宠物这种无关问题，我可能直接退出",
+        "suggestions": [
+          "把10轮压缩到5轮以内，急性子没耐心聊这么久",
+          "去掉成就系统和心情渐变这些花哨功能，我们公务员更看重实用简洁",
+          "第9轮的宠物问题应该设为可选，而且放在更后面"
+        ]
+      }
+    },
+    {
+      "profileId": 80,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "女性",
+        "occupation": "传统行业",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "科技达人",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 8,
+        "flowLength": 7,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 7,
+        "earlyExitOption": 9,
+        "privacyComfort": 8
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "实时标签云让我能直观看到自己的兴趣画像，有种被理解的感觉",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄偏好捆绑问，感觉有点被定义和限制",
+        "dropOffRisk": "如果问太多可选问题（第8、9轮）且不能跳过，会觉得浪费时间",
+        "suggestions": [
+          "建议把第7轮拆成两个独立问题，先问人生阶段再问偏好，避免捆绑感",
+          "在可选问题前明确标注‘可跳过’，给用户更多控制感",
+          "成就系统可以更酷一点，比如结合深圳本地特色（‘湾区探索者’、‘科技园常客’这种）"
+        ]
+      }
+    },
+    {
+      "profileId": 81,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "男性",
+        "occupation": "公务员/国企",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "普通用户",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我这种社恐不用费心打字，压力小很多",
+        "mostAnnoyingQuestion": "第7轮的人生阶段和年龄匹配偏好捆绑问题，感觉有点被审视，不太舒服",
+        "dropOffRisk": "如果问到太私人的问题比如收入、感情状况，或者感觉像在查户口",
+        "suggestions": [
+          "第7轮的人生阶段问题可以更委婉，比如问‘现阶段更关注什么’而不是直接问人生阶段",
+          "职业选择建议增加‘体制内/稳定工作’这类更符合广州本地特色的快捷选项",
+          "成就系统可以更低调些，社恐不太喜欢太张扬的徽章展示"
+        ]
+      }
+    },
+    {
+      "profileId": 82,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "公务员/国企",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "科技达人",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 5,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 4,
+        "earlyExitOption": 10,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很精准，特别是职业和兴趣爱好的选项，让我这种社恐不用费心组织语言",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，社恐会觉得被催婚/催交友，而且急性子会觉得一个问题里塞太多信息",
+        "dropOffRisk": "如果第9轮的宠物/其他个性化问题变成必答，或者问得太私人（比如收入、家庭情况），我会立刻退出",
+        "suggestions": [
+          "把第7轮拆成两个问题：先问人生阶段（可选），再问年龄偏好，给‘暂时不想回答’的选项",
+          "第9轮的宠物问题放在更靠前的位置，和兴趣爱好一起问，避免最后突然冒出来",
+          "小悦心情渐变和背景氛围渐变可以简化或提供关闭选项，急性子觉得有点拖慢节奏",
+          "深圳的快捷按钮要包含‘南山区’‘福田区’等具体区域选项，一线城市用户活动范围很明确"
+        ]
+      }
+    },
+    {
+      "profileId": 83,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "男性",
+        "occupation": "公务员/国企",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "普通用户",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 6,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很方便，不用打字就能快速选择",
+        "mostAnnoyingQuestion": "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉有点被催着找对象",
+        "dropOffRisk": "如果问太多私人问题比如具体职业单位或者收入，我会直接退出",
+        "suggestions": [
+          "第7轮的人生阶段和年龄偏好建议分开问，捆绑在一起压力太大",
+          "成就系统太花哨了，我们这种年纪更看重实用性和隐私保护",
+          "建议增加更多广州本地化的选项，比如早茶、珠江夜游等具体活动偏好"
+        ]
+      }
+    },
+    {
+      "profileId": 84,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "男性",
+        "occupation": "创业者",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "上海"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 3,
+        "tagCloud": 5,
+        "moodProgression": 2,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，省时间",
+        "mostAnnoyingQuestion": "第9轮的宠物问题，跟我找活动有什么关系？",
+        "dropOffRisk": "如果问题超过5个还没让我看到能参加的活动，我会直接退出",
+        "suggestions": [
+          "把10轮问题压缩到5轮以内，先让我看到活动列表再补充信息",
+          "去掉那些花里胡哨的表情和成就，直接问核心信息：时间、地点、活动类型"
+        ]
+      }
+    },
+    {
+      "profileId": 85,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "传统行业",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "香港"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 3,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，对不熟悉App的人很友好",
+        "mostAnnoyingQuestion": "人生阶段+年龄匹配偏好这种捆绑问题，感觉像在查户口",
+        "dropOffRisk": "如果问太多私人问题或者流程超过2分钟，我可能会直接退出",
+        "suggestions": [
+          "把10轮对话压缩到5-6轮，急性子没耐心看那么多问题",
+          "减少像人生阶段这种敏感问题，社恐不想被标签化",
+          "成就系统太花哨，不如直接告诉我匹配结果",
+          "标签云看不懂，传统行业的人更喜欢简单直接的界面"
+        ]
+      }
+    },
+    {
+      "profileId": 86,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "男性",
+        "occupation": "自由职业",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "普通用户",
+        "city": "上海"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "提前结束选项很人性化，让我感觉有掌控感。",
+        "mostAnnoyingQuestion": "人生阶段+年龄匹配偏好这种捆绑问题，感觉有点被催婚的压力。",
+        "dropOffRisk": "如果问到太多关于个人生活状态或情感状况的问题，我会觉得被冒犯而放弃。",
+        "suggestions": [
+          "建议把人生阶段和年龄偏好分开问，不要捆绑，这样压力小一些。",
+          "成就系统可以更成熟些，现在的趣味徽章感觉有点幼稚，不适合我们这年龄段的审美。",
+          "小悦心情渐变的表情符号太花哨了，简单点更好，现在的设计有点分散注意力。"
+        ]
+      }
+    },
+    {
+      "profileId": 87,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "女性",
+        "occupation": "大厂打工人",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 8,
+        "quickReplyDesign": 9,
+        "achievementSystem": 5,
+        "tagCloud": 6,
+        "moodProgression": 4,
+        "earlyExitOption": 10,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，对不熟悉App操作的人来说很友好",
+        "mostAnnoyingQuestion": "人生阶段和年龄匹配偏好捆绑问，感觉像在催婚，有点压力",
+        "dropOffRisk": "如果问太多私人问题比如具体职业单位或者收入，我会立刻退出",
+        "suggestions": [
+          "第7轮的问题建议分开问，不要捆绑人生阶段和择偶偏好，对内向的人来说太直接",
+          "成就系统那些趣味徽章对我们这个年龄段的吸引力不大，可以更实用些比如‘深圳美食达人’",
+          "小悦心情渐变和背景变化有点花哨，简洁稳定的界面更能让我安心"
+        ]
+      }
+    },
+    {
+      "profileId": 88,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "女性",
+        "occupation": "大厂打工人",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 5,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 8
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很直观，不用打字省时间",
+        "mostAnnoyingQuestion": "人生阶段+年龄匹配偏好这种捆绑问题，感觉像在查户口",
+        "dropOffRisk": "如果中途发现要填太多开放式问题或者需要打字太多，我可能会直接关掉",
+        "suggestions": [
+          "第7轮的人生阶段问题可以更委婉些，或者放到后面作为可选问题",
+          "能不能把10轮对话压缩到5-6轮？我们这种上班族真的没耐心",
+          "宠物问题对很多人不相关，建议作为可选而不是固定轮次",
+          "背景渐变和表情变化有点花哨，不如直接显示进度条更实用"
+        ]
+      }
+    },
+    {
+      "profileId": 89,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "女性",
+        "occupation": "创业者",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "不太熟悉App",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 6,
+        "tagCloud": 7,
+        "moodProgression": 5,
+        "earlyExitOption": 9,
+        "privacyComfort": 8
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，特别方便，尤其是选城市和兴趣爱好的时候",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点被催婚的压力，不太舒服",
+        "dropOffRisk": "如果中途出现技术问题或者卡顿，我可能就直接退出了，创业很忙没时间等",
+        "suggestions": [
+          "第7轮建议把人生阶段和年龄偏好分开问，或者用更轻松的方式表达，比如‘想认识什么年龄段的朋友’",
+          "可以增加一些创业相关的兴趣选项，比如‘创业交流’、‘行业沙龙’，现在都是吃喝玩乐为主"
+        ]
+      }
+    },
+    {
+      "profileId": 90,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "男性",
+        "occupation": "公务员/国企",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "普通用户",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 9,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 4,
+        "earlyExitOption": 8,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计很实用，特别是城市和兴趣爱好的选项，省时省力。",
+        "mostAnnoyingQuestion": "人生阶段和年龄匹配偏好捆绑在一起问，感觉有点被催婚的压力，不太舒服。",
+        "dropOffRisk": "如果中途遇到需要打很多字的问题，或者问题太私人（比如收入、婚史），我可能会直接退出。",
+        "suggestions": [
+          "建议把人生阶段和年龄偏好分开问，或者用更轻松的方式（比如‘你希望认识什么年龄段的朋友’），避免给人相亲APP的错觉。",
+          "成就系统对85后吸引力一般，可以考虑增加‘美食地图探索者’‘周末活动达人’这类更符合我们年龄段的徽章。",
+          "小悦心情渐变和背景色变化有点花哨，我们更看重效率，建议简化或提供简洁模式选项。"
+        ]
+      }
+    },
+    {
+      "profileId": 91,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "女性",
+        "occupation": "创业者",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 3,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，对社恐很友好",
+        "mostAnnoyingQuestion": "第7轮人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲软件被审问",
+        "dropOffRisk": "如果问题超过5轮还没结束，我会直接退出",
+        "suggestions": [
+          "把10轮对话压缩到5轮以内，急性子真的没耐心",
+          "去掉人生阶段和年龄匹配这种敏感问题，社恐不想被标签化",
+          "成就系统太幼稚了，创业者不需要‘铲屎官认证’这种徽章",
+          "小悦心情渐变完全没注意到，建议直接显示进度条更实用"
+        ]
+      }
+    },
+    {
+      "profileId": 92,
+      "profile": {
+        "ageGroup": "95后(25-29岁)",
+        "gender": "女性",
+        "occupation": "自由职业",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "深圳"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 8,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 5,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我这种不太会用App的人也能轻松选择，不用打字太方便了",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄偏好捆绑在一起问，感觉有点被催婚的压力，不太舒服",
+        "dropOffRisk": "如果问太多关于宠物或者太私人的问题，我会觉得被冒犯而放弃",
+        "suggestions": [
+          "第7轮的问题可以分开问，先问人生阶段，再问交友偏好，不要给人相亲App的感觉",
+          "标签云对我来说有点花哨，可以简化或者放在完成注册后再展示",
+          "小悦的心情变化太抽象了，不如直接显示进度条更直观"
+        ]
+      }
+    },
+    {
+      "profileId": 93,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "女性",
+        "occupation": "学生",
+        "socialStyle": "外向活泼型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "科技达人",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 4,
+        "quickReplyDesign": 9,
+        "achievementSystem": 6,
+        "tagCloud": 8,
+        "moodProgression": 5,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": true
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很聪明，点几下就能填完，特别适合我这种急性子",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄偏好捆绑问，感觉有点被标签化，而且问得太细了",
+        "dropOffRisk": "如果第9轮还问宠物或其他个性化问题，我会直接点提前结束，不想再浪费时间",
+        "suggestions": [
+          "把10轮压缩到6-7轮，急性子真的没耐心聊这么久，核心信息（昵称、城市、兴趣、意图）就够了",
+          "第7轮拆开问，或者直接删掉人生阶段这种敏感问题，年龄偏好可以合并到第2轮"
+        ]
+      }
+    },
+    {
+      "profileId": 94,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "男性",
+        "occupation": "金融从业者",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "普通用户",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 3,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，效率高",
+        "mostAnnoyingQuestion": "人生阶段+年龄匹配偏好这种捆绑问题，感觉像在相亲App",
+        "dropOffRisk": "如果第7轮开始问太多个人化问题，我会直接点提前结束",
+        "suggestions": [
+          "把10轮对话压缩到5轮内，急性子没耐心聊这么久",
+          "职业选项要有金融相关快捷按钮，别让我打字",
+          "宠物问题放在最后作为可选，别强制所有人回答"
+        ]
+      }
+    },
+    {
+      "profileId": 95,
+      "profile": {
+        "ageGroup": "85后(35-39岁)",
+        "gender": "男性",
+        "occupation": "传统行业",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 6,
+        "flowLength": 4,
+        "quickReplyDesign": 8,
+        "achievementSystem": 3,
+        "tagCloud": 5,
+        "moodProgression": 2,
+        "earlyExitOption": 9,
+        "隐私舒适度": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": false,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，很方便",
+        "mostAnnoyingQuestion": "人生阶段和年龄偏好捆绑问，感觉像在查户口",
+        "dropOffRisk": "如果问太多私人问题或者要打字太多，我可能会直接退出",
+        "suggestions": [
+          "第7轮的问题太直接了，可以拆开或者用更委婉的方式问",
+          "成就系统对我们这个年纪的人来说有点幼稚，可以改成更成熟的展示方式",
+          "10轮对话还是太多了，能不能压缩到5轮以内，剩下的可以注册后再补充"
+        ]
+      }
+    },
+    {
+      "profileId": 96,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "男性",
+        "occupation": "自由职业",
+        "socialStyle": "社恐但渴望社交型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "不太熟悉App",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 9,
+        "achievementSystem": 8,
+        "tagCloud": 7,
+        "moodProgression": 6,
+        "earlyExitOption": 9,
+        "privacyComfort": 5
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，社恐友好",
+        "mostAnnoyingQuestion": "人生阶段和年龄偏好捆绑问，感觉像在相亲软件",
+        "dropOffRisk": "如果问太多个人隐私或感觉像在查户口，我会直接关掉",
+        "suggestions": [
+          "第7轮的人生阶段问题可以更模糊些，比如‘现阶段生活重心’而不是直接问人生阶段",
+          "宠物问题虽然是可选的，但放在第9轮太靠后了，社恐可能前面就紧张了，建议提前说明哪些问题可选跳过"
+        ]
+      }
+    },
+    {
+      "profileId": 97,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "男性",
+        "occupation": "传统行业",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "慢热型(喜欢深度交流)",
+        "techFamiliarity": "科技达人",
+        "city": "北京"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 9,
+        "achievementSystem": 5,
+        "tagCloud": 8,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 7
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很高效，特别是职业和兴趣的多选，省去了打字的麻烦。",
+        "mostAnnoyingQuestion": "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点冒犯，像是急着给我配对。",
+        "dropOffRisk": "如果中途出现过于卡通化或幼稚的成就弹窗（比如‘铲屎官认证’这种称呼），我可能会觉得不严肃而退出。",
+        "suggestions": [
+          "建议把第7轮拆开，先问人生阶段（比如‘目前更关注事业还是生活平衡’），年龄偏好单独放后面可选。",
+          "成就系统可以更低调些，比如改为‘兴趣标签收集进度’这种务实提示，减少游戏化浮夸感。"
+        ]
+      }
+    },
+    {
+      "profileId": 98,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "男性",
+        "occupation": "传统行业",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "科技达人",
+        "city": "香港"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 5,
+        "quickReplyDesign": 9,
+        "achievementSystem": 4,
+        "tagCloud": 8,
+        "moodProgression": 3,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮设计得很精准，能让我快速选择，不用打字浪费时间",
+        "mostAnnoyingQuestion": "第9轮关于宠物或其他个性化问题，感觉有点多余，特别是对内向的人来说这种私人话题不太舒服",
+        "dropOffRisk": "如果发现需要回答太多开放式问题或者感觉问题太私人化，我会直接关掉页面",
+        "suggestions": [
+          "把10轮对话压缩到6-7轮，急性子真的没耐心，特别是第7轮捆绑问题可以拆开简化",
+          "成就系统太花哨了，对科技达人来说这种游戏化设计有点幼稚，建议做成简洁的数据可视化",
+          "小悦心情渐变和背景变化有点多余，社恐更关注内容本身而不是这些装饰效果",
+          "香港用户可能需要更具体的本地化选项，比如现居城市那里应该有香港各区快捷按钮"
+        ]
+      }
+    },
+    {
+      "profileId": 99,
+      "profile": {
+        "ageGroup": "90后(25-34岁)",
+        "gender": "男性",
+        "occupation": "金融从业者",
+        "socialStyle": "选择性社交型",
+        "patienceLevel": "急性子(希望快速完成)",
+        "techFamiliarity": "科技达人",
+        "city": "香港"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 5,
+        "quickReplyDesign": 9,
+        "achievementSystem": 4,
+        "tagCloud": 8,
+        "moodProgression": 3,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮和提前结束选项，让我能快速完成核心信息输入。",
+        "mostAnnoyingQuestion": "人生阶段和年龄匹配偏好捆绑问题，感觉像在相亲平台而不是社交活动平台。",
+        "dropOffRisk": "如果发现需要回答太多个人化或情感化问题，我会直接退出。",
+        "suggestions": [
+          "将第7轮的人生阶段问题改为可选，或者与活动意图更紧密结合",
+          "减少一轮对话，将宠物等个性化问题整合或设为完全可选",
+          "成就系统对急性子用户吸引力低，建议在注册完成后展示而非过程中干扰"
+        ]
+      }
+    },
+    {
+      "profileId": 100,
+      "profile": {
+        "ageGroup": "00后(20-24岁)",
+        "gender": "男性",
+        "occupation": "金融从业者",
+        "socialStyle": "内向慢热型",
+        "patienceLevel": "中等耐心",
+        "techFamiliarity": "不太熟悉App",
+        "city": "广州"
+      },
+      "ratings": {
+        "overallSatisfaction": 7,
+        "flowLength": 6,
+        "quickReplyDesign": 8,
+        "achievementSystem": 5,
+        "tagCloud": 7,
+        "moodProgression": 4,
+        "earlyExitOption": 9,
+        "privacyComfort": 6
+      },
+      "preferences": {
+        "preferQuickReply": true,
+        "wouldCompleteIn3Min": true,
+        "wouldRecommendToFriend": false
+      },
+      "feedback": {
+        "favoriteFeature": "快捷回复按钮让我不用打字，对不熟悉App操作的人来说很友好",
+        "mostAnnoyingQuestion": "人生阶段+年龄匹配偏好这种捆绑问题，感觉像在相亲App被审问",
+        "dropOffRisk": "如果问太多私人问题比如宠物或人生阶段，我会觉得越界直接退出",
+        "suggestions": [
+          "金融从业者这种职业选项应该放在快捷按钮里，不要让我打字输入",
+          "第7轮的人生阶段问题可以改成可选，或者放在更靠后的位置",
+          "小悦心情渐变和成就系统对我来说有点幼稚，可以简化或隐藏"
+        ]
+      }
+    }
+  ],
+  "analysis": {
+    "sampleSize": 100,
+    "averageRatings": [
+      {
+        "metric": "overallSatisfaction",
+        "score": "6.90"
+      },
+      {
+        "metric": "flowLength",
+        "score": "5.59"
+      },
+      {
+        "metric": "quickReplyDesign",
+        "score": "8.53"
+      },
+      {
+        "metric": "achievementSystem",
+        "score": "5.38"
+      },
+      {
+        "metric": "tagCloud",
+        "score": "6.85"
+      },
+      {
+        "metric": "moodProgression",
+        "score": "4.55"
+      },
+      {
+        "metric": "earlyExitOption",
+        "score": "8.99"
+      },
+      {
+        "metric": "privacyComfort",
+        "score": "NaN"
+      }
+    ],
+    "preferenceStats": {
+      "preferQuickReply": "100.0%",
+      "wouldCompleteIn3Min": "79.0%",
+      "wouldRecommendToFriend": "38.0%"
+    },
+    "patienceLevelAnalysis": [
+      {
+        "level": "中等耐心",
+        "avgSatisfaction": "7.18",
+        "count": 33
+      },
+      {
+        "level": "急性子(希望快速完成)",
+        "avgSatisfaction": "6.56",
+        "count": 39
+      },
+      {
+        "level": "慢热型(喜欢深度交流)",
+        "avgSatisfaction": "7.04",
+        "count": 28
+      }
+    ],
+    "socialStyleAnalysis": [
+      {
+        "style": "社恐但渴望社交型",
+        "avgSatisfaction": "6.92",
+        "count": 26
+      },
+      {
+        "style": "内向慢热型",
+        "avgSatisfaction": "6.76",
+        "count": 33
+      },
+      {
+        "style": "外向活泼型",
+        "avgSatisfaction": "7.21",
+        "count": 24
+      },
+      {
+        "style": "选择性社交型",
+        "avgSatisfaction": "6.71",
+        "count": 17
+      }
+    ],
+    "topSuggestions": [
+      "第7轮的人生阶段问题可以更中性一些，比如用'生活重心'代替，减少社恐的抵触感",
+      "深圳的快捷按钮应该细分到区域（南山、福田等），方便匹配附近活动",
+      "成就系统可以更实用些，比如'创业者社交认证'比'铲屎官'对我更有吸引力",
+      "把10轮对话压缩到5轮以内，急性子真的没耐心",
+      "别问宠物、人生阶段这种私人问题，社恐不想聊这些",
+      "标签云和心情变化太花哨了，看着头晕，简单直接点更好",
+      "建议把第7轮的问题拆开，先问人生阶段，等注册完成后再在个人设置里补充匹配偏好，这样压力小一点。",
+      "第9轮的宠物问题虽然是可选的，但放在注册流程里还是有点突兀，建议移到后面的‘完善资料’环节。",
+      "标签云的动态效果可以更明显一点，现在可能容易被忽略，加点动画会更吸引眼球。",
+      "第6轮的活动意图选项可以增加'偶尔参加活动'或'先看看'这类更轻松的选项，不要让人感觉压力大",
+      "小悦心情渐变和背景氛围变化对我来说意义不大，不如简化界面，让注册过程更直接清晰",
+      "成就系统太花哨，像游戏，建议在注册完成后再展示，不要干扰注册流程",
+      "建议将第7轮问题拆分，先问人生阶段（如：职场新人/稳定期/探索期），再单独询问对活动伙伴的年龄偏好，避免给人刻板印象。",
+      "小悦心情渐变可以更subtle一些，比如用颜色深浅或微动画，而不是明显的表情符号变化，符合科技达人对简洁UI的偏好。",
+      "职业选择不要用开放式提问，提供公务员/国企/事业单位等具体选项",
+      "减少花哨的动画效果（心情渐变、背景渐变），简洁明了更适合我们这类用户",
+      "宠物问题放在可选位置很好，但成就徽章名字太网络化，建议更正式些",
+      "第7轮的人生阶段问题建议拆开，不要和年龄偏好捆绑，可以改成开放式询问‘希望认识什么年龄段的朋友’",
+      "成就系统可以更成熟些，‘铲屎官认证’这类称呼对35+女性略显幼稚，建议增加‘文化探索者’‘美食鉴赏家’等更符合年龄段的徽章",
+      "隐私舒适度需要提升，建议在问职业/身份时明确说明信息用途，并增加‘跳过此问题’的选项",
+      "建议把第7轮拆分成两个独立问题，先问人生阶段（求学/工作初期等），再在后续对话中自然了解交友偏好，减少压迫感",
+      "成就系统可以更实用些，比如‘本地生存指南’徽章能关联到实际活动推荐，而不是纯趣味展示",
+      "建议把人生阶段和年龄偏好分开问，或者把人生阶段改成更中性的‘当前生活重心’",
+      "金融从业者这个职业选项可能太宽泛，可以细分或提供自由填写选项",
+      "广州的快捷按钮应该包含天河、越秀等具体区域，而不只是城市名",
+      "第7轮的问题可以拆开，或者明确说明这些信息只是用于推荐活动而非匹配对象，减少社交压力。",
+      "成就系统和心情渐变对我来说有点幼稚，可以设置一个‘简洁模式’关掉这些动画效果。",
+      "职业选择部分，希望能有‘公务员/国企’的快捷按钮，而不是每次都打字。",
+      "把10轮压缩到5-6轮核心信息，急性子没耐心聊这么久",
+      "去掉小悦心情渐变和成就系统，对35岁男性来说太幼稚",
+      "第7轮分开问，别捆绑‘人生阶段’这种敏感问题",
+      "第9轮的宠物问题可以设为可选而不是默认出现，不是所有人都有宠物",
+      "成就系统可以更实用些，比如给些本地活动优惠券而不是虚拟徽章",
+      "建议将第7轮的人生阶段和年龄偏好问题拆开或提供更模糊的选项（如‘随缘’），减少社恐用户的压迫感。",
+      "小悦心情渐变和背景氛围变化对急性子用户来说有点‘戏多’，建议提供简洁模式开关，或者默认减少这些动画效果。",
+      "把第7轮的两个问题拆开或者简化成一个问题，减少对话轮数",
+      "广州的快捷按钮应该放在更显眼的位置，毕竟我在广州",
+      "建议把第7轮拆开，先问年龄匹配偏好，人生阶段可以放在更后面作为可选问题",
+      "成就系统可以更实用些，比如‘创业者社交认证’比‘铲屎官认证’对我更有吸引力",
+      "背景和表情渐变效果可以简化，我关注的是快速完成注册，不是这些花哨的动画",
+      "第7轮可以拆成两个简单问题，不要捆绑在一起问",
+      "希望美食/场地偏好的选项能更具体些，比如加上‘火锅’‘烧烤’这种上海年轻人常去的类型",
+      "小悦心情渐变有点太文艺了，可以更活泼点，比如用emoji表情包那种",
+      "能不能压缩到5轮以内？急性子真的没耐心聊10轮",
+      "宠物和个性化问题改成可选而不是默认问，社恐不想被问太多私人信息",
+      "小悦心情渐变和背景变化有点花哨，不如直接点完成注册",
+      "建议把第7轮拆分成两个独立问题，先问人生阶段（比如‘目前更关注事业发展还是家庭生活’），再自然过渡到年龄偏好",
+      "成就系统可以更‘硬核’一些，比如‘深圳通勤王者’、‘大厂生存专家’这类更符合我们这群人自嘲风格的徽章，现在的有点太萌了",
+      "小悦心情渐变和背景色变化可以更克制些，或者给个开关让用户选择是否显示，我们这种直男可能不太在意这些花哨的效果",
+      "把人生阶段和年龄偏好分开问，别让人感觉在相亲"
+    ],
+    "topFavorites": [
+      "快捷回复按钮让我这个社恐不用费心组织语言，选择起来很轻松",
+      "快捷回复按钮，不用打字很方便",
+      "快捷回复按钮设计得很贴心，不用打字就能快速选择，特别适合我这种急性子。",
+      "快捷回复按钮让我不用打字，对不熟悉App操作的人来说很方便",
+      "实时标签云让我能直观看到自己的兴趣画像，感觉很清晰高效。",
+      "快捷回复按钮让我不用打字，对不熟悉App操作的人很友好",
+      "快捷回复按钮设计很贴心，减少了打字负担，适合我这种慢热型的人",
+      "快捷回复按钮设计得很智能，能快速选择又保留了自由输入的选项，适合我这种既想高效又希望表达准确的人",
+      "提前结束选项让我感觉有掌控感，不会被迫回答所有问题",
+      "快捷回复按钮设计得很方便，不用打字，适合我这种不太会表达的人。",
+      "快捷回复按钮让我不用打字，社恐友好",
+      "快捷回复按钮让我不用打字就能快速选择，省时省力",
+      "快捷回复按钮设计得很精准，能让我快速完成信息输入，节省时间。",
+      "快捷回复按钮让我不用打字就能快速完成注册，太适合我这种急性子了！",
+      "快捷回复按钮让我不用打字，效率高，适合我这种不太熟悉App操作的人",
+      "成就解锁系统挺有意思的，像玩游戏一样有成就感",
+      "快捷回复按钮让我不用打字，选一下就行，很方便",
+      "快捷回复按钮设计很高效，特别适合我这种工作间隙想快速注册的用户",
+      "快捷回复按钮设计得很方便，不用打字就能快速选择",
+      "快捷回复按钮设计高效，符合我作为金融从业者对效率的追求。",
+      "快捷回复按钮让我不用打字，很方便，尤其是城市和兴趣爱好的选择。",
+      "快捷回复按钮让我不用打字，对社恐很友好",
+      "实时标签云让我能直观看到自己的兴趣画像，很有科技感和掌控感",
+      "快捷回复按钮让我这种社恐不用费心想怎么回答，压力小很多",
+      "快捷回复按钮设计得很精准，能让我这种急性子快速完成信息填写",
+      "快捷回复按钮让我不用打字，省事很多",
+      "快捷回复按钮让我不用打字，很省心",
+      "快捷回复按钮让我不用打字，社恐友好",
+      "快捷回复按钮让我这种社恐不用费心打字，减少社交压力",
+      "快捷回复按钮设计高效，符合我快速完成的需求"
+    ],
+    "topAnnoyances": [
+      "人生阶段+年龄匹配偏好捆绑问，感觉有点被催婚的压力，虽然知道是匹配算法需要",
+      "人生阶段和年龄偏好捆绑问，感觉像在催婚",
+      "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点压力，好像急着要给我配对似的。",
+      "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲网站填资料，有点尴尬",
+      "第7轮把人生阶段和年龄匹配偏好捆绑提问，感觉有点被催婚的压迫感。",
+      "人生阶段+年龄匹配偏好这种捆绑问题，感觉像在查户口，有点压力",
+      "人生阶段+年龄匹配偏好捆绑问，感觉有点被催婚的压力，作为85后女性不太舒服",
+      "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲软件填资料，对内向慢热的人来说有点压力",
+      "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点冒犯，特别是对单身人士",
+      "第7轮‘人生阶段+年龄匹配偏好’这种捆绑问题，感觉有点被催着找对象，我只是想交朋友。",
+      "第7轮人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲网站填资料",
+      "第7轮的人生阶段和年龄匹配偏好捆绑问题，感觉有点被审视和分类",
+      "人生阶段+年龄匹配偏好捆绑问题，感觉有点被审视和分类的压力，作为社恐不太舒服。",
+      "第7轮把人生阶段和年龄偏好捆绑在一起问，感觉有点啰嗦，急性子想快点过",
+      "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点突兀，而且人生阶段这种问题对创业者来说太笼统",
+      "第7轮把人生阶段和年龄偏好捆绑在一起问，感觉有点复杂，想简单点",
+      "人生阶段和年龄匹配偏好捆绑问，感觉像在查户口，有点不舒服",
+      "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点突兀和刻意",
+      "人生阶段和年龄匹配偏好捆绑在一起问，感觉有点被催婚的压力",
+      "人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲平台被审视，对内向慢热型不友好。",
+      "第7轮把人生阶段和年龄匹配偏好捆绑在一起问，感觉有点冒昧和直接，像在催婚。",
+      "第7轮人生阶段+年龄匹配偏好捆绑问，感觉像相亲软件查户口",
+      "第7轮把人生阶段和年龄偏好捆绑问，感觉有点被定义和限制，作为00后不喜欢被贴标签",
+      "第7轮把人生阶段和年龄偏好捆绑问，感觉有点被催婚的压力",
+      "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲软件填资料，社恐瞬间警觉",
+      "人生阶段和年龄匹配偏好捆绑问，感觉像在相亲网站",
+      "人生阶段和年龄匹配偏好捆绑问，感觉有点被催着找对象",
+      "第7轮人生阶段+年龄匹配偏好捆绑问，感觉像相亲软件",
+      "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲App被审问",
+      "第7轮的人生阶段+年龄匹配偏好捆绑问题，感觉像在相亲网站填表"
+    ],
+    "topDropOffRisks": [
+      "如果问到太私人的问题比如收入、感情状况，或者流程明显超过3分钟我就会放弃",
+      "问到第5轮还看不到尽头，又弹出宠物这种无关问题的时候",
+      "如果中间卡在某个问题需要我打字输入，或者问题太啰嗦超过3分钟，我可能会直接退出。",
+      "如果问太多关于宠物、个人生活细节的问题，我会觉得被冒犯而放弃",
+      "如果AI表情变化太刻意或成就系统显得幼稚，会让我觉得产品不够成熟专业。",
+      "如果问到太多私人信息比如具体职业单位或者收入相关，我会立刻退出",
+      "如果问太多私人化问题（比如宠物、情感状态），或者感觉被标签化太明显时",
+      "如果问太多像‘宠物/其他个性化问题’这种看似可选但实际会引导你回答的隐私问题时，我会直接退出",
+      "如果被问到太多关于婚姻状况或感情状态的问题，我会觉得隐私被侵犯而放弃",
+      "如果问太多关于‘人生阶段’‘匹配偏好’这种暗示性很强的问题，我会觉得压力大直接退出。",
+      "如果第6轮后还问太多可选问题（宠物/美食偏好），我会直接点提前结束",
+      "如果中间出现需要我打字回答的开放式问题，或者问题太私人化",
+      "如果中途遇到需要我长篇大论打字描述的问题，或者流程明显超过3分钟，我会直接退出。",
+      "如果问题太多或者需要我打字输入太多信息，我可能会中途放弃",
+      "如果问太多像宠物、个性化这种可选问题，我会觉得浪费时间直接跳过或退出",
+      "如果中间某个问题选项里没有我想要的，又必须打字回答，可能会不耐烦退出",
+      "如果问到第5轮还没完，我可能就直接关掉App了，太长了",
+      "如果中间某个问题需要我打字输入太多内容，或者问题太矫情（比如宠物问题问得太细），我可能会直接退出",
+      "如果问太多可选问题或者成就系统太花哨，会觉得浪费时间",
+      "如果被追问过多私人情感状态或强制要求上传照片，我会立即退出。",
+      "如果问太多关于宠物、人生阶段等感觉太私人的问题，或者要求我上传照片，我可能会放弃。",
+      "如果问太多私人问题或者要我反复打字输入就会放弃",
+      "如果中途出现重复确认或需要手动输入太多信息，我可能会直接退出",
+      "如果问到收入、具体公司名称或者要求上传太多个人照片，我会立刻退出",
+      "如果第9轮开始问宠物/其他个性化问题，感觉像在查户口，会直接点提前结束",
+      "如果问太多个人隐私或者感觉像在查户口，我可能会直接关掉",
+      "如果问太多私人问题或者感觉像在查户口，我会直接退出",
+      "如果问太多私人问题比如收入或感情状况，我会立刻退出",
+      "如果被问到太多私人问题（比如收入、感情状况）或者感觉像在填表格",
+      "如果第6轮后还问太多可选问题（如宠物），我会直接点提前结束"
+    ]
+  }
+}
