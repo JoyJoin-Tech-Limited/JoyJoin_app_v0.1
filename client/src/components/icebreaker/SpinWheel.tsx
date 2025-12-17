@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { RotateCw, Crown, Sparkles, Users } from 'lucide-react';
+import { archetypeConfig } from '@/lib/archetypes';
 
-interface Participant {
+export interface Participant {
   id: string;
   name: string;
   avatar?: string;
   color?: string;
+  archetype?: string;
 }
 
 interface SpinWheelProps {
@@ -30,11 +32,11 @@ const defaultColors = [
 ];
 
 const defaultParticipants: Participant[] = [
-  { id: '1', name: '1号' },
-  { id: '2', name: '2号' },
-  { id: '3', name: '3号' },
-  { id: '4', name: '4号' },
-  { id: '5', name: '5号' },
+  { id: '1', name: '小明', archetype: '开心柯基' },
+  { id: '2', name: '小红', archetype: '灵感章鱼' },
+  { id: '3', name: '小华', archetype: '沉思猫头鹰' },
+  { id: '4', name: '小丽', archetype: '太阳鸡' },
+  { id: '5', name: '小强', archetype: '暖心熊' },
 ];
 
 export function SpinWheel({
@@ -129,6 +131,8 @@ export function SpinWheel({
             const textX = 128 + textRadius * Math.cos((midAngle - 90) * Math.PI / 180);
             const textY = 128 + textRadius * Math.sin((midAngle - 90) * Math.PI / 180);
 
+            const archetypeInfo = participant.archetype ? archetypeConfig[participant.archetype] : null;
+            
             return (
               <div
                 key={participant.id}
@@ -139,14 +143,17 @@ export function SpinWheel({
               >
                 <div className={`w-full h-full ${participant.color}`} />
                 <div
-                  className="absolute text-white font-bold text-sm drop-shadow-md whitespace-nowrap"
+                  className="absolute text-white font-bold drop-shadow-md whitespace-nowrap flex flex-col items-center gap-0.5"
                   style={{
                     left: `${textX}px`,
                     top: `${textY}px`,
                     transform: `translate(-50%, -50%) rotate(${midAngle}deg)`,
                   }}
                 >
-                  {participant.name}
+                  {archetypeInfo && (
+                    <span className="text-base leading-none">{archetypeInfo.icon}</span>
+                  )}
+                  <span className="text-xs leading-none">{participant.name}</span>
                 </div>
               </div>
             );
@@ -161,33 +168,46 @@ export function SpinWheel({
       </div>
 
       <AnimatePresence>
-        {showResult && selectedIndex !== null && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: -20 }}
-            className="w-full max-w-xs"
-          >
-            <Card className="border-2 border-primary bg-primary/5">
-              <CardContent className="p-4 text-center space-y-2">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 300, delay: 0.2 }}
-                  className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30"
-                >
-                  <Crown className="w-6 h-6 text-amber-600" />
-                </motion.div>
-                <p className="text-lg font-bold text-primary">
-                  {participantsWithColors[selectedIndex].name}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  被选中啦!
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+        {showResult && selectedIndex !== null && (() => {
+          const selected = participantsWithColors[selectedIndex];
+          const selectedArchetype = selected.archetype ? archetypeConfig[selected.archetype] : null;
+          return (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: -20 }}
+              className="w-full max-w-xs"
+            >
+              <Card className="border-2 border-primary bg-primary/5">
+                <CardContent className="p-4 text-center space-y-2">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 300, delay: 0.2 }}
+                    className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-900/30"
+                  >
+                    {selectedArchetype ? (
+                      <span className="text-2xl">{selectedArchetype.icon}</span>
+                    ) : (
+                      <Crown className="w-6 h-6 text-amber-600" />
+                    )}
+                  </motion.div>
+                  <p className="text-lg font-bold text-primary">
+                    {selected.name}
+                  </p>
+                  {selectedArchetype && (
+                    <p className="text-xs text-muted-foreground">
+                      {selected.archetype}
+                    </p>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    被选中啦!
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
       <div className="flex gap-3">
