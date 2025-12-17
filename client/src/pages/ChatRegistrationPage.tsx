@@ -472,7 +472,7 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 89  // 比通用兴趣高，确保问菜系时显示菜系选项
   },
   {
-    keywords: ["兴趣", "爱好", "喜欢", "平时", "活动"],
+    keywords: ["兴趣", "爱好", "喜欢做", "平时做", "活动", "最常做", "工作之外", "业余", "闲暇"],
     options: [
       { text: "美食探店", icon: Coffee },
       { text: "说走就走", icon: MapPin },
@@ -629,7 +629,7 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 93
   },
   {
-    keywords: ["方向", "领域", "细分", "ai", "web3", "哪个", "具体"],
+    keywords: ["方向", "领域", "细分", "ai", "web3", "具体做什么", "哪个方向"],
     options: [
       { text: "科技互联网", icon: Briefcase },
       { text: "AI/大数据", icon: Briefcase },
@@ -722,21 +722,26 @@ interface QuickReplyResult {
 function extractOptionsFromMessage(message: string): QuickReply[] {
   const options: QuickReply[] = [];
   
-  // 模式1: 顿号分隔的选项 "交朋友、拓展人脉、深度讨论"
-  // 查找包含多个顿号分隔项的句子
-  const dunhaoPattern = /(?:想要|选择|可以|比如|包括|有)?[：:]?\s*([^。！？\n]+[、][^。！？\n]+)/g;
+  // 连词分隔符正则（包括顿号、逗号和中文连词）
+  const conjunctionSplitRegex = /[、，,]|还是|或者|或|以及/g;
+  
+  // 模式1: 顿号/连词分隔的选项 "90后、95后还是00后" -> ["90后", "95后", "00后"]
+  // 查找包含多个分隔项的句子
+  const dunhaoPattern = /(?:想要|选择|可以|比如|包括|有)?[：:]?\s*([^。！？\n]+(?:[、]|还是|或者)[^。！？\n]+)/g;
   let match;
   while ((match = dunhaoPattern.exec(message)) !== null) {
     const segment = match[1];
-    // 提取顿号分隔的选项
-    const items = segment.split(/[、，,]/).map(s => s.trim()).filter(s => {
+    // 提取分隔的选项（同时用顿号和连词分割）
+    const items = segment.split(conjunctionSplitRegex).map(s => s.trim()).filter(s => {
       // 过滤掉太长或太短的项，以及包含问号的项
-      return s.length >= 2 && s.length <= 15 && !s.includes('？') && !s.includes('?');
+      // 也过滤掉像"说2-3个关键词就行"、"比如"这样的指示性文本
+      const isInstruction = /说\d|关键词|就行|比如$/.test(s);
+      return s.length >= 2 && s.length <= 15 && !s.includes('？') && !s.includes('?') && !isInstruction;
     });
     if (items.length >= 2) {
       items.forEach(item => {
-        // 清理选项文本，去掉开头的"还是"等连接词
-        let cleanItem = item.replace(/^(还是|或者|或|以及|和|跟)/, '').trim();
+        // 清理选项文本，去掉开头的连接词
+        let cleanItem = item.replace(/^(还是|或者|或|以及|和|跟|比如)/, '').trim();
         // 去掉末尾的标点
         cleanItem = cleanItem.replace(/[。！？,.!?]$/, '').trim();
         if (cleanItem.length >= 2 && cleanItem.length <= 12 && !options.find(o => o.text === cleanItem)) {
@@ -746,14 +751,7 @@ function extractOptionsFromMessage(message: string): QuickReply[] {
     }
   }
   
-  // 模式2: "还是xxx"格式的最后选项
-  const haishiPattern = /还是([^？?。！\n]+)[？?]/g;
-  while ((match = haishiPattern.exec(message)) !== null) {
-    const item = match[1].trim().replace(/[。！？,.!?]$/, '').trim();
-    if (item.length >= 2 && item.length <= 12 && !options.find(o => o.text === item)) {
-      options.push({ text: item });
-    }
-  }
+  // 模式2已整合到模式1中，不再单独处理"还是xxx"
   
   // 模式3: 字母/数字序号格式 "a. xxx b. xxx" 或 "1. xxx 2. xxx"
   const numberedPattern = /(?:^|\n|[。！？])\s*(?:[a-eA-E1-5][.、)）]\s*)([^\n。！？]+)/g;
