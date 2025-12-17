@@ -2056,12 +2056,35 @@ export default function ChatRegistrationPage() {
     setSelectedQuickReplies(new Set());
   }, [quickReplyResult.options]);
 
-  // 性格测试介绍消息（Nick Wilde风格）
-  const personalityTestIntro = `稳了。基础信息到手。
+  // 性格测试介绍消息（根据性别差异化语气）
+  const personalityTestIntro = useMemo(() => {
+    const gender = collectedInfo.gender?.toLowerCase() || '';
+    const isFemale = gender.includes('女') || gender === 'female';
+    const isMale = gender.includes('男') || gender === 'male';
+    
+    if (isFemale) {
+      // Nick对Judy风格：温柔可靠的大哥哥感
+      return `妥了，基础信息收好啦～
+
+接下来是性格测试——12道题，2分钟搞定。
+
+这个能测出你的社交原型，帮我把你配到chemistry对的人旁边。放心，值得花这点时间。`;
+    } else if (isMale) {
+      // 兄弟模式：街头老狐狸风格
+      return `稳了。基础信息到手。
 
 接下来是性格测试——12道题，2分钟搞定。
 
 这玩意能测出你的社交原型，帮我把你配到chemistry对的桌子上。值得花这两分钟。`;
+    } else {
+      // 性别未知时使用中性风格
+      return `好，基础信息收到。
+
+接下来是性格测试——12道题，2分钟搞定。
+
+这个能测出你的社交原型，帮我把你配到chemistry对的桌子上。值得花这两分钟。`;
+    }
+  }, [collectedInfo.gender]);
 
   // 快捷回复点击处理
   const handleQuickReply = (text: string) => {
