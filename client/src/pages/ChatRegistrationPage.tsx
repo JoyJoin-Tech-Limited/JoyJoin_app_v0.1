@@ -678,7 +678,7 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 93
   },
   {
-    keywords: ["身份", "状态", "创业", "在职", "学生", "自由", "gap", "过渡", "待业"],
+    keywords: ["身份", "职业状态", "工作状态", "创业", "在职", "学生", "自由", "gap", "过渡", "待业"],
     options: WORK_MODES.map(m => ({ text: m.label, icon: m.value === "student" ? Book : Sparkles })),
     priority: 84
   },
@@ -726,9 +726,9 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 70
   },
   {
-    keywords: ["感情", "单身", "恋爱", "对象", "另一半", "婚姻"],
+    keywords: ["感情状态", "感情", "单身", "恋爱", "对象", "另一半", "婚姻"],
     options: RELATIONSHIP_STATUS_OPTIONS.map(status => ({ text: status, icon: Heart })),
-    priority: 70
+    priority: 85
   },
   {
     keywords: ["兄弟", "姐妹", "独生", "一个人", "老大", "老二", "老幺", "排行"],
@@ -832,6 +832,22 @@ function shouldBeMultiSelect(options: QuickReply[], message: string): boolean {
 // 需要用户自由输入的关键词（不应显示快捷选项）
 const freeInputKeywords = ["称呼", "昵称", "名字", "怎么叫", "叫什么"];
 
+// 追问类问题的模式（这类问题不应显示通用快捷选项，除非能智能分析出对应选项）
+// 例如："哪个最常做？"、"最喜欢哪个？"、"哪个更X？"
+const followUpPatterns = [
+  /哪个[最更]?常/,        // 哪个最常做？哪个更常做？
+  /哪个[最更]?喜欢/,       // 哪个最喜欢？
+  /哪个[最更]?爱/,        // 哪个最爱？
+  /[最更]常做/,          // 最常做的是？
+  /[最更]喜欢哪/,         // 更喜欢哪个？
+  /这几个.*哪/,          // 这几个里哪个？
+  /涉猎.*哪/,           // 涉猎挺广，哪个？
+  /都不错.*哪/,          // 都不错，哪个？
+  /具体.*怎么/,          // 具体怎么xxx？
+  /多久.*一次/,          // 多久去一次？
+  /最近一次/,           // 最近一次是？
+];
+
 // 开场白/介绍类消息的关键词组合（这类消息不应显示快捷选项）
 const introductionPatterns = [
   { required: ["欢迎来悦聚"], any: [] }, // 新开场白
@@ -888,6 +904,14 @@ function detectQuickReplies(lastMessage: string): QuickReplyResult {
   for (const kw of freeInputKeywords) {
     if (lowerMessage.includes(kw)) {
       // 这类问题需要用户自由输入，不显示快捷选项
+      return { options: [], multiSelect: false };
+    }
+  }
+  
+  // 第0.5步：检查是否是追问类问题（不显示通用快捷选项）
+  for (const pattern of followUpPatterns) {
+    if (pattern.test(lastMessage)) {
+      // 追问问题需要用户根据上下文回答，不显示通用选项
       return { options: [], multiSelect: false };
     }
   }
