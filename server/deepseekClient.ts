@@ -404,10 +404,10 @@ true
 type RegistrationMode = 'express' | 'standard' | 'deep' | 'all_in_one';
 
 // 不同模式的开场白（Nick Wilde风格：简洁有力）
-// 注意：前端会把整段文字作为单条消息逐字打印，用换行符分段
+// 注意：前端会把每行作为独立气泡，每个气泡内逐字打印
 const MODE_OPENINGS: Record<RegistrationMode, string> = {
   express: `欢迎来悦聚。我是小悦，你的AI社交建筑师。
-极速模式是吧？4个问题，90秒，搞定。
+极速模式是吧？6个问题，2分钟，搞定。
 先报个称呼。`,
 
   standard: `欢迎来悦聚。我是小悦，你的AI社交建筑师。
@@ -430,11 +430,13 @@ const MODE_OPENINGS: Record<RegistrationMode, string> = {
 const MODE_SYSTEM_ADDITIONS: Record<RegistrationMode, string> = {
   express: `
 ## 【极速模式】覆盖默认规则
-这是极速模式（90秒），只收集4个核心信息：
+这是极速模式（约2分钟），收集6个核心信息：
 1. 昵称
-2. 性别（女生/男生/保密）
+2. 性别（女生/男生）
 3. 年龄或年龄段（如95后）
 4. 所在城市
+5. 职业/行业
+6. 兴趣爱好（2个左右）
 
 **模式行为规则**：
 - 每轮回复控制在1-2句话，简洁高效
@@ -448,8 +450,8 @@ const MODE_SYSTEM_ADDITIONS: Record<RegistrationMode, string> = {
 - 高价值信号（创业者/海归等）：记录但不深问
 
 **结束条件（覆盖默认）**：
-- 收集完4个核心信息后立即结束
-- 简短确认："好啦，记下了：小雨、女生、95后、深圳～对吗？"
+- 收集完6个核心信息后立即结束
+- 简短确认："好啦，记下了：小雨、女生、95后、深圳、做设计的、喜欢徒步和摄影～对吗？"
 - 用户确认后发送registration_complete
 
 **结束引导语**：
@@ -457,7 +459,7 @@ const MODE_SYSTEM_ADDITIONS: Record<RegistrationMode, string> = {
 
   standard: `
 ## 【标准模式】使用默认规则
-这是标准模式（3分钟），收集7个信息：
+这是标准模式（3分钟），收集9个信息：
 1. 昵称
 2. 性别
 3. 年龄/年龄段
@@ -465,11 +467,13 @@ const MODE_SYSTEM_ADDITIONS: Record<RegistrationMode, string> = {
 5. 职业/行业
 6. 兴趣爱好（至少2个）
 7. 活动意图
+8. 感情状态（单身/恋爱中/已婚/不透露）
+9. 人生阶段（学生党/职场新人/职场老手/创业中/自由职业）
 
 **模式行为规则**：
 - 对话节奏适中，自然流畅
 - 可以适当追问1-2个兴趣细节
-- 进阶信息（宠物、感情状态等）如自然提到就记录
+- 进阶信息（宠物、家乡等）如自然提到就记录
 
 **追问策略（Standard）**：
 - 兴趣话题：追问1个最喜欢的细节
@@ -478,7 +482,7 @@ const MODE_SYSTEM_ADDITIONS: Record<RegistrationMode, string> = {
 - 用户敷衍时：跳过追问，直接下一题
 
 **结束条件**：
-- 收集完7个核心信息后结束
+- 收集完9个核心信息后结束
 - 确认后引导性格测试`,
 
   deep: `

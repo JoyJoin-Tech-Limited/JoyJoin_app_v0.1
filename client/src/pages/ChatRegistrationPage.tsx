@@ -103,10 +103,10 @@ const registrationModes: ModeConfig[] = [
     icon: Zap,
     title: "极速体验",
     subtitle: "先看看有啥活动",
-    time: "90秒",
-    stars: 2,
+    time: "2分钟",
+    stars: 3,
     maxStars: 5,
-    description: "收集基础信息，后续可补充",
+    description: "收集基础信息（昵称、性别、年龄、城市、职业、兴趣）",
     gradient: "from-amber-500 to-orange-500"
   },
   {
@@ -115,9 +115,9 @@ const registrationModes: ModeConfig[] = [
     title: "轻松聊聊",
     subtitle: "大多数人选这个",
     time: "3分钟",
-    stars: 3,
+    stars: 4,
     maxStars: 5,
-    description: "推荐起点，聊得更深入",
+    description: "推荐起点，收集更全面（+意图、感情、阶段）",
     gradient: "from-purple-500 to-pink-500",
     recommended: true
   },
@@ -1632,18 +1632,71 @@ export default function ChatRegistrationPage() {
     onSuccess: (data) => {
       // 取消之前正在进行的开场白序列
       openingAbortRef.current?.abort();
+      const abortController = new AbortController();
+      openingAbortRef.current = abortController;
       
-      // 开场白作为单条消息，使用逐字打印效果（streaming风格）
+      // 将开场白按行分割，每行作为独立气泡，每个气泡带逐字打印动画
       const fullMessage = data.message as string;
+      const paragraphs = fullMessage.split('\n').filter(p => p.trim());
       
-      setMessages([{
-        id: `msg-${Date.now()}-opening`,
-        role: "assistant",
-        content: fullMessage,
-        timestamp: new Date(),
-        isTypingAnimation: true  // 启用逐字打印动画
-      }]);
+      // 逐条显示开场白，每条带打字动画
+      // 使用回调+安全超时的混合策略
+      const showParagraphsSequentially = async () => {
+        for (let i = 0; i < paragraphs.length; i++) {
+          // 检查是否被取消
+          if (abortController.signal.aborted) return;
+          
+          // 添加当前段落消息（带打字动画）
+          const messageId = `msg-${Date.now()}-${i}`;
+          setMessages(prev => [...prev, {
+            id: messageId,
+            role: "assistant",
+            content: paragraphs[i],
+            timestamp: new Date(),
+            isTypingAnimation: true
+          }]);
+          
+          // 等待打字动画完成（通过回调或安全超时）
+          // 安全超时 = 内容长度 * 30ms + 2000ms 缓冲（考虑渲染延迟）
+          const safetyTimeout = paragraphs[i].length * 30 + 2000;
+          
+          await new Promise<void>((resolve, reject) => {
+            // 设置回调resolver，会被onTypingComplete调用
+            typingCompleteResolverRef.current = () => {
+              typingCompleteResolverRef.current = null;
+              resolve();
+            };
+            
+            // 安全超时作为fallback
+            const timeoutId = setTimeout(() => {
+              if (typingCompleteResolverRef.current) {
+                typingCompleteResolverRef.current = null;
+                resolve();
+              }
+            }, safetyTimeout);
+            
+            // 处理取消
+            abortController.signal.addEventListener('abort', () => {
+              clearTimeout(timeoutId);
+              typingCompleteResolverRef.current = null;
+              reject(new Error('Aborted'));
+            }, { once: true });
+          }).catch(() => {});
+          
+          if (abortController.signal.aborted) return;
+          
+          // 添加300ms间隔让用户有阅读缓冲
+          await new Promise<void>((resolve, reject) => {
+            const timeoutId = setTimeout(resolve, 300);
+            abortController.signal.addEventListener('abort', () => {
+              clearTimeout(timeoutId);
+              reject(new Error('Aborted'));
+            }, { once: true });
+          }).catch(() => {});
+        }
+      };
       
+      showParagraphsSequentially();
       setConversationHistory(data.conversationHistory);
     },
     onError: () => {
