@@ -811,6 +811,36 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       { text: "有问题", icon: AlertCircle }
     ],
     priority: 92
+  },
+  {
+    keywords: ["破冰", "开口", "先说话", "先听", "新局", "社交场合", "聊天"],
+    options: [
+      { text: "我先起个头", icon: MessageCircle },
+      { text: "看气氛再说", icon: Users },
+      { text: "先观察观察", icon: Sparkles }
+    ],
+    priority: 90
+  },
+  {
+    keywords: ["充电", "恢复", "能量", "社交完", "累了", "放松", "休息"],
+    options: [
+      { text: "一个人待着", icon: User },
+      { text: "找一两个朋友聊聊", icon: Users },
+      { text: "运动健身", icon: Dumbbell },
+      { text: "睡一觉", icon: Moon }
+    ],
+    priority: 89
+  },
+  {
+    keywords: ["人生阶段", "阶段", "状态", "职场", "学生党", "创业", "自由职业"],
+    options: [
+      { text: "学生党", icon: Book },
+      { text: "职场新人", icon: Briefcase },
+      { text: "职场老手", icon: Briefcase },
+      { text: "创业中", icon: Star },
+      { text: "自由职业", icon: Sparkles }
+    ],
+    priority: 88
   }
 ];
 
@@ -825,26 +855,59 @@ function extractOptionsFromMessage(message: string): QuickReply[] {
   const options: QuickReply[] = [];
   
   // 连词分隔符正则（包括顿号、逗号和中文连词）
-  const conjunctionSplitRegex = /[、，,]|还是|或者|或|以及/g;
+  const conjunctionSplitRegex = /[、，,]|还是|或者|或/g;
   
-  // 模式1: 顿号/连词分隔的选项 "90后、95后还是00后" -> ["90后", "95后", "00后"]
-  // 查找包含多个分隔项的句子
-  const dunhaoPattern = /(?:想要|选择|可以|比如|包括|有)?[：:]?\s*([^。！？\n]+(?:[、]|还是|或者)[^。！？\n]+)/g;
+  // 模式0: 处理"先X还是先Y"/"是X还是Y"格式的问题
+  // 这类问题需要特殊处理，避免把问题主干也提取进来
+  const binaryChoicePatterns = [
+    /(?:先|是|要|想|喜欢|倾向|偏向)([^还是，。！？\n]{1,8})还是(?:先|是)?([^，。！？\n]{1,8})[？?]/g,
+    /([^还是，。！？\n]{2,8})还是([^，。！？\n]{2,8})[？?]/g,
+  ];
+  
+  for (const pattern of binaryChoicePatterns) {
+    let match;
+    pattern.lastIndex = 0;
+    while ((match = pattern.exec(message)) !== null) {
+      const option1 = match[1].trim().replace(/[。！？,.!?]$/, '').trim();
+      const option2 = match[2].trim().replace(/[。！？,.!?]$/, '').trim();
+      
+      // 验证选项有效性（长度合适，不是问题词）
+      const isValidOption = (opt: string) => {
+        const questionWords = ['你', '一般', '通常', '平时', '是不是', '有没有', '会不会'];
+        return opt.length >= 1 && opt.length <= 10 && !questionWords.some(w => opt.startsWith(w));
+      };
+      
+      if (isValidOption(option1) && !options.find(o => o.text === option1)) {
+        options.push({ text: option1 });
+      }
+      if (isValidOption(option2) && !options.find(o => o.text === option2)) {
+        options.push({ text: option2 });
+      }
+      
+      // 如果已经提取到2个选项，直接返回（二选一问题）
+      if (options.length >= 2) {
+        return options.slice(0, 4);
+      }
+    }
+  }
+  
+  // 模式1: 顿号/连词分隔的选项 "90后、95后、00后" -> ["90后", "95后", "00后"]
+  // 只匹配明确的列举格式，避免提取问题主干
+  const listPattern = /(?:有|包括|比如|选择)?[：:]?\s*([^。！？\n]*?[、，][^。！？\n]*)/g;
   let match;
-  while ((match = dunhaoPattern.exec(message)) !== null) {
+  while ((match = listPattern.exec(message)) !== null) {
     const segment = match[1];
-    // 提取分隔的选项（同时用顿号和连词分割）
-    const items = segment.split(conjunctionSplitRegex).map(s => s.trim()).filter(s => {
-      // 过滤掉太长或太短的项，以及包含问号的项
-      // 也过滤掉像"说2-3个关键词就行"、"比如"这样的指示性文本
-      const isInstruction = /说\d|关键词|就行|比如$/.test(s);
-      return s.length >= 2 && s.length <= 15 && !s.includes('？') && !s.includes('?') && !isInstruction;
+    // 如果包含"还是"，用模式0处理更合适
+    if (segment.includes('还是')) continue;
+    
+    // 提取分隔的选项
+    const items = segment.split(/[、，,]/).map(s => s.trim()).filter(s => {
+      const isInstruction = /说\d|关键词|就行|比如$|你|一般|通常/.test(s);
+      return s.length >= 2 && s.length <= 12 && !s.includes('？') && !s.includes('?') && !isInstruction;
     });
     if (items.length >= 2) {
       items.forEach(item => {
-        // 清理选项文本，去掉开头的连接词
-        let cleanItem = item.replace(/^(还是|或者|或|以及|和|跟|比如)/, '').trim();
-        // 去掉末尾的标点
+        let cleanItem = item.replace(/^(或者|或|以及|和|跟|比如)/, '').trim();
         cleanItem = cleanItem.replace(/[。！？,.!?]$/, '').trim();
         if (cleanItem.length >= 2 && cleanItem.length <= 12 && !options.find(o => o.text === cleanItem)) {
           options.push({ text: cleanItem });
@@ -853,9 +916,7 @@ function extractOptionsFromMessage(message: string): QuickReply[] {
     }
   }
   
-  // 模式2已整合到模式1中，不再单独处理"还是xxx"
-  
-  // 模式3: 字母/数字序号格式 "a. xxx b. xxx" 或 "1. xxx 2. xxx"
+  // 模式2: 字母/数字序号格式 "a. xxx b. xxx" 或 "1. xxx 2. xxx"
   const numberedPattern = /(?:^|\n|[。！？])\s*(?:[a-eA-E1-5][.、)）]\s*)([^\n。！？]+)/g;
   while ((match = numberedPattern.exec(message)) !== null) {
     const item = match[1].trim().replace(/[。！？,.!?]$/, '').trim();
@@ -1435,20 +1496,25 @@ function SocialProfileCard({ info, mode }: { info: CollectedInfo; mode?: Registr
 
             {info.interestsTop && info.interestsTop.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
-                {info.interestsTop.slice(0, 4).map((interest, i) => (
-                  <motion.span 
-                    key={i}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.1 }}
-                    className="text-xs bg-white/15 text-white/90 px-2 py-0.5 rounded-full backdrop-blur-sm border border-white/10"
-                  >
-                    {interest}
-                  </motion.span>
-                ))}
-                {info.interestsTop.length > 4 && (
-                  <span className="text-xs text-white/60 px-1">+{info.interestsTop.length - 4}</span>
-                )}
+                {info.interestsTop.map((interest, i) => {
+                  const isPrimary = info.primaryInterests?.includes(interest);
+                  return (
+                    <motion.span 
+                      key={i}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.05 }}
+                      className={`text-xs px-2 py-0.5 rounded-full backdrop-blur-sm border flex items-center gap-1 ${
+                        isPrimary 
+                          ? "bg-yellow-400/25 text-yellow-100 border-yellow-400/40" 
+                          : "bg-white/15 text-white/90 border-white/10"
+                      }`}
+                    >
+                      {isPrimary && <Star className="w-2.5 h-2.5 fill-yellow-300 text-yellow-300" />}
+                      {interest}
+                    </motion.span>
+                  );
+                })}
               </div>
             )}
           </div>
