@@ -4761,6 +4761,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // ============ ADMIN API ROUTES ============
+  
+  // Simple profile completeness calculator for stats (used before main function is defined)
+  function calculateProfileCompletenessSimple(user: any): { score: number; starRating: number; missingFields: string[] } {
+    const fields = [
+      { key: 'displayName', label: '昵称', weight: 1 },
+      { key: 'gender', label: '性别', weight: 1 },
+      { key: 'birthdate', label: '生日', weight: 1 },
+      { key: 'currentCity', label: '城市', weight: 1 },
+      { key: 'interestsTop', label: '兴趣', weight: 1, isArray: true },
+      { key: 'intent', label: '活动意向', weight: 1, isArray: true },
+      { key: 'archetype', label: '社交原型', weight: 1 },
+      { key: 'languagesComfort', label: '语言', weight: 0.5, isArray: true },
+      { key: 'relationshipStatus', label: '感情状态', weight: 0.5 },
+      { key: 'educationLevel', label: '学历', weight: 0.5 },
+      { key: 'lifeStage', label: '人生阶段', weight: 0.5 },
+      { key: 'socialStyle', label: '社交风格', weight: 0.5 },
+      { key: 'venueStylePreference', label: '场地偏好', weight: 0.5 },
+      { key: 'cuisinePreference', label: '菜系偏好', weight: 0.5, isArray: true },
+      { key: 'activityTimePreference', label: '活动时段', weight: 0.5 },
+      { key: 'socialFrequency', label: '聚会频率', weight: 0.5 },
+    ];
+    
+    const totalWeight = fields.reduce((sum, f) => sum + f.weight, 0);
+    const missingFields: string[] = [];
+    let filledWeight = 0;
+    
+    for (const field of fields) {
+      const value = user[field.key];
+      const isFilled = (field as any).isArray 
+        ? Array.isArray(value) && value.length > 0
+        : value !== null && value !== undefined && value !== '';
+      
+      if (isFilled) filledWeight += field.weight;
+      else missingFields.push(field.label);
+    }
+    
+    const score = Math.round((filledWeight / totalWeight) * 100);
+    const starRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 55 ? 3 : score >= 35 ? 2 : 1;
+    
+    return { score, starRating, missingFields };
+  }
 
   // Dashboard Statistics
   app.get("/api/admin/stats", requireAdmin, async (req, res) => {
@@ -4785,10 +4826,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Revenue stats (placeholder)
       const monthlyRevenue = 0; // TODO: Calculate from payments table
       
-      // Personality distribution
+      // Personality distribution (archetypes)
       const personalityDistribution = allUsers.reduce((acc: Record<string, number>, user: any) => {
         if (user.primaryRole) {
           acc[user.primaryRole] = (acc[user.primaryRole] || 0) + 1;
+        }
+        return acc;
+      }, {});
+      
+      // Archetype distribution (12-archetype system)
+      const archetypeDistribution = allUsers.reduce((acc: Record<string, number>, user: any) => {
+        if (user.archetype) {
+          acc[user.archetype] = (acc[user.archetype] || 0) + 1;
+        }
+        return acc;
+      }, {});
+      
+      // Profile completeness distribution
+      const completenessStats = { star1: 0, star2: 0, star3: 0, star4: 0, star5: 0, weakUsers: [] as any[] };
+      for (const user of allUsers) {
+        const completeness = calculateProfileCompletenessSimple(user);
+        if (completeness.starRating === 1) completenessStats.star1++;
+        else if (completeness.starRating === 2) completenessStats.star2++;
+        else if (completeness.starRating === 3) completenessStats.star3++;
+        else if (completeness.starRating === 4) completenessStats.star4++;
+        else if (completeness.starRating === 5) completenessStats.star5++;
+        
+        // Track weak users (< 50% completeness)
+        if (completeness.score < 50 && completenessStats.weakUsers.length < 10) {
+          completenessStats.weakUsers.push({
+            id: user.id,
+            displayName: user.displayName || user.firstName || '未命名',
+            score: completeness.score,
+            starRating: completeness.starRating,
+            missingFields: completeness.missingFields.slice(0, 5),
+          });
+        }
+      }
+      
+      // City distribution
+      const cityDistribution = allUsers.reduce((acc: Record<string, number>, user: any) => {
+        if (user.currentCity) {
+          acc[user.currentCity] = (acc[user.currentCity] || 0) + 1;
         }
         return acc;
       }, {});
@@ -4834,6 +4913,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         newUsersThisWeek,
         userGrowth,
         personalityDistribution,
+        archetypeDistribution,
+        completenessStats,
+        cityDistribution,
         weeklyMatchingSatisfaction,
         lowScoringMatches,
       });
