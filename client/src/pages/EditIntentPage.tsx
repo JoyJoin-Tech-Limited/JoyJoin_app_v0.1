@@ -43,10 +43,6 @@ export default function EditIntentPage() {
     },
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
-      toast({
-        title: "保存成功",
-        description: "活动意图已更新",
-      });
       setLocation("/profile/edit");
     },
     onError: (error: Error) => {

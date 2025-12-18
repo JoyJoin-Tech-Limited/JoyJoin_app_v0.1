@@ -54,10 +54,6 @@ export default function EditPersonalPage() {
     },
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
-      toast({
-        title: "保存成功",
-        description: "个人背景已更新",
-      });
       setLocation("/profile/edit");
     },
     onError: (error: Error) => {

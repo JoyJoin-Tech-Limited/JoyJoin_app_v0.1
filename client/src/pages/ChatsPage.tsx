@@ -68,11 +68,6 @@ export default function ChatsPage() {
       setIsCreatingDemo(true);
       const response: any = await apiRequest("POST", "/api/chats/seed-demo", {});
       
-      toast({
-        title: "演示数据创建成功",
-        description: "已创建3个演示聊天窗口",
-      });
-      
       await refetchEvents();
       await refetchThreads();
     } catch (error) {

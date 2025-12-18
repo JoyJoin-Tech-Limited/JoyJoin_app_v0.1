@@ -39,10 +39,6 @@ export default function EditInterestsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      toast({
-        title: "保存成功",
-        description: "兴趣偏好已更新",
-      });
       setLocation("/profile/edit");
     },
     onError: (error: Error) => {

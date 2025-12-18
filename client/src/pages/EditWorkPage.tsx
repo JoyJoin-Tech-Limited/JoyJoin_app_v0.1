@@ -53,10 +53,6 @@ export default function EditWorkPage() {
     },
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
-      toast({
-        title: "保存成功",
-        description: "工作信息已更新",
-      });
       setLocation("/profile/edit");
     },
     onError: (error: Error) => {

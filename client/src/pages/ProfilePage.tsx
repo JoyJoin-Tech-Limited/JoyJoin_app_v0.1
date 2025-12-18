@@ -101,10 +101,6 @@ export default function ProfilePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      toast({
-        title: "保存成功",
-        description: "个人信息已更新",
-      });
       setEditDialogOpen(false);
     },
     onError: (error: Error) => {
