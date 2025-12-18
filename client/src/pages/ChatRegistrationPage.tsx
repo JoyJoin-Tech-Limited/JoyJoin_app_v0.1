@@ -352,13 +352,74 @@ interface Achievement {
   condition: (info: CollectedInfo) => boolean;
 }
 
-const achievements: Achievement[] = [
+// 根据注册时间戳获取时间段（如果没有时间戳则返回null，不发放时间徽章）
+function getTimeOfDayFromTimestamp(timestamp?: string): 'night' | 'morning' | 'day' | null {
+  if (!timestamp) return null; // 没有时间戳时不判断时间徽章
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) return null; // 无效时间戳
+  const hour = date.getHours();
+  if (hour >= 22 || hour < 6) return 'night';
+  if (hour >= 6 && hour < 9) return 'morning';
+  return 'day';
+}
+
+// 扩展成就接口以支持模式条件
+interface AchievementWithMode extends Achievement {
+  modeCondition?: (mode?: RegistrationMode) => boolean;
+}
+
+// 检查children字段是否表示有孩子（使用CHILDREN_OPTIONS精确匹配）
+// 有孩子的值：期待中、0-5岁、6-12岁、13-18岁、成年
+// 无孩子的值：无孩子、不透露（或空）
+function hasChildren(children?: string): boolean {
+  if (!children) return false;
+  const normalized = children.trim();
+  // 明确表示有孩子的选项（来自CHILDREN_OPTIONS）
+  const hasChildrenValues = ['期待中', '0-5岁', '6-12岁', '13-18岁', '成年'];
+  return hasChildrenValues.includes(normalized);
+}
+
+// 检查破冰角色是否为主动型（使用规范化的enum值）
+// 规范化值来自validateAndNormalizeInfo: initiator/follower/observer
+function isIcebreakerInitiator(role?: string): boolean {
+  if (!role) return false;
+  const normalized = role.trim().toLowerCase();
+  // 规范化的主动型值
+  return normalized === 'initiator' || normalized === '先开口';
+}
+
+// 检查是否有海外经历（使用规范化值）
+// studyLocale规范化值：本地、海外、都有
+function hasOverseasExperience(info: CollectedInfo): boolean {
+  if (info.studyLocale) {
+    const normalized = info.studyLocale.trim();
+    if (normalized === '海外' || normalized === '都有') {
+      return true;
+    }
+  }
+  return !!info.overseasRegions && info.overseasRegions.length > 0;
+}
+
+const achievements: AchievementWithMode[] = [
+  // 原有6个
   { id: "pet_lover", title: "铲屎官认证", icon: "🐾", condition: (info) => info.hasPets === true },
   { id: "foodie", title: "美食家", icon: "🍜", condition: (info) => !!info.cuisinePreference && info.cuisinePreference.length > 0 },
   { id: "social_butterfly", title: "社交达人", icon: "🦋", condition: (info) => !!info.interestsTop && info.interestsTop.length >= 3 },
   { id: "local_expert", title: "本地通", icon: "📍", condition: (info) => !!info.currentCity && !!info.hometown },
   { id: "multi_lingual", title: "语言达人", icon: "🗣️", condition: (info) => !!info.languagesComfort && info.languagesComfort.length >= 2 },
   { id: "open_book", title: "坦诚相待", icon: "📖", condition: (info) => !!info.relationshipStatus },
+  
+  // 新增10个
+  { id: "world_citizen", title: "世界公民", icon: "🌏", condition: (info) => hasOverseasExperience(info) },
+  { id: "parent", title: "神兽驯养师", icon: "👶", condition: (info) => hasChildren(info.children) },
+  { id: "student_forever", title: "永远的学生", icon: "🎓", condition: (info) => !!info.educationLevel || !!info.fieldOfStudy },
+  { id: "work_artist", title: "搬砖艺术家", icon: "💼", condition: (info) => !!info.industry || !!info.roleTitleShort || !!info.occupationDescription },
+  { id: "night_owl", title: "夜猫子", icon: "🦉", condition: (info) => getTimeOfDayFromTimestamp(info.registrationStartTime) === 'night' },
+  { id: "early_bird", title: "早起鸟", icon: "🐔", condition: (info) => getTimeOfDayFromTimestamp(info.registrationStartTime) === 'morning' },
+  { id: "speed_demon", title: "效率狂人", icon: "⚡", condition: () => false, modeCondition: (mode) => mode === 'express' },
+  { id: "deep_diver", title: "慢工出细活", icon: "💎", condition: () => false, modeCondition: (mode) => mode === 'deep' },
+  { id: "mic_master", title: "麦霸预定", icon: "🎤", condition: (info) => isIcebreakerInitiator(info.icebreakerRole) },
+  { id: "rainbow_collector", title: "彩虹收集者", icon: "🌈", condition: (info) => !!info.interestsTop && info.interestsTop.length >= 5 },
 ];
 
 // 成就弹出组件
@@ -1452,6 +1513,13 @@ interface CollectedInfo {
   lifeStage?: string;
   ageMatchPreference?: string;
   ageDisplayPreference?: string;
+  studyLocale?: string;
+  overseasRegions?: string[];
+  icebreakerRole?: string;
+  energyRecovery?: string;
+  industry?: string;
+  roleTitleShort?: string;
+  registrationStartTime?: string;
 }
 
 // 可选兴趣标签 - 直接使用问卷数据源
@@ -1596,6 +1664,40 @@ function SocialProfileCard({ info, mode }: { info: CollectedInfo; mode?: Registr
             </motion.div>
           )}
         </div>
+
+        {/* 已解锁的成就徽章 */}
+        {(() => {
+          const earnedBadges = achievements.filter(a => 
+            a.condition(info) || 
+            (a.modeCondition && a.modeCondition(mode))
+          );
+          
+          if (earnedBadges.length === 0) return null;
+          
+          return (
+            <div className="relative z-10 mt-3 pt-3 border-t border-white/20">
+              <div className="flex items-center gap-1 mb-1.5">
+                <Sparkles className="w-3 h-3 text-yellow-300/80" />
+                <span className="text-[10px] text-white/70">已解锁徽章</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {earnedBadges.map((badge, i) => (
+                  <motion.div
+                    key={badge.id}
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.3 + i * 0.08, type: "spring", stiffness: 400 }}
+                    className="inline-flex items-center gap-0.5 bg-white/15 backdrop-blur-sm px-1.5 py-0.5 rounded-full border border-white/20"
+                    title={badge.title}
+                  >
+                    <span className="text-xs leading-none">{badge.icon}</span>
+                    <span className="text-[9px] text-white/90 leading-none">{badge.title}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </motion.div>
   );
@@ -1648,6 +1750,11 @@ function loadSavedChatState(): SavedChatState | null {
       ...m,
       timestamp: new Date(m.timestamp),
     }));
+    
+    // 为遗留会话补充registrationStartTime（使用savedAt作为近似值）
+    if (!state.collectedInfo.registrationStartTime) {
+      state.collectedInfo.registrationStartTime = state.savedAt;
+    }
     
     return state;
   } catch (e) {
@@ -1897,6 +2004,12 @@ export default function ChatRegistrationPage() {
       return res.json();
     },
     onSuccess: (data) => {
+      // 记录注册开始时间（用于时间徽章判断）
+      setCollectedInfo(prev => ({
+        ...prev,
+        registrationStartTime: new Date().toISOString()
+      }));
+      
       // 取消之前正在进行的开场白序列
       openingAbortRef.current?.abort();
       const abortController = new AbortController();
