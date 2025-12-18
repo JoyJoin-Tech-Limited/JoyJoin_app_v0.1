@@ -2912,10 +2912,30 @@ export default function ChatRegistrationPage() {
           (() => {
             // 计算收集的新信息数量
             const newInfoCount = Object.keys(collectedInfo).filter(k => collectedInfo[k as keyof CollectedInfo] !== undefined).length;
-            // 计算匹配精度提升估计
-            const boostEstimate = enrichmentBaseline 
-              ? getMatchingBoostEstimate(enrichmentBaseline.percentage) 
-              : newInfoCount * 5;
+            
+            // 合并原始用户数据和收集的新信息，计算真实的post-chat完整度
+            const mergedProfile = userData ? {
+              ...userData,
+              displayName: collectedInfo.displayName || userData.displayName,
+              gender: collectedInfo.gender || userData.gender,
+              birthdate: collectedInfo.birthdate || userData.birthdate,
+              currentCity: collectedInfo.currentCity || userData.currentCity,
+              occupation: collectedInfo.occupation || userData.occupation,
+              topInterests: collectedInfo.topInterests || userData.topInterests,
+              educationLevel: collectedInfo.educationLevel || userData.educationLevel,
+              relationshipStatus: collectedInfo.relationshipStatus || userData.relationshipStatus,
+              intent: collectedInfo.intent || userData.intent,
+              hometownCountry: collectedInfo.hometownCountry || userData.hometownCountry,
+              languagesComfort: collectedInfo.languagesComfort || userData.languagesComfort,
+              socialStyle: collectedInfo.socialStyle || userData.socialStyle,
+            } : null;
+            
+            // 使用真实的profileCompletion计算函数
+            const postChatCompletion = mergedProfile ? calculateProfileCompletionUtil(mergedProfile) : null;
+            const postChatPercentage = postChatCompletion?.percentage ?? (enrichmentBaseline?.percentage ?? 0);
+            
+            // 计算匹配精度提升估计（基于提升后的完整度）
+            const boostEstimate = getMatchingBoostEstimate(postChatPercentage);
             
             return (
               <motion.div 
@@ -2948,7 +2968,7 @@ export default function ChatRegistrationPage() {
                     </motion.div>
                     {enrichmentBaseline && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        资料完整度：{enrichmentBaseline.percentage}% → {Math.min(100, enrichmentBaseline.percentage + newInfoCount * 5)}%
+                        资料完整度：{enrichmentBaseline.percentage}% → {postChatPercentage}%
                       </p>
                     )}
                   </motion.div>
