@@ -438,7 +438,7 @@ const MODE_OPENINGS: Record<RegistrationMode, string> = {
 
   deep: `欢迎来悦聚。我是小悦，你的AI社交建筑师。
 深度模式——意味着我能把你摸得更透，匹配更准。
-大概6-7分钟，聊聊你是什么type的人，包括你的社交能量画像。不亏。
+6-7分钟，聊完你就知道有没有意思。
 先说个称呼？`,
 
   all_in_one: `欢迎来悦聚。我是小悦，你的AI社交建筑师。
