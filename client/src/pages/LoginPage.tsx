@@ -382,96 +382,89 @@ export default function LoginPage() {
       </section>
 
       {/* Section 2: Promotion Banner Carousel */}
-      <div className="py-8 px-4" data-testid="section-banners">
+      <div className="py-4 px-4" data-testid="section-banners">
         <PromotionBannerCarousel 
           placement="landing" 
           className="px-0"
         />
       </div>
 
-      {/* Section 3: 小悦介绍区 - 温暖对话风格 */}
-      <section className="py-10 px-4" data-testid="section-features">
+      {/* Section 3: 小悦介绍区 - 紧凑温暖风格 */}
+      <section className="py-4 px-4" data-testid="section-features">
         <div className="max-w-lg mx-auto">
-          {/* 小悦头像 + 对话气泡 */}
-          <div className="flex gap-3">
-            {/* 小悦狐狸头像 */}
+          {/* 小悦大头像 + 右侧信息 */}
+          <div className="flex items-center gap-4">
+            {/* 小悦狐狸大头像 - 无边框 */}
             <motion.div
-              initial={{ scale: 0, rotate: -10 }}
-              whileInView={{ scale: 1, rotate: 0 }}
+              initial={{ scale: 0.8, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
               viewport={{ once: true }}
               transition={{ type: "spring", stiffness: 200, damping: 15 }}
               className="flex-shrink-0"
             >
-              <div className="relative">
-                <img 
-                  src={xiaoyueFoxAvatar} 
-                  alt="小悦" 
-                  className="w-16 h-16 rounded-full object-cover border-2 border-primary/20 shadow-lg"
-                  data-testid="img-xiaoyue-avatar"
-                />
-                <motion.div 
-                  className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white dark:border-background flex items-center justify-center"
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ repeat: Infinity, duration: 2 }}
-                >
-                  <span className="text-[8px] text-white">在线</span>
-                </motion.div>
-              </div>
+              <img 
+                src={xiaoyueFoxAvatar} 
+                alt="小悦" 
+                className="w-28 h-28 rounded-2xl object-cover"
+                data-testid="img-xiaoyue-avatar"
+              />
             </motion.div>
 
-            {/* 对话气泡序列 */}
-            <div className="flex-1 space-y-2">
-              {XIAOYUE_MESSAGES.map((message, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -10, scale: 0.95 }}
-                  whileInView={{ opacity: 1, x: 0, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.15, duration: 0.3 }}
-                >
-                  <div 
-                    className={`inline-block px-4 py-2.5 rounded-2xl ${
-                      index === 0 
-                        ? "rounded-tl-sm bg-gradient-to-r from-primary to-primary/90 text-primary-foreground" 
-                        : "bg-muted/80 dark:bg-muted/50"
-                    }`}
-                    data-testid={`text-xiaoyue-message-${index}`}
-                  >
-                    <p className="text-sm leading-relaxed">{message}</p>
-                  </div>
-                </motion.div>
-              ))}
+            {/* 右侧：名字 + 核心信息 */}
+            <div className="flex-1 min-w-0">
+              {/* 名字和标识 */}
+              <motion.div
+                initial={{ opacity: 0, x: 10 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="mb-2"
+              >
+                <h3 className="text-lg font-bold text-foreground">小悦</h3>
+                <p className="text-xs text-muted-foreground">你的社交配局师</p>
+              </motion.div>
+              
+              {/* 核心卖点 - 简洁列表 */}
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.1 }}
+                className="space-y-1"
+              >
+                <p className="text-sm text-foreground" data-testid="text-xiaoyue-message-0">
+                  帮 <span className="font-semibold text-primary">500+</span> 朋友配到chemistry对的饭搭子
+                </p>
+                <p className="text-sm text-muted-foreground" data-testid="text-xiaoyue-message-1">
+                  每桌4-6人，都是精挑细选的组合
+                </p>
+              </motion.div>
             </div>
           </div>
 
-          {/* 功能标签 - pill风格 */}
+          {/* 功能标签 - 一行两个 */}
           <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.5 }}
-            className="mt-6 flex flex-wrap gap-2 justify-center"
+            transition={{ delay: 0.2 }}
+            className="mt-3 grid grid-cols-2 gap-2"
           >
             {XIAOYUE_FEATURES.map((feature, index) => (
-              <motion.div
+              <div
                 key={feature.text}
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.6 + index * 0.08 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 dark:bg-primary/20 text-primary text-sm font-medium hover-elevate cursor-default"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50 dark:bg-muted/30 text-xs text-muted-foreground"
                 data-testid={`tag-feature-${index}`}
               >
-                <feature.icon className="w-3.5 h-3.5" />
+                <feature.icon className="w-3 h-3 text-primary/70" />
                 <span>{feature.text}</span>
-              </motion.div>
+              </div>
             ))}
           </motion.div>
         </div>
       </section>
 
       {/* Section 5: Login Form */}
-      <section className="py-12 px-6" data-testid="section-login">
+      <section className="py-6 px-6" data-testid="section-login">
         <div className="max-w-md mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
