@@ -1017,6 +1017,29 @@ const predefinedOptionKeywords = [
   "兄弟", "姐妹", "独生", "排行" // siblings
 ];
 
+// 检测是否是简单的是非问句
+function isYesNoQuestion(message: string): boolean {
+  // 匹配常见的是非问句结尾模式
+  const yesNoPatterns = [
+    /[是吗有没会能对]吗[？?]$/,        // "是吗？", "有吗？", "对吗？"
+    /有没有[^？?]*[？?]$/,             // "有没有...？"
+    /是不是[^？?]*[？?]$/,             // "是不是...？"
+    /会不会[^？?]*[？?]$/,             // "会不会...？"
+    /能不能[^？?]*[？?]$/,             // "能不能...？"
+    /对不对[？?]$/,                    // "对不对？"
+    /好不好[？?]$/,                    // "好不好？"
+    /可以吗[？?]$/,                    // "可以吗？"
+    /方便吗[？?]$/,                    // "方便吗？"
+    /介意吗[？?]$/,                    // "介意吗？"
+  ];
+  
+  // 检查消息的最后一个问句
+  const lastQuestion = message.split(/[。！\n]/).filter(s => s.includes('？') || s.includes('?')).pop();
+  if (!lastQuestion) return false;
+  
+  return yesNoPatterns.some(pattern => pattern.test(lastQuestion.trim()));
+}
+
 // 检测最后一条消息是否匹配快捷回复
 // 改进：对于有预定义选项的字段，优先使用预定义选项而不是从AI文本提取
 function detectQuickReplies(lastMessage: string): QuickReplyResult {
@@ -1040,6 +1063,17 @@ function detectQuickReplies(lastMessage: string): QuickReplyResult {
       // 追问问题需要用户根据上下文回答，不显示通用选项
       return { options: [], multiSelect: false };
     }
+  }
+  
+  // 第0.75步：检查是否是简单的是非问句
+  if (isYesNoQuestion(lastMessage)) {
+    return { 
+      options: [
+        { text: "是的", icon: Check },
+        { text: "不是", icon: X }
+      ], 
+      multiSelect: false 
+    };
   }
   
   // 第一步：检查是否匹配需要预定义选项的字段
@@ -1699,6 +1733,9 @@ export default function ChatRegistrationPage() {
   
   // 多选快捷回复状态
   const [selectedQuickReplies, setSelectedQuickReplies] = useState<Set<string>>(new Set());
+  // 快捷回复分页状态
+  const [quickReplyPage, setQuickReplyPage] = useState(0);
+  const QUICK_REPLY_PAGE_SIZE = 4; // 每页最多显示4个选项
   
   // 成就系统状态
   const [unlockedAchievements, setUnlockedAchievements] = useState<Set<string>>(new Set());
@@ -1722,6 +1759,8 @@ export default function ChatRegistrationPage() {
 
   useEffect(() => {
     scrollToBottom();
+    // 消息变化时重置快捷回复分页
+    setQuickReplyPage(0);
   }, [messages]);
 
   // 信息收集进度
@@ -2455,55 +2494,100 @@ export default function ChatRegistrationPage() {
 
       {/* 快捷回复气泡 */}
       <AnimatePresence>
-        {quickReplyResult.options.length > 0 && !isTyping && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="px-4 py-3 border-t bg-muted/30"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-muted-foreground">
-                {quickReplyResult.multiSelect ? "可多选（点击选择后发送）：" : "快捷回复："}
-              </p>
-              {quickReplyResult.multiSelect && selectedQuickReplies.size > 0 && (
-                <Button
-                  size="sm"
-                  onClick={handleMultiSelectSend}
-                  className="h-7 text-xs"
-                  data-testid="button-send-multi-select"
-                >
-                  <Send className="w-3 h-3 mr-1" />
-                  发送 ({selectedQuickReplies.size})
-                </Button>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {quickReplyResult.options.map((reply, index) => {
-                const IconComponent = reply.icon;
-                const isSelected = selectedQuickReplies.has(reply.text);
-                return (
+        {quickReplyResult.options.length > 0 && !isTyping && (() => {
+          // 计算分页后的选项
+          const allOptions = quickReplyResult.options;
+          const needsPagination = quickReplyResult.multiSelect && allOptions.length > QUICK_REPLY_PAGE_SIZE;
+          const totalPages = needsPagination ? Math.ceil(allOptions.length / QUICK_REPLY_PAGE_SIZE) : 1;
+          const currentPage = Math.min(quickReplyPage, totalPages - 1);
+          const displayOptions = needsPagination 
+            ? allOptions.slice(currentPage * QUICK_REPLY_PAGE_SIZE, (currentPage + 1) * QUICK_REPLY_PAGE_SIZE)
+            : allOptions;
+          
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="px-4 py-3 border-t bg-muted/30"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-muted-foreground">
+                  {quickReplyResult.multiSelect ? "可多选（点击选择后发送）：" : "快捷回复："}
+                </p>
+                {quickReplyResult.multiSelect && selectedQuickReplies.size > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={handleMultiSelectSend}
+                    className="h-7 text-xs"
+                    data-testid="button-send-multi-select"
+                  >
+                    <Send className="w-3 h-3 mr-1" />
+                    发送 ({selectedQuickReplies.size})
+                  </Button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {displayOptions.map((reply, index) => {
+                  const IconComponent = reply.icon;
+                  const isSelected = selectedQuickReplies.has(reply.text);
+                  return (
+                    <motion.button
+                      key={reply.text}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => handleQuickReply(reply.text)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full border transition-all text-sm ${
+                        isSelected 
+                          ? "bg-primary text-primary-foreground border-primary" 
+                          : "bg-background border-border hover:border-primary hover:bg-primary/5"
+                      }`}
+                      data-testid={`quick-reply-${reply.text}`}
+                    >
+                      {IconComponent && <IconComponent className={`w-3.5 h-3.5 ${isSelected ? "" : "text-primary"}`} />}
+                      <span>{reply.text}</span>
+                    </motion.button>
+                  );
+                })}
+                
+                {/* 换一批按钮 - 多选且有多页时显示 */}
+                {needsPagination && (
                   <motion.button
-                    key={reply.text}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => handleQuickReply(reply.text)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full border transition-all text-sm ${
-                      isSelected 
-                        ? "bg-primary text-primary-foreground border-primary" 
-                        : "bg-background border-border hover:border-primary hover:bg-primary/5"
-                    }`}
-                    data-testid={`quick-reply-${reply.text}`}
+                    transition={{ delay: displayOptions.length * 0.05 }}
+                    onClick={() => setQuickReplyPage((currentPage + 1) % totalPages)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary hover:text-primary transition-all text-sm"
+                    data-testid="button-more-options"
                   >
-                    {IconComponent && <IconComponent className={`w-3.5 h-3.5 ${isSelected ? "" : "text-primary"}`} />}
-                    <span>{reply.text}</span>
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>换一批</span>
                   </motion.button>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
+                )}
+                
+                {/* 自己输入按钮 - 多选时显示 */}
+                {quickReplyResult.multiSelect && (
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: (displayOptions.length + (needsPagination ? 1 : 0)) * 0.05 }}
+                    onClick={() => {
+                      // 聚焦到输入框
+                      const inputEl = document.querySelector('input[data-testid="input-message"]') as HTMLInputElement;
+                      if (inputEl) inputEl.focus();
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary hover:text-primary transition-all text-sm"
+                    data-testid="button-custom-input"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    <span>自己输入</span>
+                  </motion.button>
+                )}
+              </div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
       {isComplete && infoConfirmed ? (
