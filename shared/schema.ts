@@ -22,6 +22,8 @@ import {
   STUDY_LOCALE_OPTIONS,
   PRONOUNS_OPTIONS,
   LANGUAGES_COMFORT_OPTIONS,
+  ACTIVITY_TIME_PREFERENCE_OPTIONS,
+  SOCIAL_FREQUENCY_OPTIONS,
 } from "./constants";
 
 // Session storage table (required for Replit Auth)
@@ -125,6 +127,10 @@ export const users = pgTable("users", {
   cuisinePreference: text("cuisine_preference").array(), // 菜系偏好: 粤菜, 日料, 西餐, etc.
   favoriteRestaurant: varchar("favorite_restaurant"), // 宝藏餐厅推荐
   favoriteRestaurantReason: text("favorite_restaurant_reason"), // 喜欢这家餐厅的原因
+  
+  // Registration fields - Activity Preferences (collected via AI chat)
+  activityTimePreference: varchar("activity_time_preference"), // 活动时段偏好: 工作日晚上, 周末白天, 周末晚上, 都可以
+  socialFrequency: varchar("social_frequency"), // 聚会频率: 每周社交, 每两周一次, 每月一两次, 看心情
   
   // Personality data (Step 3 - Vibe Vector)
   vibeVector: jsonb("vibe_vector"), // {energy, conversation_style, initiative, novelty, humor} scored 0-1

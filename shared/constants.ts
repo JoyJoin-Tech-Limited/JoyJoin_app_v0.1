@@ -87,6 +87,14 @@ export type EducationVisibility = typeof EDUCATION_VISIBILITY_OPTIONS[number];
 export const CURRENT_CITY_OPTIONS = ["香港", "深圳", "广州", "东莞", "珠海", "澳门", "其他"] as const;
 export type CurrentCity = typeof CURRENT_CITY_OPTIONS[number];
 
+// Activity time preference options (活动时段偏好)
+export const ACTIVITY_TIME_PREFERENCE_OPTIONS = ["工作日晚上", "周末白天", "周末晚上", "都可以"] as const;
+export type ActivityTimePreference = typeof ACTIVITY_TIME_PREFERENCE_OPTIONS[number];
+
+// Social frequency options (聚会频率)
+export const SOCIAL_FREQUENCY_OPTIONS = ["每周社交", "每两周一次", "每月一两次", "看心情"] as const;
+export type SocialFrequency = typeof SOCIAL_FREQUENCY_OPTIONS[number];
+
 // Languages comfort options - sorted by number of speakers (most to least)
 export const LANGUAGES_COMFORT_OPTIONS = [
   "普通话",

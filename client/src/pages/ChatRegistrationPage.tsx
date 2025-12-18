@@ -1520,6 +1520,8 @@ interface CollectedInfo {
   industry?: string;
   roleTitleShort?: string;
   registrationStartTime?: string;
+  activityTimePreference?: string;
+  socialFrequency?: string;
 }
 
 // 可选兴趣标签 - 直接使用问卷数据源

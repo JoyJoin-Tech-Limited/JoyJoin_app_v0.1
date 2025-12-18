@@ -50,6 +50,7 @@ export interface XiaoyueCollectedInfo {
   energyRechargeMethod?: string; // alone/small_group/exercise/sleep - 能量恢复方式
   idealSocialDuration?: string; // 1h/2h/3h_plus/flexible - 理想社交时长
   socialFrequency?: string; // weekly/biweekly/monthly/flexible - 社交频率需求
+  activityTimePreference?: string; // 工作日晚上/周末白天/周末晚上/都可以 - 活动时段偏好
   // 社交场景偏好（新增）
   activityPace?: string; // slow_deep/fast_varied/flexible - 活动节奏偏好
   breakingIceRole?: string; // initiator/follower/observer - 破冰角色
@@ -1254,6 +1255,11 @@ function validateAndNormalizeInfo(info: Partial<XiaoyueCollectedInfo>): XiaoyueC
   }
   if (info.socialFrequency && typeof info.socialFrequency === 'string') {
     normalized.socialFrequency = info.socialFrequency.trim();
+  }
+  
+  // activityTimePreference - 活动时段偏好
+  if (info.activityTimePreference && typeof info.activityTimePreference === 'string') {
+    normalized.activityTimePreference = info.activityTimePreference.trim();
   }
 
   // 社交场景偏好（新增）
