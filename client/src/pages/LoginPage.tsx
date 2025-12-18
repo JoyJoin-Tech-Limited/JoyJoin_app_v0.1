@@ -389,77 +389,69 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* Section 3: 小悦介绍区 - 紧凑温暖风格 */}
+      {/* Section 3: 小悦介绍区 - 卡片式全身展示 */}
       <section className="py-4 px-4" data-testid="section-features">
         <div className="max-w-lg mx-auto">
-          {/* 小悦大头像 + 右侧信息 */}
-          <div className="flex items-center gap-4">
-            {/* 小悦狐狸大头像 - 无边框 */}
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              whileInView={{ scale: 1, opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ type: "spring", stiffness: 200, damping: 15 }}
-              className="flex-shrink-0"
-            >
-              <img 
-                src={xiaoyueFoxAvatar} 
-                alt="小悦" 
-                className="w-28 h-28 rounded-2xl object-cover"
-                data-testid="img-xiaoyue-avatar"
-              />
-            </motion.div>
+          <Card className="overflow-hidden border-0 shadow-sm bg-gradient-to-br from-white to-primary/5 dark:from-card dark:to-primary/10">
+            <CardContent className="p-0">
+              <div className="flex">
+                {/* 小悦全身图 - 左侧 */}
+                <motion.div
+                  initial={{ x: -20, opacity: 0 }}
+                  whileInView={{ x: 0, opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                  className="flex-shrink-0 w-32"
+                >
+                  <img 
+                    src={xiaoyueFoxAvatar} 
+                    alt="小悦" 
+                    className="w-full h-44 object-contain object-bottom"
+                    data-testid="img-xiaoyue-avatar"
+                  />
+                </motion.div>
 
-            {/* 右侧：名字 + 核心信息 */}
-            <div className="flex-1 min-w-0">
-              {/* 名字和标识 */}
-              <motion.div
-                initial={{ opacity: 0, x: 10 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                className="mb-2"
-              >
-                <h3 className="text-lg font-bold text-foreground">小悦</h3>
-                <p className="text-xs text-muted-foreground">你的社交配局师</p>
-              </motion.div>
-              
-              {/* 核心卖点 - 简洁列表 */}
-              <motion.div
-                initial={{ opacity: 0, y: 5 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.1 }}
-                className="space-y-1"
-              >
-                <p className="text-sm text-foreground" data-testid="text-xiaoyue-message-0">
-                  帮 <span className="font-semibold text-primary">500+</span> 朋友配到chemistry对的饭搭子
-                </p>
-                <p className="text-sm text-muted-foreground" data-testid="text-xiaoyue-message-1">
-                  每桌4-6人，都是精挑细选的组合
-                </p>
-              </motion.div>
-            </div>
-          </div>
-
-          {/* 功能标签 - 一行两个 */}
-          <motion.div 
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="mt-3 grid grid-cols-2 gap-2"
-          >
-            {XIAOYUE_FEATURES.map((feature, index) => (
-              <div
-                key={feature.text}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50 dark:bg-muted/30 text-xs text-muted-foreground"
-                data-testid={`tag-feature-${index}`}
-              >
-                <feature.icon className="w-3 h-3 text-primary/70" />
-                <span>{feature.text}</span>
+                {/* 右侧信息区 */}
+                <div className="flex-1 p-4 flex flex-col justify-center">
+                  {/* 名字和标识 */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="mb-3"
+                  >
+                    <h3 className="text-xl font-bold text-foreground">小悦</h3>
+                    <p className="text-sm text-muted-foreground">你的社交配局师</p>
+                  </motion.div>
+                  
+                  {/* 核心卖点 */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.1 }}
+                    className="space-y-2"
+                  >
+                    <p className="text-sm text-foreground leading-relaxed" data-testid="text-xiaoyue-message-0">
+                      帮 <span className="font-bold text-primary">500+</span> 朋友配到chemistry对的饭搭子
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {XIAOYUE_FEATURES.slice(0, 2).map((feature, index) => (
+                        <span
+                          key={feature.text}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs"
+                          data-testid={`tag-feature-${index}`}
+                        >
+                          <feature.icon className="w-3 h-3" />
+                          {feature.text}
+                        </span>
+                      ))}
+                    </div>
+                  </motion.div>
+                </div>
               </div>
-            ))}
-          </motion.div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
