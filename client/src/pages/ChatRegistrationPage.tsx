@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil } from "lucide-react";
+import xiaoyueAvatar from "@assets/generated_images/final_fox_with_collar_sunglasses.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -165,13 +166,59 @@ function ModeSelectionScreen({
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-8"
       >
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 mx-auto mb-4 flex items-center justify-center">
-          <Sparkles className="w-8 h-8 text-white" />
-        </div>
-        <h1 className="text-2xl font-bold mb-2">嗨，我是小悦</h1>
-        <p className="text-muted-foreground">
+        {/* 小悦品牌大使形象 - Impactful展示 */}
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 15 }}
+          className="relative mx-auto mb-6"
+        >
+          {/* 背景光晕效果 */}
+          <div className="absolute inset-0 w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-primary/30 via-purple-400/20 to-pink-400/20 blur-xl" />
+          
+          {/* 小悦头像 */}
+          <div className="relative w-28 h-28 mx-auto rounded-full overflow-hidden ring-4 ring-primary/20 ring-offset-4 ring-offset-background shadow-2xl">
+            <img 
+              src={xiaoyueAvatar} 
+              alt="小悦 - 悦聚AI社交助手" 
+              className="w-full h-full object-cover object-top"
+              data-testid="img-xiaoyue-avatar"
+            />
+          </div>
+          
+          {/* AI闪烁标识 */}
+          <motion.div
+            animate={{ 
+              scale: [1, 1.2, 1],
+              opacity: [0.7, 1, 0.7]
+            }}
+            transition={{ 
+              duration: 2, 
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg"
+          >
+            <Sparkles className="w-4 h-4 text-white" />
+          </motion.div>
+        </motion.div>
+        
+        <motion.h1 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-2xl font-bold mb-2"
+        >
+          嗨，我是小悦
+        </motion.h1>
+        <motion.p 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="text-muted-foreground"
+        >
           让我们聊聊，帮你找到合拍的活动伙伴
-        </p>
+        </motion.p>
       </motion.div>
 
       <motion.div 
@@ -406,18 +453,27 @@ function getWarmthGradient(infoCount: number): string {
   return "from-slate-50/20 via-gray-50/10 to-background"; // 初识
 }
 
-// 小悦头像组件
-function XiaoyueAvatar({ emotion, size = "md" }: { emotion: XiaoyueEmotion; size?: "sm" | "md" }) {
-  const sizeClasses = size === "sm" ? "w-6 h-6 text-xs" : "w-8 h-8 text-sm";
+// 小悦头像组件 - 使用品牌大使形象
+function XiaoyueAvatar({ emotion, size = "md" }: { emotion: XiaoyueEmotion; size?: "sm" | "md" | "lg" | "xl" }) {
+  const sizeClasses = {
+    sm: "w-6 h-6",
+    md: "w-8 h-8", 
+    lg: "w-12 h-12",
+    xl: "w-20 h-20"
+  }[size];
   
   return (
     <motion.div 
-      className={`${sizeClasses} rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0 border border-primary/20`}
-      animate={{ scale: [1, 1.05, 1] }}
-      transition={{ duration: 0.3 }}
+      className={`${sizeClasses} rounded-full overflow-hidden flex-shrink-0 ring-2 ring-primary/20 ring-offset-2 ring-offset-background`}
+      animate={{ scale: [1, 1.02, 1] }}
+      transition={{ duration: 0.5, ease: "easeInOut" }}
       key={emotion}
     >
-      <span>{emotionEmojis[emotion]}</span>
+      <img 
+        src={xiaoyueAvatar} 
+        alt="小悦" 
+        className="w-full h-full object-cover object-top"
+      />
     </motion.div>
   );
 }
