@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil } from "lucide-react";
+import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil, Calendar } from "lucide-react";
 import xiaoyueAvatar from "@assets/generated_images/final_fox_with_collar_sunglasses.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -902,6 +902,26 @@ const quickReplyConfigs: QuickReplyConfig[] = [
       { text: "自由职业", icon: Sparkles }
     ],
     priority: 88
+  },
+  {
+    keywords: ["时间", "时段", "什么时候", "周末", "工作日", "晚上", "白天", "有空", "方便"],
+    options: [
+      { text: "工作日晚上", icon: Moon },
+      { text: "周末白天", icon: Sun },
+      { text: "周末晚上", icon: Moon },
+      { text: "都可以", icon: Sparkles }
+    ],
+    priority: 85
+  },
+  {
+    keywords: ["频率", "多久", "多频繁", "经常", "社交频率", "聚会频率", "每周", "每月"],
+    options: [
+      { text: "每周社交", icon: Zap },
+      { text: "每两周一次", icon: Calendar },
+      { text: "每月一两次", icon: Calendar },
+      { text: "看心情", icon: Sparkles }
+    ],
+    priority: 84
   }
 ];
 
@@ -1075,7 +1095,9 @@ const predefinedOptionKeywords = [
   "孩子", "小孩", "娃", // children
   "学历", "毕业", // education
   "感情", "单身", "恋爱", "已婚", // relationship
-  "兄弟", "姐妹", "独生", "排行" // siblings
+  "兄弟", "姐妹", "独生", "排行", // siblings
+  "时段", "工作日", "周末", "有空", "方便", // activity time preference
+  "频率", "多久", "多频繁", "每周", "每月" // social frequency
 ];
 
 // 检测是否是简单的是非问句（只匹配明确的二元选择问题）
