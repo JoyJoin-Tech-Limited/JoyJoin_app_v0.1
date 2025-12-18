@@ -4987,7 +4987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User Management - Get user details
+  // User Management - Get user details with profile completeness
   app.get("/api/admin/users/:id", requireAdmin, async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
@@ -4998,11 +4998,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get user's events
       const events = await storage.getUserBlindBoxEvents(req.params.id);
       
+      // Calculate profile completeness
+      const profileCompleteness = calculateProfileCompleteness(user);
+      
       res.json({
         ...user,
+        profileCompleteness,
         events,
-        subscriptions: [], // TODO: Get from subscriptions table
-        payments: [], // TODO: Get from payments table
+        subscriptions: [],
+        payments: [],
       });
     } catch (error) {
       console.error("Error fetching user details:", error);
