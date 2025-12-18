@@ -24,6 +24,7 @@ import {
   EDUCATION_LEVEL_OPTIONS, 
   CHILDREN_OPTIONS 
 } from "@shared/constants";
+import { calculateProfileCompletion as calculateProfileCompletionUtil, getMatchingBoostEstimate } from "@/lib/profileCompletion";
 
 // 注册模式配置
 type RegistrationMode = "express" | "standard" | "deep" | "all_in_one" | "enrichment";
@@ -47,23 +48,34 @@ interface EnrichmentContext {
   missingFields: string[];
 }
 
-// 计算缺失字段
+// 计算缺失字段（enrichment模式专用）
+// 注意：排除报名偏好字段（budgetRange/preferredLanguages/cuisinePreferences/dietaryRestrictions/decorStylePreferences/socialGoals）
+// 这些字段在EventPoolRegistrationPage收集，enrichment只关注匹配核心信息
 function calculateMissingFields(user: UserType | null | undefined): { missingFields: string[]; existingProfile: EnrichmentContext['existingProfile'] } {
   if (!user) return { missingFields: [], existingProfile: {} };
   
+  // 按优先级排序的字段（Tier 1 > Tier 2 > Tier 3）
+  // 排除报名时已收集的偏好类字段
   const fieldsToCheck = [
-    { key: 'displayName', label: '昵称' },
-    { key: 'gender', label: '性别' },
-    { key: 'birthdate', label: '出生日期' },
-    { key: 'currentCity', label: '城市' },
-    { key: 'occupation', label: '职业' },
-    { key: 'topInterests', label: '兴趣爱好', isArray: true },
-    { key: 'educationLevel', label: '学历' },
-    { key: 'relationshipStatus', label: '感情状态' },
-    { key: 'intent', label: '社交意向' },
-    { key: 'hometownCountry', label: '家乡' },
-    { key: 'languagesComfort', label: '语言', isArray: true },
-    { key: 'socialStyle', label: '社交风格' },
+    // Tier 1: 高影响匹配字段
+    { key: 'activityTimePreferences', label: '活动时间偏好', isArray: true, tier: 1 },
+    { key: 'socialFrequency', label: '社交频率', tier: 1 },
+    { key: 'socialEnergyType', label: '社交能量类型', tier: 1 },
+    { key: 'archetypeResult', label: '性格类型', tier: 1, isObject: true },
+    // Tier 2: 中等影响字段
+    { key: 'gender', label: '性别', tier: 2 },
+    { key: 'birthdate', label: '年龄', tier: 2 },
+    { key: 'occupation', label: '职业', tier: 2 },
+    { key: 'industry', label: '行业', tier: 2 },
+    { key: 'seniority', label: '资历', tier: 2 },
+    { key: 'educationLevel', label: '学历', tier: 2 },
+    // Tier 3: 辅助信息
+    { key: 'topInterests', label: '兴趣爱好', isArray: true, tier: 3 },
+    { key: 'relationshipStatus', label: '感情状态', tier: 3 },
+    { key: 'currentCity', label: '城市', tier: 3 },
+    { key: 'hometownCountry', label: '家乡', tier: 3 },
+    { key: 'topicAvoidances', label: '话题避开', isArray: true, tier: 3 },
+    { key: 'socialStyle', label: '社交风格', tier: 3 },
   ];
   
   const missingFields: string[] = [];
@@ -71,9 +83,15 @@ function calculateMissingFields(user: UserType | null | undefined): { missingFie
   
   fieldsToCheck.forEach(field => {
     const value = (user as any)[field.key];
-    const isFilled = field.isArray 
-      ? Array.isArray(value) && value.length > 0
-      : value !== undefined && value !== null && value !== '';
+    let isFilled = false;
+    
+    if (field.isArray) {
+      isFilled = Array.isArray(value) && value.length > 0;
+    } else if (field.isObject) {
+      isFilled = value !== undefined && value !== null && typeof value === 'object';
+    } else {
+      isFilled = value !== undefined && value !== null && value !== '';
+    }
     
     if (isFilled) {
       (existingProfile as any)[field.key] = value;
@@ -2002,7 +2020,18 @@ export default function ChatRegistrationPage() {
     return calculateMissingFields(userData);
   }, [isEnrichmentMode, userData]);
   
-  // 模式选择状态
+  // 记录enrichment开始时的baseline（用于结尾展示提升）
+  const [enrichmentBaseline, setEnrichmentBaseline] = useState<{ percentage: number; stars: number } | null>(null);
+  
+  // 当enrichment模式加载用户数据后，记录baseline
+  useEffect(() => {
+    if (isEnrichmentMode && userData && !enrichmentBaseline) {
+      const baseline = calculateProfileCompletionUtil(userData);
+      setEnrichmentBaseline({ percentage: baseline.percentage, stars: baseline.stars });
+    }
+  }, [isEnrichmentMode, userData, enrichmentBaseline]);
+  
+  // 模式选择状态 - enrichment模式直接跳过选择
   const [showModeSelection, setShowModeSelection] = useState(!presetMode);
   const [selectedMode, setSelectedMode] = useState<RegistrationMode | null>(presetMode);
   
@@ -2878,37 +2907,109 @@ export default function ChatRegistrationPage() {
       </AnimatePresence>
 
       {isComplete && infoConfirmed ? (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-4 border-t bg-muted/50"
-        >
-          <div className="text-center mb-3">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground mb-2"
-            >
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span>基础信息已收集完成</span>
-              <Sparkles className="w-4 h-4 text-primary" />
-            </motion.div>
-          </div>
-          <Button 
-            className="w-full" 
-            onClick={handleComplete}
-            disabled={submitRegistrationMutation.isPending}
-            data-testid="button-complete-registration"
+        isEnrichmentMode ? (
+          // Enrichment模式的完成界面 - 展示资料补充成果
+          (() => {
+            // 计算收集的新信息数量
+            const newInfoCount = Object.keys(collectedInfo).filter(k => collectedInfo[k as keyof CollectedInfo] !== undefined).length;
+            // 计算匹配精度提升估计
+            const boostEstimate = enrichmentBaseline 
+              ? getMatchingBoostEstimate(enrichmentBaseline.percentage) 
+              : newInfoCount * 5;
+            
+            return (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 border-t bg-gradient-to-r from-violet-500/10 to-purple-500/10"
+              >
+                <div className="text-center mb-4">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+                    className="inline-flex flex-col items-center gap-2"
+                  >
+                    <div className="flex items-center gap-2 text-primary mb-1">
+                      <Sparkles className="w-5 h-5" />
+                      <span className="font-medium">资料补充完成！</span>
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      新增了 {newInfoCount} 项信息，匹配精准度预计提升
+                    </p>
+                    <motion.div
+                      initial={{ scale: 0.5, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: 0.4, type: "spring" }}
+                      className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent"
+                    >
+                      +{boostEstimate}%
+                    </motion.div>
+                    {enrichmentBaseline && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        资料完整度：{enrichmentBaseline.percentage}% → {Math.min(100, enrichmentBaseline.percentage + newInfoCount * 5)}%
+                      </p>
+                    )}
+                  </motion.div>
+                </div>
+                <Button 
+                  className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700" 
+                  onClick={() => {
+                    // 保存收集的信息然后返回
+                    submitRegistrationMutation.mutate(undefined, {
+                      onSuccess: () => {
+                        setLocation('/profile');
+                      }
+                    });
+                  }}
+                  disabled={submitRegistrationMutation.isPending}
+                  data-testid="button-finish-enrichment"
+                >
+                  {submitRegistrationMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Check className="w-4 h-4 mr-2" />
+                  )}
+                  完成，返回个人主页
+                </Button>
+              </motion.div>
+            );
+          })()
+        ) : (
+          // 普通注册模式的完成界面
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 border-t bg-muted/50"
           >
-            {submitRegistrationMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : (
-              <ArrowRight className="w-4 h-4 mr-2" />
-            )}
-            开始性格测试
-          </Button>
-        </motion.div>
+            <div className="text-center mb-3">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+                className="inline-flex items-center gap-2 text-sm text-muted-foreground mb-2"
+              >
+                <Sparkles className="w-4 h-4 text-primary" />
+                <span>基础信息已收集完成</span>
+                <Sparkles className="w-4 h-4 text-primary" />
+              </motion.div>
+            </div>
+            <Button 
+              className="w-full" 
+              onClick={handleComplete}
+              disabled={submitRegistrationMutation.isPending}
+              data-testid="button-complete-registration"
+            >
+              {submitRegistrationMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <ArrowRight className="w-4 h-4 mr-2" />
+              )}
+              开始性格测试
+            </Button>
+          </motion.div>
+        )
       ) : isComplete && !infoConfirmed ? (
         <motion.div 
           initial={{ opacity: 0, y: 20 }}

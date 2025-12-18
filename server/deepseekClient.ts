@@ -732,6 +732,8 @@ export interface EnrichmentContext {
     birthdate?: string;
     currentCity?: string;
     occupation?: string;
+    industry?: string;
+    seniority?: string;
     topInterests?: string[];
     educationLevel?: string;
     relationshipStatus?: string;
@@ -739,35 +741,57 @@ export interface EnrichmentContext {
     hometownCountry?: string;
     languagesComfort?: string[];
     socialStyle?: string;
+    socialEnergyType?: string;
+    activityTimePreferences?: string[];
+    socialFrequency?: string;
+    archetypeResult?: any;
+    topicAvoidances?: string[];
   };
   missingFields: string[];
 }
 
 const ENRICHMENT_SYSTEM_ADDITION = `
-## 【资料补充模式】
-这是一位老用户回来补充资料。你已经知道ta的部分信息，现在要帮ta完善剩余信息。
+## 【深度资料补充模式】
+这是一位老朋友回来补充资料～用你Nick Wilde式的俏皮调侃风格，轻松愉快地聊天！
 
-**你已经知道的信息（不需要再问）**：
+**你已经知道的信息（绝对不要再问！）**：
 {KNOWN_INFO}
 
-**需要收集的信息（重点关注）**：
+**需要补充的信息（按优先级问，每次只问一个）**：
 {MISSING_FIELDS}
 
-**对话策略**：
-1. 热情但不过分：老朋友回来聊天的感觉
-2. 不要重复问已知信息
-3. 自然地引导到缺失的信息
-4. 可以根据已知信息建立联系，比如"上次你说在深圳做互联网，那有没有..."
-5. 每轮只问一个问题，保持轻松节奏
+**【重要】以下信息在活动报名时已收集，千万不要问：**
+- 预算范围（budgetRange）
+- 语言偏好（preferredLanguages） 
+- 饮食偏好（cuisinePreferences）
+- 饮食限制（dietaryRestrictions）
+- 装修风格偏好（decorStylePreferences）
+- 社交目标（socialGoals）
 
-**开场语风格**：
-- "欢迎回来呀～上次聊得挺开心的，今天想再了解你多一点～"
-- 可以根据已知信息个性化开场
+**对话风格（Nick Wilde式）**：
+1. 俏皮调侃但不油腻：
+   - "诶，说起来你平时..."
+   - "哈，我好奇问一下..."
+   - "嘿嘿，那你一般..."
+2. 性别适配的称呼（已知性别时）：
+   - 男性："帅哥"、"兄弟"、"老铁"
+   - 女性："美女"、"小姐姐"、"小可爱"
+   - 未知："朋友"、"你"
+3. 善于接话和调侃：根据用户回答自然延伸，不要生硬跳转
+4. 轻松节奏：每轮只问一个问题，有时可以纯聊天不收集信息
+
+**问题优先级（先问高影响字段）**：
+- Tier 1 (高影响): 活动时间偏好、社交频率、社交能量类型、性格类型
+- Tier 2 (中影响): 职业、行业、资历、学历
+- Tier 3 (辅助): 兴趣爱好、感情状态、话题避开
 
 **结束条件**：
-- 收集到至少3个新信息后可以结束
-- 用户表示不想继续时也可以结束
-- 结束时发送 \`\`\`registration_complete\`\`\`
+- 收集到3-5个新信息后，自然收尾
+- 用户表示想结束时，愉快收尾
+- 收尾时先总结收获，表达期待，然后发送 \`\`\`registration_complete\`\`\`
+
+**收尾话术示例**：
+"好啦～今天聊得挺开心的！资料更完整了，下次给你匹配的活动伙伴肯定更合拍～期待你来参加活动呀！"
 `;
 
 function buildEnrichmentPrompt(context: EnrichmentContext): string {
@@ -775,10 +799,12 @@ function buildEnrichmentPrompt(context: EnrichmentContext): string {
   
   const knownInfoLines: string[] = [];
   if (existingProfile.displayName) knownInfoLines.push(`- 昵称：${existingProfile.displayName}`);
-  if (existingProfile.gender) knownInfoLines.push(`- 性别：${existingProfile.gender}`);
+  if (existingProfile.gender) knownInfoLines.push(`- 性别：${existingProfile.gender === 'male' ? '男' : existingProfile.gender === 'female' ? '女' : existingProfile.gender}`);
   if (existingProfile.birthdate) knownInfoLines.push(`- 生日：${existingProfile.birthdate}`);
   if (existingProfile.currentCity) knownInfoLines.push(`- 城市：${existingProfile.currentCity}`);
   if (existingProfile.occupation) knownInfoLines.push(`- 职业：${existingProfile.occupation}`);
+  if (existingProfile.industry) knownInfoLines.push(`- 行业：${existingProfile.industry}`);
+  if (existingProfile.seniority) knownInfoLines.push(`- 资历：${existingProfile.seniority}`);
   if (existingProfile.topInterests?.length) knownInfoLines.push(`- 兴趣：${existingProfile.topInterests.join('、')}`);
   if (existingProfile.educationLevel) knownInfoLines.push(`- 学历：${existingProfile.educationLevel}`);
   if (existingProfile.relationshipStatus) knownInfoLines.push(`- 感情状态：${existingProfile.relationshipStatus}`);
@@ -786,6 +812,11 @@ function buildEnrichmentPrompt(context: EnrichmentContext): string {
   if (existingProfile.hometownCountry) knownInfoLines.push(`- 家乡：${existingProfile.hometownCountry}`);
   if (existingProfile.languagesComfort?.length) knownInfoLines.push(`- 语言：${existingProfile.languagesComfort.join('、')}`);
   if (existingProfile.socialStyle) knownInfoLines.push(`- 社交风格：${existingProfile.socialStyle}`);
+  if (existingProfile.socialEnergyType) knownInfoLines.push(`- 社交能量：${existingProfile.socialEnergyType}`);
+  if (existingProfile.activityTimePreferences?.length) knownInfoLines.push(`- 活动时间偏好：${existingProfile.activityTimePreferences.join('、')}`);
+  if (existingProfile.socialFrequency) knownInfoLines.push(`- 社交频率：${existingProfile.socialFrequency}`);
+  if (existingProfile.archetypeResult) knownInfoLines.push(`- 性格类型：已完成测试`);
+  if (existingProfile.topicAvoidances?.length) knownInfoLines.push(`- 话题避开：${existingProfile.topicAvoidances.join('、')}`);
 
   const knownInfo = knownInfoLines.length > 0 ? knownInfoLines.join('\n') : '（暂无已知信息）';
   const missing = missingFields.length > 0 ? missingFields.map(f => `- ${f}`).join('\n') : '（无缺失信息）';
@@ -798,25 +829,41 @@ function buildEnrichmentPrompt(context: EnrichmentContext): string {
 function generateEnrichmentOpening(context: EnrichmentContext): string {
   const { existingProfile, missingFields } = context;
   const name = existingProfile.displayName || '朋友';
+  const gender = existingProfile.gender;
+  
+  // 性别适配称呼
+  const genderAddress = gender === 'male' ? '帅哥' : gender === 'female' ? '小姐姐' : '朋友';
   
   const greetings = [
-    `${name}，好久不见呀～今天想再聊聊，了解你多一点～`,
-    `欢迎回来呀～${name}，之前聊得挺开心的，今天继续？`,
-    `嘿${name}～想跟你多聊几句，完善一下你的资料～`
+    `嘿～${name}${genderAddress}，又见面啦！想跟你多聊几句～`,
+    `哟～${name}回来啦！上次聊得不过瘾，今天继续？`,
+    `诶${name}～我是小悦呀！来补充点资料，让匹配更精准～`
   ];
   
   let opening = greetings[Math.floor(Math.random() * greetings.length)];
   
   if (missingFields.length > 0) {
+    // Tier 1优先级字段的开场问题
     const fieldHints: Record<string, string> = {
+      // Tier 1 - 高影响
+      '活动时间偏好': '话说你一般什么时候有空参加活动呀？工作日晚上还是周末？',
+      '社交频率': '你喜欢频繁社交还是偶尔来一场？',
+      '社交能量类型': '参加活动的时候，你是那种能量满满带动气氛的，还是更喜欢安静观察？',
+      '性格类型': '说起来，你觉得自己在社交场合是什么风格呀？',
+      // Tier 2 - 中影响  
       '职业': '话说你现在是做什么工作的呀？',
-      '兴趣爱好': '平时休闲的时候喜欢做什么呀？',
+      '行业': '在什么行业发展呢？',
+      '资历': '工作几年啦？',
       '学历': '读的什么专业呀？',
+      '性别': '先问个基础的，你是帅哥还是美女呀？',
+      '年龄': '大概是什么年龄段的呢？',
+      // Tier 3 - 辅助
+      '兴趣爱好': '平时下班之后都喜欢做什么呀？',
       '感情状态': '现在是一个人还是有伴儿呀？',
-      '社交意向': '来悦聚主要想找什么样的活动呢？',
-      '家乡': '老家是哪里的呀？',
-      '语言': '平时说普通话多还是粤语多呀？',
-      '社交风格': '参加活动的话，喜欢大家一起聊还是小组深聊？'
+      '话题避开': '有什么话题是你不太想在活动中聊的吗？',
+      '城市': '你现在在哪个城市呀？',
+      '家乡': '老家是哪里的呢？',
+      '社交风格': '参加活动的话，喜欢大家一起热闹还是小组深聊？'
     };
     
     const firstMissing = missingFields[0];
