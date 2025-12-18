@@ -54,7 +54,9 @@ Preferred communication style: Simple, everyday language.
   - **Message Queue Display:** AI messages display line-by-line with 350ms intervals for better readability
   - **Sequential Opening Messages:** Opening messages split into multiple paragraphs displayed sequentially with typing animations using AbortController for clean cancellation
   - **Anti-Abuse Protection:** Comprehensive abuse detection system with content filtering (6 categories: political, pornographic, violent, harassment, spam, illegal), rate limiting (500ms message interval, 30 turns/session, 50k tokens/day), gibberish/repetition detection, and progressive punishment (warning → 1hr freeze → 24hr freeze → permanent ban)
-  - **Smart Quick Replies:** Context-aware quick reply suggestions covering intent (交友目的), languages, relationship status, education, children, topic avoidances, cuisine preferences, pet types, overseas regions - all in Chinese with multi-select support
+  - **Smart Quick Replies:** Context-aware quick reply suggestions covering intent (交友目的), languages, relationship status, education, children, topic avoidances, cuisine preferences, pet types, overseas regions, icebreaker roles (破冰角色), energy recovery (能量恢复), life stage (人生阶段) - all in Chinese with multi-select support
+  - **Quick Reply Pagination:** Multi-select scenarios show max 4 options per page with "换一批" rotation button and "自己输入" custom input option; page resets automatically when options change
+  - **Yes/No Auto-Detection:** Binary questions (是不是/要不要/会...吗 etc.) trigger simple "是的/不是" quick replies with safeguards against enumeration and open-ended questions
   - **6 Intelligent Conversation Strategies:** Context memory & cross-referencing, emotion-aware pacing, information validation & clarification, time-aware pacing based on mode, high-value signal detection, personalized wrap-up summaries
   - **Mode-Specific Follow-up Rules:** Express=no follow-ups, Standard=selective 1-2 follow-ups, Deep=deep exploration with dialect teasing
   - **Dialect Teasing Feature:** 小悦 responds in user's dialect when detected (四川话→"安逸嘛", 粤语→"叻仔/叻女喔", etc.)
