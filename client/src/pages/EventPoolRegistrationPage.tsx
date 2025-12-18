@@ -7,6 +7,7 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { calculateProfileCompletion, getMatchingBoostEstimate } from "@/lib/profileCompletion";
 import MobileHeader from "@/components/MobileHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +16,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Users, Loader2, Check, Clock } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { Calendar, MapPin, Users, Loader2, Check, Clock, Sparkles, Star, MessageCircle, TrendingUp } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { zhCN } from "date-fns/locale";
 
@@ -62,6 +65,12 @@ export default function EventPoolRegistrationPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [paymentStep, setPaymentStep] = useState<"form" | "payment" | "success">("form");
+  const [showEnrichmentDialog, setShowEnrichmentDialog] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<RegistrationFormData | null>(null);
+
+  // Calculate profile completion
+  const profileCompletion = user ? calculateProfileCompletion(user) : { percentage: 0, stars: 0, missingFields: [] };
+  const matchingBoost = getMatchingBoostEstimate(profileCompletion.percentage);
 
   // Fetch event pool details
   const { data: pool, isLoading } = useQuery<EventPool>({
@@ -113,6 +122,21 @@ export default function EventPoolRegistrationPage() {
     },
   });
 
+  // Handle continuing registration after enrichment dialog
+  const handleContinueRegistration = () => {
+    setShowEnrichmentDialog(false);
+    if (pendingFormData) {
+      registerMutation.mutate(pendingFormData);
+      setPendingFormData(null);
+    }
+  };
+
+  // Handle going to chat with Xiaoyue
+  const handleGoToEnrichment = () => {
+    setShowEnrichmentDialog(false);
+    navigate('/chat-registration?mode=enrichment');
+  };
+
   const onSubmit = (data: RegistrationFormData) => {
     if (!user) {
       toast({
@@ -121,6 +145,13 @@ export default function EventPoolRegistrationPage() {
         variant: "destructive",
       });
       navigate("/");
+      return;
+    }
+
+    // Check profile completeness - show enrichment dialog if below 80%
+    if (profileCompletion.percentage < 80 && matchingBoost > 0) {
+      setPendingFormData(data);
+      setShowEnrichmentDialog(true);
       return;
     }
 
@@ -509,6 +540,90 @@ export default function EventPoolRegistrationPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Profile Enrichment Dialog */}
+      <Dialog open={showEnrichmentDialog} onOpenChange={setShowEnrichmentDialog}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-profile-enrichment">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              提升匹配精准度
+            </DialogTitle>
+            <DialogDescription>
+              完善资料可以帮助我们为你找到更适合的活动伙伴
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Current Profile Status */}
+            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">当前资料完整度</span>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-4 w-4 ${
+                        i < profileCompletion.stars
+                          ? "text-yellow-500 fill-yellow-500"
+                          : "text-muted-foreground/30"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+              <Progress value={profileCompletion.percentage} className="h-2" />
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">{profileCompletion.percentage}%</span>
+                {matchingBoost > 0 && (
+                  <div className="flex items-center gap-1 text-primary">
+                    <TrendingUp className="h-3 w-3" />
+                    <span>补充后预计提升 {matchingBoost}% 匹配精准度</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Missing Fields Preview */}
+            {profileCompletion.missingFields.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">可补充的信息：</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {profileCompletion.missingFields.slice(0, 5).map((field, i) => (
+                    <Badge key={i} variant="outline" className="text-xs">
+                      {field}
+                    </Badge>
+                  ))}
+                  {profileCompletion.missingFields.length > 5 && (
+                    <Badge variant="outline" className="text-xs text-muted-foreground">
+                      +{profileCompletion.missingFields.length - 5} 项
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              onClick={handleGoToEnrichment}
+              className="w-full bg-gradient-to-r from-primary to-purple-600"
+              data-testid="button-go-to-enrichment"
+            >
+              <MessageCircle className="mr-2 h-4 w-4" />
+              和小悦聊聊补充
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleContinueRegistration}
+              className="w-full"
+              data-testid="button-continue-registration"
+            >
+              直接继续报名
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
