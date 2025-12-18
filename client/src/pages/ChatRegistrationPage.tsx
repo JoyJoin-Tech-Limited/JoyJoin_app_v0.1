@@ -553,6 +553,29 @@ interface QuickReplyConfig {
   priority?: number;
 }
 
+// 结构化模式匹配配置 - 用于需要精准匹配的场景
+interface PatternBasedQuickReplyConfig {
+  id: string;
+  // 正则模式匹配 - 优先使用
+  pattern?: RegExp;
+  // 必须全部匹配的关键词组（OR关系内部，AND关系组间）
+  requiredAll?: string[][];  // e.g., [["活动", "局", "聚会"], ["时间", "时段"]] = (活动|局|聚会) AND (时间|时段)
+  // 至少匹配一个的关键词
+  requiredAny?: string[];
+  // 排除词 - 包含这些词时不触发
+  exclude?: string[];
+  // 上下文门控
+  contextGuards?: {
+    mustBeQuestion?: boolean;  // 必须是问句
+    minLength?: number;        // 消息最小长度
+  };
+  options: QuickReply[];
+  multiSelect?: boolean;
+  priority: number;
+  // 是否强制使用预定义选项（压制AI提取）
+  enforcePredefined?: boolean;
+}
+
 const quickReplyConfigs: QuickReplyConfig[] = [
   {
     // 确认模式 - 最高优先级，当AI收尾确认时触发
@@ -903,25 +926,58 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     ],
     priority: 88
   },
+];
+
+// 精准模式匹配配置 - 用于需要多条件组合的场景
+const patternBasedConfigs: PatternBasedQuickReplyConfig[] = [
   {
-    keywords: ["时间", "时段", "什么时候", "周末", "工作日", "晚上", "白天", "有空", "方便"],
+    id: "activityTime",
+    // 正则模式1：明确的活动+时间组合
+    pattern: /(活动|局|聚会|社交|出来|参加).{0,8}(时间|时段|什么时候|平日|周末|有空|方便|晚上|白天)/,
+    // 备用匹配：时段选择类问题（周末白天还是周末晚上？）
+    requiredAny: [
+      "工作日晚上", "周末白天", "周末晚上", "平日晚间", "双休晚上", "周末下午",  // 完整时段选项
+      "工作日还是周末", "平日还是周末", "晚上还是白天", "白天还是晚上",  // 对比选择
+      "倾向周末", "倾向工作日", "倾向晚上", "倾向白天",  // 倾向问题
+      "什么时候方便", "什么时候有空", "哪个时段", "更方便的时间"  // 时间询问
+    ],
+    exclude: ["喜欢做什么", "玩什么", "干什么活动", "什么活动", "周末喜欢", "周末一般做"],  // 排除兴趣问题
+    contextGuards: {
+      mustBeQuestion: true
+    },
     options: [
       { text: "工作日晚上", icon: Moon },
       { text: "周末白天", icon: Sun },
       { text: "周末晚上", icon: Moon },
       { text: "都可以", icon: Sparkles }
     ],
-    priority: 85
+    priority: 95,
+    enforcePredefined: true
   },
   {
-    keywords: ["频率", "多久", "多频繁", "经常", "社交频率", "聚会频率", "每周", "每月"],
+    id: "socialFrequency",
+    // 正则模式1：明确的社交+频率组合
+    pattern: /(社交|聚会|活动|出去|参加).{0,8}(频率|多久一次|节奏|多频繁|几次|多少次)/,
+    // 备用匹配：频率选择类问题（每周还是每月？）
+    requiredAny: [
+      "每周社交", "每两周", "每月一两次", "每月社交",  // 完整频率选项
+      "每周还是每月", "每月还是每周", "多久一次", "多久社交一次",  // 对比选择
+      "社交频率", "聚会频率", "活动频率", "出去频率",  // 频率询问
+      "偏向每周", "偏向每月", "社交节奏", "社交频次",  // 偏向问题
+      "一个月聚几次", "多常出来", "经常社交吗"  // 口语化问法
+    ],
+    exclude: ["回家多久", "多久回一次", "工作多久", "认识多久"],  // 排除其他"多久"问题
+    contextGuards: {
+      mustBeQuestion: true
+    },
     options: [
       { text: "每周社交", icon: Zap },
       { text: "每两周一次", icon: Calendar },
       { text: "每月一两次", icon: Calendar },
       { text: "看心情", icon: Sparkles }
     ],
-    priority: 84
+    priority: 94,
+    enforcePredefined: true
   }
 ];
 
@@ -1087,6 +1143,7 @@ function isIntroductionMessage(message: string): boolean {
 }
 
 // 需要优先使用预定义选项的高优先级字段（不从AI文本提取）
+// 注意：时段/频率等宽泛词已移至 patternBasedConfigs 使用精准匹配
 const predefinedOptionKeywords = [
   "想要", "期待", "目的", "意图", "拓展人脉", "交朋友", "为什么来", // intent
   "性别", "男生", "女生", "小哥哥", "小姐姐", // gender
@@ -1095,9 +1152,8 @@ const predefinedOptionKeywords = [
   "孩子", "小孩", "娃", // children
   "学历", "毕业", // education
   "感情", "单身", "恋爱", "已婚", // relationship
-  "兄弟", "姐妹", "独生", "排行", // siblings
-  "时段", "工作日", "周末", "有空", "方便", // activity time preference
-  "频率", "多久", "多频繁", "每周", "每月" // social frequency
+  "兄弟", "姐妹", "独生", "排行" // siblings
+  // 时段/频率相关词已移至 patternBasedConfigs，使用精准模式匹配避免误触发
 ];
 
 // 检测是否是简单的是非问句（只匹配明确的二元选择问题）
@@ -1142,6 +1198,72 @@ function isYesNoQuestion(message: string): boolean {
   return yesNoPatterns.some(pattern => pattern.test(trimmed));
 }
 
+// 检测是否是问句（包含问号或疑问词）
+function isQuestionMessage(message: string): boolean {
+  // 检查是否包含问号
+  if (/[？?]/.test(message)) return true;
+  // 检查是否包含疑问词
+  return /吗|呢|嘛|什么|哪|怎么|多久|多少|几|谁|何时/.test(message);
+}
+
+// 检测模式匹配配置 - 用于精准匹配活动时段、社交频率等
+function matchPatternBasedConfig(message: string): QuickReplyResult | null {
+  const lowerMsg = message.toLowerCase();
+  
+  for (const config of patternBasedConfigs) {
+    // 1. 检查排除词
+    if (config.exclude?.some(ex => lowerMsg.includes(ex.toLowerCase()))) {
+      continue;
+    }
+    
+    // 2. 检查上下文门控
+    if (config.contextGuards?.mustBeQuestion && !isQuestionMessage(message)) {
+      continue;
+    }
+    if (config.contextGuards?.minLength && message.length < config.contextGuards.minLength) {
+      continue;
+    }
+    
+    // 3. 优先使用正则模式匹配
+    if (config.pattern && config.pattern.test(message)) {
+      return {
+        options: config.options.filter(o => o.text),
+        multiSelect: config.multiSelect || false
+      };
+    }
+    
+    // 4. 使用 requiredAll 多条件组合匹配
+    if (config.requiredAll && config.requiredAll.length > 0) {
+      // 每个组内是OR关系，组间是AND关系
+      const allGroupsMatch = config.requiredAll.every(group => 
+        group.some(keyword => lowerMsg.includes(keyword.toLowerCase()))
+      );
+      
+      if (allGroupsMatch) {
+        return {
+          options: config.options.filter(o => o.text),
+          multiSelect: config.multiSelect || false
+        };
+      }
+    }
+    
+    // 5. 使用 requiredAny 单条件匹配
+    if (config.requiredAny && config.requiredAny.length > 0) {
+      const hasAny = config.requiredAny.some(keyword => 
+        lowerMsg.includes(keyword.toLowerCase())
+      );
+      if (hasAny) {
+        return {
+          options: config.options.filter(o => o.text),
+          multiSelect: config.multiSelect || false
+        };
+      }
+    }
+  }
+  
+  return null;
+}
+
 // 检测最后一条消息是否匹配快捷回复
 // 改进：对于有预定义选项的字段，优先使用预定义选项而不是从AI文本提取
 function detectQuickReplies(lastMessage: string): QuickReplyResult {
@@ -1165,6 +1287,13 @@ function detectQuickReplies(lastMessage: string): QuickReplyResult {
       // 追问问题需要用户根据上下文回答，不显示通用选项
       return { options: [], multiSelect: false };
     }
+  }
+  
+  // 第0.6步：优先检查精准模式匹配（活动时段、社交频率等）
+  // 使用多条件组合+上下文门控，避免误触发
+  const patternMatch = matchPatternBasedConfig(lastMessage);
+  if (patternMatch) {
+    return patternMatch;
   }
   
   // 第0.75步：检查是否是简单的是非问句
