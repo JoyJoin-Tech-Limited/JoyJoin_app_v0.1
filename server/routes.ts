@@ -4843,10 +4843,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to calculate profile completeness
+  function calculateProfileCompleteness(user: any): { score: number; starRating: number; missingFields: string[] } {
+    const essentialFields = [
+      { key: 'displayName', label: '昵称', weight: 1 },
+      { key: 'gender', label: '性别', weight: 1 },
+      { key: 'birthdate', label: '生日', weight: 1 },
+      { key: 'currentCity', label: '城市', weight: 1 },
+    ];
+    const coreFields = [
+      { key: 'interestsTop', label: '兴趣', weight: 1, isArray: true },
+      { key: 'intent', label: '活动意向', weight: 1, isArray: true },
+      { key: 'archetype', label: '社交原型', weight: 1 },
+      { key: 'languagesComfort', label: '语言', weight: 0.5, isArray: true },
+    ];
+    const enrichmentFields = [
+      { key: 'relationshipStatus', label: '感情状态', weight: 0.5 },
+      { key: 'educationLevel', label: '学历', weight: 0.5 },
+      { key: 'lifeStage', label: '人生阶段', weight: 0.5 },
+      { key: 'socialStyle', label: '社交风格', weight: 0.5 },
+      { key: 'venueStylePreference', label: '场地偏好', weight: 0.5 },
+      { key: 'cuisinePreference', label: '菜系偏好', weight: 0.5, isArray: true },
+      { key: 'topicAvoidances', label: '避免话题', weight: 0.3, isArray: true },
+      { key: 'activityTimePreference', label: '活动时段', weight: 0.5 },
+      { key: 'socialFrequency', label: '聚会频率', weight: 0.5 },
+      { key: 'hasPets', label: '养宠物', weight: 0.3 },
+      { key: 'hometown', label: '家乡', weight: 0.3 },
+    ];
+    
+    const allFields = [...essentialFields, ...coreFields, ...enrichmentFields];
+    const totalWeight = allFields.reduce((sum, f) => sum + f.weight, 0);
+    const missingFields: string[] = [];
+    
+    let filledWeight = 0;
+    for (const field of allFields) {
+      const value = user[field.key];
+      const isFilled = (field as any).isArray 
+        ? Array.isArray(value) && value.length > 0
+        : value !== null && value !== undefined && value !== '';
+      
+      if (isFilled) {
+        filledWeight += field.weight;
+      } else {
+        missingFields.push(field.label);
+      }
+    }
+    
+    const score = Math.round((filledWeight / totalWeight) * 100);
+    const starRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 55 ? 3 : score >= 35 ? 2 : 1;
+    
+    return { score, starRating, missingFields };
+  }
+
   // User Management - Get all users with filters and pagination
   app.get("/api/admin/users", requireAdmin, async (req, res) => {
     try {
-      const { search, filter } = req.query;
+      const { search, filter, city, archetype, intent, interest, minCompleteness, maxCompleteness } = req.query;
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = (page - 1) * limit;
@@ -4859,6 +4911,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         users = users.filter((user: any) => 
           user.firstName?.toLowerCase().includes(searchLower) ||
           user.lastName?.toLowerCase().includes(searchLower) ||
+          user.displayName?.toLowerCase().includes(searchLower) ||
           user.email?.toLowerCase().includes(searchLower) ||
           user.phoneNumber?.includes(search)
         );
@@ -4868,15 +4921,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (filter === "banned") {
         users = users.filter((user: any) => user.isBanned);
       } else if (filter === "subscribed") {
-        // TODO: Filter by subscription status when subscriptions table is implemented
         users = [];
       } else if (filter === "non-subscribed") {
-        // TODO: Filter by non-subscription status
         users = users;
       }
+      
+      // Apply city filter
+      if (city && typeof city === "string") {
+        users = users.filter((user: any) => user.currentCity === city);
+      }
+      
+      // Apply archetype filter
+      if (archetype && typeof archetype === "string") {
+        users = users.filter((user: any) => user.archetype === archetype);
+      }
+      
+      // Apply intent filter
+      if (intent && typeof intent === "string") {
+        users = users.filter((user: any) => 
+          Array.isArray(user.intent) && user.intent.includes(intent)
+        );
+      }
+      
+      // Apply interest filter
+      if (interest && typeof interest === "string") {
+        users = users.filter((user: any) => 
+          Array.isArray(user.interestsTop) && user.interestsTop.some((i: string) => 
+            i.toLowerCase().includes(interest.toLowerCase())
+          )
+        );
+      }
+      
+      // Calculate completeness for each user and apply completeness filter
+      const usersWithCompleteness = users.map((user: any) => {
+        const completeness = calculateProfileCompleteness(user);
+        return { ...user, profileCompleteness: completeness };
+      });
+      
+      // Apply completeness filters
+      let filteredUsers = usersWithCompleteness;
+      if (minCompleteness) {
+        const minVal = parseInt(minCompleteness as string);
+        filteredUsers = filteredUsers.filter(u => u.profileCompleteness.score >= minVal);
+      }
+      if (maxCompleteness) {
+        const maxVal = parseInt(maxCompleteness as string);
+        filteredUsers = filteredUsers.filter(u => u.profileCompleteness.score <= maxVal);
+      }
 
-      const totalUsers = users.length;
-      const paginatedUsers = users.slice(offset, offset + limit);
+      const totalUsers = filteredUsers.length;
+      const paginatedUsers = filteredUsers.slice(offset, offset + limit);
 
       res.json({
         users: paginatedUsers,
