@@ -2211,6 +2211,9 @@ export default function ChatRegistrationPage() {
   // 特殊情况：isComplete但未确认时仍需显示确认选项
   const quickReplyResult = useMemo(() => {
     if (isTyping || messages.length === 0) return { options: [], multiSelect: false };
+    // 用户第一条消息发送前不显示快捷选项（开场白期间）
+    const userMsgCount = messages.filter(m => m.role === 'user').length;
+    if (userMsgCount === 0) return { options: [], multiSelect: false };
     // 开场白期间（前4条助手消息）需要等待逐行显示完成，避免过早显示选项
     const assistantMsgCount = messages.filter(m => m.role === 'assistant').length;
     if (isSequentialDisplaying && assistantMsgCount <= 4) return { options: [], multiSelect: false };

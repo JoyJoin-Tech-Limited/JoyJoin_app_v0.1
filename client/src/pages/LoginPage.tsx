@@ -18,6 +18,7 @@ import {
   FileText, ShieldCheck, Utensils
 } from "lucide-react";
 import joyJoinLogo from "@assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi_1765650184831.png";
+import xiaoyueFoxAvatar from "@assets/generated_images/relaxed_fox_mascot_design.png";
 import { SiWechat } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -93,39 +94,19 @@ const FAQ_ITEMS = [
   },
 ];
 
-const FEATURES = [
-  {
-    icon: Utensils,
-    number: "4-6",
-    unit: "人",
-    title: "精品饭局·酒局",
-    subtitle: "严选餐厅酒吧",
-    color: "from-purple-500 to-purple-600",
-  },
-  {
-    icon: Gift,
-    number: "",
-    unit: "",
-    title: "同频惊喜",
-    subtitle: "盲盒玩法，AI确保合拍",
-    color: "from-pink-500 to-pink-600",
-  },
-  {
-    icon: FileText,
-    number: "",
-    unit: "",
-    title: "破冰说明书",
-    subtitle: "快速进入聊天节奏",
-    color: "from-blue-500 to-blue-600",
-  },
-  {
-    icon: ShieldCheck,
-    number: "",
-    unit: "",
-    title: "不满意退款",
-    subtitle: "全额退款保障",
-    color: "from-green-500 to-green-600",
-  },
+// 小悦对话消息序列
+const XIAOYUE_MESSAGES = [
+  "嗨～我是小悦，你的社交配局师！",
+  "我帮500+朋友找到了chemistry对的饭搭子",
+  "每桌4-6人，都是我精挑细选的组合哦~",
+];
+
+// 小悦风格的功能标签
+const XIAOYUE_FEATURES = [
+  { text: "4-6人精品小局", icon: Users },
+  { text: "盲盒惊喜·保证合拍", icon: Gift },
+  { text: "专属破冰话题", icon: Sparkles },
+  { text: "不开心全额退", icon: Heart },
 ];
 
 interface PublicStats {
@@ -409,98 +390,79 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* Section 3: 小悦AI introduces Features */}
-      <section className="py-12 px-6 bg-gradient-to-b from-primary/5 to-transparent" data-testid="section-features">
-        <div className="max-w-lg mx-auto space-y-6">
-          {/* 小悦AI Header with speech bubble */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
+      {/* Section 3: 小悦介绍区 - 温暖对话风格 */}
+      <section className="py-10 px-4" data-testid="section-features">
+        <div className="max-w-lg mx-auto">
+          {/* 小悦头像 + 对话气泡 */}
+          <div className="flex gap-3">
+            {/* 小悦狐狸头像 */}
+            <motion.div
+              initial={{ scale: 0, rotate: -10 }}
+              whileInView={{ scale: 1, rotate: 0 }}
+              viewport={{ once: true }}
+              transition={{ type: "spring", stiffness: 200, damping: 15 }}
+              className="flex-shrink-0"
+            >
+              <div className="relative">
+                <img 
+                  src={xiaoyueFoxAvatar} 
+                  alt="小悦" 
+                  className="w-16 h-16 rounded-full object-cover border-2 border-primary/20 shadow-lg"
+                />
+                <motion.div 
+                  className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white dark:border-background flex items-center justify-center"
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                >
+                  <span className="text-[8px] text-white">在线</span>
+                </motion.div>
+              </div>
+            </motion.div>
+
+            {/* 对话气泡序列 */}
+            <div className="flex-1 space-y-2">
+              {XIAOYUE_MESSAGES.map((message, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: -10, scale: 0.95 }}
+                  whileInView={{ opacity: 1, x: 0, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.15, duration: 0.3 }}
+                >
+                  <div className={`inline-block px-4 py-2.5 rounded-2xl ${
+                    index === 0 
+                      ? "rounded-tl-sm bg-gradient-to-r from-primary to-primary/90 text-primary-foreground" 
+                      : "bg-muted/80 dark:bg-muted/50"
+                  }`}>
+                    <p className="text-sm leading-relaxed">{message}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* 功能标签 - pill风格 */}
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="flex items-start gap-3"
+            transition={{ delay: 0.5 }}
+            className="mt-6 flex flex-wrap gap-2 justify-center"
           >
-            {/* AI Mascot Avatar */}
-            <div className="flex-shrink-0 h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg">
-              <Brain className="h-8 w-8 text-primary-foreground" />
-            </div>
-            
-            {/* Speech bubble */}
-            <div className="flex-1 relative pt-1">
-              <div className="bg-white dark:bg-card rounded-2xl rounded-tl-sm p-4 shadow-sm border border-primary/10">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-semibold text-base">小悦</span>
-                  <Badge variant="secondary" className="text-xs">AI助理</Badge>
-                </div>
-                <p className="text-sm text-foreground leading-relaxed">
-                  嗨～我是小悦！让我告诉你为什么大家都爱悦聚吧~
-                </p>
-              </div>
-            </div>
+            {XIAOYUE_FEATURES.map((feature, index) => (
+              <motion.div
+                key={feature.text}
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.6 + index * 0.08 }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 dark:bg-primary/20 text-primary text-sm font-medium hover-elevate cursor-default"
+              >
+                <feature.icon className="w-3.5 h-3.5" />
+                <span>{feature.text}</span>
+              </motion.div>
+            ))}
           </motion.div>
-
-          {/* Features Grid - Option A: Big icons + key numbers */}
-          <div className="grid grid-cols-2 gap-3">
-            {FEATURES.map((feature, index) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                viewport={{ once: true }}
-              >
-                <Card className="h-full hover-elevate transition-all bg-white dark:bg-card">
-                  <CardContent className="p-4 text-center">
-                    {/* Icon with optional number overlay */}
-                    <div className="relative mx-auto mb-3 w-fit">
-                      <div className={`h-14 w-14 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center text-white shadow-md`}>
-                        {feature.number ? (
-                          <div className="flex items-baseline">
-                            <span className="text-xl font-bold">{feature.number}</span>
-                            <span className="text-xs ml-0.5">{feature.unit}</span>
-                          </div>
-                        ) : (
-                          <feature.icon className="h-7 w-7" />
-                        )}
-                      </div>
-                      {/* Small icon badge for numbered items */}
-                      {feature.number && (
-                        <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-white dark:bg-card border-2 border-primary/20 flex items-center justify-center shadow-sm">
-                          <feature.icon className="h-3 w-3 text-primary" />
-                        </div>
-                      )}
-                    </div>
-                    <h3 className="font-semibold text-sm mb-0.5">{feature.title}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {feature.subtitle}
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Section 4: Social Proof Stats */}
-      <section className="py-10 px-6 bg-muted/30" data-testid="section-stats">
-        <div className="max-w-lg mx-auto">
-          <div className="grid grid-cols-4 gap-3">
-            {displayStats.map((stat, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                viewport={{ once: true }}
-                className="text-center"
-              >
-                <div className="text-xl sm:text-2xl font-bold text-primary" data-testid={`stat-${i}`}>
-                  {stat.value}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">{stat.label}</div>
-              </motion.div>
-            ))}
-          </div>
         </div>
       </section>
 
