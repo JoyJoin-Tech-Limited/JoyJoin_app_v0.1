@@ -1017,27 +1017,46 @@ const predefinedOptionKeywords = [
   "兄弟", "姐妹", "独生", "排行" // siblings
 ];
 
-// 检测是否是简单的是非问句
+// 检测是否是简单的是非问句（只匹配明确的二元选择问题）
 function isYesNoQuestion(message: string): boolean {
-  // 匹配常见的是非问句结尾模式
+  // 检查消息的最后一个问句
+  const lastQuestion = message.split(/[。！\n]/).filter(s => s.includes('？') || s.includes('?')).pop();
+  if (!lastQuestion) return false;
+  
+  const trimmed = lastQuestion.trim();
+  
+  // 排除过长的问句（复杂问题不适合简单是/否回答）
+  if (trimmed.length > 30) return false;
+  
+  // 排除包含选项列举的问句（这些应该用其他方式处理）
+  if (/[、，,]/.test(trimmed) || /还是/.test(trimmed)) return false;
+  
+  // 排除开放式问题（什么、哪里、怎么、为什么等疑问词）
+  if (/什么|哪里|哪个|怎么|为什么|多少|几个|谁|何时|如何/.test(trimmed)) return false;
+  
+  // 匹配常见的是非问句模式
   const yesNoPatterns = [
-    /[是吗有没会能对]吗[？?]$/,        // "是吗？", "有吗？", "对吗？"
-    /有没有[^？?]*[？?]$/,             // "有没有...？"
-    /是不是[^？?]*[？?]$/,             // "是不是...？"
-    /会不会[^？?]*[？?]$/,             // "会不会...？"
-    /能不能[^？?]*[？?]$/,             // "能不能...？"
+    // 二元对比形式（允许中间有内容）
+    /是不是.{0,15}[？?]$/,             // "是不是...？"
+    /有没有.{0,15}[？?]$/,             // "有没有...？"
+    /要不要.{0,15}[？?]$/,             // "要不要...？"
+    /会不会.{0,15}[？?]$/,             // "会不会...？"
+    /能不能.{0,15}[？?]$/,             // "能不能...？"
+    /可不可以.{0,12}[？?]$/,           // "可不可以...？"
+    // 简单"吗"结尾形式
     /对不对[？?]$/,                    // "对不对？"
     /好不好[？?]$/,                    // "好不好？"
     /可以吗[？?]$/,                    // "可以吗？"
     /方便吗[？?]$/,                    // "方便吗？"
     /介意吗[？?]$/,                    // "介意吗？"
+    /行吗[？?]$/,                      // "行吗？"
+    /好吗[？?]$/,                      // "好吗？"
+    // 通用短句"吗"结尾（动词+宾语+吗，如"你会来吗"、"你能参加吗"）
+    /[会能想要愿].*吗[？?]$/,          // "会...吗？"、"能...吗？"
+    /[喜欢爱].{0,10}吗[？?]$/,         // "喜欢...吗？"
   ];
   
-  // 检查消息的最后一个问句
-  const lastQuestion = message.split(/[。！\n]/).filter(s => s.includes('？') || s.includes('?')).pop();
-  if (!lastQuestion) return false;
-  
-  return yesNoPatterns.some(pattern => pattern.test(lastQuestion.trim()));
+  return yesNoPatterns.some(pattern => pattern.test(trimmed));
 }
 
 // 检测最后一条消息是否匹配快捷回复
@@ -1759,8 +1778,6 @@ export default function ChatRegistrationPage() {
 
   useEffect(() => {
     scrollToBottom();
-    // 消息变化时重置快捷回复分页
-    setQuickReplyPage(0);
   }, [messages]);
 
   // 信息收集进度
@@ -2205,9 +2222,10 @@ export default function ChatRegistrationPage() {
     return detectQuickReplies(lastAssistantMessage.content);
   }, [messages, isTyping, isComplete, infoConfirmed, isSequentialDisplaying]);
 
-  // 当问题变化时清空已选
+  // 当问题变化时清空已选并重置分页
   useEffect(() => {
     setSelectedQuickReplies(new Set());
+    setQuickReplyPage(0);
   }, [quickReplyResult.options]);
 
   // 性格测试介绍消息（根据性别差异化语气）
