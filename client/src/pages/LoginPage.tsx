@@ -12,10 +12,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { 
-  Users, Brain, Gift, Sparkles, Star, Heart, 
+  Users, Gift, Sparkles, Star, Heart, 
   Shield, Quote, MapPin, CheckCircle2, ArrowRight,
-  Flower2, Target, Sun, Play, Volume2, VolumeX,
-  FileText, ShieldCheck, Utensils
+  Flower2, Target, Sun, Play, Volume2, VolumeX
 } from "lucide-react";
 import joyJoinLogo from "@assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi_1765650184831.png";
 import xiaoyueFoxAvatar from "@assets/generated_images/relaxed_fox_mascot_design.png";
@@ -408,6 +407,7 @@ export default function LoginPage() {
                   src={xiaoyueFoxAvatar} 
                   alt="小悦" 
                   className="w-16 h-16 rounded-full object-cover border-2 border-primary/20 shadow-lg"
+                  data-testid="img-xiaoyue-avatar"
                 />
                 <motion.div 
                   className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white dark:border-background flex items-center justify-center"
@@ -429,11 +429,14 @@ export default function LoginPage() {
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.15, duration: 0.3 }}
                 >
-                  <div className={`inline-block px-4 py-2.5 rounded-2xl ${
-                    index === 0 
-                      ? "rounded-tl-sm bg-gradient-to-r from-primary to-primary/90 text-primary-foreground" 
-                      : "bg-muted/80 dark:bg-muted/50"
-                  }`}>
+                  <div 
+                    className={`inline-block px-4 py-2.5 rounded-2xl ${
+                      index === 0 
+                        ? "rounded-tl-sm bg-gradient-to-r from-primary to-primary/90 text-primary-foreground" 
+                        : "bg-muted/80 dark:bg-muted/50"
+                    }`}
+                    data-testid={`text-xiaoyue-message-${index}`}
+                  >
                     <p className="text-sm leading-relaxed">{message}</p>
                   </div>
                 </motion.div>
@@ -457,6 +460,7 @@ export default function LoginPage() {
                 viewport={{ once: true }}
                 transition={{ delay: 0.6 + index * 0.08 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 dark:bg-primary/20 text-primary text-sm font-medium hover-elevate cursor-default"
+                data-testid={`tag-feature-${index}`}
               >
                 <feature.icon className="w-3.5 h-3.5" />
                 <span>{feature.text}</span>
