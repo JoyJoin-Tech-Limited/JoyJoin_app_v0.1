@@ -1249,8 +1249,8 @@ function MessageBubble({
     );
   }
 
-  // AI消息：统一使用单气泡显示，保持streaming打字效果的流畅性
-  // 不再分割成多行独立气泡，避免打字完成后的延迟感
+  // AI消息：当打字完成后，将多行内容分割成独立气泡
+  // 打字期间保持单气泡，完成后展开成多气泡提升可读性
   const hasCalledSequentialCompleteRef = useRef(false);
   
   // 重置：当消息内容变化时重置回调标记
@@ -1266,16 +1266,48 @@ function MessageBubble({
     }
   }, [shouldAnimate, isComplete, onSequentialDisplayComplete]);
   
+  // 打字完成后分割成多行气泡
+  const isTypingComplete = !shouldAnimate || isComplete;
+  const lines = isTypingComplete 
+    ? message.content.split('\n').filter(line => line.trim() !== '')
+    : [content];
+  
+  // 如果只有一行或者还在打字中，显示单气泡
+  if (lines.length <= 1 || !isTypingComplete) {
+    return (
+      <SingleBubble
+        content={content}
+        role="assistant"
+        showAvatar={true}
+        emotion={emotion}
+        userGender={userGender}
+        collectedInfo={collectedInfo}
+        isTyping={shouldAnimate && !isComplete}
+      />
+    );
+  }
+  
+  // 多行内容：分割成独立气泡，只有第一个显示头像
   return (
-    <SingleBubble
-      content={content}
-      role="assistant"
-      showAvatar={true}
-      emotion={emotion}
-      userGender={userGender}
-      collectedInfo={collectedInfo}
-      isTyping={shouldAnimate && !isComplete}
-    />
+    <div className="flex flex-col gap-1">
+      {lines.map((line, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.1, duration: 0.2 }}
+        >
+          <SingleBubble
+            content={line}
+            role="assistant"
+            showAvatar={index === 0}
+            emotion={emotion}
+            userGender={userGender}
+            collectedInfo={collectedInfo}
+          />
+        </motion.div>
+      ))}
+    </div>
   );
 }
 
