@@ -345,7 +345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/registration/chat/message', async (req: any, res) => {
     try {
-      const { message, conversationHistory } = req.body;
+      const { message, conversationHistory, sessionId: clientSessionId } = req.body;
       const userId = req.session?.userId;
       
       if (userId) {
@@ -362,14 +362,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const { continueXiaoyueChat } = await import('./deepseekClient');
-      const result = await continueXiaoyueChat(message, conversationHistory);
+      // 使用带推断引擎的增强版对话函数
+      const { continueXiaoyueChatWithInference } = await import('./deepseekClient');
+      // sessionId: 优先使用客户端传入的，其次用userId，再用express session ID，最后才是匿名ID
+      const sessionId = clientSessionId || userId || req.sessionID || `anon_${Date.now()}`;
+      const result = await continueXiaoyueChatWithInference(message, conversationHistory, sessionId);
       
-      if (userId && result.usage?.totalTokens) {
-        await recordTokenUsage(userId, result.usage.totalTokens);
+      if (userId && (result as any).usage?.totalTokens) {
+        await recordTokenUsage(userId, (result as any).usage.totalTokens);
       }
       
-      res.json(result);
+      // 返回结果，包含推断信息供前端调试
+      res.json({
+        ...result,
+        inference: result.inferenceResult ? {
+          skippedQuestions: result.inferenceResult.skipQuestions,
+          inferred: result.inferenceResult.inferred.map(i => ({ field: i.field, value: i.value }))
+        } : undefined
+      });
     } catch (error) {
       console.error("Error in chat registration:", error);
       res.status(500).json({ message: "Failed to process message" });
@@ -382,7 +392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
     
-    const { message, conversationHistory } = req.body;
+    const { message, conversationHistory, sessionId: clientSessionId } = req.body;
     const userId = req.session?.userId;
     
     if (!message || !conversationHistory) {
@@ -412,18 +422,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const { continueXiaoyueChatStream } = await import('./deepseekClient');
-      let finalTokens = 0;
+      // 使用带推断引擎的增强版流式对话函数
+      const { continueXiaoyueChatStreamWithInference } = await import('./deepseekClient');
+      // sessionId: 优先使用客户端传入的，其次用userId，最后用会话ID（express-session会自动生成稳定的session ID）
+      const sessionId = clientSessionId || userId || req.sessionID || `anon_${Date.now()}`;
       
-      for await (const chunk of continueXiaoyueChatStream(message, conversationHistory)) {
+      for await (const chunk of continueXiaoyueChatStreamWithInference(message, conversationHistory, sessionId)) {
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-        if (chunk.type === 'done' && chunk.usage?.totalTokens) {
-          finalTokens = chunk.usage.totalTokens;
-        }
-      }
-      
-      if (userId && finalTokens > 0) {
-        await recordTokenUsage(userId, finalTokens);
       }
     } catch (error) {
       console.error("Error in streaming chat:", error);
