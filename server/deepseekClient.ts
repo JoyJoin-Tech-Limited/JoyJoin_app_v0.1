@@ -1432,4 +1432,183 @@ intent字段的有效值映射：
   }
 }
 
+// ============ 智能推断引擎集成 ============
+
+import { 
+  inferenceEngine, 
+  generateXiaoyueContext, 
+  quickInfer,
+  type UserAttributeMap,
+  type InferenceEngineResult
+} from './inference';
+
+// 会话状态存储（内存中）
+const sessionInferenceStates: Map<string, UserAttributeMap> = new Map();
+
+/**
+ * 获取或创建会话的推断状态
+ */
+export function getSessionInferenceState(sessionId: string): UserAttributeMap {
+  if (!sessionInferenceStates.has(sessionId)) {
+    sessionInferenceStates.set(sessionId, {});
+  }
+  return sessionInferenceStates.get(sessionId)!;
+}
+
+/**
+ * 更新会话的推断状态
+ */
+export function updateSessionInferenceState(sessionId: string, state: UserAttributeMap): void {
+  sessionInferenceStates.set(sessionId, state);
+}
+
+/**
+ * 清除会话的推断状态
+ */
+export function clearSessionInferenceState(sessionId: string): void {
+  sessionInferenceStates.delete(sessionId);
+}
+
+/**
+ * 生成推断增强的系统提示词补充
+ */
+function generateInferencePromptAddition(state: UserAttributeMap): string {
+  const context = generateXiaoyueContext(state);
+  
+  if (!context || context.includes('暂无')) {
+    return '';
+  }
+  
+  return `
+
+## 【智能推断上下文 - 重要！】
+${context}
+
+**推断行为准则**：
+1. 对于"不要问的问题"列表中的字段，绝对不要再问，这些信息已经从用户之前的回答中推断出来了
+2. 对于"可以确认的信息"，可以用确认式提问简单确认，而不是开放式提问
+3. 如果用户之前说过类似"我在创业"，不要再问"人生阶段"，因为已经推断出来了
+4. 保持对话连贯性，不要让用户觉得你没有在听他说话`;
+}
+
+/**
+ * 增强版对话继续函数 - 带推断引擎
+ */
+export async function continueXiaoyueChatWithInference(
+  userMessage: string,
+  conversationHistory: ChatMessage[],
+  sessionId: string
+): Promise<{
+  message: string;
+  rawMessage: string;
+  collectedInfo: Partial<XiaoyueCollectedInfo>;
+  isComplete: boolean;
+  conversationHistory: ChatMessage[];
+  inferenceResult?: InferenceEngineResult;
+}> {
+  // 1. 获取当前推断状态
+  const currentState = getSessionInferenceState(sessionId);
+  
+  // 2. 运行推断引擎
+  const inferenceResult = await inferenceEngine.process(
+    userMessage,
+    conversationHistory.map(m => ({ role: m.role, content: m.content })),
+    currentState,
+    sessionId
+  );
+  
+  // 3. 更新推断状态
+  updateSessionInferenceState(sessionId, inferenceResult.newState);
+  
+  // 4. 生成推断上下文补充
+  const inferenceAddition = generateInferencePromptAddition(inferenceResult.newState);
+  
+  // 5. 增强系统提示词
+  const enhancedHistory: ChatMessage[] = conversationHistory.map((msg, idx) => {
+    if (idx === 0 && msg.role === 'system') {
+      return {
+        ...msg,
+        content: msg.content + inferenceAddition
+      };
+    }
+    return msg;
+  });
+  
+  // 6. 添加用户消息
+  const updatedHistory: ChatMessage[] = [
+    ...enhancedHistory,
+    { role: 'user', content: userMessage }
+  ];
+
+  try {
+    const response = await deepseekClient.chat.completions.create({
+      model: 'deepseek-chat',
+      messages: updatedHistory.map(msg => ({
+        role: msg.role as 'system' | 'user' | 'assistant',
+        content: msg.content
+      })),
+      temperature: 0.8,
+      max_tokens: 800,
+    });
+
+    const assistantMessage = response.choices[0]?.message?.content || '抱歉，我走神了一下，你刚才说什么来着？';
+    
+    const collectedInfo = extractCollectedInfo(assistantMessage);
+    const isComplete = assistantMessage.includes('```registration_complete');
+    
+    let cleanMessage = assistantMessage
+      .replace(/```collected_info[\s\S]*?```/g, '')
+      .replace(/```registration_complete[\s\S]*?```/g, '')
+      .trim();
+    
+    if (!cleanMessage) {
+      cleanMessage = '好的，记下了～我们继续吧～';
+    }
+
+    // 使用原始history（不含推断补充）保存，避免上下文膨胀
+    const finalHistory: ChatMessage[] = [
+      ...conversationHistory,
+      { role: 'user', content: userMessage },
+      { role: 'assistant', content: assistantMessage }
+    ];
+
+    // 7. 日志记录推断效果
+    if (inferenceResult.skipQuestions.length > 0) {
+      console.log(`[InferenceEngine] 会话 ${sessionId}: 跳过问题 [${inferenceResult.skipQuestions.join(', ')}]`);
+    }
+    if (inferenceResult.inferred.length > 0) {
+      console.log(`[InferenceEngine] 会话 ${sessionId}: 推断 ${inferenceResult.inferred.map(i => `${i.field}=${i.value}`).join(', ')}`);
+    }
+
+    return {
+      message: cleanMessage,
+      rawMessage: assistantMessage,
+      collectedInfo,
+      isComplete,
+      conversationHistory: finalHistory,
+      inferenceResult
+    };
+  } catch (error) {
+    console.error('DeepSeek API error:', error);
+    throw new Error('小悦暂时有点忙，请稍后再试～');
+  }
+}
+
+/**
+ * 快速推断测试函数（不调用LLM）
+ */
+export function testQuickInference(userMessage: string): {
+  inferences: Array<{ field: string; value: string; confidence: number }>;
+  skipQuestions: string[];
+} {
+  return quickInfer(userMessage);
+}
+
+/**
+ * 获取推断引擎日志
+ */
+export function getInferenceLogs(sessionId?: string) {
+  return inferenceEngine.getLogs(sessionId);
+}
+
 export default deepseekClient;

@@ -8051,6 +8051,60 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  // ============ 推断引擎API ============
+  
+  // POST /api/inference/test - 测试快速推断（不调用LLM）
+  app.post("/api/inference/test", async (req, res) => {
+    try {
+      const { message } = req.body;
+      
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ message: "Missing message parameter" });
+      }
+      
+      const { testQuickInference } = await import("./deepseekClient");
+      const result = testQuickInference(message);
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("Inference test error:", error);
+      res.status(500).json({ message: "Inference test failed", error: error.message });
+    }
+  });
+  
+  // GET /api/inference/logs - 获取推断日志
+  app.get("/api/inference/logs", requireAdmin, async (req, res) => {
+    try {
+      const { sessionId } = req.query;
+      const { getInferenceLogs } = await import("./deepseekClient");
+      const logs = getInferenceLogs(sessionId as string | undefined);
+      
+      res.json(logs);
+    } catch (error: any) {
+      console.error("Error fetching inference logs:", error);
+      res.status(500).json({ message: "Failed to fetch logs", error: error.message });
+    }
+  });
+  
+  // POST /api/inference/evaluate - 运行评估（需要Admin权限）
+  app.post("/api/inference/evaluate", requireAdmin, async (req, res) => {
+    try {
+      const { scenarioCount } = req.body;
+      const { runEvaluation } = await import("./inference/evaluator");
+      
+      console.log(`[Evaluation] Starting evaluation with ${scenarioCount || 'all'} scenarios...`);
+      const result = await runEvaluation(scenarioCount);
+      
+      res.json({
+        metrics: result.metrics,
+        report: result.markdownReport
+      });
+    } catch (error: any) {
+      console.error("Evaluation error:", error);
+      res.status(500).json({ message: "Evaluation failed", error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

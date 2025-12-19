@@ -1,0 +1,441 @@
+/**
+ * 同义词和语义映射表
+ * 用于快速匹配层，处理同一概念的不同表达方式
+ */
+
+import type { SynonymGroup, InferenceRule } from './types';
+
+// ============ 人生阶段相关同义词 ============
+
+export const LIFE_STAGE_SYNONYMS: SynonymGroup[] = [
+  {
+    canonical: '创业中',
+    variants: [
+      '创业', '在创业', '自己创业', '开公司', '自己开公司', '当老板',
+      '做老板', '自己做', '自己干', '单干', '开店', '自己开店',
+      '做生意', '经商', '创业者', '企业主', '老板', '创始人',
+      'CEO', 'founder', '合伙人', '联合创始人', '自主创业'
+    ],
+    field: 'lifeStage',
+    value: '创业中'
+  },
+  {
+    canonical: '学生党',
+    variants: [
+      '学生', '在读', '还在读书', '上学', '读书', '念书',
+      '在校', '在校生', '大学生', '研究生', '博士生', '硕士',
+      '本科', '大一', '大二', '大三', '大四', '研一', '研二', '研三',
+      '高中生', '中学生', '留学生', '交换生', '在读研究生'
+    ],
+    field: 'lifeStage',
+    value: '学生党'
+  },
+  {
+    canonical: '职场新人',
+    variants: [
+      '刚毕业', '应届', '应届生', '刚工作', '工作一年', '工作两年',
+      '职场新人', '新人', '刚入职', '试用期', '实习', '实习生',
+      '工作不久', '刚开始工作', '毕业生', '初入职场'
+    ],
+    field: 'lifeStage',
+    value: '职场新人'
+  },
+  {
+    canonical: '职场老手',
+    variants: [
+      '工作多年', '老员工', '资深', '高级', 'senior', '经理',
+      '总监', '主管', '负责人', '带团队', '管理层', '中层',
+      '工作五年', '工作十年', '职场老人', '老司机'
+    ],
+    field: 'lifeStage',
+    value: '职场老手'
+  },
+  {
+    canonical: '自由职业',
+    variants: [
+      '自由职业', '自由职业者', 'freelancer', '自媒体', '博主',
+      'up主', '网红', 'KOL', '独立顾问', '独立咨询', '接私活',
+      '兼职', '灵活就业', '斜杠青年', '数字游民', '远程工作'
+    ],
+    field: 'lifeStage',
+    value: '自由职业'
+  },
+  {
+    canonical: '退休享乐',
+    variants: [
+      '退休', '已退休', '退休了', '不工作了', '享受生活',
+      '养老', '退休人员', '离退休'
+    ],
+    field: 'lifeStage',
+    value: '退休享乐'
+  }
+];
+
+// ============ 行业相关同义词 ============
+
+export const INDUSTRY_SYNONYMS: SynonymGroup[] = [
+  {
+    canonical: '互联网/科技',
+    variants: [
+      '互联网', 'IT', '科技', '技术', '程序员', '码农', '开发',
+      '软件', '产品经理', 'PM', '运营', '技术总监', 'CTO',
+      '人工智能', 'AI', '大数据', '云计算', '区块链', 'web3'
+    ],
+    field: 'industry',
+    value: '互联网/科技'
+  },
+  {
+    canonical: '金融',
+    variants: [
+      '金融', '银行', '投资', '基金', '证券', '保险', '风投',
+      'VC', 'PE', '投行', '理财', '财务', 'CFO', '会计',
+      '审计', '四大', '券商'
+    ],
+    field: 'industry',
+    value: '金融'
+  },
+  {
+    canonical: '教育',
+    variants: [
+      '教育', '老师', '教师', '培训', '讲师', '教授', '助教',
+      '辅导', '教学', '学校', '教研', 'K12', '在线教育'
+    ],
+    field: 'industry',
+    value: '教育'
+  },
+  {
+    canonical: '医疗/健康',
+    variants: [
+      '医疗', '医生', '护士', '医院', '健康', '医药', '制药',
+      '生物', '临床', '主治', '住院医', '药剂师', '康复'
+    ],
+    field: 'industry',
+    value: '医疗/健康'
+  },
+  {
+    canonical: '设计/创意',
+    variants: [
+      '设计', '设计师', 'UI', 'UX', '视觉', '平面', '交互',
+      '美术', '创意', '广告', '4A', '品牌', '艺术'
+    ],
+    field: 'industry',
+    value: '设计/创意'
+  },
+  {
+    canonical: '媒体/传播',
+    variants: [
+      '媒体', '传媒', '新闻', '记者', '编辑', '内容', '公关',
+      '市场', '营销', 'marketing', '品牌', '广告'
+    ],
+    field: 'industry',
+    value: '媒体/传播'
+  },
+  {
+    canonical: '法律',
+    variants: [
+      '法律', '律师', '法务', '律所', '法官', '检察官',
+      '法学', '司法', '仲裁'
+    ],
+    field: 'industry',
+    value: '法律'
+  },
+  {
+    canonical: '房地产',
+    variants: [
+      '房地产', '地产', '物业', '中介', '房产', '建筑',
+      '工程', '开发商', '甲方'
+    ],
+    field: 'industry',
+    value: '房地产'
+  },
+  {
+    canonical: '餐饮/服务',
+    variants: [
+      '餐饮', '餐厅', '酒店', '服务业', '零售', '门店',
+      '连锁', '加盟'
+    ],
+    field: 'industry',
+    value: '餐饮/服务'
+  }
+];
+
+// ============ 海归相关同义词 ============
+
+export const RETURNEE_SYNONYMS: SynonymGroup[] = [
+  {
+    canonical: '海归',
+    variants: [
+      '海归', '留学', '留过学', '海外', '国外', '出国',
+      '回国', '刚回国', '从国外回来', '在国外', '留学回来',
+      '美国回来', '英国回来', '澳洲回来', '加拿大回来',
+      '留学生', '海龟', 'returnee', '归国'
+    ],
+    field: 'isReturnee',
+    value: 'true'
+  }
+];
+
+// ============ 感情状态同义词 ============
+
+export const RELATIONSHIP_SYNONYMS: SynonymGroup[] = [
+  {
+    canonical: '单身',
+    variants: [
+      '单身', '没对象', '没有对象', '一个人', '母胎solo',
+      '单着', '还单着', '目前单身', '刚分手', '空窗期'
+    ],
+    field: 'relationshipStatus',
+    value: '单身'
+  },
+  {
+    canonical: '恋爱中',
+    variants: [
+      '恋爱', '有对象', '有男朋友', '有女朋友', '谈恋爱',
+      '在一起', '交往中', '热恋', '稳定交往'
+    ],
+    field: 'relationshipStatus',
+    value: '恋爱中'
+  },
+  {
+    canonical: '已婚',
+    variants: [
+      '已婚', '结婚', '结婚了', '老公', '老婆', '爱人',
+      '另一半', '伴侣', '夫妻', '配偶', '家属'
+    ],
+    field: 'relationshipStatus',
+    value: '已婚'
+  },
+  {
+    canonical: '离异',
+    variants: [
+      '离婚', '离异', '离过婚', '单亲', '前夫', '前妻'
+    ],
+    field: 'relationshipStatus',
+    value: '离异'
+  }
+];
+
+// ============ 否定表达模式 ============
+
+export const NEGATION_PATTERNS: string[] = [
+  '不是', '不做', '没有', '不再', '以前', '曾经', '之前',
+  '不干了', '不做了', '放弃了', '退出了', '离开了',
+  '不想', '不打算', '不会', '别', '勿', '非',
+  '还没', '尚未', '未曾', '从未', '从不'
+];
+
+// ============ 时间修饰词（影响推断） ============
+
+export const TEMPORAL_MODIFIERS: Record<string, 'past' | 'present' | 'future'> = {
+  '以前': 'past',
+  '之前': 'past',
+  '曾经': 'past',
+  '过去': 'past',
+  '原来': 'past',
+  '现在': 'present',
+  '目前': 'present',
+  '当前': 'present',
+  '正在': 'present',
+  '将来': 'future',
+  '以后': 'future',
+  '打算': 'future',
+  '计划': 'future',
+  '准备': 'future'
+};
+
+// ============ 快速推断规则 ============
+
+export const QUICK_INFERENCE_RULES: InferenceRule[] = [
+  // 人生阶段推断
+  {
+    id: 'life_stage_entrepreneur',
+    name: '创业者人生阶段',
+    trigger: {
+      type: 'keyword',
+      keywords: ['创业', '开公司', '自己做', '当老板', '做老板', '单干', '开店', 'CEO', '创始人', 'founder']
+    },
+    infers: [
+      { field: 'lifeStage', value: '创业中', confidence: 0.92 }
+    ],
+    excludePatterns: ['不创业', '不想创业', '以前创业', '曾经创业', '放弃创业'],
+    priority: 10
+  },
+  {
+    id: 'life_stage_student',
+    name: '学生人生阶段',
+    trigger: {
+      type: 'keyword',
+      keywords: ['学生', '在读', '上学', '念书', '大学', '研究生', '博士', '硕士', '本科', '在校']
+    },
+    infers: [
+      { field: 'lifeStage', value: '学生党', confidence: 0.95 }
+    ],
+    excludePatterns: ['不是学生', '毕业了', '已经毕业'],
+    priority: 10
+  },
+  {
+    id: 'life_stage_new_worker',
+    name: '职场新人人生阶段',
+    trigger: {
+      type: 'keyword',
+      keywords: ['刚毕业', '应届', '刚工作', '工作一年', '工作两年', '实习', '试用期']
+    },
+    infers: [
+      { field: 'lifeStage', value: '职场新人', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  {
+    id: 'life_stage_freelancer',
+    name: '自由职业人生阶段',
+    trigger: {
+      type: 'keyword',
+      keywords: ['自由职业', 'freelancer', '自媒体', '博主', 'up主', '独立顾问', '接私活', '数字游民']
+    },
+    infers: [
+      { field: 'lifeStage', value: '自由职业', confidence: 0.90 }
+    ],
+    excludePatterns: ['不是自由职业'],
+    priority: 10
+  },
+  
+  // 海归标签推断
+  {
+    id: 'returnee_detection',
+    name: '海归识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['留学', '海归', '国外回来', '留学回来', '在国外', '从美国', '从英国', '从澳洲', '从加拿大']
+    },
+    infers: [
+      { field: 'isReturnee', value: 'true', confidence: 0.90 },
+      { field: 'languages', value: '英语', confidence: 0.75 }  // 海归很可能会英语
+    ],
+    excludePatterns: ['没留过学', '没出过国'],
+    priority: 8
+  },
+  
+  // 性别推断（谨慎使用）
+  {
+    id: 'gender_male_hint',
+    name: '性别男性暗示',
+    trigger: {
+      type: 'keyword',
+      keywords: ['老婆', '女朋友', '女友', '媳妇', '我老婆', '我女朋友']
+    },
+    infers: [
+      { field: 'gender', value: '男', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 5
+  },
+  {
+    id: 'gender_female_hint',
+    name: '性别女性暗示',
+    trigger: {
+      type: 'keyword',
+      keywords: ['老公', '男朋友', '男友', '先生', '我老公', '我男朋友', '孩子妈', '当妈']
+    },
+    infers: [
+      { field: 'gender', value: '女', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 5
+  },
+  
+  // 家庭状态推断
+  {
+    id: 'has_children',
+    name: '有孩子',
+    trigger: {
+      type: 'keyword',
+      keywords: ['孩子', '儿子', '女儿', '宝宝', '娃', '小孩', '带娃', '接孩子', '幼儿园', '上学']
+    },
+    infers: [
+      { field: 'hasChildren', value: 'true', confidence: 0.88 }
+    ],
+    excludePatterns: ['没有孩子', '没孩子', '不想要孩子'],
+    priority: 7
+  }
+];
+
+// ============ 辅助函数 ============
+
+/**
+ * 检查文本是否包含否定表达
+ */
+export function containsNegation(text: string): boolean {
+  return NEGATION_PATTERNS.some(pattern => text.includes(pattern));
+}
+
+/**
+ * 获取时间修饰词的时态
+ */
+export function getTemporalContext(text: string): 'past' | 'present' | 'future' | null {
+  for (const [modifier, tense] of Object.entries(TEMPORAL_MODIFIERS)) {
+    if (text.includes(modifier)) {
+      return tense;
+    }
+  }
+  return null;
+}
+
+/**
+ * 合并所有同义词组
+ */
+export function getAllSynonymGroups(): SynonymGroup[] {
+  return [
+    ...LIFE_STAGE_SYNONYMS,
+    ...INDUSTRY_SYNONYMS,
+    ...RETURNEE_SYNONYMS,
+    ...RELATIONSHIP_SYNONYMS
+  ];
+}
+
+/**
+ * 根据变体查找标准形式和对应属性
+ */
+export function findCanonicalForm(text: string): {
+  found: boolean;
+  canonical?: string;
+  field?: string;
+  value?: string;
+  confidence: number;
+} {
+  const allGroups = getAllSynonymGroups();
+  
+  for (const group of allGroups) {
+    // 检查是否匹配任何变体
+    const matchedVariant = group.variants.find(variant => 
+      text.toLowerCase().includes(variant.toLowerCase())
+    );
+    
+    if (matchedVariant) {
+      // 检查是否被否定
+      const isNegated = containsNegation(text);
+      const temporalContext = getTemporalContext(text);
+      
+      // 如果是过去时态或被否定，降低置信度或跳过
+      if (isNegated || temporalContext === 'past') {
+        return {
+          found: true,
+          canonical: group.canonical,
+          field: group.field,
+          value: undefined,  // 不确定当前值
+          confidence: 0.3
+        };
+      }
+      
+      return {
+        found: true,
+        canonical: group.canonical,
+        field: group.field,
+        value: group.value,
+        confidence: 0.9
+      };
+    }
+  }
+  
+  return { found: false, confidence: 0 };
+}
