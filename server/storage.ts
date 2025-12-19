@@ -140,6 +140,7 @@ export interface IStorage {
   // User Coupon operations (rewards, promotions)
   getUserCoupons(userId: string): Promise<any[]>;
   createUserCoupon(data: { userId: string; couponId: string; source: string; sourceId?: string }): Promise<any>;
+  deleteUserCoupon(userCouponId: string): Promise<void>;
   markUserCouponUsed(userCouponId: string): Promise<any>;
 
   // Admin Payment operations
@@ -1430,6 +1431,10 @@ export class DatabaseStorage implements IStorage {
       RETURNING *
     `);
     return result.rows[0];
+  }
+
+  async deleteUserCoupon(userCouponId: string): Promise<void> {
+    await db.execute(sql`DELETE FROM user_coupons WHERE id = ${userCouponId}`);
   }
 
   async markUserCouponUsed(userCouponId: string): Promise<any> {

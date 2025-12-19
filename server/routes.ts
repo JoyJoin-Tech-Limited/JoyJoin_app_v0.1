@@ -587,6 +587,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.registerUser(userId, result.data);
       console.log("[Backend] User updated successfully:", { id: user.id, displayName: user.displayName, gender: user.gender, birthdate: user.birthdate });
       
+      // Award XP for registration based on method and conversation depth
+      try {
+        const { awardXPAndCoins } = await import('./gamificationService');
+        let registrationMode = 'registration_standard';
+        
+        // If registered via chat, check for depth indicators
+        if (result.data.registrationMethod === 'chat') {
+          // Use presence of optional fields as proxy for conversation depth
+          const hasDeepFields = result.data.topicAvoidances || result.data.cuisinePreference || result.data.favoriteRestaurant;
+          const hasExpressFields = !result.data.primaryInterests && !result.data.intent;
+          
+          if (hasExpressFields) {
+            registrationMode = 'registration_express';
+          } else if (hasDeepFields) {
+            registrationMode = 'registration_deep';
+          }
+        }
+        
+        await awardXPAndCoins(userId, registrationMode);
+        console.log(`[Gamification] Awarded ${registrationMode} XP to user ${userId}`);
+      } catch (xpError) {
+        console.error("Error awarding registration XP:", xpError);
+      }
+      
       res.json(user);
     } catch (error: any) {
       console.error("Error registering user:", error);
@@ -796,6 +820,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user coupons:", error);
       res.status(500).json({ message: "Failed to fetch coupons" });
+    }
+  });
+
+  // ============ 游戏化等级系统 API ============
+  
+  // Get user gamification info (level, XP, coins, streak)
+  app.get('/api/user/gamification', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { getUserGamificationInfo } = await import('./gamificationService');
+      const info = await getUserGamificationInfo(userId);
+      
+      if (!info) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(info);
+    } catch (error) {
+      console.error("Error fetching gamification info:", error);
+      res.status(500).json({ message: "Failed to fetch gamification info" });
+    }
+  });
+
+  // Get user XP transaction history
+  app.get('/api/user/gamification/history', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const { getUserTransactionHistory } = await import('./gamificationService');
+      const history = await getUserTransactionHistory(userId, limit);
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching transaction history:", error);
+      res.status(500).json({ message: "Failed to fetch transaction history" });
+    }
+  });
+
+  // Redeem joy coins for coupons
+  app.post('/api/user/gamification/redeem', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { itemId } = req.body;
+      
+      if (!itemId) {
+        return res.status(400).json({ message: "Item ID is required" });
+      }
+      
+      // Import redeemable items config
+      const { REDEEMABLE_ITEMS } = await import('@shared/gamification');
+      const item = REDEEMABLE_ITEMS.find(i => i.id === itemId);
+      
+      if (!item) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+      
+      // Step 1: Check coin balance FIRST before any mutations
+      const { checkCoinBalance, redeemCoins, refundCoins } = await import('./gamificationService');
+      const balanceCheck = await checkCoinBalance(userId, item.costCoins);
+      
+      if (!balanceCheck.hasEnough) {
+        return res.status(400).json({ 
+          message: balanceCheck.error || "悦币不足", 
+          currentBalance: balanceCheck.currentBalance,
+          required: item.costCoins 
+        });
+      }
+      
+      // Step 2: Deduct coins first (primary operation)
+      const result = await redeemCoins(userId, item.costCoins, item.id, item.nameCn);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error || "Redemption failed" });
+      }
+      
+      // Step 3: Create coupon after coins successfully deducted
+      let userCoupon: any;
+      
+      if (item.type === 'discount_coupon' || item.type === 'free_event') {
+        try {
+          const expiryDate = new Date();
+          expiryDate.setDate(expiryDate.getDate() + item.validDays);
+          
+          const existingCoupons = await storage.getCoupons();
+          let couponId = existingCoupons.find((c: any) => c.code === item.id)?.id;
+          
+          if (!couponId) {
+            const newCoupon = await storage.createCoupon({
+              code: item.id,
+              discountType: 'percentage',
+              discountValue: item.value,
+              description: item.descriptionCn,
+              expiresAt: expiryDate,
+              maxUses: 10000,
+              currentUses: 0,
+              isActive: true,
+            });
+            couponId = newCoupon.id;
+          }
+          
+          userCoupon = await storage.createUserCoupon({
+            userId,
+            couponId,
+            source: 'joy_coins_redemption',
+          });
+        } catch (couponError) {
+          // Coupon creation failed - automatically refund the coins
+          console.error("Coupon creation failed, initiating refund:", couponError);
+          
+          const refundResult = await refundCoins(userId, item.costCoins, `兑换失败退还 - ${item.nameCn}`);
+          
+          if (refundResult.success) {
+            return res.status(500).json({ 
+              message: "优惠券创建失败，悦币已退还，请重试",
+              refunded: true,
+              newCoinsBalance: refundResult.newCoinsBalance 
+            });
+          } else {
+            // Critical: Refund also failed - log for manual intervention
+            console.error("Critical: Both coupon creation and refund failed:", refundResult.error);
+            return res.status(500).json({ 
+              message: "系统错误，请联系客服处理",
+              coinsDeducted: item.costCoins 
+            });
+          }
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        newCoinsBalance: result.newCoinsBalance,
+        redeemedItem: item,
+      });
+    } catch (error) {
+      console.error("Error redeeming coins:", error);
+      res.status(500).json({ message: "Failed to redeem coins" });
+    }
+  });
+
+  // Get available redeemable items
+  app.get('/api/user/gamification/redeemable-items', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { REDEEMABLE_ITEMS } = await import('@shared/gamification');
+      res.json(REDEEMABLE_ITEMS);
+    } catch (error) {
+      console.error("Error fetching redeemable items:", error);
+      res.status(500).json({ message: "Failed to fetch redeemable items" });
+    }
+  });
+
+  // Get level configurations
+  app.get('/api/gamification/levels', async (req, res) => {
+    try {
+      const { LEVELS } = await import('@shared/gamification');
+      res.json(LEVELS);
+    } catch (error) {
+      console.error("Error fetching levels:", error);
+      res.status(500).json({ message: "Failed to fetch levels" });
     }
   });
 
@@ -1161,8 +1342,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: result.error });
       }
 
-      // Award points for completing feedback
+      // Create feedback
       const feedback = await storage.createEventFeedback(userId, result.data);
+      
+      // Award XP and coins for completing feedback
+      try {
+        const { awardXPAndCoins } = await import('./gamificationService');
+        const xpResult = await awardXPAndCoins(userId, 'feedback_basic', eventId, feedback.id);
+        console.log(`[Gamification] Awarded basic feedback XP to user ${userId}:`, xpResult);
+      } catch (xpError) {
+        console.error("Error awarding feedback XP:", xpError);
+      }
       
       // Check for mutual matches if user has new connections
       const mutualMatches: string[] = [];
@@ -1249,6 +1439,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const updatedFeedback = await storage.updateEventFeedbackDeep(userId, eventId, deepFeedbackData);
+      
+      // Award XP and coins for completing deep feedback
+      try {
+        const { awardXPAndCoins } = await import('./gamificationService');
+        const xpResult = await awardXPAndCoins(userId, 'feedback_deep', eventId, updatedFeedback.id);
+        console.log(`[Gamification] Awarded deep feedback XP to user ${userId}:`, xpResult);
+      } catch (xpError) {
+        console.error("Error awarding deep feedback XP:", xpError);
+      }
+      
       res.json(updatedFeedback);
     } catch (error) {
       console.error("Error updating deep feedback:", error);
@@ -4872,6 +5072,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return acc;
       }, {});
 
+      // Calculate gamification stats
+      const levelDistribution = allUsers.reduce((acc: Record<string, number>, user: any) => {
+        const level = user.currentLevel || 1;
+        acc[`Lv.${level}`] = (acc[`Lv.${level}`] || 0) + 1;
+        return acc;
+      }, {});
+      
+      const totalXP = allUsers.reduce((sum: number, user: any) => sum + (user.experiencePoints || 0), 0);
+      const totalJoyCoins = allUsers.reduce((sum: number, user: any) => sum + (user.joyCoins || 0), 0);
+      const activeStreakUsers = allUsers.filter((user: any) => (user.activityStreak || 0) > 0).length;
+      
+      const gamificationStats = {
+        levelDistribution,
+        totalXP,
+        totalJoyCoins,
+        activeStreakUsers,
+        avgLevel: allUsers.length > 0 
+          ? Math.round((allUsers.reduce((sum: number, u: any) => sum + (u.currentLevel || 1), 0) / allUsers.length) * 10) / 10
+          : 1,
+      };
+
       // Calculate weekly matching satisfaction and low-scoring matches
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -4918,6 +5139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cityDistribution,
         weeklyMatchingSatisfaction,
         lowScoringMatches,
+        gamificationStats,
       });
     } catch (error) {
       console.error("Error fetching admin stats:", error);

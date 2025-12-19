@@ -149,9 +149,17 @@ export const users = pgTable("users", {
   secondaryRole: varchar("secondary_role"), // Second highest archetype (used in algorithm, hidden from UI)
   roleSubtype: varchar("role_subtype"),
   
-  // Gamification
+  // Gamification - Legacy counters
   eventsAttended: integer("events_attended").default(0),
   matchesMade: integer("matches_made").default(0),
+  
+  // Gamification - Level System
+  experiencePoints: integer("experience_points").default(0), // 成长值（不可消耗，用于升级）
+  joyCoins: integer("joy_coins").default(0), // 悦币（可消耗，用于兑换优惠券）
+  currentLevel: integer("current_level").default(1), // 当前等级 (1-10)
+  activityStreak: integer("activity_streak").default(0), // 活动连击天数
+  lastActivityDate: date("last_activity_date"), // 上次活动日期（用于连击计算）
+  streakFreezeAvailable: boolean("streak_freeze_available").default(true), // 是否有连击冻结卡
   
   // Event Pack Credits
   eventCredits: integer("event_credits").default(0),
@@ -1918,3 +1926,44 @@ export type KingGameSession = typeof kingGameSessions.$inferSelect;
 export type KingGamePlayer = typeof kingGamePlayers.$inferSelect;
 export type InsertKingGameSession = z.infer<typeof insertKingGameSessionSchema>;
 export type InsertKingGamePlayer = z.infer<typeof insertKingGamePlayerSchema>;
+
+// ============ 游戏化等级系统 ============
+
+// XP Transactions table - 经验值/悦币交易日志
+export const xpTransactions = pgTable("xp_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // 交易类型
+  transactionType: varchar("transaction_type").notNull(), // registration, event_register, event_checkin, event_complete, feedback, streak_bonus, first_match, profile_complete, redeem, admin_adjust
+  
+  // 交易金额
+  xpAmount: integer("xp_amount").default(0), // 经验值变动（正数增加，负数减少）
+  coinsAmount: integer("coins_amount").default(0), // 悦币变动
+  
+  // 交易后余额（便于审计）
+  xpBalance: integer("xp_balance").default(0), // 交易后XP余额
+  coinsBalance: integer("coins_balance").default(0), // 交易后悦币余额
+  
+  // 关联信息
+  relatedEventId: varchar("related_event_id"), // 关联的活动ID（如果适用）
+  relatedFeedbackId: varchar("related_feedback_id"), // 关联的反馈ID（如果适用）
+  
+  // 描述
+  description: text("description"), // 交易描述
+  descriptionCn: text("description_cn"), // 中文描述
+  
+  // 元数据
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schema for xpTransactions
+export const insertXpTransactionSchema = createInsertSchema(xpTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for XP Transactions
+export type XpTransaction = typeof xpTransactions.$inferSelect;
+export type InsertXpTransaction = z.infer<typeof insertXpTransactionSchema>;

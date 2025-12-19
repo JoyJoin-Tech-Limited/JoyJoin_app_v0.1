@@ -4,6 +4,7 @@ import SocialRoleCard from "@/components/SocialRoleCard";
 import PersonalityRadarChart from "@/components/PersonalityRadarChart";
 import QuizIntro from "@/components/QuizIntro";
 import EditFullProfileDialog from "@/components/EditFullProfileDialog";
+import GamificationCard from "@/components/GamificationCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -240,6 +241,9 @@ export default function ProfilePage() {
             </Card>
           );
         })()}
+
+        {/* Gamification Card - Level, XP, Coins, Streak */}
+        <GamificationCard />
 
         {/* Social Role Card - Show if test completed */}
         {hasCompletedQuiz && personalityResults && (

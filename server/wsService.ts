@@ -518,6 +518,23 @@ class WebSocketService {
         await storage.updateCheckin(existingCheckin.id, { isOnline: true, checkedInAt: new Date() });
       }
 
+      // Award XP for checkin (only for new checkins)
+      if (!existingCheckin) {
+        try {
+          const { awardXPAndCoins, updateActivityStreak } = await import('./gamificationService');
+          
+          // Award checkin XP
+          const xpResult = await awardXPAndCoins(userId, 'event_checkin');
+          console.log(`[Gamification] Awarded checkin XP to user ${userId}:`, xpResult);
+          
+          // Update activity streak
+          const streakResult = await updateActivityStreak(userId);
+          console.log(`[Gamification] Updated streak for user ${userId}:`, streakResult);
+        } catch (xpError) {
+          console.error("Error awarding checkin XP:", xpError);
+        }
+      }
+
       // Get all checkins with user data
       const checkins = await storage.getSessionCheckins(sessionId);
       const session = await storage.getIcebreakerSession(sessionId);

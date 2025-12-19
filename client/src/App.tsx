@@ -39,9 +39,11 @@ import EventFeedbackFlow from "@/pages/EventFeedbackFlow";
 import DeepFeedbackFlow from "@/pages/DeepFeedbackFlow";
 import IcebreakerSessionPage from "@/pages/IcebreakerSessionPage";
 import IcebreakerDemoPage from "@/pages/IcebreakerDemoPage";
+import RewardsPage from "@/pages/RewardsPage";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import NotFound from "@/pages/not-found";
+import LevelUpProvider from "@/components/LevelUpProvider";
 
 function RedirectToRegistration() {
   const [, setLocation] = useLocation();
@@ -140,6 +142,7 @@ function AuthenticatedRouter() {
       <Route path="/chats/:eventId" component={EventChatDetailPage} />
       <Route path="/direct-chat/:threadId" component={DirectChatPage} />
       <Route path="/profile" component={ProfilePage} />
+      <Route path="/rewards" component={RewardsPage} />
       <Route path="/profile/edit" component={EditProfilePage} />
       <Route path="/profile/edit/basic" component={EditBasicInfoPage} />
       <Route path="/profile/edit/education" component={EditEducationPage} />
@@ -216,8 +219,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Router />
+        <LevelUpProvider>
+          <Toaster />
+          <Router />
+        </LevelUpProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

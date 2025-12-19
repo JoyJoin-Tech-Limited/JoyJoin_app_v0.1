@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, CreditCard, Calendar, DollarSign, UserPlus, TrendingUp, AlertCircle, RefreshCw, Star, MapPin, UserCog } from "lucide-react";
+import { Users, CreditCard, Calendar, DollarSign, UserPlus, TrendingUp, AlertCircle, RefreshCw, Star, MapPin, UserCog, Trophy, Coins, Flame } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 
@@ -33,6 +33,13 @@ interface AdminStats {
   cityDistribution?: Record<string, number>;
   weeklyMatchingSatisfaction?: number;
   lowScoringMatches?: number;
+  gamificationStats?: {
+    levelDistribution: Record<string, number>;
+    totalXP: number;
+    totalJoyCoins: number;
+    activeStreakUsers: number;
+    avgLevel: number;
+  };
 }
 
 export default function AdminDashboard() {
@@ -382,6 +389,93 @@ export default function AdminDashboard() {
           </Card>
         </div>
       )}
+
+      {/* Gamification Section */}
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-4">游戏化系统概览</h3>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">平均等级</CardTitle>
+              <Trophy className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold" data-testid="stat-avg-level">
+                Lv.{stats?.gamificationStats?.avgLevel ?? 1}
+              </div>
+              <p className="text-xs text-muted-foreground">全平台用户</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">悦币流通</CardTitle>
+              <Coins className="h-4 w-4 text-yellow-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold" data-testid="stat-total-coins">
+                {stats?.gamificationStats?.totalJoyCoins?.toLocaleString() ?? 0}
+              </div>
+              <p className="text-xs text-muted-foreground">全平台悦币总量</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">总经验值</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold" data-testid="stat-total-xp">
+                {stats?.gamificationStats?.totalXP?.toLocaleString() ?? 0}
+              </div>
+              <p className="text-xs text-muted-foreground">累计XP</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-orange-500/10 to-red-500/10">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">活跃连击</CardTitle>
+              <Flame className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold" data-testid="stat-active-streaks">
+                {stats?.gamificationStats?.activeStreakUsers ?? 0}
+              </div>
+              <p className="text-xs text-muted-foreground">有连击的用户</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Level Distribution */}
+        {stats?.gamificationStats?.levelDistribution && Object.keys(stats.gamificationStats.levelDistribution).length > 0 && (
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">等级分布</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(stats.gamificationStats.levelDistribution)
+                  .sort((a, b) => {
+                    const levelA = parseInt(a[0].replace('Lv.', ''));
+                    const levelB = parseInt(b[0].replace('Lv.', ''));
+                    return levelB - levelA;
+                  })
+                  .map(([level, count]) => (
+                    <Badge 
+                      key={level} 
+                      variant="secondary" 
+                      className="text-xs"
+                      data-testid={`badge-level-${level}`}
+                    >
+                      {level}: {count}人
+                    </Badge>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
