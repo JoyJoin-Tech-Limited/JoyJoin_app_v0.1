@@ -58,6 +58,8 @@ interface GameRecommendation {
   reason: string;
 }
 
+type EventType = "饭局" | "酒局" | "咖啡" | "徒步" | "桌游" | "其他";
+
 interface IcebreakerToolkitProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -84,6 +86,7 @@ interface IcebreakerToolkitProps {
   icebreakerSessionId?: string;
   userId?: string;
   displayName?: string;
+  eventType?: EventType;
 }
 
 const gradients = {
@@ -147,6 +150,7 @@ export function IcebreakerToolkit({
   icebreakerSessionId,
   userId,
   displayName,
+  eventType,
 }: IcebreakerToolkitProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ 
     loop: false, 
@@ -218,7 +222,22 @@ export function IcebreakerToolkit({
       });
     }
     
-    icebreakerGames.forEach((game) => {
+    // Filter games based on eventType
+    // 酒局 → Show scene: 'bar' + scene: 'both'
+    // 饭局 → Show scene: 'dinner' + scene: 'both'
+    // Other types → Show all
+    const filteredGames = icebreakerGames.filter((game) => {
+      if (eventType === '酒局') {
+        return game.scene === 'bar' || game.scene === 'both';
+      }
+      if (eventType === '饭局') {
+        return game.scene === 'dinner' || game.scene === 'both';
+      }
+      // For other event types (咖啡, 徒步, 桌游, 其他), show all games
+      return true;
+    });
+    
+    filteredGames.forEach((game) => {
       const SceneIcon = sceneIcons[game.scene] || Globe;
       const isAIRecommended = recommendedGame?.gameId === game.id;
       items.push({
@@ -256,7 +275,7 @@ export function IcebreakerToolkit({
     });
     
     return items;
-  }, [topics, recommendedTopics, recommendedGame]);
+  }, [topics, recommendedTopics, recommendedGame, eventType]);
 
   useEffect(() => {
     if (!emblaApi) return;

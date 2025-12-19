@@ -391,6 +391,7 @@ export default function IcebreakerSessionPage() {
                       onRecommendGame={handleRecommendGame}
                       isRecommendingGame={isRecommendingGame}
                       recommendedGame={recommendedGame}
+                      eventType={eventData?.eventType as "饭局" | "酒局" | "咖啡" | "徒步" | "桌游" | "其他" | undefined}
                     />
                   </>
                 )}

@@ -277,6 +277,7 @@ export default function IcebreakerDemoPage() {
                 icebreakerSessionId="demo-icebreaker-session"
                 userId="demo-you"
                 displayName="你"
+                eventType="饭局"
               />
             </motion.div>
           )}
