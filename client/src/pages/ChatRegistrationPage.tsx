@@ -433,7 +433,7 @@ const achievements: AchievementWithMode[] = [
   { id: "world_citizen", title: "世界公民", icon: "🌏", condition: (info) => hasOverseasExperience(info) },
   { id: "parent", title: "神兽驯养师", icon: "👶", condition: (info) => hasChildren(info.children) },
   { id: "student_forever", title: "永远的学生", icon: "🎓", condition: (info) => !!info.educationLevel || !!info.fieldOfStudy },
-  { id: "work_artist", title: "搬砖艺术家", icon: "💼", condition: (info) => !!info.industry || !!info.roleTitleShort || !!info.occupationDescription },
+  { id: "work_artist", title: "事业型选手", icon: "💼", condition: (info) => !!info.industry || !!info.roleTitleShort || !!info.occupationDescription },
   { id: "night_owl", title: "夜猫子", icon: "🦉", condition: (info) => getTimeOfDayFromTimestamp(info.registrationStartTime) === 'night' },
   { id: "early_bird", title: "早起鸟", icon: "🐔", condition: (info) => getTimeOfDayFromTimestamp(info.registrationStartTime) === 'morning' },
   { id: "speed_demon", title: "效率狂人", icon: "⚡", condition: () => false, modeCondition: (mode) => mode === 'express' },
@@ -2917,7 +2917,9 @@ export default function ChatRegistrationPage() {
             const newInfoCount = Object.keys(collectedInfo).filter(k => collectedInfo[k as keyof CollectedInfo] !== undefined).length;
             
             // 合并原始用户数据和收集的新信息，计算真实的post-chat完整度
-            // 注意：CollectedInfo字段名与User类型不同，需要映射
+            // 注意：calculateProfileCompletionUtil期望的字段名与User schema不完全一致
+            // profileCompletion.ts使用: occupation, topInterests 等虚拟字段
+            // 所以这里创建一个计算专用的合并对象
             const mergedProfile = userData ? {
               ...userData,
               displayName: collectedInfo.displayName || userData.displayName,
@@ -2927,10 +2929,10 @@ export default function ChatRegistrationPage() {
                 ? `${collectedInfo.birthYear}-01-01` 
                 : userData.birthdate,
               currentCity: collectedInfo.currentCity || userData.currentCity,
-              // occupationDescription映射到occupation
-              occupation: collectedInfo.occupationDescription || userData.occupation,
-              // interestsTop映射到topInterests
-              topInterests: collectedInfo.interestsTop || collectedInfo.primaryInterests || userData.topInterests,
+              // profileCompletion期望'occupation'字段，从多个来源合并
+              occupation: collectedInfo.occupationDescription || collectedInfo.industry || userData.roleTitleShort || userData.industry,
+              // profileCompletion期望'topInterests'数组字段
+              topInterests: collectedInfo.interestsTop || collectedInfo.primaryInterests || (userData as any).topInterests || [],
               educationLevel: collectedInfo.educationLevel || userData.educationLevel,
               relationshipStatus: collectedInfo.relationshipStatus || userData.relationshipStatus,
               // intent在CollectedInfo是数组，取第一个或拼接
