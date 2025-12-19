@@ -217,7 +217,7 @@ export const RELATIONSHIP_SYNONYMS: SynonymGroup[] = [
   {
     canonical: '已婚',
     variants: [
-      '已婚', '结婚', '结婚了', '老公', '老婆', '爱人',
+      '已婚', '结婚了', '老公', '老婆', '爱人',
       '另一半', '伴侣', '夫妻', '配偶', '家属'
     ],
     field: 'relationshipStatus',
@@ -241,6 +241,120 @@ export const NEGATION_PATTERNS: string[] = [
   '不想', '不打算', '不会', '别', '勿', '非',
   '还没', '尚未', '未曾', '从未', '从不'
 ];
+
+// ============ 精细化否定前缀（直接修饰关键词） ============
+
+export const DIRECT_NEGATION_PREFIXES: string[] = [
+  // 位置否定
+  '不在', '没在', '不住', '没住', '离开了', '搬离了', '搬走了',
+  '不去', '没去', '不来', '没来', '不回', '没回',
+  // 状态否定  
+  '不是', '没是', '不做', '没做', '不当', '没当',
+  '不干', '没干', '不搞', '没搞', '不从事', '没从事',
+  // 关系否定
+  '没结', '未婚', '没嫁', '没娶', '不结', '不嫁', '不娶',
+  // 身份否定
+  '不是', '不算', '不属于', '不能算',
+  // 时间否定
+  '以前在', '曾经在', '之前在', '原来在', '过去在',
+  '以前是', '曾经是', '之前是', '原来是', '过去是',
+  '以前做', '曾经做', '之前做', '原来做', '过去做',
+];
+
+/**
+ * 检查否定是否直接修饰目标关键词
+ * 例如："不在北京" 中 "不在" 直接修饰 "北京"
+ * 但对于 "不在北京，在深圳" 中的 "深圳" 不应被否定
+ */
+export function isDirectlyNegated(text: string, keyword: string): boolean {
+  const keywordIndex = text.indexOf(keyword);
+  if (keywordIndex === -1) return false;
+  
+  const AFFIRMATIVE_PREFIXES = ['在', '是', '做', '当', '住', '搬到', '来', '到'];
+  const beforeKeyword = text.substring(Math.max(0, keywordIndex - 10), keywordIndex);
+  
+  // 情况1：关键词本身以肯定前缀开头（如"在深圳"）
+  for (const affirm of AFFIRMATIVE_PREFIXES) {
+    if (keyword.startsWith(affirm)) {
+      // 检查关键词前面是否有分隔符（逗号、句号、空格等）
+      const lastChar = beforeKeyword.slice(-1);
+      if (['，', ',', '。', '；', ' ', '、', '！', '？'].includes(lastChar)) {
+        return false;  // 有分隔符，说明是独立的肯定短语
+      }
+      // 检查前面是否直接是否定词
+      for (const neg of ['不', '没', '非']) {
+        if (beforeKeyword.endsWith(neg)) {
+          return true;  // 否定词直接接肯定前缀，如"不在深圳"
+        }
+      }
+      return false;  // 否则不是被否定的
+    }
+  }
+  
+  // 情况2：检查关键词前面是否有肯定前缀直接修饰（原逻辑）
+  for (const affirm of AFFIRMATIVE_PREFIXES) {
+    if (beforeKeyword.endsWith(affirm)) {
+      // 检查这个肯定前缀前面是否紧跟否定
+      const beforeAffirm = beforeKeyword.slice(0, -affirm.length);
+      let hasNegation = false;
+      for (const neg of ['不', '没', '非']) {
+        if (beforeAffirm.endsWith(neg)) {
+          hasNegation = true;
+          break;
+        }
+      }
+      if (!hasNegation) {
+        return false;  // 有肯定前缀且前面没有否定，不是被否定的
+      }
+    }
+  }
+  
+  // 情况3：检查关键词前面是否有直接否定前缀
+  for (const prefix of DIRECT_NEGATION_PREFIXES) {
+    if (beforeKeyword.endsWith(prefix)) {
+      return true;
+    }
+    // 也检查紧邻的情况
+    if (beforeKeyword.includes(prefix) && beforeKeyword.indexOf(prefix) >= beforeKeyword.length - prefix.length - 3) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * 检查整句是否是否定句式（用于补充判断）
+ */
+export function isNegativeSentence(text: string): { isNegative: boolean; negationType: string | null } {
+  // 开头否定
+  const startNegations = ['不', '没', '非', '未', '别', '勿', '无'];
+  for (const neg of startNegations) {
+    if (text.startsWith(neg)) {
+      return { isNegative: true, negationType: 'start' };
+    }
+  }
+  
+  // 典型否定句式
+  const negativePatterns = [
+    /^不[是在做有]/,
+    /^没[有在做是]/,
+    /^还没/,
+    /^并非/,
+    /^并不/,
+    /^从不/,
+    /^从没/,
+    /^从未/,
+  ];
+  
+  for (const pattern of negativePatterns) {
+    if (pattern.test(text)) {
+      return { isNegative: true, negationType: 'pattern' };
+    }
+  }
+  
+  return { isNegative: false, negationType: null };
+}
 
 // ============ 时间修饰词（影响推断） ============
 
@@ -309,7 +423,8 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
     name: '自由职业人生阶段',
     trigger: {
       type: 'keyword',
-      keywords: ['自由职业', 'freelancer', '自媒体', '博主', 'up主', '独立顾问', '接私活', '数字游民']
+      keywords: ['自由职业', 'freelancer', '自媒体', '博主', 'up主', '独立顾问', '接私活', '数字游民',
+                 '自己接活', '接活做', '接项目做', '自己做项目']
     },
     infers: [
       { field: 'lifeStage', value: '自由职业', confidence: 0.90 }
@@ -341,13 +456,14 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
     name: '单身状态',
     trigger: {
       type: 'keyword',
-      keywords: ['单身', '没对象', '没有对象', '母胎solo', '单着', '空窗期', '刚分手', '还是一个人']
+      keywords: ['单身', '没对象', '没有对象', '母胎solo', '单着', '空窗期', '刚分手', '还是一个人',
+                 '没结婚', '没结', '未婚', '还没结婚', '不想结婚']
     },
     infers: [
       { field: 'relationshipStatus', value: '单身', confidence: 0.90 }
     ],
     excludePatterns: ['不是单身', '脱单', '告别单身'],
-    priority: 9
+    priority: 10
   },
   
   // 感情状态推断 - 离异
@@ -390,9 +506,10 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
     },
     infers: [
       { field: 'educationLevel', value: '研究生', confidence: 0.92 },
+      { field: 'education', value: '研究生', confidence: 0.92 },
       { field: 'lifeStage', value: '学生党', confidence: 0.85 }
     ],
-    excludePatterns: ['不读研', '没读研', '毕业了'],
+    excludePatterns: ['不读研', '没读研', '毕业了', '不是研究生'],
     priority: 9
   },
   {
@@ -414,12 +531,13 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
     name: '本科学历',
     trigger: {
       type: 'keyword',
-      keywords: ['本科', '大学', '大学生', '本科生', 'bachelor']
+      keywords: ['本科', '大学', '大学生', '本科生', 'bachelor', '本科毕业']
     },
     infers: [
-      { field: 'educationLevel', value: '本科', confidence: 0.88 }
+      { field: 'educationLevel', value: '本科', confidence: 0.88 },
+      { field: 'education', value: '本科', confidence: 0.88 }
     ],
-    excludePatterns: ['不是本科', '本科毕业'],
+    excludePatterns: ['不是本科'],
     priority: 7
   },
   
@@ -670,6 +788,79 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
       { field: 'city', value: '深圳', confidence: 0.92 }
     ],
     excludePatterns: [],
+    priority: 9
+  },
+  
+  // ============ 简单城市识别 ============
+  
+  // 在+城市 直接识别
+  {
+    id: 'simple_city_shenzhen',
+    name: '深圳简单识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['在深圳', '深圳这边', '来深圳', '到深圳', '住深圳', '深圳嘅']
+    },
+    infers: [
+      { field: 'city', value: '深圳', confidence: 0.90 }
+    ],
+    excludePatterns: ['不在深圳', '没在深圳', '离开深圳'],
+    priority: 9
+  },
+  
+  {
+    id: 'simple_city_shanghai',
+    name: '上海简单识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['在上海', '上海这边', '来上海', '到上海', '住上海', '上海嘅']
+    },
+    infers: [
+      { field: 'city', value: '上海', confidence: 0.90 }
+    ],
+    excludePatterns: ['不在上海', '没在上海', '离开上海'],
+    priority: 9
+  },
+  
+  {
+    id: 'simple_city_beijing',
+    name: '北京简单识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['在北京', '北京这边', '来北京', '到北京', '住北京']
+    },
+    infers: [
+      { field: 'city', value: '北京', confidence: 0.90 }
+    ],
+    excludePatterns: ['不在北京', '没在北京', '离开北京'],
+    priority: 9
+  },
+  
+  {
+    id: 'simple_city_guangzhou',
+    name: '广州简单识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['在广州', '广州这边', '来广州', '到广州', '住广州', '广州嘅']
+    },
+    infers: [
+      { field: 'city', value: '广州', confidence: 0.90 }
+    ],
+    excludePatterns: ['不在广州', '没在广州', '离开广州'],
+    priority: 9
+  },
+  
+  {
+    id: 'simple_city_hongkong',
+    name: '香港简单识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['在香港', '香港这边', '来香港', '到香港', '住香港', '喺香港']
+    },
+    infers: [
+      { field: 'city', value: '香港', confidence: 0.90 }
+    ],
+    excludePatterns: ['不在香港', '没在香港', '离开香港'],
     priority: 9
   },
   
@@ -1560,12 +1751,12 @@ export function findCanonicalForm(text: string): {
     );
     
     if (matchedVariant) {
-      // 检查是否被否定
-      const isNegated = containsNegation(text);
+      // 检查是否被直接否定
+      const directlyNegated = isDirectlyNegated(text, matchedVariant);
       const temporalContext = getTemporalContext(text);
       
-      // 如果是过去时态或被否定，降低置信度或跳过
-      if (isNegated || temporalContext === 'past') {
+      // 如果是过去时态或被直接否定，降低置信度或跳过
+      if (directlyNegated || temporalContext === 'past') {
         return {
           found: true,
           canonical: group.canonical,
