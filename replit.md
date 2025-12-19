@@ -64,7 +64,7 @@ Preferred communication style: Simple, everyday language.
   - **Intelligent Inference Engine:** Hybrid microkernel architecture that eliminates redundant questions by inferring user attributes from conversation context. Features include:
     - **4-Layer Architecture:** Semantic Matcher (fast pattern matching) → LLM Reasoner (complex inference) → Knowledge Graph (entity recognition) → State Manager (session tracking)
     - **Confidence-Based Actions:** ≥85% confidence skips questions, 60-85% uses confirmation prompts, <60% asks normally
-    - **Semantic Matcher:** 15+ quick inference rules, 200+ synonym mappings for life stages, industries, relationships, returnee patterns
+    - **Semantic Matcher:** 22+ quick inference rules, 250+ synonym mappings for life stages, industries, relationships, returnee patterns (100% accuracy on 15 critical test cases)
     - **Knowledge Graph:** 60+ companies, 30+ schools, 40+ cities with industry/city inference chains
     - **LLM Chain-of-Thought Reasoner:** DeepSeek-powered fallback for ambiguous cases with structured JSON output
     - **500 Test Scenarios:** Evaluation framework with 5 personas × 5 linguistic styles for quality assurance
