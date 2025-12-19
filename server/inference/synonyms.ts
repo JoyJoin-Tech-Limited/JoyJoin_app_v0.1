@@ -265,12 +265,12 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
     name: '学生人生阶段',
     trigger: {
       type: 'keyword',
-      keywords: ['学生', '在读', '上学', '念书', '大学', '研究生', '博士', '硕士', '本科', '在校']
+      keywords: ['是学生', '还是学生', '我是学生', '在读', '上学', '念书', '读大学', '上大学', '在大学', '读研', '在校生', '大学生', '在校']
     },
     infers: [
       { field: 'lifeStage', value: '学生党', confidence: 0.95 }
     ],
-    excludePatterns: ['不是学生', '毕业了', '已经毕业'],
+    excludePatterns: ['不是学生', '毕业了', '已经毕业', '大学城', '大学路'],
     priority: 10
   },
   {

@@ -507,7 +507,7 @@ export function chainInference(text: string): Array<{
     }
   }
   
-  // 学校 → 城市 + 海归标签
+  // 学校 → 城市 + 海归标签 + 教育水平
   const schoolInfo = findSchoolInfo(text);
   if (schoolInfo.found) {
     if (schoolInfo.isOverseas) {
@@ -527,6 +527,46 @@ export function chainInference(text: string): Array<{
         reasoning: '海外留学通常具备英语能力'
       });
     }
+    
+    // 根据上下文推断教育水平（需要更精确的模式匹配）
+    if (text.includes('博士') || text.includes('PhD') || text.includes('读博')) {
+      inferences.push({
+        field: 'educationLevel',
+        value: '博士',
+        confidence: 0.92,
+        evidence: `提到了${schoolInfo.school}博士`,
+        reasoning: '明确提到博士学位'
+      });
+    } else if (text.includes('硕士') || text.includes('研究生') || text.includes('读研') || text.includes('Master')) {
+      inferences.push({
+        field: 'educationLevel',
+        value: '硕士',
+        confidence: 0.9,
+        evidence: `提到了${schoolInfo.school}研究生`,
+        reasoning: '明确提到硕士/研究生学位'
+      });
+    } else if (text.includes('毕业') || text.includes('本科毕业') || text.includes('大学毕业')) {
+      // 需要明确提到"毕业"才推断本科
+      inferences.push({
+        field: 'educationLevel',
+        value: '本科',
+        confidence: 0.75,
+        evidence: `提到了${schoolInfo.school}毕业`,
+        reasoning: `从${schoolInfo.school}毕业，推断至少本科学历`
+      });
+    }
+  }
+  
+  // 城市推断（如果明确提到工作地点，使用city字段与现有schema保持一致）
+  const cityInfo = findCityInfo(text);
+  if (cityInfo.found && cityInfo.city) {
+    inferences.push({
+      field: 'city',
+      value: cityInfo.city,
+      confidence: 0.85,
+      evidence: `提到在${cityInfo.city}`,
+      reasoning: '明确提到城市'
+    });
   }
   
   return inferences;
