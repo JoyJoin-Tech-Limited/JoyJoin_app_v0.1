@@ -88,6 +88,9 @@ export interface InferenceRule {
   
   // 优先级（数字越大优先级越高）
   priority: number;
+  
+  // 是否忽略时态检查（用于海归、转折句式等需要绕过过去时态限制的规则）
+  ignoreTemporal?: boolean;
 }
 
 // ============ 知识图谱节点 ============

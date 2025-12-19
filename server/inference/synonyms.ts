@@ -318,20 +318,21 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
     priority: 10
   },
   
-  // 海归标签推断
+  // 海归标签推断 - 不受时态影响，因为"海归"本身就表示当前身份
   {
     id: 'returnee_detection',
     name: '海归识别',
     trigger: {
       type: 'keyword',
-      keywords: ['留学', '海归', '国外回来', '留学回来', '在国外', '从美国', '从英国', '从澳洲', '从加拿大', '硅谷', '湾区', 'Silicon Valley', '华尔街', 'Wall Street', '美国回来', '英国回来', '回国创业']
+      keywords: ['留学', '海归', '我是海归', '国外回来', '留学回来', '在国外', '从美国', '从英国', '从澳洲', '从加拿大', '硅谷', '湾区', 'Silicon Valley', '华尔街', 'Wall Street', '美国回来', '英国回来', '回国创业', '刚回国', '回国', '在美国读书', '在英国读书', '之前在美国', '之前在英国']
     },
     infers: [
       { field: 'isReturnee', value: 'true', confidence: 0.90 },
-      { field: 'languages', value: '英语', confidence: 0.75 }  // 海归很可能会英语
+      { field: 'languages', value: '英语', confidence: 0.75 }
     ],
     excludePatterns: ['没留过学', '没出过国'],
-    priority: 8
+    priority: 8,
+    ignoreTemporal: true  // 海归本身就表示"曾经留学现在回来"，不受过去时态影响
   },
   
   // 感情状态推断 - 单身
@@ -580,6 +581,83 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
     priority: 8
   },
   
+  // 粤语自由职业
+  {
+    id: 'cantonese_freelancer',
+    name: '粤语自由职业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['做freelance嘅', 'freelance', '帮人整', '自己接job', '接freelance']
+    },
+    infers: [
+      { field: 'lifeStage', value: '自由职业', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 粤语上班族
+  {
+    id: 'cantonese_employed',
+    name: '粤语上班族',
+    trigger: {
+      type: 'keyword',
+      keywords: ['返工', '返咗几年工', '返紧工', '喺公司做嘢', '打工仔']
+    },
+    infers: [
+      { field: 'lifeStage', value: '职场老手', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 粤语IT/科技
+  {
+    id: 'cantonese_it',
+    name: '粤语IT行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['整网站', '整APP', '写程式', '做网页', '做APP']
+    },
+    infers: [
+      { field: 'industry', value: '互联网/科技', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 粤语广州/香港高校
+  {
+    id: 'cantonese_guangzhou_school',
+    name: '粤语广州高校',
+    trigger: {
+      type: 'keyword',
+      keywords: ['中大', '喺中大', '华工', '暨大', '广外', '广工']
+    },
+    infers: [
+      { field: 'city', value: '广州', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // 粤语海归
+  {
+    id: 'cantonese_returnee_v2',
+    name: '粤语海归表达',
+    trigger: {
+      type: 'keyword',
+      keywords: ['之前喺美国', '之前喺英国', '喺美国读书', '喺英国读书', '外国返嚟']
+    },
+    infers: [
+      { field: 'isReturnee', value: 'true', confidence: 0.88 },
+      { field: 'languages', value: '英语', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 9,
+    ignoreTemporal: true  // 海归相关表达，不受过去时态影响
+  },
+  
   // 粤语科技园→深圳
   {
     id: 'cantonese_shenzhen',
@@ -800,6 +878,281 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
     ],
     excludePatterns: [],
     priority: 6
+  },
+  
+  // ============ 直接性别表达 ============
+  
+  {
+    id: 'gender_direct_female',
+    name: '直接女性表达',
+    trigger: {
+      type: 'keyword',
+      keywords: ['女生', '女的', '我是女', '女性', 'female', '小姐姐']
+    },
+    infers: [
+      { field: 'gender', value: '女', confidence: 0.95 }
+    ],
+    excludePatterns: ['不是女生', '不是女的'],
+    priority: 10
+  },
+  {
+    id: 'gender_direct_male',
+    name: '直接男性表达',
+    trigger: {
+      type: 'keyword',
+      keywords: ['男生', '男的', '我是男', '男性', 'male', '小哥哥']
+    },
+    infers: [
+      { field: 'gender', value: '男', confidence: 0.95 }
+    ],
+    excludePatterns: ['不是男生', '不是男的'],
+    priority: 10
+  },
+  
+  // ============ 海归额外模式 ============
+  
+  {
+    id: 'returnee_mixed_english',
+    name: '中英混杂海归',
+    trigger: {
+      type: 'keyword',
+      keywords: ['returnee', '从US回来', '从UK回来', 'from America', 'from UK', 
+                 '在Stanford', '在Harvard', '在MIT', '在Berkeley', '在Columbia',
+                 '在Google', '在Facebook', '在Meta', '在Amazon', '在Apple', '在Microsoft',
+                 '哥大', 'Stanford', 'Harvard', 'MIT', 'Berkeley', 'Yale', 'Princeton']
+    },
+    infers: [
+      { field: 'isReturnee', value: 'true', confidence: 0.90 },
+      { field: 'languages', value: '英语', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 9,
+    ignoreTemporal: true  // 海归相关表达，不受过去时态影响
+  },
+  
+  // 粤语海归
+  {
+    id: 'cantonese_returnee',
+    name: '粤语海归',
+    trigger: {
+      type: 'keyword',
+      keywords: ['喺美国读书', '喺英国读书', '喺外国', '海归返嚟', '外国翻嚟']
+    },
+    infers: [
+      { field: 'isReturnee', value: 'true', confidence: 0.88 },
+      { field: 'languages', value: '英语', confidence: 0.80 }
+    ],
+    excludePatterns: [],
+    priority: 8,
+    ignoreTemporal: true  // 海归相关表达，不受过去时态影响
+  },
+  
+  // 语言能力表达
+  {
+    id: 'language_english_fluent',
+    name: '英语流利',
+    trigger: {
+      type: 'keyword',
+      keywords: ['英语比中文', '英语流利', '英文好', '英语很好', 'bilingual', 
+                 'fluent English', '说英语', '会英语', '母语是英语']
+    },
+    infers: [
+      { field: 'languages', value: '英语', confidence: 0.90 }
+    ],
+    excludePatterns: ['不会英语', '英语不好'],
+    priority: 8
+  },
+  
+  // ============ 专业/行业推断 ============
+  
+  {
+    id: 'major_cs',
+    name: '计算机专业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['学计算机', '学CS', '计算机专业', 'CS PhD', 'computer science', 
+                 '软件工程', '学编程', '学的是计算机', '读CS']
+    },
+    infers: [
+      { field: 'industry', value: '互联网/科技', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  {
+    id: 'major_finance',
+    name: '金融专业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['学金融', '金融专业', 'MBA', '读MBA', '念MBA', '商学院', 
+                 '经济学', '会计', 'finance专业']
+    },
+    infers: [
+      { field: 'industry', value: '金融', confidence: 0.80 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // ============ 学校→城市推断 ============
+  
+  {
+    id: 'school_beijing',
+    name: '北京高校',
+    trigger: {
+      type: 'keyword',
+      keywords: ['北大', '清华', '人大', '北师大', '北航', '北理工', '在北大', '在清华']
+    },
+    infers: [
+      { field: 'city', value: '北京', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  {
+    id: 'school_shanghai',
+    name: '上海高校',
+    trigger: {
+      type: 'keyword',
+      keywords: ['复旦', '交大', '上交', '同济', '华师大', '在复旦', '在交大']
+    },
+    infers: [
+      { field: 'city', value: '上海', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // ============ 工作经历→海归推断 ============
+  
+  {
+    id: 'work_abroad',
+    name: '海外工作经历',
+    trigger: {
+      type: 'keyword',
+      keywords: ['在Google工作', '在Facebook', '在Meta工作', '在Apple工作', 
+                 '在微软工作', '在Amazon工作', '在Netflix', '在Uber',
+                 '华尔街工作', '硅谷工作', '在投行']
+    },
+    infers: [
+      { field: 'isReturnee', value: 'true', confidence: 0.85 },
+      { field: 'industry', value: '互联网/科技', confidence: 0.80 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 否定转折句式 ============
+  
+  // "以前...后来出来自己干" 模式
+  {
+    id: 'turnaround_past_to_entrepreneur',
+    name: '过去工作后来创业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['后来出来自己干', '后来创业', '后来自己做', '之后创业', '然后创业',
+                 '出来自己干了', '后来开公司', '之后开公司']
+    },
+    infers: [
+      { field: 'lifeStage', value: '创业中', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 9,
+    ignoreTemporal: true  // 转折句式，"后来"表示当前状态
+  },
+  
+  // "不是X，是做科技的" 模式
+  {
+    id: 'contrast_tech',
+    name: '对比说明科技行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['是做科技的', '是做互联网', '是做IT的', '是做技术的', '是tech']
+    },
+    infers: [
+      { field: 'industry', value: '互联网/科技', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 10
+  },
+  
+  // "不是X，是做金融的" 模式
+  {
+    id: 'contrast_finance',
+    name: '对比说明金融行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['是做金融的', '是做投资的', '是金融行业']
+    },
+    infers: [
+      { field: 'industry', value: '金融', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 10
+  },
+  
+  // "还没毕业" 学生状态
+  {
+    id: 'not_graduated_student',
+    name: '未毕业学生',
+    trigger: {
+      type: 'keyword',
+      keywords: ['还没毕业', '没毕业', '还在读', '还没工作', '不是已经工作']
+    },
+    infers: [
+      { field: 'lifeStage', value: '学生党', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 10
+  },
+  
+  // "不是本科，是研究生" 模式
+  {
+    id: 'contrast_education',
+    name: '对比说明学历',
+    trigger: {
+      type: 'keyword',
+      keywords: ['是研究生', '是硕士', '是博士', '读的研究生', '读的硕士']
+    },
+    infers: [
+      { field: 'educationLevel', value: '研究生', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 10
+  },
+  
+  // "不上班，自由职业" 模式
+  {
+    id: 'contrast_freelancer',
+    name: '对比说明自由职业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['不上班', '不是朝九晚五', '不用坐班', '不打工', '自己干活']
+    },
+    infers: [
+      { field: 'lifeStage', value: '自由职业', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // "是美国那边" 海归
+  {
+    id: 'contrast_country',
+    name: '对比说明国家',
+    trigger: {
+      type: 'keyword',
+      keywords: ['是美国那边', '是美国的', '是英国那边', '是英国的', '美国回来的']
+    },
+    infers: [
+      { field: 'isReturnee', value: 'true', confidence: 0.88 },
+      { field: 'languages', value: '英语', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 9,
+    ignoreTemporal: true  // 海归相关表达，不受过去时态影响
   }
 ];
 

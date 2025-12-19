@@ -133,8 +133,9 @@ export class SemanticMatcher {
       }
     }
     
-    // 如果是过去时态，不匹配
-    if (temporalContext === 'past') {
+    // 如果是过去时态，不匹配（除非规则设置了ignoreTemporal标志）
+    // ignoreTemporal用于处理转折句式，如"海归"、"以前...后来自己干"等
+    if (temporalContext === 'past' && !rule.ignoreTemporal) {
       return false;
     }
     
