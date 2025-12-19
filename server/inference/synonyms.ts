@@ -494,6 +494,312 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
     ],
     excludePatterns: ['没有孩子', '没孩子', '不想要孩子'],
     priority: 7
+  },
+  
+  // ============ 隐含表达推断 ============
+  
+  // 创业隐含表达
+  {
+    id: 'implicit_entrepreneur',
+    name: '创业隐含表达',
+    trigger: {
+      type: 'keyword',
+      keywords: ['见投资人', '融资', '拿投资', 'A轮', 'B轮', 'C轮', '天使轮', '种子轮', 
+                 '我们团队', '团队成员', '招人', '招聘', '合伙人', '股权', '期权',
+                 '烧钱', '现金流', '盈利模式', '商业计划']
+    },
+    infers: [
+      { field: 'lifeStage', value: '创业中', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 学生隐含表达
+  {
+    id: 'implicit_student',
+    name: '学生隐含表达',
+    trigger: {
+      type: 'keyword',
+      keywords: ['考试', '期末', '论文', '毕业论文', '导师', '教授', '课程', '上课', 
+                 '学分', '实验室', '图书馆', '宿舍', '食堂', '校园', '同学']
+    },
+    infers: [
+      { field: 'lifeStage', value: '学生党', confidence: 0.85 }
+    ],
+    excludePatterns: ['孩子考试', '孩子上课'],
+    priority: 7
+  },
+  
+  // 职场人士隐含表达
+  {
+    id: 'implicit_employed',
+    name: '职场人士隐含表达',
+    trigger: {
+      type: 'keyword',
+      keywords: ['加班', '开会', '汇报', '领导', '老板', '同事', 'OKR', 'KPI', 
+                 '年终奖', '涨薪', '晋升', '项目', '出差']
+    },
+    infers: [
+      { field: 'lifeStage', value: '职场老手', confidence: 0.80 }
+    ],
+    excludePatterns: ['不加班', '不开会'],
+    priority: 6
+  },
+  
+  // 已婚隐含表达
+  {
+    id: 'implicit_married',
+    name: '已婚隐含表达',
+    trigger: {
+      type: 'keyword',
+      keywords: ['结婚', '婚后', '婚礼', '老公', '老婆', '爱人', '另一半', '配偶',
+                 '婆媳', '公婆', '丈母娘', '岳父', '婚姻']
+    },
+    infers: [
+      { field: 'relationshipStatus', value: '已婚', confidence: 0.90 }
+    ],
+    excludePatterns: ['未婚', '不结婚', '没结婚', '还没结婚'],
+    priority: 8
+  },
+  
+  // ============ 粤语方言推断 ============
+  
+  // 粤语创业者
+  {
+    id: 'cantonese_entrepreneur',
+    name: '粤语创业者',
+    trigger: {
+      type: 'keyword',
+      keywords: ['自己做嘢', '开咗间公司', '自己开公司', '做老闆', '做老细']
+    },
+    infers: [
+      { field: 'lifeStage', value: '创业中', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 粤语科技园→深圳
+  {
+    id: 'cantonese_shenzhen',
+    name: '粤语深圳地标',
+    trigger: {
+      type: 'keyword',
+      keywords: ['南山科技园', '科技园度', '喺深圳', '深圳嗰边', '前海', '福田']
+    },
+    infers: [
+      { field: 'city', value: '深圳', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // 粤语互联网
+  {
+    id: 'cantonese_tech',
+    name: '粤语科技行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['做互联网嘅', '做IT嘅', '写code', '做tech']
+    },
+    infers: [
+      { field: 'industry', value: '互联网/科技', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 中英混杂推断 ============
+  
+  // 中英混杂创业者
+  {
+    id: 'mixed_entrepreneur',
+    name: '中英混杂创业者',
+    trigger: {
+      type: 'keyword',
+      keywords: ['startup founder', 'startup', 'co-founder', 'create了一家公司', 
+                 '做business', 'run公司', 'own business']
+    },
+    infers: [
+      { field: 'lifeStage', value: '创业中', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // 中英混杂科技行业
+  {
+    id: 'mixed_tech',
+    name: '中英混杂科技行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['tech相关', 'tech行业', 'IT行业', 'tech公司', 'technology', 
+                 '做software', 'engineer', '程序员', '码农', 'developer']
+    },
+    infers: [
+      { field: 'industry', value: '互联网/科技', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 中英混杂金融
+  {
+    id: 'mixed_finance',
+    name: '中英混杂金融行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['finance', 'banking', 'investment banking', 'PE', 'VC', 
+                 '做投资', '基金', 'hedge fund', 'asset management']
+    },
+    infers: [
+      { field: 'industry', value: '金融', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 中英混杂城市
+  {
+    id: 'mixed_shenzhen',
+    name: '中英混杂深圳',
+    trigger: {
+      type: 'keyword',
+      keywords: ['Shenzhen', '在Shenzhen', 'Shenzhen这边', '深圳Nanshan']
+    },
+    infers: [
+      { field: 'city', value: '深圳', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // ============ 地标推断城市 ============
+  
+  // 深圳地标
+  {
+    id: 'landmark_shenzhen',
+    name: '深圳地标',
+    trigger: {
+      type: 'keyword',
+      keywords: ['科技园', '南山', '福田', '前海', '华强北', '蛇口', '宝安']
+    },
+    infers: [
+      { field: 'city', value: '深圳', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // 北京地标
+  {
+    id: 'landmark_beijing',
+    name: '北京地标',
+    trigger: {
+      type: 'keyword',
+      keywords: ['中关村', '望京', '国贸', '三里屯', '朝阳', '海淀', '西二旗']
+    },
+    infers: [
+      { field: 'city', value: '北京', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // 上海地标
+  {
+    id: 'landmark_shanghai',
+    name: '上海地标',
+    trigger: {
+      type: 'keyword',
+      keywords: ['陆家嘴', '浦东', '张江', '静安', '徐汇', '虹桥', '外滩']
+    },
+    infers: [
+      { field: 'city', value: '上海', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // 广州地标
+  {
+    id: 'landmark_guangzhou',
+    name: '广州地标',
+    trigger: {
+      type: 'keyword',
+      keywords: ['天河', '珠江新城', '琶洲', '番禺', '白云', '越秀']
+    },
+    infers: [
+      { field: 'city', value: '广州', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // 成都地标
+  {
+    id: 'landmark_chengdu',
+    name: '成都地标',
+    trigger: {
+      type: 'keyword',
+      keywords: ['春熙路', '太古里', '高新区', '天府新区', '锦江', '武侯']
+    },
+    infers: [
+      { field: 'city', value: '成都', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // ============ 转折/否定后的当前状态 ============
+  
+  // 从大厂出来创业
+  {
+    id: 'turnaround_to_entrepreneur',
+    name: '转型创业者',
+    trigger: {
+      type: 'keyword',
+      keywords: ['出来自己干', '出来创业', '辞职创业', '离职创业', '不干了自己做', 
+                 '出来单干', '跳出来创业']
+    },
+    infers: [
+      { field: 'lifeStage', value: '创业中', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // ============ 年龄推断 ============
+  
+  // 直接年龄表达
+  {
+    id: 'age_direct',
+    name: '直接年龄表达',
+    trigger: {
+      type: 'pattern',
+      pattern: '(?:我|今年|都|已经)?\\s*(\\d{2})\\s*(?:岁|了|多)'
+    },
+    infers: [
+      { field: 'age', value: '$1', confidence: 0.95 }  // $1会被实际匹配替换
+    ],
+    excludePatterns: [],
+    priority: 10
+  },
+  
+  // 三十几岁
+  {
+    id: 'age_thirties',
+    name: '三十几岁',
+    trigger: {
+      type: 'keyword',
+      keywords: ['三十几', '三十多', '30多', '30几', '快四十']
+    },
+    infers: [
+      { field: 'age', value: '35', confidence: 0.70 }
+    ],
+    excludePatterns: [],
+    priority: 6
   }
 ];
 
