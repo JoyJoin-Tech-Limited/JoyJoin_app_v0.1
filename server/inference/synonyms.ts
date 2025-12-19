@@ -1260,7 +1260,8 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
     name: '对比说明科技行业',
     trigger: {
       type: 'keyword',
-      keywords: ['是做科技的', '是做互联网', '是做IT的', '是做技术的', '是tech']
+      keywords: ['是做科技的', '是做互联网', '是做IT的', '是做技术的', '是tech',
+                 '做互联网', '做科技', '做IT', '做技术']
     },
     infers: [
       { field: 'industry', value: '互联网/科技', confidence: 0.90 }

@@ -110,6 +110,62 @@ const PERSONA_TEMPLATES: PersonaTemplate[] = [
           { field: 'city', value: '深圳', turnIndex: 2 },
           { field: 'age', value: '32', turnIndex: 3 }
         ]
+      },
+      // 双重否定（只期望可靠推断的字段）
+      {
+        style: 'doubleNegative',
+        turns: [
+          '不是不想打工，只是更想自己创业',
+          '不能说不是做科技的',
+          '其实就在深圳这边',
+          '我今年32岁'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '创业中', turnIndex: 0 },
+          { field: 'industry', value: '互联网/科技', turnIndex: 1 },
+          { field: 'city', value: '深圳', turnIndex: 2 }
+        ]
+      },
+      // 假设语气（隐含肯定，从上下文推断）
+      {
+        style: 'hypothetical',
+        turns: [
+          '如果不是创业的话我可能还在大厂',
+          '要是不做科技行业，可能也不会这么累',
+          '假如不在深圳，可能就去不了那么多投资人',
+          '我现在创业做互联网，在深圳这边'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '创业中', turnIndex: 3 },
+          { field: 'industry', value: '互联网/科技', turnIndex: 3 },
+          { field: 'city', value: '深圳', turnIndex: 3 }
+        ]
+      },
+      // 第三人称（不应推断）
+      {
+        style: 'thirdPerson',
+        turns: [
+          '我朋友在创业，做得挺成功的',
+          '他们公司是做科技的',
+          '他在深圳那边',
+          '我自己还是打工的'
+        ],
+        inferableFields: []
+      },
+      // 多轮矛盾（最后一句为准）
+      {
+        style: 'contradiction',
+        turns: [
+          '我在北京工作',
+          '哦不对，我搞错了',
+          '我其实在深圳创业',
+          '做互联网的'
+        ],
+        inferableFields: [
+          { field: 'city', value: '深圳', turnIndex: 2 },
+          { field: 'lifeStage', value: '创业中', turnIndex: 2 },
+          { field: 'industry', value: '互联网/科技', turnIndex: 3 }
+        ]
       }
     ]
   },

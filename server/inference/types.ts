@@ -146,7 +146,8 @@ export interface SimulatedUserProfile {
   };
   
   // 语言变体
-  linguisticStyle: 'direct' | 'implicit' | 'negative' | 'dialect' | 'mixed';
+  linguisticStyle: 'direct' | 'implicit' | 'negative' | 'dialect' | 'mixed' | 
+                   'doubleNegative' | 'hypothetical' | 'thirdPerson' | 'contradiction';
 }
 
 export interface SimulatedDialogueTurn {

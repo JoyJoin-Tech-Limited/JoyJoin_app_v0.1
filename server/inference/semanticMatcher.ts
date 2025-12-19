@@ -117,6 +117,54 @@ function detectContradictions(inferences: InferredAttribute[]): {
 export class SemanticMatcher {
   
   /**
+   * 检测是否为假设语气
+   * "如果不是创业的话" → 实际是创业
+   * "假如不在深圳" → 实际在深圳
+   */
+  private isHypotheticalNegation(message: string): boolean {
+    const hypotheticalPrefixes = ['如果', '假如', '要是', '若是', '倘若', '假设'];
+    const negationWords = ['不是', '不在', '没有', '不做', '没'];
+    
+    for (const prefix of hypotheticalPrefixes) {
+      const prefixIdx = message.indexOf(prefix);
+      if (prefixIdx !== -1) {
+        // 检查假设词后面是否跟着否定词
+        const afterPrefix = message.substring(prefixIdx + prefix.length, prefixIdx + prefix.length + 10);
+        for (const neg of negationWords) {
+          if (afterPrefix.includes(neg)) {
+            return true;  // 假设+否定 = 实际肯定，应该推断
+          }
+        }
+      }
+    }
+    return false;
+  }
+  
+  /**
+   * 检测是否为第三人称陈述（不应推断为用户属性）
+   * "我朋友在创业" → 不推断
+   * "他在深圳" → 不推断
+   */
+  private isThirdPersonStatement(message: string): boolean {
+    const thirdPersonPatterns = [
+      /我(朋友|同事|同学|老公|老婆|爸|妈|哥|姐|弟|妹|闺蜜|兄弟)/,
+      /^他(在|是|做|住|有)/,
+      /^她(在|是|做|住|有)/,
+      /^他们(在|是|做|住|有)/,
+      /^她们(在|是|做|住|有)/,
+      /朋友(在|是|做|住|有)/,
+      /同事(在|是|做|住|有)/,
+    ];
+    
+    for (const pattern of thirdPersonPatterns) {
+      if (pattern.test(message)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * 快速匹配用户消息，返回可推断的属性
    */
   match(
@@ -133,10 +181,22 @@ export class SemanticMatcher {
     const skipQuestions: string[] = [];
     const confirmQuestions: Array<{ field: string; template: string; inferredValue: string }> = [];
     
+    // 早期退出：第三人称陈述不推断
+    if (this.isThirdPersonStatement(userMessage)) {
+      return {
+        matched: false,
+        inferences: [],
+        skipQuestions: [],
+        confirmQuestions: [],
+        confidence: 0
+      };
+    }
+    
     // 检查否定和时态
     const isNegated = containsNegation(userMessage);
     const temporalContext = getTemporalContext(userMessage);
     const sentenceNegation = isNegativeSentence(userMessage);
+    const isHypotheticalNeg = this.isHypotheticalNegation(userMessage);
     
     // 1. 基于规则的快速推断
     for (const rule of QUICK_INFERENCE_RULES) {
