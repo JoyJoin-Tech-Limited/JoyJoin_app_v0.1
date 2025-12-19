@@ -22,7 +22,9 @@ import {
   LANGUAGES_COMFORT_OPTIONS, 
   RELATIONSHIP_STATUS_OPTIONS, 
   EDUCATION_LEVEL_OPTIONS, 
-  CHILDREN_OPTIONS 
+  CHILDREN_OPTIONS,
+  ACTIVITY_TIME_PREFERENCE_OPTIONS,
+  SOCIAL_FREQUENCY_OPTIONS
 } from "@shared/constants";
 import { calculateProfileCompletion as calculateProfileCompletionUtil, getMatchingBoostEstimate } from "@/lib/profileCompletion";
 
@@ -946,55 +948,111 @@ const quickReplyConfigs: QuickReplyConfig[] = [
   },
 ];
 
-// 精准模式匹配配置 - 用于需要多条件组合的场景
+// 精准模式匹配配置 - 仅用于结构化问题，使用静态预设选项
+// 其他智能追问不显示快捷回复
 const patternBasedConfigs: PatternBasedQuickReplyConfig[] = [
+  // === Tier 1: 高影响匹配字段 ===
   {
     id: "activityTime",
-    // 正则模式1：明确的活动+时间组合
-    pattern: /(活动|局|聚会|社交|出来|参加).{0,8}(时间|时段|什么时候|平日|周末|有空|方便|晚上|白天)/,
-    // 备用匹配：时段选择类问题（周末白天还是周末晚上？）
-    requiredAny: [
-      "工作日晚上", "周末白天", "周末晚上", "平日晚间", "双休晚上", "周末下午",  // 完整时段选项
-      "工作日还是周末", "平日还是周末", "晚上还是白天", "白天还是晚上",  // 对比选择
-      "倾向周末", "倾向工作日", "倾向晚上", "倾向白天",  // 倾向问题
-      "什么时候方便", "什么时候有空", "哪个时段", "更方便的时间"  // 时间询问
-    ],
-    exclude: ["喜欢做什么", "玩什么", "干什么活动", "什么活动", "周末喜欢", "周末一般做"],  // 排除兴趣问题
-    contextGuards: {
-      mustBeQuestion: true
-    },
-    options: [
-      { text: "工作日晚上", icon: Moon },
-      { text: "周末白天", icon: Sun },
-      { text: "周末晚上", icon: Moon },
-      { text: "都可以", icon: Sparkles }
-    ],
-    priority: 95,
+    pattern: /(活动|局|聚会|社交|出来|参加).{0,8}(时间|时段|什么时候|平日|周末|有空|方便)/,
+    requiredAny: ["工作日晚上", "周末白天", "周末晚上", "什么时候有空", "哪个时段"],
+    exclude: ["喜欢做什么", "玩什么", "什么活动"],
+    contextGuards: { mustBeQuestion: true },
+    options: ACTIVITY_TIME_PREFERENCE_OPTIONS.map(opt => ({ 
+      text: opt, 
+      icon: opt.includes("晚上") ? Moon : opt.includes("白天") ? Sun : Sparkles 
+    })),
+    priority: 98,
     enforcePredefined: true
   },
   {
     id: "socialFrequency",
-    // 正则模式1：明确的社交+频率组合
-    pattern: /(社交|聚会|活动|出去|参加).{0,8}(频率|多久一次|节奏|多频繁|几次|多少次)/,
-    // 备用匹配：频率选择类问题（每周还是每月？）
-    requiredAny: [
-      "每周社交", "每两周", "每月一两次", "每月社交",  // 完整频率选项
-      "每周还是每月", "每月还是每周", "多久一次", "多久社交一次",  // 对比选择
-      "社交频率", "聚会频率", "活动频率", "出去频率",  // 频率询问
-      "偏向每周", "偏向每月", "社交节奏", "社交频次",  // 偏向问题
-      "一个月聚几次", "多常出来", "经常社交吗"  // 口语化问法
-    ],
-    exclude: ["回家多久", "多久回一次", "工作多久", "认识多久"],  // 排除其他"多久"问题
-    contextGuards: {
-      mustBeQuestion: true
-    },
+    pattern: /(社交|聚会|活动).{0,8}(频率|多久一次|节奏|多频繁)/,
+    requiredAny: ["社交频率", "多久一次", "一个月聚几次", "多常出来"],
+    exclude: ["回家多久", "工作多久"],
+    contextGuards: { mustBeQuestion: true },
+    options: SOCIAL_FREQUENCY_OPTIONS.map(opt => ({ 
+      text: opt, 
+      icon: opt.includes("每周") ? Zap : Calendar 
+    })),
+    priority: 97,
+    enforcePredefined: true
+  },
+  // === Tier 2: 基础资料字段 ===
+  {
+    id: "gender",
+    pattern: /性别|男生.*女生|女生.*男生|小哥哥.*小姐姐|是男是女/,
+    requiredAny: ["男生还是女生", "性别"],
     options: [
-      { text: "每周社交", icon: Zap },
-      { text: "每两周一次", icon: Calendar },
-      { text: "每月一两次", icon: Calendar },
-      { text: "看心情", icon: Sparkles }
+      { text: "男生", icon: Smile },
+      { text: "女生", icon: Heart }
     ],
+    priority: 96,
+    enforcePredefined: true
+  },
+  {
+    id: "education",
+    pattern: /学历|读到|什么学历|毕业|读书.*到/,
+    requiredAny: ["学历", "读到哪", "毕业"],
+    options: EDUCATION_LEVEL_OPTIONS.map(level => ({ text: level, icon: Book })),
+    priority: 95,
+    enforcePredefined: true
+  },
+  {
+    id: "relationship",
+    pattern: /感情状态|单身|恋爱|已婚|有对象/,
+    requiredAny: ["感情状态", "单身", "有对象吗", "恋爱"],
+    options: RELATIONSHIP_STATUS_OPTIONS.map(status => ({ text: status, icon: Heart })),
     priority: 94,
+    enforcePredefined: true
+  },
+  {
+    id: "industry",
+    pattern: /什么行业|哪个行业|在.*行业|从事.*行业/,
+    requiredAny: ["什么行业", "哪个行业", "行业"],
+    exclude: ["行业经验多久"],
+    options: INDUSTRIES.slice(0, 8).map(ind => ({ text: ind.label, icon: Briefcase })),
+    priority: 93,
+    multiSelect: false,
+    enforcePredefined: true
+  },
+  {
+    id: "interests",
+    pattern: /兴趣|爱好|喜欢做|平时.*做|业余.*做/,
+    requiredAny: ["兴趣", "爱好", "平时喜欢"],
+    exclude: ["哪个最常做", "最喜欢哪个"],
+    options: INTERESTS_OPTIONS.slice(0, 8).map(opt => ({ text: opt.label, icon: Sparkles })),
+    priority: 92,
+    multiSelect: true,
+    enforcePredefined: true
+  },
+  // === 其他常用结构化问题 ===
+  {
+    id: "intent",
+    pattern: /想要|期待|目的|来悦聚.*干嘛|为什么来/,
+    requiredAny: ["想要什么", "来悦聚想", "交朋友", "拓展人脉"],
+    options: [
+      { text: "交朋友", icon: Heart },
+      { text: "拓展人脉", icon: Briefcase },
+      { text: "聊天交流", icon: MessageCircle },
+      { text: "吃喝玩乐", icon: Coffee },
+      { text: "随缘都可以", icon: Sparkles }
+    ],
+    priority: 91,
+    multiSelect: true,
+    enforcePredefined: true
+  },
+  {
+    id: "age",
+    pattern: /年龄|几几年|多大|岁|哪年.*生|年代/,
+    requiredAny: ["年龄", "多大", "几几年", "哪年"],
+    options: [
+      { text: "00后", icon: Star },
+      { text: "95后", icon: Star },
+      { text: "90后", icon: Star },
+      { text: "85后", icon: Star }
+    ],
+    priority: 90,
     enforcePredefined: true
   }
 ];
@@ -1283,38 +1341,35 @@ function matchPatternBasedConfig(message: string): QuickReplyResult | null {
 }
 
 // 检测最后一条消息是否匹配快捷回复
-// 改进：对于有预定义选项的字段，优先使用预定义选项而不是从AI文本提取
+// 简化版：只对结构化问题显示静态预设选项，其他追问不显示快捷回复
 function detectQuickReplies(lastMessage: string): QuickReplyResult {
-  // 第负一步：检查是否是开场白/介绍类消息（不显示快捷选项）
+  // 1. 检查是否是开场白/介绍类消息（不显示快捷选项）
   if (isIntroductionMessage(lastMessage)) {
     return { options: [], multiSelect: false };
   }
   
-  // 第零步：检查是否需要用户自由输入（如称呼问题）
+  // 2. 检查是否需要用户自由输入（如称呼问题）
   const lowerMessage = lastMessage.toLowerCase();
   for (const kw of freeInputKeywords) {
     if (lowerMessage.includes(kw)) {
-      // 这类问题需要用户自由输入，不显示快捷选项
       return { options: [], multiSelect: false };
     }
   }
   
-  // 第0.5步：检查是否是追问类问题（不显示通用快捷选项）
+  // 3. 检查是否是追问类问题（不显示快捷选项）
   for (const pattern of followUpPatterns) {
     if (pattern.test(lastMessage)) {
-      // 追问问题需要用户根据上下文回答，不显示通用选项
       return { options: [], multiSelect: false };
     }
   }
   
-  // 第0.6步：优先检查精准模式匹配（活动时段、社交频率等）
-  // 使用多条件组合+上下文门控，避免误触发
+  // 4. 优先检查精准模式匹配（结构化问题：活动时段、社交频率、性别、学历等）
   const patternMatch = matchPatternBasedConfig(lastMessage);
   if (patternMatch) {
     return patternMatch;
   }
   
-  // 第0.75步：检查是否是简单的是非问句
+  // 5. 检查是否是简单的是非问句
   if (isYesNoQuestion(lastMessage)) {
     return { 
       options: [
@@ -1325,72 +1380,20 @@ function detectQuickReplies(lastMessage: string): QuickReplyResult {
     };
   }
   
-  // 第一步：检查是否匹配需要预定义选项的字段
-  // 对于intent、gender等重要字段，必须使用预定义选项，不从AI文本提取
-  const hasPredefinedKeyword = predefinedOptionKeywords.some(kw => lowerMessage.includes(kw));
-  
-  // 如果没有匹配预定义关键词，才尝试从消息中智能提取选项
-  if (!hasPredefinedKeyword) {
-    const extractedOptions = extractOptionsFromMessage(lastMessage);
-    if (extractedOptions.length >= 2) {
-      const multiSelect = shouldBeMultiSelect(extractedOptions, lastMessage);
-      return { options: extractedOptions, multiSelect };
-    }
+  // 6. 检查确认类问题
+  const confirmKeywords = ["对吗", "确认一下", "核对一下", "信息对吗", "没问题吗"];
+  if (confirmKeywords.some(kw => lowerMessage.includes(kw))) {
+    return {
+      options: [
+        { text: "对的，确认", icon: Check },
+        { text: "需要修改", icon: Pencil }
+      ],
+      multiSelect: false
+    };
   }
   
-  // 第二步：使用关键词匹配预定义选项
-  // 提取最后一个问句（以？结尾的句子）
-  const questionMatches = lastMessage.match(/[^。！？\n]*[？?][^。！？\n]*/g);
-  let textToAnalyze: string;
-  
-  if (questionMatches && questionMatches.length > 0) {
-    // 取最后一个问句
-    textToAnalyze = questionMatches[questionMatches.length - 1].trim();
-  } else {
-    // 没有问句时，取最后一段
-    const segments = lastMessage.split(/\n/).filter(s => s.trim());
-    textToAnalyze = segments.length > 0 ? segments[segments.length - 1] : lastMessage;
-  }
-  
-  const lowerMsg = textToAnalyze.toLowerCase();
-  
-  const matches: Array<{ config: QuickReplyConfig; score: number }> = [];
-  
-  for (const config of quickReplyConfigs) {
-    let maxPosition = -1;
-    let foundCount = 0;
-    
-    // 找到该配置中所有关键词在消息中最后出现的位置
-    // 注意：将关键词也转为小写以进行不区分大小写的匹配
-    for (const kw of config.keywords) {
-      const pos = lowerMsg.lastIndexOf(kw.toLowerCase());
-      if (pos >= 0) {
-        foundCount++;
-        if (pos > maxPosition) {
-          maxPosition = pos;
-        }
-      }
-    }
-    
-    // 如果找到关键词，计算分数
-    if (maxPosition >= 0) {
-      const positionScore = maxPosition; // 后出现的位置更高
-      const priority = config.priority || 0;
-      const matchScore = priority * 1000 + positionScore;
-      matches.push({ config, score: matchScore });
-    }
-  }
-  
-  // 按分数排序，取分数最高的配置
-  matches.sort((a, b) => b.score - a.score);
-  
-  const bestMatch = matches[0];
-  return bestMatch 
-    ? { 
-        options: bestMatch.config.options.filter(o => o.text), 
-        multiSelect: bestMatch.config.multiSelect || false 
-      }
-    : { options: [], multiSelect: false };
+  // 7. 其他情况不显示快捷回复（智能追问让用户自由输入）
+  return { options: [], multiSelect: false };
 }
 
 interface ChatMessage {
@@ -2914,18 +2917,26 @@ export default function ChatRegistrationPage() {
             const newInfoCount = Object.keys(collectedInfo).filter(k => collectedInfo[k as keyof CollectedInfo] !== undefined).length;
             
             // 合并原始用户数据和收集的新信息，计算真实的post-chat完整度
+            // 注意：CollectedInfo字段名与User类型不同，需要映射
             const mergedProfile = userData ? {
               ...userData,
               displayName: collectedInfo.displayName || userData.displayName,
               gender: collectedInfo.gender || userData.gender,
-              birthdate: collectedInfo.birthdate || userData.birthdate,
+              // birthYear需要转换为birthdate格式
+              birthdate: collectedInfo.birthYear 
+                ? `${collectedInfo.birthYear}-01-01` 
+                : userData.birthdate,
               currentCity: collectedInfo.currentCity || userData.currentCity,
-              occupation: collectedInfo.occupation || userData.occupation,
-              topInterests: collectedInfo.topInterests || userData.topInterests,
+              // occupationDescription映射到occupation
+              occupation: collectedInfo.occupationDescription || userData.occupation,
+              // interestsTop映射到topInterests
+              topInterests: collectedInfo.interestsTop || collectedInfo.primaryInterests || userData.topInterests,
               educationLevel: collectedInfo.educationLevel || userData.educationLevel,
               relationshipStatus: collectedInfo.relationshipStatus || userData.relationshipStatus,
-              intent: collectedInfo.intent || userData.intent,
-              hometownCountry: collectedInfo.hometownCountry || userData.hometownCountry,
+              // intent在CollectedInfo是数组，取第一个或拼接
+              intent: collectedInfo.intent?.length ? collectedInfo.intent.join('、') : userData.intent,
+              // hometown映射到hometownCountry
+              hometownCountry: collectedInfo.hometown || userData.hometownCountry,
               languagesComfort: collectedInfo.languagesComfort || userData.languagesComfort,
               socialStyle: collectedInfo.socialStyle || userData.socialStyle,
             } : null;
