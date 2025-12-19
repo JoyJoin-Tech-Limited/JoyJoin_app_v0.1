@@ -463,6 +463,427 @@ const PERSONA_TEMPLATES: PersonaTemplate[] = [
         ]
       }
     ]
+  },
+
+  // ============ 全职爸妈 ============
+  {
+    type: 'homemaker',
+    groundTruthOptions: [
+      { lifeStage: '全职爸妈', city: '上海', age: 35, gender: '女' },
+      { lifeStage: '全职爸妈', city: '北京', age: 38, gender: '男' },
+      { lifeStage: '全职爸妈', city: '广州', age: 32, gender: '女' },
+      { lifeStage: '全职爸妈', city: '深圳', age: 36, gender: '女' },
+    ],
+    dialogueTemplates: [
+      {
+        style: 'direct',
+        turns: [
+          '我是全职妈妈，在家带孩子',
+          '在上海这边',
+          '35岁了，带娃三年了',
+          '之前是做金融的'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '全职爸妈', turnIndex: 0 },
+          { field: 'city', value: '上海', turnIndex: 1 },
+          { field: 'age', value: '35', turnIndex: 2 },
+          { field: 'gender', value: '女', turnIndex: 0 }
+        ]
+      },
+      {
+        style: 'implicit',
+        turns: [
+          '每天接送孩子上下学，时间安排挺满的',
+          '老公工作忙，家里都是我在操心',
+          '住在浦东这边',
+          '辞职前在银行工作了十年'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '全职爸妈', turnIndex: 0 },
+          { field: 'gender', value: '女', turnIndex: 1 },
+          { field: 'city', value: '上海', turnIndex: 2 },
+          { field: 'relationshipStatus', value: '已婚', turnIndex: 1 }
+        ]
+      },
+      {
+        style: 'negative',
+        turns: [
+          '不上班了，现在全职带娃',
+          '不在北京，在上海',
+          '不是不想工作，是孩子太小',
+          '35了，女的'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '全职爸妈', turnIndex: 0 },
+          { field: 'city', value: '上海', turnIndex: 1 },
+          { field: 'gender', value: '女', turnIndex: 3 }
+        ]
+      },
+      {
+        style: 'dialect',
+        turns: [
+          '喺屋企凑仔',
+          '喺上海呢边',
+          '细路仔仲细，要有人睇住',
+          '35岁啦'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '全职爸妈', turnIndex: 0 },
+          { field: 'city', value: '上海', turnIndex: 1 }
+        ]
+      },
+      {
+        style: 'mixed',
+        turns: [
+          '我是full-time mom，在家带kids',
+          '在Shanghai这边',
+          'Age的话35岁',
+          '之前在finance行业'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '全职爸妈', turnIndex: 0 },
+          { field: 'city', value: '上海', turnIndex: 1 },
+          { field: 'age', value: '35', turnIndex: 2 }
+        ]
+      }
+    ]
+  },
+
+  // ============ 求职者/应届生 ============
+  {
+    type: 'jobSeeker',
+    groundTruthOptions: [
+      { lifeStage: '职场新人', city: '北京', age: 23, gender: '女', education: '本科' },
+      { lifeStage: '职场新人', city: '上海', age: 24, gender: '男', education: '研究生' },
+      { lifeStage: '职场新人', city: '杭州', age: 22, gender: '女', education: '本科' },
+      { lifeStage: '职场新人', city: '深圳', age: 25, gender: '男', education: '研究生' },
+    ],
+    dialogueTemplates: [
+      {
+        style: 'direct',
+        turns: [
+          '刚毕业，正在找工作',
+          '在北京这边找',
+          '23岁，女生',
+          '学的是计算机'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '职场新人', turnIndex: 0 },
+          { field: 'city', value: '北京', turnIndex: 1 },
+          { field: 'age', value: '23', turnIndex: 2 },
+          { field: 'gender', value: '女', turnIndex: 2 }
+        ]
+      },
+      {
+        style: 'implicit',
+        turns: [
+          '最近在投简历，面试了好几家',
+          '跟室友合租，省点钱',
+          '班里同学都找到工作了就我还没着落',
+          '希望进大厂'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '职场新人', turnIndex: 0 },
+          { field: 'lifeStage', value: '学生党', turnIndex: 2 }
+        ]
+      },
+      {
+        style: 'negative',
+        turns: [
+          '还没工作，刚毕业',
+          '不在老家，来北京发展',
+          '不是研究生，本科毕业的',
+          '23了，女的'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '职场新人', turnIndex: 0 },
+          { field: 'city', value: '北京', turnIndex: 1 },
+          { field: 'education', value: '本科', turnIndex: 2 },
+          { field: 'gender', value: '女', turnIndex: 3 }
+        ]
+      },
+      {
+        style: 'dialect',
+        turns: [
+          '岩岩毕业，揾紧工',
+          '喺北京度揾',
+          '23岁，女仔',
+          '读嘅系计算机'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '职场新人', turnIndex: 0 },
+          { field: 'city', value: '北京', turnIndex: 1 },
+          { field: 'gender', value: '女', turnIndex: 2 }
+        ]
+      },
+      {
+        style: 'mixed',
+        turns: [
+          '刚graduate，在找job',
+          '在Beijing投简历',
+          '23岁female',
+          '学的是CS'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '职场新人', turnIndex: 0 },
+          { field: 'city', value: '北京', turnIndex: 1 },
+          { field: 'gender', value: '女', turnIndex: 2 }
+        ]
+      }
+    ]
+  },
+
+  // ============ 医疗工作者 ============
+  {
+    type: 'healthcare',
+    groundTruthOptions: [
+      { lifeStage: '职场老手', industry: '医疗/健康', city: '上海', age: 35, gender: '女' },
+      { lifeStage: '职场老手', industry: '医疗/健康', city: '北京', age: 40, gender: '男' },
+      { lifeStage: '职场新人', industry: '医疗/健康', city: '广州', age: 28, gender: '女' },
+      { lifeStage: '职场老手', industry: '医疗/健康', city: '杭州', age: 38, gender: '男' },
+    ],
+    dialogueTemplates: [
+      {
+        style: 'direct',
+        turns: [
+          '我是医生，在医院工作',
+          '在上海的三甲医院',
+          '35岁了，女的',
+          '做了十年了'
+        ],
+        inferableFields: [
+          { field: 'industry', value: '医疗/健康', turnIndex: 0 },
+          { field: 'city', value: '上海', turnIndex: 1 },
+          { field: 'age', value: '35', turnIndex: 2 },
+          { field: 'gender', value: '女', turnIndex: 2 }
+        ]
+      },
+      {
+        style: 'implicit',
+        turns: [
+          '经常值夜班，作息不太规律',
+          '在医院里接触的病人挺多的',
+          '瑞金医院这边',
+          '老公总说我太忙了'
+        ],
+        inferableFields: [
+          { field: 'industry', value: '医疗/健康', turnIndex: 1 },
+          { field: 'city', value: '上海', turnIndex: 2 },
+          { field: 'gender', value: '女', turnIndex: 3 },
+          { field: 'relationshipStatus', value: '已婚', turnIndex: 3 }
+        ]
+      },
+      {
+        style: 'negative',
+        turns: [
+          '不是护士，是医生',
+          '不在北京，在上海',
+          '不是刚毕业的，工作十年了',
+          '35了，女的'
+        ],
+        inferableFields: [
+          { field: 'industry', value: '医疗/健康', turnIndex: 0 },
+          { field: 'city', value: '上海', turnIndex: 1 },
+          { field: 'lifeStage', value: '职场老手', turnIndex: 2 },
+          { field: 'gender', value: '女', turnIndex: 3 }
+        ]
+      },
+      {
+        style: 'dialect',
+        turns: [
+          '我系医生嚟嘅',
+          '喺上海嘅大医院做嘢',
+          '35岁啦，女仔',
+          '做咗十年医生'
+        ],
+        inferableFields: [
+          { field: 'industry', value: '医疗/健康', turnIndex: 0 },
+          { field: 'city', value: '上海', turnIndex: 1 },
+          { field: 'gender', value: '女', turnIndex: 2 }
+        ]
+      },
+      {
+        style: 'mixed',
+        turns: [
+          '我是doctor，在hospital工作',
+          '在Shanghai的三甲',
+          '35岁，female',
+          '做了ten years了'
+        ],
+        inferableFields: [
+          { field: 'industry', value: '医疗/健康', turnIndex: 0 },
+          { field: 'city', value: '上海', turnIndex: 1 },
+          { field: 'gender', value: '女', turnIndex: 2 }
+        ]
+      }
+    ]
+  },
+
+  // ============ 创意/文化工作者 ============
+  {
+    type: 'creative',
+    groundTruthOptions: [
+      { lifeStage: '自由职业', industry: '设计/创意', city: '北京', age: 30, gender: '女' },
+      { lifeStage: '职场老手', industry: '媒体/传播', city: '上海', age: 35, gender: '男' },
+      { lifeStage: '自由职业', industry: '设计/创意', city: '杭州', age: 28, gender: '女' },
+      { lifeStage: '职场新人', industry: '媒体/传播', city: '深圳', age: 26, gender: '男' },
+    ],
+    dialogueTemplates: [
+      {
+        style: 'direct',
+        turns: [
+          '我是设计师，做平面设计',
+          '在北京的一家广告公司',
+          '30岁了，女生',
+          '做设计五年了'
+        ],
+        inferableFields: [
+          { field: 'industry', value: '设计/创意', turnIndex: 0 },
+          { field: 'city', value: '北京', turnIndex: 1 },
+          { field: 'age', value: '30', turnIndex: 2 },
+          { field: 'gender', value: '女', turnIndex: 2 }
+        ]
+      },
+      {
+        style: 'implicit',
+        turns: [
+          '最近在赶一个品牌的VI项目',
+          '客户要求改了好多版',
+          '公司在798那边',
+          '甲方爸爸虐我千百遍'
+        ],
+        inferableFields: [
+          { field: 'industry', value: '设计/创意', turnIndex: 0 },
+          { field: 'city', value: '北京', turnIndex: 2 }
+        ]
+      },
+      {
+        style: 'negative',
+        turns: [
+          '不是做代码的，是做设计的',
+          '不在上海，在北京',
+          '不是刚毕业，做了五年了',
+          '30了，女的'
+        ],
+        inferableFields: [
+          { field: 'industry', value: '设计/创意', turnIndex: 0 },
+          { field: 'city', value: '北京', turnIndex: 1 },
+          { field: 'gender', value: '女', turnIndex: 3 }
+        ]
+      },
+      {
+        style: 'dialect',
+        turns: [
+          '我系做design嘅',
+          '喺北京做嘢',
+          '30岁，女仔',
+          '做咗五年设计'
+        ],
+        inferableFields: [
+          { field: 'industry', value: '设计/创意', turnIndex: 0 },
+          { field: 'city', value: '北京', turnIndex: 1 },
+          { field: 'gender', value: '女', turnIndex: 2 }
+        ]
+      },
+      {
+        style: 'mixed',
+        turns: [
+          '我是designer，做graphic design',
+          '在Beijing的agency',
+          '30岁female',
+          '做了five years了'
+        ],
+        inferableFields: [
+          { field: 'industry', value: '设计/创意', turnIndex: 0 },
+          { field: 'city', value: '北京', turnIndex: 1 },
+          { field: 'gender', value: '女', turnIndex: 2 }
+        ]
+      }
+    ]
+  },
+
+  // ============ 退休人士 ============
+  {
+    type: 'retiree',
+    groundTruthOptions: [
+      { lifeStage: '退休享乐', city: '上海', age: 62, gender: '女' },
+      { lifeStage: '退休享乐', city: '北京', age: 65, gender: '男' },
+      { lifeStage: '退休享乐', city: '广州', age: 60, gender: '女' },
+      { lifeStage: '退休享乐', city: '杭州', age: 63, gender: '男' },
+    ],
+    dialogueTemplates: [
+      {
+        style: 'direct',
+        turns: [
+          '我已经退休了',
+          '在上海这边',
+          '62岁了，女的',
+          '以前是教师'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '退休享乐', turnIndex: 0 },
+          { field: 'city', value: '上海', turnIndex: 1 },
+          { field: 'age', value: '62', turnIndex: 2 },
+          { field: 'gender', value: '女', turnIndex: 2 }
+        ]
+      },
+      {
+        style: 'implicit',
+        turns: [
+          '每天早上去公园打太极',
+          '孙子放学我去接',
+          '住在静安区这边',
+          '老伴总说我太闲'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '退休享乐', turnIndex: 0 },
+          { field: 'city', value: '上海', turnIndex: 2 },
+          { field: 'relationshipStatus', value: '已婚', turnIndex: 3 }
+        ]
+      },
+      {
+        style: 'negative',
+        turns: [
+          '不上班了，退休了',
+          '不在老家，在上海跟儿子住',
+          '不年轻了，62了',
+          '62了，女的'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '退休享乐', turnIndex: 0 },
+          { field: 'city', value: '上海', turnIndex: 1 },
+          { field: 'gender', value: '女', turnIndex: 3 }
+        ]
+      },
+      {
+        style: 'dialect',
+        turns: [
+          '已经退休啦',
+          '喺上海度住',
+          '62岁啦，女嘅',
+          '以前系老师'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '退休享乐', turnIndex: 0 },
+          { field: 'city', value: '上海', turnIndex: 1 },
+          { field: 'gender', value: '女', turnIndex: 2 }
+        ]
+      },
+      {
+        style: 'mixed',
+        turns: [
+          '我已经retire了',
+          '在Shanghai这边住',
+          '62岁，female',
+          '以前是teacher'
+        ],
+        inferableFields: [
+          { field: 'lifeStage', value: '退休享乐', turnIndex: 0 },
+          { field: 'city', value: '上海', turnIndex: 1 },
+          { field: 'gender', value: '女', turnIndex: 2 }
+        ]
+      }
+    ]
   }
 ];
 
@@ -471,12 +892,12 @@ const PERSONA_TEMPLATES: PersonaTemplate[] = [
 /**
  * 生成指定数量的模拟场景
  */
-export function generateScenarios(count: number = 500): SimulatedScenario[] {
+export function generateScenarios(count: number = 1000): SimulatedScenario[] {
   const scenarios: SimulatedScenario[] = [];
   
-  // 每种人设 * 每种语言风格 = 5 * 5 = 25种组合
-  // 每种组合生成 count/25 个场景
-  const perCombination = Math.ceil(count / 25);
+  // 每种人设 * 每种语言风格 = 10 * 5 = 50种组合
+  // 每种组合生成 count/50 个场景
+  const perCombination = Math.ceil(count / 50);
   
   let scenarioId = 0;
   
@@ -596,8 +1017,8 @@ export function generateRealisticScenario(persona: SimulatedUserProfile['persona
   };
 }
 
-// 导出生成的500个场景
-export const TEST_SCENARIOS = generateScenarios(500);
+// 导出生成的1000个场景
+export const TEST_SCENARIOS = generateScenarios(1000);
 
 // ============ 辅助函数 ============
 

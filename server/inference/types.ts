@@ -128,7 +128,8 @@ export interface SynonymGroup {
 
 export interface SimulatedUserProfile {
   id: string;
-  persona: 'entrepreneur' | 'student' | 'corporate' | 'returnee' | 'freelancer';
+  persona: 'entrepreneur' | 'student' | 'corporate' | 'returnee' | 'freelancer' | 
+           'homemaker' | 'jobSeeker' | 'healthcare' | 'creative' | 'retiree';
   
   // 真实属性（用于验证推断准确性）
   groundTruth: {

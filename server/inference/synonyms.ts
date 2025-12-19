@@ -1182,7 +1182,8 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
     trigger: {
       type: 'keyword',
       keywords: ['岁，男', '岁,男', '岁, 男', '岁，男生', '岁，男的', '男，', '，男', 
-                 '男生', '男的', '小哥', '先生', '老公', '男朋友', '老婆总说我']
+                 '男生', '男的', '小哥', '先生', '老公', '男朋友', '老婆总说我',
+                 '全职爸爸']
     },
     infers: [
       { field: 'gender', value: '男', confidence: 0.90 }
@@ -1198,7 +1199,8 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
     trigger: {
       type: 'keyword',
       keywords: ['岁，女', '岁,女', '岁, 女', '岁，女生', '岁，女的', '女，', '，女',
-                 '女生', '女的', '小姐姐', '姐姐', '女士', '老婆', '女朋友', '老公总说我']
+                 '女生', '女的', '小姐姐', '姐姐', '女士', '老婆', '女朋友', '老公总说我',
+                 '全职妈妈', '全职太太', 'full-time mom']
     },
     infers: [
       { field: 'gender', value: '女', confidence: 0.90 }
@@ -1340,10 +1342,166 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
     trigger: {
       type: 'keyword',
       keywords: ['刚回国一年', '刚工作一年', '工作一年', '刚工作', '毕业一年', 
-                 '毕业后一年', '第一份工作', '刚入职', '实习转正', '刚转正']
+                 '毕业后一年', '第一份工作', '刚入职', '实习转正', '刚转正',
+                 '刚毕业', '刚graduate', '正在找工作', '找job', '还没工作',
+                 '投简历', '面试', '揾紧工', '岩岩毕业']
     },
     infers: [
       { field: 'lifeStage', value: '职场新人', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 全职爸妈识别 ============
+  
+  {
+    id: 'homemaker_detection',
+    name: '全职爸妈识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['全职妈妈', '全职爸爸', '全职太太', '在家带孩子', '在家带娃', 
+                 '全职带娃', '带kids', 'full-time mom', 'full-time dad',
+                 '接送孩子', '凑仔', '睇仔', '不上班了，现在全职带娃']
+    },
+    infers: [
+      { field: 'lifeStage', value: '全职爸妈', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // ============ 退休识别 ============
+  
+  {
+    id: 'retiree_detection',
+    name: '退休人士识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['退休了', '已经退休', '退休啦', 'retire了', '不上班了，退休',
+                 '打太极', '接孙子', '养老']
+    },
+    infers: [
+      { field: 'lifeStage', value: '退休享乐', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // 老伴→已婚
+  {
+    id: 'relationship_spouse_elder',
+    name: '老伴→已婚',
+    trigger: {
+      type: 'keyword',
+      keywords: ['老伴', '老伴总说']
+    },
+    infers: [
+      { field: 'relationshipStatus', value: '已婚', confidence: 0.92 },
+      { field: 'lifeStage', value: '退休享乐', confidence: 0.80 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // ============ 医疗行业识别 ============
+  
+  {
+    id: 'healthcare_industry',
+    name: '医疗行业识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['医生', '护士', '医院工作', '在医院', '三甲医院', '值夜班',
+                 '病人', 'doctor', 'hospital', '医生嚟嘅', '瑞金医院', 
+                 '协和医院', '中山医院', '华山医院']
+    },
+    infers: [
+      { field: 'industry', value: '医疗/健康', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 职场老手识别 ============
+  
+  {
+    id: 'senior_professional',
+    name: '职场老手识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['工作十年', '十年了', '做了十年', 'ten years', '工作五年',
+                 '五年了', 'five years', '不是刚毕业的']
+    },
+    infers: [
+      { field: 'lifeStage', value: '职场老手', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // ============ 本科学历识别 ============
+  
+  {
+    id: 'education_bachelor',
+    name: '本科学历识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['本科', '本科毕业', '不是研究生，本科', '大学毕业']
+    },
+    infers: [
+      { field: 'education', value: '本科', confidence: 0.90 }
+    ],
+    excludePatterns: ['研究生', '硕士', '博士'],
+    priority: 8
+  },
+  
+  // ============ 浦东→上海 ============
+  
+  {
+    id: 'pudong_shanghai',
+    name: '浦东→上海',
+    trigger: {
+      type: 'keyword',
+      keywords: ['浦东', '静安区', '徐汇', '黄浦', '长宁', '虹口', '杨浦',
+                 '闵行', '宝山', '嘉定', '松江', '瑞金医院', '华山医院', 
+                 '中山医院', '仁济医院', '长海医院']
+    },
+    infers: [
+      { field: 'city', value: '上海', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 798→北京 ============
+  
+  {
+    id: 'district_798_beijing',
+    name: '798→北京',
+    trigger: {
+      type: 'keyword',
+      keywords: ['798', '望京', '朝阳', '海淀', '中关村', '五道口', 
+                 '国贸', '三里屯', '亦庄']
+    },
+    infers: [
+      { field: 'city', value: '北京', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 品牌VI→设计行业 ============
+  
+  {
+    id: 'vi_design_industry',
+    name: 'VI项目→设计行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['VI项目', '品牌设计', '广告公司', '甲方', '改稿', 
+                 'graphic design', 'agency', '做design']
+    },
+    infers: [
+      { field: 'industry', value: '设计/创意', confidence: 0.88 }
     ],
     excludePatterns: [],
     priority: 8
