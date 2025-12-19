@@ -68,6 +68,15 @@ export const LIFE_STAGE_SYNONYMS: SynonymGroup[] = [
     ],
     field: 'lifeStage',
     value: '退休享乐'
+  },
+  {
+    canonical: '全职爸妈',
+    variants: [
+      '全职妈妈', '全职爸爸', '全职太太', '全职主妇', '家庭主妇',
+      '在家带娃', '专职带娃', '照顾家庭', '全职带孩子'
+    ],
+    field: 'lifeStage',
+    value: '全职爸妈'
   }
 ];
 
@@ -156,6 +165,15 @@ export const INDUSTRY_SYNONYMS: SynonymGroup[] = [
     ],
     field: 'industry',
     value: '餐饮/服务'
+  },
+  {
+    canonical: '国企/央企',
+    variants: [
+      '国企', '央企', '国有企业', '中字头', '事业单位', '体制内',
+      '公务员', '机关', '政府', '国有', '央属'
+    ],
+    field: 'industry',
+    value: '国企/央企'
   }
 ];
 
@@ -306,13 +324,132 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
     name: '海归识别',
     trigger: {
       type: 'keyword',
-      keywords: ['留学', '海归', '国外回来', '留学回来', '在国外', '从美国', '从英国', '从澳洲', '从加拿大']
+      keywords: ['留学', '海归', '国外回来', '留学回来', '在国外', '从美国', '从英国', '从澳洲', '从加拿大', '硅谷', '湾区', 'Silicon Valley', '华尔街', 'Wall Street', '美国回来', '英国回来', '回国创业']
     },
     infers: [
       { field: 'isReturnee', value: 'true', confidence: 0.90 },
       { field: 'languages', value: '英语', confidence: 0.75 }  // 海归很可能会英语
     ],
     excludePatterns: ['没留过学', '没出过国'],
+    priority: 8
+  },
+  
+  // 感情状态推断 - 单身
+  {
+    id: 'relationship_single',
+    name: '单身状态',
+    trigger: {
+      type: 'keyword',
+      keywords: ['单身', '没对象', '没有对象', '母胎solo', '单着', '空窗期', '刚分手', '还是一个人']
+    },
+    infers: [
+      { field: 'relationshipStatus', value: '单身', confidence: 0.90 }
+    ],
+    excludePatterns: ['不是单身', '脱单', '告别单身'],
+    priority: 9
+  },
+  
+  // 感情状态推断 - 离异
+  {
+    id: 'relationship_divorced',
+    name: '离异状态',
+    trigger: {
+      type: 'keyword',
+      keywords: ['离异', '离婚', '离过婚', '单亲', '离异带娃', '离异带孩子']
+    },
+    infers: [
+      { field: 'relationshipStatus', value: '离异', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // 设计行业
+  {
+    id: 'industry_design',
+    name: '设计行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['设计师', '做设计', 'UI设计', 'UX设计', '平面设计', '视觉设计', '交互设计', '室内设计', '建筑设计']
+    },
+    infers: [
+      { field: 'industry', value: '设计/创意', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 教育水平推断
+  {
+    id: 'education_graduate',
+    name: '研究生学历',
+    trigger: {
+      type: 'keyword',
+      keywords: ['读研', '研究生', '硕士', '在读研', '读硕', '硕士生', 'master', 'Masters']
+    },
+    infers: [
+      { field: 'educationLevel', value: '研究生', confidence: 0.92 },
+      { field: 'lifeStage', value: '学生党', confidence: 0.85 }
+    ],
+    excludePatterns: ['不读研', '没读研', '毕业了'],
+    priority: 9
+  },
+  {
+    id: 'education_phd',
+    name: '博士学历',
+    trigger: {
+      type: 'keyword',
+      keywords: ['博士', '博士生', '读博', '在读博士', 'PhD', 'Ph.D']
+    },
+    infers: [
+      { field: 'educationLevel', value: '博士', confidence: 0.92 },
+      { field: 'lifeStage', value: '学生党', confidence: 0.90 }
+    ],
+    excludePatterns: ['博士后', '不读博'],
+    priority: 9
+  },
+  {
+    id: 'education_bachelor',
+    name: '本科学历',
+    trigger: {
+      type: 'keyword',
+      keywords: ['本科', '大学', '大学生', '本科生', 'bachelor']
+    },
+    infers: [
+      { field: 'educationLevel', value: '本科', confidence: 0.88 }
+    ],
+    excludePatterns: ['不是本科', '本科毕业'],
+    priority: 7
+  },
+  
+  // 全职父母
+  {
+    id: 'life_stage_fulltime_parent',
+    name: '全职父母',
+    trigger: {
+      type: 'keyword',
+      keywords: ['全职妈妈', '全职爸爸', '全职太太', '全职主妇', '家庭主妇', '在家带娃', '专职带娃']
+    },
+    infers: [
+      { field: 'lifeStage', value: '全职爸妈', confidence: 0.95 },
+      { field: 'hasChildren', value: 'true', confidence: 0.95 }
+    ],
+    excludePatterns: [],
+    priority: 10
+  },
+  
+  // 国企/央企
+  {
+    id: 'industry_state_owned',
+    name: '国企央企',
+    trigger: {
+      type: 'keyword',
+      keywords: ['国企', '央企', '国有企业', '中字头', '事业单位', '体制内', '公务员', '机关']
+    },
+    infers: [
+      { field: 'industry', value: '国企/央企', confidence: 0.92 }
+    ],
+    excludePatterns: ['不在国企', '离开国企'],
     priority: 8
   },
   
