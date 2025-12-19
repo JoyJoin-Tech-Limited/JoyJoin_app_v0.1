@@ -8110,6 +8110,114 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  // ============ 专家评估系统 API ============
+  
+  // POST /api/inference/expert-evaluation - 运行10位AI专家评估
+  app.post("/api/inference/expert-evaluation", requireAdmin, async (req, res) => {
+    try {
+      console.log("[ExpertEval] 开始专家评估...");
+      
+      // 先获取系统性能指标
+      const { runEvaluation } = await import("./inference/evaluator");
+      const evalResult = await runEvaluation(50); // 用50个场景获取性能指标
+      
+      // 运行专家评估
+      const { runExpertEvaluation, generateExpertReportMarkdown } = await import("./inference/expertEvaluation");
+      const { getRandomScenarios } = await import("./inference/scenarios");
+      
+      const sampleScenarios = getRandomScenarios(10);
+      const report = await runExpertEvaluation(evalResult.metrics, sampleScenarios);
+      
+      res.json({
+        report,
+        markdownReport: generateExpertReportMarkdown(report)
+      });
+    } catch (error: any) {
+      console.error("Expert evaluation error:", error);
+      res.status(500).json({ message: "Expert evaluation failed", error: error.message });
+    }
+  });
+  
+  // GET /api/inference/expert-personas - 获取专家人设列表
+  app.get("/api/inference/expert-personas", async (req, res) => {
+    try {
+      const { EXPERT_PERSONAS, EVALUATION_DIMENSIONS } = await import("./inference/expertEvaluation");
+      res.json({
+        experts: EXPERT_PERSONAS,
+        dimensions: EVALUATION_DIMENSIONS
+      });
+    } catch (error: any) {
+      console.error("Error fetching expert personas:", error);
+      res.status(500).json({ message: "Failed to fetch experts", error: error.message });
+    }
+  });
+  
+  // GET /api/inference/questionnaire - 获取评估问卷模板
+  app.get("/api/inference/questionnaire", async (req, res) => {
+    try {
+      const { generateEvaluationQuestionnaire } = await import("./inference/expertEvaluation");
+      const questionnaire = generateEvaluationQuestionnaire();
+      res.json(questionnaire);
+    } catch (error: any) {
+      console.error("Error generating questionnaire:", error);
+      res.status(500).json({ message: "Failed to generate questionnaire", error: error.message });
+    }
+  });
+  
+  // GET /api/inference/scenario-stats - 获取测试场景统计
+  app.get("/api/inference/scenario-stats", async (req, res) => {
+    try {
+      const { getScenarioStats } = await import("./inference/scenarios");
+      const stats = getScenarioStats();
+      res.json(stats);
+    } catch (error: any) {
+      console.error("Error fetching scenario stats:", error);
+      res.status(500).json({ message: "Failed to fetch stats", error: error.message });
+    }
+  });
+  
+  // POST /api/inference/full-evaluation - 运行完整评测（500场景 + 专家评审）
+  app.post("/api/inference/full-evaluation", requireAdmin, async (req, res) => {
+    try {
+      console.log("[FullEval] 开始完整评测...");
+      
+      // 运行500场景自动化评测
+      const { runEvaluation } = await import("./inference/evaluator");
+      console.log("[FullEval] 运行500场景自动化评测...");
+      const autoEval = await runEvaluation(500);
+      
+      // 运行专家评估
+      const { runExpertEvaluation, generateExpertReportMarkdown } = await import("./inference/expertEvaluation");
+      const { getRandomScenarios } = await import("./inference/scenarios");
+      console.log("[FullEval] 运行10位AI专家评估...");
+      const sampleScenarios = getRandomScenarios(20);
+      const expertReport = await runExpertEvaluation(autoEval.metrics, sampleScenarios);
+      
+      // 生成综合报告
+      const combinedReport = {
+        timestamp: new Date().toISOString(),
+        automatedEvaluation: {
+          metrics: autoEval.metrics,
+          report: autoEval.markdownReport
+        },
+        expertEvaluation: {
+          report: expertReport,
+          markdownReport: generateExpertReportMarkdown(expertReport)
+        },
+        overallGrade: expertReport.grade,
+        overallScore: expertReport.overallScore,
+        summary: `小悦智能推断引擎完整评测完成。自动化测试覆盖${autoEval.metrics.totalScenarios}个场景，推断准确率${(autoEval.metrics.inferenceAccuracy * 100).toFixed(1)}%。10位AI专家综合评分${expertReport.overallScore.toFixed(2)}/10，评级${expertReport.grade}。`
+      };
+      
+      console.log(`[FullEval] 评测完成！综合评分：${expertReport.overallScore.toFixed(2)}，评级：${expertReport.grade}`);
+      
+      res.json(combinedReport);
+    } catch (error: any) {
+      console.error("Full evaluation error:", error);
+      res.status(500).json({ message: "Full evaluation failed", error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

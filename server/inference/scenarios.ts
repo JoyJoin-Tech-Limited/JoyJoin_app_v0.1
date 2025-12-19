@@ -598,3 +598,58 @@ export function generateRealisticScenario(persona: SimulatedUserProfile['persona
 
 // 导出生成的500个场景
 export const TEST_SCENARIOS = generateScenarios(500);
+
+// ============ 辅助函数 ============
+
+/**
+ * 获取场景统计信息
+ */
+export function getScenarioStats() {
+  const stats = {
+    total: TEST_SCENARIOS.length,
+    byPersona: {} as Record<string, number>,
+    byStyle: {} as Record<string, number>,
+    byFieldCoverage: {} as Record<string, number>,
+  };
+  
+  for (const scenario of TEST_SCENARIOS) {
+    // 按人设统计
+    const persona = scenario.profile.persona;
+    stats.byPersona[persona] = (stats.byPersona[persona] || 0) + 1;
+    
+    // 按语言风格统计
+    const style = scenario.profile.linguisticStyle;
+    stats.byStyle[style] = (stats.byStyle[style] || 0) + 1;
+    
+    // 按字段覆盖统计
+    for (const inf of scenario.expectedInferences) {
+      stats.byFieldCoverage[inf.field] = (stats.byFieldCoverage[inf.field] || 0) + 1;
+    }
+  }
+  
+  return stats;
+}
+
+/**
+ * 获取随机场景样本
+ */
+export function getRandomScenarios(count: number = 10): SimulatedScenario[] {
+  const shuffled = [...TEST_SCENARIOS].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(count, TEST_SCENARIOS.length));
+}
+
+/**
+ * 按条件筛选场景
+ */
+export function filterScenarios(options: {
+  persona?: SimulatedUserProfile['persona'];
+  style?: SimulatedUserProfile['linguisticStyle'];
+  hasField?: string;
+}): SimulatedScenario[] {
+  return TEST_SCENARIOS.filter(scenario => {
+    if (options.persona && scenario.profile.persona !== options.persona) return false;
+    if (options.style && scenario.profile.linguisticStyle !== options.style) return false;
+    if (options.hasField && !scenario.expectedInferences.some(i => i.field === options.hasField)) return false;
+    return true;
+  });
+}
