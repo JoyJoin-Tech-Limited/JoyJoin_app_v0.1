@@ -1110,14 +1110,32 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
   
   // "不是本科，是研究生" 模式
   {
-    id: 'contrast_education',
-    name: '对比说明学历',
+    id: 'contrast_education_masters',
+    name: '对比说明研究生学历',
     trigger: {
       type: 'keyword',
-      keywords: ['是研究生', '是硕士', '是博士', '读的研究生', '读的硕士']
+      keywords: ['是研究生', '是硕士', '读的研究生', '读的硕士', '念master', '读master', 
+                 '念硕士', '硕士在读', '研究生在读', 'master在读', '念的MBA', 'MBA', 
+                 '读MBA', 'EMBA', 'MPA', 'MSc', 'MA学位', '硕士学位']
     },
     infers: [
-      { field: 'educationLevel', value: '研究生', confidence: 0.90 }
+      { field: 'education', value: '研究生', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 10
+  },
+  
+  // 博士学历识别
+  {
+    id: 'education_phd',
+    name: '博士学历识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['是博士', '读博', '博士在读', '博士生', 'PhD', 'Ph.D', '读的博士', 
+                 '念博士', '博士学位', 'CS PhD', '读PhD', '念PhD', 'doctoral']
+    },
+    infers: [
+      { field: 'education', value: '博士', confidence: 0.92 }
     ],
     excludePatterns: [],
     priority: 10
@@ -1153,6 +1171,182 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
     excludePatterns: [],
     priority: 9,
     ignoreTemporal: true  // 海归相关表达，不受过去时态影响
+  },
+  
+  // ============ 性别识别 ============
+  
+  // "30岁，男" 模式
+  {
+    id: 'gender_male_with_age',
+    name: '年龄+男性',
+    trigger: {
+      type: 'keyword',
+      keywords: ['岁，男', '岁,男', '岁, 男', '岁，男生', '岁，男的', '男，', '，男', 
+                 '男生', '男的', '小哥', '先生', '老公', '男朋友', '老婆总说我']
+    },
+    infers: [
+      { field: 'gender', value: '男', confidence: 0.90 }
+    ],
+    excludePatterns: ['女朋友'],
+    priority: 8
+  },
+  
+  // "28岁，女" 模式
+  {
+    id: 'gender_female_with_age',
+    name: '年龄+女性',
+    trigger: {
+      type: 'keyword',
+      keywords: ['岁，女', '岁,女', '岁, 女', '岁，女生', '岁，女的', '女，', '，女',
+                 '女生', '女的', '小姐姐', '姐姐', '女士', '老婆', '女朋友', '老公总说我']
+    },
+    infers: [
+      { field: 'gender', value: '女', confidence: 0.90 }
+    ],
+    excludePatterns: ['男朋友'],
+    priority: 8
+  },
+  
+  // ============ 隐含学生状态 ============
+  
+  // "室友都在准备考研" - 隐含还在读书
+  {
+    id: 'implicit_student_roommate',
+    name: '室友暗示学生',
+    trigger: {
+      type: 'keyword',
+      keywords: ['室友', '舍友', '宿舍', '同学都在', '一起上课', '同班同学', 
+                 '准备考研', '考研中', '在考研', '准备期末', '期末考', '毕业论文']
+    },
+    infers: [
+      { field: 'lifeStage', value: '学生党', confidence: 0.88 }
+    ],
+    excludePatterns: ['以前的室友', '以前的同学'],
+    priority: 8
+  },
+  
+  // ============ 大学→城市映射 ============
+  
+  // 复旦大学→上海
+  {
+    id: 'university_fudan_shanghai',
+    name: '复旦→上海',
+    trigger: {
+      type: 'keyword',
+      keywords: ['Fudan', '复旦', '复旦大学', '在复旦', 'fudan']
+    },
+    infers: [
+      { field: 'city', value: '上海', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 北大/清华→北京
+  {
+    id: 'university_beijing',
+    name: '北大清华→北京',
+    trigger: {
+      type: 'keyword',
+      keywords: ['北大', '北京大学', '清华', '清华大学', 'Tsinghua', 'PKU', 'Peking']
+    },
+    infers: [
+      { field: 'city', value: '北京', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 浙大→杭州
+  {
+    id: 'university_zju_hangzhou',
+    name: '浙大→杭州',
+    trigger: {
+      type: 'keyword',
+      keywords: ['浙大', '浙江大学', 'ZJU', 'Zhejiang University']
+    },
+    infers: [
+      { field: 'city', value: '杭州', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 科技公司→行业 ============
+  
+  // Google等大厂→互联网/科技
+  {
+    id: 'tech_company_industry',
+    name: '科技公司→行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['在Google', 'Google工作', '在Facebook', '在Meta', '在Apple', '在微软',
+                 '在Amazon', '在Netflix', '在Uber', '在阿里', '在腾讯', '在字节',
+                 '在百度', '在华为', '在美团', '在滴滴', '在京东', 'FAANG', 'BAT',
+                 '在ByteDance', '在TikTok']
+    },
+    infers: [
+      { field: 'industry', value: '互联网/科技', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 9,
+    ignoreTemporal: true  // 曾经在大厂工作仍然表示科技行业背景
+  },
+  
+  // ============ 自媒体→行业 ============
+  
+  // 自媒体→媒体/传播
+  {
+    id: 'industry_media',
+    name: '自媒体→媒体行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['做自媒体', '自媒体', '靠自媒体', '写公众号', '公众号', '博主',
+                 '视频博主', 'YouTuber', 'up主', 'B站', '小红书博主', '抖音博主',
+                 '内容创作', '新媒体', '短视频', '直播', '带货']
+    },
+    infers: [
+      { field: 'industry', value: '媒体/传播', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 设计→行业 ============
+  
+  // product design→设计/创意
+  {
+    id: 'industry_design',
+    name: '设计→创意行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['product design', 'UI设计', 'UX设计', '做设计', '设计师', '美术',
+                 '平面设计', '交互设计', '视觉设计', '品牌设计', 'design', 'designer',
+                 '创意总监', 'creative', '插画', '摄影师']
+    },
+    infers: [
+      { field: 'industry', value: '设计/创意', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 职场新人 ============
+  
+  // "刚回国一年" "刚工作一年"
+  {
+    id: 'career_newcomer',
+    name: '职场新人识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['刚回国一年', '刚工作一年', '工作一年', '刚工作', '毕业一年', 
+                 '毕业后一年', '第一份工作', '刚入职', '实习转正', '刚转正']
+    },
+    infers: [
+      { field: 'lifeStage', value: '职场新人', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
   }
 ];
 
