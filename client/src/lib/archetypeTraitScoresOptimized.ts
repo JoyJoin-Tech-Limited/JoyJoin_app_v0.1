@@ -43,14 +43,14 @@ import type { TraitScores } from './archetypeTraitScores';
 export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
   // ========== 高能量区（需提高匹配门槛）==========
   
-  // 开心柯基: 极致外向 + 极低C（更极端）
+  // 开心柯基: V6.9提高匹配率（3.3%→8%）
   "开心柯基": {
-    affinity: 65,
-    openness: 60,
-    conscientiousness: 30,  // V6: 更低，提高门槛
-    emotionalStability: 50,
-    extraversion: 100,      // 极致外向
-    positivity: 95,
+    affinity: 60,
+    openness: 55,
+    conscientiousness: 42,
+    emotionalStability: 55,
+    extraversion: 85,       // V6.9: 进一步降低门槛
+    positivity: 82,         // V6.9: 进一步降低门槛
   },
   
   // 太阳鸡: 最终门槛（V6.7）
@@ -63,14 +63,14 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 95,         // V6.7: 更极端
   },
   
-  // 夸夸豚: 更极致A+P+X（V6.5提高门槛）
+  // 夸夸豚: V6.9提高匹配率（2.2%→8%）
   "夸夸豚": {
-    affinity: 100,          // V6: 极致
-    openness: 40,           // V6.5: 进一步降低
-    conscientiousness: 35,  // V6.5: 进一步降低
-    emotionalStability: 55,
-    extraversion: 82,       // V6.5: 需要更高外向
-    positivity: 100,        // V6: 极致
+    affinity: 88,           // V6.9: 降低门槛
+    openness: 42,
+    conscientiousness: 42,
+    emotionalStability: 58,
+    extraversion: 72,       // V6.9: 降低门槛
+    positivity: 90,         // V6.9: 降低门槛
   },
   
   // 机智狐: 中等门槛（V6.2平衡）
@@ -85,24 +85,24 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
 
   // ========== 中能量区 ==========
   
-  // 淡定海豚: 保持高C+E，低X（V6.7恢复+微调）
+  // 淡定海豚: V6.9提高门槛（降低17%→8%）
   "淡定海豚": {
     affinity: 55,
-    openness: 50,
-    conscientiousness: 90,  // 保持高C
-    emotionalStability: 90, // 保持高E
-    extraversion: 35,
-    positivity: 65,
+    openness: 48,
+    conscientiousness: 95,  // V6.9: 更极端
+    emotionalStability: 95, // V6.9: 更极端
+    extraversion: 30,       // V6.9: 更极端
+    positivity: 62,
   },
   
-  // 织网蛛: 需要极致O+A（提高门槛）
+  // 织网蛛: V6.9提高门槛（降低17%→8%）
   "织网蛛": {
-    affinity: 95,           // V6: 极致
-    openness: 100,          // V6: 极致
-    conscientiousness: 48,
-    emotionalStability: 45, // V6: 降低
-    extraversion: 55,
-    positivity: 55,
+    affinity: 98,           // V6.9: 极致
+    openness: 100,          // 保持极致
+    conscientiousness: 42,  // V6.9: 降低
+    emotionalStability: 38, // V6.9: 更极端
+    extraversion: 60,       // V6.9: 提高
+    positivity: 48,
   },
   
   // 暖心熊: 提高门槛（V6.6最终）
@@ -115,26 +115,26 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 88,         // V6.6: 更极端
   },
   
-  // 灵感章鱼: 更接近中心（降低门槛）
+  // 灵感章鱼: V6.9适应O覆盖增加
   "灵感章鱼": {
     affinity: 50,
-    openness: 80,           // V6: 从98降低
-    conscientiousness: 45,  // V6: 从32提高
-    emotionalStability: 45, // V6: 从35提高
-    extraversion: 45,       // V6: 更接近中心
-    positivity: 65,
+    openness: 92,           // V6.9: 提高O门槛
+    conscientiousness: 42,
+    emotionalStability: 42,
+    extraversion: 48,
+    positivity: 62,
   },
 
   // ========== 低能量区 (V6.7恢复) ==========
   
-  // 沉思猫头鹰: 最终门槛（V6.7）
+  // 沉思猫头鹰: V6.9适应O覆盖增加
   "沉思猫头鹰": {
     affinity: 44,
-    openness: 66,           // V6.7: 微调
-    conscientiousness: 68,  // V6.7: 微调
-    emotionalStability: 66,
-    extraversion: 34,
-    positivity: 50,
+    openness: 85,           // V6.9: 提高O门槛
+    conscientiousness: 72,
+    emotionalStability: 68,
+    extraversion: 32,
+    positivity: 48,
   },
   
   // 定心大象: 保持极致C+E
@@ -149,14 +149,14 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
 
   // ========== 超低能量区 (V6.7恢复) ==========
   
-  // 稳如龟: 保持现有配置
+  // 稳如龟: V6.9提高门槛（降低14%→8%）
   "稳如龟": {
     affinity: 48,
-    openness: 52,
-    conscientiousness: 70,
-    emotionalStability: 85,
-    extraversion: 28,
-    positivity: 42,
+    openness: 45,           // V6.9: 降低
+    conscientiousness: 78,  // V6.9: 提高
+    emotionalStability: 92, // V6.9: 更极端
+    extraversion: 22,       // V6.9: 更极端
+    positivity: 38,
   },
   
   // 隐身猫: 提高门槛（V6.5调整）
