@@ -279,8 +279,40 @@ export async function refundCoins(
 // ============ 连击系统 ============
 
 /**
- * 更新活动连击
- * @returns 新的连击天数和是否触发连击奖励
+ * 获取ISO周数
+ */
+function getISOWeekNumber(date: Date): { year: number; week: number } {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const weekNumber = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return { year: d.getFullYear(), week: weekNumber };
+}
+
+/**
+ * 计算两个日期之间的周数差
+ */
+function getWeeksDiff(date1: Date, date2: Date): number {
+  const week1 = getISOWeekNumber(date1);
+  const week2 = getISOWeekNumber(date2);
+  
+  if (week1.year === week2.year) {
+    return Math.abs(week1.week - week2.week);
+  }
+  
+  // 跨年计算
+  const weeksInYear1 = getISOWeekNumber(new Date(week1.year, 11, 28)).week;
+  if (week2.year > week1.year) {
+    return (weeksInYear1 - week1.week) + week2.week + (week2.year - week1.year - 1) * 52;
+  } else {
+    return (week1.week) + (weeksInYear1 - week2.week) + (week1.year - week2.year - 1) * 52;
+  }
+}
+
+/**
+ * 更新活动连击（按周计算）
+ * @returns 新的连击周数和是否触发连击奖励
  */
 export async function updateActivityStreak(
   userId: string
@@ -288,6 +320,8 @@ export async function updateActivityStreak(
   newStreak: number; 
   streakBonus?: { xp: number; coins: number; milestone: string };
   usedFreezeCard: boolean;
+  streakBroken: boolean;
+  previousStreak: number;
 }> {
   try {
     const [user] = await db
@@ -300,34 +334,37 @@ export async function updateActivityStreak(
       .where(eq(users.id, userId));
 
     if (!user) {
-      return { newStreak: 0, usedFreezeCard: false };
+      return { newStreak: 0, usedFreezeCard: false, streakBroken: false, previousStreak: 0 };
     }
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
     const lastActivity = user.lastActivityDate ? new Date(user.lastActivityDate) : null;
     const currentStreak = user.activityStreak || 0;
     let newStreak = currentStreak;
     let usedFreezeCard = false;
+    let streakBroken = false;
+    const previousStreak = currentStreak;
 
     if (lastActivity) {
-      lastActivity.setHours(0, 0, 0, 0);
-      const daysDiff = Math.floor((today.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24));
+      const weeksDiff = getWeeksDiff(lastActivity, today);
+      const thisWeek = getISOWeekNumber(today);
+      const lastWeek = getISOWeekNumber(lastActivity);
+      const isSameWeek = thisWeek.year === lastWeek.year && thisWeek.week === lastWeek.week;
       
-      if (daysDiff === 0) {
-        // 同一天，不增加连击
-        return { newStreak: currentStreak, usedFreezeCard: false };
-      } else if (daysDiff <= 7) {
-        // 一周内有活动，连击+1
+      if (isSameWeek) {
+        // 同一周内再次参加活动，不增加连击
+        return { newStreak: currentStreak, usedFreezeCard: false, streakBroken: false, previousStreak };
+      } else if (weeksDiff === 1) {
+        // 连续周参加活动，连击+1
         newStreak = currentStreak + 1;
-      } else if (daysDiff <= 14 && user.streakFreezeAvailable) {
-        // 超过一周但两周内，使用冻结卡
+      } else if (weeksDiff === 2 && user.streakFreezeAvailable) {
+        // 跳过一周但有冻结卡，使用冻结卡保持连击
         newStreak = currentStreak + 1;
         usedFreezeCard = true;
       } else {
         // 连击断了，重置为1
         newStreak = 1;
+        streakBroken = currentStreak > 0;
       }
     } else {
       // 首次活动
@@ -345,7 +382,7 @@ export async function updateActivityStreak(
       })
       .where(eq(users.id, userId));
 
-    // 检查连击里程碑奖励
+    // 检查连击里程碑奖励（3周、6周、12周）
     let streakBonus: { xp: number; coins: number; milestone: string } | undefined;
     
     if (newStreak === 3) {
@@ -361,10 +398,10 @@ export async function updateActivityStreak(
       await awardXPAndCoins(userId, streakBonus.milestone);
     }
 
-    return { newStreak, streakBonus, usedFreezeCard };
+    return { newStreak, streakBonus, usedFreezeCard, streakBroken, previousStreak };
   } catch (error) {
     console.error("Error updating streak:", error);
-    return { newStreak: 0, usedFreezeCard: false };
+    return { newStreak: 0, usedFreezeCard: false, streakBroken: false, previousStreak: 0 };
   }
 }
 
