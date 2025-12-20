@@ -828,6 +828,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's expiring coupons (within specified days)
+  app.get('/api/user/coupons/expiring', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const withinDays = parseInt(req.query.days as string) || 7; // Default: 7 days
+      
+      const coupons = await storage.getUserCoupons(userId);
+      const now = new Date();
+      const thresholdDate = new Date(now.getTime() + withinDays * 24 * 60 * 60 * 1000);
+      
+      // Filter coupons that are:
+      // 1. Not yet used
+      // 2. Have a valid_until date
+      // 3. Will expire within the threshold
+      // 4. Not already expired
+      const expiringCoupons = coupons.filter((coupon: any) => {
+        if (coupon.is_used) return false;
+        if (!coupon.valid_until) return false;
+        
+        const validUntil = new Date(coupon.valid_until);
+        return validUntil > now && validUntil <= thresholdDate;
+      }).map((coupon: any) => {
+        const validUntil = new Date(coupon.valid_until);
+        const daysRemaining = Math.ceil((validUntil.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+        // Normalize to camelCase for frontend consistency
+        return {
+          id: coupon.id,
+          code: coupon.code,
+          discountType: coupon.discount_type,
+          discountValue: coupon.discount_value,
+          validFrom: coupon.valid_from,
+          validUntil: coupon.valid_until,
+          isUsed: coupon.is_used,
+          source: coupon.source,
+          daysRemaining,
+          isUrgent: daysRemaining <= 3, // Mark as urgent if expiring within 3 days
+        };
+      });
+      
+      res.json({
+        expiringCoupons,
+        totalExpiring: expiringCoupons.length,
+        urgentCount: expiringCoupons.filter((c: any) => c.isUrgent).length,
+      });
+    } catch (error) {
+      console.error("Error fetching expiring coupons:", error);
+      res.status(500).json({ message: "Failed to fetch expiring coupons" });
+    }
+  });
+
   // ============ 游戏化等级系统 API ============
   
   // Get user gamification info (level, XP, coins, streak)
