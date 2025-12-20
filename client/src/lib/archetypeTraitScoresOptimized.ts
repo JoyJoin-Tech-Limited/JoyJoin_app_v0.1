@@ -53,14 +53,14 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 82,         // V6.9: 进一步降低门槛
   },
   
-  // 太阳鸡: 最终门槛（V6.7）
+  // 太阳鸡: V6.9降低门槛（3.9%→6%）
   "太阳鸡": {
-    affinity: 85,
-    openness: 30,           // V6.7: 更极端
-    conscientiousness: 100, // 极致
-    emotionalStability: 100,// 极致
-    extraversion: 92,       // V6.7: 更高门槛
-    positivity: 95,         // V6.7: 更极端
+    affinity: 82,
+    openness: 35,
+    conscientiousness: 92,  // V6.9: 略降低
+    emotionalStability: 95,
+    extraversion: 85,       // V6.9: 降低门槛
+    positivity: 88,
   },
   
   // 夸夸豚: V6.9提高匹配率（2.2%→8%）
@@ -85,14 +85,14 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
 
   // ========== 中能量区 ==========
   
-  // 淡定海豚: V6.9提高门槛（降低17%→8%）
+  // 淡定海豚: V6.9区分策略 - 强调A/O，提高门槛
   "淡定海豚": {
-    affinity: 55,
-    openness: 48,
-    conscientiousness: 95,  // V6.9: 更极端
-    emotionalStability: 95, // V6.9: 更极端
-    extraversion: 30,       // V6.9: 更极端
-    positivity: 62,
+    affinity: 78,           // V6.9: 更极端A
+    openness: 62,           // V6.9: 更极端O
+    conscientiousness: 85,
+    emotionalStability: 88,
+    extraversion: 28,       // V6.9: 更低X
+    positivity: 72,
   },
   
   // 织网蛛: V6.9提高门槛（降低17%→8%）
@@ -105,14 +105,14 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 48,
   },
   
-  // 暖心熊: 提高门槛（V6.6最终）
+  // 暖心熊: V6.9降低门槛（3.3%→6%）
   "暖心熊": {
-    affinity: 95,           // V6.6: 更极端
-    openness: 45,
-    conscientiousness: 52,
-    emotionalStability: 82, // V6.6: 更极端
-    extraversion: 32,
-    positivity: 88,         // V6.6: 更极端
+    affinity: 85,           // V6.9: 略降低
+    openness: 48,
+    conscientiousness: 55,
+    emotionalStability: 78,
+    extraversion: 35,
+    positivity: 82,
   },
   
   // 灵感章鱼: V6.9适应O覆盖增加
@@ -137,14 +137,14 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 48,
   },
   
-  // 定心大象: 保持极致C+E
+  // 定心大象: V6.9区分策略 - 强调C/X维度
   "定心大象": {
-    affinity: 52,
-    openness: 38,
-    conscientiousness: 95,
+    affinity: 48,           // V6.9: 降低A（与淡定海豚区分）
+    openness: 35,           // V6.9: 降低O
+    conscientiousness: 95,  // V6.9: 极致C
     emotionalStability: 92,
-    extraversion: 30,
-    positivity: 52,
+    extraversion: 38,       // V6.9: 提高X（决断协调）
+    positivity: 55,
   },
 
   // ========== 超低能量区 (V6.7恢复) ==========

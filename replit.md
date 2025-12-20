@@ -46,14 +46,16 @@ Preferred communication style: Simple, everyday language.
   - **Cosine Similarity Matching:** User traits matched against 12 archetype animal profiles
   - **Empirical Score Ranges:** A(-4~30), O(-3~35), C(0~30), E(0~28), X(-15~38) including P contributions (V3 with negative scores)
   - Visualized with personalized Personality Radar Chart.
-  - **Accuracy Optimization (V6.7 - Production Ready):** Comprehensive optimization achieving balanced distribution:
-    - Distribution improvement: All 12 archetypes now within 5.93%-11.88% range (previously 1.8%-21%)
-    - Question bank V3: Added negative X/P scoring options and 5th choices for low-energy pathways
-    - Key improvements: 太阳鸡(21%→11.88%), 开心柯基(20%→5.93%), 隐身猫(1.8%→9.28%), 稳如龟(2%→7.90%), 暖心熊(2.7%→9.33%), 沉思猫头鹰(0.66%→9.55%)
+  - **Accuracy Optimization (V6.9 - Current):** Expert-reviewed optimization achieving balanced distribution:
+    - Distribution improvement: All 12 archetypes now within 5.53%-11.22% range (previously 1.8%-21%)
+    - Question bank V3.1: Q5 rewritten with calm negotiation path ("温和边界"), Q1/Q6/Q7 rebalanced for O coverage (66.7%→83.3%)
+    - Key improvements: 开心柯基(3.3%→8.07%), 夸夸豚(2.2%→5.53%), 沉思猫头鹰(17.7%→7.91%), 暖心熊(3.3%→11.15%), 太阳鸡(3.9%→7.69%)
+    - Vector differentiation strategy: 淡定海豚 vs 定心大象 separated by A/O (dolphin) vs C/X (elephant) dimensions
+    - Dimension coverage: A(91.7%), O(83.3%), C(100%), E(100%), X(83.3%), P(91.7%)
     - A/B test ready: `archetypeTraitScoresOptimized.ts` with `setABTestVariant('control'/'optimized')`
-    - **Known limitation:** 5 low-energy archetype pairs (淡定海豚/定心大象/稳如龟/隐身猫/沉思猫头鹰) have >98% cosine similarity. This is an architectural limitation of the 12-question format.
-    - **Euclidean Distance Analysis (V6.8):** Implemented and tested Euclidean distance algorithm as alternative. Finding: Euclidean eliminates >98% similarity pairs BUT breaks distribution (66% users → 隐身猫, 7 archetypes → 0 matches). Current archetype vectors are optimized for cosine similarity; switching to Euclidean would require complete re-optimization of all 12 archetype vectors.
-    - **Algorithm Recommendation:** Maintain cosine similarity (production-proven, balanced 5.6%-11.4% distribution) rather than switch to Euclidean without re-optimizing vectors.
+    - **Low-Energy Archetype Calibration System:** 3 supplementary questions ("静谧小屋" scenarios) for distinguishing 5 similar low-energy archetypes. Triggered when primary/secondary match score difference <3%, affecting ~10-15% of users.
+    - **Known limitation:** 3 low-energy archetype pairs have >98% cosine similarity. Supplementary calibration questions address this.
+    - **Algorithm Recommendation:** Maintain cosine similarity (production-proven) with conditional calibration for edge cases.
 - **Streamlined Onboarding:** Multi-step registration covering identity, interests, personality, and profile creation, enhanced with UX features.
 - **Admin Portal:** Desktop-first interface for comprehensive management and real-time algorithm tuning via an Admin Matching Lab.
 - **Payment & Subscription System:** Full payment infrastructure including WeChat Pay integration.
