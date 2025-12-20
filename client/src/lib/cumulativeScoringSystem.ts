@@ -17,6 +17,15 @@
 
 import { TraitScores as OptionTraits } from '@/data/personalityQuestionsV2';
 import { TraitScores, archetypeTraitScores } from './archetypeTraitScores';
+import { archetypeTraitScoresOptimized, getABTestVariant, type ABTestVariant } from './archetypeTraitScoresOptimized';
+
+/**
+ * 获取当前A/B测试使用的原型分数
+ */
+function getCurrentArchetypeScores(): Record<string, TraitScores> {
+  const variant = getABTestVariant();
+  return variant === 'optimized' ? archetypeTraitScoresOptimized : archetypeTraitScores;
+}
 
 export interface AccumulatedScores {
   A: number;  // 亲和力
@@ -201,12 +210,14 @@ function archetypeToVector(traits: TraitScores): number[] {
 
 /**
  * 使用余弦相似度匹配最接近的原型
+ * 支持A/B测试，根据当前变体选择原型分数
  */
 export function matchArchetypes(normalizedScores: NormalizedScores): ArchetypeMatch[] {
   const userVector = scoresToVector(normalizedScores);
   const matches: ArchetypeMatch[] = [];
+  const currentArchetypes = getCurrentArchetypeScores();
   
-  for (const [archetype, traits] of Object.entries(archetypeTraitScores)) {
+  for (const [archetype, traits] of Object.entries(currentArchetypes)) {
     const archetypeVector = archetypeToVector(traits);
     const similarity = cosineSimilarity(userVector, archetypeVector);
     

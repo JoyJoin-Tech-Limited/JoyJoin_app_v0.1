@@ -5,6 +5,11 @@
 
 import { personalityQuestionsV2, TraitScores } from '../client/src/data/personalityQuestionsV2';
 import { archetypeTraitScores } from '../client/src/lib/archetypeTraitScores';
+import { archetypeTraitScoresOptimized } from '../client/src/lib/archetypeTraitScoresOptimized';
+
+type VariantType = 'control' | 'optimized';
+const VARIANT: VariantType = (process.argv[2] as VariantType) || 'control';
+const activeArchetypes = VARIANT === 'optimized' ? archetypeTraitScoresOptimized : archetypeTraitScores;
 
 const SCORE_RANGE = {
   A: { min: 0, max: 32 },
@@ -66,7 +71,7 @@ function findBestArchetype(normalizedScores: { A: number; O: number; C: number; 
   let secondMatch = '';
   let secondSimilarity = -1;
   
-  for (const [name, traits] of Object.entries(archetypeTraitScores)) {
+  for (const [name, traits] of Object.entries(activeArchetypes)) {
     const archetypeVector = [
       traits.affinity,
       traits.openness,
@@ -132,7 +137,7 @@ function runSimulation(numUsers: number) {
     
     const userVector = [normalized.A, normalized.O, normalized.C, normalized.E, normalized.X];
     let similarities: { name: string; sim: number }[] = [];
-    for (const [name, traits] of Object.entries(archetypeTraitScores)) {
+    for (const [name, traits] of Object.entries(activeArchetypes)) {
       const archetypeVector = [
         traits.affinity,
         traits.openness,
@@ -157,7 +162,7 @@ function calculateStdDev(values: number[], mean: number): number {
 }
 
 function analyzeArchetypeSimilarity() {
-  const archetypes = Object.entries(archetypeTraitScores);
+  const archetypes = Object.entries(activeArchetypes);
   const similarityMatrix: Record<string, Record<string, number>> = {};
   
   for (const [name1, traits1] of archetypes) {
@@ -205,12 +210,12 @@ function analyzeQuestionCoverage() {
 }
 
 console.log('='.repeat(80));
-console.log('性格测试精准度分析报告');
+console.log(`性格测试精准度分析报告 [${VARIANT === 'optimized' ? '优化组' : '对照组'}]`);
 console.log('='.repeat(80));
 
 console.log('\n## 1. 12原型相似度矩阵分析\n');
 const similarityMatrix = analyzeArchetypeSimilarity();
-const archetypeNames = Object.keys(archetypeTraitScores);
+const archetypeNames = Object.keys(activeArchetypes);
 
 console.log('高相似度原型对（>0.98，可能难以区分）:');
 const highSimilarityPairs: { pair: string; similarity: number }[] = [];
