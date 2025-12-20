@@ -56,7 +56,7 @@ Preferred communication style: Simple, everyday language.
     - **Low-Energy Archetype Calibration System (V6.8 - Integrated):** 3 supplementary questions ("静谧小屋" scenarios) for distinguishing 5 similar low-energy archetypes (淡定海豚/定心大象/稳如龟/隐身猫/沉思猫头鹰). Triggered when primary/secondary match score difference <3%, affecting ~10-15% of users. Now fully integrated into PersonalityTestPage.tsx with proper UI flow and score merging.
     - **Known limitation:** 3 low-energy archetype pairs have >98% cosine similarity. Supplementary calibration questions address this.
     - **Algorithm Recommendation:** Maintain cosine similarity (production-proven) with conditional calibration for edge cases.
-- **Streamlined Onboarding:** Multi-step registration covering identity, interests, personality, and profile creation, enhanced with UX features.
+- **AI-First Onboarding (小悦对话注册):** Registration defaults to AI-powered conversational flow with character-based AI (小悦). Traditional form registration available at `/registration/form` as fallback. Multi-step flow covering identity, interests, personality, and profile creation.
 - **Admin Portal:** Desktop-first interface for comprehensive management and real-time algorithm tuning via an Admin Matching Lab.
 - **Payment & Subscription System:** Full payment infrastructure including WeChat Pay integration.
 - **Intelligent Venue Matching & Booking:** Algorithm-based venue scoring and a transactional booking system.
