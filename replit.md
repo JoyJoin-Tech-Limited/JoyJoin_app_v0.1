@@ -34,7 +34,10 @@ Preferred communication style: Simple, everyday language.
 - **Admin Authorization:** `isAdmin` flag for portal access.
 
 ### System Features & Design Decisions
-- **Two-Stage Event Pool Matching Model:** Admin defines event pools with hard constraints; users register with soft preferences. An AI-driven, 5-dimensional algorithm (personality, interest, background, conversation, intent) matches users within pools, incorporating a 12-Archetype Animal Social Vibe System and a real-time dynamic matching service.
+- **Two-Stage Event Pool Matching Model:** Admin defines event pools with hard constraints; users register with soft preferences. An AI-driven, 6-dimensional algorithm matches users within pools, incorporating a 12-Archetype Animal Social Vibe System and a real-time dynamic matching service.
+  - **6-Dimension Matching Algorithm:** Personality (25%), Interests (25%), Intent (15%), Background (15%), Culture (10%), Conversation Signature (10%)
+  - **Conversation Signature Integration:** AI-inferred user traits from chat registration enhance matching beyond structured data. Fields stored: conversationMode, primaryLinguisticStyle, conversationEnergy (0-100), negationReliability (0-1), inferredTraits (JSONB), inferenceConfidence (0-1)
+  - **Key Files:** `server/userMatchingService.ts`, `server/inference/conversationSignature.ts`
 - **AI-Driven Matchmaking:** Utilizes AI for sophisticated event and people matching, focusing on personality, interests, and group dynamics, with explainable results and a deep feedback system.
 - **Two-Tier Feedback Architecture:** Collects both basic and optional anonymous deep feedback to continuously refine matching algorithms.
 - **Gamified Personality Assessment:** A 10-question test determines social role archetypes, visualized with a Personality Radar Chart, requiring re-assessment for the new 12-archetype system.
@@ -64,7 +67,7 @@ Preferred communication style: Simple, everyday language.
   - **Intelligent Inference Engine:** Hybrid microkernel architecture that eliminates redundant questions by inferring user attributes from conversation context. Features include:
     - **4-Layer Architecture:** Semantic Matcher (fast pattern matching) → LLM Reasoner (complex inference) → Knowledge Graph (entity recognition) → State Manager (session tracking)
     - **Confidence-Based Actions:** ≥85% confidence skips questions, 60-85% uses confirmation prompts, <60% asks normally
-    - **Semantic Matcher:** 70+ quick inference rules covering implicit expressions, Cantonese dialect, Chinese-English mixing, negative/turnaround patterns, gender detection, university→city mapping, hospital→city mapping, full-time parent detection, retiree signals, and industry inference. Uses `ignoreTemporal` flag for returnee/turnaround rules to bypass past-tense filtering. **100% accuracy (A+)** on 1000 scenarios across all 10 personas and 5 linguistic styles.
+    - **Semantic Matcher:** 70+ quick inference rules covering implicit expressions, Cantonese dialect, Chinese-English mixing, negative/turnaround patterns, gender detection, university→city mapping, hospital→city mapping, full-time parent detection, retiree signals, and industry inference. Uses `ignoreTemporal` flag for returnee/turnaround rules to bypass past-tense filtering. **100% accuracy (A+)** on 30,000+ scenarios across 9 linguistic styles including double negation, hypothetical language, third-person detection, and multi-turn contradictions.
     - **Knowledge Graph:** 60+ companies, 30+ schools, 40+ cities with industry/city inference chains
     - **LLM Chain-of-Thought Reasoner:** DeepSeek-powered fallback for ambiguous cases with structured JSON output
     - **1000 Test Scenarios:** Evaluation framework with 10 personas (entrepreneur, student, corporate, returnee, freelancer, homemaker, jobSeeker, healthcare, creative, retiree) × 5 linguistic styles (direct, implicit, negative, dialect, mixed) × 20 variations for comprehensive quality assurance

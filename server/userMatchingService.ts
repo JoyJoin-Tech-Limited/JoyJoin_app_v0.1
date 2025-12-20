@@ -5,6 +5,7 @@
 
 import type { User } from '@shared/schema';
 import { getChemistryScore, calculateGroupChemistry, type ArchetypeName } from './archetypeChemistry';
+import { calculateSignatureSimilarity, type ConversationSignature } from './inference/conversationSignature';
 
 // 匹配配置接口
 export interface MatchingWeights {
@@ -13,15 +14,17 @@ export interface MatchingWeights {
   intentWeight: number;         // 意图匹配权重 (0-100)
   backgroundWeight: number;     // 背景多样性权重 (0-100)
   cultureWeight: number;        // 文化语言权重 (0-100)
+  conversationSignatureWeight: number; // 对话签名权重 (0-100) - 第6维度
 }
 
-// 默认权重配置
+// 默认权重配置 (6维度)
 export const DEFAULT_WEIGHTS: MatchingWeights = {
-  personalityWeight: 30,
-  interestsWeight: 25,
-  intentWeight: 20,
-  backgroundWeight: 15,
-  cultureWeight: 10,
+  personalityWeight: 25,        // 原30% → 25%
+  interestsWeight: 25,          // 不变
+  intentWeight: 15,             // 原20% → 15%
+  backgroundWeight: 15,         // 不变
+  cultureWeight: 10,            // 不变
+  conversationSignatureWeight: 10, // 新增第6维度 10%
 };
 
 // 用户匹配分数接口
@@ -33,6 +36,7 @@ export interface UserMatchScore {
   intentScore: number;        // 意图匹配分数
   backgroundScore: number;    // 背景多样性分数
   cultureScore: number;       // 文化语言分数
+  conversationSignatureScore: number; // 对话签名分数 - 第6维度
   chemistryScore: number;     // 化学反应分数（基于原型）
   matchPoints: string[];      // 匹配点（用于解释）
 }
@@ -236,6 +240,45 @@ function calculateCultureScore(user1: Partial<User>, user2: Partial<User>): numb
 }
 
 /**
+ * 从用户对象中提取对话签名
+ */
+function getUserConversationSignature(user: Partial<User>): ConversationSignature | null {
+  // 检查用户是否有对话签名数据 - 至少需要一个字段存在
+  const hasConversationMode = user.conversationMode !== undefined && user.conversationMode !== null;
+  const hasLinguisticStyle = user.primaryLinguisticStyle !== undefined && user.primaryLinguisticStyle !== null;
+  const hasConversationEnergy = user.conversationEnergy !== undefined && user.conversationEnergy !== null;
+  
+  if (!hasConversationMode && !hasLinguisticStyle && !hasConversationEnergy) {
+    return null;
+  }
+  
+  // 使用nullish coalescing避免将0值误转为默认值
+  return {
+    conversationMode: (user.conversationMode as ConversationSignature['conversationMode']) ?? 'standard',
+    primaryLinguisticStyle: (user.primaryLinguisticStyle as ConversationSignature['primaryLinguisticStyle']) ?? 'direct',
+    conversationEnergy: user.conversationEnergy ?? 50,
+    negationReliability: user.negationReliability !== undefined && user.negationReliability !== null 
+      ? parseFloat(String(user.negationReliability)) 
+      : 0.8,
+    inferredTraits: (user.inferredTraits as Record<string, string | number | boolean>) ?? {},
+    inferenceConfidence: user.inferenceConfidence !== undefined && user.inferenceConfidence !== null 
+      ? parseFloat(String(user.inferenceConfidence)) 
+      : 0.5,
+  };
+}
+
+/**
+ * 计算两个用户之间的对话签名相似度分数
+ * 第6维度 - 基于AI对话中提取的特征向量
+ */
+function calculateConversationSignatureScore(user1: Partial<User>, user2: Partial<User>): number {
+  const sig1 = getUserConversationSignature(user1);
+  const sig2 = getUserConversationSignature(user2);
+  
+  return calculateSignatureSimilarity(sig1, sig2);
+}
+
+/**
  * 计算两个用户之间的综合匹配分数
  */
 export function calculateUserMatchScore(
@@ -248,14 +291,16 @@ export function calculateUserMatchScore(
   const intentScore = calculateIntentScore(user1, user2);
   const backgroundScore = calculateBackgroundScore(user1, user2);
   const cultureScore = calculateCultureScore(user1, user2);
+  const conversationSignatureScore = calculateConversationSignatureScore(user1, user2);
   
-  // 计算加权总分
+  // 计算加权总分 (6维度)
   const overallScore = Math.round(
     (personalityScore * weights.personalityWeight +
      interestsScore * weights.interestsWeight +
      intentScore * weights.intentWeight +
      backgroundScore * weights.backgroundWeight +
-     cultureScore * weights.cultureWeight) / 100
+     cultureScore * weights.cultureWeight +
+     conversationSignatureScore * weights.conversationSignatureWeight) / 100
   );
   
   // 生成匹配点
@@ -289,6 +334,9 @@ export function calculateUserMatchScore(
   if (cultureScore >= 80) {
     matchPoints.push('语言文化相通');
   }
+  if (conversationSignatureScore >= 75) {
+    matchPoints.push('沟通风格契合');
+  }
   
   return {
     userId: user2.id || '',
@@ -298,6 +346,7 @@ export function calculateUserMatchScore(
     intentScore,
     backgroundScore,
     cultureScore,
+    conversationSignatureScore,
     chemistryScore: personalityScore, // 化学反应分数即性格分数
     matchPoints,
   };

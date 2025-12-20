@@ -9,6 +9,7 @@ import {
   integer,
   boolean,
   date,
+  numeric,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -182,6 +183,15 @@ export const users = pgTable("users", {
   // A/B Testing tracking
   registrationMethod: varchar("registration_method"), // 'form' or 'chat' for A/B testing
   registrationCompletedAt: timestamp("registration_completed_at"), // When registration was completed
+  
+  // ============ AI对话签名 (Conversation Signature) ============
+  // 用于增强匹配算法的第6维度
+  conversationMode: varchar("conversation_mode"), // 对话模式: express, standard, deep, allinone
+  primaryLinguisticStyle: varchar("primary_linguistic_style"), // 主要语言风格: direct, implicit, negative, dialect, mixed
+  conversationEnergy: integer("conversation_energy"), // 社交能量值 0-100
+  negationReliability: numeric("negation_reliability"), // 否定表达可信度 0-1
+  inferredTraits: jsonb("inferred_traits"), // AI推断的属性 { city, industry, education, lifeStage, ... }
+  inferenceConfidence: numeric("inference_confidence"), // 推断总体置信度 0-1
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
