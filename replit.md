@@ -51,7 +51,9 @@ Preferred communication style: Simple, everyday language.
     - Question bank V3: Added negative X/P scoring options and 5th choices for low-energy pathways
     - Key improvements: 太阳鸡(21%→11.88%), 开心柯基(20%→5.93%), 隐身猫(1.8%→9.28%), 稳如龟(2%→7.90%), 暖心熊(2.7%→9.33%), 沉思猫头鹰(0.66%→9.55%)
     - A/B test ready: `archetypeTraitScoresOptimized.ts` with `setABTestVariant('control'/'optimized')`
-    - **Known limitation:** 5 low-energy archetype pairs (淡定海豚/定心大象/稳如龟/隐身猫/沉思猫头鹰) have >98% cosine similarity. This is an architectural limitation of the 12-question format. Future improvements: expand question bank, use Euclidean distance, or add archetype-specific differentiating questions.
+    - **Known limitation:** 5 low-energy archetype pairs (淡定海豚/定心大象/稳如龟/隐身猫/沉思猫头鹰) have >98% cosine similarity. This is an architectural limitation of the 12-question format.
+    - **Euclidean Distance Analysis (V6.8):** Implemented and tested Euclidean distance algorithm as alternative. Finding: Euclidean eliminates >98% similarity pairs BUT breaks distribution (66% users → 隐身猫, 7 archetypes → 0 matches). Current archetype vectors are optimized for cosine similarity; switching to Euclidean would require complete re-optimization of all 12 archetype vectors.
+    - **Algorithm Recommendation:** Maintain cosine similarity (production-proven, balanced 5.6%-11.4% distribution) rather than switch to Euclidean without re-optimizing vectors.
 - **Streamlined Onboarding:** Multi-step registration covering identity, interests, personality, and profile creation, enhanced with UX features.
 - **Admin Portal:** Desktop-first interface for comprehensive management and real-time algorithm tuning via an Admin Matching Lab.
 - **Payment & Subscription System:** Full payment infrastructure including WeChat Pay integration.
