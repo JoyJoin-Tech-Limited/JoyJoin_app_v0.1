@@ -53,7 +53,7 @@ Preferred communication style: Simple, everyday language.
     - Vector differentiation strategy: 淡定海豚 vs 定心大象 separated by A/O (dolphin) vs C/X (elephant) dimensions
     - Dimension coverage: A(91.7%), O(83.3%), C(100%), E(100%), X(83.3%), P(91.7%)
     - A/B test ready: `archetypeTraitScoresOptimized.ts` with `setABTestVariant('control'/'optimized')`
-    - **Low-Energy Archetype Calibration System:** 3 supplementary questions ("静谧小屋" scenarios) for distinguishing 5 similar low-energy archetypes. Triggered when primary/secondary match score difference <3%, affecting ~10-15% of users.
+    - **Low-Energy Archetype Calibration System (V6.8 - Integrated):** 3 supplementary questions ("静谧小屋" scenarios) for distinguishing 5 similar low-energy archetypes (淡定海豚/定心大象/稳如龟/隐身猫/沉思猫头鹰). Triggered when primary/secondary match score difference <3%, affecting ~10-15% of users. Now fully integrated into PersonalityTestPage.tsx with proper UI flow and score merging.
     - **Known limitation:** 3 low-energy archetype pairs have >98% cosine similarity. Supplementary calibration questions address this.
     - **Algorithm Recommendation:** Maintain cosine similarity (production-proven) with conditional calibration for edge cases.
 - **Streamlined Onboarding:** Multi-step registration covering identity, interests, personality, and profile creation, enhanced with UX features.

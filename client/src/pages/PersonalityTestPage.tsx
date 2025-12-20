@@ -11,7 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import MiniRadarChart from "@/components/MiniRadarChart";
 import { personalityQuestionsV2, type QuestionV2, type TraitScores } from "@/data/personalityQuestionsV2";
-import { getCalibrationQuestion } from "@/data/adaptiveCalibrationQuestions";
+import { 
+  getCalibrationQuestion, 
+  shouldTriggerLowEnergyCalibration,
+  getLowEnergyCalibrationQuestions,
+  type LowEnergyCalibrationQuestion 
+} from "@/data/adaptiveCalibrationQuestions";
+import { evaluatePersonality } from "@/lib/cumulativeScoringSystem";
 import RegistrationProgress from "@/components/RegistrationProgress";
 import CelebrationConfetti from "@/components/CelebrationConfetti";
 
@@ -31,6 +37,8 @@ interface CachedProgress {
   currentQuestionIndex: number;
   answers: Record<number, AnswerV2>;
   calibrationChecked: boolean;
+  lowEnergyCalibrationActive: boolean;
+  lowEnergyQuestionIndex: number;
   timestamp: number;
 }
 
@@ -93,6 +101,11 @@ export default function PersonalityTestPage() {
   // 标记是否已执行校准检测（防止重复检测）
   const [calibrationChecked, setCalibrationChecked] = useState(false);
   
+  // V6.8 低能量原型校准状态
+  const [lowEnergyCalibrationActive, setLowEnergyCalibrationActive] = useState(false);
+  const [lowEnergyQuestionIndex, setLowEnergyQuestionIndex] = useState(0);
+  const lowEnergyQuestions = useMemo(() => getLowEnergyCalibrationQuestions(), []);
+  
   // Load cached progress on mount
   useEffect(() => {
     const cached = loadCachedProgress();
@@ -109,15 +122,21 @@ export default function PersonalityTestPage() {
         currentQuestionIndex,
         answers,
         calibrationChecked,
+        lowEnergyCalibrationActive,
+        lowEnergyQuestionIndex,
       });
     }
-  }, [currentQuestionIndex, answers, calibrationChecked]);
+  }, [currentQuestionIndex, answers, calibrationChecked, lowEnergyCalibrationActive, lowEnergyQuestionIndex]);
   
   const handleResumeProgress = useCallback(() => {
     if (cachedData) {
       setCurrentQuestionIndex(cachedData.currentQuestionIndex);
       setAnswers(cachedData.answers);
       setCalibrationChecked(cachedData.calibrationChecked);
+      if (cachedData.lowEnergyCalibrationActive) {
+        setLowEnergyCalibrationActive(true);
+        setLowEnergyQuestionIndex(cachedData.lowEnergyQuestionIndex || 0);
+      }
       toast({
         title: "已恢复进度",
         description: `继续第${cachedData.currentQuestionIndex + 1}题`,
@@ -131,6 +150,8 @@ export default function PersonalityTestPage() {
     setCurrentQuestionIndex(0);
     setAnswers({});
     setCalibrationChecked(false);
+    setLowEnergyCalibrationActive(false);
+    setLowEnergyQuestionIndex(0);
     setShowResumePrompt(false);
   }, []);
 
@@ -146,7 +167,11 @@ export default function PersonalityTestPage() {
     return baseQuestions;
   }, [calibrationQuestion, calibrationInsertIndex]);
 
-  const totalQuestions = allQuestions.length;
+  // 总题目数：基础题 + V7.2校准题(如果有) + 低能量校准题(如果激活)
+  const totalQuestions = allQuestions.length + (lowEnergyCalibrationActive ? lowEnergyQuestions.length : 0);
+  
+  // 当前低能量校准题（如果正在进行低能量校准）
+  const currentLowEnergyQuestion = lowEnergyCalibrationActive ? lowEnergyQuestions[lowEnergyQuestionIndex] : null;
 
   const submitTestMutation = useMutation({
     mutationFn: async (responses: Record<number, AnswerV2>) => {
@@ -315,10 +340,14 @@ export default function PersonalityTestPage() {
   // 判断当前是否显示校准题
   const isShowingCalibration = calibrationQuestion && currentQ?.id === calibrationQuestion.id;
   
-  // 进度计算
-  const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100;
+  // 进度计算 - 考虑低能量校准模式
+  const effectiveQuestionNumber = lowEnergyCalibrationActive 
+    ? allQuestions.length + lowEnergyQuestionIndex + 1 
+    : currentQuestionIndex + 1;
+  const progress = (effectiveQuestionNumber / totalQuestions) * 100;
 
   const getProgressLabel = () => {
+    if (lowEnergyCalibrationActive) return "静谧小屋 · 精准校准";
     if (isShowingCalibration) return "精准校准中";
     const baseIndex = calibrationInsertIndex !== null && currentQuestionIndex > calibrationInsertIndex
       ? currentQuestionIndex - 1
@@ -330,6 +359,13 @@ export default function PersonalityTestPage() {
   };
 
   const getEncouragementMessage = () => {
+    // 低能量校准模式
+    if (lowEnergyCalibrationActive) {
+      const remaining = lowEnergyQuestions.length - lowEnergyQuestionIndex - 1;
+      if (remaining === 0) return "最后一道校准题，马上揭晓结果！";
+      return `还有${remaining}道题就能获得更精准的结果～`;
+    }
+    
     const remainingBase = calibrationQuestion 
       ? (totalQuestions - 1) - currentQuestionIndex
       : totalQuestions - currentQuestionIndex - 1;
@@ -358,8 +394,21 @@ export default function PersonalityTestPage() {
     return messages[currentQuestionIndex % messages.length];
   };
 
-  // 计算实际的最后一题
-  const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
+  // 计算实际的最后一题 - 需要考虑低能量校准
+  const isLastBaseQuestion = currentQuestionIndex === allQuestions.length - 1 && !lowEnergyCalibrationActive;
+  const isLastLowEnergyQuestion = lowEnergyCalibrationActive && lowEnergyQuestionIndex === lowEnergyQuestions.length - 1;
+  const isLastQuestion = lowEnergyCalibrationActive ? isLastLowEnergyQuestion : isLastBaseQuestion;
+
+  // 低能量校准题选择处理
+  const handleLowEnergyChoice = (value: string, traitScores: TraitScores) => {
+    const questionId = currentLowEnergyQuestion?.id;
+    if (questionId) {
+      setAnswers({
+        ...answers,
+        [questionId]: { type: "single", value, traitScores },
+      });
+    }
+  };
 
   const handleSingleChoice = (value: string, traitScores: TraitScores) => {
     // 所有答案统一存储到answers中（包括校准题）
@@ -386,6 +435,13 @@ export default function PersonalityTestPage() {
   };
 
   const canProceed = () => {
+    // 低能量校准模式
+    if (lowEnergyCalibrationActive && currentLowEnergyQuestion) {
+      const answer = answers[currentLowEnergyQuestion.id];
+      return !!answer?.value;
+    }
+    
+    // 普通模式
     const answer = answers[currentQ?.id];
     if (!answer) return false;
 
@@ -403,120 +459,191 @@ export default function PersonalityTestPage() {
   const handleNext = () => {
     if (!canProceed()) return;
 
-    if (isLastQuestion) {
-      setShowBlindBox(true);
-      // 提交时只发送基础题答案（ID 1-12），后端只识别这些ID
-      // 校准题（ID 101-106）的特质分数需要合并到基础答案中
-      const baseAnswers: Record<number, AnswerV2> = {};
-      let calibrationAnswer: AnswerV2 | undefined = undefined;
-      
-      for (const [id, answer] of Object.entries(answers)) {
-        const qId = parseInt(id);
-        if (qId >= 1 && qId <= 12) {
-          baseAnswers[qId] = answer;
-        } else if (qId >= 101 && qId <= 106) {
-          // 保存校准题答案用于合并
-          calibrationAnswer = answer;
-        }
+    // ========== 低能量校准模式 ==========
+    if (lowEnergyCalibrationActive) {
+      if (isLastLowEnergyQuestion) {
+        // 所有低能量校准题完成，准备提交
+        setShowBlindBox(true);
+        submitWithCalibration();
+      } else {
+        // 进入下一道低能量校准题
+        setLowEnergyQuestionIndex(lowEnergyQuestionIndex + 1);
       }
+      return;
+    }
+
+    // ========== 基础题完成后检测低能量校准 ==========
+    if (isLastBaseQuestion) {
+      // 先计算初步匹配结果
+      const traitScoresArray: TraitScores[] = [];
+      Object.values(answers).forEach(answer => {
+        if (answer.traitScores) traitScoresArray.push(answer.traitScores);
+        if (answer.secondTraitScores) traitScoresArray.push(answer.secondTraitScores);
+      });
       
-      // 将校准题的特质分数合并到Q12的答案中（确保对最终结果有影响）
-      // 只有当校准题和Q12都有有效完整答案时才合并
-      // 验证Q12保留双选结构（mostLike, secondLike都存在）
-      const q12HasDualStructure = baseAnswers[12]?.mostLike && baseAnswers[12]?.secondLike;
-      if (calibrationAnswer && calibrationAnswer.traitScores && baseAnswers[12]?.traitScores && q12HasDualStructure) {
-        const q12Answer = baseAnswers[12];
-        const calScores = calibrationAnswer.traitScores;
-        const q12Scores = q12Answer.traitScores;
-        
-        // 计算校准增量（校准分数的一半）
-        const calDelta = {
-          A: Math.round((calScores.A ?? 0) / 2),
-          O: Math.round((calScores.O ?? 0) / 2),
-          C: Math.round((calScores.C ?? 0) / 2),
-          E: Math.round((calScores.E ?? 0) / 2),
-          X: Math.round((calScores.X ?? 0) / 2),
-          P: Math.round((calScores.P ?? 0) / 2),
-        };
-        
-        // 创建合并后的traitScores
-        const mergedTraitScores = {
-          ...q12Scores,
-          A: (q12Scores.A ?? 0) + calDelta.A,
-          O: (q12Scores.O ?? 0) + calDelta.O,
-          C: (q12Scores.C ?? 0) + calDelta.C,
-          E: (q12Scores.E ?? 0) + calDelta.E,
-          X: (q12Scores.X ?? 0) + calDelta.X,
-          P: (q12Scores.P ?? 0) + calDelta.P,
-        };
-        
-        // 如果有secondTraitScores，也应用同样的校准增量以保持一致性
-        let mergedSecondTraitScores = q12Answer.secondTraitScores;
-        if (q12Answer.secondTraitScores) {
-          const secondScores = q12Answer.secondTraitScores;
-          mergedSecondTraitScores = {
-            ...secondScores,
-            A: (secondScores.A ?? 0) + calDelta.A,
-            O: (secondScores.O ?? 0) + calDelta.O,
-            C: (secondScores.C ?? 0) + calDelta.C,
-            E: (secondScores.E ?? 0) + calDelta.E,
-            X: (secondScores.X ?? 0) + calDelta.X,
-            P: (secondScores.P ?? 0) + calDelta.P,
-          };
-        }
-        
-        // 完整保留Q12的所有其他属性（mostLike, secondLike等）
-        baseAnswers[12] = {
-          ...q12Answer,
-          traitScores: mergedTraitScores,
-          ...(mergedSecondTraitScores && { secondTraitScores: mergedSecondTraitScores }),
-        };
-      }
+      const preliminaryResult = evaluatePersonality(traitScoresArray);
+      const primaryArchetype = preliminaryResult.primaryMatch.archetype;
+      const primaryScore = preliminaryResult.primaryMatch.similarity;
+      const secondaryScore = preliminaryResult.secondaryMatch.similarity;
       
-      submitTestMutation.mutate(baseAnswers);
-    } else {
-      // Q6完成后（索引5）检测是否需要校准 - 仅执行一次
-      if (currentQuestionIndex === 5 && !calibrationChecked) {
-        setCalibrationChecked(true); // 标记已检测
-        
-        // 转换answers格式用于校准检测（只使用基础题1-6的答案）
-        const answersForCalibration: Record<number, { traitScores: TraitScores; secondTraitScores?: TraitScores }> = {};
-        Object.entries(answers).forEach(([id, answer]) => {
-          const qId = parseInt(id);
-          if (qId <= 6) { // 只用Q1-Q6的答案检测
-            answersForCalibration[qId] = {
-              traitScores: answer.traitScores,
-              secondTraitScores: answer.secondTraitScores,
-            };
-          }
-        });
-        
-        const calibration = getCalibrationQuestion(answersForCalibration);
-        if (calibration) {
-          // 设置校准题，插入到索引6位置
-          setCalibrationQuestion(calibration);
-          setCalibrationInsertIndex(6);
-          // 显示milestone后进入校准题
-          setShowMilestone(true);
-          setTimeout(() => {
-            setShowMilestone(false);
-            setCurrentQuestionIndex(6); // 校准题位于索引6
-          }, 2500);
-          return;
-        }
-      }
+      // V6.8 检测是否需要低能量原型校准
+      const needsLowEnergyCalibration = shouldTriggerLowEnergyCalibration(
+        primaryArchetype,
+        primaryScore,
+        secondaryScore
+      );
       
-      // 在索引5显示milestone（无论是否有校准题）
-      if (currentQuestionIndex === 5 && !showMilestone) {
+      console.log('📊 低能量校准检测:', {
+        primaryArchetype,
+        primaryScore: (primaryScore * 100).toFixed(2) + '%',
+        secondaryScore: (secondaryScore * 100).toFixed(2) + '%',
+        scoreDiff: ((primaryScore - secondaryScore) * 100).toFixed(2) + '%',
+        triggered: needsLowEnergyCalibration
+      });
+      
+      if (needsLowEnergyCalibration) {
+        // 激活低能量校准流程
+        setLowEnergyCalibrationActive(true);
+        setLowEnergyQuestionIndex(0);
+        // 显示过渡提示
         setShowMilestone(true);
         setTimeout(() => {
           setShowMilestone(false);
-          setCurrentQuestionIndex(currentQuestionIndex + 1);
         }, 2500);
-      } else {
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
+        return;
+      }
+      
+      // 不需要低能量校准，直接提交
+      setShowBlindBox(true);
+      submitWithCalibration();
+      return;
+    }
+
+    // ========== 常规题目流程 ==========
+    // Q6完成后（索引5）检测是否需要V7.2弱信号校准 - 仅执行一次
+    if (currentQuestionIndex === 5 && !calibrationChecked) {
+      setCalibrationChecked(true); // 标记已检测
+      
+      // 转换answers格式用于校准检测（只使用基础题1-6的答案）
+      const answersForCalibration: Record<number, { traitScores: TraitScores; secondTraitScores?: TraitScores }> = {};
+      Object.entries(answers).forEach(([id, answer]) => {
+        const qId = parseInt(id);
+        if (qId <= 6) { // 只用Q1-Q6的答案检测
+          answersForCalibration[qId] = {
+            traitScores: answer.traitScores,
+            secondTraitScores: answer.secondTraitScores,
+          };
+        }
+      });
+      
+      const calibration = getCalibrationQuestion(answersForCalibration);
+      if (calibration) {
+        // 设置校准题，插入到索引6位置
+        setCalibrationQuestion(calibration);
+        setCalibrationInsertIndex(6);
+        // 显示milestone后进入校准题
+        setShowMilestone(true);
+        setTimeout(() => {
+          setShowMilestone(false);
+          setCurrentQuestionIndex(6); // 校准题位于索引6
+        }, 2500);
+        return;
       }
     }
+    
+    // 在索引5显示milestone（无论是否有校准题）
+    if (currentQuestionIndex === 5 && !showMilestone) {
+      setShowMilestone(true);
+      setTimeout(() => {
+        setShowMilestone(false);
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      }, 2500);
+    } else {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    }
+  };
+  
+  // 提交答案（合并所有校准分数）
+  const submitWithCalibration = () => {
+    // 提交时只发送基础题答案（ID 1-12），后端只识别这些ID
+    // 校准题特质分数需要合并到基础答案中
+    const baseAnswers: Record<number, AnswerV2> = {};
+    let v72CalibrationScores: TraitScores = {};  // V7.2 弱信号校准分数
+    let lowEnergyCalibrationScores: TraitScores = {};  // V6.8 低能量校准分数
+    
+    for (const [id, answer] of Object.entries(answers)) {
+      const qId = parseInt(id);
+      if (qId >= 1 && qId <= 12) {
+        baseAnswers[qId] = answer;
+      } else if (qId >= 101 && qId <= 106) {
+        // V7.2 弱信号校准答案
+        v72CalibrationScores = answer.traitScores;
+      } else if (qId >= 201 && qId <= 203) {
+        // V6.8 低能量校准答案 - 累加
+        Object.entries(answer.traitScores).forEach(([trait, score]) => {
+          const t = trait as keyof TraitScores;
+          lowEnergyCalibrationScores[t] = (lowEnergyCalibrationScores[t] ?? 0) + (score ?? 0);
+        });
+      }
+    }
+    
+    // 合并所有校准分数到Q12
+    const q12HasDualStructure = baseAnswers[12]?.mostLike && baseAnswers[12]?.secondLike;
+    if (baseAnswers[12]?.traitScores && q12HasDualStructure) {
+      const q12Answer = baseAnswers[12];
+      const q12Scores = q12Answer.traitScores;
+      
+      // 计算校准增量
+      const calDelta: TraitScores = {
+        A: Math.round(((v72CalibrationScores.A ?? 0) / 2) + (lowEnergyCalibrationScores.A ?? 0)),
+        O: Math.round(((v72CalibrationScores.O ?? 0) / 2) + (lowEnergyCalibrationScores.O ?? 0)),
+        C: Math.round(((v72CalibrationScores.C ?? 0) / 2) + (lowEnergyCalibrationScores.C ?? 0)),
+        E: Math.round(((v72CalibrationScores.E ?? 0) / 2) + (lowEnergyCalibrationScores.E ?? 0)),
+        X: Math.round(((v72CalibrationScores.X ?? 0) / 2) + (lowEnergyCalibrationScores.X ?? 0)),
+        P: Math.round(((v72CalibrationScores.P ?? 0) / 2) + (lowEnergyCalibrationScores.P ?? 0)),
+      };
+      
+      // 创建合并后的traitScores
+      const mergedTraitScores = {
+        ...q12Scores,
+        A: (q12Scores.A ?? 0) + (calDelta.A ?? 0),
+        O: (q12Scores.O ?? 0) + (calDelta.O ?? 0),
+        C: (q12Scores.C ?? 0) + (calDelta.C ?? 0),
+        E: (q12Scores.E ?? 0) + (calDelta.E ?? 0),
+        X: (q12Scores.X ?? 0) + (calDelta.X ?? 0),
+        P: (q12Scores.P ?? 0) + (calDelta.P ?? 0),
+      };
+      
+      // 如果有secondTraitScores，也应用同样的校准增量
+      let mergedSecondTraitScores = q12Answer.secondTraitScores;
+      if (q12Answer.secondTraitScores) {
+        const secondScores = q12Answer.secondTraitScores;
+        mergedSecondTraitScores = {
+          ...secondScores,
+          A: (secondScores.A ?? 0) + (calDelta.A ?? 0),
+          O: (secondScores.O ?? 0) + (calDelta.O ?? 0),
+          C: (secondScores.C ?? 0) + (calDelta.C ?? 0),
+          E: (secondScores.E ?? 0) + (calDelta.E ?? 0),
+          X: (secondScores.X ?? 0) + (calDelta.X ?? 0),
+          P: (secondScores.P ?? 0) + (calDelta.P ?? 0),
+        };
+      }
+      
+      // 完整保留Q12的所有其他属性
+      baseAnswers[12] = {
+        ...q12Answer,
+        traitScores: mergedTraitScores,
+        ...(mergedSecondTraitScores && { secondTraitScores: mergedSecondTraitScores }),
+      };
+    }
+    
+    console.log('📤 提交答案:', {
+      baseAnswersCount: Object.keys(baseAnswers).length,
+      hasV72Calibration: Object.keys(v72CalibrationScores).length > 0,
+      hasLowEnergyCalibration: Object.keys(lowEnergyCalibrationScores).length > 0,
+    });
+    
+    submitTestMutation.mutate(baseAnswers);
   };
 
   const handleBack = () => {
@@ -625,7 +752,7 @@ export default function PersonalityTestPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <RegistrationProgress 
         currentStage="personality" 
-        currentStep={currentQuestionIndex + 1}
+        currentStep={effectiveQuestionNumber}
         totalSteps={totalQuestions}
       />
       
@@ -647,7 +774,7 @@ export default function PersonalityTestPage() {
             )}
           </div>
           <span className="text-sm text-muted-foreground">
-            {currentQuestionIndex + 1}/{totalQuestions}
+            {effectiveQuestionNumber}/{totalQuestions}
           </span>
         </div>
         <div className="space-y-1">
@@ -675,6 +802,71 @@ export default function PersonalityTestPage() {
 
       <div className="flex-1 p-6 overflow-y-auto">
         <div className="max-w-2xl mx-auto space-y-6">
+          {/* ========== 低能量校准模式渲染 ========== */}
+          {lowEnergyCalibrationActive && currentLowEnergyQuestion ? (
+            <>
+              <motion.div
+                key={`low-energy-${lowEnergyQuestionIndex}`}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="flex items-center gap-2 text-sm text-primary mb-2">
+                  <Star className="w-4 h-4" />
+                  <span>{currentLowEnergyQuestion.category}</span>
+                  <Badge variant="outline" className="text-xs">精准校准</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3 italic leading-relaxed">
+                  {currentLowEnergyQuestion.scenarioText}
+                </p>
+                <h2 className="text-xl font-bold mb-6">{currentLowEnergyQuestion.questionText}</h2>
+              </motion.div>
+
+              <div className="space-y-3">
+                {currentLowEnergyQuestion.options.map((option) => {
+                  const isSelected = answers[currentLowEnergyQuestion.id]?.value === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => handleLowEnergyChoice(option.value, option.traitScores)}
+                      className={`
+                        w-full px-4 py-4 text-left rounded-lg border-2 transition-all text-base flex flex-col gap-2
+                        ${
+                          isSelected
+                            ? "border-primary bg-primary/5 text-foreground"
+                            : "border-border hover-elevate active-elevate-2"
+                        }
+                      `}
+                      data-testid={`button-low-energy-${currentLowEnergyQuestion.id}-${option.value}`}
+                    >
+                      <div className="flex items-start gap-3 w-full">
+                        <span className="font-semibold shrink-0">{option.value}.</span>
+                        <span className="flex-1">{option.text}</span>
+                        {isSelected && (
+                          <span className="text-primary font-bold shrink-0">
+                            <Sparkles className="w-4 h-4" />
+                          </span>
+                        )}
+                      </div>
+                      {option.tag && (
+                        <div className="flex justify-end w-full">
+                          <Badge 
+                            variant={isSelected ? "default" : "secondary"} 
+                            className="text-xs px-2 py-0.5"
+                          >
+                            {option.tag}
+                          </Badge>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            /* ========== 普通题目渲染 ========== */
+            <>
           <motion.div
             key={currentQuestionIndex}
             initial={{ opacity: 0, x: 20 }}
@@ -848,6 +1040,8 @@ export default function PersonalityTestPage() {
                 </div>
               </div>
             </div>
+          )}
+          </>
           )}
         </div>
       </div>
