@@ -58,7 +58,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "B", 
         text: "找到寿星，让ta来帮你介绍认识大家", 
-        traitScores: { C: 1, E: 2 },
+        traitScores: { C: 1, E: 2, P: 0 },  // V3优化：移除隐含P
         tag: "借力社交"
       },
       { 
@@ -70,8 +70,14 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "D", 
         text: "先找个角落坐下，用手机掩饰，默默观察", 
-        traitScores: { C: 2, E: 1 },  // 专家修正：观察行为体现谨慎性，非积极性
+        traitScores: { C: 2, E: 2, X: -2, P: -1 },  // V3优化：低能量原型路径
         tag: "隐身观察"
+      },
+      { 
+        value: "E", 
+        text: "先在门口观察一下场面，再慢慢找机会加入", 
+        traitScores: { A: 1, E: 2, X: -1 },  // V3新增：隐身猫/稳如龟路径
+        tag: "观察再入"
       },
     ],
   },
@@ -107,6 +113,12 @@ export const personalityQuestionsV2: QuestionV2[] = [
         traitScores: { O: 2, C: 1 },
         tag: "深度分析"
       },
+      { 
+        value: "E", 
+        text: "「听起来不错，等确认好信息后我再决定去不去」", 
+        traitScores: { C: 2, E: 1, X: -1 },  // V3新增：定心大象路径
+        tag: "谨慎确认"
+      },
     ],
   },
 
@@ -132,13 +144,13 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "C", 
         text: "默默递纸巾，全程不说话，用眼神表达理解", 
-        traitScores: { A: 2, C: 1, E: 1, P: 1 },
+        traitScores: { A: 2, C: 2, E: 2, P: 0 },  // V3优化：稳如龟路径
         tag: "无声陪伴"
       },
       { 
         value: "D", 
         text: "等情绪稳定后，巧妙引入轻松话题转移注意力", 
-        traitScores: { A: 1, E: 2, X: 1 },
+        traitScores: { E: 3, X: -1, P: -1 },  // V3优化：稳如龟路径，移除X正分
         tag: "氛围调控"
       },
     ],
@@ -166,7 +178,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "C", 
         text: "「嗯...让我想想」边想边组织语言，斟酌后才开口", 
-        traitScores: { C: 2, E: 1, P: 1 },
+        traitScores: { C: 3, E: 2, X: -1, P: 0 },  // V3优化：沉思猫头鹰路径
         tag: "稳健思考"
       },
       { 
@@ -174,6 +186,12 @@ export const personalityQuestionsV2: QuestionV2[] = [
         text: "「你们呢？我先听听大家的想法」", 
         traitScores: { A: 1, O: 1, X: 1 },
         tag: "倾听优先"
+      },
+      { 
+        value: "E", 
+        text: "心里有想法，但想回去记录下来好好研究一下", 
+        traitScores: { O: 1, C: 2, E: 1, X: -1 },  // V3新增：沉思猫头鹰路径
+        tag: "深度研究"
       },
     ],
   },
@@ -206,7 +224,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "D", 
         text: "一言不发，低头玩手机，等他们自己聊完", 
-        traitScores: { E: 2, C: 1 },  // 专家修正：沉默是低外向性，移除X正分
+        traitScores: { E: 3, C: 1, X: -2, P: -1 },  // V3优化：稳如龟/隐身猫路径
         tag: "沉默等待"
       },
     ],
@@ -234,7 +252,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "C", 
         text: "默默把账单算好，等大家吃完发给大家", 
-        traitScores: { C: 2, E: 1, P: 1 },
+        traitScores: { C: 3, E: 2, X: -1 },  // V3优化：定心大象/沉思猫头鹰路径
         tag: "细心执行"
       },
       { 
@@ -242,6 +260,12 @@ export const personalityQuestionsV2: QuestionV2[] = [
         text: "「我负责活跃气氛就好啦！」贡献其他价值", 
         traitScores: { X: 2, P: 3 },
         tag: "气氛担当"
+      },
+      { 
+        value: "E", 
+        text: "负责安排行程时间节奏，确保大家准时到位", 
+        traitScores: { C: 2, E: 2, X: 0 },  // V3新增：定心大象路径
+        tag: "节奏把控"
       },
     ],
   },
@@ -274,8 +298,14 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "D", 
         text: "找个舒服的角落，安静听大家聊，享受旁观", 
-        traitScores: { C: 1, E: 1, X: 1 },
+        traitScores: { E: 3, C: 1, X: -3, P: -1 },  // V3优化：隐身猫/稳如龟路径
         tag: "边缘舒适"
+      },
+      { 
+        value: "E", 
+        text: "和两三位聊得来的人深度聊天，不追求面面俱到", 
+        traitScores: { A: 2, E: 1, X: 0 },  // V3新增：暖心熊路径
+        tag: "深度连接"
       },
     ],
   },
@@ -296,7 +326,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "B", 
         text: "认真听ta讲完，追问细节和ta的感受", 
-        traitScores: { C: 2, E: 1, P: 1 },
+        traitScores: { A: 2, C: 2, E: 1, P: 0 },  // V3优化：暖心熊路径
         tag: "专注倾听"
       },
       { 
@@ -308,7 +338,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "D", 
         text: "默默听着，觉得电影这种东西看缘分", 
-        traitScores: { E: 1, X: 1, P: 2 },
+        traitScores: { E: 3, X: -2, P: -1 },  // V3优化：稳如龟/隐身猫路径
         tag: "随缘佛系"
       },
     ],
@@ -324,26 +354,32 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "A", 
         text: "「累爆了但超爽！」躺床上还在回味今晚的高光时刻", 
-        traitScores: { X: 4, P: 3 },
+        traitScores: { X: 3, P: 2 },  // V3优化：降低X/P分值
         tag: "累并快乐"
       },
       { 
         value: "B", 
         text: "「好充实～」心满意足，感觉给了很多也收获了很多", 
-        traitScores: { E: 2, P: 2 },
+        traitScores: { A: 1, E: 2, P: 2 },
         tag: "温暖充实"
       },
       { 
         value: "C", 
         text: "「还行吧」正常消耗，独处一会儿就能恢复", 
-        traitScores: { C: 1, E: 1, X: 1 },
+        traitScores: { C: 1, E: 2, X: -1 },  // V3优化：平衡选项
         tag: "平稳消耗"
       },
       { 
         value: "D", 
         text: "「终于...」瘫在沙发上不想动，社交电量归零", 
-        traitScores: { E: 1 },  // 专家修正：社交耗尽更关联情绪稳定性，非亲和力
+        traitScores: { E: 3, X: -3, P: -2 },  // V3优化：稳如龟/隐身猫路径
         tag: "彻底耗尽"
+      },
+      { 
+        value: "E", 
+        text: "安静地整理一下今天的事情，慢慢恢复能量", 
+        traitScores: { C: 1, E: 2, X: -1 },  // V3新增：稳定型恢复
+        tag: "安静恢复"
       },
     ],
   },
@@ -358,26 +394,32 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "A", 
         text: "「人间小太阳，和ta在一起心情会变好！」", 
-        traitScores: { O: 1, X: 3, P: 3 },
+        traitScores: { O: 1, X: 2, P: 3 },  // V3优化：降低X分值
         tag: "温暖治愈"
       },
       { 
         value: "B", 
         text: "「超会玩！总能带你发现新奇好玩的东西！」", 
-        traitScores: { O: 4, X: 2 },  // 专家修正：探索行为核心是开放性，非亲和力
+        traitScores: { O: 4, X: 1 },  // V3优化：降低X分值
         tag: "探索达人"
       },
       { 
         value: "C", 
         text: "「脑洞王！创意源源不断，想法特别多！」", 
-        traitScores: { O: 3, C: 1 },  // 专家修正：创意核心是开放性，责任心为辅
+        traitScores: { O: 3, C: 1 },
         tag: "创意无限"
       },
       { 
         value: "D", 
         text: "「超靠谱！关键时刻稳得一批！」", 
-        traitScores: { C: 3, E: 2 },  // 专家修正：靠谱稳定核心是责任心+情绪稳定
+        traitScores: { C: 3, E: 2 },
         tag: "稳定可靠"
+      },
+      { 
+        value: "E", 
+        text: "「踏实可靠型朋友，虽然话不多但很值得信赖！」", 
+        traitScores: { C: 3, E: 2, X: -1 },  // V3新增：定心大象路径
+        tag: "沉稳可信"
       },
     ],
   },
@@ -410,8 +452,14 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "D", 
         text: "「我在旁边看你们玩也挺好的」保持距离", 
-        traitScores: { C: 2, X: 1 },
+        traitScores: { C: 2, E: 1, X: -1 },  // V3优化：隐身猫路径
         tag: "旁观为主"
+      },
+      { 
+        value: "E", 
+        text: "「让我先收集一下资料再决定要不要参与」", 
+        traitScores: { O: 1, C: 3, E: 1, X: -1 },  // V3新增：沉思猫头鹰路径
+        tag: "资料收集"
       },
     ],
   },
@@ -444,8 +492,14 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "D", 
         text: "「有点可惜...不过也没办法」接受现实", 
-        traitScores: { C: 1, E: 1, P: 1 },
+        traitScores: { C: 2, E: 3, X: -2, P: -1 },  // V3优化：稳如龟/隐身猫路径
         tag: "接受调整"
+      },
+      { 
+        value: "E", 
+        text: "「没关系，我来重新规划一下方案」", 
+        traitScores: { C: 3, E: 2 },  // V3新增：定心大象路径
+        tag: "计划适应"
       },
     ],
   },
