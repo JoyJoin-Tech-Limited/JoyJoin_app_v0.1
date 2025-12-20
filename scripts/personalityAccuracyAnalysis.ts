@@ -8,7 +8,9 @@ import { archetypeTraitScores } from '../client/src/lib/archetypeTraitScores';
 import { archetypeTraitScoresOptimized } from '../client/src/lib/archetypeTraitScoresOptimized';
 
 type VariantType = 'control' | 'optimized';
+type AlgorithmType = 'cosine' | 'euclidean';
 const VARIANT: VariantType = (process.argv[2] as VariantType) || 'control';
+const ALGORITHM: AlgorithmType = (process.argv[3] as AlgorithmType) || 'cosine';
 const activeArchetypes = VARIANT === 'optimized' ? archetypeTraitScoresOptimized : archetypeTraitScores;
 
 // V3优化版 SCORE_RANGE（包含负分）
@@ -59,6 +61,26 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
+function euclideanDistance(a: number[], b: number[]): number {
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) {
+    sum += Math.pow(a[i] - b[i], 2);
+  }
+  return Math.sqrt(sum);
+}
+
+function euclideanToSimilarity(distance: number): number {
+  const maxDistance = Math.sqrt(5 * 100 * 100); // ~223.6
+  return 1 / (1 + distance / maxDistance);
+}
+
+function calculateSimilarity(a: number[], b: number[], algorithm: AlgorithmType): number {
+  if (algorithm === 'euclidean') {
+    return euclideanToSimilarity(euclideanDistance(a, b));
+  }
+  return cosineSimilarity(a, b);
+}
+
 function findBestArchetype(normalizedScores: { A: number; O: number; C: number; E: number; X: number }) {
   const userVector = [
     normalizedScores.A,
@@ -82,7 +104,7 @@ function findBestArchetype(normalizedScores: { A: number; O: number; C: number; 
       traits.extraversion
     ];
     
-    const similarity = cosineSimilarity(userVector, archetypeVector);
+    const similarity = calculateSimilarity(userVector, archetypeVector, ALGORITHM);
     
     if (similarity > bestSimilarity) {
       secondMatch = bestMatch;
@@ -173,7 +195,7 @@ function analyzeArchetypeSimilarity() {
     
     for (const [name2, traits2] of archetypes) {
       const v2 = [traits2.affinity, traits2.openness, traits2.conscientiousness, traits2.emotionalStability, traits2.extraversion];
-      similarityMatrix[name1][name2] = cosineSimilarity(v1, v2);
+      similarityMatrix[name1][name2] = calculateSimilarity(v1, v2, ALGORITHM);
     }
   }
   
@@ -212,7 +234,7 @@ function analyzeQuestionCoverage() {
 }
 
 console.log('='.repeat(80));
-console.log(`性格测试精准度分析报告 [${VARIANT === 'optimized' ? '优化组' : '对照组'}]`);
+console.log(`性格测试精准度分析报告 [${VARIANT === 'optimized' ? '优化组' : '对照组'}] [${ALGORITHM === 'euclidean' ? '欧氏距离' : '余弦相似度'}]`);
 console.log('='.repeat(80));
 
 console.log('\n## 1. 12原型相似度矩阵分析\n');

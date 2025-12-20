@@ -186,6 +186,30 @@ function cosineSimilarity(vec1: number[], vec2: number[]): number {
 }
 
 /**
+ * 计算两个向量的欧氏距离
+ */
+function euclideanDistance(vec1: number[], vec2: number[]): number {
+  if (vec1.length !== vec2.length) return Infinity;
+  
+  let sum = 0;
+  for (let i = 0; i < vec1.length; i++) {
+    sum += Math.pow(vec1[i] - vec2[i], 2);
+  }
+  
+  return Math.sqrt(sum);
+}
+
+/**
+ * 将欧氏距离转换为相似度 (0-1范围)
+ * 使用公式: similarity = 1 / (1 + distance / maxDistance)
+ * maxDistance约为141.4 (5维度各100的最大距离)
+ */
+function euclideanToSimilarity(distance: number): number {
+  const maxDistance = Math.sqrt(5 * 100 * 100); // ~223.6
+  return 1 / (1 + distance / maxDistance);
+}
+
+/**
  * 将NormalizedScores转换为向量
  */
 function scoresToVector(scores: NormalizedScores): number[] {
@@ -217,6 +241,11 @@ function archetypeToVector(traits: TraitScores): number[] {
 }
 
 /**
+ * 匹配算法类型
+ */
+export type MatchingAlgorithm = 'cosine' | 'euclidean';
+
+/**
  * 使用余弦相似度匹配最接近的原型
  * 支持A/B测试，根据当前变体选择原型分数
  */
@@ -240,6 +269,45 @@ export function matchArchetypes(normalizedScores: NormalizedScores): ArchetypeMa
   matches.sort((a, b) => b.similarity - a.similarity);
   
   return matches;
+}
+
+/**
+ * 使用欧氏距离匹配最接近的原型
+ * 距离越小=相似度越高
+ */
+export function matchArchetypesEuclidean(normalizedScores: NormalizedScores): ArchetypeMatch[] {
+  const userVector = scoresToVector(normalizedScores);
+  const matches: ArchetypeMatch[] = [];
+  const currentArchetypes = getCurrentArchetypeScores();
+  
+  for (const [archetype, traits] of Object.entries(currentArchetypes)) {
+    const archetypeVector = archetypeToVector(traits);
+    const distance = euclideanDistance(userVector, archetypeVector);
+    const similarity = euclideanToSimilarity(distance);
+    
+    matches.push({
+      archetype,
+      similarity,
+      matchPercentage: Math.round(similarity * 100),
+    });
+  }
+  
+  // 按相似度降序排序
+  matches.sort((a, b) => b.similarity - a.similarity);
+  
+  return matches;
+}
+
+/**
+ * 通用匹配函数，支持算法选择
+ */
+export function matchArchetypesWithAlgorithm(
+  normalizedScores: NormalizedScores, 
+  algorithm: MatchingAlgorithm = 'cosine'
+): ArchetypeMatch[] {
+  return algorithm === 'euclidean' 
+    ? matchArchetypesEuclidean(normalizedScores) 
+    : matchArchetypes(normalizedScores);
 }
 
 /**
