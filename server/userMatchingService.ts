@@ -180,63 +180,199 @@ function calculateIntentScore(user1: Partial<User>, user2: Partial<User>): numbe
 }
 
 /**
- * 计算两个用户之间的背景多样性分数
- * 注意：多样性分数越高表示背景越不同，这对于丰富对话很有价值
+ * 计算用户年龄（从birthdate字段）
+ */
+function getUserAge(user: Partial<User>): number | null {
+  if (!user.birthdate) return null;
+  
+  const birthDate = new Date(user.birthdate);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return age;
+}
+
+/**
+ * 计算两个用户之间的背景分数
+ * 综合考虑：多样性（行业、教育）+ 相似性（年龄、老乡）
  */
 function calculateBackgroundScore(user1: Partial<User>, user2: Partial<User>): number {
-  let diversityPoints = 0;
-  let totalChecks = 0;
+  let score = 50; // 基础分
+  let factors = 0;
   
-  // 行业不同 (+1)
+  // ====== 多样性因素（不同加分）======
+  
+  // 行业多样性 (+10分如果不同)
   if (user1.industry && user2.industry) {
-    totalChecks++;
-    if (user1.industry !== user2.industry) diversityPoints += 1;
+    factors++;
+    if (user1.industry !== user2.industry) {
+      score += 10;
+    }
   }
   
-  // 教育背景不同 (+1)
-  if (user1.educationLevel && user2.educationLevel) {
-    totalChecks++;
-    if (user1.educationLevel !== user2.educationLevel) diversityPoints += 0.5;
-  }
-  
-  // 学习地域不同 (+1)
+  // 学习地域多样性 (+5分如果不同)
   if (user1.studyLocale && user2.studyLocale) {
-    totalChecks++;
-    if (user1.studyLocale !== user2.studyLocale) diversityPoints += 1;
+    factors++;
+    if (user1.studyLocale !== user2.studyLocale) {
+      score += 5;
+    }
   }
   
-  // 家乡不同 (+1)
-  if (user1.hometownCountry && user2.hometownCountry) {
-    totalChecks++;
-    if (user1.hometownCountry !== user2.hometownCountry) diversityPoints += 1;
+  // ====== 相似性因素（相同加分）======
+  
+  // 年龄相近度 (+15分如果年龄差≤3岁，+10分如果≤5岁，+5分如果≤8岁)
+  const age1 = getUserAge(user1);
+  const age2 = getUserAge(user2);
+  if (age1 && age2) {
+    factors++;
+    const ageDiff = Math.abs(age1 - age2);
+    if (ageDiff <= 3) {
+      score += 15; // 年龄非常相近
+    } else if (ageDiff <= 5) {
+      score += 10; // 年龄比较相近
+    } else if (ageDiff <= 8) {
+      score += 5; // 年龄有些相近
+    }
+    // 年龄差>8岁不加分也不扣分
   }
   
-  if (totalChecks === 0) return 50;
+  // 城市级老乡匹配 (+20分如果同城，+10分如果同国)
+  if (user1.hometownRegionCity && user2.hometownRegionCity) {
+    factors++;
+    if (user1.hometownRegionCity === user2.hometownRegionCity) {
+      score += 20; // 同城老乡！超级加分
+    } else if (user1.hometownCountry && user2.hometownCountry && 
+               user1.hometownCountry === user2.hometownCountry) {
+      score += 10; // 同国老乡
+    }
+  } else if (user1.hometownCountry && user2.hometownCountry) {
+    factors++;
+    if (user1.hometownCountry === user2.hometownCountry) {
+      score += 10; // 同国老乡
+    }
+  }
   
-  // 转换为0-100分数（多样性越高，分数越高）
-  const diversityRatio = diversityPoints / totalChecks;
-  return Math.round(diversityRatio * 100);
+  // 资历相似度 (+10分如果相同资历阶段)
+  if (user1.seniority && user2.seniority) {
+    factors++;
+    if (user1.seniority === user2.seniority) {
+      score += 10;
+    } else {
+      // 相邻资历也有加分
+      const seniorityLevels = ['Junior', 'Mid', 'Senior', 'Executive', 'Founder'];
+      const level1 = seniorityLevels.indexOf(user1.seniority);
+      const level2 = seniorityLevels.indexOf(user2.seniority);
+      if (level1 >= 0 && level2 >= 0 && Math.abs(level1 - level2) === 1) {
+        score += 5; // 相邻资历
+      }
+    }
+  }
+  
+  // ====== 人生阶段匹配 ======
+  
+  // 子女状态匹配 (+15分如果相同阶段)
+  if (user1.children && user2.children && 
+      user1.children !== 'Prefer not to say' && user2.children !== 'Prefer not to say') {
+    factors++;
+    if (user1.children === user2.children) {
+      // 相同子女状态，人生阶段一致
+      if (user1.children === 'Expecting') {
+        score += 20; // 都在期待新生命，非常特殊的共鸣
+      } else if (user1.children === 'No kids') {
+        score += 10; // 都没有孩子
+      } else {
+        score += 15; // 孩子年龄段相同
+      }
+    } else {
+      // 相近子女阶段也有加分
+      const childStages = ['No kids', 'Expecting', '0-5', '6-12', '13-18', 'Adult'];
+      const stage1 = childStages.indexOf(user1.children);
+      const stage2 = childStages.indexOf(user2.children);
+      if (stage1 >= 2 && stage2 >= 2 && Math.abs(stage1 - stage2) === 1) {
+        score += 8; // 相邻孩子年龄段
+      }
+    }
+  }
+  
+  // 感情状态匹配 (+8分如果相同)
+  if (user1.relationshipStatus && user2.relationshipStatus &&
+      user1.relationshipStatus !== 'Prefer not to say' && user2.relationshipStatus !== 'Prefer not to say') {
+    factors++;
+    if (user1.relationshipStatus === user2.relationshipStatus) {
+      score += 8; // 相同感情状态
+    }
+  }
+  
+  // ====== 归一化处理 ======
+  // 防止分数因多因素堆叠过高，使用衰减因子
+  // 基础分50 + 加分 → 归一化到合理范围
+  const rawBonus = score - 50;
+  
+  // 使用对数衰减：超过30分的部分按50%计算
+  let normalizedBonus = rawBonus;
+  if (rawBonus > 30) {
+    normalizedBonus = 30 + (rawBonus - 30) * 0.5;
+  }
+  
+  // 最终分数 = 基础分 + 归一化加分
+  const finalScore = 50 + normalizedBonus;
+  
+  // 确保分数在有效范围内（0-100）
+  return Math.min(100, Math.max(0, Math.round(finalScore)));
 }
 
 /**
  * 计算两个用户之间的文化语言分数
+ * 包括：共同语言 + 海外地区经历匹配
  */
 function calculateCultureScore(user1: Partial<User>, user2: Partial<User>): number {
+  let score = 40; // 基础分
+  
+  // ====== 语言匹配 ======
   const lang1 = user1.languagesComfort || [];
   const lang2 = user2.languagesComfort || [];
   
-  if (lang1.length === 0 || lang2.length === 0) return 50;
-  
-  // 计算共同语言
-  const commonLanguages = lang1.filter(l => lang2.includes(l));
-  
-  if (commonLanguages.length === 0) {
-    return 20; // 没有共同语言，低分
-  } else if (commonLanguages.length >= 2) {
-    return 95; // 多个共同语言，高分
-  } else {
-    return 75; // 一个共同语言，良好
+  if (lang1.length > 0 && lang2.length > 0) {
+    const commonLanguages = lang1.filter(l => lang2.includes(l));
+    
+    if (commonLanguages.length === 0) {
+      score -= 20; // 没有共同语言，扣分
+    } else if (commonLanguages.length >= 2) {
+      score += 30; // 多个共同语言，大加分
+    } else {
+      score += 20; // 一个共同语言，加分
+    }
   }
+  
+  // ====== 海外地区经历匹配 ======
+  const overseas1 = user1.overseasRegions || [];
+  const overseas2 = user2.overseasRegions || [];
+  
+  if (overseas1.length > 0 && overseas2.length > 0) {
+    const commonRegions = overseas1.filter(r => overseas2.includes(r));
+    
+    if (commonRegions.length > 0) {
+      // 相同海外经历地区，非常有共同话题
+      score += Math.min(commonRegions.length * 15, 30); // 最多+30分
+    }
+  }
+  
+  // ====== 学习地域匹配 ======
+  // 都有海外经历时额外加分（有共同国际化视野）
+  if (user1.studyLocale && user2.studyLocale) {
+    if ((user1.studyLocale === 'Overseas' || user1.studyLocale === 'Both') &&
+        (user2.studyLocale === 'Overseas' || user2.studyLocale === 'Both')) {
+      score += 10; // 都有国际化视野
+    }
+  }
+  
+  // 确保分数在有效范围内（0-100）
+  return Math.min(100, Math.max(0, score));
 }
 
 /**
@@ -303,12 +439,13 @@ export function calculateUserMatchScore(
      conversationSignatureScore * weights.conversationSignatureWeight) / 100
   );
   
-  // 生成匹配点
+  // 生成匹配点（更精细的解释）
   const matchPoints: string[] = [];
   
   if (personalityScore >= 80) {
     matchPoints.push(`性格高度互补 (${personalityScore}分)`);
   }
+  
   if (interestsScore >= 70) {
     const interests1 = getUserInterests(user1);
     const interests2 = getUserInterests(user2);
@@ -325,15 +462,81 @@ export function calculateUserMatchScore(
       matchPoints.push(`核心兴趣一致：${commonPrimary.join('、')}`);
     }
   }
+  
   if (intentScore >= 75) {
     matchPoints.push('活动意图一致');
   }
+  
+  // 背景匹配细分
   if (backgroundScore >= 70) {
-    matchPoints.push('背景多元化');
+    // 年龄相近
+    const age1 = getUserAge(user1);
+    const age2 = getUserAge(user2);
+    if (age1 && age2 && Math.abs(age1 - age2) <= 5) {
+      matchPoints.push('年龄相近');
+    }
+    
+    // 同城老乡
+    if (user1.hometownRegionCity && user2.hometownRegionCity && 
+        user1.hometownRegionCity === user2.hometownRegionCity) {
+      matchPoints.push(`老乡！都来自${user1.hometownRegionCity}`);
+    } else if (user1.hometownCountry && user2.hometownCountry && 
+               user1.hometownCountry === user2.hometownCountry &&
+               user1.hometownCountry !== '中国') {
+      matchPoints.push(`都来自${user1.hometownCountry}`);
+    }
+    
+    // 子女状态相同
+    if (user1.children && user2.children && user1.children === user2.children &&
+        user1.children !== 'Prefer not to say') {
+      const childrenLabels: Record<string, string> = {
+        'No kids': '都是丁克一族',
+        'Expecting': '都在期待新生命',
+        '0-5': '都有学龄前孩子',
+        '6-12': '都有小学阶段的孩子',
+        '13-18': '都有青少年孩子',
+        'Adult': '都有成年子女',
+      };
+      if (childrenLabels[user1.children]) {
+        matchPoints.push(childrenLabels[user1.children]);
+      }
+    }
+    
+    // 资历相同
+    if (user1.seniority && user2.seniority && user1.seniority === user2.seniority) {
+      const seniorityLabels: Record<string, string> = {
+        'Junior': '都是职场新人',
+        'Mid': '职场中坚力量',
+        'Senior': '都是职场老司机',
+        'Executive': '都是高管',
+        'Founder': '同为创业者',
+      };
+      if (seniorityLabels[user1.seniority]) {
+        matchPoints.push(seniorityLabels[user1.seniority]);
+      }
+    }
   }
-  if (cultureScore >= 80) {
-    matchPoints.push('语言文化相通');
+  
+  // 文化匹配细分
+  if (cultureScore >= 70) {
+    const overseas1 = user1.overseasRegions || [];
+    const overseas2 = user2.overseasRegions || [];
+    const commonRegions = overseas1.filter(r => overseas2.includes(r));
+    if (commonRegions.length > 0) {
+      const regionLabels: Record<string, string> = {
+        'North America': '北美',
+        'Europe': '欧洲',
+        'East Asia (excl. China)': '东亚',
+        'Southeast Asia': '东南亚',
+        'Oceania': '大洋洲',
+      };
+      const regionName = regionLabels[commonRegions[0]] || commonRegions[0];
+      matchPoints.push(`都在${regionName}留过学`);
+    } else if (cultureScore >= 80) {
+      matchPoints.push('语言文化相通');
+    }
   }
+  
   if (conversationSignatureScore >= 75) {
     matchPoints.push('沟通风格契合');
   }

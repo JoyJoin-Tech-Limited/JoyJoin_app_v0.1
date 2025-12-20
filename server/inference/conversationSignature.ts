@@ -1,9 +1,125 @@
 /**
  * 对话签名生成器 (Conversation Signature Generator)
  * 从AI对话中提取用户特征向量，用于增强匹配算法
+ * 包含深度特征提取：认知风格、沟通偏好、社交人格、情感特质等
  */
 
 import type { InferredAttribute } from './types';
+
+// ============ 深度特征分类体系 ============
+
+/**
+ * 认知风格 - 用户思考和决策的方式
+ */
+export interface CognitiveStyle {
+  // 决策速度: quick(快速决策) | deliberate(深思熟虑) | balanced(平衡型)
+  decisionSpeed: 'quick' | 'deliberate' | 'balanced';
+  
+  // 风险偏好: adventurous(冒险型) | cautious(谨慎型) | moderate(适中型)
+  riskTolerance: 'adventurous' | 'cautious' | 'moderate';
+  
+  // 思维方式: logical(逻辑型) | intuitive(直觉型) | mixed(混合型)
+  thinkingMode: 'logical' | 'intuitive' | 'mixed';
+  
+  // 信息处理: detail(细节导向) | big-picture(宏观导向) | flexible(灵活切换)
+  infoProcessing: 'detail' | 'big-picture' | 'flexible';
+}
+
+/**
+ * 沟通偏好 - 用户的表达和交流习惯
+ */
+export interface CommunicationPreference {
+  // 幽默风格: witty(机智型) | silly(搞笑型) | dry(冷幽默) | none(不使用)
+  humorStyle: 'witty' | 'silly' | 'dry' | 'none';
+  
+  // 表达深度: surface(表面) | moderate(适中) | deep(深度)
+  expressionDepth: 'surface' | 'moderate' | 'deep';
+  
+  // Emoji使用: frequent(频繁) | occasional(偶尔) | rare(很少)
+  emojiUsage: 'frequent' | 'occasional' | 'rare';
+  
+  // 回复长度偏好: concise(简洁) | moderate(适中) | elaborate(详尽)
+  responseLengthPreference: 'concise' | 'moderate' | 'elaborate';
+  
+  // 正式度: formal(正式) | casual(随意) | adaptive(适应性)
+  formalityLevel: 'formal' | 'casual' | 'adaptive';
+}
+
+/**
+ * 社交人格 - 用户在社交场合的行为模式
+ */
+export interface SocialPersonality {
+  // 社交主动性: proactive(主动) | reactive(被动) | balanced(平衡)
+  socialInitiative: 'proactive' | 'reactive' | 'balanced';
+  
+  // 领导倾向: leader(领导) | follower(跟随) | collaborator(协作)
+  leadershipTendency: 'leader' | 'follower' | 'collaborator';
+  
+  // 倾听vs表达: listener(倾听型) | expressor(表达型) | balanced(平衡)
+  listenExpressBalance: 'listener' | 'expressor' | 'balanced';
+  
+  // 群体偏好: small(小群体) | large(大群体) | flexible(灵活)
+  groupSizePreference: 'small' | 'large' | 'flexible';
+  
+  // 能量来源: introvert(内向) | extrovert(外向) | ambivert(两向)
+  energySource: 'introvert' | 'extrovert' | 'ambivert';
+}
+
+/**
+ * 情感特质 - 用户的情感表达和情绪特征
+ */
+export interface EmotionalTraits {
+  // 情绪稳定度 (0-100): 越高越稳定
+  emotionalStability: number;
+  
+  // 共情能力 (0-100): 理解他人情感的能力
+  empathyLevel: number;
+  
+  // 开放程度 (0-100): 对新事物和新观点的接受度
+  opennessLevel: number;
+  
+  // 情感表达: expressive(外显) | reserved(内敛) | selective(选择性)
+  emotionalExpression: 'expressive' | 'reserved' | 'selective';
+  
+  // 积极性 (0-100): 对话中的积极程度
+  positivityScore: number;
+}
+
+/**
+ * 互动节奏 - 用户的对话节奏特征
+ */
+export interface InteractionRhythm {
+  // 回复节奏: fast(快) | moderate(中) | slow(慢)
+  responseSpeed: 'fast' | 'moderate' | 'slow';
+  
+  // 话题切换: frequent(频繁) | steady(稳定) | rare(很少)
+  topicSwitching: 'frequent' | 'steady' | 'rare';
+  
+  // 对话深入度: surface(浅尝辄止) | moderate(适中) | deep(深入探讨)
+  conversationDepth: 'surface' | 'moderate' | 'deep';
+  
+  // 问答比例: questioner(多问) | answerer(多答) | balanced(平衡)
+  qaBalance: 'questioner' | 'answerer' | 'balanced';
+}
+
+/**
+ * 完整的深度特征结构
+ */
+export interface DeepTraits {
+  cognitive: Partial<CognitiveStyle>;
+  communication: Partial<CommunicationPreference>;
+  social: Partial<SocialPersonality>;
+  emotional: Partial<EmotionalTraits>;
+  rhythm: Partial<InteractionRhythm>;
+  
+  // 提取时间戳
+  extractedAt: string;
+  
+  // 总体置信度 (0-1)
+  overallConfidence: number;
+}
+
+// ============ 原有类型定义 ============
 
 // 语言风格类型
 export type LinguisticStyle = 'direct' | 'implicit' | 'negative' | 'dialect' | 'mixed' | 
@@ -30,6 +146,9 @@ export interface ConversationSignature {
   
   // AI推断的属性
   inferredTraits: Record<string, string | number | boolean>;
+  
+  // 深度特征 (可选，需要足够对话数据)
+  deepTraits?: DeepTraits;
   
   // 总体推断置信度 (0-1)
   inferenceConfidence: number;
@@ -316,7 +435,295 @@ export function calculateSignatureSimilarity(
   return Math.max(0, Math.min(100, score));
 }
 
+// ============ 深度特征提取器 ============
+
+/**
+ * 从对话中提取深度特征
+ * 分析用户的认知风格、沟通偏好、社交人格等微观信号
+ */
+export function extractDeepTraits(
+  messages: Array<{ role: string; content: string }>
+): DeepTraits {
+  const userMessages = messages.filter(m => m.role === 'user');
+  const allUserContent = userMessages.map(m => m.content).join(' ');
+  
+  // 基础统计
+  const stats = analyzeConversation(messages);
+  
+  // ====== 沟通偏好分析 ======
+  const communication: Partial<CommunicationPreference> = {};
+  
+  // Emoji使用频率
+  if (stats.emojiCount > 5) {
+    communication.emojiUsage = 'frequent';
+  } else if (stats.emojiCount > 1) {
+    communication.emojiUsage = 'occasional';
+  } else {
+    communication.emojiUsage = 'rare';
+  }
+  
+  // 回复长度偏好
+  if (stats.avgResponseLength > 50) {
+    communication.responseLengthPreference = 'elaborate';
+  } else if (stats.avgResponseLength > 20) {
+    communication.responseLengthPreference = 'moderate';
+  } else {
+    communication.responseLengthPreference = 'concise';
+  }
+  
+  // 正式度检测
+  const formalPatterns = /您|请问|麻烦|贵/g;
+  const casualPatterns = /哈哈|嘿|哇|啊|呀|嘛|呢|吧/g;
+  const formalCount = (allUserContent.match(formalPatterns) || []).length;
+  const casualCount = (allUserContent.match(casualPatterns) || []).length;
+  
+  if (formalCount > casualCount * 2) {
+    communication.formalityLevel = 'formal';
+  } else if (casualCount > formalCount * 2) {
+    communication.formalityLevel = 'casual';
+  } else {
+    communication.formalityLevel = 'adaptive';
+  }
+  
+  // 幽默风格检测
+  const wittyPatterns = /笑|哈哈|haha|lol|😂|🤣/gi;
+  const sillyPatterns = /傻|疯|神经|搞笑/g;
+  const wittyCount = (allUserContent.match(wittyPatterns) || []).length;
+  const sillyCount = (allUserContent.match(sillyPatterns) || []).length;
+  
+  if (wittyCount > 3) {
+    communication.humorStyle = 'witty';
+  } else if (sillyCount > 2) {
+    communication.humorStyle = 'silly';
+  } else if (wittyCount > 0 || sillyCount > 0) {
+    communication.humorStyle = 'dry';
+  } else {
+    communication.humorStyle = 'none';
+  }
+  
+  // ====== 社交人格分析 ======
+  const social: Partial<SocialPersonality> = {};
+  
+  // 社交主动性
+  if (stats.proactiveQuestions > 3) {
+    social.socialInitiative = 'proactive';
+  } else if (stats.proactiveQuestions > 0) {
+    social.socialInitiative = 'balanced';
+  } else {
+    social.socialInitiative = 'reactive';
+  }
+  
+  // 问答比例
+  if (stats.questionCount > stats.userTurns * 0.5) {
+    social.listenExpressBalance = 'listener'; // 多问说明想了解他人
+  } else if (stats.avgResponseLength > 40) {
+    social.listenExpressBalance = 'expressor'; // 长回复说明喜欢表达
+  } else {
+    social.listenExpressBalance = 'balanced';
+  }
+  
+  // 能量来源推断（基于表达热情度）
+  const energyScore = calculateConversationEnergy(stats);
+  if (energyScore >= 70) {
+    social.energySource = 'extrovert';
+  } else if (energyScore <= 40) {
+    social.energySource = 'introvert';
+  } else {
+    social.energySource = 'ambivert';
+  }
+  
+  // ====== 情感特质分析 ======
+  const emotional: Partial<EmotionalTraits> = {};
+  
+  // 积极性评分（使用更丰富的情感词库）
+  const positivePatterns = /喜欢|开心|快乐|期待|兴奋|棒|好|赞|爱|感谢|谢谢|不错|可以|挺好|蛮好|还行/g;
+  const negativePatterns = /讨厌|烦|累|难过|无聊|不想|不喜欢|不行|糟糕|差劲/g;
+  const positiveCount = (allUserContent.match(positivePatterns) || []).length;
+  const negativeCount = (allUserContent.match(negativePatterns) || []).length;
+  
+  // 使用加权计算避免0数据时的极端值
+  const totalAffect = positiveCount + negativeCount;
+  if (totalAffect > 0) {
+    emotional.positivityScore = Math.round((positiveCount / totalAffect) * 100);
+  } else {
+    emotional.positivityScore = 50; // 默认中性
+  }
+  
+  // 情感表达风格
+  if (stats.exclamationCount > stats.userTurns * 0.3) {
+    emotional.emotionalExpression = 'expressive';
+  } else if (stats.exclamationCount === 0 && communication.emojiUsage === 'rare') {
+    emotional.emotionalExpression = 'reserved';
+  } else {
+    emotional.emotionalExpression = 'selective';
+  }
+  
+  // 开放程度（基于愿意分享的信息量，使用更保守的计算）
+  const infoKeywords = /我是|我在|我的|家人|工作|喜欢|爱好|经历|之前/g;
+  const infoCount = (allUserContent.match(infoKeywords) || []).length;
+  // 使用渐进式计算，避免少量文本导致极端值
+  emotional.opennessLevel = Math.min(100, Math.max(30, 30 + Math.round(infoCount * 7)));
+  
+  // 情绪稳定度（基于用词一致性，默认中等）
+  emotional.emotionalStability = 50 + Math.min(30, stats.userTurns * 2);
+  
+  // 共情能力（基于提问和关心词汇，默认中等）
+  const empathyPatterns = /你|您|怎么样|还好吗|辛苦|理解/g;
+  const empathyCount = (allUserContent.match(empathyPatterns) || []).length;
+  emotional.empathyLevel = Math.min(100, Math.max(40, 40 + empathyCount * 10));
+  
+  // ====== 互动节奏分析 ======
+  const rhythm: Partial<InteractionRhythm> = {};
+  
+  // 对话深入度
+  if (stats.avgResponseLength > 60 || stats.userTurns > 12) {
+    rhythm.conversationDepth = 'deep';
+  } else if (stats.avgResponseLength > 25 || stats.userTurns > 6) {
+    rhythm.conversationDepth = 'moderate';
+  } else {
+    rhythm.conversationDepth = 'surface';
+  }
+  
+  // 问答比例
+  const qaRatio = stats.questionCount / Math.max(1, stats.userTurns);
+  if (qaRatio > 0.5) {
+    rhythm.qaBalance = 'questioner';
+  } else if (qaRatio < 0.1) {
+    rhythm.qaBalance = 'answerer';
+  } else {
+    rhythm.qaBalance = 'balanced';
+  }
+  
+  // ====== 认知风格分析 ======
+  const cognitive: Partial<CognitiveStyle> = {};
+  
+  // 思维方式（基于表达特征）
+  const logicalPatterns = /因为|所以|如果|那么|但是|然而|首先|其次|总之/g;
+  const intuitivePatterns = /感觉|好像|可能|应该|大概|似乎/g;
+  const logicalCount = (allUserContent.match(logicalPatterns) || []).length;
+  const intuitiveCount = (allUserContent.match(intuitivePatterns) || []).length;
+  
+  if (logicalCount > intuitiveCount * 2) {
+    cognitive.thinkingMode = 'logical';
+  } else if (intuitiveCount > logicalCount * 2) {
+    cognitive.thinkingMode = 'intuitive';
+  } else {
+    cognitive.thinkingMode = 'mixed';
+  }
+  
+  // 决策速度（基于回复简洁度）
+  if (communication.responseLengthPreference === 'concise') {
+    cognitive.decisionSpeed = 'quick';
+  } else if (communication.responseLengthPreference === 'elaborate') {
+    cognitive.decisionSpeed = 'deliberate';
+  } else {
+    cognitive.decisionSpeed = 'balanced';
+  }
+  
+  // 计算总体置信度
+  const totalFactors = Object.keys(communication).length + 
+                       Object.keys(social).length + 
+                       Object.keys(emotional).length + 
+                       Object.keys(rhythm).length + 
+                       Object.keys(cognitive).length;
+  const overallConfidence = Math.min(0.95, 0.3 + (totalFactors * 0.05) + (stats.userTurns * 0.02));
+  
+  return {
+    cognitive,
+    communication,
+    social,
+    emotional,
+    rhythm,
+    extractedAt: new Date().toISOString(),
+    overallConfidence: Math.round(overallConfidence * 100) / 100,
+  };
+}
+
+/**
+ * 计算两个用户深度特征的相似度 (0-100)
+ * 使用置信度加权，确保即使部分特征缺失也能合理计算
+ */
+export function calculateDeepTraitsSimilarity(
+  traits1: DeepTraits | undefined,
+  traits2: DeepTraits | undefined
+): number {
+  if (!traits1 || !traits2) {
+    return 50; // 无数据时返回中等分数
+  }
+  
+  let score = 0;
+  let totalWeight = 0;
+  
+  // 辅助函数：安全比较并加权
+  const compareAndScore = (
+    val1: string | number | undefined, 
+    val2: string | number | undefined, 
+    weight: number,
+    numericThreshold?: number
+  ): void => {
+    if (val1 === undefined || val2 === undefined) return;
+    
+    totalWeight += weight;
+    
+    if (typeof val1 === 'number' && typeof val2 === 'number' && numericThreshold) {
+      // 数值比较
+      const diff = Math.abs(val1 - val2);
+      if (diff <= numericThreshold) {
+        score += weight;
+      } else if (diff <= numericThreshold * 2) {
+        score += weight * 0.5;
+      }
+    } else if (val1 === val2) {
+      // 类别比较
+      score += weight;
+    }
+  };
+  
+  // 沟通偏好匹配
+  compareAndScore(traits1.communication.emojiUsage, traits2.communication.emojiUsage, 10);
+  compareAndScore(traits1.communication.formalityLevel, traits2.communication.formalityLevel, 10);
+  compareAndScore(traits1.communication.responseLengthPreference, traits2.communication.responseLengthPreference, 8);
+  compareAndScore(traits1.communication.humorStyle, traits2.communication.humorStyle, 8);
+  
+  // 社交人格匹配
+  compareAndScore(traits1.social.energySource, traits2.social.energySource, 15);
+  compareAndScore(traits1.social.socialInitiative, traits2.social.socialInitiative, 10);
+  compareAndScore(traits1.social.listenExpressBalance, traits2.social.listenExpressBalance, 8);
+  
+  // 互动节奏匹配
+  compareAndScore(traits1.rhythm.conversationDepth, traits2.rhythm.conversationDepth, 12);
+  compareAndScore(traits1.rhythm.qaBalance, traits2.rhythm.qaBalance, 8);
+  
+  // 认知风格匹配
+  compareAndScore(traits1.cognitive.thinkingMode, traits2.cognitive.thinkingMode, 12);
+  compareAndScore(traits1.cognitive.decisionSpeed, traits2.cognitive.decisionSpeed, 8);
+  
+  // 情感特质匹配 - 数值型
+  compareAndScore(traits1.emotional.positivityScore, traits2.emotional.positivityScore, 15, 20);
+  compareAndScore(traits1.emotional.opennessLevel, traits2.emotional.opennessLevel, 10, 25);
+  compareAndScore(traits1.emotional.empathyLevel, traits2.emotional.empathyLevel, 10, 20);
+  
+  // 如果没有可比较的特征，返回中等分数
+  if (totalWeight === 0) {
+    return 50;
+  }
+  
+  // 基于置信度加权的最终分数
+  // 使用两者置信度的几何平均
+  const confidenceWeight = Math.sqrt(traits1.overallConfidence * traits2.overallConfidence);
+  
+  // 归一化到0-100范围
+  const normalizedScore = (score / totalWeight) * 100;
+  
+  // 置信度调整：低置信度时趋向50分
+  const adjustedScore = 50 + (normalizedScore - 50) * confidenceWeight;
+  
+  return Math.min(100, Math.max(0, Math.round(adjustedScore)));
+}
+
 export default {
   generateConversationSignature,
   calculateSignatureSimilarity,
+  extractDeepTraits,
+  calculateDeepTraitsSimilarity,
 };
