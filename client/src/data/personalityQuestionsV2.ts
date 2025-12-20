@@ -468,7 +468,7 @@ export function validateV2Coverage(): Record<string, number> {
   return coverage;
 }
 
-if (import.meta.env.DEV) {
+if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
   const coverage = validateV2Coverage();
   console.log("📊 V2题库维度覆盖度:", coverage);
   
