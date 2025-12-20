@@ -70,7 +70,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "D", 
         text: "先找个角落坐下，用手机掩饰，默默观察", 
-        traitScores: { C: 1, E: 1, P: 1 },
+        traitScores: { C: 2, E: 1 },  // 专家修正：观察行为体现谨慎性，非积极性
         tag: "隐身观察"
       },
     ],
@@ -206,7 +206,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "D", 
         text: "一言不发，低头玩手机，等他们自己聊完", 
-        traitScores: { C: 1, E: 2, X: 1 },
+        traitScores: { E: 2, C: 1 },  // 专家修正：沉默是低外向性，移除X正分
         tag: "沉默等待"
       },
     ],
@@ -342,7 +342,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "D", 
         text: "「终于...」瘫在沙发上不想动，社交电量归零", 
-        traitScores: { A: 2, P: 1 },
+        traitScores: { E: 1 },  // 专家修正：社交耗尽更关联情绪稳定性，非亲和力
         tag: "彻底耗尽"
       },
     ],
@@ -364,19 +364,19 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "B", 
         text: "「超会玩！总能带你发现新奇好玩的东西！」", 
-        traitScores: { A: 3, E: 1, X: 1 },
+        traitScores: { O: 4, X: 2 },  // 专家修正：探索行为核心是开放性，非亲和力
         tag: "探索达人"
       },
       { 
         value: "C", 
         text: "「脑洞王！创意源源不断，想法特别多！」", 
-        traitScores: { C: 3, E: 1 },
+        traitScores: { O: 3, C: 1 },  // 专家修正：创意核心是开放性，责任心为辅
         tag: "创意无限"
       },
       { 
         value: "D", 
         text: "「超靠谱！关键时刻稳得一批！」", 
-        traitScores: { O: 3, C: 1 },
+        traitScores: { C: 3, E: 2 },  // 专家修正：靠谱稳定核心是责任心+情绪稳定
         tag: "稳定可靠"
       },
     ],

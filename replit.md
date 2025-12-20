@@ -36,10 +36,16 @@ Preferred communication style: Simple, everyday language.
   - **Dynamic Weight Adjustment:** Feedback-driven weight optimization that adapts dimension weights based on user satisfaction and match point discussions.
   - **Hybrid Semantic Strategy (Option C):** Simple features use regex patterns, complex semantics call DeepSeek API only for low-confidence attributes to control costs.
   - **Matching Cache System:** In-memory caching for pair scores and signatures, ready for Redis migration.
-  - **Expanded Cantonese Dialect Support:** 100+ Cantonese vocabulary patterns covering Hong Kong and Shenzhen regional expressions.
+  - **Expanded Cantonese Dialect Support:** 368 Cantonese vocabulary patterns covering particles, verbs, adjectives, phrases, HK/SZ locations (80 MTR stations), and internet slang.
 - **AI-Driven Matchmaking:** Utilizes AI for sophisticated event and people matching, focusing on personality, interests, and group dynamics, with explainable results and a deep feedback system.
 - **Two-Tier Feedback Architecture:** Collects basic and optional anonymous deep feedback to refine algorithms.
-- **Gamified Personality Assessment:** 10-question test for social role archetypes, visualized with a Personality Radar Chart.
+- **Gamified Personality Assessment:** 12-question test using cumulative trait-based scoring:
+  - **Cumulative Scoring System:** Trait scores accumulated from each answer, min-max normalized to 0-100
+  - **5-Dimensional Model (AOCEX):** Affinity, Openness, Conscientiousness, Emotional Stability, Extraversion
+  - **P-Dimension Integration:** Positivity distributed to X(40%), O(30%), A(30%) using floating-point precision
+  - **Cosine Similarity Matching:** User traits matched against 12 archetype animal profiles
+  - **Empirical Score Ranges:** A(0-32), O(0-38), C(0-24), E(0-20), X(0-42) including P contributions
+  - Visualized with personalized Personality Radar Chart.
 - **Streamlined Onboarding:** Multi-step registration covering identity, interests, personality, and profile creation, enhanced with UX features.
 - **Admin Portal:** Desktop-first interface for comprehensive management and real-time algorithm tuning via an Admin Matching Lab.
 - **Payment & Subscription System:** Full payment infrastructure including WeChat Pay integration.

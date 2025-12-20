@@ -5,6 +5,7 @@
  */
 
 import type { InferredAttribute } from './types';
+import { CANTONESE_PATTERN, detectCantoneseUsage } from './cantoneseVocabulary';
 
 // ============ 深度特征分类体系 ============
 
@@ -182,23 +183,8 @@ function analyzeConversation(messages: Array<{ role: string; content: string }>)
   let negationUsage = 0;
   let proactiveQuestions = 0;
   
-  // 周语辰专家建议：扩展粤语方言词典，覆盖更多常用词汇和语法
-  const dialectPatterns = new RegExp([
-    // 基础语气助词
-    '[嘅喺咗啦嘛咩呀噉]',
-    // 常用动词
-    '系|唔系|冇|睇|嚟|返|食|饮|瞓|行|讲|听|做|买|卖|揾|攞|畀|带|放|坐|企|跑|跳|游|飞|开|关|落|入|出',
-    // 语气词和结构词
-    '啊|喎|咧|㗎|咁|仲|都|先|添|净|翻|埋|晒|住|紧|过|落去',
-    // 常用形容词
-    '靓|叻|勁|正|型|索|衰|憎|赞|好嘢|醒|烦|肥|瘦|高|矮|肥仔|肥妹|靓仔|靓女',
-    // 常用短语
-    '点解|做咩|係咪|冇问题|唔该|多谢|早晨|晚安|再见|拜拜|食饭未|搞掂|唔使|唔好意思|咪住|慢慢嚟|冇所谓',
-    // 香港粤语特有词
-    '打工仔|返工|收工|OT|放假|攰|發夢|沖涼|瞓觉|屋企|公司|巴士|地铁|的士|港鉴|铜锣湾|旺角|尖沙咀|中环',
-    // 深圳/广东粤语
-    '科技园|南山|福田|罗湖|宝安|龙华|前海|东门|华强北|车公庙|深大|港大|中大|科大',
-  ].join('|'), 'g');
+  // 使用扩展的粤语词库（200+ 词汇）
+  const dialectPatterns = CANTONESE_PATTERN;
   const negationPatterns = /不是|没有|不在|不想|没|不|唔系|唔係|冇|唔/g;
   const emojiPattern = /[\uD83C-\uDBFF\uDC00-\uDFFF]+/g;
   
