@@ -381,3 +381,195 @@ if (import.meta.env?.DEV) {
   console.log('📋 自适应校准题库已加载');
   console.log('📊 可校准维度:', Object.keys(calibrationQuestions));
 }
+
+// ========================================
+// V6.8 低能量原型校准系统 - 静谧小屋系列
+// 仅对低能量原型用户触发（约10-15%）
+// 用于区分5个高相似度原型
+// ========================================
+
+export const LOW_ENERGY_ARCHETYPES = [
+  '淡定海豚',
+  '定心大象', 
+  '稳如龟',
+  '隐身猫',
+  '沉思猫头鹰'
+];
+
+export const LOW_ENERGY_CALIBRATION_THRESHOLD = 0.03;
+
+export interface LowEnergyCalibrationOption {
+  value: string;
+  text: string;
+  traitScores: TraitScores;
+  tag: string;
+  targetArchetype: string;
+}
+
+export interface LowEnergyCalibrationQuestion {
+  id: number;
+  category: string;
+  scenarioText: string;
+  questionText: string;
+  options: LowEnergyCalibrationOption[];
+}
+
+export const lowEnergyCalibrationQuestions: LowEnergyCalibrationQuestion[] = [
+  {
+    id: 201,
+    category: "独处充电",
+    scenarioText: "🔋 经过一场热闹聚会后，你终于回到自己的小天地...",
+    questionText: "你会怎么恢复能量？",
+    options: [
+      { 
+        value: "A", 
+        text: "泡杯茶，翻翻待办清单，规划明天的事", 
+        traitScores: { C: 2, E: 2, X: 0 },
+        tag: "规划充电",
+        targetArchetype: "定心大象"
+      },
+      { 
+        value: "B", 
+        text: "放空发呆，让思绪慢慢平静下来", 
+        traitScores: { E: 3, C: 1, X: 0 },
+        tag: "放空平静",
+        targetArchetype: "淡定海豚"
+      },
+      { 
+        value: "C", 
+        text: "检查今天的任务完成情况，逐项打勾确认", 
+        traitScores: { C: 3, E: 1, X: -1 },
+        tag: "清单确认",
+        targetArchetype: "稳如龟"
+      },
+      { 
+        value: "D", 
+        text: "窝在角落看书或追剧，不想被任何人打扰", 
+        traitScores: { X: -3, C: 0, E: 1 },
+        tag: "独处享受",
+        targetArchetype: "隐身猫"
+      },
+      { 
+        value: "E", 
+        text: "写日记或思考今天有趣的对话和想法", 
+        traitScores: { O: 3, C: 1, E: 1, X: -1 },
+        tag: "反思记录",
+        targetArchetype: "沉思猫头鹰"
+      },
+    ],
+  },
+
+  {
+    id: 202,
+    category: "突发应对",
+    scenarioText: "🚨 朋友聚会时突然停电了！黑暗中大家有点慌...",
+    questionText: "你会？",
+    options: [
+      { 
+        value: "A", 
+        text: "立刻站出来安排：谁找蜡烛、谁查电闸", 
+        traitScores: { C: 2, E: 2, X: 1 },
+        tag: "组织协调",
+        targetArchetype: "定心大象"
+      },
+      { 
+        value: "B", 
+        text: "轻声安慰身边的人，让大家别紧张", 
+        traitScores: { E: 3, A: 2, X: 0 },
+        tag: "情绪安抚",
+        targetArchetype: "淡定海豚"
+      },
+      { 
+        value: "C", 
+        text: "先确认周围安全，提醒大家别乱动", 
+        traitScores: { C: 3, E: 1, X: -1 },
+        tag: "安全优先",
+        targetArchetype: "稳如龟"
+      },
+      { 
+        value: "D", 
+        text: "安静待在原地，等别人处理就好", 
+        traitScores: { X: -2, C: 0, E: 1 },
+        tag: "静观其变",
+        targetArchetype: "隐身猫"
+      },
+      { 
+        value: "E", 
+        text: "好奇地分析可能的原因：跳闸？线路问题？", 
+        traitScores: { O: 3, C: 1, X: -1 },
+        tag: "分析原因",
+        targetArchetype: "沉思猫头鹰"
+      },
+    ],
+  },
+
+  {
+    id: 203,
+    category: "深夜复盘",
+    scenarioText: "📓 夜深了，你躺在床上回顾今天...",
+    questionText: "你的脑海里在想什么？",
+    options: [
+      { 
+        value: "A", 
+        text: "列一下明天的重点任务，心里有数就安心", 
+        traitScores: { C: 2, E: 2, X: 0 },
+        tag: "计划明天",
+        targetArchetype: "定心大象"
+      },
+      { 
+        value: "B", 
+        text: "没什么特别的，放轻松就好，不多想", 
+        traitScores: { E: 3, C: 1, X: 0 },
+        tag: "放松入睡",
+        targetArchetype: "淡定海豚"
+      },
+      { 
+        value: "C", 
+        text: "复盘今天有没有什么遗漏或失误", 
+        traitScores: { C: 3, E: 1, X: -2 },
+        tag: "检查复盘",
+        targetArchetype: "稳如龟"
+      },
+      { 
+        value: "D", 
+        text: "静静回味独处时的舒适感，享受安静", 
+        traitScores: { X: -3, E: 1, C: 0 },
+        tag: "享受独处",
+        targetArchetype: "隐身猫"
+      },
+      { 
+        value: "E", 
+        text: "思考今天学到的新东西，有什么启发", 
+        traitScores: { O: 3, C: 1, E: 1, X: -1 },
+        tag: "思考启发",
+        targetArchetype: "沉思猫头鹰"
+      },
+    ],
+  },
+];
+
+/**
+ * V6.8 判断是否需要触发低能量原型校准
+ * @param primaryArchetype 主匹配原型
+ * @param primaryScore 主匹配分数 (0-1)
+ * @param secondaryScore 次匹配分数 (0-1)
+ */
+export function shouldTriggerLowEnergyCalibration(
+  primaryArchetype: string,
+  primaryScore: number,
+  secondaryScore: number
+): boolean {
+  const isLowEnergy = LOW_ENERGY_ARCHETYPES.includes(primaryArchetype);
+  const scoreDiff = primaryScore - secondaryScore;
+  const isCloseMatch = scoreDiff < LOW_ENERGY_CALIBRATION_THRESHOLD;
+  
+  return isLowEnergy && isCloseMatch;
+}
+
+/**
+ * V6.8 获取低能量原型校准题目
+ * 返回3道静谧小屋系列题目用于区分低能量原型
+ */
+export function getLowEnergyCalibrationQuestions(): LowEnergyCalibrationQuestion[] {
+  return lowEnergyCalibrationQuestions;
+}

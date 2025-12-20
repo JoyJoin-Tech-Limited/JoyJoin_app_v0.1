@@ -52,31 +52,31 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "A", 
         text: "大声说「大家好！」用幽默开场让全场笑起来", 
-        traitScores: { A: 2, X: 4, P: 1 },
+        traitScores: { A: 2, X: 3, P: 1 },
         tag: "主动破冰"
       },
       { 
         value: "B", 
         text: "找到寿星，让ta来帮你介绍认识大家", 
-        traitScores: { C: 1, E: 2, P: 0 },  // V3优化：移除隐含P
+        traitScores: { C: 1, E: 2, O: 1 },
         tag: "借力社交"
       },
       { 
         value: "C", 
         text: "挨个问「你是怎么认识XX的」，建立人际连接", 
-        traitScores: { A: 3, X: 2 },
+        traitScores: { A: 3, X: 2, O: 1 },
         tag: "主动连接"
       },
       { 
         value: "D", 
         text: "先找个角落坐下，用手机掩饰，默默观察", 
-        traitScores: { C: 2, E: 2, X: -2, P: -1 },  // V3优化：低能量原型路径
+        traitScores: { C: 2, E: 2, X: -2, P: -1 },
         tag: "隐身观察"
       },
       { 
         value: "E", 
         text: "先在门口观察一下场面，再慢慢找机会加入", 
-        traitScores: { A: 1, E: 2, X: -1 },  // V3新增：隐身猫/稳如龟路径
+        traitScores: { A: 1, E: 2, X: -1, O: 1 },
         tag: "观察再入"
       },
     ],
@@ -205,9 +205,9 @@ export const personalityQuestionsV2: QuestionV2[] = [
     options: [
       { 
         value: "A", 
-        text: "「哈哈哈！要不猜拳决定？输的请客！」搞笑化解", 
-        traitScores: { A: 2, E: 2, X: 1 },
-        tag: "幽默破冰"
+        text: "「要不这次听A的，下次听B的？」提出轮流方案", 
+        traitScores: { A: 2, C: 2, E: 1 },
+        tag: "理性协调"
       },
       { 
         value: "B", 
@@ -218,14 +218,20 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "C", 
         text: "「其实附近有家店两种都有！」找创意方案", 
-        traitScores: { A: 1, O: 2, P: 2 },
+        traitScores: { A: 1, O: 3, P: 1 },
         tag: "创意解法"
       },
       { 
         value: "D", 
-        text: "一言不发，低头玩手机，等他们自己聊完", 
-        traitScores: { E: 3, C: 1, X: -2, P: -1 },  // V3优化：稳如龟/隐身猫路径
-        tag: "沉默等待"
+        text: "安静等着，心想「吃什么都行，你们决定就好」", 
+        traitScores: { E: 2, C: 1, X: -2 },
+        tag: "随遇而安"
+      },
+      { 
+        value: "E", 
+        text: "「我没什么意见，但别吵太久哈～」温和表达边界", 
+        traitScores: { E: 2, A: 1, X: -1, C: 1 },
+        tag: "温和边界"
       },
     ],
   },
@@ -240,31 +246,31 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "A", 
         text: "「我来订位！交给我没问题！」主动承担组织者", 
-        traitScores: { C: 3, X: 2, P: 2 },
+        traitScores: { C: 3, X: 2, P: 1 },
         tag: "主动担当"
       },
       { 
         value: "B", 
         text: "「需要帮忙喊一声～」愿意配合支持", 
-        traitScores: { A: 2, C: 1 },
+        traitScores: { A: 2, C: 1, O: 1 },
         tag: "配合支持"
       },
       { 
         value: "C", 
         text: "默默把账单算好，等大家吃完发给大家", 
-        traitScores: { C: 3, E: 2, X: -1 },  // V3优化：定心大象/沉思猫头鹰路径
+        traitScores: { C: 3, E: 2, X: -1 },
         tag: "细心执行"
       },
       { 
         value: "D", 
         text: "「我负责活跃气氛就好啦！」贡献其他价值", 
-        traitScores: { X: 2, P: 3 },
+        traitScores: { X: 2, P: 2, O: 1 },
         tag: "气氛担当"
       },
       { 
         value: "E", 
         text: "负责安排行程时间节奏，确保大家准时到位", 
-        traitScores: { C: 2, E: 2, X: 0 },  // V3新增：定心大象路径
+        traitScores: { C: 2, E: 2, O: 1 },
         tag: "节奏把控"
       },
     ],
@@ -280,31 +286,31 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "A", 
         text: "站在C位带节奏，全场的笑点都是你制造的", 
-        traitScores: { X: 4, P: 3 },
+        traitScores: { X: 4, P: 2 },
         tag: "全场焦点"
       },
       { 
         value: "B", 
         text: "像太阳一样照顾每个人，确保没人被冷落", 
-        traitScores: { A: 2, O: 1 },
+        traitScores: { A: 2, O: 2 },
         tag: "普照全场"
       },
       { 
         value: "C", 
         text: "到处串场，和不同的人深聊，挖掘有趣信息", 
-        traitScores: { A: 1, E: 1, P: 1 },
+        traitScores: { A: 1, E: 1, O: 2 },
         tag: "探索挖掘"
       },
       { 
         value: "D", 
         text: "找个舒服的角落，安静听大家聊，享受旁观", 
-        traitScores: { E: 3, C: 1, X: -3, P: -1 },  // V3优化：隐身猫/稳如龟路径
+        traitScores: { E: 3, C: 1, X: -3, P: -1 },
         tag: "边缘舒适"
       },
       { 
         value: "E", 
         text: "和两三位聊得来的人深度聊天，不追求面面俱到", 
-        traitScores: { A: 2, E: 1, X: 0 },  // V3新增：暖心熊路径
+        traitScores: { A: 2, E: 1, O: 1 },
         tag: "深度连接"
       },
     ],
