@@ -47,10 +47,11 @@ Preferred communication style: Simple, everyday language.
   - **Empirical Score Ranges:** A(-4~30), O(-3~35), C(0~30), E(0~28), X(-15~38) including P contributions (V3 with negative scores)
   - Visualized with personalized Personality Radar Chart.
   - **Accuracy Optimization (V6.7 - Production Ready):** Comprehensive optimization achieving balanced distribution:
-    - Distribution improvement: All 12 archetypes now within 5.64%-11.40% range (previously 1.8%-21%)
+    - Distribution improvement: All 12 archetypes now within 5.93%-11.88% range (previously 1.8%-21%)
     - Question bank V3: Added negative X/P scoring options and 5th choices for low-energy pathways
-    - Key improvements: 太阳鸡(21%→11.40%), 开心柯基(20%→5.64%), 隐身猫(1.8%→9.05%), 稳如龟(2%→7.96%), 暖心熊(2.7%→9.34%), 沉思猫头鹰(0.66%→8.80%)
+    - Key improvements: 太阳鸡(21%→11.88%), 开心柯基(20%→5.93%), 隐身猫(1.8%→9.28%), 稳如龟(2%→7.90%), 暖心熊(2.7%→9.33%), 沉思猫头鹰(0.66%→9.55%)
     - A/B test ready: `archetypeTraitScoresOptimized.ts` with `setABTestVariant('control'/'optimized')`
+    - **Known limitation:** 5 low-energy archetype pairs (淡定海豚/定心大象/稳如龟/隐身猫/沉思猫头鹰) have >98% cosine similarity. This is an architectural limitation of the 12-question format. Future improvements: expand question bank, use Euclidean distance, or add archetype-specific differentiating questions.
 - **Streamlined Onboarding:** Multi-step registration covering identity, interests, personality, and profile creation, enhanced with UX features.
 - **Admin Portal:** Desktop-first interface for comprehensive management and real-time algorithm tuning via an Admin Matching Lab.
 - **Payment & Subscription System:** Full payment infrastructure including WeChat Pay integration.

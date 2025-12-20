@@ -85,12 +85,12 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
 
   // ========== 中能量区 ==========
   
-  // 淡定海豚: 保持高C+E，低X
+  // 淡定海豚: 保持高C+E，低X（V6.7恢复+微调）
   "淡定海豚": {
     affinity: 55,
     openness: 50,
-    conscientiousness: 90,
-    emotionalStability: 90,
+    conscientiousness: 90,  // 保持高C
+    emotionalStability: 90, // 保持高E
     extraversion: 35,
     positivity: 65,
   },
@@ -125,7 +125,7 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 65,
   },
 
-  // ========== 低能量区 ==========
+  // ========== 低能量区 (V6.7恢复) ==========
   
   // 沉思猫头鹰: 最终门槛（V6.7）
   "沉思猫头鹰": {
@@ -147,7 +147,7 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 52,
   },
 
-  // ========== 超低能量区 ==========
+  // ========== 超低能量区 (V6.7恢复) ==========
   
   // 稳如龟: 保持现有配置
   "稳如龟": {
