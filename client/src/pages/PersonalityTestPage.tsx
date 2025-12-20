@@ -403,6 +403,7 @@ export default function PersonalityTestPage() {
   const handleLowEnergyChoice = (value: string, traitScores: TraitScores) => {
     const questionId = currentLowEnergyQuestion?.id;
     if (questionId) {
+      // 存储到主answers中，submitWithCalibration会处理ID 201-203的分数合并
       setAnswers({
         ...answers,
         [questionId]: { type: "single", value, traitScores },
@@ -587,13 +588,15 @@ export default function PersonalityTestPage() {
       }
     }
     
-    // 合并所有校准分数到Q12
-    const q12HasDualStructure = baseAnswers[12]?.mostLike && baseAnswers[12]?.secondLike;
-    if (baseAnswers[12]?.traitScores && q12HasDualStructure) {
+    // 合并所有校准分数到Q12（支持单选和双选两种结构）
+    const hasCalibrationScores = Object.keys(v72CalibrationScores).length > 0 || 
+                                  Object.keys(lowEnergyCalibrationScores).length > 0;
+    
+    if (hasCalibrationScores && baseAnswers[12]?.traitScores) {
       const q12Answer = baseAnswers[12];
       const q12Scores = q12Answer.traitScores;
       
-      // 计算校准增量
+      // 计算校准增量（V7.2权重减半，V6.8全权重）
       const calDelta: TraitScores = {
         A: Math.round(((v72CalibrationScores.A ?? 0) / 2) + (lowEnergyCalibrationScores.A ?? 0)),
         O: Math.round(((v72CalibrationScores.O ?? 0) / 2) + (lowEnergyCalibrationScores.O ?? 0)),
@@ -602,6 +605,8 @@ export default function PersonalityTestPage() {
         X: Math.round(((v72CalibrationScores.X ?? 0) / 2) + (lowEnergyCalibrationScores.X ?? 0)),
         P: Math.round(((v72CalibrationScores.P ?? 0) / 2) + (lowEnergyCalibrationScores.P ?? 0)),
       };
+      
+      console.log('🔧 校准分数合并:', { v72CalibrationScores, lowEnergyCalibrationScores, calDelta });
       
       // 创建合并后的traitScores
       const mergedTraitScores = {
@@ -614,7 +619,7 @@ export default function PersonalityTestPage() {
         P: (q12Scores.P ?? 0) + (calDelta.P ?? 0),
       };
       
-      // 如果有secondTraitScores，也应用同样的校准增量
+      // 如果有secondTraitScores（双选题），也应用同样的校准增量
       let mergedSecondTraitScores = q12Answer.secondTraitScores;
       if (q12Answer.secondTraitScores) {
         const secondScores = q12Answer.secondTraitScores;
