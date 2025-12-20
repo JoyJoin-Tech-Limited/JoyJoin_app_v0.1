@@ -89,9 +89,12 @@ function AuthenticatedRouter() {
   if (needsRegistration) {
     return (
       <Switch>
-        <Route path="/registration" component={RegistrationMethodPage} />
-        <Route path="/registration/form" component={RegistrationPage} />
+        {/* AI对话注册为默认入口 */}
+        <Route path="/registration" component={ChatRegistrationPage} />
         <Route path="/registration/chat" component={ChatRegistrationPage} />
+        {/* 保留表单注册作为备用选项 */}
+        <Route path="/registration/form" component={RegistrationPage} />
+        <Route path="/registration/method" component={RegistrationMethodPage} />
         <Route path="*" component={RedirectToRegistration} />
       </Switch>
     );
@@ -201,11 +204,13 @@ function Router() {
   if (!isAuthenticated) {
     return (
       <Switch>
-        {/* Allow unauthenticated users to access registration routes directly */}
-        <Route path="/registration/method" component={RegistrationMethodPage} />
-        <Route path="/registration/form" component={RegistrationPage} />
+        {/* AI对话注册为默认入口 */}
+        <Route path="/registration" component={ChatRegistrationPage} />
         <Route path="/registration/chat" component={ChatRegistrationPage} />
-        <Route path="/register" component={RegistrationPage} />
+        {/* 保留表单注册作为备用选项 */}
+        <Route path="/registration/form" component={RegistrationPage} />
+        <Route path="/registration/method" component={RegistrationMethodPage} />
+        <Route path="/register" component={ChatRegistrationPage} />
         {/* All other routes show login page */}
         <Route path="*" component={LoginPage} />
       </Switch>
