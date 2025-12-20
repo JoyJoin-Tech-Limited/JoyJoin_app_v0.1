@@ -67,22 +67,23 @@ export interface SocialPersonality {
 
 /**
  * 情感特质 - 用户的情感表达和情绪特征
+ * 赵心怡教授建议：使用描述性区间代替0-100数值，避免标签化风险
  */
 export interface EmotionalTraits {
-  // 情绪稳定度 (0-100): 越高越稳定
-  emotionalStability: number;
+  // 情绪稳定度: stable(稳定型) | sensitive(敏感型) | balanced(平衡型)
+  emotionalStability: 'stable' | 'sensitive' | 'balanced';
   
-  // 共情能力 (0-100): 理解他人情感的能力
-  empathyLevel: number;
+  // 共情能力: high(高共情) | moderate(中等) | developing(发展中)
+  empathyLevel: 'high' | 'moderate' | 'developing';
   
-  // 开放程度 (0-100): 对新事物和新观点的接受度
-  opennessLevel: number;
+  // 开放程度: open(开放型) | selective(选择性) | traditional(传统型)
+  opennessLevel: 'open' | 'selective' | 'traditional';
   
   // 情感表达: expressive(外显) | reserved(内敛) | selective(选择性)
   emotionalExpression: 'expressive' | 'reserved' | 'selective';
   
-  // 积极性 (0-100): 对话中的积极程度
-  positivityScore: number;
+  // 积极性: optimistic(乐观型) | neutral(中性) | cautious(谨慎型)
+  positivityLevel: 'optimistic' | 'neutral' | 'cautious';
 }
 
 /**
@@ -181,8 +182,24 @@ function analyzeConversation(messages: Array<{ role: string; content: string }>)
   let negationUsage = 0;
   let proactiveQuestions = 0;
   
-  const dialectPatterns = /[嘅喺咗啦嘛咩呀噉]/g;
-  const negationPatterns = /不是|没有|不在|不想|没|不/g;
+  // 周语辰专家建议：扩展粤语方言词典，覆盖更多常用词汇和语法
+  const dialectPatterns = new RegExp([
+    // 基础语气助词
+    '[嘅喺咗啦嘛咩呀噉]',
+    // 常用动词
+    '系|唔系|冇|睇|嚟|返|食|饮|瞓|行|讲|听|做|买|卖|揾|攞|畀|带|放|坐|企|跑|跳|游|飞|开|关|落|入|出',
+    // 语气词和结构词
+    '啊|喎|咧|㗎|咁|仲|都|先|添|净|翻|埋|晒|住|紧|过|落去',
+    // 常用形容词
+    '靓|叻|勁|正|型|索|衰|憎|赞|好嘢|醒|烦|肥|瘦|高|矮|肥仔|肥妹|靓仔|靓女',
+    // 常用短语
+    '点解|做咩|係咪|冇问题|唔该|多谢|早晨|晚安|再见|拜拜|食饭未|搞掂|唔使|唔好意思|咪住|慢慢嚟|冇所谓',
+    // 香港粤语特有词
+    '打工仔|返工|收工|OT|放假|攰|發夢|沖涼|瞓觉|屋企|公司|巴士|地铁|的士|港鉴|铜锣湾|旺角|尖沙咀|中环',
+    // 深圳/广东粤语
+    '科技园|南山|福田|罗湖|宝安|龙华|前海|东门|华强北|车公庙|深大|港大|中大|科大',
+  ].join('|'), 'g');
+  const negationPatterns = /不是|没有|不在|不想|没|不|唔系|唔係|冇|唔/g;
   const emojiPattern = /[\uD83C-\uDBFF\uDC00-\uDFFF]+/g;
   
   for (const msg of userMessages) {
@@ -535,18 +552,25 @@ export function extractDeepTraits(
   // ====== 情感特质分析 ======
   const emotional: Partial<EmotionalTraits> = {};
   
-  // 积极性评分（使用更丰富的情感词库）
+  // 积极性分析（使用描述性区间代替0-100数值）
   const positivePatterns = /喜欢|开心|快乐|期待|兴奋|棒|好|赞|爱|感谢|谢谢|不错|可以|挺好|蛮好|还行/g;
   const negativePatterns = /讨厌|烦|累|难过|无聊|不想|不喜欢|不行|糟糕|差劲/g;
   const positiveCount = (allUserContent.match(positivePatterns) || []).length;
   const negativeCount = (allUserContent.match(negativePatterns) || []).length;
   
-  // 使用加权计算避免0数据时的极端值
+  // 使用描述性区间判断积极性
   const totalAffect = positiveCount + negativeCount;
   if (totalAffect > 0) {
-    emotional.positivityScore = Math.round((positiveCount / totalAffect) * 100);
+    const positivityRatio = positiveCount / totalAffect;
+    if (positivityRatio >= 0.65) {
+      emotional.positivityLevel = 'optimistic';
+    } else if (positivityRatio <= 0.35) {
+      emotional.positivityLevel = 'cautious';
+    } else {
+      emotional.positivityLevel = 'neutral';
+    }
   } else {
-    emotional.positivityScore = 50; // 默认中性
+    emotional.positivityLevel = 'neutral'; // 默认中性
   }
   
   // 情感表达风格
@@ -558,19 +582,37 @@ export function extractDeepTraits(
     emotional.emotionalExpression = 'selective';
   }
   
-  // 开放程度（基于愿意分享的信息量，使用更保守的计算）
+  // 开放程度（基于愿意分享的信息量，使用描述性区间）
   const infoKeywords = /我是|我在|我的|家人|工作|喜欢|爱好|经历|之前/g;
   const infoCount = (allUserContent.match(infoKeywords) || []).length;
-  // 使用渐进式计算，避免少量文本导致极端值
-  emotional.opennessLevel = Math.min(100, Math.max(30, 30 + Math.round(infoCount * 7)));
+  if (infoCount >= 5) {
+    emotional.opennessLevel = 'open';
+  } else if (infoCount >= 2) {
+    emotional.opennessLevel = 'selective';
+  } else {
+    emotional.opennessLevel = 'traditional';
+  }
   
-  // 情绪稳定度（基于用词一致性，默认中等）
-  emotional.emotionalStability = 50 + Math.min(30, stats.userTurns * 2);
+  // 情绪稳定度（基于表达一致性，使用描述性区间）
+  // 对话轮次越多、表达越稳定则更可能是稳定型
+  if (stats.userTurns >= 8 && stats.exclamationCount < stats.userTurns * 0.4) {
+    emotional.emotionalStability = 'stable';
+  } else if (stats.exclamationCount > stats.userTurns * 0.5 || negativeCount > positiveCount) {
+    emotional.emotionalStability = 'sensitive';
+  } else {
+    emotional.emotionalStability = 'balanced';
+  }
   
-  // 共情能力（基于提问和关心词汇，默认中等）
+  // 共情能力（基于提问和关心词汇，使用描述性区间）
   const empathyPatterns = /你|您|怎么样|还好吗|辛苦|理解/g;
   const empathyCount = (allUserContent.match(empathyPatterns) || []).length;
-  emotional.empathyLevel = Math.min(100, Math.max(40, 40 + empathyCount * 10));
+  if (empathyCount >= 5) {
+    emotional.empathyLevel = 'high';
+  } else if (empathyCount >= 2) {
+    emotional.empathyLevel = 'moderate';
+  } else {
+    emotional.empathyLevel = 'developing';
+  }
   
   // ====== 互动节奏分析 ======
   const rhythm: Partial<InteractionRhythm> = {};
@@ -698,10 +740,11 @@ export function calculateDeepTraitsSimilarity(
   compareAndScore(traits1.cognitive.thinkingMode, traits2.cognitive.thinkingMode, 12);
   compareAndScore(traits1.cognitive.decisionSpeed, traits2.cognitive.decisionSpeed, 8);
   
-  // 情感特质匹配 - 数值型
-  compareAndScore(traits1.emotional.positivityScore, traits2.emotional.positivityScore, 15, 20);
-  compareAndScore(traits1.emotional.opennessLevel, traits2.emotional.opennessLevel, 10, 25);
-  compareAndScore(traits1.emotional.empathyLevel, traits2.emotional.empathyLevel, 10, 20);
+  // 情感特质匹配 - 现已改为类别型（赵心怡教授建议）
+  compareAndScore(traits1.emotional.positivityLevel, traits2.emotional.positivityLevel, 15);
+  compareAndScore(traits1.emotional.opennessLevel, traits2.emotional.opennessLevel, 10);
+  compareAndScore(traits1.emotional.empathyLevel, traits2.emotional.empathyLevel, 10);
+  compareAndScore(traits1.emotional.emotionalStability, traits2.emotional.emotionalStability, 12);
   
   // 如果没有可比较的特征，返回中等分数
   if (totalWeight === 0) {

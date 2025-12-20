@@ -31,8 +31,12 @@ Preferred communication style: Simple, everyday language.
 - **Admin Authorization:** `isAdmin` flag.
 
 ### System Features & Design Decisions
-- **Two-Stage Event Pool Matching Model:** Admin-defined event pools with hard constraints; AI-driven, 6-dimensional algorithm (Personality, Interests, Intent, Background, Culture, Conversation Signature) matches users within pools. Includes a 12-Archetype Animal Social Vibe System and granular match point explanations.
-  - **Deep Trait Extraction System:** 5-category psychological profiling from conversation patterns (Cognitive Style, Communication Preference, Social Personality, Emotional Traits, Interaction Rhythm).
+- **Two-Stage Event Pool Matching Model:** Admin-defined event pools with hard constraints; AI-driven, 6-dimensional algorithm (Personality 23%, Interests 24%, Intent 13%, Background 15%, Culture 10%, Conversation Signature 15%) matches users within pools. Includes a 12-Archetype Animal Social Vibe System and granular match point explanations.
+  - **Deep Trait Extraction System:** 5-category psychological profiling from conversation patterns (Cognitive Style, Communication Preference, Social Personality, Emotional Traits, Interaction Rhythm). Emotional traits now use descriptive categories (stable/sensitive/balanced) instead of 0-100 scores to avoid labeling risks.
+  - **Dynamic Weight Adjustment:** Feedback-driven weight optimization that adapts dimension weights based on user satisfaction and match point discussions.
+  - **Hybrid Semantic Strategy (Option C):** Simple features use regex patterns, complex semantics call DeepSeek API only for low-confidence attributes to control costs.
+  - **Matching Cache System:** In-memory caching for pair scores and signatures, ready for Redis migration.
+  - **Expanded Cantonese Dialect Support:** 100+ Cantonese vocabulary patterns covering Hong Kong and Shenzhen regional expressions.
 - **AI-Driven Matchmaking:** Utilizes AI for sophisticated event and people matching, focusing on personality, interests, and group dynamics, with explainable results and a deep feedback system.
 - **Two-Tier Feedback Architecture:** Collects basic and optional anonymous deep feedback to refine algorithms.
 - **Gamified Personality Assessment:** 10-question test for social role archetypes, visualized with a Personality Radar Chart.
