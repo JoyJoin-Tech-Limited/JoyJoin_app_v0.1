@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { getLevelDiscount } from "@shared/gamification";
 
 /**
  * Payment Service for WeChat Pay Integration
@@ -22,6 +23,7 @@ export interface CreatePaymentParams {
   relatedId: string; // subscription ID or event ID
   originalAmount: number; // in cents (¥98 = 9800)
   couponId?: string;
+  applyLevelDiscount?: boolean; // Whether to apply user's level discount
 }
 
 export interface PaymentResult {
@@ -37,12 +39,30 @@ export class PaymentService {
    * Create a new payment order
    */
   async createPayment(params: CreatePaymentParams): Promise<PaymentResult> {
-    const { userId, paymentType, relatedId, originalAmount, couponId } = params;
+    const { userId, paymentType, relatedId, originalAmount, couponId, applyLevelDiscount = true } = params;
     
-    // Calculate discount if coupon provided
-    let discountAmount = 0;
+    // Calculate discount from multiple sources
+    let couponDiscountAmount = 0;
+    let levelDiscountAmount = 0;
     let finalAmount = originalAmount;
     
+    // 1. Apply level discount first (for event payments)
+    if (applyLevelDiscount && paymentType === "event") {
+      const user = await storage.getUser(userId);
+      if (user) {
+        const userLevel = user.currentLevel || 1;
+        const levelDiscountPercent = getLevelDiscount(userLevel);
+        if (levelDiscountPercent > 0) {
+          levelDiscountAmount = Math.floor(originalAmount * (levelDiscountPercent / 100));
+          console.log(`[Payment] Applied level ${userLevel} discount: ${levelDiscountPercent}% = ¥${levelDiscountAmount / 100}`);
+        }
+      }
+    }
+    
+    // Calculate amount after level discount
+    let amountAfterLevelDiscount = originalAmount - levelDiscountAmount;
+    
+    // 2. Apply coupon discount on top of level discount
     if (couponId) {
       const coupon = await storage.getCoupon(couponId);
       if (coupon && coupon.isActive) {
@@ -54,28 +74,31 @@ export class PaymentService {
         if (now >= validFrom && (!validUntil || now <= validUntil)) {
           // Check usage limits
           if (coupon.maxUses === null || coupon.currentUses < coupon.maxUses) {
-            // Calculate discount
+            // Calculate discount on the remaining amount
             if (coupon.discountType === "fixed_amount") {
-              discountAmount = coupon.discountValue;
+              couponDiscountAmount = coupon.discountValue;
             } else if (coupon.discountType === "percentage") {
-              discountAmount = Math.floor(originalAmount * (coupon.discountValue / 100));
+              couponDiscountAmount = Math.floor(amountAfterLevelDiscount * (coupon.discountValue / 100));
             }
-            finalAmount = Math.max(0, originalAmount - discountAmount);
           }
         }
       }
     }
     
+    // Calculate total discount and final amount
+    const totalDiscountAmount = levelDiscountAmount + couponDiscountAmount;
+    finalAmount = Math.max(0, originalAmount - totalDiscountAmount);
+    
     // Generate unique order ID
     const wechatOrderId = `JJ${Date.now()}${Math.random().toString(36).substr(2, 9)}`;
     
-    // Create payment record
+    // Create payment record (discountAmount stores the total discount)
     const payment = await storage.createPayment({
       userId,
       paymentType,
       relatedId,
       originalAmount,
-      discountAmount,
+      discountAmount: totalDiscountAmount,
       finalAmount,
       couponId,
       wechatOrderId,

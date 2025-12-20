@@ -985,6 +985,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's level discount for payment preview
+  app.get('/api/user/gamification/level-discount', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const { getLevelDiscount, getLevelConfig } = await import('@shared/gamification');
+      const userLevel = user.currentLevel || 1;
+      const discountPercent = getLevelDiscount(userLevel);
+      const levelConfig = getLevelConfig(userLevel);
+      
+      res.json({
+        level: userLevel,
+        levelName: levelConfig.nameCn,
+        discountPercent,
+        hasDiscount: discountPercent > 0,
+      });
+    } catch (error) {
+      console.error("Error fetching level discount:", error);
+      res.status(500).json({ message: "Failed to fetch level discount" });
+    }
+  });
+
   app.get('/api/personality-test/results', isPhoneAuthenticated, async (req: any, res) => {
     try {
       const userId = req.session.userId;
