@@ -42,16 +42,15 @@ Preferred communication style: Simple, everyday language.
 - **Gamified Personality Assessment:** 12-question test using cumulative trait-based scoring:
   - **Cumulative Scoring System:** Trait scores accumulated from each answer, min-max normalized to 0-100
   - **5-Dimensional Model (AOCEX):** Affinity, Openness, Conscientiousness, Emotional Stability, Extraversion
-  - **P-Dimension Integration:** Positivity distributed to X(40%), O(30%), A(30%) using floating-point precision
+  - **P-Dimension Integration:** Positivity distributed to X(25%), O(35%), A(40%) using floating-point precision (V6.4 optimized)
   - **Cosine Similarity Matching:** User traits matched against 12 archetype animal profiles
-  - **Empirical Score Ranges:** A(0-32), O(0-38), C(0-24), E(0-20), X(0-42) including P contributions
+  - **Empirical Score Ranges:** A(-4~30), O(-3~35), C(0~30), E(0~28), X(-15~38) including P contributions (V3 with negative scores)
   - Visualized with personalized Personality Radar Chart.
-  - **Accuracy Optimization (v5):** Optimized archetype vectors with A/B testing infrastructure
-    - High-similarity pairs reduced from 30 to 4-5 pairs (>98% similarity)
-    - Low-margin matches reduced from 87.9% to 52.5%
-    - Average distinction margin improved from 0.48% to 1.21%
+  - **Accuracy Optimization (V6.4 - Production Ready):** Comprehensive optimization achieving balanced distribution:
+    - Distribution improvement: All 12 archetypes now within 4.86%-13.97% range (previously 1.8%-21%)
+    - Question bank V3: Added negative X/P scoring options and 5th choices for low-energy pathways
+    - Key improvements: 太阳鸡(21%→13.12%), 开心柯基(20%→5.17%), 隐身猫(1.8%→13.97%), 稳如龟(2%→6.33%), 暖心熊(2.7%→9.98%)
     - A/B test ready: `archetypeTraitScoresOptimized.ts` with `setABTestVariant('control'/'optimized')`
-    - Distribution remains skewed toward high-energy archetypes (太阳鸡 21%, 开心柯基 20%); further optimization requires question bank restructuring
 - **Streamlined Onboarding:** Multi-step registration covering identity, interests, personality, and profile creation, enhanced with UX features.
 - **Admin Portal:** Desktop-first interface for comprehensive management and real-time algorithm tuning via an Admin Matching Lab.
 - **Payment & Subscription System:** Full payment infrastructure including WeChat Pay integration.

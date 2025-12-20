@@ -6,14 +6,14 @@ import {
 import { personalityQuestionsV2, TraitScores } from '../../data/personalityQuestionsV2';
 
 const SCORE_RANGE = {
-  A: { min: 0, max: 32 },
-  O: { min: 0, max: 38 },
-  C: { min: 0, max: 24 },
-  E: { min: 0, max: 20 },
-  X: { min: 0, max: 42 },
+  A: { min: -4, max: 30 },
+  O: { min: -3, max: 35 },
+  C: { min: 0, max: 30 },
+  E: { min: 0, max: 28 },
+  X: { min: -15, max: 38 },
 };
 
-const P_INTEGRATION = { X: 0.4, O: 0.3, A: 0.3 };
+const P_INTEGRATION = { X: 0.25, O: 0.35, A: 0.4 };
 
 function getEffectiveScore(trait: keyof typeof SCORE_RANGE, ts: TraitScores): number {
   const base = ts[trait] || 0;
@@ -64,11 +64,11 @@ describe('Cumulative Scoring System', () => {
 
       const accumulated = accumulateTraitScores(maxAnswers);
       
-      expect(accumulated.A).toBeLessThanOrEqual(32);
-      expect(accumulated.O).toBeLessThanOrEqual(38);
-      expect(accumulated.C).toBeLessThanOrEqual(24);
-      expect(accumulated.E).toBeLessThanOrEqual(20);
-      expect(accumulated.X).toBeLessThanOrEqual(42);
+      expect(accumulated.A).toBeLessThanOrEqual(30);
+      expect(accumulated.O).toBeLessThanOrEqual(35);
+      expect(accumulated.C).toBeLessThanOrEqual(30);
+      expect(accumulated.E).toBeLessThanOrEqual(28);
+      expect(accumulated.X).toBeLessThanOrEqual(38);
     });
 
     it('should handle randomized answer combinations within bounds', () => {
@@ -140,9 +140,9 @@ describe('Cumulative Scoring System', () => {
       const answersWithP: TraitScores[] = [{ P: 10, A: 0, O: 0, C: 0, E: 0, X: 0 }];
       const accumulated = accumulateTraitScores(answersWithP);
       
-      expect(accumulated.A).toBeCloseTo(3, 5);
-      expect(accumulated.O).toBeCloseTo(3, 5);
-      expect(accumulated.X).toBeCloseTo(4, 5);
+      expect(accumulated.A).toBeCloseTo(4, 5);
+      expect(accumulated.O).toBeCloseTo(3.5, 5);
+      expect(accumulated.X).toBeCloseTo(2.5, 5);
       expect(accumulated.C).toBe(0);
       expect(accumulated.E).toBe(0);
     });
@@ -151,9 +151,9 @@ describe('Cumulative Scoring System', () => {
       const answersWithSmallP: TraitScores[] = [{ P: 1, A: 0, O: 0, C: 0, E: 0, X: 0 }];
       const accumulated = accumulateTraitScores(answersWithSmallP);
       
-      expect(accumulated.A).toBeCloseTo(0.3, 5);
-      expect(accumulated.O).toBeCloseTo(0.3, 5);
-      expect(accumulated.X).toBeCloseTo(0.4, 5);
+      expect(accumulated.A).toBeCloseTo(0.4, 5);
+      expect(accumulated.O).toBeCloseTo(0.35, 5);
+      expect(accumulated.X).toBeCloseTo(0.25, 5);
     });
   });
 });
