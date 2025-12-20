@@ -53,23 +53,23 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 95,
   },
   
-  // 太阳鸡: 需要极高C+E+X才能匹配（提高门槛）
+  // 太阳鸡: 最终门槛（V6.7）
   "太阳鸡": {
-    affinity: 80,
-    openness: 35,           // V6: 更低
-    conscientiousness: 100, // V6: 极致
-    emotionalStability: 100,// V6: 极致
-    extraversion: 85,       // V6: 需要高外向
-    positivity: 90,
+    affinity: 85,
+    openness: 30,           // V6.7: 更极端
+    conscientiousness: 100, // 极致
+    emotionalStability: 100,// 极致
+    extraversion: 92,       // V6.7: 更高门槛
+    positivity: 95,         // V6.7: 更极端
   },
   
-  // 夸夸豚: 极致A+P（提高门槛）
+  // 夸夸豚: 更极致A+P+X（V6.5提高门槛）
   "夸夸豚": {
     affinity: 100,          // V6: 极致
-    openness: 45,           // V6: 降低
-    conscientiousness: 40,  // V6: 降低
-    emotionalStability: 60,
-    extraversion: 72,
+    openness: 40,           // V6.5: 进一步降低
+    conscientiousness: 35,  // V6.5: 进一步降低
+    emotionalStability: 55,
+    extraversion: 82,       // V6.5: 需要更高外向
     positivity: 100,        // V6: 极致
   },
   
@@ -105,14 +105,14 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 55,
   },
   
-  // 暖心熊: 保持极致A + 低X
+  // 暖心熊: 提高门槛（V6.6最终）
   "暖心熊": {
-    affinity: 92,
-    openness: 48,
-    conscientiousness: 55,
-    emotionalStability: 78,
-    extraversion: 35,
-    positivity: 85,
+    affinity: 95,           // V6.6: 更极端
+    openness: 45,
+    conscientiousness: 52,
+    emotionalStability: 82, // V6.6: 更极端
+    extraversion: 32,
+    positivity: 88,         // V6.6: 更极端
   },
   
   // 灵感章鱼: 更接近中心（降低门槛）
@@ -127,12 +127,12 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
 
   // ========== 低能量区 ==========
   
-  // 沉思猫头鹰: 平衡门槛（V6.4最终版）
+  // 沉思猫头鹰: 最终门槛（V6.7）
   "沉思猫头鹰": {
-    affinity: 42,
-    openness: 68,           // V6.4: 在V6.2(72)和V6.3(58)之间
-    conscientiousness: 72,  // V6.4: 在V6.2(78)和V6.3(62)之间
-    emotionalStability: 68,
+    affinity: 44,
+    openness: 66,           // V6.7: 微调
+    conscientiousness: 68,  // V6.7: 微调
+    emotionalStability: 66,
     extraversion: 34,
     positivity: 50,
   },
@@ -159,14 +159,14 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 42,
   },
   
-  // 隐身猫: 保持现有配置
+  // 隐身猫: 提高门槛（V6.5调整）
   "隐身猫": {
-    affinity: 48,
-    openness: 42,
-    conscientiousness: 52,
-    emotionalStability: 72,
-    extraversion: 22,
-    positivity: 45,
+    affinity: 45,
+    openness: 38,           // V6.5: 更极端
+    conscientiousness: 48,
+    emotionalStability: 78, // V6.5: 更极端
+    extraversion: 18,       // V6.5: 更极端
+    positivity: 42,
   },
 };
 

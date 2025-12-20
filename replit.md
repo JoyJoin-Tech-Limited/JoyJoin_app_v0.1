@@ -46,10 +46,10 @@ Preferred communication style: Simple, everyday language.
   - **Cosine Similarity Matching:** User traits matched against 12 archetype animal profiles
   - **Empirical Score Ranges:** A(-4~30), O(-3~35), C(0~30), E(0~28), X(-15~38) including P contributions (V3 with negative scores)
   - Visualized with personalized Personality Radar Chart.
-  - **Accuracy Optimization (V6.4 - Production Ready):** Comprehensive optimization achieving balanced distribution:
-    - Distribution improvement: All 12 archetypes now within 4.86%-13.97% range (previously 1.8%-21%)
+  - **Accuracy Optimization (V6.7 - Production Ready):** Comprehensive optimization achieving balanced distribution:
+    - Distribution improvement: All 12 archetypes now within 5.64%-11.40% range (previously 1.8%-21%)
     - Question bank V3: Added negative X/P scoring options and 5th choices for low-energy pathways
-    - Key improvements: 太阳鸡(21%→13.12%), 开心柯基(20%→5.17%), 隐身猫(1.8%→13.97%), 稳如龟(2%→6.33%), 暖心熊(2.7%→9.98%)
+    - Key improvements: 太阳鸡(21%→11.40%), 开心柯基(20%→5.64%), 隐身猫(1.8%→9.05%), 稳如龟(2%→7.96%), 暖心熊(2.7%→9.34%), 沉思猫头鹰(0.66%→8.80%)
     - A/B test ready: `archetypeTraitScoresOptimized.ts` with `setABTestVariant('control'/'optimized')`
 - **Streamlined Onboarding:** Multi-step registration covering identity, interests, personality, and profile creation, enhanced with UX features.
 - **Admin Portal:** Desktop-first interface for comprehensive management and real-time algorithm tuning via an Admin Matching Lab.
