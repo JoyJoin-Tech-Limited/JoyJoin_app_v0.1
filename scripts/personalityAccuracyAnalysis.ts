@@ -11,15 +11,17 @@ type VariantType = 'control' | 'optimized';
 const VARIANT: VariantType = (process.argv[2] as VariantType) || 'control';
 const activeArchetypes = VARIANT === 'optimized' ? archetypeTraitScoresOptimized : archetypeTraitScores;
 
+// V3优化版 SCORE_RANGE（包含负分）
 const SCORE_RANGE = {
-  A: { min: 0, max: 32 },
-  O: { min: 0, max: 38 },
-  C: { min: 0, max: 24 },
-  E: { min: 0, max: 20 },
-  X: { min: 0, max: 42 },
+  A: { min: -4, max: 30 },   // 基础(-1~22) + P贡献(-3.2~8) ≈ -4~30
+  O: { min: -3, max: 35 },   // 基础(0~28) + P贡献(-2.8~7) ≈ -3~35
+  C: { min: 0, max: 30 },    // 责任心不受P影响，新选项扩大范围
+  E: { min: 0, max: 28 },    // 情绪稳定不受P影响，新选项扩大范围
+  X: { min: -15, max: 38 },  // 基础(-13~33) + P贡献(-2~5) ≈ -15~38
 };
 
-const P_INTEGRATION = { X: 0.4, O: 0.3, A: 0.3 };
+// V3优化版 P_INTEGRATION（降低高能量偏向）
+const P_INTEGRATION = { X: 0.25, O: 0.35, A: 0.40 };
 
 function accumulateTraitScores(answers: TraitScores[]): { A: number; O: number; C: number; E: number; X: number } {
   let A = 0, O = 0, C = 0, E = 0, X = 0;

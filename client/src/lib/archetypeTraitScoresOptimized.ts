@@ -31,141 +31,142 @@ import type { TraitScores } from './archetypeTraitScores';
  * - 各维度跨度 ≥60（积极性≥55）
  */
 /**
- * 专家优化版原型向量 V5
+ * 专家优化版原型向量 V6
  * 
- * V5核心改进：
- * 1. 太阳鸡vs淡定海豚：太阳鸡更高外向(80)，淡定海豚更低外向(42)
- * 2. 定心大象vs隐身猫：定心大象极高C(100)，隐身猫中C(50)
- * 3. 机智狐vs灵感章鱼：机智狐更高X(95)和E(60)，灵感章鱼更低X(52)和E(35)
- * 4. 低能量原型的向量更接近中心，提高匹配率
+ * V6核心改进（基于V3题目优化后的模拟结果）：
+ * 1. 降低过热原型（夸夸豚17%→8%, 太阳鸡17%→8%, 织网蛛16%→8%）
+ *    - 策略：增加极端维度要求，使匹配门槛更高
+ * 2. 提升过冷原型（灵感章鱼1.4%→8%, 机智狐1.2%→8%, 沉思猫头鹰0.7%→8%）
+ *    - 策略：向量更接近中心，降低匹配门槛
+ * 3. 保持稳定原型（隐身猫12%, 稳如龟7%, 暖心熊6%）
  */
 export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
-  // ========== 高能量区 ==========
+  // ========== 高能量区（需提高匹配门槛）==========
   
-  // 开心柯基: 极致外向 + 中等偏低C
+  // 开心柯基: 极致外向 + 极低C（更极端）
   "开心柯基": {
-    affinity: 70,
-    openness: 65,
-    conscientiousness: 42,
-    emotionalStability: 58,
+    affinity: 65,
+    openness: 60,
+    conscientiousness: 30,  // V6: 更低，提高门槛
+    emotionalStability: 50,
     extraversion: 100,      // 极致外向
+    positivity: 95,
+  },
+  
+  // 太阳鸡: 需要极高C+E+X才能匹配（提高门槛）
+  "太阳鸡": {
+    affinity: 80,
+    openness: 35,           // V6: 更低
+    conscientiousness: 100, // V6: 极致
+    emotionalStability: 100,// V6: 极致
+    extraversion: 85,       // V6: 需要高外向
     positivity: 90,
   },
   
-  // 太阳鸡: 高C+E，中等X（需要更极端的特征才能匹配）
-  "太阳鸡": {
-    affinity: 72,
-    openness: 45,           // 降低：更专注于稳定而非探索
-    conscientiousness: 92,  // 更高门槛
-    emotionalStability: 98, // 极致稳定
-    extraversion: 72,       // 降低：不需要极高外向
-    positivity: 78,
-  },
-  
-  // 夸夸豚: 极致A+P
+  // 夸夸豚: 极致A+P（提高门槛）
   "夸夸豚": {
-    affinity: 98,
-    openness: 55,
-    conscientiousness: 52,
-    emotionalStability: 68,
-    extraversion: 65,
-    positivity: 98,
+    affinity: 100,          // V6: 极致
+    openness: 45,           // V6: 降低
+    conscientiousness: 40,  // V6: 降低
+    emotionalStability: 60,
+    extraversion: 72,
+    positivity: 100,        // V6: 极致
   },
   
-  // 机智狐: 高O+X，中等E（比灵感章鱼更稳定更外向）
+  // 机智狐: 中等门槛（V6.2平衡）
   "机智狐": {
     affinity: 42,
-    openness: 95,
-    conscientiousness: 38,
-    emotionalStability: 60, // 关键区分：比灵感章鱼高25
-    extraversion: 95,       // 关键区分：比灵感章鱼高43
-    positivity: 68,
+    openness: 80,           // V6.2: 平衡
+    conscientiousness: 45,
+    emotionalStability: 62,
+    extraversion: 78,       // V6.2: 平衡
+    positivity: 60,
   },
 
   // ========== 中能量区 ==========
   
-  // 淡定海豚: 高C+E，低X（比太阳鸡更内向）
+  // 淡定海豚: 保持高C+E，低X
   "淡定海豚": {
-    affinity: 62,
-    openness: 55,
-    conscientiousness: 95,
-    emotionalStability: 95,
-    extraversion: 42,       // 关键区分：比太阳鸡低38
-    positivity: 72,
+    affinity: 55,
+    openness: 50,
+    conscientiousness: 90,
+    emotionalStability: 90,
+    extraversion: 35,
+    positivity: 65,
   },
   
-  // 织网蛛: 高O+A
+  // 织网蛛: 需要极致O+A（提高门槛）
   "织网蛛": {
-    affinity: 82,
-    openness: 90,
-    conscientiousness: 58,
-    emotionalStability: 55,
-    extraversion: 58,
-    positivity: 62,
+    affinity: 95,           // V6: 极致
+    openness: 100,          // V6: 极致
+    conscientiousness: 48,
+    emotionalStability: 45, // V6: 降低
+    extraversion: 55,
+    positivity: 55,
   },
   
-  // 暖心熊: 极致A + 低X
+  // 暖心熊: 保持极致A + 低X
   "暖心熊": {
-    affinity: 95,
-    openness: 52,
-    conscientiousness: 58,
-    emotionalStability: 82,
-    extraversion: 38,
-    positivity: 88,
+    affinity: 92,
+    openness: 48,
+    conscientiousness: 55,
+    emotionalStability: 78,
+    extraversion: 35,
+    positivity: 85,
   },
   
-  // 灵感章鱼: 极致O + 低C+E+X（比机智狐更敏感更内向）
+  // 灵感章鱼: 更接近中心（降低门槛）
   "灵感章鱼": {
-    affinity: 52,
-    openness: 98,
-    conscientiousness: 32,
-    emotionalStability: 35, // 关键区分：比机智狐低25
-    extraversion: 52,       // 关键区分：比机智狐低43
-    positivity: 82,
+    affinity: 50,
+    openness: 80,           // V6: 从98降低
+    conscientiousness: 45,  // V6: 从32提高
+    emotionalStability: 45, // V6: 从35提高
+    extraversion: 45,       // V6: 更接近中心
+    positivity: 65,
   },
 
   // ========== 低能量区 ==========
   
-  // 沉思猫头鹰: 高O+C，低X+A
+  // 沉思猫头鹰: 平衡门槛（V6.4最终版）
   "沉思猫头鹰": {
-    affinity: 40,
-    openness: 85,
-    conscientiousness: 90,
-    emotionalStability: 78,
-    extraversion: 32,
+    affinity: 42,
+    openness: 68,           // V6.4: 在V6.2(72)和V6.3(58)之间
+    conscientiousness: 72,  // V6.4: 在V6.2(78)和V6.3(62)之间
+    emotionalStability: 68,
+    extraversion: 34,
+    positivity: 50,
+  },
+  
+  // 定心大象: 保持极致C+E
+  "定心大象": {
+    affinity: 52,
+    openness: 38,
+    conscientiousness: 95,
+    emotionalStability: 92,
+    extraversion: 30,
     positivity: 52,
   },
-  
-  // 定心大象: 极致C+E，低O（比隐身猫更高C）
-  "定心大象": {
-    affinity: 58,
-    openness: 35,
-    conscientiousness: 100, // 关键区分：比隐身猫高50
-    emotionalStability: 95,
-    extraversion: 32,
-    positivity: 58,
-  },
 
-  // ========== 超低能量区（向量更接近中心）==========
+  // ========== 超低能量区 ==========
   
-  // 稳如龟: 高E，中等其他（更接近中心便于匹配）
+  // 稳如龟: 保持现有配置
   "稳如龟": {
     affinity: 48,
-    openness: 55,
-    conscientiousness: 72,
-    emotionalStability: 88,
+    openness: 52,
+    conscientiousness: 70,
+    emotionalStability: 85,
     extraversion: 28,
-    positivity: 45,
+    positivity: 42,
   },
   
-  // 隐身猫: 低X+O，中等C（比定心大象更低C）
+  // 隐身猫: 保持现有配置
   "隐身猫": {
-    affinity: 50,
-    openness: 40,
-    conscientiousness: 50,  // 关键区分：比定心大象低50
-    emotionalStability: 75,
+    affinity: 48,
+    openness: 42,
+    conscientiousness: 52,
+    emotionalStability: 72,
     extraversion: 22,
-    positivity: 48,
+    positivity: 45,
   },
 };
 
