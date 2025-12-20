@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import LoginPage from "@/pages/LoginPage";
 import RegistrationPage from "@/pages/RegistrationPage";
-import RegistrationMethodPage from "@/pages/RegistrationMethodPage";
+// RegistrationMethodPage kept for internal reference only - not imported in user routes
 import ChatRegistrationPage from "@/pages/ChatRegistrationPage";
 import InterestsTopicsPage from "@/pages/InterestsTopicsPage";
 import PersonalityTestPage from "@/pages/PersonalityTestPage";
@@ -89,12 +89,11 @@ function AuthenticatedRouter() {
   if (needsRegistration) {
     return (
       <Switch>
-        {/* AI对话注册为默认入口 */}
+        {/* AI对话注册（小悦）为唯一用户入口 */}
         <Route path="/registration" component={ChatRegistrationPage} />
         <Route path="/registration/chat" component={ChatRegistrationPage} />
-        {/* 保留表单注册作为备用选项 */}
+        {/* 保留表单注册供内部测试使用 */}
         <Route path="/registration/form" component={RegistrationPage} />
-        <Route path="/registration/method" component={RegistrationMethodPage} />
         <Route path="*" component={RedirectToRegistration} />
       </Switch>
     );
@@ -204,13 +203,12 @@ function Router() {
   if (!isAuthenticated) {
     return (
       <Switch>
-        {/* AI对话注册为默认入口 */}
+        {/* AI对话注册（小悦）为唯一用户入口 */}
         <Route path="/registration" component={ChatRegistrationPage} />
         <Route path="/registration/chat" component={ChatRegistrationPage} />
-        {/* 保留表单注册作为备用选项 */}
-        <Route path="/registration/form" component={RegistrationPage} />
-        <Route path="/registration/method" component={RegistrationMethodPage} />
         <Route path="/register" component={ChatRegistrationPage} />
+        {/* 保留表单注册供内部测试使用 */}
+        <Route path="/registration/form" component={RegistrationPage} />
         {/* All other routes show login page */}
         <Route path="*" component={LoginPage} />
       </Switch>
