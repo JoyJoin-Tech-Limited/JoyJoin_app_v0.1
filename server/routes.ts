@@ -2015,6 +2015,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 🍸 DEMO: Create "弥所 Homebar" partner venue with exclusive deal
+  app.post('/api/demo/create-homebar-venue', requireAdmin, async (_req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { venues, venueDeals } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      // Check if venue already exists
+      const existingVenues = await db
+        .select()
+        .from(venues)
+        .where(eq(venues.name, "弥所 Homebar"));
+      
+      if (existingVenues.length > 0) {
+        const existingVenue = existingVenues[0];
+        const existingDeals = await storage.getVenueDeals(existingVenue.id);
+        return res.json({ 
+          message: "Venue already exists",
+          venue: existingVenue,
+          deals: existingDeals
+        });
+      }
+      
+      // Create 弥所 Homebar venue
+      const [venue] = await db.insert(venues).values({
+        name: "弥所 Homebar",
+        venueType: "homebar",
+        address: "深圳市南山区科技园某商业街",
+        city: "深圳",
+        area: "南山区",
+        contactPerson: "弥所老板",
+        contactPhone: null,
+        commissionRate: 15,
+        tags: ["cozy", "lively", "小众", "适合破冰"],
+        cuisines: ["鸡尾酒", "威士忌", "创意小食"],
+        priceRange: "80-150",
+        decorStyle: ["轻奢现代风", "温馨日式风"],
+        capacity: 2,
+        operatingHours: "18:00-02:00",
+        avgPrice: 100,
+        priceNote: "一杯酒约100元起",
+        coverImageUrl: null,
+        galleryImages: [],
+        partnerStatus: "active",
+        partnerSince: "2025-01-01",
+        isActive: true,
+      }).returning();
+      
+      console.log("✅ Demo venue created:", venue.id, venue.name);
+      
+      // Create 20% off exclusive deal
+      const [deal] = await db.insert(venueDeals).values({
+        venueId: venue.id,
+        title: "悦聚专属8折优惠",
+        discountType: "percentage",
+        discountValue: 20, // 20 means 20% off, so 8折
+        description: "凡通过「悦聚」参加活动的朋友，全单消费可享8折优惠",
+        redemptionMethod: "show_page",
+        redemptionCode: null,
+        minSpend: null,
+        maxDiscount: null,
+        perPersonLimit: false,
+        validFrom: "2025-01-01",
+        validUntil: "2025-12-31",
+        terms: "每桌限使用一次，不可与其他优惠叠加使用",
+        excludedDates: ["2025-02-14", "2025-12-24", "2025-12-25", "2025-12-31"],
+        isActive: true,
+      }).returning();
+      
+      console.log("✅ Demo deal created:", deal.id, deal.title);
+      
+      res.json({
+        message: "Homebar venue and deal created successfully",
+        venue,
+        deals: [deal],
+        instructions: "场地和优惠已创建成功，可在活动详情页查看"
+      });
+    } catch (error) {
+      console.error("[DemoHomebarVenue] Error creating venue:", error);
+      res.status(500).json({ 
+        message: "Failed to create Homebar venue",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Debug middleware for blind box event routes
   app.use('/api/blind-box-events', (req, _res, next) => {
     console.log("[BlindBoxDebug] incoming request on /api/blind-box-events", {
