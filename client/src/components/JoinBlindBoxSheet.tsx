@@ -82,11 +82,10 @@ export default function JoinBlindBoxSheet({
   const [selectedIntent, setSelectedIntent] = useState<string[]>([]);
 
   const budgetOptions = [
-    { value: "100以下", label: "≤100" },
-    { value: "100-200", label: "100-200" },
+    { value: "150以下", label: "≤150" },
+    { value: "150-200", label: "150-200" },
     { value: "200-300", label: "200-300" },
     { value: "300-500", label: "300-500" },
-    { value: "500+", label: "500+" },
   ];
 
   const languageOptions = [

@@ -39,7 +39,7 @@ interface EventPool {
   targetGroups: number;
 }
 
-const budgetOptions = ["100元以下", "100-200", "200-300", "300-500", "500+"];
+const budgetOptions = ["150以下", "150-200", "200-300", "300-500"];
 const languageOptions = ["粤语", "普通话", "英语"];
 const socialGoalOptions = ["认识新朋友", "拓展人脉", "轻松聊天", "深度交流", "兴趣探索"];
 const cuisineOptions = ["粤菜", "川菜", "日料", "西餐", "火锅", "烧烤", "其他"];

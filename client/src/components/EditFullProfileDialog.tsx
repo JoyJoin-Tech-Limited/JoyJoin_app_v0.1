@@ -98,11 +98,10 @@ const interestOptions = [
 ];
 
 const budgetOptions = [
-  "100以下",
-  "100-200",
+  "150以下",
+  "150-200",
   "200-300",
   "300-500",
-  "500+",
 ];
 
 interface EditFullProfileDialogProps {

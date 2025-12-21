@@ -161,11 +161,10 @@ const cuisineOptions = [
 ];
 
 const budgetOptions = [
-  { value: "100以下", label: "≤100" },
-  { value: "100-200", label: "100-200" },
+  { value: "150以下", label: "≤150" },
+  { value: "150-200", label: "150-200" },
   { value: "200-300", label: "200-300" },
   { value: "300-500", label: "300-500" },
-  { value: "500+", label: "500+" },
 ];
 
 // 创建盲盒活动表单
@@ -186,7 +185,7 @@ const createEventSchema = z.object({
 type StatusFilter = "all" | "pending_match" | "matched" | "completed";
 type CityFilter = "all" | "深圳" | "香港";
 type EventTypeFilter = "all" | "饭局" | "酒局" | "其他";
-type BudgetFilter = "all" | "100以下" | "100-200" | "200-300" | "300-500" | "500+";
+type BudgetFilter = "all" | "150以下" | "150-200" | "200-300" | "300-500";
 type LanguageFilter = "all" | "中文（国语）" | "中文（粤语）" | "英语";
 type TasteFilter = "all" | "爱吃辣" | "不辣/清淡为主";
 type CuisineFilter =

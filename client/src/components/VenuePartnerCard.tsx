@@ -126,9 +126,9 @@ export default function VenuePartnerCard({
                 </p>
               )}
               <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                {venue.avgPrice && (
+                {venue.priceRange && (
                   <Badge variant="outline" className="text-xs" data-testid="badge-venue-price">
-                    人均约¥{venue.avgPrice}
+                    人均¥{venue.priceRange}
                   </Badge>
                 )}
                 {venue.priceNote && (

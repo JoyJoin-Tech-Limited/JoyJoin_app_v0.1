@@ -284,7 +284,7 @@ export const eventPoolRegistrations = pgTable("event_pool_registrations", {
   userId: varchar("user_id").notNull().references(() => users.id),
   
   // 用户临时偏好（软约束 - 仅用于本次活动）
-  budgetRange: text("budget_range").array(), // 预算范围，多选：["100元以下", "100-200", "200-300", "300-500", "500+"]
+  budgetRange: text("budget_range").array(), // 预算范围，多选：["150以下", "150-200", "200-300", "300-500"]
   preferredLanguages: text("preferred_languages").array(), // 首选语言：["普通话", "粤语", "英语"]
   socialGoals: text("social_goals").array(), // 社交目的：["交朋友", "扩展人脉", "放松心情", "行业交流", "flexible"]
   cuisinePreferences: text("cuisine_preferences").array(), // 饮食偏好：["中餐", "川菜", "粤菜", "日料", "西餐"]
@@ -843,7 +843,7 @@ export const venues = pgTable("venues", {
   // Venue tags for matching
   tags: text("tags").array(), // atmosphere tags: cozy, lively, upscale, casual
   cuisines: text("cuisines").array(), // 粤菜, 川菜, 日料, 西餐 etc.
-  priceRange: text("price_range"), // 100-200, 200-300, 300+ per person
+  priceRange: text("price_range"), // 预算档次: "150以下", "150-200", "200-300", "300-500"
   decorStyle: text("decor_style").array(), // 装修风格: 轻奢现代风, 绿植花园风, 复古工业风, 温馨日式风
   
   // Capacity management
@@ -851,8 +851,7 @@ export const venues = pgTable("venues", {
   operatingHours: text("operating_hours"), // e.g., "11:00-22:00"
   
   // ============ 新增字段：合作场地优惠系统 ============
-  // 消费信息
-  avgPrice: integer("avg_price"), // 人均消费（元）
+  // 消费信息（使用priceRange预设档次）
   priceNote: text("price_note"), // 价格说明，如"一杯酒约100元"
   
   // 图片
