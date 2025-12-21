@@ -235,25 +235,61 @@ export function OS1InlineLoader({
     gradient: "from-violet-400 to-purple-500",
   };
 
+  const glowColors = {
+    purple: "shadow-violet-500/40",
+    warm: "shadow-orange-500/40",
+    gradient: "shadow-purple-500/40",
+  };
+
+  // 5条波形条，模拟《Her》电影中OS1的呼吸式波形动画
+  const barCount = 5;
+  const baseHeights = [8, 14, 20, 14, 8]; // 中间最高，两边渐低
+  const maxHeights = [14, 22, 28, 22, 14];
+
   return (
     <div className="flex items-center gap-3 py-2">
-      <div className="flex items-center gap-1">
-        {[0, 1, 2].map((i) => (
-          <motion.div
-            key={i}
-            className={`w-2 h-2 rounded-full bg-gradient-to-r ${colors[variant]}`}
-            animate={{
-              y: [0, -6, 0],
-              opacity: [0.5, 1, 0.5],
-            }}
-            transition={{
-              duration: 0.8,
-              repeat: Infinity,
-              delay: i * 0.15,
-              ease: "easeInOut",
-            }}
-          />
-        ))}
+      <div className="relative flex items-center justify-center h-7">
+        {/* 背景光晕 */}
+        <motion.div
+          className={`absolute inset-0 rounded-full bg-gradient-to-r ${colors[variant]} opacity-20 blur-md`}
+          animate={{
+            opacity: [0.15, 0.25, 0.15],
+            scale: [0.9, 1.1, 0.9],
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+        
+        {/* 波形条 */}
+        <div className="relative flex items-center gap-[3px] px-2">
+          {Array.from({ length: barCount }).map((_, i) => {
+            const isCenter = i === Math.floor(barCount / 2);
+            const delay = i * 0.12;
+            
+            return (
+              <motion.div
+                key={i}
+                className={`w-[2.5px] rounded-full bg-gradient-to-t ${colors[variant]} ${glowColors[variant]} shadow-sm`}
+                animate={{
+                  height: [baseHeights[i], maxHeights[i], baseHeights[i]],
+                  opacity: isCenter ? [0.7, 1, 0.7] : [0.5, 0.9, 0.5],
+                }}
+                transition={{
+                  duration: 1.2,
+                  repeat: Infinity,
+                  delay,
+                  ease: "easeInOut",
+                }}
+                style={{
+                  height: baseHeights[i],
+                }}
+              />
+            );
+          })}
+        </div>
       </div>
       <span className="text-sm text-muted-foreground">{message}</span>
     </div>
