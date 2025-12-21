@@ -29,7 +29,7 @@ import {
 import { calculateProfileCompletion as calculateProfileCompletionUtil, getMatchingBoostEstimate } from "@/lib/profileCompletion";
 
 // 注册模式配置
-type RegistrationMode = "express" | "standard" | "deep" | "all_in_one" | "enrichment";
+type RegistrationMode = "express" | "standard" | "deep" | "enrichment";
 
 // 资料补充模式的上下文
 interface EnrichmentContext {
@@ -297,17 +297,6 @@ function ModeSelectionScreen({
         匹配会随着你参加活动越来越精准哦
       </motion.p>
 
-      <motion.button
-        className="mt-4 text-sm text-primary hover:underline flex items-center gap-1"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.8 }}
-        onClick={() => onSelectMode("all_in_one")}
-        data-testid="button-all-in-one"
-      >
-        <Zap className="w-3.5 h-3.5" />
-        赶时间？一键搞定（注册+性格测试，约6分钟）
-      </motion.button>
     </div>
   );
 }
@@ -1213,7 +1202,6 @@ const introductionPatterns = [
   { required: ["怎么称呼"], any: [] }, // 昵称问题
   { required: ["极速模式"], any: [] }, // express模式开场
   { required: ["深度模式"], any: [] }, // deep模式开场
-  { required: ["一键搞定"], any: [] }, // all_in_one模式开场
   { required: ["负责帮你配局"], any: [] }, // standard模式片段
   { required: ["值得投资"], any: [] } // deep模式片段
 ];
@@ -1716,7 +1704,6 @@ const MODE_LABELS: Record<RegistrationMode, { icon: any; label: string; color: s
   express: { icon: Zap, label: "极速模式", color: "bg-yellow-400/20 text-yellow-200 border-yellow-400/30" },
   standard: { icon: Sun, label: "标准模式", color: "bg-blue-400/20 text-blue-200 border-blue-400/30" },
   deep: { icon: Diamond, label: "深度模式", color: "bg-purple-300/20 text-purple-200 border-purple-300/30" },
-  all_in_one: { icon: Star, label: "一站式", color: "bg-pink-400/20 text-pink-200 border-pink-400/30" },
   enrichment: { icon: Edit2, label: "资料补充", color: "bg-green-400/20 text-green-200 border-green-400/30" }
 };
 
