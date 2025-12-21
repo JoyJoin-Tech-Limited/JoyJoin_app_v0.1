@@ -6,27 +6,30 @@
 import type { User } from '@shared/schema';
 import { getChemistryScore, calculateGroupChemistry, type ArchetypeName } from './archetypeChemistry';
 import { calculateSignatureSimilarity, type ConversationSignature } from './inference/conversationSignature';
+import { matchingWeightsService, type MatchingWeights } from './matchingWeightsService';
 
-// 匹配配置接口
-export interface MatchingWeights {
-  personalityWeight: number;   // 性格兼容性权重 (0-100)
-  interestsWeight: number;      // 兴趣匹配权重 (0-100)
-  intentWeight: number;         // 意图匹配权重 (0-100)
-  backgroundWeight: number;     // 背景多样性权重 (0-100)
-  cultureWeight: number;        // 文化语言权重 (0-100)
-  conversationSignatureWeight: number; // 对话签名权重 (0-100) - 第6维度
-}
+// 重新导出类型以保持向后兼容
+export type { MatchingWeights } from './matchingWeightsService';
 
-// 默认权重配置 (6维度)
-// 专家建议：对话签名权重从10%提升到15%，更好地反映对话特征
+// 默认权重配置 (6维度) - 作为fallback使用
+// 实际运行时会从数据库动态加载
 export const DEFAULT_WEIGHTS: MatchingWeights = {
-  personalityWeight: 23,        // 25% → 23%（微调）
-  interestsWeight: 24,          // 25% → 24%（微调）
-  intentWeight: 13,             // 15% → 13%（微调）
-  backgroundWeight: 15,         // 不变
-  cultureWeight: 10,            // 不变
-  conversationSignatureWeight: 15, // 10% → 15%（王雅琪专家建议）
+  personalityWeight: 23,
+  interestsWeight: 24,
+  intentWeight: 13,
+  backgroundWeight: 15,
+  cultureWeight: 10,
+  conversationSignatureWeight: 15,
 };
+
+// 获取动态权重的辅助函数
+export async function getDynamicWeights(): Promise<MatchingWeights> {
+  try {
+    return await matchingWeightsService.getActiveWeights();
+  } catch {
+    return DEFAULT_WEIGHTS;
+  }
+}
 
 // 用户匹配分数接口
 export interface UserMatchScore {

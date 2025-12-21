@@ -8629,6 +8629,156 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  // ============ 小悦进化系统 API - AI Evolution System ============
+  
+  // 获取当前匹配权重配置
+  app.get('/api/admin/evolution/weights', requireAdmin, async (req: any, res) => {
+    try {
+      const { matchingWeightsService } = await import('./matchingWeightsService');
+      const config = await matchingWeightsService.getActiveConfig();
+      const weights = await matchingWeightsService.getActiveWeights();
+      res.json({ config, weights });
+    } catch (error: any) {
+      console.error('[Evolution API] Failed to get weights:', error);
+      res.status(500).json({ message: 'Failed to get weights', error: error.message });
+    }
+  });
+
+  // 获取权重变化历史
+  app.get('/api/admin/evolution/weights-history', requireAdmin, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 30;
+      const { matchingWeightsService } = await import('./matchingWeightsService');
+      const history = await matchingWeightsService.getWeightsHistory(limit);
+      res.json(history);
+    } catch (error: any) {
+      console.error('[Evolution API] Failed to get weights history:', error);
+      res.status(500).json({ message: 'Failed to get history', error: error.message });
+    }
+  });
+
+  // 获取触发器性能统计
+  app.get('/api/admin/evolution/triggers', requireAdmin, async (req: any, res) => {
+    try {
+      const { triggerPerformanceService } = await import('./triggerPerformanceService');
+      const stats = await triggerPerformanceService.getAllTriggerStats();
+      const top = await triggerPerformanceService.getTopPerformingTriggers(10);
+      const underperforming = await triggerPerformanceService.getUnderperformingTriggers(0.3);
+      res.json({ all: stats, topPerforming: top, underperforming });
+    } catch (error: any) {
+      console.error('[Evolution API] Failed to get trigger stats:', error);
+      res.status(500).json({ message: 'Failed to get trigger stats', error: error.message });
+    }
+  });
+
+  // 获取黄金话术列表
+  app.get('/api/admin/evolution/golden-dialogues', requireAdmin, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const category = req.query.category as string;
+      const { goldenDialogueService } = await import('./goldenDialogueService');
+      
+      let dialogues;
+      if (category) {
+        dialogues = await goldenDialogueService.findByCategory(category, limit);
+      } else {
+        dialogues = await goldenDialogueService.getAllDialogues(limit);
+      }
+      const stats = await goldenDialogueService.getStatistics();
+      res.json({ dialogues, stats });
+    } catch (error: any) {
+      console.error('[Evolution API] Failed to get golden dialogues:', error);
+      res.status(500).json({ message: 'Failed to get dialogues', error: error.message });
+    }
+  });
+
+  // 标记黄金话术
+  app.post('/api/admin/evolution/golden-dialogues', requireAdmin, async (req: any, res) => {
+    try {
+      const adminId = req.session.userId;
+      const { dialogueContent, category, sourceSessionId, sourceUserId } = req.body;
+      
+      if (!dialogueContent || !category) {
+        return res.status(400).json({ message: 'dialogueContent and category are required' });
+      }
+
+      const { goldenDialogueService } = await import('./goldenDialogueService');
+      const result = await goldenDialogueService.tagAsGolden(
+        dialogueContent,
+        category,
+        adminId,
+        sourceSessionId,
+        sourceUserId
+      );
+      
+      res.json({ success: true, dialogue: result });
+    } catch (error: any) {
+      console.error('[Evolution API] Failed to tag golden dialogue:', error);
+      res.status(500).json({ message: 'Failed to tag dialogue', error: error.message });
+    }
+  });
+
+  // 更新黄金话术精炼版本
+  app.patch('/api/admin/evolution/golden-dialogues/:id', requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { refinedVersion, isActive } = req.body;
+      
+      const { goldenDialogueService } = await import('./goldenDialogueService');
+      
+      if (refinedVersion !== undefined) {
+        await goldenDialogueService.updateRefinedVersion(id, refinedVersion);
+      }
+      if (isActive === false) {
+        await goldenDialogueService.deactivateDialogue(id);
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('[Evolution API] Failed to update golden dialogue:', error);
+      res.status(500).json({ message: 'Failed to update dialogue', error: error.message });
+    }
+  });
+
+  // 进化系统总览统计
+  app.get('/api/admin/evolution/overview', requireAdmin, async (req: any, res) => {
+    try {
+      const { matchingWeightsService } = await import('./matchingWeightsService');
+      const { triggerPerformanceService } = await import('./triggerPerformanceService');
+      const { goldenDialogueService } = await import('./goldenDialogueService');
+
+      const [weightsConfig, triggerStats, dialogueStats] = await Promise.all([
+        matchingWeightsService.getActiveConfig(),
+        triggerPerformanceService.getAllTriggerStats(),
+        goldenDialogueService.getStatistics(),
+      ]);
+
+      const overview = {
+        weights: {
+          totalMatches: weightsConfig?.totalMatches || 0,
+          successfulMatches: weightsConfig?.successfulMatches || 0,
+          avgSatisfaction: parseFloat(weightsConfig?.averageSatisfaction || '0'),
+          lastUpdated: weightsConfig?.updatedAt,
+        },
+        triggers: {
+          total: triggerStats.length,
+          avgEffectiveness: triggerStats.length > 0
+            ? triggerStats.reduce((sum, t) => sum + t.effectivenessScore, 0) / triggerStats.length
+            : 0,
+          totalActivations: triggerStats.reduce((sum, t) => sum + t.totalTriggers, 0),
+        },
+        dialogues: dialogueStats,
+        systemHealth: 'healthy',
+        lastAnalyzed: new Date().toISOString(),
+      };
+
+      res.json(overview);
+    } catch (error: any) {
+      console.error('[Evolution API] Failed to get overview:', error);
+      res.status(500).json({ message: 'Failed to get overview', error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
