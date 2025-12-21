@@ -461,13 +461,17 @@ const achievements: AchievementWithMode[] = [
 
 // 成就弹出组件
 function AchievementToast({ achievement, onComplete }: { achievement: Achievement; onComplete: () => void }) {
+  // 使用 ref 存储 onComplete 回调，避免因函数引用变化导致无限循环
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+  
   useEffect(() => {
     // 强制 2 秒后执行完成回调 (根据 UIUX 建议缩短停留时间)
     const timer = setTimeout(() => {
-      onComplete();
+      onCompleteRef.current();
     }, 2000);
     return () => clearTimeout(timer);
-  }, [achievement.id, onComplete]);
+  }, [achievement.id]); // 只依赖 achievement.id，不依赖 onComplete
 
   return (
     <motion.div
