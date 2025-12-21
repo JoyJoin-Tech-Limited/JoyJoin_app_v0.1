@@ -1350,21 +1350,28 @@ function MessageBubble({
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 5 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              className="relative group px-3 py-1.5 overflow-hidden"
+              className="relative mt-1"
             >
-              {/* 微光背景效果 */}
-              <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-primary/10 to-violet-500/5 rounded-full" />
-              <motion.div 
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
-                animate={{ x: ['-100%', '200%'] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", repeatDelay: 1 }}
-              />
+              {/* 连接线 - 视觉锚点 */}
+              <div className="absolute -top-1 left-4 w-px h-1.5 bg-gradient-to-b from-violet-300/50 to-transparent" />
               
-              <div className="relative flex items-center gap-1.5">
-                <div className="w-1 h-1 rounded-full bg-primary/40 animate-pulse" />
-                <span className="text-[11px] font-medium bg-gradient-to-r from-primary/80 to-violet-600/80 bg-clip-text text-transparent tracking-tight">
-                  {feedbackText}
-                </span>
+              <div className="relative group px-3 py-1.5 overflow-hidden rounded-lg">
+                {/* 微光背景效果 */}
+                <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-primary/10 to-violet-500/5 rounded-lg" />
+                <motion.div 
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
+                  animate={{ x: ['-100%', '200%'] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", repeatDelay: 1 }}
+                />
+                
+                <div className="relative flex items-center gap-1.5">
+                  <Sparkles className="w-2.5 h-2.5 text-primary/50" />
+                  <span className="text-[10px] text-muted-foreground/60 mr-1">小悦的推理</span>
+                  <div className="w-px h-2.5 bg-violet-200/30" />
+                  <span className="text-[11px] font-medium bg-gradient-to-r from-primary/80 to-violet-600/80 bg-clip-text text-transparent tracking-tight">
+                    {feedbackText}
+                  </span>
+                </div>
               </div>
             </motion.div>
           );
