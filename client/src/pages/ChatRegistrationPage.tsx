@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil, Calendar, CalendarDays, Laptop, Bot, Cpu, Car, Globe, TrendingUp, Megaphone, Palette, Video, Stethoscope, GraduationCap, Scale, Building, Plane, MoreHorizontal, Languages, Banknote, UtensilsCrossed, Landmark, LineChart, Wallet, PiggyBank, ShieldCheck, FileText, HardHat, Hammer } from "lucide-react";
+import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil, Calendar, CalendarDays, Laptop, Bot, Cpu, Car, Globe, TrendingUp, Megaphone, Palette, Video, Stethoscope, GraduationCap, Scale, Building, Plane, MoreHorizontal, Languages, Banknote, UtensilsCrossed, Landmark, LineChart, Wallet, PiggyBank, ShieldCheck, FileText, HardHat, Hammer, ChevronDown, ThumbsUp, ThumbsDown } from "lucide-react";
 import xiaoyueAvatar from "@assets/generated_images/final_fox_with_collar_sunglasses.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -600,6 +600,7 @@ interface QuickReplyConfig {
   options: QuickReply[];
   multiSelect?: boolean;
   priority?: number;
+  fullDisplay?: boolean; // 是否全量展示所有选项
 }
 
 // 结构化模式匹配配置 - 用于需要精准匹配的场景
@@ -1236,89 +1237,417 @@ function UserAvatar() {
   );
 }
 
-// 动态AI推理生成函数 - 根据已收集信息生成个性化洞察
-function generateDynamicInference(info: CollectedInfo): string | null {
-  const inferences: string[] = [];
+// ============ 小悦碎嘴推理系统 V2 ============
+// 基于3大心理支柱：身份归属、社交能量、价值驱动
+// 使用"观察+因为+成长潜力"句式框架
+
+interface FoxInsight {
+  text: string;
+  pillar: 'identity' | 'energy' | 'value'; // 三大支柱
+  confidence: number; // 0-1 置信度
+  trigger: string; // 触发条件描述
+}
+
+// 碎嘴推理节奏控制
+const insightCadenceState = {
+  lastInsightTurn: -10, // 初始化为负数，让首次推理不受冷却限制
+  shownInsights: new Set<string>(),
+  cooldownTurns: 2, // 每2轮最多1条
+};
+
+// 动态AI推理生成函数 - 3大支柱 + 组合推理 + 节奏控制
+// 注意：此函数应由缓存层调用，缓存层负责防止重复调用
+function generateDynamicInference(
+  info: CollectedInfo, 
+  messageCount?: number
+): FoxInsight | null {
+  const insights: FoxInsight[] = [];
   const isFemale = info.gender?.includes('女');
+  const currentTurn = messageCount ?? 0;
   
-  // 根据收集的信息层次生成不同的推理
-  // L1 基础信息推理
+  // 节奏控制：每2轮最多1条（首次不受限制因为lastInsightTurn初始为负数）
+  if (currentTurn - insightCadenceState.lastInsightTurn < insightCadenceState.cooldownTurns) {
+    return null;
+  }
+  
+  // ========== 支柱1：身份归属 ==========
+  
+  // 名字+性别基础推理
   if (info.displayName && info.gender && !info.birthdate && !info.currentCity) {
-    return isFemale ? "很好听的名字哦，小姐姐～" : "名字很硬朗嘛，兄弟！";
+    insights.push({
+      text: isFemale ? "名字挺温柔的，感觉是个细腻的人～" : "这名字有分量，应该是个靠谱的",
+      pillar: 'identity',
+      confidence: 0.6,
+      trigger: 'name_gender'
+    });
   }
   
-  // 年龄相关推理
-  if (info.birthYear || info.birthdate) {
-    const birthYear = info.birthYear ? parseInt(info.birthYear) : 
-      (info.birthdate ? parseInt(info.birthdate.split('-')[0]) : null);
-    if (birthYear) {
-      if (birthYear >= 2000) {
-        inferences.push(isFemale ? "00后职场新势力，冲劲十足～" : "00后职场新锐，干劲满满！");
-      } else if (birthYear >= 1995) {
-        inferences.push(isFemale ? "95后黄金期，事业正当时～" : "95后职场中坚，正是发力的年纪！");
-      } else if (birthYear >= 1990) {
-        inferences.push(isFemale ? "90后轻熟派，阅历与活力兼具～" : "90后老手，职场老鸟了！");
-      }
+  // 年龄+城市+行业组合推理
+  const birthYear = info.birthYear ? parseInt(info.birthYear) : 
+    (info.birthdate ? parseInt(info.birthdate.split('-')[0]) : null);
+  
+  if (birthYear && info.currentCity && info.industry) {
+    // 组合推理：00后+金融+香港
+    if (birthYear >= 2000 && info.industry.includes("金融") && info.currentCity.includes("香港")) {
+      insights.push({
+        text: isFemale ? "00后港漂金融人，国际范儿拉满，周末应该闲不住吧？" : "00后港漂金融人，见过世面但不端着，我猜你周末闲不住",
+        pillar: 'identity',
+        confidence: 0.85,
+        trigger: 'combo_00_finance_hk'
+      });
+    }
+    // 组合推理：95后+科技+深圳
+    else if (birthYear >= 1995 && birthYear < 2000 && info.industry.includes("科技") && info.currentCity.includes("深圳")) {
+      insights.push({
+        text: isFemale ? "深圳科技圈95后，节奏快但有自己的生活态度～" : "深圳科技圈95后，卷但清醒，知道自己要什么",
+        pillar: 'identity',
+        confidence: 0.8,
+        trigger: 'combo_95_tech_sz'
+      });
+    }
+    // 组合推理：创业+深圳
+    else if (info.industry.includes("创业") || info.occupationDescription?.includes("创业")) {
+      insights.push({
+        text: isFemale ? "创业中的姐姐，独立又有野心，respect～" : "创业路上的兄弟，有想法有执行力，聊起来应该有料",
+        pillar: 'identity',
+        confidence: 0.75,
+        trigger: 'combo_startup'
+      });
     }
   }
   
-  // 城市相关推理
-  if (info.currentCity && info.hometown) {
-    if (info.currentCity !== info.hometown) {
-      inferences.push(isFemale ? `从${info.hometown}到${info.currentCity}打拼，独立又勇敢～` : 
-        `从${info.hometown}到${info.currentCity}闯荡，是个有故事的人！`);
-    } else {
-      inferences.push(isFemale ? "本地人的主场优势，资源满满～" : "本地人，人脉扎实！");
+  // 单独年龄推理
+  if (birthYear && !insights.some(i => i.trigger.includes('combo'))) {
+    if (birthYear >= 2000) {
+      insights.push({
+        text: isFemale ? "00后已经在职场发力了，新生代的冲劲我看到了～" : "00后职场新锐，干劲满满，后生可畏",
+        pillar: 'identity',
+        confidence: 0.7,
+        trigger: 'age_00'
+      });
+    } else if (birthYear >= 1995) {
+      insights.push({
+        text: isFemale ? "95后黄金期，事业和生活都在上升期～" : "95后正当年，经验和精力都在线",
+        pillar: 'identity',
+        confidence: 0.7,
+        trigger: 'age_95'
+      });
     }
   }
   
-  // 行业相关推理
-  if (info.industry) {
-    const industryInferences: Record<string, string[]> = {
-      "科技互联网": [isFemale ? "互联网圈的姐姐，思维敏捷～" : "互联网老炮，节奏感拉满！"],
-      "AI/大数据": [isFemale ? "AI领域的女性力量，很酷～" : "AI前沿玩家，眼光独到！"],
-      "金融投资": [isFemale ? "金融圈精英，数字敏感度满分～" : "金融圈人士，资本嗅觉灵敏！"],
-      "创意设计": [isFemale ? "创意人，审美在线～" : "设计圈的，艺术细胞爆棚！"],
-      "传媒内容": [isFemale ? "内容创作者，故事感十足～" : "传媒人，讲故事的高手！"],
-      "医疗健康": [isFemale ? "医疗行业，救死扶伤的天使～" : "医疗人士，专业靠谱！"],
-      "教育培训": [isFemale ? "教育工作者，温暖有爱～" : "教育圈的，有耐心有情怀！"],
-    };
-    const match = industryInferences[info.industry];
-    if (match) inferences.push(match[0]);
+  // 城市迁移推理
+  if (info.currentCity && info.hometown && info.currentCity !== info.hometown) {
+    insights.push({
+      text: isFemale 
+        ? `从${info.hometown}到${info.currentCity}打拼，独立又勇敢，这种人一般都挺有故事的～` 
+        : `从${info.hometown}到${info.currentCity}闯荡，说明你不是安于现状的人`,
+      pillar: 'identity',
+      confidence: 0.75,
+      trigger: 'migration'
+    });
   }
   
-  // 兴趣相关推理
+  // ========== 支柱2：社交能量 ==========
+  
+  // 兴趣+社交风格组合
   if (info.interestsTop && info.interestsTop.length > 0) {
     const interests = info.interestsTop;
-    if (interests.includes("户外运动") || interests.includes("运动健身")) {
-      inferences.push(isFemale ? "热爱运动，活力满满～" : "运动派，精力充沛！");
+    const hasOutdoor = interests.some(i => i.includes("户外") || i.includes("运动"));
+    const hasFood = interests.some(i => i.includes("美食") || i.includes("探店"));
+    const hasDeep = interests.some(i => i.includes("读书") || i.includes("知识") || i.includes("讨论"));
+    
+    // 组合：户外+美食 = 体验派
+    if (hasOutdoor && hasFood) {
+      insights.push({
+        text: isFemale ? "又能动又能吃，是个会享受生活的体验派～" : "运动完吃好的，懂生活的人",
+        pillar: 'energy',
+        confidence: 0.8,
+        trigger: 'combo_outdoor_food'
+      });
     }
-    if (interests.includes("美食探店")) {
-      inferences.push(isFemale ? "美食达人，舌尖品味～" : "吃货一枚，懂生活！");
+    // 组合：深度+安静 = 思考者
+    else if (hasDeep && info.socialStyle?.includes("内敛")) {
+      insights.push({
+        text: isFemale ? "安静但有深度，聊开了应该很有料～" : "内敛派，但我猜聊深了你有很多想法",
+        pillar: 'energy',
+        confidence: 0.75,
+        trigger: 'combo_deep_quiet'
+      });
     }
-    if (interests.includes("读书学习") || interests.includes("知识分享")) {
-      inferences.push(isFemale ? "爱学习的女孩，内涵满满～" : "爱看书，有深度！");
-    }
-    if (interests.includes("旅行探索")) {
-      inferences.push(isFemale ? "热爱旅行，见识广博～" : "旅行爱好者，眼界开阔！");
+    // 单独兴趣推理
+    else if (hasFood) {
+      insights.push({
+        text: isFemale ? "美食爱好者，舌尖品味应该不错～" : "吃货一枚，懂吃的人一般都懂生活",
+        pillar: 'energy',
+        confidence: 0.65,
+        trigger: 'interest_food'
+      });
+    } else if (interests.includes("旅行探索")) {
+      insights.push({
+        text: isFemale ? "热爱旅行，见识广博，聊天话题应该很多～" : "旅行爱好者，眼界开阔的人",
+        pillar: 'energy',
+        confidence: 0.65,
+        trigger: 'interest_travel'
+      });
     }
   }
   
-  // 社交风格推理
-  if (info.socialStyle) {
+  // 社交风格单独推理
+  if (info.socialStyle && !insights.some(i => i.trigger.includes('combo'))) {
     if (info.socialStyle.includes("活跃") || info.socialStyle.includes("外向")) {
-      inferences.push(isFemale ? "社交达人，氛围组担当～" : "社牛属性，聊什么都行！");
-    } else if (info.socialStyle.includes("内敛") || info.socialStyle.includes("安静")) {
-      inferences.push(isFemale ? "安静有力量，深度社交型～" : "内敛派，聊深了有料！");
+      insights.push({
+        text: isFemale ? "社交达人，氛围组担当，有你在场应该不会冷场～" : "社牛属性，聊什么都能接住",
+        pillar: 'energy',
+        confidence: 0.7,
+        trigger: 'social_active'
+      });
     }
   }
   
-  // 返回最新/最相关的推理（优先返回最后一条，即最新收集的信息）
-  if (inferences.length > 0) {
-    return inferences[inferences.length - 1];
+  // ========== 支柱3：价值驱动 ==========
+  
+  // 意图推理
+  if (info.intent) {
+    if (info.intent.includes("深度讨论") || info.intent.includes("知识")) {
+      insights.push({
+        text: isFemale ? "喜欢深度讨论，说明你不满足于表面社交，想找到真正聊得来的人～" : "追求深度交流，不是随便聊聊就行的那种",
+        pillar: 'value',
+        confidence: 0.8,
+        trigger: 'intent_deep'
+      });
+    } else if (info.intent.includes("拓展人脉") || info.intent.includes("商业")) {
+      insights.push({
+        text: isFemale ? "有明确的社交目标，务实又高效～" : "目标清晰，知道自己要什么",
+        pillar: 'value',
+        confidence: 0.75,
+        trigger: 'intent_network'
+      });
+    }
+  }
+  
+  // 行业单独推理（fallback）
+  if (info.industry && !insights.some(i => i.trigger.includes('combo') || i.trigger.includes('industry'))) {
+    const industryMap: Record<string, { f: string; m: string }> = {
+      "科技互联网": { f: "互联网人的节奏感，应该很会安排时间～", m: "互联网老炮，效率拉满" },
+      "AI/大数据": { f: "AI领域的女性力量，眼光超前～", m: "AI前沿玩家，眼光独到" },
+      "金融投资": { f: "金融圈的，数字敏感度应该很强～", m: "金融人，资本嗅觉灵敏" },
+      "创意设计": { f: "创意人，审美肯定在线～", m: "设计圈的，艺术细胞爆棚" },
+      "传媒内容": { f: "做内容的，讲故事能力应该很强～", m: "传媒人，讲故事的高手" },
+    };
+    const match = industryMap[info.industry];
+    if (match) {
+      insights.push({
+        text: isFemale ? match.f : match.m,
+        pillar: 'identity',
+        confidence: 0.6,
+        trigger: 'industry_single'
+      });
+    }
+  }
+  
+  // 过滤已显示的推理，选择置信度最高的
+  const availableInsights = insights.filter(i => !insightCadenceState.shownInsights.has(i.trigger));
+  
+  if (availableInsights.length > 0) {
+    // 按置信度排序，取最高的
+    availableInsights.sort((a, b) => b.confidence - a.confidence);
+    const selected = availableInsights[0];
+    
+    // 更新节奏状态
+    insightCadenceState.lastInsightTurn = currentTurn;
+    insightCadenceState.shownInsights.add(selected.trigger);
+    
+    return selected;
   }
   
   return null;
+}
+
+// 全局追踪：每个消息+信息组合是否已经生成过insight
+// 使用 "messageIndex:infoHashCode" 作为key，值为生成的insight或null
+const insightCache = new Map<string, FoxInsight | null>();
+
+// 重置碎嘴节奏状态（用于新会话）- 同时重置所有相关缓存
+function resetInsightCadence() {
+  insightCadenceState.lastInsightTurn = -10; // 重置为负数让首次推理不受限
+  insightCadenceState.shownInsights.clear();
+  insightCache.clear(); // 同时清空insight缓存
+}
+
+// ========== 方案B: Insight显示包装器（解决React渲染状态问题）==========
+function FoxInsightWrapper({ 
+  isAssistant, 
+  isLatest, 
+  shouldShowTyping, 
+  collectedInfo, 
+  messageIndex 
+}: {
+  isAssistant: boolean;
+  isLatest: boolean;
+  shouldShowTyping: boolean;
+  collectedInfo: CollectedInfo;
+  messageIndex: number;
+}) {
+  // 条件不满足时不显示
+  if (!isAssistant || !isLatest || shouldShowTyping) {
+    return null;
+  }
+  
+  // 计算完整信息哈希（所有推理相关字段）
+  const infoHash = JSON.stringify(collectedInfo);
+  
+  // 缓存key = 消息索引 + 信息哈希
+  const cacheKey = `${messageIndex}:${infoHash}`;
+  
+  // 检查缓存：如果这个exact组合已经计算过，直接使用缓存结果
+  if (insightCache.has(cacheKey)) {
+    const cached = insightCache.get(cacheKey);
+    if (cached) {
+      return <FoxInsightBubble insight={cached} />;
+    }
+    return null;
+  }
+  
+  // 未缓存：尝试生成insight
+  // 首先检查是否已经为这个messageIndex生成过成功的insight
+  // 如果有，直接复用，避免重复显示
+  for (const [key, value] of insightCache.entries()) {
+    if (key.startsWith(`${messageIndex}:`) && value !== null) {
+      // 这个消息已经有成功的insight了，复用它
+      insightCache.set(cacheKey, value);
+      return <FoxInsightBubble insight={value} />;
+    }
+  }
+  
+  // 尝试生成新insight
+  const newInsight = generateDynamicInference(collectedInfo, messageIndex);
+  
+  // 缓存结果（包括null，但当collectedInfo变化时可以重试）
+  insightCache.set(cacheKey, newInsight);
+  
+  if (newInsight) {
+    return <FoxInsightBubble insight={newInsight} />;
+  }
+  
+  return null;
+}
+
+// ========== 方案B: 气泡内嵌入的"小悦偷偷碎嘴"组件 ==========
+function FoxInsightBubble({ insight }: { insight: FoxInsight }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
+  
+  // 支柱图标映射
+  const pillarIcons = {
+    identity: '🦊',
+    energy: '⚡',
+    value: '💎',
+  };
+  
+  const handleFeedback = (type: 'up' | 'down') => {
+    setFeedback(type);
+    // TODO: 发送反馈到后端收集数据
+    console.log('[FoxInsight Feedback]', { trigger: insight.trigger, feedback: type });
+  };
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 }}
+      className="mt-2"
+    >
+      <Card className="bg-gradient-to-r from-violet-50/80 via-primary/5 to-violet-50/80 dark:from-violet-900/20 dark:via-primary/10 dark:to-violet-900/20 border-violet-200/40 dark:border-violet-700/30 overflow-hidden">
+        {/* 可点击的标题栏 */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full px-3 py-2 flex items-center justify-between hover-elevate"
+          data-testid="button-toggle-fox-insight"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-xs">{pillarIcons[insight.pillar]}</span>
+            <span className="text-[11px] text-muted-foreground/70">小悦偷偷碎嘴</span>
+            <ChevronDown 
+              className={`w-3 h-3 text-muted-foreground/50 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+            />
+          </div>
+          
+          {/* 置信度指示器（仅展开时显示） */}
+          {isExpanded && (
+            <div className="flex items-center gap-1">
+              <div className="h-1 w-8 bg-violet-200/50 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary/60 rounded-full"
+                  style={{ width: `${insight.confidence * 100}%` }}
+                />
+              </div>
+              <span className="text-[9px] text-muted-foreground/50">{Math.round(insight.confidence * 100)}%</span>
+            </div>
+          )}
+        </button>
+        
+        {/* 折叠/展开的推理内容 */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="px-3 pb-2.5 pt-0">
+                <div className="text-[12px] leading-relaxed text-foreground/80 mb-2">
+                  {insight.text}
+                </div>
+                
+                {/* 反馈按钮 */}
+                <div className="flex items-center gap-2 justify-end">
+                  <span className="text-[10px] text-muted-foreground/50">准不准？</span>
+                  <button
+                    onClick={() => handleFeedback('up')}
+                    className={`p-1 rounded transition-colors ${
+                      feedback === 'up' 
+                        ? 'bg-green-100 dark:bg-green-900/30' 
+                        : 'hover:bg-muted/50'
+                    }`}
+                    disabled={feedback !== null}
+                    data-testid="button-insight-feedback-up"
+                  >
+                    <ThumbsUp className={`w-3 h-3 ${
+                      feedback === 'up' ? 'text-green-600' : 'text-muted-foreground/50'
+                    }`} />
+                  </button>
+                  <button
+                    onClick={() => handleFeedback('down')}
+                    className={`p-1 rounded transition-colors ${
+                      feedback === 'down' 
+                        ? 'bg-red-100 dark:bg-red-900/30' 
+                        : 'hover:bg-muted/50'
+                    }`}
+                    disabled={feedback !== null}
+                    data-testid="button-insight-feedback-down"
+                  >
+                    <ThumbsDown className={`w-3 h-3 ${
+                      feedback === 'down' ? 'text-red-600' : 'text-muted-foreground/50'
+                    }`} />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        {/* 未展开时的预览文字 */}
+        {!isExpanded && (
+          <div className="px-3 pb-2 pt-0">
+            <p className="text-[11px] text-muted-foreground/60 truncate">
+              {insight.text.slice(0, 25)}...
+            </p>
+          </div>
+        )}
+      </Card>
+    </motion.div>
+  );
 }
 
 // 消息气泡组件
@@ -1328,7 +1657,8 @@ function MessageBubble({
   userGender, 
   collectedInfo, 
   onTypingComplete,
-  onSequentialDisplayComplete
+  onSequentialDisplayComplete,
+  messageIndex
 }: { 
   message: ChatMessage; 
   isLatest: boolean; 
@@ -1336,6 +1666,7 @@ function MessageBubble({
   collectedInfo: CollectedInfo;
   onTypingComplete?: () => void;
   onSequentialDisplayComplete?: () => void;
+  messageIndex: number;
 }) {
   const isAssistant = message.role === "assistant";
   
@@ -1421,39 +1752,14 @@ function MessageBubble({
           ))
         )}
         
-        {/* 动态AI推理：根据已收集信息生成个性化洞察 */}
-        {isAssistant && isLatest && !shouldShowTyping && (() => {
-          const inference = generateDynamicInference(collectedInfo);
-          if (!inference) return null;
-          
-          return (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 5 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              className="relative mt-1"
-            >
-              <div className="absolute -top-1 left-4 w-px h-1.5 bg-gradient-to-b from-violet-300/50 to-transparent" />
-              
-              <div className="relative group px-3 py-1.5 overflow-hidden rounded-lg">
-                <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-primary/10 to-violet-500/5 rounded-lg" />
-                <motion.div 
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
-                  animate={{ x: ['-100%', '200%'] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", repeatDelay: 1 }}
-                />
-                
-                <div className="relative flex items-center gap-1.5">
-                  <Sparkles className="w-2.5 h-2.5 text-primary/50" />
-                  <span className="text-[10px] text-muted-foreground/60 mr-1">小悦的推理</span>
-                  <div className="w-px h-2.5 bg-violet-200/30" />
-                  <span className="text-[11px] font-medium bg-gradient-to-r from-primary/80 to-violet-600/80 bg-clip-text text-transparent tracking-tight">
-                    {inference}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          );
-        })()}
+        {/* 方案B：气泡内嵌入"小悦偷偷碎嘴"区域 */}
+        <FoxInsightWrapper 
+          isAssistant={isAssistant}
+          isLatest={isLatest}
+          shouldShowTyping={shouldShowTyping}
+          collectedInfo={collectedInfo}
+          messageIndex={messageIndex}
+        />
       </div>
 
       {!isAssistant && <UserAvatar />}
@@ -1877,6 +2183,8 @@ export default function ChatRegistrationPage() {
   const handleModeSelect = (mode: RegistrationMode) => {
     setSelectedMode(mode);
     setShowModeSelection(false);
+    // 重置碎嘴节奏状态
+    resetInsightCadence();
     // 开始对话，传入模式
     startChatMutation.mutate({ mode, enrichmentContext: null });
   };
@@ -1964,6 +2272,8 @@ export default function ChatRegistrationPage() {
     setSelectedMode(savedState.selectedMode);
     setShowResumePrompt(false);
     setShowModeSelection(false);
+    // 重置碎嘴节奏状态（恢复时也需要）
+    resetInsightCadence();
     
     toast({
       title: "对话已恢复",
@@ -1977,6 +2287,8 @@ export default function ChatRegistrationPage() {
     setSavedState(null);
     setShowResumePrompt(false);
     setShowModeSelection(true);
+    // 重置碎嘴节奏状态
+    resetInsightCadence();
   };
   
   // 保存对话状态（每次消息更新时调用）
@@ -2683,13 +2995,14 @@ export default function ChatRegistrationPage() {
             className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
           >
         <AnimatePresence>
-          {messages.map((msg) => (
+          {messages.map((msg, idx) => (
             <MessageBubble
               key={msg.id}
               message={msg}
               isLatest={msg === messages[messages.length - 1]}
               userGender={collectedInfo.gender}
               collectedInfo={collectedInfo}
+              messageIndex={idx}
               onTypingComplete={() => {
                 setMessages(prev => prev.map((m) => 
                   m.id === msg.id ? { ...m, isTypingAnimation: false } : m
