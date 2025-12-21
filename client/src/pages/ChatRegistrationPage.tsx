@@ -2781,6 +2781,11 @@ export default function ChatRegistrationPage() {
   const [birthdayMonth, setBirthdayMonth] = useState<string>("");
   const [birthdayDay, setBirthdayDay] = useState<string>("");
   
+  // 生日滚轮选择器refs
+  const yearScrollRef = useRef<HTMLDivElement>(null);
+  const monthScrollRef = useRef<HTMLDivElement>(null);
+  const dayScrollRef = useRef<HTMLDivElement>(null);
+  
   // 快捷回复点击处理
   const handleQuickReply = (text: string) => {
     if (isTyping) return;
@@ -3205,7 +3210,7 @@ export default function ChatRegistrationPage() {
           
           <div className="px-4 pb-6">
             {/* 滚轮选择器 */}
-            <div className="flex gap-2 justify-center items-end h-56 relative">
+            <div className="flex gap-2 justify-center items-end h-60 relative" style={{ touchAction: 'pan-y' }}>
               {/* 顶部高亮区域 */}
               <div className="absolute inset-0 top-0 h-20 bg-gradient-to-b from-muted/50 to-transparent pointer-events-none rounded-t-lg z-10" />
               {/* 底部高亮区域 */}
@@ -3214,66 +3219,99 @@ export default function ChatRegistrationPage() {
               <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-12 border-y border-primary/30 pointer-events-none z-20" />
               
               {/* 年份滚轮 */}
-              <div className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory" 
-                   style={{ scrollBehavior: 'smooth', height: '224px' }}>
-                <div className="h-20" />
-                {Array.from({ length: 50 }, (_, i) => 2025 - 18 - i).map((year, idx) => (
-                  <motion.button
+              <div 
+                ref={yearScrollRef}
+                className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center" 
+                style={{ height: '240px', touchAction: 'pan-y' }}
+                onScroll={(e) => {
+                  const target = e.currentTarget;
+                  const scrollTop = target.scrollTop;
+                  const itemHeight = 48; // py-3 + implicit spacing
+                  const index = Math.round(scrollTop / itemHeight);
+                  const years = Array.from({ length: 50 }, (_, i) => 2025 - 18 - i);
+                  if (index >= 0 && index < years.length && birthdayYear !== String(years[index])) {
+                    setBirthdayYear(String(years[index]));
+                  }
+                }}
+              >
+                <div className="h-12" />
+                {Array.from({ length: 50 }, (_, i) => 2025 - 18 - i).map((year) => (
+                  <div
                     key={year}
-                    onClick={() => setBirthdayYear(String(year))}
-                    className={`w-full py-3 text-center font-medium snap-center transition-all ${
+                    className={`w-full py-3 text-center font-medium transition-all ${
                       birthdayYear === String(year)
                         ? "text-primary text-lg"
                         : "text-muted-foreground text-sm opacity-50"
                     }`}
-                    whileTap={{ scale: 0.95 }}
                   >
                     {year}
-                  </motion.button>
+                  </div>
                 ))}
-                <div className="h-20" />
+                <div className="h-12" />
               </div>
               
               {/* 月份滚轮 */}
-              <div className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory"
-                   style={{ scrollBehavior: 'smooth', height: '224px' }}>
-                <div className="h-20" />
+              <div 
+                ref={monthScrollRef}
+                className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center"
+                style={{ height: '240px', touchAction: 'pan-y' }}
+                onScroll={(e) => {
+                  const target = e.currentTarget;
+                  const scrollTop = target.scrollTop;
+                  const itemHeight = 48;
+                  const index = Math.round(scrollTop / itemHeight);
+                  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+                  if (index >= 0 && index < months.length && birthdayMonth !== String(months[index])) {
+                    setBirthdayMonth(String(months[index]));
+                  }
+                }}
+              >
+                <div className="h-12" />
                 {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
-                  <motion.button
+                  <div
                     key={month}
-                    onClick={() => setBirthdayMonth(String(month))}
-                    className={`w-full py-3 text-center font-medium snap-center transition-all ${
+                    className={`w-full py-3 text-center font-medium transition-all ${
                       birthdayMonth === String(month)
                         ? "text-primary text-lg"
                         : "text-muted-foreground text-sm opacity-50"
                     }`}
-                    whileTap={{ scale: 0.95 }}
                   >
                     {String(month).padStart(2, '0')}月
-                  </motion.button>
+                  </div>
                 ))}
-                <div className="h-20" />
+                <div className="h-12" />
               </div>
               
               {/* 日期滚轮 */}
-              <div className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory"
-                   style={{ scrollBehavior: 'smooth', height: '224px' }}>
-                <div className="h-20" />
+              <div 
+                ref={dayScrollRef}
+                className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center"
+                style={{ height: '240px', touchAction: 'pan-y' }}
+                onScroll={(e) => {
+                  const target = e.currentTarget;
+                  const scrollTop = target.scrollTop;
+                  const itemHeight = 48;
+                  const index = Math.round(scrollTop / itemHeight);
+                  const days = Array.from({ length: 31 }, (_, i) => i + 1);
+                  if (index >= 0 && index < days.length && birthdayDay !== String(days[index])) {
+                    setBirthdayDay(String(days[index]));
+                  }
+                }}
+              >
+                <div className="h-12" />
                 {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                  <motion.button
+                  <div
                     key={day}
-                    onClick={() => setBirthdayDay(String(day))}
-                    className={`w-full py-3 text-center font-medium snap-center transition-all ${
+                    className={`w-full py-3 text-center font-medium transition-all ${
                       birthdayDay === String(day)
                         ? "text-primary text-lg"
                         : "text-muted-foreground text-sm opacity-50"
                     }`}
-                    whileTap={{ scale: 0.95 }}
                   >
                     {String(day).padStart(2, '0')}日
-                  </motion.button>
+                  </div>
                 ))}
-                <div className="h-20" />
+                <div className="h-12" />
               </div>
             </div>
             
