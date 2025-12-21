@@ -634,6 +634,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== Insight Feedback API ==========
+  // 收集"小悦偷偷碎嘴"推理准确度反馈（无需登录）
+  app.post('/api/insight-feedback', async (req: any, res) => {
+    try {
+      const { trigger, pillar, confidence, feedback, timestamp } = req.body;
+      
+      // 简单验证
+      if (!trigger || !feedback || !['up', 'down'].includes(feedback)) {
+        return res.status(400).json({ error: 'Invalid feedback data' });
+      }
+      
+      // 记录到控制台（后续可存入数据库）
+      console.log('[Insight Feedback]', {
+        trigger,
+        pillar,
+        confidence,
+        feedback,
+        timestamp,
+        sessionId: req.session?.id || 'anonymous'
+      });
+      
+      // TODO: 存入数据库以供分析
+      // await storage.saveInsightFeedback({ trigger, pillar, confidence, feedback, timestamp });
+      
+      res.json({ success: true, message: 'Feedback recorded' });
+    } catch (error) {
+      console.error("Error saving insight feedback:", error);
+      res.status(500).json({ error: 'Failed to save feedback' });
+    }
+  });
+
   // Registration routes
   app.post('/api/user/register', isPhoneAuthenticated, async (req: any, res) => {
     try {

@@ -1650,7 +1650,9 @@ function FoxInsightWrapper({
   // 未缓存：尝试生成insight
   // 首先检查是否已经为这个messageIndex生成过成功的insight
   // 如果有，直接复用，避免重复显示
-  for (const [key, value] of insightCache.entries()) {
+  const cacheEntries = Array.from(insightCache.entries());
+  for (let i = 0; i < cacheEntries.length; i++) {
+    const [key, value] = cacheEntries[i];
     if (key.startsWith(`${messageIndex}:`) && value.type === 'success') {
       // 这个消息已经有成功的insight了，复用它
       insightCache.set(cacheKey, value);
@@ -1677,10 +1679,57 @@ function FoxInsightWrapper({
   }
 }
 
+// ========== 打字机效果Hook ==========
+function useTypewriter(text: string, speed: number = 50, enabled: boolean = true) {
+  const [displayedText, setDisplayedText] = useState('');
+  const [isComplete, setIsComplete] = useState(false);
+  
+  useEffect(() => {
+    if (!enabled) {
+      setDisplayedText(text);
+      setIsComplete(true);
+      return;
+    }
+    
+    setDisplayedText('');
+    setIsComplete(false);
+    let currentIndex = 0;
+    
+    const timer = setInterval(() => {
+      if (currentIndex < text.length) {
+        setDisplayedText(text.slice(0, currentIndex + 1));
+        currentIndex++;
+      } else {
+        setIsComplete(true);
+        clearInterval(timer);
+      }
+    }, speed);
+    
+    return () => clearInterval(timer);
+  }, [text, speed, enabled]);
+  
+  return { displayedText, isComplete };
+}
+
 // ========== 方案B: 气泡内嵌入的"小悦偷偷碎嘴"组件 ==========
 function FoxInsightBubble({ insight }: { insight: FoxInsight }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
+  const [hasPlayedTypewriter, setHasPlayedTypewriter] = useState(false);
+  
+  // 打字机效果：仅在首次展开时播放
+  const { displayedText, isComplete } = useTypewriter(
+    insight.text, 
+    35, // 每字35ms，让"边想边说"感更自然
+    isExpanded && !hasPlayedTypewriter
+  );
+  
+  // 记录已播放过打字机效果
+  useEffect(() => {
+    if (isComplete && isExpanded) {
+      setHasPlayedTypewriter(true);
+    }
+  }, [isComplete, isExpanded]);
   
   // 支柱图标映射
   const pillarIcons = {
@@ -1689,20 +1738,40 @@ function FoxInsightBubble({ insight }: { insight: FoxInsight }) {
     value: '💎',
   };
   
-  const handleFeedback = (type: 'up' | 'down') => {
+  const handleFeedback = async (type: 'up' | 'down') => {
     setFeedback(type);
-    // TODO: 发送反馈到后端收集数据
-    console.log('[FoxInsight Feedback]', { trigger: insight.trigger, feedback: type });
+    // 发送反馈到后端
+    try {
+      await fetch('/api/insight-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trigger: insight.trigger,
+          pillar: insight.pillar,
+          confidence: insight.confidence,
+          feedback: type,
+          timestamp: new Date().toISOString()
+        })
+      });
+      console.log('[FoxInsight Feedback] Sent:', { trigger: insight.trigger, feedback: type });
+    } catch (error) {
+      console.error('[FoxInsight Feedback] Failed:', error);
+    }
   };
   
   return (
     <motion.div
-      initial={{ opacity: 0, y: 5 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3 }}
+      initial={{ opacity: 0, y: 12, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ 
+        type: "spring",
+        stiffness: 400,
+        damping: 25,
+        delay: 0.4
+      }}
       className="mt-2"
     >
-      <Card className="bg-gradient-to-r from-violet-50/80 via-primary/5 to-violet-50/80 dark:from-violet-900/20 dark:via-primary/10 dark:to-violet-900/20 border-violet-200/40 dark:border-violet-700/30 overflow-hidden">
+      <Card className="bg-gradient-to-r from-violet-50/80 via-primary/5 to-violet-50/80 dark:from-violet-900/20 dark:via-primary/10 dark:to-violet-900/20 border-violet-200/40 dark:border-violet-700/30 overflow-hidden shadow-sm">
         {/* 可点击的标题栏 */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
@@ -1710,25 +1779,43 @@ function FoxInsightBubble({ insight }: { insight: FoxInsight }) {
           data-testid="button-toggle-fox-insight"
         >
           <div className="flex items-center gap-2">
-            <span className="text-xs">{pillarIcons[insight.pillar]}</span>
+            <motion.span 
+              className="text-xs"
+              animate={{ rotate: isExpanded ? [0, -10, 10, 0] : 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              {pillarIcons[insight.pillar]}
+            </motion.span>
             <span className="text-[11px] text-muted-foreground/70">小悦偷偷碎嘴</span>
-            <ChevronDown 
-              className={`w-3 h-3 text-muted-foreground/50 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
-            />
+            <motion.div
+              animate={{ rotate: isExpanded ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronDown className="w-3 h-3 text-muted-foreground/50" />
+            </motion.div>
           </div>
           
           {/* 置信度指示器（仅展开时显示） */}
-          {isExpanded && (
-            <div className="flex items-center gap-1">
-              <div className="h-1 w-8 bg-violet-200/50 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary/60 rounded-full"
-                  style={{ width: `${insight.confidence * 100}%` }}
-                />
-              </div>
-              <span className="text-[9px] text-muted-foreground/50">{Math.round(insight.confidence * 100)}%</span>
-            </div>
-          )}
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div 
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="flex items-center gap-1"
+              >
+                <div className="h-1 w-8 bg-violet-200/50 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-primary/60 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${insight.confidence * 100}%` }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  />
+                </div>
+                <span className="text-[9px] text-muted-foreground/50">{Math.round(insight.confidence * 100)}%</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </button>
         
         {/* 折叠/展开的推理内容 */}
@@ -1738,45 +1825,77 @@ function FoxInsightBubble({ insight }: { insight: FoxInsight }) {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
             >
               <div className="px-3 pb-2.5 pt-0">
-                <div className="text-[12px] leading-relaxed text-foreground/80 mb-2">
-                  {insight.text}
+                <div className="text-[12px] leading-relaxed text-foreground/80 mb-2 min-h-[2.5em]">
+                  {hasPlayedTypewriter ? insight.text : displayedText}
+                  {/* 打字机光标 */}
+                  {!isComplete && !hasPlayedTypewriter && (
+                    <motion.span
+                      animate={{ opacity: [1, 0] }}
+                      transition={{ duration: 0.5, repeat: Infinity }}
+                      className="inline-block w-0.5 h-3 bg-primary/60 ml-0.5 align-middle"
+                    />
+                  )}
                 </div>
                 
-                {/* 反馈按钮 */}
-                <div className="flex items-center gap-2 justify-end">
-                  <span className="text-[10px] text-muted-foreground/50">准不准？</span>
-                  <button
-                    onClick={() => handleFeedback('up')}
-                    className={`p-1 rounded transition-colors ${
-                      feedback === 'up' 
-                        ? 'bg-green-100 dark:bg-green-900/30' 
-                        : 'hover:bg-muted/50'
-                    }`}
-                    disabled={feedback !== null}
-                    data-testid="button-insight-feedback-up"
-                  >
-                    <ThumbsUp className={`w-3 h-3 ${
-                      feedback === 'up' ? 'text-green-600' : 'text-muted-foreground/50'
-                    }`} />
-                  </button>
-                  <button
-                    onClick={() => handleFeedback('down')}
-                    className={`p-1 rounded transition-colors ${
-                      feedback === 'down' 
-                        ? 'bg-red-100 dark:bg-red-900/30' 
-                        : 'hover:bg-muted/50'
-                    }`}
-                    disabled={feedback !== null}
-                    data-testid="button-insight-feedback-down"
-                  >
-                    <ThumbsDown className={`w-3 h-3 ${
-                      feedback === 'down' ? 'text-red-600' : 'text-muted-foreground/50'
-                    }`} />
-                  </button>
-                </div>
+                {/* 反馈按钮 - 仅在打字完成后显示 */}
+                <AnimatePresence>
+                  {(isComplete || hasPlayedTypewriter) && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="flex items-center gap-2 justify-end"
+                    >
+                      <span className="text-[10px] text-muted-foreground/50">准不准？</span>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleFeedback('up')}
+                        className={`p-1.5 rounded-full transition-colors ${
+                          feedback === 'up' 
+                            ? 'bg-green-100 dark:bg-green-900/30' 
+                            : 'hover:bg-muted/50'
+                        }`}
+                        disabled={feedback !== null}
+                        data-testid="button-insight-feedback-up"
+                      >
+                        <ThumbsUp className={`w-3.5 h-3.5 ${
+                          feedback === 'up' ? 'text-green-600' : 'text-muted-foreground/50'
+                        }`} />
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleFeedback('down')}
+                        className={`p-1.5 rounded-full transition-colors ${
+                          feedback === 'down' 
+                            ? 'bg-red-100 dark:bg-red-900/30' 
+                            : 'hover:bg-muted/50'
+                        }`}
+                        disabled={feedback !== null}
+                        data-testid="button-insight-feedback-down"
+                      >
+                        <ThumbsDown className={`w-3.5 h-3.5 ${
+                          feedback === 'down' ? 'text-red-600' : 'text-muted-foreground/50'
+                        }`} />
+                      </motion.button>
+                      
+                      {/* 反馈确认提示 */}
+                      {feedback && (
+                        <motion.span
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="text-[10px] text-primary/70 ml-1"
+                        >
+                          {feedback === 'up' ? '谢谢认可~' : '我会更准的!'}
+                        </motion.span>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           )}
@@ -1784,11 +1903,15 @@ function FoxInsightBubble({ insight }: { insight: FoxInsight }) {
         
         {/* 未展开时的预览文字 */}
         {!isExpanded && (
-          <div className="px-3 pb-2 pt-0">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="px-3 pb-2 pt-0"
+          >
             <p className="text-[11px] text-muted-foreground/60 truncate">
               {insight.text.slice(0, 25)}...
             </p>
-          </div>
+          </motion.div>
         )}
       </Card>
     </motion.div>
