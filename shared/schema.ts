@@ -486,6 +486,11 @@ export const eventFeedback = pgTable("event_feedback", {
   
   deepFeedbackCompletedAt: timestamp("deep_feedback_completed_at"),
   
+  // AI Evolution System - Trigger Association
+  triggersActivated: text("triggers_activated").array(), // 触发器ID列表 (对话中激活的触发器)
+  mostImpactfulTrigger: varchar("most_impactful_trigger"), // 最有影响力的触发器
+  triggerEffectivenessScore: numeric("trigger_effectiveness_score", { precision: 5, scale: 4 }), // 触发器整体效果 0-1
+  
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2075,6 +2080,13 @@ export const registrationSessions = pgTable("registration_sessions", {
   
   // 元数据
   metadata: jsonb("metadata"), // 额外数据存储
+  
+  // AI Evolution System - Completion Quality Tracking
+  completionQuality: numeric("completion_quality", { precision: 5, scale: 4 }), // 整体完成质量 0-1
+  completionQualityFactors: jsonb("completion_quality_factors"), // {informationCompleteness: 0-1, engagementLevel: 0-1, responseQuality: 0-1}
+  triggersUsedInSession: text("triggers_used_in_session").array(), // 会话中使用的触发器ID列表
+  mostEffectiveTriggerInSession: varchar("most_effective_trigger_in_session"), // 最有效的触发器
+  aiResponseQuality: numeric("ai_response_quality", { precision: 5, scale: 4 }), // 小悦回复质量评分 0-1
   
   // 时间戳
   updatedAt: timestamp("updated_at").defaultNow(),
