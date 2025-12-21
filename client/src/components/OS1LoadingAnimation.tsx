@@ -222,74 +222,106 @@ export function OS1FullScreenLoader({
   );
 }
 
+// 真正的《Her》电影OS1波浪动画 - 使用SVG正弦波曲线
 export function OS1InlineLoader({
   message = "思考中...",
   variant = "purple",
+  isComplete = false,
 }: {
   message?: string;
   variant?: "warm" | "purple" | "gradient";
+  isComplete?: boolean;
 }) {
-  const colors = {
-    purple: "from-violet-400 to-purple-500",
-    warm: "from-orange-400 to-rose-500",
-    gradient: "from-violet-400 to-purple-500",
+  const strokeColors = {
+    purple: "#a78bfa", // violet-400
+    warm: "#fb923c",   // orange-400
+    gradient: "#a78bfa",
   };
 
-  const glowColors = {
-    purple: "shadow-violet-500/40",
-    warm: "shadow-orange-500/40",
-    gradient: "shadow-purple-500/40",
-  };
-
-  // 5条波形条，模拟《Her》电影中OS1的呼吸式波形动画
-  const barCount = 5;
-  const baseHeights = [8, 14, 20, 14, 8]; // 中间最高，两边渐低
-  const maxHeights = [14, 22, 28, 22, 14];
+  // SVG路径：思考中的正弦波 vs 完成的圆形
+  // 正弦波路径：从左到右的平滑波浪
+  const wavePath = "M 5 12 Q 12 4, 20 12 T 35 12 T 50 12 T 65 12";
+  // 圆形路径
+  const circlePath = "M 35 4 A 8 8 0 1 1 34.99 4";
 
   return (
     <div className="flex items-center gap-3 py-2">
-      <div className="relative flex items-center justify-center h-7">
-        {/* 背景光晕 */}
-        <motion.div
-          className={`absolute inset-0 rounded-full bg-gradient-to-r ${colors[variant]} opacity-20 blur-md`}
-          animate={{
-            opacity: [0.15, 0.25, 0.15],
-            scale: [0.9, 1.1, 0.9],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-        
-        {/* 波形条 */}
-        <div className="relative flex items-center gap-[3px] px-2">
-          {Array.from({ length: barCount }).map((_, i) => {
-            const isCenter = i === Math.floor(barCount / 2);
-            const delay = i * 0.12;
-            
-            return (
-              <motion.div
-                key={i}
-                className={`w-[2.5px] rounded-full bg-gradient-to-t ${colors[variant]} ${glowColors[variant]} shadow-sm`}
-                animate={{
-                  height: [baseHeights[i], maxHeights[i], baseHeights[i]],
-                  opacity: isCenter ? [0.7, 1, 0.7] : [0.5, 0.9, 0.5],
-                }}
-                transition={{
-                  duration: 1.2,
-                  repeat: Infinity,
-                  delay,
-                  ease: "easeInOut",
-                }}
-                style={{
-                  height: baseHeights[i],
-                }}
-              />
-            );
-          })}
-        </div>
+      <div className="relative flex items-center justify-center w-[70px] h-6">
+        <svg
+          width="70"
+          height="24"
+          viewBox="0 0 70 24"
+          fill="none"
+          className="overflow-visible"
+        >
+          <defs>
+            <linearGradient id={`os1-gradient-${variant}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={strokeColors[variant]} stopOpacity="0.6" />
+              <stop offset="50%" stopColor={strokeColors[variant]} stopOpacity="1" />
+              <stop offset="100%" stopColor={strokeColors[variant]} stopOpacity="0.6" />
+            </linearGradient>
+            <filter id="os1-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          
+          <motion.path
+            d={isComplete ? circlePath : wavePath}
+            stroke={`url(#os1-gradient-${variant})`}
+            strokeWidth="2"
+            strokeLinecap="round"
+            fill="none"
+            filter="url(#os1-glow)"
+            initial={false}
+            animate={isComplete ? {
+              // 完成状态：静止的圆环
+              pathLength: 1,
+              opacity: 1,
+            } : {
+              // 思考中：波浪呼吸动画
+              pathLength: [0.3, 1, 0.3],
+              opacity: [0.6, 1, 0.6],
+            }}
+            transition={isComplete ? {
+              duration: 0.5,
+              ease: "easeOut",
+            } : {
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+            style={{
+              strokeDasharray: isComplete ? "none" : "8 4",
+            }}
+          />
+          
+          {/* 波浪流动效果 - 仅在思考中显示 */}
+          {!isComplete && (
+            <motion.path
+              d={wavePath}
+              stroke={strokeColors[variant]}
+              strokeWidth="2"
+              strokeLinecap="round"
+              fill="none"
+              opacity={0.4}
+              animate={{
+                strokeDashoffset: [0, -24],
+              }}
+              transition={{
+                duration: 1,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+              style={{
+                strokeDasharray: "4 8",
+              }}
+            />
+          )}
+        </svg>
       </div>
       <span className="text-sm text-muted-foreground">{message}</span>
     </div>

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil, Calendar, Laptop, Bot, Cpu, Car, Globe, TrendingUp, Megaphone, Palette, Video, Stethoscope, GraduationCap, Scale, Building, Plane, MoreHorizontal } from "lucide-react";
+import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil, Calendar, Laptop, Bot, Cpu, Car, Globe, TrendingUp, Megaphone, Palette, Video, Stethoscope, GraduationCap, Scale, Building, Plane, MoreHorizontal, Languages, Banknote, UtensilsCrossed, Landmark, LineChart, Wallet, PiggyBank, ShieldCheck, FileText, HardHat, Hammer } from "lucide-react";
 import xiaoyueAvatar from "@assets/generated_images/final_fox_with_collar_sunglasses.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -631,8 +631,8 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     keywords: ["想要", "期待", "目的", "意图", "来这里", "悦聚", "拓展人脉", "交朋友", "想来", "为什么来", "什么目的"],
     options: [
       { text: "交朋友", icon: Heart },
-      { text: "拓展人脉", icon: Briefcase },
-      { text: "聊天交流", icon: Book },
+      { text: "拓展人脉", icon: Users },
+      { text: "聊天交流", icon: MessageCircle },
       { text: "吃喝玩乐", icon: Coffee },
       { text: "脱单恋爱", icon: Heart },
       { text: "随缘都可以", icon: Sparkles }
@@ -642,17 +642,17 @@ const quickReplyConfigs: QuickReplyConfig[] = [
   },
   {
     keywords: ["语言", "方言", "会说", "普通话", "粤语", "英语", "母语", "口音"],
-    options: LANGUAGES_COMFORT_OPTIONS.slice(0, 12).map(lang => ({ text: lang, icon: Book })),
+    options: LANGUAGES_COMFORT_OPTIONS.slice(0, 12).map(lang => ({ text: lang, icon: Languages })),
     multiSelect: true,
     priority: 78
   },
   {
     keywords: ["不聊", "避免", "不太想聊", "敏感", "尴尬", "话题"],
     options: [
-      { text: "政治时事", icon: Sparkles },
+      { text: "政治时事", icon: Globe },
       { text: "催婚催恋", icon: Heart },
-      { text: "职场八卦", icon: Briefcase },
-      { text: "金钱财务", icon: Briefcase },
+      { text: "职场八卦", icon: Users },
+      { text: "金钱财务", icon: Banknote },
       { text: "都OK没禁忌", icon: Sparkles }
     ],
     multiSelect: true,
@@ -674,7 +674,7 @@ const quickReplyConfigs: QuickReplyConfig[] = [
   },
   {
     keywords: ["学历", "读到", "什么学历", "毕业", "读书", "上学"],
-    options: EDUCATION_LEVEL_OPTIONS.map(level => ({ text: level, icon: Book })),
+    options: EDUCATION_LEVEL_OPTIONS.map(level => ({ text: level, icon: GraduationCap })),
     priority: 73
   },
   {
@@ -694,13 +694,13 @@ const quickReplyConfigs: QuickReplyConfig[] = [
   {
     keywords: ["菜系", "日料", "粤菜", "火锅", "西餐", "川菜", "湘菜", "东南亚", "韩餐", "偏好", "口味"],
     options: [
-      { text: "日料", icon: Coffee },
-      { text: "粤菜/港式", icon: Coffee },
-      { text: "火锅", icon: Coffee },
-      { text: "川湘菜", icon: Coffee },
-      { text: "西餐", icon: Coffee },
-      { text: "东南亚菜", icon: Coffee },
-      { text: "韩餐", icon: Coffee },
+      { text: "日料", icon: UtensilsCrossed },
+      { text: "粤菜/港式", icon: UtensilsCrossed },
+      { text: "火锅", icon: UtensilsCrossed },
+      { text: "川湘菜", icon: UtensilsCrossed },
+      { text: "西餐", icon: UtensilsCrossed },
+      { text: "东南亚菜", icon: UtensilsCrossed },
+      { text: "韩餐", icon: UtensilsCrossed },
       { text: "各种都爱", icon: Sparkles }
     ],
     multiSelect: true,
@@ -753,14 +753,14 @@ const quickReplyConfigs: QuickReplyConfig[] = [
   {
     keywords: ["金融", "银行", "证券", "基金", "投资", "PE", "VC", "创投", "资管", "保险"],
     options: [
-      { text: "银行", icon: Briefcase },
-      { text: "证券/投行", icon: Briefcase },
-      { text: "公募/私募基金", icon: Briefcase },
-      { text: "PE/VC创投", icon: Briefcase },
-      { text: "保险", icon: Briefcase },
-      { text: "资产管理", icon: Briefcase },
-      { text: "财富管理", icon: Briefcase },
-      { text: "金融科技", icon: Briefcase }
+      { text: "银行", icon: Landmark },
+      { text: "证券/投行", icon: LineChart },
+      { text: "公募/私募基金", icon: TrendingUp },
+      { text: "PE/VC创投", icon: TrendingUp },
+      { text: "保险", icon: ShieldCheck },
+      { text: "资产管理", icon: Wallet },
+      { text: "财富管理", icon: PiggyBank },
+      { text: "金融科技", icon: Laptop }
     ],
     priority: 94
   },
@@ -842,23 +842,23 @@ const quickReplyConfigs: QuickReplyConfig[] = [
   {
     keywords: ["法律", "律师", "法务", "合规"],
     options: [
-      { text: "律所律师", icon: Briefcase },
-      { text: "企业法务", icon: Briefcase },
-      { text: "合规风控", icon: Briefcase },
-      { text: "知识产权", icon: Briefcase },
-      { text: "公证/仲裁", icon: Briefcase }
+      { text: "律所律师", icon: Scale },
+      { text: "企业法务", icon: FileText },
+      { text: "合规风控", icon: ShieldCheck },
+      { text: "知识产权", icon: FileText },
+      { text: "公证/仲裁", icon: Scale }
     ],
     priority: 93
   },
   {
     keywords: ["地产", "建筑", "房产", "工程", "装修"],
     options: [
-      { text: "房地产开发", icon: Briefcase },
-      { text: "建筑设计", icon: Briefcase },
-      { text: "工程施工", icon: Briefcase },
-      { text: "物业管理", icon: Briefcase },
-      { text: "房产经纪", icon: Briefcase },
-      { text: "装修设计", icon: Briefcase }
+      { text: "房地产开发", icon: Building },
+      { text: "建筑设计", icon: HardHat },
+      { text: "工程施工", icon: Hammer },
+      { text: "物业管理", icon: Building },
+      { text: "房产经纪", icon: Building },
+      { text: "装修设计", icon: Palette }
     ],
     priority: 93
   },
@@ -1010,7 +1010,7 @@ const patternBasedConfigs: PatternBasedQuickReplyConfig[] = [
     id: "education",
     pattern: /学历|读到|什么学历|毕业|读书.*到/,
     requiredAny: ["学历", "读到哪", "毕业"],
-    options: EDUCATION_LEVEL_OPTIONS.map(level => ({ text: level, icon: Book })),
+    options: EDUCATION_LEVEL_OPTIONS.map(level => ({ text: level, icon: GraduationCap })),
     priority: 95,
     enforcePredefined: true
   },
@@ -1049,7 +1049,7 @@ const patternBasedConfigs: PatternBasedQuickReplyConfig[] = [
     requiredAny: ["想要什么", "来悦聚想", "交朋友", "拓展人脉"],
     options: [
       { text: "交朋友", icon: Heart },
-      { text: "拓展人脉", icon: Briefcase },
+      { text: "拓展人脉", icon: Users },
       { text: "聊天交流", icon: MessageCircle },
       { text: "吃喝玩乐", icon: Coffee },
       { text: "随缘都可以", icon: Sparkles }
@@ -3080,9 +3080,10 @@ export default function ChatRegistrationPage() {
           
           return (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
+              exit={{ opacity: 0, y: 4 }}
+              transition={{ duration: 0.15 }}
               className="px-4 py-3 border-t bg-muted/30"
             >
               <div className="flex items-center justify-between mb-2">
@@ -3108,9 +3109,9 @@ export default function ChatRegistrationPage() {
                   return (
                     <motion.button
                       key={reply.text}
-                      initial={{ opacity: 0, scale: 0.8 }}
+                      initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.05 }}
+                      transition={{ duration: 0.12, delay: index * 0.02 }}
                       onClick={() => handleQuickReply(reply.text)}
                       className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full border transition-all text-sm ${
                         isSelected 
@@ -3128,9 +3129,9 @@ export default function ChatRegistrationPage() {
                 {/* 换一批按钮 - 多选且有多页时显示 */}
                 {needsPagination && (
                   <motion.button
-                    initial={{ opacity: 0, scale: 0.8 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: displayOptions.length * 0.05 }}
+                    transition={{ duration: 0.12, delay: displayOptions.length * 0.02 }}
                     onClick={() => setQuickReplyPage((currentPage + 1) % totalPages)}
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary hover:text-primary transition-all text-sm"
                     data-testid="button-more-options"
@@ -3143,9 +3144,9 @@ export default function ChatRegistrationPage() {
                 {/* 自己输入按钮 - 多选时显示 */}
                 {quickReplyResult.multiSelect && (
                   <motion.button
-                    initial={{ opacity: 0, scale: 0.8 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: (displayOptions.length + (needsPagination ? 1 : 0)) * 0.05 }}
+                    transition={{ duration: 0.12, delay: (displayOptions.length + (needsPagination ? 1 : 0)) * 0.02 }}
                     onClick={() => {
                       // 聚焦到输入框
                       const inputEl = document.querySelector('input[data-testid="input-message"]') as HTMLInputElement;
