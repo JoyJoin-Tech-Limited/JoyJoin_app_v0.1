@@ -8,8 +8,9 @@
  */
 
 import { db } from '../db';
-import { users } from '@shared/schema';
-import { sql, count, and, gte, isNotNull } from 'drizzle-orm';
+import { users, registrationSessions } from '@shared/schema';
+import { sql, count, and, gte, lte, isNotNull, desc } from 'drizzle-orm';
+import { storage } from '../storage';
 
 // ============ 类型定义 ============
 
@@ -121,8 +122,30 @@ export async function getRegistrationFunnelData(): Promise<RegistrationFunnelDat
 
 /**
  * 获取核心KPI指标
+ * 优先使用registration_sessions表的真实遥测数据，无数据时回退到users表统计
  */
 async function getKPIs(): Promise<RegistrationFunnelKPIs> {
+  // First, try to get stats from registration_sessions table (authoritative source)
+  const sessionStats = await storage.getRegistrationSessionStats();
+  
+  // If we have session data, use it as the primary source
+  if (sessionStats.totalStarted > 0) {
+    const conversionRate = sessionStats.totalStarted > 0 
+      ? (sessionStats.totalCompleted / sessionStats.totalStarted) * 100 
+      : 0;
+    
+    return {
+      totalStarted: sessionStats.totalStarted,
+      totalCompleted: sessionStats.totalCompleted,
+      conversionRate,
+      avgCompletionTimeMinutes: sessionStats.avgCompletionTimeMinutes,
+      completedLast7Days: sessionStats.completedLast7Days,
+      completedPrevious7Days: sessionStats.completedPrevious7Days,
+      avgL3Confidence: sessionStats.avgL3Confidence,
+    };
+  }
+  
+  // Fallback to users table for historical data (before session telemetry was implemented)
   const now = new Date();
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
@@ -140,37 +163,34 @@ async function getKPIs(): Promise<RegistrationFunnelKPIs> {
     .where(sql`${users.hasCompletedRegistration} = true`);
   const totalCompleted = completedResult?.count || 0;
 
-  // 近7天完成
+  // 近7天完成 (exclusive lower bound)
   const [last7DaysResult] = await db
     .select({ count: count() })
     .from(users)
     .where(and(
       sql`${users.hasCompletedRegistration} = true`,
-      gte(users.createdAt, sevenDaysAgo)
+      sql`${users.createdAt} > ${sevenDaysAgo}`
     ));
   const completedLast7Days = last7DaysResult?.count || 0;
 
-  // 前7天完成
+  // 前7天完成 (exclusive bounds to avoid overlap)
   const [prev7DaysResult] = await db
     .select({ count: count() })
     .from(users)
     .where(and(
       sql`${users.hasCompletedRegistration} = true`,
-      gte(users.createdAt, fourteenDaysAgo),
-      sql`${users.createdAt} < ${sevenDaysAgo}`
+      sql`${users.createdAt} > ${fourteenDaysAgo}`,
+      sql`${users.createdAt} <= ${sevenDaysAgo}`
     ));
   const completedPrevious7Days = prev7DaysResult?.count || 0;
 
   // 转化率
   const conversionRate = totalStarted > 0 ? (totalCompleted / totalStarted) * 100 : 0;
 
-  // 平均完成时长
-  // TODO: 需要会话遥测表(registration_sessions)来记录实际注册时长
-  // 当前基于用户调研数据使用估算值，后续应从 session_started_at 到 registration_completed_at 计算
-  let avgCompletionTimeMinutes = 2.4;
+  // 平均完成时长 - 从users表估算（无session数据时返回0而非魔术数字）
+  let avgCompletionTimeMinutes = 0;
   
   try {
-    // 尝试从users表的created_at和updated_at计算平均时长（粗略估算）
     const [timeResult] = await db
       .select({
         avgMinutes: sql<number>`AVG(EXTRACT(EPOCH FROM (${users.updatedAt} - ${users.createdAt})) / 60)`
@@ -181,12 +201,11 @@ async function getKPIs(): Promise<RegistrationFunnelKPIs> {
       avgCompletionTimeMinutes = Math.round(timeResult.avgMinutes * 10) / 10;
     }
   } catch {
-    // 保持默认值
+    // Keep 0 as fallback (no fake data)
   }
 
-  // L3 平均置信度
-  // 基于已填写L3相关字段（dialect, communication style等）的用户比例估算
-  let avgL3Confidence = 0.72;
+  // L3 平均置信度 - 无session数据时返回0
+  let avgL3Confidence = 0;
   
   try {
     // 计算有方言数据的用户比例作为L3置信度代理指标
@@ -201,7 +220,7 @@ async function getKPIs(): Promise<RegistrationFunnelKPIs> {
       avgL3Confidence = Math.min(0.95, (dialectFilled / totalCompleted) * 0.8 + 0.2);
     }
   } catch {
-    // 保持默认值
+    // Keep 0 as fallback (no fake data)
   }
 
   return {
@@ -366,37 +385,89 @@ async function getL2Engagements(): Promise<L2Engagement[]> {
 
 /**
  * 获取L3置信度趋势（近30天）
+ * 从registration_sessions表查询真实数据
  */
 async function getL3ConfidenceTrend(): Promise<L3ConfidenceTrend[]> {
-  // 模拟数据 - 实际应从用户的conversationSignature中提取
-  const trend: L3ConfidenceTrend[] = [];
   const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-    const dateStr = date.toISOString().split('T')[0];
+  try {
+    // Query daily L3 confidence averages from registration_sessions
+    const dailyStats = await db
+      .select({
+        date: sql<string>`DATE(${registrationSessions.completedAt})::text`,
+        avgConfidence: sql<number>`AVG(${registrationSessions.l3Confidence}::numeric)`,
+        sampleSize: sql<number>`COUNT(*)::int`,
+      })
+      .from(registrationSessions)
+      .where(and(
+        sql`${registrationSessions.completedAt} IS NOT NULL`,
+        sql`${registrationSessions.l3Confidence} IS NOT NULL`,
+        gte(registrationSessions.completedAt, thirtyDaysAgo)
+      ))
+      .groupBy(sql`DATE(${registrationSessions.completedAt})`)
+      .orderBy(sql`DATE(${registrationSessions.completedAt})`);
     
-    // 模拟置信度数据（实际应从数据库查询）
-    trend.push({
-      date: dateStr,
-      avgConfidence: 0.65 + Math.random() * 0.2, // 0.65-0.85 范围
-      sampleSize: Math.floor(Math.random() * 20) + 5,
-    });
+    if (dailyStats.length > 0) {
+      return dailyStats.map(stat => ({
+        date: stat.date,
+        avgConfidence: stat.avgConfidence || 0,
+        sampleSize: stat.sampleSize || 0,
+      }));
+    }
+  } catch (e) {
+    console.warn('[Analytics] Failed to query L3 confidence trend:', e);
   }
   
-  return trend;
+  // Return empty array when no real data exists (no fake data)
+  return [];
 }
 
 /**
  * 获取会话时长分布
+ * 从registration_sessions表查询真实数据
  */
 async function getSessionDurationDistribution(): Promise<{ range: string; count: number }[]> {
-  // 模拟数据 - 实际应从registrationSessions表查询
-  return [
-    { range: '0-1分钟', count: 15 },
-    { range: '1-2分钟', count: 35 },
-    { range: '2-3分钟', count: 28 },
-    { range: '3-5分钟', count: 12 },
-    { range: '5分钟以上', count: 10 },
-  ];
+  try {
+    // Query session duration distribution from registration_sessions
+    const durationStats = await db
+      .select({
+        durationMinutes: sql<number>`EXTRACT(EPOCH FROM (${registrationSessions.completedAt} - ${registrationSessions.startedAt})) / 60`,
+      })
+      .from(registrationSessions)
+      .where(sql`${registrationSessions.completedAt} IS NOT NULL`);
+    
+    if (durationStats.length === 0) {
+      return [];
+    }
+    
+    // Bucket the durations
+    const buckets = {
+      '0-1分钟': 0,
+      '1-2分钟': 0,
+      '2-3分钟': 0,
+      '3-5分钟': 0,
+      '5分钟以上': 0,
+    };
+    
+    for (const stat of durationStats) {
+      const minutes = stat.durationMinutes || 0;
+      if (minutes < 1) {
+        buckets['0-1分钟']++;
+      } else if (minutes < 2) {
+        buckets['1-2分钟']++;
+      } else if (minutes < 3) {
+        buckets['2-3分钟']++;
+      } else if (minutes < 5) {
+        buckets['3-5分钟']++;
+      } else {
+        buckets['5分钟以上']++;
+      }
+    }
+    
+    return Object.entries(buckets).map(([range, count]) => ({ range, count }));
+  } catch (e) {
+    console.warn('[Analytics] Failed to query session duration distribution:', e);
+    return [];
+  }
 }
