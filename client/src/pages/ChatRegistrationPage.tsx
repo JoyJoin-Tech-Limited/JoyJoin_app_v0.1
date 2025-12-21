@@ -123,22 +123,22 @@ const registrationModes: ModeConfig[] = [
     id: "express",
     icon: Zap,
     title: "极速体验",
-    subtitle: "先看看有啥活动",
+    subtitle: "先玩再聊，我帮你打个底",
     time: "2分钟",
     stars: 3,
     maxStars: 5,
-    description: "收集基础信息（昵称、性别、年龄、城市、职业、兴趣）",
+    description: "适合：想快速看看",
     gradient: "from-amber-500 to-orange-500"
   },
   {
     id: "standard",
     icon: Clock,
     title: "轻松聊聊",
-    subtitle: "大多数人选这个",
+    subtitle: "聊几句，匹配更靠谱",
     time: "3分钟",
     stars: 4,
     maxStars: 5,
-    description: "推荐起点（+意图、感情、破冰角色、能量恢复）",
+    description: "适合：第一次尝试",
     gradient: "from-purple-500 to-pink-500",
     recommended: true
   },
@@ -146,11 +146,11 @@ const registrationModes: ModeConfig[] = [
     id: "deep",
     icon: Diamond,
     title: "深度了解",
-    subtitle: "起步就更懂你",
+    subtitle: "多聊会儿，开局匹配更精准",
     time: "6-7分钟",
     stars: 5,
     maxStars: 5,
-    description: "详细画像+社交能量，匹配最精准",
+    description: "适合：认真交友",
     gradient: "from-blue-500 to-cyan-500"
   }
 ];
@@ -229,7 +229,7 @@ function ModeSelectionScreen({
           transition={{ delay: 0.2 }}
           className="text-2xl font-bold mb-2"
         >
-          嗨，我是小悦
+          嘿，我是小悦
         </motion.h1>
         <motion.p 
           initial={{ opacity: 0, y: 10 }}
@@ -237,7 +237,7 @@ function ModeSelectionScreen({
           transition={{ delay: 0.3 }}
           className="text-muted-foreground"
         >
-          让我们聊聊，帮你找到合拍的活动伙伴
+          聊几句，帮你找到聊得来的伙伴
         </motion.p>
       </motion.div>
 
@@ -277,7 +277,7 @@ function ModeSelectionScreen({
                   </div>
                   <p className="text-sm text-muted-foreground mb-1.5">{mode.subtitle}</p>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">初始画像</span>
+                    <span className="text-xs text-muted-foreground">匹配精准度</span>
                     <StarRating filled={mode.stars} total={mode.maxStars} />
                   </div>
                 </div>
@@ -294,7 +294,7 @@ function ModeSelectionScreen({
         animate={{ opacity: 1 }}
         transition={{ delay: 0.7 }}
       >
-        匹配会随着你参加活动越来越精准哦
+        多参加几次活动，匹配会越来越准
       </motion.p>
 
     </div>
