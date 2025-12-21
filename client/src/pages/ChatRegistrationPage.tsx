@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, memo } from "react";
+import { useState, useRef, useEffect, useMemo, memo, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1220,30 +1220,16 @@ function useTypingEffect(text: string, isActive: boolean, speed: number = 30) {
   return { displayedText, isComplete };
 }
 
-// 用户头像组件 - 根据性别动态切换
-function UserAvatar({ gender }: { gender?: string }) {
-  const getAvatarStyle = () => {
-    if (gender === "女生" || gender === "女性") {
-      return { bg: "bg-pink-100 dark:bg-pink-900/30", iconColor: "text-pink-500", border: "border-pink-200 dark:border-pink-800", icon: Heart };
-    }
-    if (gender === "男生" || gender === "男性") {
-      return { bg: "bg-blue-100 dark:bg-blue-900/30", iconColor: "text-blue-500", border: "border-blue-200 dark:border-blue-800", icon: Smile };
-    }
-    return { bg: "bg-muted", iconColor: "", border: "border-muted-foreground/20", icon: User };
-  };
-  
-  const style = getAvatarStyle();
-  const IconComponent = style.icon;
-  
+// 用户头像组件 - 统一紫色渐变风格（更温暖、更中立）
+function UserAvatar() {
   return (
     <motion.div 
-      className={`w-8 h-8 rounded-full ${style.bg} flex items-center justify-center flex-shrink-0 border ${style.border}`}
-      key={gender || "default"}
+      className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0 border border-primary/20"
       initial={{ scale: 0.8, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300 }}
     >
-      <IconComponent className={`w-4 h-4 ${style.iconColor}`} />
+      <span className="text-sm">😊</span>
     </motion.div>
   );
 }
@@ -1373,7 +1359,7 @@ function MessageBubble({
         })()}
       </div>
 
-      {!isAssistant && <UserAvatar gender={userGender} />}
+      {!isAssistant && <UserAvatar />}
     </motion.div>
   );
 }
@@ -1797,16 +1783,16 @@ export default function ChatRegistrationPage() {
     startChatMutation.mutate({ mode, enrichmentContext: null });
   };
 
-  // 滚动计数器 - 用于在流式更新期间也能触发滚动
-  const [scrollTrigger, setScrollTrigger] = useState(0);
+  // 使用ref来追踪滚动，避免频繁state更新导致的无限循环
+  const lastScrollTimeRef = useRef<number>(0);
   
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, scrollTrigger]);
+  }, [messages, scrollToBottom]);
 
   // 信息收集进度
   const infoCount = Object.keys(collectedInfo).filter(k => 
@@ -2104,18 +2090,18 @@ export default function ChatRegistrationPage() {
                   if (filteredContent) {
                     lastValidContent = filteredContent; // 记录最新有效内容
                   }
-                  // 通过streamId找到消息并更新其内容（含节流滚动触发）
-                  const now = Date.now();
+                  // 通过streamId找到消息并更新其内容
                   setMessages(prev => prev.map(m => {
                     if (m.streamId === streamMessageId) {
                       return { ...m, content: filteredContent || lastValidContent };
                     }
                     return m;
                   }));
-                  // 每300ms触发一次滚动，避免频繁滚动导致卡顿
-                  if (now - (window as any).__lastScrollTrigger > 300) {
-                    (window as any).__lastScrollTrigger = now;
-                    setScrollTrigger(prev => prev + 1);
+                  // 节流滚动：每300ms触发一次，避免频繁滚动导致卡顿
+                  const now = Date.now();
+                  if (now - lastScrollTimeRef.current > 300) {
+                    lastScrollTimeRef.current = now;
+                    scrollToBottom();
                   }
                 } else if (data.type === 'done') {
                   console.log('[STREAM DEBUG] Stream message marked as done');
