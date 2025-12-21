@@ -1786,8 +1786,20 @@ export default function ChatRegistrationPage() {
   // 使用ref来追踪滚动，避免频繁state更新导致的无限循环
   const lastScrollTimeRef = useRef<number>(0);
   
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = useCallback((force = false) => {
+    if (!scrollRef.current) return;
+    
+    // 如果不是强制滚动，且用户正在向上滚动查看历史，则不自动滚动
+    if (!force) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+      if (!isNearBottom) return;
+    }
+
+    scrollRef.current.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth"
+    });
   }, []);
 
   useEffect(() => {
