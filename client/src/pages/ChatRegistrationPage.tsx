@@ -1797,13 +1797,16 @@ export default function ChatRegistrationPage() {
     startChatMutation.mutate({ mode, enrichmentContext: null });
   };
 
+  // 滚动计数器 - 用于在流式更新期间也能触发滚动
+  const [scrollTrigger, setScrollTrigger] = useState(0);
+  
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollTrigger]);
 
   // 信息收集进度
   const infoCount = Object.keys(collectedInfo).filter(k => 
@@ -2088,14 +2091,32 @@ export default function ChatRegistrationPage() {
                 
                 if (data.type === 'content') {
                   streamedContent += data.content;
-                  lastValidContent = streamedContent; // 记录最新有效内容
-                  // 通过streamId找到消息并更新其内容
+                  // 实时过滤代码块（包括不完整的），避免闪烁
+                  let filteredContent = streamedContent
+                    .replace(/```collected_info[\s\S]*?(?:```|$)/gi, '')
+                    .replace(/```registration_complete[\s\S]*?(?:```|$)/gi, '')
+                    .replace(/```json[\s\S]*?(?:```|$)/gi, '')
+                    .replace(/```[\s\S]*?(?:```|$)/gi, '')
+                    .replace(/collected_info\s*\{[\s\S]*/gi, '')
+                    .replace(/\{"displayName"[\s\S]*/gi, '')
+                    .trim();
+                  
+                  if (filteredContent) {
+                    lastValidContent = filteredContent; // 记录最新有效内容
+                  }
+                  // 通过streamId找到消息并更新其内容（含节流滚动触发）
+                  const now = Date.now();
                   setMessages(prev => prev.map(m => {
                     if (m.streamId === streamMessageId) {
-                      return { ...m, content: streamedContent };
+                      return { ...m, content: filteredContent || lastValidContent };
                     }
                     return m;
                   }));
+                  // 每300ms触发一次滚动，避免频繁滚动导致卡顿
+                  if (now - (window as any).__lastScrollTrigger > 300) {
+                    (window as any).__lastScrollTrigger = now;
+                    setScrollTrigger(prev => prev + 1);
+                  }
                 } else if (data.type === 'done') {
                   console.log('[STREAM DEBUG] Stream message marked as done');
                   finalConversationHistory = data.conversationHistory;
