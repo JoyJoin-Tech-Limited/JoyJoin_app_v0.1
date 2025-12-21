@@ -41,7 +41,7 @@ export default function OS1LoadingAnimation({
   messages = defaultMessages,
   showMessage = true,
   size = "md",
-  variant = "warm",
+  variant = "purple",
 }: OS1LoadingAnimationProps) {
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
 
@@ -62,22 +62,22 @@ export default function OS1LoadingAnimation({
   };
 
   const colorConfig = {
+    purple: {
+      primary: "from-violet-400 to-purple-500",
+      glow: "shadow-violet-500/30",
+      text: "text-violet-100",
+      bg: "bg-gradient-to-br from-violet-950/80 to-purple-950/80",
+    },
     warm: {
       primary: "from-orange-400 to-rose-500",
       glow: "shadow-orange-500/30",
       text: "text-orange-100",
       bg: "bg-gradient-to-br from-orange-950/80 to-rose-950/80",
     },
-    purple: {
-      primary: "from-purple-400 to-pink-500",
+    gradient: {
+      primary: "from-violet-400 via-purple-500 to-pink-500",
       glow: "shadow-purple-500/30",
       text: "text-purple-100",
-      bg: "bg-gradient-to-br from-purple-950/80 to-pink-950/80",
-    },
-    gradient: {
-      primary: "from-orange-400 via-rose-500 to-purple-500",
-      glow: "shadow-rose-500/30",
-      text: "text-rose-100",
       bg: "bg-gradient-to-br from-slate-900/90 to-slate-800/90",
     },
   };
@@ -131,7 +131,7 @@ export default function OS1LoadingAnimation({
         <motion.div
           className={`absolute inset-0 rounded-full border-2 border-transparent`}
           style={{
-            background: `linear-gradient(90deg, transparent, rgba(251, 146, 60, 0.3), transparent)`,
+            background: `linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent)`,
             backgroundSize: "200% 100%",
           }}
           animate={{
@@ -163,15 +163,21 @@ export default function OS1LoadingAnimation({
 
 export function OS1FullScreenLoader({
   messages = defaultMessages,
-  variant = "warm",
+  variant = "purple",
 }: {
   messages?: string[];
   variant?: "warm" | "purple" | "gradient";
 }) {
   const colorConfig = {
+    purple: "bg-gradient-to-br from-violet-950 via-purple-950 to-slate-950",
     warm: "bg-gradient-to-br from-orange-950 via-rose-950 to-slate-950",
-    purple: "bg-gradient-to-br from-purple-950 via-pink-950 to-slate-950",
-    gradient: "bg-gradient-to-br from-slate-950 via-rose-950 to-purple-950",
+    gradient: "bg-gradient-to-br from-slate-950 via-purple-950 to-violet-950",
+  };
+
+  const glowColors = {
+    purple: "bg-violet-500/10",
+    warm: "bg-orange-500/10",
+    gradient: "bg-purple-500/10",
   };
 
   return (
@@ -185,7 +191,7 @@ export function OS1FullScreenLoader({
         {Array.from({ length: 3 }).map((_, i) => (
           <motion.div
             key={i}
-            className="absolute rounded-full bg-orange-500/10"
+            className={`absolute rounded-full ${glowColors[variant]}`}
             style={{
               width: 300 + i * 100,
               height: 300 + i * 100,
@@ -218,15 +224,15 @@ export function OS1FullScreenLoader({
 
 export function OS1InlineLoader({
   message = "思考中...",
-  variant = "warm",
+  variant = "purple",
 }: {
   message?: string;
   variant?: "warm" | "purple" | "gradient";
 }) {
   const colors = {
+    purple: "from-violet-400 to-purple-500",
     warm: "from-orange-400 to-rose-500",
-    purple: "from-purple-400 to-pink-500",
-    gradient: "from-orange-400 to-purple-500",
+    gradient: "from-violet-400 to-purple-500",
   };
 
   return (

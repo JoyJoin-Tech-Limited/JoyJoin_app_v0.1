@@ -52,8 +52,9 @@ export const AnimationLoadingScreen: React.FC<AnimationLoadingScreenProps> = ({
   const displayMessage = message || MATCHING_MESSAGES[currentMessageIndex];
 
   const colors = useMemo(() => {
-    const defaultPrimary = { r: 251, g: 146, b: 60 };
-    const defaultAccent = { r: 244, g: 63, b: 94 };
+    // 默认使用紫色系（与JoyJoin品牌色一致 --primary: 280 45% 55%）
+    const defaultPrimary = { r: 139, g: 92, b: 246 };  // violet-500
+    const defaultAccent = { r: 168, g: 85, b: 247 };   // purple-500
     
     const primaryRgb = eventTheme?.blindBoxColor ? hexToRgb(eventTheme.blindBoxColor) : null;
     const accentRgb = eventTheme?.accentColor ? hexToRgb(eventTheme.accentColor) : null;

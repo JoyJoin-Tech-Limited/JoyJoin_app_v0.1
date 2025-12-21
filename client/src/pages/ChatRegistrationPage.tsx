@@ -2993,10 +2993,9 @@ export default function ChatRegistrationPage() {
             className="flex gap-3 items-center"
           >
             <XiaoyueAvatar emotion="thinking" />
-            <Card className="bg-muted/50 p-3 backdrop-blur-sm border-orange-200/20">
+            <Card className="bg-muted/50 p-3 backdrop-blur-sm border-violet-200/20">
               <OS1InlineLoader 
                 message="小悦正在思考..." 
-                variant="warm"
               />
             </Card>
           </motion.div>
