@@ -204,7 +204,7 @@ async function getKPIs(): Promise<RegistrationFunnelKPIs> {
     // Keep 0 as fallback (no fake data)
   }
 
-  // L3 平均置信度 - 无session数据时返回0
+  // L3 平均置信度 - 无session数据时返回0，从真实数据派生
   let avgL3Confidence = 0;
   
   try {
@@ -216,8 +216,8 @@ async function getKPIs(): Promise<RegistrationFunnelKPIs> {
     const dialectFilled = dialectResult?.count || 0;
     
     if (totalCompleted > 0) {
-      // L3置信度 = 能推断出方言的用户比例 * 0.8 + 基础置信度 0.2
-      avgL3Confidence = Math.min(0.95, (dialectFilled / totalCompleted) * 0.8 + 0.2);
+      // L3置信度 = 能推断出方言的用户比例（纯数据派生，无魔术数字）
+      avgL3Confidence = Math.min(1.0, dialectFilled / totalCompleted);
     }
   } catch {
     // Keep 0 as fallback (no fake data)
