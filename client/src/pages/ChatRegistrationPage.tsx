@@ -2441,7 +2441,7 @@ export default function ChatRegistrationPage() {
     return (
       <div 
         ref={scrollRef as React.RefObject<HTMLDivElement>}
-        className="h-[240px] overflow-y-auto snap-y snap-mandatory scrollbar-hide py-[96px]"
+        className="h-[200px] overflow-y-auto snap-y snap-mandatory scrollbar-hide py-[76px]"
         onScroll={onScroll}
       >
         {items.map((item, i) => (
@@ -2762,35 +2762,39 @@ export default function ChatRegistrationPage() {
             <DrawerTitle className="text-center">选择你的生日</DrawerTitle>
           </DrawerHeader>
           <div className="px-4 py-8">
-            <div className="relative h-[240px] flex items-center justify-center overflow-hidden bg-muted/20 rounded-2xl border border-violet-200/10">
-              <div className="absolute top-1/2 left-0 w-full h-12 -translate-y-1/2 bg-primary/10 pointer-events-none border-y border-primary/20" />
-              <div className="grid grid-cols-3 w-full h-full relative z-10">
-                <div className="flex flex-col">
-                  <div className="text-[10px] text-center text-muted-foreground/60 font-bold uppercase py-1">年份</div>
-                  <WheelScrollPicker 
-                    scrollRef={yearScrollRef}
-                    items={Array.from({ length: 50 }, (_, i) => 2025 - 18 - i)} 
-                    value={birthdayYear} 
-                    onScroll={(e) => onScroll(e, 'year')} 
-                  />
-                </div>
-                <div className="flex flex-col border-x border-violet-200/5">
-                  <div className="text-[10px] text-center text-muted-foreground/60 font-bold uppercase py-1">月份</div>
-                  <WheelScrollPicker 
-                    scrollRef={monthScrollRef}
-                    items={Array.from({ length: 12 }, (_, i) => i + 1)} 
-                    value={birthdayMonth} 
-                    onScroll={(e) => onScroll(e, 'month')} 
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <div className="text-[10px] text-center text-muted-foreground/60 font-bold uppercase py-1">日期</div>
-                  <WheelScrollPicker 
-                    scrollRef={dayScrollRef}
-                    items={Array.from({ length: 31 }, (_, i) => i + 1)} 
-                    value={birthdayDay} 
-                    onScroll={(e) => onScroll(e, 'day')} 
-                  />
+            <div className="flex flex-col bg-muted/20 rounded-2xl border border-violet-200/10 overflow-hidden">
+              <div className="grid grid-cols-3 text-[10px] text-center text-muted-foreground/60 font-bold uppercase py-2 border-b border-violet-200/10">
+                <div>年份</div>
+                <div className="border-x border-violet-200/5">月份</div>
+                <div>日期</div>
+              </div>
+              <div className="relative h-[200px] flex items-center justify-center overflow-hidden">
+                <div className="absolute top-1/2 left-0 w-full h-12 -translate-y-1/2 bg-primary/10 pointer-events-none border-y border-primary/20" />
+                <div className="grid grid-cols-3 w-full h-full relative z-10">
+                  <div className="h-full">
+                    <WheelScrollPicker 
+                      scrollRef={yearScrollRef}
+                      items={Array.from({ length: 50 }, (_, i) => 2025 - 18 - i)} 
+                      value={birthdayYear} 
+                      onScroll={(e) => onScroll(e, 'year')} 
+                    />
+                  </div>
+                  <div className="h-full border-x border-violet-200/5">
+                    <WheelScrollPicker 
+                      scrollRef={monthScrollRef}
+                      items={Array.from({ length: 12 }, (_, i) => i + 1)} 
+                      value={birthdayMonth} 
+                      onScroll={(e) => onScroll(e, 'month')} 
+                    />
+                  </div>
+                  <div className="h-full">
+                    <WheelScrollPicker 
+                      scrollRef={dayScrollRef}
+                      items={Array.from({ length: 31 }, (_, i) => i + 1)} 
+                      value={birthdayDay} 
+                      onScroll={(e) => onScroll(e, 'day')} 
+                    />
+                  </div>
                 </div>
               </div>
             </div>
