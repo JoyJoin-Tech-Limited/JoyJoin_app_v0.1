@@ -61,6 +61,11 @@ Preferred communication style: Simple, everyday language.
 - **Payment & Subscription System:** Full payment infrastructure including WeChat Pay integration.
 - **Intelligent Venue Matching & Booking:** Algorithm-based venue scoring and a transactional booking system.
 - **AI Chat Registration:** AI-powered conversational registration flow using a character-based AI (小悦) for engaging user onboarding and secure server-side information extraction. Features tiered conversation modes, context-aware quick replies, smart inference, anti-abuse protection, and dialect teasing.
+  - **3-Tier Information Funnel (V7.2):** Scientifically-designed data collection architecture based on 10 social expert recommendations:
+    - **L1 (Explicit Fundamentals):** 7 must-ask fields collected directly - nickname, phone, gender, age range, city, hometown province, language preference. Used as hard filters in matching.
+    - **L2 (Natural Enrichment):** 11 optional fields gathered conversationally - interests, occupation, intent, social style, ideal group size, budget, availability, dietary restrictions, etc. Contributes 40% to compatibility scoring.
+    - **L3 (Hidden Insights):** AI-inferred from conversation patterns - dialect profile (8 dialects: Cantonese, Hunan, Teochew, Hakka, Sichuan, Northeastern, Hokkien, Shanghainese), communication style, conversation rhythm, emotional signature, personality signals. Contributes 15% to chemistry scoring.
+  - **Dialect Matching as Chemistry Factor:** Same dialect background = +15 points bonus in ConversationSignature similarity (老乡 effect). Both having dialect backgrounds but different = +5 points (移民共鸣).
   - **Intelligent Inference Engine:** Hybrid microkernel architecture (Semantic Matcher, LLM Reasoner, Knowledge Graph, State Manager) to infer user attributes and skip redundant questions with confidence-based actions.
   - **Expert Evaluation System:** Framework with 10 AI expert personas and 7 weighted evaluation dimensions for quality assessment.
 - **Personalized Icebreaker Topics:** Algorithm-curated topics considering common interests and archetypes.

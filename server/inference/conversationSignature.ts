@@ -6,6 +6,8 @@
 
 import type { InferredAttribute } from './types';
 import { CANTONESE_PATTERN, detectCantoneseUsage } from './cantoneseVocabulary';
+import { analyzeDialectsFromMessages } from './dialectVocabulary';
+import type { DialectProfile, Level3HiddenInsights } from './informationTiers';
 
 // ============ 深度特征分类体系 ============
 
@@ -151,6 +153,9 @@ export interface ConversationSignature {
   
   // 深度特征 (可选，需要足够对话数据)
   deepTraits?: DeepTraits;
+  
+  // 方言画像 (Level 3 隐藏推断)
+  dialectProfile?: DialectProfile;
   
   // 总体推断置信度 (0-1)
   inferenceConfidence: number;
@@ -354,6 +359,9 @@ export function generateConversationSignature(
   const negationReliability = calculateNegationReliability(stats);
   const inferenceConfidence = calculateInferenceConfidence(inferences, stats);
   
+  // 分析方言画像 (Level 3 隐藏推断)
+  const dialectProfile = analyzeDialectsFromMessages(messages);
+  
   // 构建推断属性对象
   const inferredTraits: Record<string, string | number | boolean> = {};
   for (const inf of inferences) {
@@ -366,6 +374,7 @@ export function generateConversationSignature(
     conversationEnergy,
     negationReliability,
     inferredTraits,
+    dialectProfile,
     inferenceConfidence,
   };
 }
@@ -430,6 +439,21 @@ export function calculateSignatureSimilarity(
       (deepModes.includes(sig1.conversationMode) && deepModes.includes(sig2.conversationMode)) ||
       (quickModes.includes(sig1.conversationMode) && quickModes.includes(sig2.conversationMode))
     ) {
+      score += 5;
+    }
+  }
+  
+  // 方言画像匹配 (+15分) - Level 3 隐藏推断的化学反应加成
+  if (sig1.dialectProfile && sig2.dialectProfile) {
+    const dp1 = sig1.dialectProfile;
+    const dp2 = sig2.dialectProfile;
+    
+    // 同方言老乡加成
+    if (dp1.primaryDialect && dp1.primaryDialect === dp2.primaryDialect) {
+      // 同方言背景，超级加分！
+      score += 15;
+    } else if (dp1.primaryDialect && dp2.primaryDialect) {
+      // 都有明确方言背景但不同，小加分（都是移民/外地人，有共鸣）
       score += 5;
     }
   }
