@@ -462,10 +462,10 @@ const achievements: AchievementWithMode[] = [
 // 成就弹出组件
 function AchievementToast({ achievement, onComplete }: { achievement: Achievement; onComplete: () => void }) {
   useEffect(() => {
-    // 强制 3 秒后执行完成回调
+    // 强制 2 秒后执行完成回调 (根据 UIUX 建议缩短停留时间)
     const timer = setTimeout(() => {
       onComplete();
-    }, 3000);
+    }, 2000);
     return () => clearTimeout(timer);
   }, [achievement.id, onComplete]);
 
