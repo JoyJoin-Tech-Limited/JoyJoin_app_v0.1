@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil, Calendar, Laptop, Bot, Cpu, Car, Globe, TrendingUp, Megaphone, Palette, Video, Stethoscope, GraduationCap, Scale, Building, Plane, MoreHorizontal, Languages, Banknote, UtensilsCrossed, Landmark, LineChart, Wallet, PiggyBank, ShieldCheck, FileText, HardHat, Hammer } from "lucide-react";
+import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil, Calendar, CalendarDays, Laptop, Bot, Cpu, Car, Globe, TrendingUp, Megaphone, Palette, Video, Stethoscope, GraduationCap, Scale, Building, Plane, MoreHorizontal, Languages, Banknote, UtensilsCrossed, Landmark, LineChart, Wallet, PiggyBank, ShieldCheck, FileText, HardHat, Hammer } from "lucide-react";
 import xiaoyueAvatar from "@assets/generated_images/final_fox_with_collar_sunglasses.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -1069,10 +1069,11 @@ const patternBasedConfigs: PatternBasedQuickReplyConfig[] = [
     pattern: /年龄|几几年|多大|岁|哪年.*生|年代/,
     requiredAny: ["年龄", "多大", "几几年", "哪年"],
     options: [
-      { text: "00后", icon: Star },
-      { text: "95后", icon: Star },
-      { text: "90后", icon: Star },
-      { text: "85后", icon: Star }
+      { text: "00后", icon: CalendarDays },
+      { text: "95后", icon: CalendarDays },
+      { text: "90后", icon: CalendarDays },
+      { text: "85后", icon: CalendarDays },
+      { text: "选择生日", icon: Calendar }
     ],
     priority: 90,
     enforcePredefined: true
@@ -2773,9 +2774,21 @@ export default function ChatRegistrationPage() {
   // 休息模式状态 - 用户选择休息后显示继续按钮
   const [isRestMode, setIsRestMode] = useState(false);
   
+  // 生日选择器状态
+  const [showBirthdayPicker, setShowBirthdayPicker] = useState(false);
+  const [birthdayYear, setBirthdayYear] = useState<string>("");
+  const [birthdayMonth, setBirthdayMonth] = useState<string>("");
+  const [birthdayDay, setBirthdayDay] = useState<string>("");
+  
   // 快捷回复点击处理
   const handleQuickReply = (text: string) => {
     if (isTyping) return;
+    
+    // 特殊处理：选择生日
+    if (text === "选择生日") {
+      setShowBirthdayPicker(true);
+      return;
+    }
     
     // 如果是多选模式，切换选中状态而不是立即发送
     if (quickReplyResult.multiSelect) {
@@ -3181,6 +3194,102 @@ export default function ChatRegistrationPage() {
           );
         })()}
       </AnimatePresence>
+
+      {/* 生日选择器Modal */}
+      <Dialog open={showBirthdayPicker} onOpenChange={setShowBirthdayPicker}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>选择你的生日</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>年份</Label>
+              <Select value={birthdayYear} onValueChange={setBirthdayYear}>
+                <SelectTrigger>
+                  <SelectValue placeholder="选择年份" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 50 }, (_, i) => {
+                    const year = new Date().getFullYear() - 18 - i;
+                    return year;
+                  }).map(year => (
+                    <SelectItem key={year} value={String(year)}>
+                      {year}年
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>月份</Label>
+              <Select value={birthdayMonth} onValueChange={setBirthdayMonth}>
+                <SelectTrigger>
+                  <SelectValue placeholder="选择月份" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                    <SelectItem key={month} value={String(month)}>
+                      {month}月
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>日期</Label>
+              <Select value={birthdayDay} onValueChange={setBirthdayDay}>
+                <SelectTrigger>
+                  <SelectValue placeholder="选择日期" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                    <SelectItem key={day} value={String(day)}>
+                      {day}日
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowBirthdayPicker(false)}
+              className="flex-1"
+            >
+              取消
+            </Button>
+            <Button
+              onClick={() => {
+                if (birthdayYear && birthdayMonth && birthdayDay) {
+                  const year = parseInt(birthdayYear);
+                  const ageGroup = year >= 2000 ? "00后" : year >= 1995 ? "95后" : year >= 1990 ? "90后" : "85后";
+                  
+                  // 发送年龄段
+                  setMessages(prev => [...prev, {
+                    id: `msg-${Date.now()}`,
+                    role: "user",
+                    content: ageGroup,
+                    timestamp: new Date()
+                  }]);
+                  setIsTyping(true);
+                  sendMessageMutation.mutate(ageGroup);
+                  
+                  // 关闭Modal
+                  setShowBirthdayPicker(false);
+                  setBirthdayYear("");
+                  setBirthdayMonth("");
+                  setBirthdayDay("");
+                }
+              }}
+              className="flex-1"
+              data-testid="button-confirm-birthday"
+            >
+              确认
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {isComplete && infoConfirmed ? (
         isEnrichmentMode ? (
