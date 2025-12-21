@@ -640,8 +640,9 @@ const quickReplyConfigs: QuickReplyConfig[] = [
   },
   {
     keywords: ["行业", "职业", "做什么工作", "工作"],
-    options: INDUSTRIES.slice(0, 8).map(ind => ({ text: ind.label, icon: getIndustryIcon(ind.label) })),
-    priority: 7
+    options: INDUSTRIES.map(ind => ({ text: ind.label, icon: getIndustryIcon(ind.label) })),
+    priority: 7,
+    fullDisplay: true
   }
 ];
 
@@ -706,10 +707,11 @@ const patternBasedConfigs: PatternBasedQuickReplyConfig[] = [
     pattern: /什么行业|哪个行业|在.*行业|从事.*行业/,
     requiredAny: ["什么行业", "哪个行业", "行业"],
     exclude: ["行业经验多久"],
-    options: INDUSTRIES.slice(0, 8).map(ind => ({ text: ind.label, icon: getIndustryIcon(ind.label) })),
+    options: INDUSTRIES.map(ind => ({ text: ind.label, icon: getIndustryIcon(ind.label) })),
     priority: 93,
     multiSelect: false,
-    enforcePredefined: true
+    enforcePredefined: true,
+    fullDisplay: true
   },
   {
     id: "interests",
@@ -1234,6 +1236,91 @@ function UserAvatar() {
   );
 }
 
+// 动态AI推理生成函数 - 根据已收集信息生成个性化洞察
+function generateDynamicInference(info: CollectedInfo): string | null {
+  const inferences: string[] = [];
+  const isFemale = info.gender?.includes('女');
+  
+  // 根据收集的信息层次生成不同的推理
+  // L1 基础信息推理
+  if (info.displayName && info.gender && !info.birthdate && !info.currentCity) {
+    return isFemale ? "很好听的名字哦，小姐姐～" : "名字很硬朗嘛，兄弟！";
+  }
+  
+  // 年龄相关推理
+  if (info.birthYear || info.birthdate) {
+    const birthYear = info.birthYear ? parseInt(info.birthYear) : 
+      (info.birthdate ? parseInt(info.birthdate.split('-')[0]) : null);
+    if (birthYear) {
+      if (birthYear >= 2000) {
+        inferences.push(isFemale ? "00后职场新势力，冲劲十足～" : "00后职场新锐，干劲满满！");
+      } else if (birthYear >= 1995) {
+        inferences.push(isFemale ? "95后黄金期，事业正当时～" : "95后职场中坚，正是发力的年纪！");
+      } else if (birthYear >= 1990) {
+        inferences.push(isFemale ? "90后轻熟派，阅历与活力兼具～" : "90后老手，职场老鸟了！");
+      }
+    }
+  }
+  
+  // 城市相关推理
+  if (info.currentCity && info.hometown) {
+    if (info.currentCity !== info.hometown) {
+      inferences.push(isFemale ? `从${info.hometown}到${info.currentCity}打拼，独立又勇敢～` : 
+        `从${info.hometown}到${info.currentCity}闯荡，是个有故事的人！`);
+    } else {
+      inferences.push(isFemale ? "本地人的主场优势，资源满满～" : "本地人，人脉扎实！");
+    }
+  }
+  
+  // 行业相关推理
+  if (info.industry) {
+    const industryInferences: Record<string, string[]> = {
+      "科技互联网": [isFemale ? "互联网圈的姐姐，思维敏捷～" : "互联网老炮，节奏感拉满！"],
+      "AI/大数据": [isFemale ? "AI领域的女性力量，很酷～" : "AI前沿玩家，眼光独到！"],
+      "金融投资": [isFemale ? "金融圈精英，数字敏感度满分～" : "金融圈人士，资本嗅觉灵敏！"],
+      "创意设计": [isFemale ? "创意人，审美在线～" : "设计圈的，艺术细胞爆棚！"],
+      "传媒内容": [isFemale ? "内容创作者，故事感十足～" : "传媒人，讲故事的高手！"],
+      "医疗健康": [isFemale ? "医疗行业，救死扶伤的天使～" : "医疗人士，专业靠谱！"],
+      "教育培训": [isFemale ? "教育工作者，温暖有爱～" : "教育圈的，有耐心有情怀！"],
+    };
+    const match = industryInferences[info.industry];
+    if (match) inferences.push(match[0]);
+  }
+  
+  // 兴趣相关推理
+  if (info.interestsTop && info.interestsTop.length > 0) {
+    const interests = info.interestsTop;
+    if (interests.includes("户外运动") || interests.includes("运动健身")) {
+      inferences.push(isFemale ? "热爱运动，活力满满～" : "运动派，精力充沛！");
+    }
+    if (interests.includes("美食探店")) {
+      inferences.push(isFemale ? "美食达人，舌尖品味～" : "吃货一枚，懂生活！");
+    }
+    if (interests.includes("读书学习") || interests.includes("知识分享")) {
+      inferences.push(isFemale ? "爱学习的女孩，内涵满满～" : "爱看书，有深度！");
+    }
+    if (interests.includes("旅行探索")) {
+      inferences.push(isFemale ? "热爱旅行，见识广博～" : "旅行爱好者，眼界开阔！");
+    }
+  }
+  
+  // 社交风格推理
+  if (info.socialStyle) {
+    if (info.socialStyle.includes("活跃") || info.socialStyle.includes("外向")) {
+      inferences.push(isFemale ? "社交达人，氛围组担当～" : "社牛属性，聊什么都行！");
+    } else if (info.socialStyle.includes("内敛") || info.socialStyle.includes("安静")) {
+      inferences.push(isFemale ? "安静有力量，深度社交型～" : "内敛派，聊深了有料！");
+    }
+  }
+  
+  // 返回最新/最相关的推理（优先返回最后一条，即最新收集的信息）
+  if (inferences.length > 0) {
+    return inferences[inferences.length - 1];
+  }
+  
+  return null;
+}
+
 // 消息气泡组件
 function MessageBubble({ 
   message, 
@@ -1303,48 +1390,41 @@ function MessageBubble({
     >
       {isAssistant && <XiaoyueAvatar emotion={detectEmotion(message.content)} />}
       
-      <div className={`max-w-[80%] space-y-2 ${isAssistant ? "" : "flex flex-col items-end"}`}>
-        <Card className={`${
-          isAssistant 
-            ? "bg-card/90 backdrop-blur-sm border-violet-200/30" 
-            : "bg-primary text-primary-foreground"
-        } px-4 py-2.5 shadow-sm overflow-hidden`}>
-          <div className="text-sm whitespace-pre-wrap leading-relaxed">
-            {shouldShowTyping ? displayedText : (
-              paragraphs.slice(0, visibleParagraphCount).map((p, i) => (
-                <motion.p
-                  key={i}
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={i > 0 ? "mt-2" : ""}
-                >
-                  {p}
-                </motion.p>
-              ))
-            )}
-          </div>
-        </Card>
+      <div className={`max-w-[80%] space-y-1.5 ${isAssistant ? "" : "flex flex-col items-end"}`}>
+        {/* 每行内容独立显示为单独的气泡，符合聊天App惯例 */}
+        {shouldShowTyping ? (
+          <Card className={`${
+            isAssistant 
+              ? "bg-card/90 backdrop-blur-sm border-violet-200/30" 
+              : "bg-primary text-primary-foreground"
+          } px-4 py-2.5 shadow-sm overflow-hidden`}>
+            <div className="text-sm whitespace-pre-wrap leading-relaxed">
+              {displayedText}
+            </div>
+          </Card>
+        ) : (
+          paragraphs.slice(0, visibleParagraphCount).map((p, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+            >
+              <Card className={`${
+                isAssistant 
+                  ? "bg-card/90 backdrop-blur-sm border-violet-200/30" 
+                  : "bg-primary text-primary-foreground"
+              } px-4 py-2.5 shadow-sm overflow-hidden`}>
+                <p className="text-sm leading-relaxed">{p}</p>
+              </Card>
+            </motion.div>
+          ))
+        )}
         
-        {/* L1完成后的彩蛋反馈：根据性别差异化 */}
+        {/* 动态AI推理：根据已收集信息生成个性化洞察 */}
         {isAssistant && isLatest && !shouldShowTyping && (() => {
-          const hasL1 = collectedInfo.displayName && collectedInfo.gender;
-          if (!hasL1) return null;
-          
-          const isFemale = collectedInfo.gender?.includes('女');
-          const isMale = collectedInfo.gender?.includes('男');
-          
-          let feedbackText = "";
-          let icon = null;
-          
-          if (isFemale) {
-            feedbackText = "很好听的名字哦，小姐姐～";
-            icon = <Sparkles className="w-3 h-3 text-pink-400" />;
-          } else if (isMale) {
-            feedbackText = "名字很硬朗嘛，兄弟！";
-            icon = <Zap className="w-3 h-3 text-blue-400" />;
-          }
-          
-          if (!feedbackText) return null;
+          const inference = generateDynamicInference(collectedInfo);
+          if (!inference) return null;
           
           return (
             <motion.div
@@ -1352,11 +1432,9 @@ function MessageBubble({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               className="relative mt-1"
             >
-              {/* 连接线 - 视觉锚点 */}
               <div className="absolute -top-1 left-4 w-px h-1.5 bg-gradient-to-b from-violet-300/50 to-transparent" />
               
               <div className="relative group px-3 py-1.5 overflow-hidden rounded-lg">
-                {/* 微光背景效果 */}
                 <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-primary/10 to-violet-500/5 rounded-lg" />
                 <motion.div 
                   className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
@@ -1369,7 +1447,7 @@ function MessageBubble({
                   <span className="text-[10px] text-muted-foreground/60 mr-1">小悦的推理</span>
                   <div className="w-px h-2.5 bg-violet-200/30" />
                   <span className="text-[11px] font-medium bg-gradient-to-r from-primary/80 to-violet-600/80 bg-clip-text text-transparent tracking-tight">
-                    {feedbackText}
+                    {inference}
                   </span>
                 </div>
               </div>
@@ -2796,47 +2874,73 @@ export default function ChatRegistrationPage() {
           <DrawerHeader>
             <DrawerTitle className="text-center">选择你的生日</DrawerTitle>
           </DrawerHeader>
-          <div className="px-4 py-8 pointer-events-auto">
-            <div className="flex flex-col bg-muted/20 rounded-2xl border border-violet-200/10 overflow-hidden relative z-0">
-              <div className="grid grid-cols-3 text-[10px] text-center text-muted-foreground/60 font-bold uppercase py-2 border-b border-violet-200/10 relative z-10 bg-muted/20">
-                <div>年份</div>
-                <div className="border-x border-violet-200/5">月份</div>
-                <div>日期</div>
+          <div className="px-4 py-8">
+            {/* 使用三个下拉选择器替代wheel picker，确保移动端触摸兼容性 */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground text-center block">年份</Label>
+                <Select value={birthdayYear} onValueChange={setBirthdayYear}>
+                  <SelectTrigger className="h-14 text-lg font-medium" data-testid="select-birthday-year">
+                    <SelectValue placeholder="年" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[200px]">
+                    {Array.from({ length: 50 }, (_, i) => 2025 - 18 - i).map(year => (
+                      <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="relative h-[200px] flex items-center justify-center overflow-hidden">
-                {/* 选中的高亮条 - pointer-events-none 确保点击能穿透到后面的滚轮 */}
-                <div className="absolute top-1/2 left-0 w-full h-12 -translate-y-1/2 bg-primary/10 pointer-events-none border-y border-primary/20 z-10" />
-                <div className="grid grid-cols-3 w-full h-full relative z-20">
-                  <div className="h-full">
-                    <WheelScrollPicker 
-                      scrollRef={yearScrollRef}
-                      items={Array.from({ length: 50 }, (_, i) => 2025 - 18 - i)} 
-                      value={birthdayYear} 
-                      onScroll={(e) => onScroll(e, 'year')} 
-                    />
-                  </div>
-                  <div className="h-full border-x border-violet-200/5">
-                    <WheelScrollPicker 
-                      scrollRef={monthScrollRef}
-                      items={Array.from({ length: 12 }, (_, i) => i + 1)} 
-                      value={birthdayMonth} 
-                      onScroll={(e) => onScroll(e, 'month')} 
-                    />
-                  </div>
-                  <div className="h-full">
-                    <WheelScrollPicker 
-                      scrollRef={dayScrollRef}
-                      items={Array.from({ length: 31 }, (_, i) => i + 1)} 
-                      value={birthdayDay} 
-                      onScroll={(e) => onScroll(e, 'day')} 
-                    />
-                  </div>
-                </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground text-center block">月份</Label>
+                <Select value={birthdayMonth} onValueChange={setBirthdayMonth}>
+                  <SelectTrigger className="h-14 text-lg font-medium" data-testid="select-birthday-month">
+                    <SelectValue placeholder="月" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[200px]">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                      <SelectItem key={month} value={month.toString()}>{month}月</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground text-center block">日期</Label>
+                <Select value={birthdayDay} onValueChange={setBirthdayDay}>
+                  <SelectTrigger className="h-14 text-lg font-medium" data-testid="select-birthday-day">
+                    <SelectValue placeholder="日" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[200px]">
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                      <SelectItem key={day} value={day.toString()}>{day}日</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-3 mt-8 relative z-30 pointer-events-auto">
-              <Button variant="outline" onClick={() => setShowBirthdayPicker(false)} className="rounded-xl h-12 relative z-50 pointer-events-auto">取消</Button>
+            {/* 已选日期预览 */}
+            {birthdayYear && birthdayMonth && birthdayDay && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center mb-6 p-3 bg-primary/5 rounded-xl border border-primary/20"
+              >
+                <span className="text-sm text-muted-foreground">已选择：</span>
+                <span className="text-lg font-bold text-primary ml-2">
+                  {birthdayYear}年{birthdayMonth}月{birthdayDay}日
+                </span>
+              </motion.div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowBirthdayPicker(false)} 
+                className="rounded-xl h-12"
+                data-testid="button-cancel-birthday"
+              >
+                取消
+              </Button>
               <Button 
                 onClick={() => {
                   const birthDate = `${birthdayYear}-${birthdayMonth.padStart(2, '0')}-${birthdayDay.padStart(2, '0')}`;
@@ -2851,7 +2955,7 @@ export default function ChatRegistrationPage() {
                   sendMessageMutation.mutate(`我的生日是 ${birthDate}`);
                 }}
                 disabled={!birthdayYear || !birthdayMonth || !birthdayDay}
-                className="rounded-xl h-12 shadow-lg shadow-primary/20 relative z-50 pointer-events-auto"
+                className="rounded-xl h-12 shadow-lg shadow-primary/20"
                 data-testid="button-confirm-birthday"
               >
                 确定
