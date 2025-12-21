@@ -44,6 +44,10 @@ const archetypeBgColors: Record<string, string> = {
   "隐身猫": "bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-950/40 dark:to-slate-950/40",
 };
 
+// Constants for match point display
+const DEFAULT_VISIBLE_COUNT = 3;
+const MAX_MATCH_POINTS = 10;
+
 export default function UserConnectionCard({
   attendee,
   connectionTags,
@@ -53,6 +57,23 @@ export default function UserConnectionCard({
 }: UserConnectionCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [revealedBadges, setRevealedBadges] = useState<Set<number>>(new Set());
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Total connection points count (for energy ring - always use full count)
+  const totalConnectionPoints = connectionTags.length;
+  
+  // Sort by rarity (epic > rare > common) and limit display to max
+  const sortedTags = [...connectionTags]
+    .sort((a, b) => {
+      const rarityOrder = { epic: 0, rare: 1, common: 2 };
+      return rarityOrder[a.rarity] - rarityOrder[b.rarity];
+    })
+    .slice(0, MAX_MATCH_POINTS);
+  
+  // Display tags: show 3 by default, all when expanded
+  const displayTags = isExpanded ? sortedTags : sortedTags.slice(0, DEFAULT_VISIBLE_COUNT);
+  // Ensure hiddenCount is never negative
+  const hiddenCount = Math.max(0, sortedTags.length - DEFAULT_VISIBLE_COUNT);
 
   const archetypeBgColor = attendee.archetype && archetypeBgColors[attendee.archetype]
     ? archetypeBgColors[attendee.archetype]
@@ -71,7 +92,10 @@ export default function UserConnectionCard({
     setRevealedBadges((prev) => new Set(prev).add(index));
   };
 
-  const allRevealed = revealedBadges.size === connectionTags.length;
+  // All revealed when current display set is fully revealed
+  const allRevealed = isExpanded 
+    ? revealedBadges.size >= sortedTags.length 
+    : revealedBadges.size >= displayTags.length;
 
   // Format display values
   const genderDisplay = attendee.gender === "Woman" ? "女" : 
@@ -256,23 +280,36 @@ export default function UserConnectionCard({
 
                 {/* Lower Zone: Energy Ring surrounding Connection Count */}
                 <div className="flex-1 flex flex-col justify-center items-center gap-4 border-t pt-6">
-                  {/* Energy Ring with Connection Count */}
-                  <EnergyRing 
-                    percentage={matchQuality.percentage}
-                    qualityTier={matchQuality.qualityTier}
-                    visualBoost={matchQuality.visualBoost}
-                    size={140}
-                    strokeWidth={8}
-                  >
-                    <div className="flex flex-col items-center justify-center">
-                      <div className={`text-5xl font-bold ${numberColorClass}`}>
-                        {connectionTags.length}
+                  {/* Energy Ring with Connection Count - always based on ALL tags */}
+                  <div className="relative">
+                    <EnergyRing 
+                      percentage={matchQuality.percentage}
+                      qualityTier={matchQuality.qualityTier}
+                      visualBoost={matchQuality.visualBoost}
+                      size={140}
+                      strokeWidth={8}
+                    >
+                      <div className="flex flex-col items-center justify-center">
+                        <div className={`text-5xl font-bold ${numberColorClass}`}>
+                          {totalConnectionPoints}
+                        </div>
+                        <div className="text-xs font-medium text-muted-foreground mt-1 text-center px-2">
+                          个潜在契合点
+                        </div>
                       </div>
-                      <div className="text-xs font-medium text-muted-foreground mt-1 text-center px-2">
-                        个潜在契合点
-                      </div>
-                    </div>
-                  </EnergyRing>
+                    </EnergyRing>
+                    {/* +N indicator when there are hidden tags */}
+                    {hiddenCount > 0 && !isExpanded && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-md"
+                        data-testid={`badge-hidden-count-${attendee.userId}`}
+                      >
+                        +{hiddenCount}
+                      </motion.div>
+                    )}
+                  </div>
 
                   <div className="flex gap-2">
                     <motion.button
@@ -332,10 +369,10 @@ export default function UserConnectionCard({
                   </motion.button>
                 </div>
 
-                {/* Mystery Badges Grid */}
+                {/* Mystery Badges Grid - sorted by rarity, with expand functionality */}
                 <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                   <div className="grid grid-cols-2 gap-3">
-                    {connectionTags.map((badge, idx) => (
+                    {displayTags.map((badge, idx) => (
                       <MysteryBadge
                         key={idx}
                         icon={badge.icon}
@@ -348,6 +385,23 @@ export default function UserConnectionCard({
                       />
                     ))}
                   </div>
+                  
+                  {/* Expand/Collapse button */}
+                  {hiddenCount > 0 && (
+                    <motion.button
+                      onClick={() => setIsExpanded(!isExpanded)}
+                      className="w-full mt-3 py-2 text-sm text-primary hover:text-primary/80 flex items-center justify-center gap-1"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      data-testid={`button-expand-${attendee.userId}`}
+                    >
+                      {isExpanded ? (
+                        <>收起</>
+                      ) : (
+                        <>查看更多 (+{hiddenCount})</>
+                      )}
+                    </motion.button>
+                  )}
                 </div>
 
                 {/* Completion Message */}

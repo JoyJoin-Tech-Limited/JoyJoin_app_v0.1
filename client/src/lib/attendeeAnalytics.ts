@@ -28,7 +28,11 @@ export interface AttendeeData {
   seniority?: string;
   fieldOfStudy?: string;
   languagesComfort?: string[];
-  intent?: string; // Event-specific intent
+  intent?: string[]; // Event-specific intent (aligned with User.intent)
+  // New fields from AI chat registration
+  cuisinePreference?: string[];
+  favoriteRestaurant?: string;
+  dialectProfile?: string[]; // Detected dialects from conversation
 }
 
 export interface CommonInterest {
@@ -241,8 +245,12 @@ export interface SparkPredictionContext {
   userHometownRegionCity?: string;
   userHometownAffinityOptin?: boolean;
   userArchetype?: string;
-  userIntent?: string; // Event-specific intent
+  userIntent?: string[]; // Event-specific intent (aligned with User.intent)
   userMatchedBefore?: string[]; // Array of user IDs previously matched with
+  // New fields from AI chat registration
+  userCuisinePreference?: string[];
+  userFavoriteRestaurant?: string;
+  userDialectProfile?: string[]; // Detected dialects from conversation
 }
 
 export type RarityLevel = 'common' | 'rare' | 'epic';
@@ -907,7 +915,8 @@ export function generateSparkPredictions(
   // - "flexible" + specific → neutral (no bonus, flexible people adapt)
   // - Same specific intent → rare/epic (strong alignment)
   // - Different specific intents → neutral (no forced mismatch)
-  if (userContext.userIntent && attendee.intent) {
+  if (userContext.userIntent && userContext.userIntent.length > 0 && 
+      attendee.intent && attendee.intent.length > 0) {
     const intentLabels: Record<string, { text: string; rarity: RarityLevel }> = {
       "flexible": { text: "都保持开放心态", rarity: 'common' },
       "networking": { text: "都为职业社交而来", rarity: 'rare' },
@@ -917,12 +926,20 @@ export function generateSparkPredictions(
       "romance": { text: "都在寻找另一半", rarity: 'epic' }
     };
     
-    // Only add connection point if intents match
-    if (userContext.userIntent === attendee.intent && intentLabels[userContext.userIntent]) {
-      predictions.push(intentLabels[userContext.userIntent]);
+    // Find common intents between user and attendee
+    const commonIntents = userContext.userIntent.filter(i => attendee.intent?.includes(i));
+    
+    // Add connection points for matching intents (prioritize higher rarity)
+    const rarityOrder: RarityLevel[] = ['epic', 'rare', 'common'];
+    for (const rarity of rarityOrder) {
+      for (const intent of commonIntents) {
+        if (intentLabels[intent] && intentLabels[intent].rarity === rarity) {
+          predictions.push(intentLabels[intent]);
+          break; // Only add one intent match to avoid spam
+        }
+      }
+      if (predictions.some(p => commonIntents.some(i => intentLabels[i]?.text === p.text))) break;
     }
-    // Note: flexible + specific intent = neutral (no bonus, no penalty)
-    // Different specific intents = neutral (no forced match)
   }
   
   // 🎯 Anti-repetition scoring - penalize if matched before
@@ -933,8 +950,74 @@ export function generateSparkPredictions(
     // and prioritize fresh connections instead
   }
   
-  // Return top 6 predictions - perfect for 3x2 grid layout
-  return predictions.slice(0, 6);
+  // 🍜 NEW: Cuisine preference matching - great icebreaker topic
+  if (userContext.userCuisinePreference && userContext.userCuisinePreference.length > 0 &&
+      attendee.cuisinePreference && attendee.cuisinePreference.length > 0) {
+    const commonCuisines = userContext.userCuisinePreference.filter(c => 
+      attendee.cuisinePreference?.includes(c)
+    );
+    
+    if (commonCuisines.length > 0) {
+      // Use the first common cuisine for the label
+      const cuisineLabel = commonCuisines[0];
+      predictions.push({
+        text: `都爱${cuisineLabel}`,
+        rarity: commonCuisines.length >= 2 ? 'rare' : 'common'
+      });
+    }
+  }
+  
+  // 🍽️ NEW: Favorite restaurant matching - epic connection if same restaurant
+  if (userContext.userFavoriteRestaurant && attendee.favoriteRestaurant) {
+    // Normalize restaurant names for comparison (remove spaces, lowercase)
+    const normalizeRestaurant = (name: string) => name.toLowerCase().replace(/\s+/g, '');
+    if (normalizeRestaurant(userContext.userFavoriteRestaurant) === 
+        normalizeRestaurant(attendee.favoriteRestaurant)) {
+      predictions.push({
+        text: `同粉${attendee.favoriteRestaurant}`,
+        rarity: 'epic'
+      });
+    }
+  }
+  
+  // 🗣️ NEW: Dialect matching - 老乡加分 (laoxiang bonus)
+  if (userContext.userDialectProfile && userContext.userDialectProfile.length > 0 &&
+      attendee.dialectProfile && attendee.dialectProfile.length > 0) {
+    const commonDialects = userContext.userDialectProfile.filter(d => 
+      attendee.dialectProfile?.includes(d)
+    );
+    
+    if (commonDialects.length > 0) {
+      // Same dialect = strong connection (老乡效应)
+      const dialectLabel = commonDialects[0];
+      const dialectDisplayNames: Record<string, string> = {
+        'cantonese': '粤语老乡',
+        'hokkien': '闽南老乡',
+        'hakka': '客家老乡',
+        'teochew': '潮汕老乡',
+        'shanghainese': '上海老乡',
+        'sichuanese': '川渝老乡',
+        'northeastern': '东北老乡',
+        'hunan': '湖南老乡'
+      };
+      predictions.push({
+        text: dialectDisplayNames[dialectLabel] || `都说${dialectLabel}`,
+        rarity: 'rare'
+      });
+    } else if (userContext.userDialectProfile.length > 0 && attendee.dialectProfile.length > 0) {
+      // Both have dialect backgrounds but different = 移民共鸣
+      predictions.push({
+        text: '都有方言背景',
+        rarity: 'common'
+      });
+    }
+  }
+  
+  // Sort by rarity (epic > rare > common) and return top 10
+  const rarityWeight: Record<RarityLevel, number> = { epic: 3, rare: 2, common: 1 };
+  predictions.sort((a, b) => rarityWeight[b.rarity] - rarityWeight[a.rarity]);
+  
+  return predictions.slice(0, 10);
 }
 
 export function calculateGroupInsights(attendees: AttendeeData[]): GroupInsight[] {
