@@ -1223,16 +1223,20 @@ function useTypingEffect(text: string, isActive: boolean, speed: number = 30) {
   return { displayedText, isComplete };
 }
 
-// 用户头像组件 - 统一紫色渐变风格（更温暖、更中立）
-function UserAvatar() {
+// 用户头像组件 - 使用紫色3D圆球人脸（EvolvingAvatar）
+function UserAvatar({ clarityLevel = 0 }: { clarityLevel?: number }) {
   return (
     <motion.div 
-      className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0 border border-primary/20"
+      className="flex-shrink-0"
       initial={{ scale: 0.8, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300 }}
     >
-      <span className="text-sm">😊</span>
+      <EvolvingAvatar 
+        clarityLevel={clarityLevel}
+        gender="unknown"
+        size={32}
+      />
     </motion.div>
   );
 }
@@ -1248,6 +1252,12 @@ interface FoxInsight {
   trigger: string; // 触发条件描述
 }
 
+// 推理结果类型：区分成功、冷却阻止、无匹配规则
+type InferenceResult = 
+  | { type: 'success'; insight: FoxInsight }
+  | { type: 'cooldown'; reason: string }  // 不应缓存
+  | { type: 'no_match'; reason: string }; // 可以缓存
+
 // 碎嘴推理节奏控制
 const insightCadenceState = {
   lastInsightTurn: -10, // 初始化为负数，让首次推理不受冷却限制
@@ -1256,26 +1266,29 @@ const insightCadenceState = {
 };
 
 // 动态AI推理生成函数 - 3大支柱 + 组合推理 + 节奏控制
-// 注意：此函数应由缓存层调用，缓存层负责防止重复调用
+// 返回结构化结果，区分null的原因
 function generateDynamicInference(
   info: CollectedInfo, 
   messageCount?: number
-): FoxInsight | null {
+): InferenceResult {
   const insights: FoxInsight[] = [];
   const isFemale = info.gender?.includes('女');
   const currentTurn = messageCount ?? 0;
   
   // 节奏控制：每2轮最多1条（首次不受限制因为lastInsightTurn初始为负数）
   if (currentTurn - insightCadenceState.lastInsightTurn < insightCadenceState.cooldownTurns) {
-    return null;
+    return { type: 'cooldown', reason: `turn ${currentTurn} still in cooldown` };
   }
   
   // ========== 支柱1：身份归属 ==========
+  // 句式框架：观察 + 因为 + 成长潜力/期待
   
   // 名字+性别基础推理
   if (info.displayName && info.gender && !info.birthdate && !info.currentCity) {
     insights.push({
-      text: isFemale ? "名字挺温柔的，感觉是个细腻的人～" : "这名字有分量，应该是个靠谱的",
+      text: isFemale 
+        ? "名字听起来很温柔，因为这种细腻感挺难得的，期待聊开后发现更多有趣的面～" 
+        : "这名字有分量，因为给人靠谱的感觉，期待后面聊到更深入的话题～",
       pillar: 'identity',
       confidence: 0.6,
       trigger: 'name_gender'
@@ -1352,42 +1365,112 @@ function generateDynamicInference(
   // 兴趣+社交风格组合
   if (info.interestsTop && info.interestsTop.length > 0) {
     const interests = info.interestsTop;
-    const hasOutdoor = interests.some(i => i.includes("户外") || i.includes("运动"));
-    const hasFood = interests.some(i => i.includes("美食") || i.includes("探店"));
-    const hasDeep = interests.some(i => i.includes("读书") || i.includes("知识") || i.includes("讨论"));
+    const hasOutdoor = interests.some(i => /户外|运动|健身|跑步|爬山|徒步|hiking/.test(i));
+    const hasFood = interests.some(i => /美食|探店|吃|烹饪|餐厅/.test(i));
+    const hasDeep = interests.some(i => /读书|知识|讨论|学习|阅读/.test(i));
+    const hasMovie = interests.some(i => /电影|影视|追剧|综艺|看片/.test(i));
+    const hasMusic = interests.some(i => /音乐|乐器|唱歌|演唱会/.test(i));
+    const hasTravel = interests.some(i => /旅行|旅游|探索|出游|度假/.test(i));
+    const hasArt = interests.some(i => /艺术|展览|博物馆|画廊|摄影/.test(i));
     
-    // 组合：户外+美食 = 体验派
-    if (hasOutdoor && hasFood) {
+    // 组合：户外+电影 = 动静皆宜
+    if (hasOutdoor && hasMovie) {
       insights.push({
-        text: isFemale ? "又能动又能吃，是个会享受生活的体验派～" : "运动完吃好的，懂生活的人",
+        text: isFemale 
+          ? "户外能撒欢，回家能追剧，因为这种动静皆宜的状态很难得，期待一起发现好玩的活动～" 
+          : "能动能静，因为这种平衡感很难得，期待聊聊你最近在追什么好片～",
+        pillar: 'energy',
+        confidence: 0.8,
+        trigger: 'combo_outdoor_movie'
+      });
+    }
+    // 组合：户外+美食 = 体验派
+    else if (hasOutdoor && hasFood) {
+      insights.push({
+        text: isFemale 
+          ? "又能动又能吃，因为这种会享受生活的态度很吸引人，期待一起探索好吃好玩的～" 
+          : "运动完吃好的，因为懂生活的人一般都挺有趣，期待聊聊你最爱的餐厅～",
         pillar: 'energy',
         confidence: 0.8,
         trigger: 'combo_outdoor_food'
       });
     }
+    // 组合：电影+音乐 = 文艺
+    else if (hasMovie && hasMusic) {
+      insights.push({
+        text: isFemale 
+          ? "电影音乐都爱，因为文艺细胞满满的人一般感受力很强，期待听你推荐好片好歌～" 
+          : "影音双修，因为品味应该不错，期待交换一下彼此的私藏歌单～",
+        pillar: 'energy',
+        confidence: 0.75,
+        trigger: 'combo_movie_music'
+      });
+    }
     // 组合：深度+安静 = 思考者
     else if (hasDeep && info.socialStyle?.includes("内敛")) {
       insights.push({
-        text: isFemale ? "安静但有深度，聊开了应该很有料～" : "内敛派，但我猜聊深了你有很多想法",
+        text: isFemale 
+          ? "安静但有深度，因为这种人聊开了往往很有料，期待找到共同话题深聊～" 
+          : "内敛派，因为聊深了你应该有很多独到的想法，期待慢慢解锁～",
         pillar: 'energy',
         confidence: 0.75,
         trigger: 'combo_deep_quiet'
       });
     }
     // 单独兴趣推理
-    else if (hasFood) {
+    else if (hasOutdoor) {
       insights.push({
-        text: isFemale ? "美食爱好者，舌尖品味应该不错～" : "吃货一枚，懂吃的人一般都懂生活",
+        text: isFemale 
+          ? "户外爱好者，因为阳光健康的状态很有感染力，期待一起探索新路线～" 
+          : "喜欢户外，因为精力充沛的人一般都很有行动力，期待聊聊你最爱的活动～",
+        pillar: 'energy',
+        confidence: 0.65,
+        trigger: 'interest_outdoor'
+      });
+    } else if (hasMovie) {
+      insights.push({
+        text: isFemale 
+          ? "爱看电影，因为会挑片的人品味一般不差，期待听你推荐好片～" 
+          : "影迷一枚，因为好品味值得交流，期待聊聊最近看了什么好片～",
+        pillar: 'energy',
+        confidence: 0.65,
+        trigger: 'interest_movie'
+      });
+    } else if (hasFood) {
+      insights.push({
+        text: isFemale 
+          ? "美食爱好者，因为舌尖品味好的人一般生活质量也高，期待交换餐厅推荐～" 
+          : "吃货一枚，因为懂吃的人一般都懂生活，期待一起探店～",
         pillar: 'energy',
         confidence: 0.65,
         trigger: 'interest_food'
       });
-    } else if (interests.includes("旅行探索")) {
+    } else if (hasTravel) {
       insights.push({
-        text: isFemale ? "热爱旅行，见识广博，聊天话题应该很多～" : "旅行爱好者，眼界开阔的人",
+        text: isFemale 
+          ? "热爱旅行，因为见识广博的人聊天话题应该很多，期待听你分享旅途故事～" 
+          : "旅行爱好者，因为眼界开阔的人一般都挺有趣，期待交流旅行心得～",
         pillar: 'energy',
         confidence: 0.65,
         trigger: 'interest_travel'
+      });
+    } else if (hasArt) {
+      insights.push({
+        text: isFemale 
+          ? "爱逛展的文艺青年，因为审美在线的人一般感受力也强，期待一起看展交流～" 
+          : "艺术爱好者，因为有品位的人值得深聊，期待听你分享最近看的好展～",
+        pillar: 'energy',
+        confidence: 0.65,
+        trigger: 'interest_art'
+      });
+    } else if (hasMusic) {
+      insights.push({
+        text: isFemale 
+          ? "音乐爱好者，因为感性又有品味的人一般都很有趣，期待交换歌单～" 
+          : "爱音乐的人，因为这种兴趣一般都挺有故事，期待聊聊你最爱的音乐类型～",
+        pillar: 'energy',
+        confidence: 0.65,
+        trigger: 'interest_music'
       });
     }
   }
@@ -1425,23 +1508,73 @@ function generateDynamicInference(
     }
   }
   
-  // 行业单独推理（fallback）
-  if (info.industry && !insights.some(i => i.trigger.includes('combo') || i.trigger.includes('industry'))) {
-    const industryMap: Record<string, { f: string; m: string }> = {
-      "科技互联网": { f: "互联网人的节奏感，应该很会安排时间～", m: "互联网老炮，效率拉满" },
-      "AI/大数据": { f: "AI领域的女性力量，眼光超前～", m: "AI前沿玩家，眼光独到" },
-      "金融投资": { f: "金融圈的，数字敏感度应该很强～", m: "金融人，资本嗅觉灵敏" },
-      "创意设计": { f: "创意人，审美肯定在线～", m: "设计圈的，艺术细胞爆棚" },
-      "传媒内容": { f: "做内容的，讲故事能力应该很强～", m: "传媒人，讲故事的高手" },
-    };
-    const match = industryMap[info.industry];
-    if (match) {
+  // 城市+行业组合推理（不需要年龄）
+  if (info.currentCity && info.industry && !insights.some(i => i.trigger.includes('combo'))) {
+    const isFinance = info.industry.includes("金融") || info.industry.includes("投资") || info.industry.includes("银行");
+    const isTech = info.industry.includes("科技") || info.industry.includes("互联网") || info.industry.includes("AI");
+    
+    if (isFinance && info.currentCity.includes("香港")) {
       insights.push({
-        text: isFemale ? match.f : match.m,
+        text: isFemale 
+          ? "香港金融圈的姐姐呀，因为这个圈子节奏快见识广，我觉得你应该有不少跨文化的经历和故事，期待聊到更多～" 
+          : "香港金融人，因为这个环境培养出来的国际视野很难得，期待聊到你的独特见解～",
         pillar: 'identity',
-        confidence: 0.6,
-        trigger: 'industry_single'
+        confidence: 0.8,
+        trigger: 'combo_finance_hk'
       });
+    } else if (isTech && info.currentCity.includes("深圳")) {
+      insights.push({
+        text: isFemale 
+          ? "深圳科技圈的，因为这里效率和创新氛围拉满，你应该是个很有执行力的人，期待了解你在做什么有趣的事～" 
+          : "深圳科技人，因为这座城市务实又前沿，期待听你分享一些行业内的洞察～",
+        pillar: 'identity',
+        confidence: 0.8,
+        trigger: 'combo_tech_sz'
+      });
+    } else if (isFinance) {
+      insights.push({
+        text: isFemale 
+          ? "金融圈的姐姐，因为数字敏感度应该很强，期待聊到你对趋势的独到见解～" 
+          : "金融人，因为资本嗅觉一般都很敏锐，期待听你分享一些有意思的观察～",
+        pillar: 'identity',
+        confidence: 0.7,
+        trigger: 'industry_finance'
+      });
+    } else if (isTech) {
+      insights.push({
+        text: isFemale 
+          ? "科技圈的，因为逻辑思维应该很清晰，期待聊到你在做什么有意思的项目～" 
+          : "科技人，因为效率一般拉满，期待了解你怎么平衡工作和生活～",
+        pillar: 'identity',
+        confidence: 0.7,
+        trigger: 'industry_tech'
+      });
+    }
+  }
+  
+  // 行业单独推理（fallback）- 使用模糊匹配
+  if (info.industry && !insights.some(i => i.trigger.includes('combo') || i.trigger.includes('industry'))) {
+    const industryPatterns: Array<{ pattern: RegExp; f: string; m: string }> = [
+      { pattern: /科技|互联网|IT|软件|程序/, f: "互联网人的节奏感，应该很会安排时间～", m: "互联网老炮，效率拉满" },
+      { pattern: /AI|大数据|人工智能|机器学习/, f: "AI领域的女性力量，眼光超前～", m: "AI前沿玩家，眼光独到" },
+      { pattern: /金融|投资|银行|证券|保险/, f: "金融圈的，数字敏感度应该很强～", m: "金融人，资本嗅觉灵敏" },
+      { pattern: /设计|创意|美术|艺术/, f: "创意人，审美肯定在线～", m: "设计圈的，艺术细胞爆棚" },
+      { pattern: /传媒|内容|媒体|编辑|记者/, f: "做内容的，讲故事能力应该很强～", m: "传媒人，讲故事的高手" },
+      { pattern: /教育|培训|老师/, f: "教育工作者，耐心和表达能力应该都不错～", m: "做教育的，有耐心有方法" },
+      { pattern: /医疗|健康|医生|护士/, f: "医疗行业的，细心和责任感应该很强～", m: "医疗人，专业又靠谱" },
+      { pattern: /法律|律师|法务/, f: "法律人，逻辑严谨，说话应该很有分寸～", m: "法律人，思维缜密" },
+    ];
+    
+    for (const { pattern, f, m } of industryPatterns) {
+      if (pattern.test(info.industry)) {
+        insights.push({
+          text: isFemale ? f : m,
+          pillar: 'identity',
+          confidence: 0.6,
+          trigger: 'industry_single'
+        });
+        break;
+      }
     }
   }
   
@@ -1457,15 +1590,20 @@ function generateDynamicInference(
     insightCadenceState.lastInsightTurn = currentTurn;
     insightCadenceState.shownInsights.add(selected.trigger);
     
-    return selected;
+    return { type: 'success', insight: selected };
   }
   
-  return null;
+  return { type: 'no_match', reason: 'no matching rules for current info' };
 }
 
+// 缓存类型：区分成功的insight和"无匹配规则"的null
+// cooldown类型不会被缓存，允许后续重试
+type CachedResult = 
+  | { type: 'success'; insight: FoxInsight }
+  | { type: 'no_match' };
+
 // 全局追踪：每个消息+信息组合是否已经生成过insight
-// 使用 "messageIndex:infoHashCode" 作为key，值为生成的insight或null
-const insightCache = new Map<string, FoxInsight | null>();
+const insightCache = new Map<string, CachedResult>();
 
 // 重置碎嘴节奏状态（用于新会话）- 同时重置所有相关缓存
 function resetInsightCadence() {
@@ -1501,10 +1639,11 @@ function FoxInsightWrapper({
   
   // 检查缓存：如果这个exact组合已经计算过，直接使用缓存结果
   if (insightCache.has(cacheKey)) {
-    const cached = insightCache.get(cacheKey);
-    if (cached) {
-      return <FoxInsightBubble insight={cached} />;
+    const cached = insightCache.get(cacheKey)!;
+    if (cached.type === 'success') {
+      return <FoxInsightBubble insight={cached.insight} />;
     }
+    // no_match类型，返回null
     return null;
   }
   
@@ -1512,24 +1651,30 @@ function FoxInsightWrapper({
   // 首先检查是否已经为这个messageIndex生成过成功的insight
   // 如果有，直接复用，避免重复显示
   for (const [key, value] of insightCache.entries()) {
-    if (key.startsWith(`${messageIndex}:`) && value !== null) {
+    if (key.startsWith(`${messageIndex}:`) && value.type === 'success') {
       // 这个消息已经有成功的insight了，复用它
       insightCache.set(cacheKey, value);
-      return <FoxInsightBubble insight={value} />;
+      return <FoxInsightBubble insight={value.insight} />;
     }
   }
   
   // 尝试生成新insight
-  const newInsight = generateDynamicInference(collectedInfo, messageIndex);
+  const result = generateDynamicInference(collectedInfo, messageIndex);
   
-  // 缓存结果（包括null，但当collectedInfo变化时可以重试）
-  insightCache.set(cacheKey, newInsight);
-  
-  if (newInsight) {
-    return <FoxInsightBubble insight={newInsight} />;
+  // 根据结果类型决定是否缓存
+  if (result.type === 'success') {
+    // 成功：缓存并显示
+    insightCache.set(cacheKey, { type: 'success', insight: result.insight });
+    return <FoxInsightBubble insight={result.insight} />;
+  } else if (result.type === 'no_match') {
+    // 无匹配规则：缓存null（同样的info不会产生不同结果）
+    insightCache.set(cacheKey, { type: 'no_match' });
+    return null;
+  } else {
+    // cooldown：不缓存，允许后续重试
+    // 下次collectedInfo变化时会生成新的cacheKey，可以重试
+    return null;
   }
-  
-  return null;
 }
 
 // ========== 方案B: 气泡内嵌入的"小悦偷偷碎嘴"组件 ==========
@@ -1762,7 +1907,7 @@ function MessageBubble({
         />
       </div>
 
-      {!isAssistant && <UserAvatar />}
+      {!isAssistant && <UserAvatar clarityLevel={calculateClarityLevel(collectedInfo)} />}
     </motion.div>
   );
 }
