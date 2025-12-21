@@ -2823,21 +2823,26 @@ export default function ChatRegistrationPage() {
         if (height > 0) itemHeightRef.current = height;
       }
       
-      // 初始化滚动位置（直接设置到中心）
+      // 初始化滚动位置
+      // 注意：由于有96px的顶部占位符，当scrollTop为0时，第一个item刚好就在中间(120px位置，假设item高度48px)
+      // 所以 scrollTop = index * itemHeight 应该能让对应索引的item居中
       const ITEM_HEIGHT = itemHeightRef.current;
       if (yearScrollRef.current && birthdayYear) {
-        const yearIndex = Array.from({ length: 50 }, (_, i) => 2025 - 18 - i).indexOf(parseInt(birthdayYear));
-        if (yearIndex >= 0) yearScrollRef.current.scrollTop = yearIndex * ITEM_HEIGHT;
+        const years = Array.from({ length: 50 }, (_, i) => 2025 - 18 - i);
+        const yearIndex = years.indexOf(parseInt(birthdayYear));
+        if (yearIndex >= 0) {
+          yearScrollRef.current.scrollTo({ top: yearIndex * ITEM_HEIGHT, behavior: 'auto' });
+        }
       }
       if (monthScrollRef.current && birthdayMonth) {
         const monthIndex = parseInt(birthdayMonth) - 1;
-        monthScrollRef.current.scrollTop = monthIndex * ITEM_HEIGHT;
+        monthScrollRef.current.scrollTo({ top: monthIndex * ITEM_HEIGHT, behavior: 'auto' });
       }
       if (dayScrollRef.current && birthdayDay) {
         const dayIndex = parseInt(birthdayDay) - 1;
-        dayScrollRef.current.scrollTop = dayIndex * ITEM_HEIGHT;
+        dayScrollRef.current.scrollTo({ top: dayIndex * ITEM_HEIGHT, behavior: 'auto' });
       }
-    }, 50);
+    }, 100);
     
     return () => {
       if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
@@ -3287,26 +3292,30 @@ export default function ChatRegistrationPage() {
                   const itemHeight = itemHeightRef.current;
                   const index = Math.round(scrollTop / itemHeight);
                   const years = Array.from({ length: 50 }, (_, i) => 2025 - 18 - i);
-                  if (index >= 0 && index < years.length && birthdayYear !== String(years[index])) {
-                    setBirthdayYear(String(years[index]));
+                  
+                  if (index >= 0 && index < years.length) {
+                    const selectedYear = String(years[index]);
+                    if (birthdayYear !== selectedYear) {
+                      setBirthdayYear(selectedYear);
+                    }
                   }
                 }}
               >
-                <div style={{ height: '96px' }} />
+                <div style={{ minHeight: '96px' }} />
                 {Array.from({ length: 50 }, (_, i) => 2025 - 18 - i).map((year) => (
                   <div
                     key={year}
                     data-wheel-item
                     className={`w-full py-3 text-center transition-all ${
                       birthdayYear === String(year)
-                        ? "text-primary text-xl font-bold"
-                        : "text-muted-foreground text-sm opacity-50"
+                        ? "text-primary text-xl font-bold opacity-100"
+                        : "text-muted-foreground text-sm opacity-40"
                     }`}
                   >
                     {year}
                   </div>
                 ))}
-                <div style={{ height: '96px' }} />
+                <div style={{ minHeight: '96px' }} />
               </div>
               
               {/* 月份滚轮 */}
@@ -3320,26 +3329,30 @@ export default function ChatRegistrationPage() {
                   const itemHeight = itemHeightRef.current;
                   const index = Math.round(scrollTop / itemHeight);
                   const months = Array.from({ length: 12 }, (_, i) => i + 1);
-                  if (index >= 0 && index < months.length && birthdayMonth !== String(months[index])) {
-                    setBirthdayMonth(String(months[index]));
+                  
+                  if (index >= 0 && index < months.length) {
+                    const selectedMonth = String(months[index]);
+                    if (birthdayMonth !== selectedMonth) {
+                      setBirthdayMonth(selectedMonth);
+                    }
                   }
                 }}
               >
-                <div style={{ height: '96px' }} />
+                <div style={{ minHeight: '96px' }} />
                 {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
                   <div
                     key={month}
                     data-wheel-item
                     className={`w-full py-3 text-center transition-all ${
                       birthdayMonth === String(month)
-                        ? "text-primary text-xl font-bold"
-                        : "text-muted-foreground text-sm opacity-50"
+                        ? "text-primary text-xl font-bold opacity-100"
+                        : "text-muted-foreground text-sm opacity-40"
                     }`}
                   >
                     {String(month).padStart(2, '0')}月
                   </div>
                 ))}
-                <div style={{ height: '96px' }} />
+                <div style={{ minHeight: '96px' }} />
               </div>
               
               {/* 日期滚轮 */}
@@ -3353,26 +3366,30 @@ export default function ChatRegistrationPage() {
                   const itemHeight = itemHeightRef.current;
                   const index = Math.round(scrollTop / itemHeight);
                   const days = Array.from({ length: 31 }, (_, i) => i + 1);
-                  if (index >= 0 && index < days.length && birthdayDay !== String(days[index])) {
-                    setBirthdayDay(String(days[index]));
+                  
+                  if (index >= 0 && index < days.length) {
+                    const selectedDay = String(days[index]);
+                    if (birthdayDay !== selectedDay) {
+                      setBirthdayDay(selectedDay);
+                    }
                   }
                 }}
               >
-                <div style={{ height: '96px' }} />
+                <div style={{ minHeight: '96px' }} />
                 {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
                   <div
                     key={day}
                     data-wheel-item
                     className={`w-full py-3 text-center transition-all ${
                       birthdayDay === String(day)
-                        ? "text-primary text-xl font-bold"
-                        : "text-muted-foreground text-sm opacity-50"
+                        ? "text-primary text-xl font-bold opacity-100"
+                        : "text-muted-foreground text-sm opacity-40"
                     }`}
                   >
                     {String(day).padStart(2, '0')}日
                   </div>
                 ))}
-                <div style={{ height: '96px' }} />
+                <div style={{ minHeight: '96px' }} />
               </div>
             </div>
             
