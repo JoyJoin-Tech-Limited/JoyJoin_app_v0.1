@@ -10,6 +10,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil, Calendar, CalendarDays, Laptop, Bot, Cpu, Car, Globe, TrendingUp, Megaphone, Palette, Video, Stethoscope, GraduationCap, Scale, Building, Plane, MoreHorizontal, Languages, Banknote, UtensilsCrossed, Landmark, LineChart, Wallet, PiggyBank, ShieldCheck, FileText, HardHat, Hammer } from "lucide-react";
 import xiaoyueAvatar from "@assets/generated_images/final_fox_with_collar_sunglasses.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -3195,109 +3196,136 @@ export default function ChatRegistrationPage() {
         })()}
       </AnimatePresence>
 
-      {/* 生日选择器Modal */}
-      <Dialog open={showBirthdayPicker} onOpenChange={setShowBirthdayPicker}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>选择你的生日</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>年份</Label>
-              <Select value={birthdayYear} onValueChange={setBirthdayYear}>
-                <SelectTrigger>
-                  <SelectValue placeholder="选择年份" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 50 }, (_, i) => {
-                    const year = 2025 - 18 - i;
-                    return year;
-                  }).map(year => (
-                    <SelectItem key={year} value={String(year)}>
-                      {year}年
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      {/* 生日选择器 - iOS风格滚轮 */}
+      <Drawer open={showBirthdayPicker} onOpenChange={setShowBirthdayPicker}>
+        <DrawerContent className="bg-background border-t">
+          <DrawerHeader className="text-center pb-2">
+            <DrawerTitle>选择你的生日</DrawerTitle>
+          </DrawerHeader>
+          
+          <div className="px-4 pb-6">
+            {/* 滚轮选择器 */}
+            <div className="flex gap-2 justify-center items-end h-56 relative">
+              {/* 顶部高亮区域 */}
+              <div className="absolute inset-0 top-0 h-20 bg-gradient-to-b from-muted/50 to-transparent pointer-events-none rounded-t-lg z-10" />
+              {/* 底部高亮区域 */}
+              <div className="absolute inset-0 bottom-0 h-20 bg-gradient-to-t from-muted/50 to-transparent pointer-events-none rounded-b-lg z-10" />
+              {/* 中间选中区域 */}
+              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-12 border-y border-primary/30 pointer-events-none z-20" />
+              
+              {/* 年份滚轮 */}
+              <div className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory" 
+                   style={{ scrollBehavior: 'smooth', height: '224px' }}>
+                <div className="h-20" />
+                {Array.from({ length: 50 }, (_, i) => 2025 - 18 - i).map((year, idx) => (
+                  <motion.button
+                    key={year}
+                    onClick={() => setBirthdayYear(String(year))}
+                    className={`w-full py-3 text-center font-medium snap-center transition-all ${
+                      birthdayYear === String(year)
+                        ? "text-primary text-lg"
+                        : "text-muted-foreground text-sm opacity-50"
+                    }`}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {year}
+                  </motion.button>
+                ))}
+                <div className="h-20" />
+              </div>
+              
+              {/* 月份滚轮 */}
+              <div className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory"
+                   style={{ scrollBehavior: 'smooth', height: '224px' }}>
+                <div className="h-20" />
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                  <motion.button
+                    key={month}
+                    onClick={() => setBirthdayMonth(String(month))}
+                    className={`w-full py-3 text-center font-medium snap-center transition-all ${
+                      birthdayMonth === String(month)
+                        ? "text-primary text-lg"
+                        : "text-muted-foreground text-sm opacity-50"
+                    }`}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {String(month).padStart(2, '0')}月
+                  </motion.button>
+                ))}
+                <div className="h-20" />
+              </div>
+              
+              {/* 日期滚轮 */}
+              <div className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory"
+                   style={{ scrollBehavior: 'smooth', height: '224px' }}>
+                <div className="h-20" />
+                {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                  <motion.button
+                    key={day}
+                    onClick={() => setBirthdayDay(String(day))}
+                    className={`w-full py-3 text-center font-medium snap-center transition-all ${
+                      birthdayDay === String(day)
+                        ? "text-primary text-lg"
+                        : "text-muted-foreground text-sm opacity-50"
+                    }`}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {String(day).padStart(2, '0')}日
+                  </motion.button>
+                ))}
+                <div className="h-20" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>月份</Label>
-              <Select value={birthdayMonth} onValueChange={setBirthdayMonth}>
-                <SelectTrigger>
-                  <SelectValue placeholder="选择月份" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
-                    <SelectItem key={month} value={String(month)}>
-                      {month}月
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>日期</Label>
-              <Select value={birthdayDay} onValueChange={setBirthdayDay}>
-                <SelectTrigger>
-                  <SelectValue placeholder="选择日期" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                    <SelectItem key={day} value={String(day)}>
-                      {day}日
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            
+            {/* 按钮 */}
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowBirthdayPicker(false)}
+                className="flex-1"
+              >
+                取消
+              </Button>
+              <Button
+                onClick={() => {
+                  if (birthdayYear && birthdayMonth && birthdayDay) {
+                    const year = parseInt(birthdayYear);
+                    const ageGroup = year >= 2000 ? "00后" : year >= 1995 ? "95后" : year >= 1990 ? "90后" : "85后";
+                    
+                    // 保存完整的生日日期到collectedInfo
+                    const birthdateStr = `${birthdayYear}-${String(parseInt(birthdayMonth)).padStart(2, '0')}-${String(parseInt(birthdayDay)).padStart(2, '0')}`;
+                    setCollectedInfo(prev => ({
+                      ...prev,
+                      birthYear: year,
+                      birthdate: birthdateStr
+                    }));
+                    
+                    // 发送年龄段
+                    setMessages(prev => [...prev, {
+                      id: `msg-${Date.now()}`,
+                      role: "user",
+                      content: ageGroup,
+                      timestamp: new Date()
+                    }]);
+                    setIsTyping(true);
+                    sendMessageMutation.mutate(ageGroup);
+                    
+                    // 关闭Modal
+                    setShowBirthdayPicker(false);
+                    setBirthdayYear("");
+                    setBirthdayMonth("");
+                    setBirthdayDay("");
+                  }
+                }}
+                className="flex-1 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700"
+                data-testid="button-confirm-birthday"
+              >
+                确认
+              </Button>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowBirthdayPicker(false)}
-              className="flex-1"
-            >
-              取消
-            </Button>
-            <Button
-              onClick={() => {
-                if (birthdayYear && birthdayMonth && birthdayDay) {
-                  const year = parseInt(birthdayYear);
-                  const ageGroup = year >= 2000 ? "00后" : year >= 1995 ? "95后" : year >= 1990 ? "90后" : "85后";
-                  
-                  // 保存完整的生日日期到collectedInfo
-                  const birthdateStr = `${birthdayYear}-${String(parseInt(birthdayMonth)).padStart(2, '0')}-${String(parseInt(birthdayDay)).padStart(2, '0')}`;
-                  setCollectedInfo(prev => ({
-                    ...prev,
-                    birthYear: year,
-                    birthdate: birthdateStr
-                  }));
-                  
-                  // 发送年龄段
-                  setMessages(prev => [...prev, {
-                    id: `msg-${Date.now()}`,
-                    role: "user",
-                    content: ageGroup,
-                    timestamp: new Date()
-                  }]);
-                  setIsTyping(true);
-                  sendMessageMutation.mutate(ageGroup);
-                  
-                  // 关闭Modal
-                  setShowBirthdayPicker(false);
-                  setBirthdayYear("");
-                  setBirthdayMonth("");
-                  setBirthdayDay("");
-                }
-              }}
-              className="flex-1"
-              data-testid="button-confirm-birthday"
-            >
-              确认
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
 
       {isComplete && infoConfirmed ? (
         isEnrichmentMode ? (
