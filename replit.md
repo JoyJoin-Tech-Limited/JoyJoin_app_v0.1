@@ -60,6 +60,12 @@ Preferred communication style: Simple, everyday language.
 - **Admin Portal:** Desktop-first interface for comprehensive management and real-time algorithm tuning via an Admin Matching Lab.
 - **Payment & Subscription System:** Full payment infrastructure including WeChat Pay integration.
 - **Intelligent Venue Matching & Booking:** Algorithm-based venue scoring and a transactional booking system.
+- **Venue Partnership System (V1.0):** Collaborative restaurant/bar partnerships with exclusive member deals.
+  - **Extended Venue Model:** venues table enhanced with avgPrice, priceNote, coverImageUrl, galleryImages, partnerStatus, partnerSince fields.
+  - **Venue Deals Table:** venueDeals table for partner-exclusive discounts supporting percentage (8折), fixed amount (立减¥X), and gift types.
+  - **Redemption Methods:** show_page (出示本页面), code (报暗号), qr_code (扫码核销).
+  - **VenuePartnerCard Component:** Reusable frontend component displaying venue info with expandable deal details and usage tracking.
+  - **Demo Data:** "弥所 Homebar" partner venue with 20% exclusive discount for testing.
 - **AI Chat Registration:** AI-powered conversational registration flow using a character-based AI (小悦) for engaging user onboarding and secure server-side information extraction. Features tiered conversation modes, context-aware quick replies, smart inference, anti-abuse protection, and dialect teasing.
   - **3-Tier Information Funnel (V7.2):** Scientifically-designed data collection architecture based on 10 social expert recommendations:
     - **L1 (Explicit Fundamentals):** 7 must-ask fields collected directly - nickname, phone, gender, age range, city, hometown province, language preference. Used as hard filters in matching.
