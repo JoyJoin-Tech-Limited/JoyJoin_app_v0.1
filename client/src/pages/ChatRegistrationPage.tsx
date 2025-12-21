@@ -2820,15 +2820,7 @@ export default function ChatRegistrationPage() {
     // 清除之前的timeout
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     
-      scrollTimeoutRef.current = setTimeout(() => {
-        // 测量实际item高度
-        const firstItem = yearScrollRef.current?.querySelector('[data-wheel-item]');
-        if (firstItem) {
-          const height = firstItem.getBoundingClientRect().height;
-          if (height > 0) itemHeightRef.current = height;
-        }
-        
-        const ITEM_HEIGHT = itemHeightRef.current;
+        const ITEM_HEIGHT = 48; // 使用固定的项目高度以保证计算稳定性
         // 增加延时确保布局渲染完成，并使用精确计算
         if (yearScrollRef.current && birthdayYear) {
           const years = Array.from({ length: 50 }, (_, i) => 2025 - 18 - i);
@@ -2842,6 +2834,10 @@ export default function ChatRegistrationPage() {
           monthScrollRef.current.scrollTop = monthIndex * ITEM_HEIGHT;
         }
         if (dayScrollRef.current && birthdayDay) {
+          const dayIndex = parseInt(birthdayDay) - 1;
+          dayScrollRef.current.scrollTop = dayIndex * ITEM_HEIGHT;
+        }
+      }, 150); // 略微增加延时确保 DOM 布局已就绪
           const dayIndex = parseInt(birthdayDay) - 1;
           dayScrollRef.current.scrollTop = dayIndex * ITEM_HEIGHT;
         }
@@ -3276,19 +3272,19 @@ export default function ChatRegistrationPage() {
           
           <div className="px-4 pb-6">
             {/* 滚轮选择器 */}
-            <div className="flex gap-2 justify-center items-center h-60 relative overflow-hidden" style={{ touchAction: 'pan-y' }}>
-              {/* 中间选中区域 */}
-              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-12 border-y border-primary/20 pointer-events-none z-20" />
+            <div className="flex gap-2 justify-center items-center h-64 relative overflow-hidden" style={{ touchAction: 'pan-y' }}>
+              {/* 中间选中区域 - 增加高度和视觉提示 */}
+              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-14 border-y-2 border-primary/30 pointer-events-none z-20 bg-primary/5 shadow-[0_0_15px_rgba(var(--primary),0.05)]" />
               
               {/* 年份滚轮 */}
               <div 
                 ref={yearScrollRef}
                 className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory" 
-                style={{ height: '240px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch', paddingTop: '96px', paddingBottom: '96px' }}
+                style={{ height: '256px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch', paddingTop: '101px', paddingBottom: '101px' }}
                 onScroll={(e) => {
                   const target = e.currentTarget;
                   const scrollTop = target.scrollTop;
-                  const itemHeight = itemHeightRef.current;
+                  const itemHeight = 48; // 固定高度以保证计算稳定
                   const index = Math.round(scrollTop / itemHeight);
                   const years = Array.from({ length: 50 }, (_, i) => 2025 - 18 - i);
                   
@@ -3304,10 +3300,10 @@ export default function ChatRegistrationPage() {
                   <div
                     key={year}
                     data-wheel-item
-                    className={`w-full py-3 text-center transition-all duration-200 ease-out snap-center shrink-0 ${
+                    className={`w-full h-12 flex items-center justify-center transition-all duration-300 ease-out snap-center shrink-0 ${
                       birthdayYear === String(year)
-                        ? "text-primary text-xl font-bold opacity-100 scale-110"
-                        : "text-muted-foreground text-sm opacity-30 scale-90"
+                        ? "text-primary text-2xl font-black opacity-100 scale-110"
+                        : "text-muted-foreground text-sm opacity-20 scale-90"
                     }`}
                   >
                     {year}
@@ -3319,70 +3315,76 @@ export default function ChatRegistrationPage() {
               <div 
                 ref={monthScrollRef}
                 className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory"
-                style={{ height: '240px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch', paddingTop: '96px', paddingBottom: '96px' }}
+                style={{ height: '256px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch', paddingTop: '101px', paddingBottom: '101px' }}
                 onScroll={(e) => {
                   const target = e.currentTarget;
                   const scrollTop = target.scrollTop;
-                  const itemHeight = itemHeightRef.current;
+                  const itemHeight = 48;
                   const index = Math.round(scrollTop / itemHeight);
                   const months = Array.from({ length: 12 }, (_, i) => i + 1);
                   
                   if (index >= 0 && index < months.length) {
-                    const selectedMonth = String(months[index]);
+                    const selectedMonth = String(months[index]).padStart(2, '0');
                     if (birthdayMonth !== selectedMonth) {
                       setBirthdayMonth(selectedMonth);
                     }
                   }
                 }}
               >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
-                  <div
-                    key={month}
-                    data-wheel-item
-                    className={`w-full py-3 text-center transition-all duration-200 ease-out snap-center shrink-0 ${
-                      birthdayMonth === String(month)
-                        ? "text-primary text-xl font-bold opacity-100 scale-110"
-                        : "text-muted-foreground text-sm opacity-30 scale-90"
-                    }`}
-                  >
-                    {String(month).padStart(2, '0')}月
-                  </div>
-                ))}
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(month => {
+                  const mStr = String(month).padStart(2, '0');
+                  return (
+                    <div
+                      key={month}
+                      data-wheel-item
+                      className={`w-full h-12 flex items-center justify-center transition-all duration-300 ease-out snap-center shrink-0 ${
+                        birthdayMonth === mStr
+                          ? "text-primary text-2xl font-black opacity-100 scale-110"
+                          : "text-muted-foreground text-sm opacity-20 scale-90"
+                      }`}
+                    >
+                      {mStr}月
+                    </div>
+                  );
+                })}
               </div>
               
               {/* 日期滚轮 */}
               <div 
                 ref={dayScrollRef}
                 className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory"
-                style={{ height: '240px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch', paddingTop: '96px', paddingBottom: '96px' }}
+                style={{ height: '256px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch', paddingTop: '101px', paddingBottom: '101px' }}
                 onScroll={(e) => {
                   const target = e.currentTarget;
                   const scrollTop = target.scrollTop;
-                  const itemHeight = itemHeightRef.current;
+                  const itemHeight = 48;
                   const index = Math.round(scrollTop / itemHeight);
                   const days = Array.from({ length: 31 }, (_, i) => i + 1);
                   
                   if (index >= 0 && index < days.length) {
-                    const selectedDay = String(days[index]);
+                    const selectedDay = String(days[index]).padStart(2, '0');
                     if (birthdayDay !== selectedDay) {
                       setBirthdayDay(selectedDay);
                     }
                   }
                 }}
               >
-                {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                  <div
-                    key={day}
-                    data-wheel-item
-                    className={`w-full py-3 text-center transition-all duration-200 ease-out snap-center shrink-0 ${
-                      birthdayDay === String(day)
-                        ? "text-primary text-xl font-bold opacity-100 scale-110"
-                        : "text-muted-foreground text-sm opacity-30 scale-90"
-                    }`}
-                  >
-                    {String(day).padStart(2, '0')}日
-                  </div>
-                ))}
+                {Array.from({ length: 31 }, (_, i) => i + 1).map(day => {
+                  const dStr = String(day).padStart(2, '0');
+                  return (
+                    <div
+                      key={day}
+                      data-wheel-item
+                      className={`w-full h-12 flex items-center justify-center transition-all duration-300 ease-out snap-center shrink-0 ${
+                        birthdayDay === dStr
+                          ? "text-primary text-2xl font-black opacity-100 scale-110"
+                          : "text-muted-foreground text-sm opacity-20 scale-90"
+                      }`}
+                    >
+                      {dStr}日
+                    </div>
+                  );
+                })}
               </div>
             </div>
             
