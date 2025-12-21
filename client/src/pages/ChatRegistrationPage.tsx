@@ -3292,21 +3292,21 @@ export default function ChatRegistrationPage() {
                   }
                 }}
               >
-                <div className="h-12" />
+                <div style={{ height: '96px' }} />
                 {Array.from({ length: 50 }, (_, i) => 2025 - 18 - i).map((year) => (
                   <div
                     key={year}
                     data-wheel-item
-                    className={`w-full py-3 text-center font-medium transition-all ${
+                    className={`w-full py-3 text-center transition-all ${
                       birthdayYear === String(year)
-                        ? "text-primary text-lg"
+                        ? "text-primary text-xl font-bold"
                         : "text-muted-foreground text-sm opacity-50"
                     }`}
                   >
                     {year}
                   </div>
                 ))}
-                <div className="h-12" />
+                <div style={{ height: '96px' }} />
               </div>
               
               {/* 月份滚轮 */}
@@ -3325,21 +3325,21 @@ export default function ChatRegistrationPage() {
                   }
                 }}
               >
-                <div className="h-12" />
+                <div style={{ height: '96px' }} />
                 {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
                   <div
                     key={month}
                     data-wheel-item
-                    className={`w-full py-3 text-center font-medium transition-all ${
+                    className={`w-full py-3 text-center transition-all ${
                       birthdayMonth === String(month)
-                        ? "text-primary text-lg"
+                        ? "text-primary text-xl font-bold"
                         : "text-muted-foreground text-sm opacity-50"
                     }`}
                   >
                     {String(month).padStart(2, '0')}月
                   </div>
                 ))}
-                <div className="h-12" />
+                <div style={{ height: '96px' }} />
               </div>
               
               {/* 日期滚轮 */}
@@ -3358,21 +3358,21 @@ export default function ChatRegistrationPage() {
                   }
                 }}
               >
-                <div className="h-12" />
+                <div style={{ height: '96px' }} />
                 {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
                   <div
                     key={day}
                     data-wheel-item
-                    className={`w-full py-3 text-center font-medium transition-all ${
+                    className={`w-full py-3 text-center transition-all ${
                       birthdayDay === String(day)
-                        ? "text-primary text-lg"
+                        ? "text-primary text-xl font-bold"
                         : "text-muted-foreground text-sm opacity-50"
                     }`}
                   >
                     {String(day).padStart(2, '0')}日
                   </div>
                 ))}
-                <div className="h-12" />
+                <div style={{ height: '96px' }} />
               </div>
             </div>
             
