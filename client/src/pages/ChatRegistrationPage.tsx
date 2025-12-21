@@ -438,7 +438,7 @@ function hasOverseasExperience(info: CollectedInfo): boolean {
 }
 
 const achievements: AchievementWithMode[] = [
-  // 原有6个
+  // 原有的
   { id: "pet_lover", title: "铲屎官认证", icon: "🐾", condition: (info) => info.hasPets === true },
   { id: "foodie", title: "美食家", icon: "🍜", condition: (info) => !!info.cuisinePreference && info.cuisinePreference.length > 0 },
   { id: "social_butterfly", title: "社交达人", icon: "🦋", condition: (info) => !!info.interestsTop && info.interestsTop.length >= 3 },
@@ -446,7 +446,7 @@ const achievements: AchievementWithMode[] = [
   { id: "multi_lingual", title: "语言达人", icon: "🗣️", condition: (info) => !!info.languagesComfort && info.languagesComfort.length >= 2 },
   { id: "open_book", title: "坦诚相待", icon: "📖", condition: (info) => !!info.relationshipStatus },
   
-  // 新增10个
+  // 新增的
   { id: "world_citizen", title: "世界公民", icon: "🌏", condition: (info) => hasOverseasExperience(info) },
   { id: "parent", title: "神兽驯养师", icon: "👶", condition: (info) => hasChildren(info.children) },
   { id: "student_forever", title: "永远的学生", icon: "🎓", condition: (info) => !!info.educationLevel || !!info.fieldOfStudy },
@@ -597,382 +597,46 @@ interface QuickReplyConfig {
 // 结构化模式匹配配置 - 用于需要精准匹配的场景
 interface PatternBasedQuickReplyConfig {
   id: string;
-  // 正则模式匹配 - 优先使用
   pattern?: RegExp;
-  // 必须全部匹配的关键词组（OR关系内部，AND关系组间）
-  requiredAll?: string[][];  // e.g., [["活动", "局", "聚会"], ["时间", "时段"]] = (活动|局|聚会) AND (时间|时段)
-  // 至少匹配一个的关键词
   requiredAny?: string[];
-  // 排除词 - 包含这些词时不触发
+  requiredAll?: string[][];
   exclude?: string[];
-  // 上下文门控
   contextGuards?: {
-    mustBeQuestion?: boolean;  // 必须是问句
-    minLength?: number;        // 消息最小长度
+    mustBeQuestion?: boolean;
+    minLength?: number;
   };
   options: QuickReply[];
+  priority?: number;
   multiSelect?: boolean;
-  priority: number;
-  // 是否强制使用预定义选项（压制AI提取）
   enforcePredefined?: boolean;
-  // 是否全量展示（不显示换一批和自己输入按钮）
   fullDisplay?: boolean;
 }
 
 const quickReplyConfigs: QuickReplyConfig[] = [
   {
-    // 确认模式 - 最高优先级，当AI收尾确认时触发
-    keywords: ["对吗", "确认一下", "核对一下", "信息对吗", "没问题吗", "有错吗", "需要改吗"],
-    options: [
-      { text: "对的，确认", icon: Check },
-      { text: "需要修改", icon: Pencil }
-    ],
-    priority: 100 // 最高优先级，不被其他关键词覆盖
-  },
-  {
-    keywords: ["称呼", "昵称", "名字", "怎么叫"],
-    options: [],
-    priority: 95 // 昵称需要用户输入，不提供快捷选项
-  },
-  {
-    keywords: ["想要", "期待", "目的", "意图", "来这里", "悦聚", "拓展人脉", "交朋友", "想来", "为什么来", "什么目的"],
-    options: [
-      { text: "交朋友", icon: Heart },
-      { text: "拓展人脉", icon: Users },
-      { text: "深度讨论", icon: MessageCircle },
-      { text: "娱乐放松", icon: Coffee },
-      { text: "浪漫社交", icon: Heart },
-      { text: "灵活开放·都可以", icon: Sparkles }
-    ],
-    multiSelect: true,
-    priority: 92
-  },
-  {
-    keywords: ["语言", "方言", "会说", "普通话", "粤语", "英语", "母语", "口音"],
-    options: LANGUAGES_COMFORT_OPTIONS.slice(0, 12).map(lang => ({ text: lang, icon: Languages })),
-    multiSelect: true,
-    priority: 78
-  },
-  {
-    keywords: ["不聊", "避免", "不太想聊", "敏感", "尴尬", "话题"],
-    options: [
-      { text: "政治时事", icon: Globe },
-      { text: "催婚催恋", icon: Heart },
-      { text: "职场八卦", icon: Users },
-      { text: "金钱财务", icon: Banknote },
-      { text: "都OK没禁忌", icon: Sparkles }
-    ],
-    multiSelect: true,
-    priority: 76
-  },
-  {
-    keywords: ["海外", "留学", "国外", "出国", "留过学", "在哪读的"],
-    options: [
-      { text: "北美", icon: MapPin },
-      { text: "欧洲", icon: MapPin },
-      { text: "英国", icon: MapPin },
-      { text: "澳洲/新西兰", icon: MapPin },
-      { text: "东亚（日韩）", icon: MapPin },
-      { text: "东南亚", icon: MapPin },
-      { text: "没有海外经历", icon: MapPin }
-    ],
-    multiSelect: true,
-    priority: 74
-  },
-  {
-    keywords: ["学历", "读到", "什么学历", "毕业", "读书", "上学"],
-    options: EDUCATION_LEVEL_OPTIONS.map(level => ({ text: level, icon: GraduationCap })),
-    priority: 73
-  },
-  {
-    keywords: ["孩子", "小孩", "娃", "宝宝", "生娃"],
-    options: CHILDREN_OPTIONS.map(opt => ({ text: opt, icon: Heart })),
-    priority: 72
-  },
-  {
-    keywords: ["经常去", "到处探索", "深圳玩", "香港工作", "两边跑", "常跑", "常去"],
-    options: [
-      { text: "是的，经常去", icon: MapPin },
-      { text: "偶尔去", icon: MapPin },
-      { text: "很少去", icon: MapPin }
-    ],
-    priority: 91  // 城市follow-up高优先级
-  },
-  {
-    keywords: ["菜系", "日料", "粤菜", "火锅", "西餐", "川菜", "湘菜", "东南亚", "韩餐", "偏好", "口味"],
-    options: [
-      { text: "日料", icon: UtensilsCrossed },
-      { text: "粤菜/港式", icon: UtensilsCrossed },
-      { text: "火锅", icon: UtensilsCrossed },
-      { text: "川湘菜", icon: UtensilsCrossed },
-      { text: "西餐", icon: UtensilsCrossed },
-      { text: "东南亚菜", icon: UtensilsCrossed },
-      { text: "韩餐", icon: UtensilsCrossed },
-      { text: "各种都爱", icon: Sparkles }
-    ],
-    multiSelect: true,
-    priority: 89  // 比通用兴趣高，确保问菜系时显示菜系选项
-  },
-  {
-    keywords: ["兴趣", "爱好", "喜欢做", "平时做", "活动", "最常做", "工作之外", "业余", "闲暇"],
-    options: INTERESTS_OPTIONS.map(opt => {
-      const iconMap: Record<string, any> = {
-        "food_dining": Coffee, "travel": MapPin, "city_walk": MapPin,
-        "drinks_bar": Coffee, "music_live": Music, "photography": Camera,
-        "sports_fitness": Dumbbell, "movies": Camera, "exhibitions": Camera, "tv_shows": Camera,
-        "games_video": Gamepad2, "pets_animals": Heart, "reading_books": Book, 
-        "tech_gadgets": Sparkles, "outdoor_adventure": MapPin, "games_board": Gamepad2, 
-        "entrepreneurship": Briefcase, "investing": Briefcase, "diy_crafts": Heart, 
-        "volunteering": Heart, "meditation": Sparkles, "languages": Book
-      };
-      return { text: opt.label, icon: iconMap[opt.id] || Sparkles };
-    }),
-    multiSelect: true,
-    priority: 88
-  },
-  {
-    keywords: ["年龄", "年代", "几几年", "多大", "岁", "后", "哪年"],
-    options: [
-      { text: "00后" },
-      { text: "95后" },
-      { text: "90后" },
-      { text: "85后" }
-    ],
-    priority: 86
-  },
-  {
-    keywords: ["对外", "显示", "年龄显示", "怎么显示", "隐藏", "年代", "区间"],
-    options: [
-      { text: "只显示年代（如95后）" },
-      { text: "显示年龄区间（如25-30岁）" },
-      { text: "完全隐藏" }
-    ],
-    priority: 87
-  },
-  {
-    keywords: ["性别", "男生", "女生", "小哥哥", "小姐姐"],
-    options: [
-      { text: "女生", icon: Heart },
-      { text: "男生", icon: Smile }
-    ],
-    priority: 85
-  },
-  {
-    keywords: ["金融", "银行", "证券", "基金", "投资", "PE", "VC", "创投", "资管", "保险"],
-    options: [
-      { text: "银行", icon: Landmark },
-      { text: "证券/投行", icon: LineChart },
-      { text: "公募/私募基金", icon: TrendingUp },
-      { text: "PE/VC创投", icon: TrendingUp },
-      { text: "保险", icon: ShieldCheck },
-      { text: "资产管理", icon: Wallet },
-      { text: "财富管理", icon: PiggyBank },
-      { text: "金融科技", icon: Laptop }
-    ],
-    priority: 94
-  },
-  {
-    keywords: ["互联网", "科技", "技术", "开发", "产品", "运营", "技术开发"],
-    options: [
-      { text: "产品经理", icon: Briefcase },
-      { text: "技术开发", icon: Briefcase },
-      { text: "运营", icon: Briefcase },
-      { text: "设计", icon: Briefcase },
-      { text: "数据分析", icon: Briefcase },
-      { text: "项目管理", icon: Briefcase },
-      { text: "市场营销", icon: Briefcase },
-      { text: "HR/行政", icon: Briefcase }
-    ],
-    priority: 93
-  },
-  {
-    keywords: ["咨询", "四大", "MBB", "战略", "管理咨询"],
-    options: [
-      { text: "战略咨询", icon: Briefcase },
-      { text: "管理咨询", icon: Briefcase },
-      { text: "财务咨询", icon: Briefcase },
-      { text: "IT咨询", icon: Briefcase },
-      { text: "人力咨询", icon: Briefcase },
-      { text: "法律咨询", icon: Briefcase }
-    ],
-    priority: 93
-  },
-  {
-    keywords: ["医疗", "医药", "健康", "医生", "护士", "药"],
-    options: [
-      { text: "临床医生", icon: Briefcase },
-      { text: "医药研发", icon: Briefcase },
-      { text: "医药销售", icon: Briefcase },
-      { text: "医疗器械", icon: Briefcase },
-      { text: "医院管理", icon: Briefcase },
-      { text: "健康管理", icon: Briefcase },
-      { text: "生物科技", icon: Briefcase }
-    ],
-    priority: 93
-  },
-  {
-    keywords: ["教育", "老师", "培训", "教学", "学校"],
-    options: [
-      { text: "K12教育", icon: Book },
-      { text: "高等教育", icon: Book },
-      { text: "职业培训", icon: Book },
-      { text: "在线教育", icon: Book },
-      { text: "教育科技", icon: Book },
-      { text: "留学咨询", icon: Book }
-    ],
-    priority: 93
-  },
-  {
-    keywords: ["设计", "创意", "UI", "UX", "平面", "视觉"],
-    options: [
-      { text: "UI/UX设计", icon: Briefcase },
-      { text: "平面设计", icon: Briefcase },
-      { text: "品牌设计", icon: Briefcase },
-      { text: "室内设计", icon: Briefcase },
-      { text: "工业设计", icon: Briefcase },
-      { text: "动画/影视", icon: Briefcase }
-    ],
-    priority: 93
-  },
-  {
-    keywords: ["传媒", "媒体", "内容", "记者", "编辑", "自媒体"],
-    options: [
-      { text: "新闻媒体", icon: Briefcase },
-      { text: "自媒体/KOL", icon: Briefcase },
-      { text: "影视制作", icon: Briefcase },
-      { text: "广告公关", icon: Briefcase },
-      { text: "内容运营", icon: Briefcase },
-      { text: "MCN机构", icon: Briefcase }
-    ],
-    priority: 93
-  },
-  {
-    keywords: ["法律", "律师", "法务", "合规"],
-    options: [
-      { text: "律所律师", icon: Scale },
-      { text: "企业法务", icon: FileText },
-      { text: "合规风控", icon: ShieldCheck },
-      { text: "知识产权", icon: FileText },
-      { text: "公证/仲裁", icon: Scale }
-    ],
-    priority: 93
-  },
-  {
-    keywords: ["地产", "建筑", "房产", "工程", "装修"],
-    options: [
-      { text: "房地产开发", icon: Building },
-      { text: "建筑设计", icon: HardHat },
-      { text: "工程施工", icon: Hammer },
-      { text: "物业管理", icon: Building },
-      { text: "房产经纪", icon: Building },
-      { text: "装修设计", icon: Palette }
-    ],
-    priority: 93
-  },
-  {
-    keywords: ["身份", "职业状态", "工作状态", "创业", "在职", "学生", "自由", "gap", "过渡", "待业"],
-    options: WORK_MODES.map(m => ({ text: m.label, icon: m.value === "student" ? Book : Sparkles })),
-    priority: 84
-  },
-  {
-    keywords: ["方向", "领域", "细分", "ai", "web3", "具体做什么", "哪个方向"],
-    options: [
-      { text: "科技互联网", icon: Laptop },
-      { text: "AI/大数据", icon: Bot },
-      { text: "金融投资", icon: TrendingUp },
-      { text: "咨询服务", icon: Briefcase },
-      { text: "市场营销", icon: Megaphone },
-      { text: "创意设计", icon: Palette },
-      { text: "传媒内容", icon: Video },
-      { text: "医疗健康", icon: Stethoscope },
-      { text: "教育培训", icon: GraduationCap }
-    ],
-    priority: 83
-  },
-  {
-    keywords: ["工作", "职业", "做什么", "行业", "从事", "干什么", "什么工作", "忙什么", "哪行", "上班"],
-    options: INDUSTRIES.map(ind => ({ text: ind.label, icon: getIndustryIcon(ind.label) })),
-    priority: 82
-  },
-  {
-    keywords: ["城市", "哪里", "在哪", "深圳", "香港", "广州", "base"],
+    keywords: ["城市", "住", "base", "base哪", "哪里人", "家乡", "深圳", "上海", "北京", "广州", "香港"],
     options: [
       { text: "深圳", icon: MapPin },
+      { text: "上海", icon: MapPin },
+      { text: "北京", icon: MapPin },
       { text: "香港", icon: MapPin },
-      { text: "广州", icon: MapPin },
-      { text: "其他城市", icon: MapPin }
+      { text: "广州", icon: MapPin }
     ],
-    priority: 75
+    priority: 10
   },
   {
-    keywords: ["宠物", "毛孩子", "猫", "狗", "养"],
-    options: [
-      { text: "猫咪", icon: Heart },
-      { text: "狗狗", icon: Heart },
-      { text: "兔子", icon: Heart },
-      { text: "仓鼠/小宠", icon: Heart },
-      { text: "猫狗都有", icon: Heart },
-      { text: "没有养", icon: Sparkles }
-    ],
+    keywords: ["兴趣", "爱好", "喜欢做", "平时做", "业余"],
+    options: INTERESTS_OPTIONS.slice(0, 12).map(opt => ({ text: opt.label, icon: getInterestIcon(opt.id) })),
     multiSelect: true,
-    priority: 70
+    priority: 8
   },
   {
-    keywords: ["感情状态", "感情", "单身", "恋爱", "对象", "另一半", "婚姻"],
-    options: RELATIONSHIP_STATUS_OPTIONS.map(status => ({ text: status, icon: Heart })),
-    priority: 85
-  },
-  {
-    keywords: ["兄弟", "姐妹", "独生", "一个人", "老大", "老二", "老幺", "排行"],
-    options: [
-      { text: "独生子女", icon: Users },
-      { text: "有兄弟姐妹", icon: Users },
-      { text: "不方便说", icon: Sparkles }
-    ],
-    priority: 68
-  },
-  {
-    keywords: ["确认", "对吗", "没问题", "对不对", "有问题吗"],
-    options: [
-      { text: "确认无误", icon: Check },
-      { text: "有问题", icon: AlertCircle }
-    ],
-    priority: 92
-  },
-  {
-    keywords: ["破冰", "开口", "先说话", "先听", "新局", "社交场合", "聊天"],
-    options: [
-      { text: "我先起个头", icon: MessageCircle },
-      { text: "看气氛再说", icon: Users },
-      { text: "先观察观察", icon: Sparkles }
-    ],
-    priority: 90
-  },
-  {
-    keywords: ["充电", "恢复", "能量", "社交完", "累了", "放松", "休息"],
-    options: [
-      { text: "一个人待着", icon: User },
-      { text: "找一两个朋友聊聊", icon: Users },
-      { text: "运动健身", icon: Dumbbell },
-      { text: "睡一觉", icon: Moon }
-    ],
-    priority: 89
-  },
-  {
-    keywords: ["人生阶段", "阶段", "状态", "职场", "学生党", "创业", "自由职业"],
-    options: [
-      { text: "学生党", icon: Book },
-      { text: "职场新人", icon: Briefcase },
-      { text: "职场老手", icon: Briefcase },
-      { text: "创业中", icon: Star },
-      { text: "自由职业", icon: Sparkles }
-    ],
-    priority: 88
-  },
+    keywords: ["行业", "职业", "做什么工作", "工作"],
+    options: INDUSTRIES.slice(0, 8).map(ind => ({ text: ind.label, icon: getIndustryIcon(ind.label) })),
+    priority: 7
+  }
 ];
 
-// 精准模式匹配配置 - 仅用于结构化问题，使用静态预设选项
-// 其他智能追问不显示快捷回复
 const patternBasedConfigs: PatternBasedQuickReplyConfig[] = [
   // === Tier 1: 高影响匹配字段 ===
   {
@@ -1576,403 +1240,230 @@ function UserAvatar({ gender }: { gender?: string }) {
   );
 }
 
-// 单行气泡组件
-function SingleBubble({ 
-  content, 
-  role, 
-  showAvatar, 
-  emotion, 
-  userGender, 
-  collectedInfo,
-  isTyping
-}: { 
-  content: string;
-  role: "user" | "assistant";
-  showAvatar: boolean;
-  emotion: XiaoyueEmotion;
-  userGender?: string;
-  collectedInfo?: CollectedInfo;
-  isTyping?: boolean;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className={`flex gap-3 ${role === "user" ? "flex-row-reverse" : ""}`}
-    >
-      {role === "assistant" ? (
-        showAvatar ? (
-          <XiaoyueAvatar emotion={emotion} />
-        ) : (
-          <div className="w-8 flex-shrink-0" />
-        )
-      ) : (
-        <EvolvingAvatar 
-          clarityLevel={calculateClarityLevel(collectedInfo || {})}
-          gender={userGender === '女性' || userGender === '女生' ? 'female' : userGender === '男性' || userGender === '男生' ? 'male' : 'unknown'}
-          size={36}
-        />
-      )}
-      <Card className={`max-w-[80%] p-3 ${
-        role === "user" 
-          ? "bg-primary text-primary-foreground" 
-          : "bg-muted"
-      }`}>
-        <p className="text-sm whitespace-pre-wrap">
-          {content}
-          {isTyping && (
-            <span className="inline-block w-0.5 h-4 bg-current ml-0.5 animate-pulse" />
-          )}
-        </p>
-      </Card>
-    </motion.div>
-  );
-}
-
-// 单条消息组件（支持打字效果和小悦表情）
-// 对于AI消息，每行成为单独的气泡
+// 消息气泡组件
 function MessageBubble({ 
   message, 
-  isLatest,
-  userGender,
-  collectedInfo,
+  isLatest, 
+  userGender, 
+  collectedInfo, 
   onTypingComplete,
   onSequentialDisplayComplete
 }: { 
   message: ChatMessage; 
-  isLatest: boolean;
+  isLatest: boolean; 
   userGender?: string;
-  collectedInfo?: CollectedInfo;
+  collectedInfo: CollectedInfo;
   onTypingComplete?: () => void;
   onSequentialDisplayComplete?: () => void;
 }) {
-  // 空消息或短消息（≤15字）跳过打字动画
-  const isEmptyMessage = !message.content.trim();
-  const isShortMessage = message.content.length <= 15;
-  const shouldAnimate = message.role === "assistant" && isLatest && message.isTypingAnimation && !isShortMessage && !isEmptyMessage;
-  const { displayedText, isComplete } = useTypingEffect(
-    message.content, 
-    shouldAnimate || false,
-    30 // 每个字30ms - 增加呼吸感
-  );
+  const isAssistant = message.role === "assistant";
+  
+  // 仅在最新助理消息且需要动画时显示打字效果
+  const shouldShowTyping = isAssistant && message.isTypingAnimation;
+  const { displayedText, isComplete } = useTypingEffect(message.content, shouldShowTyping);
 
-  // Ref guard to ensure onTypingComplete is called exactly once per message
-  const hasCalledCompleteRef = useRef(false);
-  
-  // Reset the guard when message content changes
   useEffect(() => {
-    hasCalledCompleteRef.current = false;
-  }, [message.content]);
-  
-  // Call onTypingComplete when:
-  // 1. Typing animation completes naturally (isComplete && shouldAnimate)
-  // 2. OR message had isTypingAnimation=true but it became false (interrupted or short message)
-  useEffect(() => {
-    if (hasCalledCompleteRef.current) return;
-    
-    // Natural completion: typing finished while still animating
-    if (isComplete && shouldAnimate && onTypingComplete) {
-      hasCalledCompleteRef.current = true;
+    if (isComplete && onTypingComplete) {
       onTypingComplete();
     }
-  }, [isComplete, shouldAnimate, onTypingComplete]);
-  
-  // Handle case where message.isTypingAnimation becomes false (marked as completed externally)
+  }, [isComplete, onTypingComplete]);
+
+  // 处理逐行显示的消息（仅在性格测试介绍时使用）
+  const paragraphs = useMemo(() => message.content.split('\n').filter(p => p.trim()), [message.content]);
+  const [visibleParagraphCount, setVisibleParagraphCount] = useState(0);
+
   useEffect(() => {
-    if (hasCalledCompleteRef.current) return;
-    
-    // If this was an assistant message that was supposed to animate but isTypingAnimation is now false
-    // (either short message or interrupted), call completion
-    if (message.role === "assistant" && !message.isTypingAnimation && onTypingComplete) {
-      hasCalledCompleteRef.current = true;
-      onTypingComplete();
+    if (message.content.includes("性格测试") && message.content.includes("12道题")) {
+      setVisibleParagraphCount(0);
+      let i = 0;
+      const timer = setInterval(() => {
+        if (i < paragraphs.length) {
+          setVisibleParagraphCount(i + 1);
+          i++;
+        } else {
+          clearInterval(timer);
+          onSequentialDisplayComplete?.();
+        }
+      }, 350);
+      return () => clearInterval(timer);
+    } else {
+      setVisibleParagraphCount(paragraphs.length);
     }
-  }, [message.role, message.isTypingAnimation, onTypingComplete]);
-
-  const content = shouldAnimate ? displayedText : message.content;
-  const emotion = message.role === "assistant" ? detectEmotion(message.content) : "neutral";
-
-  // 用户消息：单个气泡
-  if (message.role === "user") {
-    return (
-      <SingleBubble
-        content={content}
-        role="user"
-        showAvatar={true}
-        emotion={emotion}
-        userGender={userGender}
-        collectedInfo={collectedInfo}
-      />
-    );
-  }
-
-  // AI消息：当打字完成后，将多行内容分割成独立气泡
-  // 打字期间保持单气泡，完成后展开成多气泡提升可读性
-  const hasCalledSequentialCompleteRef = useRef(false);
-  
-  // 重置：当消息内容变化时重置回调标记
-  useEffect(() => {
-    hasCalledSequentialCompleteRef.current = false;
-  }, [message.content]);
-  
-  // 打字完成后触发回调
-  useEffect(() => {
-    if (!hasCalledSequentialCompleteRef.current && (!shouldAnimate || isComplete)) {
-      hasCalledSequentialCompleteRef.current = true;
-      onSequentialDisplayComplete?.();
-    }
-  }, [shouldAnimate, isComplete, onSequentialDisplayComplete]);
-  
-  // 打字完成后分割成多行气泡
-  const isTypingComplete = !shouldAnimate || isComplete;
-  const lines = isTypingComplete 
-    ? message.content.split('\n').filter(line => line.trim() !== '')
-    : [content];
-  
-  // 如果只有一行或者还在打字中，显示单气泡
-  if (lines.length <= 1 || !isTypingComplete) {
-    return (
-      <SingleBubble
-        content={content}
-        role="assistant"
-        showAvatar={true}
-        emotion={emotion}
-        userGender={userGender}
-        collectedInfo={collectedInfo}
-        isTyping={shouldAnimate && !isComplete}
-      />
-    );
-  }
-  
-  // 多行内容：分割成独立气泡，只有第一个显示头像
-  return (
-    <div className="flex flex-col gap-1">
-      {lines.map((line, index) => (
-        <motion.div
-          key={index}
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.1, duration: 0.2 }}
-        >
-          <SingleBubble
-            content={line}
-            role="assistant"
-            showAvatar={index === 0}
-            emotion={emotion}
-            userGender={userGender}
-            collectedInfo={collectedInfo}
-          />
-        </motion.div>
-      ))}
-    </div>
-  );
-}
-
-interface CollectedInfo {
-  displayName?: string;
-  gender?: string;
-  birthYear?: number;
-  currentCity?: string;
-  occupationDescription?: string;
-  interestsTop?: string[];
-  primaryInterests?: string[];
-  venueStylePreference?: string;
-  topicAvoidances?: string[];
-  socialStyle?: string;
-  intent?: string[];
-  hasPets?: boolean;
-  petTypes?: string[];
-  hasSiblings?: boolean;
-  relationshipStatus?: string;
-  hometown?: string;
-  languagesComfort?: string[];
-  cuisinePreference?: string[];
-  favoriteRestaurant?: string;
-  favoriteRestaurantReason?: string;
-  children?: string;
-  educationLevel?: string;
-  fieldOfStudy?: string;
-  lifeStage?: string;
-  ageMatchPreference?: string;
-  ageDisplayPreference?: string;
-  studyLocale?: string;
-  overseasRegions?: string[];
-  icebreakerRole?: string;
-  energyRecovery?: string;
-  industry?: string;
-  roleTitleShort?: string;
-  registrationStartTime?: string;
-  activityTimePreference?: string;
-  socialFrequency?: string;
-}
-
-// 可选兴趣标签 - 直接使用问卷数据源
-const interestOptions = INTERESTS_OPTIONS.map(opt => opt.label);
-
-// 模式标签配置
-const MODE_LABELS: Record<RegistrationMode, { icon: any; label: string; color: string }> = {
-  express: { icon: Zap, label: "极速模式", color: "bg-yellow-400/20 text-yellow-200 border-yellow-400/30" },
-  standard: { icon: Sun, label: "标准模式", color: "bg-blue-400/20 text-blue-200 border-blue-400/30" },
-  deep: { icon: Diamond, label: "深度模式", color: "bg-purple-300/20 text-purple-200 border-purple-300/30" },
-  enrichment: { icon: Edit2, label: "资料补充", color: "bg-green-400/20 text-green-200 border-green-400/30" }
-};
-
-// 社交名片卡片组件 - 紫色渐变商务卡片风格
-function SocialProfileCard({ info, mode }: { info: CollectedInfo; mode?: RegistrationMode }) {
-  const getYearLabel = (year?: number) => {
-    if (!year) return "";
-    if (year >= 2000) return "00后";
-    if (year >= 1995) return "95后";
-    if (year >= 1990) return "90后";
-    if (year >= 1985) return "85后";
-    return `${year}年`;
-  };
-
-  const getGenderIcon = () => {
-    if (info.gender === "女性" || info.gender === "女生") return "♀";
-    if (info.gender === "男性" || info.gender === "男生") return "♂";
-    return "";
-  };
+  }, [message.content, paragraphs.length, onSequentialDisplayComplete]);
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 300, damping: 25 }}
-      className="relative w-full max-w-[85%] mx-auto my-2"
-      data-testid="social-profile-card"
+      initial={{ opacity: 0, x: isAssistant ? -20 : 20, y: 10 }}
+      animate={{ opacity: 1, x: 0, y: 0 }}
+      className={`flex gap-3 ${isAssistant ? "justify-start" : "justify-end"}`}
     >
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-4 shadow-xl">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-50" />
-        
-        <motion.div 
-          className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"
-          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div 
-          className="absolute -bottom-8 -left-8 w-24 h-24 bg-pink-400/20 rounded-full blur-xl"
-          animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.4, 0.2] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-        />
-
-        <div className="relative z-10 flex items-start gap-3">
-          <div className="flex-shrink-0">
-            <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 shadow-lg">
-              <span className="text-2xl font-bold text-white">
-                {info.displayName?.charAt(0) || "?"}
-              </span>
-            </div>
-          </div>
-          
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-lg font-bold text-white truncate">
-                {info.displayName || "神秘访客"}
-              </h3>
-              {getGenderIcon() && (
-                <span className="text-white/80 text-sm">{getGenderIcon()}</span>
-              )}
-              {info.birthYear && (
-                <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded-full backdrop-blur-sm">
-                  {getYearLabel(info.birthYear)}
-                </span>
-              )}
-            </div>
-            
-            <div className="flex items-center gap-2 mt-1 text-white/80 text-sm">
-              {info.currentCity && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  {info.currentCity}
-                </span>
-              )}
-              {info.occupationDescription && (
-                <>
-                  <span className="text-white/40">·</span>
-                  <span className="flex items-center gap-1">
-                    <Briefcase className="w-3 h-3" />
-                    {info.occupationDescription}
-                  </span>
-                </>
-              )}
-            </div>
-
-            {info.interestsTop && info.interestsTop.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {info.interestsTop.map((interest, i) => {
-                  const isPrimary = info.primaryInterests?.includes(interest);
-                  return (
-                    <motion.span 
-                      key={i}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.05 }}
-                      className={`text-xs px-2 py-0.5 rounded-full backdrop-blur-sm border flex items-center gap-1 ${
-                        isPrimary 
-                          ? "bg-yellow-400/25 text-yellow-100 border-yellow-400/40" 
-                          : "bg-white/15 text-white/90 border-white/10"
-                      }`}
-                    >
-                      {isPrimary && <Star className="w-2.5 h-2.5 fill-yellow-300 text-yellow-300" />}
-                      {interest}
-                    </motion.span>
-                  );
-                })}
-              </div>
+      {isAssistant && <XiaoyueAvatar emotion={detectEmotion(message.content)} />}
+      
+      <div className={`max-w-[80%] space-y-2 ${isAssistant ? "" : "flex flex-col items-end"}`}>
+        <Card className={`${
+          isAssistant 
+            ? "bg-card/90 backdrop-blur-sm border-violet-200/30" 
+            : "bg-primary text-primary-foreground"
+        } px-4 py-2.5 shadow-sm overflow-hidden`}>
+          <div className="text-sm whitespace-pre-wrap leading-relaxed">
+            {shouldShowTyping ? displayedText : (
+              paragraphs.slice(0, visibleParagraphCount).map((p, i) => (
+                <motion.p
+                  key={i}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={i > 0 ? "mt-2" : ""}
+                >
+                  {p}
+                </motion.p>
+              ))
             )}
           </div>
-        </div>
-
-        {/* 模式水印 */}
-        <div className="absolute top-2 right-2">
-          {mode && MODE_LABELS[mode] ? (
-            <motion.div
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border backdrop-blur-sm ${MODE_LABELS[mode].color}`}
-            >
-              {(() => {
-                const IconComp = MODE_LABELS[mode].icon;
-                return <IconComp className="w-3 h-3" />;
-              })()}
-              <span>{MODE_LABELS[mode].label}</span>
-            </motion.div>
-          ) : (
-            <motion.div
-              animate={{ rotate: [0, 10, -10, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <Sparkles className="w-4 h-4 text-yellow-300/70" />
-            </motion.div>
-          )}
-        </div>
-
-        {/* 已解锁的成就徽章 */}
-        {(() => {
-          const earnedBadges = achievements.filter(a => 
-            a.condition(info) || 
-            (a.modeCondition && a.modeCondition(mode))
-          );
+        </Card>
+        
+        {/* L1完成后的彩蛋反馈：根据性别差异化 */}
+        {isAssistant && isLatest && !shouldShowTyping && (() => {
+          const hasL1 = collectedInfo.displayName && collectedInfo.gender;
+          if (!hasL1) return null;
           
-          if (earnedBadges.length === 0) return null;
+          const isFemale = collectedInfo.gender?.includes('女');
+          const isMale = collectedInfo.gender?.includes('男');
+          
+          let feedbackText = "";
+          let icon = null;
+          
+          if (isFemale) {
+            feedbackText = "很好听的名字哦，小姐姐～";
+            icon = <Sparkles className="w-3 h-3 text-pink-400" />;
+          } else if (isMale) {
+            feedbackText = "名字很硬朗嘛，兄弟！";
+            icon = <Zap className="w-3 h-3 text-blue-400" />;
+          }
+          
+          if (!feedbackText) return null;
           
           return (
-            <div className="relative z-10 mt-3 pt-3 border-t border-white/20">
-              <div className="flex items-center gap-1 mb-1.5">
-                <Sparkles className="w-3 h-3 text-yellow-300/80" />
-                <span className="text-[10px] text-white/70">已解锁徽章</span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {earnedBadges.map((badge, i) => (
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-1 px-2 py-1 bg-muted/30 rounded-full w-fit"
+            >
+              {icon}
+              <span className="text-[10px] text-muted-foreground">{feedbackText}</span>
+            </motion.div>
+          );
+        })()}
+      </div>
+
+      {!isAssistant && <UserAvatar gender={userGender} />}
+    </motion.div>
+  );
+}
+
+// 资料完整度进度条
+interface CollectedInfo {
+  registrationStartTime?: string; // 注册开始时间戳
+  displayName?: string;
+  gender?: string;
+  birthdate?: string;
+  birthYear?: string;
+  currentCity?: string;
+  hometown?: string;
+  occupation?: string;
+  occupationDescription?: string;
+  industry?: string;
+  roleTitleShort?: string;
+  seniority?: string;
+  companyName?: string;
+  fieldOfStudy?: string;
+  educationLevel?: string;
+  topInterests?: string[];
+  interestsTop?: string[]; // 兴趣TOP3
+  interestsDeep?: string[]; // 深度兴趣
+  intent?: string;
+  hasPets?: boolean;
+  petTypes?: string[];
+  relationshipStatus?: string;
+  children?: string;
+  overseasRegions?: string[];
+  studyLocale?: string;
+  languagesComfort?: string[];
+  icebreakerRole?: string;
+  socialStyle?: string;
+  topicAvoidances?: string[];
+}
+
+function SocialProfileCard({ info, mode }: { info: CollectedInfo; mode?: RegistrationMode }) {
+  const matchingBoost = getMatchingBoostEstimate(info);
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="p-4 bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-transparent rounded-2xl border border-violet-200/20 shadow-xl"
+    >
+      <div className="flex items-start gap-4 mb-4">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/40 dark:to-purple-900/40 flex items-center justify-center border border-violet-200/30">
+          <User className="w-8 h-8 text-primary" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-bold text-primary flex items-center gap-2">
+            {info.displayName || "神秘嘉宾"}
+            <Badge variant="outline" className="text-[10px] h-4 px-1">{mode === 'express' ? '极速' : mode === 'deep' ? '深度' : '标准'}</Badge>
+          </h3>
+          <p className="text-sm text-muted-foreground flex items-center gap-2">
+            {info.gender} · {info.birthYear}后 · {info.currentCity}
+          </p>
+          <div className="flex items-center gap-1.5 mt-2">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+              匹配加成: +{matchingBoost}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {info.industry && (
+          <div className="p-2.5 bg-background/50 rounded-xl border border-violet-100/20">
+            <div className="flex items-center gap-2 mb-1">
+              <Briefcase className="w-3.5 h-3.5 text-violet-500" />
+              <span className="text-[10px] text-muted-foreground font-medium">行业</span>
+            </div>
+            <p className="text-xs font-semibold truncate">{info.industry}</p>
+          </div>
+        )}
+        {info.interestsTop && info.interestsTop.length > 0 && (
+          <div className="p-2.5 bg-background/50 rounded-xl border border-violet-100/20">
+            <div className="flex items-center gap-2 mb-1">
+              <Heart className="w-3.5 h-3.5 text-pink-500" />
+              <span className="text-[10px] text-muted-foreground font-medium">最爱</span>
+            </div>
+            <p className="text-xs font-semibold truncate">{info.interestsTop[0]}</p>
+          </div>
+        )}
+      </div>
+      
+      {/* 成就墙预览 */}
+      <div className="mt-4 pt-4 border-t border-violet-200/20">
+        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mb-2">解锁成就</p>
+        {(() => {
+          const unlocked = achievements.filter(a => a.condition(info));
+          if (unlocked.length === 0) return (
+            <div className="bg-muted/30 rounded-lg p-2 text-center">
+              <p className="text-[10px] text-muted-foreground italic">暂无勋章，多聊聊能解锁更多哦</p>
+            </div>
+          );
+          return (
+            <div className="overflow-x-auto pb-1 scrollbar-hide">
+              <div className="flex gap-2 min-w-max">
+                {unlocked.map((badge, idx) => (
                   <motion.div
                     key={badge.id}
-                    initial={{ opacity: 0, scale: 0 }}
+                    initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.3 + i * 0.08, type: "spring", stiffness: 400 }}
-                    className="inline-flex items-center gap-0.5 bg-white/15 backdrop-blur-sm px-1.5 py-0.5 rounded-full border border-white/20"
-                    title={badge.title}
+                    transition={{ delay: idx * 0.1 }}
+                    className="flex flex-col items-center gap-1 p-2 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-lg min-w-[60px]"
                   >
                     <span className="text-xs leading-none">{badge.icon}</span>
                     <span className="text-[9px] text-white/90 leading-none">{badge.title}</span>
@@ -2575,60 +2066,27 @@ export default function ChatRegistrationPage() {
               try {
                 const data = JSON.parse(line.slice(6));
                 
-                if (data.type === 'content' && data.content) {
+                if (data.type === 'content') {
                   streamedContent += data.content;
-                  // 实时过滤代码块
-                  let cleanContent = streamedContent
-                    .replace(/```collected_info[\s\S]*?```/g, '')
-                    .replace(/```registration_complete[\s\S]*?```/g, '')
-                    .replace(/```collected_info[\s\S]*$/g, '')
-                    .replace(/```registration_complete[\s\S]*$/g, '')
-                    .replace(/```[a-z_]*\s*$/g, '')
-                    .trim();
-                  
-                  if (cleanContent) {
-                    lastValidContent = cleanContent;
-                    // 实时更新消息内容（每次有新内容就更新）
-                    const contentToUse = cleanContent;
-                    setMessages(prev => prev.map(m => 
-                      m.streamId === streamMessageId 
-                        ? { ...m, content: contentToUse } 
-                        : m
-                    ));
-                  }
+                  lastValidContent = streamedContent; // 记录最新有效内容
+                  // 通过streamId找到消息并更新其内容
+                  setMessages(prev => prev.map(m => {
+                    if (m.streamId === streamMessageId) {
+                      return { ...m, content: streamedContent };
+                    }
+                    return m;
+                  }));
                 } else if (data.type === 'done') {
-                  console.log('[STREAM DEBUG] Done event received');
-                  // 保存conversationHistory
-                  if (data.conversationHistory) {
-                    finalConversationHistory = data.conversationHistory;
-                    setConversationHistory(data.conversationHistory);
-                  }
-                  // 使用后端返回的cleanMessage作为最终内容
-                  const finalContent = data.cleanMessage || lastValidContent;
-                  if (finalContent) {
-                    lastValidContent = finalContent;
-                    // 流式完成：清除 streamId 触发逐行显示，同时设置 isSequentialDisplaying
-                    // 保存触发逐行显示的消息 ID，确保回调匹配
-                    setIsSequentialDisplaying(true);
-                    setSequentialDisplayMessageId(streamMessageId);
-                    setMessages(prev => prev.map(m => 
-                      m.streamId === streamMessageId 
-                        ? { ...m, content: finalContent, streamId: undefined } 
-                        : m
-                    ));
-                  }
+                  console.log('[STREAM DEBUG] Stream message marked as done');
+                  finalConversationHistory = data.conversationHistory;
+                  setConversationHistory(data.conversationHistory);
                   if (data.collectedInfo) {
                     setCollectedInfo(prev => ({ ...prev, ...data.collectedInfo }));
                   }
-                  if (data.isComplete) {
-                    setIsComplete(true);
-                    clearSavedChatState(); // 完成后清除保存的对话状态
-                  }
-                } else if (data.type === 'error') {
-                  throw new Error(data.content || '请求失败');
+                  if (data.isComplete) setIsComplete(true);
                 }
-              } catch (parseError) {
-                console.log('[STREAM DEBUG] Parse error for line:', line, parseError);
+              } catch (e) {
+                console.warn('[STREAM DEBUG] Parse error for line:', line, e);
               }
             }
           }
@@ -2711,8 +2169,6 @@ export default function ChatRegistrationPage() {
     }
   });
 
-  // 不再自动开始对话，由模式选择触发
-
   const handleSend = () => {
     if (!inputValue.trim() || isTyping) return;
 
@@ -2758,6 +2214,13 @@ export default function ChatRegistrationPage() {
     const lastAssistantMessage = [...messages].reverse().find(m => m.role === "assistant");
     // 只有当消息有实际内容时才显示快捷选项
     if (!lastAssistantMessage || !lastAssistantMessage.content.trim()) return { options: [], multiSelect: false };
+    
+    // 性别选项需要即时显示（messages.length比较小的时候）
+    const isEarlyStage = messages.length < 10;
+    if (isEarlyStage) {
+      return detectQuickReplies(lastAssistantMessage.content);
+    }
+
     return detectQuickReplies(lastAssistantMessage.content);
   }, [messages, isTyping, isComplete, infoConfirmed, isSequentialDisplaying]);
 
@@ -2774,26 +2237,11 @@ export default function ChatRegistrationPage() {
     const isMale = gender.includes('男') || gender === 'male';
     
     if (isFemale) {
-      // Nick对Judy风格：温柔可靠的大哥哥感
-      return `妥了，基础信息收好啦～
-
-接下来是性格测试——12道题，2分钟搞定。
-
-这个能测出你的社交原型，帮我把你配到chemistry对的人旁边。放心，值得花这点时间。`;
+      return `妥了，基础信息收好啦～\n\n接下来是性格测试——12道题，2分钟搞定。\n\n这个能测出你的社交原型，帮我把你配到chemistry对的人旁边。放心，值得花这点时间。`;
     } else if (isMale) {
-      // 兄弟模式：街头老狐狸风格
-      return `稳了。基础信息到手。
-
-接下来是性格测试——12道题，2分钟搞定。
-
-这玩意能测出你的社交原型，帮我把你配到chemistry对的桌子上。值得花这两分钟。`;
+      return `稳了。基础信息到手。\n\n接下来是性格测试——12道题，2分钟搞定。\n\n这玩意能测出你的社交原型，帮我把你配到chemistry对的桌子上。值得花这两分钟。`;
     } else {
-      // 性别未知时使用中性风格
-      return `好，基础信息收到。
-
-接下来是性格测试——12道题，2分钟搞定。
-
-这个能测出你的社交原型，帮我把你配到chemistry对的桌子上。值得花这两分钟。`;
+      return `好，基础信息收到。\n\n接下来是性格测试——12道题，2分钟搞定。\n\n这个能测出你的社交原型，帮我把你配到chemistry对的桌子上。值得花这两分钟。`;
     }
   }, [collectedInfo.gender]);
 
@@ -2810,7 +2258,6 @@ export default function ChatRegistrationPage() {
   const yearScrollRef = useRef<HTMLDivElement>(null);
   const monthScrollRef = useRef<HTMLDivElement>(null);
   const dayScrollRef = useRef<HTMLDivElement>(null);
-  const itemHeightRef = useRef<number>(56); // Default item height
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // 初始化生日滚轮位置
@@ -2820,6 +2267,7 @@ export default function ChatRegistrationPage() {
     // 清除之前的timeout
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     
+    scrollTimeoutRef.current = setTimeout(() => {
         const ITEM_HEIGHT = 48; // 使用固定的项目高度以保证计算稳定性
         // 增加延时确保布局渲染完成，并使用精确计算
         if (yearScrollRef.current && birthdayYear) {
@@ -2837,10 +2285,6 @@ export default function ChatRegistrationPage() {
           const dayIndex = parseInt(birthdayDay) - 1;
           dayScrollRef.current.scrollTop = dayIndex * ITEM_HEIGHT;
         }
-      }, 150); // 略微增加延时确保 DOM 布局已就绪
-          const dayIndex = parseInt(birthdayDay) - 1;
-          dayScrollRef.current.scrollTop = dayIndex * ITEM_HEIGHT;
-        }
       }, 150);
     
     return () => {
@@ -2852,13 +2296,11 @@ export default function ChatRegistrationPage() {
   const handleQuickReply = (text: string) => {
     if (isTyping) return;
     
-    // 特殊处理：选择生日
     if (text === "选择生日") {
       setShowBirthdayPicker(true);
       return;
     }
     
-    // 如果是多选模式，切换选中状态而不是立即发送
     if (quickReplyResult.multiSelect) {
       setSelectedQuickReplies(prev => {
         const newSet = new Set(prev);
@@ -2872,9 +2314,7 @@ export default function ChatRegistrationPage() {
       return;
     }
     
-    // 特殊处理：用户选择休息
     if (text === "先休息一下" || text.includes("休息")) {
-      // 添加用户消息
       setMessages(prev => [...prev, {
         id: `msg-${Date.now()}`,
         role: "user",
@@ -2882,10 +2322,8 @@ export default function ChatRegistrationPage() {
         timestamp: new Date()
       }]);
       
-      // 找出下一个待问的问题（用于提示从哪里继续）
       const nextField = collectedInfo.currentCity ? "下一个问题" : "城市问题";
       
-      // 添加小悦的温暖回复
       setTimeout(() => {
         setMessages(prev => [...prev, {
           id: `msg-rest-${Date.now()}`,
@@ -2893,15 +2331,12 @@ export default function ChatRegistrationPage() {
           content: `好的，进度已存好～\n想继续的时候点下方按钮就行，我们从${nextField}接着聊`,
           timestamp: new Date()
         }]);
-        // 进入休息模式
         setIsRestMode(true);
       }, 300);
       return;
     }
     
-    // 特殊处理：用户确认信息无误
     if (text === "确认无误" && isComplete && !infoConfirmed) {
-      // 添加用户确认消息
       setMessages(prev => [...prev, {
         id: `msg-${Date.now()}`,
         role: "user",
@@ -2909,7 +2344,6 @@ export default function ChatRegistrationPage() {
         timestamp: new Date()
       }]);
       
-      // 添加小悦的性格测试介绍（延迟显示以模拟思考）
       setTimeout(() => {
         const introMsgId = `msg-intro-${Date.now()}`;
         setMessages(prev => [...prev, {
@@ -2918,16 +2352,13 @@ export default function ChatRegistrationPage() {
           content: personalityTestIntro,
           timestamp: new Date()
         }]);
-        // 启用逐行显示
         setIsSequentialDisplaying(true);
         setSequentialDisplayMessageId(introMsgId);
-        // 确认完成后设置状态
         setInfoConfirmed(true);
       }, 500);
       return;
     }
     
-    // 单选模式，立即发送
     setMessages(prev => [...prev, {
       id: `msg-${Date.now()}`,
       role: "user",
@@ -2935,12 +2366,10 @@ export default function ChatRegistrationPage() {
       timestamp: new Date()
     }]);
     setIsTyping(true);
-    // 任何快捷回复都退出休息模式
     if (isRestMode) setIsRestMode(false);
     sendMessageMutation.mutate(text);
   };
 
-  // 多选确认发送
   const handleMultiSelectSend = () => {
     if (isTyping || selectedQuickReplies.size === 0) return;
     const selectedText = Array.from(selectedQuickReplies).join("、");
@@ -2952,14 +2381,59 @@ export default function ChatRegistrationPage() {
     }]);
     setSelectedQuickReplies(new Set());
     setIsTyping(true);
-    // 任何发送都退出休息模式
     if (isRestMode) setIsRestMode(false);
     sendMessageMutation.mutate(selectedText);
   };
 
+  const onScroll = (e: React.UIEvent<HTMLDivElement>, type: 'year' | 'month' | 'day') => {
+    const scrollTop = e.currentTarget.scrollTop;
+    const ITEM_HEIGHT = 48;
+    const index = Math.round(scrollTop / ITEM_HEIGHT);
+    
+    if (type === 'year') {
+      const years = Array.from({ length: 50 }, (_, i) => 2025 - 18 - i);
+      if (years[index]) setBirthdayYear(years[index].toString());
+    } else if (type === 'month') {
+      setBirthdayMonth((index + 1).toString());
+    } else if (type === 'day') {
+      setBirthdayDay((index + 1).toString());
+    }
+  };
+
+  const WheelScrollPicker = memo(({ 
+    items, 
+    value, 
+    onScroll, 
+    scrollRef 
+  }: { 
+    items: (string | number)[], 
+    value: string, 
+    onScroll: (e: React.UIEvent<HTMLDivElement>) => void,
+    scrollRef: React.RefObject<HTMLDivElement | null>
+  }) => {
+    return (
+      <div 
+        ref={scrollRef}
+        className="h-[240px] overflow-y-auto snap-y snap-mandatory scrollbar-hide py-[96px]"
+        onScroll={onScroll}
+      >
+        {items.map((item, i) => (
+          <div 
+            key={i}
+            className={`h-12 flex items-center justify-center snap-center transition-all ${
+              value === item.toString() ? "text-primary font-bold text-lg" : "text-muted-foreground opacity-40 text-sm"
+            }`}
+          >
+            {item}
+          </div>
+        ))}
+      </div>
+    );
+  });
+  WheelScrollPicker.displayName = "WheelScrollPicker";
+
   const TimeIcon = themeConfig.icon;
 
-  // 显示断点续聊提示
   if (showResumePrompt && savedState) {
     const savedMessageCount = savedState.messages.length;
     const savedInfoCount = Object.keys(savedState.collectedInfo).filter(k => 
@@ -3017,7 +2491,6 @@ export default function ChatRegistrationPage() {
     );
   }
 
-  // 显示enrichment模式加载界面
   if (isEnrichmentLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -3038,7 +2511,6 @@ export default function ChatRegistrationPage() {
     );
   }
 
-  // 显示模式选择界面
   if (showModeSelection) {
     return (
       <div className="min-h-screen bg-background">
@@ -3049,14 +2521,12 @@ export default function ChatRegistrationPage() {
 
   return (
     <div className={`min-h-screen flex flex-col relative overflow-hidden`}>
-      {/* 动态背景渐变层 - 随聊天进度变暖 */}
       <motion.div 
         className={`absolute inset-0 bg-gradient-to-b ${warmthGradient} pointer-events-none z-0`}
         animate={{ opacity: 1 }}
         transition={{ duration: 1.5, ease: "easeOut" }}
         key={warmthGradient}
       />
-      {/* 时间主题背景层 */}
       <div className={`absolute inset-0 bg-gradient-to-b ${themeConfig.gradient} pointer-events-none z-0 opacity-50`} />
       
       <div className="relative z-10 flex flex-col min-h-screen">
@@ -3067,7 +2537,6 @@ export default function ChatRegistrationPage() {
         </div>
       } />
       
-      {/* 实时标签云 */}
       {infoCount >= 3 && !isComplete && (
         <TagCloud info={collectedInfo} />
       )}
@@ -3082,18 +2551,15 @@ export default function ChatRegistrationPage() {
               userGender={collectedInfo.gender}
               collectedInfo={collectedInfo}
               onTypingComplete={() => {
-                // 标记该消息的打字动画已完成
                 setMessages(prev => prev.map((m) => 
                   m.id === msg.id ? { ...m, isTypingAnimation: false } : m
                 ));
-                // 通知等待中的开场白序列可以继续
                 if (typingCompleteResolverRef.current) {
                   typingCompleteResolverRef.current();
                   typingCompleteResolverRef.current = null;
                 }
               }}
               onSequentialDisplayComplete={() => {
-                // 只有当这条消息是触发逐行显示的那条消息时，才结束逐行显示状态
                 if (sequentialDisplayMessageId && sequentialDisplayMessageId === msg.id) {
                   setIsSequentialDisplaying(false);
                   setSequentialDisplayMessageId(null);
@@ -3125,7 +2591,6 @@ export default function ChatRegistrationPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 休息模式 - 继续注册按钮 */}
       <AnimatePresence>
         {isRestMode && (
           <motion.div
@@ -3137,7 +2602,6 @@ export default function ChatRegistrationPage() {
             <Button
               onClick={() => {
                 setIsRestMode(false);
-                // 添加继续消息
                 setMessages(prev => [...prev, {
                   id: `msg-continue-${Date.now()}`,
                   role: "user",
@@ -3157,13 +2621,10 @@ export default function ChatRegistrationPage() {
         )}
       </AnimatePresence>
 
-      {/* 快捷回复气泡 */}
       <AnimatePresence>
         {quickReplyResult.options.length > 0 && !isTyping && !isRestMode && (() => {
-          // 计算分页后的选项（fullDisplay模式下显示全部）
           const allOptions = quickReplyResult.options;
           const isFullDisplay = quickReplyResult.fullDisplay === true;
-          // fullDisplay模式下不分页，直接显示所有选项
           const needsPagination = !isFullDisplay && quickReplyResult.multiSelect && allOptions.length > QUICK_REPLY_PAGE_SIZE;
           const totalPages = needsPagination ? Math.ceil(allOptions.length / QUICK_REPLY_PAGE_SIZE) : 1;
           const currentPage = Math.min(quickReplyPage, totalPages - 1);
@@ -3224,37 +2685,17 @@ export default function ChatRegistrationPage() {
                   );
                 })}
                 
-                {/* 换一批按钮 - 多选且有多页时显示（fullDisplay模式下隐藏） */}
                 {needsPagination && !quickReplyResult.fullDisplay && (
                   <motion.button
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.12, delay: displayOptions.length * 0.02 }}
-                    onClick={() => setQuickReplyPage((currentPage + 1) % totalPages)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary hover:text-primary transition-all text-sm"
-                    data-testid="button-more-options"
+                    onClick={() => setQuickReplyPage((prev) => (prev + 1) % totalPages)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-primary/40 bg-primary/5 text-primary text-sm hover:bg-primary/10 transition-all"
+                    data-testid="button-next-replies"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>换一批</span>
-                  </motion.button>
-                )}
-                
-                {/* 自己输入按钮 - 多选时显示（fullDisplay模式下隐藏） */}
-                {quickReplyResult.multiSelect && !quickReplyResult.fullDisplay && (
-                  <motion.button
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.12, delay: (displayOptions.length + (needsPagination ? 1 : 0)) * 0.02 }}
-                    onClick={() => {
-                      // 聚焦到输入框
-                      const inputEl = document.querySelector('input[data-testid="input-message"]') as HTMLInputElement;
-                      if (inputEl) inputEl.focus();
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary hover:text-primary transition-all text-sm"
-                    data-testid="button-custom-input"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    <span>自己输入</span>
                   </motion.button>
                 )}
               </div>
@@ -3263,389 +2704,96 @@ export default function ChatRegistrationPage() {
         })()}
       </AnimatePresence>
 
-      {/* 生日选择器 - iOS风格滚轮 */}
+      <div className="p-4 border-t bg-background/80 backdrop-blur-sm relative z-20">
+        <div className="flex gap-2 items-center">
+          <Input
+            ref={inputRef}
+            placeholder={isTyping ? "小悦正在思考..." : "和小悦聊聊..."}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyPress}
+            disabled={isTyping || isComplete}
+            className="flex-1 bg-muted/50 border-violet-200/20"
+            data-testid="input-chat-message"
+          />
+          <Button 
+            size="icon" 
+            onClick={handleSend} 
+            disabled={isTyping || !inputValue.trim() || isComplete}
+            className="rounded-full shadow-lg shadow-primary/20"
+            data-testid="button-send-message"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+      </div>
+
       <Drawer open={showBirthdayPicker} onOpenChange={setShowBirthdayPicker}>
-        <DrawerContent className="bg-background border-t">
-          <DrawerHeader className="text-center pb-2">
-            <DrawerTitle>选择你的生日</DrawerTitle>
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader>
+            <DrawerTitle className="text-center">选择你的生日</DrawerTitle>
           </DrawerHeader>
-          
-          <div className="px-4 pb-6">
-            {/* 滚轮选择器 */}
-            <div className="flex gap-2 justify-center items-center h-64 relative overflow-hidden" style={{ touchAction: 'pan-y' }}>
-              {/* 中间选中区域 - 增加高度和视觉提示 */}
-              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-14 border-y-2 border-primary/30 pointer-events-none z-20 bg-primary/5 shadow-[0_0_15px_rgba(var(--primary),0.05)]" />
-              
-              {/* 年份滚轮 */}
-              <div 
-                ref={yearScrollRef}
-                className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory" 
-                style={{ height: '256px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch', paddingTop: '101px', paddingBottom: '101px' }}
-                onScroll={(e) => {
-                  const target = e.currentTarget;
-                  const scrollTop = target.scrollTop;
-                  const itemHeight = 48; // 固定高度以保证计算稳定
-                  const index = Math.round(scrollTop / itemHeight);
-                  const years = Array.from({ length: 50 }, (_, i) => 2025 - 18 - i);
-                  
-                  if (index >= 0 && index < years.length) {
-                    const selectedYear = String(years[index]);
-                    if (birthdayYear !== selectedYear) {
-                      setBirthdayYear(selectedYear);
-                    }
-                  }
-                }}
-              >
-                {Array.from({ length: 50 }, (_, i) => 2025 - 18 - i).map((year) => (
-                  <div
-                    key={year}
-                    data-wheel-item
-                    className={`w-full h-12 flex items-center justify-center transition-all duration-300 ease-out snap-center shrink-0 ${
-                      birthdayYear === String(year)
-                        ? "text-primary text-2xl font-black opacity-100 scale-110"
-                        : "text-muted-foreground text-sm opacity-20 scale-90"
-                    }`}
-                  >
-                    {year}
-                  </div>
-                ))}
-              </div>
-              
-              {/* 月份滚轮 */}
-              <div 
-                ref={monthScrollRef}
-                className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory"
-                style={{ height: '256px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch', paddingTop: '101px', paddingBottom: '101px' }}
-                onScroll={(e) => {
-                  const target = e.currentTarget;
-                  const scrollTop = target.scrollTop;
-                  const itemHeight = 48;
-                  const index = Math.round(scrollTop / itemHeight);
-                  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-                  
-                  if (index >= 0 && index < months.length) {
-                    const selectedMonth = String(months[index]).padStart(2, '0');
-                    if (birthdayMonth !== selectedMonth) {
-                      setBirthdayMonth(selectedMonth);
-                    }
-                  }
-                }}
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map(month => {
-                  const mStr = String(month).padStart(2, '0');
-                  return (
-                    <div
-                      key={month}
-                      data-wheel-item
-                      className={`w-full h-12 flex items-center justify-center transition-all duration-300 ease-out snap-center shrink-0 ${
-                        birthdayMonth === mStr
-                          ? "text-primary text-2xl font-black opacity-100 scale-110"
-                          : "text-muted-foreground text-sm opacity-20 scale-90"
-                      }`}
-                    >
-                      {mStr}月
-                    </div>
-                  );
-                })}
-              </div>
-              
-              {/* 日期滚轮 */}
-              <div 
-                ref={dayScrollRef}
-                className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory"
-                style={{ height: '256px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch', paddingTop: '101px', paddingBottom: '101px' }}
-                onScroll={(e) => {
-                  const target = e.currentTarget;
-                  const scrollTop = target.scrollTop;
-                  const itemHeight = 48;
-                  const index = Math.round(scrollTop / itemHeight);
-                  const days = Array.from({ length: 31 }, (_, i) => i + 1);
-                  
-                  if (index >= 0 && index < days.length) {
-                    const selectedDay = String(days[index]).padStart(2, '0');
-                    if (birthdayDay !== selectedDay) {
-                      setBirthdayDay(selectedDay);
-                    }
-                  }
-                }}
-              >
-                {Array.from({ length: 31 }, (_, i) => i + 1).map(day => {
-                  const dStr = String(day).padStart(2, '0');
-                  return (
-                    <div
-                      key={day}
-                      data-wheel-item
-                      className={`w-full h-12 flex items-center justify-center transition-all duration-300 ease-out snap-center shrink-0 ${
-                        birthdayDay === dStr
-                          ? "text-primary text-2xl font-black opacity-100 scale-110"
-                          : "text-muted-foreground text-sm opacity-20 scale-90"
-                      }`}
-                    >
-                      {dStr}日
-                    </div>
-                  );
-                })}
+          <div className="px-4 py-8">
+            <div className="relative h-[240px] flex items-center justify-center overflow-hidden bg-muted/20 rounded-2xl border border-violet-200/10">
+              <div className="absolute top-1/2 left-0 w-full h-12 -translate-y-1/2 bg-primary/10 pointer-events-none border-y border-primary/20" />
+              <div className="grid grid-cols-3 w-full h-full relative z-10">
+                <div className="flex flex-col">
+                  <div className="text-[10px] text-center text-muted-foreground/60 font-bold uppercase py-1">年份</div>
+                  <WheelScrollPicker 
+                    scrollRef={yearScrollRef}
+                    items={Array.from({ length: 50 }, (_, i) => 2025 - 18 - i)} 
+                    value={birthdayYear} 
+                    onScroll={(e) => onScroll(e, 'year')} 
+                  />
+                </div>
+                <div className="flex flex-col border-x border-violet-200/5">
+                  <div className="text-[10px] text-center text-muted-foreground/60 font-bold uppercase py-1">月份</div>
+                  <WheelScrollPicker 
+                    scrollRef={monthScrollRef}
+                    items={Array.from({ length: 12 }, (_, i) => i + 1)} 
+                    value={birthdayMonth} 
+                    onScroll={(e) => onScroll(e, 'month')} 
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <div className="text-[10px] text-center text-muted-foreground/60 font-bold uppercase py-1">日期</div>
+                  <WheelScrollPicker 
+                    scrollRef={dayScrollRef}
+                    items={Array.from({ length: 31 }, (_, i) => i + 1)} 
+                    value={birthdayDay} 
+                    onScroll={(e) => onScroll(e, 'day')} 
+                  />
+                </div>
               </div>
             </div>
             
-            {/* 按钮 */}
-            <div className="flex gap-3 mt-6">
-              <Button
-                variant="outline"
-                onClick={() => setShowBirthdayPicker(false)}
-                className="flex-1"
-              >
-                取消
-              </Button>
-              <Button
+            <div className="grid grid-cols-2 gap-3 mt-8">
+              <Button variant="outline" onClick={() => setShowBirthdayPicker(false)} className="rounded-xl h-12">取消</Button>
+              <Button 
                 onClick={() => {
-                  if (birthdayYear && birthdayMonth && birthdayDay) {
-                    const year = parseInt(birthdayYear);
-                    const ageGroup = year >= 2000 ? "00后" : year >= 1995 ? "95后" : year >= 1990 ? "90后" : "85后";
-                    
-                    // 保存完整的生日日期到collectedInfo
-                    const birthdateStr = `${birthdayYear}-${String(parseInt(birthdayMonth)).padStart(2, '0')}-${String(parseInt(birthdayDay)).padStart(2, '0')}`;
-                    setCollectedInfo(prev => ({
-                      ...prev,
-                      birthYear: year,
-                      birthdate: birthdateStr
-                    }));
-                    
-                    // 发送年龄段
-                    setMessages(prev => [...prev, {
-                      id: `msg-${Date.now()}`,
-                      role: "user",
-                      content: ageGroup,
-                      timestamp: new Date()
-                    }]);
-                    setIsTyping(true);
-                    sendMessageMutation.mutate(ageGroup);
-                    
-                    // 关闭Modal
-                    setShowBirthdayPicker(false);
-                    setBirthdayYear("");
-                    setBirthdayMonth("");
-                    setBirthdayDay("");
-                  }
+                  const birthDate = `${birthdayYear}-${birthdayMonth.padStart(2, '0')}-${birthdayDay.padStart(2, '0')}`;
+                  setShowBirthdayPicker(false);
+                  setMessages(prev => [...prev, {
+                    id: `msg-${Date.now()}`,
+                    role: "user",
+                    content: `我的生日是 ${birthDate}`,
+                    timestamp: new Date()
+                  }]);
+                  setIsTyping(true);
+                  sendMessageMutation.mutate(`我的生日是 ${birthDate}`);
                 }}
-                className="flex-1 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700"
+                disabled={!birthdayYear || !birthdayMonth || !birthdayDay}
+                className="rounded-xl h-12 shadow-lg shadow-primary/20"
                 data-testid="button-confirm-birthday"
               >
-                确认
+                确定
               </Button>
             </div>
           </div>
         </DrawerContent>
       </Drawer>
 
-      {isComplete && infoConfirmed ? (
-        isEnrichmentMode ? (
-          // Enrichment模式的完成界面 - 展示资料补充成果
-          (() => {
-            // 计算收集的新信息数量
-            const newInfoCount = Object.keys(collectedInfo).filter(k => collectedInfo[k as keyof CollectedInfo] !== undefined).length;
-            
-            // 合并原始用户数据和收集的新信息，计算真实的post-chat完整度
-            // 注意：calculateProfileCompletionUtil期望的字段名与User schema不完全一致
-            // profileCompletion.ts使用: occupation, topInterests 等虚拟字段
-            // 所以这里创建一个计算专用的合并对象
-            const mergedProfile = userData ? {
-              ...userData,
-              displayName: collectedInfo.displayName || userData.displayName,
-              gender: collectedInfo.gender || userData.gender,
-              // birthYear需要转换为birthdate格式
-              birthdate: collectedInfo.birthYear 
-                ? `${collectedInfo.birthYear}-01-01` 
-                : userData.birthdate,
-              currentCity: collectedInfo.currentCity || userData.currentCity,
-              // profileCompletion期望'occupation'字段，从多个来源合并
-              occupation: collectedInfo.occupationDescription || collectedInfo.industry || userData.roleTitleShort || userData.industry,
-              // profileCompletion期望'topInterests'数组字段
-              topInterests: collectedInfo.interestsTop || collectedInfo.primaryInterests || (userData as any).topInterests || [],
-              educationLevel: collectedInfo.educationLevel || userData.educationLevel,
-              relationshipStatus: collectedInfo.relationshipStatus || userData.relationshipStatus,
-              // intent在CollectedInfo是数组，取第一个或拼接
-              intent: collectedInfo.intent?.length ? collectedInfo.intent.join('、') : userData.intent,
-              // hometown映射到hometownCountry
-              hometownCountry: collectedInfo.hometown || userData.hometownCountry,
-              languagesComfort: collectedInfo.languagesComfort || userData.languagesComfort,
-              socialStyle: collectedInfo.socialStyle || userData.socialStyle,
-            } : null;
-            
-            // 使用真实的profileCompletion计算函数
-            const postChatCompletion = mergedProfile ? calculateProfileCompletionUtil(mergedProfile) : null;
-            const postChatPercentage = postChatCompletion?.percentage ?? (enrichmentBaseline?.percentage ?? 0);
-            
-            // 计算匹配精度提升估计（基于提升后的完整度）
-            const boostEstimate = getMatchingBoostEstimate(postChatPercentage);
-            
-            return (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 border-t bg-gradient-to-r from-violet-500/10 to-purple-500/10"
-              >
-                <div className="text-center mb-4">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
-                    className="inline-flex flex-col items-center gap-2"
-                  >
-                    <div className="flex items-center gap-2 text-primary mb-1">
-                      <Sparkles className="w-5 h-5" />
-                      <span className="font-medium">资料补充完成！</span>
-                      <Sparkles className="w-5 h-5" />
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      新增了 {newInfoCount} 项信息，匹配精准度预计提升
-                    </p>
-                    <motion.div
-                      initial={{ scale: 0.5, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: 0.4, type: "spring" }}
-                      className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent"
-                    >
-                      +{boostEstimate}%
-                    </motion.div>
-                    {enrichmentBaseline && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        资料完整度：{enrichmentBaseline.percentage}% → {postChatPercentage}%
-                      </p>
-                    )}
-                  </motion.div>
-                </div>
-                <Button 
-                  className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700" 
-                  onClick={() => {
-                    // 保存收集的信息然后返回
-                    submitRegistrationMutation.mutate(undefined, {
-                      onSuccess: () => {
-                        setLocation('/profile');
-                      }
-                    });
-                  }}
-                  disabled={submitRegistrationMutation.isPending}
-                  data-testid="button-finish-enrichment"
-                >
-                  {submitRegistrationMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : (
-                    <Check className="w-4 h-4 mr-2" />
-                  )}
-                  完成，返回个人主页
-                </Button>
-              </motion.div>
-            );
-          })()
-        ) : (
-          // 普通注册模式的完成界面
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-4 border-t bg-muted/50"
-          >
-            <div className="text-center mb-3">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
-                className="inline-flex items-center gap-2 text-sm text-muted-foreground mb-2"
-              >
-                <Sparkles className="w-4 h-4 text-primary" />
-                <span>基础信息已收集完成</span>
-                <Sparkles className="w-4 h-4 text-primary" />
-              </motion.div>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="text-xs text-muted-foreground"
-              >
-                接下来做个2分钟的性格测试，帮你找到更合拍的活动伙伴~
-              </motion.p>
-            </div>
-            <Button 
-              className="w-full" 
-              onClick={handleComplete}
-              disabled={submitRegistrationMutation.isPending}
-              data-testid="button-complete-registration"
-            >
-              {submitRegistrationMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : (
-                <ArrowRight className="w-4 h-4 mr-2" />
-              )}
-              开始性格测试
-            </Button>
-          </motion.div>
-        )
-      ) : isComplete && !infoConfirmed ? (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-4 border-t bg-background"
-        >
-          <p className="text-xs text-center text-muted-foreground mb-3">
-            请确认以上信息是否正确
-          </p>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              className="flex-1 h-11"
-              onClick={() => {
-                // 发送需要修改的消息，重新进入对话模式
-                setIsComplete(false);
-                sendMessageMutation.mutate("需要修改一些信息");
-              }}
-              data-testid="button-need-modify"
-            >
-              <Pencil className="w-4 h-4 mr-2" />
-              需要修改
-            </Button>
-            <Button
-              className="flex-1 h-11 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg"
-              onClick={() => {
-                setInfoConfirmed(true);
-              }}
-              data-testid="button-confirm-info"
-            >
-              <Check className="w-4 h-4 mr-2" />
-              确认正确
-            </Button>
-          </div>
-        </motion.div>
-      ) : (
-        <div className="p-4 border-t bg-background">
-          <div className="flex gap-2">
-            <Input
-              ref={inputRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="输入消息..."
-              disabled={isTyping || startChatMutation.isPending}
-              className="flex-1"
-              data-testid="input-chat-message"
-            />
-            <Button
-              size="icon"
-              onClick={handleSend}
-              disabled={!inputValue.trim() || isTyping}
-              data-testid="button-send-message"
-            >
-              {isTyping ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
-      </div>
-      
-      {/* 成就弹窗 */}
       <AnimatePresence>
         {currentAchievement && (
           <AchievementToast 
