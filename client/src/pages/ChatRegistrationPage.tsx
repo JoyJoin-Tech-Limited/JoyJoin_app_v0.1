@@ -2752,7 +2752,7 @@ export default function ChatRegistrationPage() {
     if (userMsgCount === 0) return { options: [], multiSelect: false };
     // 开场白期间（前4条助手消息）需要等待逐行显示完成，避免过早显示选项
     const assistantMsgCount = messages.filter(m => m.role === 'assistant').length;
-    if (isSequentialDisplaying && assistantMsgCount <= 4) return { options: [], multiSelect: false };
+    if (isSequentialDisplaying && assistantMsgCount < 4) return { options: [], multiSelect: false };
     // 已确认后不再显示快捷选项
     if (isComplete && infoConfirmed) return { options: [], multiSelect: false };
     const lastAssistantMessage = [...messages].reverse().find(m => m.role === "assistant");
@@ -3276,7 +3276,7 @@ export default function ChatRegistrationPage() {
           
           <div className="px-4 pb-6">
             {/* 滚轮选择器 */}
-            <div className="flex gap-2 justify-center items-end h-60 relative overflow-hidden" style={{ touchAction: 'pan-y' }}>
+            <div className="flex gap-2 justify-center items-center h-60 relative overflow-hidden" style={{ touchAction: 'pan-y' }}>
               {/* 中间选中区域 */}
               <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-12 border-y border-primary/20 pointer-events-none z-20" />
               
@@ -3284,7 +3284,7 @@ export default function ChatRegistrationPage() {
               <div 
                 ref={yearScrollRef}
                 className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory" 
-                style={{ height: '240px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+                style={{ height: '240px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch', paddingTop: '96px', paddingBottom: '96px' }}
                 onScroll={(e) => {
                   const target = e.currentTarget;
                   const scrollTop = target.scrollTop;
@@ -3300,7 +3300,6 @@ export default function ChatRegistrationPage() {
                   }
                 }}
               >
-                <div className="shrink-0" style={{ height: '96px' }} />
                 {Array.from({ length: 50 }, (_, i) => 2025 - 18 - i).map((year) => (
                   <div
                     key={year}
@@ -3314,14 +3313,13 @@ export default function ChatRegistrationPage() {
                     {year}
                   </div>
                 ))}
-                <div className="shrink-0" style={{ height: '96px' }} />
               </div>
               
               {/* 月份滚轮 */}
               <div 
                 ref={monthScrollRef}
                 className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory"
-                style={{ height: '240px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+                style={{ height: '240px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch', paddingTop: '96px', paddingBottom: '96px' }}
                 onScroll={(e) => {
                   const target = e.currentTarget;
                   const scrollTop = target.scrollTop;
@@ -3337,7 +3335,6 @@ export default function ChatRegistrationPage() {
                   }
                 }}
               >
-                <div className="shrink-0" style={{ height: '96px' }} />
                 {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
                   <div
                     key={month}
@@ -3351,14 +3348,13 @@ export default function ChatRegistrationPage() {
                     {String(month).padStart(2, '0')}月
                   </div>
                 ))}
-                <div className="shrink-0" style={{ height: '96px' }} />
               </div>
               
               {/* 日期滚轮 */}
               <div 
                 ref={dayScrollRef}
                 className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory"
-                style={{ height: '240px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+                style={{ height: '240px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch', paddingTop: '96px', paddingBottom: '96px' }}
                 onScroll={(e) => {
                   const target = e.currentTarget;
                   const scrollTop = target.scrollTop;
@@ -3374,7 +3370,6 @@ export default function ChatRegistrationPage() {
                   }
                 }}
               >
-                <div className="shrink-0" style={{ height: '96px' }} />
                 {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
                   <div
                     key={day}
@@ -3388,7 +3383,6 @@ export default function ChatRegistrationPage() {
                     {String(day).padStart(2, '0')}日
                   </div>
                 ))}
-                <div className="shrink-0" style={{ height: '96px' }} />
               </div>
             </div>
             
