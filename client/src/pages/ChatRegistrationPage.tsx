@@ -861,7 +861,7 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     priority: 82
   },
   {
-    keywords: ["城市", "哪里", "在哪", "深圳", "香港", "广州"],
+    keywords: ["城市", "哪里", "在哪", "深圳", "香港", "广州", "base"],
     options: [
       { text: "深圳", icon: MapPin },
       { text: "香港", icon: MapPin },
@@ -1340,6 +1340,43 @@ function matchPatternBasedConfig(message: string): QuickReplyResult | null {
   return null;
 }
 
+// 提取消息的最后一个问句 - 用于精准匹配快捷回复
+// 避免前文内容（如"96年，28岁"）干扰问题检测（如"现在base哪个城市？"）
+function extractLastQuestion(message: string): string {
+  // 按句号、感叹号、换行分割，保留问句
+  const sentences = message.split(/[。！\n]+/).map(s => s.trim()).filter(Boolean);
+  // 从后往前找第一个包含问号或疑问词的句子
+  for (let i = sentences.length - 1; i >= 0; i--) {
+    const s = sentences[i];
+    if (/[？?]/.test(s) || /吗|呢|嘛|什么|哪|怎么|多久|多少|几|谁|何时/.test(s)) {
+      return s;
+    }
+  }
+  // 没找到问句，返回最后一句
+  return sentences[sentences.length - 1] || message;
+}
+
+// 关键词匹配 quickReplyConfigs - 作为 patternBasedConfigs 的后备
+function matchKeywordBasedConfig(message: string): QuickReplyResult | null {
+  const lowerMsg = message.toLowerCase();
+  
+  // 按优先级排序
+  const sortedConfigs = [...quickReplyConfigs].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+  
+  for (const config of sortedConfigs) {
+    // 检查是否有关键词匹配
+    const hasMatch = config.keywords.some(kw => lowerMsg.includes(kw.toLowerCase()));
+    if (hasMatch && config.options.length > 0) {
+      return {
+        options: config.options.filter(o => o.text),
+        multiSelect: config.multiSelect || false
+      };
+    }
+  }
+  
+  return null;
+}
+
 // 检测最后一条消息是否匹配快捷回复
 // 简化版：只对结构化问题显示静态预设选项，其他追问不显示快捷回复
 function detectQuickReplies(lastMessage: string): QuickReplyResult {
@@ -1363,13 +1400,23 @@ function detectQuickReplies(lastMessage: string): QuickReplyResult {
     }
   }
   
-  // 4. 优先检查精准模式匹配（结构化问题：活动时段、社交频率、性别、学历等）
-  const patternMatch = matchPatternBasedConfig(lastMessage);
+  // 4. 提取最后一个问句，避免前文内容干扰
+  const lastQuestion = extractLastQuestion(lastMessage);
+  
+  // 5. 优先检查精准模式匹配（结构化问题：活动时段、社交频率、性别、学历等）
+  // 使用最后一个问句进行匹配
+  const patternMatch = matchPatternBasedConfig(lastQuestion);
   if (patternMatch) {
     return patternMatch;
   }
   
-  // 5. 检查是否是简单的是非问句
+  // 6. 关键词匹配作为后备（城市、兴趣等）
+  const keywordMatch = matchKeywordBasedConfig(lastQuestion);
+  if (keywordMatch) {
+    return keywordMatch;
+  }
+  
+  // 7. 检查是否是简单的是非问句
   if (isYesNoQuestion(lastMessage)) {
     return { 
       options: [
@@ -1380,7 +1427,7 @@ function detectQuickReplies(lastMessage: string): QuickReplyResult {
     };
   }
   
-  // 6. 检查确认类问题
+  // 8. 检查确认类问题
   const confirmKeywords = ["对吗", "确认一下", "核对一下", "信息对吗", "没问题吗"];
   if (confirmKeywords.some(kw => lowerMessage.includes(kw))) {
     return {
@@ -1392,7 +1439,7 @@ function detectQuickReplies(lastMessage: string): QuickReplyResult {
     };
   }
   
-  // 7. 其他情况不显示快捷回复（智能追问让用户自由输入）
+  // 9. 其他情况不显示快捷回复（智能追问让用户自由输入）
   return { options: [], multiSelect: false };
 }
 
