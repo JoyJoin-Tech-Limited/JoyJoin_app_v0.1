@@ -476,10 +476,10 @@ function AchievementToast({ achievement, onComplete }: { achievement: Achievemen
   return (
     <motion.div
       key={achievement.id}
-      initial={{ opacity: 0, y: 50, scale: 0.8, x: "-50%" }}
-      animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
-      exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-      className="fixed bottom-32 left-1/2 z-[100] pointer-events-none"
+      initial={{ opacity: 0, y: -20, x: 20 }}
+      animate={{ opacity: 1, y: 0, x: 0 }}
+      exit={{ opacity: 0, y: -20, transition: { duration: 0.2 } }}
+      className="fixed top-16 right-4 z-[100] pointer-events-none"
     >
       <div className="bg-gradient-to-r from-primary/90 to-purple-600/90 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3">
         <motion.span 
