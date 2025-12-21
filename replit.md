@@ -74,6 +74,7 @@ Preferred communication style: Simple, everyday language.
     - L2 engagement bar chart showing optional field participation rates
     - L3 confidence trend line chart tracking AI inference accuracy
     - Session duration distribution histogram
+    - **Real Session Telemetry (V8.0):** Uses `registration_sessions` table as single source of truth with lifecycle timestamps (started_at, l1_completed_at, l2_enriched_at, completed_at). Zero fallback to hardcoded values - all KPIs derive from real data. Falls back to users table for historical pre-telemetry data.
   - **Lightweight Fatigue Reminder:** Triggers once after 7 minutes if L2 fields are still empty, with gentle prompt from 小悦.
 - **Personalized Icebreaker Topics:** Algorithm-curated topics considering common interests and archetypes.
 - **Activity Toolkit (活动工具包) UX Enhancements:** Features like "适合破冰" badges, atmosphere checks, and streamlined ending screens.
