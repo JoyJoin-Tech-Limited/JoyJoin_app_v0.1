@@ -551,7 +551,7 @@ function getWarmthGradient(infoCount: number): string {
   return "from-slate-50/20 via-gray-50/10 to-background"; // 初识
 }
 
-// 小悦头像组件 - 使用品牌大使形象
+// 小悦头像组件 - 使用品牌大使形象（已缓存，不会重新加载）
 function XiaoyueAvatar({ emotion, size = "md" }: { emotion: XiaoyueEmotion; size?: "sm" | "md" | "lg" | "xl" }) {
   const sizeClasses = {
     sm: "w-6 h-6",
@@ -565,7 +565,6 @@ function XiaoyueAvatar({ emotion, size = "md" }: { emotion: XiaoyueEmotion; size
       className={`${sizeClasses} rounded-full overflow-hidden flex-shrink-0 ring-2 ring-primary/20 ring-offset-2 ring-offset-background`}
       animate={{ scale: [1, 1.02, 1] }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      key={emotion}
     >
       <img 
         src={xiaoyueAvatar} 
