@@ -2796,7 +2796,7 @@ export default function ChatRegistrationPage() {
           <DrawerHeader>
             <DrawerTitle className="text-center">选择你的生日</DrawerTitle>
           </DrawerHeader>
-          <div className="px-4 py-8">
+          <div className="px-4 py-8 pointer-events-auto">
             <div className="flex flex-col bg-muted/20 rounded-2xl border border-violet-200/10 overflow-hidden relative z-0">
               <div className="grid grid-cols-3 text-[10px] text-center text-muted-foreground/60 font-bold uppercase py-2 border-b border-violet-200/10 relative z-10 bg-muted/20">
                 <div>年份</div>
@@ -2835,8 +2835,8 @@ export default function ChatRegistrationPage() {
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-3 mt-8">
-              <Button variant="outline" onClick={() => setShowBirthdayPicker(false)} className="rounded-xl h-12">取消</Button>
+            <div className="grid grid-cols-2 gap-3 mt-8 relative z-30 pointer-events-auto">
+              <Button variant="outline" onClick={() => setShowBirthdayPicker(false)} className="rounded-xl h-12 relative z-50 pointer-events-auto">取消</Button>
               <Button 
                 onClick={() => {
                   const birthDate = `${birthdayYear}-${birthdayMonth.padStart(2, '0')}-${birthdayDay.padStart(2, '0')}`;
@@ -2851,7 +2851,7 @@ export default function ChatRegistrationPage() {
                   sendMessageMutation.mutate(`我的生日是 ${birthDate}`);
                 }}
                 disabled={!birthdayYear || !birthdayMonth || !birthdayDay}
-                className="rounded-xl h-12 shadow-lg shadow-primary/20"
+                className="rounded-xl h-12 shadow-lg shadow-primary/20 relative z-50 pointer-events-auto"
                 data-testid="button-confirm-birthday"
               >
                 确定
