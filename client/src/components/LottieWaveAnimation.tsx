@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useId } from 'react';
 import Lottie, { LottieRefCurrentProps } from 'lottie-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -481,7 +481,7 @@ export default function LottieWaveAnimation({
   );
 }
 
-// 内联版本 - 用于聊天气泡内（使用CSS Transform动画，性能更好）
+// 内联版本 - 用于聊天气泡内（增强版：3层波浪 + 浮动粒子）
 export function LottieInlineLoader({
   message = "思考中...",
   variant = "purple",
@@ -489,84 +489,205 @@ export function LottieInlineLoader({
   message?: string;
   variant?: "warm" | "purple" | "gradient";
 }) {
+  const uniqueId = useId();
+  
   const colorConfig = {
-    purple: { main: "#a78bfa", glow: "#8b5cf6" },
-    warm: { main: "#fb923c", glow: "#f97316" },
-    gradient: { main: "#c084fc", glow: "#a855f7" },
+    purple: { 
+      main: "#a78bfa", 
+      glow: "#8b5cf6", 
+      light: "#c4b5fd",
+      accent: "#ddd6fe"
+    },
+    warm: { 
+      main: "#fb923c", 
+      glow: "#f97316",
+      light: "#fed7aa",
+      accent: "#ffedd5"
+    },
+    gradient: { 
+      main: "#c084fc", 
+      glow: "#a855f7",
+      light: "#e9d5ff",
+      accent: "#f3e8ff"
+    },
   };
 
   const colors = colorConfig[variant];
+  const gradId = `inline-grad-${uniqueId}`;
+  const glowId = `inline-glow-${uniqueId}`;
+  const particleGlowId = `particle-glow-${uniqueId}`;
+
+  // 动画配置
+  const width = 70;
+  const height = 32;
+  const centerY = height / 2;
 
   return (
     <div className="flex items-center gap-3 py-2">
-      {/* 使用CSS动画的多层波浪，避免JS逐帧更新 */}
-      <div className="relative" style={{ width: 60, height: 24 }}>
-        {/* 背景发光 */}
+      {/* 增强版多层波浪动画 */}
+      <div className="relative" style={{ width, height }}>
+        {/* 多层背景发光 */}
         <motion.div
-          className="absolute inset-0 rounded-full blur-md"
-          style={{ background: `${colors.glow}30` }}
-          animate={{ opacity: [0.3, 0.5, 0.3] }}
+          className="absolute rounded-full blur-lg"
+          style={{ 
+            width: width * 1.2,
+            height: height * 1.5,
+            left: -width * 0.1,
+            top: -height * 0.25,
+            background: `radial-gradient(ellipse, ${colors.glow}40 0%, ${colors.glow}15 50%, transparent 80%)`,
+          }}
+          animate={{ 
+            opacity: [0.4, 0.7, 0.4],
+            scale: [1, 1.05, 1],
+          }}
           transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
         />
         
-        {/* 主波浪层 - 使用SVG + CSS transform动画 */}
+        {/* 内层发光 */}
+        <motion.div
+          className="absolute rounded-full blur-md"
+          style={{ 
+            width: width * 0.8,
+            height: height,
+            left: width * 0.1,
+            top: 0,
+            background: `${colors.light}25`,
+          }}
+          animate={{ opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+        />
+        
+        {/* 主波浪层 SVG */}
         <svg 
-          width={60} 
-          height={24} 
-          viewBox="0 0 60 24"
+          width={width} 
+          height={height} 
+          viewBox={`0 0 ${width} ${height}`}
           className="absolute inset-0 overflow-visible"
         >
           <defs>
-            <linearGradient id="inline-wave-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor={colors.main} stopOpacity="0.15" />
-              <stop offset="30%" stopColor={colors.main} stopOpacity="0.85" />
+            {/* 主渐变 */}
+            <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={colors.main} stopOpacity="0.1" />
+              <stop offset="20%" stopColor={colors.main} stopOpacity="0.7" />
               <stop offset="50%" stopColor={colors.main} stopOpacity="1" />
-              <stop offset="70%" stopColor={colors.main} stopOpacity="0.85" />
-              <stop offset="100%" stopColor={colors.main} stopOpacity="0.15" />
+              <stop offset="80%" stopColor={colors.main} stopOpacity="0.7" />
+              <stop offset="100%" stopColor={colors.main} stopOpacity="0.1" />
             </linearGradient>
-            <filter id="inline-glow" x="-50%" y="-100%" width="200%" height="300%">
+            
+            {/* 发光滤镜 */}
+            <filter id={glowId} x="-50%" y="-100%" width="200%" height="300%">
+              <feGaussianBlur stdDeviation="2" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+            
+            {/* 粒子发光滤镜 */}
+            <filter id={particleGlowId} x="-100%" y="-100%" width="300%" height="300%">
               <feGaussianBlur stdDeviation="1.5" result="blur"/>
               <feMerge>
+                <feMergeNode in="blur"/>
                 <feMergeNode in="blur"/>
                 <feMergeNode in="SourceGraphic"/>
               </feMerge>
             </filter>
           </defs>
           
-          {/* 次波浪 */}
+          {/* 第三层波浪 - 最远/最淡 */}
           <motion.path
-            d="M 0 12 Q 15 6, 30 12 T 60 12"
-            stroke={colors.main}
+            d={`M 0 ${centerY} Q ${width*0.25} ${centerY-4}, ${width*0.5} ${centerY} T ${width} ${centerY}`}
+            stroke={colors.accent}
+            strokeWidth="1"
+            strokeLinecap="round"
+            fill="none"
+            opacity="0.25"
+            animate={{ 
+              d: [
+                `M 0 ${centerY} Q ${width*0.25} ${centerY-4}, ${width*0.5} ${centerY} T ${width} ${centerY}`,
+                `M 0 ${centerY} Q ${width*0.25} ${centerY+5}, ${width*0.5} ${centerY} T ${width} ${centerY}`,
+                `M 0 ${centerY} Q ${width*0.25} ${centerY-4}, ${width*0.5} ${centerY} T ${width} ${centerY}`
+              ]
+            }}
+            transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+          />
+          
+          {/* 第二层波浪 - 中间层 */}
+          <motion.path
+            d={`M 0 ${centerY} Q ${width*0.25} ${centerY+5}, ${width*0.5} ${centerY} T ${width} ${centerY}`}
+            stroke={colors.light}
             strokeWidth="1.5"
             strokeLinecap="round"
             fill="none"
-            opacity="0.35"
+            opacity="0.45"
             animate={{ 
               d: [
-                "M 0 12 Q 15 6, 30 12 T 60 12",
-                "M 0 12 Q 15 18, 30 12 T 60 12",
-                "M 0 12 Q 15 6, 30 12 T 60 12"
+                `M 0 ${centerY} Q ${width*0.25} ${centerY+5}, ${width*0.5} ${centerY} T ${width} ${centerY}`,
+                `M 0 ${centerY} Q ${width*0.25} ${centerY-6}, ${width*0.5} ${centerY} T ${width} ${centerY}`,
+                `M 0 ${centerY} Q ${width*0.25} ${centerY+5}, ${width*0.5} ${centerY} T ${width} ${centerY}`
               ]
             }}
-            transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+            transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
           />
           
-          {/* 主波浪 */}
+          {/* 主波浪 - 最亮/最粗 */}
           <motion.path
-            d="M 0 12 Q 15 18, 30 12 T 60 12"
-            stroke="url(#inline-wave-grad)"
+            d={`M 0 ${centerY} Q ${width*0.25} ${centerY-7}, ${width*0.5} ${centerY} T ${width} ${centerY}`}
+            stroke={`url(#${gradId})`}
             strokeWidth="2.5"
             strokeLinecap="round"
             fill="none"
-            filter="url(#inline-glow)"
+            filter={`url(#${glowId})`}
             animate={{ 
               d: [
-                "M 0 12 Q 15 18, 30 12 T 60 12",
-                "M 0 12 Q 15 6, 30 12 T 60 12",
-                "M 0 12 Q 15 18, 30 12 T 60 12"
+                `M 0 ${centerY} Q ${width*0.25} ${centerY-7}, ${width*0.5} ${centerY} T ${width} ${centerY}`,
+                `M 0 ${centerY} Q ${width*0.25} ${centerY+8}, ${width*0.5} ${centerY} T ${width} ${centerY}`,
+                `M 0 ${centerY} Q ${width*0.25} ${centerY-7}, ${width*0.5} ${centerY} T ${width} ${centerY}`
               ]
             }}
             transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+          />
+          
+          {/* 浮动粒子1 - 左侧 */}
+          <motion.circle
+            cx={width * 0.2}
+            r="2.5"
+            fill={colors.main}
+            filter={`url(#${particleGlowId})`}
+            animate={{ 
+              cy: [centerY - 3, centerY + 5, centerY - 3],
+              opacity: [0.7, 1, 0.7],
+              r: [2.5, 3, 2.5]
+            }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+          />
+          
+          {/* 浮动粒子2 - 中间 */}
+          <motion.circle
+            cx={width * 0.5}
+            r="3"
+            fill={colors.glow}
+            filter={`url(#${particleGlowId})`}
+            animate={{ 
+              cy: [centerY + 4, centerY - 6, centerY + 4],
+              opacity: [0.8, 1, 0.8],
+              r: [3, 3.5, 3]
+            }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+          />
+          
+          {/* 浮动粒子3 - 右侧 */}
+          <motion.circle
+            cx={width * 0.8}
+            r="2"
+            fill={colors.light}
+            filter={`url(#${particleGlowId})`}
+            animate={{ 
+              cy: [centerY - 2, centerY + 6, centerY - 2],
+              opacity: [0.6, 0.9, 0.6],
+              r: [2, 2.5, 2]
+            }}
+            transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
           />
         </svg>
       </div>
