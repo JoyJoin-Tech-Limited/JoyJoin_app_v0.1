@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil, Calendar } from "lucide-react";
+import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil, Calendar, Laptop, Bot, Cpu, Car, Globe, TrendingUp, Megaphone, Palette, Video, Stethoscope, GraduationCap, Scale, Building, Plane, MoreHorizontal } from "lucide-react";
 import xiaoyueAvatar from "@assets/generated_images/final_fox_with_collar_sunglasses.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -117,6 +117,32 @@ interface ModeConfig {
   description: string;
   gradient: string;
   recommended?: boolean;
+}
+
+// 行业图标映射 - 为每个行业分配贴切的lucide图标
+const INDUSTRY_ICON_MAP: Record<string, any> = {
+  "科技互联网": Laptop,
+  "AI/大数据": Bot,
+  "硬科技/芯片": Cpu,
+  "新能源汽车": Car,
+  "跨境电商": Globe,
+  "金融投资": TrendingUp,
+  "咨询服务": Briefcase,
+  "市场营销": Megaphone,
+  "创意设计": Palette,
+  "传媒内容": Video,
+  "医疗健康": Stethoscope,
+  "教育培训": GraduationCap,
+  "法律合规": Scale,
+  "地产建筑": Building,
+  "航空酒店旅游": Plane,
+  "生活方式": Coffee,
+  "其他行业": MoreHorizontal,
+};
+
+// 根据行业名称获取对应图标
+function getIndustryIcon(industryLabel: string): any {
+  return INDUSTRY_ICON_MAP[industryLabel] || Briefcase;
 }
 
 const registrationModes: ModeConfig[] = [
@@ -844,21 +870,21 @@ const quickReplyConfigs: QuickReplyConfig[] = [
   {
     keywords: ["方向", "领域", "细分", "ai", "web3", "具体做什么", "哪个方向"],
     options: [
-      { text: "科技互联网", icon: Briefcase },
-      { text: "AI/大数据", icon: Briefcase },
-      { text: "金融投资", icon: Briefcase },
+      { text: "科技互联网", icon: Laptop },
+      { text: "AI/大数据", icon: Bot },
+      { text: "金融投资", icon: TrendingUp },
       { text: "咨询服务", icon: Briefcase },
-      { text: "市场营销", icon: Briefcase },
-      { text: "创意设计", icon: Briefcase },
-      { text: "传媒内容", icon: Briefcase },
-      { text: "医疗健康", icon: Briefcase },
-      { text: "教育培训", icon: Book }
+      { text: "市场营销", icon: Megaphone },
+      { text: "创意设计", icon: Palette },
+      { text: "传媒内容", icon: Video },
+      { text: "医疗健康", icon: Stethoscope },
+      { text: "教育培训", icon: GraduationCap }
     ],
     priority: 83
   },
   {
     keywords: ["工作", "职业", "做什么", "行业", "从事", "干什么", "什么工作", "忙什么", "哪行", "上班"],
-    options: INDUSTRIES.map(ind => ({ text: ind.label, icon: Briefcase })),
+    options: INDUSTRIES.map(ind => ({ text: ind.label, icon: getIndustryIcon(ind.label) })),
     priority: 82
   },
   {
@@ -1001,7 +1027,7 @@ const patternBasedConfigs: PatternBasedQuickReplyConfig[] = [
     pattern: /什么行业|哪个行业|在.*行业|从事.*行业/,
     requiredAny: ["什么行业", "哪个行业", "行业"],
     exclude: ["行业经验多久"],
-    options: INDUSTRIES.slice(0, 8).map(ind => ({ text: ind.label, icon: Briefcase })),
+    options: INDUSTRIES.slice(0, 8).map(ind => ({ text: ind.label, icon: getIndustryIcon(ind.label) })),
     priority: 93,
     multiSelect: false,
     enforcePredefined: true
