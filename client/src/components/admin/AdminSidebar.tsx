@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Settings,
   ScrollText,
+  Brain,
 } from "lucide-react";
 import {
   Sidebar,
@@ -122,6 +123,11 @@ const analyticsItems = [
     title: "匹配日志",
     url: "/admin/matching-logs",
     icon: ScrollText,
+  },
+  {
+    title: "小悦进化",
+    url: "/admin/evolution",
+    icon: Brain,
   },
 ];
 

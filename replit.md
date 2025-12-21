@@ -86,6 +86,24 @@ Preferred communication style: Simple, everyday language.
 - **Personalized Icebreaker Topics:** Algorithm-curated topics considering common interests and archetypes.
 - **Activity Toolkit (活动工具包) UX Enhancements:** Features like "适合破冰" badges, atmosphere checks, and streamlined ending screens.
 - **King Game (国王游戏) Digital Card System:** Interactive digital poker card game with multi-device WebSocket synchronization, 3D flip animations, dynamic deck generation, and automated dealer rotation.
+- **小悦进化系统 (AI Evolution System V1.0):** Enables Xiaoyue chatbot to learn and improve through user feedback and multi-armed bandit optimization.
+  - **Database Tables:** 
+    - `golden_dialogues`: Stores successful conversation patterns for reference
+    - `matching_weights_config`: Dynamic 6-dimension matching weights with Thompson Sampling parameters
+    - `matching_weights_history`: Weight change history for visualization
+    - `dialogue_embeddings`: Conversation vector storage (JSONB, ready for pgvector migration)
+    - `trigger_performance`: Tracks 38 trigger effectiveness with auto-threshold adjustment
+    - `dialogue_feedback`: Explicit/implicit feedback collection
+  - **Backend Services:**
+    - `matchingWeightsService.ts`: Dynamic weight loading, Thompson Sampling optimization, auto-recalculation every 50 matches
+    - `triggerPerformanceService.ts`: Trigger activation tracking, effectiveness scoring, threshold optimization
+    - `goldenDialogueService.ts`: Golden dialogue CRUD, category search, usage tracking
+  - **Admin Portal Page:** `/admin/evolution` with:
+    - Overview KPIs: total matches, satisfaction, trigger activations, golden dialogues count
+    - Weights visualization: 6-dimension progress bars with real-time percentages
+    - Trigger performance: Top performing and underperforming triggers
+    - Golden dialogue management: Add, view, refine conversation patterns
+  - **Thompson Sampling Algorithm:** Beta distribution-based exploration-exploitation for weight optimization
 
 ## External Dependencies
 

@@ -22,6 +22,7 @@ import AdminFeedbackPage from "@/pages/admin/AdminFeedbackPage";
 import AdminMatchingConfigPage from "@/pages/admin/AdminMatchingConfigPage";
 import AdminMatchingLogsPage from "@/pages/admin/AdminMatchingLogsPage";
 import AdminPricingPage from "@/pages/admin/AdminPricingPage";
+import AdminEvolutionPage from "@/pages/admin/AdminEvolutionPage";
 
 export default function AdminLayout() {
   const sidebarStyle = {
@@ -67,6 +68,7 @@ export default function AdminLayout() {
               <Route path="/admin/matching" component={AdminMatchingLabPage} />
               <Route path="/admin/matching-config" component={AdminMatchingConfigPage} />
               <Route path="/admin/matching-logs" component={AdminMatchingLogsPage} />
+              <Route path="/admin/evolution" component={AdminEvolutionPage} />
             </Switch>
           </main>
         </div>
