@@ -1397,6 +1397,9 @@ function extractLastQuestion(message: string): string {
 // 缓存排序的配置（避免每次都排序）
 const sortedQuickReplyConfigs = quickReplyConfigs.sort((a, b) => (b.priority || 0) - (a.priority || 0));
 
+// 快速回复检测缓存 - 避免重复处理相同的AI消息
+const quickReplyCache = new Map<string, QuickReplyResult>();
+
 // 关键词匹配 quickReplyConfigs - 作为 patternBasedConfigs 的后备
 function matchKeywordBasedConfig(message: string): QuickReplyResult | null {
   const lowerMsg = message.toLowerCase();
@@ -1418,67 +1421,85 @@ function matchKeywordBasedConfig(message: string): QuickReplyResult | null {
 // 检测最后一条消息是否匹配快捷回复
 // 简化版：只对结构化问题显示静态预设选项，其他追问不显示快捷回复
 function detectQuickReplies(lastMessage: string): QuickReplyResult {
+  // 0. 检查缓存 - 大幅加速性别等热点问题
+  const cached = quickReplyCache.get(lastMessage);
+  if (cached) return cached;
+  
+  // 计算结果（最后统一缓存）
+  let result: QuickReplyResult;
+  
   // 1. 检查是否是开场白/介绍类消息（不显示快捷选项）
   if (isIntroductionMessage(lastMessage)) {
-    return { options: [], multiSelect: false };
-  }
-  
-  // 2. 检查是否需要用户自由输入（如称呼问题）
-  const lowerMessage = lastMessage.toLowerCase();
-  for (const kw of freeInputKeywords) {
-    if (lowerMessage.includes(kw)) {
-      return { options: [], multiSelect: false };
+    result = { options: [], multiSelect: false };
+  } else {
+    // 2. 检查是否需要用户自由输入（如称呼问题）
+    const lowerMessage = lastMessage.toLowerCase();
+    let foundFreeInput = false;
+    for (const kw of freeInputKeywords) {
+      if (lowerMessage.includes(kw)) {
+        result = { options: [], multiSelect: false };
+        foundFreeInput = true;
+        break;
+      }
+    }
+    
+    if (!foundFreeInput) {
+      // 3. 检查是否是追问类问题（不显示快捷选项）
+      let foundFollowUp = false;
+      for (const pattern of followUpPatterns) {
+        if (pattern.test(lastMessage)) {
+          result = { options: [], multiSelect: false };
+          foundFollowUp = true;
+          break;
+        }
+      }
+      
+      if (!foundFollowUp) {
+        // 4. 提取最后一个问句，避免前文内容干扰
+        const lastQuestion = extractLastQuestion(lastMessage);
+        
+        // 5. 优先检查精准模式匹配（结构化问题：活动时段、社交频率、性别、学历等）
+        const patternMatch = matchPatternBasedConfig(lastQuestion);
+        if (patternMatch) {
+          result = patternMatch;
+        } else {
+          // 6. 关键词匹配作为后备（城市、兴趣等）
+          const keywordMatch = matchKeywordBasedConfig(lastQuestion);
+          if (keywordMatch) {
+            result = keywordMatch;
+          } else if (isYesNoQuestion(lastMessage)) {
+            // 7. 检查是否是简单的是非问句
+            result = { 
+              options: [
+                { text: "是的", icon: Check },
+                { text: "不是", icon: X }
+              ], 
+              multiSelect: false 
+            };
+          } else {
+            // 8. 检查确认类问题
+            const confirmKeywords = ["对吗", "确认一下", "核对一下", "信息对吗", "没问题吗"];
+            if (confirmKeywords.some(kw => lowerMessage.includes(kw))) {
+              result = {
+                options: [
+                  { text: "对的，确认", icon: Check },
+                  { text: "需要修改", icon: Pencil }
+                ],
+                multiSelect: false
+              };
+            } else {
+              // 9. 其他情况不显示快捷回复（智能追问让用户自由输入）
+              result = { options: [], multiSelect: false };
+            }
+          }
+        }
+      }
     }
   }
   
-  // 3. 检查是否是追问类问题（不显示快捷选项）
-  for (const pattern of followUpPatterns) {
-    if (pattern.test(lastMessage)) {
-      return { options: [], multiSelect: false };
-    }
-  }
-  
-  // 4. 提取最后一个问句，避免前文内容干扰
-  const lastQuestion = extractLastQuestion(lastMessage);
-  
-  // 5. 优先检查精准模式匹配（结构化问题：活动时段、社交频率、性别、学历等）
-  // 使用最后一个问句进行匹配
-  const patternMatch = matchPatternBasedConfig(lastQuestion);
-  if (patternMatch) {
-    return patternMatch;
-  }
-  
-  // 6. 关键词匹配作为后备（城市、兴趣等）
-  const keywordMatch = matchKeywordBasedConfig(lastQuestion);
-  if (keywordMatch) {
-    return keywordMatch;
-  }
-  
-  // 7. 检查是否是简单的是非问句
-  if (isYesNoQuestion(lastMessage)) {
-    return { 
-      options: [
-        { text: "是的", icon: Check },
-        { text: "不是", icon: X }
-      ], 
-      multiSelect: false 
-    };
-  }
-  
-  // 8. 检查确认类问题
-  const confirmKeywords = ["对吗", "确认一下", "核对一下", "信息对吗", "没问题吗"];
-  if (confirmKeywords.some(kw => lowerMessage.includes(kw))) {
-    return {
-      options: [
-        { text: "对的，确认", icon: Check },
-        { text: "需要修改", icon: Pencil }
-      ],
-      multiSelect: false
-    };
-  }
-  
-  // 9. 其他情况不显示快捷回复（智能追问让用户自由输入）
-  return { options: [], multiSelect: false };
+  // 统一缓存所有结果
+  quickReplyCache.set(lastMessage, result!);
+  return result!;
 }
 
 interface ChatMessage {
