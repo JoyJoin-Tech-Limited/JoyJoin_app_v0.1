@@ -61,7 +61,8 @@ Preferred communication style: Simple, everyday language.
 - **Payment & Subscription System:** Full payment infrastructure including WeChat Pay integration.
 - **Intelligent Venue Matching & Booking:** Algorithm-based venue scoring and a transactional booking system.
 - **Venue Partnership System (V1.0):** Collaborative restaurant/bar partnerships with exclusive member deals.
-  - **Extended Venue Model:** venues table enhanced with avgPrice, priceNote, coverImageUrl, galleryImages, partnerStatus, partnerSince fields.
+  - **Extended Venue Model:** venues table enhanced with priceNote, coverImageUrl, galleryImages, partnerStatus, partnerSince fields.
+  - **Unified Budget Tiers:** System-wide preset tiers: "150以下", "150-200", "200-300", "300-500" (used for user budgetRange and venue priceRange).
   - **Venue Deals Table:** venueDeals table for partner-exclusive discounts supporting percentage (8折), fixed amount (立减¥X), and gift types.
   - **Redemption Methods:** show_page (出示本页面), code (报暗号), qr_code (扫码核销).
   - **VenuePartnerCard Component:** Reusable frontend component displaying venue info with expandable deal details and usage tracking.
