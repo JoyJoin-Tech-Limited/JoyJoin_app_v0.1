@@ -3099,9 +3099,14 @@ export default function ChatRegistrationPage() {
               className="px-4 py-3 border-t bg-muted/30"
             >
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-muted-foreground">
-                  {quickReplyResult.multiSelect ? "可多选（点击选择后发送）：" : "快捷回复："}
-                </p>
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-xs text-muted-foreground">
+                    {quickReplyResult.multiSelect ? "可多选（点击选择后发送）：" : "快捷回复："}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/60 italic">
+                    嫌麻烦？直接打字聊也行，我又不挑～
+                  </p>
+                </div>
                 {quickReplyResult.multiSelect && selectedQuickReplies.size > 0 && (
                   <Button
                     size="sm"
