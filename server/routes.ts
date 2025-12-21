@@ -1948,6 +1948,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 🎄 DEMO: Create a Christmas Mystery Cocktail Pool for testing
+  app.post('/api/demo/create-christmas-pool', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        console.error("[DemoChristmasPool] No userId in session");
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { db } = await import("./db");
+      const { blindBoxEvents } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      // Check if user already has a Christmas pool demo
+      const existingPools = await db
+        .select()
+        .from(blindBoxEvents)
+        .where(eq(blindBoxEvents.userId, userId));
+      
+      const hasChristmasPool = existingPools.some(e => 
+        e.title && e.title.includes("圣诞") && e.status === "pending_match"
+      );
+      
+      if (hasChristmasPool) {
+        console.log("✅ Christmas pool already exists for user:", userId);
+        return res.json({ 
+          message: "Christmas pool already exists",
+          poolExists: true 
+        });
+      }
+      
+      // Create Christmas event on Dec 27, 2025 at 9 PM
+      const christmasDate = new Date("2025-12-27T21:00:00");
+      
+      const created = await db.insert(blindBoxEvents).values({
+        userId,
+        title: "圣诞神秘酒局 · 南山夜聊",
+        eventType: "酒局",
+        city: "深圳",
+        district: "南山",
+        dateTime: christmasDate,
+        budgetTier: "150-250",
+        selectedLanguages: ["粤语", "普通话"],
+        selectedCuisines: ["鸡尾酒吧", "创意小食"],
+        acceptNearby: true,
+        status: "pending_match",
+        progress: 0,
+        currentParticipants: 1, // Just the creator
+      }).returning();
+
+      console.log("✅ Demo Christmas pool created:", created[0].id);
+      
+      res.json({
+        message: "Christmas pool created successfully",
+        event: created[0],
+        eventId: created[0].id,
+        instructions: "你现在可以体验报名流程。系统将自动为你匹配其他参加者，生成完整的匹配桌。"
+      });
+    } catch (error) {
+      console.error("[DemoChristmasPool] Error creating pool:", error);
+      res.status(500).json({ 
+        message: "Failed to create Christmas pool",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Debug middleware for blind box event routes
   app.use('/api/blind-box-events', (req, _res, next) => {
     console.log("[BlindBoxDebug] incoming request on /api/blind-box-events", {
