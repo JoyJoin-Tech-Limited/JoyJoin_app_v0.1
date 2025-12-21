@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import MobileHeader from "@/components/MobileHeader";
 import EvolvingAvatar, { calculateClarityLevel } from "@/components/EvolvingAvatar";
+import { OS1InlineLoader } from "@/components/OS1LoadingAnimation";
 import type { User as UserType } from "@shared/schema";
 import { INTERESTS_OPTIONS } from "@/data/interestsTopicsData";
 import { INDUSTRIES, WORK_MODES } from "@shared/occupations";
@@ -2989,15 +2990,14 @@ export default function ChatRegistrationPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex gap-3"
+            className="flex gap-3 items-center"
           >
             <XiaoyueAvatar emotion="thinking" />
-            <Card className="bg-muted p-3">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-              </div>
+            <Card className="bg-muted/50 p-3 backdrop-blur-sm border-orange-200/20">
+              <OS1InlineLoader 
+                message="小悦正在思考..." 
+                variant="warm"
+              />
             </Card>
           </motion.div>
         )}
