@@ -2454,7 +2454,7 @@ export default function ChatRegistrationPage() {
     return (
       <div 
         ref={scrollRef as React.RefObject<HTMLDivElement>}
-        className="h-[200px] overflow-y-auto snap-y snap-mandatory scrollbar-hide py-[76px]"
+        className="h-[200px] overflow-y-auto snap-y snap-mandatory scrollbar-hide py-[76px] relative z-20"
         onScroll={onScroll}
       >
         {items.map((item, i) => (
