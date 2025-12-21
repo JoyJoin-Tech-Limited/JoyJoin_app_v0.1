@@ -832,7 +832,7 @@ export const insertRoleResultSchema = createInsertSchema(roleResults).omit({
 export const venues = pgTable("venues", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  venueType: text("venue_type").notNull(), // restaurant, bar
+  venueType: text("venue_type").notNull(), // restaurant, bar, homebar, cafe
   address: text("address").notNull(),
   city: text("city").notNull(), // 深圳, 香港
   area: text("area").notNull(), // 南山区, 中环 etc.
@@ -850,10 +850,60 @@ export const venues = pgTable("venues", {
   capacity: integer("capacity").default(1), // How many events can run at same time
   operatingHours: text("operating_hours"), // e.g., "11:00-22:00"
   
+  // ============ 新增字段：合作场地优惠系统 ============
+  // 消费信息
+  avgPrice: integer("avg_price"), // 人均消费（元）
+  priceNote: text("price_note"), // 价格说明，如"一杯酒约100元"
+  
+  // 图片
+  coverImageUrl: text("cover_image_url"), // 封面图
+  galleryImages: text("gallery_images").array(), // 图片集
+  
+  // 合作状态
+  partnerStatus: text("partner_status").default("active"), // active, paused, ended
+  partnerSince: date("partner_since"), // 合作开始日期
+  
   // Status
   isActive: boolean("is_active").default(true),
   
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Venue Deals table - 场地优惠
+export const venueDeals = pgTable("venue_deals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  venueId: varchar("venue_id").notNull().references(() => venues.id),
+  
+  // 优惠信息
+  title: text("title").notNull(), // 优惠标题，如"悦聚专属8折"
+  discountType: text("discount_type").notNull(), // percentage, fixed, gift
+  discountValue: integer("discount_value"), // 折扣值: percentage=20表示8折, fixed=30表示减30元
+  description: text("description"), // 优惠详细说明
+  
+  // 兑换方式
+  redemptionMethod: text("redemption_method").default("show_page"), // show_page, code, qr_code
+  redemptionCode: text("redemption_code"), // 兑换码/暗号
+  
+  // 适用条件
+  minSpend: integer("min_spend"), // 最低消费
+  maxDiscount: integer("max_discount"), // 最高优惠金额
+  perPersonLimit: boolean("per_person_limit").default(false), // 是否每人限用一次
+  
+  // 有效期
+  validFrom: date("valid_from"),
+  validUntil: date("valid_until"),
+  
+  // 使用限制
+  terms: text("terms"), // 使用条款
+  excludedDates: text("excluded_dates").array(), // 不可用日期
+  
+  // 状态
+  isActive: boolean("is_active").default(true),
+  usageCount: integer("usage_count").default(0), // 使用次数统计
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Event Templates table - Recurring time slots and themes
@@ -1178,6 +1228,17 @@ export type ReferralConversion = typeof referralConversions.$inferSelect;
 export const insertVenueSchema = createInsertSchema(venues).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVenueDealSchema = createInsertSchema(venueDeals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  usageCount: true,
+}).extend({
+  title: z.string().min(1, "优惠标题不能为空"),
+  discountType: z.enum(["percentage", "fixed", "gift"]),
 });
 
 export const insertEventTemplateSchema = createInsertSchema(eventTemplates).omit({
@@ -1260,6 +1321,7 @@ export type InsertRoleResult = z.infer<typeof insertRoleResultSchema>;
 
 // Admin Portal Types
 export type Venue = typeof venues.$inferSelect;
+export type VenueDeal = typeof venueDeals.$inferSelect;
 export type EventTemplate = typeof eventTemplates.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
@@ -1272,6 +1334,7 @@ export type ModerationLog = typeof moderationLogs.$inferSelect;
 export type Content = typeof contents.$inferSelect;
 
 export type InsertVenue = z.infer<typeof insertVenueSchema>;
+export type InsertVenueDeal = z.infer<typeof insertVenueDealSchema>;
 export type InsertEventTemplate = z.infer<typeof insertEventTemplateSchema>;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
