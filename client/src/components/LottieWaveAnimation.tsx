@@ -481,7 +481,7 @@ export default function LottieWaveAnimation({
   );
 }
 
-// 内联版本 - 用于聊天气泡内
+// 内联版本 - 用于聊天气泡内（使用CSS Transform动画，性能更好）
 export function LottieInlineLoader({
   message = "思考中...",
   variant = "purple",
@@ -490,18 +490,87 @@ export function LottieInlineLoader({
   variant?: "warm" | "purple" | "gradient";
 }) {
   const colorConfig = {
-    purple: "#a78bfa",
-    warm: "#fb923c",
-    gradient: "#c084fc",
+    purple: { main: "#a78bfa", glow: "#8b5cf6" },
+    warm: { main: "#fb923c", glow: "#f97316" },
+    gradient: { main: "#c084fc", glow: "#a855f7" },
   };
+
+  const colors = colorConfig[variant];
 
   return (
     <div className="flex items-center gap-3 py-2">
-      <FluidWaveSVG 
-        width={60} 
-        height={20} 
-        color={colorConfig[variant]}
-      />
+      {/* 使用CSS动画的多层波浪，避免JS逐帧更新 */}
+      <div className="relative" style={{ width: 60, height: 24 }}>
+        {/* 背景发光 */}
+        <motion.div
+          className="absolute inset-0 rounded-full blur-md"
+          style={{ background: `${colors.glow}30` }}
+          animate={{ opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+        />
+        
+        {/* 主波浪层 - 使用SVG + CSS transform动画 */}
+        <svg 
+          width={60} 
+          height={24} 
+          viewBox="0 0 60 24"
+          className="absolute inset-0 overflow-visible"
+        >
+          <defs>
+            <linearGradient id="inline-wave-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={colors.main} stopOpacity="0.15" />
+              <stop offset="30%" stopColor={colors.main} stopOpacity="0.85" />
+              <stop offset="50%" stopColor={colors.main} stopOpacity="1" />
+              <stop offset="70%" stopColor={colors.main} stopOpacity="0.85" />
+              <stop offset="100%" stopColor={colors.main} stopOpacity="0.15" />
+            </linearGradient>
+            <filter id="inline-glow" x="-50%" y="-100%" width="200%" height="300%">
+              <feGaussianBlur stdDeviation="1.5" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          
+          {/* 次波浪 */}
+          <motion.path
+            d="M 0 12 Q 15 6, 30 12 T 60 12"
+            stroke={colors.main}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            fill="none"
+            opacity="0.35"
+            animate={{ 
+              d: [
+                "M 0 12 Q 15 6, 30 12 T 60 12",
+                "M 0 12 Q 15 18, 30 12 T 60 12",
+                "M 0 12 Q 15 6, 30 12 T 60 12"
+              ]
+            }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+          />
+          
+          {/* 主波浪 */}
+          <motion.path
+            d="M 0 12 Q 15 18, 30 12 T 60 12"
+            stroke="url(#inline-wave-grad)"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            fill="none"
+            filter="url(#inline-glow)"
+            animate={{ 
+              d: [
+                "M 0 12 Q 15 18, 30 12 T 60 12",
+                "M 0 12 Q 15 6, 30 12 T 60 12",
+                "M 0 12 Q 15 18, 30 12 T 60 12"
+              ]
+            }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </svg>
+      </div>
+      
       <span className="text-sm text-muted-foreground">{message}</span>
     </div>
   );

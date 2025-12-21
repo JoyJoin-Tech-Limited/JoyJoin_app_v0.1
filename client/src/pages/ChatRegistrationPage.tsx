@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import MobileHeader from "@/components/MobileHeader";
 import EvolvingAvatar, { calculateClarityLevel } from "@/components/EvolvingAvatar";
-import { OS1InlineLoader } from "@/components/OS1LoadingAnimation";
+import { LottieInlineLoader } from "@/components/LottieWaveAnimation";
 import type { User as UserType } from "@shared/schema";
 import { INTERESTS_OPTIONS } from "@/data/interestsTopicsData";
 import { INDUSTRIES, WORK_MODES } from "@shared/occupations";
@@ -3020,7 +3020,7 @@ export default function ChatRegistrationPage() {
           >
             <XiaoyueAvatar emotion="thinking" />
             <Card className="bg-muted/50 p-3 backdrop-blur-sm border-violet-200/20">
-              <OS1InlineLoader 
+              <LottieInlineLoader 
                 message="小悦正在思考..." 
               />
             </Card>
