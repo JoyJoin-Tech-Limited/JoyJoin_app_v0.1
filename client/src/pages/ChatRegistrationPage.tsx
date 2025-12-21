@@ -2815,34 +2815,32 @@ export default function ChatRegistrationPage() {
     // 清除之前的timeout
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     
-    scrollTimeoutRef.current = setTimeout(() => {
-      // 测量实际item高度
-      const firstItem = yearScrollRef.current?.querySelector('[data-wheel-item]');
-      if (firstItem) {
-        const height = firstItem.getBoundingClientRect().height;
-        if (height > 0) itemHeightRef.current = height;
-      }
-      
-      // 初始化滚动位置
-      // 注意：由于有96px的顶部占位符，当scrollTop为0时，第一个item刚好就在中间(120px位置，假设item高度48px)
-      // 所以 scrollTop = index * itemHeight 应该能让对应索引的item居中
-      const ITEM_HEIGHT = itemHeightRef.current;
-      if (yearScrollRef.current && birthdayYear) {
-        const years = Array.from({ length: 50 }, (_, i) => 2025 - 18 - i);
-        const yearIndex = years.indexOf(parseInt(birthdayYear));
-        if (yearIndex >= 0) {
-          yearScrollRef.current.scrollTo({ top: yearIndex * ITEM_HEIGHT, behavior: 'auto' });
+      scrollTimeoutRef.current = setTimeout(() => {
+        // 测量实际item高度
+        const firstItem = yearScrollRef.current?.querySelector('[data-wheel-item]');
+        if (firstItem) {
+          const height = firstItem.getBoundingClientRect().height;
+          if (height > 0) itemHeightRef.current = height;
         }
-      }
-      if (monthScrollRef.current && birthdayMonth) {
-        const monthIndex = parseInt(birthdayMonth) - 1;
-        monthScrollRef.current.scrollTo({ top: monthIndex * ITEM_HEIGHT, behavior: 'auto' });
-      }
-      if (dayScrollRef.current && birthdayDay) {
-        const dayIndex = parseInt(birthdayDay) - 1;
-        dayScrollRef.current.scrollTo({ top: dayIndex * ITEM_HEIGHT, behavior: 'auto' });
-      }
-    }, 100);
+        
+        const ITEM_HEIGHT = itemHeightRef.current;
+        // 增加延时确保布局渲染完成，并使用精确计算
+        if (yearScrollRef.current && birthdayYear) {
+          const years = Array.from({ length: 50 }, (_, i) => 2025 - 18 - i);
+          const yearIndex = years.indexOf(parseInt(birthdayYear));
+          if (yearIndex >= 0) {
+            yearScrollRef.current.scrollTop = yearIndex * ITEM_HEIGHT;
+          }
+        }
+        if (monthScrollRef.current && birthdayMonth) {
+          const monthIndex = parseInt(birthdayMonth) - 1;
+          monthScrollRef.current.scrollTop = monthIndex * ITEM_HEIGHT;
+        }
+        if (dayScrollRef.current && birthdayDay) {
+          const dayIndex = parseInt(birthdayDay) - 1;
+          dayScrollRef.current.scrollTop = dayIndex * ITEM_HEIGHT;
+        }
+      }, 150);
     
     return () => {
       if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
@@ -3297,12 +3295,12 @@ export default function ChatRegistrationPage() {
                   }
                 }}
               >
-                <div style={{ minHeight: '96px' }} />
+                <div className="shrink-0" style={{ height: '96px' }} />
                 {Array.from({ length: 50 }, (_, i) => 2025 - 18 - i).map((year) => (
                   <div
                     key={year}
                     data-wheel-item
-                    className={`w-full py-3 text-center transition-all duration-200 ease-out snap-center ${
+                    className={`w-full py-3 text-center transition-all duration-200 ease-out snap-center shrink-0 ${
                       birthdayYear === String(year)
                         ? "text-primary text-xl font-bold opacity-100 scale-110"
                         : "text-muted-foreground text-sm opacity-30 scale-90"
@@ -3311,7 +3309,7 @@ export default function ChatRegistrationPage() {
                     {year}
                   </div>
                 ))}
-                <div style={{ minHeight: '96px' }} />
+                <div className="shrink-0" style={{ height: '96px' }} />
               </div>
               
               {/* 月份滚轮 */}
@@ -3334,12 +3332,12 @@ export default function ChatRegistrationPage() {
                   }
                 }}
               >
-                <div style={{ minHeight: '96px' }} />
+                <div className="shrink-0" style={{ height: '96px' }} />
                 {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
                   <div
                     key={month}
                     data-wheel-item
-                    className={`w-full py-3 text-center transition-all duration-200 ease-out snap-center ${
+                    className={`w-full py-3 text-center transition-all duration-200 ease-out snap-center shrink-0 ${
                       birthdayMonth === String(month)
                         ? "text-primary text-xl font-bold opacity-100 scale-110"
                         : "text-muted-foreground text-sm opacity-30 scale-90"
@@ -3348,7 +3346,7 @@ export default function ChatRegistrationPage() {
                     {String(month).padStart(2, '0')}月
                   </div>
                 ))}
-                <div style={{ minHeight: '96px' }} />
+                <div className="shrink-0" style={{ height: '96px' }} />
               </div>
               
               {/* 日期滚轮 */}
@@ -3371,12 +3369,12 @@ export default function ChatRegistrationPage() {
                   }
                 }}
               >
-                <div style={{ minHeight: '96px' }} />
+                <div className="shrink-0" style={{ height: '96px' }} />
                 {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
                   <div
                     key={day}
                     data-wheel-item
-                    className={`w-full py-3 text-center transition-all duration-200 ease-out snap-center ${
+                    className={`w-full py-3 text-center transition-all duration-200 ease-out snap-center shrink-0 ${
                       birthdayDay === String(day)
                         ? "text-primary text-xl font-bold opacity-100 scale-110"
                         : "text-muted-foreground text-sm opacity-30 scale-90"
@@ -3385,7 +3383,7 @@ export default function ChatRegistrationPage() {
                     {String(day).padStart(2, '0')}日
                   </div>
                 ))}
-                <div style={{ minHeight: '96px' }} />
+                <div className="shrink-0" style={{ height: '96px' }} />
               </div>
             </div>
             
