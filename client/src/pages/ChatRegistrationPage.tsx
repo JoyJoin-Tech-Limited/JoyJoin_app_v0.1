@@ -2585,8 +2585,8 @@ export default function ChatRegistrationPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
-        title: "注册成功",
-        description: "欢迎加入 JoyJoin！"
+        title: "注册成功！",
+        description: "接下来做个2分钟的性格测试，帮你找到更合拍的活动伙伴~"
       });
       // 导航到性格测试页面
       setLocation("/personality-test");
@@ -3152,6 +3152,14 @@ export default function ChatRegistrationPage() {
                 <span>基础信息已收集完成</span>
                 <Sparkles className="w-4 h-4 text-primary" />
               </motion.div>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="text-xs text-muted-foreground"
+              >
+                接下来做个2分钟的性格测试，帮你找到更合拍的活动伙伴~
+              </motion.p>
             </div>
             <Button 
               className="w-full" 
