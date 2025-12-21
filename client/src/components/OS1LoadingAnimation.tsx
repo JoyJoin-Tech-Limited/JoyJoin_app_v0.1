@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId, useRef } from "react";
 
 interface OS1LoadingAnimationProps {
   messages?: string[];
@@ -37,6 +37,136 @@ export const OS1_MESSAGE_PRESETS = {
   ],
 };
 
+// 生成连续正弦波SVG路径
+function generateSineWavePath(
+  width: number,
+  height: number,
+  amplitude: number,
+  frequency: number = 2,
+  phase: number = 0
+): string {
+  const centerY = height / 2;
+  const points: string[] = [];
+  const steps = 50;
+  
+  for (let i = 0; i <= steps; i++) {
+    const x = (i / steps) * width;
+    const y = centerY + Math.sin((i / steps) * Math.PI * 2 * frequency + phase) * amplitude;
+    
+    if (i === 0) {
+      points.push(`M ${x.toFixed(2)} ${y.toFixed(2)}`);
+    } else {
+      points.push(`L ${x.toFixed(2)} ${y.toFixed(2)}`);
+    }
+  }
+  
+  return points.join(' ');
+}
+
+// Her电影风格的呼吸正弦波组件 - 使用CSS动画避免React重渲染
+function BreathingSineWave({
+  width = 70,
+  height = 24,
+  color = "#a78bfa",
+  isComplete = false,
+}: {
+  width?: number;
+  height?: number;
+  color?: string;
+  isComplete?: boolean;
+}) {
+  const uniqueId = useId();
+  const pathRef = useRef<SVGPathElement>(null);
+
+  // 使用requestAnimationFrame直接操作DOM，避免React重渲染
+  useEffect(() => {
+    if (isComplete || !pathRef.current) return;
+
+    let animationId: number;
+    let startTime: number | null = null;
+
+    const animate = (timestamp: number) => {
+      if (startTime === null) startTime = timestamp;
+      const elapsed = (timestamp - startTime) / 1000;
+
+      // 波幅呼吸：2.5秒周期
+      const amplitude = 5.5 + Math.sin(elapsed * Math.PI * 0.8) * 2.5;
+      // 相位缓慢移动
+      const phase = elapsed * 0.5;
+      
+      const path = generateSineWavePath(width, height, amplitude, 2, phase);
+      if (pathRef.current) {
+        pathRef.current.setAttribute('d', path);
+      }
+
+      animationId = requestAnimationFrame(animate);
+    };
+
+    animationId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationId);
+  }, [isComplete, width, height]);
+
+  // 完成状态的圆形路径
+  const circleRadius = 8;
+  const initialWavePath = generateSineWavePath(width, height, 5.5, 2, 0);
+  const circlePath = `M ${width/2} ${height/2 - circleRadius} A ${circleRadius} ${circleRadius} 0 1 1 ${width/2 - 0.01} ${height/2 - circleRadius}`;
+
+  const gradientId = `sine-gradient-${uniqueId}`;
+  const glowId = `sine-glow-${uniqueId}`;
+
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      fill="none"
+      className="overflow-visible"
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <stop offset="30%" stopColor={color} stopOpacity="0.9" />
+          <stop offset="50%" stopColor={color} stopOpacity="1" />
+          <stop offset="70%" stopColor={color} stopOpacity="0.9" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.3" />
+        </linearGradient>
+        <filter id={glowId} x="-50%" y="-100%" width="200%" height="300%">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      
+      {isComplete ? (
+        <motion.path
+          d={circlePath}
+          stroke={`url(#${gradientId})`}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          fill="none"
+          filter={`url(#${glowId})`}
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: 1 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        />
+      ) : (
+        <path
+          ref={pathRef}
+          d={initialWavePath}
+          stroke={`url(#${gradientId})`}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+          filter={`url(#${glowId})`}
+        />
+      )}
+    </svg>
+  );
+}
+
 export default function OS1LoadingAnimation({
   messages = defaultMessages,
   showMessage = true,
@@ -56,29 +186,23 @@ export default function OS1LoadingAnimation({
   }, [messages, showMessage]);
 
   const sizeConfig = {
-    sm: { container: "w-16 h-16", bars: 3, barWidth: 3, gap: 2 },
-    md: { container: "w-24 h-24", bars: 5, barWidth: 4, gap: 3 },
-    lg: { container: "w-32 h-32", bars: 7, barWidth: 5, gap: 4 },
+    sm: { width: 60, height: 20 },
+    md: { width: 100, height: 32 },
+    lg: { width: 140, height: 44 },
   };
 
   const colorConfig = {
     purple: {
-      primary: "from-violet-400 to-purple-500",
-      glow: "shadow-violet-500/30",
-      text: "text-violet-100",
-      bg: "bg-gradient-to-br from-violet-950/80 to-purple-950/80",
+      color: "#a78bfa",
+      text: "text-violet-300",
     },
     warm: {
-      primary: "from-orange-400 to-rose-500",
-      glow: "shadow-orange-500/30",
-      text: "text-orange-100",
-      bg: "bg-gradient-to-br from-orange-950/80 to-rose-950/80",
+      color: "#fb923c",
+      text: "text-orange-300",
     },
     gradient: {
-      primary: "from-violet-400 via-purple-500 to-pink-500",
-      glow: "shadow-purple-500/30",
-      text: "text-purple-100",
-      bg: "bg-gradient-to-br from-slate-900/90 to-slate-800/90",
+      color: "#c084fc",
+      text: "text-purple-300",
     },
   };
 
@@ -86,62 +210,31 @@ export default function OS1LoadingAnimation({
   const colors = colorConfig[variant];
 
   return (
-    <div className="flex flex-col items-center justify-center gap-6">
-      <div className={`relative ${config.container} flex items-center justify-center`}>
+    <div className="flex flex-col items-center justify-center gap-4">
+      <div className="relative flex items-center justify-center">
+        {/* 背景发光 */}
         <motion.div
-          className={`absolute inset-0 rounded-full bg-gradient-to-r ${colors.primary} opacity-20 blur-xl`}
+          className="absolute rounded-full blur-xl"
+          style={{
+            width: config.width * 1.5,
+            height: config.height * 2,
+            background: `radial-gradient(ellipse, ${colors.color}30 0%, transparent 70%)`,
+          }}
           animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.2, 0.3, 0.2],
+            scale: [1, 1.15, 1],
+            opacity: [0.4, 0.6, 0.4],
           }}
           transition={{
-            duration: 2,
+            duration: 2.5,
             repeat: Infinity,
             ease: "easeInOut",
           }}
         />
         
-        <div className="relative flex items-end justify-center gap-1 h-full py-4">
-          {Array.from({ length: config.bars }).map((_, i) => {
-            const delay = i * 0.15;
-            const isCenter = i === Math.floor(config.bars / 2);
-            
-            return (
-              <motion.div
-                key={i}
-                className={`rounded-full bg-gradient-to-t ${colors.primary} ${colors.glow} shadow-lg`}
-                style={{ width: config.barWidth }}
-                animate={{
-                  height: isCenter 
-                    ? [20, 40, 60, 40, 20]
-                    : [15, 30, 45, 30, 15],
-                  opacity: [0.6, 1, 0.8, 1, 0.6],
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  delay,
-                  ease: "easeInOut",
-                }}
-              />
-            );
-          })}
-        </div>
-
-        <motion.div
-          className={`absolute inset-0 rounded-full border-2 border-transparent`}
-          style={{
-            background: `linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent)`,
-            backgroundSize: "200% 100%",
-          }}
-          animate={{
-            backgroundPosition: ["200% 0", "-200% 0"],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            ease: "linear",
-          }}
+        <BreathingSineWave
+          width={config.width}
+          height={config.height}
+          color={colors.color}
         />
       </div>
 
@@ -222,7 +315,7 @@ export function OS1FullScreenLoader({
   );
 }
 
-// 真正的《Her》电影OS1波浪动画 - 使用SVG正弦波曲线
+// Her电影风格内联加载器 - 连续正弦波呼吸动画
 export function OS1InlineLoader({
   message = "思考中...",
   variant = "purple",
@@ -233,96 +326,19 @@ export function OS1InlineLoader({
   isComplete?: boolean;
 }) {
   const strokeColors = {
-    purple: "#a78bfa", // violet-400
-    warm: "#fb923c",   // orange-400
-    gradient: "#a78bfa",
+    purple: "#a78bfa",
+    warm: "#fb923c",
+    gradient: "#c084fc",
   };
-
-  // SVG路径：思考中的正弦波 vs 完成的圆形
-  // 正弦波路径：从左到右的平滑波浪
-  const wavePath = "M 5 12 Q 12 4, 20 12 T 35 12 T 50 12 T 65 12";
-  // 圆形路径
-  const circlePath = "M 35 4 A 8 8 0 1 1 34.99 4";
 
   return (
     <div className="flex items-center gap-3 py-2">
-      <div className="relative flex items-center justify-center w-[70px] h-6">
-        <svg
-          width="70"
-          height="24"
-          viewBox="0 0 70 24"
-          fill="none"
-          className="overflow-visible"
-        >
-          <defs>
-            <linearGradient id={`os1-gradient-${variant}`} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor={strokeColors[variant]} stopOpacity="0.6" />
-              <stop offset="50%" stopColor={strokeColors[variant]} stopOpacity="1" />
-              <stop offset="100%" stopColor={strokeColors[variant]} stopOpacity="0.6" />
-            </linearGradient>
-            <filter id="os1-glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-              <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-          </defs>
-          
-          <motion.path
-            d={isComplete ? circlePath : wavePath}
-            stroke={`url(#os1-gradient-${variant})`}
-            strokeWidth="2"
-            strokeLinecap="round"
-            fill="none"
-            filter="url(#os1-glow)"
-            initial={false}
-            animate={isComplete ? {
-              // 完成状态：静止的圆环
-              pathLength: 1,
-              opacity: 1,
-            } : {
-              // 思考中：波浪呼吸动画
-              pathLength: [0.3, 1, 0.3],
-              opacity: [0.6, 1, 0.6],
-            }}
-            transition={isComplete ? {
-              duration: 0.5,
-              ease: "easeOut",
-            } : {
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-            style={{
-              strokeDasharray: isComplete ? "none" : "8 4",
-            }}
-          />
-          
-          {/* 波浪流动效果 - 仅在思考中显示 */}
-          {!isComplete && (
-            <motion.path
-              d={wavePath}
-              stroke={strokeColors[variant]}
-              strokeWidth="2"
-              strokeLinecap="round"
-              fill="none"
-              opacity={0.4}
-              animate={{
-                strokeDashoffset: [0, -24],
-              }}
-              transition={{
-                duration: 1,
-                repeat: Infinity,
-                ease: "linear",
-              }}
-              style={{
-                strokeDasharray: "4 8",
-              }}
-            />
-          )}
-        </svg>
-      </div>
+      <BreathingSineWave
+        width={70}
+        height={24}
+        color={strokeColors[variant]}
+        isComplete={isComplete}
+      />
       <span className="text-sm text-muted-foreground">{message}</span>
     </div>
   );
