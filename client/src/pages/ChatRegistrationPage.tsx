@@ -1269,8 +1269,10 @@ function MessageBubble({
   // 过滤掉消息中的 collected_info 和 registration_complete 代码块，避免显示“乱码”
   const displayContent = useMemo(() => {
     return message.content
-      .replace(/```collected_info[\s\S]*?```/g, '')
-      .replace(/```registration_complete[\s\S]*?```/g, '')
+      .replace(/```collected_info[\s\S]*?```/gi, '')
+      .replace(/```registration_complete[\s\S]*?```/gi, '')
+      .replace(/collected_info\s*\{[\s\S]*?\}/gi, '')
+      .replace(/\{"displayName"[\s\S]*?\}/gi, '')
       .trim();
   }, [message.content]);
 

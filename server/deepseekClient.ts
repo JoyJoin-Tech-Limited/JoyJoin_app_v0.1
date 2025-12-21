@@ -1053,9 +1053,14 @@ export async function continueXiaoyueChat(
     const collectedInfo = extractCollectedInfo(assistantMessage);
     const isComplete = assistantMessage.includes('```registration_complete');
     
+    // 强制清理输出中的调试信息块
     let cleanMessage = assistantMessage
-      .replace(/```collected_info[\s\S]*?```/g, '')
-      .replace(/```registration_complete[\s\S]*?```/g, '')
+      .replace(/```collected_info[\s\S]*?```/gi, '')
+      .replace(/```registration_complete[\s\S]*?```/gi, '')
+      .replace(/collected_info\s*\{[\s\S]*?\}/gi, '') 
+      .replace(/```json[\s\S]*?```/gi, '')
+      .replace(/\{"displayName"[\s\S]*?\}|collected_info/gi, '')
+      .replace(/```[\s\S]*?```/gi, '') 
       .trim();
     
     // Fallback: 如果AI只输出了代码块没有对话内容，提供默认回复
@@ -1683,9 +1688,14 @@ export async function continueXiaoyueChatWithInference(
     const collectedInfo = extractCollectedInfo(assistantMessage);
     const isComplete = assistantMessage.includes('```registration_complete');
     
+    // 强制清理输出中的调试信息块
     let cleanMessage = assistantMessage
-      .replace(/```collected_info[\s\S]*?```/g, '')
-      .replace(/```registration_complete[\s\S]*?```/g, '')
+      .replace(/```collected_info[\s\S]*?```/gi, '')
+      .replace(/```registration_complete[\s\S]*?```/gi, '')
+      .replace(/collected_info\s*\{[\s\S]*?\}/gi, '') 
+      .replace(/```json[\s\S]*?```/gi, '')
+      .replace(/\{"displayName"[\s\S]*?\}|collected_info/gi, '')
+      .replace(/```[\s\S]*?```/gi, '') 
       .trim();
     
     if (!cleanMessage) {
