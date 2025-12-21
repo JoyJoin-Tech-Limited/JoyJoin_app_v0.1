@@ -462,18 +462,20 @@ const achievements: AchievementWithMode[] = [
 // 成就弹出组件
 function AchievementToast({ achievement, onComplete }: { achievement: Achievement; onComplete: () => void }) {
   useEffect(() => {
+    // 强制 3 秒后执行完成回调
     const timer = setTimeout(() => {
       onComplete();
-    }, 4000); // 增加显示时间到 4 秒
+    }, 3000);
     return () => clearTimeout(timer);
-  }, [achievement.id, onComplete]); // 监听 achievement.id 变化
+  }, [achievement.id, onComplete]);
 
   return (
     <motion.div
+      key={achievement.id}
       initial={{ opacity: 0, y: 50, scale: 0.8, x: "-50%" }}
       animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
-      exit={{ opacity: 0, y: -20, scale: 0.9, x: "-50%" }}
-      className="fixed bottom-32 left-1/2 z-50"
+      exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+      className="fixed bottom-32 left-1/2 z-[100] pointer-events-none"
     >
       <div className="bg-gradient-to-r from-primary/90 to-purple-600/90 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3">
         <motion.span 
@@ -2806,9 +2808,10 @@ export default function ChatRegistrationPage() {
         </DrawerContent>
       </Drawer>
 
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {currentAchievement && (
           <AchievementToast 
+            key={currentAchievement.id}
             achievement={currentAchievement} 
             onComplete={() => setCurrentAchievement(null)} 
           />
