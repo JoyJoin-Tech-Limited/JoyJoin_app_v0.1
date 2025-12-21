@@ -1395,14 +1395,14 @@ function extractLastQuestion(message: string): string {
   return sentences[sentences.length - 1] || message;
 }
 
+// 缓存排序的配置（避免每次都排序）
+const sortedQuickReplyConfigs = quickReplyConfigs.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+
 // 关键词匹配 quickReplyConfigs - 作为 patternBasedConfigs 的后备
 function matchKeywordBasedConfig(message: string): QuickReplyResult | null {
   const lowerMsg = message.toLowerCase();
   
-  // 按优先级排序
-  const sortedConfigs = [...quickReplyConfigs].sort((a, b) => (b.priority || 0) - (a.priority || 0));
-  
-  for (const config of sortedConfigs) {
+  for (const config of sortedQuickReplyConfigs) {
     // 检查是否有关键词匹配
     const hasMatch = config.keywords.some(kw => lowerMsg.includes(kw.toLowerCase()));
     if (hasMatch && config.options.length > 0) {
