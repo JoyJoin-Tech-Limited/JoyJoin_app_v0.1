@@ -68,6 +68,13 @@ Preferred communication style: Simple, everyday language.
   - **Dialect Matching as Chemistry Factor:** Same dialect background = +15 points bonus in ConversationSignature similarity (老乡 effect). Both having dialect backgrounds but different = +5 points (移民共鸣).
   - **Intelligent Inference Engine:** Hybrid microkernel architecture (Semantic Matcher, LLM Reasoner, Knowledge Graph, State Manager) to infer user attributes and skip redundant questions with confidence-based actions.
   - **Expert Evaluation System:** Framework with 10 AI expert personas and 7 weighted evaluation dimensions for quality assessment.
+  - **Registration Funnel Analytics Dashboard:** Admin Portal tab under "数据洞察" with:
+    - KPI cards: conversion rate, avg completion time, 7-day completions, L3 confidence
+    - L1 field dropoff heatmap showing which required fields cause abandonment
+    - L2 engagement bar chart showing optional field participation rates
+    - L3 confidence trend line chart tracking AI inference accuracy
+    - Session duration distribution histogram
+  - **Lightweight Fatigue Reminder:** Triggers once after 7 minutes if L2 fields are still empty, with gentle prompt from 小悦.
 - **Personalized Icebreaker Topics:** Algorithm-curated topics considering common interests and archetypes.
 - **Activity Toolkit (活动工具包) UX Enhancements:** Features like "适合破冰" badges, atmosphere checks, and streamlined ending screens.
 - **King Game (国王游戏) Digital Card System:** Interactive digital poker card game with multi-device WebSocket synchronization, 3D flip animations, dynamic deck generation, and automated dealer rotation.

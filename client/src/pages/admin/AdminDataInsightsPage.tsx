@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -11,7 +13,8 @@ import {
   Clock,
   Star,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  UserPlus
 } from "lucide-react";
 import {
   PieChart,
@@ -28,6 +31,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import RegistrationFunnelDashboard from "@/components/admin/RegistrationFunnelDashboard";
 
 interface InsightsData {
   engagementMetrics: {
@@ -143,21 +147,10 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export default function AdminDataInsightsPage() {
+  const [activeTab, setActiveTab] = useState("operations");
   const { data: insights, isLoading, error } = useQuery<InsightsData>({
     queryKey: ["/api/admin/insights"],
   });
-
-  if (error) {
-    return (
-      <div className="p-8">
-        <div className="text-center py-12">
-          <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">加载失败</h3>
-          <p className="text-muted-foreground">无法加载数据洞察，请稍后重试</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-8 space-y-6">
@@ -166,6 +159,31 @@ export default function AdminDataInsightsPage() {
         <p className="text-muted-foreground mt-1">实时监控平台核心运营指标</p>
       </div>
 
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="operations" className="flex items-center gap-2" data-testid="tab-operations">
+            <Target className="h-4 w-4" />
+            运营概览
+          </TabsTrigger>
+          <TabsTrigger value="registration" className="flex items-center gap-2" data-testid="tab-registration">
+            <UserPlus className="h-4 w-4" />
+            注册漏斗
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="registration" className="mt-6">
+          <RegistrationFunnelDashboard />
+        </TabsContent>
+
+        <TabsContent value="operations" className="mt-6 space-y-6">
+          {error ? (
+            <div className="text-center py-12">
+              <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">加载失败</h3>
+              <p className="text-muted-foreground">无法加载数据洞察，请稍后重试</p>
+            </div>
+          ) : (
+            <>
       {/* Top KPI Cards */}
       <div className="grid gap-6 md:grid-cols-3">
         {/* 1. User Scale Card */}
@@ -590,6 +608,10 @@ export default function AdminDataInsightsPage() {
           </CardContent>
         </Card>
       )}
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

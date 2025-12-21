@@ -1054,6 +1054,18 @@ const patternBasedConfigs: PatternBasedQuickReplyConfig[] = [
     ],
     priority: 90,
     enforcePredefined: true
+  },
+  // === 疲劳提醒快捷回复 ===
+  {
+    id: "fatigueReminder",
+    pattern: /聊了一会儿|小歇一下|帮你记住/,
+    requiredAny: [],
+    options: [
+      { text: "继续聊", icon: MessageCircle },
+      { text: "先休息一下", icon: Coffee }
+    ],
+    priority: 99,
+    enforcePredefined: true
   }
 ];
 
@@ -2055,6 +2067,52 @@ export default function ChatRegistrationPage() {
   
   // 对话开始时间（用于计算completionSpeed）
   const [chatStartTime] = useState<string>(() => new Date().toISOString());
+  
+  // 轻量版疲劳提醒状态 (对话超7分钟且L2未完成时触发一次)
+  const [hasFatigueReminderShown, setHasFatigueReminderShown] = useState(false);
+  
+  // 检查是否需要显示疲劳提醒
+  useEffect(() => {
+    if (hasFatigueReminderShown || !chatStartTime || !selectedMode) return;
+    
+    // 计算L2完成度（检查是否有可选字段被填写）
+    const l2Fields = ['interestsTop', 'occupation', 'intent', 'socialStyle'];
+    const hasL2Data = l2Fields.some(field => {
+      const value = (collectedInfo as any)[field];
+      if (Array.isArray(value)) return value.length > 0;
+      return value !== undefined && value !== null && value !== '';
+    });
+    
+    // 如果L2已有数据，不需要提醒
+    if (hasL2Data) return;
+    
+    // 设置7分钟定时器
+    const FATIGUE_THRESHOLD_MS = 7 * 60 * 1000; // 7分钟
+    const elapsed = Date.now() - new Date(chatStartTime).getTime();
+    const remainingTime = Math.max(0, FATIGUE_THRESHOLD_MS - elapsed);
+    
+    const timer = setTimeout(() => {
+      // 再次检查L2完成度
+      const stillMissingL2 = !l2Fields.some(field => {
+        const value = (collectedInfo as any)[field];
+        if (Array.isArray(value)) return value.length > 0;
+        return value !== undefined && value !== null && value !== '';
+      });
+      
+      if (stillMissingL2 && !hasFatigueReminderShown) {
+        // 添加小悦的温馨提醒消息（不使用emoji，保持简洁温暖）
+        setMessages(prev => [...prev, {
+          id: `msg-fatigue-${Date.now()}`,
+          role: 'assistant' as const,
+          content: '聊了一会儿啦，要不要小歇一下？你随时可以继续，我会帮你记住刚才聊的内容哦～',
+          timestamp: new Date(),
+        }]);
+        setHasFatigueReminderShown(true);
+      }
+    }, remainingTime);
+    
+    return () => clearTimeout(timer);
+  }, [chatStartTime, selectedMode, hasFatigueReminderShown, collectedInfo]);
   
   // 处理模式选择
   const handleModeSelect = (mode: RegistrationMode) => {

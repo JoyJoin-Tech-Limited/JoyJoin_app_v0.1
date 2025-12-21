@@ -7190,6 +7190,18 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  // Registration Funnel Analytics - Get registration funnel data
+  app.get("/api/admin/insights/registration-funnel", requireAdmin, async (req, res) => {
+    try {
+      const { getRegistrationFunnelData } = await import('./analytics/registrationFunnelAnalytics');
+      const funnelData = await getRegistrationFunnelData();
+      res.json(funnelData);
+    } catch (error) {
+      console.error("Error fetching registration funnel data:", error);
+      res.status(500).json({ message: "Failed to fetch registration funnel data" });
+    }
+  });
+
   // ============ ADMIN FEEDBACK MANAGEMENT ============
 
   // Get all feedbacks with filters
