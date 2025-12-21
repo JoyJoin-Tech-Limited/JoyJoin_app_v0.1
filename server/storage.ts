@@ -3447,42 +3447,42 @@ export class DatabaseStorage implements IStorage {
       .where(sql`${registrationSessions.completedAt} IS NOT NULL`);
     const totalCompleted = completedResult?.count || 0;
 
-    // Average completion time in minutes
+    // Average completion time in minutes (no fallback - real data only)
     const [timeResult] = await db
       .select({
         avgMinutes: sql<number>`AVG(EXTRACT(EPOCH FROM (${registrationSessions.completedAt} - ${registrationSessions.startedAt})) / 60)`
       })
       .from(registrationSessions)
       .where(sql`${registrationSessions.completedAt} IS NOT NULL`);
-    const avgCompletionTimeMinutes = timeResult?.avgMinutes ? Math.round(timeResult.avgMinutes * 10) / 10 : 2.4;
+    const avgCompletionTimeMinutes = timeResult?.avgMinutes ? Math.round(timeResult.avgMinutes * 10) / 10 : 0;
 
-    // Average L3 confidence
+    // Average L3 confidence (no fallback - real data only)
     const [confidenceResult] = await db
       .select({
         avgConfidence: sql<number>`AVG(${registrationSessions.l3Confidence}::numeric)`
       })
       .from(registrationSessions)
       .where(sql`${registrationSessions.l3Confidence} IS NOT NULL`);
-    const avgL3Confidence = confidenceResult?.avgConfidence || 0.72;
+    const avgL3Confidence = confidenceResult?.avgConfidence || 0;
 
-    // Completed last 7 days
+    // Completed last 7 days (exclusive lower bound to avoid overlap)
     const [last7Result] = await db
       .select({ count: sql<number>`COUNT(*)::int` })
       .from(registrationSessions)
       .where(and(
         sql`${registrationSessions.completedAt} IS NOT NULL`,
-        gte(registrationSessions.completedAt, sevenDaysAgo)
+        sql`${registrationSessions.completedAt} > ${sevenDaysAgo}`
       ));
     const completedLast7Days = last7Result?.count || 0;
 
-    // Completed previous 7 days
+    // Completed previous 7 days (inclusive lower, exclusive upper to avoid overlap)
     const [prev7Result] = await db
       .select({ count: sql<number>`COUNT(*)::int` })
       .from(registrationSessions)
       .where(and(
         sql`${registrationSessions.completedAt} IS NOT NULL`,
-        gte(registrationSessions.completedAt, fourteenDaysAgo),
-        lte(registrationSessions.completedAt, sevenDaysAgo)
+        sql`${registrationSessions.completedAt} > ${fourteenDaysAgo}`,
+        sql`${registrationSessions.completedAt} <= ${sevenDaysAgo}`
       ));
     const completedPrevious7Days = prev7Result?.count || 0;
 

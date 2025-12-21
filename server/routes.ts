@@ -576,6 +576,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ Registration Session Telemetry Routes ============
+  
+  // Create a new registration session (called when chat registration starts)
+  app.post('/api/registration/sessions', async (req: any, res) => {
+    try {
+      const { sessionMode, deviceChannel } = req.body;
+      const userId = req.session?.userId;
+      const userAgent = req.headers['user-agent'];
+      
+      const session = await storage.createRegistrationSession({
+        sessionMode: sessionMode || 'ai_chat',
+        userId,
+        deviceChannel,
+        userAgent,
+      });
+      
+      res.json({ sessionId: session.id });
+    } catch (error) {
+      console.error("Error creating registration session:", error);
+      res.status(500).json({ message: "Failed to create session" });
+    }
+  });
+  
+  // Update registration session (lifecycle updates)
+  app.patch('/api/registration/sessions/:id', async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      // Convert string dates to Date objects
+      const processedUpdates: any = {};
+      for (const [key, value] of Object.entries(updates)) {
+        if (['l1CompletedAt', 'l2EnrichedAt', 'completedAt', 'abandonedAt', 'lastTouchAt'].includes(key) && value) {
+          processedUpdates[key] = new Date(value as string);
+        } else {
+          processedUpdates[key] = value;
+        }
+      }
+      
+      const session = await storage.updateRegistrationSession(id, processedUpdates);
+      res.json(session);
+    } catch (error) {
+      console.error("Error updating registration session:", error);
+      res.status(500).json({ message: "Failed to update session" });
+    }
+  });
+  
+  // Get registration session stats (admin endpoint)
+  app.get('/api/registration/sessions/stats', requireAdmin, async (req: any, res) => {
+    try {
+      const stats = await storage.getRegistrationSessionStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error getting registration session stats:", error);
+      res.status(500).json({ message: "Failed to get stats" });
+    }
+  });
+
   // Registration routes
   app.post('/api/user/register', isPhoneAuthenticated, async (req: any, res) => {
     try {
