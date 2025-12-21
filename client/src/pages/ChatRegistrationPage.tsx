@@ -2071,6 +2071,11 @@ export default function ChatRegistrationPage() {
   // 轻量版疲劳提醒状态 (对话超7分钟且L2未完成时触发一次)
   const [hasFatigueReminderShown, setHasFatigueReminderShown] = useState(false);
   
+  // Session telemetry state
+  const [telemetrySessionId, setTelemetrySessionId] = useState<string | null>(null);
+  const [l1CompletedEmitted, setL1CompletedEmitted] = useState(false);
+  const [l2EnrichedEmitted, setL2EnrichedEmitted] = useState(false);
+  
   // 检查是否需要显示疲劳提醒
   useEffect(() => {
     if (hasFatigueReminderShown || !chatStartTime || !selectedMode) return;
@@ -2113,6 +2118,67 @@ export default function ChatRegistrationPage() {
     
     return () => clearTimeout(timer);
   }, [chatStartTime, selectedMode, hasFatigueReminderShown, collectedInfo]);
+  
+  // Telemetry: Emit L1 completion when core fields are collected
+  useEffect(() => {
+    if (!telemetrySessionId || l1CompletedEmitted) return;
+    
+    // L1 required fields: displayName, gender
+    const hasL1 = collectedInfo.displayName && collectedInfo.gender;
+    if (hasL1) {
+      setL1CompletedEmitted(true);
+      apiRequest("PATCH", `/api/registration/sessions/${telemetrySessionId}`, {
+        l1CompletedAt: new Date().toISOString(),
+        lastTouchAt: new Date().toISOString(),
+      }).catch(e => console.warn('[Telemetry] Failed to emit L1 completion:', e));
+    }
+  }, [telemetrySessionId, l1CompletedEmitted, collectedInfo.displayName, collectedInfo.gender]);
+  
+  // Telemetry: Emit L2 enrichment when optional fields are collected
+  useEffect(() => {
+    if (!telemetrySessionId || l2EnrichedEmitted || !l1CompletedEmitted) return;
+    
+    // L2 optional fields: interests, occupation, intent, socialStyle
+    const l2Fields = ['interestsTop', 'occupation', 'intent', 'socialStyle'];
+    const filledL2Count = l2Fields.filter(field => {
+      const value = (collectedInfo as any)[field];
+      if (Array.isArray(value)) return value.length > 0;
+      return value !== undefined && value !== null && value !== '';
+    }).length;
+    
+    // Consider L2 enriched if at least 1 optional field is filled
+    if (filledL2Count >= 1) {
+      setL2EnrichedEmitted(true);
+      apiRequest("PATCH", `/api/registration/sessions/${telemetrySessionId}`, {
+        l2EnrichedAt: new Date().toISOString(),
+        l2FieldsFilledCount: filledL2Count,
+        lastTouchAt: new Date().toISOString(),
+      }).catch(e => console.warn('[Telemetry] Failed to emit L2 enrichment:', e));
+    }
+  }, [telemetrySessionId, l1CompletedEmitted, l2EnrichedEmitted, collectedInfo]);
+  
+  // Telemetry: Emit fatigue reminder trigger
+  useEffect(() => {
+    if (!telemetrySessionId || !hasFatigueReminderShown) return;
+    
+    apiRequest("PATCH", `/api/registration/sessions/${telemetrySessionId}`, {
+      fatigueReminderTriggered: true,
+      lastTouchAt: new Date().toISOString(),
+    }).catch(e => console.warn('[Telemetry] Failed to emit fatigue reminder:', e));
+  }, [telemetrySessionId, hasFatigueReminderShown]);
+  
+  // Telemetry: Emit completion when registration is finished
+  const [completionEmitted, setCompletionEmitted] = useState(false);
+  useEffect(() => {
+    if (!telemetrySessionId || !isComplete || completionEmitted) return;
+    
+    setCompletionEmitted(true);
+    apiRequest("PATCH", `/api/registration/sessions/${telemetrySessionId}`, {
+      completedAt: new Date().toISOString(),
+      messageCount: messages.length,
+      lastTouchAt: new Date().toISOString(),
+    }).catch(e => console.warn('[Telemetry] Failed to emit completion:', e));
+  }, [telemetrySessionId, isComplete, completionEmitted, messages.length]);
   
   // 处理模式选择
   const handleModeSelect = (mode: RegistrationMode) => {
@@ -2246,12 +2312,26 @@ export default function ChatRegistrationPage() {
       const res = await apiRequest("POST", "/api/registration/chat/start", payload);
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       // 记录注册开始时间（用于时间徽章判断）
       setCollectedInfo(prev => ({
         ...prev,
         registrationStartTime: new Date().toISOString()
       }));
+      
+      // Create telemetry session
+      try {
+        const sessionRes = await apiRequest("POST", "/api/registration/sessions", {
+          sessionMode: selectedMode || 'ai_chat',
+          deviceChannel: /mobile|android|iphone/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+        });
+        const sessionData = await sessionRes.json();
+        if (sessionData.sessionId) {
+          setTelemetrySessionId(sessionData.sessionId);
+        }
+      } catch (e) {
+        console.warn('[Telemetry] Failed to create session:', e);
+      }
       
       // 取消之前正在进行的开场白序列
       openingAbortRef.current?.abort();
