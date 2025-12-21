@@ -2785,6 +2785,44 @@ export default function ChatRegistrationPage() {
   const yearScrollRef = useRef<HTMLDivElement>(null);
   const monthScrollRef = useRef<HTMLDivElement>(null);
   const dayScrollRef = useRef<HTMLDivElement>(null);
+  const itemHeightRef = useRef<number>(56); // Default item height
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // 初始化生日滚轮位置
+  useEffect(() => {
+    if (!showBirthdayPicker) return;
+    
+    // 清除之前的timeout
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    
+    scrollTimeoutRef.current = setTimeout(() => {
+      // 测量实际item高度
+      const firstItem = yearScrollRef.current?.querySelector('[data-wheel-item]');
+      if (firstItem) {
+        const height = firstItem.getBoundingClientRect().height;
+        if (height > 0) itemHeightRef.current = height;
+      }
+      
+      // 初始化滚动位置（直接设置到中心）
+      const ITEM_HEIGHT = itemHeightRef.current;
+      if (yearScrollRef.current && birthdayYear) {
+        const yearIndex = Array.from({ length: 50 }, (_, i) => 2025 - 18 - i).indexOf(parseInt(birthdayYear));
+        if (yearIndex >= 0) yearScrollRef.current.scrollTop = yearIndex * ITEM_HEIGHT;
+      }
+      if (monthScrollRef.current && birthdayMonth) {
+        const monthIndex = parseInt(birthdayMonth) - 1;
+        monthScrollRef.current.scrollTop = monthIndex * ITEM_HEIGHT;
+      }
+      if (dayScrollRef.current && birthdayDay) {
+        const dayIndex = parseInt(birthdayDay) - 1;
+        dayScrollRef.current.scrollTop = dayIndex * ITEM_HEIGHT;
+      }
+    }, 50);
+    
+    return () => {
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    };
+  }, [showBirthdayPicker, birthdayYear, birthdayMonth, birthdayDay]);
   
   // 快捷回复点击处理
   const handleQuickReply = (text: string) => {
@@ -3226,7 +3264,7 @@ export default function ChatRegistrationPage() {
                 onScroll={(e) => {
                   const target = e.currentTarget;
                   const scrollTop = target.scrollTop;
-                  const itemHeight = 48; // py-3 + implicit spacing
+                  const itemHeight = itemHeightRef.current;
                   const index = Math.round(scrollTop / itemHeight);
                   const years = Array.from({ length: 50 }, (_, i) => 2025 - 18 - i);
                   if (index >= 0 && index < years.length && birthdayYear !== String(years[index])) {
@@ -3238,6 +3276,7 @@ export default function ChatRegistrationPage() {
                 {Array.from({ length: 50 }, (_, i) => 2025 - 18 - i).map((year) => (
                   <div
                     key={year}
+                    data-wheel-item
                     className={`w-full py-3 text-center font-medium transition-all ${
                       birthdayYear === String(year)
                         ? "text-primary text-lg"
@@ -3258,7 +3297,7 @@ export default function ChatRegistrationPage() {
                 onScroll={(e) => {
                   const target = e.currentTarget;
                   const scrollTop = target.scrollTop;
-                  const itemHeight = 48;
+                  const itemHeight = itemHeightRef.current;
                   const index = Math.round(scrollTop / itemHeight);
                   const months = Array.from({ length: 12 }, (_, i) => i + 1);
                   if (index >= 0 && index < months.length && birthdayMonth !== String(months[index])) {
@@ -3270,6 +3309,7 @@ export default function ChatRegistrationPage() {
                 {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
                   <div
                     key={month}
+                    data-wheel-item
                     className={`w-full py-3 text-center font-medium transition-all ${
                       birthdayMonth === String(month)
                         ? "text-primary text-lg"
@@ -3290,7 +3330,7 @@ export default function ChatRegistrationPage() {
                 onScroll={(e) => {
                   const target = e.currentTarget;
                   const scrollTop = target.scrollTop;
-                  const itemHeight = 48;
+                  const itemHeight = itemHeightRef.current;
                   const index = Math.round(scrollTop / itemHeight);
                   const days = Array.from({ length: 31 }, (_, i) => i + 1);
                   if (index >= 0 && index < days.length && birthdayDay !== String(days[index])) {
@@ -3302,6 +3342,7 @@ export default function ChatRegistrationPage() {
                 {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
                   <div
                     key={day}
+                    data-wheel-item
                     className={`w-full py-3 text-center font-medium transition-all ${
                       birthdayDay === String(day)
                         ? "text-primary text-lg"
