@@ -2069,9 +2069,102 @@ interface CollectedInfo {
   cuisinePreference?: string[];
 }
 
+// 信息项组件：显示标签和值，支持待完善状态
+function InfoItem({ label, value, pending = false }: { label: string; value?: string | string[]; pending?: boolean }) {
+  const displayValue = Array.isArray(value) ? value.join('、') : value;
+  const isEmpty = !displayValue || displayValue.trim() === '';
+  
+  if (isEmpty && !pending) return null;
+  
+  return (
+    <div className="flex items-start gap-2 text-xs">
+      <span className="text-muted-foreground shrink-0 min-w-[3.5rem]">{label}</span>
+      {isEmpty ? (
+        <span className="text-muted-foreground/50 italic">待完善</span>
+      ) : (
+        <span className="font-medium">{displayValue}</span>
+      )}
+    </div>
+  );
+}
+
+// 分组折叠组件
+function ProfileSection({ 
+  icon, 
+  title, 
+  children, 
+  defaultOpen = true,
+  filledCount,
+  totalCount 
+}: { 
+  icon: React.ReactNode; 
+  title: string; 
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  filledCount: number;
+  totalCount: number;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const allFilled = filledCount === totalCount;
+  
+  return (
+    <div className="border-b border-violet-100/10 last:border-0">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between py-2.5 px-1 hover-elevate rounded-lg transition-colors"
+        data-testid={`section-toggle-${title}`}
+      >
+        <div className="flex items-center gap-2">
+          {icon}
+          <span className="text-xs font-medium">{title}</span>
+          <span className="text-[10px] text-muted-foreground">
+            {filledCount}/{totalCount}
+          </span>
+          {allFilled && <span className="text-[10px]">✓</span>}
+        </div>
+        <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="pb-3 pl-6 space-y-1.5">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function SocialProfileCard({ info, mode }: { info: CollectedInfo; mode?: RegistrationMode }) {
   const { percentage } = calculateProfileCompletionUtil(info as any);
   const matchingBoost = getMatchingBoostEstimate(percentage);
+  
+  // 计算各分组填充数量
+  const countFilled = (...values: (string | string[] | boolean | undefined)[]) => 
+    values.filter(v => {
+      if (Array.isArray(v)) return v.length > 0;
+      if (typeof v === 'boolean') return v !== undefined;
+      return v && String(v).trim() !== '';
+    }).length;
+
+  // 身份档案：昵称、性别、年龄、家乡、感情、子女（6项）
+  const identityFilled = countFilled(info.displayName, info.gender, info.birthYear, info.hometown, info.relationshipStatus, info.children);
+  // 职业背景：行业、职业、职位、资历、学历、专业（6项）
+  const careerFilled = countFilled(info.industry, info.occupation || info.occupationDescription, info.roleTitleShort, info.seniority, info.educationLevel, info.fieldOfStudy);
+  // 地理语言：城市、语言、海外、留学（4项）
+  const geoLangFilled = countFilled(info.currentCity, info.languagesComfort, info.overseasRegions, info.studyLocale);
+  // 兴趣生活：兴趣、深度兴趣、饮食、禁区（4项）
+  const interestsFilled = countFilled(info.interestsTop || info.topInterests, info.interestsDeep, info.cuisinePreference, info.topicAvoidances);
+  // 社交风格：意图、风格、破冰（3项）
+  const socialFilled = countFilled(info.intent, info.socialStyle, info.icebreakerRole);
   
   return (
     <motion.div
@@ -2079,77 +2172,146 @@ function SocialProfileCard({ info, mode }: { info: CollectedInfo; mode?: Registr
       animate={{ opacity: 1, scale: 1 }}
       className="p-4 bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-transparent rounded-2xl border border-violet-200/20 shadow-xl"
     >
-      <div className="flex items-start gap-4 mb-4">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/40 dark:to-purple-900/40 flex items-center justify-center border border-violet-200/30">
-          <User className="w-8 h-8 text-primary" />
+      {/* 顶部头像区域 */}
+      <div className="flex items-start gap-4 mb-3">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/40 dark:to-purple-900/40 flex items-center justify-center border border-violet-200/30">
+          <User className="w-7 h-7 text-primary" />
         </div>
-        <div className="flex-1">
-          <h3 className="text-lg font-bold text-primary flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base font-bold text-primary flex items-center gap-2 flex-wrap">
             {info.displayName || "神秘嘉宾"}
             <Badge variant="outline" className="text-[10px] h-4 px-1">{mode === 'express' ? '极速' : mode === 'deep' ? '深度' : '标准'}</Badge>
           </h3>
-          <p className="text-sm text-muted-foreground flex items-center gap-2">
-            {info.gender} · {info.birthYear}后 · {info.currentCity}
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {[info.gender, info.birthYear ? `${info.birthYear}后` : null, info.currentCity].filter(Boolean).join(' · ') || '资料待完善'}
           </p>
-          <div className="flex items-center gap-1.5 mt-2">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
-              匹配加成: +{matchingBoost}%
-            </span>
-          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {info.industry && (
-          <div className="p-2.5 bg-background/50 rounded-xl border border-violet-100/20">
-            <div className="flex items-center gap-2 mb-1">
-              <Briefcase className="w-3.5 h-3.5 text-violet-500" />
-              <span className="text-[10px] text-muted-foreground font-medium">行业</span>
-            </div>
-            <p className="text-xs font-semibold truncate">{info.industry}</p>
+      {/* 进度条 + 匹配加成 */}
+      <div className="mb-3 p-2.5 bg-background/40 rounded-xl">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[10px] text-muted-foreground">资料完整度</span>
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3 text-amber-500" />
+            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
+              匹配加成 +{matchingBoost}%
+            </span>
           </div>
-        )}
-        {info.interestsTop && info.interestsTop.length > 0 && (
-          <div className="p-2.5 bg-background/50 rounded-xl border border-violet-100/20">
-            <div className="flex items-center gap-2 mb-1">
-              <Heart className="w-3.5 h-3.5 text-pink-500" />
-              <span className="text-[10px] text-muted-foreground font-medium">最爱</span>
-            </div>
-            <p className="text-xs font-semibold truncate">{info.interestsTop[0]}</p>
-          </div>
-        )}
+        </div>
+        <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${percentage}%` }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full"
+          />
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-1 text-right">{percentage}%</p>
       </div>
-      
-      {/* 成就墙预览 */}
-      <div className="mt-4 pt-4 border-t border-violet-200/20">
-        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mb-2">解锁成就</p>
-        {(() => {
-          const unlocked = achievements.filter(a => a.condition(info));
-          if (unlocked.length === 0) return (
-            <div className="bg-muted/30 rounded-lg p-2 text-center">
-              <p className="text-[10px] text-muted-foreground italic">暂无勋章，多聊聊能解锁更多哦</p>
-            </div>
-          );
-          return (
+
+      {/* 成就徽章横向滚动 */}
+      {(() => {
+        const unlocked = achievements.filter(a => a.condition(info));
+        if (unlocked.length === 0) return null;
+        return (
+          <div className="mb-3">
+            <p className="text-[10px] text-muted-foreground font-medium mb-1.5 px-1">解锁成就</p>
             <div className="overflow-x-auto pb-1 scrollbar-hide">
-              <div className="flex gap-2 min-w-max">
+              <div className="flex gap-1.5 min-w-max">
                 {unlocked.map((badge, idx) => (
                   <motion.div
                     key={badge.id}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: idx * 0.1 }}
-                    className="flex flex-col items-center gap-1 p-2 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-lg min-w-[60px]"
+                    transition={{ delay: idx * 0.05 }}
+                    className="flex items-center gap-1 px-2 py-1 bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-full"
                   >
-                    <span className="text-xs leading-none">{badge.icon}</span>
-                    <span className="text-[9px] text-white/90 leading-none">{badge.title}</span>
+                    <span className="text-[10px] leading-none">{badge.icon}</span>
+                    <span className="text-[9px] leading-none">{badge.title}</span>
                   </motion.div>
                 ))}
               </div>
             </div>
-          );
-        })()}
+          </div>
+        );
+      })()}
+
+      {/* 5大分组 */}
+      <div className="space-y-0">
+        {/* 身份档案：昵称、性别、年龄、家乡、感情、子女（6项） */}
+        <ProfileSection
+          icon={<User className="w-3.5 h-3.5 text-violet-500" />}
+          title="身份档案"
+          filledCount={identityFilled}
+          totalCount={6}
+          defaultOpen={true}
+        >
+          <InfoItem label="昵称" value={info.displayName} pending />
+          <InfoItem label="性别" value={info.gender} pending />
+          <InfoItem label="年龄" value={info.birthYear ? `${info.birthYear}后` : undefined} pending />
+          <InfoItem label="家乡" value={info.hometown} pending />
+          <InfoItem label="感情" value={info.relationshipStatus} pending />
+          <InfoItem label="子女" value={info.children} pending />
+          {info.hasPets && <InfoItem label="宠物" value={info.petTypes?.join('、') || '有宠物'} />}
+        </ProfileSection>
+
+        {/* 职业背景：行业、职业、职位、资历、学历、专业（6项） */}
+        <ProfileSection
+          icon={<Briefcase className="w-3.5 h-3.5 text-blue-500" />}
+          title="职业背景"
+          filledCount={careerFilled}
+          totalCount={6}
+          defaultOpen={false}
+        >
+          <InfoItem label="行业" value={info.industry} pending />
+          <InfoItem label="职业" value={info.occupation || info.occupationDescription} pending />
+          <InfoItem label="职位" value={info.roleTitleShort} pending />
+          <InfoItem label="资历" value={info.seniority} pending />
+          <InfoItem label="学历" value={info.educationLevel} pending />
+          <InfoItem label="专业" value={info.fieldOfStudy} pending />
+        </ProfileSection>
+
+        {/* 地理语言：城市、语言、海外、留学（4项） */}
+        <ProfileSection
+          icon={<MapPin className="w-3.5 h-3.5 text-green-500" />}
+          title="地理语言"
+          filledCount={geoLangFilled}
+          totalCount={4}
+          defaultOpen={false}
+        >
+          <InfoItem label="城市" value={info.currentCity} pending />
+          <InfoItem label="语言" value={info.languagesComfort} pending />
+          <InfoItem label="海外" value={info.overseasRegions} pending />
+          <InfoItem label="留学" value={info.studyLocale} pending />
+        </ProfileSection>
+
+        {/* 兴趣生活：兴趣、深度兴趣、饮食、禁区（4项） */}
+        <ProfileSection
+          icon={<Heart className="w-3.5 h-3.5 text-pink-500" />}
+          title="兴趣生活"
+          filledCount={interestsFilled}
+          totalCount={4}
+          defaultOpen={false}
+        >
+          <InfoItem label="兴趣" value={info.interestsTop || info.topInterests} pending />
+          <InfoItem label="深度" value={info.interestsDeep} pending />
+          <InfoItem label="饮食" value={info.cuisinePreference} pending />
+          <InfoItem label="禁区" value={info.topicAvoidances} pending />
+        </ProfileSection>
+
+        {/* 社交风格：意图、风格、破冰（3项） */}
+        <ProfileSection
+          icon={<MessageCircle className="w-3.5 h-3.5 text-orange-500" />}
+          title="社交风格"
+          filledCount={socialFilled}
+          totalCount={3}
+          defaultOpen={false}
+        >
+          <InfoItem label="意图" value={info.intent} pending />
+          <InfoItem label="风格" value={info.socialStyle} pending />
+          <InfoItem label="破冰" value={info.icebreakerRole} pending />
+        </ProfileSection>
       </div>
     </motion.div>
   );
