@@ -1259,7 +1259,7 @@ function MessageBubble({
   const isAssistant = message.role === "assistant";
   
   // 仅在最新助理消息且需要动画时显示打字效果
-  const shouldShowTyping = isAssistant && message.isTypingAnimation;
+  const shouldShowTyping = isAssistant && message.isTypingAnimation === true;
   const { displayedText, isComplete } = useTypingEffect(message.content, shouldShowTyping);
 
   useEffect(() => {
@@ -1391,10 +1391,12 @@ interface CollectedInfo {
   icebreakerRole?: string;
   socialStyle?: string;
   topicAvoidances?: string[];
+  cuisinePreference?: string[];
 }
 
 function SocialProfileCard({ info, mode }: { info: CollectedInfo; mode?: RegistrationMode }) {
-  const matchingBoost = getMatchingBoostEstimate(info);
+  const { percentage } = calculateProfileCompletionUtil(info as any);
+  const matchingBoost = getMatchingBoostEstimate(percentage);
   
   return (
     <motion.div
@@ -2413,7 +2415,7 @@ export default function ChatRegistrationPage() {
   }) => {
     return (
       <div 
-        ref={scrollRef}
+        ref={scrollRef as React.RefObject<HTMLDivElement>}
         className="h-[240px] overflow-y-auto snap-y snap-mandatory scrollbar-hide py-[96px]"
         onScroll={onScroll}
       >
