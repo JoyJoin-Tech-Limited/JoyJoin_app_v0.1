@@ -462,16 +462,18 @@ const achievements: AchievementWithMode[] = [
 // 成就弹出组件
 function AchievementToast({ achievement, onComplete }: { achievement: Achievement; onComplete: () => void }) {
   useEffect(() => {
-    const timer = setTimeout(onComplete, 2500);
+    const timer = setTimeout(() => {
+      onComplete();
+    }, 4000); // 增加显示时间到 4 秒
     return () => clearTimeout(timer);
-  }, [onComplete]);
+  }, [achievement.id, onComplete]); // 监听 achievement.id 变化
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 50, scale: 0.8 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -20, scale: 0.9 }}
-      className="fixed bottom-32 left-1/2 -translate-x-1/2 z-50"
+      initial={{ opacity: 0, y: 50, scale: 0.8, x: "-50%" }}
+      animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
+      exit={{ opacity: 0, y: -20, scale: 0.9, x: "-50%" }}
+      className="fixed bottom-32 left-1/2 z-50"
     >
       <div className="bg-gradient-to-r from-primary/90 to-purple-600/90 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3">
         <motion.span 
@@ -1258,9 +1260,17 @@ function MessageBubble({
 }) {
   const isAssistant = message.role === "assistant";
   
+  // 过滤掉消息中的 collected_info 和 registration_complete 代码块，避免显示“乱码”
+  const displayContent = useMemo(() => {
+    return message.content
+      .replace(/```collected_info[\s\S]*?```/g, '')
+      .replace(/```registration_complete[\s\S]*?```/g, '')
+      .trim();
+  }, [message.content]);
+
   // 仅在最新助理消息且需要动画时显示打字效果
   const shouldShowTyping = isAssistant && message.isTypingAnimation === true;
-  const { displayedText, isComplete } = useTypingEffect(message.content, shouldShowTyping);
+  const { displayedText, isComplete } = useTypingEffect(displayContent, shouldShowTyping);
 
   useEffect(() => {
     if (isComplete && onTypingComplete) {
@@ -1269,11 +1279,11 @@ function MessageBubble({
   }, [isComplete, onTypingComplete]);
 
   // 处理逐行显示的消息（仅在性格测试介绍时使用）
-  const paragraphs = useMemo(() => message.content.split('\n').filter(p => p.trim()), [message.content]);
+  const paragraphs = useMemo(() => displayContent.split('\n').filter(p => p.trim()), [displayContent]);
   const [visibleParagraphCount, setVisibleParagraphCount] = useState(0);
 
   useEffect(() => {
-    if (message.content.includes("性格测试") && message.content.includes("12道题")) {
+    if (displayContent.includes("性格测试") && displayContent.includes("12道题")) {
       setVisibleParagraphCount(0);
       let i = 0;
       const timer = setInterval(() => {
