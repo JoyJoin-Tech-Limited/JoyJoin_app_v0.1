@@ -5898,6 +5898,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ VENUE DEALS API (场地优惠) ============
+  
+  // Get all deals for a venue (admin)
+  app.get("/api/admin/venues/:venueId/deals", requireAdmin, async (req, res) => {
+    try {
+      const deals = await storage.getVenueDeals(req.params.venueId);
+      res.json(deals);
+    } catch (error) {
+      console.error("Error fetching venue deals:", error);
+      res.status(500).json({ message: "Failed to fetch venue deals" });
+    }
+  });
+
+  // Get active deals for a venue (public - for event detail page)
+  app.get("/api/venues/:venueId/deals", async (req, res) => {
+    try {
+      const deals = await storage.getActiveVenueDeals(req.params.venueId);
+      res.json(deals);
+    } catch (error) {
+      console.error("Error fetching active venue deals:", error);
+      res.status(500).json({ message: "Failed to fetch venue deals" });
+    }
+  });
+
+  // Create venue deal (admin)
+  app.post("/api/admin/venues/:venueId/deals", requireAdmin, async (req, res) => {
+    try {
+      const deal = await storage.createVenueDeal({
+        ...req.body,
+        venueId: req.params.venueId,
+      });
+      res.json(deal);
+    } catch (error) {
+      console.error("Error creating venue deal:", error);
+      res.status(500).json({ message: "Failed to create venue deal" });
+    }
+  });
+
+  // Update venue deal (admin)
+  app.patch("/api/admin/venue-deals/:id", requireAdmin, async (req, res) => {
+    try {
+      const deal = await storage.updateVenueDeal(req.params.id, req.body);
+      res.json(deal);
+    } catch (error) {
+      console.error("Error updating venue deal:", error);
+      res.status(500).json({ message: "Failed to update venue deal" });
+    }
+  });
+
+  // Delete venue deal (admin)
+  app.delete("/api/admin/venue-deals/:id", requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteVenueDeal(req.params.id);
+      res.json({ message: "Venue deal deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting venue deal:", error);
+      res.status(500).json({ message: "Failed to delete venue deal" });
+    }
+  });
+
+  // Record deal usage (for analytics)
+  app.post("/api/venue-deals/:id/use", isPhoneAuthenticated, async (req, res) => {
+    try {
+      await storage.incrementVenueDealUsage(req.params.id);
+      res.json({ message: "Deal usage recorded" });
+    } catch (error) {
+      console.error("Error recording deal usage:", error);
+      res.status(500).json({ message: "Failed to record deal usage" });
+    }
+  });
+
+  // Get venue with deals (public - for event detail page)
+  app.get("/api/venues/:venueId/with-deals", async (req, res) => {
+    try {
+      const venue = await storage.getVenue(req.params.venueId);
+      if (!venue) {
+        return res.status(404).json({ message: "Venue not found" });
+      }
+      const deals = await storage.getActiveVenueDeals(req.params.venueId);
+      res.json({ venue, deals });
+    } catch (error) {
+      console.error("Error fetching venue with deals:", error);
+      res.status(500).json({ message: "Failed to fetch venue info" });
+    }
+  });
+
   // Venue Booking - Check availability
   app.post("/api/venues/check-availability", requireAuth, async (req, res) => {
     try {

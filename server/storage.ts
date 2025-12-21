@@ -152,8 +152,17 @@ export interface IStorage {
   // Admin Venue operations
   getAllVenues(): Promise<any[]>;
   getVenue(id: string): Promise<any>;
+  createVenue(data: any): Promise<any>;
   updateVenue(id: string, updates: any): Promise<any>;
   deleteVenue(id: string): Promise<void>;
+  
+  // Venue Deal operations (场地优惠)
+  getVenueDeals(venueId: string): Promise<any[]>;
+  getActiveVenueDeals(venueId: string): Promise<any[]>;
+  createVenueDeal(data: any): Promise<any>;
+  updateVenueDeal(id: string, updates: any): Promise<any>;
+  deleteVenueDeal(id: string): Promise<void>;
+  incrementVenueDealUsage(id: string): Promise<void>;
 
   // Venue Booking operations
   checkVenueAvailability(venueId: string, bookingDate: Date, bookingTime: string): Promise<boolean>;
@@ -1601,19 +1610,167 @@ export class DatabaseStorage implements IStorage {
       setClauses.push(`notes = $${values.length + 1}`);
       values.push(updates.notes);
     }
+    // 新增字段：合作场地优惠系统
+    if (updates.avgPrice !== undefined) {
+      setClauses.push(`avg_price = $${values.length + 1}`);
+      values.push(updates.avgPrice);
+    }
+    if (updates.priceNote !== undefined) {
+      setClauses.push(`price_note = $${values.length + 1}`);
+      values.push(updates.priceNote);
+    }
+    if (updates.coverImageUrl !== undefined) {
+      setClauses.push(`cover_image_url = $${values.length + 1}`);
+      values.push(updates.coverImageUrl);
+    }
+    if (updates.galleryImages !== undefined) {
+      setClauses.push(`gallery_images = $${values.length + 1}`);
+      values.push(updates.galleryImages);
+    }
+    if (updates.partnerStatus !== undefined) {
+      setClauses.push(`partner_status = $${values.length + 1}`);
+      values.push(updates.partnerStatus);
+    }
+    if (updates.partnerSince !== undefined) {
+      setClauses.push(`partner_since = $${values.length + 1}`);
+      values.push(updates.partnerSince);
+    }
 
     if (setClauses.length === 0) {
       return this.getVenue(id);
     }
 
     values.push(id);
-    const query = sql.raw(`UPDATE venues SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`);
+    const query = sql.raw(`UPDATE venues SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = $${values.length} RETURNING *`);
     const result = await db.execute(query);
     return result.rows[0];
   }
 
   async deleteVenue(id: string): Promise<void> {
     await db.execute(sql`DELETE FROM venues WHERE id = ${id}`);
+  }
+
+  // ============ VENUE DEALS (场地优惠) ============
+  async getVenueDeals(venueId: string): Promise<any[]> {
+    const result = await db.execute(sql`
+      SELECT * FROM venue_deals 
+      WHERE venue_id = ${venueId}
+      ORDER BY created_at DESC
+    `);
+    return result.rows;
+  }
+
+  async getActiveVenueDeals(venueId: string): Promise<any[]> {
+    const today = new Date().toISOString().split('T')[0];
+    const result = await db.execute(sql`
+      SELECT * FROM venue_deals 
+      WHERE venue_id = ${venueId}
+        AND is_active = true
+        AND (valid_from IS NULL OR valid_from <= ${today}::date)
+        AND (valid_until IS NULL OR valid_until >= ${today}::date)
+      ORDER BY created_at DESC
+    `);
+    return result.rows;
+  }
+
+  async createVenueDeal(data: any): Promise<any> {
+    const result = await db.execute(sql`
+      INSERT INTO venue_deals (
+        venue_id, title, discount_type, discount_value, description,
+        redemption_method, redemption_code, min_spend, max_discount,
+        per_person_limit, valid_from, valid_until, terms, excluded_dates, is_active
+      ) VALUES (
+        ${data.venueId}, ${data.title}, ${data.discountType}, ${data.discountValue || null},
+        ${data.description || null}, ${data.redemptionMethod || 'show_page'},
+        ${data.redemptionCode || null}, ${data.minSpend || null}, ${data.maxDiscount || null},
+        ${data.perPersonLimit || false}, ${data.validFrom || null}, ${data.validUntil || null},
+        ${data.terms || null}, ${data.excludedDates || null}, ${data.isActive !== false}
+      ) RETURNING *
+    `);
+    return result.rows[0];
+  }
+
+  async updateVenueDeal(id: string, updates: any): Promise<any> {
+    const setClauses = [];
+    const values: any[] = [];
+    
+    if (updates.title !== undefined) {
+      setClauses.push(`title = $${values.length + 1}`);
+      values.push(updates.title);
+    }
+    if (updates.discountType !== undefined) {
+      setClauses.push(`discount_type = $${values.length + 1}`);
+      values.push(updates.discountType);
+    }
+    if (updates.discountValue !== undefined) {
+      setClauses.push(`discount_value = $${values.length + 1}`);
+      values.push(updates.discountValue);
+    }
+    if (updates.description !== undefined) {
+      setClauses.push(`description = $${values.length + 1}`);
+      values.push(updates.description);
+    }
+    if (updates.redemptionMethod !== undefined) {
+      setClauses.push(`redemption_method = $${values.length + 1}`);
+      values.push(updates.redemptionMethod);
+    }
+    if (updates.redemptionCode !== undefined) {
+      setClauses.push(`redemption_code = $${values.length + 1}`);
+      values.push(updates.redemptionCode);
+    }
+    if (updates.minSpend !== undefined) {
+      setClauses.push(`min_spend = $${values.length + 1}`);
+      values.push(updates.minSpend);
+    }
+    if (updates.maxDiscount !== undefined) {
+      setClauses.push(`max_discount = $${values.length + 1}`);
+      values.push(updates.maxDiscount);
+    }
+    if (updates.perPersonLimit !== undefined) {
+      setClauses.push(`per_person_limit = $${values.length + 1}`);
+      values.push(updates.perPersonLimit);
+    }
+    if (updates.validFrom !== undefined) {
+      setClauses.push(`valid_from = $${values.length + 1}`);
+      values.push(updates.validFrom);
+    }
+    if (updates.validUntil !== undefined) {
+      setClauses.push(`valid_until = $${values.length + 1}`);
+      values.push(updates.validUntil);
+    }
+    if (updates.terms !== undefined) {
+      setClauses.push(`terms = $${values.length + 1}`);
+      values.push(updates.terms);
+    }
+    if (updates.excludedDates !== undefined) {
+      setClauses.push(`excluded_dates = $${values.length + 1}`);
+      values.push(updates.excludedDates);
+    }
+    if (updates.isActive !== undefined) {
+      setClauses.push(`is_active = $${values.length + 1}`);
+      values.push(updates.isActive);
+    }
+
+    if (setClauses.length === 0) {
+      const result = await db.execute(sql`SELECT * FROM venue_deals WHERE id = ${id}`);
+      return result.rows[0];
+    }
+
+    values.push(id);
+    const query = sql.raw(`UPDATE venue_deals SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = $${values.length} RETURNING *`);
+    const result = await db.execute(query);
+    return result.rows[0];
+  }
+
+  async deleteVenueDeal(id: string): Promise<void> {
+    await db.execute(sql`DELETE FROM venue_deals WHERE id = ${id}`);
+  }
+
+  async incrementVenueDealUsage(id: string): Promise<void> {
+    await db.execute(sql`
+      UPDATE venue_deals SET usage_count = usage_count + 1, updated_at = NOW()
+      WHERE id = ${id}
+    `);
   }
 
   // ============ VENUE BOOKINGS ============
