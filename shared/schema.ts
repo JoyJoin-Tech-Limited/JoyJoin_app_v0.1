@@ -2093,3 +2093,260 @@ export const insertRegistrationSessionSchema = createInsertSchema(registrationSe
 // Types for Registration Sessions
 export type RegistrationSession = typeof registrationSessions.$inferSelect;
 export type InsertRegistrationSession = z.infer<typeof insertRegistrationSessionSchema>;
+
+// ============ 小悦进化系统 - AI Evolution System ============
+
+// 黄金话术库 - Golden Dialogues for successful conversation patterns
+export const goldenDialogues = pgTable("golden_dialogues", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // 话术分类
+  category: varchar("category").notNull(), // 'greeting', 'gender_ask', 'age_ask', 'interest_probe', 'closing', etc.
+  triggerContext: varchar("trigger_context"), // 触发该话术的上下文场景
+  
+  // 话术内容
+  dialogueContent: text("dialogue_content").notNull(), // 原始对话片段
+  refinedVersion: text("refined_version"), // 精炼版本（人工优化后）
+  
+  // 效果指标
+  successRate: numeric("success_rate", { precision: 5, scale: 4 }).default("0"), // 成功率 0-1
+  usageCount: integer("usage_count").default(0), // 使用次数
+  positiveReactions: integer("positive_reactions").default(0), // 正向反应次数
+  
+  // 标记状态
+  isActive: boolean("is_active").default(true),
+  isManuallyTagged: boolean("is_manually_tagged").default(false), // 人工标记 vs 自动发现
+  taggedByAdminId: varchar("tagged_by_admin_id").references(() => users.id),
+  
+  // 来源追踪
+  sourceSessionId: varchar("source_session_id").references(() => registrationSessions.id),
+  sourceUserId: varchar("source_user_id").references(() => users.id),
+  
+  // 时间戳
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_golden_dialogues_category").on(table.category),
+  index("idx_golden_dialogues_success_rate").on(table.successRate),
+]);
+
+// 匹配权重配置 - Dynamic Matching Weights (Multi-Armed Bandit)
+export const matchingWeightsConfig = pgTable("matching_weights_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // 配置标识
+  configName: varchar("config_name").notNull().unique(), // 'default', 'experiment_a', 'experiment_b'
+  isActive: boolean("is_active").default(false), // 当前是否生效
+  
+  // 6维权重 (Thompson Sampling参数)
+  personalityWeight: numeric("personality_weight", { precision: 5, scale: 4 }).default("0.23"), // 人格 23%
+  interestsWeight: numeric("interests_weight", { precision: 5, scale: 4 }).default("0.24"), // 兴趣 24%
+  intentWeight: numeric("intent_weight", { precision: 5, scale: 4 }).default("0.13"), // 意图 13%
+  backgroundWeight: numeric("background_weight", { precision: 5, scale: 4 }).default("0.15"), // 背景 15%
+  cultureWeight: numeric("culture_weight", { precision: 5, scale: 4 }).default("0.10"), // 文化 10%
+  conversationSignatureWeight: numeric("conversation_signature_weight", { precision: 5, scale: 4 }).default("0.15"), // 对话签名 15%
+  
+  // Thompson Sampling 统计 (Beta分布参数)
+  personalityAlpha: integer("personality_alpha").default(1),
+  personalityBeta: integer("personality_beta").default(1),
+  interestsAlpha: integer("interests_alpha").default(1),
+  interestsBeta: integer("interests_beta").default(1),
+  intentAlpha: integer("intent_alpha").default(1),
+  intentBeta: integer("intent_beta").default(1),
+  backgroundAlpha: integer("background_alpha").default(1),
+  backgroundBeta: integer("background_beta").default(1),
+  cultureAlpha: integer("culture_alpha").default(1),
+  cultureBeta: integer("culture_beta").default(1),
+  conversationSignatureAlpha: integer("conversation_signature_alpha").default(1),
+  conversationSignatureBeta: integer("conversation_signature_beta").default(1),
+  
+  // 累计统计
+  totalMatches: integer("total_matches").default(0),
+  successfulMatches: integer("successful_matches").default(0), // 满意度>=4的匹配
+  averageSatisfaction: numeric("average_satisfaction", { precision: 5, scale: 4 }).default("0"),
+  
+  // 时间戳
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// 权重变化历史 - Weight Change History for visualization
+export const matchingWeightsHistory = pgTable("matching_weights_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  configId: varchar("config_id").notNull().references(() => matchingWeightsConfig.id),
+  
+  // 快照时间点的权重
+  personalityWeight: numeric("personality_weight", { precision: 5, scale: 4 }),
+  interestsWeight: numeric("interests_weight", { precision: 5, scale: 4 }),
+  intentWeight: numeric("intent_weight", { precision: 5, scale: 4 }),
+  backgroundWeight: numeric("background_weight", { precision: 5, scale: 4 }),
+  cultureWeight: numeric("culture_weight", { precision: 5, scale: 4 }),
+  conversationSignatureWeight: numeric("conversation_signature_weight", { precision: 5, scale: 4 }),
+  
+  // 触发变更的原因
+  changeReason: varchar("change_reason"), // 'scheduled_update', 'manual_adjustment', 'bandit_exploration'
+  
+  // 当时的统计
+  matchesSinceLastUpdate: integer("matches_since_last_update").default(0),
+  satisfactionSinceLastUpdate: numeric("satisfaction_since_last_update", { precision: 5, scale: 4 }),
+  
+  recordedAt: timestamp("recorded_at").defaultNow(),
+}, (table) => [
+  index("idx_weights_history_config").on(table.configId),
+  index("idx_weights_history_recorded_at").on(table.recordedAt),
+]);
+
+// 对话向量存储 - Dialogue Embeddings (using JSONB for vector storage)
+export const dialogueEmbeddings = pgTable("dialogue_embeddings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // 来源关联
+  sourceSessionId: varchar("source_session_id").references(() => registrationSessions.id),
+  sourceUserId: varchar("source_user_id").references(() => users.id),
+  
+  // 对话内容
+  dialogueContent: text("dialogue_content").notNull(), // 原始对话
+  dialogueSummary: text("dialogue_summary"), // AI生成的摘要
+  
+  // 向量存储 (使用JSONB存储，支持未来迁移到pgvector)
+  embedding: jsonb("embedding"), // 向量数组 [0.1, 0.2, ...]
+  embeddingModel: varchar("embedding_model").default("deepseek"), // 使用的embedding模型
+  embeddingDimension: integer("embedding_dimension").default(1536), // 向量维度
+  
+  // 元数据
+  category: varchar("category"), // 对话类别
+  sentiment: varchar("sentiment"), // 情感分析结果
+  qualityScore: numeric("quality_score", { precision: 5, scale: 4 }), // 质量评分 0-1
+  
+  // 状态
+  isSuccessful: boolean("is_successful").default(false), // 是否来自成功注册
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_dialogue_embeddings_session").on(table.sourceSessionId),
+  index("idx_dialogue_embeddings_successful").on(table.isSuccessful),
+]);
+
+// 触发器性能追踪 - Trigger Performance Tracking
+export const triggerPerformance = pgTable("trigger_performance", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // 触发器标识
+  triggerId: varchar("trigger_id").notNull(), // 对应38个触发器的ID
+  triggerName: varchar("trigger_name").notNull(), // 触发器名称
+  triggerCategory: varchar("trigger_category"), // 'greeting', 'probe', 'reaction', 'closing'
+  
+  // 当前阈值配置
+  currentThreshold: numeric("current_threshold", { precision: 5, scale: 4 }).default("0.5"),
+  defaultThreshold: numeric("default_threshold", { precision: 5, scale: 4 }).default("0.5"),
+  
+  // Thompson Sampling 参数
+  alpha: integer("alpha").default(1), // 成功次数 + 1
+  beta: integer("beta").default(1), // 失败次数 + 1
+  
+  // 统计指标
+  totalTriggers: integer("total_triggers").default(0), // 总触发次数
+  successfulTriggers: integer("successful_triggers").default(0), // 触发后用户继续对话
+  abandonedAfterTrigger: integer("abandoned_after_trigger").default(0), // 触发后用户放弃
+  
+  // 效果评分
+  effectivenessScore: numeric("effectiveness_score", { precision: 5, scale: 4 }).default("0.5"),
+  
+  // 最后更新
+  lastTriggeredAt: timestamp("last_triggered_at"),
+  lastUpdatedAt: timestamp("last_updated_at").defaultNow(),
+}, (table) => [
+  index("idx_trigger_performance_id").on(table.triggerId),
+  index("idx_trigger_performance_effectiveness").on(table.effectivenessScore),
+]);
+
+// 对话反馈 - Dialogue Feedback for evolution
+export const dialogueFeedback = pgTable("dialogue_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // 关联
+  sessionId: varchar("session_id").references(() => registrationSessions.id),
+  userId: varchar("user_id").references(() => users.id),
+  
+  // 反馈类型
+  feedbackType: varchar("feedback_type").notNull(), // 'completion', 'abandonment', 'implicit', 'explicit'
+  
+  // 显性反馈 (用户主动提供)
+  overallRating: integer("overall_rating"), // 1-5
+  helpfulnessRating: integer("helpfulness_rating"), // 1-5
+  personalityRating: integer("personality_rating"), // 1-5 (小悦的人格魅力)
+  feedbackText: text("feedback_text"), // 文字反馈
+  
+  // 隐性反馈 (系统自动收集)
+  completionTime: integer("completion_time"), // 完成注册所用秒数
+  messageCount: integer("message_count"), // 对话轮数
+  abandonmentPoint: varchar("abandonment_point"), // 放弃时的问题阶段
+  retryCount: integer("retry_count").default(0), // 重试次数
+  
+  // 触发器关联
+  triggersUsed: text("triggers_used").array(), // 本次对话使用的触发器ID列表
+  mostEffectiveTrigger: varchar("most_effective_trigger"), // 最有效的触发器
+  
+  // 对话质量指标
+  dialogueQualityScore: numeric("dialogue_quality_score", { precision: 5, scale: 4 }), // AI评估的对话质量
+  userEngagementScore: numeric("user_engagement_score", { precision: 5, scale: 4 }), // 用户参与度
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_dialogue_feedback_session").on(table.sessionId),
+  index("idx_dialogue_feedback_type").on(table.feedbackType),
+  index("idx_dialogue_feedback_rating").on(table.overallRating),
+]);
+
+// Insert schemas for evolution system
+export const insertGoldenDialogueSchema = createInsertSchema(goldenDialogues).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMatchingWeightsConfigSchema = createInsertSchema(matchingWeightsConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMatchingWeightsHistorySchema = createInsertSchema(matchingWeightsHistory).omit({
+  id: true,
+  recordedAt: true,
+});
+
+export const insertDialogueEmbeddingSchema = createInsertSchema(dialogueEmbeddings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTriggerPerformanceSchema = createInsertSchema(triggerPerformance).omit({
+  id: true,
+  lastUpdatedAt: true,
+});
+
+export const insertDialogueFeedbackSchema = createInsertSchema(dialogueFeedback).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for evolution system
+export type GoldenDialogue = typeof goldenDialogues.$inferSelect;
+export type InsertGoldenDialogue = z.infer<typeof insertGoldenDialogueSchema>;
+
+export type MatchingWeightsConfig = typeof matchingWeightsConfig.$inferSelect;
+export type InsertMatchingWeightsConfig = z.infer<typeof insertMatchingWeightsConfigSchema>;
+
+export type MatchingWeightsHistory = typeof matchingWeightsHistory.$inferSelect;
+export type InsertMatchingWeightsHistory = z.infer<typeof insertMatchingWeightsHistorySchema>;
+
+export type DialogueEmbedding = typeof dialogueEmbeddings.$inferSelect;
+export type InsertDialogueEmbedding = z.infer<typeof insertDialogueEmbeddingSchema>;
+
+export type TriggerPerformance = typeof triggerPerformance.$inferSelect;
+export type InsertTriggerPerformance = z.infer<typeof insertTriggerPerformanceSchema>;
+
+export type DialogueFeedback = typeof dialogueFeedback.$inferSelect;
+export type InsertDialogueFeedback = z.infer<typeof insertDialogueFeedbackSchema>;
