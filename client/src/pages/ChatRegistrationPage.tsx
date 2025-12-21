@@ -3273,19 +3273,15 @@ export default function ChatRegistrationPage() {
           
           <div className="px-4 pb-6">
             {/* 滚轮选择器 */}
-            <div className="flex gap-2 justify-center items-end h-60 relative" style={{ touchAction: 'pan-y' }}>
-              {/* 顶部高亮区域 */}
-              <div className="absolute inset-0 top-0 h-20 bg-gradient-to-b from-muted/50 to-transparent pointer-events-none rounded-t-lg z-10" />
-              {/* 底部高亮区域 */}
-              <div className="absolute inset-0 bottom-0 h-20 bg-gradient-to-t from-muted/50 to-transparent pointer-events-none rounded-b-lg z-10" />
+            <div className="flex gap-2 justify-center items-end h-60 relative overflow-hidden" style={{ touchAction: 'pan-y' }}>
               {/* 中间选中区域 */}
-              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-12 border-y border-primary/30 pointer-events-none z-20" />
+              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-12 border-y border-primary/20 pointer-events-none z-20" />
               
               {/* 年份滚轮 */}
               <div 
                 ref={yearScrollRef}
-                className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center" 
-                style={{ height: '240px', touchAction: 'pan-y' }}
+                className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory" 
+                style={{ height: '240px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
                 onScroll={(e) => {
                   const target = e.currentTarget;
                   const scrollTop = target.scrollTop;
@@ -3306,10 +3302,10 @@ export default function ChatRegistrationPage() {
                   <div
                     key={year}
                     data-wheel-item
-                    className={`w-full py-3 text-center transition-all ${
+                    className={`w-full py-3 text-center transition-all duration-200 ease-out snap-center ${
                       birthdayYear === String(year)
-                        ? "text-primary text-xl font-bold opacity-100"
-                        : "text-muted-foreground text-sm opacity-40"
+                        ? "text-primary text-xl font-bold opacity-100 scale-110"
+                        : "text-muted-foreground text-sm opacity-30 scale-90"
                     }`}
                   >
                     {year}
@@ -3321,8 +3317,8 @@ export default function ChatRegistrationPage() {
               {/* 月份滚轮 */}
               <div 
                 ref={monthScrollRef}
-                className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center"
-                style={{ height: '240px', touchAction: 'pan-y' }}
+                className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory"
+                style={{ height: '240px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
                 onScroll={(e) => {
                   const target = e.currentTarget;
                   const scrollTop = target.scrollTop;
@@ -3343,10 +3339,10 @@ export default function ChatRegistrationPage() {
                   <div
                     key={month}
                     data-wheel-item
-                    className={`w-full py-3 text-center transition-all ${
+                    className={`w-full py-3 text-center transition-all duration-200 ease-out snap-center ${
                       birthdayMonth === String(month)
-                        ? "text-primary text-xl font-bold opacity-100"
-                        : "text-muted-foreground text-sm opacity-40"
+                        ? "text-primary text-xl font-bold opacity-100 scale-110"
+                        : "text-muted-foreground text-sm opacity-30 scale-90"
                     }`}
                   >
                     {String(month).padStart(2, '0')}月
@@ -3358,8 +3354,8 @@ export default function ChatRegistrationPage() {
               {/* 日期滚轮 */}
               <div 
                 ref={dayScrollRef}
-                className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center"
-                style={{ height: '240px', touchAction: 'pan-y' }}
+                className="flex-1 overflow-y-scroll scroll-smooth no-scrollbar flex flex-col items-center snap-y snap-mandatory"
+                style={{ height: '240px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
                 onScroll={(e) => {
                   const target = e.currentTarget;
                   const scrollTop = target.scrollTop;
@@ -3380,10 +3376,10 @@ export default function ChatRegistrationPage() {
                   <div
                     key={day}
                     data-wheel-item
-                    className={`w-full py-3 text-center transition-all ${
+                    className={`w-full py-3 text-center transition-all duration-200 ease-out snap-center ${
                       birthdayDay === String(day)
-                        ? "text-primary text-xl font-bold opacity-100"
-                        : "text-muted-foreground text-sm opacity-40"
+                        ? "text-primary text-xl font-bold opacity-100 scale-110"
+                        : "text-muted-foreground text-sm opacity-30 scale-90"
                     }`}
                   >
                     {String(day).padStart(2, '0')}日
