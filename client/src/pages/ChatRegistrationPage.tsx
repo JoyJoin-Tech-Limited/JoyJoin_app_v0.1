@@ -3210,7 +3210,7 @@ export default function ChatRegistrationPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {Array.from({ length: 50 }, (_, i) => {
-                    const year = new Date().getFullYear() - 18 - i;
+                    const year = 2025 - 18 - i;
                     return year;
                   }).map(year => (
                     <SelectItem key={year} value={String(year)}>
@@ -3264,6 +3264,14 @@ export default function ChatRegistrationPage() {
                 if (birthdayYear && birthdayMonth && birthdayDay) {
                   const year = parseInt(birthdayYear);
                   const ageGroup = year >= 2000 ? "00后" : year >= 1995 ? "95后" : year >= 1990 ? "90后" : "85后";
+                  
+                  // 保存完整的生日日期到collectedInfo
+                  const birthdateStr = `${birthdayYear}-${String(parseInt(birthdayMonth)).padStart(2, '0')}-${String(parseInt(birthdayDay)).padStart(2, '0')}`;
+                  setCollectedInfo(prev => ({
+                    ...prev,
+                    birthYear: year,
+                    birthdate: birthdateStr
+                  }));
                   
                   // 发送年龄段
                   setMessages(prev => [...prev, {
