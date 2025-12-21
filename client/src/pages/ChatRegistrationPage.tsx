@@ -1603,6 +1603,7 @@ export default function ChatRegistrationPage() {
   const [collectedInfo, setCollectedInfo] = useState<CollectedInfo>({});
   const [isComplete, setIsComplete] = useState(false);
   const [infoConfirmed, setInfoConfirmed] = useState(false); // 用户确认信息无误
+  const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
@@ -2580,7 +2581,10 @@ export default function ChatRegistrationPage() {
         <TagCloud info={collectedInfo} />
       )}
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+          <div 
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+          >
         <AnimatePresence>
           {messages.map((msg) => (
             <MessageBubble
