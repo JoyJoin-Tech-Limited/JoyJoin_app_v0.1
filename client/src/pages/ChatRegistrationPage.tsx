@@ -552,7 +552,8 @@ function getWarmthGradient(infoCount: number): string {
 }
 
 // 小悦头像组件 - 使用品牌大使形象（已缓存，不会重新加载）
-function XiaoyueAvatar({ emotion, size = "md" }: { emotion: XiaoyueEmotion; size?: "sm" | "md" | "lg" | "xl" }) {
+// 使用 React.memo 减少重复渲染导致的闪烁
+const XiaoyueAvatar = React.memo(({ emotion, size = "md" }: { emotion: XiaoyueEmotion; size?: "sm" | "md" | "lg" | "xl" }) => {
   const sizeClasses = {
     sm: "w-6 h-6",
     md: "w-8 h-8", 
@@ -562,7 +563,7 @@ function XiaoyueAvatar({ emotion, size = "md" }: { emotion: XiaoyueEmotion; size
   
   return (
     <motion.div 
-      className={`${sizeClasses} rounded-full overflow-hidden flex-shrink-0 ring-2 ring-primary/20 ring-offset-2 ring-offset-background`}
+      className={`${sizeClasses} rounded-full overflow-hidden flex-shrink-0 ring-2 ring-primary/20 ring-offset-2 ring-offset-background bg-muted`}
       animate={{ scale: [1, 1.02, 1] }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
     >
@@ -570,10 +571,14 @@ function XiaoyueAvatar({ emotion, size = "md" }: { emotion: XiaoyueEmotion; size
         src={xiaoyueAvatar} 
         alt="小悦" 
         className="w-full h-full object-cover object-top"
+        loading="eager"
+        decoding="async"
       />
     </motion.div>
   );
-}
+});
+
+XiaoyueAvatar.displayName = "XiaoyueAvatar";
 
 
 // 快捷回复配置
