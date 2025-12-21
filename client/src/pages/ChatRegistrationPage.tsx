@@ -17,7 +17,7 @@ import MobileHeader from "@/components/MobileHeader";
 import EvolvingAvatar, { calculateClarityLevel } from "@/components/EvolvingAvatar";
 import { LottieInlineLoader } from "@/components/LottieWaveAnimation";
 import type { User as UserType } from "@shared/schema";
-import { INTERESTS_OPTIONS } from "@/data/interestsTopicsData";
+import { INTERESTS_OPTIONS, getInterestIcon } from "@/data/interestsTopicsData";
 import { INDUSTRIES, WORK_MODES } from "@shared/occupations";
 import { 
   LANGUAGES_COMFORT_OPTIONS, 
@@ -610,6 +610,8 @@ interface PatternBasedQuickReplyConfig {
   priority: number;
   // 是否强制使用预定义选项（压制AI提取）
   enforcePredefined?: boolean;
+  // 是否全量展示（不显示换一批和自己输入按钮）
+  fullDisplay?: boolean;
 }
 
 const quickReplyConfigs: QuickReplyConfig[] = [
@@ -632,10 +634,10 @@ const quickReplyConfigs: QuickReplyConfig[] = [
     options: [
       { text: "交朋友", icon: Heart },
       { text: "拓展人脉", icon: Users },
-      { text: "聊天交流", icon: MessageCircle },
-      { text: "吃喝玩乐", icon: Coffee },
-      { text: "脱单恋爱", icon: Heart },
-      { text: "随缘都可以", icon: Sparkles }
+      { text: "深度讨论", icon: MessageCircle },
+      { text: "娱乐放松", icon: Coffee },
+      { text: "浪漫社交", icon: Heart },
+      { text: "灵活开放·都可以", icon: Sparkles }
     ],
     multiSelect: true,
     priority: 92
@@ -1037,10 +1039,13 @@ const patternBasedConfigs: PatternBasedQuickReplyConfig[] = [
     pattern: /兴趣|爱好|喜欢做|平时.*做|业余.*做/,
     requiredAny: ["兴趣", "爱好", "平时喜欢"],
     exclude: ["哪个最常做", "最喜欢哪个"],
-    options: INTERESTS_OPTIONS.slice(0, 8).map(opt => ({ text: opt.label, icon: Sparkles })),
+    // 全量展示所有22个兴趣选项，每个使用专属图标
+    options: INTERESTS_OPTIONS.map(opt => ({ text: opt.label, icon: getInterestIcon(opt.id) })),
     priority: 92,
     multiSelect: true,
-    enforcePredefined: true
+    enforcePredefined: true,
+    // 标记为全量展示模式，不显示换一批和自己输入
+    fullDisplay: true
   },
   // === 其他常用结构化问题 ===
   {
@@ -1050,9 +1055,10 @@ const patternBasedConfigs: PatternBasedQuickReplyConfig[] = [
     options: [
       { text: "交朋友", icon: Heart },
       { text: "拓展人脉", icon: Users },
-      { text: "聊天交流", icon: MessageCircle },
-      { text: "吃喝玩乐", icon: Coffee },
-      { text: "随缘都可以", icon: Sparkles }
+      { text: "深度讨论", icon: MessageCircle },
+      { text: "娱乐放松", icon: Coffee },
+      { text: "浪漫社交", icon: Heart },
+      { text: "灵活开放·都可以", icon: Sparkles }
     ],
     priority: 91,
     multiSelect: true,
@@ -1089,6 +1095,7 @@ const patternBasedConfigs: PatternBasedQuickReplyConfig[] = [
 interface QuickReplyResult {
   options: QuickReply[];
   multiSelect: boolean;
+  fullDisplay?: boolean;
 }
 
 // 智能提取AI消息中的选项列表
@@ -1331,7 +1338,8 @@ function matchPatternBasedConfig(message: string): QuickReplyResult | null {
     if (config.pattern && config.pattern.test(message)) {
       return {
         options: config.options.filter(o => o.text),
-        multiSelect: config.multiSelect || false
+        multiSelect: config.multiSelect || false,
+        fullDisplay: config.fullDisplay || false
       };
     }
     
@@ -1345,7 +1353,8 @@ function matchPatternBasedConfig(message: string): QuickReplyResult | null {
       if (allGroupsMatch) {
         return {
           options: config.options.filter(o => o.text),
-          multiSelect: config.multiSelect || false
+          multiSelect: config.multiSelect || false,
+          fullDisplay: config.fullDisplay || false
         };
       }
     }
@@ -1358,7 +1367,8 @@ function matchPatternBasedConfig(message: string): QuickReplyResult | null {
       if (hasAny) {
         return {
           options: config.options.filter(o => o.text),
-          multiSelect: config.multiSelect || false
+          multiSelect: config.multiSelect || false,
+          fullDisplay: config.fullDisplay || false
         };
       }
     }
@@ -3069,9 +3079,11 @@ export default function ChatRegistrationPage() {
       {/* 快捷回复气泡 */}
       <AnimatePresence>
         {quickReplyResult.options.length > 0 && !isTyping && !isRestMode && (() => {
-          // 计算分页后的选项
+          // 计算分页后的选项（fullDisplay模式下显示全部）
           const allOptions = quickReplyResult.options;
-          const needsPagination = quickReplyResult.multiSelect && allOptions.length > QUICK_REPLY_PAGE_SIZE;
+          const isFullDisplay = quickReplyResult.fullDisplay === true;
+          // fullDisplay模式下不分页，直接显示所有选项
+          const needsPagination = !isFullDisplay && quickReplyResult.multiSelect && allOptions.length > QUICK_REPLY_PAGE_SIZE;
           const totalPages = needsPagination ? Math.ceil(allOptions.length / QUICK_REPLY_PAGE_SIZE) : 1;
           const currentPage = Math.min(quickReplyPage, totalPages - 1);
           const displayOptions = needsPagination 
@@ -3126,8 +3138,8 @@ export default function ChatRegistrationPage() {
                   );
                 })}
                 
-                {/* 换一批按钮 - 多选且有多页时显示 */}
-                {needsPagination && (
+                {/* 换一批按钮 - 多选且有多页时显示（fullDisplay模式下隐藏） */}
+                {needsPagination && !quickReplyResult.fullDisplay && (
                   <motion.button
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -3141,8 +3153,8 @@ export default function ChatRegistrationPage() {
                   </motion.button>
                 )}
                 
-                {/* 自己输入按钮 - 多选时显示 */}
-                {quickReplyResult.multiSelect && (
+                {/* 自己输入按钮 - 多选时显示（fullDisplay模式下隐藏） */}
+                {quickReplyResult.multiSelect && !quickReplyResult.fullDisplay && (
                   <motion.button
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}

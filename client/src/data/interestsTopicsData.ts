@@ -1,4 +1,40 @@
-import { Heart, MessageCircle, AlertCircle, type LucideIcon } from "lucide-react";
+import { 
+  Heart, MessageCircle, AlertCircle, type LucideIcon,
+  UtensilsCrossed, Plane, Footprints, Wine, Music, Camera, Dumbbell,
+  Film, Palette, Tv, Gamepad2, PawPrint, BookOpen, Cpu, Mountain,
+  Dice5, Rocket, TrendingUp, Scissors, HandHeart, Sparkles, Languages
+} from "lucide-react";
+
+// 兴趣图标映射表
+export const INTEREST_ICONS: Record<string, LucideIcon> = {
+  food_dining: UtensilsCrossed,
+  travel: Plane,
+  city_walk: Footprints,
+  drinks_bar: Wine,
+  music_live: Music,
+  photography: Camera,
+  sports_fitness: Dumbbell,
+  movies: Film,
+  exhibitions: Palette,
+  tv_shows: Tv,
+  games_video: Gamepad2,
+  pets_animals: PawPrint,
+  reading_books: BookOpen,
+  tech_gadgets: Cpu,
+  outdoor_adventure: Mountain,
+  games_board: Dice5,
+  entrepreneurship: Rocket,
+  investing: TrendingUp,
+  diy_crafts: Scissors,
+  volunteering: HandHeart,
+  meditation: Sparkles,
+  languages: Languages,
+};
+
+// 获取兴趣图标的辅助函数
+export function getInterestIcon(interestId: string): LucideIcon {
+  return INTEREST_ICONS[interestId] || Sparkles;
+}
 
 export interface InterestOption {
   id: string;
