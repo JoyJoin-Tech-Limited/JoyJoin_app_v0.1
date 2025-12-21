@@ -2860,19 +2860,9 @@ export default function ChatRegistrationPage() {
       
       <div className="relative z-10 flex flex-col min-h-screen">
       <MobileHeader title="和小悦聊聊" action={
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <TimeIcon className="w-3.5 h-3.5" />
-            <span>{themeConfig.greeting}</span>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => setLocation("/registration/form")}
-            data-testid="button-switch-to-form"
-          >
-            切换到表单
-          </Button>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <TimeIcon className="w-3.5 h-3.5" />
+          <span>{themeConfig.greeting}</span>
         </div>
       } />
       
