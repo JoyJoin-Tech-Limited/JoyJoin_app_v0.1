@@ -152,6 +152,7 @@ export interface IStorage {
   // Admin Venue operations
   getAllVenues(): Promise<any[]>;
   getVenue(id: string): Promise<any>;
+  getVenueByName(name: string): Promise<any>;
   createVenue(data: any): Promise<any>;
   updateVenue(id: string, updates: any): Promise<any>;
   deleteVenue(id: string): Promise<void>;
@@ -1538,6 +1539,15 @@ export class DatabaseStorage implements IStorage {
 
   async getVenue(id: string): Promise<any> {
     const result = await db.execute(sql`SELECT * FROM venues WHERE id = ${id}`);
+    return result.rows[0];
+  }
+
+  async getVenueByName(name: string): Promise<any> {
+    const result = await db.execute(sql`
+      SELECT * FROM venues 
+      WHERE name = ${name} AND is_active = true 
+      LIMIT 1
+    `);
     return result.rows[0];
   }
 

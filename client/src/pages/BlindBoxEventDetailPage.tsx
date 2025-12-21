@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Clock, MapPin, DollarSign, Users, Phone, Navigation, AlertCircle, Sparkles, ChevronRight } from "lucide-react";
-import type { BlindBoxEvent } from "@shared/schema";
+import type { BlindBoxEvent, Venue, VenueDeal } from "@shared/schema";
 import { getCurrencySymbol } from "@/lib/currency";
 import { calculateAge } from "@shared/utils";
 import IcebreakerCardsSheet from "@/components/IcebreakerCardsSheet";
@@ -16,6 +17,7 @@ import MatchRevealAnimation from "@/components/MatchRevealAnimation";
 import MysteryWaitingCard from "@/components/MysteryWaitingCard";
 import MysteryLocationCard from "@/components/MysteryLocationCard";
 import MatchCelebrationOverlay from "@/components/MatchCelebrationOverlay";
+import VenuePartnerCard from "@/components/VenuePartnerCard";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { invalidateCacheForEvent } from "@/lib/cacheInvalidation";
@@ -68,6 +70,18 @@ export default function BlindBoxEventDetailPage() {
   const { data: animationStatus } = useQuery<AnimationStatus>({
     queryKey: ["/api/events", eventId, "animation-status"],
     enabled: !!eventId && event?.status === "matched",
+  });
+
+  // Query partner venue and deals when restaurant name is revealed
+  const { data: venueData, isLoading: venueLoading } = useQuery<{ venue: Venue | null; deals: VenueDeal[] }>({
+    queryKey: ["/api/venues/by-name", event?.restaurantName],
+    queryFn: async () => {
+      const res = await fetch(`/api/venues/by-name?name=${encodeURIComponent(event?.restaurantName || '')}`);
+      if (!res.ok) throw new Error("Failed to fetch venue");
+      return res.json();
+    },
+    enabled: !!(event?.restaurantName && isRevealed && (event?.status === "matched" || event?.status === "completed")),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   // Mark animation as viewed mutation with error handling
@@ -482,6 +496,26 @@ export default function BlindBoxEventDetailPage() {
             />
           )
         ) : null}
+
+        {/* Partner Venue Card with exclusive deals (only after reveal) */}
+        {isRevealed && event?.restaurantName && (event.status === "matched" || event.status === "completed") && (
+          venueLoading ? (
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </CardContent>
+            </Card>
+          ) : venueData?.venue && venueData.deals.length > 0 ? (
+            <VenuePartnerCard 
+              venue={venueData.venue}
+              deals={venueData.deals}
+              isRevealed={true}
+              eventDateTime={event?.dateTime}
+            />
+          ) : null
+        )}
 
         {/* 预算与菜式 */}
         <Card>

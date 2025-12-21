@@ -6069,6 +6069,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get venue by restaurant name with deals (for blind box event detail page)
+  app.get("/api/venues/by-name", async (req, res) => {
+    try {
+      const { name } = req.query;
+      if (!name || typeof name !== 'string') {
+        return res.status(400).json({ message: "Restaurant name required" });
+      }
+      
+      const venue = await storage.getVenueByName(name);
+      if (!venue) {
+        return res.json({ venue: null, deals: [] });
+      }
+      
+      // Only return partner venues with active deals
+      if (venue.partner_status !== 'active') {
+        return res.json({ venue: null, deals: [] });
+      }
+      
+      const deals = await storage.getActiveVenueDeals(venue.id);
+      res.json({ venue, deals });
+    } catch (error) {
+      console.error("Error fetching venue by name:", error);
+      res.status(500).json({ message: "Failed to fetch venue info" });
+    }
+  });
+
   // Venue Booking - Check availability
   app.post("/api/venues/check-availability", requireAuth, async (req, res) => {
     try {
