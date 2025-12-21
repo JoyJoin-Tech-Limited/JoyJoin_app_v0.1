@@ -1977,3 +1977,57 @@ export const insertXpTransactionSchema = createInsertSchema(xpTransactions).omit
 // Types for XP Transactions
 export type XpTransaction = typeof xpTransactions.$inferSelect;
 export type InsertXpTransaction = z.infer<typeof insertXpTransactionSchema>;
+
+// ============ 注册会话遥测系统 ============
+
+// Registration Sessions table - 追踪注册漏斗的完整生命周期
+export const registrationSessions = pgTable("registration_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // 用户关联（可选，匿名会话开始时可能没有用户）
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  
+  // 会话模式
+  sessionMode: varchar("session_mode").notNull(), // 'ai_chat', 'form', 'hybrid'
+  
+  // 生命周期时间戳
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  l1CompletedAt: timestamp("l1_completed_at"), // L1必填字段完成时间
+  l2EnrichedAt: timestamp("l2_enriched_at"), // L2可选字段首次填写时间
+  completedAt: timestamp("completed_at"), // 注册完成时间
+  abandonedAt: timestamp("abandoned_at"), // 放弃时间（如果放弃）
+  lastTouchAt: timestamp("last_touch_at").defaultNow(), // 最后活跃时间
+  
+  // L3 AI推断指标
+  l3Confidence: numeric("l3_confidence", { precision: 5, scale: 4 }), // 0.0000 - 1.0000
+  l3ConfidenceSource: varchar("l3_confidence_source"), // 'dialect', 'communication_style', 'combined'
+  
+  // 会话统计
+  messageCount: integer("message_count").default(0), // AI对话消息数
+  l2FieldsFilledCount: integer("l2_fields_filled_count").default(0), // 已填L2字段数
+  fatigueReminderTriggered: boolean("fatigue_reminder_triggered").default(false), // 是否触发疲劳提醒
+  
+  // 设备信息
+  deviceChannel: varchar("device_channel"), // 'mobile', 'desktop', 'tablet'
+  userAgent: text("user_agent"),
+  
+  // 元数据
+  metadata: jsonb("metadata"), // 额外数据存储
+  
+  // 时间戳
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_reg_sessions_user_id").on(table.userId),
+  index("idx_reg_sessions_started_at").on(table.startedAt),
+  index("idx_reg_sessions_completed_at").on(table.completedAt),
+]);
+
+// Insert schema for registrationSessions
+export const insertRegistrationSessionSchema = createInsertSchema(registrationSessions).omit({
+  id: true,
+  updatedAt: true,
+});
+
+// Types for Registration Sessions
+export type RegistrationSession = typeof registrationSessions.$inferSelect;
+export type InsertRegistrationSession = z.infer<typeof insertRegistrationSessionSchema>;
