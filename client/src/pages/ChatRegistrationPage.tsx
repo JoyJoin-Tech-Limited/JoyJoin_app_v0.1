@@ -2661,6 +2661,8 @@ export default function ChatRegistrationPage() {
     }]);
     setInputValue("");
     setIsTyping(true);
+    // 任何用户输入都退出休息模式
+    if (isRestMode) setIsRestMode(false);
     sendMessageMutation.mutate(userMessage);
   };
 
@@ -2731,6 +2733,9 @@ export default function ChatRegistrationPage() {
     }
   }, [collectedInfo.gender]);
 
+  // 休息模式状态 - 用户选择休息后显示继续按钮
+  const [isRestMode, setIsRestMode] = useState(false);
+  
   // 快捷回复点击处理
   const handleQuickReply = (text: string) => {
     if (isTyping) return;
@@ -2746,6 +2751,33 @@ export default function ChatRegistrationPage() {
         }
         return newSet;
       });
+      return;
+    }
+    
+    // 特殊处理：用户选择休息
+    if (text === "先休息一下" || text.includes("休息")) {
+      // 添加用户消息
+      setMessages(prev => [...prev, {
+        id: `msg-${Date.now()}`,
+        role: "user",
+        content: text,
+        timestamp: new Date()
+      }]);
+      
+      // 找出下一个待问的问题（用于提示从哪里继续）
+      const nextField = collectedInfo.currentCity ? "下一个问题" : "城市问题";
+      
+      // 添加小悦的温暖回复
+      setTimeout(() => {
+        setMessages(prev => [...prev, {
+          id: `msg-rest-${Date.now()}`,
+          role: "assistant",
+          content: `好的，进度已存好～\n想继续的时候点下方按钮就行，我们从${nextField}接着聊`,
+          timestamp: new Date()
+        }]);
+        // 进入休息模式
+        setIsRestMode(true);
+      }, 300);
       return;
     }
     
@@ -2785,6 +2817,8 @@ export default function ChatRegistrationPage() {
       timestamp: new Date()
     }]);
     setIsTyping(true);
+    // 任何快捷回复都退出休息模式
+    if (isRestMode) setIsRestMode(false);
     sendMessageMutation.mutate(text);
   };
 
@@ -2800,6 +2834,8 @@ export default function ChatRegistrationPage() {
     }]);
     setSelectedQuickReplies(new Set());
     setIsTyping(true);
+    // 任何发送都退出休息模式
+    if (isRestMode) setIsRestMode(false);
     sendMessageMutation.mutate(selectedText);
   };
 
@@ -2973,9 +3009,41 @@ export default function ChatRegistrationPage() {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* 休息模式 - 继续注册按钮 */}
+      <AnimatePresence>
+        {isRestMode && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="px-4 py-4 border-t bg-muted/30"
+          >
+            <Button
+              onClick={() => {
+                setIsRestMode(false);
+                // 添加继续消息
+                setMessages(prev => [...prev, {
+                  id: `msg-continue-${Date.now()}`,
+                  role: "user",
+                  content: "继续聊",
+                  timestamp: new Date()
+                }]);
+                setIsTyping(true);
+                sendMessageMutation.mutate("继续聊");
+              }}
+              className="w-full"
+              data-testid="button-continue-registration"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              继续注册
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* 快捷回复气泡 */}
       <AnimatePresence>
-        {quickReplyResult.options.length > 0 && !isTyping && (() => {
+        {quickReplyResult.options.length > 0 && !isTyping && !isRestMode && (() => {
           // 计算分页后的选项
           const allOptions = quickReplyResult.options;
           const needsPagination = quickReplyResult.multiSelect && allOptions.length > QUICK_REPLY_PAGE_SIZE;
