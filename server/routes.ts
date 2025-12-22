@@ -638,10 +638,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.chatSessionId = chatSessionId;
       }
       
-      // Return collected info (actual user creation will happen through phone auth -> /api/user/register flow)
+      // If user is already logged in (via phone auth), update their profile and mark registration complete
+      const userId = req.session?.userId;
+      if (userId) {
+        try {
+          // Update user profile with extracted data
+          await storage.updateUserProfile(userId, registrationData);
+          
+          // Mark registration as complete
+          await storage.markRegistrationComplete(userId);
+          
+          console.log(`[Chat Registration] User ${userId} profile updated and registration marked complete`);
+        } catch (updateError) {
+          console.error('[Chat Registration] Error updating user profile:', updateError);
+          // Non-blocking - continue with response
+        }
+      }
+      
+      // Return collected info
       res.json({
         success: true,
-        message: "对话注册完成，请通过电话验证完成注册",
+        message: userId ? "注册完成！" : "对话注册完成，请通过电话验证完成注册",
         registrationData,
         conversationalProfile: extractedInfo.conversationalProfile,
         chatSessionId, // Return for client to persist if needed

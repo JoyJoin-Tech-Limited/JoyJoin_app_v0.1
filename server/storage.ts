@@ -37,6 +37,7 @@ export interface IStorage {
   registerUser(id: string, data: RegisterUser): Promise<User>;
   markRegistrationComplete(id: string): Promise<void>;
   markPersonalityTestComplete(id: string): Promise<void>;
+  updateUserProfile(id: string, profileData: Partial<User>): Promise<User>;
   updateInterestsTopics(id: string, data: InterestsTopics): Promise<User>;
   
   // Personality test operations
@@ -542,6 +543,22 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(eq(users.id, id));
+  }
+
+  async updateUserProfile(id: string, profileData: Partial<User>): Promise<User> {
+    // Remove readonly/auto fields
+    const { id: _, createdAt, updatedAt, ...updateData } = profileData as any;
+    
+    const [user] = await db
+      .update(users)
+      .set({
+        ...updateData,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning();
+    
+    return user;
   }
 
   async saveTestResponses(userId: string, responses: Record<number, any>): Promise<void> {
