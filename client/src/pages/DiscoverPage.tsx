@@ -65,6 +65,16 @@ export default function DiscoverPage() {
   // Fetch event pools with client-side caching (毫秒级加载)
   const { data: eventPools = [], isLoading } = useQuery<EventPool[]>({
     queryKey: ["/api/event-pools", selectedCity],
+    queryFn: async () => {
+      const res = await fetch(`/api/event-pools?city=${encodeURIComponent(selectedCity)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        if (res.status === 401) return [];
+        throw new Error(`${res.status}: ${await res.text()}`);
+      }
+      return res.json();
+    },
   });
 
   // Fetch user's available coupons
