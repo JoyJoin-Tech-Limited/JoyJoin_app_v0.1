@@ -2069,9 +2069,9 @@ interface CollectedInfo {
   cuisinePreference?: string[];
 }
 
-// 模式-字段矩阵配置
+// 模式-字段矩阵配置（用于SocialProfileCard）
 type SectionType = 'identity' | 'career' | 'geoLang' | 'interests' | 'social';
-interface ModeConfig {
+interface ProfileModeConfig {
   label: string;
   labelColor: string;
   sections: {
@@ -2083,7 +2083,7 @@ interface ModeConfig {
   };
 }
 
-const MODE_CONFIGS: Record<RegistrationMode, ModeConfig> = {
+const PROFILE_MODE_CONFIGS: Record<RegistrationMode, ProfileModeConfig> = {
   express: {
     label: '极速模式',
     labelColor: 'bg-amber-500/20 text-amber-700 dark:text-amber-400',
@@ -2115,6 +2115,17 @@ const MODE_CONFIGS: Record<RegistrationMode, ModeConfig> = {
       geoLang: { visible: true, isBonus: false, coreFields: 4 },
       interests: { visible: true, isBonus: false, coreFields: 4 },
       social: { visible: true, isBonus: false, coreFields: 3 },
+    },
+  },
+  enrichment: {
+    label: '补充模式',
+    labelColor: 'bg-blue-500/20 text-blue-700 dark:text-blue-400',
+    sections: {
+      identity: { visible: true, isBonus: false, coreFields: 4 },
+      career: { visible: true, isBonus: false, coreFields: 3 },
+      geoLang: { visible: true, isBonus: true, coreFields: 2 },
+      interests: { visible: true, isBonus: false, coreFields: 2 },
+      social: { visible: true, isBonus: true, coreFields: 1 },
     },
   },
 };
@@ -2218,7 +2229,7 @@ function ProfileSection({
 
 function SocialProfileCard({ info, mode }: { info: CollectedInfo; mode?: RegistrationMode }) {
   const currentMode = mode || 'standard';
-  const modeConfig = MODE_CONFIGS[currentMode];
+  const modeConfig = PROFILE_MODE_CONFIGS[currentMode];
   
   // 计算填充数量的辅助函数
   const isFilled = (v: string | string[] | boolean | undefined) => {
@@ -2242,6 +2253,7 @@ function SocialProfileCard({ info, mode }: { info: CollectedInfo; mode?: Registr
           social: [], // 0项
         };
       case 'standard':
+      case 'enrichment':
         return {
           identity: [info.displayName, info.gender, info.birthYear, info.currentCity], // 4项核心
           career: [info.industry, info.occupation || info.occupationDescription, info.educationLevel], // 3项
@@ -3249,7 +3261,7 @@ export default function ChatRegistrationPage() {
   // 检测快捷回复选项
   // 只有当不在API请求中、且消息有内容时才检测
   // 开场白序列（前4条消息）需等待逐行显示完成，后续消息不等待打字动画
-  // 特殊情况：isComplete但未确认时仍需显示确认选项
+  // 特殊情况：isComplete但未确认时只显示确认选项，跳过所有关键词匹配
   const quickReplyResult = useMemo(() => {
     if (isTyping || messages.length === 0) return { options: [], multiSelect: false };
     // 用户第一条消息发送前不显示快捷选项（开场白期间）
@@ -3260,6 +3272,18 @@ export default function ChatRegistrationPage() {
     if (isSequentialDisplaying && assistantMsgCount < 4) return { options: [], multiSelect: false };
     // 已确认后不再显示快捷选项
     if (isComplete && infoConfirmed) return { options: [], multiSelect: false };
+    
+    // 信息收集完成但未确认：只显示确认选项，跳过所有关键词匹配
+    if (isComplete && !infoConfirmed) {
+      return {
+        options: [
+          { text: "确认无误", icon: Check },
+          { text: "需要修改", icon: Pencil }
+        ],
+        multiSelect: false
+      };
+    }
+    
     const lastAssistantMessage = [...messages].reverse().find(m => m.role === "assistant");
     // 只有当消息有实际内容时才显示快捷选项
     if (!lastAssistantMessage || !lastAssistantMessage.content.trim()) return { options: [], multiSelect: false };
@@ -3669,6 +3693,39 @@ export default function ChatRegistrationPage() {
             >
               <MessageCircle className="w-4 h-4 mr-2" />
               继续注册
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 确认后显示"开始性格测试"按钮 */}
+      <AnimatePresence>
+        {isComplete && infoConfirmed && !isSequentialDisplaying && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.3 }}
+            className="px-4 py-4 border-t bg-gradient-to-r from-violet-500/10 via-purple-500/5 to-transparent"
+          >
+            <Button
+              size="lg"
+              onClick={handleComplete}
+              disabled={submitRegistrationMutation.isPending}
+              className="w-full h-12 text-base font-medium rounded-xl shadow-lg shadow-primary/20 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700"
+              data-testid="button-start-personality-test"
+            >
+              {submitRegistrationMutation.isPending ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  正在保存...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  开始性格测试
+                </>
+              )}
             </Button>
           </motion.div>
         )}
