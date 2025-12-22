@@ -97,3 +97,6 @@ Preferred communication style: Simple, everyday language.
   - Progress bar labels: "核心资料 X/Y项" → mystical stages ("小悦正在感知你的特质")
   - Footer progress: "X/Y项" → progressive reveals ("渐入佳境.../洞察完成")
 - **Registration Data Persistence (Dec 22):** New fields (industry/industrySegment/structuredOccupation/companyType/seniority) and smartInsights→insightLedger(JSONB) now persist on chat registration completion
+- **SmartInsights Frontend Display (Dec 22):** AI-powered insights now visible in both chat registration and profile pages
+  - **SocialProfileCard (ChatRegistrationPage):** Shows "小悦的洞察" section with top 3 high-confidence (≥0.7) insights, category-based coloring (career/blue, personality/purple, lifestyle/amber, preference/pink, background/green, social/orange), staggered motion animations
+  - **ProfilePage Career Card:** New "职业画像" card displaying industry/occupation/seniority chips, company info, and insightLedger insights with category icons (Briefcase/Users/Coffee/Heart/Globe), fallback message when no high-confidence insights
