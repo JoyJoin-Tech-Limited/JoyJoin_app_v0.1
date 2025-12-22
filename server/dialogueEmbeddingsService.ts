@@ -9,7 +9,7 @@
  */
 
 import { db } from './db';
-import { dialogueEmbeddings, dialogueFeedback, users } from '@shared/schema';
+import { dialogueEmbeddings, dialogueFeedback, users, registrationSessions } from '@shared/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import type { DetectedInsight, InsightDetectionResult, InsightCategory } from './insightDetectorService';
 import type { DeepTraits } from './inference/conversationSignature';
@@ -52,6 +52,37 @@ export interface InsightStats {
 
 export class DialogueEmbeddingsService {
   /**
+   * 确保 registration_session 存在，如不存在则自动创建
+   */
+  private async ensureSessionExists(sessionId: string, userId: string | null): Promise<string> {
+    try {
+      // 检查 session 是否存在
+      const existing = await db.query.registrationSessions.findFirst({
+        where: eq(registrationSessions.id, sessionId),
+      });
+      
+      if (existing) {
+        return sessionId;
+      }
+      
+      // 自动创建 session（auto-heal）
+      const [created] = await db.insert(registrationSessions).values({
+        id: sessionId,
+        sessionMode: 'ai_chat',
+        userId: userId || undefined,
+        startedAt: new Date(),
+        lastTouchAt: new Date(),
+      }).returning({ id: registrationSessions.id });
+      
+      console.log(`[DialogueEmbeddings] Auto-created registration session: ${sessionId}`);
+      return created.id;
+    } catch (error) {
+      console.error('[DialogueEmbeddings] Error ensuring session exists:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 存储对话洞察结果
    */
   async storeInsights(
@@ -63,6 +94,12 @@ export class DialogueEmbeddingsService {
     phoneNumber?: string
   ): Promise<string | null> {
     try {
+      // 确保 session 存在以满足外键约束
+      let validSessionId = sessionId;
+      if (sessionId) {
+        validSessionId = await this.ensureSessionExists(sessionId, userId);
+      }
+
       const embeddingData: InsightEmbeddingData = {
         insights: result.insights,
         dialectProfile: result.dialectProfile,
@@ -83,7 +120,7 @@ export class DialogueEmbeddingsService {
       const sentiment = this.analyzeSentiment(result);
 
       const [inserted] = await db.insert(dialogueEmbeddings).values({
-        sourceSessionId: sessionId,
+        sourceSessionId: validSessionId,
         sourceUserId: userId,
         dialogueContent,
         dialogueSummary: summary,
@@ -94,7 +131,7 @@ export class DialogueEmbeddingsService {
         isSuccessful,
       }).returning({ id: dialogueEmbeddings.id });
 
-      console.log(`[DialogueEmbeddings] Stored ${result.insights.length} insights for session ${sessionId}`);
+      console.log(`[DialogueEmbeddings] Stored ${result.insights.length} insights for session ${validSessionId}`);
       return inserted?.id || null;
     } catch (error) {
       console.error('[DialogueEmbeddings] Error storing insights:', error);

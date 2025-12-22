@@ -3548,8 +3548,10 @@ export default function ChatRegistrationPage() {
       });
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    onSuccess: async () => {
+      // 等待用户状态刷新完成后再导航，避免被判断为未登录
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       toast({
         title: "注册成功！",
         description: "接下来做个2分钟的性格测试，帮你找到更合拍的活动伙伴~"
