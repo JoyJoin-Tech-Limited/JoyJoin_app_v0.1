@@ -2511,15 +2511,17 @@ function SocialProfileCard({ info, mode, showConfirmButtons, infoConfirmed, onCo
     values.filter(isFilled).length;
 
   // 按模式定义核心字段列表（只计算核心字段，不计算bonus字段）
+  // 注意：极速模式下仍需检查这些字段，以便用户主动提供时能显示
   const getCoreFields = () => {
     switch (currentMode) {
       case 'express':
         return {
-          identity: [info.displayName, info.gender, info.birthYear, info.currentCity], // 4项
-          career: [], // 0项
-          geoLang: [], // 0项
-          interests: [], // 0项
-          social: [], // 0项
+          identity: [info.displayName, info.gender, info.birthYear, info.currentCity], // 4项核心
+          // 极速模式下这些为加分项，但如果用户主动提供了也要显示
+          career: [info.industry, info.occupation || info.occupationDescription],
+          geoLang: [],
+          interests: [info.interestsTop || info.topInterests],
+          social: [],
         };
       case 'standard':
       case 'enrichment':
