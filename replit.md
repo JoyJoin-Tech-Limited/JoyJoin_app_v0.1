@@ -1,21 +1,19 @@
 # Local Micro-Events Social Network (JoyJoin)
 
 ## Overview
-
-JoyJoin (悦聚·Joy) is a social networking platform that facilitates meaningful local connections through curated micro-events (5-10 attendees). It targets the Hong Kong/Shenzhen market, utilizing AI for intelligent user matching based on interests, personality, and social compatibility, with a focus on psychological safety and inclusivity. Key features include AI-powered matching, a comprehensive feedback system, streamlined event management, and a robust Admin Portal. A core innovation is the 12-Archetype Animal Social Vibe System, which enhances group dynamics and chemistry matching.
+JoyJoin (悦聚·Joy) is a social networking platform designed to foster meaningful local connections through curated micro-events (5-10 attendees). It targets the Hong Kong/Shenzhen market, leveraging AI for intelligent user matching based on interests, personality, and social compatibility. The platform prioritizes psychological safety and inclusivity, featuring AI-powered matching, a comprehensive feedback system, streamlined event management, and a robust Admin Portal. A key innovation is the 12-Archetype Animal Social Vibe System, which enhances group dynamics and chemistry matching.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
 ### Frontend
 - **Frameworks:** React 18 with TypeScript, Vite, Wouter.
-- **UI/Styling:** Mobile-first design using Radix UI, shadcn/ui, and Tailwind CSS. Features dark mode, a purple-centric warm color palette, and bilingual support (Chinese/English).
+- **UI/Styling:** Mobile-first design using Radix UI, shadcn/ui, and Tailwind CSS. Supports dark mode, a purple-centric warm color palette, and bilingualism (Chinese/English).
 - **State Management:** TanStack Query for server state.
 - **Animations:** Framer-motion.
-- **Design Principles:** Emphasizes warmth, accessibility, responsive design, and progressive anxiety reduction.
+- **Design Principles:** Focuses on warmth, accessibility, responsive design, and progressive anxiety reduction.
 
 ### Backend
 - **Runtime:** Node.js with Express.js, TypeScript.
@@ -31,94 +29,30 @@ Preferred communication style: Simple, everyday language.
 - **Admin Authorization:** `isAdmin` flag.
 
 ### System Features & Design Decisions
-- **Two-Stage Event Pool Matching Model:** Admin-defined event pools with hard constraints; AI-driven, 6-dimensional algorithm (Personality 23%, Interests 24%, Intent 13%, Background 15%, Culture 10%, Conversation Signature 15%) matches users within pools. Includes a 12-Archetype Animal Social Vibe System and granular match point explanations.
-  - **Deep Trait Extraction System:** 5-category psychological profiling from conversation patterns (Cognitive Style, Communication Preference, Social Personality, Emotional Traits, Interaction Rhythm). Emotional traits now use descriptive categories (stable/sensitive/balanced) instead of 0-100 scores to avoid labeling risks.
-  - **Dynamic Weight Adjustment:** Feedback-driven weight optimization that adapts dimension weights based on user satisfaction and match point discussions.
-  - **Hybrid Semantic Strategy (Option C):** Simple features use regex patterns, complex semantics call DeepSeek API only for low-confidence attributes to control costs.
-  - **Matching Cache System:** In-memory caching for pair scores and signatures, ready for Redis migration.
-  - **Expanded Cantonese Dialect Support:** 368 Cantonese vocabulary patterns covering particles, verbs, adjectives, phrases, HK/SZ locations (80 MTR stations), and internet slang.
-- **AI-Driven Matchmaking:** Utilizes AI for sophisticated event and people matching, focusing on personality, interests, and group dynamics, with explainable results and a deep feedback system.
-- **Two-Tier Feedback Architecture:** Collects basic and optional anonymous deep feedback to refine algorithms.
-- **Gamified Personality Assessment:** 12-question test using cumulative trait-based scoring:
-  - **Cumulative Scoring System:** Trait scores accumulated from each answer, min-max normalized to 0-100
-  - **5-Dimensional Model (AOCEX):** Affinity, Openness, Conscientiousness, Emotional Stability, Extraversion
-  - **P-Dimension Integration:** Positivity distributed to X(25%), O(35%), A(40%) using floating-point precision (V6.4 optimized)
-  - **Cosine Similarity Matching:** User traits matched against 12 archetype animal profiles
-  - **Empirical Score Ranges:** A(-4~30), O(-3~35), C(0~30), E(0~28), X(-15~38) including P contributions (V3 with negative scores)
-  - Visualized with personalized Personality Radar Chart.
-  - **Accuracy Optimization (V6.9 - Current):** Expert-reviewed optimization achieving balanced distribution:
-    - Distribution improvement: All 12 archetypes now within 5.53%-11.22% range (previously 1.8%-21%)
-    - Question bank V3.1: Q5 rewritten with calm negotiation path ("温和边界"), Q1/Q6/Q7 rebalanced for O coverage (66.7%→83.3%)
-    - Key improvements: 开心柯基(3.3%→8.07%), 夸夸豚(2.2%→5.53%), 沉思猫头鹰(17.7%→7.91%), 暖心熊(3.3%→11.15%), 太阳鸡(3.9%→7.69%)
-    - Vector differentiation strategy: 淡定海豚 vs 定心大象 separated by A/O (dolphin) vs C/X (elephant) dimensions
-    - Dimension coverage: A(91.7%), O(83.3%), C(100%), E(100%), X(83.3%), P(91.7%)
-    - A/B test ready: `archetypeTraitScoresOptimized.ts` with `setABTestVariant('control'/'optimized')`
-    - **Low-Energy Archetype Calibration System (V6.8 - Integrated):** 3 supplementary questions ("静谧小屋" scenarios) for distinguishing 5 similar low-energy archetypes (淡定海豚/定心大象/稳如龟/隐身猫/沉思猫头鹰). Triggered when primary/secondary match score difference <3%, affecting ~10-15% of users. Now fully integrated into PersonalityTestPage.tsx with proper UI flow and score merging.
-    - **Known limitation:** 3 low-energy archetype pairs have >98% cosine similarity. Supplementary calibration questions address this.
-    - **Algorithm Recommendation:** Maintain cosine similarity (production-proven) with conditional calibration for edge cases.
-- **AI-First Onboarding (小悦对话注册):** Registration defaults to AI-powered conversational flow with character-based AI (小悦). Traditional form registration available at `/registration/form` as fallback. Multi-step flow covering identity, interests, personality, and profile creation.
+- **AI-Driven Event Pool Matching:** Two-stage model using admin-defined event pools and an AI-driven, 6-dimensional algorithm (Personality, Interests, Intent, Background, Culture, Conversation Signature) for user matching. Includes a 12-Archetype Animal Social Vibe System and explainable match points.
+  - **Deep Trait Extraction:** 5-category psychological profiling from conversation patterns (Cognitive Style, Communication Preference, Social Personality, Emotional Traits, Interaction Rhythm).
+  - **Dynamic Weight Adjustment:** Feedback-driven optimization of matching dimension weights.
+  - **Hybrid Semantic Strategy:** Combines regex patterns for simple features and DeepSeek API for complex semantics to manage costs.
+  - **Matching Cache System:** In-memory caching for performance.
+  - **Expanded Cantonese Dialect Support:** Comprehensive vocabulary patterns covering various Cantonese linguistic nuances and regional specifics.
+- **Two-Tier Feedback Architecture:** Collects basic and optional anonymous deep feedback for algorithm refinement.
+- **Gamified Personality Assessment:** 12-question test with cumulative trait-based scoring across 5 dimensions (AOCEX) and cosine similarity matching against 12 archetype animal profiles. Includes a low-energy archetype calibration system for refined distinctions.
+- **AI-First Onboarding (小悦对话注册):** Conversational, AI-powered registration flow with character-based AI (小悦) as default, covering identity, interests, and personality. Traditional form registration is available as a fallback.
+  - **3-Tier Information Funnel:** Scientifically designed data collection for explicit fundamentals, natural enrichment, and AI-inferred hidden insights (e.g., dialect profiles).
+  - **Dialect Matching:** Integrates dialect background as a chemistry factor in matching.
+  - **Intelligent Inference Engine:** Hybrid architecture for inferring user attributes and optimizing question flow.
+  - **Registration Funnel Analytics:** Admin dashboard for monitoring KPIs, drop-offs, and AI inference accuracy.
 - **Admin Portal:** Desktop-first interface for comprehensive management and real-time algorithm tuning via an Admin Matching Lab.
 - **Payment & Subscription System:** Full payment infrastructure including WeChat Pay integration.
 - **Intelligent Venue Matching & Booking:** Algorithm-based venue scoring and a transactional booking system.
-- **Venue Partnership System (V1.0):** Collaborative restaurant/bar partnerships with exclusive member deals.
-  - **Extended Venue Model:** venues table enhanced with priceNote, coverImageUrl, galleryImages, partnerStatus, partnerSince fields.
-  - **Unified Budget Tiers:** System-wide preset tiers: "150以下", "150-200", "200-300", "300-500" (used for user budgetRange and venue priceRange).
-  - **Venue Deals Table:** venueDeals table for partner-exclusive discounts supporting percentage (8折), fixed amount (立减¥X), and gift types.
-  - **Redemption Methods:** show_page (出示本页面), code (报暗号), qr_code (扫码核销).
-  - **VenuePartnerCard Component:** Reusable frontend component displaying venue info with expandable deal details and usage tracking.
-  - **Demo Data:** "弥所 Homebar" partner venue with 20% exclusive discount for testing.
-- **AI Chat Registration:** AI-powered conversational registration flow using a character-based AI (小悦) for engaging user onboarding and secure server-side information extraction. Features tiered conversation modes, context-aware quick replies, smart inference, anti-abuse protection, and dialect teasing.
-  - **3-Tier Information Funnel (V7.2):** Scientifically-designed data collection architecture based on 10 social expert recommendations:
-    - **L1 (Explicit Fundamentals):** 7 must-ask fields collected directly - nickname, phone, gender, age range, city, hometown province, language preference. Used as hard filters in matching.
-    - **L2 (Natural Enrichment):** 11 optional fields gathered conversationally - interests, occupation, intent, social style, ideal group size, budget, availability, dietary restrictions, etc. Contributes 40% to compatibility scoring.
-    - **L3 (Hidden Insights):** AI-inferred from conversation patterns - dialect profile (8 dialects: Cantonese, Hunan, Teochew, Hakka, Sichuan, Northeastern, Hokkien, Shanghainese), communication style, conversation rhythm, emotional signature, personality signals. Contributes 15% to chemistry scoring.
-  - **Dialect Matching as Chemistry Factor:** Same dialect background = +15 points bonus in ConversationSignature similarity (老乡 effect). Both having dialect backgrounds but different = +5 points (移民共鸣).
-  - **Intelligent Inference Engine:** Hybrid microkernel architecture (Semantic Matcher, LLM Reasoner, Knowledge Graph, State Manager) to infer user attributes and skip redundant questions with confidence-based actions.
-  - **Expert Evaluation System:** Framework with 10 AI expert personas and 7 weighted evaluation dimensions for quality assessment.
-  - **Registration Funnel Analytics Dashboard:** Admin Portal tab under "数据洞察" with:
-    - KPI cards: conversion rate, avg completion time, 7-day completions, L3 confidence
-    - L1 field dropoff heatmap showing which required fields cause abandonment
-    - L2 engagement bar chart showing optional field participation rates
-    - L3 confidence trend line chart tracking AI inference accuracy
-    - Session duration distribution histogram
-    - **Real Session Telemetry (V8.0):** Uses `registration_sessions` table as single source of truth with lifecycle timestamps (started_at, l1_completed_at, l2_enriched_at, completed_at). Zero fallback to hardcoded values - all KPIs derive from real data. Falls back to users table for historical pre-telemetry data.
-  - **Lightweight Fatigue Reminder:** Triggers once after 7 minutes if L2 fields are still empty, with gentle prompt from 小悦.
-- **Personalized Icebreaker Topics:** Algorithm-curated topics considering common interests and archetypes.
-- **Activity Toolkit (活动工具包) UX Enhancements:** Features like "适合破冰" badges, atmosphere checks, and streamlined ending screens.
-- **King Game (国王游戏) Digital Card System:** Interactive digital poker card game with multi-device WebSocket synchronization, 3D flip animations, dynamic deck generation, and automated dealer rotation.
-- **小悦进化系统 (AI Evolution System V2.0):** Enables Xiaoyue chatbot to learn and improve through user feedback and multi-armed bandit optimization. Now includes realtime insight detection beyond predefined fields.
-  - **Database Tables:** 
-    - `golden_dialogues`: Stores successful conversation patterns for reference
-    - `matching_weights_config`: Dynamic 6-dimension matching weights with Thompson Sampling parameters
-    - `matching_weights_history`: Weight change history for visualization
-    - `dialogue_embeddings`: Conversation vector storage with insights, dialect profiles, deep traits (JSONB, ready for pgvector migration)
-    - `trigger_performance`: Tracks 38 trigger effectiveness with auto-threshold adjustment
-    - `dialogue_feedback`: Explicit/implicit feedback collection
-  - **Backend Services:**
-    - `matchingWeightsService.ts`: Dynamic weight loading, Thompson Sampling optimization, auto-recalculation every 50 matches
-    - `triggerPerformanceService.ts`: Trigger activation tracking, effectiveness scoring, threshold optimization
-    - `goldenDialogueService.ts`: Golden dialogue CRUD, category search, usage tracking
-    - `insightDetectorService.ts`: 6-dimension insight detection with 30+ rules (safety, emotional, lifestyle, relationship, career, preference). Includes therapeutic confirmation templates.
-    - `dialogueEmbeddingsService.ts`: Per-turn persistence to DB, cross-session linking by phone number, user profile enrichment
-  - **Realtime Insight Detection (V2.0):**
-    - Per-message detection: Insights detected immediately during chat and stored to DB (isSuccessful=false)
-    - Registration complete: Full conversation analysis with dialect + deep traits, stored with isSuccessful=true
-    - Cross-session linking: Phone number stored in embedding data enables linking across devices/sessions
-    - User profile enrichment: Safety constraints, pet preferences, group size preferences automatically applied
-  - **6 Insight Categories:**
-    - Safety: allergies, dietary restrictions, social anxiety, trauma topics
-    - Emotional: introvert recharge, stress signals, seeking connection, positive energy
-    - Lifestyle: pets (cat/dog), fitness, sleep patterns
-    - Relationship: recently single, long distance, long-term single
-    - Career: job hunting, startup, immigration, burnout
-    - Preference: group size, KTV avoidance, outdoor activities
-  - **Admin Portal Page:** `/admin/evolution` with:
-    - Overview KPIs: total matches, satisfaction, trigger activations, golden dialogues count, insight stats
-    - Weights visualization: 6-dimension progress bars with real-time percentages
-    - Trigger performance: Top performing and underperforming triggers
-    - Golden dialogue management: Add, view, refine conversation patterns
-    - Insight analytics: Recent insights, category breakdown, confidence trends
-  - **Thompson Sampling Algorithm:** Beta distribution-based exploration-exploitation for weight optimization
+- **Venue Partnership System:** Supports collaborative restaurant/bar partnerships with exclusive member deals, detailed venue models, unified budget tiers, and various deal redemption methods.
+- **Personalized Icebreaker Topics:** Algorithm-curated topics based on common interests and archetypes.
+- **Activity Toolkit UX Enhancements:** Features like "适合破冰" badges and atmosphere checks.
+- **King Game (国王游戏) Digital Card System:** Interactive digital poker game with multi-device WebSocket synchronization and dynamic features.
+- **小悦进化系统 (AI Evolution System V2.0):** Enables the Xiaoyue chatbot to learn and improve through user feedback and multi-armed bandit optimization, including real-time insight detection across 6 categories (Safety, Emotional, Lifestyle, Relationship, Career, Preference).
+  - **Dynamic Weight Optimization:** Utilizes Thompson Sampling for adjusting matching weights.
+  - **Real-time Insight Detection:** Per-message and full conversation analysis for user profile enrichment.
+  - **Admin Evolution Portal:** Provides KPIs, visualizations for weights and triggers, and golden dialogue management.
 
 ## External Dependencies
 
