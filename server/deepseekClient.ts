@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import type { DetectedInsight } from './insightDetectorService';
 
 const deepseekClient = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
@@ -1577,6 +1578,37 @@ import {
 // 会话状态存储（内存中）
 const sessionInferenceStates: Map<string, UserAttributeMap> = new Map();
 
+// ===== AI Evolution: Session Insight Store =====
+const sessionInsightStore: Map<string, DetectedInsight[]> = new Map();
+
+/**
+ * AI Evolution: 获取会话累积的洞察
+ */
+export function getSessionInsights(sessionId: string): DetectedInsight[] {
+  return sessionInsightStore.get(sessionId) || [];
+}
+
+/**
+ * AI Evolution: 添加洞察到会话累积
+ */
+export function addSessionInsights(sessionId: string, insights: DetectedInsight[]): void {
+  const existing = sessionInsightStore.get(sessionId) || [];
+  const existingSubTypes = new Set(existing.map(i => i.subType));
+  const newInsights = insights.filter(i => !existingSubTypes.has(i.subType));
+  
+  if (newInsights.length > 0) {
+    sessionInsightStore.set(sessionId, [...existing, ...newInsights]);
+    console.log(`[AI Evolution] 会话 ${sessionId} 累积洞察: ${sessionInsightStore.get(sessionId)?.length || 0} 个`);
+  }
+}
+
+/**
+ * AI Evolution: 清除会话洞察
+ */
+export function clearSessionInsights(sessionId: string): void {
+  sessionInsightStore.delete(sessionId);
+}
+
 /**
  * 获取或创建会话的推断状态
  */
@@ -1651,6 +1683,31 @@ export async function continueXiaoyueChatWithInference(
   
   // 3. 更新推断状态
   updateSessionInferenceState(sessionId, inferenceResult.newState);
+  
+  // 3.5 AI Evolution: 实时洞察检测 (per-message) + 累积存储 + 持久化
+  try {
+    const { insightDetectorService } = await import('./insightDetectorService');
+    const { dialogueEmbeddingsService } = await import('./dialogueEmbeddingsService');
+    const existingInsights = getSessionInsights(sessionId);
+    const turnIndex = conversationHistory.filter(m => m.role === 'user').length;
+    const detectedInsights = insightDetectorService.detectFromMessage(userMessage, turnIndex, existingInsights);
+    
+    if (detectedInsights.length > 0) {
+      // 累积到内存
+      addSessionInsights(sessionId, detectedInsights);
+      
+      // 持久化到数据库（防止用户中途退出丢失洞察）
+      await dialogueEmbeddingsService.storeInsights(
+        sessionId,
+        null,
+        userMessage,
+        { insights: detectedInsights, dialectProfile: null, deepTraits: null, totalConfidence: 0.85, apiCallsUsed: 0 },
+        false // isSuccessful = false indicates partial/in-progress
+      );
+    }
+  } catch (insightError) {
+    // Non-blocking
+  }
   
   // 4. 生成推断上下文补充
   const inferenceAddition = generateInferencePromptAddition(inferenceResult.newState);
@@ -1764,6 +1821,31 @@ export async function* continueXiaoyueChatStreamWithInference(
   
   // 3. 更新推断状态
   updateSessionInferenceState(sessionId, inferenceResult.newState);
+  
+  // 3.5 AI Evolution: 实时洞察检测 (per-message) + 累积存储 + 持久化
+  try {
+    const { insightDetectorService } = await import('./insightDetectorService');
+    const { dialogueEmbeddingsService } = await import('./dialogueEmbeddingsService');
+    const existingInsights = getSessionInsights(sessionId);
+    const turnIndex = conversationHistory.filter(m => m.role === 'user').length;
+    const detectedInsights = insightDetectorService.detectFromMessage(userMessage, turnIndex, existingInsights);
+    
+    if (detectedInsights.length > 0) {
+      // 累积到内存
+      addSessionInsights(sessionId, detectedInsights);
+      
+      // 持久化到数据库（防止用户中途退出丢失洞察）
+      await dialogueEmbeddingsService.storeInsights(
+        sessionId,
+        null,
+        userMessage,
+        { insights: detectedInsights, dialectProfile: null, deepTraits: null, totalConfidence: 0.85, apiCallsUsed: 0 },
+        false // isSuccessful = false indicates partial/in-progress
+      );
+    }
+  } catch (insightError) {
+    // Non-blocking
+  }
   
   // 4. 生成推断上下文补充
   const context = generateXiaoyueContext(inferenceResult.newState);

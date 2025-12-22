@@ -563,12 +563,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
         registrationData.occupationDescription = extractedInfo.occupationDescription;
       }
       
+      // ===== AI Evolution System: Insight Detection & Storage =====
+      try {
+        const { insightDetectorService } = await import('./insightDetectorService');
+        const { dialogueEmbeddingsService } = await import('./dialogueEmbeddingsService');
+        const { getSessionInsights, clearSessionInsights } = await import('./deepseekClient');
+        
+        // Get accumulated per-message insights from session
+        const sessionId = req.body.sessionId || req.sessionID;
+        const accumulatedInsights = getSessionInsights(sessionId);
+        
+        // Store phoneNumber for cross-session linking
+        const linkPhoneNumber = phoneNumber;
+        
+        // Run full conversation analysis (includes dialect + deep traits)
+        const insightResult = await insightDetectorService.analyzeConversation(conversationHistory);
+        
+        // Merge accumulated per-message insights with final analysis
+        const allInsights = [...accumulatedInsights, ...insightResult.insights];
+        const uniqueInsights = allInsights.filter((insight, index, self) =>
+          index === self.findIndex(i => i.subType === insight.subType)
+        );
+        
+        // Update result with merged insights
+        insightResult.insights = uniqueInsights;
+        
+        // Store insights to dialogue_embeddings table
+        const dialogueContent = conversationHistory
+          .filter((m: any) => m.role === 'user')
+          .map((m: any) => m.content)
+          .join('\n');
+        
+        await dialogueEmbeddingsService.storeInsights(
+          sessionId,
+          null, // userId not available yet
+          dialogueContent,
+          insightResult,
+          true, // isSuccessful
+          linkPhoneNumber // Store phone for cross-session linking
+        );
+        
+        // Clear session insights after storing
+        clearSessionInsights(sessionId);
+        
+        console.log(`[AI Evolution] Stored ${insightResult.insights.length} insights (${accumulatedInsights.length} realtime + final), dialect: ${insightResult.dialectProfile?.primaryDialect || 'none'}`);
+        
+        // Merge safety insights into registrationData
+        const safetyInsights = insightResult.insights.filter(i => i.category === 'safety');
+        if (safetyInsights.length > 0) {
+          registrationData.safetyNoteHost = safetyInsights
+            .map(i => `[${i.subType}] ${i.value}`)
+            .join('; ');
+        }
+        
+        // Merge lifestyle insights
+        const petInsights = insightResult.insights.filter(i => 
+          i.subType === 'pet_owner_cat' || i.subType === 'pet_owner_dog'
+        );
+        if (petInsights.length > 0 && !registrationData.hasPets) {
+          registrationData.hasPets = true;
+          registrationData.petTypes = petInsights.map(i => 
+            i.subType === 'pet_owner_cat' ? '猫' : '狗'
+          );
+        }
+      } catch (insightError) {
+        console.error('[AI Evolution] Insight detection error:', insightError);
+        // Non-blocking - continue with registration
+      }
+      // ===== End AI Evolution System =====
+      
+      // Store chatSessionId in session for linking insights at user registration
+      const chatSessionId = req.body.sessionId || req.sessionID;
+      if (req.session) {
+        req.session.chatSessionId = chatSessionId;
+      }
+      
       // Return collected info (actual user creation will happen through phone auth -> /api/user/register flow)
       res.json({
         success: true,
         message: "对话注册完成，请通过电话验证完成注册",
         registrationData,
         conversationalProfile: extractedInfo.conversationalProfile,
+        chatSessionId, // Return for client to persist if needed
       });
     } catch (error) {
       console.error("Error completing chat registration:", error);
@@ -704,6 +780,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (xpError) {
         console.error("Error awarding registration XP:", xpError);
       }
+      
+      // ===== AI Evolution: Link session insights to user profile =====
+      try {
+        const { dialogueEmbeddingsService } = await import('./dialogueEmbeddingsService');
+        
+        // Method 1: Use verified phone number (most reliable, works cross-device)
+        const verifiedPhone = req.session?.verifiedPhoneNumber;
+        if (verifiedPhone) {
+          const linkResult = await dialogueEmbeddingsService.linkByPhoneNumber(verifiedPhone, userId);
+          if (linkResult.linked > 0) {
+            console.log(`[AI Evolution] Linked ${linkResult.linked} records by phone to user ${userId}`);
+          } else {
+            // Method 2: Fallback to session ID
+            const sessionId = req.session?.chatSessionId || req.body?.chatSessionId || req.sessionID;
+            if (sessionId) {
+              const sessionResult = await dialogueEmbeddingsService.linkSessionToUser(sessionId, userId);
+              console.log(`[AI Evolution] Fallback: Linked ${sessionResult.linked} records by sessionId to user ${userId}`);
+            }
+          }
+        } else {
+          // Method 2: Fallback to session ID if phone not available
+          const sessionId = req.session?.chatSessionId || req.body?.chatSessionId || req.sessionID;
+          if (sessionId) {
+            const linkResult = await dialogueEmbeddingsService.linkSessionToUser(sessionId, userId);
+            console.log(`[AI Evolution] Linked ${linkResult.linked} records from session ${sessionId} to user ${userId}`);
+          }
+        }
+      } catch (linkError) {
+        console.error('[AI Evolution] Failed to link insights to user:', linkError);
+        // Non-blocking - user registration still succeeds
+      }
+      // ===== End AI Evolution =====
       
       res.json(user);
     } catch (error: any) {
@@ -8777,11 +8885,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { matchingWeightsService } = await import('./matchingWeightsService');
       const { triggerPerformanceService } = await import('./triggerPerformanceService');
       const { goldenDialogueService } = await import('./goldenDialogueService');
+      const { dialogueEmbeddingsService } = await import('./dialogueEmbeddingsService');
 
-      const [weightsConfig, triggerStats, dialogueStats] = await Promise.all([
+      const [weightsConfig, triggerStats, dialogueStats, insightStats] = await Promise.all([
         matchingWeightsService.getActiveConfig(),
         triggerPerformanceService.getAllTriggerStats(),
         goldenDialogueService.getStatistics(),
+        dialogueEmbeddingsService.getInsightStats(),
       ]);
 
       const overview = {
@@ -8799,6 +8909,11 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           totalActivations: triggerStats.reduce((sum, t) => sum + t.totalTriggers, 0),
         },
         dialogues: dialogueStats,
+        insights: {
+          total: insightStats.totalInsights,
+          byCategory: insightStats.byCategory,
+          avgConfidence: insightStats.avgConfidence,
+        },
         systemHealth: 'healthy',
         lastAnalyzed: new Date().toISOString(),
       };
@@ -8807,6 +8922,18 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     } catch (error: any) {
       console.error('[Evolution API] Failed to get overview:', error);
       res.status(500).json({ message: 'Failed to get overview', error: error.message });
+    }
+  });
+
+  // 洞察统计详情
+  app.get('/api/admin/evolution/insights', requireAdmin, async (req: any, res) => {
+    try {
+      const { dialogueEmbeddingsService } = await import('./dialogueEmbeddingsService');
+      const stats = await dialogueEmbeddingsService.getInsightStats();
+      res.json(stats);
+    } catch (error: any) {
+      console.error('[Evolution API] Failed to get insight stats:', error);
+      res.status(500).json({ message: 'Failed to get insight stats', error: error.message });
     }
   });
 

@@ -107,6 +107,7 @@ export function setupPhoneAuth(app: Express) {
         }
 
         req.session.userId = userId;
+        (req.session as any).verifiedPhoneNumber = phoneNumber; // Store for AI Evolution insight linking
         req.session.save(async (err) => {
           if (err) {
             console.error("Session save error:", err);
