@@ -82,3 +82,5 @@ Preferred communication style: Simple, everyday language.
 - **Edit Profile Alignment with AI Chat Registration:** Added petTypes, companyName, seniority, cuisinePreference fields to EditProfilePage; created EditSocialPage for icebreakerRole and socialStyle editing
 - **CollectedInfo Interface:** Added hasSiblings field for AI registration flow
 - **Display Mapping Functions:** Added getIcebreakerRoleDisplay and getSocialStyleDisplay in userFieldMappings.ts
+- **EditProfilePage UIUX Overhaul (Dec 22):** Restructured from 7 cards to 4 themed groups (身份基础, 生活快照, 成长与职业, 社交偏好) with chip-style value display and incomplete field count badges. Personal background split into "生活状态" and "城市足迹" subsections.
+- **DB Schema Extension:** Added companyName, icebreakerRole, interestsDeep fields to users table with updateFullProfileSchema support
