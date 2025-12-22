@@ -191,7 +191,12 @@ const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，悦聚平台的AI社交助手。
 
 ## 对话原则
 
-1. **一次一问**：每轮只问一个问题，绝不连环炮
+1. **一次一问（最重要！）**：每轮只能问一个问题，绝不连环炮
+   - ❌ 错误："金融投资，一级还是二级？说点兴趣爱好，说得多我配得准。"（追问+新问题=2个问题）
+   - ❌ 错误："香港，收到。做什么工作的？平时有什么兴趣爱好？"（2个问题）
+   - ✅ 正确："金融投资，一级还是二级？"（只追问职业细节）
+   - ✅ 正确："香港，收到。做什么工作的？"（只问一个新问题）
+   - 原则：追问和新问题不能放在同一轮，用户回答后再问下一个
 2. **自然过渡**：根据回答引出下一个话题，不生硬跳转
 3. **狐狸式回应**：收到信息给一句有味道的反馈，不是复读机
 4. **尊重边界**：用户不想说，一句"跳过"利落收工
@@ -1069,6 +1074,9 @@ export async function continueXiaoyueChat(
       console.log('[WARN] AI response had no visible dialogue content, using fallback');
       cleanMessage = '好的，记下了～我们继续吧～';
     }
+    
+    // 多问号验证器：检测并修复一条消息问多个问题的情况
+    cleanMessage = enforceOneQuestionPerTurn(cleanMessage);
 
     const finalHistory: ChatMessage[] = [
       ...updatedHistory,
@@ -1086,6 +1094,44 @@ export async function continueXiaoyueChat(
     console.error('DeepSeek API error:', error);
     throw new Error('小悦暂时有点忙，请稍后再试～');
   }
+}
+
+// 多问号验证器：检测并修复一条消息问多个问题的情况
+// 如果AI回复包含多个问号，只保留第一个问句，后续问题留到下一轮
+function enforceOneQuestionPerTurn(message: string): string {
+  // 检测问号数量（中文和英文）
+  const questionMarks = (message.match(/[？?]/g) || []).length;
+  
+  if (questionMarks <= 1) {
+    return message; // 只有0或1个问号，正常返回
+  }
+  
+  console.log(`[WARN] Multi-question detected (${questionMarks} questions), truncating to first question`);
+  console.log('[WARN] Original:', message);
+  
+  // 按句子分割（保留问号）
+  const sentences = message.split(/(?<=[。！？?!])/);
+  
+  // 找到第一个问句的位置
+  let result = '';
+  let foundFirstQuestion = false;
+  
+  for (const sentence of sentences) {
+    if (!foundFirstQuestion) {
+      result += sentence;
+      if (/[？?]/.test(sentence)) {
+        foundFirstQuestion = true;
+      }
+    }
+  }
+  
+  // 如果截断后内容太短，返回原始消息（避免过度截断）
+  if (result.trim().length < 10) {
+    return message;
+  }
+  
+  console.log('[WARN] Truncated to:', result.trim());
+  return result.trim();
 }
 
 function extractCollectedInfo(message: string): Partial<XiaoyueCollectedInfo> {
@@ -1153,6 +1199,9 @@ export async function* continueXiaoyueChatStream(
       console.log('[WARN] AI streaming response had no visible dialogue content, using fallback');
       cleanMessage = '好的，记下了～我们继续吧～';
     }
+    
+    // 多问号验证器：检测并修复一条消息问多个问题的情况
+    cleanMessage = enforceOneQuestionPerTurn(cleanMessage);
 
     const finalHistory: ChatMessage[] = [
       ...updatedHistory,

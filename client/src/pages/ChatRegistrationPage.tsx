@@ -1157,38 +1157,49 @@ function detectQuickReplies(lastMessage: string): QuickReplyResult {
         const lastQuestion = extractLastQuestion(lastMessage);
         
         // 5. 优先检查精准模式匹配（结构化问题：活动时段、社交频率、性别、学历等）
-        const patternMatch = matchPatternBasedConfig(lastQuestion);
+        let patternMatch = matchPatternBasedConfig(lastQuestion);
+        let keywordMatch: QuickReplyResult | null = null;
+        
+        // 6. 如果提取的问句没匹配，回退用完整消息匹配（解决关键词被截断问题）
+        if (!patternMatch) {
+          keywordMatch = matchKeywordBasedConfig(lastQuestion);
+          
+          // 7. 如果提取的问句还是没匹配，用完整消息再试一次
+          if (!keywordMatch && lastQuestion !== lastMessage) {
+            patternMatch = matchPatternBasedConfig(lastMessage);
+            if (!patternMatch) {
+              keywordMatch = matchKeywordBasedConfig(lastMessage);
+            }
+          }
+        }
+        
         if (patternMatch) {
           result = patternMatch;
+        } else if (keywordMatch) {
+          result = keywordMatch;
+        } else if (isYesNoQuestion(lastMessage)) {
+          // 8. 检查是否是简单的是非问句
+          result = { 
+            options: [
+              { text: "是的", icon: Check },
+              { text: "不是", icon: X }
+            ], 
+            multiSelect: false 
+          };
         } else {
-          // 6. 关键词匹配作为后备（城市、兴趣等）
-          const keywordMatch = matchKeywordBasedConfig(lastQuestion);
-          if (keywordMatch) {
-            result = keywordMatch;
-          } else if (isYesNoQuestion(lastMessage)) {
-            // 7. 检查是否是简单的是非问句
-            result = { 
+          // 9. 检查确认类问题
+          const confirmKeywords = ["对吗", "确认一下", "核对一下", "信息对吗", "没问题吗"];
+          if (confirmKeywords.some(kw => lowerMessage.includes(kw))) {
+            result = {
               options: [
-                { text: "是的", icon: Check },
-                { text: "不是", icon: X }
-              ], 
-              multiSelect: false 
+                { text: "对的，确认", icon: Check },
+                { text: "需要修改", icon: Pencil }
+              ],
+              multiSelect: false
             };
           } else {
-            // 8. 检查确认类问题
-            const confirmKeywords = ["对吗", "确认一下", "核对一下", "信息对吗", "没问题吗"];
-            if (confirmKeywords.some(kw => lowerMessage.includes(kw))) {
-              result = {
-                options: [
-                  { text: "对的，确认", icon: Check },
-                  { text: "需要修改", icon: Pencil }
-                ],
-                multiSelect: false
-              };
-            } else {
-              // 9. 其他情况不显示快捷回复（智能追问让用户自由输入）
-              result = { options: [], multiSelect: false };
-            }
+            // 10. 其他情况不显示快捷回复（智能追问让用户自由输入）
+            result = { options: [], multiSelect: false };
           }
         }
       }
@@ -1835,11 +1846,16 @@ type CachedResult =
 // 全局追踪：每个消息+信息组合是否已经生成过insight
 const insightCache = new Map<string, CachedResult>();
 
+// 持久化：记录每个消息首次生成insight时的infoHash
+// 防止后续collectedInfo变化导致历史消息"回溯显示"新碎嘴
+const insightFirstGeneratedAt = new Map<number, string>();
+
 // 重置碎嘴节奏状态（用于新会话）- 同时重置所有相关缓存
 function resetInsightCadence() {
   insightCadenceState.lastInsightTurn = -10; // 重置为负数让首次推理不受限
   insightCadenceState.shownInsights.clear();
   insightCache.clear(); // 同时清空insight缓存
+  insightFirstGeneratedAt.clear(); // 清空首次生成记录
 }
 
 // ========== 方案B: Insight显示包装器（解决React渲染状态问题）==========
@@ -1847,20 +1863,41 @@ function FoxInsightWrapper({
   isAssistant, 
   shouldShowTyping, 
   collectedInfo, 
-  messageIndex 
+  messageIndex,
+  isLatestAssistant
 }: {
   isAssistant: boolean;
   shouldShowTyping: boolean;
   collectedInfo: CollectedInfo;
   messageIndex: number;
+  isLatestAssistant: boolean;
 }) {
-  // 条件不满足时不显示（移除isLatest条件，让历史insight持久保留）
+  // 条件不满足时不显示
   if (!isAssistant || shouldShowTyping) {
     return null;
   }
   
   // 计算完整信息哈希（所有推理相关字段）
   const infoHash = JSON.stringify(collectedInfo);
+  
+  // 关键修复：只有最新助手消息才能首次生成碎嘴
+  // 历史消息只能显示之前已生成的碎嘴，不能"回溯显示"新碎嘴
+  const firstGenHash = insightFirstGeneratedAt.get(messageIndex);
+  
+  if (firstGenHash) {
+    // 这个消息之前已经生成过碎嘴，只用首次生成时的infoHash
+    const cacheKey = `${messageIndex}:${firstGenHash}`;
+    const cached = insightCache.get(cacheKey);
+    if (cached?.type === 'success') {
+      return <FoxInsightBubble insight={cached.insight} />;
+    }
+    return null;
+  }
+  
+  // 未生成过碎嘴：只有最新助手消息才能尝试生成
+  if (!isLatestAssistant) {
+    return null; // 历史消息不能生成新碎嘴
+  }
   
   // 缓存key = 消息索引 + 信息哈希
   const cacheKey = `${messageIndex}:${infoHash}`;
@@ -1869,23 +1906,10 @@ function FoxInsightWrapper({
   if (insightCache.has(cacheKey)) {
     const cached = insightCache.get(cacheKey)!;
     if (cached.type === 'success') {
+      insightFirstGeneratedAt.set(messageIndex, infoHash); // 记录首次生成
       return <FoxInsightBubble insight={cached.insight} />;
     }
-    // no_match类型，返回null
     return null;
-  }
-  
-  // 未缓存：尝试生成insight
-  // 首先检查是否已经为这个messageIndex生成过成功的insight
-  // 如果有，直接复用，避免重复显示
-  const cacheEntries = Array.from(insightCache.entries());
-  for (let i = 0; i < cacheEntries.length; i++) {
-    const [key, value] = cacheEntries[i];
-    if (key.startsWith(`${messageIndex}:`) && value.type === 'success') {
-      // 这个消息已经有成功的insight了，复用它
-      insightCache.set(cacheKey, value);
-      return <FoxInsightBubble insight={value.insight} />;
-    }
   }
   
   // 尝试生成新insight
@@ -1893,16 +1917,16 @@ function FoxInsightWrapper({
   
   // 根据结果类型决定是否缓存
   if (result.type === 'success') {
-    // 成功：缓存并显示
+    // 成功：缓存并显示，记录首次生成时的infoHash
     insightCache.set(cacheKey, { type: 'success', insight: result.insight });
+    insightFirstGeneratedAt.set(messageIndex, infoHash);
     return <FoxInsightBubble insight={result.insight} />;
   } else if (result.type === 'no_match') {
-    // 无匹配规则：缓存null（同样的info不会产生不同结果）
+    // 无匹配规则：缓存null
     insightCache.set(cacheKey, { type: 'no_match' });
     return null;
   } else {
     // cooldown：不缓存，允许后续重试
-    // 下次collectedInfo变化时会生成新的cacheKey，可以重试
     return null;
   }
 }
@@ -2248,12 +2272,13 @@ function MessageBubble({
           ))
         )}
         
-        {/* 方案B：气泡内嵌入"小悦偷偷碎嘴"区域 - 移除isLatest让历史insight持久保留 */}
+        {/* 方案B：气泡内嵌入"小悦偷偷碎嘴"区域 - 只在最新助手消息显示新碎嘴 */}
         <FoxInsightWrapper 
           isAssistant={isAssistant}
           shouldShowTyping={shouldShowTyping}
           collectedInfo={collectedInfo}
           messageIndex={messageIndex}
+          isLatestAssistant={isLatest && isAssistant}
         />
       </div>
 
