@@ -579,30 +579,6 @@ export default function LoginPage() {
                   </Button>
                 </div>
 
-                {/* Development Mode A/B Testing Buttons */}
-                {isDevelopment && (
-                  <div className="space-y-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full text-xs"
-                      onClick={() => setLocation('/registration/chat')}
-                      data-testid="button-test-chat-registration"
-                    >
-                      测试·小悦对话注册
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full text-xs"
-                      onClick={() => setLocation('/register')}
-                      data-testid="button-test-form-registration"
-                    >
-                      测试·传统问卷注册
-                    </Button>
-                  </div>
-                )}
-
                 {/* Safety Badges */}
                 <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground pt-2">
                   <div className="flex items-center gap-1">
