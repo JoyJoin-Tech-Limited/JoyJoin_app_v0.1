@@ -2622,11 +2622,15 @@ function SocialProfileCard({ info, mode, showConfirmButtons, infoConfirmed, onCo
         </div>
       </div>
 
-      {/* 进度条 + 匹配加成 */}
+      {/* 进度条 + 匹配加成 - 神秘感渐进式表述 */}
       <div className="mb-3 p-2.5 bg-background/40 rounded-xl">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[10px] text-muted-foreground">
-            {currentMode === 'express' ? '核心资料' : currentMode === 'deep' ? '完整资料' : '核心资料'}
+            {corePercentage >= 80 
+              ? '小悦已充分了解你' 
+              : corePercentage >= 50 
+                ? '小悦正在感知你的特质' 
+                : '小悦开始了解你'}
           </span>
           <div className="flex items-center gap-1.5">
             <Sparkles className="w-3 h-3 text-amber-500" />
@@ -2645,7 +2649,7 @@ function SocialProfileCard({ info, mode, showConfirmButtons, infoConfirmed, onCo
         </div>
         <div className="flex items-center justify-between mt-1">
           <span className="text-[10px] text-muted-foreground">
-            {corePercentage >= 100 ? '核心已完成 ✓' : `${coreFilled}/${coreTotal} 项`}
+            {corePercentage >= 100 ? '洞察完成' : corePercentage >= 60 ? '渐入佳境...' : '继续聊聊...'}
           </span>
           <span className="text-[10px] font-medium text-primary">{corePercentage}%</span>
         </div>
@@ -3893,6 +3897,13 @@ export default function ChatRegistrationPage() {
       : timeAgo < 1440 
         ? `${Math.floor(timeAgo / 60)}小时前` 
         : '昨天';
+    
+    // 神秘感渐进式表述：避免暴露具体数量
+    const insightHint = savedInfoCount >= 8 
+      ? '小悦已捕捉到不少有趣洞察' 
+      : savedInfoCount >= 4 
+        ? '小悦已悄悄记下一些线索' 
+        : '小悦刚开始了解你';
 
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -3909,7 +3920,7 @@ export default function ChatRegistrationPage() {
                 </div>
                 <h2 className="text-lg font-semibold">发现未完成的对话</h2>
                 <p className="text-sm text-muted-foreground">
-                  {timeAgoText}你和小悦聊了{savedMessageCount}条消息，已收集{savedInfoCount}项信息
+                  {timeAgoText}你和小悦聊了{savedMessageCount}条消息，{insightHint}
                 </p>
               </div>
               

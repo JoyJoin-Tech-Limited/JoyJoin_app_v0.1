@@ -563,6 +563,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         registrationData.occupationDescription = extractedInfo.occupationDescription;
       }
       
+      // ===== 智能信息收集系统新增字段 =====
+      if (extractedInfo.industry) {
+        registrationData.industry = extractedInfo.industry;
+      }
+      if (extractedInfo.industrySegment) {
+        registrationData.industrySegment = extractedInfo.industrySegment;
+      }
+      if (extractedInfo.occupation) {
+        registrationData.structuredOccupation = extractedInfo.occupation;
+      }
+      if (extractedInfo.companyType) {
+        registrationData.companyType = extractedInfo.companyType;
+      }
+      if (extractedInfo.seniority) {
+        registrationData.seniority = extractedInfo.seniority;
+      }
+      // 智能洞察存储到 insightLedger（JSONB）
+      if (extractedInfo.smartInsights && extractedInfo.smartInsights.length > 0) {
+        registrationData.insightLedger = extractedInfo.smartInsights;
+      }
+      
       // ===== AI Evolution System: Insight Detection & Storage =====
       try {
         const { insightDetectorService } = await import('./insightDetectorService');
