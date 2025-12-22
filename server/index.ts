@@ -1,10 +1,27 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
 import { warmupDatabase } from "./db";
 import { subscriptionService } from "./subscriptionService";
 import { wsService } from "./wsService";
 import { scanAllActivePools } from "./poolRealtimeMatchingService";
+
+// Dynamic import for vite utilities - only load in development
+// This prevents vite and its plugins from being bundled in production
+const loadViteUtils = async () => {
+  const viteModule = await import("./vite");
+  return viteModule;
+};
+
+// Log function that doesn't require vite module
+function log(message: string, source = "express") {
+  const formattedTime = new Date().toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
 
 // Detect if running on Replit infra (where reusePort is supported/needed)
 const IS_REPLIT =
@@ -61,8 +78,12 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
+    // Dynamic import to avoid bundling vite in production
+    const { setupVite } = await loadViteUtils();
     await setupVite(app, server);
   } else {
+    // Dynamic import for serveStatic as well to keep vite.ts completely separate
+    const { serveStatic } = await loadViteUtils();
     serveStatic(app);
   }
 
