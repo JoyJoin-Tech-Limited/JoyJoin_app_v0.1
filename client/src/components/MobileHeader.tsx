@@ -17,7 +17,7 @@ export default function MobileHeader({
 }: MobileHeaderProps) {
   return (
     <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur-sm border-b">
-      <div className="flex items-center justify-between h-16 pl-2 pr-4">
+      <div className="flex items-center justify-between h-16 px-4">
         {showLogo ? (
           <JoyJoinLogo size="sm" />
         ) : (
