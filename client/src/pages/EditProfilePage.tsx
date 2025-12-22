@@ -2,19 +2,22 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, User, GraduationCap, Briefcase, Heart, Star, Target } from "lucide-react";
+import { ChevronLeft, ChevronRight, User, GraduationCap, Briefcase, Heart, Star, Target, Users, UtensilsCrossed } from "lucide-react";
 import {
   getGenderDisplay,
   calculateAge,
   formatAge,
   getEducationDisplay,
   getStudyLocaleDisplay,
+  getSeniorityDisplay,
   getRelationshipDisplay,
   getChildrenDisplay,
   getIntentDisplay,
   getUserPrimaryInterests,
   getUserTopicAvoidances,
   getUserTopicsHappy,
+  getIcebreakerRoleDisplay,
+  getSocialStyleDisplay,
 } from "@/lib/userFieldMappings";
 import { getOccupationDisplayLabel, getIndustryDisplayLabel, WORK_MODE_TO_LABEL, INDUSTRY_ID_TO_LABEL, type WorkMode } from "@shared/occupations";
 import { getInterestLabel, getTopicLabel } from "@/data/interestsTopicsData";
@@ -60,7 +63,7 @@ export default function EditProfilePage() {
       fields: [
         { label: "关系状态", value: user.relationshipStatus ? getRelationshipDisplay(user.relationshipStatus) : null },
         { label: "孩子状况", value: user.children ? getChildrenDisplay(user.children) : null },
-        { label: "毛孩子", value: user.hasPets === true ? "有" : user.hasPets === false ? "没有" : null },
+        { label: "毛孩子", value: user.hasPets === true ? (user.petTypes?.length > 0 ? user.petTypes.join(", ") : "有") : user.hasPets === false ? "没有" : null },
         { label: "兄弟姐妹", value: user.hasSiblings === true ? "有" : user.hasSiblings === false ? "独生子女" : null },
         { label: "现居城市", value: user.currentCity || null },
         { label: "家乡", value: user.hometownRegionCity || null },
@@ -90,6 +93,8 @@ export default function EditProfilePage() {
         { label: "职业", value: getOccupationDisplayLabel(user.occupationId, user.workMode, { showWorkMode: true }) || (user.industry ? INDUSTRY_ID_TO_LABEL[user.industry] || user.industry : null) },
         { label: "行业", value: getIndustryDisplayLabel(user.occupationId) || (user.industry ? INDUSTRY_ID_TO_LABEL[user.industry] || user.industry : null) },
         { label: "工作身份", value: user.workMode ? WORK_MODE_TO_LABEL[user.workMode as WorkMode] : null },
+        { label: "公司", value: user.companyName || null },
+        { label: "资历", value: user.seniority ? getSeniorityDisplay(user.seniority) : null },
       ],
     },
     {
@@ -120,6 +125,20 @@ export default function EditProfilePage() {
             ? getUserTopicAvoidances(user).map(id => getTopicLabel(id)).join(", ") 
             : null 
         },
+        {
+          label: "美食偏好",
+          value: user.cuisinePreference?.length > 0 ? user.cuisinePreference.join(", ") : null
+        },
+      ],
+    },
+    {
+      id: "social",
+      title: "社交风格",
+      icon: <Users className="h-4 w-4" />,
+      path: "/profile/edit/social",
+      fields: [
+        { label: "破冰角色", value: user.icebreakerRole ? getIcebreakerRoleDisplay(user.icebreakerRole) : null },
+        { label: "社交风格", value: user.socialStyle ? getSocialStyleDisplay(user.socialStyle) : null },
       ],
     },
   ];

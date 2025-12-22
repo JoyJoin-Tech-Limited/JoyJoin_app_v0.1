@@ -26,6 +26,7 @@ import EditWorkPage from "@/pages/EditWorkPage";
 import EditPersonalPage from "@/pages/EditPersonalPage";
 import EditIntentPage from "@/pages/EditIntentPage";
 import EditInterestsPage from "@/pages/EditInterestsPage";
+import EditSocialPage from "@/pages/EditSocialPage";
 import EventDetailPage from "@/pages/EventDetailPage";
 import BlindBoxPaymentPage from "@/pages/BlindBoxPaymentPage";
 import BlindBoxConfirmationPage from "@/pages/BlindBoxConfirmationPage";
@@ -152,6 +153,7 @@ function AuthenticatedRouter() {
       <Route path="/profile/edit/personal" component={EditPersonalPage} />
       <Route path="/profile/edit/intent" component={EditIntentPage} />
       <Route path="/profile/edit/interests" component={EditInterestsPage} />
+      <Route path="/profile/edit/social" component={EditSocialPage} />
       <Route path="/event/:id" component={EventDetailPage} />
       <Route path="/invite" component={InvitePage} />
       <Route path="/personality-test" component={PersonalityTestPage} />

@@ -8,7 +8,8 @@ import GamificationCard from "@/components/GamificationCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target, RefreshCw, MessageCircle, Star } from "lucide-react";
+import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target, RefreshCw, MessageCircle, Star, ChevronDown, Dna } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -38,6 +39,7 @@ export default function ProfilePage() {
   const [, setLocation] = useLocation();
   const [showQuizIntro, setShowQuizIntro] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [socialDnaOpen, setSocialDnaOpen] = useState(true);
   const { toast } = useToast();
   
   const { data: user, isLoading: userLoading } = useQuery<any>({ queryKey: ["/api/auth/user"] });
@@ -47,6 +49,11 @@ export default function ProfilePage() {
   });
   const { data: stats, isLoading: statsLoading } = useQuery<{ eventsCompleted: number; connectionsMade: number }>({
     queryKey: ["/api/profile/stats"],
+    enabled: !!user,
+  });
+  
+  const { data: gamification } = useQuery<{ currentLevel: number; levelConfig: { level: number; nameCn: string } }>({
+    queryKey: ["/api/user/gamification"],
     enabled: !!user,
   });
 
@@ -165,8 +172,18 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="flex items-center gap-4">
-                <div className={`h-16 w-16 rounded-full ${avatarConfig.bgColor} flex items-center justify-center text-3xl`}>
-                  {avatarConfig.icon}
+                <div className="relative">
+                  <div className={`h-16 w-16 rounded-full ${avatarConfig.bgColor} flex items-center justify-center text-3xl`}>
+                    {avatarConfig.icon}
+                  </div>
+                  {gamification && (
+                    <div 
+                      className="absolute -bottom-1 -right-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full border-2 border-background"
+                      data-testid="badge-level"
+                    >
+                      Lv.{gamification.levelConfig.level}
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1">
                   <h2 className="text-xl font-bold">{getUserName()}</h2>
@@ -245,126 +262,129 @@ export default function ProfilePage() {
         {/* Gamification Card - Level, XP, Coins, Streak */}
         <GamificationCard />
 
-        {/* Social Role Card - Show if test completed */}
+        {/* Social DNA Section - Collapsible */}
         {hasCompletedQuiz && personalityResults && (
-          <SocialRoleCard
-            primaryRole={personalityResults.primaryRole}
-            secondaryRole={personalityResults.secondaryRole}
-            primaryRoleScore={personalityResults.primaryRoleScore}
-            secondaryRoleScore={personalityResults.secondaryRoleScore}
-          />
-        )}
-
-        {/* Personality Traits Card - Radar Chart + 6-Dimension Scores */}
-        {hasCompletedQuiz && personalityResults && (
-          <Card className="border shadow-sm">
-            <CardContent className="p-4 space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="font-semibold">性格特质</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setLocation("/personality-test")}
-                  data-testid="button-retake-quiz"
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  重新测试
-                </Button>
-              </div>
-
-              <PersonalityRadarChart 
-                archetype={personalityResults.primaryRole}
-              />
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Role Details Card - Show rich archetype content */}
-        {hasCompletedQuiz && personalityResults && archetypeDetails && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
-                角色深度解读
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Epic Description */}
-              {archetypeDetails.epicDescription && (
-                <div className="space-y-2">
-                  <p className="text-sm leading-relaxed text-foreground/90" data-testid="text-epic-description">
-                    {archetypeDetails.epicDescription}
-                  </p>
-                </div>
-              )}
-
-              {/* Style Quote */}
-              {archetypeDetails.styleQuote && (
-                <div className={`relative bg-gradient-to-br ${archetypeGradients[personalityResults.primaryRole] || 'from-purple-500 to-pink-500'} bg-opacity-10 rounded-lg p-4 border-l-4 border-primary/50`}>
-                  <Quote className="w-6 h-6 text-primary/40 absolute top-2 left-2" />
-                  <p className="text-sm font-medium italic text-foreground pl-8" data-testid="text-style-quote">
-                    {archetypeDetails.styleQuote}
-                  </p>
-                </div>
-              )}
-
-              {/* Core Contributions */}
-              {archetypeDetails.coreContributions && (
-                <div className="flex items-start gap-3 bg-muted/30 rounded-lg p-3">
-                  <Target className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold text-muted-foreground">核心贡献</p>
-                    <p className="text-sm font-medium text-foreground" data-testid="text-core-contributions">
-                      {archetypeDetails.coreContributions}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Archetype Compatibility Preview Card */}
-        {hasCompletedQuiz && personalityResults && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Heart className="w-5 h-5 text-red-500" />
-                最佳搭档
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                作为<span className="font-semibold text-foreground">{personalityResults.primaryRole}</span>，你在活动中最有化学反应的角色：
-              </p>
-              <div className="space-y-2">
-                {getTopCompatibleArchetypes(personalityResults.primaryRole, 3).map((match) => (
-                  <div key={match.archetype} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                    <div className="flex items-center gap-3 flex-1">
-                      {getArchetypeImage(match.archetype) ? (
-                        <img 
-                          src={getArchetypeImage(match.archetype)!} 
-                          alt={match.archetype}
-                          className="h-10 w-10 rounded-full object-contain"
-                        />
-                      ) : (
-                        <img 
-                          src={archetypeAvatars[match.archetype]} 
-                          alt={match.archetype}
-                          className="h-10 w-10 rounded-full object-cover"
-                        />
-                      )}
-                      <div>
-                        <div className="font-semibold text-sm">{match.archetype}</div>
-                        <div className="text-xs text-muted-foreground">{getCompatibilityCategory(match.score)}</div>
-                      </div>
+          <Collapsible open={socialDnaOpen} onOpenChange={setSocialDnaOpen}>
+            <Card className="border shadow-sm">
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover-elevate pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Dna className="w-5 h-5 text-primary" />
+                      你的社交DNA
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">{personalityResults.primaryRole}</span>
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${socialDnaOpen ? 'rotate-180' : ''}`} />
                     </div>
-                    <div className="text-lg font-bold text-primary">{match.score}%</div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </CardHeader>
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent>
+                <CardContent className="pt-0 space-y-4">
+                  {/* Social Role Summary */}
+                  <SocialRoleCard
+                    primaryRole={personalityResults.primaryRole}
+                    secondaryRole={personalityResults.secondaryRole}
+                    primaryRoleScore={personalityResults.primaryRoleScore}
+                    secondaryRoleScore={personalityResults.secondaryRoleScore}
+                  />
+
+                  {/* Radar Chart */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm">性格特质</h4>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setLocation("/personality-test")}
+                        data-testid="button-retake-quiz"
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        重新测试
+                      </Button>
+                    </div>
+                    <PersonalityRadarChart archetype={personalityResults.primaryRole} />
+                  </div>
+
+                  {/* Role Details */}
+                  {archetypeDetails && (
+                    <div className="space-y-3 pt-2 border-t">
+                      <h4 className="font-medium text-sm flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-primary" />
+                        角色深度解读
+                      </h4>
+                      
+                      {archetypeDetails.epicDescription && (
+                        <p className="text-sm leading-relaxed text-foreground/90" data-testid="text-epic-description">
+                          {archetypeDetails.epicDescription}
+                        </p>
+                      )}
+
+                      {archetypeDetails.styleQuote && (
+                        <div className={`relative bg-gradient-to-br ${archetypeGradients[personalityResults.primaryRole] || 'from-purple-500 to-pink-500'} bg-opacity-10 rounded-lg p-4 border-l-4 border-primary/50`}>
+                          <Quote className="w-5 h-5 text-primary/40 absolute top-2 left-2" />
+                          <p className="text-sm font-medium italic text-foreground pl-7" data-testid="text-style-quote">
+                            {archetypeDetails.styleQuote}
+                          </p>
+                        </div>
+                      )}
+
+                      {archetypeDetails.coreContributions && (
+                        <div className="flex items-start gap-3 bg-muted/30 rounded-lg p-3">
+                          <Target className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold text-muted-foreground">核心贡献</p>
+                            <p className="text-sm font-medium text-foreground" data-testid="text-core-contributions">
+                              {archetypeDetails.coreContributions}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Best Matches */}
+                  <div className="space-y-3 pt-2 border-t">
+                    <h4 className="font-medium text-sm flex items-center gap-2">
+                      <Heart className="w-4 h-4 text-red-500" />
+                      最佳搭档
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      作为<span className="font-semibold text-foreground">{personalityResults.primaryRole}</span>，你在活动中最有化学反应的角色：
+                    </p>
+                    <div className="space-y-2">
+                      {getTopCompatibleArchetypes(personalityResults.primaryRole, 3).map((match) => (
+                        <div key={match.archetype} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                          <div className="flex items-center gap-3 flex-1">
+                            {getArchetypeImage(match.archetype) ? (
+                              <img 
+                                src={getArchetypeImage(match.archetype)!} 
+                                alt={match.archetype}
+                                className="h-10 w-10 rounded-full object-contain"
+                              />
+                            ) : (
+                              <img 
+                                src={archetypeAvatars[match.archetype]} 
+                                alt={match.archetype}
+                                className="h-10 w-10 rounded-full object-cover"
+                              />
+                            )}
+                            <div>
+                              <div className="font-semibold text-sm">{match.archetype}</div>
+                              <div className="text-xs text-muted-foreground">{getCompatibilityCategory(match.score)}</div>
+                            </div>
+                          </div>
+                          <div className="text-lg font-bold text-primary">{match.score}%</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
         )}
 
         {!hasCompletedQuiz && (

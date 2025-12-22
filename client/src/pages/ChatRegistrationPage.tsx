@@ -2317,6 +2317,7 @@ interface CollectedInfo {
   intent?: string;
   hasPets?: boolean;
   petTypes?: string[];
+  hasSiblings?: boolean;
   relationshipStatus?: string;
   children?: string;
   overseasRegions?: string[];
