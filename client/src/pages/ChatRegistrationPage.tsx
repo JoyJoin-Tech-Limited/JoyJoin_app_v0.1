@@ -2268,7 +2268,16 @@ function ProfileSection({
   );
 }
 
-function SocialProfileCard({ info, mode }: { info: CollectedInfo; mode?: RegistrationMode }) {
+interface SocialProfileCardProps {
+  info: CollectedInfo;
+  mode?: RegistrationMode;
+  showConfirmButtons?: boolean;
+  infoConfirmed?: boolean;
+  onConfirm?: () => void;
+  onRequestEdit?: () => void;
+}
+
+function SocialProfileCard({ info, mode, showConfirmButtons, infoConfirmed, onConfirm, onRequestEdit }: SocialProfileCardProps) {
   const currentMode = mode || 'standard';
   const modeConfig = PROFILE_MODE_CONFIGS[currentMode];
   
@@ -2525,7 +2534,7 @@ function SocialProfileCard({ info, mode }: { info: CollectedInfo; mode?: Registr
       </div>
 
       {/* 加分提示 - 仅极速/标准模式显示 */}
-      {currentMode !== 'deep' && (
+      {currentMode !== 'deep' && !showConfirmButtons && (
         <div className="mt-3 pt-3 border-t border-violet-100/10">
           <p className="text-[10px] text-muted-foreground text-center">
             {hasBonusContent ? (
@@ -2535,6 +2544,38 @@ function SocialProfileCard({ info, mode }: { info: CollectedInfo; mode?: Registr
             )}
           </p>
         </div>
+      )}
+
+      {/* 确认按钮区域 */}
+      {showConfirmButtons && !infoConfirmed && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-4 pt-4 border-t border-violet-200/20"
+        >
+          <p className="text-xs text-muted-foreground text-center mb-3">
+            请确认以上信息是否正确
+          </p>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1 h-10"
+              onClick={onRequestEdit}
+              data-testid="button-request-edit"
+            >
+              <Pencil className="w-4 h-4 mr-2" />
+              需要修改
+            </Button>
+            <Button
+              className="flex-1 h-10 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700"
+              onClick={onConfirm}
+              data-testid="button-confirm-info"
+            >
+              <Check className="w-4 h-4 mr-2" />
+              确认无误
+            </Button>
+          </div>
+        </motion.div>
       )}
     </motion.div>
   );
@@ -3738,7 +3779,42 @@ export default function ChatRegistrationPage() {
         )}
 
         {isComplete && collectedInfo.displayName && (
-          <SocialProfileCard info={collectedInfo} mode={selectedMode || undefined} />
+          <SocialProfileCard 
+            info={collectedInfo} 
+            mode={selectedMode || undefined}
+            showConfirmButtons={isComplete}
+            infoConfirmed={infoConfirmed}
+            onConfirm={() => {
+              setMessages(prev => [...prev, {
+                id: `msg-${Date.now()}`,
+                role: "user",
+                content: "确认无误",
+                timestamp: new Date()
+              }]);
+              setTimeout(() => {
+                const introMsgId = `msg-intro-${Date.now()}`;
+                setMessages(prev => [...prev, {
+                  id: introMsgId,
+                  role: "assistant",
+                  content: personalityTestIntro,
+                  timestamp: new Date()
+                }]);
+                setIsSequentialDisplaying(true);
+                setSequentialDisplayMessageId(introMsgId);
+                setInfoConfirmed(true);
+              }, 500);
+            }}
+            onRequestEdit={() => {
+              setMessages(prev => [...prev, {
+                id: `msg-${Date.now()}`,
+                role: "user",
+                content: "需要修改",
+                timestamp: new Date()
+              }]);
+              setIsTyping(true);
+              sendMessageMutation.mutate("需要修改");
+            }}
+          />
         )}
 
         <div ref={messagesEndRef} />
