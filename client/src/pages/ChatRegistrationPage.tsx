@@ -2213,10 +2213,15 @@ function MessageBubble({
 
   // 处理逐行显示的消息（仅在性格测试介绍时使用）
   const paragraphs = useMemo(() => displayContent.split('\n').filter(p => p.trim()), [displayContent]);
-  const [visibleParagraphCount, setVisibleParagraphCount] = useState(0);
+  const isPersonalityTestIntro = displayContent.includes("性格测试") && displayContent.includes("12道题");
+  
+  // 初始值：非性格测试消息直接显示全部段落
+  const [visibleParagraphCount, setVisibleParagraphCount] = useState(() => 
+    isPersonalityTestIntro ? 0 : paragraphs.length
+  );
 
   useEffect(() => {
-    if (displayContent.includes("性格测试") && displayContent.includes("12道题")) {
+    if (isPersonalityTestIntro) {
       setVisibleParagraphCount(0);
       let i = 0;
       const timer = setInterval(() => {
@@ -2230,9 +2235,10 @@ function MessageBubble({
       }, 350);
       return () => clearInterval(timer);
     } else {
+      // 确保非性格测试消息始终显示全部段落
       setVisibleParagraphCount(paragraphs.length);
     }
-  }, [message.content, paragraphs.length, onSequentialDisplayComplete]);
+  }, [message.content, paragraphs.length, isPersonalityTestIntro, onSequentialDisplayComplete]);
 
   return (
     <motion.div
