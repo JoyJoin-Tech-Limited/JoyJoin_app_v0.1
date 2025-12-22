@@ -3936,10 +3936,10 @@ export default function ChatRegistrationPage() {
       <div className={`absolute inset-0 bg-gradient-to-b ${themeConfig.gradient} pointer-events-none z-0 opacity-50`} />
       
       <div className="relative z-10 flex flex-col min-h-screen">
-      <MobileHeader title="和小悦聊聊" action={
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <TimeIcon className="w-3.5 h-3.5" />
-          <span>{themeConfig.greeting}</span>
+      <MobileHeader title="注册中 · Xiaoyue" action={
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+          <Zap className="w-3 h-3" />
+          <span>{selectedMode === 'express' ? '≈2分钟' : selectedMode === 'deep' ? '≈10分钟' : '≈5分钟'}</span>
         </div>
       } />
       
