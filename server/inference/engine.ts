@@ -10,8 +10,9 @@ import type {
   DEFAULT_CONFIG 
 } from './types';
 import { semanticMatcher } from './semanticMatcher';
-import { llmReasoner, type LLMReasonerResult } from './llmReasoner';
+import { llmReasoner, type LLMReasonerResult, getTelemetryLogs } from './llmReasoner';
 import { stateManager } from './stateManager';
+import { matchIndustryFromText } from './industryOntology';
 
 export interface InferenceEngineResult {
   extracted: Record<string, string>;
@@ -257,4 +258,21 @@ export function generateXiaoyueContext(state: UserAttributeMap): string {
   }
   
   return prompt;
+}
+
+/**
+ * 获取推断遥测数据
+ */
+export function getInferenceTelemetry() {
+  return {
+    llmTelemetry: getTelemetryLogs(),
+    inferenceLogs: inferenceEngine.getLogs()
+  };
+}
+
+/**
+ * 快速行业匹配（基于本体知识库）
+ */
+export function quickIndustryMatch(text: string) {
+  return matchIndustryFromText(text);
 }

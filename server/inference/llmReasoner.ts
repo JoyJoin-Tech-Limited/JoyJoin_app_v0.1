@@ -1,16 +1,44 @@
 /**
  * LLM推理器 - 使用Chain-of-Thought进行复杂推断
  * 当快速匹配层无法处理时调用
+ * 
+ * 集成模块化prompt和RAG检索
  */
 
 import OpenAI from 'openai';
 import type { InferredAttribute, UserAttributeMap, ConflictInfo } from './types';
+import { getReasoningModules } from '../prompts';
+import { generateRAGContext } from './industryOntology';
 
 // 使用DeepSeek API
 const client = new OpenAI({
   baseURL: 'https://api.deepseek.com',
   apiKey: process.env.DEEPSEEK_API_KEY || ''
 });
+
+// 遥测日志
+interface TelemetryLog {
+  timestamp: Date;
+  operation: string;
+  latencyMs: number;
+  success: boolean;
+  error?: string;
+  metadata?: Record<string, any>;
+}
+
+const telemetryLogs: TelemetryLog[] = [];
+const MAX_TELEMETRY_LOGS = 500;
+
+function logTelemetry(log: Omit<TelemetryLog, 'timestamp'>) {
+  telemetryLogs.push({ ...log, timestamp: new Date() });
+  if (telemetryLogs.length > MAX_TELEMETRY_LOGS) {
+    telemetryLogs.shift();
+  }
+}
+
+export function getTelemetryLogs(): TelemetryLog[] {
+  return [...telemetryLogs];
+}
 
 // ============ CoT推理提示词 ============
 
@@ -154,8 +182,9 @@ export class LLMReasoner {
     }
     
     try {
-      // 构建提示词
-      const prompt = this.buildPrompt(userMessage, conversationHistory, currentState);
+      // 构建提示词（集成RAG上下文）
+      const ragContext = this.getRAGContext(userMessage, conversationHistory);
+      const prompt = this.buildPrompt(userMessage, conversationHistory, currentState, ragContext);
       
       // 调用LLM
       const response = await client.chat.completions.create({
@@ -175,15 +204,41 @@ export class LLMReasoner {
       
       // 解析JSON
       const result = this.parseResponse(content);
+      const latencyMs = Date.now() - startTime;
+      
+      // 记录遥测
+      logTelemetry({
+        operation: 'llm_infer',
+        latencyMs,
+        success: true,
+        metadata: {
+          hasRAGContext: !!ragContext,
+          extractedFields: Object.keys(result.extracted).length,
+          inferredCount: result.inferred.length,
+          conflictsCount: result.conflicts.length
+        }
+      });
       
       return {
         ...result,
         success: true,
-        latencyMs: Date.now() - startTime
+        latencyMs
       };
       
     } catch (error) {
+      const latencyMs = Date.now() - startTime;
+      const errorMsg = error instanceof Error ? error.message : '未知错误';
+      
       console.error('LLM推理错误:', error);
+      
+      // 记录遥测
+      logTelemetry({
+        operation: 'llm_infer',
+        latencyMs,
+        success: false,
+        error: errorMsg
+      });
+      
       return {
         success: false,
         extracted: {},
@@ -191,19 +246,44 @@ export class LLMReasoner {
         conflicts: [],
         skipQuestions: [],
         confirmQuestions: [],
-        error: error instanceof Error ? error.message : '未知错误',
-        latencyMs: Date.now() - startTime
+        error: errorMsg,
+        latencyMs
       };
     }
   }
   
   /**
-   * 构建提示词
+   * 获取RAG上下文（基于行业本体知识库）
+   */
+  private getRAGContext(
+    userMessage: string,
+    conversationHistory: Array<{ role: string; content: string }>
+  ): string | null {
+    try {
+      // 收集用户消息用于RAG检索
+      const userMessages = conversationHistory
+        .filter(msg => msg.role === 'user')
+        .map(msg => msg.content)
+        .slice(-5);
+      userMessages.push(userMessage);
+      
+      // 生成RAG上下文
+      const ragContext = generateRAGContext(userMessages);
+      return ragContext || null;
+    } catch (e) {
+      console.warn('RAG上下文生成失败:', e);
+      return null;
+    }
+  }
+
+  /**
+   * 构建提示词（集成模块化prompt和RAG上下文）
    */
   private buildPrompt(
     userMessage: string,
     conversationHistory: Array<{ role: string; content: string }>,
-    currentState: UserAttributeMap
+    currentState: UserAttributeMap,
+    ragContext?: string | null
   ): string {
     // 格式化当前状态
     const stateStr = Object.entries(currentState)
@@ -216,10 +296,24 @@ export class LLMReasoner {
       .map(msg => `${msg.role === 'user' ? '用户' : '小悦'}: ${msg.content.slice(0, 100)}`)
       .join('\n') || '暂无';
     
-    return COT_INFERENCE_PROMPT
+    // 获取模块化推理prompt
+    const reasoningModules = getReasoningModules();
+    
+    // 基础提示词
+    let prompt = COT_INFERENCE_PROMPT
       .replace('{{currentState}}', stateStr)
       .replace('{{userMessage}}', userMessage)
       .replace('{{conversationSummary}}', historyStr);
+    
+    // 添加RAG上下文（如果有）
+    if (ragContext) {
+      prompt += `\n\n## 行业知识参考\n${ragContext}`;
+    }
+    
+    // 添加模块化推理指引
+    prompt += `\n\n${reasoningModules}`;
+    
+    return prompt;
   }
   
   /**
