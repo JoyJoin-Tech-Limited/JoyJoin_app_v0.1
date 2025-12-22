@@ -1880,7 +1880,7 @@ function FoxInsightWrapper({
   // 计算完整信息哈希（所有推理相关字段）
   const infoHash = JSON.stringify(collectedInfo);
   
-  // 关键修复：只有最新助手消息才能首次生成碎嘴
+  // 关键修复：允许碎嘴在对话过程中"锁定"到某个消息上
   // 历史消息只能显示之前已生成的碎嘴，不能"回溯显示"新碎嘴
   const firstGenHash = insightFirstGeneratedAt.get(messageIndex);
   
@@ -1894,11 +1894,6 @@ function FoxInsightWrapper({
     return null;
   }
   
-  // 未生成过碎嘴：只有最新助手消息才能尝试生成
-  if (!isLatestAssistant) {
-    return null; // 历史消息不能生成新碎嘴
-  }
-  
   // 缓存key = 消息索引 + 信息哈希
   const cacheKey = `${messageIndex}:${infoHash}`;
   
@@ -1909,6 +1904,12 @@ function FoxInsightWrapper({
       insightFirstGeneratedAt.set(messageIndex, infoHash); // 记录首次生成
       return <FoxInsightBubble insight={cached.insight} />;
     }
+    return null;
+  }
+  
+  // 只有最新助手消息才能生成新碎嘴（除非已有记录）
+  // 增加判定：如果消息正在打字，也不生成，避免状态频繁变动
+  if (!isLatestAssistant || shouldShowTyping) {
     return null;
   }
   
