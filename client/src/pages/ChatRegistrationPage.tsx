@@ -3918,16 +3918,13 @@ export default function ChatRegistrationPage() {
                 size="sm"
                 variant="outline"
                 onClick={() => {
+                  const lastInput = networkError.lastInput;
                   setNetworkError(null);
-                  if (networkError.lastInput) {
-                    setMessages(prev => [...prev, {
-                      id: `msg-retry-${Date.now()}`,
-                      role: "user",
-                      content: networkError.lastInput,
-                      timestamp: new Date()
-                    }]);
+                  if (lastInput) {
+                    // 用户消息已在messages中（handleSend时添加），只需重新发送
+                    // 不需要再添加用户消息到messages，避免重复
                     setIsTyping(true);
-                    sendMessageMutation.mutate(networkError.lastInput);
+                    sendMessageMutation.mutate(lastInput);
                   }
                 }}
                 className="shrink-0 h-7 text-xs"
