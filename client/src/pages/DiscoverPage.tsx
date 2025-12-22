@@ -208,7 +208,7 @@ export default function DiscoverPage() {
           } : undefined}
         />
 
-        <div className="px-4 space-y-4">
+        <div className="px-4 pb-6 space-y-4">
           {/* 无券时显示邀请好友卡片 */}
           {!bestCoupon && <InviteFriendCard />}
 
