@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target, RefreshCw, MessageCircle, Star, ChevronDown, Dna, Briefcase, Globe, Users, Coffee } from "lucide-react";
+import { getInsightCategoryConfig, INSIGHT_CONFIDENCE_THRESHOLD, INSIGHT_DISPLAY_LIMIT } from "@/lib/insightCategoryConfig";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
@@ -307,18 +308,10 @@ export default function ProfilePage() {
                   </p>
                   <div className="space-y-1.5">
                     {user.insightLedger
-                      .filter((insight: any) => insight.confidence >= 0.7)
-                      .slice(0, 3)
+                      .filter((insight: any) => insight.confidence >= INSIGHT_CONFIDENCE_THRESHOLD)
+                      .slice(0, INSIGHT_DISPLAY_LIMIT)
                       .map((insight: any, idx: number) => {
-                        const categoryConfig: Record<string, { icon: typeof Briefcase; color: string }> = {
-                          career: { icon: Briefcase, color: 'text-blue-500 bg-blue-500/10' },
-                          personality: { icon: Users, color: 'text-violet-500 bg-violet-500/10' },
-                          lifestyle: { icon: Coffee, color: 'text-amber-500 bg-amber-500/10' },
-                          preference: { icon: Heart, color: 'text-pink-500 bg-pink-500/10' },
-                          background: { icon: Globe, color: 'text-green-500 bg-green-500/10' },
-                          social: { icon: Users, color: 'text-orange-500 bg-orange-500/10' },
-                        };
-                        const config = categoryConfig[insight.category] || { icon: Sparkles, color: 'text-primary bg-primary/10' };
+                        const config = getInsightCategoryConfig(insight.category);
                         const IconComponent = config.icon;
                         return (
                           <div
@@ -330,7 +323,7 @@ export default function ProfilePage() {
                           </div>
                         );
                       })}
-                    {user.insightLedger.filter((insight: any) => insight.confidence >= 0.7).length === 0 && (
+                    {user.insightLedger.filter((insight: any) => insight.confidence >= INSIGHT_CONFIDENCE_THRESHOLD).length === 0 && (
                       <p className="text-xs text-muted-foreground italic">
                         暂无高置信度洞察，继续和小悦聊天可解锁更多发现
                       </p>

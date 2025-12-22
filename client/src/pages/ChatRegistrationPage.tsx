@@ -29,6 +29,7 @@ import {
   SOCIAL_FREQUENCY_OPTIONS
 } from "@shared/constants";
 import { calculateProfileCompletion as calculateProfileCompletionUtil, getMatchingBoostEstimate } from "@/lib/profileCompletion";
+import { getInsightCategoryConfig, INSIGHT_CONFIDENCE_THRESHOLD, INSIGHT_DISPLAY_LIMIT } from "@/lib/insightCategoryConfig";
 
 // 注册模式配置
 type RegistrationMode = "express" | "standard" | "deep" | "enrichment";
@@ -2691,26 +2692,20 @@ function SocialProfileCard({ info, mode, showConfirmButtons, infoConfirmed, onCo
           </p>
           <div className="space-y-1.5">
             {info.smartInsights
-              .filter(insight => insight.confidence >= 0.7)
-              .slice(0, 3)
+              .filter(insight => insight.confidence >= INSIGHT_CONFIDENCE_THRESHOLD)
+              .slice(0, INSIGHT_DISPLAY_LIMIT)
               .map((insight, idx) => {
-                const categoryConfig: Record<string, { icon: string; color: string }> = {
-                  career: { icon: 'Briefcase', color: 'text-blue-500 bg-blue-500/10' },
-                  personality: { icon: 'User', color: 'text-violet-500 bg-violet-500/10' },
-                  lifestyle: { icon: 'Coffee', color: 'text-amber-500 bg-amber-500/10' },
-                  preference: { icon: 'Heart', color: 'text-pink-500 bg-pink-500/10' },
-                  background: { icon: 'Globe', color: 'text-green-500 bg-green-500/10' },
-                  social: { icon: 'Users', color: 'text-orange-500 bg-orange-500/10' },
-                };
-                const config = categoryConfig[insight.category] || { icon: 'Sparkles', color: 'text-primary bg-primary/10' };
+                const config = getInsightCategoryConfig(insight.category);
+                const IconComponent = config.icon;
                 return (
                   <motion.div
                     key={`insight-${idx}`}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.1 }}
-                    className={`px-2.5 py-1.5 rounded-lg text-[11px] ${config.color} border border-current/10`}
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] flex items-start gap-2 ${config.color} border border-current/10`}
                   >
+                    <IconComponent className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
                     <span className="line-clamp-2">{insight.insight}</span>
                   </motion.div>
                 );
