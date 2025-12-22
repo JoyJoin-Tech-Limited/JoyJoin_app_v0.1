@@ -9,4 +9,4 @@ dist
 replit.nix
 .upm
 .cache
-attached_assets
+#attached_assets
