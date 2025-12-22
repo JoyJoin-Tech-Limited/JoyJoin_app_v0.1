@@ -504,13 +504,31 @@ function AchievementToast({ achievement, onComplete }: { achievement: Achievemen
   );
 }
 
+// 辅助函数：将年份转换为年龄代称（如1996→96后，2000→00后）
+function formatBirthYear(birthYear: string | number | undefined): string | undefined {
+  if (!birthYear) return undefined;
+  const year = typeof birthYear === 'string' ? parseInt(birthYear, 10) : birthYear;
+  if (isNaN(year)) return undefined;
+  // 四位数年份转两位数
+  if (year >= 1900 && year <= 2025) {
+    const twoDigit = year % 100;
+    return `${twoDigit.toString().padStart(2, '0')}后`;
+  }
+  // 已经是两位数
+  if (year < 100) {
+    return `${year.toString().padStart(2, '0')}后`;
+  }
+  return `${year}后`;
+}
+
 // 实时标签云组件
 function TagCloud({ info }: { info: CollectedInfo }) {
   const tags: { text: string; type: "primary" | "secondary" | "accent" }[] = [];
   
   if (info.currentCity) tags.push({ text: info.currentCity, type: "primary" });
   if (info.gender) tags.push({ text: info.gender, type: "secondary" });
-  if (info.birthYear) tags.push({ text: `${info.birthYear}后`, type: "secondary" });
+  const formattedAge = formatBirthYear(info.birthYear);
+  if (formattedAge) tags.push({ text: formattedAge, type: "secondary" });
   if (info.occupationDescription) tags.push({ text: info.occupationDescription, type: "accent" });
   if (info.interestsTop) {
     info.interestsTop.slice(0, 2).forEach(i => tags.push({ text: i, type: "primary" }));
@@ -2534,7 +2552,7 @@ function SocialProfileCard({ info, mode, showConfirmButtons, infoConfirmed, onCo
             </span>
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {[info.gender, info.birthYear ? `${info.birthYear}后` : null, info.currentCity].filter(Boolean).join(' · ') || '开始聊天收集信息'}
+            {[info.gender, formatBirthYear(info.birthYear), info.currentCity].filter(Boolean).join(' · ') || '开始聊天收集信息'}
           </p>
         </div>
       </div>
@@ -2608,7 +2626,7 @@ function SocialProfileCard({ info, mode, showConfirmButtons, infoConfirmed, onCo
         >
           <InfoItem label="昵称" value={info.displayName} pending />
           <InfoItem label="性别" value={info.gender} pending />
-          <InfoItem label="年龄" value={info.birthYear ? `${info.birthYear}后` : undefined} pending />
+          <InfoItem label="年龄" value={formatBirthYear(info.birthYear)} pending />
           <InfoItem label="城市" value={info.currentCity} pending />
           {currentMode !== 'express' && (
             <>
@@ -3414,7 +3432,16 @@ export default function ChatRegistrationPage() {
                   finalConversationHistory = data.conversationHistory;
                   setConversationHistory(data.conversationHistory);
                   if (data.collectedInfo) {
-                    setCollectedInfo(prev => ({ ...prev, ...data.collectedInfo }));
+                    // 只合并非null/undefined的值，避免覆盖已收集的信息
+                    setCollectedInfo(prev => {
+                      const filtered: Record<string, any> = {};
+                      for (const [key, value] of Object.entries(data.collectedInfo)) {
+                        if (value !== null && value !== undefined && value !== '') {
+                          filtered[key] = value;
+                        }
+                      }
+                      return { ...prev, ...filtered };
+                    });
                   }
                   if (data.isComplete) setIsComplete(true);
                 }
@@ -3552,15 +3579,9 @@ export default function ChatRegistrationPage() {
     // 已确认后不再显示快捷选项
     if (isComplete && infoConfirmed) return { options: [], multiSelect: false };
     
-    // 信息收集完成但未确认：只显示确认选项，跳过所有关键词匹配
+    // 信息收集完成但未确认：不显示快捷回复（只使用信息卡底部的确认按钮）
     if (isComplete && !infoConfirmed) {
-      return {
-        options: [
-          { text: "确认无误", icon: Check },
-          { text: "需要修改", icon: Pencil }
-        ],
-        multiSelect: false
-      };
+      return { options: [], multiSelect: false };
     }
     
     const lastAssistantMessage = [...messages].reverse().find(m => m.role === "assistant");
@@ -4188,20 +4209,7 @@ export default function ChatRegistrationPage() {
           )}
         </AnimatePresence>
         
-        {/* Thinking动画提示 - 输入框上方显示 */}
-        <AnimatePresence>
-          {isTyping && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="flex items-center gap-2 mb-2 text-xs text-muted-foreground"
-            >
-              <ThinkingDots />
-              <span>小悦正在思考...</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Thinking动画已在聊天窗口显示，此处不再重复 */}
         <div className="flex gap-2 items-center">
           <Input
             ref={inputRef}
