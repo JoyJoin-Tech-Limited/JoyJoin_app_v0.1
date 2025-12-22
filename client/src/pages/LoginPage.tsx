@@ -193,9 +193,10 @@ export default function LoginPage() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: { phoneNumber: string; code: string }) => {
-      return await apiRequest("POST", "/api/auth/phone-login", data);
+      const response = await apiRequest("POST", "/api/auth/phone-login", data);
+      return await response.json();
     },
-    onSuccess: async () => {
+    onSuccess: async (userData) => {
       try {
         await apiRequest("POST", "/api/demo/seed-events", {});
         console.log("Demo events seeded");
@@ -214,14 +215,22 @@ export default function LoginPage() {
         return;
       }
       
-      toast({
-        title: "登录成功",
-        description: "欢迎回来！",
-      });
-      
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      // Redirect to home after successful login
-      setTimeout(() => setLocation("/"), 500);
+      
+      // Check if user has completed registration
+      if (!userData.hasCompletedRegistration) {
+        toast({
+          title: "欢迎加入悦聚！",
+          description: "让我们开始注册流程吧~",
+        });
+        setTimeout(() => setLocation("/registration"), 500);
+      } else {
+        toast({
+          title: "登录成功",
+          description: "欢迎回来！",
+        });
+        setTimeout(() => setLocation("/"), 500);
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -503,9 +512,10 @@ export default function LoginPage() {
                     <div className="flex gap-2">
                       <Select value={areaCode} onValueChange={setAreaCode}>
                         <SelectTrigger className="w-[110px] h-11" data-testid="select-area-code">
-                          <SelectValue>
-                            {AREA_CODES.find(a => a.code === areaCode)?.flag} {areaCode}
-                          </SelectValue>
+                          <span className="flex items-center gap-1">
+                            <span>{AREA_CODES.find(a => a.code === areaCode)?.flag}</span>
+                            <span>{areaCode}</span>
+                          </span>
                         </SelectTrigger>
                         <SelectContent>
                           {AREA_CODES.map((area) => (
