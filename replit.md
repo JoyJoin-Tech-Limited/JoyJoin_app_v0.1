@@ -76,3 +76,9 @@ Preferred communication style: Simple, everyday language.
 
 ### AI Services
 - **DeepSeek API:** Used for conversational AI.
+
+## Recent Changes (December 2025)
+- **ProfilePage Optimization:** Added level badge on avatar (Lv.X badge at bottom-right), integrated "Social DNA" collapsible section combining SocialRoleCard, personality traits radar, archetype insights, and compatibility matches
+- **Edit Profile Alignment with AI Chat Registration:** Added petTypes, companyName, seniority, cuisinePreference fields to EditProfilePage; created EditSocialPage for icebreakerRole and socialStyle editing
+- **CollectedInfo Interface:** Added hasSiblings field for AI registration flow
+- **Display Mapping Functions:** Added getIcebreakerRoleDisplay and getSocialStyleDisplay in userFieldMappings.ts
