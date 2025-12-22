@@ -154,6 +154,7 @@ function AuthenticatedRouter() {
       <Route path="/profile/edit/intent" component={EditIntentPage} />
       <Route path="/profile/edit/interests" component={EditInterestsPage} />
       <Route path="/profile/edit/social" component={EditSocialPage} />
+      <Route path="/registration/chat" component={ChatRegistrationPage} />
       <Route path="/event/:id" component={EventDetailPage} />
       <Route path="/invite" component={InvitePage} />
       <Route path="/personality-test" component={PersonalityTestPage} />
