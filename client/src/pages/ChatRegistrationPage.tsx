@@ -1306,7 +1306,7 @@ type InferenceResult =
 const insightCadenceState = {
   lastInsightTurn: -10, // 初始化为负数，让首次推理不受冷却限制
   shownInsights: new Set<string>(),
-  cooldownTurns: 2, // 每2轮最多1条
+  cooldownTurns: 3, // 每3轮最多1条（避免聒噪感）
 };
 
 // 动态AI推理生成函数 - 3大支柱 + 组合推理 + 节奏控制
@@ -1380,6 +1380,60 @@ function generateDynamicInference(
         trigger: 'combo_startup'
       });
     }
+    // 新增：00后+科技+深圳
+    else if (birthYear >= 2000 && (info.industry.includes("科技") || info.industry.includes("互联网")) && info.currentCity.includes("深圳")) {
+      insights.push({
+        text: isFemale ? "00后深圳互联网人，年轻有冲劲，应该是团队里最会用新工具的那个～" : "00后深圳互联网er，年轻但靠谱，我猜你已经是团队主力了",
+        pillar: 'identity',
+        confidence: 0.85,
+        trigger: 'combo_00_tech_sz'
+      });
+    }
+    // 新增：95后+咨询/法律+香港
+    else if (birthYear >= 1995 && (info.industry.includes("咨询") || info.industry.includes("法律") || info.industry.includes("律师")) && info.currentCity.includes("香港")) {
+      insights.push({
+        text: isFemale ? "香港专业服务圈的，逻辑清晰又会沟通，开会应该很能hold住场～" : "香港专业服务人，思维缜密又能说会道，客户应该挺信任你",
+        pillar: 'identity',
+        confidence: 0.82,
+        trigger: 'combo_95_pro_hk'
+      });
+    }
+    // 新增：设计/创意+深圳
+    else if ((info.industry.includes("设计") || info.industry.includes("创意") || info.industry.includes("广告")) && info.currentCity.includes("深圳")) {
+      insights.push({
+        text: isFemale ? "深圳创意圈的姐姐，审美在线又有执行力，作品应该很能打～" : "深圳创意人，既有想法又能落地，这种人一般都挺有趣",
+        pillar: 'identity',
+        confidence: 0.78,
+        trigger: 'combo_creative_sz'
+      });
+    }
+    // 新增：设计/创意+香港
+    else if ((info.industry.includes("设计") || info.industry.includes("创意") || info.industry.includes("广告")) && info.currentCity.includes("香港")) {
+      insights.push({
+        text: isFemale ? "香港创意圈的，中西审美融合得应该很好，作品肯定很有调性～" : "香港创意人，国际范儿加本土味道，这种视野很难得",
+        pillar: 'identity',
+        confidence: 0.78,
+        trigger: 'combo_creative_hk'
+      });
+    }
+    // 新增：传媒/内容+深圳或香港
+    else if ((info.industry.includes("传媒") || info.industry.includes("内容") || info.industry.includes("媒体"))) {
+      insights.push({
+        text: isFemale ? "做内容的姐姐，讲故事能力应该很强，聊天应该很有料～" : "传媒人，敏感度和表达力应该都拉满，期待听你分享行业八卦",
+        pillar: 'identity',
+        confidence: 0.75,
+        trigger: 'combo_media'
+      });
+    }
+    // 新增：金融+深圳
+    else if (info.industry.includes("金融") && info.currentCity.includes("深圳")) {
+      insights.push({
+        text: isFemale ? "深圳金融圈的，VC/PE氛围浓，你应该对创新项目很敏感～" : "深圳金融人，创投圈的节奏你应该很熟，期待聊聊你看好什么方向",
+        pillar: 'identity',
+        confidence: 0.8,
+        trigger: 'combo_finance_sz'
+      });
+    }
   }
   
   // 单独年龄推理
@@ -1422,9 +1476,12 @@ function generateDynamicInference(
     const hasFood = interests.some(i => /美食|探店|吃|烹饪|餐厅/.test(i));
     const hasDeep = interests.some(i => /读书|知识|讨论|学习|阅读/.test(i));
     const hasMovie = interests.some(i => /电影|影视|追剧|综艺|看片/.test(i));
-    const hasMusic = interests.some(i => /音乐|乐器|唱歌|演唱会/.test(i));
+    const hasMusic = interests.some(i => /音乐|乐器|唱歌|演唱会|livehouse/.test(i));
     const hasTravel = interests.some(i => /旅行|旅游|探索|出游|度假/.test(i));
     const hasArt = interests.some(i => /艺术|展览|博物馆|画廊|摄影/.test(i));
+    const hasDrink = interests.some(i => /酒|小酌|威士忌|红酒|鸡尾酒|bar|清吧/.test(i));
+    const hasGaming = interests.some(i => /游戏|switch|ps5|steam|电竞|桌游/.test(i));
+    const hasPets = interests.some(i => /猫|狗|宠物|撸猫|遛狗/.test(i)) || info.hasPets;
     
     // 组合：户外+电影 = 动静皆宜
     if (hasOutdoor && hasMovie) {
@@ -1468,6 +1525,72 @@ function generateDynamicInference(
         pillar: 'energy',
         confidence: 0.75,
         trigger: 'combo_deep_quiet'
+      });
+    }
+    // 新增：美食+小酌 = 探店达人
+    else if (hasFood && hasDrink) {
+      insights.push({
+        text: isFemale 
+          ? "美食配小酌，因为这种会享受的人一般生活品味都不错，期待交换私藏店铺～" 
+          : "探店加小酌，因为懂吃懂喝的人聊天一般很有意思，期待下次一起探新店～",
+        pillar: 'energy',
+        confidence: 0.85,
+        trigger: 'combo_food_drink'
+      });
+    }
+    // 新增：电影+宅 = 深夜追剧党
+    else if (hasMovie && (info.socialStyle?.includes("内敛") || info.socialStyle?.includes("慢热"))) {
+      insights.push({
+        text: isFemale 
+          ? "追剧爱好者，因为周末窝在家看剧也是一种享受，期待交换好剧推荐～" 
+          : "深夜追剧党，因为这种安静的快乐很珍贵，期待聊聊最近在追什么～",
+        pillar: 'energy',
+        confidence: 0.75,
+        trigger: 'combo_movie_homebody'
+      });
+    }
+    // 新增：音乐+livehouse = 现场派
+    else if (hasMusic && (interests.some(i => /livehouse|现场|演出|音乐节/.test(i)))) {
+      insights.push({
+        text: isFemale 
+          ? "livehouse常客，因为喜欢现场的人一般感受力都很强，期待一起蹲场好演出～" 
+          : "现场派，因为懂音乐的人聊起来应该很有共鸣，期待交换演出信息～",
+        pillar: 'energy',
+        confidence: 0.8,
+        trigger: 'combo_music_live'
+      });
+    }
+    // 新增：游戏 = 电子榨菜爱好者
+    else if (hasGaming) {
+      insights.push({
+        text: isFemale 
+          ? "游戏玩家，因为这个圈子有很多有趣的灵魂，期待聊聊你最近在玩什么～" 
+          : "游戏党，因为打游戏能看出一个人的性格，期待有机会组队开黑～",
+        pillar: 'energy',
+        confidence: 0.7,
+        trigger: 'interest_gaming'
+      });
+    }
+    // 新增：养宠 = 铲屎官
+    else if (hasPets) {
+      insights.push({
+        text: isFemale 
+          ? "铲屎官一枚，因为养宠物的人一般都挺有爱心，期待看看你的毛孩子～" 
+          : "养宠达人，因为能照顾好小动物的人责任感应该很强，期待晒宠交流～",
+        pillar: 'energy',
+        confidence: 0.75,
+        trigger: 'interest_pets'
+      });
+    }
+    // 新增：旅行+摄影 = 旅拍达人
+    else if (hasTravel && hasArt) {
+      insights.push({
+        text: isFemale 
+          ? "旅拍爱好者，因为既会玩又会拍的人一般审美都在线，期待看看你的作品～" 
+          : "旅拍达人，因为走过的地方多眼界应该很开阔，期待听你分享旅途故事～",
+        pillar: 'energy',
+        confidence: 0.78,
+        trigger: 'combo_travel_art'
       });
     }
     // 单独兴趣推理
@@ -1631,6 +1754,42 @@ function generateDynamicInference(
     }
   }
   
+  // ========== 温暖兜底规则 ==========
+  // 当没有精准匹配时，确保用户也能感受到小悦的"看穿感"
+  if (insights.length === 0) {
+    // 兜底1：有任何信息就给一个温暖的回应
+    if (info.displayName && info.gender) {
+      const fallbacks = isFemale ? [
+        "感觉你是个很有自己想法的人，期待慢慢了解更多～",
+        "你给我的感觉挺有意思的，继续聊聊？",
+        "直觉告诉我你应该是个有故事的人，期待解锁更多～",
+      ] : [
+        "感觉你是个挺靠谱的人，继续聊聊？",
+        "你给我的感觉挺有意思的，期待了解更多～",
+        "直觉告诉我你应该是个有想法的人，期待解锁更多～",
+      ];
+      const randomIndex = Math.floor(Math.random() * fallbacks.length);
+      insights.push({
+        text: fallbacks[randomIndex],
+        pillar: 'identity',
+        confidence: 0.5,
+        trigger: `fallback_warm_${randomIndex}`
+      });
+    }
+    
+    // 兜底2：如果有城市信息
+    if (info.currentCity && insights.length === 0) {
+      insights.push({
+        text: isFemale 
+          ? `在${info.currentCity}生活的姐姐，因为这个城市挺有意思的，期待聊聊你的日常～` 
+          : `${info.currentCity}的兄弟，因为这座城市有它独特的味道，期待聊聊你的发现～`,
+        pillar: 'identity',
+        confidence: 0.55,
+        trigger: 'fallback_city'
+      });
+    }
+  }
+
   // 过滤已显示的推理，选择置信度最高的
   const availableInsights = insights.filter(i => !insightCadenceState.shownInsights.has(i.trigger));
   
