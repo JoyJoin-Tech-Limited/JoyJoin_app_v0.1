@@ -78,10 +78,17 @@ Preferred communication style: Simple, everyday language.
 - **DeepSeek API:** Used for conversational AI.
 
 ## Recent Changes (December 2025)
+- **Intelligent Information Collection System (Dec 22):** Comprehensive system to "珍惜每次用户给我们的宝贵回复" - intelligently extracts and structures professional information
+  - **SmartInsight System:** category/insight/evidence/confidence tracking with Jaccard similarity deduplication (threshold 0.8), confidence gating (>=0.7), and category limits (max 5 per category)
+  - **InferredTraits:** Deep psychological profiling covering cognitive style, communication preference, social personality, emotional traits
+  - **Industry Ontology Knowledge Base:** 10+ industries (金融/科技/咨询/法律/医疗/教育/地产/快消/传媒/制造) with hierarchical segments, synonym mappings, and RAG retrieval functions
+  - **Finance Deep Segments:** 一级市场/PE/VC/并购/投行/二级市场/量化/四大/MBB/银行/保险/资管
+  - **Smart Inference Rules:** 15+ regex-based rules for professional terminology mapping (e.g., "一级并购" → industrySegment: "一级市场-并购")
+  - **Key Files:** server/inference/industryOntology.ts, server/inference/smartInsightsService.ts, server/inference/smartInference.ts
 - **ProfilePage Optimization:** Added level badge on avatar (Lv.X badge at bottom-right), integrated "Social DNA" collapsible section combining SocialRoleCard, personality traits radar, archetype insights, and compatibility matches
 - **Edit Profile Alignment with AI Chat Registration:** Added petTypes, companyName, seniority, cuisinePreference fields to EditProfilePage; created EditSocialPage for icebreakerRole and socialStyle editing
 - **CollectedInfo Interface:** Added hasSiblings field for AI registration flow
 - **Display Mapping Functions:** Added getIcebreakerRoleDisplay and getSocialStyleDisplay in userFieldMappings.ts
 - **EditProfilePage UIUX Overhaul (Dec 22):** Restructured from 7 cards to 4 themed groups (身份基础, 生活快照, 成长与职业, 社交偏好) with chip-style value display and incomplete field count badges. Personal background split into "生活状态" and "城市足迹" subsections.
-- **DB Schema Extension:** Added companyName, icebreakerRole, interestsDeep fields to users table with updateFullProfileSchema support
+- **DB Schema Extension:** Added companyName, icebreakerRole, interestsDeep, industrySegment, structuredOccupation, insightLedger(JSONB) fields to users table
 - **Admin Event Pool Editing (Dec 22):** Added full CRUD support for event pools in Admin Portal with edit button on pool cards, timezone-safe datetime handling using date-fns format(), and form reuse between create/edit modes
