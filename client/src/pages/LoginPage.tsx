@@ -197,6 +197,14 @@ export default function LoginPage() {
       return await response.json();
     },
     onSuccess: async (userData) => {
+      // 清除上一个用户的对话注册状态，防止跨用户数据泄露
+      try {
+        localStorage.removeItem('joyjoin_chat_registration_state');
+        localStorage.removeItem('registration_progress');
+      } catch (e) {
+        console.warn('Failed to clear old registration state:', e);
+      }
+      
       try {
         await apiRequest("POST", "/api/demo/seed-events", {});
         console.log("Demo events seeded");
