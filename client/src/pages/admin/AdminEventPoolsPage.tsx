@@ -35,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Users, Eye, MapPin, Clock, Store, Copy, Check } from "lucide-react";
+import { Calendar, Users, Eye, MapPin, Clock, Store, Copy, Check, Pencil } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -200,8 +200,9 @@ export default function AdminEventPoolsPage() {
   const [waitingFilter, setWaitingFilter] = useState<WaitingFilter>("all");
   const [eventsFilter, setEventsFilter] = useState<EventsFilter>("all");
 
-  // 创建 / 详情弹窗
+  // 创建 / 编辑 / 详情弹窗
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [editingPoolId, setEditingPoolId] = useState<string | null>(null);
   const [selectedPool, setSelectedPool] = useState<EventPool | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [copiedPoolId, setCopiedPoolId] = useState<string | null>(null);
@@ -316,6 +317,7 @@ export default function AdminEventPoolsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/event-pools"] });
       setShowCreateDialog(false);
+      setEditingPoolId(null);
       form.reset();
       toast({
         title: "创建成功",
@@ -332,20 +334,73 @@ export default function AdminEventPoolsPage() {
     },
   });
 
+  const updatePoolMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      apiRequest("PATCH", `/api/admin/event-pools/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/event-pools"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/event-pools"] });
+      setShowCreateDialog(false);
+      setEditingPoolId(null);
+      form.reset();
+      toast({
+        title: "更新成功",
+        description: "活动池信息已更新",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Error updating event pool:", error);
+      toast({
+        title: "更新失败",
+        description: error?.message || "无法更新活动池，请重试",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: any) => {
     const payload = {
       ...data,
-      // 确保数字字段真的是 number
       minGroupSize: Number(data.minGroupSize) || 4,
       maxGroupSize: Number(data.maxGroupSize) || 6,
       targetGroups: Number(data.targetGroups) || 1,
     };
-    createPoolMutation.mutate(payload);
+    
+    if (editingPoolId) {
+      updatePoolMutation.mutate({ id: editingPoolId, data: payload });
+    } else {
+      createPoolMutation.mutate(payload);
+    }
   };
 
   const handleViewDetails = (pool: EventPool) => {
     setSelectedPool(pool);
     setShowDetailsDialog(true);
+  };
+
+  const handleEditPool = (pool: EventPool) => {
+    form.reset({
+      title: pool.title,
+      description: pool.description || "",
+      eventType: pool.eventType as any,
+      city: pool.city as any,
+      district: pool.district || "",
+      dateTime: pool.dateTime ? new Date(pool.dateTime).toISOString().slice(0, 16) : "",
+      registrationDeadline: pool.registrationDeadline ? new Date(pool.registrationDeadline).toISOString().slice(0, 16) : "",
+      minGroupSize: pool.minGroupSize,
+      maxGroupSize: pool.maxGroupSize,
+      targetGroups: pool.targetGroups,
+    });
+    setEditingPoolId(pool.id);
+    setShowCreateDialog(true);
+  };
+
+  const handleCloseDialog = (open: boolean) => {
+    if (!open) {
+      setEditingPoolId(null);
+      form.reset();
+    }
+    setShowCreateDialog(open);
   };
 
   // ====== 派生数据：根据报名情况算业务状态 ======
@@ -472,16 +527,16 @@ export default function AdminEventPoolsPage() {
             按城市 / 区 / 活动类型划分的「常驻池」，用于集中招募用户，方便后续从池子里“捞人”成局。
           </p>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <Dialog open={showCreateDialog} onOpenChange={handleCloseDialog}>
           <DialogTrigger asChild>
-            <Button data-testid="button-create-pool">
+            <Button data-testid="button-create-pool" onClick={() => { setEditingPoolId(null); form.reset(); }}>
               <Calendar className="mr-2 h-4 w-4" />
               创建活动池
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>创建新活动池</DialogTitle>
+              <DialogTitle>{editingPoolId ? "编辑活动池" : "创建新活动池"}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form
@@ -793,16 +848,18 @@ export default function AdminEventPoolsPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowCreateDialog(false)}
+                    onClick={() => handleCloseDialog(false)}
                   >
                     取消
                   </Button>
                   <Button
                     type="submit"
-                    disabled={createPoolMutation.isPending}
+                    disabled={createPoolMutation.isPending || updatePoolMutation.isPending}
                     data-testid="button-submit-pool"
                   >
-                    {createPoolMutation.isPending ? "创建中..." : "创建活动池"}
+                    {editingPoolId
+                      ? (updatePoolMutation.isPending ? "更新中..." : "保存修改")
+                      : (createPoolMutation.isPending ? "创建中..." : "创建活动池")}
                   </Button>
                 </DialogFooter>
               </form>
@@ -1004,7 +1061,16 @@ export default function AdminEventPoolsPage() {
                       data-testid={`button-view-${pool.id}`}
                     >
                       <Eye className="h-4 w-4 mr-1" />
-                      查看详情 / 池内用户
+                      查看详情
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditPool(pool)}
+                      data-testid={`button-edit-${pool.id}`}
+                    >
+                      <Pencil className="h-4 w-4 mr-1" />
+                      编辑
                     </Button>
                     <Button
                       variant="outline"
@@ -1020,7 +1086,7 @@ export default function AdminEventPoolsPage() {
                       ) : (
                         <>
                           <Copy className="h-4 w-4 mr-1" />
-                          快速复制
+                          复制
                         </>
                       )}
                     </Button>
