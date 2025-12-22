@@ -155,6 +155,100 @@ export const SMART_INFERENCE_RULES: InferenceRule[] = [
     skipQuestions: ['industry'],
   },
   
+  // ===== 金融细分领域推断 (Phase2新增) =====
+  {
+    pattern: /(?:一级|PE|VC|私募股权|风投|创投|股权投资|早期投资)/i,
+    inferences: [
+      { field: 'industry', value: '金融', confidence: 0.95 },
+      { field: 'industrySegment', value: '一级市场', confidence: 0.9 },
+    ],
+    skipQuestions: ['industry', 'industrySegment'],
+  },
+  {
+    pattern: /(?:并购|M&A|收购|兼并|重组)/i,
+    inferences: [
+      { field: 'industry', value: '金融', confidence: 0.95 },
+      { field: 'industrySegment', value: '并购', confidence: 0.9 },
+    ],
+    skipQuestions: ['industry', 'industrySegment'],
+  },
+  {
+    pattern: /(?:投行|IBD|保荐|承销|IPO)/i,
+    inferences: [
+      { field: 'industry', value: '金融', confidence: 0.95 },
+      { field: 'industrySegment', value: '投行', confidence: 0.9 },
+    ],
+    skipQuestions: ['industry', 'industrySegment'],
+  },
+  {
+    pattern: /(?:二级|公募|股票|交易员|研究员|基金经理)/i,
+    inferences: [
+      { field: 'industry', value: '金融', confidence: 0.9 },
+      { field: 'industrySegment', value: '二级市场', confidence: 0.85 },
+    ],
+    skipQuestions: ['industry', 'industrySegment'],
+  },
+  {
+    pattern: /(?:量化|quant|策略|高频|alpha|因子)/i,
+    inferences: [
+      { field: 'industry', value: '金融', confidence: 0.9 },
+      { field: 'industrySegment', value: '量化', confidence: 0.9 },
+    ],
+    skipQuestions: ['industry', 'industrySegment'],
+  },
+  {
+    pattern: /(?:四大|审计|普华|德勤|安永|毕马威|KPMG)/i,
+    inferences: [
+      { field: 'industry', value: '咨询', confidence: 0.9 },
+      { field: 'industrySegment', value: '财务咨询', confidence: 0.9 },
+    ],
+    skipQuestions: ['industry', 'industrySegment'],
+  },
+  {
+    pattern: /(?:MBB|麦肯锡|BCG|贝恩|咨询顾问|战略咨询)/i,
+    inferences: [
+      { field: 'industry', value: '咨询', confidence: 0.95 },
+      { field: 'industrySegment', value: '战略咨询', confidence: 0.9 },
+    ],
+    skipQuestions: ['industry', 'industrySegment'],
+  },
+  
+  // ===== 科技细分领域推断 =====
+  {
+    pattern: /(?:AI|人工智能|机器学习|深度学习|大模型|LLM|算法)/i,
+    inferences: [
+      { field: 'industry', value: '科技/互联网', confidence: 0.9 },
+      { field: 'industrySegment', value: 'AI/算法', confidence: 0.9 },
+    ],
+    skipQuestions: ['industry', 'industrySegment'],
+  },
+  {
+    pattern: /(?:数据分析|BI|数仓|ETL|数据工程)/i,
+    inferences: [
+      { field: 'industry', value: '科技/互联网', confidence: 0.85 },
+      { field: 'industrySegment', value: '数据', confidence: 0.9 },
+    ],
+    skipQuestions: ['industrySegment'],
+  },
+  
+  // ===== 法律行业细分 =====
+  {
+    pattern: /(?:律师|律所|红圈所|金杜|中伦|方达)/i,
+    inferences: [
+      { field: 'industry', value: '法律', confidence: 0.95 },
+      { field: 'industrySegment', value: '律所', confidence: 0.9 },
+    ],
+    skipQuestions: ['industry', 'industrySegment'],
+  },
+  {
+    pattern: /(?:法务|in-house|合规|法总)/i,
+    inferences: [
+      { field: 'industry', value: '法律', confidence: 0.9 },
+      { field: 'industrySegment', value: '企业法务', confidence: 0.9 },
+    ],
+    skipQuestions: ['industry', 'industrySegment'],
+  },
+  
   // ===== 人生阶段推断 =====
   {
     pattern: /(?:大一|大二|大三|大四|研一|研二|研三|博一|博二|在读|读书|念书)/,

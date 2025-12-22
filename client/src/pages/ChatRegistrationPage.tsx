@@ -2294,6 +2294,31 @@ function MessageBubble({
   );
 }
 
+// 智能洞察条目类型
+interface SmartInsight {
+  category: 'career' | 'personality' | 'lifestyle' | 'preference' | 'background' | 'social';
+  insight: string;
+  evidence: string;
+  confidence: number;
+  timestamp?: string;
+}
+
+// 推断的深度特征类型
+interface InferredTraits {
+  riskTolerance?: 'high' | 'medium' | 'low';
+  decisionStyle?: 'analytical' | 'intuitive' | 'balanced';
+  thinkingMode?: 'logical' | 'creative' | 'mixed';
+  communicationStyle?: 'direct' | 'diplomatic' | 'adaptive';
+  expressionDepth?: 'surface' | 'moderate' | 'deep';
+  humorStyle?: 'witty' | 'playful' | 'dry' | 'none';
+  socialInitiative?: 'proactive' | 'reactive' | 'balanced';
+  leadershipTendency?: 'leader' | 'collaborator' | 'follower';
+  groupPreference?: 'small' | 'large' | 'flexible';
+  emotionalOpenness?: 'open' | 'guarded' | 'selective';
+  stressResponse?: 'calm' | 'adaptive' | 'sensitive';
+  overallConfidence?: number;
+}
+
 // 资料完整度进度条
 interface CollectedInfo {
   registrationStartTime?: string; // 注册开始时间戳
@@ -2306,6 +2331,8 @@ interface CollectedInfo {
   occupation?: string;
   occupationDescription?: string;
   industry?: string;
+  industrySegment?: string;  // 智能信息收集：细分领域
+  companyType?: string;      // 智能信息收集：公司类型
   roleTitleShort?: string;
   seniority?: string;
   companyName?: string;
@@ -2327,6 +2354,9 @@ interface CollectedInfo {
   socialStyle?: string;
   topicAvoidances?: string[];
   cuisinePreference?: string[];
+  // 智能信息收集系统新增
+  smartInsights?: SmartInsight[];
+  inferredTraits?: InferredTraits;
 }
 
 // 模式-字段矩阵配置（用于SocialProfileCard）

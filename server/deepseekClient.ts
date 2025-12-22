@@ -6,6 +6,38 @@ const deepseekClient = new OpenAI({
   baseURL: 'https://api.deepseek.com',
 });
 
+// ============ 智能洞察类型定义 ============
+
+// 智能洞察条目 - LLM自由记录的有价值信息
+export interface SmartInsight {
+  category: 'career' | 'personality' | 'lifestyle' | 'preference' | 'background' | 'social';
+  insight: string;           // 洞察内容，如"资深金融从业者，一级市场背景"
+  evidence: string;          // 证据来源，如"用户提到做一级并购"
+  confidence: number;        // 置信度 0-1，建议>=0.7才输出
+  timestamp?: string;        // 提取时间
+}
+
+// 推断的深度特征 - 从对话风格推断的人格特征
+export interface InferredTraits {
+  // 认知风格
+  riskTolerance?: 'high' | 'medium' | 'low';           // 风险偏好
+  decisionStyle?: 'analytical' | 'intuitive' | 'balanced'; // 决策风格
+  thinkingMode?: 'logical' | 'creative' | 'mixed';     // 思维方式
+  // 沟通风格
+  communicationStyle?: 'direct' | 'diplomatic' | 'adaptive'; // 沟通风格
+  expressionDepth?: 'surface' | 'moderate' | 'deep';   // 表达深度
+  humorStyle?: 'witty' | 'playful' | 'dry' | 'none';   // 幽默风格
+  // 社交特征
+  socialInitiative?: 'proactive' | 'reactive' | 'balanced'; // 社交主动性
+  leadershipTendency?: 'leader' | 'collaborator' | 'follower'; // 领导倾向
+  groupPreference?: 'small' | 'large' | 'flexible';    // 群体偏好
+  // 情绪特征
+  emotionalOpenness?: 'open' | 'guarded' | 'selective'; // 情绪开放度
+  stressResponse?: 'calm' | 'adaptive' | 'sensitive';  // 压力响应
+  // 总体置信度
+  overallConfidence?: number;
+}
+
 export interface XiaoyueCollectedInfo {
   displayName?: string;
   gender?: string;
@@ -56,6 +88,21 @@ export interface XiaoyueCollectedInfo {
   activityPace?: string; // slow_deep/fast_varied/flexible - 活动节奏偏好
   breakingIceRole?: string; // initiator/follower/observer - 破冰角色
   socialContinuity?: string; // fixed_circle/new_faces/flexible - 社交延续偏好
+  
+  // ============ 智能信息收集系统新增字段 ============
+  
+  // 结构化职业信息（替代模糊的occupationDescription）
+  industry?: string;           // 行业大类：金融/科技/医疗/法律/咨询/教育等
+  industrySegment?: string;    // 细分领域：PE/VC/并购/投行（金融）、前端/后端/AI（科技）等
+  occupation?: string;         // 具体职位：投资经理/产品经理/医生等
+  companyType?: string;        // 公司类型：外资/国企/民企/创业公司/自由职业
+  seniority?: string;          // 资历：实习/初级/中级/高级/总监/VP+
+  
+  // 智能洞察数组 - LLM自由记录任何有价值的推断
+  smartInsights?: SmartInsight[];
+  
+  // 推断的深度特征 - 从对话风格推断的人格特征
+  inferredTraits?: InferredTraits;
 }
 
 export interface ChatMessage {
@@ -527,13 +574,63 @@ const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，悦聚平台的AI社交助手。
 
 格式如下（严格按照这个格式输出）：
 \`\`\`collected_info
-{"displayName": "用户提供的昵称（如果有）", "gender": "女生/男生/保密（如果提到了）", "birthYear": 1995, "currentCity": "深圳", "occupationDescription": "职业描述", "interestsTop": ["兴趣1", "兴趣2"], "intent": ["交朋友", "拓展人脉"], "hometown": "老家位置", "hasPets": true, "relationshipStatus": "单身", "breakingIceRole": "initiator/follower/observer", "energyRechargeMethod": "alone/small_group/exercise/sleep", "idealSocialDuration": "1h/2h/3h_plus/flexible", "socialFrequency": "weekly/biweekly/monthly/flexible", "activityPace": "slow_deep/fast_varied/flexible", "socialContinuity": "fixed_circle/new_faces/flexible"}
+{
+  "displayName": "用户提供的昵称",
+  "gender": "女生/男生/保密",
+  "birthYear": 1995,
+  "currentCity": "深圳",
+  "occupationDescription": "职业描述（用户原话）",
+  "industry": "金融/科技/医疗/法律/咨询/教育等（结构化行业大类）",
+  "industrySegment": "一级市场/并购/投行/前端/后端/AI等（细分领域）",
+  "occupation": "投资经理/产品经理/医生等（规范化职位）",
+  "companyType": "外资/国企/民企/创业公司/自由职业",
+  "seniority": "实习/初级/中级/高级/总监/VP+",
+  "interestsTop": ["兴趣1", "兴趣2"],
+  "intent": ["交朋友", "拓展人脉"],
+  "hometown": "老家位置",
+  "hasPets": true,
+  "relationshipStatus": "单身",
+  "smartInsights": [
+    {
+      "category": "career/personality/lifestyle/preference/background/social",
+      "insight": "对用户的洞察性总结，如'资深金融从业者，一级市场背景，可能偏好小圈子社交'",
+      "evidence": "用户说的原话或行为证据",
+      "confidence": 0.85
+    }
+  ],
+  "inferredTraits": {
+    "communicationStyle": "direct/diplomatic/adaptive",
+    "socialInitiative": "proactive/reactive/balanced",
+    "overallConfidence": 0.8
+  }
+}
 \`\`\`
 
-**重要说明**：这个代码块只用于系统后台提取用户信息（更新头像清晰度等），不会显示给用户看。用户看到的只是你上面的自然对话内容。
-- 只输出用户已经明确提供或提到的字段，没提到的字段不要加
+**智能信息收集指南**（珍惜每次用户回复！）：
+
+1. **结构化职业信息**：当用户提到工作时，智能映射到规范字段
+   - "做一级并购" → industry:"金融", industrySegment:"并购"
+   - "前端开发" → industry:"科技/互联网", industrySegment:"前端", occupation:"前端工程师"
+   - "MBB咨询" → industry:"咨询", industrySegment:"战略咨询"
+
+2. **smartInsights洞察**（置信度>=0.7才输出）：
+   - career: 职业相关洞察（"资深金融人士，一级市场背景"）
+   - personality: 性格相关洞察（"表达直接，可能偏向主导型社交"）
+   - lifestyle: 生活方式洞察（"高频出差，时间碎片化"）
+   - preference: 偏好洞察（"偏好小圈子深度交流"）
+   - background: 背景洞察（"海归背景，双语能力强"）
+   - social: 社交特征洞察（"善于破冰，可能是气氛组"）
+
+3. **inferredTraits推断**（从对话风格推断）：
+   - 回复简短直接 → communicationStyle:"direct"
+   - 主动分享很多 → socialInitiative:"proactive"
+   - 用词谨慎含蓄 → communicationStyle:"diplomatic"
+
+**重要说明**：这个代码块只用于系统后台提取用户信息，不会显示给用户看。用户看到的只是你上面的自然对话内容。
+- 只输出用户已经明确提供或能高置信度推断的字段
 - 对于数组字段（如interestsTop、intent），按用户选择的顺序列出
 - 年份如果是"95后"这样的形式，转换成对应年份数字（如1995）
+- smartInsights的confidence必须>=0.7才输出，低置信度推断不要加
 - **关键**：代码块必须以\`\`\`collected_info开头，以\`\`\`结尾，中间只有JSON数据
 - **再次强调**：代码块之前必须有对话内容！用户必须能看到你的回复！
 
@@ -1149,6 +1246,38 @@ function extractCollectedInfo(message: string): Partial<XiaoyueCollectedInfo> {
     console.log('[DEBUG] extractCollectedInfo: Found JSON block:', jsonStr.substring(0, 200));
     const result = JSON.parse(jsonStr);
     console.log('[DEBUG] extractCollectedInfo: Parsed successfully:', Object.keys(result));
+    
+    // 智能洞察处理：验证和过滤smartInsights
+    if (result.smartInsights && Array.isArray(result.smartInsights)) {
+      const validCategories = ['career', 'personality', 'lifestyle', 'preference', 'background', 'social'];
+      result.smartInsights = result.smartInsights.filter((insight: any) => {
+        // 验证必需字段和置信度阈值
+        return (
+          insight &&
+          typeof insight.category === 'string' &&
+          validCategories.includes(insight.category) &&
+          typeof insight.insight === 'string' &&
+          insight.insight.length > 0 &&
+          typeof insight.confidence === 'number' &&
+          insight.confidence >= 0.7 // 最低置信度阈值
+        );
+      }).map((insight: any) => ({
+        ...insight,
+        timestamp: new Date().toISOString(),
+      }));
+      
+      console.log('[DEBUG] extractCollectedInfo: Validated smartInsights count:', result.smartInsights.length);
+    }
+    
+    // 推断特征处理：验证inferredTraits
+    if (result.inferredTraits && typeof result.inferredTraits === 'object') {
+      // 确保置信度字段存在
+      if (typeof result.inferredTraits.overallConfidence !== 'number') {
+        result.inferredTraits.overallConfidence = 0.7;
+      }
+      console.log('[DEBUG] extractCollectedInfo: InferredTraits confidence:', result.inferredTraits.overallConfidence);
+    }
+    
     return result;
   } catch (error) {
     console.log('[DEBUG] extractCollectedInfo: JSON parse failed:', error);

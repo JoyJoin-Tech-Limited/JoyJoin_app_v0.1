@@ -196,6 +196,13 @@ export const users = pgTable("users", {
   inferredTraits: jsonb("inferred_traits"), // AI推断的属性 { city, industry, education, lifeStage, ... }
   inferenceConfidence: numeric("inference_confidence"), // 推断总体置信度 0-1
   
+  // ============ 智能信息收集系统 (Smart Info Collection) ============
+  // 结构化职业信息（补充现有industry字段）
+  industrySegment: varchar("industry_segment"), // 细分领域：PE/VC/并购（金融）、前端/后端/AI（科技）等
+  structuredOccupation: varchar("structured_occupation"), // 规范化职位：投资经理/产品经理等（区别于legacy的roleTitleShort）
+  // 智能洞察存储（JSONB灵活schema）
+  insightLedger: jsonb("insight_ledger"), // SmartInsight[] - 带provenance/confidence的动态事实存储
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -528,6 +535,8 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   overseasRegions: true,
   fieldOfStudy: true,
   industry: true,
+  industrySegment: true,  // 智能信息收集：细分领域
+  structuredOccupation: true,  // 智能信息收集：规范化职位
   occupationId: true,
   workMode: true,
   roleTitleShort: true,
