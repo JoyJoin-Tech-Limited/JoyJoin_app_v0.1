@@ -20,6 +20,7 @@ import {
 const workSchema = z.object({
   industry: z.string().optional(),
   roleTitleShort: z.string().optional(),
+  companyName: z.string().optional(),
   seniority: z.enum(["Intern", "Junior", "Mid", "Senior", "Founder", "Executive"]).optional(),
   workVisibility: z.enum(["hide_all", "show_industry_only"]).optional(),
 });
@@ -42,6 +43,7 @@ export default function EditWorkPage() {
     defaultValues: {
       industry: user?.industry || "",
       roleTitleShort: user?.roleTitleShort || "",
+      companyName: user?.companyName || "",
       seniority: user?.seniority || undefined,
       workVisibility: user?.workVisibility || "show_industry_only",
     },
@@ -70,6 +72,7 @@ export default function EditWorkPage() {
       ...data,
       industry: data.industry && data.industry.trim() !== '' ? data.industry : undefined,
       roleTitleShort: data.roleTitleShort && data.roleTitleShort.trim() !== '' ? data.roleTitleShort : undefined,
+      companyName: data.companyName && data.companyName.trim() !== '' ? data.companyName : undefined,
     };
     updateMutation.mutate(cleanedData);
   };
@@ -137,6 +140,20 @@ export default function EditWorkPage() {
             {...form.register("roleTitleShort")}
             data-testid="input-roleTitleShort"
           />
+        </div>
+
+        {/* Company Name */}
+        <div className="space-y-2">
+          <Label htmlFor="companyName">公司名称</Label>
+          <Input
+            id="companyName"
+            placeholder="例如：腾讯、字节跳动等（可选）"
+            {...form.register("companyName")}
+            data-testid="input-companyName"
+          />
+          <p className="text-xs text-muted-foreground">
+            用于职场社交匹配，仅匹配时可见
+          </p>
         </div>
 
         {/* Seniority */}

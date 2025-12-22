@@ -85,6 +85,7 @@ export const users = pgTable("users", {
   industry: varchar("industry"), // 学生, 大厂, 金融等中文行业 - now auto-derived from occupationId
   roleTitleShort: varchar("role_title_short"), // Optional short text - deprecated, use occupationId
   seniority: varchar("seniority"), // 实习生, 初级, 中级, 高级, 资深, 创始人, 高管 - deprecated, use workMode
+  companyName: varchar("company_name"), // 公司名称（可选，用于职场社交匹配）
   workVisibility: varchar("work_visibility").default("show_industry_only"), // hide_all, show_industry_only
   
   // Registration fields - Culture & Language
@@ -121,9 +122,11 @@ export const users = pgTable("users", {
   topicsHappy: text("topics_happy").array(), // Deprecated: Topics user enjoys discussing - moving to simpler model
   topicsAvoid: text("topics_avoid").array(), // Deprecated: Topics to avoid - use topicAvoidances
   topicAvoidances: text("topic_avoidances").array(), // 饭局酒局不自在话题: politics, dating_pressure, workplace_gossip, money_finance, or empty for "都OK"
+  interestsDeep: text("interests_deep").array(), // 深度兴趣（AI对话收集的更详细兴趣描述）
   
   // Registration fields - Social & Venue Preferences (collected via AI chat)
   socialStyle: varchar("social_style"), // 社交风格: 外向活泼, 内敛沉稳, 看情况
+  icebreakerRole: varchar("icebreaker_role"), // 破冰角色: leader(气氛组), supporter(捧场王), observer(观察者), flexible(看情况)
   venueStylePreference: varchar("venue_style_preference"), // 场地偏好: 安静咖啡馆, 热闹酒吧, 户外活动, etc.
   cuisinePreference: text("cuisine_preference").array(), // 菜系偏好: 粤菜, 日料, 西餐, etc.
   favoriteRestaurant: varchar("favorite_restaurant"), // 宝藏餐厅推荐
@@ -516,20 +519,33 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   gender: true,
   relationshipStatus: true,
   children: true,
+  hasPets: true,
+  petTypes: true,
+  hasSiblings: true,
+  currentCity: true,
   educationLevel: true,
   studyLocale: true,
   overseasRegions: true,
   fieldOfStudy: true,
   industry: true,
+  occupationId: true,
+  workMode: true,
   roleTitleShort: true,
   seniority: true,
+  companyName: true,
   hometownCountry: true,
   hometownRegionCity: true,
   languagesComfort: true,
   intent: true,
   interestsTop: true,
+  primaryInterests: true,
+  interestsDeep: true,
   topicsHappy: true,
   topicsAvoid: true,
+  topicAvoidances: true,
+  cuisinePreference: true,
+  socialStyle: true,
+  icebreakerRole: true,
   workVisibility: true,
 }).partial();
 
