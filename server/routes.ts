@@ -643,12 +643,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (userId) {
         try {
           // Update user profile with extracted data
-          await storage.updateUserProfile(userId, registrationData);
+          // Also mark interests/topics as complete since AI chat already collected this info
+          await storage.updateUserProfile(userId, {
+            ...registrationData,
+            hasCompletedInterestsTopics: true,
+          });
           
           // Mark registration as complete
           await storage.markRegistrationComplete(userId);
           
-          console.log(`[Chat Registration] User ${userId} profile updated and registration marked complete`);
+          console.log(`[Chat Registration] User ${userId} profile updated, registration and interests marked complete`);
         } catch (updateError) {
           console.error('[Chat Registration] Error updating user profile:', updateError);
           // Non-blocking - continue with response

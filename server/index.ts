@@ -1,16 +1,11 @@
 import express, { type Request, Response, NextFunction } from "express";
+import fs from "fs";
+import path from "path";
 import { registerRoutes } from "./routes";
 import { warmupDatabase } from "./db";
 import { subscriptionService } from "./subscriptionService";
 import { wsService } from "./wsService";
 import { scanAllActivePools } from "./poolRealtimeMatchingService";
-
-// Dynamic import for vite utilities - only load in development
-// This prevents vite and its plugins from being bundled in production
-const loadViteUtils = async () => {
-  const viteModule = await import("./vite");
-  return viteModule;
-};
 
 // Log function that doesn't require vite module
 function log(message: string, source = "express") {
@@ -21,6 +16,23 @@ function log(message: string, source = "express") {
     hour12: true,
   });
   console.log(`${formattedTime} [${source}] ${message}`);
+}
+
+// Production static file serving - inlined to avoid any vite imports
+function serveStatic(app: express.Application) {
+  const distPath = path.resolve(import.meta.dirname, "public");
+
+  if (!fs.existsSync(distPath)) {
+    throw new Error(
+      `Could not find the build directory: ${distPath}, make sure to build the client first`,
+    );
+  }
+
+  app.use(express.static(distPath));
+
+  app.use("*", (_req, res) => {
+    res.sendFile(path.resolve(distPath, "index.html"));
+  });
 }
 
 // Detect if running on Replit infra (where reusePort is supported/needed)
@@ -79,11 +91,11 @@ app.use((req, res, next) => {
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     // Dynamic import to avoid bundling vite in production
-    const { setupVite } = await loadViteUtils();
-    await setupVite(app, server);
+    // This ensures vite.ts and vite.config.ts are never loaded in production
+    const viteModule = await import("./vite");
+    await viteModule.setupVite(app, server);
   } else {
-    // Dynamic import for serveStatic as well to keep vite.ts completely separate
-    const { serveStatic } = await loadViteUtils();
+    // Production: use inlined serveStatic (no vite dependencies)
     serveStatic(app);
   }
 
