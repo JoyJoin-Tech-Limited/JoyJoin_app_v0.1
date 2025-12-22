@@ -1241,6 +1241,50 @@ function UserAvatar({ clarityLevel = 0 }: { clarityLevel?: number }) {
   );
 }
 
+// 三点跳动动画组件 - 用于输入框thinking状态
+function ThinkingDots() {
+  return (
+    <div className="flex items-center gap-1" aria-live="polite" aria-label="小悦正在思考">
+      {[0, 1, 2].map((i) => (
+        <motion.span
+          key={i}
+          className="w-1.5 h-1.5 rounded-full bg-primary/60"
+          animate={{
+            y: [0, -4, 0],
+            opacity: [0.4, 1, 0.4],
+          }}
+          transition={{
+            duration: 0.6,
+            repeat: Infinity,
+            delay: i * 0.15,
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// 顶部轻量进度条组件
+function RegistrationProgressBar({ 
+  progress, 
+  isComplete 
+}: { 
+  progress: number; 
+  isComplete: boolean;
+}) {
+  return (
+    <div className="w-full h-1 bg-muted/30 overflow-hidden">
+      <motion.div
+        className={`h-full ${isComplete ? 'bg-green-500' : 'bg-gradient-to-r from-violet-500 to-purple-500'}`}
+        initial={{ width: 0 }}
+        animate={{ width: `${Math.min(progress, 100)}%` }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      />
+    </div>
+  );
+}
+
 // ============ 小悦碎嘴推理系统 V2 ============
 // 基于3大心理支柱：身份归属、社交能量、价值驱动
 // 使用"观察+因为+成长潜力"句式框架
@@ -1615,19 +1659,17 @@ function resetInsightCadence() {
 // ========== 方案B: Insight显示包装器（解决React渲染状态问题）==========
 function FoxInsightWrapper({ 
   isAssistant, 
-  isLatest, 
   shouldShowTyping, 
   collectedInfo, 
   messageIndex 
 }: {
   isAssistant: boolean;
-  isLatest: boolean;
   shouldShowTyping: boolean;
   collectedInfo: CollectedInfo;
   messageIndex: number;
 }) {
-  // 条件不满足时不显示
-  if (!isAssistant || !isLatest || shouldShowTyping) {
+  // 条件不满足时不显示（移除isLatest条件，让历史insight持久保留）
+  if (!isAssistant || shouldShowTyping) {
     return null;
   }
   
@@ -2020,10 +2062,9 @@ function MessageBubble({
           ))
         )}
         
-        {/* 方案B：气泡内嵌入"小悦偷偷碎嘴"区域 */}
+        {/* 方案B：气泡内嵌入"小悦偷偷碎嘴"区域 - 移除isLatest让历史insight持久保留 */}
         <FoxInsightWrapper 
           isAssistant={isAssistant}
-          isLatest={isLatest}
           shouldShowTyping={shouldShowTyping}
           collectedInfo={collectedInfo}
           messageIndex={messageIndex}
@@ -2824,6 +2865,28 @@ export default function ChatRegistrationPage() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  // 移动端键盘优化：监听virtualViewport变化，自动滚动到底部
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    let lastHeight = viewport.height;
+    const handleResize = () => {
+      // 键盘弹出时viewport高度变小
+      if (viewport.height < lastHeight) {
+        // 延迟执行确保DOM更新完成
+        setTimeout(() => scrollToBottom(true), 100);
+      }
+      lastHeight = viewport.height;
+    };
+
+    viewport.addEventListener('resize', handleResize);
+    return () => viewport.removeEventListener('resize', handleResize);
+  }, [scrollToBottom]);
+
+  // 网络错误状态
+  const [networkError, setNetworkError] = useState<{ message: string; lastInput: string } | null>(null);
+
   // 信息收集进度
   const infoCount = Object.keys(collectedInfo).filter(k => 
     collectedInfo[k as keyof CollectedInfo] !== undefined
@@ -3184,6 +3247,11 @@ export default function ChatRegistrationPage() {
     } catch (error) {
       // 根据streamId移除失败的消息
       setMessages(prev => prev.filter(m => m.streamId !== streamMessageId));
+      // 设置网络错误状态，允许用户重试（使用传入的message参数）
+      setNetworkError({
+        message: "网络不太稳定，消息没发出去",
+        lastInput: message
+      });
       toast({
         title: "发送失败",
         description: "小悦暂时走神了，请重试",
@@ -3233,6 +3301,8 @@ export default function ChatRegistrationPage() {
   const handleSend = () => {
     if (!inputValue.trim() || isTyping) return;
 
+    // 清除网络错误状态
+    setNetworkError(null);
     const userMessage = inputValue.trim();
     setMessages(prev => [...prev, {
       id: `msg-${Date.now()}`,
@@ -3610,6 +3680,12 @@ export default function ChatRegistrationPage() {
         </div>
       } />
       
+      {/* 顶部轻量进度条 - 让用户知道"快完成了" */}
+      <RegistrationProgressBar 
+        progress={calculateProfileCompletionUtil(collectedInfo).percentage} 
+        isComplete={isComplete} 
+      />
+      
       {infoCount >= 3 && !isComplete && (
         <TagCloud info={collectedInfo} />
       )}
@@ -3780,7 +3856,12 @@ export default function ChatRegistrationPage() {
                       key={reply.text}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.12, delay: index * 0.02 }}
+                      whileTap={{ scale: 0.92 }}
+                      transition={{ 
+                        duration: 0.12, 
+                        delay: index * 0.02,
+                        scale: { type: "spring", stiffness: 400, damping: 17 }
+                      }}
                       onClick={() => handleQuickReply(reply.text)}
                       className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full border transition-all text-sm ${
                         isSelected 
@@ -3799,7 +3880,12 @@ export default function ChatRegistrationPage() {
                   <motion.button
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.12, delay: displayOptions.length * 0.02 }}
+                    whileTap={{ scale: 0.92 }}
+                    transition={{ 
+                      duration: 0.12, 
+                      delay: displayOptions.length * 0.02,
+                      scale: { type: "spring", stiffness: 400, damping: 17 }
+                    }}
                     onClick={() => setQuickReplyPage((prev) => (prev + 1) % totalPages)}
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-primary/40 bg-primary/5 text-primary text-sm hover:bg-primary/10 transition-all"
                     data-testid="button-next-replies"
@@ -3815,10 +3901,63 @@ export default function ChatRegistrationPage() {
       </AnimatePresence>
 
       <div className="p-4 border-t bg-background/80 backdrop-blur-sm relative z-20">
+        {/* 网络错误重试提示 */}
+        <AnimatePresence>
+          {networkError && !isTyping && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex items-center justify-between gap-2 mb-3 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20"
+            >
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{networkError.message}</span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setNetworkError(null);
+                  if (networkError.lastInput) {
+                    setMessages(prev => [...prev, {
+                      id: `msg-retry-${Date.now()}`,
+                      role: "user",
+                      content: networkError.lastInput,
+                      timestamp: new Date()
+                    }]);
+                    setIsTyping(true);
+                    sendMessageMutation.mutate(networkError.lastInput);
+                  }
+                }}
+                className="shrink-0 h-7 text-xs"
+                data-testid="button-retry-send"
+              >
+                <RotateCcw className="w-3 h-3 mr-1" />
+                重试
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        {/* Thinking动画提示 - 输入框上方显示 */}
+        <AnimatePresence>
+          {isTyping && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="flex items-center gap-2 mb-2 text-xs text-muted-foreground"
+            >
+              <ThinkingDots />
+              <span>小悦正在思考...</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className="flex gap-2 items-center">
           <Input
             ref={inputRef}
-            placeholder={isTyping ? "小悦正在思考..." : "和小悦聊聊..."}
+            placeholder={isTyping ? "请稍等..." : "和小悦聊聊..."}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyPress}
