@@ -92,3 +92,8 @@ Preferred communication style: Simple, everyday language.
 - **EditProfilePage UIUX Overhaul (Dec 22):** Restructured from 7 cards to 4 themed groups (身份基础, 生活快照, 成长与职业, 社交偏好) with chip-style value display and incomplete field count badges. Personal background split into "生活状态" and "城市足迹" subsections.
 - **DB Schema Extension:** Added companyName, icebreakerRole, interestsDeep, industrySegment, structuredOccupation, insightLedger(JSONB) fields to users table
 - **Admin Event Pool Editing (Dec 22):** Added full CRUD support for event pools in Admin Portal with edit button on pool cards, timezone-safe datetime handling using date-fns format(), and form reuse between create/edit modes
+- **AI Mystique UX Updates (Dec 22):** Replaced explicit data counts with progressive reveal messaging for AI mystique effect
+  - Resume prompt: "已收集X项信息" → tiered hints ("小悦已捕捉到不少有趣洞察" for >=8 items)
+  - Progress bar labels: "核心资料 X/Y项" → mystical stages ("小悦正在感知你的特质")
+  - Footer progress: "X/Y项" → progressive reveals ("渐入佳境.../洞察完成")
+- **Registration Data Persistence (Dec 22):** New fields (industry/industrySegment/structuredOccupation/companyType/seniority) and smartInsights→insightLedger(JSONB) now persist on chat registration completion
