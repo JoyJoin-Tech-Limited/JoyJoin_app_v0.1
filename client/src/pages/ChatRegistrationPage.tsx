@@ -4030,6 +4030,12 @@ export default function ChatRegistrationPage() {
                 setIsSequentialDisplaying(true);
                 setSequentialDisplayMessageId(introMsgId);
                 setInfoConfirmed(true);
+                
+                // 备用超时：确保逐行显示状态在3秒后重置，防止卡住
+                setTimeout(() => {
+                  setIsSequentialDisplaying(false);
+                  setSequentialDisplayMessageId(null);
+                }, 3000);
               }, 500);
             }}
             onRequestEdit={() => {
@@ -4039,6 +4045,7 @@ export default function ChatRegistrationPage() {
                 content: "需要修改",
                 timestamp: new Date()
               }]);
+              setIsComplete(false); // 重置完成状态，解锁输入框
               setIsTyping(true);
               sendMessageMutation.mutate("需要修改");
             }}
