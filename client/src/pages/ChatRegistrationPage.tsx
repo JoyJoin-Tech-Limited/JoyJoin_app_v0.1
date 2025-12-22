@@ -2682,6 +2682,43 @@ function SocialProfileCard({ info, mode, showConfirmButtons, infoConfirmed, onCo
         );
       })()}
 
+      {/* 小悦洞察区域 - 展示AI智能推断的洞察 */}
+      {info.smartInsights && info.smartInsights.length > 0 && (
+        <div className="mb-3">
+          <p className="text-[10px] text-muted-foreground font-medium mb-1.5 px-1 flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-amber-500" />
+            小悦的洞察
+          </p>
+          <div className="space-y-1.5">
+            {info.smartInsights
+              .filter(insight => insight.confidence >= 0.7)
+              .slice(0, 3)
+              .map((insight, idx) => {
+                const categoryConfig: Record<string, { icon: string; color: string }> = {
+                  career: { icon: 'Briefcase', color: 'text-blue-500 bg-blue-500/10' },
+                  personality: { icon: 'User', color: 'text-violet-500 bg-violet-500/10' },
+                  lifestyle: { icon: 'Coffee', color: 'text-amber-500 bg-amber-500/10' },
+                  preference: { icon: 'Heart', color: 'text-pink-500 bg-pink-500/10' },
+                  background: { icon: 'Globe', color: 'text-green-500 bg-green-500/10' },
+                  social: { icon: 'Users', color: 'text-orange-500 bg-orange-500/10' },
+                };
+                const config = categoryConfig[insight.category] || { icon: 'Sparkles', color: 'text-primary bg-primary/10' };
+                return (
+                  <motion.div
+                    key={`insight-${idx}`}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] ${config.color} border border-current/10`}
+                  >
+                    <span className="line-clamp-2">{insight.insight}</span>
+                  </motion.div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
       {/* 分组区域 - 根据模式动态显示 */}
       <div className="space-y-0">
         {/* 身份档案 - 所有模式都显示 */}
