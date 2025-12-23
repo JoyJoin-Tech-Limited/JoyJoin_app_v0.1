@@ -2,6 +2,15 @@ import OpenAI from 'openai';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { DetectedInsight } from './insightDetectorService';
+import {
+  getOrCreateOrchestratorState,
+  getNextQuestion,
+  markQuestionAsked,
+  generateDynamicPromptInjection,
+  generateDimensionTransition,
+  calculateCompletionStatus,
+  type RegistrationMode as OrchestratorMode
+} from './inference/dimensionOrchestrator';
 
 const deepseekClient = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
@@ -1943,12 +1952,50 @@ export async function continueXiaoyueChatWithInference(
   // 4. 生成推断上下文补充
   const inferenceAddition = generateInferencePromptAddition(inferenceResult.newState);
   
-  // 5. 增强系统提示词
+  // 4.5 【新增】6维度编排器动态prompt注入
+  let orchestratorAddition = '';
+  try {
+    // 从conversationHistory第一条系统消息中提取mode（极速/标准/深度）
+    const systemMsg = conversationHistory.find(m => m.role === 'system')?.content || '';
+    const modeMatch = systemMsg.match(/极速模式|标准模式|深度模式/);
+    const mode: OrchestratorMode = modeMatch?.[0] === '极速模式' ? 'express' 
+      : modeMatch?.[0] === '深度模式' ? 'deep' : 'standard';
+    
+    // 获取编排器状态
+    const orchestratorState = getOrCreateOrchestratorState(sessionId, mode);
+    
+    // 构建已收集字段Map（从inferenceResult.newState提取）
+    // 使用0.5阈值以捕获更多待确认字段，提高维度覆盖检测准确性
+    const collectedFields: Record<string, unknown> = {};
+    for (const [field, attr] of Object.entries(inferenceResult.newState)) {
+      if (attr.confidence >= 0.5) {
+        collectedFields[field] = attr.value;
+      }
+    }
+    
+    // 生成动态prompt注入
+    orchestratorAddition = '\n\n' + generateDynamicPromptInjection(orchestratorState, collectedFields);
+    
+    // 获取下一个推荐问题，记录已问
+    const nextQ = getNextQuestion(orchestratorState, collectedFields);
+    if (nextQ.question && nextQ.dimension) {
+      markQuestionAsked(orchestratorState, nextQ.question.id, nextQ.dimension);
+    }
+    
+    // 计算完成度（用于日志）
+    const completion = calculateCompletionStatus(collectedFields, orchestratorState);
+    console.log(`[Orchestrator] 会话 ${sessionId}: L1=${completion.l1Percentage}% L2=${completion.l2Percentage}% 阶段=${nextQ.phase}`);
+  } catch (orchestratorError) {
+    console.error('[Orchestrator] 编排器错误:', orchestratorError);
+    // Non-blocking，继续使用原有逻辑
+  }
+  
+  // 5. 增强系统提示词（加入推断上下文 + 编排器引导）
   const enhancedHistory: ChatMessage[] = conversationHistory.map((msg, idx) => {
     if (idx === 0 && msg.role === 'system') {
       return {
         ...msg,
-        content: msg.content + inferenceAddition
+        content: msg.content + inferenceAddition + orchestratorAddition
       };
     }
     return msg;
@@ -2094,10 +2141,41 @@ ${context}
 4. 保持对话连贯性，不要让用户觉得你没有在听他说话`;
   }
   
+  // 4.5 【新增】6维度编排器动态prompt注入
+  let orchestratorAddition = '';
+  try {
+    const systemMsg = conversationHistory.find(m => m.role === 'system')?.content || '';
+    const modeMatch = systemMsg.match(/极速模式|标准模式|深度模式/);
+    const mode: OrchestratorMode = modeMatch?.[0] === '极速模式' ? 'express' 
+      : modeMatch?.[0] === '深度模式' ? 'deep' : 'standard';
+    
+    const orchestratorState = getOrCreateOrchestratorState(sessionId, mode);
+    
+    // 使用0.5阈值以捕获更多待确认字段，提高维度覆盖检测准确性
+    const collectedFields: Record<string, unknown> = {};
+    for (const [field, attr] of Object.entries(inferenceResult.newState)) {
+      if (attr.confidence >= 0.5) {
+        collectedFields[field] = attr.value;
+      }
+    }
+    
+    orchestratorAddition = '\n\n' + generateDynamicPromptInjection(orchestratorState, collectedFields);
+    
+    const nextQ = getNextQuestion(orchestratorState, collectedFields);
+    if (nextQ.question && nextQ.dimension) {
+      markQuestionAsked(orchestratorState, nextQ.question.id, nextQ.dimension);
+    }
+    
+    const completion = calculateCompletionStatus(collectedFields, orchestratorState);
+    console.log(`[Orchestrator] 流式会话 ${sessionId}: L1=${completion.l1Percentage}% L2=${completion.l2Percentage}% 阶段=${nextQ.phase}`);
+  } catch (orchestratorError) {
+    console.error('[Orchestrator] 流式编排器错误:', orchestratorError);
+  }
+  
   // 5. 构建增强的消息历史（只用于API调用，不保存）
   const enhancedHistory: ChatMessage[] = conversationHistory.map((msg, idx) => {
     if (idx === 0 && msg.role === 'system') {
-      return { ...msg, content: msg.content + inferenceAddition };
+      return { ...msg, content: msg.content + inferenceAddition + orchestratorAddition };
     }
     return msg;
   });
