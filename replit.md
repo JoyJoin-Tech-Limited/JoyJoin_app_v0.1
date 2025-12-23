@@ -78,6 +78,13 @@ Preferred communication style: Simple, everyday language.
 - **DeepSeek API:** Used for conversational AI.
 
 ## Recent Changes (December 2025)
+- **6-Dimension Dialogue Guidance System (Dec 23):** Scientific dimension orchestrator replacing hard-coded conversation flow
+  - **dimensionOrchestrator.ts:** Unified orchestrator managing 6-dimension conversation flow (interest → lifestyle → personality → social → career → expectation)
+  - **Mode Configs:** Express (2 required dimensions), Standard (all 6 dimensions), Deep (unlimited follow-ups)
+  - **L1/L2 Field Mapping:** Maps each dimension to corresponding user profile fields for completion tracking
+  - **Dynamic Prompt Injection:** Real-time prompt updates with dimension progress, suggested questions, and transition phrases
+  - **Integration Pipeline:** Orchestrator → inferenceEngine → insightDetector → stateManager
+  - **Key Files:** server/inference/dimensionOrchestrator.ts, server/deepseekClient.ts (continueXiaoyueChatWithInference)
 - **Intelligent Information Collection System (Dec 22):** Comprehensive system to "珍惜每次用户给我们的宝贵回复" - intelligently extracts and structures professional information
   - **SmartInsight System:** category/insight/evidence/confidence tracking with Jaccard similarity deduplication (threshold 0.8), confidence gating (>=0.7), and category limits (max 5 per category)
   - **InferredTraits:** Deep psychological profiling covering cognitive style, communication preference, social personality, emotional traits
