@@ -12,6 +12,9 @@
  */
 
 import type { SmartInsight } from '../deepseekClient';
+import { recognizeCityFromText } from './cityLandmarks';
+import { extractOccupationInfo } from './occupationMatcher';
+import { shouldTriggerLLM, type LLMInferenceRequest } from './llmFallbackInference';
 
 // ============ 6大维度定义 ============
 
@@ -522,6 +525,31 @@ export function extractAndUpdateCoverage(
 }
 
 /**
+ * 检查是否需要LLM兜底推断
+ * 返回需要LLM处理的维度及请求
+ */
+export function checkLLMFallbackNeeded(
+  tracker: ConversationTracker,
+  currentText: string
+): LLMInferenceRequest[] {
+  const requests: LLMInferenceRequest[] = [];
+  
+  for (const dim of DIMENSION_ORDER) {
+    const coverage = tracker.dimensions.get(dim)!;
+    
+    if (shouldTriggerLLM(dim, coverage.confidence, coverage.insights.length, coverage.questionAsked)) {
+      requests.push({
+        text: currentText,
+        dimension: dim,
+        previousAttempts: coverage.insights
+      });
+    }
+  }
+  
+  return requests;
+}
+
+/**
  * 从文本生成洞察描述
  * 扩展的匹配规则库，覆盖更多表达方式
  */
@@ -671,47 +699,60 @@ function generateInsightsFromText(
       break;
       
     case 'career':
-      // 职业相关 - 更丰富的提取
-      if (/程序员|码农|开发|工程师|写代码|敲代码|it|tech|技术/i.test(text)) {
-        insights.push('技术/开发岗位');
+      // 使用职位匹配器识别职位（支持口语表达）
+      const occupationInfo = extractOccupationInfo(text);
+      if (occupationInfo.occupation) {
+        insights.push(`${occupationInfo.occupation.occupation}`);
       }
-      if (/产品|pm|产品经理|需求|prd/i.test(text)) {
-        insights.push('产品岗位');
+      
+      // 识别公司
+      if (occupationInfo.company) {
+        insights.push(`${occupationInfo.company.name}员工`);
+        insights.push(`${occupationInfo.company.industry}行业`);
       }
-      if (/设计|ui|ux|美工|视觉|figma|sketch/i.test(text)) {
-        insights.push('设计岗位');
+      
+      // 兜底：正则匹配职业关键词
+      if (!occupationInfo.occupation) {
+        if (/程序员|码农|开发|工程师|写代码|敲代码|it|tech|技术/i.test(text)) {
+          insights.push('技术/开发岗位');
+        }
+        if (/产品|pm|产品经理|需求|prd/i.test(text)) {
+          insights.push('产品岗位');
+        }
+        if (/设计|ui|ux|美工|视觉|figma|sketch/i.test(text)) {
+          insights.push('设计岗位');
+        }
+        if (/金融|投资|银行|基金|证券|量化|投行|pe|vc/i.test(text)) {
+          insights.push('金融行业');
+        }
+        if (/咨询|四大|mbb|麦肯锡|bcg|贝恩|德勤|普华|安永|毕马威/i.test(text)) {
+          insights.push('咨询行业');
+        }
+        if (/律师|法务|法律|律所/i.test(text)) {
+          insights.push('法律行业');
+        }
+        if (/医生|医疗|医院|医药|护士/i.test(text)) {
+          insights.push('医疗行业');
+        }
+        if (/老师|教师|教育|培训/i.test(text)) {
+          insights.push('教育行业');
+        }
       }
-      if (/金融|投资|银行|基金|证券|量化|投行|pe|vc/i.test(text)) {
-        insights.push('金融行业');
+      
+      // 使用城市地标识别器
+      const cityMatch = recognizeCityFromText(text);
+      if (cityMatch) {
+        insights.push(`城市: ${cityMatch.city}`);
+      } else {
+        // 兜底：基础城市名匹配
+        if (/深圳/i.test(text)) insights.push('城市: 深圳');
+        else if (/香港|hk/i.test(text)) insights.push('城市: 香港');
+        else if (/广州/i.test(text)) insights.push('城市: 广州');
+        else if (/北京|帝都/i.test(text)) insights.push('城市: 北京');
+        else if (/上海|魔都/i.test(text)) insights.push('城市: 上海');
+        else if (/杭州/i.test(text)) insights.push('城市: 杭州');
       }
-      if (/咨询|四大|mbb|麦肯锡|bcg|贝恩|德勤|普华|安永|毕马威/i.test(text)) {
-        insights.push('咨询行业');
-      }
-      if (/律师|法务|法律|律所/i.test(text)) {
-        insights.push('法律行业');
-      }
-      if (/医生|医疗|医院|医药|护士/i.test(text)) {
-        insights.push('医疗行业');
-      }
-      if (/老师|教师|教育|培训/i.test(text)) {
-        insights.push('教育行业');
-      }
-      // 城市
-      if (/深圳|南山|福田|罗湖|宝安|龙华|前海|科技园|粤海/i.test(text)) {
-        insights.push('深圳');
-      }
-      if (/香港|hk|港岛|九龙|新界|中环|旺角|铜锣湾|尖沙咀/i.test(text)) {
-        insights.push('香港');
-      }
-      if (/广州|天河|越秀|海珠|番禺|珠江新城/i.test(text)) {
-        insights.push('广州');
-      }
-      if (/北京|帝都|朝阳|海淀|西城|东城/i.test(text)) {
-        insights.push('北京');
-      }
-      if (/上海|魔都|浦东|静安|徐汇|黄浦|陆家嘴/i.test(text)) {
-        insights.push('上海');
-      }
+      
       // 工作年限/阶段
       if (/打工人|社畜|上班族|工作/i.test(text)) {
         insights.push('职场打工人');

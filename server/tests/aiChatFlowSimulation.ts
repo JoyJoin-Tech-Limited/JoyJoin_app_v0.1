@@ -134,6 +134,9 @@ const ANSWER_TEMPLATES: AnswerTemplate[] = [
       '做{occupation}的，在{city}，公司是{company}',
       '{city}{company}，做{occupation}，{years}年经验了',
       '我是做{occupation}的，现在在{city}的{company}',
+      '{occupation_colloquial}，在{city_landmark}上班',
+      '在{company}，{occupation_colloquial}',
+      '{city_landmark}这边，{occupation_colloquial}',
     ]
   },
   {
@@ -184,6 +187,21 @@ const FILL_WORDS = {
   relationship_status: ['目前单身', '有对象了', '单身很久了'],
   origin: ['本地人', '外地来这边发展的', '来这边几年了'],
   activity_wish: ['一起吃饭探店', '周末一起玩', '聊聊天', '一起运动', '交流行业经验'],
+  occupation_colloquial: [
+    '做产品的', '产品一枚', '搞产品的', 
+    '做开发的', '码农一枚', '搞技术的', '写代码的',
+    '做设计的', '设计一枚', 'UI狗',
+    '做运营的', '运营一枚',
+    '搞金融的', '金融狗一枚',
+    '做咨询的', '咨询狗',
+  ],
+  city_landmark: [
+    '科技园', '粤海街道', '前海', '后海', '车公庙', '南山', '福田',
+    '中环', '铜锣湾', 'IFC', '尖沙咀', '旺角',
+    '陆家嘴', '张江', '漕河泾', '静安',
+    '中关村', '望京', '西二旗', '国贸',
+    '珠江新城', '琶洲', '天河',
+  ],
 };
 
 function randomChoice<T>(arr: T[]): T {
