@@ -18,7 +18,6 @@ import {
   type LowEnergyCalibrationQuestion 
 } from "@/data/adaptiveCalibrationQuestions";
 import { evaluatePersonality } from "@/lib/cumulativeScoringSystem";
-import RegistrationProgress from "@/components/RegistrationProgress";
 import CelebrationConfetti from "@/components/CelebrationConfetti";
 
 const PERSONALITY_TEST_CACHE_KEY = "joyjoin_personality_test_progress";
@@ -755,54 +754,25 @@ export default function PersonalityTestPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <RegistrationProgress 
-        currentStage="personality" 
-        currentStep={effectiveQuestionNumber}
-        totalSteps={totalQuestions}
-      />
-      
       <AnimatePresence>{showIntro && !showResumePrompt && <IntroScreen />}</AnimatePresence>
       <AnimatePresence>{showResumePrompt && <ResumePrompt />}</AnimatePresence>
       <AnimatePresence>{showBlindBox && <BlindBoxReveal />}</AnimatePresence>
       <AnimatePresence>{showMilestone && <MilestoneCard />}</AnimatePresence>
 
-      <div className="p-4 border-b">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <h1 className="text-lg font-bold">趣味性格测评</h1>
-            {Object.keys(answers).length > 0 && (
-              <MiniRadarChart
-                progress={progress}
-                answeredQuestions={Object.keys(answers).length}
-                totalQuestions={totalQuestions}
-              />
-            )}
-          </div>
-          <span className="text-sm text-muted-foreground">
-            {effectiveQuestionNumber}/{totalQuestions}
-          </span>
-        </div>
-        <div className="space-y-1">
-          <Progress value={progress} className="h-2" />
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-medium text-muted-foreground">
-              {getProgressLabel()}
+      {/* 简化的进度条 - sticky悬浮 */}
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b">
+        <div className="p-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <h1 className="text-base font-semibold">性格测试</h1>
+            </div>
+            <span className="text-sm font-medium text-primary">
+              {effectiveQuestionNumber}/{totalQuestions}
             </span>
-            <span className="text-muted-foreground">{Math.round(progress)}%</span>
           </div>
+          <Progress value={progress} className="h-1.5" />
         </div>
-        
-        {/* Encouragement message with animation */}
-        <motion.div
-          key={getEncouragementMessage()}
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="flex items-center justify-center gap-2 mt-2 text-sm text-primary/80"
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>{getEncouragementMessage()}</span>
-        </motion.div>
       </div>
 
       <div className="flex-1 p-6 overflow-y-auto">

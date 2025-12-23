@@ -18,6 +18,7 @@ export default function PersonalityTestResultPage() {
   const [, setLocation] = useLocation();
   const [showCountdown, setShowCountdown] = useState(true);
   const [countdown, setCountdown] = useState(3);
+  const [animationPhase, setAnimationPhase] = useState<'countdown' | 'reveal'>('countdown');
 
   const { data: result, isLoading } = useQuery<RoleResult>({
     queryKey: ['/api/personality-test/results'],
@@ -47,6 +48,16 @@ export default function PersonalityTestResultPage() {
       return () => clearTimeout(timer);
     }
   }, [countdown, result, showCountdown]);
+
+  // Transition to reveal phase after countdown finishes
+  useEffect(() => {
+    if (countdown === 0 && animationPhase === 'countdown') {
+      const timer = setTimeout(() => {
+        setAnimationPhase('reveal');
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown, animationPhase]);
 
   if (isLoading) {
     return (
@@ -150,20 +161,6 @@ export default function PersonalityTestResultPage() {
       alert('已复制到剪贴板！');
     }
   };
-
-  // Animation phase state: 'countdown' | 'reveal'
-  const [animationPhase, setAnimationPhase] = useState<'countdown' | 'reveal'>('countdown');
-
-  // Transition to reveal phase after countdown finishes
-  useEffect(() => {
-    if (countdown === 0 && animationPhase === 'countdown') {
-      // Brief pause before revealing
-      const timer = setTimeout(() => {
-        setAnimationPhase('reveal');
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown, animationPhase]);
 
   // Countdown Reveal Animation - Separated into two phases
   const CountdownReveal = () => (

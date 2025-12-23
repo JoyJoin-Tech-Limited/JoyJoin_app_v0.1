@@ -73,8 +73,8 @@ export default function PersonalityRadarChart({
   });
 
   return (
-    <div className="flex flex-col items-center justify-center w-full py-4 overflow-visible">
-      <svg width="320" height="320" viewBox="0 0 300 300" className="max-w-full overflow-visible">
+    <div className="flex flex-col items-center justify-center w-full py-4">
+      <svg width="100%" height="auto" viewBox="-10 -10 320 320" className="max-w-[320px]">
         <defs>
           <radialGradient id="radarGradient" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />

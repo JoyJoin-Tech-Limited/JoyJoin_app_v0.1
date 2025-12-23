@@ -4027,15 +4027,13 @@ export default function ChatRegistrationPage() {
         </div>
       } />
       
-      {/* 顶部轻量进度条 - 让用户知道"快完成了" */}
-      <RegistrationProgressBar 
-        progress={calculateProfileCompletionUtil(collectedInfo).percentage} 
-        isComplete={isComplete} 
-      />
-      
-      {infoCount >= 3 && !isComplete && (
-        <TagCloud info={collectedInfo} />
-      )}
+      {/* 顶部轻量进度条 - sticky悬浮在顶部 */}
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm">
+        <RegistrationProgressBar 
+          progress={calculateProfileCompletionUtil(collectedInfo).percentage} 
+          isComplete={isComplete} 
+        />
+      </div>
 
           <div 
             ref={scrollRef}
