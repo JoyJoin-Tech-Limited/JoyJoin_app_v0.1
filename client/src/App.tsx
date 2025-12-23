@@ -179,6 +179,11 @@ function Router() {
     );
   }
 
+  // Preview login page (for demo purposes - shows complete login flow)
+  if (location === "/preview-login") {
+    return <Route path="/preview-login" component={LoginPage} />;
+  }
+
   // Invite landing page is publicly accessible (handles both referrals and event invitations)
   if (location.startsWith("/invite/")) {
     return <Route path="/invite/:code" component={InviteLandingRouter} />;
