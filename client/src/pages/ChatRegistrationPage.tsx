@@ -2549,7 +2549,7 @@ function SocialProfileCard({ info, mode, showConfirmButtons, infoConfirmed, onCo
         return {
           identity: [info.displayName, info.gender, info.birthYear, info.currentCity], // 4项核心
           // 极速模式下这些为加分项，但如果用户主动提供了也要显示
-          career: [info.industry, info.occupation || info.occupationDescription],
+          career: [info.industry, info.industrySegment, info.occupation || info.occupationDescription, info.seniority],
           geoLang: [],
           interests: [info.interestsTop || info.topInterests],
           social: [],
@@ -2558,7 +2558,7 @@ function SocialProfileCard({ info, mode, showConfirmButtons, infoConfirmed, onCo
       case 'enrichment':
         return {
           identity: [info.displayName, info.gender, info.birthYear, info.currentCity], // 4项核心
-          career: [info.industry, info.occupation || info.occupationDescription, info.educationLevel], // 3项
+          career: [info.industry, info.industrySegment, info.occupation || info.occupationDescription, info.seniority, info.educationLevel], // 5项
           geoLang: [info.currentCity, info.languagesComfort], // 2项
           interests: [info.interestsTop || info.topInterests, info.cuisinePreference], // 2项
           social: [info.intent], // 1项
@@ -2567,7 +2567,7 @@ function SocialProfileCard({ info, mode, showConfirmButtons, infoConfirmed, onCo
       default:
         return {
           identity: [info.displayName, info.gender, info.birthYear, info.currentCity, info.hometown, info.relationshipStatus], // 6项
-          career: [info.industry, info.occupation || info.occupationDescription, info.roleTitleShort, info.seniority, info.educationLevel, info.fieldOfStudy], // 6项
+          career: [info.industry, info.industrySegment, info.occupation || info.occupationDescription, info.seniority, info.educationLevel, info.fieldOfStudy], // 6项
           geoLang: [info.currentCity, info.languagesComfort, info.overseasRegions, info.studyLocale], // 4项
           interests: [info.interestsTop || info.topInterests, info.interestsDeep, info.cuisinePreference, info.topicAvoidances], // 4项
           social: [info.intent, info.socialStyle, info.icebreakerRole], // 3项
@@ -2749,12 +2749,12 @@ function SocialProfileCard({ info, mode, showConfirmButtons, infoConfirmed, onCo
           hidden={!modeConfig.sections.career.visible && careerFilled === 0}
         >
           <InfoItem label="行业" value={info.industry} pending />
+          <InfoItem label="细分" value={info.industrySegment} pending />
           <InfoItem label="职业" value={info.occupation || info.occupationDescription} pending />
+          <InfoItem label="资历" value={info.seniority} pending />
           <InfoItem label="学历" value={info.educationLevel} pending />
           {currentMode === 'deep' && (
             <>
-              <InfoItem label="职位" value={info.roleTitleShort} pending />
-              <InfoItem label="资历" value={info.seniority} pending />
               <InfoItem label="专业" value={info.fieldOfStudy} pending />
             </>
           )}
