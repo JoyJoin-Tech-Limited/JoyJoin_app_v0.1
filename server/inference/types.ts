@@ -33,9 +33,12 @@ export interface ConflictInfo {
   reason: string;
 }
 
+// 提取值的联合类型
+export type ExtractedValue = string | number | boolean | string[];
+
 export interface InferenceResult {
   // 显式提取的信息
-  extracted: Record<string, string>;
+  extracted: Record<string, ExtractedValue>;
   
   // 推断的属性
   inferred: InferredAttribute[];

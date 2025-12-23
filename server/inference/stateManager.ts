@@ -8,29 +8,58 @@ import type {
   AttributeState, 
   InferredAttribute, 
   ConflictInfo,
-  InferenceResult 
+  InferenceResult,
+  ExtractedValue
 } from './types';
 
 export class StateManager {
   /**
    * 更新状态：合并新的显式信息
+   * 支持 string | number | boolean | string[] 类型
    */
   updateExplicit(
     currentState: UserAttributeMap,
-    extracted: Record<string, string>
+    extracted: Record<string, ExtractedValue>
   ): UserAttributeMap {
     const newState = { ...currentState };
     
     for (const [field, value] of Object.entries(extracted)) {
-      if (value && value.trim()) {
-        newState[field] = {
-          value: value.trim(),
-          source: 'explicit',
-          confidence: 1.0,  // 显式信息置信度为1
-          evidence: '用户直接提供',
-          timestamp: new Date()
-        };
+      // 跳过 null/undefined
+      if (value === null || value === undefined) continue;
+      
+      // 按类型分支处理
+      let finalValue: ExtractedValue;
+      
+      if (typeof value === 'string') {
+        // 字符串：trim 后检查是否为空
+        const trimmed = value.trim();
+        if (!trimmed) continue;
+        finalValue = trimmed;
+      } else if (typeof value === 'number') {
+        // 数字：直接使用（如 birthYear: 1996）
+        finalValue = value;
+      } else if (typeof value === 'boolean') {
+        // 布尔值：直接使用
+        finalValue = value;
+      } else if (Array.isArray(value)) {
+        // 数组：过滤空值并 trim 字符串元素
+        const filtered = value
+          .map(v => typeof v === 'string' ? v.trim() : v)
+          .filter(v => v && (typeof v !== 'string' || v.length > 0));
+        if (filtered.length === 0) continue;
+        finalValue = filtered;
+      } else {
+        // 未知类型跳过
+        continue;
       }
+      
+      newState[field] = {
+        value: finalValue,
+        source: 'explicit',
+        confidence: 1.0,  // 显式信息置信度为1
+        evidence: '用户直接提供',
+        timestamp: new Date()
+      };
     }
     
     return newState;
@@ -257,7 +286,7 @@ export class StateManager {
       confirmQuestions: Array<{ field: string; template: string; inferredValue: string }>;
     },
     llmResult: {
-      extracted: Record<string, string>;
+      extracted: Record<string, ExtractedValue>;
       inferred: InferredAttribute[];
       conflicts: ConflictInfo[];
       skipQuestions: string[];
