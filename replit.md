@@ -78,6 +78,11 @@ Preferred communication style: Simple, everyday language.
 - **DeepSeek API:** Used for conversational AI.
 
 ## Recent Changes (December 2025)
+- **CI/CD TypeScript Error Fix (Dec 23):** Resolved all 37 blocking TypeScript errors to 0
+  - **Schema Extensions:** Added poolId to blindBoxEvents, atmosphereType/hostUserId to icebreakerSessions, totalAcceptances to invitations
+  - **Interface Updates:** Added avgChemistryScore to MatchGroup in poolMatchingService.ts
+  - **Type Fixes:** Fixed storage method calls (getAllCoupons, getBlindBoxEventById), added type assertions for SQL query results, fixed Map iterator compatibility
+  - **Key Files:** server/routes.ts, shared/schema.ts, server/poolMatchingService.ts
 - **6-Dimension Dialogue Guidance System (Dec 23):** Scientific dimension orchestrator replacing hard-coded conversation flow
   - **dimensionOrchestrator.ts:** Unified orchestrator managing 6-dimension conversation flow (interest → lifestyle → personality → social → career → expectation)
   - **Mode Configs:** Express (2 required dimensions), Standard (all 6 dimensions), Deep (unlimited follow-ups)
