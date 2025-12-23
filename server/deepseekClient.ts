@@ -1924,7 +1924,7 @@ export async function continueXiaoyueChatWithInference(
   // 3. 更新推断状态
   updateSessionInferenceState(sessionId, inferenceResult.newState);
   
-  // 3.5 AI Evolution: 实时洞察检测 (per-message) + 累积存储 + 持久化
+  // 3.5 AI Evolution: 实时洞察检测 (per-message) + L3完整分析 + 累积存储 + 持久化
   try {
     const { insightDetectorService } = await import('./insightDetectorService');
     const { dialogueEmbeddingsService } = await import('./dialogueEmbeddingsService');
@@ -1932,20 +1932,37 @@ export async function continueXiaoyueChatWithInference(
     const turnIndex = conversationHistory.filter(m => m.role === 'user').length;
     const detectedInsights = insightDetectorService.detectFromMessage(userMessage, turnIndex, existingInsights);
     
-    if (detectedInsights.length > 0) {
+    // L3完整分析：每3轮或有足够消息时运行dialectProfile和deepTraits分析
+    let dialectProfile = null;
+    let deepTraits = null;
+    const userMessages = conversationHistory.filter(m => m.role === 'user');
+    if (turnIndex >= 3 && turnIndex % 3 === 0) {
+      // 运行完整L3分析（方言画像 + 深度特质）
+      const fullAnalysis = await insightDetectorService.analyzeConversation(
+        [...conversationHistory, { role: 'user', content: userMessage }]
+      );
+      dialectProfile = fullAnalysis.dialectProfile;
+      deepTraits = fullAnalysis.deepTraits;
+      console.log(`[L3 Analysis] 会话 ${sessionId}: 方言=${dialectProfile?.primaryDialect || '未检测'}, 深度特质已提取`);
+    }
+    
+    if (detectedInsights.length > 0 || dialectProfile || deepTraits) {
       // 累积到内存
-      addSessionInsights(sessionId, detectedInsights);
+      if (detectedInsights.length > 0) {
+        addSessionInsights(sessionId, detectedInsights);
+      }
       
       // 持久化到数据库（防止用户中途退出丢失洞察）
       await dialogueEmbeddingsService.storeInsights(
         sessionId,
         null,
         userMessage,
-        { insights: detectedInsights, dialectProfile: null, deepTraits: null, totalConfidence: 0.85, apiCallsUsed: 0 },
+        { insights: detectedInsights, dialectProfile, deepTraits, totalConfidence: 0.85, apiCallsUsed: 0 },
         false // isSuccessful = false indicates partial/in-progress
       );
     }
   } catch (insightError) {
+    console.error('[L3 Analysis] 洞察检测错误:', insightError);
     // Non-blocking
   }
   
@@ -2100,7 +2117,7 @@ export async function* continueXiaoyueChatStreamWithInference(
   // 3. 更新推断状态
   updateSessionInferenceState(sessionId, inferenceResult.newState);
   
-  // 3.5 AI Evolution: 实时洞察检测 (per-message) + 累积存储 + 持久化
+  // 3.5 AI Evolution: 实时洞察检测 (per-message) + L3完整分析 + 累积存储 + 持久化
   try {
     const { insightDetectorService } = await import('./insightDetectorService');
     const { dialogueEmbeddingsService } = await import('./dialogueEmbeddingsService');
@@ -2108,20 +2125,36 @@ export async function* continueXiaoyueChatStreamWithInference(
     const turnIndex = conversationHistory.filter(m => m.role === 'user').length;
     const detectedInsights = insightDetectorService.detectFromMessage(userMessage, turnIndex, existingInsights);
     
-    if (detectedInsights.length > 0) {
+    // L3完整分析：每3轮或有足够消息时运行dialectProfile和deepTraits分析
+    let dialectProfile = null;
+    let deepTraits = null;
+    if (turnIndex >= 3 && turnIndex % 3 === 0) {
+      // 运行完整L3分析（方言画像 + 深度特质）
+      const fullAnalysis = await insightDetectorService.analyzeConversation(
+        [...conversationHistory, { role: 'user', content: userMessage }]
+      );
+      dialectProfile = fullAnalysis.dialectProfile;
+      deepTraits = fullAnalysis.deepTraits;
+      console.log(`[L3 Analysis Stream] 会话 ${sessionId}: 方言=${dialectProfile?.primaryDialect || '未检测'}, 深度特质已提取`);
+    }
+    
+    if (detectedInsights.length > 0 || dialectProfile || deepTraits) {
       // 累积到内存
-      addSessionInsights(sessionId, detectedInsights);
+      if (detectedInsights.length > 0) {
+        addSessionInsights(sessionId, detectedInsights);
+      }
       
       // 持久化到数据库（防止用户中途退出丢失洞察）
       await dialogueEmbeddingsService.storeInsights(
         sessionId,
         null,
         userMessage,
-        { insights: detectedInsights, dialectProfile: null, deepTraits: null, totalConfidence: 0.85, apiCallsUsed: 0 },
+        { insights: detectedInsights, dialectProfile, deepTraits, totalConfidence: 0.85, apiCallsUsed: 0 },
         false // isSuccessful = false indicates partial/in-progress
       );
     }
   } catch (insightError) {
+    console.error('[L3 Analysis Stream] 洞察检测错误:', insightError);
     // Non-blocking
   }
   
