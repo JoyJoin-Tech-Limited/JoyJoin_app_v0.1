@@ -1,4 +1,6 @@
 import OpenAI from 'openai';
+import { format } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
 import type { DetectedInsight } from './insightDetectorService';
 
 const deepseekClient = new OpenAI({
@@ -768,6 +770,15 @@ true
 
 好的对话应该让用户觉得在和一个有趣又靠谱的人聊天，而不是在填问卷。`;
 
+/**
+ * 生成动态系统提示词，包含当前日期
+ * 每次对话时自动获取最新日期，确保小悦能准确计算用户年龄
+ */
+function getXiaoyueSystemPrompt(): string {
+  const today = format(new Date(), 'yyyy年MM月dd日', { locale: zhCN });
+  return `${XIAOYUE_SYSTEM_PROMPT}\n\n【当前日期】：今天是 ${today}（用户提供的日期信息基于这一天计算）`;
+}
+
 // 注册模式类型
 type RegistrationMode = 'express' | 'standard' | 'deep' | 'all_in_one';
 
@@ -943,7 +954,7 @@ export async function startXiaoyueChat(mode: RegistrationMode = 'standard'): Pro
 }> {
   const opening = MODE_OPENINGS[mode] || MODE_OPENINGS.standard;
   const modeAddition = MODE_SYSTEM_ADDITIONS[mode] || '';
-  const fullSystemPrompt = XIAOYUE_SYSTEM_PROMPT + modeAddition;
+  const fullSystemPrompt = getXiaoyueSystemPrompt() + modeAddition;
   
   return {
     message: opening,
@@ -1112,7 +1123,7 @@ export async function startXiaoyueChatEnrichment(context: EnrichmentContext): Pr
   mode: 'enrichment';
 }> {
   const enrichmentAddition = buildEnrichmentPrompt(context);
-  const fullSystemPrompt = XIAOYUE_SYSTEM_PROMPT + enrichmentAddition;
+  const fullSystemPrompt = getXiaoyueSystemPrompt() + enrichmentAddition;
   const opening = generateEnrichmentOpening(context);
   
   return {
