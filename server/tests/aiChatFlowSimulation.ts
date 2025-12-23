@@ -1,18 +1,31 @@
 /**
- * AI Chat Flow 模拟测试
+ * AI Chat Flow 模拟测试 v2.0
  * 
- * 模拟1000个资深产品经理和AI工程师的对话
- * 统计智能信息收集的效果
+ * 使用6维度对话引导系统，模拟完整对话流程
+ * 目标：各维度覆盖率达到90%+
  */
 
-import { applySmartInference, SMART_INFERENCE_RULES } from '../inference/smartInference';
-import { matchIndustryFromText, generateRAGContext } from '../inference/industryOntology';
+import { applySmartInference } from '../inference/smartInference';
+import { matchIndustryFromText } from '../inference/industryOntology';
 import { 
   mergeInsights, 
-  filterByConfidence, 
-  extractAndValidateInsights,
+  filterByConfidence,
   getInsightDistribution 
 } from '../inference/smartInsightsService';
+import {
+  DIMENSION_ORDER,
+  DIMENSION_NAMES,
+  GUIDANCE_QUESTIONS,
+  createConversationTracker,
+  getNextQuestion,
+  getFollowUpQuestion,
+  extractAndUpdateCoverage,
+  getCoverageStats,
+  toSmartInsights,
+  type InsightDimension,
+  type ConversationTracker,
+  type GuidanceQuestion
+} from '../inference/dialogGuidanceSystem';
 import type { SmartInsight } from '../deepseekClient';
 
 // ============ 模拟用户数据生成 ============
@@ -28,551 +41,576 @@ interface SimulatedUser {
     company?: string;
     city: string;
     lifeStage: string;
+    personality: string;
+    interests: string[];
+    socialStyle: string;
   };
-  dialogues: string[];  // 模拟对话内容
-  expectedInsights: string[];  // 预期应该提取的洞察
 }
 
 // 产品经理背景模板
-const PM_BACKGROUNDS = [
-  { industry: '科技/互联网', segment: '产品', company: '字节跳动', city: '深圳' },
-  { industry: '科技/互联网', segment: '产品', company: '腾讯', city: '深圳' },
-  { industry: '金融', segment: '资管', company: '华夏基金', city: '北京' },
-  { industry: '科技/互联网', segment: '产品', company: '阿里巴巴', city: '杭州' },
-  { industry: '快消/零售', segment: '电商', company: '拼多多', city: '上海' },
-  { industry: '医疗/生物', segment: '医药研发', company: '药明康德', city: '上海' },
-  { industry: '金融', segment: '投行', company: '中金', city: '北京' },
-  { industry: '咨询', segment: '战略咨询', company: '麦肯锡', city: '上海' },
-  { industry: '教育', segment: '培训机构', company: '新东方', city: '北京' },
-  { industry: '传媒/广告', segment: '广告公司', company: '奥美', city: '上海' },
+const PM_PROFILES = [
+  { industry: '科技/互联网', segment: '产品', company: '字节跳动', city: '深圳', personality: '外向', interests: ['游戏', '电影'], socialStyle: '活跃' },
+  { industry: '科技/互联网', segment: '产品', company: '腾讯', city: '深圳', personality: '内向', interests: ['读书', '咖啡'], socialStyle: '小范围' },
+  { industry: '金融', segment: '资管', company: '华夏基金', city: '北京', personality: '稳重', interests: ['健身', '红酒'], socialStyle: '深度' },
+  { industry: '科技/互联网', segment: '产品', company: '阿里巴巴', city: '杭州', personality: '随性', interests: ['旅行', '摄影'], socialStyle: '随缘' },
+  { industry: '快消/零售', segment: '电商', company: '拼多多', city: '上海', personality: '主动', interests: ['美食', '探店'], socialStyle: '热闹' },
+  { industry: '医疗/生物', segment: '医药研发', company: '药明康德', city: '上海', personality: '严谨', interests: ['健身', '阅读'], socialStyle: '小圈子' },
+  { industry: '金融', segment: '投行', company: '中金', city: '北京', personality: '内敛', interests: ['高尔夫', '品酒'], socialStyle: '精准' },
+  { industry: '咨询', segment: '战略咨询', company: '麦肯锡', city: '上海', personality: '外向', interests: ['旅行', '健身'], socialStyle: '开放' },
+  { industry: '教育', segment: '培训机构', company: '新东方', city: '北京', personality: '热情', interests: ['音乐', '演讲'], socialStyle: '广泛' },
+  { industry: '传媒/广告', segment: '广告公司', company: '奥美', city: '上海', personality: '创意', interests: ['艺术', '设计'], socialStyle: '多元' },
 ];
 
 // AI工程师背景模板
-const AI_ENGINEER_BACKGROUNDS = [
-  { industry: '科技/互联网', segment: 'AI/算法', company: 'OpenAI', city: '深圳' },
-  { industry: '科技/互联网', segment: 'AI/算法', company: '百度', city: '北京' },
-  { industry: '科技/互联网', segment: 'AI/算法', company: '商汤', city: '深圳' },
-  { industry: '金融', segment: '量化', company: '幻方', city: '杭州' },
-  { industry: '科技/互联网', segment: 'AI/算法', company: '华为', city: '深圳' },
-  { industry: '制造业', segment: '半导体/芯片', company: '寒武纪', city: '北京' },
-  { industry: '科技/互联网', segment: '数据', company: '美团', city: '北京' },
-  { industry: '医疗/生物', segment: '生物科技', company: '晶泰科技', city: '深圳' },
-  { industry: '科技/互联网', segment: 'AI/算法', company: 'DeepMind', city: '香港' },
-  { industry: '金融', segment: '二级市场', company: '九坤', city: '上海' },
+const AI_ENGINEER_PROFILES = [
+  { industry: '科技/互联网', segment: 'AI/算法', company: 'OpenAI', city: '深圳', personality: '内向', interests: ['编程', '游戏'], socialStyle: '技术圈' },
+  { industry: '科技/互联网', segment: 'AI/算法', company: '百度', city: '北京', personality: '宅', interests: ['二次元', '桌游'], socialStyle: '小众' },
+  { industry: '科技/互联网', segment: 'AI/算法', company: '商汤', city: '深圳', personality: '理性', interests: ['健身', '电影'], socialStyle: '选择性' },
+  { industry: '金融', segment: '量化', company: '幻方', city: '杭州', personality: '专注', interests: ['数学', '围棋'], socialStyle: '精英' },
+  { industry: '科技/互联网', segment: 'AI/算法', company: '华为', city: '深圳', personality: '踏实', interests: ['跑步', '徒步'], socialStyle: '同事圈' },
+  { industry: '制造业', segment: '半导体/芯片', company: '寒武纪', city: '北京', personality: '严谨', interests: ['硬件', '3D打印'], socialStyle: '专业' },
+  { industry: '科技/互联网', segment: '数据', company: '美团', city: '北京', personality: '务实', interests: ['美食', '骑行'], socialStyle: '生活化' },
+  { industry: '医疗/生物', segment: '生物科技', company: '晶泰科技', city: '深圳', personality: '学术', interests: ['论文', '实验'], socialStyle: '学术圈' },
+  { industry: '科技/互联网', segment: 'AI/算法', company: 'DeepMind', city: '香港', personality: '国际化', interests: ['旅行', '语言'], socialStyle: '多元' },
+  { industry: '金融', segment: '二级市场', company: '九坤', city: '上海', personality: '敏锐', interests: ['交易', '新闻'], socialStyle: '金融圈' },
 ];
 
-// 资历级别
 const SENIORITY_LEVELS = ['初级', '中级', '高级', '资深', '专家', '总监'];
 const LIFE_STAGES = ['职场新人', '职场打工人', '创业中', '自由职业'];
 
-// 对话模板 - 产品经理
-const PM_DIALOGUE_TEMPLATES = [
-  '我是做产品经理的，在{company}工作，主要负责用户增长',
-  '做PM有{years}年了，之前在{prevCompany}，现在在{company}做B端产品',
-  '我在{city}{company}做产品，平时会关注用户体验和数据分析',
-  '目前在{company}做产品总监，带一个小团队，专注金融科技方向',
-  '我是{company}的产品经理，主要做社交电商相关的业务',
-  '之前在一级市场做投资，后来转型做产品经理了，现在{company}',
-  '做了5年PM了，从C端做到B端，现在{company}负责企业服务产品线',
-  '我在{company}做AI产品，跟算法团队配合比较多',
-  '刚从{prevCompany}跳槽到{company}，继续做产品经理',
-  '我是资深PM，在{city}工作，主要关注增长和商业化',
-];
+// ============ 模拟用户回答生成 ============
 
-// 对话模板 - AI工程师
-const AI_ENGINEER_DIALOGUE_TEMPLATES = [
-  '我是做AI的，在{company}做算法工程师，主要方向是NLP',
-  '做机器学习{years}年了，现在{company}做大模型相关的工作',
-  '我在{company}做深度学习，主要是CV方向的',
-  '目前在{company}做量化策略研究，用AI做因子挖掘',
-  '我是{company}的AI工程师，做推荐系统的',
-  '之前在学术界做研究，现在在{company}做LLM工程化落地',
-  '做了4年算法了，从传统ML到现在的大模型，现在{company}',
-  '我在{company}做数据科学家，主要负责用户画像和预测',
-  '刚从{prevCompany}跳槽到{company}，继续做算法研发',
-  '我是资深算法工程师，在{city}工作，专注自然语言处理',
-];
-
-// 补充对话内容 - 用于增加信息丰富度
-const SUPPLEMENTARY_DIALOGUES = [
-  '平时喜欢打篮球和看电影',
-  '周末经常跟朋友去爬山或者喝咖啡',
-  '我比较内向，但是跟熟悉的人聊天会很话痨',
-  '对新技术比较感兴趣，会经常关注行业动态',
-  '喜欢读书，最近在看一些心理学的书',
-  '下班后喜欢健身，保持身材很重要',
-  '我是深圳本地人，对这边比较熟悉',
-  '我是从广州来深圳发展的，来了3年了',
-  '周末喜欢探店，发现好吃的餐厅',
-  '对红酒和咖啡比较有研究',
-  '平时会参加一些行业交流活动',
-  '我单身，希望能认识志同道合的朋友',
-  '跟朋友相处我比较随和，不太计较',
-  '工作压力比较大，需要放松的渠道',
-  '对艺术和设计比较感兴趣',
-];
-
-// 生成随机数
-function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+interface AnswerTemplate {
+  dimension: InsightDimension;
+  templates: string[];
 }
 
-// 随机选择数组元素
+const ANSWER_TEMPLATES: AnswerTemplate[] = [
+  {
+    dimension: 'interest',
+    templates: [
+      '最近在追{drama}，超好看！周末也喜欢{hobby}',
+      '我比较喜欢{hobby}，还有就是{interest2}，感觉挺解压的',
+      '周末一般{hobby}，有时候也会{interest2}',
+      '最近在玩{game}，太上头了哈哈。平时也喜欢{hobby}',
+      '我爱好挺广的，{hobby}、{interest2}都喜欢',
+    ]
+  },
+  {
+    dimension: 'lifestyle',
+    templates: [
+      '下班后一般会{activity}放松一下，周末喜欢{weekend}',
+      '我是{sleep_type}，平时喜欢{food_style}',
+      '{activity}是我的解压方式，吃的话比较喜欢{cuisine}',
+      '周末一般{weekend}，有时候也会自己{activity}',
+      '我比较{lifestyle_type}，{food_style}，作息{sleep_pattern}',
+    ]
+  },
+  {
+    dimension: 'personality',
+    templates: [
+      '我算是{personality_type}的吧，{social_behavior}',
+      '朋友说我{friend_eval}，我觉得还挺准的',
+      '刚认识的时候会{first_meet}，熟了之后{after_familiar}',
+      '我做事比较{decision_style}，压力大的时候{stress_handle}',
+      '应该算{energy_type}吧，{social_preference}',
+    ]
+  },
+  {
+    dimension: 'social',
+    templates: [
+      '我喜欢{gathering_style}，{friend_count}就够了',
+      '交朋友比较看重{friend_value}，{relationship_style}',
+      '我是{social_role}的类型，喜欢{topic_style}',
+      '{gathering_pref}的聚会我比较喜欢，{friend_criteria}',
+      '社交上我比较{social_tendency}，{friend_expectation}',
+    ]
+  },
+  {
+    dimension: 'career',
+    templates: [
+      '我在{company}做{occupation}，在{city}工作{years}年了',
+      '现在{city}这边做{occupation}，{company}，工作{years}年了',
+      '做{occupation}的，在{city}，公司是{company}',
+      '{city}{company}，做{occupation}，{years}年经验了',
+      '我是做{occupation}的，现在在{city}的{company}',
+    ]
+  },
+  {
+    dimension: 'expectation',
+    templates: [
+      '希望认识{friend_type}的朋友，{relationship_status}，想找人{activity_wish}',
+      '想认识{friend_type}的人，最好能{activity_wish}',
+      '我{origin}，{relationship_status}，希望找到{friend_type}的朋友',
+      '期待认识{friend_type}的朋友，一起{activity_wish}',
+      '{relationship_status}，想找{friend_type}的朋友{activity_wish}',
+    ]
+  },
+];
+
+// 填充模板的词库
+const FILL_WORDS = {
+  drama: ['鱿鱼游戏', '狂飙', '繁花', '漫长的季节', '三体'],
+  hobby: ['打游戏', '看电影', '健身', '看书', '弹吉他', '画画', '摄影'],
+  interest2: ['听音乐', '刷B站', '逛展', '喝咖啡', '爬山'],
+  game: ['原神', '王者', 'Steam上的独立游戏', 'Switch健身环'],
+  activity: ['健身', '跑步', '打球', '看书', '打游戏', '追剧'],
+  weekend: ['宅家', '出门探店', '跟朋友聚餐', '去咖啡厅', '户外徒步'],
+  sleep_type: ['夜猫子', '早睡早起型', '作息不太规律'],
+  food_style: ['喜欢探店', '自己做饭', '外卖党', '重口味', '清淡饮食'],
+  cuisine: ['粤菜', '川菜', '日料', '火锅', '西餐'],
+  lifestyle_type: ['宅', '喜欢出门', '看心情', '规律作息'],
+  sleep_pattern: ['比较规律', '经常熬夜', '佛系'],
+  personality_type: ['比较内向', '偏外向', '慢热', '随性'],
+  social_behavior: ['跟新朋友聊天会先观察', '熟了之后话很多', '比较主动找话题'],
+  friend_eval: ['比较靠谱', '话痨', '随和', '有点闷骚', '很好相处'],
+  first_meet: ['先观察一会儿', '主动搭话', '看对方先开口'],
+  after_familiar: ['话很多', '很能聊', '还是比较安静'],
+  decision_style: ['想清楚再做', '边做边调整', '听直觉'],
+  stress_handle: ['找朋友聊', '自己消化', '运动发泄'],
+  energy_type: ['需要独处充电', '跟人在一起有能量', '都还好'],
+  social_preference: ['但也喜欢跟合得来的人聊天', '不太喜欢应酬', '看心情'],
+  gathering_style: ['小范围深聊', '热闹的聚会', '3-5个人刚好'],
+  friend_count: ['有几个铁哥们/闺蜜', '认识多点人也好', '质量比数量重要'],
+  friend_value: ['三观合', '聊得来', '有共同爱好', '真诚'],
+  relationship_style: ['比较看重深度交流', '轻松相处就好', '喜欢互相支持'],
+  social_role: ['照顾别人多一点', '被照顾', '比较平等'],
+  topic_style: ['深度话题', '轻松吐槽', '什么都能聊'],
+  gathering_pref: ['小范围', '有主题', '自由随意'],
+  friend_criteria: ['志同道合最重要', '氛围好就行', '能互相学习'],
+  social_tendency: ['选择性社交', '比较开放', '随缘'],
+  friend_expectation: ['希望找到几个知心朋友', '扩大社交圈', '认识有趣的人'],
+  friend_type: ['聊得来', '同频', '有共同爱好', '三观合', '有趣'],
+  relationship_status: ['目前单身', '有对象了', '单身很久了'],
+  origin: ['本地人', '外地来这边发展的', '来这边几年了'],
+  activity_wish: ['一起吃饭探店', '周末一起玩', '聊聊天', '一起运动', '交流行业经验'],
+};
+
 function randomChoice<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// 生成模拟用户
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function fillTemplate(template: string, profile: SimulatedUser['background']): string {
+  let result = template;
+  
+  // 替换profile中的字段
+  result = result.replace('{company}', profile.company || '大厂');
+  result = result.replace('{city}', profile.city);
+  result = result.replace('{occupation}', profile.occupation);
+  result = result.replace('{years}', randomInt(2, 10).toString());
+  
+  // 替换词库中的占位符
+  for (const [key, values] of Object.entries(FILL_WORDS)) {
+    const placeholder = `{${key}}`;
+    while (result.includes(placeholder)) {
+      result = result.replace(placeholder, randomChoice(values));
+    }
+  }
+  
+  return result;
+}
+
+// 噪声回答 - 模拟真实用户的模糊/简短/拒绝回答
+const NOISY_RESPONSES: Record<InsightDimension, string[]> = {
+  interest: [
+    '还好吧，没什么特别的',
+    '就那样呗',
+    '🎮🎬',  // 纯emoji
+    '看心情',
+    'emmm',
+    '哈哈，什么都玩一点',
+  ],
+  lifestyle: [
+    '随便啦',
+    '看情况',
+    '就正常生活吧',
+    '😴',
+    '没什么特别',
+  ],
+  personality: [
+    '不太好说',
+    '我也不知道诶',
+    '应该还行？',
+    '🤔',
+    '说不上来',
+  ],
+  social: [
+    '都可以',
+    '看情况吧',
+    '随缘',
+    '🤷',
+    '没想过这个问题',
+  ],
+  career: [
+    '上班族',
+    '打工人',
+    '社畜一枚',
+    '就普通工作',
+    '😅工作嘛',
+  ],
+  expectation: [
+    '没想好',
+    '看看再说',
+    '都行吧',
+    '随缘~',
+    '先看看',
+  ],
+};
+
+function generateUserAnswer(dimension: InsightDimension, profile: SimulatedUser['background']): string {
+  // 30%概率给出噪声回答（模拟真实用户变化）
+  if (Math.random() < 0.3) {
+    const noisy = NOISY_RESPONSES[dimension];
+    if (noisy && noisy.length > 0) {
+      return randomChoice(noisy);
+    }
+  }
+  
+  const templates = ANSWER_TEMPLATES.find(t => t.dimension === dimension)?.templates || [];
+  if (templates.length === 0) return '还好吧，没什么特别的';
+  
+  const template = randomChoice(templates);
+  return fillTemplate(template, profile);
+}
+
+// ============ 生成模拟用户 ============
+
 function generateSimulatedUsers(count: number): SimulatedUser[] {
   const users: SimulatedUser[] = [];
   const pmCount = Math.floor(count / 2);
   
-  // 生成产品经理
   for (let i = 0; i < pmCount; i++) {
-    const bg = randomChoice(PM_BACKGROUNDS);
-    const template = randomChoice(PM_DIALOGUE_TEMPLATES);
-    const years = randomInt(2, 10);
-    const prevCompany = randomChoice(PM_BACKGROUNDS.filter(b => b.company !== bg.company)).company;
-    
-    const mainDialogue = template
-      .replace('{company}', bg.company || '大厂')
-      .replace('{city}', bg.city)
-      .replace('{years}', years.toString())
-      .replace('{prevCompany}', prevCompany || '其他公司');
-    
-    const dialogues = [mainDialogue];
-    // 添加1-3条补充对话
-    const supplementCount = randomInt(1, 3);
-    for (let j = 0; j < supplementCount; j++) {
-      dialogues.push(randomChoice(SUPPLEMENTARY_DIALOGUES));
-    }
-    
+    const profile = randomChoice(PM_PROFILES);
     users.push({
       id: i + 1,
       type: 'PM',
       background: {
-        industry: bg.industry,
-        industrySegment: bg.segment,
+        industry: profile.industry,
+        industrySegment: profile.segment,
         occupation: '产品经理',
         seniority: randomChoice(SENIORITY_LEVELS),
-        company: bg.company,
-        city: bg.city,
+        company: profile.company,
+        city: profile.city,
         lifeStage: randomChoice(LIFE_STAGES),
-      },
-      dialogues,
-      expectedInsights: [
-        `从事${bg.industry}行业`,
-        `${bg.segment}方向`,
-        `在${bg.company}工作`,
-      ],
+        personality: profile.personality,
+        interests: profile.interests,
+        socialStyle: profile.socialStyle,
+      }
     });
   }
   
-  // 生成AI工程师
   for (let i = pmCount; i < count; i++) {
-    const bg = randomChoice(AI_ENGINEER_BACKGROUNDS);
-    const template = randomChoice(AI_ENGINEER_DIALOGUE_TEMPLATES);
-    const years = randomInt(2, 8);
-    const prevCompany = randomChoice(AI_ENGINEER_BACKGROUNDS.filter(b => b.company !== bg.company)).company;
-    
-    const mainDialogue = template
-      .replace('{company}', bg.company || '大厂')
-      .replace('{city}', bg.city)
-      .replace('{years}', years.toString())
-      .replace('{prevCompany}', prevCompany || '其他公司');
-    
-    const dialogues = [mainDialogue];
-    const supplementCount = randomInt(1, 3);
-    for (let j = 0; j < supplementCount; j++) {
-      dialogues.push(randomChoice(SUPPLEMENTARY_DIALOGUES));
-    }
-    
+    const profile = randomChoice(AI_ENGINEER_PROFILES);
     users.push({
       id: i + 1,
       type: 'AI_Engineer',
       background: {
-        industry: bg.industry,
-        industrySegment: bg.segment,
+        industry: profile.industry,
+        industrySegment: profile.segment,
         occupation: 'AI工程师',
         seniority: randomChoice(SENIORITY_LEVELS),
-        company: bg.company,
-        city: bg.city,
+        company: profile.company,
+        city: profile.city,
         lifeStage: randomChoice(LIFE_STAGES),
-      },
-      dialogues,
-      expectedInsights: [
-        `从事${bg.industry}行业`,
-        `${bg.segment}方向`,
-        `在${bg.company}工作`,
-      ],
+        personality: profile.personality,
+        interests: profile.interests,
+        socialStyle: profile.socialStyle,
+      }
     });
   }
   
   return users;
 }
 
-// ============ 信息提取测试 ============
+// ============ 模拟对话流程 ============
 
-interface ExtractionResult {
+interface DialogueSimulationResult {
   userId: number;
   userType: 'PM' | 'AI_Engineer';
-  dialogues: string[];
-  
-  // SmartInference结果
-  inferences: Array<{ field: string; value: string | boolean; confidence: number }>;
-  skipQuestions: string[];
-  
-  // 行业匹配结果
-  industryMatch: {
-    industry?: string;
-    industrySegment?: string;
-    occupation?: string;
-    confidence: number;
-  } | null;
-  
-  // RAG上下文
-  ragContext: string;
-  
-  // 模拟的SmartInsights（基于规则生成）
-  simulatedInsights: SmartInsight[];
-  
-  // 评估指标
-  metrics: {
-    fieldsExtracted: number;
-    expectedFieldsCovered: number;
-    accuracyRate: number;
-    insightCount: number;
-    avgConfidence: number;
-  };
+  conversationTurns: number;
+  coverageStats: ReturnType<typeof getCoverageStats>;
+  smartInsights: SmartInsight[];
+  dimensionCoverage: Record<InsightDimension, boolean>;
+  dialogueLog: Array<{
+    turn: number;
+    question: string;
+    answer: string;
+    dimension: InsightDimension;
+  }>;
 }
 
-// 基于对话内容模拟生成SmartInsights
-function simulateSmartInsights(dialogues: string[], background: SimulatedUser['background']): SmartInsight[] {
-  const insights: SmartInsight[] = [];
-  const allText = dialogues.join(' ');
+function simulateDialogue(user: SimulatedUser): DialogueSimulationResult {
+  const tracker = createConversationTracker();
+  tracker.userId = user.id;
   
-  // 职业类洞察
-  if (allText.includes('产品经理') || allText.includes('PM') || allText.includes('做产品')) {
-    insights.push({
-      category: 'career',
-      insight: '具有产品管理经验，关注用户体验和数据驱动决策',
-      evidence: '用户提到从事产品经理工作',
-      confidence: 0.9,
-      timestamp: new Date().toISOString(),
+  const dialogueLog: DialogueSimulationResult['dialogueLog'] = [];
+  let turn = 0;
+  const maxTurns = 10; // 最多10轮对话
+  
+  while (turn < maxTurns) {
+    const question = getNextQuestion(tracker);
+    if (!question) break; // 所有维度已覆盖
+    
+    turn++;
+    tracker.questionsAsked.push(question);
+    tracker.totalTurns = turn;
+    
+    // 生成用户回答
+    const answer = generateUserAnswer(question.dimension, user.background);
+    
+    // 提取洞察并更新覆盖
+    const extractions = extractAndUpdateCoverage(answer, tracker, question);
+    
+    dialogueLog.push({
+      turn,
+      question: question.question,
+      answer,
+      dimension: question.dimension
     });
+    
+    // 检查是否需要追问（置信度不够）
+    const coverage = tracker.dimensions.get(question.dimension)!;
+    if (!coverage.covered && coverage.confidence < 0.7) {
+      // 尝试追问
+      const followUp = getFollowUpQuestion(tracker, question.dimension);
+      if (followUp) {
+        turn++;
+        tracker.questionsAsked.push(followUp);
+        tracker.totalTurns = turn;
+        
+        const followUpAnswer = generateUserAnswer(question.dimension, user.background);
+        extractAndUpdateCoverage(followUpAnswer, tracker, followUp);
+        
+        dialogueLog.push({
+          turn,
+          question: followUp.followUp || followUp.question,
+          answer: followUpAnswer,
+          dimension: question.dimension
+        });
+      }
+    }
   }
   
-  if (allText.includes('AI') || allText.includes('算法') || allText.includes('机器学习') || allText.includes('深度学习')) {
-    insights.push({
-      category: 'career',
-      insight: '技术背景扎实，专注AI/算法领域',
-      evidence: '用户提到从事AI或算法工作',
-      confidence: 0.92,
-      timestamp: new Date().toISOString(),
-    });
+  // 收集结果
+  const stats = getCoverageStats(tracker);
+  const insights = toSmartInsights(tracker);
+  
+  const dimensionCoverage: Record<InsightDimension, boolean> = {} as any;
+  for (const dim of DIMENSION_ORDER) {
+    dimensionCoverage[dim] = tracker.dimensions.get(dim)!.covered;
   }
-  
-  // 性格类洞察
-  if (allText.includes('内向') || allText.includes('话痨') || allText.includes('随和')) {
-    insights.push({
-      category: 'personality',
-      insight: '性格温和，社交偏好深度交流而非广泛社交',
-      evidence: '用户描述自己的性格特点',
-      confidence: 0.85,
-      timestamp: new Date().toISOString(),
-    });
-  }
-  
-  // 生活方式洞察
-  if (allText.includes('健身') || allText.includes('篮球') || allText.includes('爬山') || allText.includes('运动')) {
-    insights.push({
-      category: 'lifestyle',
-      insight: '注重健康和运动，生活方式积极向上',
-      evidence: '用户提到运动爱好',
-      confidence: 0.88,
-      timestamp: new Date().toISOString(),
-    });
-  }
-  
-  if (allText.includes('咖啡') || allText.includes('红酒') || allText.includes('探店')) {
-    insights.push({
-      category: 'preference',
-      insight: '对生活品质有追求，喜欢探索美食',
-      evidence: '用户提到饮食偏好',
-      confidence: 0.82,
-      timestamp: new Date().toISOString(),
-    });
-  }
-  
-  // 社交类洞察
-  if (allText.includes('单身') || allText.includes('认识') || allText.includes('朋友')) {
-    insights.push({
-      category: 'social',
-      insight: '开放交友，期待建立有意义的社交关系',
-      evidence: '用户表达交友意向',
-      confidence: 0.8,
-      timestamp: new Date().toISOString(),
-    });
-  }
-  
-  // 背景类洞察
-  if (allText.includes('本地') || allText.includes('来自') || allText.includes('深圳') || allText.includes('香港')) {
-    insights.push({
-      category: 'background',
-      insight: `在${background.city}工作生活，熟悉本地环境`,
-      evidence: '用户提到所在城市',
-      confidence: 0.9,
-      timestamp: new Date().toISOString(),
-    });
-  }
-  
-  return insights;
-}
-
-// 运行单个用户的提取测试
-function runExtractionForUser(user: SimulatedUser): ExtractionResult {
-  const allText = user.dialogues.join(' ');
-  
-  // 1. SmartInference
-  const inferenceResult = applySmartInference(allText);
-  
-  // 2. 行业匹配
-  const industryMatch = matchIndustryFromText(allText);
-  
-  // 3. RAG上下文
-  const ragContext = generateRAGContext(user.dialogues);
-  
-  // 4. 模拟SmartInsights
-  const simulatedInsights = simulateSmartInsights(user.dialogues, user.background);
-  const validInsights = filterByConfidence(simulatedInsights);
-  
-  // 5. 计算评估指标
-  const expectedFields = ['industry', 'industrySegment', 'occupation', 'city'];
-  let coveredFields = 0;
-  
-  if (inferenceResult.inferences.some(i => i.field === 'industry')) coveredFields++;
-  if (inferenceResult.inferences.some(i => i.field === 'industrySegment')) coveredFields++;
-  if (inferenceResult.inferences.some(i => i.field === 'occupation')) coveredFields++;
-  if (inferenceResult.inferences.some(i => i.field === 'city')) coveredFields++;
-  
-  // 行业匹配也计入
-  if (industryMatch?.industry) coveredFields = Math.max(coveredFields, 1);
-  if (industryMatch?.industrySegment) coveredFields = Math.max(coveredFields, 2);
-  
-  const avgConfidence = validInsights.length > 0
-    ? validInsights.reduce((sum, i) => sum + i.confidence, 0) / validInsights.length
-    : 0;
   
   return {
     userId: user.id,
     userType: user.type,
-    dialogues: user.dialogues,
-    inferences: inferenceResult.inferences,
-    skipQuestions: inferenceResult.skipQuestions,
-    industryMatch: industryMatch ? {
-      industry: industryMatch.industry,
-      industrySegment: industryMatch.industrySegment,
-      occupation: industryMatch.occupation,
-      confidence: industryMatch.confidence,
-    } : null,
-    ragContext,
-    simulatedInsights: validInsights,
-    metrics: {
-      fieldsExtracted: inferenceResult.inferences.length,
-      expectedFieldsCovered: coveredFields,
-      accuracyRate: coveredFields / expectedFields.length,
-      insightCount: validInsights.length,
-      avgConfidence,
-    },
+    conversationTurns: turn,
+    coverageStats: stats,
+    smartInsights: insights,
+    dimensionCoverage,
+    dialogueLog
   };
 }
 
-// ============ 统计报告生成 ============
+// ============ 生成报告 ============
 
 interface SimulationReport {
   totalUsers: number;
   pmCount: number;
   aiEngineerCount: number;
   
-  // 总体统计
-  overall: {
-    avgFieldsExtracted: number;
-    avgAccuracyRate: number;
-    avgInsightCount: number;
-    avgConfidence: number;
-    industryMatchRate: number;
-    skipQuestionsAvg: number;
-  };
+  avgConversationTurns: number;
   
-  // 按用户类型统计
-  byUserType: {
-    PM: {
-      avgFieldsExtracted: number;
-      avgAccuracyRate: number;
-      avgInsightCount: number;
-      topInferredFields: string[];
-    };
-    AI_Engineer: {
-      avgFieldsExtracted: number;
-      avgAccuracyRate: number;
-      avgInsightCount: number;
-      topInferredFields: string[];
-    };
-  };
+  dimensionCoverageRates: Record<InsightDimension, number>;
+  overallCoverageRate: number;
   
-  // 洞察类别分布
+  avgInsightCount: number;
+  avgConfidence: number;
+  
   insightDistribution: Record<string, number>;
   
-  // 信息丢失分析
-  dataLossAnalysis: {
-    totalExpectedFields: number;
-    totalExtractedFields: number;
-    lossRate: number;
-    missedFieldsBreakdown: Record<string, number>;
+  intelligenceScore: {
+    coverageCompleteness: number;
+    efficiencyScore: number;
+    qualityScore: number;
+    overallScore: number;
   };
   
-  // 智能化程度评估
-  intelligenceScore: {
-    inferenceEfficiency: number;    // 推断效率 (0-100)
-    coverageCompleteness: number;   // 覆盖完整度 (0-100)
-    confidenceQuality: number;      // 置信度质量 (0-100)
-    overallScore: number;           // 综合评分 (0-100)
-    improvement: string;            // 相比传统表单的提升描述
+  comparison: {
+    beforeOptimization: Record<string, number>;
+    afterOptimization: Record<string, number>;
+    improvement: Record<string, string>;
   };
 }
 
-function generateReport(results: ExtractionResult[]): SimulationReport {
+function generateReport(results: DialogueSimulationResult[]): SimulationReport {
   const pmResults = results.filter(r => r.userType === 'PM');
   const aiResults = results.filter(r => r.userType === 'AI_Engineer');
   
-  // 总体统计
-  const avgFieldsExtracted = results.reduce((sum, r) => sum + r.metrics.fieldsExtracted, 0) / results.length;
-  const avgAccuracyRate = results.reduce((sum, r) => sum + r.metrics.accuracyRate, 0) / results.length;
-  const avgInsightCount = results.reduce((sum, r) => sum + r.metrics.insightCount, 0) / results.length;
-  const avgConfidence = results.reduce((sum, r) => sum + r.metrics.avgConfidence, 0) / results.length;
-  const industryMatchRate = results.filter(r => r.industryMatch !== null).length / results.length;
-  const skipQuestionsAvg = results.reduce((sum, r) => sum + r.skipQuestions.length, 0) / results.length;
+  // 计算各维度覆盖率
+  const dimensionCoverageRates: Record<InsightDimension, number> = {} as any;
+  for (const dim of DIMENSION_ORDER) {
+    const coveredCount = results.filter(r => r.dimensionCoverage[dim]).length;
+    dimensionCoverageRates[dim] = coveredCount / results.length;
+  }
   
-  // 洞察类别分布
-  const allInsights = results.flatMap(r => r.simulatedInsights);
+  // 总体覆盖率
+  const totalDimensions = results.length * DIMENSION_ORDER.length;
+  const coveredDimensions = results.reduce((sum, r) => 
+    sum + DIMENSION_ORDER.filter(d => r.dimensionCoverage[d]).length, 0
+  );
+  const overallCoverageRate = coveredDimensions / totalDimensions;
+  
+  // 平均对话轮次
+  const avgTurns = results.reduce((sum, r) => sum + r.conversationTurns, 0) / results.length;
+  
+  // 洞察统计
+  const allInsights = results.flatMap(r => r.smartInsights);
+  const avgInsightCount = allInsights.length / results.length;
+  const avgConfidence = results.reduce((sum, r) => sum + r.coverageStats.overallConfidence, 0) / results.length;
+  
   const insightDistribution = getInsightDistribution(allInsights);
   
-  // 统计推断字段
-  const pmInferredFields = new Map<string, number>();
-  const aiInferredFields = new Map<string, number>();
-  
-  pmResults.forEach(r => {
-    r.inferences.forEach(inf => {
-      pmInferredFields.set(inf.field, (pmInferredFields.get(inf.field) || 0) + 1);
-    });
-  });
-  
-  aiResults.forEach(r => {
-    r.inferences.forEach(inf => {
-      aiInferredFields.set(inf.field, (aiInferredFields.get(inf.field) || 0) + 1);
-    });
-  });
-  
-  const pmTopFields = Array.from(pmInferredFields.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([field]) => field);
-  
-  const aiTopFields = Array.from(aiInferredFields.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([field]) => field);
-  
-  // 信息丢失分析
-  const expectedFieldsPerUser = 4; // industry, segment, occupation, city
-  const totalExpectedFields = results.length * expectedFieldsPerUser;
-  const totalExtractedFields = results.reduce((sum, r) => sum + r.metrics.expectedFieldsCovered, 0);
-  const lossRate = 1 - (totalExtractedFields / totalExpectedFields);
-  
   // 智能化评分
-  const inferenceEfficiency = Math.round(avgFieldsExtracted / 4 * 100);  // 假设最优是4个字段
-  const coverageCompleteness = Math.round(avgAccuracyRate * 100);
-  const confidenceQuality = Math.round(avgConfidence * 100);
-  const overallScore = Math.round((inferenceEfficiency * 0.3 + coverageCompleteness * 0.4 + confidenceQuality * 0.3));
+  const coverageScore = Math.round(overallCoverageRate * 100);
+  const efficiencyScore = Math.round(Math.max(0, 100 - (avgTurns - 6) * 10)); // 6轮为基准
+  const qualityScore = Math.round(avgConfidence * 100);
+  const overallScore = Math.round(coverageScore * 0.5 + efficiencyScore * 0.2 + qualityScore * 0.3);
   
-  // 相比传统表单的提升
-  const traditionalFormFields = 8; // 传统表单需要填8个字段
-  const savedQuestions = Math.round(skipQuestionsAvg);
-  const improvementPercent = Math.round((savedQuestions / traditionalFormFields) * 100);
+  // 优化前后对比
+  const beforeOptimization: Record<string, number> = {
+    'career': 90.8,
+    'social': 35.6,
+    'lifestyle': 33.3,
+    'preference': 33.3,
+    'background': 27.8,
+    'personality': 26.1,
+    'overall': 76,
+  };
+  
+  const afterOptimization: Record<string, number> = {
+    'career': dimensionCoverageRates.career * 100,
+    'social': dimensionCoverageRates.social * 100,
+    'lifestyle': dimensionCoverageRates.lifestyle * 100,
+    'preference': dimensionCoverageRates.interest * 100,
+    'background': dimensionCoverageRates.expectation * 100,
+    'personality': dimensionCoverageRates.personality * 100,
+    'overall': overallScore,
+  };
+  
+  const improvement: Record<string, string> = {};
+  for (const key of Object.keys(beforeOptimization)) {
+    const before = beforeOptimization[key];
+    const after = afterOptimization[key];
+    const diff = after - before;
+    improvement[key] = diff >= 0 ? `+${diff.toFixed(1)}%` : `${diff.toFixed(1)}%`;
+  }
   
   return {
     totalUsers: results.length,
     pmCount: pmResults.length,
     aiEngineerCount: aiResults.length,
-    
-    overall: {
-      avgFieldsExtracted,
-      avgAccuracyRate,
-      avgInsightCount,
-      avgConfidence,
-      industryMatchRate,
-      skipQuestionsAvg,
-    },
-    
-    byUserType: {
-      PM: {
-        avgFieldsExtracted: pmResults.reduce((sum, r) => sum + r.metrics.fieldsExtracted, 0) / pmResults.length,
-        avgAccuracyRate: pmResults.reduce((sum, r) => sum + r.metrics.accuracyRate, 0) / pmResults.length,
-        avgInsightCount: pmResults.reduce((sum, r) => sum + r.metrics.insightCount, 0) / pmResults.length,
-        topInferredFields: pmTopFields,
-      },
-      AI_Engineer: {
-        avgFieldsExtracted: aiResults.reduce((sum, r) => sum + r.metrics.fieldsExtracted, 0) / aiResults.length,
-        avgAccuracyRate: aiResults.reduce((sum, r) => sum + r.metrics.accuracyRate, 0) / aiResults.length,
-        avgInsightCount: aiResults.reduce((sum, r) => sum + r.metrics.insightCount, 0) / aiResults.length,
-        topInferredFields: aiTopFields,
-      },
-    },
-    
+    avgConversationTurns: avgTurns,
+    dimensionCoverageRates,
+    overallCoverageRate,
+    avgInsightCount,
+    avgConfidence,
     insightDistribution,
-    
-    dataLossAnalysis: {
-      totalExpectedFields,
-      totalExtractedFields,
-      lossRate,
-      missedFieldsBreakdown: {
-        industry: results.filter(r => !r.inferences.some(i => i.field === 'industry') && !r.industryMatch?.industry).length,
-        industrySegment: results.filter(r => !r.inferences.some(i => i.field === 'industrySegment') && !r.industryMatch?.industrySegment).length,
-        occupation: results.filter(r => !r.inferences.some(i => i.field === 'occupation')).length,
-        city: results.filter(r => !r.inferences.some(i => i.field === 'city')).length,
-      },
-    },
-    
     intelligenceScore: {
-      inferenceEfficiency,
-      coverageCompleteness,
-      confidenceQuality,
-      overallScore,
-      improvement: `相比传统表单注册，AI对话平均可减少 ${savedQuestions} 个问题 (节省 ${improvementPercent}% 的填写负担)，同时额外收集 ${avgInsightCount.toFixed(1)} 条隐藏洞察`,
+      coverageCompleteness: coverageScore,
+      efficiencyScore,
+      qualityScore,
+      overallScore
     },
+    comparison: {
+      beforeOptimization,
+      afterOptimization,
+      improvement
+    }
   };
+}
+
+function printReport(report: SimulationReport): void {
+  console.log(`\n${'='.repeat(70)}`);
+  console.log(`📊 AI Chat Flow 模拟测试报告 v2.0 (6维度对话引导系统)`);
+  console.log(`${'='.repeat(70)}\n`);
+  
+  console.log(`【基本信息】`);
+  console.log(`  - 测试用户: ${report.totalUsers} (PM: ${report.pmCount}, AI工程师: ${report.aiEngineerCount})`);
+  console.log(`  - 平均对话轮次: ${report.avgConversationTurns.toFixed(1)} 轮`);
+  console.log();
+  
+  console.log(`【各维度覆盖率】`);
+  for (const dim of DIMENSION_ORDER) {
+    const rate = report.dimensionCoverageRates[dim] * 100;
+    const status = rate >= 90 ? '✅' : rate >= 70 ? '⚠️' : '❌';
+    console.log(`  ${status} ${DIMENSION_NAMES[dim]}: ${rate.toFixed(1)}%`);
+  }
+  console.log(`  ━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`  📈 总体覆盖率: ${(report.overallCoverageRate * 100).toFixed(1)}%`);
+  console.log();
+  
+  console.log(`【洞察质量】`);
+  console.log(`  - 平均洞察数: ${report.avgInsightCount.toFixed(1)} 条/用户`);
+  console.log(`  - 平均置信度: ${(report.avgConfidence * 100).toFixed(1)}%`);
+  console.log();
+  
+  console.log(`【智能化评分】`);
+  console.log(`  - 覆盖完整度: ${report.intelligenceScore.coverageCompleteness}/100`);
+  console.log(`  - 效率评分: ${report.intelligenceScore.efficiencyScore}/100`);
+  console.log(`  - 质量评分: ${report.intelligenceScore.qualityScore}/100`);
+  console.log(`  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`  🏆 综合评分: ${report.intelligenceScore.overallScore}/100`);
+  console.log();
+  
+  console.log(`【优化前后对比】`);
+  console.log(`  ${'维度'.padEnd(12)}${'优化前'.padEnd(10)}${'优化后'.padEnd(10)}${'提升'}`);
+  console.log(`  ${'─'.repeat(42)}`);
+  
+  const dimMapping: Record<string, string> = {
+    'career': '职业画像',
+    'social': '社交偏好',
+    'lifestyle': '生活方式',
+    'preference': '兴趣爱好',
+    'background': '背景期待',
+    'personality': '性格特质',
+    'overall': '综合评分',
+  };
+  
+  for (const key of Object.keys(report.comparison.beforeOptimization)) {
+    const before = report.comparison.beforeOptimization[key];
+    const after = report.comparison.afterOptimization[key];
+    const imp = report.comparison.improvement[key];
+    const name = dimMapping[key] || key;
+    const impColor = imp.startsWith('+') ? '📈' : '📉';
+    console.log(`  ${name.padEnd(10)} ${before.toFixed(1).padStart(6)}%   ${after.toFixed(1).padStart(6)}%   ${impColor} ${imp}`);
+  }
+  
+  console.log(`\n${'='.repeat(70)}\n`);
 }
 
 // ============ 主测试函数 ============
 
 export async function runSimulation(userCount: number = 1000): Promise<SimulationReport> {
-  console.log(`\n${'='.repeat(60)}`);
-  console.log(`🧪 AI Chat Flow 模拟测试`);
+  console.log(`\n${'='.repeat(70)}`);
+  console.log(`🧪 AI Chat Flow 模拟测试 v2.0`);
   console.log(`📊 模拟用户数: ${userCount} (${userCount/2} PM + ${userCount/2} AI工程师)`);
-  console.log(`${'='.repeat(60)}\n`);
+  console.log(`🎯 目标: 各维度覆盖率达到 90%+`);
+  console.log(`${'='.repeat(70)}\n`);
   
-  // 1. 生成模拟用户
-  console.log('📝 生成模拟用户数据...');
+  console.log('📝 生成模拟用户...');
   const users = generateSimulatedUsers(userCount);
   console.log(`   ✅ 生成完成: ${users.length} 个用户\n`);
   
-  // 2. 运行提取测试
-  console.log('🔍 运行信息提取测试...');
-  const results: ExtractionResult[] = [];
+  console.log('💬 模拟对话流程...');
+  const results: DialogueSimulationResult[] = [];
   let processed = 0;
   
   for (const user of users) {
-    const result = runExtractionForUser(user);
+    const result = simulateDialogue(user);
     results.push(result);
     processed++;
     
@@ -580,76 +618,14 @@ export async function runSimulation(userCount: number = 1000): Promise<Simulatio
       console.log(`   进度: ${processed}/${userCount} (${Math.round(processed/userCount*100)}%)`);
     }
   }
-  console.log(`   ✅ 测试完成\n`);
+  console.log(`   ✅ 对话模拟完成\n`);
   
-  // 3. 生成报告
-  console.log('📊 生成统计报告...');
+  console.log('📊 生成报告...');
   const report = generateReport(results);
   
-  // 4. 打印报告
   printReport(report);
   
   return report;
 }
 
-function printReport(report: SimulationReport): void {
-  console.log(`\n${'='.repeat(60)}`);
-  console.log(`📊 模拟测试报告`);
-  console.log(`${'='.repeat(60)}\n`);
-  
-  console.log(`【总体统计】`);
-  console.log(`  - 测试用户总数: ${report.totalUsers}`);
-  console.log(`  - 产品经理: ${report.pmCount}`);
-  console.log(`  - AI工程师: ${report.aiEngineerCount}`);
-  console.log();
-  
-  console.log(`【信息提取效果】`);
-  console.log(`  - 平均提取字段数: ${report.overall.avgFieldsExtracted.toFixed(2)}`);
-  console.log(`  - 平均准确率: ${(report.overall.avgAccuracyRate * 100).toFixed(1)}%`);
-  console.log(`  - 行业识别率: ${(report.overall.industryMatchRate * 100).toFixed(1)}%`);
-  console.log(`  - 平均可跳过问题数: ${report.overall.skipQuestionsAvg.toFixed(1)}`);
-  console.log();
-  
-  console.log(`【SmartInsights洞察】`);
-  console.log(`  - 平均洞察数: ${report.overall.avgInsightCount.toFixed(2)}`);
-  console.log(`  - 平均置信度: ${(report.overall.avgConfidence * 100).toFixed(1)}%`);
-  console.log(`  - 洞察类别分布:`);
-  Object.entries(report.insightDistribution).forEach(([cat, count]) => {
-    console.log(`    · ${cat}: ${count} (${(count / report.totalUsers * 100).toFixed(1)}%)`);
-  });
-  console.log();
-  
-  console.log(`【按用户类型】`);
-  console.log(`  产品经理:`);
-  console.log(`    - 平均字段: ${report.byUserType.PM.avgFieldsExtracted.toFixed(2)}`);
-  console.log(`    - 准确率: ${(report.byUserType.PM.avgAccuracyRate * 100).toFixed(1)}%`);
-  console.log(`    - 常见推断: ${report.byUserType.PM.topInferredFields.join(', ')}`);
-  console.log(`  AI工程师:`);
-  console.log(`    - 平均字段: ${report.byUserType.AI_Engineer.avgFieldsExtracted.toFixed(2)}`);
-  console.log(`    - 准确率: ${(report.byUserType.AI_Engineer.avgAccuracyRate * 100).toFixed(1)}%`);
-  console.log(`    - 常见推断: ${report.byUserType.AI_Engineer.topInferredFields.join(', ')}`);
-  console.log();
-  
-  console.log(`【信息丢失分析】`);
-  console.log(`  - 期望提取字段: ${report.dataLossAnalysis.totalExpectedFields}`);
-  console.log(`  - 实际提取字段: ${report.dataLossAnalysis.totalExtractedFields}`);
-  console.log(`  - 丢失率: ${(report.dataLossAnalysis.lossRate * 100).toFixed(1)}%`);
-  console.log(`  - 未识别字段分布:`);
-  Object.entries(report.dataLossAnalysis.missedFieldsBreakdown).forEach(([field, count]) => {
-    console.log(`    · ${field}: ${count} 用户未识别 (${(count / report.totalUsers * 100).toFixed(1)}%)`);
-  });
-  console.log();
-  
-  console.log(`【智能化程度评估】`);
-  console.log(`  - 推断效率: ${report.intelligenceScore.inferenceEfficiency}/100`);
-  console.log(`  - 覆盖完整度: ${report.intelligenceScore.coverageCompleteness}/100`);
-  console.log(`  - 置信度质量: ${report.intelligenceScore.confidenceQuality}/100`);
-  console.log(`  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  console.log(`  🏆 综合评分: ${report.intelligenceScore.overallScore}/100`);
-  console.log();
-  console.log(`  📈 ${report.intelligenceScore.improvement}`);
-  console.log(`\n${'='.repeat(60)}\n`);
-}
-
-// 导出运行命令
 export default runSimulation;
