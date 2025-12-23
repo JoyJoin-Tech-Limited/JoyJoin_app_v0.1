@@ -122,7 +122,7 @@ export async function checkUserAbuse(userId: string, message: string): Promise<A
 
   const contentResult = filterContent(message);
   if (contentResult.isViolation) {
-    await recordViolation(userId, contentResult.violationType!, contentResult.severity);
+    await recordViolation(userId, contentResult.violationType!, contentResult.severity as 'warning' | 'severe');
     
     if (contentResult.severity === 'severe') {
       return { 

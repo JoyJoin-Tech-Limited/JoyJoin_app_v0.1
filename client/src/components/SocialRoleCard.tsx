@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Zap, Sun, Search, Waves, Users, Heart, Lightbulb, Brain, Anchor, Shield, Eye } from "lucide-react";
-import { archetypeConfig, ARCHETYPE_ICONS } from "@/lib/archetypes";
+import { archetypeConfig } from "@/lib/archetypes";
 import { getArchetypeImage } from "@/lib/archetypeImages";
 import type { LucideIcon } from "lucide-react";
 

@@ -703,6 +703,9 @@ export const blindBoxEvents = pgTable("blind_box_events", {
   invitedCount: integer("invited_count").default(0),
   invitedJoined: integer("invited_joined").default(0),
   
+  // Pool reference (for event pool matching)
+  poolId: varchar("pool_id"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -822,8 +825,13 @@ export const registerUserSchema = z.object({
   // Culture & Language - Required for matching algorithm
   hometownCountry: z.string().optional(), // Auto-set based on province selection
   hometownRegionCity: z.string().min(1, "请选择家乡"),
+  hometownAffinityOptin: z.boolean().optional().default(true), // 同乡亲和力
   currentCity: z.string().min(1, "请选择现居城市"),
   languagesComfort: z.array(z.string()).min(1, "请至少选择一种语言"),
+  
+  // Privacy controls
+  educationVisibility: z.enum(["hide_all", "show_level_only", "show_level_and_field"]).optional().default("hide_all"),
+  workVisibility: z.enum(["hide_all", "show_industry_only"]).optional().default("show_industry_only"),
   
   // Access & Safety
   accessibilityNeeds: z.string().optional(),
@@ -831,6 +839,15 @@ export const registerUserSchema = z.object({
   
   // Legacy/Optional
   wechatId: z.string().optional(),
+  
+  // Chat registration specific fields
+  registrationMethod: z.enum(["chat", "form"]).optional(),
+  topicAvoidances: z.array(z.string()).optional(),
+  cuisinePreference: z.array(z.string()).optional(),
+  favoriteRestaurant: z.string().optional(),
+  primaryInterests: z.array(z.string()).optional(),
+  petTypes: z.array(z.string()).optional(),
+  companyName: z.string().optional(),
 });
 
 // Interests & Topics schema (Step 2)
@@ -1164,6 +1181,7 @@ export const invitations = pgTable("invitations", {
   // 状态统计
   totalClicks: integer("total_clicks").default(0), // 链接点击次数
   totalRegistrations: integer("total_registrations").default(0), // 成功注册人数
+  totalAcceptances: integer("total_acceptances").default(0), // 接受邀请人数
   successfulMatches: integer("successful_matches").default(0), // 成功匹配到同局的人数
   
   // 元数据
@@ -1864,6 +1882,8 @@ export const icebreakerSessions = pgTable("icebreaker_sessions", {
   // 会话配置
   autoAdvanceTimeout: integer("auto_advance_timeout").default(60), // 自动推进超时（秒）
   minReadyRatio: integer("min_ready_ratio").default(50), // 最小准备就绪比例（百分比）
+  atmosphereType: varchar("atmosphere_type"), // 氛围类型
+  hostUserId: varchar("host_user_id"), // 主持人用户ID
   
   // 元数据
   startedAt: timestamp("started_at"),

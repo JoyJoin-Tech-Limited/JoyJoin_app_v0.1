@@ -61,6 +61,7 @@ export interface UserWithProfile {
 export interface MatchGroup {
   members: UserWithProfile[];
   avgPairScore: number;  // 平均配对兼容性分数（chemistry + interest + preference + language）
+  avgChemistryScore: number;  // 平均化学反应分数
   diversityScore: number;  // 小组多样性分数
   energyBalance: number;  // 能量平衡分数（0-100，评估小组社交能量的平衡度）
   overallScore: number;  // 综合分数 = avgPairScore × 0.6 + diversityScore × 0.25 + energyBalance × 0.15
@@ -566,6 +567,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       const group: MatchGroup = {
         members: groupMembers,
         avgPairScore: avgPairScore,
+        avgChemistryScore: avgPairScore, // Same as avgPairScore for now
         diversityScore: diversity,
         energyBalance: energyBalance,
         overallScore: overall,

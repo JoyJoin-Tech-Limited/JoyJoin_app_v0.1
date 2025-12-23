@@ -1935,8 +1935,8 @@ export class DatabaseStorage implements IStorage {
     
     const isAvailable = await this.checkVenueAvailability(
       newVenueId, 
-      new Date(booking.booking_date), 
-      booking.booking_time
+      new Date(booking.booking_date as string), 
+      booking.booking_time as string
     );
     
     if (!isAvailable) {

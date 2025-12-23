@@ -132,7 +132,7 @@ export function detectRepetition(text: string): boolean {
     wordCounts.set(lower, (wordCounts.get(lower) || 0) + 1);
   }
   
-  for (const [, count] of wordCounts) {
+  for (const [, count] of Array.from(wordCounts)) {
     if (count >= 5 && count / words.length > 0.5) {
       return true;
     }

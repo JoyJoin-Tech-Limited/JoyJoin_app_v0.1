@@ -261,7 +261,7 @@ export default function AdminEventPoolsPage() {
         params.append("district", currentDistrict);
       }
       const res = await apiRequest("GET", `/api/admin/available-venues?${params}`);
-      return res as AvailableVenue[];
+      return res as unknown as AvailableVenue[];
     },
     enabled: showCreateDialog && !!currentCity && !!currentDateTime,
   });

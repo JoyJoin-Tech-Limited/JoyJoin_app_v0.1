@@ -149,7 +149,7 @@ export default function AdminCouponsPage() {
       discountValue: coupon.discount_value.toString(),
       validFrom: coupon.valid_from ? format(new Date(coupon.valid_from), "yyyy-MM-dd") : "",
       validUntil: coupon.valid_until ? format(new Date(coupon.valid_until), "yyyy-MM-dd") : "",
-      maxUses: coupon.max_uses?.toString() || "",
+      maxUses: coupon.usage_limit?.toString() || "",
     });
     setShowEditDialog(true);
   };

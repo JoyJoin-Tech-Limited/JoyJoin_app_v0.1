@@ -7,7 +7,8 @@ import type {
   InferenceResult, 
   UserAttributeMap, 
   InferenceEngineConfig,
-  DEFAULT_CONFIG 
+  DEFAULT_CONFIG,
+  ExtractedValue
 } from './types';
 import { semanticMatcher } from './semanticMatcher';
 import { llmReasoner, type LLMReasonerResult, getTelemetryLogs } from './llmReasoner';
@@ -15,7 +16,7 @@ import { stateManager } from './stateManager';
 import { matchIndustryFromText } from './industryOntology';
 
 export interface InferenceEngineResult {
-  extracted: Record<string, string>;
+  extracted: Record<string, ExtractedValue>;
   inferred: InferenceResult['inferred'];
   conflicts: InferenceResult['conflicts'];
   skipQuestions: string[];

@@ -29,6 +29,9 @@ export interface AttendeeData {
   fieldOfStudy?: string;
   languagesComfort?: string[];
   intent?: string[]; // Event-specific intent (aligned with User.intent)
+  // Work fields
+  occupationId?: string;
+  workMode?: string;
   // New fields from AI chat registration
   cuisinePreference?: string[];
   favoriteRestaurant?: string;

@@ -3,7 +3,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useState } from 'react';
 
 interface PersonalityRadarChartProps {
-  archetype: string;
+  archetype?: string;
+  affinityScore?: number;
+  opennessScore?: number;
+  conscientiousnessScore?: number;
+  emotionalStabilityScore?: number;
+  extraversionScore?: number;
+  positivityScore?: number;
 }
 
 // 维度含义说明
@@ -18,17 +24,23 @@ const traitDescriptions: Record<string, string> = {
 
 export default function PersonalityRadarChart({
   archetype,
+  affinityScore,
+  opennessScore,
+  conscientiousnessScore,
+  emotionalStabilityScore,
+  extraversionScore,
+  positivityScore,
 }: PersonalityRadarChartProps) {
-  const rawScores = getTraitScoresForArchetype(archetype);
+  const rawScores = archetype ? getTraitScoresForArchetype(archetype) : null;
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   
   const traits = [
-    { name: '亲和力', score: normalizeScoreTo10(rawScores.affinity), maxScore: 10 },
-    { name: '开放性', score: normalizeScoreTo10(rawScores.openness), maxScore: 10 },
-    { name: '责任心', score: normalizeScoreTo10(rawScores.conscientiousness), maxScore: 10 },
-    { name: '情绪稳定性', score: normalizeScoreTo10(rawScores.emotionalStability), maxScore: 10 },
-    { name: '外向性', score: normalizeScoreTo10(rawScores.extraversion), maxScore: 10 },
-    { name: '正能量性', score: normalizeScoreTo10(rawScores.positivity), maxScore: 10 },
+    { name: '亲和力', score: affinityScore ?? (rawScores ? normalizeScoreTo10(rawScores.affinity) : 5), maxScore: 10 },
+    { name: '开放性', score: opennessScore ?? (rawScores ? normalizeScoreTo10(rawScores.openness) : 5), maxScore: 10 },
+    { name: '责任心', score: conscientiousnessScore ?? (rawScores ? normalizeScoreTo10(rawScores.conscientiousness) : 5), maxScore: 10 },
+    { name: '情绪稳定性', score: emotionalStabilityScore ?? (rawScores ? normalizeScoreTo10(rawScores.emotionalStability) : 5), maxScore: 10 },
+    { name: '外向性', score: extraversionScore ?? (rawScores ? normalizeScoreTo10(rawScores.extraversion) : 5), maxScore: 10 },
+    { name: '正能量性', score: positivityScore ?? (rawScores ? normalizeScoreTo10(rawScores.positivity) : 5), maxScore: 10 },
   ];
 
   const centerX = 150;

@@ -1196,7 +1196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const expiryDate = new Date();
           expiryDate.setDate(expiryDate.getDate() + item.validDays);
           
-          const existingCoupons = await storage.getCoupons();
+          const existingCoupons = await storage.getAllCoupons();
           let couponId = existingCoupons.find((c: any) => c.code === item.id)?.id;
           
           if (!couponId) {
@@ -4098,7 +4098,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get matched attendees from event
-      const matchedAttendees = event.matchedAttendees || [];
+      const matchedAttendees = (Array.isArray(event.matchedAttendees) ? event.matchedAttendees : []) as Array<{
+        userId?: string;
+        interests?: string[];
+        primaryInterests?: string[];
+        archetype?: string;
+      }>;
       const attendeeCount = matchedAttendees.length;
 
       // Collect interests from all attendees (check multiple possible field names)
@@ -4789,7 +4794,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const eventId = req.params.id;
 
       // Verify user owns this event
-      const event = await storage.getBlindBoxEventByIdAndUser(eventId, userId);
+      const event = await storage.getBlindBoxEventById(eventId, userId);
       if (!event) {
         return res.status(404).json({ message: "Event not found or access denied" });
       }
@@ -5020,12 +5025,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(users.id, invitation.inviterId))
         .limit(1);
 
-      // Fetch event info
-      const event = await storage.getBlindBoxEventById(invitation.eventId);
+      // Fetch event info (use inviter's userId for access)
+      const event = await storage.getBlindBoxEventById(invitation.eventId, invitation.inviterId);
 
       // Increment click count
       await db.update(invitations)
-        .set({ totalClicks: invitation.totalClicks + 1 })
+        .set({ totalClicks: (invitation.totalClicks ?? 0) + 1 })
         .where(eq(invitations.id, invitation.id));
 
       res.json({
@@ -6426,13 +6431,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Booking not found" });
       }
       
-      const bookingData = booking.rows[0];
+      const bookingData = booking.rows[0] as Record<string, any>;
       
       const alternatives = await venueMatchingService.findMatchingVenues({
-        eventType: bookingData.event_type || "dining",
-        participantCount: bookingData.participant_count || 8,
-        preferredCity: bookingData.city,
-        preferredDistrict: bookingData.district,
+        eventType: String(bookingData.event_type || "dining"),
+        participantCount: Number(bookingData.participant_count) || 8,
+        preferredCity: String(bookingData.city || ""),
+        preferredDistrict: String(bookingData.district || ""),
         dateTime: new Date(bookingData.booking_date),
         durationHours: 3
       });
@@ -7235,7 +7240,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
 
         // Increment acceptance count on invitation
         await db.update(invitations)
-          .set({ totalAcceptances: db.raw('total_acceptances + 1') })
+          .set({ totalAcceptances: sql`COALESCE(total_acceptances, 0) + 1` })
           .where(eq(invitations.code, invitationCode));
       }
 
@@ -7529,14 +7534,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           topInterests: users.interestsRankedTop3,
           age: users.birthdate,
           industry: users.industry,
-          ageVisible: users.ageVisible,
-          industryVisible: users.industryVisible,
+          ageVisible: users.ageVisibility,
+          industryVisible: users.workVisibility,
           gender: users.gender,
           educationLevel: users.educationLevel,
           hometownCountry: users.hometownCountry,
           hometownRegionCity: users.hometownRegionCity,
           hometownAffinityOptin: users.hometownAffinityOptin,
-          educationVisible: users.educationVisible,
+          educationVisible: users.educationVisibility,
           relationshipStatus: users.relationshipStatus,
           children: users.children,
           studyLocale: users.studyLocale,
@@ -8286,6 +8291,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         intentWeight: config.intentWeight,
         backgroundWeight: config.backgroundWeight,
         cultureWeight: config.cultureWeight,
+        conversationSignatureWeight: config.conversationSignatureWeight || 0,
       });
       
       if (!validation.valid) {
