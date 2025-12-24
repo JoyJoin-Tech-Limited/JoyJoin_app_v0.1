@@ -157,6 +157,15 @@ function generateInsights(primaryRole: string, secondaryRole: string | null): {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint - must be before session middleware for cloud platform health checks
+  app.get('/api/health', (_req, res) => {
+    res.status(200).json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  });
+
   // Session middleware
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
