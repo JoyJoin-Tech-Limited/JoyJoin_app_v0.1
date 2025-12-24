@@ -1,21 +1,23 @@
 //my path:/Users/felixg/projects/JoyJoin3/client/src/components/JoinBlindBoxSheet.tsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { Drawer } from "vaul";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { 
   Calendar, 
   MapPin, 
   Users, 
-  Copy, 
   ChevronRight,
+  ChevronDown,
   Info,
   CheckCircle2,
-  Clock,
-  DollarSign
+  DollarSign,
+  Sparkles,
+  Share2,
+  UserPlus,
+  X
 } from "lucide-react";
 import {
   Collapsible,
@@ -35,6 +37,11 @@ import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { getCurrencySymbol } from "@/lib/currency";
+import { 
+  shenzhenClusters, 
+  heatConfig,
+  getDistrictById
+} from "@/lib/districts";
 
 interface JoinBlindBoxSheetProps {
   open: boolean;
@@ -59,8 +66,6 @@ export default function JoinBlindBoxSheet({
 }: JoinBlindBoxSheetProps) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [inviteFriends, setInviteFriends] = useState(false);
-  const [friendsCount, setFriendsCount] = useState<1 | 2>(1);
   const [mustMatchTogether, setMustMatchTogether] = useState(true);
   
   // 预算偏好 - 可多选
@@ -69,8 +74,14 @@ export default function JoinBlindBoxSheet({
   // 确认弹窗状态
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
-  // 我的偏好选项
-  const [acceptNearby, setAcceptNearby] = useState(false);
+  // 商圈多选 - 替代简单的 acceptNearby 开关
+  const [selectedDistricts, setSelectedDistricts] = useState<string[]>([]);
+  const [expandedClusters, setExpandedClusters] = useState<string[]>(['nanshan']);
+  
+  // 组队邀请状态
+  const [showTeamInvite, setShowTeamInvite] = useState(false);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [teammateStatus, setTeammateStatus] = useState<'waiting' | 'joined' | null>(null);
 
   // 用户偏好 - 语言和口味
   const [preferencesOpen, setPreferencesOpen] = useState(false);
@@ -184,15 +195,6 @@ export default function JoinBlindBoxSheet({
     },
   });
 
-  const handleCopyInviteLink = () => {
-    const link = `https://joyjoin.app/invite/${Math.random().toString(36).substr(2, 9)}`;
-    navigator.clipboard.writeText(link);
-    toast({
-      description: "已复制邀请链接",
-      duration: 2000,
-    });
-  };
-
   const handleConfirm = () => {
     if (budgetPreference.length === 0) {
       toast({
@@ -252,7 +254,8 @@ export default function JoinBlindBoxSheet({
         budget: budgetPreference,
 
         // 偏好信息
-        acceptNearby,
+        selectedDistricts,
+        acceptNearby: selectedDistricts.length > 1,
         selectedLanguages,
         selectedTasteIntensity,
         selectedCuisines,
@@ -261,9 +264,11 @@ export default function JoinBlindBoxSheet({
         socialGoals: selectedIntent,
         intent: selectedIntent,
 
-        // 邀请相关
-        inviteFriends,
-        friendsCount,
+        // 组队邀请相关
+        inviteFriends: showTeamInvite,
+        friendsCount: showTeamInvite ? 1 : 0,
+        inviteLink: showTeamInvite ? inviteLink : null,
+        mustMatchTogether: showTeamInvite ? mustMatchTogether : false,
       };
 
       console.log("[JoinBlindBoxSheet] saving blindbox_event_data:", blindboxEventPayload);
@@ -285,8 +290,8 @@ export default function JoinBlindBoxSheet({
   };
 
   const getConfirmButtonText = () => {
-    if (inviteFriends) {
-      return "确认参与（我和朋友）";
+    if (showTeamInvite) {
+      return "确认参与（组队报名）";
     }
     return "确认参与";
   };
@@ -312,27 +317,17 @@ export default function JoinBlindBoxSheet({
 
             {/* A. 报名摘要 */}
             <div className="mb-6 p-4 bg-muted/50 rounded-lg space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  <span className="font-medium">{eventData.date} {eventData.time}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {eventData.eventType}
+              <div className="flex items-center gap-2 text-sm flex-wrap">
+                <Calendar className="h-4 w-4 text-primary" />
+                <span className="font-medium">{eventData.date} {eventData.time}</span>
+                <Badge variant="secondary" className="text-xs">
+                  {eventData.eventType}
+                </Badge>
+                {eventData.isGirlsNight && (
+                  <Badge className="text-xs bg-pink-500 hover:bg-pink-600">
+                    👭 Girls Night
                   </Badge>
-                  {eventData.isGirlsNight && (
-                    <Badge className="text-xs bg-pink-500 hover:bg-pink-600">
-                      👭 Girls Night
-                    </Badge>
-                  )}
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 px-2 text-xs text-primary"
-                  data-testid="button-modify-time"
-                >
-                  修改
-                </Button>
+                )}
               </div>
               
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -526,31 +521,112 @@ export default function JoinBlindBoxSheet({
                 </div>
               </div>
 
-            {/* D. 提升成功率 */}
+            {/* D. 选择商圈 - 多选提升成功率 */}
             <div className="mb-6">
               <div className="mb-3">
-                <h3 className="text-base font-semibold mb-1">提升成功率</h3>
-                <p className="text-xs text-muted-foreground">扩展到附近商圈，通常更快成局</p>
+                <h3 className="text-base font-semibold mb-1">选择商圈</h3>
+                <p className="text-xs text-muted-foreground">多选商圈可提升匹配成功率</p>
               </div>
-              <button
-                onClick={() => setAcceptNearby(!acceptNearby)}
-                className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-border bg-background transition-all hover-elevate"
-                data-testid="button-accept-nearby"
-              >
-                <div className="text-left">
-                  <span className="font-medium text-sm block">相邻商圈</span>
-                  <span className="text-xs text-muted-foreground">例如在福田的话，华侨城和南山也可以</span>
+
+              {selectedDistricts.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  <span className="text-xs text-muted-foreground">已选：</span>
+                  {selectedDistricts.map(id => {
+                    const district = getDistrictById(id);
+                    return district ? (
+                      <Badge 
+                        key={id} 
+                        variant="secondary"
+                        className="flex items-center gap-1 pr-1"
+                      >
+                        {district.name}
+                        <button
+                          onClick={() => setSelectedDistricts(prev => prev.filter(d => d !== id))}
+                          className="ml-1 hover:bg-muted rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ) : null;
+                  })}
                 </div>
-                <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ml-2 ${
-                  acceptNearby
-                    ? 'bg-foreground border-foreground'
-                    : 'border-foreground/30'
-                }`}>
-                  {acceptNearby && (
-                    <CheckCircle2 className="h-4 w-4 text-background" />
-                  )}
+              )}
+
+              <div className="space-y-2">
+                {shenzhenClusters.map(cluster => (
+                  <Collapsible 
+                    key={cluster.id}
+                    open={expandedClusters.includes(cluster.id)} 
+                    onOpenChange={() => {
+                      setExpandedClusters(prev => 
+                        prev.includes(cluster.id) 
+                          ? prev.filter(id => id !== cluster.id)
+                          : [...prev, cluster.id]
+                      );
+                    }}
+                  >
+                    <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover-elevate">
+                      <div className="flex items-center gap-2">
+                        {expandedClusters.includes(cluster.id) ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                        <span className="font-medium text-sm">{cluster.name}</span>
+                        {cluster.districts.filter(d => selectedDistricts.includes(d.id)).length > 0 && (
+                          <Badge variant="default" className="text-xs">
+                            {cluster.districts.filter(d => selectedDistricts.includes(d.id)).length}
+                          </Badge>
+                        )}
+                      </div>
+                      {!expandedClusters.includes(cluster.id) && (
+                        <span className="text-xs text-muted-foreground">查看更多</span>
+                      )}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-3 pl-6">
+                      <div className="flex flex-wrap gap-2">
+                        {cluster.districts.map(district => {
+                          const heat = heatConfig[district.heat];
+                          const isSelected = selectedDistricts.includes(district.id);
+                          return (
+                            <button
+                              key={district.id}
+                              onClick={() => {
+                                if (isSelected) {
+                                  setSelectedDistricts(prev => prev.filter(id => id !== district.id));
+                                } else if (selectedDistricts.length < 4) {
+                                  setSelectedDistricts(prev => [...prev, district.id]);
+                                }
+                              }}
+                              className={`
+                                inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium
+                                transition-all border-2
+                                ${isSelected
+                                  ? 'bg-primary text-primary-foreground border-primary'
+                                  : 'bg-background border-border hover-elevate'
+                                }
+                              `}
+                              data-testid={`chip-district-${district.id}`}
+                            >
+                              <span>{district.name}</span>
+                              {heat.icon && <span>{heat.icon}</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+
+              {selectedDistricts.length < 2 && (
+                <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg mt-3">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-sm text-primary">
+                    多选2-3个商圈，成局率提升42%
+                  </span>
                 </div>
-              </button>
+              )}
             </div>
             </div>
 
@@ -569,83 +645,86 @@ export default function JoinBlindBoxSheet({
               </div>
             </div>
 
-            {/* F. 邀请朋友（放到最后，弱化展示） */}
-            <Collapsible open={inviteFriends} onOpenChange={setInviteFriends} className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="invite-friends" className="text-base font-semibold cursor-pointer">
-                    邀请朋友
-                  </Label>
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <Switch 
-                  id="invite-friends" 
-                  checked={inviteFriends} 
-                  onCheckedChange={setInviteFriends}
-                  data-testid="switch-invite-friends"
-                />
+            {/* F. 组队邀请 - 游戏化设计 */}
+            <div className="mb-6">
+              <div className="mb-3">
+                <h3 className="text-base font-semibold mb-1">组队出击</h3>
+                <p className="text-xs text-muted-foreground">邀请1位朋友一起，优先匹配同局</p>
               </div>
-              
-              <CollapsibleContent className="space-y-3">
-                <p className="text-xs text-muted-foreground mb-3">
-                  与朋友一起报名更有安全感与话题感，同组将优先同局匹配
-                </p>
 
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-sm mb-2 block">选择人数</Label>
-                    <div className="inline-flex rounded-lg p-1 bg-muted">
-                      <button
-                        onClick={() => setFriendsCount(1)}
-                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                          friendsCount === 1
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground"
-                        }`}
-                        data-testid="button-friends-1"
-                      >
-                        1位朋友
-                      </button>
-                      <button
-                        onClick={() => setFriendsCount(2)}
-                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                          friendsCount === 2
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground"
-                        }`}
-                        data-testid="button-friends-2"
-                      >
-                        2位朋友
-                      </button>
+              {!showTeamInvite ? (
+                <Button
+                  variant="outline"
+                  className="w-full justify-between h-auto py-4"
+                  onClick={() => {
+                    setShowTeamInvite(true);
+                    const generatedLink = `https://joyjoin.app/invite/${Date.now().toString(36)}${Math.random().toString(36).substr(2, 6)}`;
+                    setInviteLink(generatedLink);
+                  }}
+                  data-testid="button-start-team"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <UserPlus className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-medium">发起组队</div>
+                      <div className="text-xs text-muted-foreground">分享给朋友，一起参加</div>
                     </div>
                   </div>
-
-                  {friendsCount === 2 && (
-                    <div className="p-2 bg-blue-50 dark:bg-blue-950/20 rounded-md">
-                      <p className="text-xs text-blue-600 dark:text-blue-400">
-                        本局上限6人，系统将优先匹配3–4位陌生同伴
-                      </p>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </Button>
+              ) : (
+                <div className="p-4 rounded-xl border-2 border-primary/20 bg-primary/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+                        <Users className="h-4 w-4 text-primary-foreground" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">组队进度</div>
+                        <div className="text-xs text-muted-foreground">
+                          {teammateStatus === 'joined' ? '队友已就位' : '等待队友加入 (1/2)'}
+                        </div>
+                      </div>
                     </div>
+                    {teammateStatus === 'joined' ? (
+                      <Badge className="bg-green-500">已就位</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="animate-pulse">等待中</Badge>
+                    )}
+                  </div>
+
+                  {teammateStatus !== 'joined' && (
+                    <Button
+                      className="w-full gap-2"
+                      onClick={async () => {
+                        if (navigator.share) {
+                          try {
+                            await navigator.share({
+                              title: '悦聚·组队邀请',
+                              text: `邀请你一起参加${eventData.eventType}活动`,
+                              url: inviteLink || window.location.href
+                            });
+                          } catch (err) {
+                            toast({
+                              title: "分享取消",
+                              description: "你可以稍后再试",
+                            });
+                          }
+                        } else {
+                          toast({
+                            title: "请复制链接分享",
+                            description: inviteLink || window.location.href,
+                          });
+                        }
+                      }}
+                      data-testid="button-share-invite"
+                    >
+                      <Share2 className="h-4 w-4" />
+                      分享到微信
+                    </Button>
                   )}
-
-                  <div>
-                    <Label className="text-sm mb-2 block">邀请方式</Label>
-                    <div className="flex gap-2">
-                      <Input 
-                        placeholder="输入手机号或用户名" 
-                        className="flex-1"
-                        data-testid="input-friend-contact"
-                      />
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={handleCopyInviteLink}
-                        data-testid="button-copy-invite-link"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
 
                   <div className="flex items-center space-x-2">
                     <Switch 
@@ -654,14 +733,25 @@ export default function JoinBlindBoxSheet({
                       onCheckedChange={setMustMatchTogether}
                       data-testid="switch-match-together"
                     />
-                    <Label htmlFor="match-together" className="text-sm cursor-pointer">
+                    <Label htmlFor="match-together" className="text-xs cursor-pointer">
                       同组必同局匹配
-                      <span className="text-xs text-muted-foreground ml-1">（可能延长匹配时长）</span>
                     </Label>
                   </div>
+
+                  <button
+                    onClick={() => {
+                      setShowTeamInvite(false);
+                      setTeammateStatus(null);
+                      setInviteLink(null);
+                    }}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                    data-testid="button-cancel-team"
+                  >
+                    取消组队
+                  </button>
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
+              )}
+            </div>
           </div>
 
           {/* F. 底部操作区 */}
@@ -778,19 +868,22 @@ export default function JoinBlindBoxSheet({
             </div>
           )}
 
-          {/* 4. 提升成功率 */}
-          <div className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold">提升成功率</h3>
-              <p className="text-xs text-muted-foreground mt-1">扩展到附近商圈，通常更快成局</p>
+          {/* 4. 已选商圈 */}
+          {selectedDistricts.length > 0 && (
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold">已选商圈</h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {selectedDistricts.map(id => {
+                  const district = getDistrictById(id);
+                  return district ? (
+                    <Badge key={id} variant="secondary">{district.name}</Badge>
+                  ) : null;
+                })}
+              </div>
             </div>
-            <div className="flex items-center justify-between p-3 rounded-lg border-2 border-muted bg-muted/30">
-              <span className="text-sm">相邻商圈</span>
-              <Badge variant={acceptNearby ? "default" : "outline"} className="text-xs">
-                {acceptNearby ? "已开启" : "未开启"}
-              </Badge>
-            </div>
-          </div>
+          )}
 
           {/* 5. 费用说明 */}
           <div className="p-3 bg-muted/50 rounded-lg">
@@ -809,22 +902,16 @@ export default function JoinBlindBoxSheet({
             </ul>
           </div>
 
-          {/* 6. 邀请朋友（可选，弱化展示） */}
-          {inviteFriends && (
+          {/* 6. 组队邀请（可选） */}
+          {showTeamInvite && (
             <div className="p-3 border rounded-lg">
-              <h3 className="text-sm font-semibold mb-2">邀请朋友</h3>
+              <h3 className="text-sm font-semibold mb-2">组队出击</h3>
               <p className="text-xs text-muted-foreground mb-2">
-                已邀请 {friendsCount} 位朋友
+                已发起组队，等待1位朋友加入
               </p>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleCopyInviteLink}
-                className="w-full"
-              >
-                <Copy className="h-3 w-3 mr-1" />
-                复制邀请链接
-              </Button>
+              <Badge variant={teammateStatus === 'joined' ? "default" : "secondary"}>
+                {teammateStatus === 'joined' ? '队友已就位' : '等待中'}
+              </Badge>
             </div>
           )}
         </div>

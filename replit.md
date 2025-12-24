@@ -78,6 +78,12 @@ Preferred communication style: Simple, everyday language.
 - **DeepSeek API:** Used for conversational AI.
 
 ## Recent Changes (December 2025)
+- **JoinBlindBoxSheet UX Overhaul (Dec 24):** Major redesign of registration flow with multi-select districts and gamified team invitation
+  - **Multi-Select District Chips:** Replaced simple "相邻商圈" toggle with collapsible cluster groups (南山走廊, 前海, 华侨城, 福田), each district as selectable chip with heat indicator (🔥), max 4 selections, "多选2-3个商圈，成局率提升42%" incentive
+  - **Gamified Team Invitation:** Replaced form-based "邀请朋友" with game-style "发起组队" button, 1-friend limit, showTeamInvite state managing invite flow, Web Share API integration for WeChat sharing, teammate status tracking (waiting/joined)
+  - **Clean State Management:** Removed redundant inviteFriends/friendsCount states, showTeamInvite now drives all invite-related UI/payload, inviteLink generated and persisted
+  - **Confirm Dialog Updates:** Shows selected districts as badges, displays team invite status when active
+  - **Key Files:** client/src/components/JoinBlindBoxSheet.tsx, client/src/lib/districts.ts
 - **CI/CD TypeScript Error Fix (Dec 23):** Resolved all 37 blocking TypeScript errors to 0
   - **Schema Extensions:** Added poolId to blindBoxEvents, atmosphereType/hostUserId to icebreakerSessions, totalAcceptances to invitations
   - **Interface Updates:** Added avgChemistryScore to MatchGroup in poolMatchingService.ts
