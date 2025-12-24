@@ -19,6 +19,9 @@ COPY packages/shared ./packages/shared
 # Copy admin-client source
 COPY apps/admin-client ./apps/admin-client
 
+# Copy attached assets (images referenced by the app)
+COPY attached_assets ./attached_assets
+
 # Build the static assets
 WORKDIR /app/apps/admin-client
 RUN npm run build
