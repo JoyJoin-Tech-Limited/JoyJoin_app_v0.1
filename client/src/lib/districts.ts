@@ -19,6 +19,7 @@ export interface DistrictCluster {
   id: string;
   name: string;
   displayName: string;
+  description?: string;
   districts: District[];
 }
 
@@ -33,8 +34,9 @@ export const heatConfig: Record<HeatLevel, { label: string; iconName: 'flame' | 
 export const shenzhenClusters: DistrictCluster[] = [
   {
     id: 'nanshan',
-    name: '南山社交走廊',
+    name: '南山区',
     displayName: '南山区',
+    description: '科技园、后海CBD聚集地',
     districts: [
       { id: 'keji', name: '科技园', heat: 'hot', clusterId: 'nanshan' },
       { id: 'houhai', name: '后海', heat: 'hot', clusterId: 'nanshan' },
@@ -46,8 +48,9 @@ export const shenzhenClusters: DistrictCluster[] = [
   },
   {
     id: 'futian',
-    name: '福田',
+    name: '福田区',
     displayName: '福田区',
+    description: '深圳中心商务区',
     districts: [
       { id: 'chegongmiao', name: '车公庙', heat: 'hot', clusterId: 'futian' },
       { id: 'gouwugongyuan', name: '购物公园·会展', heat: 'active', clusterId: 'futian' },

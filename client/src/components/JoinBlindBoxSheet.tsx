@@ -511,52 +511,97 @@ export default function JoinBlindBoxSheet({
                 </div>
               </div>
 
-            {/* D. 选择片区 - 点击即全选该片区所有商圈 */}
+            {/* D. 选择片区 - 卡片式布局，支持选择片区和细分商圈 */}
             <div className="mb-6">
               <div className="mb-3">
                 <h3 className="text-base font-semibold mb-1">选择片区</h3>
-                <p className="text-xs text-muted-foreground">选择片区后默认覆盖该区所有商圈</p>
+                <p className="text-xs text-muted-foreground">选择片区后默认覆盖该区所有商圈，也可单独选择商圈</p>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="space-y-3">
                 {shenzhenClusters.map(cluster => {
                   const clusterDistrictIds = cluster.districts.map(d => d.id);
                   const selectedInCluster = clusterDistrictIds.filter(id => selectedDistricts.includes(id));
                   const isClusterSelected = selectedInCluster.length === clusterDistrictIds.length;
                   const isPartiallySelected = selectedInCluster.length > 0 && selectedInCluster.length < clusterDistrictIds.length;
+                  const hasSelection = selectedInCluster.length > 0;
                   
                   return (
-                    <button
+                    <div
                       key={cluster.id}
-                      onClick={() => {
-                        if (isClusterSelected) {
-                          setSelectedDistricts(prev => prev.filter(id => !clusterDistrictIds.includes(id)));
-                        } else {
-                          setSelectedDistricts(prev => {
-                            const withoutCluster = prev.filter(id => !clusterDistrictIds.includes(id));
-                            return [...new Set([...withoutCluster, ...clusterDistrictIds])];
-                          });
-                        }
-                      }}
                       className={`
-                        inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium
-                        transition-all border-2
-                        ${isClusterSelected
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : isPartiallySelected
-                            ? 'bg-primary/20 text-primary border-primary/50'
-                            : 'bg-background border-border hover-elevate'
+                        p-3 rounded-lg border-2 transition-all
+                        ${hasSelection 
+                          ? 'border-primary/50 bg-primary/5' 
+                          : 'border-border'
                         }
                       `}
-                      data-testid={`chip-cluster-${cluster.id}`}
+                      data-testid={`card-cluster-${cluster.id}`}
                     >
-                      <span>{cluster.name}</span>
-                      {isClusterSelected && (
-                        <Badge variant="secondary" className="text-xs px-1.5 py-0 bg-primary-foreground/20 text-primary-foreground">
-                          {clusterDistrictIds.length}
-                        </Badge>
-                      )}
-                    </button>
+                      <div className="flex items-center justify-between mb-2">
+                        <button
+                          onClick={() => {
+                            if (isClusterSelected) {
+                              setSelectedDistricts(prev => prev.filter(id => !clusterDistrictIds.includes(id)));
+                            } else {
+                              setSelectedDistricts(prev => {
+                                const withoutCluster = prev.filter(id => !clusterDistrictIds.includes(id));
+                                return [...new Set([...withoutCluster, ...clusterDistrictIds])];
+                              });
+                            }
+                          }}
+                          className={`
+                            inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium
+                            transition-all border-2
+                            ${isClusterSelected
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : isPartiallySelected
+                                ? 'bg-primary/20 text-primary border-primary/50'
+                                : 'bg-background border-border hover-elevate'
+                            }
+                          `}
+                          data-testid={`chip-cluster-${cluster.id}`}
+                        >
+                          <span>{cluster.displayName}</span>
+                          {hasSelection && (
+                            <Badge variant="secondary" className="text-xs px-1.5 py-0 bg-primary-foreground/20 text-primary-foreground">
+                              {selectedInCluster.length}
+                            </Badge>
+                          )}
+                        </button>
+                        <span className="text-xs text-muted-foreground">
+                          {isClusterSelected ? '全选' : isPartiallySelected ? `已选${selectedInCluster.length}个` : '点击全选'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-1.5">
+                        {cluster.districts.map(district => {
+                          const isDistrictSelected = selectedDistricts.includes(district.id);
+                          return (
+                            <button
+                              key={district.id}
+                              onClick={() => {
+                                if (isDistrictSelected) {
+                                  setSelectedDistricts(prev => prev.filter(id => id !== district.id));
+                                } else {
+                                  setSelectedDistricts(prev => [...prev, district.id]);
+                                }
+                              }}
+                              className={`
+                                px-2.5 py-1 rounded-md text-xs font-medium transition-all
+                                ${isDistrictSelected
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-muted/50 text-muted-foreground hover-elevate'
+                                }
+                              `}
+                              data-testid={`chip-district-${district.id}`}
+                            >
+                              {district.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -569,6 +614,10 @@ export default function JoinBlindBoxSheet({
                   </span>
                 </div>
               )}
+
+              <p className="text-xs text-muted-foreground text-center mt-3">
+                更多片区（罗湖、龙岗、宝安...）即将开放
+              </p>
             </div>
             </div>
 

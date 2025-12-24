@@ -1,23 +1,13 @@
 import { Drawer } from "vaul";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Navigation, X, Flame, Zap, Loader2 } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { MapPin, Navigation, X, Loader2, Check, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getCurrentLocation } from "@/lib/gpsUtils";
 import { useToast } from "@/hooks/use-toast";
-
-function HeatIcon({ iconName, className }: { iconName: 'flame' | 'zap' | 'none'; className?: string }) {
-  if (iconName === 'flame') return <Flame className={`h-3 w-3 ${className}`} />;
-  if (iconName === 'zap') return <Zap className={`h-3 w-3 ${className}`} />;
-  return null;
-}
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  shenzhenClusters, 
-  heatConfig,
-  type District,
-  getAllDistricts 
-} from "@/lib/districts";
+import { shenzhenClusters } from "@/lib/districts";
 
 interface LocationPickerSheetProps {
   open: boolean;
@@ -26,14 +16,6 @@ interface LocationPickerSheetProps {
   selectedArea?: string;
   onSave: (city: "香港" | "深圳", area: string) => void;
 }
-
-const hongkongDistricts = [
-  { id: 'central', name: '中西区', heat: 'hot' as const },
-  { id: 'wanchai', name: '湾仔', heat: 'hot' as const },
-  { id: 'causeway', name: '铜锣湾', heat: 'active' as const },
-  { id: 'tsimshatsui', name: '尖沙咀', heat: 'hot' as const },
-  { id: 'mongkok', name: '旺角', heat: 'active' as const },
-];
 
 export default function LocationPickerSheet({ 
   open, 
@@ -44,9 +26,21 @@ export default function LocationPickerSheet({
 }: LocationPickerSheetProps) {
   const { toast } = useToast();
   const [tempCity, setTempCity] = useState<"香港" | "深圳">(selectedCity);
-  const [tempDistrictId, setTempDistrictId] = useState<string>("");
-  const [activeCluster, setActiveCluster] = useState(shenzhenClusters[0]?.id || '');
+  const [selectedClusterId, setSelectedClusterId] = useState<string>("");
   const [isLocating, setIsLocating] = useState(false);
+
+  useEffect(() => {
+    if (selectedArea) {
+      const cluster = shenzhenClusters.find(c => 
+        c.name === selectedArea || 
+        c.displayName === selectedArea ||
+        c.districts.some(d => d.name === selectedArea)
+      );
+      if (cluster) {
+        setSelectedClusterId(cluster.id);
+      }
+    }
+  }, [selectedArea]);
 
   const handleGetLocation = async () => {
     setIsLocating(true);
@@ -57,30 +51,18 @@ export default function LocationPickerSheet({
       setTempCity(result.city);
       
       if (result.city === "深圳" && result.cluster) {
-        setActiveCluster(result.cluster);
+        setSelectedClusterId(result.cluster);
         const cluster = shenzhenClusters.find(c => c.id === result.cluster);
-        if (cluster && cluster.districts.length > 0) {
-          setTempDistrictId(cluster.districts[0].id);
-          toast({
-            title: "定位成功",
-            description: `已选择：${result.city} · ${cluster.name} · ${cluster.districts[0].name}`,
-          });
-          return;
-        }
-      }
-      
-      if (result.city === "香港" && hongkongDistricts.length > 0) {
-        setTempDistrictId(hongkongDistricts[0].id);
         toast({
-          title: "定位成功", 
-          description: `已选择：香港 · ${hongkongDistricts[0].name}`,
+          title: "定位成功",
+          description: `已选择：${result.city} · ${cluster?.displayName || cluster?.name}`,
         });
         return;
       }
       
       toast({
         title: "定位成功",
-        description: `当前位置：${result.city}，请选择商圈`,
+        description: `当前位置：${result.city}，请选择片区`,
       });
     } else {
       toast({
@@ -91,47 +73,34 @@ export default function LocationPickerSheet({
     }
   };
 
-  useEffect(() => {
-    if (selectedArea) {
-      const district = getAllDistricts().find(d => d.name === selectedArea || d.id === selectedArea);
-      if (district) {
-        setTempDistrictId(district.id);
-        setActiveCluster(district.clusterId);
-      }
-    }
-  }, [selectedArea]);
-
   const handleSave = () => {
-    const allDistricts = tempCity === "深圳" 
-      ? getAllDistricts() 
-      : hongkongDistricts.map(d => ({ ...d, clusterId: 'hk' }));
-    const district = allDistricts.find(d => d.id === tempDistrictId);
-    onSave(tempCity, district?.name || "");
+    if (tempCity === "深圳") {
+      const cluster = shenzhenClusters.find(c => c.id === selectedClusterId);
+      onSave(tempCity, cluster?.displayName || cluster?.name || "");
+    } else {
+      onSave(tempCity, "");
+    }
     onOpenChange(false);
   };
 
-  const handleSelectDistrict = (district: District | typeof hongkongDistricts[0]) => {
-    setTempDistrictId(district.id);
-  };
-
-  const currentCluster = shenzhenClusters.find(c => c.id === activeCluster);
-  const selectedDistrictName = tempCity === "深圳"
-    ? getAllDistricts().find(d => d.id === tempDistrictId)?.name
-    : hongkongDistricts.find(d => d.id === tempDistrictId)?.name;
+  const selectedCluster = shenzhenClusters.find(c => c.id === selectedClusterId);
+  const selectedDisplayName = tempCity === "深圳" 
+    ? (selectedCluster?.displayName || selectedCluster?.name || "未选择")
+    : "香港";
 
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
         <Drawer.Content 
-          className="bg-background flex flex-col rounded-t-[20px] h-[70vh] mt-24 fixed bottom-0 left-0 right-0 z-50 outline-none"
+          className="bg-background flex flex-col rounded-t-[20px] h-[75vh] mt-24 fixed bottom-0 left-0 right-0 z-50 outline-none"
           data-testid="drawer-location-picker"
         >
           <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted mt-4" />
           
           <div className="flex items-center justify-between px-4 py-4 border-b">
             <Drawer.Title className="text-xl font-bold" data-testid="text-picker-title">
-              选择商圈
+              选择城市
             </Drawer.Title>
             <button
               onClick={() => onOpenChange(false)}
@@ -150,7 +119,7 @@ export default function LocationPickerSheet({
                 <div>
                   <div className="text-sm font-medium">当前选择</div>
                   <div className="text-xs text-muted-foreground">
-                    {tempCity} · {selectedDistrictName || "未选择"}
+                    {tempCity} · {selectedDisplayName}
                   </div>
                 </div>
               </div>
@@ -173,7 +142,7 @@ export default function LocationPickerSheet({
 
             <Tabs value={tempCity} onValueChange={(v) => {
               setTempCity(v as "香港" | "深圳");
-              setTempDistrictId("");
+              setSelectedClusterId("");
             }}>
               <TabsList className="w-full grid grid-cols-2">
                 <TabsTrigger value="深圳" data-testid="tab-shenzhen">
@@ -184,109 +153,105 @@ export default function LocationPickerSheet({
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="深圳" className="mt-4 space-y-4">
-                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                  {shenzhenClusters.map(cluster => (
-                    <button
+              <TabsContent value="深圳" className="mt-4 space-y-3">
+                {shenzhenClusters.map(cluster => {
+                  const isSelected = selectedClusterId === cluster.id;
+                  const hotCount = cluster.districts.filter(d => d.heat === 'hot').length;
+                  
+                  return (
+                    <Card
                       key={cluster.id}
-                      onClick={() => setActiveCluster(cluster.id)}
+                      onClick={() => setSelectedClusterId(cluster.id)}
                       className={`
-                        px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap
-                        transition-all border-2
-                        ${activeCluster === cluster.id
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-background border-border hover-elevate'
+                        relative p-4 cursor-pointer transition-all
+                        ${isSelected 
+                          ? 'ring-2 ring-primary bg-primary/5' 
+                          : 'hover-elevate'
                         }
                       `}
-                      data-testid={`tab-cluster-${cluster.id}`}
+                      data-testid={`card-cluster-${cluster.id}`}
                     >
-                      {cluster.name}
-                    </button>
-                  ))}
-                </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-semibold">{cluster.displayName}</h3>
+                            {hotCount > 0 && (
+                              <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+                                {hotCount}个热门商圈
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            {cluster.description}
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {cluster.districts.map(district => (
+                              <Badge 
+                                key={district.id} 
+                                variant="outline"
+                                className="text-xs font-normal"
+                              >
+                                {district.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div className={`
+                          flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center
+                          ${isSelected 
+                            ? 'bg-primary border-primary' 
+                            : 'border-muted-foreground/30'
+                          }
+                        `}>
+                          {isSelected && <Check className="h-4 w-4 text-primary-foreground" />}
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
 
-                {currentCluster && (
-                  <div className="flex flex-wrap gap-2">
-                    {currentCluster.districts.map(district => {
-                      const heat = heatConfig[district.heat];
-                      return (
-                        <button
-                          key={district.id}
-                          onClick={() => handleSelectDistrict(district)}
-                          className={`
-                            inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium
-                            transition-all border-2
-                            ${tempDistrictId === district.id
-                              ? 'bg-primary text-primary-foreground border-primary'
-                              : 'bg-background border-border hover-elevate'
-                            }
-                          `}
-                          data-testid={`chip-district-${district.id}`}
-                        >
-                          <span>{district.name}</span>
-                          {heat.iconName !== 'none' && (
-                            <HeatIcon iconName={heat.iconName} className={heat.color} />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg mt-4">
+                  <Sparkles className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">
+                    更多片区（罗湖、龙岗、宝安...）即将开放
+                  </p>
+                </div>
               </TabsContent>
 
-              <TabsContent value="香港" className="mt-4 space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  {hongkongDistricts.map(district => {
-                    const heat = heatConfig[district.heat];
-                    return (
-                      <button
-                        key={district.id}
-                        onClick={() => handleSelectDistrict(district)}
-                        className={`
-                          inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium
-                          transition-all border-2
-                          ${tempDistrictId === district.id
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-background border-border hover-elevate'
-                          }
-                        `}
-                        data-testid={`chip-district-${district.id}`}
-                      >
-                        <span>{district.name}</span>
-                        {heat.iconName !== 'none' && (
-                          <HeatIcon iconName={heat.iconName} className={heat.color} />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-muted-foreground text-center">
-                  香港更多商圈即将开放
-                </p>
+              <TabsContent value="香港" className="mt-4">
+                <Card className="p-6 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                      <MapPin className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1">香港</h3>
+                      <p className="text-sm text-muted-foreground">
+                        香港地区即将开放，敬请期待
+                      </p>
+                    </div>
+                  </div>
+                </Card>
               </TabsContent>
             </Tabs>
-
-            <div className="text-xs text-center text-muted-foreground py-2">
-              💡 换个商圈看看，成局更快
-            </div>
           </div>
 
           <div className="border-t p-4 flex gap-2 flex-shrink-0 bg-background">
             <Button 
               variant="outline" 
               className="flex-1"
-              onClick={() => setTempDistrictId("")}
+              onClick={() => setSelectedClusterId("")}
               data-testid="button-reset"
             >
-              重置为全城
+              重置
             </Button>
             <Button 
               className="flex-1" 
               onClick={handleSave}
-              disabled={!tempDistrictId}
+              disabled={tempCity === "深圳" && !selectedClusterId}
               data-testid="button-save-location"
             >
-              保存并刷新
+              确认选择
             </Button>
           </div>
         </Drawer.Content>
