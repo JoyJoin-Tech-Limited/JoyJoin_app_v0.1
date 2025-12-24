@@ -8,6 +8,27 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
+### Monorepo Structure (Deployment)
+```
+joyjoin-monorepo/
+├── apps/
+│   ├── user-client/     # 用户端 (Dockerfile: nginx 静态托管)
+│   ├── admin-client/    # 管理端 (Dockerfile: nginx 静态托管)
+│   └── server/          # API 服务 (Dockerfile: Node.js)
+├── packages/
+│   └── shared/          # @joyjoin/shared 共享包
+├── client/              # 开发时使用的用户端代码
+├── server/              # 开发时使用的服务端代码
+└── package.json         # npm workspaces 配置
+```
+
+**部署命令：**
+- `docker build -f apps/user-client/Dockerfile -t joyjoin-user .`
+- `docker build -f apps/admin-client/Dockerfile -t joyjoin-admin .`
+- `docker build -f apps/server/Dockerfile -t joyjoin-api .`
+
+**开发模式：** 使用根目录 `client/` + `server/`，运行 `npm run dev`
+
 ### Frontend
 - **Frameworks:** React 18 with TypeScript, Vite, Wouter.
 - **UI/Styling:** Mobile-first design using Radix UI, shadcn/ui, and Tailwind CSS. Features dark mode, a purple-centric warm color palette, and bilingual support (Chinese/English).
