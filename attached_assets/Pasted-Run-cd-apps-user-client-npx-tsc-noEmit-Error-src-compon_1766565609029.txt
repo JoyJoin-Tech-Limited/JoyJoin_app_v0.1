@@ -1,0 +1,71 @@
+Run cd apps/user-client && npx tsc --noEmit
+Error: src/components/JoyJoinLogo.tsx(1,23): error TS2307: Cannot find module '@assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi_1765650184831.png' or its corresponding type declarations.
+Error: src/components/examples/EventCard.tsx(12,9): error TS2322: Type '{ title: string; date: string; time: string; location: string; vibes: { label: string; icon: ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>; }[]; ... 4 more ...; imageGradient: string; }' is not assignable to type 'IntrinsicAttributes & EventCardProps'.
+  Property 'vibes' does not exist on type 'IntrinsicAttributes & EventCardProps'.
+Error: src/components/examples/JoyEventCard.tsx(1,26): error TS2307: Cannot find module '../JoyEventCard' or its corresponding type declarations.
+Error: src/components/examples/MobileHeader.tsx(4,41): error TS2322: Type '{ title: string; showNotification: boolean; }' is not assignable to type 'IntrinsicAttributes & MobileHeaderProps'.
+  Property 'showNotification' does not exist on type 'IntrinsicAttributes & MobileHeaderProps'.
+Error: src/components/icebreaker/IcebreakerCheckinModal.tsx(8,24): error TS2307: Cannot find module '@assets/开心柯基_transparent_1_1765650619462.png' or its corresponding type declarations.
+Error: src/components/icebreaker/IcebreakerCheckinModal.tsx(9,21): error TS2307: Cannot find module '@assets/机智狐_transparent_2_1765650619453.png' or its corresponding type declarations.
+Error: src/components/icebreaker/IcebreakerCheckinModal.tsx(10,26): error TS2307: Cannot find module '@assets/暖心熊_transparent_3_1765650619461.png' or its corresponding type declarations.
+Error: src/components/icebreaker/IcebreakerCheckinModal.tsx(11,24): error TS2307: Cannot find module '@assets/织网蛛_transparent_4_1765650619463.png' or its corresponding type declarations.
+Error: src/components/icebreaker/IcebreakerCheckinModal.tsx(12,23): error TS2307: Cannot find module '@assets/夸夸豚_transparent_5_1765650619478.png' or its corresponding type declarations.
+Error: src/components/icebreaker/IcebreakerCheckinModal.tsx(13,23): error TS2307: Cannot find module '@assets/太阳鸡_transparent_6_1765650619458.png' or its corresponding type declarations.
+Error: src/components/icebreaker/IcebreakerCheckinModal.tsx(14,27): error TS2307: Cannot find module '@assets/淡定海豚_transparent_7_1765650619477.png' or its corresponding type declarations.
+Error: src/components/icebreaker/IcebreakerCheckinModal.tsx(15,30): error TS2307: Cannot find module '@assets/沉思猫头鹰_transparent_8_1765650619459.png' or its corresponding type declarations.
+Error: src/components/icebreaker/IcebreakerCheckinModal.tsx(16,22): error TS2307: Cannot find module '@assets/稳如龟_transparent_9_1765650619461.png' or its corresponding type declarations.
+Error: src/components/icebreaker/IcebreakerCheckinModal.tsx(17,24): error TS2307: Cannot find module '@assets/隐身猫_transparent_10_1765650619464.png' or its corresponding type declarations.
+Error: src/components/icebreaker/IcebreakerCheckinModal.tsx(18,28): error TS2307: Cannot find module '@assets/定心大象_transparent_11_1765650619460.png' or its corresponding type declarations.
+Error: src/components/icebreaker/IcebreakerCheckinModal.tsx(19,28): error TS2307: Cannot find module '@assets/灵感章鱼_transparent_12_1765650619464.png' or its corresponding type declarations.
+Error: src/components/icebreaker/NetworkStatusBanner.tsx(12,35): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+Error: src/components/icebreaker/NumberPlateDisplay.tsx(10,24): error TS2307: Cannot find module '@assets/开心柯基_transparent_1_1765650619462.png' or its corresponding type declarations.
+Error: src/components/icebreaker/NumberPlateDisplay.tsx(11,21): error TS2307: Cannot find module '@assets/机智狐_transparent_2_1765650619453.png' or its corresponding type declarations.
+Error: src/components/icebreaker/NumberPlateDisplay.tsx(12,26): error TS2307: Cannot find module '@assets/暖心熊_transparent_3_1765650619461.png' or its corresponding type declarations.
+Error: src/components/icebreaker/NumberPlateDisplay.tsx(13,24): error TS2307: Cannot find module '@assets/织网蛛_transparent_4_1765650619463.png' or its corresponding type declarations.
+Error: src/components/icebreaker/NumberPlateDisplay.tsx(14,23): error TS2307: Cannot find module '@assets/夸夸豚_transparent_5_1765650619478.png' or its corresponding type declarations.
+Error: src/components/icebreaker/NumberPlateDisplay.tsx(15,23): error TS2307: Cannot find module '@assets/太阳鸡_transparent_6_1765650619458.png' or its corresponding type declarations.
+Error: src/components/icebreaker/NumberPlateDisplay.tsx(16,27): error TS2307: Cannot find module '@assets/淡定海豚_transparent_7_1765650619477.png' or its corresponding type declarations.
+Error: src/components/icebreaker/NumberPlateDisplay.tsx(17,30): error TS2307: Cannot find module '@assets/沉思猫头鹰_transparent_8_1765650619459.png' or its corresponding type declarations.
+Error: src/components/icebreaker/NumberPlateDisplay.tsx(18,22): error TS2307: Cannot find module '@assets/稳如龟_transparent_9_1765650619461.png' or its corresponding type declarations.
+Error: src/components/icebreaker/NumberPlateDisplay.tsx(19,24): error TS2307: Cannot find module '@assets/隐身猫_transparent_10_1765650619464.png' or its corresponding type declarations.
+Error: src/components/icebreaker/NumberPlateDisplay.tsx(20,28): error TS2307: Cannot find module '@assets/定心大象_transparent_11_1765650619460.png' or its corresponding type declarations.
+Error: src/components/icebreaker/NumberPlateDisplay.tsx(21,28): error TS2307: Cannot find module '@assets/灵感章鱼_transparent_12_1765650619464.png' or its corresponding type declarations.
+Error: src/data/adaptiveCalibrationQuestions.ts(380,17): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+Error: src/data/personalityQuestions.ts(530,17): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+Error: src/data/personalityQuestionsV2.ts(531,55): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+Error: src/hooks/useIcebreakerWebSocket.ts(18,35): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+Error: src/lib/animationTestSimulation.ts(59,23): error TS2322: Type '"replay"' is not assignable to type '"view" | "complete"'.
+Error: src/lib/animationTestSimulation.ts(60,21): error TS2345: Argument of type '{ type: "complete"; time: number; }' is not assignable to parameter of type '{ type: "view"; time: number; durationInAnimation: number; interactionPoint?: undefined; } | { type: "complete"; time: number; durationInAnimation: number; interactionPoint: string; }'.
+  Type '{ type: "complete"; time: number; }' is missing the following properties from type '{ type: "complete"; time: number; durationInAnimation: number; interactionPoint: string; }': durationInAnimation, interactionPoint
+Error: src/lib/animationTestSimulation.ts(64,23): error TS2322: Type '"share"' is not assignable to type '"view" | "complete"'.
+Error: src/lib/animationTestSimulation.ts(172,5): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ '1\u661F': number; '2\u661F': number; '3\u661F': number; '4\u661F': number; '5\u661F': number; }'.
+Error: src/lib/archetypeAvatars.ts(4,22): error TS2307: Cannot find module '@assets/开心柯基_1763997660297.png' or its corresponding type declarations.
+Error: src/lib/archetypeAvatars.ts(5,24): error TS2307: Cannot find module '@assets/太阳鸡_1763997660294.png' or its corresponding type declarations.
+Error: src/lib/archetypeAvatars.ts(6,24): error TS2307: Cannot find module '@assets/夸夸豚_1763997660288.png' or its corresponding type declarations.
+Error: src/lib/archetypeAvatars.ts(7,20): error TS2307: Cannot find module '@assets/机智狐_1763997660293.png' or its corresponding type declarations.
+Error: src/lib/archetypeAvatars.ts(8,28): error TS2307: Cannot find module '@assets/淡定海豚_1763997660293.png' or its corresponding type declarations.
+Error: src/lib/archetypeAvatars.ts(9,23): error TS2307: Cannot find module '@assets/织网蛛_1763997660291.png' or its corresponding type declarations.
+Error: src/lib/archetypeAvatars.ts(10,21): error TS2307: Cannot find module '@assets/暖心熊_1763997660292.png' or its corresponding type declarations.
+Error: src/lib/archetypeAvatars.ts(11,24): error TS2307: Cannot find module '@assets/灵感章鱼_1763997660292.png' or its corresponding type declarations.
+Error: src/lib/archetypeAvatars.ts(12,20): error TS2307: Cannot find module '@assets/沉思猫头鹰_1763997660294.png' or its corresponding type declarations.
+Error: src/lib/archetypeAvatars.ts(13,25): error TS2307: Cannot find module '@assets/定心大象_1763997660293.png' or its corresponding type declarations.
+Error: src/lib/archetypeAvatars.ts(14,23): error TS2307: Cannot find module '@assets/稳如龟_1763997660291.png' or its corresponding type declarations.
+Error: src/lib/archetypeAvatars.ts(15,20): error TS2307: Cannot find module '@assets/隐身猫_1763997660297.png' or its corresponding type declarations.
+Error: src/lib/archetypeImages.ts(1,24): error TS2307: Cannot find module '@assets/开心柯基_transparent_1_1765650619462.png' or its corresponding type declarations.
+Error: src/lib/archetypeImages.ts(2,23): error TS2307: Cannot find module '@assets/太阳鸡_transparent_6_1765650619458.png' or its corresponding type declarations.
+Error: src/lib/archetypeImages.ts(3,23): error TS2307: Cannot find module '@assets/夸夸豚_transparent_5_1765650619478.png' or its corresponding type declarations.
+Error: src/lib/archetypeImages.ts(4,21): error TS2307: Cannot find module '@assets/机智狐_transparent_2_1765650619453.png' or its corresponding type declarations.
+Error: src/lib/archetypeImages.ts(5,27): error TS2307: Cannot find module '@assets/淡定海豚_transparent_7_1765650619477.png' or its corresponding type declarations.
+Error: src/lib/archetypeImages.ts(6,24): error TS2307: Cannot find module '@assets/织网蛛_transparent_4_1765650619463.png' or its corresponding type declarations.
+Error: src/lib/archetypeImages.ts(7,26): error TS2307: Cannot find module '@assets/暖心熊_transparent_3_1765741025689.png' or its corresponding type declarations.
+Error: src/lib/archetypeImages.ts(8,28): error TS2307: Cannot find module '@assets/灵感章鱼_transparent_12_1765650619464.png' or its corresponding type declarations.
+Error: src/lib/archetypeImages.ts(9,30): error TS2307: Cannot find module '@assets/沉思猫头鹰_transparent_8_1765650619459.png' or its corresponding type declarations.
+Error: src/lib/archetypeImages.ts(10,28): error TS2307: Cannot find module '@assets/定心大象_transparent_11_1765650619460.png' or its corresponding type declarations.
+Error: src/lib/archetypeImages.ts(11,22): error TS2307: Cannot find module '@assets/稳如龟_transparent_9_1765650619461.png' or its corresponding type declarations.
+Error: src/lib/archetypeImages.ts(12,24): error TS2307: Cannot find module '@assets/隐身猫_transparent_10_1765650619464.png' or its corresponding type declarations.
+Error: src/pages/ChatRegistrationPage.tsx(11,27): error TS2307: Cannot find module '@assets/generated_images/final_fox_with_collar_sunglasses.png' or its corresponding type declarations.
+Error: src/pages/LoginPage.tsx(19,25): error TS2307: Cannot find module '@assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi_1765650184831.png' or its corresponding type declarations.
+Error: src/pages/LoginPage.tsx(20,30): error TS2307: Cannot find module '@assets/generated_images/fox_mascot_purple_eyes_accessories.png' or its corresponding type declarations.
+Error: src/pages/LoginPage.tsx(139,37): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+Error: src/pages/RegistrationPage.tsx(457,37): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+Error: Process completed with exit code 2.
