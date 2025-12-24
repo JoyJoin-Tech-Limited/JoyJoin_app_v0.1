@@ -28,7 +28,7 @@ export const heatConfig: Record<HeatLevel, { label: string; icon: string; color:
 export const shenzhenClusters: DistrictCluster[] = [
   {
     id: 'nanshan',
-    name: '南山社交走廊',
+    name: '南山',
     districts: [
       { id: 'keji', name: '科技园', heat: 'hot', clusterId: 'nanshan' },
       { id: 'houhai', name: '后海', heat: 'hot', clusterId: 'nanshan' },
