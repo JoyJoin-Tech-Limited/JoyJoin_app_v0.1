@@ -25,8 +25,12 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm ci
-      - name: Type check
-        run: npm run check
+      - name: Type check user-client
+        run: cd apps/user-client && npx tsc --noEmit
+      - name: Type check admin-client
+        run: cd apps/admin-client && npx tsc --noEmit
+      - name: Type check server
+        run: cd apps/server && npx tsc --noEmit
 
   test:
     name: Run Tests
@@ -67,7 +71,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: user-client-build
-          path: dist/user-client
+          path: apps/user-client/dist
           retention-days: 7
 
   build-admin:
@@ -92,7 +96,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: admin-client-build
-          path: dist/admin-client
+          path: apps/admin-client/dist
           retention-days: 7
 
   build-api:
@@ -150,12 +154,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: user-client-build
-          path: dist/user-client
+          path: apps/user-client/dist
       - name: Download Admin Build
         uses: actions/download-artifact@v4
         with:
           name: admin-client-build
-          path: dist/admin-client
+          path: apps/admin-client/dist
       - name: Deploy User Portal to Staging
         run: echo "Deploying user portal to staging CDN..."
       - name: Deploy Admin Portal to Staging
@@ -180,12 +184,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: user-client-build
-          path: dist/user-client
+          path: apps/user-client/dist
       - name: Download Admin Build
         uses: actions/download-artifact@v4
         with:
           name: admin-client-build
-          path: dist/admin-client
+          path: apps/admin-client/dist
       - name: Run Database Migrations
         run: echo "Running database migrations..."
         env:

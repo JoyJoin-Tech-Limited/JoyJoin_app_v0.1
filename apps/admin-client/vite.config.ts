@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   root: '.',
   build: {
-    outDir: '../../dist/admin-client',
+    outDir: 'dist',
     emptyOutDir: true,
   },
   resolve: {
