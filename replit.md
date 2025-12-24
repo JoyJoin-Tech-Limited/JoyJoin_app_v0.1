@@ -41,6 +41,22 @@ Preferred communication style: Simple, everyday language.
 - **小悦进化系统 (AI Evolution System V2.0):** Enables the Xiaoyue chatbot to learn and improve through user feedback and multi-armed bandit optimization, including real-time insight detection across 6 categories. Features dynamic weight optimization using Thompson Sampling and an Admin Evolution Portal for monitoring.
 - **Intelligent Information Collection System:** Extracts and structures professional information, including a SmartInsight System for tracking categories, insights, evidence, and confidence, and an Industry Ontology Knowledge Base with hierarchical segments and smart inference rules.
 
+## Recent Changes (2025-12-24)
+
+### Location Structure Simplification & Unified Data Model
+- **Cluster Model:** Simplified to **2 clusters only** (南山区, 福田区) - consolidated from previous 4-cluster structure
+- **District Mapping:**
+  - **南山区 (Nanshan):** 科技园, 后海, 深圳湾, 蛇口, 前海, 华侨城 (6 districts)
+  - **福田区 (Futian):** 车公庙, 购物公园·会展, 梅林 (3 districts)
+- **Data Synchronization:** 
+  - Updated `packages/shared/src/districts.ts` as authoritative source
+  - Synchronized `apps/admin-client/src/lib/districts.ts` to match shared structure
+  - Added helper functions: `getDistrictIdsByCluster()`, `getClusterIdByDistrictId()`
+- **Import Path Fixes:**
+  - Fixed TypeScript path issues in `apps/server/src/` to use `@shared/*` alias instead of relative paths
+  - Fixed `vite.ts` import path from `../vite.config` to `../../../vite.config`
+  - Excluded `src/vite.ts` from TypeScript checking due to dynamic import requirements
+
 ## External Dependencies
 
 - **React Ecosystem:** `react`, `react-dom`, `@tanstack/react-query`.
