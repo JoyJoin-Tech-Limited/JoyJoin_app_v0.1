@@ -6,9 +6,10 @@ import { MapPin, Clock, DollarSign, Users, Navigation, CheckCircle2, Sparkles } 
 import { motion } from "framer-motion";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import type { BlindBoxEvent } from "@joyjoin/shared/schema";
+import type { BlindBoxEvent } from "@shared/schema";
 import { getCurrencySymbol } from "@/lib/currency";
 import { useLocation } from "wouter";
+import { formatDateInHongKong, getHongKongDateForComparison } from "@/lib/hongKongTime";
 
 interface MatchedEventCardProps {
   event: BlindBoxEvent;
@@ -66,18 +67,13 @@ export default function MatchedEventCard({ event }: MatchedEventCardProps) {
     }
   };
 
-  const formatDate = (dateTime: Date) => {
-    const date = new Date(dateTime);
-    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-    const weekday = weekdays[date.getDay()];
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${weekday} ${hours}:${minutes}`;
+  const formatDate = (dateTime: Date | string) => {
+    return formatDateInHongKong(dateTime, 'weekday-time');
   };
 
-  const getCountdown = (dateTime: Date) => {
+  const getCountdown = (dateTime: Date | string) => {
     const now = new Date();
-    const eventDate = new Date(dateTime);
+    const eventDate = getHongKongDateForComparison(dateTime);
     const diff = eventDate.getTime() - now.getTime();
     
     if (diff <= 0) return "活动进行中";

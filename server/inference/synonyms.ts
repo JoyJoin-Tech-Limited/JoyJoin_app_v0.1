@@ -1,0 +1,1781 @@
+/**
+ * 同义词和语义映射表
+ * 用于快速匹配层，处理同一概念的不同表达方式
+ */
+
+import type { SynonymGroup, InferenceRule } from './types';
+
+// ============ 人生阶段相关同义词 ============
+
+export const LIFE_STAGE_SYNONYMS: SynonymGroup[] = [
+  {
+    canonical: '创业中',
+    variants: [
+      '创业', '在创业', '自己创业', '开公司', '自己开公司', '当老板',
+      '做老板', '自己做', '自己干', '单干', '开店', '自己开店',
+      '做生意', '经商', '创业者', '企业主', '老板', '创始人',
+      'CEO', 'founder', '合伙人', '联合创始人', '自主创业'
+    ],
+    field: 'lifeStage',
+    value: '创业中'
+  },
+  {
+    canonical: '学生党',
+    variants: [
+      '学生', '在读', '还在读书', '上学', '读书', '念书',
+      '在校', '在校生', '大学生', '研究生', '博士生', '硕士',
+      '本科', '大一', '大二', '大三', '大四', '研一', '研二', '研三',
+      '高中生', '中学生', '留学生', '交换生', '在读研究生'
+    ],
+    field: 'lifeStage',
+    value: '学生党'
+  },
+  {
+    canonical: '职场新人',
+    variants: [
+      '刚毕业', '应届', '应届生', '刚工作', '工作一年', '工作两年',
+      '职场新人', '新人', '刚入职', '试用期', '实习', '实习生',
+      '工作不久', '刚开始工作', '毕业生', '初入职场'
+    ],
+    field: 'lifeStage',
+    value: '职场新人'
+  },
+  {
+    canonical: '职场老手',
+    variants: [
+      '工作多年', '老员工', '资深', '高级', 'senior', '经理',
+      '总监', '主管', '负责人', '带团队', '管理层', '中层',
+      '工作五年', '工作十年', '职场老人', '老司机'
+    ],
+    field: 'lifeStage',
+    value: '职场老手'
+  },
+  {
+    canonical: '自由职业',
+    variants: [
+      '自由职业', '自由职业者', 'freelancer', '自媒体', '博主',
+      'up主', '网红', 'KOL', '独立顾问', '独立咨询', '接私活',
+      '兼职', '灵活就业', '斜杠青年', '数字游民', '远程工作'
+    ],
+    field: 'lifeStage',
+    value: '自由职业'
+  },
+  {
+    canonical: '退休享乐',
+    variants: [
+      '退休', '已退休', '退休了', '不工作了', '享受生活',
+      '养老', '退休人员', '离退休'
+    ],
+    field: 'lifeStage',
+    value: '退休享乐'
+  },
+  {
+    canonical: '全职爸妈',
+    variants: [
+      '全职妈妈', '全职爸爸', '全职太太', '全职主妇', '家庭主妇',
+      '在家带娃', '专职带娃', '照顾家庭', '全职带孩子'
+    ],
+    field: 'lifeStage',
+    value: '全职爸妈'
+  }
+];
+
+// ============ 行业相关同义词 ============
+
+export const INDUSTRY_SYNONYMS: SynonymGroup[] = [
+  {
+    canonical: '互联网/科技',
+    variants: [
+      '互联网', 'IT', '科技', '技术', '程序员', '码农', '开发',
+      '软件', '产品经理', 'PM', '运营', '技术总监', 'CTO',
+      '人工智能', 'AI', '大数据', '云计算', '区块链', 'web3'
+    ],
+    field: 'industry',
+    value: '互联网/科技'
+  },
+  {
+    canonical: '金融',
+    variants: [
+      '金融', '银行', '投资', '基金', '证券', '保险', '风投',
+      'VC', 'PE', '投行', '理财', '财务', 'CFO', '会计',
+      '审计', '四大', '券商'
+    ],
+    field: 'industry',
+    value: '金融'
+  },
+  {
+    canonical: '教育',
+    variants: [
+      '教育', '老师', '教师', '培训', '讲师', '教授', '助教',
+      '辅导', '教学', '学校', '教研', 'K12', '在线教育'
+    ],
+    field: 'industry',
+    value: '教育'
+  },
+  {
+    canonical: '医疗/健康',
+    variants: [
+      '医疗', '医生', '护士', '医院', '健康', '医药', '制药',
+      '生物', '临床', '主治', '住院医', '药剂师', '康复'
+    ],
+    field: 'industry',
+    value: '医疗/健康'
+  },
+  {
+    canonical: '设计/创意',
+    variants: [
+      '设计', '设计师', 'UI', 'UX', '视觉', '平面', '交互',
+      '美术', '创意', '广告', '4A', '品牌', '艺术'
+    ],
+    field: 'industry',
+    value: '设计/创意'
+  },
+  {
+    canonical: '媒体/传播',
+    variants: [
+      '媒体', '传媒', '新闻', '记者', '编辑', '内容', '公关',
+      '市场', '营销', 'marketing', '品牌', '广告'
+    ],
+    field: 'industry',
+    value: '媒体/传播'
+  },
+  {
+    canonical: '法律',
+    variants: [
+      '法律', '律师', '法务', '律所', '法官', '检察官',
+      '法学', '司法', '仲裁'
+    ],
+    field: 'industry',
+    value: '法律'
+  },
+  {
+    canonical: '房地产',
+    variants: [
+      '房地产', '地产', '物业', '中介', '房产', '建筑',
+      '工程', '开发商', '甲方'
+    ],
+    field: 'industry',
+    value: '房地产'
+  },
+  {
+    canonical: '餐饮/服务',
+    variants: [
+      '餐饮', '餐厅', '酒店', '服务业', '零售', '门店',
+      '连锁', '加盟'
+    ],
+    field: 'industry',
+    value: '餐饮/服务'
+  },
+  {
+    canonical: '国企/央企',
+    variants: [
+      '国企', '央企', '国有企业', '中字头', '事业单位', '体制内',
+      '公务员', '机关', '政府', '国有', '央属'
+    ],
+    field: 'industry',
+    value: '国企/央企'
+  }
+];
+
+// ============ 海归相关同义词 ============
+
+export const RETURNEE_SYNONYMS: SynonymGroup[] = [
+  {
+    canonical: '海归',
+    variants: [
+      '海归', '留学', '留过学', '海外', '国外', '出国',
+      '回国', '刚回国', '从国外回来', '在国外', '留学回来',
+      '美国回来', '英国回来', '澳洲回来', '加拿大回来',
+      '留学生', '海龟', 'returnee', '归国'
+    ],
+    field: 'isReturnee',
+    value: 'true'
+  }
+];
+
+// ============ 感情状态同义词 ============
+
+export const RELATIONSHIP_SYNONYMS: SynonymGroup[] = [
+  {
+    canonical: '单身',
+    variants: [
+      '单身', '没对象', '没有对象', '一个人', '母胎solo',
+      '单着', '还单着', '目前单身', '刚分手', '空窗期'
+    ],
+    field: 'relationshipStatus',
+    value: '单身'
+  },
+  {
+    canonical: '恋爱中',
+    variants: [
+      '恋爱', '有对象', '有男朋友', '有女朋友', '谈恋爱',
+      '在一起', '交往中', '热恋', '稳定交往'
+    ],
+    field: 'relationshipStatus',
+    value: '恋爱中'
+  },
+  {
+    canonical: '已婚',
+    variants: [
+      '已婚', '结婚了', '老公', '老婆', '爱人',
+      '另一半', '伴侣', '夫妻', '配偶', '家属'
+    ],
+    field: 'relationshipStatus',
+    value: '已婚'
+  },
+  {
+    canonical: '离异',
+    variants: [
+      '离婚', '离异', '离过婚', '单亲', '前夫', '前妻'
+    ],
+    field: 'relationshipStatus',
+    value: '离异'
+  }
+];
+
+// ============ 否定表达模式 ============
+
+export const NEGATION_PATTERNS: string[] = [
+  '不是', '不做', '没有', '不再', '以前', '曾经', '之前',
+  '不干了', '不做了', '放弃了', '退出了', '离开了',
+  '不想', '不打算', '不会', '别', '勿', '非',
+  '还没', '尚未', '未曾', '从未', '从不'
+];
+
+// ============ 精细化否定前缀（直接修饰关键词） ============
+
+export const DIRECT_NEGATION_PREFIXES: string[] = [
+  // 位置否定
+  '不在', '没在', '不住', '没住', '离开了', '搬离了', '搬走了',
+  '不去', '没去', '不来', '没来', '不回', '没回',
+  // 状态否定  
+  '不是', '没是', '不做', '没做', '不当', '没当',
+  '不干', '没干', '不搞', '没搞', '不从事', '没从事',
+  // 关系否定
+  '没结', '未婚', '没嫁', '没娶', '不结', '不嫁', '不娶',
+  // 身份否定
+  '不是', '不算', '不属于', '不能算',
+  // 时间否定
+  '以前在', '曾经在', '之前在', '原来在', '过去在',
+  '以前是', '曾经是', '之前是', '原来是', '过去是',
+  '以前做', '曾经做', '之前做', '原来做', '过去做',
+];
+
+/**
+ * 检查否定是否直接修饰目标关键词
+ * 例如："不在北京" 中 "不在" 直接修饰 "北京"
+ * 但对于 "不在北京，在深圳" 中的 "深圳" 不应被否定
+ */
+export function isDirectlyNegated(text: string, keyword: string): boolean {
+  const keywordIndex = text.indexOf(keyword);
+  if (keywordIndex === -1) return false;
+  
+  const AFFIRMATIVE_PREFIXES = ['在', '是', '做', '当', '住', '搬到', '来', '到'];
+  const beforeKeyword = text.substring(Math.max(0, keywordIndex - 10), keywordIndex);
+  
+  // 情况1：关键词本身以肯定前缀开头（如"在深圳"）
+  for (const affirm of AFFIRMATIVE_PREFIXES) {
+    if (keyword.startsWith(affirm)) {
+      // 检查关键词前面是否有分隔符（逗号、句号、空格等）
+      const lastChar = beforeKeyword.slice(-1);
+      if (['，', ',', '。', '；', ' ', '、', '！', '？'].includes(lastChar)) {
+        return false;  // 有分隔符，说明是独立的肯定短语
+      }
+      // 检查前面是否直接是否定词
+      for (const neg of ['不', '没', '非']) {
+        if (beforeKeyword.endsWith(neg)) {
+          return true;  // 否定词直接接肯定前缀，如"不在深圳"
+        }
+      }
+      return false;  // 否则不是被否定的
+    }
+  }
+  
+  // 情况2：检查关键词前面是否有肯定前缀直接修饰（原逻辑）
+  for (const affirm of AFFIRMATIVE_PREFIXES) {
+    if (beforeKeyword.endsWith(affirm)) {
+      // 检查这个肯定前缀前面是否紧跟否定
+      const beforeAffirm = beforeKeyword.slice(0, -affirm.length);
+      let hasNegation = false;
+      for (const neg of ['不', '没', '非']) {
+        if (beforeAffirm.endsWith(neg)) {
+          hasNegation = true;
+          break;
+        }
+      }
+      if (!hasNegation) {
+        return false;  // 有肯定前缀且前面没有否定，不是被否定的
+      }
+    }
+  }
+  
+  // 情况3：检查关键词前面是否有直接否定前缀
+  for (const prefix of DIRECT_NEGATION_PREFIXES) {
+    if (beforeKeyword.endsWith(prefix)) {
+      return true;
+    }
+    // 也检查紧邻的情况
+    if (beforeKeyword.includes(prefix) && beforeKeyword.indexOf(prefix) >= beforeKeyword.length - prefix.length - 3) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * 检查整句是否是否定句式（用于补充判断）
+ */
+export function isNegativeSentence(text: string): { isNegative: boolean; negationType: string | null } {
+  // 开头否定
+  const startNegations = ['不', '没', '非', '未', '别', '勿', '无'];
+  for (const neg of startNegations) {
+    if (text.startsWith(neg)) {
+      return { isNegative: true, negationType: 'start' };
+    }
+  }
+  
+  // 典型否定句式
+  const negativePatterns = [
+    /^不[是在做有]/,
+    /^没[有在做是]/,
+    /^还没/,
+    /^并非/,
+    /^并不/,
+    /^从不/,
+    /^从没/,
+    /^从未/,
+  ];
+  
+  for (const pattern of negativePatterns) {
+    if (pattern.test(text)) {
+      return { isNegative: true, negationType: 'pattern' };
+    }
+  }
+  
+  return { isNegative: false, negationType: null };
+}
+
+// ============ 时间修饰词（影响推断） ============
+
+export const TEMPORAL_MODIFIERS: Record<string, 'past' | 'present' | 'future'> = {
+  '以前': 'past',
+  '之前': 'past',
+  '曾经': 'past',
+  '过去': 'past',
+  '原来': 'past',
+  '现在': 'present',
+  '目前': 'present',
+  '当前': 'present',
+  '正在': 'present',
+  '将来': 'future',
+  '以后': 'future',
+  '打算': 'future',
+  '计划': 'future',
+  '准备': 'future'
+};
+
+// ============ 快速推断规则 ============
+
+export const QUICK_INFERENCE_RULES: InferenceRule[] = [
+  // 人生阶段推断
+  {
+    id: 'life_stage_entrepreneur',
+    name: '创业者人生阶段',
+    trigger: {
+      type: 'keyword',
+      keywords: ['创业', '开公司', '自己做', '当老板', '做老板', '单干', '开店', 'CEO', '创始人', 'founder']
+    },
+    infers: [
+      { field: 'lifeStage', value: '创业中', confidence: 0.92 }
+    ],
+    excludePatterns: ['不创业', '不想创业', '以前创业', '曾经创业', '放弃创业'],
+    priority: 10
+  },
+  {
+    id: 'life_stage_student',
+    name: '学生人生阶段',
+    trigger: {
+      type: 'keyword',
+      keywords: ['是学生', '还是学生', '我是学生', '在读', '上学', '念书', '读大学', '上大学', '在大学', '读研', '在校生', '大学生', '在校']
+    },
+    infers: [
+      { field: 'lifeStage', value: '学生党', confidence: 0.95 }
+    ],
+    excludePatterns: ['不是学生', '毕业了', '已经毕业', '大学城', '大学路'],
+    priority: 10
+  },
+  {
+    id: 'life_stage_new_worker',
+    name: '职场新人人生阶段',
+    trigger: {
+      type: 'keyword',
+      keywords: ['刚毕业', '应届', '刚工作', '工作一年', '工作两年', '实习', '试用期']
+    },
+    infers: [
+      { field: 'lifeStage', value: '职场新人', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  {
+    id: 'life_stage_freelancer',
+    name: '自由职业人生阶段',
+    trigger: {
+      type: 'keyword',
+      keywords: ['自由职业', 'freelancer', '自媒体', '博主', 'up主', '独立顾问', '接私活', '数字游民',
+                 '自己接活', '接活做', '接项目做', '自己做项目']
+    },
+    infers: [
+      { field: 'lifeStage', value: '自由职业', confidence: 0.90 }
+    ],
+    excludePatterns: ['不是自由职业'],
+    priority: 10
+  },
+  
+  // 海归标签推断 - 不受时态影响，因为"海归"本身就表示当前身份
+  {
+    id: 'returnee_detection',
+    name: '海归识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['留学', '海归', '我是海归', '国外回来', '留学回来', '在国外', '从美国', '从英国', '从澳洲', '从加拿大', '硅谷', '湾区', 'Silicon Valley', '华尔街', 'Wall Street', '美国回来', '英国回来', '回国创业', '刚回国', '回国', '在美国读书', '在英国读书', '之前在美国', '之前在英国']
+    },
+    infers: [
+      { field: 'isReturnee', value: 'true', confidence: 0.90 },
+      { field: 'languages', value: '英语', confidence: 0.75 }
+    ],
+    excludePatterns: ['没留过学', '没出过国'],
+    priority: 8,
+    ignoreTemporal: true  // 海归本身就表示"曾经留学现在回来"，不受过去时态影响
+  },
+  
+  // 感情状态推断 - 单身
+  {
+    id: 'relationship_single',
+    name: '单身状态',
+    trigger: {
+      type: 'keyword',
+      keywords: ['单身', '没对象', '没有对象', '母胎solo', '单着', '空窗期', '刚分手', '还是一个人',
+                 '没结婚', '没结', '未婚', '还没结婚', '不想结婚']
+    },
+    infers: [
+      { field: 'relationshipStatus', value: '单身', confidence: 0.90 }
+    ],
+    excludePatterns: ['不是单身', '脱单', '告别单身'],
+    priority: 10
+  },
+  
+  // 感情状态推断 - 离异
+  {
+    id: 'relationship_divorced',
+    name: '离异状态',
+    trigger: {
+      type: 'keyword',
+      keywords: ['离异', '离婚', '离过婚', '单亲', '离异带娃', '离异带孩子']
+    },
+    infers: [
+      { field: 'relationshipStatus', value: '离异', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // 设计行业
+  {
+    id: 'industry_design',
+    name: '设计行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['设计师', '做设计', 'UI设计', 'UX设计', '平面设计', '视觉设计', '交互设计', '室内设计', '建筑设计']
+    },
+    infers: [
+      { field: 'industry', value: '设计/创意', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 教育水平推断
+  {
+    id: 'education_graduate',
+    name: '研究生学历',
+    trigger: {
+      type: 'keyword',
+      keywords: ['读研', '研究生', '硕士', '在读研', '读硕', '硕士生', 'master', 'Masters']
+    },
+    infers: [
+      { field: 'educationLevel', value: '研究生', confidence: 0.92 },
+      { field: 'education', value: '研究生', confidence: 0.92 },
+      { field: 'lifeStage', value: '学生党', confidence: 0.85 }
+    ],
+    excludePatterns: ['不读研', '没读研', '毕业了', '不是研究生'],
+    priority: 9
+  },
+  {
+    id: 'education_phd',
+    name: '博士学历',
+    trigger: {
+      type: 'keyword',
+      keywords: ['博士', '博士生', '读博', '在读博士', 'PhD', 'Ph.D']
+    },
+    infers: [
+      { field: 'educationLevel', value: '博士', confidence: 0.92 },
+      { field: 'lifeStage', value: '学生党', confidence: 0.90 }
+    ],
+    excludePatterns: ['博士后', '不读博'],
+    priority: 9
+  },
+  {
+    id: 'education_bachelor',
+    name: '本科学历',
+    trigger: {
+      type: 'keyword',
+      keywords: ['本科', '大学', '大学生', '本科生', 'bachelor', '本科毕业']
+    },
+    infers: [
+      { field: 'educationLevel', value: '本科', confidence: 0.88 },
+      { field: 'education', value: '本科', confidence: 0.88 }
+    ],
+    excludePatterns: ['不是本科'],
+    priority: 7
+  },
+  
+  // 全职父母
+  {
+    id: 'life_stage_fulltime_parent',
+    name: '全职父母',
+    trigger: {
+      type: 'keyword',
+      keywords: ['全职妈妈', '全职爸爸', '全职太太', '全职主妇', '家庭主妇', '在家带娃', '专职带娃']
+    },
+    infers: [
+      { field: 'lifeStage', value: '全职爸妈', confidence: 0.95 },
+      { field: 'hasChildren', value: 'true', confidence: 0.95 }
+    ],
+    excludePatterns: [],
+    priority: 10
+  },
+  
+  // 国企/央企
+  {
+    id: 'industry_state_owned',
+    name: '国企央企',
+    trigger: {
+      type: 'keyword',
+      keywords: ['国企', '央企', '国有企业', '中字头', '事业单位', '体制内', '公务员', '机关']
+    },
+    infers: [
+      { field: 'industry', value: '国企/央企', confidence: 0.92 }
+    ],
+    excludePatterns: ['不在国企', '离开国企'],
+    priority: 8
+  },
+  
+  // 性别推断（谨慎使用）
+  {
+    id: 'gender_male_hint',
+    name: '性别男性暗示',
+    trigger: {
+      type: 'keyword',
+      keywords: ['老婆', '女朋友', '女友', '媳妇', '我老婆', '我女朋友']
+    },
+    infers: [
+      { field: 'gender', value: '男', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 5
+  },
+  {
+    id: 'gender_female_hint',
+    name: '性别女性暗示',
+    trigger: {
+      type: 'keyword',
+      keywords: ['老公', '男朋友', '男友', '先生', '我老公', '我男朋友', '孩子妈', '当妈']
+    },
+    infers: [
+      { field: 'gender', value: '女', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 5
+  },
+  
+  // 家庭状态推断
+  {
+    id: 'has_children',
+    name: '有孩子',
+    trigger: {
+      type: 'keyword',
+      keywords: ['孩子', '儿子', '女儿', '宝宝', '娃', '小孩', '带娃', '接孩子', '幼儿园', '上学']
+    },
+    infers: [
+      { field: 'hasChildren', value: 'true', confidence: 0.88 }
+    ],
+    excludePatterns: ['没有孩子', '没孩子', '不想要孩子'],
+    priority: 7
+  },
+  
+  // ============ 隐含表达推断 ============
+  
+  // 创业隐含表达
+  {
+    id: 'implicit_entrepreneur',
+    name: '创业隐含表达',
+    trigger: {
+      type: 'keyword',
+      keywords: ['见投资人', '融资', '拿投资', 'A轮', 'B轮', 'C轮', '天使轮', '种子轮', 
+                 '我们团队', '团队成员', '招人', '招聘', '合伙人', '股权', '期权',
+                 '烧钱', '现金流', '盈利模式', '商业计划']
+    },
+    infers: [
+      { field: 'lifeStage', value: '创业中', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 学生隐含表达
+  {
+    id: 'implicit_student',
+    name: '学生隐含表达',
+    trigger: {
+      type: 'keyword',
+      keywords: ['考试', '期末', '论文', '毕业论文', '导师', '教授', '课程', '上课', 
+                 '学分', '实验室', '图书馆', '宿舍', '食堂', '校园', '同学']
+    },
+    infers: [
+      { field: 'lifeStage', value: '学生党', confidence: 0.85 }
+    ],
+    excludePatterns: ['孩子考试', '孩子上课'],
+    priority: 7
+  },
+  
+  // 职场人士隐含表达
+  {
+    id: 'implicit_employed',
+    name: '职场人士隐含表达',
+    trigger: {
+      type: 'keyword',
+      keywords: ['加班', '开会', '汇报', '领导', '老板', '同事', 'OKR', 'KPI', 
+                 '年终奖', '涨薪', '晋升', '项目', '出差']
+    },
+    infers: [
+      { field: 'lifeStage', value: '职场老手', confidence: 0.80 }
+    ],
+    excludePatterns: ['不加班', '不开会'],
+    priority: 6
+  },
+  
+  // 已婚隐含表达
+  {
+    id: 'implicit_married',
+    name: '已婚隐含表达',
+    trigger: {
+      type: 'keyword',
+      keywords: ['结婚', '婚后', '婚礼', '老公', '老婆', '爱人', '另一半', '配偶',
+                 '婆媳', '公婆', '丈母娘', '岳父', '婚姻']
+    },
+    infers: [
+      { field: 'relationshipStatus', value: '已婚', confidence: 0.90 }
+    ],
+    excludePatterns: ['未婚', '不结婚', '没结婚', '还没结婚'],
+    priority: 8
+  },
+  
+  // ============ 粤语方言推断 ============
+  
+  // 粤语创业者
+  {
+    id: 'cantonese_entrepreneur',
+    name: '粤语创业者',
+    trigger: {
+      type: 'keyword',
+      keywords: ['自己做嘢', '开咗间公司', '自己开公司', '做老闆', '做老细']
+    },
+    infers: [
+      { field: 'lifeStage', value: '创业中', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 粤语自由职业
+  {
+    id: 'cantonese_freelancer',
+    name: '粤语自由职业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['做freelance嘅', 'freelance', '帮人整', '自己接job', '接freelance']
+    },
+    infers: [
+      { field: 'lifeStage', value: '自由职业', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 粤语上班族
+  {
+    id: 'cantonese_employed',
+    name: '粤语上班族',
+    trigger: {
+      type: 'keyword',
+      keywords: ['返工', '返咗几年工', '返紧工', '喺公司做嘢', '打工仔']
+    },
+    infers: [
+      { field: 'lifeStage', value: '职场老手', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 粤语IT/科技
+  {
+    id: 'cantonese_it',
+    name: '粤语IT行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['整网站', '整APP', '写程式', '做网页', '做APP']
+    },
+    infers: [
+      { field: 'industry', value: '互联网/科技', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 粤语广州/香港高校
+  {
+    id: 'cantonese_guangzhou_school',
+    name: '粤语广州高校',
+    trigger: {
+      type: 'keyword',
+      keywords: ['中大', '喺中大', '华工', '暨大', '广外', '广工']
+    },
+    infers: [
+      { field: 'city', value: '广州', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // 粤语海归
+  {
+    id: 'cantonese_returnee_v2',
+    name: '粤语海归表达',
+    trigger: {
+      type: 'keyword',
+      keywords: ['之前喺美国', '之前喺英国', '喺美国读书', '喺英国读书', '外国返嚟']
+    },
+    infers: [
+      { field: 'isReturnee', value: 'true', confidence: 0.88 },
+      { field: 'languages', value: '英语', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 9,
+    ignoreTemporal: true  // 海归相关表达，不受过去时态影响
+  },
+  
+  // 粤语科技园→深圳
+  {
+    id: 'cantonese_shenzhen',
+    name: '粤语深圳地标',
+    trigger: {
+      type: 'keyword',
+      keywords: ['南山科技园', '科技园度', '喺深圳', '深圳嗰边', '前海', '福田']
+    },
+    infers: [
+      { field: 'city', value: '深圳', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // ============ 简单城市识别 ============
+  
+  // 在+城市 直接识别
+  {
+    id: 'simple_city_shenzhen',
+    name: '深圳简单识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['在深圳', '深圳这边', '来深圳', '到深圳', '住深圳', '深圳嘅']
+    },
+    infers: [
+      { field: 'city', value: '深圳', confidence: 0.90 }
+    ],
+    excludePatterns: ['不在深圳', '没在深圳', '离开深圳'],
+    priority: 9
+  },
+  
+  {
+    id: 'simple_city_shanghai',
+    name: '上海简单识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['在上海', '上海这边', '来上海', '到上海', '住上海', '上海嘅']
+    },
+    infers: [
+      { field: 'city', value: '上海', confidence: 0.90 }
+    ],
+    excludePatterns: ['不在上海', '没在上海', '离开上海'],
+    priority: 9
+  },
+  
+  {
+    id: 'simple_city_beijing',
+    name: '北京简单识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['在北京', '北京这边', '来北京', '到北京', '住北京']
+    },
+    infers: [
+      { field: 'city', value: '北京', confidence: 0.90 }
+    ],
+    excludePatterns: ['不在北京', '没在北京', '离开北京'],
+    priority: 9
+  },
+  
+  {
+    id: 'simple_city_guangzhou',
+    name: '广州简单识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['在广州', '广州这边', '来广州', '到广州', '住广州', '广州嘅']
+    },
+    infers: [
+      { field: 'city', value: '广州', confidence: 0.90 }
+    ],
+    excludePatterns: ['不在广州', '没在广州', '离开广州'],
+    priority: 9
+  },
+  
+  {
+    id: 'simple_city_hongkong',
+    name: '香港简单识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['在香港', '香港这边', '来香港', '到香港', '住香港', '喺香港']
+    },
+    infers: [
+      { field: 'city', value: '香港', confidence: 0.90 }
+    ],
+    excludePatterns: ['不在香港', '没在香港', '离开香港'],
+    priority: 9
+  },
+  
+  // 粤语互联网
+  {
+    id: 'cantonese_tech',
+    name: '粤语科技行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['做互联网嘅', '做IT嘅', '写code', '做tech']
+    },
+    infers: [
+      { field: 'industry', value: '互联网/科技', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 中英混杂推断 ============
+  
+  // 中英混杂创业者
+  {
+    id: 'mixed_entrepreneur',
+    name: '中英混杂创业者',
+    trigger: {
+      type: 'keyword',
+      keywords: ['startup founder', 'startup', 'co-founder', 'create了一家公司', 
+                 '做business', 'run公司', 'own business']
+    },
+    infers: [
+      { field: 'lifeStage', value: '创业中', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // 中英混杂科技行业
+  {
+    id: 'mixed_tech',
+    name: '中英混杂科技行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['tech相关', 'tech行业', 'IT行业', 'tech公司', 'technology', 
+                 '做software', 'engineer', '程序员', '码农', 'developer']
+    },
+    infers: [
+      { field: 'industry', value: '互联网/科技', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 中英混杂金融
+  {
+    id: 'mixed_finance',
+    name: '中英混杂金融行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['finance', 'banking', 'investment banking', 'PE', 'VC', 
+                 '做投资', '基金', 'hedge fund', 'asset management']
+    },
+    infers: [
+      { field: 'industry', value: '金融', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 中英混杂城市
+  {
+    id: 'mixed_shenzhen',
+    name: '中英混杂深圳',
+    trigger: {
+      type: 'keyword',
+      keywords: ['Shenzhen', '在Shenzhen', 'Shenzhen这边', '深圳Nanshan']
+    },
+    infers: [
+      { field: 'city', value: '深圳', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // ============ 地标推断城市 ============
+  
+  // 深圳地标
+  {
+    id: 'landmark_shenzhen',
+    name: '深圳地标',
+    trigger: {
+      type: 'keyword',
+      keywords: ['科技园', '南山', '福田', '前海', '华强北', '蛇口', '宝安']
+    },
+    infers: [
+      { field: 'city', value: '深圳', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // 北京地标
+  {
+    id: 'landmark_beijing',
+    name: '北京地标',
+    trigger: {
+      type: 'keyword',
+      keywords: ['中关村', '望京', '国贸', '三里屯', '朝阳', '海淀', '西二旗']
+    },
+    infers: [
+      { field: 'city', value: '北京', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // 上海地标
+  {
+    id: 'landmark_shanghai',
+    name: '上海地标',
+    trigger: {
+      type: 'keyword',
+      keywords: ['陆家嘴', '浦东', '张江', '静安', '徐汇', '虹桥', '外滩']
+    },
+    infers: [
+      { field: 'city', value: '上海', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // 广州地标
+  {
+    id: 'landmark_guangzhou',
+    name: '广州地标',
+    trigger: {
+      type: 'keyword',
+      keywords: ['天河', '珠江新城', '琶洲', '番禺', '白云', '越秀']
+    },
+    infers: [
+      { field: 'city', value: '广州', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // 成都地标
+  {
+    id: 'landmark_chengdu',
+    name: '成都地标',
+    trigger: {
+      type: 'keyword',
+      keywords: ['春熙路', '太古里', '高新区', '天府新区', '锦江', '武侯']
+    },
+    infers: [
+      { field: 'city', value: '成都', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // ============ 转折/否定后的当前状态 ============
+  
+  // 从大厂出来创业
+  {
+    id: 'turnaround_to_entrepreneur',
+    name: '转型创业者',
+    trigger: {
+      type: 'keyword',
+      keywords: ['出来自己干', '出来创业', '辞职创业', '离职创业', '不干了自己做', 
+                 '出来单干', '跳出来创业']
+    },
+    infers: [
+      { field: 'lifeStage', value: '创业中', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // ============ 年龄推断 ============
+  
+  // 直接年龄表达
+  {
+    id: 'age_direct',
+    name: '直接年龄表达',
+    trigger: {
+      type: 'pattern',
+      pattern: '(?:我|今年|都|已经)?\\s*(\\d{2})\\s*(?:岁|了|多)'
+    },
+    infers: [
+      { field: 'age', value: '$1', confidence: 0.95 }  // $1会被实际匹配替换
+    ],
+    excludePatterns: [],
+    priority: 10
+  },
+  
+  // 三十几岁
+  {
+    id: 'age_thirties',
+    name: '三十几岁',
+    trigger: {
+      type: 'keyword',
+      keywords: ['三十几', '三十多', '30多', '30几', '快四十']
+    },
+    infers: [
+      { field: 'age', value: '35', confidence: 0.70 }
+    ],
+    excludePatterns: [],
+    priority: 6
+  },
+  
+  // ============ 直接性别表达 ============
+  
+  {
+    id: 'gender_direct_female',
+    name: '直接女性表达',
+    trigger: {
+      type: 'keyword',
+      keywords: ['女生', '女的', '我是女', '女性', 'female', '小姐姐']
+    },
+    infers: [
+      { field: 'gender', value: '女', confidence: 0.95 }
+    ],
+    excludePatterns: ['不是女生', '不是女的'],
+    priority: 10
+  },
+  {
+    id: 'gender_direct_male',
+    name: '直接男性表达',
+    trigger: {
+      type: 'keyword',
+      keywords: ['男生', '男的', '我是男', '男性', 'male', '小哥哥']
+    },
+    infers: [
+      { field: 'gender', value: '男', confidence: 0.95 }
+    ],
+    excludePatterns: ['不是男生', '不是男的'],
+    priority: 10
+  },
+  
+  // ============ 海归额外模式 ============
+  
+  {
+    id: 'returnee_mixed_english',
+    name: '中英混杂海归',
+    trigger: {
+      type: 'keyword',
+      keywords: ['returnee', '从US回来', '从UK回来', 'from America', 'from UK', 
+                 '在Stanford', '在Harvard', '在MIT', '在Berkeley', '在Columbia',
+                 '在Google', '在Facebook', '在Meta', '在Amazon', '在Apple', '在Microsoft',
+                 '哥大', 'Stanford', 'Harvard', 'MIT', 'Berkeley', 'Yale', 'Princeton']
+    },
+    infers: [
+      { field: 'isReturnee', value: 'true', confidence: 0.90 },
+      { field: 'languages', value: '英语', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 9,
+    ignoreTemporal: true  // 海归相关表达，不受过去时态影响
+  },
+  
+  // 粤语海归
+  {
+    id: 'cantonese_returnee',
+    name: '粤语海归',
+    trigger: {
+      type: 'keyword',
+      keywords: ['喺美国读书', '喺英国读书', '喺外国', '海归返嚟', '外国翻嚟']
+    },
+    infers: [
+      { field: 'isReturnee', value: 'true', confidence: 0.88 },
+      { field: 'languages', value: '英语', confidence: 0.80 }
+    ],
+    excludePatterns: [],
+    priority: 8,
+    ignoreTemporal: true  // 海归相关表达，不受过去时态影响
+  },
+  
+  // 语言能力表达
+  {
+    id: 'language_english_fluent',
+    name: '英语流利',
+    trigger: {
+      type: 'keyword',
+      keywords: ['英语比中文', '英语流利', '英文好', '英语很好', 'bilingual', 
+                 'fluent English', '说英语', '会英语', '母语是英语']
+    },
+    infers: [
+      { field: 'languages', value: '英语', confidence: 0.90 }
+    ],
+    excludePatterns: ['不会英语', '英语不好'],
+    priority: 8
+  },
+  
+  // ============ 专业/行业推断 ============
+  
+  {
+    id: 'major_cs',
+    name: '计算机专业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['学计算机', '学CS', '计算机专业', 'CS PhD', 'computer science', 
+                 '软件工程', '学编程', '学的是计算机', '读CS']
+    },
+    infers: [
+      { field: 'industry', value: '互联网/科技', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  {
+    id: 'major_finance',
+    name: '金融专业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['学金融', '金融专业', 'MBA', '读MBA', '念MBA', '商学院', 
+                 '经济学', '会计', 'finance专业']
+    },
+    infers: [
+      { field: 'industry', value: '金融', confidence: 0.80 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // ============ 学校→城市推断 ============
+  
+  {
+    id: 'school_beijing',
+    name: '北京高校',
+    trigger: {
+      type: 'keyword',
+      keywords: ['北大', '清华', '人大', '北师大', '北航', '北理工', '在北大', '在清华']
+    },
+    infers: [
+      { field: 'city', value: '北京', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  {
+    id: 'school_shanghai',
+    name: '上海高校',
+    trigger: {
+      type: 'keyword',
+      keywords: ['复旦', '交大', '上交', '同济', '华师大', '在复旦', '在交大']
+    },
+    infers: [
+      { field: 'city', value: '上海', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // ============ 工作经历→海归推断 ============
+  
+  {
+    id: 'work_abroad',
+    name: '海外工作经历',
+    trigger: {
+      type: 'keyword',
+      keywords: ['在Google工作', '在Facebook', '在Meta工作', '在Apple工作', 
+                 '在微软工作', '在Amazon工作', '在Netflix', '在Uber',
+                 '华尔街工作', '硅谷工作', '在投行']
+    },
+    infers: [
+      { field: 'isReturnee', value: 'true', confidence: 0.85 },
+      { field: 'industry', value: '互联网/科技', confidence: 0.80 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 否定转折句式 ============
+  
+  // "以前...后来出来自己干" 模式
+  {
+    id: 'turnaround_past_to_entrepreneur',
+    name: '过去工作后来创业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['后来出来自己干', '后来创业', '后来自己做', '之后创业', '然后创业',
+                 '出来自己干了', '后来开公司', '之后开公司']
+    },
+    infers: [
+      { field: 'lifeStage', value: '创业中', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 9,
+    ignoreTemporal: true  // 转折句式，"后来"表示当前状态
+  },
+  
+  // "不是X，是做科技的" 模式
+  {
+    id: 'contrast_tech',
+    name: '对比说明科技行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['是做科技的', '是做互联网', '是做IT的', '是做技术的', '是tech',
+                 '做互联网', '做科技', '做IT', '做技术']
+    },
+    infers: [
+      { field: 'industry', value: '互联网/科技', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 10
+  },
+  
+  // "不是X，是做金融的" 模式
+  {
+    id: 'contrast_finance',
+    name: '对比说明金融行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['是做金融的', '是做投资的', '是金融行业']
+    },
+    infers: [
+      { field: 'industry', value: '金融', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 10
+  },
+  
+  // "还没毕业" 学生状态
+  {
+    id: 'not_graduated_student',
+    name: '未毕业学生',
+    trigger: {
+      type: 'keyword',
+      keywords: ['还没毕业', '没毕业', '还在读', '还没工作', '不是已经工作']
+    },
+    infers: [
+      { field: 'lifeStage', value: '学生党', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 10
+  },
+  
+  // "不是本科，是研究生" 模式
+  {
+    id: 'contrast_education_masters',
+    name: '对比说明研究生学历',
+    trigger: {
+      type: 'keyword',
+      keywords: ['是研究生', '是硕士', '读的研究生', '读的硕士', '念master', '读master', 
+                 '念硕士', '硕士在读', '研究生在读', 'master在读', '念的MBA', 'MBA', 
+                 '读MBA', 'EMBA', 'MPA', 'MSc', 'MA学位', '硕士学位']
+    },
+    infers: [
+      { field: 'education', value: '研究生', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 10
+  },
+  
+  // 博士学历识别
+  {
+    id: 'education_phd',
+    name: '博士学历识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['是博士', '读博', '博士在读', '博士生', 'PhD', 'Ph.D', '读的博士', 
+                 '念博士', '博士学位', 'CS PhD', '读PhD', '念PhD', 'doctoral']
+    },
+    infers: [
+      { field: 'education', value: '博士', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 10
+  },
+  
+  // "不上班，自由职业" 模式
+  {
+    id: 'contrast_freelancer',
+    name: '对比说明自由职业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['不上班', '不是朝九晚五', '不用坐班', '不打工', '自己干活']
+    },
+    infers: [
+      { field: 'lifeStage', value: '自由职业', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // "是美国那边" 海归
+  {
+    id: 'contrast_country',
+    name: '对比说明国家',
+    trigger: {
+      type: 'keyword',
+      keywords: ['是美国那边', '是美国的', '是英国那边', '是英国的', '美国回来的']
+    },
+    infers: [
+      { field: 'isReturnee', value: 'true', confidence: 0.88 },
+      { field: 'languages', value: '英语', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 9,
+    ignoreTemporal: true  // 海归相关表达，不受过去时态影响
+  },
+  
+  // ============ 性别识别 ============
+  
+  // "30岁，男" 模式
+  {
+    id: 'gender_male_with_age',
+    name: '年龄+男性',
+    trigger: {
+      type: 'keyword',
+      keywords: ['岁，男', '岁,男', '岁, 男', '岁，男生', '岁，男的', '男，', '，男', 
+                 '男生', '男的', '小哥', '先生', '老公', '男朋友', '老婆总说我',
+                 '全职爸爸']
+    },
+    infers: [
+      { field: 'gender', value: '男', confidence: 0.90 }
+    ],
+    excludePatterns: ['女朋友'],
+    priority: 8
+  },
+  
+  // "28岁，女" 模式
+  {
+    id: 'gender_female_with_age',
+    name: '年龄+女性',
+    trigger: {
+      type: 'keyword',
+      keywords: ['岁，女', '岁,女', '岁, 女', '岁，女生', '岁，女的', '女，', '，女',
+                 '女生', '女的', '小姐姐', '姐姐', '女士', '老婆', '女朋友', '老公总说我',
+                 '全职妈妈', '全职太太', 'full-time mom']
+    },
+    infers: [
+      { field: 'gender', value: '女', confidence: 0.90 }
+    ],
+    excludePatterns: ['男朋友'],
+    priority: 8
+  },
+  
+  // ============ 隐含学生状态 ============
+  
+  // "室友都在准备考研" - 隐含还在读书
+  {
+    id: 'implicit_student_roommate',
+    name: '室友暗示学生',
+    trigger: {
+      type: 'keyword',
+      keywords: ['室友', '舍友', '宿舍', '同学都在', '一起上课', '同班同学', 
+                 '准备考研', '考研中', '在考研', '准备期末', '期末考', '毕业论文']
+    },
+    infers: [
+      { field: 'lifeStage', value: '学生党', confidence: 0.88 }
+    ],
+    excludePatterns: ['以前的室友', '以前的同学'],
+    priority: 8
+  },
+  
+  // ============ 大学→城市映射 ============
+  
+  // 复旦大学→上海
+  {
+    id: 'university_fudan_shanghai',
+    name: '复旦→上海',
+    trigger: {
+      type: 'keyword',
+      keywords: ['Fudan', '复旦', '复旦大学', '在复旦', 'fudan']
+    },
+    infers: [
+      { field: 'city', value: '上海', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 北大/清华→北京
+  {
+    id: 'university_beijing',
+    name: '北大清华→北京',
+    trigger: {
+      type: 'keyword',
+      keywords: ['北大', '北京大学', '清华', '清华大学', 'Tsinghua', 'PKU', 'Peking']
+    },
+    infers: [
+      { field: 'city', value: '北京', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // 浙大→杭州
+  {
+    id: 'university_zju_hangzhou',
+    name: '浙大→杭州',
+    trigger: {
+      type: 'keyword',
+      keywords: ['浙大', '浙江大学', 'ZJU', 'Zhejiang University']
+    },
+    infers: [
+      { field: 'city', value: '杭州', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 科技公司→行业 ============
+  
+  // Google等大厂→互联网/科技
+  {
+    id: 'tech_company_industry',
+    name: '科技公司→行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['在Google', 'Google工作', '在Facebook', '在Meta', '在Apple', '在微软',
+                 '在Amazon', '在Netflix', '在Uber', '在阿里', '在腾讯', '在字节',
+                 '在百度', '在华为', '在美团', '在滴滴', '在京东', 'FAANG', 'BAT',
+                 '在ByteDance', '在TikTok']
+    },
+    infers: [
+      { field: 'industry', value: '互联网/科技', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 9,
+    ignoreTemporal: true  // 曾经在大厂工作仍然表示科技行业背景
+  },
+  
+  // ============ 自媒体→行业 ============
+  
+  // 自媒体→媒体/传播
+  {
+    id: 'industry_media',
+    name: '自媒体→媒体行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['做自媒体', '自媒体', '靠自媒体', '写公众号', '公众号', '博主',
+                 '视频博主', 'YouTuber', 'up主', 'B站', '小红书博主', '抖音博主',
+                 '内容创作', '新媒体', '短视频', '直播', '带货']
+    },
+    infers: [
+      { field: 'industry', value: '媒体/传播', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 设计→行业 ============
+  
+  // product design→设计/创意
+  {
+    id: 'industry_design',
+    name: '设计→创意行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['product design', 'UI设计', 'UX设计', '做设计', '设计师', '美术',
+                 '平面设计', '交互设计', '视觉设计', '品牌设计', 'design', 'designer',
+                 '创意总监', 'creative', '插画', '摄影师']
+    },
+    infers: [
+      { field: 'industry', value: '设计/创意', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 职场新人 ============
+  
+  // "刚回国一年" "刚工作一年"
+  {
+    id: 'career_newcomer',
+    name: '职场新人识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['刚回国一年', '刚工作一年', '工作一年', '刚工作', '毕业一年', 
+                 '毕业后一年', '第一份工作', '刚入职', '实习转正', '刚转正',
+                 '刚毕业', '刚graduate', '正在找工作', '找job', '还没工作',
+                 '投简历', '面试', '揾紧工', '岩岩毕业']
+    },
+    infers: [
+      { field: 'lifeStage', value: '职场新人', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 全职爸妈识别 ============
+  
+  {
+    id: 'homemaker_detection',
+    name: '全职爸妈识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['全职妈妈', '全职爸爸', '全职太太', '在家带孩子', '在家带娃', 
+                 '全职带娃', '带kids', 'full-time mom', 'full-time dad',
+                 '接送孩子', '凑仔', '睇仔', '不上班了，现在全职带娃']
+    },
+    infers: [
+      { field: 'lifeStage', value: '全职爸妈', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // ============ 退休识别 ============
+  
+  {
+    id: 'retiree_detection',
+    name: '退休人士识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['退休了', '已经退休', '退休啦', 'retire了', '不上班了，退休',
+                 '打太极', '接孙子', '养老']
+    },
+    infers: [
+      { field: 'lifeStage', value: '退休享乐', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // 老伴→已婚
+  {
+    id: 'relationship_spouse_elder',
+    name: '老伴→已婚',
+    trigger: {
+      type: 'keyword',
+      keywords: ['老伴', '老伴总说']
+    },
+    infers: [
+      { field: 'relationshipStatus', value: '已婚', confidence: 0.92 },
+      { field: 'lifeStage', value: '退休享乐', confidence: 0.80 }
+    ],
+    excludePatterns: [],
+    priority: 9
+  },
+  
+  // ============ 医疗行业识别 ============
+  
+  {
+    id: 'healthcare_industry',
+    name: '医疗行业识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['医生', '护士', '医院工作', '在医院', '三甲医院', '值夜班',
+                 '病人', 'doctor', 'hospital', '医生嚟嘅', '瑞金医院', 
+                 '协和医院', '中山医院', '华山医院']
+    },
+    infers: [
+      { field: 'industry', value: '医疗/健康', confidence: 0.90 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 职场老手识别 ============
+  
+  {
+    id: 'senior_professional',
+    name: '职场老手识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['工作十年', '十年了', '做了十年', 'ten years', '工作五年',
+                 '五年了', 'five years', '不是刚毕业的']
+    },
+    infers: [
+      { field: 'lifeStage', value: '职场老手', confidence: 0.85 }
+    ],
+    excludePatterns: [],
+    priority: 7
+  },
+  
+  // ============ 本科学历识别 ============
+  
+  {
+    id: 'education_bachelor',
+    name: '本科学历识别',
+    trigger: {
+      type: 'keyword',
+      keywords: ['本科', '本科毕业', '不是研究生，本科', '大学毕业']
+    },
+    infers: [
+      { field: 'education', value: '本科', confidence: 0.90 }
+    ],
+    excludePatterns: ['研究生', '硕士', '博士'],
+    priority: 8
+  },
+  
+  // ============ 浦东→上海 ============
+  
+  {
+    id: 'pudong_shanghai',
+    name: '浦东→上海',
+    trigger: {
+      type: 'keyword',
+      keywords: ['浦东', '静安区', '徐汇', '黄浦', '长宁', '虹口', '杨浦',
+                 '闵行', '宝山', '嘉定', '松江', '瑞金医院', '华山医院', 
+                 '中山医院', '仁济医院', '长海医院']
+    },
+    infers: [
+      { field: 'city', value: '上海', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 798→北京 ============
+  
+  {
+    id: 'district_798_beijing',
+    name: '798→北京',
+    trigger: {
+      type: 'keyword',
+      keywords: ['798', '望京', '朝阳', '海淀', '中关村', '五道口', 
+                 '国贸', '三里屯', '亦庄']
+    },
+    infers: [
+      { field: 'city', value: '北京', confidence: 0.92 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  },
+  
+  // ============ 品牌VI→设计行业 ============
+  
+  {
+    id: 'vi_design_industry',
+    name: 'VI项目→设计行业',
+    trigger: {
+      type: 'keyword',
+      keywords: ['VI项目', '品牌设计', '广告公司', '甲方', '改稿', 
+                 'graphic design', 'agency', '做design']
+    },
+    infers: [
+      { field: 'industry', value: '设计/创意', confidence: 0.88 }
+    ],
+    excludePatterns: [],
+    priority: 8
+  }
+];
+
+// ============ 辅助函数 ============
+
+/**
+ * 检查文本是否包含否定表达
+ */
+export function containsNegation(text: string): boolean {
+  return NEGATION_PATTERNS.some(pattern => text.includes(pattern));
+}
+
+/**
+ * 获取时间修饰词的时态
+ */
+export function getTemporalContext(text: string): 'past' | 'present' | 'future' | null {
+  for (const [modifier, tense] of Object.entries(TEMPORAL_MODIFIERS)) {
+    if (text.includes(modifier)) {
+      return tense;
+    }
+  }
+  return null;
+}
+
+/**
+ * 合并所有同义词组
+ */
+export function getAllSynonymGroups(): SynonymGroup[] {
+  return [
+    ...LIFE_STAGE_SYNONYMS,
+    ...INDUSTRY_SYNONYMS,
+    ...RETURNEE_SYNONYMS,
+    ...RELATIONSHIP_SYNONYMS
+  ];
+}
+
+/**
+ * 根据变体查找标准形式和对应属性
+ */
+export function findCanonicalForm(text: string): {
+  found: boolean;
+  canonical?: string;
+  field?: string;
+  value?: string;
+  confidence: number;
+} {
+  const allGroups = getAllSynonymGroups();
+  
+  for (const group of allGroups) {
+    // 检查是否匹配任何变体
+    const matchedVariant = group.variants.find(variant => 
+      text.toLowerCase().includes(variant.toLowerCase())
+    );
+    
+    if (matchedVariant) {
+      // 检查是否被直接否定
+      const directlyNegated = isDirectlyNegated(text, matchedVariant);
+      const temporalContext = getTemporalContext(text);
+      
+      // 如果是过去时态或被直接否定，降低置信度或跳过
+      if (directlyNegated || temporalContext === 'past') {
+        return {
+          found: true,
+          canonical: group.canonical,
+          field: group.field,
+          value: undefined,  // 不确定当前值
+          confidence: 0.3
+        };
+      }
+      
+      return {
+        found: true,
+        canonical: group.canonical,
+        field: group.field,
+        value: group.value,
+        confidence: 0.9
+      };
+    }
+  }
+  
+  return { found: false, confidence: 0 };
+}

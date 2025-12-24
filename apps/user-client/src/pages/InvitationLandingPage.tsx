@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, MapPin, Calendar, Users, Clock, DollarSign, User } from "lucide-react";
-import { format } from "date-fns";
-import { zhCN } from "date-fns/locale";
+import { convertToHongKongTime } from "@/lib/hongKongTime";
 
 interface InvitationData {
   inviter: {
@@ -118,13 +117,25 @@ export default function InvitationLandingPage() {
               <div className="flex items-center gap-3 text-sm">
                 <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <span>
-                  {format(new Date(event.dateTime), 'yyyy年MM月dd日 EEEE', { locale: zhCN })}
+                  {(() => {
+                    const hkTime = convertToHongKongTime(event.dateTime);
+                    const month = (hkTime.getUTCMonth() + 1).toString().padStart(2, '0');
+                    const day = hkTime.getUTCDate().toString().padStart(2, '0');
+                    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+                    const weekday = weekdays[hkTime.getUTCDay()];
+                    return `${hkTime.getUTCFullYear()}年${month}月${day}日 ${weekday}`;
+                  })()}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <span>
-                  {format(new Date(event.dateTime), 'HH:mm')}
+                  {(() => {
+                    const hkTime = convertToHongKongTime(event.dateTime);
+                    const hours = hkTime.getUTCHours().toString().padStart(2, '0');
+                    const minutes = hkTime.getUTCMinutes().toString().padStart(2, '0');
+                    return `${hours}:${minutes}`;
+                  })()}
                 </span>
               </div>
               {event.location && (

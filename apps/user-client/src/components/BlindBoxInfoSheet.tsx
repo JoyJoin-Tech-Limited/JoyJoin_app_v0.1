@@ -1,6 +1,6 @@
 import { Drawer } from "vaul";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Sparkles, ChevronDown, Users, HelpCircle, DollarSign, Send, Clock, Bell, PartyPopper } from "lucide-react";
+import { Calendar, MapPin, Sparkles, ChevronDown, Users, HelpCircle, DollarSign, Bot } from "lucide-react";
 import { useState } from "react";
 import {
   Collapsible,
@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/collapsible";
 import { getCurrencySymbol } from "@/lib/currency";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import xiaoyueAvatar from "@assets/generated_images/final_fox_with_collar_sunglasses.png";
+
+const XIAOYUE_AVATAR_PLACEHOLDER = null;
 
 interface BlindBoxInfoSheetProps {
   open: boolean;
@@ -64,38 +65,32 @@ export default function BlindBoxInfoSheet({
           
           {/* 可滚动内容 */}
           <div className="overflow-y-auto flex-1 px-4 pb-6">
-            {/* 小悦介绍区 - 优化后的布局 */}
-            <div className="mb-6 relative">
-              <div className="flex items-start gap-3">
-                <div className="relative flex-shrink-0">
-                  <Avatar className="h-14 w-14 border-2 border-primary/30 shadow-lg">
-                    <AvatarImage src={xiaoyueAvatar} alt="小悦" />
-                    <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20">
-                      小悦
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
-                    <span className="text-[10px] text-white">AI</span>
-                  </div>
+            {/* 小悦介绍区 */}
+            <div className="mb-6 flex items-start gap-3">
+              <Avatar className="h-12 w-12 flex-shrink-0 border-2 border-primary/20">
+                {XIAOYUE_AVATAR_PLACEHOLDER ? (
+                  <AvatarImage src={XIAOYUE_AVATAR_PLACEHOLDER} alt="小悦" />
+                ) : null}
+                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20">
+                  <Bot className="h-6 w-6 text-primary" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <Drawer.Title className="text-base font-semibold" data-testid="text-sheet-title">
+                    小悦
+                  </Drawer.Title>
+                  <Badge variant="secondary" className="text-xs">
+                    悦聚助手
+                  </Badge>
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Drawer.Title className="text-lg font-bold" data-testid="text-sheet-title">
-                      小悦
-                    </Drawer.Title>
-                    <Badge className="text-xs bg-gradient-to-r from-primary to-primary/80">
-                      悦聚助手
-                    </Badge>
-                  </div>
-                  <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl rounded-tl-none p-3 border border-primary/10">
-                    <p className="text-sm leading-relaxed">
-                      嗨～我是小悦！让我来告诉你<span className="font-semibold text-primary">盲盒模式</span>是怎么玩的吧～
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      详情在成局后解锁哦
-                    </p>
-                  </div>
+                <div className="bg-muted/50 rounded-lg rounded-tl-none p-3">
+                  <p className="text-sm">
+                    嗨～我是小悦！让我来告诉你<span className="font-medium text-primary">盲盒模式</span>是怎么玩的吧～
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    详情在成局后解锁哦
+                  </p>
                 </div>
               </div>
             </div>
@@ -124,76 +119,46 @@ export default function BlindBoxInfoSheet({
               )}
             </div>
 
-            {/* 2. 盲盒怎么玩 - 4步流程卡片式布局 */}
+            {/* 2. 盲盒怎么玩 */}
             <div className="mb-6">
-              <h3 className="text-base font-semibold mb-4 flex items-center gap-2">
+              <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
                 盲盒怎么玩
               </h3>
-              <div className="grid grid-cols-2 gap-3">
-                {/* 步骤1 */}
-                <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border border-blue-200/50 dark:border-blue-800/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center">
-                      <Send className="h-3.5 w-3.5 text-white" />
-                    </div>
-                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">STEP 1</span>
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+                    1
                   </div>
-                  <p className="text-sm font-semibold mb-1">报名参加</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    选择时间、片区，提交报名
-                  </p>
-                </div>
-                
-                {/* 步骤2 */}
-                <div className="p-3 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20 border border-purple-200/50 dark:border-purple-800/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center">
-                      <Clock className="h-3.5 w-3.5 text-white" />
-                    </div>
-                    <span className="text-xs font-bold text-purple-600 dark:text-purple-400">STEP 2</span>
+                  <div>
+                    <p className="text-sm font-medium">先报名，再揭晓</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      选择时间与类型，提交后进入匹配
+                    </p>
                   </div>
-                  <p className="text-sm font-semibold mb-1">等待匹配</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    AI按兴趣智能配对中
-                  </p>
                 </div>
-                
-                {/* 步骤3 */}
-                <div className="p-3 rounded-xl bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20 border border-orange-200/50 dark:border-orange-800/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center">
-                      <Bell className="h-3.5 w-3.5 text-white" />
-                    </div>
-                    <span className="text-xs font-bold text-orange-600 dark:text-orange-400">STEP 3</span>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+                    2
                   </div>
-                  <p className="text-sm font-semibold mb-1">成局通知</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    解锁地点、加入群聊
-                  </p>
-                </div>
-                
-                {/* 步骤4 */}
-                <div className="p-3 rounded-xl bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 border border-green-200/50 dark:border-green-800/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center">
-                      <PartyPopper className="h-3.5 w-3.5 text-white" />
-                    </div>
-                    <span className="text-xs font-bold text-green-600 dark:text-green-400">STEP 4</span>
+                  <div>
+                    <p className="text-sm font-medium">智能配对</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      按兴趣、距离与人数自动成局
+                    </p>
                   </div>
-                  <p className="text-sm font-semibold mb-1">开启派对</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    见面、社交、享受！
-                  </p>
                 </div>
-              </div>
-              
-              {/* 为什么是盲盒提示 */}
-              <div className="mt-3 p-2.5 rounded-lg bg-muted/50 border border-dashed">
-                <p className="text-xs text-muted-foreground text-center">
-                  <HelpCircle className="h-3 w-3 inline mr-1" />
-                  为什么是"盲盒"？成局前地点保密，增加惊喜感～
-                </p>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+                    3
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">成局即通知</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      解锁活动名称、具体地点与群聊
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 

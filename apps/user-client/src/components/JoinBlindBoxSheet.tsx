@@ -1,5 +1,5 @@
 //my path:/Users/felixg/projects/JoyJoin3/client/src/components/JoinBlindBoxSheet.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Drawer } from "vaul";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,15 +10,22 @@ import {
   MapPin, 
   Users, 
   ChevronRight,
+  ChevronDown,
   Info,
   CheckCircle2,
   DollarSign,
   Sparkles,
   Share2,
   UserPlus,
+  X,
   Flame,
-  Check
+  Zap
 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -33,8 +40,17 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { getCurrencySymbol } from "@/lib/currency";
 import { 
-  shenzhenClusters
-} from "@/lib/districts";
+  shenzhenClusters, 
+  heatConfig,
+  getDistrictById,
+  getDistrictIdsByCluster
+} from "@shared/districts";
+
+function HeatIcon({ iconName, className }: { iconName: 'flame' | 'zap' | 'none'; className?: string }) {
+  if (iconName === 'flame') return <Flame className={`h-3 w-3 ${className}`} />;
+  if (iconName === 'zap') return <Zap className={`h-3 w-3 ${className}`} />;
+  return null;
+}
 
 interface JoinBlindBoxSheetProps {
   open: boolean;
@@ -67,8 +83,30 @@ export default function JoinBlindBoxSheet({
   // 确认弹窗状态
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
-  // 商圈多选 - 选择片区自动全选该片区所有商圈
-  const [selectedDistricts, setSelectedDistricts] = useState<string[]>([]);
+  // 商圈多选 - 替代简单的 acceptNearby 开关
+  // 根据用户选的片区自动预选对应商圈
+  const getUserClusterId = () => {
+    // 根据 eventData.area (片区名称如"南山区") 找到对应的 cluster
+    const cluster = shenzhenClusters.find(c => 
+      c.displayName === eventData.area || c.id === eventData.area
+    );
+    return cluster?.id || 'nanshan';
+  };
+  
+  const userClusterId = getUserClusterId();
+  const [selectedDistricts, setSelectedDistricts] = useState<string[]>(() => {
+    // 初始化时自动选中用户片区的所有商圈
+    return getDistrictIdsByCluster(userClusterId);
+  });
+  const [expandedClusters, setExpandedClusters] = useState<string[]>([userClusterId]);
+  
+  // 当用户切换片区时，重新计算预选商圈
+  useEffect(() => {
+    const newClusterId = getUserClusterId();
+    const newDistrictIds = getDistrictIdsByCluster(newClusterId);
+    setSelectedDistricts(newDistrictIds);
+    setExpandedClusters([newClusterId]);
+  }, [eventData.area]);
   
   // 组队邀请状态
   const [showTeamInvite, setShowTeamInvite] = useState(false);
@@ -80,10 +118,6 @@ export default function JoinBlindBoxSheet({
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [selectedTasteIntensity, setSelectedTasteIntensity] = useState<string[]>([]);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
-  
-  // 酒局偏好 - 酒吧主题和饮酒程度
-  const [selectedBarThemes, setSelectedBarThemes] = useState<string[]>([]);
-  const [selectedAlcoholComfort, setSelectedAlcoholComfort] = useState<string[]>([]);
   
   // 参与意图 - Event-specific intent (multi-select)
   const [selectedIntent, setSelectedIntent] = useState<string[]>([]);
@@ -114,21 +148,6 @@ export default function JoinBlindBoxSheet({
     { value: "烧烤", label: "烧烤" },
     { value: "西餐", label: "西餐" },
     { value: "日料", label: "日料" },
-  ];
-
-  // 酒局偏好选项
-  const barThemeOptions = [
-    { value: "精酿", label: "精酿" },
-    { value: "清吧", label: "清吧" },
-    { value: "鸡尾酒吧", label: "鸡尾酒吧" },
-    { value: "Whisky Bar", label: "Whisky Bar" },
-    { value: "Wine Bar", label: "Wine Bar" },
-  ];
-
-  const alcoholComfortOptions = [
-    { value: "可以喝酒", label: "可以喝酒" },
-    { value: "微醺就好", label: "微醺就好" },
-    { value: "无酒精饮品", label: "无酒精饮品" },
   ];
 
   const toggleBudget = (value: string) => {
@@ -185,28 +204,10 @@ export default function JoinBlindBoxSheet({
     );
   };
 
-  const toggleBarTheme = (value: string) => {
-    setSelectedBarThemes(prev => 
-      prev.includes(value) 
-        ? prev.filter(v => v !== value)
-        : [...prev, value]
-    );
-  };
-
-  const toggleAlcoholComfort = (value: string) => {
-    setSelectedAlcoholComfort(prev => 
-      prev.includes(value) 
-        ? prev.filter(v => v !== value)
-        : [...prev, value]
-    );
-  };
-
   const clearAllPreferences = () => {
     setSelectedLanguages([]);
     setSelectedTasteIntensity([]);
     setSelectedCuisines([]);
-    setSelectedBarThemes([]);
-    setSelectedAlcoholComfort([]);
   };
 
   const saveBudgetMutation = useMutation({
@@ -258,12 +259,8 @@ export default function JoinBlindBoxSheet({
         "blindbox_preferences",
         JSON.stringify({
           languages: selectedLanguages,
-          // 饭局偏好
           tasteIntensity: selectedTasteIntensity,
           cuisines: selectedCuisines,
-          // 酒局偏好
-          barThemes: selectedBarThemes,
-          alcoholComfort: selectedAlcoholComfort,
         })
       );
 
@@ -290,12 +287,8 @@ export default function JoinBlindBoxSheet({
         selectedDistricts,
         acceptNearby: selectedDistricts.length > 1,
         selectedLanguages,
-        // 饭局偏好
         selectedTasteIntensity,
         selectedCuisines,
-        // 酒局偏好
-        selectedBarThemes,
-        selectedAlcoholComfort,
 
         // 参与意图：同时写入 socialGoals 和 intent，方便后端与其它模块复用
         socialGoals: selectedIntent,
@@ -467,19 +460,15 @@ export default function JoinBlindBoxSheet({
                 )}
               </div>
 
-              {/* C. 我的偏好 - 根据活动类型显示不同选项 */}
+              {/* C. 我的偏好 */}
               <div>
                 <div className="mb-3">
                   <h3 className="text-base font-semibold mb-1">我的偏好（可多选）</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {eventData.eventType === "酒局" 
-                      ? "帮助AI更精准匹配酒吧和同伴" 
-                      : "帮助AI更精准匹配餐厅和同伴"}
-                  </p>
+                  <p className="text-xs text-muted-foreground">帮助AI更精准匹配餐厅和同伴</p>
                 </div>
                 
                 <div className="space-y-4">
-                  {/* 语言偏好 - 两种活动类型共用 */}
+                  {/* 语言偏好 */}
                   <div>
                     <h4 className="text-sm font-medium mb-2">语言</h4>
                     <div className="grid grid-cols-3 gap-2">
@@ -500,106 +489,55 @@ export default function JoinBlindBoxSheet({
                     </div>
                   </div>
 
-                  {/* 饭局偏好 - 仅饭局显示 */}
-                  {eventData.eventType === "饭局" && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-2">口味偏好（用于匹配餐厅）</h4>
-                      
-                      {/* 口味强度 */}
-                      <div className="mb-3">
-                        <p className="text-xs text-muted-foreground mb-2">口味强度</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          {tasteIntensityOptions.map((option) => (
-                            <button
-                              key={option.value}
-                              onClick={() => toggleTasteIntensity(option.value)}
-                              className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
-                                selectedTasteIntensity.includes(option.value)
-                                  ? 'border-primary bg-primary/5 font-medium'
-                                  : 'border-muted bg-muted/30'
-                              }`}
-                              data-testid={`button-taste-${option.value}`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* 主流菜系 */}
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-2">主流菜系</p>
-                        <div className="grid grid-cols-3 gap-2">
-                          {cuisineOptions.map((option) => (
-                            <button
-                              key={option.value}
-                              onClick={() => toggleCuisine(option.value)}
-                              className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
-                                selectedCuisines.includes(option.value)
-                                  ? 'border-primary bg-primary/5 font-medium'
-                                  : 'border-muted bg-muted/30'
-                              }`}
-                              data-testid={`button-cuisine-${option.value}`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
+                  {/* 口味偏好 */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">口味偏好（用于匹配餐厅）</h4>
+                    
+                    {/* 口味强度 */}
+                    <div className="mb-3">
+                      <p className="text-xs text-muted-foreground mb-2">口味强度</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {tasteIntensityOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            onClick={() => toggleTasteIntensity(option.value)}
+                            className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
+                              selectedTasteIntensity.includes(option.value)
+                                ? 'border-primary bg-primary/5 font-medium'
+                                : 'border-muted bg-muted/30'
+                            }`}
+                            data-testid={`button-taste-${option.value}`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
-                  )}
 
-                  {/* 酒局偏好 - 仅酒局显示 */}
-                  {eventData.eventType === "酒局" && (
+                    {/* 主流菜系 */}
                     <div>
-                      <h4 className="text-sm font-medium mb-2">酒吧偏好（用于匹配场地）</h4>
-                      
-                      {/* 酒吧主题 */}
-                      <div className="mb-3">
-                        <p className="text-xs text-muted-foreground mb-2">酒吧类型</p>
-                        <div className="grid grid-cols-3 gap-2">
-                          {barThemeOptions.map((option) => (
-                            <button
-                              key={option.value}
-                              onClick={() => toggleBarTheme(option.value)}
-                              className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
-                                selectedBarThemes.includes(option.value)
-                                  ? 'border-primary bg-primary/5 font-medium'
-                                  : 'border-muted bg-muted/30'
-                              }`}
-                              data-testid={`button-bar-theme-${option.value}`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* 饮酒程度 */}
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-2">饮酒程度</p>
-                        <div className="grid grid-cols-3 gap-2">
-                          {alcoholComfortOptions.map((option) => (
-                            <button
-                              key={option.value}
-                              onClick={() => toggleAlcoholComfort(option.value)}
-                              className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
-                                selectedAlcoholComfort.includes(option.value)
-                                  ? 'border-primary bg-primary/5 font-medium'
-                                  : 'border-muted bg-muted/30'
-                              }`}
-                              data-testid={`button-alcohol-${option.value}`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
+                      <p className="text-xs text-muted-foreground mb-2">主流菜系</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {cuisineOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            onClick={() => toggleCuisine(option.value)}
+                            className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
+                              selectedCuisines.includes(option.value)
+                                ? 'border-primary bg-primary/5 font-medium'
+                                : 'border-muted bg-muted/30'
+                            }`}
+                            data-testid={`button-cuisine-${option.value}`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
-                  )}
+                  </div>
 
                   {/* 一键清空 - 放在最后，样式弱化 */}
-                  {(selectedLanguages.length > 0 || selectedTasteIntensity.length > 0 || selectedCuisines.length > 0 || selectedBarThemes.length > 0 || selectedAlcoholComfort.length > 0) && (
+                  {(selectedLanguages.length > 0 || selectedTasteIntensity.length > 0 || selectedCuisines.length > 0) && (
                     <Button 
                       variant="ghost" 
                       size="sm" 
@@ -613,149 +551,140 @@ export default function JoinBlindBoxSheet({
                 </div>
               </div>
 
-            {/* D. 选择片区 - 优化后的卡片式布局 */}
+            {/* D. 选择商圈 - 多选提升成功率 */}
             <div className="mb-6">
               <div className="mb-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-semibold">选择片区</h3>
-                  <Badge variant="outline" className="text-xs">
-                    可多选
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">选择片区后默认覆盖该区所有商圈，也可单独选择</p>
+                <h3 className="text-base font-semibold mb-1">选择商圈</h3>
+                <p className="text-xs text-muted-foreground">多选商圈可提升匹配成功率</p>
               </div>
 
-              <div className="space-y-4">
-                {shenzhenClusters.map(cluster => {
-                  const clusterDistrictIds = cluster.districts.map(d => d.id);
-                  const selectedInCluster = clusterDistrictIds.filter(id => selectedDistricts.includes(id));
-                  const isClusterSelected = selectedInCluster.length === clusterDistrictIds.length;
-                  const isPartiallySelected = selectedInCluster.length > 0 && selectedInCluster.length < clusterDistrictIds.length;
-                  const hasSelection = selectedInCluster.length > 0;
-                  const hotDistricts = cluster.districts.filter(d => d.heat === 'hot');
-                  
-                  return (
-                    <div
-                      key={cluster.id}
-                      className={`
-                        p-4 rounded-xl border-2 transition-all
-                        ${hasSelection 
-                          ? 'border-primary bg-gradient-to-br from-primary/5 to-primary/10 shadow-sm' 
-                          : 'border-border hover:border-primary/30'
-                        }
-                      `}
-                      data-testid={`card-cluster-${cluster.id}`}
-                    >
-                      {/* 区域标题行 */}
-                      <div className="flex items-center justify-between mb-3">
+              {selectedDistricts.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  <span className="text-xs text-muted-foreground">已选：</span>
+                  {selectedDistricts.map(id => {
+                    const district = getDistrictById(id);
+                    return district ? (
+                      <Badge 
+                        key={id} 
+                        variant="secondary"
+                        className="flex items-center gap-1 pr-1"
+                      >
+                        {district.name}
+                        <button
+                          onClick={() => setSelectedDistricts(prev => prev.filter(d => d !== id))}
+                          className="ml-1 hover:bg-muted rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ) : null;
+                  })}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                {shenzhenClusters.map(cluster => (
+                  <Collapsible 
+                    key={cluster.id}
+                    open={expandedClusters.includes(cluster.id)} 
+                    onOpenChange={() => {
+                      setExpandedClusters(prev => 
+                        prev.includes(cluster.id) 
+                          ? prev.filter(id => id !== cluster.id)
+                          : [...prev, cluster.id]
+                      );
+                    }}
+                  >
+                    <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover-elevate">
+                      <div className="flex items-center gap-2">
+                        {expandedClusters.includes(cluster.id) ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                        <span className="font-medium text-sm">{cluster.name}</span>
+                        {cluster.districts.filter(d => selectedDistricts.includes(d.id)).length > 0 && (
+                          <Badge variant="default" className="text-xs">
+                            {cluster.districts.filter(d => selectedDistricts.includes(d.id)).length}
+                          </Badge>
+                        )}
+                      </div>
+                      {!expandedClusters.includes(cluster.id) && (
+                        <span className="text-xs text-muted-foreground">查看更多</span>
+                      )}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-3 pl-6">
+                      {/* 全选/取消按钮 */}
+                      <div className="flex items-center gap-2 mb-2">
                         <button
                           onClick={() => {
-                            if (isClusterSelected) {
-                              setSelectedDistricts(prev => prev.filter(id => !clusterDistrictIds.includes(id)));
+                            const allClusterDistrictIds = cluster.districts.map(d => d.id);
+                            const allSelected = allClusterDistrictIds.every(id => selectedDistricts.includes(id));
+                            if (allSelected) {
+                              // 取消选择该片区所有商圈
+                              setSelectedDistricts(prev => prev.filter(id => !allClusterDistrictIds.includes(id)));
                             } else {
+                              // 选择该片区所有商圈
                               setSelectedDistricts(prev => {
-                                const withoutCluster = prev.filter(id => !clusterDistrictIds.includes(id));
-                                return [...new Set([...withoutCluster, ...clusterDistrictIds])];
+                                const newSelection = [...prev];
+                                allClusterDistrictIds.forEach(id => {
+                                  if (!newSelection.includes(id)) {
+                                    newSelection.push(id);
+                                  }
+                                });
+                                return newSelection;
                               });
                             }
                           }}
-                          className={`
-                            inline-flex items-center gap-2 px-4 py-2 rounded-full text-base font-semibold
-                            transition-all border-2 shadow-sm
-                            ${isClusterSelected
-                              ? 'bg-gradient-to-r from-primary to-primary/90 text-primary-foreground border-primary'
-                              : isPartiallySelected
-                                ? 'bg-primary/20 text-primary border-primary/50'
-                                : 'bg-background border-border hover-elevate'
-                            }
-                          `}
-                          data-testid={`chip-cluster-${cluster.id}`}
+                          className="text-xs text-primary hover:underline"
+                          data-testid={`button-select-all-${cluster.id}`}
                         >
-                          {isClusterSelected && <CheckCircle2 className="h-4 w-4" />}
-                          <span>{cluster.displayName}</span>
-                          <Badge 
-                            variant={hasSelection ? "secondary" : "outline"} 
-                            className={`text-xs px-1.5 ${hasSelection ? 'bg-primary-foreground/20 text-primary-foreground' : ''}`}
-                          >
-                            {selectedInCluster.length}/{clusterDistrictIds.length}
-                          </Badge>
-                        </button>
-                        <button 
-                          onClick={() => {
-                            if (isClusterSelected) {
-                              setSelectedDistricts(prev => prev.filter(id => !clusterDistrictIds.includes(id)));
-                            } else {
-                              setSelectedDistricts(prev => {
-                                const withoutCluster = prev.filter(id => !clusterDistrictIds.includes(id));
-                                return [...new Set([...withoutCluster, ...clusterDistrictIds])];
-                              });
-                            }
-                          }}
-                          className="text-xs text-primary font-medium hover:underline"
-                        >
-                          {isClusterSelected ? '取消全选' : '全选'}
+                          {cluster.districts.every(d => selectedDistricts.includes(d.id)) ? '取消全选' : '全选'}
                         </button>
                       </div>
-                      
-                      {/* 热门商圈提示 */}
-                      {hotDistricts.length > 0 && (
-                        <p className="text-xs text-orange-600 dark:text-orange-400 mb-2 flex items-center gap-1">
-                          <Flame className="h-3 w-3" />
-                          {hotDistricts.length}个热门商圈
-                        </p>
-                      )}
-                      
-                      {/* 商圈标签 - 放大尺寸 */}
                       <div className="flex flex-wrap gap-2">
                         {cluster.districts.map(district => {
-                          const isDistrictSelected = selectedDistricts.includes(district.id);
-                          const isHot = district.heat === 'hot';
+                          const heat = heatConfig[district.heat];
+                          const isSelected = selectedDistricts.includes(district.id);
                           return (
                             <button
                               key={district.id}
                               onClick={() => {
-                                if (isDistrictSelected) {
+                                if (isSelected) {
                                   setSelectedDistricts(prev => prev.filter(id => id !== district.id));
                                 } else {
                                   setSelectedDistricts(prev => [...prev, district.id]);
                                 }
                               }}
                               className={`
-                                px-3.5 py-2 rounded-lg text-sm font-medium transition-all
-                                flex items-center gap-1.5 border-2
-                                ${isDistrictSelected
-                                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                                  : isHot
-                                    ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800/50 hover-elevate'
-                                    : 'bg-muted/30 text-foreground border-transparent hover:border-primary/30 hover-elevate'
+                                inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium
+                                transition-all border-2
+                                ${isSelected
+                                  ? 'bg-primary text-primary-foreground border-primary'
+                                  : 'bg-background border-border hover-elevate'
                                 }
                               `}
                               data-testid={`chip-district-${district.id}`}
                             >
-                              {isDistrictSelected && <Check className="h-3.5 w-3.5" />}
-                              {isHot && !isDistrictSelected && <Flame className="h-3 w-3 text-orange-500" />}
-                              {district.name}
+                              <span>{district.name}</span>
+                              {heat.iconName !== 'none' && <HeatIcon iconName={heat.iconName} className={heat.color} />}
                             </button>
                           );
                         })}
                       </div>
-                    </div>
-                  );
-                })}
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
               </div>
 
-              {selectedDistricts.length === 0 && (
-                <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg mt-4 border border-primary/20">
+              {selectedDistricts.length < 2 && (
+                <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg mt-3">
                   <Sparkles className="h-4 w-4 text-primary" />
                   <span className="text-sm text-primary">
-                    选择片区，AI会在该区域为你匹配
+                    多选2-3个商圈，成局率提升42%
                   </span>
                 </div>
               )}
-
-              <p className="text-xs text-muted-foreground text-center mt-4">
-                更多片区（罗湖、龙岗、宝安...）即将开放
-              </p>
             </div>
             </div>
 
@@ -971,7 +900,7 @@ export default function JoinBlindBoxSheet({
           </div>
 
           {/* 3. 我的偏好 */}
-          {(selectedLanguages.length > 0 || selectedTasteIntensity.length > 0 || selectedCuisines.length > 0 || selectedBarThemes.length > 0 || selectedAlcoholComfort.length > 0) && (
+          {(selectedLanguages.length > 0 || selectedTasteIntensity.length > 0 || selectedCuisines.length > 0) && (
             <div className="space-y-3 pb-4 border-b">
               <h3 className="text-sm font-semibold">我的偏好</h3>
               <div className="space-y-2 text-sm">
@@ -981,56 +910,35 @@ export default function JoinBlindBoxSheet({
                     <span className="font-medium ml-2">{selectedLanguages.join(' · ')}</span>
                   </div>
                 )}
-                {/* 饭局偏好显示 */}
-                {eventData.eventType === "饭局" && selectedTasteIntensity.length > 0 && (
+                {selectedTasteIntensity.length > 0 && (
                   <div>
                     <span className="text-muted-foreground">口味强度：</span>
                     <span className="font-medium ml-2">{selectedTasteIntensity.join(' · ')}</span>
                   </div>
                 )}
-                {eventData.eventType === "饭局" && selectedCuisines.length > 0 && (
+                {selectedCuisines.length > 0 && (
                   <div>
                     <span className="text-muted-foreground">菜系：</span>
                     <span className="font-medium ml-2">{selectedCuisines.join(' · ')}</span>
-                  </div>
-                )}
-                {/* 酒局偏好显示 */}
-                {eventData.eventType === "酒局" && selectedBarThemes.length > 0 && (
-                  <div>
-                    <span className="text-muted-foreground">酒吧类型：</span>
-                    <span className="font-medium ml-2">{selectedBarThemes.join(' · ')}</span>
-                  </div>
-                )}
-                {eventData.eventType === "酒局" && selectedAlcoholComfort.length > 0 && (
-                  <div>
-                    <span className="text-muted-foreground">饮酒程度：</span>
-                    <span className="font-medium ml-2">{selectedAlcoholComfort.join(' · ')}</span>
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* 4. 已选片区 */}
+          {/* 4. 已选商圈 */}
           {selectedDistricts.length > 0 && (
             <div className="space-y-3">
               <div>
-                <h3 className="text-sm font-semibold">已选片区</h3>
-                <p className="text-xs text-muted-foreground">共覆盖 {selectedDistricts.length} 个商圈</p>
+                <h3 className="text-sm font-semibold">已选商圈</h3>
               </div>
               <div className="flex flex-wrap gap-2">
-                {shenzhenClusters
-                  .filter(cluster => cluster.districts.some(d => selectedDistricts.includes(d.id)))
-                  .map(cluster => {
-                    const selectedCount = cluster.districts.filter(d => selectedDistricts.includes(d.id)).length;
-                    const totalCount = cluster.districts.length;
-                    return (
-                      <Badge key={cluster.id} variant="secondary">
-                        {cluster.name} ({selectedCount}/{totalCount})
-                      </Badge>
-                    );
-                  })
-                }
+                {selectedDistricts.map(id => {
+                  const district = getDistrictById(id);
+                  return district ? (
+                    <Badge key={id} variant="secondary">{district.name}</Badge>
+                  ) : null;
+                })}
               </div>
             </div>
           )}
