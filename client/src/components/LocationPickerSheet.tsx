@@ -1,14 +1,16 @@
 import { Drawer } from "vaul";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Navigation, X, Flame, Zap } from "lucide-react";
+import { MapPin, Navigation, X, Flame, Zap, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { getCurrentLocation } from "@/lib/gpsUtils";
+import { useToast } from "@/hooks/use-toast";
 
 function HeatIcon({ iconName, className }: { iconName: 'flame' | 'zap' | 'none'; className?: string }) {
   if (iconName === 'flame') return <Flame className={`h-3 w-3 ${className}`} />;
   if (iconName === 'zap') return <Zap className={`h-3 w-3 ${className}`} />;
   return null;
 }
-import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   shenzhenClusters, 
@@ -40,9 +42,34 @@ export default function LocationPickerSheet({
   selectedArea,
   onSave 
 }: LocationPickerSheetProps) {
+  const { toast } = useToast();
   const [tempCity, setTempCity] = useState<"香港" | "深圳">(selectedCity);
   const [tempDistrictId, setTempDistrictId] = useState<string>("");
   const [activeCluster, setActiveCluster] = useState(shenzhenClusters[0]?.id || '');
+  const [isLocating, setIsLocating] = useState(false);
+
+  const handleGetLocation = async () => {
+    setIsLocating(true);
+    const result = await getCurrentLocation();
+    setIsLocating(false);
+
+    if (result.success && result.city) {
+      setTempCity(result.city);
+      if (result.cluster) {
+        setActiveCluster(result.cluster);
+      }
+      toast({
+        title: "定位成功",
+        description: `当前位置：${result.city}${result.cluster ? ` · ${result.cluster === 'nanshan' ? '南山区' : '福田区'}` : ''}`,
+      });
+    } else {
+      toast({
+        title: "定位失败",
+        description: result.error || "无法获取当前位置",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     if (selectedArea) {
@@ -111,10 +138,16 @@ export default function LocationPickerSheet({
                 variant="outline" 
                 size="sm"
                 className="gap-1"
+                onClick={handleGetLocation}
+                disabled={isLocating}
                 data-testid="button-use-current-location"
               >
-                <Navigation className="h-4 w-4" />
-                定位
+                {isLocating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Navigation className="h-4 w-4" />
+                )}
+                {isLocating ? "定位中..." : "定位"}
               </Button>
             </div>
 
