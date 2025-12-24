@@ -41,7 +41,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run AI Chat Flow Tests
-        run: npx tsx server/tests/runSimulation.ts 100
+        run: npx tsx apps/server/src/tests/runSimulation.ts 100
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
