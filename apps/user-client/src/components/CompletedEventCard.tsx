@@ -6,6 +6,7 @@ import type { BlindBoxEvent, EventFeedback } from "@shared/schema";
 import { getCurrencySymbol } from "@/lib/currency";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
+import { formatDateInHongKong } from "@/lib/hongKongTime";
 
 interface CompletedEventCardProps {
   event: BlindBoxEvent;
@@ -16,15 +17,8 @@ export default function CompletedEventCard({ event, feedback }: CompletedEventCa
   const [, setLocation] = useLocation();
   const currencySymbol = getCurrencySymbol(event.city as "香港" | "深圳");
 
-  const formatDate = (dateTime: Date) => {
-    const date = new Date(dateTime);
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-    const weekday = weekdays[date.getDay()];
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${month}月${day}日 ${weekday} ${hours}:${minutes}`;
+  const formatDate = (dateTime: Date | string) => {
+    return formatDateInHongKong(dateTime, 'full');
   };
 
   const getParticipantInfo = () => {
