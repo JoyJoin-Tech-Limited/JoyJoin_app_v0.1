@@ -85,6 +85,10 @@ interface Venue {
   createdAt: string;
   bookingCount?: number;
   totalCommission?: number;
+  // 酒吧特有字段
+  barThemes: string[] | null;
+  alcoholOptions: string[] | null;
+  vibeDescriptor: string | null;
 }
 
 const VENUE_TYPES = [
@@ -107,6 +111,10 @@ const PRICE_RANGES = [
 const TAGS = ["cozy", "lively", "upscale", "casual"];
 const CUISINES = ["粤菜", "川菜", "日料", "西餐", "酒吧"];
 const DECOR_STYLES = ["轻奢现代风", "绿植花园风", "复古工业风", "温馨日式风"];
+
+// 酒吧特有选项
+const BAR_THEMES = ["精酿", "清吧", "鸡尾酒吧", "Whisky Bar", "Wine Bar"];
+const ALCOHOL_OPTIONS = ["可以喝酒", "微醺就好", "无酒精饮品"];
 
 interface AllTimeSlot extends VenueTimeSlot {
   venueName: string;
@@ -221,6 +229,10 @@ export default function AdminVenuesPage() {
     cuisines: [] as string[],
     decorStyle: [] as string[],
     notes: "",
+    // 酒吧特有字段
+    barThemes: [] as string[],
+    alcoholOptions: [] as string[],
+    vibeDescriptor: "",
   });
 
   const { toast } = useToast();
@@ -713,6 +725,9 @@ export default function AdminVenuesPage() {
       cuisines: [],
       decorStyle: [],
       notes: "",
+      barThemes: [],
+      alcoholOptions: [],
+      vibeDescriptor: "",
     });
   };
 
@@ -743,6 +758,10 @@ export default function AdminVenuesPage() {
       cuisines: formData.cuisines.length > 0 ? formData.cuisines : undefined,
       decorStyle: formData.decorStyle.length > 0 ? formData.decorStyle : undefined,
       notes: formData.notes || undefined,
+      // 酒吧特有字段
+      barThemes: formData.barThemes.length > 0 ? formData.barThemes : undefined,
+      alcoholOptions: formData.alcoholOptions.length > 0 ? formData.alcoholOptions : undefined,
+      vibeDescriptor: formData.vibeDescriptor || undefined,
     });
   };
 
@@ -765,6 +784,9 @@ export default function AdminVenuesPage() {
       cuisines: venue.cuisines || [],
       decorStyle: venue.decorStyle || [],
       notes: venue.notes || "",
+      barThemes: venue.barThemes || [],
+      alcoholOptions: venue.alcoholOptions || [],
+      vibeDescriptor: venue.vibeDescriptor || "",
     });
     setShowEditDialog(true);
   };
@@ -791,6 +813,10 @@ export default function AdminVenuesPage() {
         cuisines: formData.cuisines.length > 0 ? formData.cuisines : null,
         decorStyle: formData.decorStyle.length > 0 ? formData.decorStyle : null,
         notes: formData.notes || null,
+        // 酒吧特有字段
+        barThemes: formData.barThemes.length > 0 ? formData.barThemes : null,
+        alcoholOptions: formData.alcoholOptions.length > 0 ? formData.alcoholOptions : null,
+        vibeDescriptor: formData.vibeDescriptor || null,
       },
     });
   };
@@ -837,6 +863,24 @@ export default function AdminVenuesPage() {
       decorStyle: prev.decorStyle.includes(style)
         ? prev.decorStyle.filter(s => s !== style)
         : [...prev.decorStyle, style]
+    }));
+  };
+
+  const toggleBarTheme = (theme: string) => {
+    setFormData(prev => ({
+      ...prev,
+      barThemes: prev.barThemes.includes(theme)
+        ? prev.barThemes.filter(t => t !== theme)
+        : [...prev.barThemes, theme]
+    }));
+  };
+
+  const toggleAlcoholOption = (option: string) => {
+    setFormData(prev => ({
+      ...prev,
+      alcoholOptions: prev.alcoholOptions.includes(option)
+        ? prev.alcoholOptions.filter(o => o !== option)
+        : [...prev.alcoholOptions, option]
     }));
   };
 
@@ -1442,6 +1486,56 @@ export default function AdminVenuesPage() {
               </div>
             </div>
 
+            {/* 酒吧特有字段 - 仅当类型为酒吧时显示 */}
+            {formData.type === "bar" && (
+              <>
+                <div className="space-y-2">
+                  <Label>酒吧主题</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {BAR_THEMES.map(theme => (
+                      <Badge
+                        key={theme}
+                        variant={formData.barThemes.includes(theme) ? "default" : "outline"}
+                        className="cursor-pointer hover-elevate active-elevate-2"
+                        onClick={() => toggleBarTheme(theme)}
+                        data-testid={`barTheme-${theme}`}
+                      >
+                        {theme}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>支持的饮酒选项</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {ALCOHOL_OPTIONS.map(option => (
+                      <Badge
+                        key={option}
+                        variant={formData.alcoholOptions.includes(option) ? "default" : "outline"}
+                        className="cursor-pointer hover-elevate active-elevate-2"
+                        onClick={() => toggleAlcoholOption(option)}
+                        data-testid={`alcoholOption-${option}`}
+                      >
+                        {option}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="vibeDescriptor">氛围描述</Label>
+                  <Input
+                    id="vibeDescriptor"
+                    placeholder="例：适合安静聊天、轻松社交氛围"
+                    value={formData.vibeDescriptor}
+                    onChange={(e) => setFormData({ ...formData, vibeDescriptor: e.target.value })}
+                    data-testid="input-vibeDescriptor"
+                  />
+                </div>
+              </>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="notes">备注</Label>
               <Textarea
@@ -1697,6 +1791,56 @@ export default function AdminVenuesPage() {
                 ))}
               </div>
             </div>
+
+            {/* 酒吧特有字段 - 仅当类型为酒吧时显示 */}
+            {formData.type === "bar" && (
+              <>
+                <div className="space-y-2">
+                  <Label>酒吧主题</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {BAR_THEMES.map(theme => (
+                      <Badge
+                        key={theme}
+                        variant={formData.barThemes.includes(theme) ? "default" : "outline"}
+                        className="cursor-pointer hover-elevate active-elevate-2"
+                        onClick={() => toggleBarTheme(theme)}
+                        data-testid={`edit-barTheme-${theme}`}
+                      >
+                        {theme}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>支持的饮酒选项</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {ALCOHOL_OPTIONS.map(option => (
+                      <Badge
+                        key={option}
+                        variant={formData.alcoholOptions.includes(option) ? "default" : "outline"}
+                        className="cursor-pointer hover-elevate active-elevate-2"
+                        onClick={() => toggleAlcoholOption(option)}
+                        data-testid={`edit-alcoholOption-${option}`}
+                      >
+                        {option}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-vibeDescriptor">氛围描述</Label>
+                  <Input
+                    id="edit-vibeDescriptor"
+                    placeholder="例：适合安静聊天、轻松社交氛围"
+                    value={formData.vibeDescriptor}
+                    onChange={(e) => setFormData({ ...formData, vibeDescriptor: e.target.value })}
+                    data-testid="input-edit-vibeDescriptor"
+                  />
+                </div>
+              </>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="edit-notes">备注</Label>

@@ -79,6 +79,10 @@ export default function JoinBlindBoxSheet({
   const [selectedTasteIntensity, setSelectedTasteIntensity] = useState<string[]>([]);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   
+  // 酒局偏好 - 酒吧主题和饮酒程度
+  const [selectedBarThemes, setSelectedBarThemes] = useState<string[]>([]);
+  const [selectedAlcoholComfort, setSelectedAlcoholComfort] = useState<string[]>([]);
+  
   // 参与意图 - Event-specific intent (multi-select)
   const [selectedIntent, setSelectedIntent] = useState<string[]>([]);
 
@@ -108,6 +112,21 @@ export default function JoinBlindBoxSheet({
     { value: "烧烤", label: "烧烤" },
     { value: "西餐", label: "西餐" },
     { value: "日料", label: "日料" },
+  ];
+
+  // 酒局偏好选项
+  const barThemeOptions = [
+    { value: "精酿", label: "精酿" },
+    { value: "清吧", label: "清吧" },
+    { value: "鸡尾酒吧", label: "鸡尾酒吧" },
+    { value: "Whisky Bar", label: "Whisky Bar" },
+    { value: "Wine Bar", label: "Wine Bar" },
+  ];
+
+  const alcoholComfortOptions = [
+    { value: "可以喝酒", label: "可以喝酒" },
+    { value: "微醺就好", label: "微醺就好" },
+    { value: "无酒精饮品", label: "无酒精饮品" },
   ];
 
   const toggleBudget = (value: string) => {
@@ -164,10 +183,28 @@ export default function JoinBlindBoxSheet({
     );
   };
 
+  const toggleBarTheme = (value: string) => {
+    setSelectedBarThemes(prev => 
+      prev.includes(value) 
+        ? prev.filter(v => v !== value)
+        : [...prev, value]
+    );
+  };
+
+  const toggleAlcoholComfort = (value: string) => {
+    setSelectedAlcoholComfort(prev => 
+      prev.includes(value) 
+        ? prev.filter(v => v !== value)
+        : [...prev, value]
+    );
+  };
+
   const clearAllPreferences = () => {
     setSelectedLanguages([]);
     setSelectedTasteIntensity([]);
     setSelectedCuisines([]);
+    setSelectedBarThemes([]);
+    setSelectedAlcoholComfort([]);
   };
 
   const saveBudgetMutation = useMutation({
@@ -219,8 +256,12 @@ export default function JoinBlindBoxSheet({
         "blindbox_preferences",
         JSON.stringify({
           languages: selectedLanguages,
+          // 饭局偏好
           tasteIntensity: selectedTasteIntensity,
           cuisines: selectedCuisines,
+          // 酒局偏好
+          barThemes: selectedBarThemes,
+          alcoholComfort: selectedAlcoholComfort,
         })
       );
 
@@ -247,8 +288,12 @@ export default function JoinBlindBoxSheet({
         selectedDistricts,
         acceptNearby: selectedDistricts.length > 1,
         selectedLanguages,
+        // 饭局偏好
         selectedTasteIntensity,
         selectedCuisines,
+        // 酒局偏好
+        selectedBarThemes,
+        selectedAlcoholComfort,
 
         // 参与意图：同时写入 socialGoals 和 intent，方便后端与其它模块复用
         socialGoals: selectedIntent,
@@ -420,15 +465,19 @@ export default function JoinBlindBoxSheet({
                 )}
               </div>
 
-              {/* C. 我的偏好 */}
+              {/* C. 我的偏好 - 根据活动类型显示不同选项 */}
               <div>
                 <div className="mb-3">
                   <h3 className="text-base font-semibold mb-1">我的偏好（可多选）</h3>
-                  <p className="text-xs text-muted-foreground">帮助AI更精准匹配餐厅和同伴</p>
+                  <p className="text-xs text-muted-foreground">
+                    {eventData.eventType === "酒局" 
+                      ? "帮助AI更精准匹配酒吧和同伴" 
+                      : "帮助AI更精准匹配餐厅和同伴"}
+                  </p>
                 </div>
                 
                 <div className="space-y-4">
-                  {/* 语言偏好 */}
+                  {/* 语言偏好 - 两种活动类型共用 */}
                   <div>
                     <h4 className="text-sm font-medium mb-2">语言</h4>
                     <div className="grid grid-cols-3 gap-2">
@@ -449,55 +498,106 @@ export default function JoinBlindBoxSheet({
                     </div>
                   </div>
 
-                  {/* 口味偏好 */}
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">口味偏好（用于匹配餐厅）</h4>
-                    
-                    {/* 口味强度 */}
-                    <div className="mb-3">
-                      <p className="text-xs text-muted-foreground mb-2">口味强度</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {tasteIntensityOptions.map((option) => (
-                          <button
-                            key={option.value}
-                            onClick={() => toggleTasteIntensity(option.value)}
-                            className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
-                              selectedTasteIntensity.includes(option.value)
-                                ? 'border-primary bg-primary/5 font-medium'
-                                : 'border-muted bg-muted/30'
-                            }`}
-                            data-testid={`button-taste-${option.value}`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* 主流菜系 */}
+                  {/* 饭局偏好 - 仅饭局显示 */}
+                  {eventData.eventType === "饭局" && (
                     <div>
-                      <p className="text-xs text-muted-foreground mb-2">主流菜系</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {cuisineOptions.map((option) => (
-                          <button
-                            key={option.value}
-                            onClick={() => toggleCuisine(option.value)}
-                            className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
-                              selectedCuisines.includes(option.value)
-                                ? 'border-primary bg-primary/5 font-medium'
-                                : 'border-muted bg-muted/30'
-                            }`}
-                            data-testid={`button-cuisine-${option.value}`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
+                      <h4 className="text-sm font-medium mb-2">口味偏好（用于匹配餐厅）</h4>
+                      
+                      {/* 口味强度 */}
+                      <div className="mb-3">
+                        <p className="text-xs text-muted-foreground mb-2">口味强度</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {tasteIntensityOptions.map((option) => (
+                            <button
+                              key={option.value}
+                              onClick={() => toggleTasteIntensity(option.value)}
+                              className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
+                                selectedTasteIntensity.includes(option.value)
+                                  ? 'border-primary bg-primary/5 font-medium'
+                                  : 'border-muted bg-muted/30'
+                              }`}
+                              data-testid={`button-taste-${option.value}`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 主流菜系 */}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-2">主流菜系</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {cuisineOptions.map((option) => (
+                            <button
+                              key={option.value}
+                              onClick={() => toggleCuisine(option.value)}
+                              className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
+                                selectedCuisines.includes(option.value)
+                                  ? 'border-primary bg-primary/5 font-medium'
+                                  : 'border-muted bg-muted/30'
+                              }`}
+                              data-testid={`button-cuisine-${option.value}`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* 酒局偏好 - 仅酒局显示 */}
+                  {eventData.eventType === "酒局" && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">酒吧偏好（用于匹配场地）</h4>
+                      
+                      {/* 酒吧主题 */}
+                      <div className="mb-3">
+                        <p className="text-xs text-muted-foreground mb-2">酒吧类型</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {barThemeOptions.map((option) => (
+                            <button
+                              key={option.value}
+                              onClick={() => toggleBarTheme(option.value)}
+                              className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
+                                selectedBarThemes.includes(option.value)
+                                  ? 'border-primary bg-primary/5 font-medium'
+                                  : 'border-muted bg-muted/30'
+                              }`}
+                              data-testid={`button-bar-theme-${option.value}`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 饮酒程度 */}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-2">饮酒程度</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {alcoholComfortOptions.map((option) => (
+                            <button
+                              key={option.value}
+                              onClick={() => toggleAlcoholComfort(option.value)}
+                              className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
+                                selectedAlcoholComfort.includes(option.value)
+                                  ? 'border-primary bg-primary/5 font-medium'
+                                  : 'border-muted bg-muted/30'
+                              }`}
+                              data-testid={`button-alcohol-${option.value}`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* 一键清空 - 放在最后，样式弱化 */}
-                  {(selectedLanguages.length > 0 || selectedTasteIntensity.length > 0 || selectedCuisines.length > 0) && (
+                  {(selectedLanguages.length > 0 || selectedTasteIntensity.length > 0 || selectedCuisines.length > 0 || selectedBarThemes.length > 0 || selectedAlcoholComfort.length > 0) && (
                     <Button 
                       variant="ghost" 
                       size="sm" 
@@ -833,7 +933,7 @@ export default function JoinBlindBoxSheet({
           </div>
 
           {/* 3. 我的偏好 */}
-          {(selectedLanguages.length > 0 || selectedTasteIntensity.length > 0 || selectedCuisines.length > 0) && (
+          {(selectedLanguages.length > 0 || selectedTasteIntensity.length > 0 || selectedCuisines.length > 0 || selectedBarThemes.length > 0 || selectedAlcoholComfort.length > 0) && (
             <div className="space-y-3 pb-4 border-b">
               <h3 className="text-sm font-semibold">我的偏好</h3>
               <div className="space-y-2 text-sm">
@@ -843,16 +943,30 @@ export default function JoinBlindBoxSheet({
                     <span className="font-medium ml-2">{selectedLanguages.join(' · ')}</span>
                   </div>
                 )}
-                {selectedTasteIntensity.length > 0 && (
+                {/* 饭局偏好显示 */}
+                {eventData.eventType === "饭局" && selectedTasteIntensity.length > 0 && (
                   <div>
                     <span className="text-muted-foreground">口味强度：</span>
                     <span className="font-medium ml-2">{selectedTasteIntensity.join(' · ')}</span>
                   </div>
                 )}
-                {selectedCuisines.length > 0 && (
+                {eventData.eventType === "饭局" && selectedCuisines.length > 0 && (
                   <div>
                     <span className="text-muted-foreground">菜系：</span>
                     <span className="font-medium ml-2">{selectedCuisines.join(' · ')}</span>
+                  </div>
+                )}
+                {/* 酒局偏好显示 */}
+                {eventData.eventType === "酒局" && selectedBarThemes.length > 0 && (
+                  <div>
+                    <span className="text-muted-foreground">酒吧类型：</span>
+                    <span className="font-medium ml-2">{selectedBarThemes.join(' · ')}</span>
+                  </div>
+                )}
+                {eventData.eventType === "酒局" && selectedAlcoholComfort.length > 0 && (
+                  <div>
+                    <span className="text-muted-foreground">饮酒程度：</span>
+                    <span className="font-medium ml-2">{selectedAlcoholComfort.join(' · ')}</span>
                   </div>
                 )}
               </div>

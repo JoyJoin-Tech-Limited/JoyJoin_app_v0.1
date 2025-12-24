@@ -893,6 +893,11 @@ export const venues = pgTable("venues", {
   priceRange: text("price_range"), // 预算档次: "150以下", "150-200", "200-300", "300-500"
   decorStyle: text("decor_style").array(), // 装修风格: 轻奢现代风, 绿植花园风, 复古工业风, 温馨日式风
   
+  // 酒吧特有标签 (仅当 venueType='bar' 时使用)
+  barThemes: text("bar_themes").array(), // 酒吧主题: 精酿, 清吧, 鸡尾酒吧, Whisky Bar, Wine Bar
+  alcoholOptions: text("alcohol_options").array(), // 支持的饮酒选项: 可以喝酒, 微醺就好, 无酒精饮品
+  vibeDescriptor: text("vibe_descriptor"), // 氛围描述（编辑性文字，非结构化标签）
+  
   // Capacity management
   capacity: integer("capacity").default(1), // How many events can run at same time
   operatingHours: text("operating_hours"), // e.g., "11:00-22:00"
