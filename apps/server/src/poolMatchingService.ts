@@ -31,7 +31,7 @@ import {
 } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { wsService } from "./wsService";
-import type { PoolMatchedData } from "../shared/wsEvents";
+import type { PoolMatchedData } from "@shared/wsEvents";
 import { chemistryMatrix as CHEMISTRY_MATRIX, ARCHETYPE_ENERGY } from "./archetypeChemistry";
 
 export interface UserWithProfile {

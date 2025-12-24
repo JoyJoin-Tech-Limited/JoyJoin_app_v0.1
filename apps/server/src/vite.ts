@@ -16,7 +16,7 @@ export function log(message: string, source = "express") {
 
 export async function setupVite(app: Express, server: Server) {
   const vite = await import("vite");
-  const viteConfigModule = await import("../vite.config");
+  const viteConfigModule = await import("../../../vite.config");
   const viteConfig = viteConfigModule.default;
   const nanoidModule = await import("nanoid");
   const nanoid = nanoidModule.nanoid;
