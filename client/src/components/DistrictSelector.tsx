@@ -2,7 +2,13 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight, X, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronRight, X, Sparkles, Flame, Zap } from "lucide-react";
+
+function HeatIcon({ iconName, className }: { iconName: 'flame' | 'zap' | 'none'; className?: string }) {
+  if (iconName === 'flame') return <Flame className={`h-3 w-3 ${className}`} />;
+  if (iconName === 'zap') return <Zap className={`h-3 w-3 ${className}`} />;
+  return null;
+}
 import { 
   shenzhenClusters, 
   heatConfig, 
@@ -34,8 +40,8 @@ function DistrictChip({ district, selected, onSelect, showHeat = true }: Distric
       data-testid={`chip-district-${district.id}`}
     >
       <span>{district.shortName || district.name}</span>
-      {showHeat && heat.icon && (
-        <span className={heat.color}>{heat.icon}</span>
+      {showHeat && heat.iconName !== 'none' && (
+        <HeatIcon iconName={heat.iconName} className={heat.color} />
       )}
     </button>
   );
