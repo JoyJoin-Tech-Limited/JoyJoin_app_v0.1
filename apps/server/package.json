@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "NODE_ENV=development node --env-file=../../.env --import tsx/esm src/index.ts",
-    "build": "esbuild ./src/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build": "esbuild ./src/index.ts --platform=node --packages=external --external:./vite --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "lint": "tsc --noEmit",
     "db:push": "drizzle-kit push"
