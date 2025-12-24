@@ -15,7 +15,9 @@ import {
   DollarSign,
   Sparkles,
   Share2,
-  UserPlus
+  UserPlus,
+  Flame,
+  Check
 } from "lucide-react";
 import {
   Dialog,
@@ -611,34 +613,41 @@ export default function JoinBlindBoxSheet({
                 </div>
               </div>
 
-            {/* D. 选择片区 - 卡片式布局，支持选择片区和细分商圈 */}
+            {/* D. 选择片区 - 优化后的卡片式布局 */}
             <div className="mb-6">
               <div className="mb-3">
-                <h3 className="text-base font-semibold mb-1">选择片区</h3>
-                <p className="text-xs text-muted-foreground">选择片区后默认覆盖该区所有商圈，也可单独选择商圈</p>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold">选择片区</h3>
+                  <Badge variant="outline" className="text-xs">
+                    可多选
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">选择片区后默认覆盖该区所有商圈，也可单独选择</p>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {shenzhenClusters.map(cluster => {
                   const clusterDistrictIds = cluster.districts.map(d => d.id);
                   const selectedInCluster = clusterDistrictIds.filter(id => selectedDistricts.includes(id));
                   const isClusterSelected = selectedInCluster.length === clusterDistrictIds.length;
                   const isPartiallySelected = selectedInCluster.length > 0 && selectedInCluster.length < clusterDistrictIds.length;
                   const hasSelection = selectedInCluster.length > 0;
+                  const hotDistricts = cluster.districts.filter(d => d.heat === 'hot');
                   
                   return (
                     <div
                       key={cluster.id}
                       className={`
-                        p-3 rounded-lg border-2 transition-all
+                        p-4 rounded-xl border-2 transition-all
                         ${hasSelection 
-                          ? 'border-primary/50 bg-primary/5' 
-                          : 'border-border'
+                          ? 'border-primary bg-gradient-to-br from-primary/5 to-primary/10 shadow-sm' 
+                          : 'border-border hover:border-primary/30'
                         }
                       `}
                       data-testid={`card-cluster-${cluster.id}`}
                     >
-                      <div className="flex items-center justify-between mb-2">
+                      {/* 区域标题行 */}
+                      <div className="flex items-center justify-between mb-3">
                         <button
                           onClick={() => {
                             if (isClusterSelected) {
@@ -651,10 +660,10 @@ export default function JoinBlindBoxSheet({
                             }
                           }}
                           className={`
-                            inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium
-                            transition-all border-2
+                            inline-flex items-center gap-2 px-4 py-2 rounded-full text-base font-semibold
+                            transition-all border-2 shadow-sm
                             ${isClusterSelected
-                              ? 'bg-primary text-primary-foreground border-primary'
+                              ? 'bg-gradient-to-r from-primary to-primary/90 text-primary-foreground border-primary'
                               : isPartiallySelected
                                 ? 'bg-primary/20 text-primary border-primary/50'
                                 : 'bg-background border-border hover-elevate'
@@ -662,21 +671,45 @@ export default function JoinBlindBoxSheet({
                           `}
                           data-testid={`chip-cluster-${cluster.id}`}
                         >
+                          {isClusterSelected && <CheckCircle2 className="h-4 w-4" />}
                           <span>{cluster.displayName}</span>
-                          {hasSelection && (
-                            <Badge variant="secondary" className="text-xs px-1.5 py-0 bg-primary-foreground/20 text-primary-foreground">
-                              {selectedInCluster.length}
-                            </Badge>
-                          )}
+                          <Badge 
+                            variant={hasSelection ? "secondary" : "outline"} 
+                            className={`text-xs px-1.5 ${hasSelection ? 'bg-primary-foreground/20 text-primary-foreground' : ''}`}
+                          >
+                            {selectedInCluster.length}/{clusterDistrictIds.length}
+                          </Badge>
                         </button>
-                        <span className="text-xs text-muted-foreground">
-                          {isClusterSelected ? '全选' : isPartiallySelected ? `已选${selectedInCluster.length}个` : '点击全选'}
-                        </span>
+                        <button 
+                          onClick={() => {
+                            if (isClusterSelected) {
+                              setSelectedDistricts(prev => prev.filter(id => !clusterDistrictIds.includes(id)));
+                            } else {
+                              setSelectedDistricts(prev => {
+                                const withoutCluster = prev.filter(id => !clusterDistrictIds.includes(id));
+                                return [...new Set([...withoutCluster, ...clusterDistrictIds])];
+                              });
+                            }
+                          }}
+                          className="text-xs text-primary font-medium hover:underline"
+                        >
+                          {isClusterSelected ? '取消全选' : '全选'}
+                        </button>
                       </div>
                       
-                      <div className="flex flex-wrap gap-1.5">
+                      {/* 热门商圈提示 */}
+                      {hotDistricts.length > 0 && (
+                        <p className="text-xs text-orange-600 dark:text-orange-400 mb-2 flex items-center gap-1">
+                          <Flame className="h-3 w-3" />
+                          {hotDistricts.length}个热门商圈
+                        </p>
+                      )}
+                      
+                      {/* 商圈标签 - 放大尺寸 */}
+                      <div className="flex flex-wrap gap-2">
                         {cluster.districts.map(district => {
                           const isDistrictSelected = selectedDistricts.includes(district.id);
+                          const isHot = district.heat === 'hot';
                           return (
                             <button
                               key={district.id}
@@ -688,14 +721,19 @@ export default function JoinBlindBoxSheet({
                                 }
                               }}
                               className={`
-                                px-2.5 py-1 rounded-md text-xs font-medium transition-all
+                                px-3.5 py-2 rounded-lg text-sm font-medium transition-all
+                                flex items-center gap-1.5 border-2
                                 ${isDistrictSelected
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-muted/50 text-muted-foreground hover-elevate'
+                                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                                  : isHot
+                                    ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800/50 hover-elevate'
+                                    : 'bg-muted/30 text-foreground border-transparent hover:border-primary/30 hover-elevate'
                                 }
                               `}
                               data-testid={`chip-district-${district.id}`}
                             >
+                              {isDistrictSelected && <Check className="h-3.5 w-3.5" />}
+                              {isHot && !isDistrictSelected && <Flame className="h-3 w-3 text-orange-500" />}
                               {district.name}
                             </button>
                           );
@@ -707,7 +745,7 @@ export default function JoinBlindBoxSheet({
               </div>
 
               {selectedDistricts.length === 0 && (
-                <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg mt-3">
+                <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg mt-4 border border-primary/20">
                   <Sparkles className="h-4 w-4 text-primary" />
                   <span className="text-sm text-primary">
                     选择片区，AI会在该区域为你匹配
@@ -715,7 +753,7 @@ export default function JoinBlindBoxSheet({
                 </div>
               )}
 
-              <p className="text-xs text-muted-foreground text-center mt-3">
+              <p className="text-xs text-muted-foreground text-center mt-4">
                 更多片区（罗湖、龙岗、宝安...）即将开放
               </p>
             </div>
