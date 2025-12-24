@@ -78,6 +78,12 @@ Preferred communication style: Simple, everyday language.
 - **DeepSeek API:** Used for conversational AI.
 
 ## Recent Changes (December 2025)
+- **Monorepo Structure Standardization (Dec 24):** Complete migration from legacy directories to proper monorepo structure
+  - **Directory Structure:** Code migrated from `server/` and `client/` to `apps/server/src/`, `apps/user-client/src/`, `apps/admin-client/src/`
+  - **Per-App TypeScript:** Each app has dedicated `tsconfig.json` with proper path aliases (@/, @shared/, @assets/)
+  - **CI/CD Pipeline:** Lint runs `npx tsc --noEmit` per app, test path updated to `apps/server/src/tests/`, artifact upload/download paths aligned to `apps/*/dist`
+  - **Vite Configs:** Output to local `dist` directory per app for cleaner builds
+  - **Key Files:** `.github/workflows/cicd.yml`, `apps/*/tsconfig.json`, `apps/*/vite.config.ts`, `packages/shared/src/index.ts`
 - **JoinBlindBoxSheet UX Overhaul (Dec 24):** Major redesign of registration flow with multi-select districts and gamified team invitation
   - **Multi-Select District Chips:** Replaced simple "相邻商圈" toggle with collapsible cluster groups (南山走廊, 前海, 华侨城, 福田), each district as selectable chip with heat indicator (🔥), max 4 selections, "多选2-3个商圈，成局率提升42%" incentive
   - **Gamified Team Invitation:** Replaced form-based "邀请朋友" with game-style "发起组队" button, 1-friend limit, showTeamInvite state managing invite flow, Web Share API integration for WeChat sharing, teammate status tracking (waiting/joined)
