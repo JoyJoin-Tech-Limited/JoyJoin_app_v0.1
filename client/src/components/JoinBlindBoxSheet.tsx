@@ -10,20 +10,13 @@ import {
   MapPin, 
   Users, 
   ChevronRight,
-  ChevronDown,
   Info,
   CheckCircle2,
   DollarSign,
   Sparkles,
   Share2,
-  UserPlus,
-  X
+  UserPlus
 } from "lucide-react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -38,9 +31,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { getCurrencySymbol } from "@/lib/currency";
 import { 
-  shenzhenClusters, 
-  heatConfig,
-  getDistrictById
+  shenzhenClusters
 } from "@/lib/districts";
 
 interface JoinBlindBoxSheetProps {
@@ -74,9 +65,8 @@ export default function JoinBlindBoxSheet({
   // 确认弹窗状态
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
-  // 商圈多选 - 替代简单的 acceptNearby 开关
+  // 商圈多选 - 选择片区自动全选该片区所有商圈
   const [selectedDistricts, setSelectedDistricts] = useState<string[]>([]);
-  const [expandedClusters, setExpandedClusters] = useState<string[]>(['nanshan']);
   
   // 组队邀请状态
   const [showTeamInvite, setShowTeamInvite] = useState(false);
@@ -521,109 +511,61 @@ export default function JoinBlindBoxSheet({
                 </div>
               </div>
 
-            {/* D. 选择商圈 - 多选提升成功率 */}
+            {/* D. 选择片区 - 点击即全选该片区所有商圈 */}
             <div className="mb-6">
               <div className="mb-3">
-                <h3 className="text-base font-semibold mb-1">选择商圈</h3>
-                <p className="text-xs text-muted-foreground">多选商圈可提升匹配成功率</p>
+                <h3 className="text-base font-semibold mb-1">选择片区</h3>
+                <p className="text-xs text-muted-foreground">选择片区后默认覆盖该区所有商圈</p>
               </div>
 
-              {selectedDistricts.length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-2">
-                  <span className="text-xs text-muted-foreground">已选：</span>
-                  {selectedDistricts.map(id => {
-                    const district = getDistrictById(id);
-                    return district ? (
-                      <Badge 
-                        key={id} 
-                        variant="secondary"
-                        className="flex items-center gap-1 pr-1"
-                      >
-                        {district.name}
-                        <button
-                          onClick={() => setSelectedDistricts(prev => prev.filter(d => d !== id))}
-                          className="ml-1 hover:bg-muted rounded-full p-0.5"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ) : null;
-                  })}
-                </div>
-              )}
-
-              <div className="space-y-2">
-                {shenzhenClusters.map(cluster => (
-                  <Collapsible 
-                    key={cluster.id}
-                    open={expandedClusters.includes(cluster.id)} 
-                    onOpenChange={() => {
-                      setExpandedClusters(prev => 
-                        prev.includes(cluster.id) 
-                          ? prev.filter(id => id !== cluster.id)
-                          : [...prev, cluster.id]
-                      );
-                    }}
-                  >
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover-elevate">
-                      <div className="flex items-center gap-2">
-                        {expandedClusters.includes(cluster.id) ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
-                        <span className="font-medium text-sm">{cluster.name}</span>
-                        {cluster.districts.filter(d => selectedDistricts.includes(d.id)).length > 0 && (
-                          <Badge variant="default" className="text-xs">
-                            {cluster.districts.filter(d => selectedDistricts.includes(d.id)).length}
-                          </Badge>
-                        )}
-                      </div>
-                      {!expandedClusters.includes(cluster.id) && (
-                        <span className="text-xs text-muted-foreground">查看更多</span>
+              <div className="flex flex-wrap gap-2">
+                {shenzhenClusters.map(cluster => {
+                  const clusterDistrictIds = cluster.districts.map(d => d.id);
+                  const selectedInCluster = clusterDistrictIds.filter(id => selectedDistricts.includes(id));
+                  const isClusterSelected = selectedInCluster.length === clusterDistrictIds.length;
+                  const isPartiallySelected = selectedInCluster.length > 0 && selectedInCluster.length < clusterDistrictIds.length;
+                  
+                  return (
+                    <button
+                      key={cluster.id}
+                      onClick={() => {
+                        if (isClusterSelected) {
+                          setSelectedDistricts(prev => prev.filter(id => !clusterDistrictIds.includes(id)));
+                        } else {
+                          setSelectedDistricts(prev => {
+                            const withoutCluster = prev.filter(id => !clusterDistrictIds.includes(id));
+                            return [...new Set([...withoutCluster, ...clusterDistrictIds])];
+                          });
+                        }
+                      }}
+                      className={`
+                        inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium
+                        transition-all border-2
+                        ${isClusterSelected
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : isPartiallySelected
+                            ? 'bg-primary/20 text-primary border-primary/50'
+                            : 'bg-background border-border hover-elevate'
+                        }
+                      `}
+                      data-testid={`chip-cluster-${cluster.id}`}
+                    >
+                      <span>{cluster.name}</span>
+                      {isClusterSelected && (
+                        <Badge variant="secondary" className="text-xs px-1.5 py-0 bg-primary-foreground/20 text-primary-foreground">
+                          {clusterDistrictIds.length}
+                        </Badge>
                       )}
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pt-3 pl-6">
-                      <div className="flex flex-wrap gap-2">
-                        {cluster.districts.map(district => {
-                          const heat = heatConfig[district.heat];
-                          const isSelected = selectedDistricts.includes(district.id);
-                          return (
-                            <button
-                              key={district.id}
-                              onClick={() => {
-                                if (isSelected) {
-                                  setSelectedDistricts(prev => prev.filter(id => id !== district.id));
-                                } else if (selectedDistricts.length < 4) {
-                                  setSelectedDistricts(prev => [...prev, district.id]);
-                                }
-                              }}
-                              className={`
-                                inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium
-                                transition-all border-2
-                                ${isSelected
-                                  ? 'bg-primary text-primary-foreground border-primary'
-                                  : 'bg-background border-border hover-elevate'
-                                }
-                              `}
-                              data-testid={`chip-district-${district.id}`}
-                            >
-                              <span>{district.name}</span>
-                              {heat.icon && <span>{heat.icon}</span>}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
 
-              {selectedDistricts.length < 2 && (
+              {selectedDistricts.length === 0 && (
                 <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg mt-3">
                   <Sparkles className="h-4 w-4 text-primary" />
                   <span className="text-sm text-primary">
-                    多选2-3个商圈，成局率提升42%
+                    选择片区，AI会在该区域为你匹配
                   </span>
                 </div>
               )}
@@ -868,19 +810,26 @@ export default function JoinBlindBoxSheet({
             </div>
           )}
 
-          {/* 4. 已选商圈 */}
+          {/* 4. 已选片区 */}
           {selectedDistricts.length > 0 && (
             <div className="space-y-3">
               <div>
-                <h3 className="text-sm font-semibold">已选商圈</h3>
+                <h3 className="text-sm font-semibold">已选片区</h3>
+                <p className="text-xs text-muted-foreground">共覆盖 {selectedDistricts.length} 个商圈</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                {selectedDistricts.map(id => {
-                  const district = getDistrictById(id);
-                  return district ? (
-                    <Badge key={id} variant="secondary">{district.name}</Badge>
-                  ) : null;
-                })}
+                {shenzhenClusters
+                  .filter(cluster => cluster.districts.some(d => selectedDistricts.includes(d.id)))
+                  .map(cluster => {
+                    const selectedCount = cluster.districts.filter(d => selectedDistricts.includes(d.id)).length;
+                    const totalCount = cluster.districts.length;
+                    return (
+                      <Badge key={cluster.id} variant="secondary">
+                        {cluster.name} ({selectedCount}/{totalCount})
+                      </Badge>
+                    );
+                  })
+                }
               </div>
             </div>
           )}
