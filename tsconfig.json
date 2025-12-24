@@ -1,13 +1,13 @@
 {
-  "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
+  "include": ["apps/user-client/src/**/*", "packages/shared/src/**/*", "apps/server/src/**/*", "server/**/*"],
   "exclude": [
     "node_modules", 
     "build", 
     "dist", 
     "**/*.test.ts",
-    "client/src/components/examples/**/*",
-    "client/src/lib/animationTestSimulation.ts",
-    "server/tests/**/*"
+    "apps/user-client/src/components/examples/**/*",
+    "apps/user-client/src/lib/animationTestSimulation.ts",
+    "apps/server/src/tests/**/*"
   ],
   "compilerOptions": {
     "incremental": true,
@@ -26,8 +26,8 @@
     "baseUrl": ".",
     "types": ["node", "vite/client"],
     "paths": {
-      "@/*": ["./client/src/*"],
-      "@shared/*": ["./shared/*"]
+      "@/*": ["./apps/user-client/src/*"],
+      "@shared/*": ["./packages/shared/src/*"]
     }
   }
 }
