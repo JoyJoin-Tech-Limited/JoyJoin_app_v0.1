@@ -28,6 +28,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV PORT=5000
 
 # Copy built files and production dependencies
 COPY --from=builder /app/apps/server/dist ./dist
