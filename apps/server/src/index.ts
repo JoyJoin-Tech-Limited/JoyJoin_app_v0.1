@@ -19,13 +19,13 @@ function log(message: string, source = "express") {
 }
 
 // Production static file serving - inlined to avoid any vite imports
-function serveStatic(app: express.Application) {
+// Returns true if static files were found and served, false if running as pure API
+function serveStatic(app: express.Application): boolean {
   const distPath = path.resolve(import.meta.dirname, "public");
 
   if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
-    );
+    console.warn("Static build directory not found. Running as pure API server.");
+    return false;
   }
 
   app.use(express.static(distPath));
@@ -33,6 +33,8 @@ function serveStatic(app: express.Application) {
   app.use("*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
+  
+  return true;
 }
 
 // Detect if running on Replit infra (where reusePort is supported/needed)
