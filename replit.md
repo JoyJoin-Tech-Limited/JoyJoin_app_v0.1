@@ -43,6 +43,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (2025-12-24)
 
+### Dual-Track Preference System for Event Types
+- **Event Type Differentiation:** Implemented conditional rendering for event-specific preferences
+  - **饭局 (Dining Events):** Shows taste intensity (爱吃辣/不辣清淡) + cuisine preferences (中餐/川菜/粤菜/火锅/烧烤/西餐/日料)
+  - **酒局 (Bar Events):** Shows bar themes (精酿/清吧/鸡尾酒吧/Whisky Bar/Wine Bar) + alcohol comfort levels (可以喝酒/微醺就好/无酒精饮品)
+  - **Shared:** Language preferences (国语/粤语/英语) displayed for both event types
+- **Database Schema Updates:** Added bar-specific fields to venues table:
+  - `barThemes`: text array for bar theme categories
+  - `alcoholOptions`: text array for alcohol comfort options supported
+  - `vibeDescriptor`: text field for editorial atmosphere description
+- **Admin Portal Enhancement:** Venue management form now conditionally displays bar-specific fields only when venue type is "bar"
+- **Confirmation Dialog:** Updated to show appropriate preference summary based on event type
+
 ### Location Structure Simplification & Unified Data Model
 - **Cluster Model:** Simplified to **2 clusters only** (南山区, 福田区) - consolidated from previous 4-cluster structure
 - **District Mapping:**
