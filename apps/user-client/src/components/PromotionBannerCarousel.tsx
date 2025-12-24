@@ -6,7 +6,7 @@ import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Ticket, Gift } from "lucide-react";
-import type { PromotionBanner } from "@shared/schema";
+import type { PromotionBanner } from "@joyjoin/shared/schema";
 
 interface CouponSlide {
   type: "coupon";

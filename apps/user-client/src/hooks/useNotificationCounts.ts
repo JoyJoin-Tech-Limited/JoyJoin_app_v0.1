@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { NotificationCounts } from "@shared/schema";
+import type { NotificationCounts } from "@joyjoin/shared/schema";
 
 export function useNotificationCounts() {
   return useQuery<NotificationCounts>({

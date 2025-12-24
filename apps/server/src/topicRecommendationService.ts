@@ -1,11 +1,11 @@
 import OpenAI from 'openai';
-import type { TopicCard } from '@shared/topicCards';
+import type { TopicCard } from '@joyjoin/shared/topicCards';
 import { 
   getExpandedRecommendedTopics, 
   getRecommendedTopics,
   universalTopics,
   energyBasedTopics 
-} from '@shared/topicCards';
+} from '@joyjoin/shared/topicCards';
 
 const deepseekClient = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,

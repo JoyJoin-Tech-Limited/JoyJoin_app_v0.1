@@ -10,7 +10,7 @@ import {
   type MatchingWeightsConfig,
   type InsertMatchingWeightsConfig,
   type InsertMatchingWeightsHistory
-} from '@shared/schema';
+} from '@joyjoin/shared/schema';
 import { eq, desc } from 'drizzle-orm';
 
 export interface MatchingWeights {

@@ -12,7 +12,7 @@ import {
   normalizeInterestName,
   type AttendeeData,
 } from "@/lib/attendeeAnalytics";
-import { getOccupationDisplayLabel, getIndustryDisplayLabel } from "@shared/occupations";
+import { getOccupationDisplayLabel, getIndustryDisplayLabel } from "@joyjoin/shared/occupations";
 import { getArchetypeImage } from "@/lib/archetypeImages";
 
 const INTEREST_ICONS: Record<string, LucideIcon> = {

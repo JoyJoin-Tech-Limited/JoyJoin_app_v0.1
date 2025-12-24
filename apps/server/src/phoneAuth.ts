@@ -153,7 +153,7 @@ export const isPhoneAuthenticated: RequestHandler = async (req, res, next) => {
 async function createDemoDataForUser(userId: string) {
   try {
     const { db } = await import("./db");
-    const { users, roleResults, blindBoxEvents } = await import("@shared/schema");
+    const { users, roleResults, blindBoxEvents } = await import("@joyjoin/shared/schema");
     const { eq } = await import("drizzle-orm");
     
     console.log(`🎯 Creating demo data for user: ${userId}`);

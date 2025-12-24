@@ -2,11 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Users, Clock, Sparkles, XCircle, UserPlus, UserCheck } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { zhCN } from "date-fns/locale";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { convertToHongKongTime } from "@/lib/hongKongTime";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,7 +47,7 @@ interface PoolRegistrationCardProps {
 export default function PoolRegistrationCard({ registration }: PoolRegistrationCardProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const poolDateTime = convertToHongKongTime(registration.poolDateTime);
+  const poolDateTime = parseISO(registration.poolDateTime);
   
   const cancelMutation = useMutation({
     mutationFn: async () => {
@@ -134,17 +135,7 @@ export default function PoolRegistrationCard({ registration }: PoolRegistrationC
       <CardContent className="space-y-3">
         <div className="flex items-center gap-2 text-sm">
           <Calendar className="h-4 w-4 text-muted-foreground" />
-          <span>
-            {(() => {
-              const month = (poolDateTime.getUTCMonth() + 1).toString().padStart(2, '0');
-              const day = poolDateTime.getUTCDate().toString().padStart(2, '0');
-              const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-              const weekday = weekdays[poolDateTime.getUTCDay()];
-              const hours = poolDateTime.getUTCHours().toString().padStart(2, '0');
-              const minutes = poolDateTime.getUTCMinutes().toString().padStart(2, '0');
-              return `${month}月${day}日 ${weekday} ${hours}:${minutes}`;
-            })()}
-          </span>
+          <span>{format(poolDateTime, 'MM月dd日 EEEE HH:mm', { locale: zhCN })}</span>
         </div>
         
         <div className="flex items-center gap-2 text-sm">

@@ -16,8 +16,6 @@ export function log(message: string, source = "express") {
 
 export async function setupVite(app: Express, server: Server) {
   const vite = await import("vite");
-  const viteConfigModule = await import("../../../vite.config");
-  const viteConfig = viteConfigModule.default;
   const nanoidModule = await import("nanoid");
   const nanoid = nanoidModule.nanoid;
   
@@ -29,9 +27,12 @@ export async function setupVite(app: Express, server: Server) {
     allowedHosts: true as const,
   };
 
+  // Use user-client's vite config for development
+  const userClientRoot = path.resolve(import.meta.dirname, "..", "..", "user-client");
+  
   const viteServer = await vite.createServer({
-    ...viteConfig,
-    configFile: false,
+    root: userClientRoot,
+    configFile: path.resolve(userClientRoot, "vite.config.ts"),
     customLogger: {
       ...viteLogger,
       error: (msg: string, options?: { error?: Error | null }) => {
@@ -48,12 +49,7 @@ export async function setupVite(app: Express, server: Server) {
     const url = req.originalUrl;
 
     try {
-      const clientTemplate = path.resolve(
-        import.meta.dirname,
-        "..",
-        "client",
-        "index.html",
-      );
+      const clientTemplate = path.resolve(userClientRoot, "index.html");
 
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(

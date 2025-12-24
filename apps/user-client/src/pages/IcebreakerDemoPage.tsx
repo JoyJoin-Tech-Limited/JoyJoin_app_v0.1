@@ -13,8 +13,8 @@ import { IcebreakerOverlayProvider, IcebreakerSurface } from '@/components/icebr
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { LogOut, Clock, Info, Smartphone, Wifi } from 'lucide-react';
-import type { TopicCard } from '@shared/topicCards';
-import type { IcebreakerGame } from '@shared/icebreakerGames';
+import type { TopicCard } from '@joyjoin/shared/topicCards';
+import type { IcebreakerGame } from '@joyjoin/shared/icebreakerGames';
 
 type DemoPhase = 'checkin' | 'number_assign' | 'icebreaker' | 'ended';
 

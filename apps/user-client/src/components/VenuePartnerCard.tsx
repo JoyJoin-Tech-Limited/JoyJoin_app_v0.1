@@ -14,7 +14,7 @@ import {
   Ticket,
 } from "lucide-react";
 import { useState } from "react";
-import type { Venue, VenueDeal } from "@shared/schema";
+import type { Venue, VenueDeal } from "@joyjoin/shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
 interface VenuePartnerCardProps {

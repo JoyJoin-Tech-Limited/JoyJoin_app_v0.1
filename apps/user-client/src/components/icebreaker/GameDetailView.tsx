@@ -21,7 +21,7 @@ import {
   Crown,
   Sparkles,
 } from 'lucide-react';
-import { icebreakerGames, getRandomGame, type IcebreakerGame } from '@shared/icebreakerGames';
+import { icebreakerGames, getRandomGame, type IcebreakerGame } from '@joyjoin/shared/icebreakerGames';
 
 interface Participant {
   id: string;

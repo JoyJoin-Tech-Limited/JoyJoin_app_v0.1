@@ -4,7 +4,7 @@
  */
 
 import { db } from './db';
-import { users } from '@shared/schema';
+import { users } from '@joyjoin/shared/schema';
 import { eq } from 'drizzle-orm';
 import { filterContent, detectGibberish, detectRepetition, type ContentFilterResult, type ViolationType } from './contentFilter';
 

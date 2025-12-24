@@ -15,7 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ArrowLeft, Send, Clock, ArrowDown, CheckCheck, MoreVertical, Flag } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { User, ChatMessage } from "@shared/schema";
+import type { User, ChatMessage } from "@joyjoin/shared/schema";
 import { 
   getGenderDisplay, 
   formatAge, 

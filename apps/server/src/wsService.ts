@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
-import type { WSMessage, WSEventType } from '@shared/wsEvents';
+import type { WSMessage, WSEventType } from '../shared/wsEvents';
 import { storage } from './storage';
 
 interface AuthenticatedWebSocket extends WebSocket {

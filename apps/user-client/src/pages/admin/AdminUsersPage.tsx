@@ -24,7 +24,7 @@ import { Search, UserX, UserCheck, Calendar, Crown, AlertCircle, RefreshCw, Star
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { useLocation, useSearch } from "wouter";
-import { CURRENT_CITY_OPTIONS } from "@shared/constants";
+import { CURRENT_CITY_OPTIONS } from "@joyjoin/shared/constants";
 
 interface ProfileCompleteness {
   score: number;

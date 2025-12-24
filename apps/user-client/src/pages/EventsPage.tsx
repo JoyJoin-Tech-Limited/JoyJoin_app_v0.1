@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { invalidateCacheForEvent } from "@/lib/cacheInvalidation";
-import type { BlindBoxEvent, EventFeedback } from "@shared/schema";
+import type { BlindBoxEvent, EventFeedback } from "@joyjoin/shared/schema";
 
 interface ReunionInvite {
   responseId: string;

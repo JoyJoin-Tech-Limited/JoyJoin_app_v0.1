@@ -4,7 +4,7 @@
  */
 
 import { db } from './db';
-import { triggerPerformance, type TriggerPerformance } from '@shared/schema';
+import { triggerPerformance, type TriggerPerformance } from '@joyjoin/shared/schema';
 import { eq, desc } from 'drizzle-orm';
 
 interface TriggerStats {

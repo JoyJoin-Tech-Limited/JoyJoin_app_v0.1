@@ -6,7 +6,7 @@ import type {
   UserConfirmedData,
   MatchProgressUpdateData,
   AdminActionData,
-} from '@shared/wsEvents';
+} from '../shared/wsEvents';
 
 /**
  * 广播活动状态变更事件

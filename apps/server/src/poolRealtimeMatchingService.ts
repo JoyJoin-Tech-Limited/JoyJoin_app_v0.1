@@ -14,7 +14,7 @@ import {
   eventPoolRegistrations,
   matchingThresholds,
   poolMatchingLogs,
-} from "@shared/schema";
+} from "@joyjoin/shared/schema";
 import { eq, and } from "drizzle-orm";
 import { matchEventPool, saveMatchResults } from "./poolMatchingService";
 import type { MatchGroup } from "./poolMatchingService";

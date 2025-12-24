@@ -20,7 +20,7 @@ import {
   formatAge, 
   getEducationDisplay
 } from "@/lib/userFieldMappings";
-import type { Event, DirectMessageThread, User as UserType } from "@shared/schema";
+import type { Event, DirectMessageThread, User as UserType } from "@joyjoin/shared/schema";
 
 type EventWithParticipants = Event & { 
   attendanceStatus: string; 

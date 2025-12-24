@@ -22,8 +22,8 @@ import {
   Utensils,
   Globe,
 } from 'lucide-react';
-import type { TopicCard } from '@shared/topicCards';
-import { icebreakerGames, sceneLabels, type IcebreakerGame } from '@shared/icebreakerGames';
+import type { TopicCard } from '@joyjoin/shared/topicCards';
+import { icebreakerGames, sceneLabels, type IcebreakerGame } from '@joyjoin/shared/icebreakerGames';
 import { ActivitySpotlight } from './ActivitySpotlight';
 import { GameDetailView } from './GameDetailView';
 import { KingGameController } from './KingGameController';

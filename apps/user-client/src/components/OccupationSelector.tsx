@@ -25,12 +25,12 @@ import {
   getOccupationGuidance,
   type Occupation,
   type WorkMode,
-} from "@shared/occupations";
+} from "@joyjoin/shared/occupations";
 import {
   WORK_MODE_OPTIONS,
   WORK_MODE_LABELS,
   WORK_MODE_DESCRIPTIONS,
-} from "@shared/constants";
+} from "@joyjoin/shared/constants";
 
 function HighlightText({ text, query }: { text: string; query: string }) {
   if (!query.trim()) {

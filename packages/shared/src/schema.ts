@@ -883,10 +883,6 @@ export const venues = pgTable("venues", {
   address: text("address").notNull(),
   city: text("city").notNull(), // 深圳, 香港
   area: text("area").notNull(), // 南山区, 中环 etc.
-  
-  // 商圈定位（与用户报名商圈匹配）
-  clusterId: text("cluster_id"), // 片区ID: nanshan, futian, oct, qianhai
-  districtId: text("district_id"), // 商圈ID: keji, houhai, chegongmiao etc.
   contactPerson: text("contact_person"),
   contactPhone: text("contact_phone"),
   commissionRate: integer("commission_rate").default(20), // percentage
@@ -896,6 +892,11 @@ export const venues = pgTable("venues", {
   cuisines: text("cuisines").array(), // 粤菜, 川菜, 日料, 西餐 etc.
   priceRange: text("price_range"), // 预算档次: "150以下", "150-200", "200-300", "300-500"
   decorStyle: text("decor_style").array(), // 装修风格: 轻奢现代风, 绿植花园风, 复古工业风, 温馨日式风
+  
+  // 酒吧特有标签 (仅当 venueType='bar' 时使用)
+  barThemes: text("bar_themes").array(), // 酒吧主题: 精酿, 清吧, 鸡尾酒吧, Whisky Bar, Wine Bar
+  alcoholOptions: text("alcohol_options").array(), // 支持的饮酒选项: 可以喝酒, 微醺就好, 无酒精饮品
+  vibeDescriptor: text("vibe_descriptor"), // 氛围描述（编辑性文字，非结构化标签）
   
   // Capacity management
   capacity: integer("capacity").default(1), // How many events can run at same time

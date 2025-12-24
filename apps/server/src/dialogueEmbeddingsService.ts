@@ -9,7 +9,7 @@
  */
 
 import { db } from './db';
-import { dialogueEmbeddings, dialogueFeedback, users, registrationSessions } from '@shared/schema';
+import { dialogueEmbeddings, dialogueFeedback, users, registrationSessions } from '@joyjoin/shared/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import type { DetectedInsight, InsightDetectionResult, InsightCategory } from './insightDetectorService';
 import type { DeepTraits } from './inference/conversationSignature';

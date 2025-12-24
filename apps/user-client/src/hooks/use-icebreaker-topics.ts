@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import type { TopicCard } from '@shared/topicCards';
+import type { TopicCard } from '@joyjoin/shared/topicCards';
 
 export interface ParticipantProfile {
   displayName: string;

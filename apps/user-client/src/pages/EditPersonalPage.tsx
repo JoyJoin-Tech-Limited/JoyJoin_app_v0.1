@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, Check } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { RELATIONSHIP_STATUS_OPTIONS, CHILDREN_OPTIONS } from "@shared/constants";
+import { RELATIONSHIP_STATUS_OPTIONS, CHILDREN_OPTIONS } from "@joyjoin/shared/constants";
 
 type PersonalData = {
   relationshipStatus?: string;

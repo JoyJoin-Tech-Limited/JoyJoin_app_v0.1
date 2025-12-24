@@ -14,7 +14,7 @@ import { processTestV2, type AnswerV2 } from "./personalityMatchingV2";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, type User } from "@joyjoin/shared/schema";
 import { db } from "./db";
 import { eq, or, and, desc, inArray, isNotNull, gt, sql } from "drizzle-orm";
 
@@ -1171,7 +1171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Import redeemable items config
-      const { REDEEMABLE_ITEMS } = await import('@shared/gamification');
+      const { REDEEMABLE_ITEMS } = await import('@joyjoin/shared/gamification');
       const item = REDEEMABLE_ITEMS.find(i => i.id === itemId);
       
       if (!item) {
@@ -1264,7 +1264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get available redeemable items
   app.get('/api/user/gamification/redeemable-items', isPhoneAuthenticated, async (req: any, res) => {
     try {
-      const { REDEEMABLE_ITEMS } = await import('@shared/gamification');
+      const { REDEEMABLE_ITEMS } = await import('@joyjoin/shared/gamification');
       res.json(REDEEMABLE_ITEMS);
     } catch (error) {
       console.error("Error fetching redeemable items:", error);
@@ -1275,7 +1275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get level configurations
   app.get('/api/gamification/levels', async (req, res) => {
     try {
-      const { LEVELS } = await import('@shared/gamification');
+      const { LEVELS } = await import('@joyjoin/shared/gamification');
       res.json(LEVELS);
     } catch (error) {
       console.error("Error fetching levels:", error);
@@ -1293,7 +1293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      const { getLevelDiscount, getLevelConfig } = await import('@shared/gamification');
+      const { getLevelDiscount, getLevelConfig } = await import('@joyjoin/shared/gamification');
       const userLevel = user.currentLevel || 1;
       const discountPercent = getLevelDiscount(userLevel);
       const levelConfig = getLevelConfig(userLevel);
@@ -1791,7 +1791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.session.userId;
       const { db } = await import("./db");
-      const { blindBoxEvents } = await import("@shared/schema");
+      const { blindBoxEvents } = await import("@joyjoin/shared/schema");
       const { eq } = await import("drizzle-orm");
       
       // Check if user already has demo events
@@ -2148,7 +2148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { db } = await import("./db");
-      const { blindBoxEvents } = await import("@shared/schema");
+      const { blindBoxEvents } = await import("@joyjoin/shared/schema");
       const { eq } = await import("drizzle-orm");
       
       // Check if user already has a Christmas pool demo
@@ -2209,7 +2209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/demo/create-homebar-venue', requireAdmin, async (_req, res) => {
     try {
       const { db } = await import("./db");
-      const { venues, venueDeals } = await import("@shared/schema");
+      const { venues, venueDeals } = await import("@joyjoin/shared/schema");
       const { eq } = await import("drizzle-orm");
       
       // Check if venue already exists
@@ -3611,7 +3611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //     console.log("[AdminBlindBox] GET /api/admin/events by admin:", adminId);
 
   //     const { db } = await import("./db");
-  //     const { blindBoxEvents } = await import("@shared/schema");
+  //     const { blindBoxEvents } = await import("@joyjoin/shared/schema");
   //     const { desc } = await import("drizzle-orm");
 
   //     const events = await db
@@ -3723,7 +3723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //     }
 
   //     const { db } = await import("./db");
-  //     const { blindBoxEvents } = await import("@shared/schema");
+  //     const { blindBoxEvents } = await import("@joyjoin/shared/schema");
 
   //     const [created] = await db
   //       .insert(blindBoxEvents)
@@ -3778,7 +3778,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //       eventId,
   //     });
 
-  //     const { blindBoxEvents } = await import("@shared/schema");
+  //     const { blindBoxEvents } = await import("@joyjoin/shared/schema");
   //     const { db } = await import("./db");
 
   //     // Load event
@@ -4718,7 +4718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "scene must be 'dinner', 'bar', or 'both'" });
       }
       
-      const { icebreakerGames } = await import('@shared/icebreakerGames');
+      const { icebreakerGames } = await import('@joyjoin/shared/icebreakerGames');
       const { recommendGameForParticipants } = await import('./icebreakerAIService');
       
       let games = icebreakerGames.map(g => ({
@@ -6126,7 +6126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Venue Management - Create venue
   app.post("/api/admin/venues", requireAdmin, async (req, res) => {
     try {
-      const { name, type, address, city, district, contactName, contactPhone, commissionRate, tags, cuisines, priceRange, maxConcurrentEvents, notes } = req.body;
+      const { name, type, address, city, district, clusterId, districtId, contactName, contactPhone, commissionRate, tags, cuisines, priceRange, maxConcurrentEvents, notes } = req.body;
       
       if (!name || !type || !address || !city || !district) {
         return res.status(400).json({ message: "Missing required fields" });
@@ -6138,6 +6138,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         address,
         city,
         district,
+        clusterId: clusterId || null,
+        districtId: districtId || null,
         contactName: contactName || null,
         contactPhone: contactPhone || null,
         commissionRate: commissionRate || 20,

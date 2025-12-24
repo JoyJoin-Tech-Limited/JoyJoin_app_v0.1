@@ -17,8 +17,8 @@ import { IcebreakerOverlayProvider, IcebreakerSurface } from '@/components/icebr
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, WifiOff, RefreshCcw } from 'lucide-react';
-import type { TopicCard } from '@shared/topicCards';
-import type { IcebreakerGame } from '@shared/icebreakerGames';
+import type { TopicCard } from '@joyjoin/shared/topicCards';
+import type { IcebreakerGame } from '@joyjoin/shared/icebreakerGames';
 
 interface SessionData {
   id: string;

@@ -17,9 +17,9 @@ import { Badge } from "@/components/ui/badge";
 import MobileHeader from "@/components/MobileHeader";
 import EvolvingAvatar, { calculateClarityLevel } from "@/components/EvolvingAvatar";
 import { LottieInlineLoader } from "@/components/LottieWaveAnimation";
-import type { User as UserType } from "@shared/schema";
+import type { User as UserType } from "@joyjoin/shared/schema";
 import { INTERESTS_OPTIONS, getInterestIcon } from "@/data/interestsTopicsData";
-import { INDUSTRIES, WORK_MODES } from "@shared/occupations";
+import { INDUSTRIES, WORK_MODES } from "@joyjoin/shared/occupations";
 import { 
   LANGUAGES_COMFORT_OPTIONS, 
   RELATIONSHIP_STATUS_OPTIONS, 
@@ -27,7 +27,7 @@ import {
   CHILDREN_OPTIONS,
   ACTIVITY_TIME_PREFERENCE_OPTIONS,
   SOCIAL_FREQUENCY_OPTIONS
-} from "@shared/constants";
+} from "@joyjoin/shared/constants";
 import { calculateProfileCompletion as calculateProfileCompletionUtil, getMatchingBoostEstimate } from "@/lib/profileCompletion";
 import { getInsightCategoryConfig, INSIGHT_CONFIDENCE_THRESHOLD, INSIGHT_DISPLAY_LIMIT } from "@/lib/insightCategoryConfig";
 

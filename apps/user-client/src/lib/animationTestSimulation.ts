@@ -43,12 +43,7 @@ export const generateTestSessions = (): UserTestSession[] => {
     
     // Simulate different user behavior patterns
     const behaviorPattern = Math.random();
-    let events: Array<{
-      type: 'view' | 'skip' | 'share' | 'complete' | 'replay';
-      time: number;
-      durationInAnimation?: number;
-      interactionPoint?: string;
-    }> = [];
+    let events = [];
     let completionRate: 'full' | 'partial' | 'skip' = 'full';
     let satisfactionScore = 5;
     let feedbackText = '';
@@ -174,8 +169,7 @@ export const generateTestReport = (sessions: UserTestSession[]) => {
     // Satisfaction stats
     totalScore += session.metadata.satisfactionScore;
     const scoreInt = Math.ceil(session.metadata.satisfactionScore);
-    const scoreKey = `${scoreInt}星` as keyof typeof report.satisfactionStats.distribution;
-    report.satisfactionStats.distribution[scoreKey]++;
+    report.satisfactionStats.distribution[`${scoreInt}星` as any]++;
 
     // Browser stats
     report.browserStats[session.metadata.browser] = (report.browserStats[session.metadata.browser] || 0) + 1;

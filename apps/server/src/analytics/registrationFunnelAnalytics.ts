@@ -8,7 +8,7 @@
  */
 
 import { db } from '../db';
-import { users, registrationSessions } from '@shared/schema';
+import { users, registrationSessions } from '@joyjoin/shared/schema';
 import { sql, count, and, gte, lte, isNotNull, desc } from 'drizzle-orm';
 import { storage } from '../storage';
 

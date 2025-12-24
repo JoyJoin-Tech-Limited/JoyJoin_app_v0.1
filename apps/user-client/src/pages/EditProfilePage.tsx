@@ -20,7 +20,7 @@ import {
   getIcebreakerRoleDisplay,
   getSocialStyleDisplay,
 } from "@/lib/userFieldMappings";
-import { getOccupationDisplayLabel, getIndustryDisplayLabel, WORK_MODE_TO_LABEL, INDUSTRY_ID_TO_LABEL, type WorkMode } from "@shared/occupations";
+import { getOccupationDisplayLabel, getIndustryDisplayLabel, WORK_MODE_TO_LABEL, INDUSTRY_ID_TO_LABEL, type WorkMode } from "@joyjoin/shared/occupations";
 import { getInterestLabel, getTopicLabel } from "@/data/interestsTopicsData";
 
 interface Field {

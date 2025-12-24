@@ -75,7 +75,7 @@ export default function JourneyProgressCard({
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <Sparkles className="h-4 w-4 text-primary" />
-          <span className="font-semibold text-sm">你的悦聚·JoyJoin之旅</span>
+          <span className="font-semibold text-sm">你的JoyJoin之旅</span>
           <span className="text-xs text-muted-foreground ml-auto">
             {completedCount}/{steps.length} 已完成
           </span>

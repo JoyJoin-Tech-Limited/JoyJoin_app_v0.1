@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, xpTransactions } from "@shared/schema";
+import { users, xpTransactions } from "@joyjoin/shared/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { 
   XP_REWARDS, 
@@ -7,7 +7,7 @@ import {
   getLevelConfig, 
   getXPForNextLevel,
   type XPTransactionType 
-} from "@shared/gamification";
+} from "@joyjoin/shared/gamification";
 
 // ============ XP/悦币发放服务 ============
 

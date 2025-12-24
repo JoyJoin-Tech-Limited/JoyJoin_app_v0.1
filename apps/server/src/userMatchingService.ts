@@ -3,7 +3,7 @@
  * 实现基于14种性格原型的多维度智能匹配
  */
 
-import type { User } from '@shared/schema';
+import type { User } from '@joyjoin/shared/schema';
 import { getChemistryScore, calculateGroupChemistry, type ArchetypeName } from './archetypeChemistry';
 import { calculateSignatureSimilarity, type ConversationSignature } from './inference/conversationSignature';
 import { matchingWeightsService, type MatchingWeights } from './matchingWeightsService';

@@ -1,5 +1,5 @@
 import { storage } from "./storage";
-import { getLevelDiscount } from "@shared/gamification";
+import { getLevelDiscount } from "@joyjoin/shared/gamification";
 
 /**
  * Payment Service for WeChat Pay Integration

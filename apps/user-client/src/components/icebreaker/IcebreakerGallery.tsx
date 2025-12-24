@@ -19,8 +19,8 @@ import {
   Play,
   RefreshCw,
 } from 'lucide-react';
-import type { TopicCard } from '@shared/topicCards';
-import { icebreakerGames, type IcebreakerGame } from '@shared/icebreakerGames';
+import type { TopicCard } from '@joyjoin/shared/topicCards';
+import { icebreakerGames, type IcebreakerGame } from '@joyjoin/shared/icebreakerGames';
 
 export interface RecommendedTopic {
   topic: TopicCard;

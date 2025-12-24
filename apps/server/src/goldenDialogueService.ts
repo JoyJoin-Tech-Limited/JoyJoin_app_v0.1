@@ -11,7 +11,7 @@ import {
   type GoldenDialogue,
   type InsertGoldenDialogue,
   type InsertDialogueFeedback
-} from '@shared/schema';
+} from '@joyjoin/shared/schema';
 import { eq, desc, gte, and, sql } from 'drizzle-orm';
 
 interface DialogueSearchResult {

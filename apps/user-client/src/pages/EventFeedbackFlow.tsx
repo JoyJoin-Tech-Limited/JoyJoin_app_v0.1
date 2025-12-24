@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, Sparkles, UtensilsCrossed, Wine, Calendar, Clock, MapPin, Users, Gift, Star, Target, CheckCircle2, Home, ThumbsUp, Meh, ThumbsDown } from "lucide-react";
 import { motion } from "framer-motion";
-import type { BlindBoxEvent, EventFeedback } from "@shared/schema";
+import type { BlindBoxEvent, EventFeedback } from "@joyjoin/shared/schema";
 import AtmosphereThermometer from "@/components/feedback/AtmosphereThermometer";
 import SelectConnectionsStep from "@/components/feedback/SelectConnectionsStep";
 import ImprovementCards from "@/components/feedback/ImprovementCards";

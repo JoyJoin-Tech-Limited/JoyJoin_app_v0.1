@@ -11,8 +11,8 @@ import {
   Globe,
   MessageCircle,
 } from 'lucide-react';
-import type { TopicCard } from '@shared/topicCards';
-import type { IcebreakerGame } from '@shared/icebreakerGames';
+import type { TopicCard } from '@joyjoin/shared/topicCards';
+import type { IcebreakerGame } from '@joyjoin/shared/icebreakerGames';
 import { SpinWheel } from './SpinWheel';
 
 interface ActivitySpotlightProps {

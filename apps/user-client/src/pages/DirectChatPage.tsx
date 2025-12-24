@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ArrowLeft, Send, Sparkles, ArrowDown, CheckCheck } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { User, DirectMessage } from "@shared/schema";
+import type { User, DirectMessage } from "@joyjoin/shared/schema";
 
 type DirectThreadWithDetails = {
   id: string;

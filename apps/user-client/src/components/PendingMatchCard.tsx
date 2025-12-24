@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Users, DollarSign, X, Edit, Languages, Utensils, Flame } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import type { BlindBoxEvent } from "@shared/schema";
+import type { BlindBoxEvent } from "@joyjoin/shared/schema";
 import { getCurrencySymbol } from "@/lib/currency";
 import {
   AlertDialog,

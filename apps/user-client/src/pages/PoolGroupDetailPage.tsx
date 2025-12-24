@@ -7,7 +7,7 @@ import { ArrowLeft, Clock, MapPin, Users, Navigation, AlertCircle, Sparkles } fr
 import PostMatchEventCard from "@/components/PostMatchEventCard";
 import IcebreakerTool from "@/components/IcebreakerTool";
 import { useAuth } from "@/hooks/useAuth";
-import { calculateAge } from "@shared/utils";
+import { calculateAge } from "@joyjoin/shared/utils";
 import type { AttendeeData } from "@/lib/attendeeAnalytics";
 
 interface PoolGroupResponse {
