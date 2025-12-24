@@ -1,0 +1,109 @@
+找到了！这个 `cicd.yml` 文件中有几个**隐藏的“地雷”**，直接导致了你看到的“引号未闭合”和“找不到路径”报错。
+
+我们要针对你现在的 **Monorepo（多应用）结构** 进行精准手术。
+
+---
+
+### 1. 修复第 8 行附近的“引号未闭合”报错
+
+**问题点：** `IMAGE_NAME: ${{ github.repository }}/api`
+在某些 YAML 解析器中，`${{` 开头的内容如果不加引号，会被误认为是一个复杂的对象（Mapping）或者未闭合的字符串。
+
+**修复方案：** 加上双引号。
+
+```yaml
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: "${{ github.repository }}/api" # 加上双引号，消除歧义
+
+```
+
+---
+
+### 2. 修复“Missing script: build:user”报错
+
+**问题点：** 你在根目录运行 `npm ci` 和 `npm run build:user`。
+
+* 因为你把代码移到了 `apps/user-client`，根目录的 `npm ci` 不会安装子目录的依赖。
+* 除非你在根目录的 `package.json` 里手动写了 `cd apps/user-client && ...`，否则它找不到命令。
+
+**修复方案（以 build-user 任务为例）：**
+
+```yaml
+  build-user:
+    name: Build User Portal
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          # 注意：如果根目录没 lock 文件，这里 cache 可能会报错，可以先注释掉
+      
+      - name: Install User Dependencies
+        run: |
+          cd apps/user-client 
+          npm install # 在子目录安装依赖
+          
+      - name: Build User Client
+        run: |
+          cd apps/user-client
+          npm run build # 运行子目录自己的 build 命令
+        env:
+          VITE_API_URL: ${{ vars.API_URL }}
+
+```
+
+---
+
+### 3. 修复“index.html 找不到”和 Artifact 路径问题
+
+**问题点：** 你上传产物的路径是 `path: dist/user-client`。
+在你的新结构下，Vite 打包出的文件通常在 `apps/user-client/dist`。
+
+**修复方案：**
+
+```yaml
+      - name: Upload User Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: user-client-build
+          path: apps/user-client/dist # 指向正确的子目录产物路径
+
+```
+
+---
+
+### 4. Docker 构建的潜在风险
+
+**问题点：** `context: .` 和 `file: apps/server/Dockerfile`。
+这本身是对的，但要确保你的 `Dockerfile` 内部引用 `packages/shared` 时使用的是正确的相对路径。
+
+---
+
+### 💡 总结后的完整修复建议（关键部分对照）
+
+| 任务 | 原写法 (问题) | 建议新写法 (Monorepo 兼容) |
+| --- | --- | --- |
+| **ENV 设置** | `${{ github.repository }}` | `"${{ github.repository }}"` (加引号) |
+| **依赖安装** | `npm ci` (根目录) | `cd apps/xxx && npm install` (进目录装) |
+| **打包命令** | `npm run build:user` | `cd apps/xxx && npm run build` |
+| **产物路径** | `dist/user-client` | `apps/xxx/dist` |
+
+---
+
+### ✅ 你现在该怎么改？
+
+1. **修改 `IMAGE_NAME**`：加上引号。
+2. **修改 `build-user` 和 `build-admin**`：
+* 删掉第一步的 `npm ci`。
+* 将构建步骤改为 `cd apps/xxx && npm install && npm run build`。
+* 将 `upload-artifact` 的路径改为 `apps/xxx/dist`。
+
+
+3. **保存并 Push**：
+由于你现在是在尝试“自动化”这条路，你会经历几次“改一点、推一次、看报错”的过程。这非常正常，不要气馁！
+
+**要不你把根目录下的 `package.json` 的内容发给我看看？我能确认你是否在根目录定义了那些 `build:user` 之类的代理命令。**
