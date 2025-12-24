@@ -1,26 +1,25 @@
-# Multi-stage build for JoyJoin API Server
+# Multi-stage build for JoyJoin API Server (Monorepo)
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy root package files for workspaces
 COPY package*.json ./
-COPY apps/server/package.json ./apps/server/
 COPY packages/shared/package.json ./packages/shared/
+COPY apps/server/package.json ./apps/server/
 
-# Install dependencies
+# Install all dependencies
 RUN npm ci
 
-# Copy source code
-COPY . .
+# Copy shared package source
+COPY packages/shared ./packages/shared
+
+# Copy server source
+COPY apps/server ./apps/server
 
 # Build the server
 WORKDIR /app/apps/server
 RUN npm run build
-
-# Prune dev dependencies
-WORKDIR /app
-RUN npm prune --omit=dev
 
 # Production image
 FROM node:20-alpine AS runner
@@ -30,14 +29,27 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=5000
 
-# Copy built files and production dependencies
-COPY --from=builder /app/apps/server/dist ./dist
-COPY --from=builder /app/apps/server/package.json ./
-COPY --from=builder /app/node_modules ./node_modules
+# Install native dependencies for bcrypt
+RUN apk add --no-cache make gcc g++ python3
+
+# Copy package files
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/packages/shared/package.json ./packages/shared/
+COPY --from=builder /app/apps/server/package.json ./apps/server/
+
+# Install production dependencies only
+RUN npm ci --omit=dev
+
+# Copy built server files
+COPY --from=builder /app/apps/server/dist ./apps/server/dist
+
+# Copy shared package (needed at runtime)
 COPY --from=builder /app/packages/shared ./packages/shared
 
+WORKDIR /app/apps/server
+
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:5000/api/health || exit 1
 
 EXPOSE 5000

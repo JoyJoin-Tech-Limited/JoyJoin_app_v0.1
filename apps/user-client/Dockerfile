@@ -1,0 +1,39 @@
+# Multi-stage build for JoyJoin User Client (Static SPA)
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy root package files for workspaces
+COPY package*.json ./
+COPY packages/shared/package.json ./packages/shared/
+
+# Copy app package file
+COPY apps/user-client/package.json ./apps/user-client/
+
+# Install all dependencies
+RUN npm ci
+
+# Copy shared package source
+COPY packages/shared ./packages/shared
+
+# Copy user-client source
+COPY apps/user-client ./apps/user-client
+
+# Build the static assets
+WORKDIR /app/apps/user-client
+RUN npm run build
+
+# Production image - nginx to serve static files
+FROM nginx:alpine AS runner
+
+# Copy nginx configuration
+COPY apps/user-client/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy built static files
+COPY --from=builder /app/apps/user-client/dist /usr/share/nginx/html
+
+# Expose port
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

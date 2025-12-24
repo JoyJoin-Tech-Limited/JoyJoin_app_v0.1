@@ -1,13 +1,23 @@
 {
-  "name": "rest-express",
+  "name": "joyjoin-monorepo",
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "NODE_ENV=development node --env-file=.env --import tsx/esm server/index.ts",
+    "dev:user": "npm run dev -w @joyjoin/user-client",
+    "dev:admin": "npm run dev -w @joyjoin/admin-client",
+    "dev:server": "npm run dev -w @joyjoin/server",
+    "dev:all": "npm run dev",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --external:./vite --define:process.env.NODE_ENV=\\\"production\\\"",
-    "build:user": "cd apps/user-client && npm install && npm run build",
-    "build:admin": "cd apps/admin-client && npm install && npm run build",
+    "build:user": "npm run build -w @joyjoin/user-client",
+    "build:admin": "npm run build -w @joyjoin/admin-client",
+    "build:server": "npm run build -w @joyjoin/server",
     "start": "NODE_ENV=production node --env-file=.env dist/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",

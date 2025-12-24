@@ -8,7 +8,22 @@
   "exports": {
     ".": "./src/index.ts",
     "./schema": "./src/schema.ts",
-    "./ui/*": "./src/components/ui/*",
-    "./lib/*": "./src/lib/*"
+    "./districts": "./src/districts.ts",
+    "./constants": "./src/constants.ts",
+    "./utils": "./src/utils.ts",
+    "./gamification": "./src/gamification.ts",
+    "./wsEvents": "./src/wsEvents.ts",
+    "./icebreakerGames": "./src/icebreakerGames.ts",
+    "./occupations": "./src/occupations.ts",
+    "./topicCards": "./src/topicCards.ts",
+    "./atmospherePrediction": "./src/atmospherePrediction.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.39.1",
+    "drizzle-zod": "^0.7.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3"
   }
 }
