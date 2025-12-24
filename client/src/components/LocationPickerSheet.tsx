@@ -55,12 +55,32 @@ export default function LocationPickerSheet({
 
     if (result.success && result.city) {
       setTempCity(result.city);
-      if (result.cluster) {
+      
+      if (result.city === "深圳" && result.cluster) {
         setActiveCluster(result.cluster);
+        const cluster = shenzhenClusters.find(c => c.id === result.cluster);
+        if (cluster && cluster.districts.length > 0) {
+          setTempDistrictId(cluster.districts[0].id);
+          toast({
+            title: "定位成功",
+            description: `已选择：${result.city} · ${cluster.name} · ${cluster.districts[0].name}`,
+          });
+          return;
+        }
       }
+      
+      if (result.city === "香港" && hongkongDistricts.length > 0) {
+        setTempDistrictId(hongkongDistricts[0].id);
+        toast({
+          title: "定位成功", 
+          description: `已选择：香港 · ${hongkongDistricts[0].name}`,
+        });
+        return;
+      }
+      
       toast({
         title: "定位成功",
-        description: `当前位置：${result.city}${result.cluster ? ` · ${result.cluster === 'nanshan' ? '南山区' : '福田区'}` : ''}`,
+        description: `当前位置：${result.city}，请选择商圈`,
       });
     } else {
       toast({
