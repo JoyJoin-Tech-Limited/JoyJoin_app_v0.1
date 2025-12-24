@@ -1,5 +1,5 @@
 //my path:/Users/felixg/projects/JoyJoin3/client/src/components/JoinBlindBoxSheet.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Drawer } from "vaul";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +42,8 @@ import { getCurrencySymbol } from "@/lib/currency";
 import { 
   shenzhenClusters, 
   heatConfig,
-  getDistrictById
+  getDistrictById,
+  getDistrictIdsByCluster
 } from "@shared/districts";
 
 function HeatIcon({ iconName, className }: { iconName: 'flame' | 'zap' | 'none'; className?: string }) {
@@ -83,8 +84,29 @@ export default function JoinBlindBoxSheet({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
   // 商圈多选 - 替代简单的 acceptNearby 开关
-  const [selectedDistricts, setSelectedDistricts] = useState<string[]>([]);
-  const [expandedClusters, setExpandedClusters] = useState<string[]>(['nanshan']);
+  // 根据用户选的片区自动预选对应商圈
+  const getUserClusterId = () => {
+    // 根据 eventData.area (片区名称如"南山区") 找到对应的 cluster
+    const cluster = shenzhenClusters.find(c => 
+      c.displayName === eventData.area || c.id === eventData.area
+    );
+    return cluster?.id || 'nanshan';
+  };
+  
+  const userClusterId = getUserClusterId();
+  const [selectedDistricts, setSelectedDistricts] = useState<string[]>(() => {
+    // 初始化时自动选中用户片区的所有商圈
+    return getDistrictIdsByCluster(userClusterId);
+  });
+  const [expandedClusters, setExpandedClusters] = useState<string[]>([userClusterId]);
+  
+  // 当用户切换片区时，重新计算预选商圈
+  useEffect(() => {
+    const newClusterId = getUserClusterId();
+    const newDistrictIds = getDistrictIdsByCluster(newClusterId);
+    setSelectedDistricts(newDistrictIds);
+    setExpandedClusters([newClusterId]);
+  }, [eventData.area]);
   
   // 组队邀请状态
   const [showTeamInvite, setShowTeamInvite] = useState(false);
@@ -592,6 +614,34 @@ export default function JoinBlindBoxSheet({
                       )}
                     </CollapsibleTrigger>
                     <CollapsibleContent className="pt-3 pl-6">
+                      {/* 全选/取消按钮 */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <button
+                          onClick={() => {
+                            const allClusterDistrictIds = cluster.districts.map(d => d.id);
+                            const allSelected = allClusterDistrictIds.every(id => selectedDistricts.includes(id));
+                            if (allSelected) {
+                              // 取消选择该片区所有商圈
+                              setSelectedDistricts(prev => prev.filter(id => !allClusterDistrictIds.includes(id)));
+                            } else {
+                              // 选择该片区所有商圈
+                              setSelectedDistricts(prev => {
+                                const newSelection = [...prev];
+                                allClusterDistrictIds.forEach(id => {
+                                  if (!newSelection.includes(id)) {
+                                    newSelection.push(id);
+                                  }
+                                });
+                                return newSelection;
+                              });
+                            }
+                          }}
+                          className="text-xs text-primary hover:underline"
+                          data-testid={`button-select-all-${cluster.id}`}
+                        >
+                          {cluster.districts.every(d => selectedDistricts.includes(d.id)) ? '取消全选' : '全选'}
+                        </button>
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         {cluster.districts.map(district => {
                           const heat = heatConfig[district.heat];
@@ -602,7 +652,7 @@ export default function JoinBlindBoxSheet({
                               onClick={() => {
                                 if (isSelected) {
                                   setSelectedDistricts(prev => prev.filter(id => id !== district.id));
-                                } else if (selectedDistricts.length < 4) {
+                                } else {
                                   setSelectedDistricts(prev => [...prev, district.id]);
                                 }
                               }}
