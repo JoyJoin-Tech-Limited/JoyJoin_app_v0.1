@@ -78,6 +78,12 @@ Preferred communication style: Simple, everyday language.
 - **DeepSeek API:** Used for conversational AI.
 
 ## Recent Changes (December 2025)
+- **TypeScript Type Safety Fixes (Dec 24):** Resolved all CI/CD compilation errors for cleaner builds
+  - **Vite Type Declarations:** Created vite-env.d.ts in both apps/user-client/src/ and apps/admin-client/src/ with image module declarations
+  - **TSConfig Updates:** Added "types": ["vite/client"] and vite-env.d.ts to include array in both client tsconfigs
+  - **Animation Type Fix:** Explicitly typed events array in animationTestSimulation.ts to resolve union type inference errors
+  - **Cleanup:** Removed three broken example files (EventCard.tsx, MobileHeader.tsx, JoyEventCard.tsx) that referenced non-existent components
+  - **Key Files:** apps/*/src/vite-env.d.ts, apps/*/tsconfig.json, apps/user-client/src/lib/animationTestSimulation.ts
 - **Monorepo Structure Standardization (Dec 24):** Complete migration from legacy directories to proper monorepo structure
   - **Directory Structure:** Code migrated from `server/` and `client/` to `apps/server/src/`, `apps/user-client/src/`, `apps/admin-client/src/`
   - **Per-App TypeScript:** Each app has dedicated `tsconfig.json` with proper path aliases (@/, @shared/, @assets/)
