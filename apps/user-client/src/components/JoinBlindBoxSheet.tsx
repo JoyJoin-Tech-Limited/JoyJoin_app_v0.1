@@ -17,7 +17,9 @@ import {
   Sparkles,
   Share2,
   UserPlus,
-  X
+  X,
+  Flame,
+  Zap
 } from "lucide-react";
 import {
   Collapsible,
@@ -41,7 +43,13 @@ import {
   shenzhenClusters, 
   heatConfig,
   getDistrictById
-} from "@/lib/districts";
+} from "@shared/districts";
+
+function HeatIcon({ iconName, className }: { iconName: 'flame' | 'zap' | 'none'; className?: string }) {
+  if (iconName === 'flame') return <Flame className={`h-3 w-3 ${className}`} />;
+  if (iconName === 'zap') return <Zap className={`h-3 w-3 ${className}`} />;
+  return null;
+}
 
 interface JoinBlindBoxSheetProps {
   open: boolean;
@@ -609,7 +617,7 @@ export default function JoinBlindBoxSheet({
                               data-testid={`chip-district-${district.id}`}
                             >
                               <span>{district.name}</span>
-                              {heat.icon && <span>{heat.icon}</span>}
+                              {heat.iconName !== 'none' && <HeatIcon iconName={heat.iconName} className={heat.color} />}
                             </button>
                           );
                         })}

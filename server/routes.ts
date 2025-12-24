@@ -6117,7 +6117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Venue Management - Create venue
   app.post("/api/admin/venues", requireAdmin, async (req, res) => {
     try {
-      const { name, type, address, city, district, contactName, contactPhone, commissionRate, tags, cuisines, priceRange, maxConcurrentEvents, notes } = req.body;
+      const { name, type, address, city, district, clusterId, districtId, contactName, contactPhone, commissionRate, tags, cuisines, priceRange, maxConcurrentEvents, notes } = req.body;
       
       if (!name || !type || !address || !city || !district) {
         return res.status(400).json({ message: "Missing required fields" });
@@ -6129,6 +6129,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         address,
         city,
         district,
+        clusterId: clusterId || null,
+        districtId: districtId || null,
         contactName: contactName || null,
         contactPhone: contactPhone || null,
         commissionRate: commissionRate || 20,

@@ -34,7 +34,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Store, Plus, Edit, Trash2, Building, TrendingUp, Calendar, DollarSign, Clock, X, CalendarDays, LayoutGrid, AlertTriangle, ArrowRightLeft, Gift, Percent, Tag, CircleDollarSign, Eye, EyeOff } from "lucide-react";
+import { Store, Plus, Edit, Trash2, Building, TrendingUp, Calendar, DollarSign, Clock, X, CalendarDays, LayoutGrid, AlertTriangle, ArrowRightLeft, Gift, Percent, Tag, CircleDollarSign, Eye, EyeOff, MapPin } from "lucide-react";
+import { shenzhenClusters, getDistrictsByCluster, getDistrictById, getClusterById } from "@shared/districts";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -69,6 +70,8 @@ interface Venue {
   address: string;
   city: string;
   district: string;
+  clusterId: string | null;
+  districtId: string | null;
   contactName: string | null;
   contactPhone: string | null;
   commissionRate: number;
@@ -207,6 +210,8 @@ export default function AdminVenuesPage() {
     address: "",
     city: "深圳",
     district: "",
+    clusterId: "",
+    districtId: "",
     contactName: "",
     contactPhone: "",
     commissionRate: "20",
@@ -697,6 +702,8 @@ export default function AdminVenuesPage() {
       address: "",
       city: "深圳",
       district: "",
+      clusterId: "",
+      districtId: "",
       contactName: "",
       contactPhone: "",
       commissionRate: "20",
@@ -725,6 +732,8 @@ export default function AdminVenuesPage() {
       address: formData.address,
       city: formData.city,
       district: formData.district,
+      clusterId: formData.clusterId || undefined,
+      districtId: formData.districtId || undefined,
       contactName: formData.contactName || undefined,
       contactPhone: formData.contactPhone || undefined,
       commissionRate: parseInt(formData.commissionRate),
@@ -745,6 +754,8 @@ export default function AdminVenuesPage() {
       address: venue.address,
       city: venue.city,
       district: venue.district,
+      clusterId: venue.clusterId || "",
+      districtId: venue.districtId || "",
       contactName: venue.contactName || "",
       contactPhone: venue.contactPhone || "",
       commissionRate: venue.commissionRate.toString(),
@@ -769,6 +780,8 @@ export default function AdminVenuesPage() {
         address: formData.address,
         city: formData.city,
         district: formData.district,
+        clusterId: formData.clusterId || null,
+        districtId: formData.districtId || null,
         contactName: formData.contactName || null,
         contactPhone: formData.contactPhone || null,
         commissionRate: parseInt(formData.commissionRate),
@@ -1271,6 +1284,48 @@ export default function AdminVenuesPage() {
               </div>
             </div>
 
+            {formData.city === "深圳" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="clusterId" className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5" />
+                    片区
+                  </Label>
+                  <Select 
+                    value={formData.clusterId} 
+                    onValueChange={(v) => setFormData({ ...formData, clusterId: v, districtId: "" })}
+                  >
+                    <SelectTrigger data-testid="select-cluster">
+                      <SelectValue placeholder="选择片区" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {shenzhenClusters.map(cluster => (
+                        <SelectItem key={cluster.id} value={cluster.id}>{cluster.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="districtId">商圈</Label>
+                  <Select 
+                    value={formData.districtId} 
+                    onValueChange={(v) => setFormData({ ...formData, districtId: v })}
+                    disabled={!formData.clusterId}
+                  >
+                    <SelectTrigger data-testid="select-district-id">
+                      <SelectValue placeholder={formData.clusterId ? "选择商圈" : "请先选择片区"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {formData.clusterId && getDistrictsByCluster(formData.clusterId).map(d => (
+                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="contactName">联系人</Label>
@@ -1484,6 +1539,48 @@ export default function AdminVenuesPage() {
                 />
               </div>
             </div>
+
+            {formData.city === "深圳" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-clusterId" className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5" />
+                    片区
+                  </Label>
+                  <Select 
+                    value={formData.clusterId} 
+                    onValueChange={(v) => setFormData({ ...formData, clusterId: v, districtId: "" })}
+                  >
+                    <SelectTrigger data-testid="select-edit-cluster">
+                      <SelectValue placeholder="选择片区" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {shenzhenClusters.map(cluster => (
+                        <SelectItem key={cluster.id} value={cluster.id}>{cluster.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-districtId">商圈</Label>
+                  <Select 
+                    value={formData.districtId} 
+                    onValueChange={(v) => setFormData({ ...formData, districtId: v })}
+                    disabled={!formData.clusterId}
+                  >
+                    <SelectTrigger data-testid="select-edit-district-id">
+                      <SelectValue placeholder={formData.clusterId ? "选择商圈" : "请先选择片区"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {formData.clusterId && getDistrictsByCluster(formData.clusterId).map(d => (
+                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

@@ -1,7 +1,7 @@
 import { Drawer } from "vaul";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Navigation, X } from "lucide-react";
+import { MapPin, Navigation, X, Flame, Zap } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -9,7 +9,7 @@ import {
   heatConfig,
   type District,
   getAllDistricts 
-} from "@/lib/districts";
+} from "@shared/districts";
 
 interface LocationPickerSheetProps {
   open: boolean;
@@ -17,6 +17,12 @@ interface LocationPickerSheetProps {
   selectedCity: "香港" | "深圳";
   selectedArea?: string;
   onSave: (city: "香港" | "深圳", area: string) => void;
+}
+
+function HeatIcon({ iconName, className }: { iconName: 'flame' | 'zap' | 'none'; className?: string }) {
+  if (iconName === 'flame') return <Flame className={`h-3 w-3 ${className}`} />;
+  if (iconName === 'zap') return <Zap className={`h-3 w-3 ${className}`} />;
+  return null;
 }
 
 const hongkongDistricts = [
@@ -165,8 +171,8 @@ export default function LocationPickerSheet({
                           data-testid={`chip-district-${district.id}`}
                         >
                           <span>{district.name}</span>
-                          {heat.icon && (
-                            <span>{heat.icon}</span>
+                          {heat.iconName !== 'none' && (
+                            <HeatIcon iconName={heat.iconName} className={heat.color} />
                           )}
                         </button>
                       );
@@ -194,8 +200,8 @@ export default function LocationPickerSheet({
                         data-testid={`chip-district-${district.id}`}
                       >
                         <span>{district.name}</span>
-                        {heat.icon && (
-                          <span>{heat.icon}</span>
+                        {heat.iconName !== 'none' && (
+                          <HeatIcon iconName={heat.iconName} className={heat.color} />
                         )}
                       </button>
                     );

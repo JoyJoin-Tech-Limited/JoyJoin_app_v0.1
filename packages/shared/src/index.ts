@@ -32,3 +32,4 @@ export {
   getIndustryId
 } from './occupations';
 export * from './atmospherePrediction';
+export * from './districts';

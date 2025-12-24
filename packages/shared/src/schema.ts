@@ -883,6 +883,10 @@ export const venues = pgTable("venues", {
   address: text("address").notNull(),
   city: text("city").notNull(), // 深圳, 香港
   area: text("area").notNull(), // 南山区, 中环 etc.
+  
+  // 商圈定位（与用户报名商圈匹配）
+  clusterId: text("cluster_id"), // 片区ID: nanshan, futian, oct, qianhai
+  districtId: text("district_id"), // 商圈ID: keji, houhai, chegongmiao etc.
   contactPerson: text("contact_person"),
   contactPhone: text("contact_phone"),
   commissionRate: integer("commission_rate").default(20), // percentage

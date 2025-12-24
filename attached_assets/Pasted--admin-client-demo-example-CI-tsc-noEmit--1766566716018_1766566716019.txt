@@ -1,0 +1,121 @@
+这些报错现在已经不是“环境缺东西”了，而是 admin-client 里有一堆 demo/example 代码的类型/路径不一致（而且 CI 的 tsc --noEmit 会把它们全扫描出来）。
+
+我给你两个打法：先过 CI（最快） vs 把类型都修干净（更正统）。你们现在明显是“先过 CI”比较重要，所以我按这个顺序给。
+
+⸻
+
+✅ 先让 CI 过：把 demo/example 文件从 admin-client 的 tsc 检查里排除
+
+如果这些文件只是演示用（src/components/examples/*、src/lib/animationTestSimulation.ts），直接在 apps/admin-client/tsconfig.json 里加 exclude：
+
+{
+  "exclude": [
+    "src/components/examples/**",
+    "src/lib/animationTestSimulation.ts"
+  ]
+}
+
+然后本地跑：
+
+cd apps/admin-client
+npx tsc --noEmit
+
+这招的逻辑：你 CI 的目标是保证真正打包用的代码没类型问题，而不是 demo 也要 0 error。
+
+⸻
+
+如果你希望把这些错误也修掉（不排除文件），按下面逐个改
+
+1) EventCardProps 没有 vibes
+
+你在 EventCard.tsx 传了 vibes，但 EventCardProps 里没这个字段 → 把它加成可选就行：
+
+type EventCardProps = {
+  // 原来的字段...
+  vibes?: { label: string; icon: any }[];
+};
+
+（更严格的话，把 any 换成 LucideIcon 类型，但先过 CI 用 any 足够）
+
+⸻
+
+2) MobileHeaderProps 没有 showNotification
+
+同理：要么删掉传参，要么把 props 加上：
+
+type MobileHeaderProps = {
+  title: string;
+  showNotification?: boolean;
+};
+
+
+⸻
+
+3) JoyEventCard 找不到模块：99% 是大小写 / 文件不存在（Linux 区分大小写）
+
+CI 报：
+
+Cannot find module '../JoyEventCard'
+
+你本地 Mac 很可能能跑，但 GitHub Actions 是 Linux：文件名大小写必须完全一致。
+
+你去看一下实际文件名是不是：
+	•	JoyEventCard.tsx（你 import 期望的）
+还是
+	•	joyEventCard.tsx / JoyeventCard.tsx / 放在别的目录
+
+✅ 修法：
+	•	把文件名重命名成 JoyEventCard.tsx
+	•	或把 import 改成和真实文件名完全一致（含大小写）
+
+⸻
+
+4) animationTestSimulation.ts 的 union 类型不包含 "replay" / "share"
+
+报错：
+	•	"replay" 不是 "view" | "complete"
+	•	"share" 不是 "view" | "complete"
+
+两种修法选一个：
+
+A. 扩展 union：
+
+type ActionType = "view" | "complete" | "replay" | "share";
+
+B. 把代码里 "replay" / "share" 改成你允许的类型（如果本来只是写错了）
+
+还有这个：
+
+{ type: "complete"; time: number; } 缺 durationInAnimation, interactionPoint
+
+你要么补字段：
+
+{ type: "complete", time, durationInAnimation: 0, interactionPoint: "..." }
+
+要么把类型定义改成这些字段可选（如果确实可选）：
+
+type CompleteEvent = { type: "complete"; time: number; durationInAnimation?: number; interactionPoint?: string };
+
+
+⸻
+
+5) TS7053：any 作为 key 去索引星级对象
+
+你大概有这种：
+
+const map = { "1星": 1, "2星": 2, ... };
+map[someAny]
+
+修法（最省事）：
+
+const key = someAny as keyof typeof map;
+const v = map[key];
+
+
+⸻
+
+我建议你现在怎么做（最省时间）
+	1.	先用“exclude demo”那招，让 CI 快速变绿
+	2.	等 pipeline 稳了，再慢慢把 demo 的类型修干净（上面那几条）
+
+你把 apps/admin-client/tsconfig.json 贴一下（只要 compilerOptions/include/exclude 那段），我可以直接告诉你该加在哪、会不会误伤到生产代码。
