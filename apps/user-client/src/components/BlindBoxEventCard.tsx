@@ -1,10 +1,9 @@
-// /Users/felixg/projects/JoyJoin3/client/src/components/BlindBoxEventCard.tsx
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Sparkles, Users } from "lucide-react";
+import { Calendar, MapPin, Sparkles, Users, Shield, Heart, RotateCcw, Lock, CheckCircle2 } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
 import JoinBlindBoxSheet from "./JoinBlindBoxSheet";
 import { getArchetypeImage } from "@/lib/archetypeImages";
@@ -27,6 +26,12 @@ interface BlindBoxEventCardProps {
   sampleArchetypes?: string[];
 }
 
+function triggerHaptic() {
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    navigator.vibrate(15);
+  }
+}
+
 export default function BlindBoxEventCard({
   id,
   date,
@@ -44,120 +49,232 @@ export default function BlindBoxEventCard({
 }: BlindBoxEventCardProps) {
   const [infoSheetOpen, setInfoSheetOpen] = useState(false);
   const [joinSheetOpen, setJoinSheetOpen] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
 
-  const handleJoinClick = () => {
+  const handleJoinClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     console.log("[BlindBoxEventCard] opening JoinBlindBoxSheet with poolId:", poolId);
-    // 不再跳转到 /event-pool/...，而是打开盲盒报名弹窗
     setJoinSheetOpen(true);
   };
 
+  const handleFlip = () => {
+    triggerHaptic();
+    setIsFlipped(!isFlipped);
+  };
+
+  const promises = [
+    { icon: Heart, text: "AI精准匹配志趣相投" },
+    { icon: Shield, text: "活动前隐藏真实身份" },
+    { icon: Lock, text: "聊天记录不留痕" },
+  ];
+
   return (
     <>
-      <Card
-        className="hover-elevate active-elevate-2 transition-all border shadow-sm"
-        data-testid={`card-blindbox-${id}`}
+      <div 
+        className="relative h-[220px]"
+        style={{ perspective: "1000px" }}
       >
-        <div className="p-4 space-y-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1">
-              <h3 className="font-brand font-bold text-lg text-muted-foreground/60 mb-2">
-                {mysteryTitle}
-              </h3>
+        <motion.div
+          className="relative w-full h-full cursor-pointer"
+          style={{ transformStyle: "preserve-3d" }}
+          animate={{ rotateY: isFlipped ? 180 : 0 }}
+          transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.5, ease: "easeInOut" }}
+          onClick={handleFlip}
+        >
+          {/* 正面 - 活动信息 */}
+          <div 
+            className="absolute inset-0"
+            style={{ backfaceVisibility: "hidden" }}
+          >
+            <Card
+              className="h-full relative overflow-hidden border shadow-sm"
+              data-testid={`card-blindbox-${id}`}
+            >
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full pointer-events-none" />
+              
+              <div className="p-4 h-full flex flex-col">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex-1">
+                    <h3 className="font-brand font-bold text-lg text-muted-foreground/60 mb-2">
+                      {mysteryTitle}
+                    </h3>
 
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex items-center gap-1.5 text-sm font-medium">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  <span>
-                    {date} {time}
-                  </span>
-                </div>
-                <Badge
-                  variant="secondary"
-                  className="text-xs px-2 py-0.5 rounded-md"
-                  data-testid={`badge-event-type-${eventType}`}
-                >
-                  {eventType}
-                </Badge>
-                {isGirlsNight && (
-                  <Badge
-                    variant="default"
-                    className="text-xs px-2 py-0.5 rounded-md bg-pink-500 hover:bg-pink-600"
-                    data-testid="badge-girls-night"
-                  >
-                    👭 Girls Night
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            <Sparkles className="h-5 w-5 text-primary" />
-          </div>
-
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4" />
-            <span>{area}</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Users className="h-4 w-4" />
-              <span>4-6人</span>
-              <span className="text-xs">
-                • {isGirlsNight ? "仅限女生" : "尽量保持男女比例平衡"}
-              </span>
-            </div>
-            
-            {/* 社交证明：报名人数 + 原型头像叠合 */}
-            {registrationCount > 0 && (
-              <div className="flex items-center gap-1.5" data-testid={`social-proof-${id}`}>
-                <div className="flex -space-x-2">
-                  {sampleArchetypes.slice(0, 3).map((archetype, index) => {
-                    const imgSrc = getArchetypeImage(archetype);
-                    return imgSrc ? (
-                      <div
-                        key={index}
-                        className="w-6 h-6 rounded-full border-2 border-background bg-muted overflow-hidden"
-                        style={{ zIndex: 3 - index }}
-                      >
-                        <img 
-                          src={imgSrc} 
-                          alt={archetype}
-                          className="w-full h-full object-cover"
-                        />
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 text-sm font-medium">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        <span>
+                          {date} {time}
+                        </span>
                       </div>
-                    ) : null;
-                  })}
+                      <Badge
+                        variant="secondary"
+                        className="text-xs px-2 py-0.5 rounded-md"
+                        data-testid={`badge-event-type-${eventType}`}
+                      >
+                        {eventType}
+                      </Badge>
+                      {isGirlsNight && (
+                        <Badge
+                          variant="default"
+                          className="text-xs px-2 py-0.5 rounded-md bg-pink-500 hover:bg-pink-600"
+                          data-testid="badge-girls-night"
+                        >
+                          Girls Night
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <motion.div 
+                    className="relative"
+                    animate={prefersReducedMotion ? {} : { scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <Sparkles className="h-5 w-5 text-primary" />
+                  </motion.div>
                 </div>
-                <span className="text-xs text-muted-foreground font-medium">
-                  {registrationCount}人已报名
-                </span>
+
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                  <MapPin className="h-4 w-4" />
+                  <span>{area}</span>
+                </div>
+
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>4-6人</span>
+                    <span className="text-xs">
+                      • {isGirlsNight ? "仅限女生" : "男女比例平衡"}
+                    </span>
+                  </div>
+                  
+                  {registrationCount > 0 && (
+                    <div className="flex items-center gap-1.5" data-testid={`social-proof-${id}`}>
+                      <div className="flex -space-x-2">
+                        {sampleArchetypes.slice(0, 3).map((archetype, index) => {
+                          const imgSrc = getArchetypeImage(archetype);
+                          return imgSrc ? (
+                            <div
+                              key={index}
+                              className="w-6 h-6 rounded-full border-2 border-background bg-muted overflow-hidden"
+                              style={{ zIndex: 3 - index }}
+                            >
+                              <img 
+                                src={imgSrc} 
+                                alt={archetype}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : null;
+                        })}
+                      </div>
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {registrationCount}人已报名
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 mt-auto">
+                  <Button
+                    className="flex-1"
+                    size="default"
+                    onClick={handleJoinClick}
+                    data-testid={`button-join-${id}`}
+                  >
+                    <Sparkles className="h-4 w-4 mr-1.5" />
+                    立即参与
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleFlip();
+                    }}
+                    data-testid={`button-flip-${id}`}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            )}
+
+              <div className="absolute bottom-1 right-2 text-[10px] text-muted-foreground/50">
+                点击查看保障
+              </div>
+            </Card>
           </div>
 
-          <div className="flex gap-2 pt-1">
-            <Button
-              className="flex-1"
-              size="default"
-              onClick={handleJoinClick}
-              data-testid={`button-join-${id}`}
+          {/* 背面 - 匹配承诺与隐私保障 */}
+          <div 
+            className="absolute inset-0"
+            style={{ 
+              backfaceVisibility: "hidden",
+              transform: "rotateY(180deg)"
+            }}
+          >
+            <Card
+              className="h-full relative overflow-hidden border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-background to-primary/10"
+              data-testid={`card-blindbox-back-${id}`}
             >
-              <Sparkles className="h-4 w-4 mr-1.5" />
-              立即参与
-            </Button>
-            <Button
-              variant="outline"
-              size="default"
-              onClick={() => setInfoSheetOpen(true)}
-              data-testid={`button-learn-more-${id}`}
-            >
-              了解更多
-            </Button>
-          </div>
-        </div>
-      </Card>
+              <div className="absolute inset-0 opacity-5">
+                <div className="absolute top-4 right-4 w-32 h-32 rounded-full border-2 border-primary/20" />
+                <div className="absolute bottom-4 left-4 w-24 h-24 rounded-full border-2 border-primary/20" />
+              </div>
 
-      {/* 活动介绍弹窗 */}
+              <div className="p-4 h-full flex flex-col relative">
+                <div className="flex items-center gap-2 mb-4">
+                  <Shield className="h-5 w-5 text-primary" />
+                  <h3 className="font-bold text-base">我们的承诺</h3>
+                </div>
+
+                <div className="space-y-3 flex-1">
+                  {promises.map((promise, index) => (
+                    <motion.div
+                      key={index}
+                      className="flex items-center gap-3 p-2.5 rounded-lg bg-background/80 border border-primary/10"
+                      initial={prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
+                      animate={{ opacity: isFlipped ? 1 : 0, x: isFlipped ? 0 : (prefersReducedMotion ? 0 : -20) }}
+                      transition={prefersReducedMotion ? { duration: 0 } : { delay: index * 0.1 + 0.2 }}
+                    >
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <promise.icon className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="text-sm font-medium">{promise.text}</span>
+                      <CheckCircle2 className="h-4 w-4 text-primary ml-auto" />
+                    </motion.div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 mt-3">
+                  <Button
+                    className="flex-1"
+                    size="default"
+                    onClick={handleJoinClick}
+                    data-testid={`button-join-back-${id}`}
+                  >
+                    <Sparkles className="h-4 w-4 mr-1.5" />
+                    立即参与
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleFlip();
+                    }}
+                    data-testid={`button-flip-back-${id}`}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </motion.div>
+      </div>
+
       <BlindBoxInfoSheet
         open={infoSheetOpen}
         onOpenChange={setInfoSheetOpen}
@@ -172,7 +289,6 @@ export default function BlindBoxEventCard({
         }}
       />
 
-      {/* 报名 / 预算 / 偏好弹窗 */}
       <JoinBlindBoxSheet
         open={joinSheetOpen}
         onOpenChange={setJoinSheetOpen}

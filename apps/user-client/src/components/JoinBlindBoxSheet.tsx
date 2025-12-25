@@ -534,53 +534,69 @@ export default function JoinBlindBoxSheet({
                         )}
                       </CollapsibleTrigger>
                       <CollapsibleContent className="pt-3 pl-6">
-                        <div className="flex items-center gap-2 mb-2">
-                          <button
-                            onClick={() => {
-                              const allClusterDistrictIds = cluster.districts.map(d => d.id);
-                              const allSelected = allClusterDistrictIds.every(id => selectedDistricts.includes(id));
-                              if (allSelected) {
-                                setSelectedDistricts(prev => prev.filter(id => !allClusterDistrictIds.includes(id)));
-                              } else {
-                                setSelectedDistricts(prev => {
-                                  const newSelection = [...prev];
-                                  allClusterDistrictIds.forEach(id => {
-                                    if (!newSelection.includes(id)) {
-                                      newSelection.push(id);
+                        {(() => {
+                          const allClusterDistrictIds = cluster.districts.map(d => d.id);
+                          const allSelected = allClusterDistrictIds.every(id => selectedDistricts.includes(id));
+                          
+                          return (
+                            <>
+                              <div className="flex items-center gap-2 mb-2">
+                                <button
+                                  onClick={() => {
+                                    if (allSelected) {
+                                      setSelectedDistricts(prev => prev.filter(id => !allClusterDistrictIds.includes(id)));
+                                    } else {
+                                      setSelectedDistricts(prev => {
+                                        const newSelection = [...prev];
+                                        allClusterDistrictIds.forEach(id => {
+                                          if (!newSelection.includes(id)) {
+                                            newSelection.push(id);
+                                          }
+                                        });
+                                        return newSelection;
+                                      });
                                     }
-                                  });
-                                  return newSelection;
-                                });
-                              }
-                            }}
-                            className="text-xs text-primary hover:underline"
-                            data-testid={`button-select-all-${cluster.id}`}
-                          >
-                            {cluster.districts.every(d => selectedDistricts.includes(d.id)) ? '取消全选' : '全选'}
-                          </button>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {cluster.districts.map(district => {
-                            const isSelected = selectedDistricts.includes(district.id);
-                            return (
-                              <MultiSelectButton
-                                key={district.id}
-                                selected={isSelected}
-                                onClick={() => {
-                                  if (isSelected) {
-                                    setSelectedDistricts(prev => prev.filter(id => id !== district.id));
-                                  } else {
-                                    setSelectedDistricts(prev => [...prev, district.id]);
-                                  }
-                                }}
-                                className="rounded-full"
-                                data-testid={`chip-district-${district.id}`}
-                              >
-                                {district.name}
-                              </MultiSelectButton>
-                            );
-                          })}
-                        </div>
+                                  }}
+                                  className="text-xs text-primary hover:underline"
+                                  data-testid={`button-select-all-${cluster.id}`}
+                                >
+                                  {allSelected ? '取消全选' : '全选'}
+                                </button>
+                                {allSelected && (
+                                  <Badge variant="outline" className="text-xs border-primary text-primary bg-primary/5">
+                                    已全选
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className={`flex flex-wrap gap-2 p-2 -m-2 rounded-lg transition-all duration-300 ${
+                                allSelected 
+                                  ? 'border-2 border-dashed border-primary/60 bg-primary/5' 
+                                  : 'border-2 border-transparent'
+                              }`}>
+                                {cluster.districts.map(district => {
+                                  const isSelected = selectedDistricts.includes(district.id);
+                                  return (
+                                    <MultiSelectButton
+                                      key={district.id}
+                                      selected={isSelected}
+                                      onClick={() => {
+                                        if (isSelected) {
+                                          setSelectedDistricts(prev => prev.filter(id => id !== district.id));
+                                        } else {
+                                          setSelectedDistricts(prev => [...prev, district.id]);
+                                        }
+                                      }}
+                                      className="rounded-full"
+                                      data-testid={`chip-district-${district.id}`}
+                                    >
+                                      {district.name}
+                                    </MultiSelectButton>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </CollapsibleContent>
                     </Collapsible>
                   ))}
