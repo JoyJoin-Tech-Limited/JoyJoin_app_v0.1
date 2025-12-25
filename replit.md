@@ -60,12 +60,24 @@ joyjoin-monorepo/
 - **小悦进化系统 (AI Evolution System V2.0):** Enables the Xiaoyue chatbot to learn and improve through user feedback and multi-armed bandit optimization, including real-time insight detection across 6 categories. Features dynamic weight optimization using Thompson Sampling and an Admin Evolution Portal for monitoring.
 - **Intelligent Information Collection System:** Extracts and structures professional information, including a SmartInsight System for tracking categories, insights, evidence, and confidence, and an Industry Ontology Knowledge Base with hierarchical segments and smart inference rules.
 
-## Recent Changes (2025-12-24)
+## Recent Changes (2025-12-25)
 
-### Dual-Track Preference System for Event Types
+### Bar Preference Simplification & Single-Select Alcohol Comfort
+- **Bar Theme Options Simplified:** Reduced from 5 to 3 user-facing options (精酿 / 清吧 / 私密调酒·Homebar) - maintains multi-select capability
+  - Tooltip for Homebar: "隐藏/预约制调酒空间" (hidden/reservation-based cocktail space)
+  - Bar types remain multi-selectable for users with diverse preferences
+- **Alcohol Comfort Level Changed to Single-Select:** Only one option can be selected at a time (可以喝酒 / 微醺就好 / 无酒精饮品)
+  - Rationale: Prevents matching conflicts when misaligned with group expectations
+  - Users with variable drinking tolerance should select their most comfortable baseline
+- **JoinBlindBoxSheet Updates:** 
+  - Modified `barThemeOptions` array (lines 150-154)
+  - Updated `toggleAlcoholComfort` function to enforce single-select logic (lines 227-231)
+  - Updated UI labels: "酒吧类型（可多选）" and "饮酒程度（请选一个）"
+
+### Dual-Track Preference System for Event Types (2025-12-24)
 - **Event Type Differentiation:** Implemented conditional rendering for event-specific preferences
   - **饭局 (Dining Events):** Shows taste intensity (爱吃辣/不辣清淡) + cuisine preferences (中餐/川菜/粤菜/火锅/烧烤/西餐/日料)
-  - **酒局 (Bar Events):** Shows bar themes (精酿/清吧/鸡尾酒吧/Whisky Bar/Wine Bar) + alcohol comfort levels (可以喝酒/微醺就好/无酒精饮品)
+  - **酒局 (Bar Events):** Shows bar themes (精酿/清吧/私密调酒·Homebar) + alcohol comfort levels (single-select)
   - **Shared:** Language preferences (国语/粤语/英语) displayed for both event types
 - **Database Schema Updates:** Added bar-specific fields to venues table:
   - `barThemes`: text array for bar theme categories

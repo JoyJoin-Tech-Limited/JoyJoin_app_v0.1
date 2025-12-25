@@ -150,9 +150,7 @@ export default function JoinBlindBoxSheet({
   const barThemeOptions = [
     { value: "精酿", label: "精酿" },
     { value: "清吧", label: "清吧" },
-    { value: "鸡尾酒吧", label: "鸡尾酒吧" },
-    { value: "Whisky Bar", label: "Whisky Bar" },
-    { value: "Wine Bar", label: "Wine Bar" },
+    { value: "私密调酒·Homebar", label: "私密调酒·Homebar" },
   ];
 
   const alcoholComfortOptions = [
@@ -224,11 +222,12 @@ export default function JoinBlindBoxSheet({
   };
 
   const toggleAlcoholComfort = (value: string) => {
-    setSelectedAlcoholComfort(prev => 
-      prev.includes(value) 
-        ? prev.filter(v => v !== value)
-        : [...prev, value]
-    );
+    // 单选：如果已选中则取消，否则替换为新选项
+    if (selectedAlcoholComfort.includes(value)) {
+      setSelectedAlcoholComfort([]);
+    } else {
+      setSelectedAlcoholComfort([value]);
+    }
   };
 
   const clearAllPreferences = () => {
@@ -580,9 +579,9 @@ export default function JoinBlindBoxSheet({
                     <div>
                       <h4 className="text-sm font-medium mb-2">酒吧偏好（用于匹配场地）</h4>
                       
-                      {/* 酒吧主题 */}
+                      {/* 酒吧主题 - 多选 */}
                       <div className="mb-3">
-                        <p className="text-xs text-muted-foreground mb-2">酒吧类型</p>
+                        <p className="text-xs text-muted-foreground mb-2">酒吧类型（可多选）</p>
                         <div className="grid grid-cols-3 gap-2">
                           {barThemeOptions.map((option) => (
                             <button
@@ -601,9 +600,9 @@ export default function JoinBlindBoxSheet({
                         </div>
                       </div>
 
-                      {/* 饮酒程度 */}
+                      {/* 饮酒程度 - 单选 */}
                       <div>
-                        <p className="text-xs text-muted-foreground mb-2">饮酒程度</p>
+                        <p className="text-xs text-muted-foreground mb-2">饮酒程度（请选一个）</p>
                         <div className="grid grid-cols-3 gap-2">
                           {alcoholComfortOptions.map((option) => (
                             <button
