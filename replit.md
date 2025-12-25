@@ -62,6 +62,20 @@ joyjoin-monorepo/
 
 ## Recent Changes (2025-12-25)
 
+### JoinBlindBoxSheet UI/UX Refactoring
+- **Form Structure Reorganization**: Restructured into 3 clear sections with visual separators:
+  - **STEP 1: 必填信息 (Required)**: Budget selection + District selection (moved from optional)
+  - **STEP 2: 偏好设置 (Optional)**: Intent, Language preferences, Event-specific preferences (饭局/酒局)
+  - **STEP 3: 组队邀请 (Optional)**: Team formation with invite link sharing
+  - **Rules & Guarantee section**: Displayed before submit button
+- **Section Headers**: Added iconography (Wallet, Globe, Users) with required/optional badges
+- **Mobile Touch Target Optimization**: All interactive buttons now have `min-h-[44px]` for accessibility compliance:
+  - Budget selection buttons, District chips, Intent buttons, Language buttons
+  - Taste intensity, Cuisine, Bar theme, Alcohol comfort buttons
+- **Event Type Preference Reset**: Added `useEffect` hook that automatically clears irrelevant preferences when switching between 饭局 (dining) and 酒局 (bar) event types
+- **Layout Improvements**: Changed from fixed grid layouts to `flex flex-wrap gap-2` for better responsive behavior
+- **Removed duplicate code**: Consolidated district selection into Step 1
+
 ### Bar Preference Simplification & Single-Select Alcohol Comfort
 - **Bar Theme Options Simplified:** Reduced from 5 to 3 user-facing options (精酿 / 清吧 / 私密调酒·Homebar) - maintains multi-select capability
   - Tooltip for Homebar: "隐藏/预约制调酒空间" (hidden/reservation-based cocktail space)

@@ -17,7 +17,17 @@ import {
   Sparkles,
   Share2,
   UserPlus,
-  X
+  X,
+  Briefcase,
+  HandHeart,
+  MessageCircle,
+  PartyPopper,
+  Heart,
+  Shuffle,
+  Wallet,
+  Globe,
+  UtensilsCrossed,
+  Wine
 } from "lucide-react";
 import {
   Collapsible,
@@ -99,6 +109,19 @@ export default function JoinBlindBoxSheet({
     setSelectedDistricts(newDistrictIds);
     setExpandedClusters([newClusterId]);
   }, [eventData.area]);
+
+  // 当活动类型切换时，重置不相关的偏好数据
+  useEffect(() => {
+    if (eventData.eventType === "饭局") {
+      // 切换到饭局时，清空酒局偏好
+      setSelectedBarThemes([]);
+      setSelectedAlcoholComfort([]);
+    } else if (eventData.eventType === "酒局") {
+      // 切换到酒局时，清空饭局偏好
+      setSelectedTasteIntensity([]);
+      setSelectedCuisines([]);
+    }
+  }, [eventData.eventType]);
   
   // 组队邀请状态
   const [showTeamInvite, setShowTeamInvite] = useState(false);
@@ -408,51 +431,186 @@ export default function JoinBlindBoxSheet({
               </div>
             </div>
 
-            {/* === USER PREFERENCES SECTION === */}
-            <div className="mb-6 space-y-6">
+            {/* ========== STEP 1: 必填信息 ========== */}
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Wallet className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-bold">必填信息</h2>
+                <Badge variant="destructive" className="text-xs">必填</Badge>
+              </div>
+              
               {/* 预算选择 */}
-              <div>
+              <div className="mb-6">
                 <div className="mb-3">
                   <h3 className="text-base font-semibold mb-1">你的预算范围？</h3>
-                  <p className="text-xs text-muted-foreground">(必填)</p>
+                  <p className="text-xs text-muted-foreground">可多选</p>
                 </div>
-                <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
                   {budgetOptions.map((option) => (
                     <button
                       key={option.value}
                       onClick={() => toggleBudget(option.value)}
-                      className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-border bg-background transition-all hover-elevate"
+                      className={`px-4 py-2.5 rounded-lg border-2 text-sm transition-all hover-elevate min-h-[44px] ${
+                        budgetPreference.includes(option.value)
+                          ? 'border-primary bg-primary/5 font-medium'
+                          : 'border-muted bg-muted/30'
+                      }`}
                       data-testid={`button-budget-${option.value}`}
                     >
-                      <span className="font-medium text-base">{getCurrencySymbol(eventData.city || "深圳")}{option.label}</span>
-                      <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                        budgetPreference.includes(option.value)
-                          ? 'bg-foreground border-foreground'
-                          : 'border-foreground/30'
-                      }`}>
-                        {budgetPreference.includes(option.value) && (
-                          <CheckCircle2 className="h-4 w-4 text-background" />
-                        )}
-                      </div>
+                      {getCurrencySymbol(eventData.city || "深圳")}{option.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* B. 参与意图 (Event-specific intent) - 可选 */}
+              {/* 选择商圈 - 移到必填区 */}
+              <div>
+                <div className="mb-3">
+                  <h3 className="text-base font-semibold mb-1">选择商圈</h3>
+                  <p className="text-xs text-muted-foreground">多选商圈可提升匹配成功率</p>
+                </div>
+
+                {selectedDistricts.length > 0 && (
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      已选 <span className="font-medium text-foreground">{selectedDistricts.length}</span> 个商圈
+                    </span>
+                    <button
+                      onClick={() => setSelectedDistricts([])}
+                      className="text-xs text-destructive hover:underline"
+                      data-testid="button-clear-districts"
+                    >
+                      清空
+                    </button>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {shenzhenClusters.map(cluster => (
+                    <Collapsible 
+                      key={cluster.id}
+                      open={expandedClusters.includes(cluster.id)} 
+                      onOpenChange={() => {
+                        setExpandedClusters(prev => 
+                          prev.includes(cluster.id) 
+                            ? prev.filter(id => id !== cluster.id)
+                            : [...prev, cluster.id]
+                        );
+                      }}
+                    >
+                      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover-elevate">
+                        <div className="flex items-center gap-2">
+                          {expandedClusters.includes(cluster.id) ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                          <span className="font-medium text-sm">{cluster.name}</span>
+                          {cluster.districts.filter(d => selectedDistricts.includes(d.id)).length > 0 && (
+                            <Badge variant="default" className="text-xs">
+                              {cluster.districts.filter(d => selectedDistricts.includes(d.id)).length}
+                            </Badge>
+                          )}
+                        </div>
+                        {!expandedClusters.includes(cluster.id) && (
+                          <span className="text-xs text-muted-foreground">查看更多</span>
+                        )}
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-3 pl-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <button
+                            onClick={() => {
+                              const allClusterDistrictIds = cluster.districts.map(d => d.id);
+                              const allSelected = allClusterDistrictIds.every(id => selectedDistricts.includes(id));
+                              if (allSelected) {
+                                setSelectedDistricts(prev => prev.filter(id => !allClusterDistrictIds.includes(id)));
+                              } else {
+                                setSelectedDistricts(prev => {
+                                  const newSelection = [...prev];
+                                  allClusterDistrictIds.forEach(id => {
+                                    if (!newSelection.includes(id)) {
+                                      newSelection.push(id);
+                                    }
+                                  });
+                                  return newSelection;
+                                });
+                              }
+                            }}
+                            className="text-xs text-primary hover:underline"
+                            data-testid={`button-select-all-${cluster.id}`}
+                          >
+                            {cluster.districts.every(d => selectedDistricts.includes(d.id)) ? '取消全选' : '全选'}
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {cluster.districts.map(district => {
+                            const isSelected = selectedDistricts.includes(district.id);
+                            return (
+                              <button
+                                key={district.id}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setSelectedDistricts(prev => prev.filter(id => id !== district.id));
+                                  } else {
+                                    setSelectedDistricts(prev => [...prev, district.id]);
+                                  }
+                                }}
+                                className={`
+                                  px-4 py-2.5 rounded-full text-sm min-h-[44px]
+                                  transition-all border
+                                  ${isSelected
+                                    ? 'bg-primary text-primary-foreground border-primary font-medium'
+                                    : 'bg-background border-border hover-elevate'
+                                  }
+                                `}
+                                data-testid={`chip-district-${district.id}`}
+                              >
+                                {district.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ))}
+                </div>
+
+                {selectedDistricts.length < 2 && (
+                  <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg mt-3">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-primary">
+                      多选2-3个商圈，成局率提升42%
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 分隔线 */}
+            <div className="h-px bg-border mb-6" />
+
+            {/* ========== STEP 2: 偏好设置 ========== */}
+            <div className="mb-6 space-y-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Globe className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-lg font-bold">偏好设置</h2>
+                <Badge variant="secondary" className="text-xs">选填</Badge>
+              </div>
+
+              {/* 参与意图 */}
               <div>
                 <div className="mb-3">
                   <h3 className="text-base font-semibold mb-1">参与这场活动的主要目的？</h3>
-                  <p className="text-xs text-muted-foreground">选填 · 帮助AI匹配，也可以保持开放心态不选 · 可多选</p>
+                  <p className="text-xs text-muted-foreground">帮助AI匹配，也可以保持开放心态不选 · 可多选</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { value: "flexible", label: "灵活开放·都可以", icon: "✨" },
-                    { value: "networking", label: "拓展人脉", icon: "💼" },
-                    { value: "friends", label: "交朋友", icon: "👋" },
-                    { value: "discussion", label: "深度讨论", icon: "💬" },
-                    { value: "fun", label: "娱乐放松", icon: "🎉" },
-                    { value: "romance", label: "浪漫社交", icon: "💕" },
+                    { value: "flexible", label: "灵活开放", Icon: Shuffle },
+                    { value: "networking", label: "拓展人脉", Icon: Briefcase },
+                    { value: "friends", label: "交朋友", Icon: HandHeart },
+                    { value: "discussion", label: "深度讨论", Icon: MessageCircle },
+                    { value: "fun", label: "娱乐放松", Icon: PartyPopper },
+                    { value: "romance", label: "浪漫社交", Icon: Heart },
                   ].map((option) => {
                     const isSelected = selectedIntent.includes(option.value);
                     const isFlexible = option.value === "flexible";
@@ -464,7 +622,7 @@ export default function JoinBlindBoxSheet({
                         key={option.value}
                         onClick={() => toggleIntent(option.value)}
                         disabled={isDisabled}
-                        className={`px-3 py-3 rounded-lg border-2 text-sm transition-all hover-elevate ${
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 text-sm transition-all hover-elevate min-h-[44px] ${
                           isSelected
                             ? 'border-primary bg-primary/5 font-medium'
                             : isDisabled
@@ -473,7 +631,7 @@ export default function JoinBlindBoxSheet({
                         }`}
                         data-testid={`button-intent-${option.value}`}
                       >
-                        <span className="mr-1">{option.icon}</span>
+                        <option.Icon className={`h-4 w-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
                         {option.label}
                       </button>
                     );
@@ -507,12 +665,12 @@ export default function JoinBlindBoxSheet({
                   {/* 语言偏好 - 两种活动类型共用 */}
                   <div>
                     <h4 className="text-sm font-medium mb-2">语言</h4>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {languageOptions.map((option) => (
                         <button
                           key={option.value}
                           onClick={() => toggleLanguage(option.value)}
-                          className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
+                          className={`px-4 py-2.5 rounded-lg border-2 text-sm transition-all hover-elevate min-h-[44px] ${
                             selectedLanguages.includes(option.value)
                               ? 'border-primary bg-primary/5 font-medium'
                               : 'border-muted bg-muted/30'
@@ -533,12 +691,12 @@ export default function JoinBlindBoxSheet({
                     {/* 口味强度 */}
                     <div className="mb-3">
                       <p className="text-xs text-muted-foreground mb-2">口味强度</p>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="flex flex-wrap gap-2">
                         {tasteIntensityOptions.map((option) => (
                           <button
                             key={option.value}
                             onClick={() => toggleTasteIntensity(option.value)}
-                            className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
+                            className={`px-4 py-2.5 rounded-lg border-2 text-sm transition-all hover-elevate min-h-[44px] ${
                               selectedTasteIntensity.includes(option.value)
                                 ? 'border-primary bg-primary/5 font-medium'
                                 : 'border-muted bg-muted/30'
@@ -554,12 +712,12 @@ export default function JoinBlindBoxSheet({
                     {/* 主流菜系 */}
                     <div>
                       <p className="text-xs text-muted-foreground mb-2">主流菜系</p>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="flex flex-wrap gap-2">
                         {cuisineOptions.map((option) => (
                           <button
                             key={option.value}
                             onClick={() => toggleCuisine(option.value)}
-                            className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
+                            className={`px-4 py-2.5 rounded-lg border-2 text-sm transition-all hover-elevate min-h-[44px] ${
                               selectedCuisines.includes(option.value)
                                 ? 'border-primary bg-primary/5 font-medium'
                                 : 'border-muted bg-muted/30'
@@ -582,12 +740,12 @@ export default function JoinBlindBoxSheet({
                       {/* 酒吧主题 - 多选 */}
                       <div className="mb-3">
                         <p className="text-xs text-muted-foreground mb-2">酒吧类型（可多选）</p>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="flex flex-wrap gap-2">
                           {barThemeOptions.map((option) => (
                             <button
                               key={option.value}
                               onClick={() => toggleBarTheme(option.value)}
-                              className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
+                              className={`px-4 py-2.5 rounded-lg border-2 text-sm transition-all hover-elevate min-h-[44px] ${
                                 selectedBarThemes.includes(option.value)
                                   ? 'border-primary bg-primary/5 font-medium'
                                   : 'border-muted bg-muted/30'
@@ -603,12 +761,12 @@ export default function JoinBlindBoxSheet({
                       {/* 饮酒程度 - 单选 */}
                       <div>
                         <p className="text-xs text-muted-foreground mb-2">饮酒程度（请选一个）</p>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="flex flex-wrap gap-2">
                           {alcoholComfortOptions.map((option) => (
                             <button
                               key={option.value}
                               onClick={() => toggleAlcoholComfort(option.value)}
-                              className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
+                              className={`px-4 py-2.5 rounded-lg border-2 text-sm transition-all hover-elevate min-h-[44px] ${
                                 selectedAlcoholComfort.includes(option.value)
                                   ? 'border-primary bg-primary/5 font-medium'
                                   : 'border-muted bg-muted/30'
@@ -637,154 +795,20 @@ export default function JoinBlindBoxSheet({
                   )}
                 </div>
               </div>
+            </div>
 
-            {/* D. 选择商圈 - 多选提升成功率 */}
+            {/* 分隔线 */}
+            <div className="h-px bg-border mb-6" />
+
+            {/* ========== STEP 3: 组队邀请 ========== */}
             <div className="mb-6">
-              <div className="mb-3">
-                <h3 className="text-base font-semibold mb-1">选择商圈</h3>
-                <p className="text-xs text-muted-foreground">多选商圈可提升匹配成功率</p>
+              <div className="flex items-center gap-2 mb-4">
+                <Users className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-lg font-bold">组队邀请</h2>
+                <Badge variant="secondary" className="text-xs">选填</Badge>
               </div>
 
-              {selectedDistricts.length > 0 && (
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    已选 <span className="font-medium text-foreground">{selectedDistricts.length}</span> 个商圈
-                  </span>
-                  <button
-                    onClick={() => setSelectedDistricts([])}
-                    className="text-xs text-destructive hover:underline"
-                    data-testid="button-clear-districts"
-                  >
-                    清空
-                  </button>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                {shenzhenClusters.map(cluster => (
-                  <Collapsible 
-                    key={cluster.id}
-                    open={expandedClusters.includes(cluster.id)} 
-                    onOpenChange={() => {
-                      setExpandedClusters(prev => 
-                        prev.includes(cluster.id) 
-                          ? prev.filter(id => id !== cluster.id)
-                          : [...prev, cluster.id]
-                      );
-                    }}
-                  >
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover-elevate">
-                      <div className="flex items-center gap-2">
-                        {expandedClusters.includes(cluster.id) ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
-                        <span className="font-medium text-sm">{cluster.name}</span>
-                        {cluster.districts.filter(d => selectedDistricts.includes(d.id)).length > 0 && (
-                          <Badge variant="default" className="text-xs">
-                            {cluster.districts.filter(d => selectedDistricts.includes(d.id)).length}
-                          </Badge>
-                        )}
-                      </div>
-                      {!expandedClusters.includes(cluster.id) && (
-                        <span className="text-xs text-muted-foreground">查看更多</span>
-                      )}
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pt-3 pl-6">
-                      {/* 全选/取消按钮 */}
-                      <div className="flex items-center gap-2 mb-2">
-                        <button
-                          onClick={() => {
-                            const allClusterDistrictIds = cluster.districts.map(d => d.id);
-                            const allSelected = allClusterDistrictIds.every(id => selectedDistricts.includes(id));
-                            if (allSelected) {
-                              // 取消选择该片区所有商圈
-                              setSelectedDistricts(prev => prev.filter(id => !allClusterDistrictIds.includes(id)));
-                            } else {
-                              // 选择该片区所有商圈
-                              setSelectedDistricts(prev => {
-                                const newSelection = [...prev];
-                                allClusterDistrictIds.forEach(id => {
-                                  if (!newSelection.includes(id)) {
-                                    newSelection.push(id);
-                                  }
-                                });
-                                return newSelection;
-                              });
-                            }
-                          }}
-                          className="text-xs text-primary hover:underline"
-                          data-testid={`button-select-all-${cluster.id}`}
-                        >
-                          {cluster.districts.every(d => selectedDistricts.includes(d.id)) ? '取消全选' : '全选'}
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {cluster.districts.map(district => {
-                          const isSelected = selectedDistricts.includes(district.id);
-                          return (
-                            <button
-                              key={district.id}
-                              onClick={() => {
-                                if (isSelected) {
-                                  setSelectedDistricts(prev => prev.filter(id => id !== district.id));
-                                } else {
-                                  setSelectedDistricts(prev => [...prev, district.id]);
-                                }
-                              }}
-                              className={`
-                                px-3 py-1.5 rounded-full text-sm
-                                transition-all border
-                                ${isSelected
-                                  ? 'bg-primary text-primary-foreground border-primary font-medium'
-                                  : 'bg-background border-border hover-elevate'
-                                }
-                              `}
-                              data-testid={`chip-district-${district.id}`}
-                            >
-                              {district.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                ))}
-              </div>
-
-              {selectedDistricts.length < 2 && (
-                <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg mt-3">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <span className="text-sm text-primary">
-                    多选2-3个商圈，成局率提升42%
-                  </span>
-                </div>
-              )}
-            </div>
-            </div>
-
-            {/* E. 规则与保障 */}
-            <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-              <div className="flex items-start gap-2 mb-2">
-                <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                <div className="text-xs text-blue-600 dark:text-blue-400">
-                  <p className="font-medium mb-1">规则与保障</p>
-                  <ul className="space-y-1 list-disc list-inside">
-                    <li>AI智能匹配 · 满4人成局 · 最多6人</li>
-                    <li>成局前可退；成局后至开局前24小时内不可退</li>
-                    <li>报名收取平台服务费；当天现场点单AA</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* F. 组队邀请 - 游戏化设计 */}
-            <div className="mb-6">
-              <div className="mb-3">
-                <h3 className="text-base font-semibold mb-1">组队出击</h3>
-                <p className="text-xs text-muted-foreground">邀请1位朋友一起，优先匹配同局</p>
-              </div>
+              <p className="text-sm text-muted-foreground mb-4">邀请1位朋友一起，优先匹配同局</p>
 
               {!showTeamInvite ? (
                 <Button
@@ -886,9 +910,24 @@ export default function JoinBlindBoxSheet({
                 </div>
               )}
             </div>
+
+            {/* 规则与保障 */}
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-blue-600 dark:text-blue-400">
+                  <p className="font-medium mb-1">规则与保障</p>
+                  <ul className="space-y-1 list-disc list-inside">
+                    <li>AI智能匹配 · 满4人成局 · 最多6人</li>
+                    <li>成局前可退；成局后至开局前24小时内不可退</li>
+                    <li>报名收取平台服务费；当天现场点单AA</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* F. 底部操作区 */}
+          {/* 底部操作区 */}
           <div className="border-t p-4 space-y-2 flex-shrink-0 bg-background">
             <Button 
               className="w-full" 
