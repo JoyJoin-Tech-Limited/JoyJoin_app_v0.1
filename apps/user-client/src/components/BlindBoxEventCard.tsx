@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calendar, MapPin, Sparkles, Users, Shield, Heart, RotateCcw, Lock, CheckCircle2, Clock } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
@@ -147,13 +148,9 @@ export default function BlindBoxEventCard({
                     </div>
                   </div>
 
-                  <motion.div 
-                    className="relative"
-                    animate={prefersReducedMotion ? {} : { scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
+                  <div className="relative">
                     <Sparkles className="h-5 w-5 text-primary" />
-                  </motion.div>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
@@ -240,22 +237,26 @@ export default function BlindBoxEventCard({
                     <Sparkles className="h-4 w-4 mr-1.5" />
                     立即参与
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleFlip();
-                    }}
-                    data-testid={`button-flip-${id}`}
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFlip();
+                        }}
+                        aria-label="查看保障"
+                        data-testid={`button-flip-${id}`}
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>查看保障</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
-              </div>
-
-              <div className="absolute bottom-1 right-2 text-[10px] text-muted-foreground/50">
-                点击查看保障
               </div>
             </Card>
           </div>
@@ -277,31 +278,31 @@ export default function BlindBoxEventCard({
                 <div className="absolute bottom-4 left-4 w-24 h-24 rounded-full border-2 border-primary/20" />
               </div>
 
-              <div className="p-4 h-full flex flex-col relative">
-                <div className="flex items-center gap-2 mb-4">
-                  <Shield className="h-5 w-5 text-primary" />
-                  <h3 className="font-bold text-base">我们的承诺</h3>
+              <div className="p-3 h-full flex flex-col relative">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Shield className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold text-sm">我们的承诺</h3>
                 </div>
 
-                <div className="space-y-3 flex-1">
+                <div className="space-y-2 flex-1">
                   {promises.map((promise, index) => (
                     <motion.div
                       key={index}
-                      className="flex items-center gap-3 p-2.5 rounded-lg bg-background/80 border border-primary/10"
+                      className="flex items-center gap-2 p-2 rounded-lg bg-background/80 border border-primary/10"
                       initial={prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
                       animate={{ opacity: isFlipped ? 1 : 0, x: isFlipped ? 0 : (prefersReducedMotion ? 0 : -20) }}
                       transition={prefersReducedMotion ? { duration: 0 } : { delay: index * 0.1 + 0.2 }}
                     >
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <promise.icon className="h-4 w-4 text-primary" />
+                      <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <promise.icon className="h-3 w-3 text-primary" />
                       </div>
-                      <span className="text-sm font-medium">{promise.text}</span>
-                      <CheckCircle2 className="h-4 w-4 text-primary ml-auto" />
+                      <span className="text-xs font-medium leading-tight">{promise.text}</span>
+                      <CheckCircle2 className="h-3.5 w-3.5 text-primary ml-auto flex-shrink-0" />
                     </motion.div>
                   ))}
                 </div>
 
-                <div className="flex gap-2 mt-3">
+                <div className="flex gap-2 mt-2">
                   <Button
                     className="flex-1"
                     size="default"

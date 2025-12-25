@@ -220,7 +220,7 @@ export default function JoinBlindBoxSheet({
     }
   };
 
-  // Toggle intent with 3-item limit (excluding flexible)
+  // Toggle intent - no limit, auto-enable flexible mode when all 5 selected
   const toggleIntent = (intentValue: string) => {
     if (intentValue === "flexible") {
       toggleFlexibleMode(!isFlexibleMode);
@@ -230,21 +230,28 @@ export default function JoinBlindBoxSheet({
     // If in flexible mode, don't allow selecting specific intents
     if (isFlexibleMode) return;
     
+    const allIntentValues = ["networking", "friends", "discussion", "fun", "romance"];
+    
     if (selectedIntent.includes(intentValue)) {
       // Deselect this intent
       setSelectedIntent(selectedIntent.filter(i => i !== intentValue));
     } else {
-      // Check 3-item limit before adding
-      const currentCount = selectedIntent.filter(i => i !== "flexible").length;
-      if (currentCount >= 3) {
-        // Show toast for limit reached
+      // Add the new intent
+      const newSelection = [...selectedIntent, intentValue];
+      
+      // Check if all 5 are now selected - auto-enable flexible mode
+      const nonFlexibleIntents = newSelection.filter(i => i !== "flexible");
+      if (allIntentValues.every(v => nonFlexibleIntents.includes(v))) {
+        // All 5 selected, switch to flexible mode
+        setIsFlexibleMode(true);
+        setSelectedIntent(["flexible"]);
         toast({
-          title: "最多选择3个",
-          description: "请先取消一个已选项目",
+          title: "已切换到灵活开放模式",
+          description: "全选即交给AI智能匹配",
         });
-        return;
+      } else {
+        setSelectedIntent(newSelection);
       }
-      setSelectedIntent([...selectedIntent, intentValue]);
     }
   };
 
@@ -467,16 +474,19 @@ export default function JoinBlindBoxSheet({
                   selectedCount={budgetPreference.length}
                   showCounter={true}
                 >
-                  {budgetOptions.map((option) => (
-                    <MultiSelectButton
-                      key={option.value}
-                      selected={budgetPreference.includes(option.value)}
-                      onClick={() => toggleBudget(option.value)}
-                      data-testid={`button-budget-${option.value}`}
-                    >
-                      {getCurrencySymbol(eventData.city || "深圳")}{option.label}
-                    </MultiSelectButton>
-                  ))}
+                  <div className="grid grid-cols-4 gap-2 w-full">
+                    {budgetOptions.map((option) => (
+                      <MultiSelectButton
+                        key={option.value}
+                        selected={budgetPreference.includes(option.value)}
+                        onClick={() => toggleBudget(option.value)}
+                        className="w-full justify-center"
+                        data-testid={`button-budget-${option.value}`}
+                      >
+                        {getCurrencySymbol(eventData.city || "深圳")}{option.label}
+                      </MultiSelectButton>
+                    ))}
+                  </div>
                 </MultiSelectGroup>
               </div>
 
@@ -628,7 +638,7 @@ export default function JoinBlindBoxSheet({
               <div>
                 <div className="mb-3">
                   <h3 className="text-base font-semibold mb-1">参与这场活动的主要目的？</h3>
-                  <p className="text-xs text-muted-foreground">帮助AI精准匹配 · 最多选3个</p>
+                  <p className="text-xs text-muted-foreground">帮助AI精准匹配</p>
                 </div>
 
                 {/* 灵活开放独立开关 */}
@@ -664,7 +674,6 @@ export default function JoinBlindBoxSheet({
                       label=""
                       hint=""
                       selectedCount={selectedIntent.filter(i => i !== "flexible").length}
-                      maxCount={3}
                       showCounter={selectedIntent.filter(i => i !== "flexible").length > 0}
                     >
                       <div className="grid grid-cols-2 gap-2 w-full">
@@ -725,16 +734,19 @@ export default function JoinBlindBoxSheet({
                     selectedCount={selectedLanguages.length}
                     showCounter={true}
                   >
-                    {languageOptions.map((option) => (
-                      <MultiSelectButton
-                        key={option.value}
-                        selected={selectedLanguages.includes(option.value)}
-                        onClick={() => toggleLanguage(option.value)}
-                        data-testid={`button-language-${option.value}`}
-                      >
-                        {option.label}
-                      </MultiSelectButton>
-                    ))}
+                    <div className="grid grid-cols-3 gap-2 w-full">
+                      {languageOptions.map((option) => (
+                        <MultiSelectButton
+                          key={option.value}
+                          selected={selectedLanguages.includes(option.value)}
+                          onClick={() => toggleLanguage(option.value)}
+                          className="w-full justify-center"
+                          data-testid={`button-language-${option.value}`}
+                        >
+                          {option.label}
+                        </MultiSelectButton>
+                      ))}
+                    </div>
                   </MultiSelectGroup>
 
                   {/* 饭局偏好 - 仅饭局显示 */}
@@ -748,16 +760,19 @@ export default function JoinBlindBoxSheet({
                         selectedCount={selectedTasteIntensity.length}
                         showCounter={true}
                       >
-                        {tasteIntensityOptions.map((option) => (
-                          <MultiSelectButton
-                            key={option.value}
-                            selected={selectedTasteIntensity.includes(option.value)}
-                            onClick={() => toggleTasteIntensity(option.value)}
-                            data-testid={`button-taste-${option.value}`}
-                          >
-                            {option.label}
-                          </MultiSelectButton>
-                        ))}
+                        <div className="grid grid-cols-2 gap-2 w-full">
+                          {tasteIntensityOptions.map((option) => (
+                            <MultiSelectButton
+                              key={option.value}
+                              selected={selectedTasteIntensity.includes(option.value)}
+                              onClick={() => toggleTasteIntensity(option.value)}
+                              className="w-full justify-center"
+                              data-testid={`button-taste-${option.value}`}
+                            >
+                              {option.label}
+                            </MultiSelectButton>
+                          ))}
+                        </div>
                       </MultiSelectGroup>
 
                       {/* 主流菜系 */}
@@ -767,16 +782,19 @@ export default function JoinBlindBoxSheet({
                         selectedCount={selectedCuisines.length}
                         showCounter={true}
                       >
-                        {cuisineOptions.map((option) => (
-                          <MultiSelectButton
-                            key={option.value}
-                            selected={selectedCuisines.includes(option.value)}
-                            onClick={() => toggleCuisine(option.value)}
-                            data-testid={`button-cuisine-${option.value}`}
-                          >
-                            {option.label}
-                          </MultiSelectButton>
-                        ))}
+                        <div className="flex flex-wrap gap-2">
+                          {cuisineOptions.map((option) => (
+                            <MultiSelectButton
+                              key={option.value}
+                              selected={selectedCuisines.includes(option.value)}
+                              onClick={() => toggleCuisine(option.value)}
+                              className="min-w-[4.5rem] justify-center"
+                              data-testid={`button-cuisine-${option.value}`}
+                            >
+                              {option.label}
+                            </MultiSelectButton>
+                          ))}
+                        </div>
                       </MultiSelectGroup>
                     </div>
                   )}
@@ -793,30 +811,34 @@ export default function JoinBlindBoxSheet({
                         selectedCount={selectedBarThemes.length}
                         showCounter={true}
                       >
-                        {barThemeOptions.map((option) => (
-                          <MultiSelectButton
-                            key={option.value}
-                            selected={selectedBarThemes.includes(option.value)}
-                            onClick={() => toggleBarTheme(option.value)}
-                            data-testid={`button-bar-theme-${option.value}`}
-                          >
-                            {option.label}
-                          </MultiSelectButton>
-                        ))}
+                        <div className="grid grid-cols-3 gap-2 w-full">
+                          {barThemeOptions.map((option) => (
+                            <MultiSelectButton
+                              key={option.value}
+                              selected={selectedBarThemes.includes(option.value)}
+                              onClick={() => toggleBarTheme(option.value)}
+                              className="w-full justify-center text-xs"
+                              data-testid={`button-bar-theme-${option.value}`}
+                            >
+                              {option.label}
+                            </MultiSelectButton>
+                          ))}
+                        </div>
                       </MultiSelectGroup>
 
                       {/* 饮酒程度 - 单选 */}
                       <div>
                         <div className="mb-3">
-                          <h3 className="text-base font-semibold mb-1">饮酒程度</h3>
+                          <h3 className="text-sm font-medium">饮酒程度</h3>
                           <p className="text-xs text-muted-foreground">请选一个</p>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid grid-cols-3 gap-2 w-full">
                           {alcoholComfortOptions.map((option) => (
                             <SingleSelectButton
                               key={option.value}
                               selected={selectedAlcoholComfort.includes(option.value)}
                               onClick={() => toggleAlcoholComfort(option.value)}
+                              className="w-full justify-center"
                               data-testid={`button-alcohol-${option.value}`}
                             >
                               {option.label}
