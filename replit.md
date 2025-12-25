@@ -62,6 +62,34 @@ joyjoin-monorepo/
 
 ## Recent Changes (2025-12-25)
 
+### Accessibility & Reduced Motion Support
+- **BlindBoxGuide Component**: Refactored to conditionally render static content when `prefers-reduced-motion` is enabled
+  - Uses `useReducedMotion()` hook from framer-motion
+  - When reduced motion is preferred: renders static div wrapper, pulse animation disabled
+  - When motion is allowed: renders motion.div with entrance animation (fade-in + slide-up)
+- **BlindBoxEventCard Component**: Flip card animation respects reduced motion preferences
+  - Flip transition duration set to 0 when reduced motion is preferred
+  - Sparkle animations suppressed under reduced motion
+  - Staggered promise item animations disabled for accessibility
+- **FlipCard Component** (`apps/user-client/src/components/ui/flip-card.tsx`): Reusable flip card primitive with haptic feedback
+- **Haptic Feedback Pattern**: `navigator.vibrate(10-15)` on mobile for card interactions
+
+### BlindBoxGuide Professional Redesign
+- **Card-based Layout**: Replaced chat bubble with professional guidance card
+- **3-Step Horizontal Timeline**: 报名 → AI匹配 → 揭晓 with icon badges
+- **Feature Badges**: 提前1天揭晓 / 4-6人精品局 / 隐私保护
+- **Pulse Animation**: Icon has breathing pulse effect (respects reduced motion)
+- **CTA Button**: Optional "了解详细规则" with callback support
+
+### BlindBoxEventCard Flip Design
+- **Front Face**: Event type badge, time/location, archetype avatars, participant count
+- **Back Face**: AI matching promises (AI精准匹配, 隐私保护, 聊天记录不留痕) with animated reveals
+- **Tap to Flip**: Consistent flip interaction with "了解详情" / "返回" prompts
+- **Social Proof Avatars**: Sample archetype animal avatars for visual engagement
+
+### District Selection Visual Feedback
+- **Purple Dashed Border**: When all districts in a cluster are selected, the cluster card displays a purple dashed border with "已全选" badge
+
 ### Multi-Select Button UI Optimization (Expert Consultation)
 - **Created Reusable MultiSelectButton Component** (`apps/user-client/src/components/ui/multi-select-button.tsx`):
   - Selected state: Primary color fill + white text (clear visual distinction)
