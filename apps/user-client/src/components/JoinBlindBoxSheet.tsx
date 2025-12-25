@@ -17,9 +17,7 @@ import {
   Sparkles,
   Share2,
   UserPlus,
-  X,
-  Flame,
-  Zap
+  X
 } from "lucide-react";
 import {
   Collapsible,
@@ -41,16 +39,10 @@ import { apiRequest } from "@/lib/queryClient";
 import { getCurrencySymbol } from "@/lib/currency";
 import { 
   shenzhenClusters, 
-  heatConfig,
   getDistrictById,
   getDistrictIdsByCluster
 } from "@shared/districts";
 
-function HeatIcon({ iconName, className }: { iconName: 'flame' | 'zap' | 'none'; className?: string }) {
-  if (iconName === 'flame') return <Flame className={`h-3 w-3 ${className}`} />;
-  if (iconName === 'zap') return <Zap className={`h-3 w-3 ${className}`} />;
-  return null;
-}
 
 interface JoinBlindBoxSheetProps {
   open: boolean;
@@ -655,26 +647,17 @@ export default function JoinBlindBoxSheet({
               </div>
 
               {selectedDistricts.length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-2">
-                  <span className="text-xs text-muted-foreground">已选：</span>
-                  {selectedDistricts.map(id => {
-                    const district = getDistrictById(id);
-                    return district ? (
-                      <Badge 
-                        key={id} 
-                        variant="secondary"
-                        className="flex items-center gap-1 pr-1"
-                      >
-                        {district.name}
-                        <button
-                          onClick={() => setSelectedDistricts(prev => prev.filter(d => d !== id))}
-                          className="ml-1 hover:bg-muted rounded-full p-0.5"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ) : null;
-                  })}
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    已选 <span className="font-medium text-foreground">{selectedDistricts.length}</span> 个商圈
+                  </span>
+                  <button
+                    onClick={() => setSelectedDistricts([])}
+                    className="text-xs text-destructive hover:underline"
+                    data-testid="button-clear-districts"
+                  >
+                    清空
+                  </button>
                 </div>
               )}
 
@@ -740,7 +723,6 @@ export default function JoinBlindBoxSheet({
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {cluster.districts.map(district => {
-                          const heat = heatConfig[district.heat];
                           const isSelected = selectedDistricts.includes(district.id);
                           return (
                             <button
@@ -753,17 +735,16 @@ export default function JoinBlindBoxSheet({
                                 }
                               }}
                               className={`
-                                inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium
-                                transition-all border-2
+                                px-3 py-1.5 rounded-full text-sm
+                                transition-all border
                                 ${isSelected
-                                  ? 'bg-primary text-primary-foreground border-primary'
+                                  ? 'bg-primary text-primary-foreground border-primary font-medium'
                                   : 'bg-background border-border hover-elevate'
                                 }
                               `}
                               data-testid={`chip-district-${district.id}`}
                             >
-                              <span>{district.name}</span>
-                              {heat.iconName !== 'none' && <HeatIcon iconName={heat.iconName} className={heat.color} />}
+                              {district.name}
                             </button>
                           );
                         })}
@@ -857,7 +838,7 @@ export default function JoinBlindBoxSheet({
                           try {
                             await navigator.share({
                               title: '悦聚·组队邀请',
-                              text: `邀请你一起参加${eventData.eventType}活动`,
+                              text: `我抢到 JoyJoin 神秘${eventData.eventType}名额，一起开盲盒？`,
                               url: inviteLink || window.location.href
                             });
                           } catch (err) {
