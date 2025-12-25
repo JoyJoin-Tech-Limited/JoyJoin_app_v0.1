@@ -1,6 +1,7 @@
 import MobileHeader from "@/components/MobileHeader";
 import BottomNav from "@/components/BottomNav";
 import BlindBoxEventCard from "@/components/BlindBoxEventCard";
+import BlindBoxSection from "@/components/BlindBoxSection";
 import HeroWelcome from "@/components/HeroWelcome";
 import LocationPickerSheet from "@/components/LocationPickerSheet";
 import { PromotionBannerCarousel } from "@/components/PromotionBannerCarousel";
@@ -150,6 +151,7 @@ export default function DiscoverPage() {
         isGirlsNight,
         registrationCount: pool.registrationCount || 0,
         sampleArchetypes: pool.sampleArchetypes || [],
+        registrationDeadline: pool.registrationDeadline,
       };
     } catch (error) {
       console.error("Error transforming event pool:", pool, error);
@@ -208,33 +210,36 @@ export default function DiscoverPage() {
           } : undefined}
         />
 
-        <div className="px-4 pb-6 space-y-4">
-          {/* 无券时显示邀请好友卡片 */}
+        <div className="px-4 pb-2">
           {!bestCoupon && <InviteFriendCard />}
-
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="font-medium">盲盒模式</span>
-          </div>
-
-          <div className="space-y-5" ref={eventListRef}>
-            {isLoading ? (
-              <div className="text-center py-8">
-                <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-                <p className="text-sm text-muted-foreground mt-4">加载中...</p>
-              </div>
-            ) : filteredBlindBoxEvents.length > 0 ? (
-              filteredBlindBoxEvents.map((event) => (
-                <BlindBoxEventCard key={event.id} {...event} />
-              ))
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>暂无{selectedCity}{selectedArea ? `·${selectedArea}` : ''}的盲盒活动</p>
-                <p className="text-sm mt-2">Admin还没创建活动池，或当前筛选条件下没有可用活动</p>
-              </div>
-            )}
-          </div>
         </div>
+
+        <BlindBoxSection className="py-6">
+          <div className="px-4 space-y-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="font-medium">盲盒模式</span>
+            </div>
+
+            <div className="space-y-5" ref={eventListRef}>
+              {isLoading ? (
+                <div className="text-center py-8">
+                  <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-sm text-muted-foreground mt-4">加载中...</p>
+                </div>
+              ) : filteredBlindBoxEvents.length > 0 ? (
+                filteredBlindBoxEvents.map((event) => (
+                  <BlindBoxEventCard key={event.id} {...event} />
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>暂无{selectedCity}{selectedArea ? `·${selectedArea}` : ''}的盲盒活动</p>
+                  <p className="text-sm mt-2">Admin还没创建活动池，或当前筛选条件下没有可用活动</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </BlindBoxSection>
       </div>
 
       <BottomNav />

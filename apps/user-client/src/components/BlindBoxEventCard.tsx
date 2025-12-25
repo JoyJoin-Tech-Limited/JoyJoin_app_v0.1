@@ -2,13 +2,32 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Sparkles, Users, Shield, Heart, RotateCcw, Lock, CheckCircle2 } from "lucide-react";
+import { Calendar, MapPin, Sparkles, Users, Shield, Heart, RotateCcw, Lock, CheckCircle2, Clock } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
 import JoinBlindBoxSheet from "./JoinBlindBoxSheet";
 import { getArchetypeImage } from "@/lib/archetypeImages";
+import { differenceInHours, differenceInDays, format, parseISO } from "date-fns";
+import { zhCN } from "date-fns/locale";
 
 type PriceTier = "150以下" | "150-200" | "200-300" | "300-500";
+
+function formatDeadline(deadline: string): { text: string; isUrgent: boolean } {
+  const deadlineDate = parseISO(deadline);
+  const now = new Date();
+  const hoursLeft = differenceInHours(deadlineDate, now);
+  const daysLeft = differenceInDays(deadlineDate, now);
+  
+  if (hoursLeft <= 0) {
+    return { text: "报名已截止", isUrgent: true };
+  } else if (hoursLeft < 24) {
+    return { text: `还剩${hoursLeft}小时`, isUrgent: true };
+  } else if (daysLeft <= 3) {
+    return { text: `还剩${daysLeft}天`, isUrgent: false };
+  } else {
+    return { text: `截止 ${format(deadlineDate, "M月d日 HH:mm", { locale: zhCN })}`, isUrgent: false };
+  }
+}
 
 interface BlindBoxEventCardProps {
   id: string;
@@ -24,6 +43,7 @@ interface BlindBoxEventCardProps {
   poolId?: string;
   registrationCount?: number;
   sampleArchetypes?: string[];
+  registrationDeadline?: string;
 }
 
 function triggerHaptic() {
@@ -46,6 +66,7 @@ export default function BlindBoxEventCard({
   poolId,
   registrationCount = 0,
   sampleArchetypes = [],
+  registrationDeadline,
 }: BlindBoxEventCardProps) {
   const [infoSheetOpen, setInfoSheetOpen] = useState(false);
   const [joinSheetOpen, setJoinSheetOpen] = useState(false);
@@ -149,7 +170,7 @@ export default function BlindBoxEventCard({
                     </span>
                   </div>
                   
-                  {registrationCount > 0 && (
+                  {registrationCount >= 10 ? (
                     <div className="flex items-center gap-1.5" data-testid={`social-proof-${id}`}>
                       <div className="flex -space-x-2">
                         {sampleArchetypes.slice(0, 3).map((archetype, index) => {
@@ -173,8 +194,41 @@ export default function BlindBoxEventCard({
                         {registrationCount}人已报名
                       </span>
                     </div>
+                  ) : sampleArchetypes.length > 0 && (
+                    <div className="flex -space-x-2" data-testid={`avatars-${id}`}>
+                      {sampleArchetypes.slice(0, 3).map((archetype, index) => {
+                        const imgSrc = getArchetypeImage(archetype);
+                        return imgSrc ? (
+                          <div
+                            key={index}
+                            className="w-6 h-6 rounded-full border-2 border-background bg-muted overflow-hidden"
+                            style={{ zIndex: 3 - index }}
+                          >
+                            <img 
+                              src={imgSrc} 
+                              alt={archetype}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
                   )}
                 </div>
+
+                {registrationDeadline && (
+                  <div 
+                    className={`flex items-center gap-1.5 text-xs mb-2 ${
+                      formatDeadline(registrationDeadline).isUrgent 
+                        ? 'text-destructive font-medium' 
+                        : 'text-muted-foreground'
+                    }`}
+                    data-testid={`deadline-${id}`}
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>{formatDeadline(registrationDeadline).text}</span>
+                  </div>
+                )}
 
                 <div className="flex gap-2 mt-auto">
                   <Button
