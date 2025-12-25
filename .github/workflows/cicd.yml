@@ -11,7 +11,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/api
+  REPO_NAME: ${{ github.repository }}
 
 jobs:
   lint:
@@ -50,54 +50,84 @@ jobs:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
   build-user:
-    name: Build User Portal
+    name: Build User Docker Image
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
         with:
-          node-version: 20
-      - name: Install root dependencies
-        run: npm ci
-      - name: Build User Client
-        run: |
-          cd apps/user-client
-          npx vite build
-        env:
-          VITE_API_URL: ${{ vars.API_URL }}
-      - name: Upload User Build
-        uses: actions/upload-artifact@v4
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          name: user-client-build
-          path: apps/user-client/dist
-          retention-days: 7
+          images: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/user
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+      
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/user-client/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            VITE_API_URL=${{ vars.API_URL }}
 
   build-admin:
-    name: Build Admin Portal
+    name: Build Admin Docker Image
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
         with:
-          node-version: 20
-      - name: Install root dependencies
-        run: npm ci
-      - name: Build Admin Client
-        run: |
-          cd apps/admin-client
-          npx vite build
-        env:
-          VITE_API_URL: ${{ vars.API_URL }}
-      - name: Upload Admin Build
-        uses: actions/upload-artifact@v4
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          name: admin-client-build
-          path: apps/admin-client/dist
-          retention-days: 7
+          images: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/admin
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+      
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/admin-client/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            VITE_API_URL=${{ vars.API_URL }}
 
   build-api:
     name: Build API Docker Image
@@ -123,7 +153,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/api
           tags: |
             type=sha,prefix=
             type=ref,event=branch
@@ -150,22 +180,12 @@ jobs:
       url: https://staging.joyjoin.com
     steps:
       - uses: actions/checkout@v4
-      - name: Download User Build
-        uses: actions/download-artifact@v4
-        with:
-          name: user-client-build
-          path: apps/user-client/dist
-      - name: Download Admin Build
-        uses: actions/download-artifact@v4
-        with:
-          name: admin-client-build
-          path: apps/admin-client/dist
-      - name: Deploy User Portal to Staging
-        run: echo "Deploying user portal to staging CDN..."
-      - name: Deploy Admin Portal to Staging
-        run: echo "Deploying admin portal to staging CDN..."
-      - name: Deploy API to Staging
-        run: echo "Deploying API container to staging..."
+      - name: Deploy containers to staging
+        run: |
+          echo "Deploying Docker images to staging..."
+          echo "User: ghcr.io/${{ env.REPO_NAME }}/user:develop"
+          echo "Admin: ghcr.io/${{ env.REPO_NAME }}/admin:develop"
+          echo "API: ghcr.io/${{ env.REPO_NAME }}/api:develop"
 
   deploy-production:
     name: Deploy to Production
@@ -180,23 +200,13 @@ jobs:
       url: https://app.joyjoin.com
     steps:
       - uses: actions/checkout@v4
-      - name: Download User Build
-        uses: actions/download-artifact@v4
-        with:
-          name: user-client-build
-          path: apps/user-client/dist
-      - name: Download Admin Build
-        uses: actions/download-artifact@v4
-        with:
-          name: admin-client-build
-          path: apps/admin-client/dist
       - name: Run Database Migrations
         run: echo "Running database migrations..."
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      - name: Deploy User Portal
-        run: echo "Deploying user portal to production CDN..."
-      - name: Deploy Admin Portal
-        run: echo "Deploying admin portal to production CDN..."
-      - name: Deploy API
-        run: echo "Deploying API container to production..."
+      - name: Deploy containers to production
+        run: |
+          echo "Deploying Docker images to production..."
+          echo "User: ghcr.io/${{ env.REPO_NAME }}/user:main"
+          echo "Admin: ghcr.io/${{ env.REPO_NAME }}/admin:main"
+          echo "API: ghcr.io/${{ env.REPO_NAME }}/api:main"
