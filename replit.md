@@ -45,7 +45,7 @@ The project uses a monorepo setup (`joyjoin-monorepo`) containing separate appli
 - **Intelligent Information Collection System:** Extracts and structures professional information, featuring a SmartInsight System and an Industry Ontology Knowledge Base.
 - **Location Structure:** Simplified to two main clusters (南山区, 福田区) with distinct districts, providing a card-based selection UI.
 - **Event Type Preferences:** Implemented dual-track preference system for Dining (饭局) and Bar (酒局) events, with conditional UI for specific options like cuisine, taste intensity, bar themes, and alcohol comfort levels.
-- **Timezone Handling:** All timestamps are stored as UTC in the database. Frontend uses `chineseDateTime.ts` utilities with `toChina()` helper to convert UTC to China timezone (UTC+8) for display. Time format uses Chinese periods (凌晨/上午/中午/下午/晚上) with 12-hour format.
+- **Timezone Handling:** All timestamps are stored as China timezone (UTC+8) directly in the database. Frontend uses `chineseDateTime.ts` utilities with `parseAsChinaTime()` helper to parse without timezone conversion. Time format uses Chinese periods (凌晨/上午/中午/下午/晚上) with 12-hour format.
 
 ## External Dependencies
 

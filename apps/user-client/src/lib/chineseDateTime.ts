@@ -1,12 +1,24 @@
-import { parseISO, differenceInHours, differenceInMinutes, differenceInDays, getHours, getMinutes, getDay, getMonth, getDate, getYear, isSameYear, addHours } from "date-fns";
+import { parseISO, differenceInHours, differenceInMinutes, differenceInDays, getHours, getMinutes, getDay, getMonth, getDate, getYear, isSameYear } from "date-fns";
 
 const WEEKDAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
-const CHINA_TIMEZONE_OFFSET = 8;
-
-function toChina(date: Date): Date {
-  const utcDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
-  return addHours(utcDate, CHINA_TIMEZONE_OFFSET);
+function parseAsChinaTime(dateInput: Date | string): Date {
+  if (typeof dateInput === "string") {
+    let dateStr = dateInput;
+    if (dateStr.endsWith("Z")) {
+      dateStr = dateStr.slice(0, -1);
+    }
+    if (dateStr.includes("+") || dateStr.includes("-")) {
+      const plusIndex = dateStr.lastIndexOf("+");
+      const minusIndex = dateStr.lastIndexOf("-");
+      const tzIndex = Math.max(plusIndex, minusIndex);
+      if (tzIndex > 10) {
+        dateStr = dateStr.slice(0, tzIndex);
+      }
+    }
+    return new Date(dateStr);
+  }
+  return dateInput;
 }
 
 export type UrgencyLevel = "calm" | "warn" | "critical" | "expired";
@@ -42,8 +54,7 @@ export function formatChineseTime(hour: number, minute?: number): string {
 }
 
 export function formatChineseDateTime(dateInput: Date | string, includeYear?: boolean): string {
-  const rawDate = typeof dateInput === "string" ? parseISO(dateInput) : dateInput;
-  const date = toChina(rawDate);
+  const date = parseAsChinaTime(dateInput);
   const now = new Date();
   
   const month = getMonth(date) + 1;
@@ -65,8 +76,7 @@ export function formatChineseDateTime(dateInput: Date | string, includeYear?: bo
 }
 
 export function formatChineseDateOnly(dateInput: Date | string): string {
-  const rawDate = typeof dateInput === "string" ? parseISO(dateInput) : dateInput;
-  const date = toChina(rawDate);
+  const date = parseAsChinaTime(dateInput);
   
   const month = getMonth(date) + 1;
   const day = getDate(date);
@@ -76,8 +86,7 @@ export function formatChineseDateOnly(dateInput: Date | string): string {
 }
 
 export function extractChineseTime(dateInput: Date | string): string {
-  const rawDate = typeof dateInput === "string" ? parseISO(dateInput) : dateInput;
-  const date = toChina(rawDate);
+  const date = parseAsChinaTime(dateInput);
   
   const hour = getHours(date);
   const minute = getMinutes(date);
