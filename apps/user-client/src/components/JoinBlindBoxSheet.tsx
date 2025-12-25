@@ -1,10 +1,10 @@
-//my path:/Users/felixg/projects/JoyJoin3/client/src/components/JoinBlindBoxSheet.tsx
 import { useState, useEffect } from "react";
 import { Drawer } from "vaul";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { MultiSelectButton, MultiSelectGroup, SingleSelectButton } from "@/components/ui/multi-select-button";
 import { 
   Calendar, 
   MapPin, 
@@ -27,7 +27,8 @@ import {
   Wallet,
   Globe,
   UtensilsCrossed,
-  Wine
+  Wine,
+  Check
 } from "lucide-react";
 import {
   Collapsible,
@@ -206,25 +207,44 @@ export default function JoinBlindBoxSheet({
     );
   };
 
-  // Toggle intent with flexible exclusivity logic
+  // 灵活开放开关状态
+  const [isFlexibleMode, setIsFlexibleMode] = useState(false);
+  
+  // Toggle flexible mode - clears other selections when enabled
+  const toggleFlexibleMode = (enabled: boolean) => {
+    setIsFlexibleMode(enabled);
+    if (enabled) {
+      setSelectedIntent(["flexible"]);
+    } else {
+      setSelectedIntent([]);
+    }
+  };
+
+  // Toggle intent with 3-item limit (excluding flexible)
   const toggleIntent = (intentValue: string) => {
     if (intentValue === "flexible") {
-      // If selecting "flexible", clear all other intents
-      if (selectedIntent.includes("flexible")) {
-        setSelectedIntent([]);
-      } else {
-        setSelectedIntent(["flexible"]);
-      }
+      toggleFlexibleMode(!isFlexibleMode);
+      return;
+    }
+    
+    // If in flexible mode, don't allow selecting specific intents
+    if (isFlexibleMode) return;
+    
+    if (selectedIntent.includes(intentValue)) {
+      // Deselect this intent
+      setSelectedIntent(selectedIntent.filter(i => i !== intentValue));
     } else {
-      // If selecting a specific intent
-      if (selectedIntent.includes(intentValue)) {
-        // Deselect this intent
-        setSelectedIntent(selectedIntent.filter(i => i !== intentValue));
-      } else {
-        // Select this intent and remove "flexible" if present
-        const newIntents = selectedIntent.filter(i => i !== "flexible");
-        setSelectedIntent([...newIntents, intentValue]);
+      // Check 3-item limit before adding
+      const currentCount = selectedIntent.filter(i => i !== "flexible").length;
+      if (currentCount >= 3) {
+        // Show toast for limit reached
+        toast({
+          title: "最多选择3个",
+          description: "请先取消一个已选项目",
+        });
+        return;
       }
+      setSelectedIntent([...selectedIntent, intentValue]);
     }
   };
 
@@ -441,26 +461,23 @@ export default function JoinBlindBoxSheet({
               
               {/* 预算选择 */}
               <div className="mb-6">
-                <div className="mb-3">
-                  <h3 className="text-base font-semibold mb-1">你的预算范围？</h3>
-                  <p className="text-xs text-muted-foreground">可多选</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
+                <MultiSelectGroup
+                  label="你的预算范围？"
+                  hint="多选可提升42%匹配率"
+                  selectedCount={budgetPreference.length}
+                  showCounter={true}
+                >
                   {budgetOptions.map((option) => (
-                    <button
+                    <MultiSelectButton
                       key={option.value}
+                      selected={budgetPreference.includes(option.value)}
                       onClick={() => toggleBudget(option.value)}
-                      className={`px-4 py-2.5 rounded-lg border-2 text-sm transition-all hover-elevate min-h-[44px] ${
-                        budgetPreference.includes(option.value)
-                          ? 'border-primary bg-primary/5 font-medium'
-                          : 'border-muted bg-muted/30'
-                      }`}
                       data-testid={`button-budget-${option.value}`}
                     >
                       {getCurrencySymbol(eventData.city || "深圳")}{option.label}
-                    </button>
+                    </MultiSelectButton>
                   ))}
-                </div>
+                </MultiSelectGroup>
               </div>
 
               {/* 选择商圈 - 移到必填区 */}
@@ -546,8 +563,9 @@ export default function JoinBlindBoxSheet({
                           {cluster.districts.map(district => {
                             const isSelected = selectedDistricts.includes(district.id);
                             return (
-                              <button
+                              <MultiSelectButton
                                 key={district.id}
+                                selected={isSelected}
                                 onClick={() => {
                                   if (isSelected) {
                                     setSelectedDistricts(prev => prev.filter(id => id !== district.id));
@@ -555,18 +573,11 @@ export default function JoinBlindBoxSheet({
                                     setSelectedDistricts(prev => [...prev, district.id]);
                                   }
                                 }}
-                                className={`
-                                  px-4 py-2.5 rounded-full text-sm min-h-[44px]
-                                  transition-all border
-                                  ${isSelected
-                                    ? 'bg-primary text-primary-foreground border-primary font-medium'
-                                    : 'bg-background border-border hover-elevate'
-                                  }
-                                `}
+                                className="rounded-full"
                                 data-testid={`chip-district-${district.id}`}
                               >
                                 {district.name}
-                              </button>
+                              </MultiSelectButton>
                             );
                           })}
                         </div>
@@ -601,52 +612,81 @@ export default function JoinBlindBoxSheet({
               <div>
                 <div className="mb-3">
                   <h3 className="text-base font-semibold mb-1">参与这场活动的主要目的？</h3>
-                  <p className="text-xs text-muted-foreground">帮助AI匹配，也可以保持开放心态不选 · 可多选</p>
+                  <p className="text-xs text-muted-foreground">帮助AI精准匹配 · 最多选3个</p>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { value: "flexible", label: "灵活开放", Icon: Shuffle },
-                    { value: "networking", label: "拓展人脉", Icon: Briefcase },
-                    { value: "friends", label: "交朋友", Icon: HandHeart },
-                    { value: "discussion", label: "深度讨论", Icon: MessageCircle },
-                    { value: "fun", label: "娱乐放松", Icon: PartyPopper },
-                    { value: "romance", label: "浪漫社交", Icon: Heart },
-                  ].map((option) => {
-                    const isSelected = selectedIntent.includes(option.value);
-                    const isFlexible = option.value === "flexible";
-                    const hasFlexible = selectedIntent.includes("flexible");
-                    const isDisabled = !isFlexible && hasFlexible;
 
-                    return (
-                      <button
-                        key={option.value}
-                        onClick={() => toggleIntent(option.value)}
-                        disabled={isDisabled}
-                        className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 text-sm transition-all hover-elevate min-h-[44px] ${
-                          isSelected
-                            ? 'border-primary bg-primary/5 font-medium'
-                            : isDisabled
-                            ? 'border-muted bg-muted/50 text-muted-foreground cursor-not-allowed'
-                            : 'border-muted bg-muted/30'
-                        }`}
-                        data-testid={`button-intent-${option.value}`}
-                      >
-                        <option.Icon className={`h-4 w-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
-                        {option.label}
-                      </button>
-                    );
-                  })}
+                {/* 灵活开放独立开关 */}
+                <div className={`flex items-center justify-between p-3 rounded-lg mb-3 transition-all ${
+                  isFlexibleMode 
+                    ? 'bg-primary/10 border-2 border-primary' 
+                    : 'bg-muted/30 border-2 border-transparent'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                      isFlexibleMode ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                    }`}>
+                      <Shuffle className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-sm">灵活开放</div>
+                      <div className="text-xs text-muted-foreground">
+                        {isFlexibleMode ? '已交给AI智能匹配' : '让AI为你匹配最合适的同伴'}
+                      </div>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={isFlexibleMode}
+                    onCheckedChange={toggleFlexibleMode}
+                    data-testid="switch-flexible-mode"
+                  />
                 </div>
-                {selectedIntent.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedIntent([])}
-                    className="mt-2 w-full text-xs text-muted-foreground"
-                    data-testid="button-clear-intent"
-                  >
-                    清空选择
-                  </Button>
+
+                {/* 具体目的多选 - 关闭灵活模式时显示 */}
+                {!isFlexibleMode && (
+                  <>
+                    <MultiSelectGroup
+                      label=""
+                      hint=""
+                      selectedCount={selectedIntent.filter(i => i !== "flexible").length}
+                      maxCount={3}
+                      showCounter={selectedIntent.filter(i => i !== "flexible").length > 0}
+                    >
+                      <div className="grid grid-cols-2 gap-2 w-full">
+                        {[
+                          { value: "networking", label: "拓展人脉", Icon: Briefcase },
+                          { value: "friends", label: "交朋友", Icon: HandHeart },
+                          { value: "discussion", label: "深度讨论", Icon: MessageCircle },
+                          { value: "fun", label: "娱乐放松", Icon: PartyPopper },
+                          { value: "romance", label: "浪漫社交", Icon: Heart },
+                        ].map((option) => {
+                          const isSelected = selectedIntent.includes(option.value);
+
+                          return (
+                            <MultiSelectButton
+                              key={option.value}
+                              selected={isSelected}
+                              onClick={() => toggleIntent(option.value)}
+                              icon={<option.Icon className="h-4 w-4" />}
+                              data-testid={`button-intent-${option.value}`}
+                            >
+                              {option.label}
+                            </MultiSelectButton>
+                          );
+                        })}
+                      </div>
+                    </MultiSelectGroup>
+                    {selectedIntent.filter(i => i !== "flexible").length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedIntent([])}
+                        className="mt-2 w-full text-xs text-muted-foreground"
+                        data-testid="button-clear-intent"
+                      >
+                        清空选择
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -663,118 +703,108 @@ export default function JoinBlindBoxSheet({
                 
                 <div className="space-y-4">
                   {/* 语言偏好 - 两种活动类型共用 */}
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">语言</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {languageOptions.map((option) => (
-                        <button
-                          key={option.value}
-                          onClick={() => toggleLanguage(option.value)}
-                          className={`px-4 py-2.5 rounded-lg border-2 text-sm transition-all hover-elevate min-h-[44px] ${
-                            selectedLanguages.includes(option.value)
-                              ? 'border-primary bg-primary/5 font-medium'
-                              : 'border-muted bg-muted/30'
-                          }`}
-                          data-testid={`button-language-${option.value}`}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <MultiSelectGroup
+                    label="语言"
+                    hint="多选可提升42%匹配率"
+                    selectedCount={selectedLanguages.length}
+                    showCounter={true}
+                  >
+                    {languageOptions.map((option) => (
+                      <MultiSelectButton
+                        key={option.value}
+                        selected={selectedLanguages.includes(option.value)}
+                        onClick={() => toggleLanguage(option.value)}
+                        data-testid={`button-language-${option.value}`}
+                      >
+                        {option.label}
+                      </MultiSelectButton>
+                    ))}
+                  </MultiSelectGroup>
 
                   {/* 饭局偏好 - 仅饭局显示 */}
                   {eventData.eventType === "饭局" && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-2">口味偏好（用于匹配餐厅）</h4>
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-medium">口味偏好（用于匹配餐厅）</h4>
                     
-                    {/* 口味强度 */}
-                    <div className="mb-3">
-                      <p className="text-xs text-muted-foreground mb-2">口味强度</p>
-                      <div className="flex flex-wrap gap-2">
+                      {/* 口味强度 */}
+                      <MultiSelectGroup
+                        label="口味强度"
+                        selectedCount={selectedTasteIntensity.length}
+                        showCounter={true}
+                      >
                         {tasteIntensityOptions.map((option) => (
-                          <button
+                          <MultiSelectButton
                             key={option.value}
+                            selected={selectedTasteIntensity.includes(option.value)}
                             onClick={() => toggleTasteIntensity(option.value)}
-                            className={`px-4 py-2.5 rounded-lg border-2 text-sm transition-all hover-elevate min-h-[44px] ${
-                              selectedTasteIntensity.includes(option.value)
-                                ? 'border-primary bg-primary/5 font-medium'
-                                : 'border-muted bg-muted/30'
-                            }`}
                             data-testid={`button-taste-${option.value}`}
                           >
                             {option.label}
-                          </button>
+                          </MultiSelectButton>
                         ))}
-                      </div>
-                    </div>
+                      </MultiSelectGroup>
 
-                    {/* 主流菜系 */}
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-2">主流菜系</p>
-                      <div className="flex flex-wrap gap-2">
+                      {/* 主流菜系 */}
+                      <MultiSelectGroup
+                        label="主流菜系"
+                        hint="多选可提升42%匹配率"
+                        selectedCount={selectedCuisines.length}
+                        showCounter={true}
+                      >
                         {cuisineOptions.map((option) => (
-                          <button
+                          <MultiSelectButton
                             key={option.value}
+                            selected={selectedCuisines.includes(option.value)}
                             onClick={() => toggleCuisine(option.value)}
-                            className={`px-4 py-2.5 rounded-lg border-2 text-sm transition-all hover-elevate min-h-[44px] ${
-                              selectedCuisines.includes(option.value)
-                                ? 'border-primary bg-primary/5 font-medium'
-                                : 'border-muted bg-muted/30'
-                            }`}
                             data-testid={`button-cuisine-${option.value}`}
                           >
                             {option.label}
-                          </button>
+                          </MultiSelectButton>
                         ))}
-                      </div>
+                      </MultiSelectGroup>
                     </div>
-                  </div>
                   )}
 
                   {/* 酒局偏好 - 仅酒局显示 */}
                   {eventData.eventType === "酒局" && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-2">酒吧偏好（用于匹配场地）</h4>
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-medium">酒吧偏好（用于匹配场地）</h4>
                       
                       {/* 酒吧主题 - 多选 */}
-                      <div className="mb-3">
-                        <p className="text-xs text-muted-foreground mb-2">酒吧类型（可多选）</p>
-                        <div className="flex flex-wrap gap-2">
-                          {barThemeOptions.map((option) => (
-                            <button
-                              key={option.value}
-                              onClick={() => toggleBarTheme(option.value)}
-                              className={`px-4 py-2.5 rounded-lg border-2 text-sm transition-all hover-elevate min-h-[44px] ${
-                                selectedBarThemes.includes(option.value)
-                                  ? 'border-primary bg-primary/5 font-medium'
-                                  : 'border-muted bg-muted/30'
-                              }`}
-                              data-testid={`button-bar-theme-${option.value}`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      <MultiSelectGroup
+                        label="酒吧类型"
+                        hint="多选可提升42%匹配率"
+                        selectedCount={selectedBarThemes.length}
+                        showCounter={true}
+                      >
+                        {barThemeOptions.map((option) => (
+                          <MultiSelectButton
+                            key={option.value}
+                            selected={selectedBarThemes.includes(option.value)}
+                            onClick={() => toggleBarTheme(option.value)}
+                            data-testid={`button-bar-theme-${option.value}`}
+                          >
+                            {option.label}
+                          </MultiSelectButton>
+                        ))}
+                      </MultiSelectGroup>
 
                       {/* 饮酒程度 - 单选 */}
                       <div>
-                        <p className="text-xs text-muted-foreground mb-2">饮酒程度（请选一个）</p>
+                        <div className="mb-3">
+                          <h3 className="text-base font-semibold mb-1">饮酒程度</h3>
+                          <p className="text-xs text-muted-foreground">请选一个</p>
+                        </div>
                         <div className="flex flex-wrap gap-2">
                           {alcoholComfortOptions.map((option) => (
-                            <button
+                            <SingleSelectButton
                               key={option.value}
+                              selected={selectedAlcoholComfort.includes(option.value)}
                               onClick={() => toggleAlcoholComfort(option.value)}
-                              className={`px-4 py-2.5 rounded-lg border-2 text-sm transition-all hover-elevate min-h-[44px] ${
-                                selectedAlcoholComfort.includes(option.value)
-                                  ? 'border-primary bg-primary/5 font-medium'
-                                  : 'border-muted bg-muted/30'
-                              }`}
                               data-testid={`button-alcohol-${option.value}`}
                             >
                               {option.label}
-                            </button>
+                            </SingleSelectButton>
                           ))}
                         </div>
                       </div>

@@ -62,6 +62,27 @@ joyjoin-monorepo/
 
 ## Recent Changes (2025-12-25)
 
+### Multi-Select Button UI Optimization (Expert Consultation)
+- **Created Reusable MultiSelectButton Component** (`apps/user-client/src/components/ui/multi-select-button.tsx`):
+  - Selected state: Primary color fill + white text (clear visual distinction)
+  - Checkmark icon: ✓ appears on left side when selected
+  - Micro-animation: `active:scale-[0.97]` press feedback
+  - Haptic feedback: `navigator.vibrate(10)` on mobile
+  - Accessibility: min-h-[44px] touch targets
+- **Selection Counter**: Shows "已选 2/3" progress badge for multi-select fields
+- **Smart Hints**: Changed "可多选" to "多选可提升42%匹配率" (motivational copy)
+- **SingleSelectButton Component**: Radio-button style for single-select fields (e.g., 饮酒程度)
+
+### Social Intent Selector Redesign
+- **"灵活开放" as Standalone Toggle**: Extracted from 6 buttons, now a Switch toggle above 5 intent buttons
+  - When enabled: Shows "已交给AI智能匹配" and hides specific intent buttons
+  - When disabled: Shows 5 specific intent buttons (拓展人脉/交朋友/深度讨论/娱乐放松/浪漫社交)
+- **3-Item Selection Limit**: Maximum 3 specific intents can be selected; toast notification when exceeded
+- **Progressive Disclosure**: Intent buttons only visible when "灵活开放" is off
+
+### LocationPickerSheet Simplification
+- **Removed "最近使用" Section**: Simplified to direct cluster selection without redundant recent history
+
 ### JoinBlindBoxSheet UI/UX Refactoring
 - **Form Structure Reorganization**: Restructured into 3 clear sections with visual separators:
   - **STEP 1: 必填信息 (Required)**: Budget selection + District selection (moved from optional)

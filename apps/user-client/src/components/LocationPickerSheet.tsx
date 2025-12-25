@@ -1,6 +1,6 @@
 import { Drawer } from "vaul";
 import { Button } from "@/components/ui/button";
-import { MapPin, X, Clock, Check, Flame, Zap } from "lucide-react";
+import { MapPin, X, Check, Flame, Zap } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -28,9 +28,6 @@ const hongkongClusters = [
   { id: 'hkisland', displayName: '港岛', heat: 'hot' as const },
   { id: 'kowloon', displayName: '九龙', heat: 'hot' as const },
 ];
-
-// 最近使用的片区（可以后续从localStorage读取）
-const recentClusters = ['nanshan', 'futian'];
 
 export default function LocationPickerSheet({ 
   open, 
@@ -106,42 +103,10 @@ export default function LocationPickerSheet({
               </TabsList>
 
               <TabsContent value="深圳" className="mt-4 space-y-6">
-                {/* 最近使用 */}
-                <div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                    <Clock className="h-4 w-4" />
-                    <span>最近使用</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {recentClusters.map(clusterId => {
-                      const cluster = shenzhenClusters.find(c => c.id === clusterId);
-                      if (!cluster) return null;
-                      const isSelected = tempClusterId === cluster.id;
-                      return (
-                        <button
-                          key={cluster.id}
-                          onClick={() => handleSelectCluster(cluster.id)}
-                          className={`
-                            px-4 py-2 rounded-full text-sm font-medium
-                            transition-all border-2
-                            ${isSelected
-                              ? 'bg-primary text-primary-foreground border-primary'
-                              : 'bg-background border-border hover-elevate'
-                            }
-                          `}
-                          data-testid={`chip-recent-${cluster.id}`}
-                        >
-                          {cluster.displayName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 推荐商圈（片区卡片） */}
+                {/* 片区选择 - 简洁卡片设计 */}
                 <div>
                   <div className="text-sm text-muted-foreground mb-3">
-                    推荐商圈
+                    选择片区
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {shenzhenClusters.map(cluster => {
