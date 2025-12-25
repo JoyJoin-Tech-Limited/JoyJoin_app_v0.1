@@ -1,20 +1,25 @@
-import { parseISO, differenceInHours, differenceInMinutes, differenceInDays, getHours, getMinutes, getDay, getMonth, getDate, getYear, isSameYear } from "date-fns";
+import { differenceInHours, differenceInMinutes, differenceInDays, getHours, getMinutes, getDay, getMonth, getDate, getYear, isSameYear } from "date-fns";
 
 const WEEKDAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
 function parseAsChinaTime(dateInput: Date | string): Date {
   if (typeof dateInput === "string") {
-    let dateStr = dateInput;
-    if (dateStr.endsWith("Z")) {
-      dateStr = dateStr.slice(0, -1);
+    let dateStr = dateInput.trim()
+      .replace(/\.\d{1,3}Z?$/, "")
+      .replace("Z", "")
+      .replace(/[+-]\d{2}:\d{2}$/, "");
+    const parts = dateStr.match(/(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (parts) {
+      const [, year, month, day, hour, minute, second = "0"] = parts;
+      return new Date(
+        parseInt(year), parseInt(month) - 1, parseInt(day),
+        parseInt(hour), parseInt(minute), parseInt(second)
+      );
     }
-    if (dateStr.includes("+") || dateStr.includes("-")) {
-      const plusIndex = dateStr.lastIndexOf("+");
-      const minusIndex = dateStr.lastIndexOf("-");
-      const tzIndex = Math.max(plusIndex, minusIndex);
-      if (tzIndex > 10) {
-        dateStr = dateStr.slice(0, tzIndex);
-      }
+    const dateParts = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (dateParts) {
+      const [, year, month, day] = dateParts;
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     }
     return new Date(dateStr);
   }
@@ -95,7 +100,15 @@ export function extractChineseTime(dateInput: Date | string): string {
 }
 
 export function getCountdown(deadlineInput: Date | string): CountdownResult {
-  const deadline = typeof deadlineInput === "string" ? parseISO(deadlineInput) : deadlineInput;
+  const deadlineChina = parseAsChinaTime(deadlineInput);
+  const deadline = new Date(Date.UTC(
+    deadlineChina.getFullYear(),
+    deadlineChina.getMonth(),
+    deadlineChina.getDate(),
+    deadlineChina.getHours() - 8,
+    deadlineChina.getMinutes(),
+    deadlineChina.getSeconds()
+  ));
   const now = new Date();
   
   const minutesLeft = differenceInMinutes(deadline, now);
