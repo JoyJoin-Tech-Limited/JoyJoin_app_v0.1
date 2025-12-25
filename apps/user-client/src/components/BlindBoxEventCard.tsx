@@ -8,7 +8,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
 import JoinBlindBoxSheet from "./JoinBlindBoxSheet";
 import { getArchetypeImage } from "@/lib/archetypeImages";
-import { getCountdown, formatTimeStringToChinese, type UrgencyLevel } from "@/lib/chineseDateTime";
+import { getCountdown, type UrgencyLevel } from "@/lib/chineseDateTime";
 
 type PriceTier = "150以下" | "150-200" | "200-300" | "300-500";
 
@@ -105,8 +105,6 @@ export default function BlindBoxEventCard({
     setIsFlipped(!isFlipped);
   };
 
-  const chineseTime = formatTimeStringToChinese(time);
-
   const gameplaySteps = [
     { icon: Gift, title: "盲抽匹配", desc: "AI为你挑选志趣相投的同伴" },
     { icon: UserCheck, title: "组队成功", desc: "确认参与，认识新朋友" },
@@ -153,7 +151,7 @@ export default function BlindBoxEventCard({
                       <div className="flex items-center gap-1.5 text-sm font-medium">
                         <Calendar className="h-4 w-4 text-primary" />
                         <span>
-                          {date} {chineseTime}
+                          {date} {time}
                         </span>
                       </div>
                       <Badge

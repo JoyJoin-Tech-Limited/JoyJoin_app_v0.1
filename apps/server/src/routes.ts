@@ -2169,8 +2169,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Create Christmas event on Dec 27, 2025 at 9 PM
-      const christmasDate = new Date("2025-12-27T21:00:00");
+      // Create Christmas event on Dec 25, 2025 at 9 PM China time (UTC+8)
+      const christmasDate = new Date("2025-12-25T21:00:00+08:00");
       
       const created = await db.insert(blindBoxEvents).values({
         userId,

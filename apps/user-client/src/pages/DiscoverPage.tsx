@@ -13,8 +13,8 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { useQuery } from "@tanstack/react-query";
-import { format, parseISO, differenceInDays } from "date-fns";
-import { zhCN } from "date-fns/locale";
+import { differenceInDays } from "date-fns";
+import { formatChineseDateOnly, extractChineseTime } from "@/lib/chineseDateTime";
 
 interface EventPool {
   id: string;
@@ -125,9 +125,10 @@ export default function DiscoverPage() {
   // Transform event pools to blind box event card props
   const transformEventPool = (pool: EventPool) => {
     try {
-      const dateTime = parseISO(pool.dateTime);
-      const dayOfWeek = format(dateTime, 'EEEE', { locale: zhCN });
-      const time = format(dateTime, 'HH:mm');
+      // Use Chinese date format: "12月25日 (周四)" with proper timezone
+      const chineseDate = formatChineseDateOnly(pool.dateTime);
+      // Extract time in Chinese format: "晚上9点" with proper timezone  
+      const chineseTime = extractChineseTime(pool.dateTime);
       const area = `${pool.city}•${pool.district}`;
       
       // Use pool title as mystery title, or generate one
@@ -141,8 +142,8 @@ export default function DiscoverPage() {
 
       return {
         id: pool.id,
-        date: dayOfWeek,
-        time,
+        date: chineseDate,
+        time: chineseTime,
         eventType: (pool.eventType === "其他" ? "饭局" : pool.eventType) as "饭局" | "酒局",
         area,
         city: pool.city,
