@@ -1,7 +1,9 @@
 import { Compass, Calendar, MessageSquare, User } from "lucide-react";
 import { useLocation } from "wouter";
+import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
+import { queryClient } from "@/lib/queryClient";
 
 interface NavItem {
   icon: any;
@@ -22,6 +24,48 @@ export default function BottomNav() {
   const [location] = useLocation();
   const { data: notificationCounts } = useNotificationCounts();
 
+  // Prefetch data for other tabs on mount using requestIdleCallback
+  useEffect(() => {
+    const prefetchData = () => {
+      // Check network quality - skip prefetch on slow connections
+      const connection = (navigator as any).connection;
+      if (connection?.effectiveType === '2g' || connection?.saveData) {
+        return;
+      }
+
+      // Prefetch in priority order: events -> chats -> profile
+      // These keys match the actual queryKey arrays used in the pages
+      const prefetchQueries = [
+        ['/api/my-events'],           // EventsPage
+        ['/api/my-pool-registrations'], // EventsPage
+        ['/api/events/joined'],        // ChatsPage
+        ['/api/auth/user'],            // ProfilePage (auth state)
+      ];
+
+      prefetchQueries.forEach((queryKey, index) => {
+        // Stagger prefetch to avoid network congestion
+        setTimeout(() => {
+          queryClient.prefetchQuery({ queryKey });
+        }, index * 150);
+      });
+    };
+
+    // Use requestIdleCallback for non-blocking prefetch
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(prefetchData, { timeout: 2000 });
+    } else {
+      // Fallback for Safari
+      setTimeout(prefetchData, 100);
+    }
+  }, []);
+
+  const [, setLocation] = useLocation();
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+    e.preventDefault();
+    setLocation(path);
+  };
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t z-50 safe-area-pb">
       <div className="flex items-center justify-around h-16">
@@ -39,6 +83,7 @@ export default function BottomNav() {
             <a
               key={item.path}
               href={item.path}
+              onClick={(e) => handleNavClick(e, item.path)}
               className={`relative flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors ${
                 isActive ? "text-primary" : "text-muted-foreground"
               }`}
