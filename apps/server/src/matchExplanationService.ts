@@ -3,10 +3,19 @@
  * 
  * 使用 DeepSeek API 生成个性化的匹配解释，说明为什么这些用户被匹配在一起。
  * 用于活动详情页的"桌友分析"部分。
+ * 
+ * 特性：
+ * - 配对解释缓存（存储在 eventPoolGroups.pairExplanationsCache）
+ * - 破冰话题缓存（存储在 eventPoolGroups.iceBreakersCache）
+ * - 并发限制（最多3个并发API调用）
+ * - 指数退避重试（最多2次重试）
  */
 
 import OpenAI from 'openai';
 import { chemistryMatrix } from './archetypeChemistry';
+import { db } from './db';
+import { eventPoolGroups } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
 // Configure DeepSeek client with 10-second timeout
 const deepseekClient = new OpenAI({
@@ -106,6 +115,133 @@ export interface GroupAnalysis {
   groupDynamics: string; // 整体动态描述
   pairExplanations: MatchExplanation[]; // 两两配对解释
   iceBreakers: string[]; // 推荐破冰话题
+}
+
+// ============ 缓存类型 ============
+
+interface CachedPairExplanation extends MatchExplanation {
+  generatedAt: string; // ISO date string
+}
+
+interface CachedIceBreakers {
+  topics: string[];
+  generatedAt: string; // ISO date string
+}
+
+// Cache expiry: 7 days
+const CACHE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+
+// ============ 缓存函数 ============
+
+/**
+ * 从数据库加载缓存的配对解释
+ */
+async function loadCachedPairExplanations(groupId: string): Promise<CachedPairExplanation[] | null> {
+  try {
+    const group = await db.query.eventPoolGroups.findFirst({
+      where: eq(eventPoolGroups.id, groupId),
+    });
+    
+    if (!group?.pairExplanationsCache) return null;
+    
+    const cached = group.pairExplanationsCache as CachedPairExplanation[];
+    if (!Array.isArray(cached) || cached.length === 0) return null;
+    
+    // Check if cache is still valid
+    const firstEntry = cached[0];
+    if (firstEntry?.generatedAt) {
+      const generatedTime = new Date(firstEntry.generatedAt).getTime();
+      if (Date.now() - generatedTime > CACHE_EXPIRY_MS) {
+        console.log(`[MatchExplanation] Cache expired for group ${groupId}`);
+        return null;
+      }
+    }
+    
+    return cached;
+  } catch (error) {
+    console.warn('[MatchExplanation] Error loading cache:', error);
+    return null;
+  }
+}
+
+/**
+ * 保存配对解释到数据库缓存
+ */
+async function savePairExplanationsCache(
+  groupId: string, 
+  explanations: MatchExplanation[]
+): Promise<void> {
+  try {
+    const now = new Date().toISOString();
+    const cached: CachedPairExplanation[] = explanations.map(exp => ({
+      ...exp,
+      generatedAt: now,
+    }));
+    
+    await db.update(eventPoolGroups)
+      .set({ 
+        pairExplanationsCache: cached,
+        updatedAt: new Date(),
+      })
+      .where(eq(eventPoolGroups.id, groupId));
+    
+    console.log(`[MatchExplanation] Saved ${cached.length} pair explanations to cache for group ${groupId}`);
+  } catch (error) {
+    console.warn('[MatchExplanation] Error saving cache:', error);
+  }
+}
+
+/**
+ * 从数据库加载缓存的破冰话题
+ */
+async function loadCachedIceBreakers(groupId: string): Promise<string[] | null> {
+  try {
+    const group = await db.query.eventPoolGroups.findFirst({
+      where: eq(eventPoolGroups.id, groupId),
+    });
+    
+    if (!group?.iceBreakersCache) return null;
+    
+    const cached = group.iceBreakersCache as CachedIceBreakers;
+    if (!cached?.topics || !Array.isArray(cached.topics)) return null;
+    
+    // Check if cache is still valid
+    if (cached.generatedAt) {
+      const generatedTime = new Date(cached.generatedAt).getTime();
+      if (Date.now() - generatedTime > CACHE_EXPIRY_MS) {
+        console.log(`[IceBreakers] Cache expired for group ${groupId}`);
+        return null;
+      }
+    }
+    
+    return cached.topics;
+  } catch (error) {
+    console.warn('[IceBreakers] Error loading cache:', error);
+    return null;
+  }
+}
+
+/**
+ * 保存破冰话题到数据库缓存
+ */
+async function saveIceBreakersCache(groupId: string, topics: string[]): Promise<void> {
+  try {
+    const cached: CachedIceBreakers = {
+      topics,
+      generatedAt: new Date().toISOString(),
+    };
+    
+    await db.update(eventPoolGroups)
+      .set({ 
+        iceBreakersCache: cached,
+        updatedAt: new Date(),
+      })
+      .where(eq(eventPoolGroups.id, groupId));
+    
+    console.log(`[IceBreakers] Saved ${topics.length} ice breakers to cache for group ${groupId}`);
+  } catch (error) {
+    console.warn('[IceBreakers] Error saving cache:', error);
+  }
 }
 
 // ============ 原型中文名映射 ============
@@ -257,14 +393,9 @@ function generateFallbackExplanation(
 }
 
 /**
- * 为整个小组生成分析报告
+ * 生成所有配对的解释（不使用缓存）
  */
-export async function generateGroupAnalysis(
-  groupId: string,
-  members: MatchMember[],
-  eventType: string = "饭局"
-): Promise<GroupAnalysis> {
-  // 构建所有配对
+async function generateFreshPairExplanations(members: MatchMember[]): Promise<MatchExplanation[]> {
   const pairs: Array<{ member1: MatchMember; member2: MatchMember }> = [];
   for (let i = 0; i < members.length; i++) {
     for (let j = i + 1; j < members.length; j++) {
@@ -272,12 +403,48 @@ export async function generateGroupAnalysis(
     }
   }
   
-  // 并行生成所有配对的解释（带并发限制）
-  const pairExplanations = await runWithConcurrencyLimit(
+  return runWithConcurrencyLimit(
     pairs,
     async (pair) => generatePairExplanation(pair.member1, pair.member2),
     API_CONFIG.CONCURRENCY_LIMIT
   );
+}
+
+/**
+ * 为整个小组生成分析报告
+ */
+export async function generateGroupAnalysis(
+  groupId: string,
+  members: MatchMember[],
+  eventType: string = "饭局",
+  useCache: boolean = true
+): Promise<GroupAnalysis> {
+  let pairExplanations: MatchExplanation[] = [];
+  let iceBreakers: string[] = [];
+  
+  // Try to load from cache first
+  if (useCache) {
+    const cachedExplanations = await loadCachedPairExplanations(groupId);
+    const cachedIceBreakers = await loadCachedIceBreakers(groupId);
+    
+    if (cachedExplanations && cachedIceBreakers) {
+      console.log(`[MatchExplanation] Using cached data for group ${groupId}`);
+      pairExplanations = cachedExplanations;
+      iceBreakers = cachedIceBreakers;
+    } else {
+      // Cache miss or partial cache - regenerate
+      pairExplanations = await generateFreshPairExplanations(members);
+      iceBreakers = await generateIceBreakers(members, eventType);
+      
+      // Save to cache (fire and forget)
+      savePairExplanationsCache(groupId, pairExplanations).catch(() => {});
+      saveIceBreakersCache(groupId, iceBreakers).catch(() => {});
+    }
+  } else {
+    // No cache requested - generate fresh
+    pairExplanations = await generateFreshPairExplanations(members);
+    iceBreakers = await generateIceBreakers(members, eventType);
+  }
   
   // 计算整体化学反应
   const totalChemistry = pairExplanations.reduce((sum, exp) => sum + exp.chemistryScore, 0);
@@ -293,9 +460,6 @@ export async function generateGroupAnalysis(
   
   // 生成小组动态描述
   const groupDynamics = generateGroupDynamics(members, avgChemistry, eventType);
-  
-  // 生成破冰话题
-  const iceBreakers = await generateIceBreakers(members, eventType);
   
   return {
     groupId,

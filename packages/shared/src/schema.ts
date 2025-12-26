@@ -333,6 +333,8 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   overallScore: integer("overall_score"), // 综合分数
   temperatureLevel: varchar("temperature_level"), // 化学反应温度等级: fire | warm | mild | cold
   matchExplanation: text("match_explanation"), // AI生成的匹配解释
+  pairExplanationsCache: jsonb("pair_explanations_cache"), // 缓存的配对解释: [{pairKey, explanation, chemistryScore, sharedInterests, connectionPoints, generatedAt}]
+  iceBreakersCache: jsonb("ice_breakers_cache"), // 缓存的破冰话题: {topics: string[], generatedAt: string}
   
   // 活动详情（匹配后生成）
   venueName: varchar("venue_name"),
