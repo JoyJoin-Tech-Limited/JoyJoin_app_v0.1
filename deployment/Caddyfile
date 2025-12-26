@@ -1,0 +1,73 @@
+# JoyJoin Caddy Configuration
+# 智能网关 + 自动 HTTPS + 跨子域名身份共享
+# 
+# 部署说明:
+# 1. 确保 DNS A 记录指向服务器 IP:
+#    - yuejuapp.com -> 服务器IP
+#    - www.yuejuapp.com -> 服务器IP  
+#    - api.yuejuapp.com -> 服务器IP
+#    - admin.yuejuapp.com -> 服务器IP
+# 2. Caddy 会自动申请 Let's Encrypt SSL 证书
+# 3. 所有 HTTP 请求自动重定向到 HTTPS
+
+# 用户端 (主域名 + www)
+yuejuapp.com, www.yuejuapp.com {
+    encode gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+
+    reverse_proxy joyjoin-user:80 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# 管理后台 (admin 子域名)
+admin.yuejuapp.com {
+    encode gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+
+    reverse_proxy joyjoin-admin:80 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# 后端接口 (api 子域名)
+api.yuejuapp.com {
+    encode gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        Referrer-Policy strict-origin-when-cross-origin
+        Access-Control-Allow-Credentials true
+    }
+
+    @cors_preflight method OPTIONS
+    handle @cors_preflight {
+        header Access-Control-Allow-Origin "{header.Origin}"
+        header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        header Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+        header Access-Control-Max-Age "86400"
+        respond "" 204
+    }
+
+    reverse_proxy joyjoin-api:5000 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up Host {host}
+    }
+}

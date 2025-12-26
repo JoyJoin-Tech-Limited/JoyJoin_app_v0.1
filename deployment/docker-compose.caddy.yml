@@ -1,0 +1,83 @@
+# JoyJoin Docker Compose with Caddy
+# 智能网关 + 自动 HTTPS 部署配置
+#
+# 使用方法:
+# 1. 复制 .env.production.example 到 .env.production 并填写真实值
+# 2. 构建镜像: docker-compose -f docker-compose.caddy.yml build
+# 3. 启动服务: docker-compose -f docker-compose.caddy.yml up -d
+# 4. 查看日志: docker-compose -f docker-compose.caddy.yml logs -f
+
+version: '3.8'
+
+services:
+  # Caddy 反向代理 (自动 HTTPS)
+  caddy:
+    image: caddy:2-alpine
+    container_name: joyjoin-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - joyjoin-api
+      - joyjoin-user
+      - joyjoin-admin
+    networks:
+      - joyjoin-network
+
+  # 后端 API 服务
+  joyjoin-api:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.api
+    container_name: joyjoin-api
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+    expose:
+      - "5000"
+    networks:
+      - joyjoin-network
+
+  # 用户端前端
+  joyjoin-user:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.user
+      args:
+        - VITE_API_URL=https://api.yuejuapp.com
+    container_name: joyjoin-user
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - joyjoin-network
+
+  # 管理后台前端
+  joyjoin-admin:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.admin
+      args:
+        - VITE_API_URL=https://api.yuejuapp.com
+    container_name: joyjoin-admin
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - joyjoin-network
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  joyjoin-network:
+    driver: bridge

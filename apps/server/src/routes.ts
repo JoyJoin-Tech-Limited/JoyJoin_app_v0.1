@@ -176,14 +176,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     tableName: "sessions",
   });
   
+  // Cookie domain configuration for cross-subdomain session sharing
+  // In production with yuejuapp.com, use '.yuejuapp.com' to share across subdomains
+  const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+  
   app.use(session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    proxy: process.env.NODE_ENV === 'production', // Required for secure cookies behind Caddy proxy
     cookie: {
+      domain: cookieDomain, // '.yuejuapp.com' enables sharing across api/admin/www subdomains
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production', // true when Caddy provides HTTPS
       maxAge: sessionTtl,
       sameSite: 'lax',
     },

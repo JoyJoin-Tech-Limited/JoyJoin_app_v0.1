@@ -59,3 +59,18 @@ The project uses a monorepo setup (`joyjoin-monorepo`) containing separate appli
 - **Validation:** `zod`.
 - **Authentication:** `express-session`, `connect-pg-simple`.
 - **AI Services:** DeepSeek API.
+
+## Deployment Configuration
+
+### Production Deployment (Caddy + Docker)
+- **Domain:** yuejuapp.com with subdomains (www, api, admin)
+- **Reverse Proxy:** Caddy for automatic HTTPS via Let's Encrypt
+- **Session Sharing:** Cross-subdomain cookie with `.yuejuapp.com` domain
+- **Files:**
+  - `deployment/Caddyfile` - Caddy reverse proxy configuration
+  - `deployment/docker-compose.caddy.yml` - Docker Compose with Caddy
+  - `deployment/.env.production.example` - Production environment template
+- **Key Settings:**
+  - `COOKIE_DOMAIN=.yuejuapp.com` enables session sharing across subdomains
+  - `app.set('trust proxy', 1)` allows Express to trust Caddy's X-Forwarded headers
+  - `proxy: true` in session config for secure cookies behind proxy
