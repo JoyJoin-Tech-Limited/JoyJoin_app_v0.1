@@ -17,6 +17,88 @@ const deepseekClient = new OpenAI({
   baseURL: 'https://api.deepseek.com',
 });
 
+/**
+ * 精确年龄计算函数
+ * @param birthYear 出生年份
+ * @param birthMonth 出生月份 (1-12)，可选
+ * @param birthDay 出生日期 (1-31)，可选
+ * @returns 精确年龄
+ */
+function calculatePreciseAge(birthYear: number, birthMonth?: number, birthDay?: number): number {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11
+  const currentDay = now.getDate();
+  
+  let age = currentYear - birthYear;
+  
+  // 如果提供了月份和日期，检查生日是否已过
+  if (birthMonth !== undefined) {
+    if (currentMonth < birthMonth) {
+      age -= 1; // 生日还没到
+    } else if (currentMonth === birthMonth && birthDay !== undefined) {
+      if (currentDay < birthDay) {
+        age -= 1; // 生日还没到
+      }
+    }
+  }
+  
+  return age;
+}
+
+/**
+ * 从用户输入解析生日信息
+ * 支持格式: "1998-10-02", "1998年10月2日", "1998/10/02", "1998.10.02"
+ * @returns { birthYear, birthMonth?, birthDay? }
+ */
+function parseBirthDateFromInput(input: string): { birthYear?: number; birthMonth?: number; birthDay?: number } {
+  // 完整日期格式: 1998-10-02, 1998年10月2日, 1998/10/02, 1998.10.02
+  const fullDatePatterns = [
+    /(\d{4})[-\/\.年](\d{1,2})[-\/\.月](\d{1,2})日?/,
+    /(\d{4})[-\/\.](\d{1,2})[-\/\.](\d{1,2})/
+  ];
+  
+  for (const pattern of fullDatePatterns) {
+    const match = input.match(pattern);
+    if (match) {
+      const year = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10);
+      const day = parseInt(match[3], 10);
+      if (year >= 1960 && year <= 2010 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        return { birthYear: year, birthMonth: month, birthDay: day };
+      }
+    }
+  }
+  
+  // 仅年月格式: 1998年10月, 1998-10
+  const yearMonthPatterns = [
+    /(\d{4})[-\/\.年](\d{1,2})月?/
+  ];
+  
+  for (const pattern of yearMonthPatterns) {
+    const match = input.match(pattern);
+    if (match) {
+      const year = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10);
+      if (year >= 1960 && year <= 2010 && month >= 1 && month <= 12) {
+        return { birthYear: year, birthMonth: month };
+      }
+    }
+  }
+  
+  // 仅年份: 1998年, 1998
+  const yearPattern = /(\d{4})年?/;
+  const match = input.match(yearPattern);
+  if (match) {
+    const year = parseInt(match[1], 10);
+    if (year >= 1960 && year <= 2010) {
+      return { birthYear: year };
+    }
+  }
+  
+  return {};
+}
+
 // ============ 智能洞察类型定义 ============
 
 // 智能洞察条目 - LLM自由记录的有价值信息
@@ -264,7 +346,7 @@ const XIAOYUE_SYSTEM_PROMPT = `你是"小悦"，悦聚平台的AI社交助手。
 以下字段会由系统自动显示快捷回复按钮，你只需要简洁地问一句话，**绝对不要在对话中列举选项**：
 - 社交目的/意图：错误示例："想拓展人脉、交朋友、还是纯玩？" 正确："来悦聚想干嘛？"
 - 性别：错误示例："男生还是女生？" 正确："性别方便说吗？"
-- 语言/方言：错误示例："普通话、粤语、还是英语？" 正确："平时说什么话？"
+- 语言/方言：正确："日常讲什么话？普通话、粤语、英语还是会说老家方言？"
 - 感情状态：错误示例："单身、恋爱中、还是已婚？" 正确："感情状态呢？"
 - 学历：错误示例："本科、硕士、还是博士？" 正确："什么学历？"
 - 兄弟姐妹：错误示例："独生子女还是有兄弟姐妹？" 正确："家里就你一个？"
@@ -1365,9 +1447,25 @@ export async function* continueXiaoyueChatStream(
   userMessage: string,
   conversationHistory: ChatMessage[]
 ): AsyncGenerator<{ type: 'content' | 'done' | 'error'; content?: string; collectedInfo?: Partial<XiaoyueCollectedInfo>; isComplete?: boolean; rawMessage?: string; cleanMessage?: string; conversationHistory?: ChatMessage[] }> {
+  
+  // 检测用户消息中是否包含生日信息，如果有则精确计算年龄
+  const birthInfo = parseBirthDateFromInput(userMessage);
+  let ageHint = '';
+  if (birthInfo.birthYear) {
+    const preciseAge = calculatePreciseAge(birthInfo.birthYear, birthInfo.birthMonth, birthInfo.birthDay);
+    const now = new Date();
+    const dateStr = birthInfo.birthMonth && birthInfo.birthDay 
+      ? `${birthInfo.birthYear}年${birthInfo.birthMonth}月${birthInfo.birthDay}日`
+      : birthInfo.birthMonth 
+        ? `${birthInfo.birthYear}年${birthInfo.birthMonth}月`
+        : `${birthInfo.birthYear}年`;
+    ageHint = `\n\n【系统提示：用户提到的生日是${dateStr}，根据今天${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日计算，TA今年${preciseAge}岁。请使用这个准确年龄，记录birthYear为${birthInfo.birthYear}】`;
+    console.log(`[AgeCalc] Detected birth date: ${dateStr}, calculated age: ${preciseAge}`);
+  }
+  
   const updatedHistory: ChatMessage[] = [
     ...conversationHistory,
-    { role: 'user', content: userMessage }
+    { role: 'user', content: userMessage + ageHint }
   ];
 
   try {
@@ -2219,6 +2317,21 @@ ${context}
     console.error('[Orchestrator] 流式编排器错误:', orchestratorError);
   }
   
+  // 4.6 【新增】精确年龄计算：检测用户消息中的生日信息
+  const birthInfo = parseBirthDateFromInput(userMessage);
+  let ageHint = '';
+  if (birthInfo.birthYear) {
+    const preciseAge = calculatePreciseAge(birthInfo.birthYear, birthInfo.birthMonth, birthInfo.birthDay);
+    const now = new Date();
+    const dateStr = birthInfo.birthMonth && birthInfo.birthDay 
+      ? `${birthInfo.birthYear}年${birthInfo.birthMonth}月${birthInfo.birthDay}日`
+      : birthInfo.birthMonth 
+        ? `${birthInfo.birthYear}年${birthInfo.birthMonth}月`
+        : `${birthInfo.birthYear}年`;
+    ageHint = `\n\n【系统提示：用户提到的生日是${dateStr}，根据今天${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日计算，TA今年${preciseAge}岁。请使用这个准确年龄，记录birthYear为${birthInfo.birthYear}】`;
+    console.log(`[AgeCalc Inference] Detected birth date: ${dateStr}, calculated age: ${preciseAge}`);
+  }
+  
   // 5. 构建增强的消息历史（只用于API调用，不保存）
   const enhancedHistory: ChatMessage[] = conversationHistory.map((msg, idx) => {
     if (idx === 0 && msg.role === 'system') {
@@ -2229,7 +2342,7 @@ ${context}
   
   const updatedHistory: ChatMessage[] = [
     ...enhancedHistory,
-    { role: 'user', content: userMessage }
+    { role: 'user', content: userMessage + ageHint }
   ];
 
   try {
