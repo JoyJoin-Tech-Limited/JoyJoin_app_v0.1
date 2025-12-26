@@ -25,8 +25,21 @@ const keepAliveAgent = new https.Agent({
 const deepseekClient = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
   baseURL: 'https://api.deepseek.com',
+  // @ts-expect-error - httpAgent is supported by the underlying fetch but not typed
   httpAgent: keepAliveAgent,
 });
+
+// DeepSeek cache monitoring helper
+function logCacheStats(usage: any, context: string) {
+  if (usage?.prompt_cache_hit_tokens !== undefined) {
+    const hitTokens = usage.prompt_cache_hit_tokens || 0;
+    const missTokens = usage.prompt_cache_miss_tokens || 0;
+    const hitRate = hitTokens + missTokens > 0 
+      ? Math.round((hitTokens / (hitTokens + missTokens)) * 100) 
+      : 0;
+    console.log(`[DeepSeek Cache ${context}] Hit: ${hitTokens}, Miss: ${missTokens}, Rate: ${hitRate}%`);
+  }
+}
 
 /**
  * 精确年龄计算函数
@@ -214,21 +227,74 @@ export interface ChatMessage {
   content: string;
 }
 
-// ============ 对话历史裁剪函数 ============
+// ============ 对话历史裁剪函数（V3 状态驱动摘要）============
+
 /**
- * 裁剪对话历史以减少token数量
- * 保留system prompt + 最近N轮对话 + 早期摘要
+ * 生成已收集信息的结构化摘要
+ * 用于替代简单的"已完成X轮对话"占位符
+ */
+function buildCollectedInfoSummary(collected?: Partial<XiaoyueCollectedInfo>): string {
+  if (!collected) return '';
+  
+  const fields: string[] = [];
+  const currentYear = new Date().getFullYear();
+  
+  if (collected.displayName) fields.push(`昵称:${collected.displayName}`);
+  if (collected.gender) fields.push(`性别:${collected.gender}`);
+  if (collected.birthYear) fields.push(`年龄:${currentYear - collected.birthYear}岁`);
+  if (collected.currentCity) fields.push(`城市:${collected.currentCity}`);
+  if (collected.industry) fields.push(`行业:${collected.industry}`);
+  if (collected.industrySegment) fields.push(`细分:${collected.industrySegment}`);
+  if (collected.occupation) fields.push(`职位:${collected.occupation}`);
+  if (collected.seniority) fields.push(`资历:${collected.seniority}`);
+  if (collected.interestsTop?.length) fields.push(`兴趣:${collected.interestsTop.slice(0, 3).join(',')}`);
+  if (collected.hometown) fields.push(`家乡:${collected.hometown}`);
+  if (collected.relationshipStatus) fields.push(`感情:${collected.relationshipStatus}`);
+  
+  if (fields.length === 0) return '';
+  return `[已收集] ${fields.join(' | ')}`;
+}
+
+/**
+ * 检测待追问项（帮助模型继续追问）
+ */
+function detectPendingFollowups(collected?: Partial<XiaoyueCollectedInfo>): string[] {
+  if (!collected) return [];
+  const pending: string[] = [];
+  
+  // 有行业但没细分 → 需要追问细分
+  if (collected.industry && !collected.industrySegment) {
+    pending.push('待追问:行业细分');
+  }
+  // 有细分但没资历 → 需要追问资历
+  if (collected.industrySegment && !collected.seniority) {
+    pending.push('待追问:资历');
+  }
+  
+  return pending;
+}
+
+/**
+ * 裁剪对话历史以减少token数量（V3 优化版）
+ * - 使用状态驱动摘要，保留已收集字段信息
+ * - 自适应历史窗口：默认4轮，有待追问项时扩展到6轮
  * @param history 完整对话历史
- * @param maxTurns 保留的最近轮数（默认4轮 = 8条消息）
+ * @param collected 已收集的用户信息（可选，用于生成结构化摘要）
+ * @param baseMaxTurns 基础保留轮数（默认4轮）
  * @returns 裁剪后的对话历史
  */
 export function trimConversationHistory(
   history: ChatMessage[],
-  maxTurns: number = 4
+  collected?: Partial<XiaoyueCollectedInfo>,
+  baseMaxTurns: number = 4
 ): ChatMessage[] {
   // 分离system消息和对话消息
   const systemMessages = history.filter(m => m.role === 'system');
   const dialogueMessages = history.filter(m => m.role !== 'system');
+  
+  // 自适应历史窗口：有待追问项时扩展到6轮
+  const pendingFollowups = detectPendingFollowups(collected);
+  const maxTurns = pendingFollowups.length > 0 ? Math.min(baseMaxTurns + 2, 6) : baseMaxTurns;
   
   // 如果对话消息不超过限制，直接返回
   if (dialogueMessages.length <= maxTurns * 2) {
@@ -240,13 +306,20 @@ export function trimConversationHistory(
   const trimmedCount = dialogueMessages.length - maxTurns * 2;
   const trimmedTurns = Math.floor(trimmedCount / 2);
   
-  // 生成早期历史摘要
+  // 生成状态驱动摘要（V3 优化）
+  const collectedSummary = buildCollectedInfoSummary(collected);
+  const pendingInfo = pendingFollowups.length > 0 ? ` | ${pendingFollowups.join(', ')}` : '';
+  
+  const summaryContent = collectedSummary 
+    ? `${collectedSummary}${pendingInfo} | 已完成${trimmedTurns}轮对话`
+    : `[早期对话：已完成${trimmedTurns}轮，请继续推进]`;
+  
   const summaryMessage: ChatMessage = {
     role: 'system',
-    content: `[早期对话摘要：已完成${trimmedTurns}轮对话，用户信息收集进行中。请继续根据上下文推进。]`
+    content: summaryContent
   };
   
-  console.log(`[HistoryTrim] 裁剪历史: ${dialogueMessages.length}条 → ${recentHistory.length}条, 摘要${trimmedTurns}轮`);
+  console.log(`[HistoryTrim V3] 裁剪: ${dialogueMessages.length}条 → ${recentHistory.length}条 (${maxTurns}轮), 摘要: ${summaryContent.substring(0, 50)}...`);
   
   return [...systemMessages, summaryMessage, ...recentHistory];
 }
@@ -1115,6 +1188,9 @@ export async function continueXiaoyueChat(
   isComplete: boolean;
   conversationHistory: ChatMessage[];
 }> {
+  // 从历史消息中提取已收集的信息（用于状态驱动摘要）
+  const previouslyCollected = extractCollectedInfoFromHistory(conversationHistory);
+  
   // 检测用户消息中是否包含生日信息，如果有则精确计算年龄
   const birthInfo = parseBirthDateFromInput(userMessage);
   let ageHint = '';
@@ -1130,8 +1206,8 @@ export async function continueXiaoyueChat(
     console.log(`[AgeCalc NonStream] Detected birth date: ${dateStr}, calculated age: ${preciseAge}`);
   }
   
-  // 历史裁剪：减少token使用（保留最近4轮）
-  const trimmedHistory = trimConversationHistory(conversationHistory);
+  // 历史裁剪：使用状态驱动摘要（V3 优化）
+  const trimmedHistory = trimConversationHistory(conversationHistory, previouslyCollected);
   
   // API调用用的历史（裁剪后+ageHint，仅用于API调用）
   const apiCallHistory: ChatMessage[] = [
@@ -1149,6 +1225,9 @@ export async function continueXiaoyueChat(
       temperature: 0.8,
       max_tokens: 800,
     });
+
+    // 记录 DeepSeek cache 命中情况
+    logCacheStats(response.usage, 'continueChat');
 
     const assistantMessage = response.choices[0]?.message?.content || '抱歉，我走神了一下，你刚才说什么来着？';
     
@@ -1232,6 +1311,28 @@ function enforceOneQuestionPerTurn(message: string): string {
   return result.trim();
 }
 
+/**
+ * 从对话历史中提取已收集的信息（合并所有 assistant 消息中的 collected_info）
+ * 用于状态驱动摘要
+ */
+function extractCollectedInfoFromHistory(history: ChatMessage[]): Partial<XiaoyueCollectedInfo> {
+  const merged: Partial<XiaoyueCollectedInfo> = {};
+  
+  for (const msg of history) {
+    if (msg.role === 'assistant') {
+      const info = extractCollectedInfo(msg.content);
+      // 合并非空字段
+      Object.entries(info).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          (merged as any)[key] = value;
+        }
+      });
+    }
+  }
+  
+  return merged;
+}
+
 function extractCollectedInfo(message: string): Partial<XiaoyueCollectedInfo> {
   const match = message.match(/```collected_info\s*([\s\S]*?)```/);
   
@@ -1291,6 +1392,9 @@ export async function* continueXiaoyueChatStream(
   conversationHistory: ChatMessage[]
 ): AsyncGenerator<{ type: 'content' | 'done' | 'error'; content?: string; collectedInfo?: Partial<XiaoyueCollectedInfo>; isComplete?: boolean; rawMessage?: string; cleanMessage?: string; conversationHistory?: ChatMessage[] }> {
   
+  // 从历史消息中提取已收集的信息（用于状态驱动摘要）
+  const previouslyCollected = extractCollectedInfoFromHistory(conversationHistory);
+  
   // 检测用户消息中是否包含生日信息，如果有则精确计算年龄
   const birthInfo = parseBirthDateFromInput(userMessage);
   let ageHint = '';
@@ -1306,8 +1410,8 @@ export async function* continueXiaoyueChatStream(
     console.log(`[AgeCalc] Detected birth date: ${dateStr}, calculated age: ${preciseAge}`);
   }
   
-  // 历史裁剪：减少token使用（保留最近4轮）
-  const trimmedHistory = trimConversationHistory(conversationHistory);
+  // 历史裁剪：使用状态驱动摘要（V3 优化）
+  const trimmedHistory = trimConversationHistory(conversationHistory, previouslyCollected);
   
   // API调用用的历史（裁剪后+ageHint，仅用于API调用）
   const apiCallHistory: ChatMessage[] = [
