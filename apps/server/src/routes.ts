@@ -167,6 +167,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Amap config endpoint - provides map API keys for frontend (Admin Portal only)
+  app.get('/api/config/amap', (_req, res) => {
+    const apiKey = process.env.AMAP_API_KEY;
+    const securityKey = process.env.AMAP_SECURITY_KEY;
+    
+    if (!apiKey || !securityKey) {
+      return res.status(503).json({ error: 'Amap configuration not available' });
+    }
+    
+    res.json({
+      apiKey,
+      securityKey
+    });
+  });
+
   // Session middleware
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
