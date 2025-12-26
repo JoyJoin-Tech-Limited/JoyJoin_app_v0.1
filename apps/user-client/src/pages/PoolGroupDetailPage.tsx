@@ -88,11 +88,14 @@ export default function PoolGroupDetailPage() {
     
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     
     if (days > 0) {
-      return `还剩 ${days}天 ${hours}小时`;
+      return `报名截止 · ${days}天${hours}小时`;
+    } else if (hours > 0) {
+      return `报名截止 · ${hours}小时`;
     } else {
-      return `还剩 ${hours}小时`;
+      return `报名截止 · ${minutes}分钟`;
     }
   };
 

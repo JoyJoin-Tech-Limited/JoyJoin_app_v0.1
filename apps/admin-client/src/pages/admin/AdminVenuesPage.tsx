@@ -101,15 +101,26 @@ const CITIES = [
   { value: "香港", label: "香港" },
 ];
 
-const PRICE_RANGES = [
-  { value: "150以下", label: "¥150以下" },
-  { value: "150-200", label: "¥150-200" },
-  { value: "200-300", label: "¥200-300" },
-  { value: "300-500", label: "¥300-500" },
+// 餐厅价格范围（人均）
+const RESTAURANT_PRICE_RANGES = [
+  { value: "150以下", label: "¥150以下/人" },
+  { value: "150-200", label: "¥150-200/人" },
+  { value: "200-300", label: "¥200-300/人" },
+  { value: "300-500", label: "¥300-500/人" },
 ];
 
+// 酒吧价格范围（每杯）
+const BAR_PRICE_RANGES = [
+  { value: "80以下", label: "¥80以下/杯" },
+  { value: "80-150", label: "¥80-150/杯" },
+];
+
+// 兼容旧数据
+const PRICE_RANGES = RESTAURANT_PRICE_RANGES;
+
 const TAGS = ["cozy", "lively", "upscale", "casual"];
-const CUISINES = ["粤菜", "川菜", "日料", "西餐", "酒吧"];
+// 餐厅专属菜系（移除"酒吧"）
+const CUISINES = ["粤菜", "川菜", "日料", "西餐", "火锅", "烧烤", "东南亚菜", "融合菜"];
 const DECOR_STYLES = ["轻奢现代风", "绿植花园风", "复古工业风", "温馨日式风"];
 
 // 酒吧特有选项
@@ -1409,13 +1420,13 @@ export default function AdminVenuesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="priceRange">人均消费</Label>
+                <Label htmlFor="priceRange">{formData.type === "bar" ? "人均消费(每杯)" : "人均消费"}</Label>
                 <Select value={formData.priceRange} onValueChange={(v) => setFormData({ ...formData, priceRange: v })}>
                   <SelectTrigger data-testid="select-price-range">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PRICE_RANGES.map(range => (
+                    {(formData.type === "bar" ? BAR_PRICE_RANGES : RESTAURANT_PRICE_RANGES).map(range => (
                       <SelectItem key={range.value} value={range.value}>{range.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -1452,22 +1463,25 @@ export default function AdminVenuesPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>菜系类型</Label>
-              <div className="flex flex-wrap gap-2">
-                {CUISINES.map(cuisine => (
-                  <Badge
-                    key={cuisine}
-                    variant={formData.cuisines.includes(cuisine) ? "default" : "outline"}
-                    className="cursor-pointer hover-elevate active-elevate-2"
-                    onClick={() => toggleCuisine(cuisine)}
-                    data-testid={`cuisine-${cuisine}`}
-                  >
-                    {cuisine}
-                  </Badge>
-                ))}
+            {/* 餐厅专属：菜系类型 */}
+            {formData.type === "restaurant" && (
+              <div className="space-y-2">
+                <Label>菜系类型</Label>
+                <div className="flex flex-wrap gap-2">
+                  {CUISINES.map(cuisine => (
+                    <Badge
+                      key={cuisine}
+                      variant={formData.cuisines.includes(cuisine) ? "default" : "outline"}
+                      className="cursor-pointer hover-elevate active-elevate-2"
+                      onClick={() => toggleCuisine(cuisine)}
+                      data-testid={`cuisine-${cuisine}`}
+                    >
+                      {cuisine}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-2">
               <Label>装修风格</Label>
@@ -1715,13 +1729,13 @@ export default function AdminVenuesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-priceRange">人均消费</Label>
+                <Label htmlFor="edit-priceRange">{formData.type === "bar" ? "人均消费(每杯)" : "人均消费"}</Label>
                 <Select value={formData.priceRange} onValueChange={(v) => setFormData({ ...formData, priceRange: v })}>
                   <SelectTrigger data-testid="select-edit-price-range">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PRICE_RANGES.map(range => (
+                    {(formData.type === "bar" ? BAR_PRICE_RANGES : RESTAURANT_PRICE_RANGES).map(range => (
                       <SelectItem key={range.value} value={range.value}>{range.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -1758,22 +1772,25 @@ export default function AdminVenuesPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>菜系类型</Label>
-              <div className="flex flex-wrap gap-2">
-                {CUISINES.map(cuisine => (
-                  <Badge
-                    key={cuisine}
-                    variant={formData.cuisines.includes(cuisine) ? "default" : "outline"}
-                    className="cursor-pointer hover-elevate active-elevate-2"
-                    onClick={() => toggleCuisine(cuisine)}
-                    data-testid={`edit-cuisine-${cuisine}`}
-                  >
-                    {cuisine}
-                  </Badge>
-                ))}
+            {/* 餐厅专属：菜系类型 */}
+            {formData.type === "restaurant" && (
+              <div className="space-y-2">
+                <Label>菜系类型</Label>
+                <div className="flex flex-wrap gap-2">
+                  {CUISINES.map(cuisine => (
+                    <Badge
+                      key={cuisine}
+                      variant={formData.cuisines.includes(cuisine) ? "default" : "outline"}
+                      className="cursor-pointer hover-elevate active-elevate-2"
+                      onClick={() => toggleCuisine(cuisine)}
+                      data-testid={`edit-cuisine-${cuisine}`}
+                    >
+                      {cuisine}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-2">
               <Label>装修风格</Label>

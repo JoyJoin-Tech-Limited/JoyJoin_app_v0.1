@@ -556,7 +556,7 @@ export default function JoinBlindBoxSheet({
                   <div className="mb-3 p-2 bg-primary/5 rounded-lg border border-primary/20">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs text-muted-foreground">已选:</span>
-                      {selectedDistricts.slice(0, 6).map(id => {
+                      {selectedDistricts.map(id => {
                         const district = getDistrictById(id);
                         return district ? (
                           <Badge key={id} variant="secondary" className="text-xs">
@@ -564,9 +564,6 @@ export default function JoinBlindBoxSheet({
                           </Badge>
                         ) : null;
                       })}
-                      {selectedDistricts.length > 6 && (
-                        <span className="text-xs text-muted-foreground">+{selectedDistricts.length - 6}个</span>
-                      )}
                     </div>
                   </div>
                 )}
