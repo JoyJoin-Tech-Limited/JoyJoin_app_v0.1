@@ -3158,6 +3158,7 @@ export default function ChatRegistrationPage() {
   // 检查URL参数是否有预设模式（从其他页面跳转时使用）
   const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const presetMode = urlParams.get('mode') as RegistrationMode | null;
+  const presetTopic = urlParams.get('topic'); // 从编辑资料页跳转时的聚焦主题
   const isEnrichmentMode = presetMode === 'enrichment';
   
   // 获取用户数据（仅在enrichment模式下需要）
@@ -3172,8 +3173,13 @@ export default function ChatRegistrationPage() {
   // 计算enrichment上下文（基于用户数据）
   const enrichmentContext = useMemo(() => {
     if (!isEnrichmentMode || !userData) return null;
-    return calculateMissingFields(userData);
-  }, [isEnrichmentMode, userData]);
+    const context = calculateMissingFields(userData);
+    // 如果有预设主题，将其添加到上下文中以聚焦对话
+    if (presetTopic) {
+      (context as any).focusTopic = presetTopic;
+    }
+    return context;
+  }, [isEnrichmentMode, userData, presetTopic]);
   
   // 记录enrichment开始时的baseline（用于结尾展示提升）
   const [enrichmentBaseline, setEnrichmentBaseline] = useState<{ percentage: number; stars: number } | null>(null);

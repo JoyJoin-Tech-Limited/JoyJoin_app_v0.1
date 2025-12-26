@@ -134,7 +134,7 @@ export default function EventPoolRegistrationPage() {
   // Handle going to chat with Xiaoyue
   const handleGoToEnrichment = () => {
     setShowEnrichmentDialog(false);
-    navigate('/chat-registration?mode=enrichment');
+    navigate('/registration/chat?mode=enrichment');
   };
 
   const onSubmit = (data: RegistrationFormData) => {

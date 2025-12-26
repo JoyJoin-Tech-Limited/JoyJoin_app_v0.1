@@ -1,10 +1,25 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, User, GraduationCap, Briefcase, Heart, Star, Target, Users, MapPin } from "lucide-react";
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  ChevronDown,
+  User, 
+  GraduationCap, 
+  Briefcase, 
+  Heart, 
+  Star, 
+  Target, 
+  Users, 
+  MapPin,
+  MessageCircle,
+  Sparkles,
+  Settings2
+} from "lucide-react";
 import {
   getGenderDisplay,
   calculateAge,
@@ -22,6 +37,9 @@ import {
 } from "@/lib/userFieldMappings";
 import { getOccupationDisplayLabel, getIndustryDisplayLabel, WORK_MODE_TO_LABEL, INDUSTRY_ID_TO_LABEL, type WorkMode } from "@shared/occupations";
 import { getInterestLabel, getTopicLabel } from "@/data/interestsTopicsData";
+import { calculateProfileCompletion } from "@/lib/profileCompletion";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import xiaoyueAvatar from "@assets/Xiao_Yue_Avatar-03_1766766685650.png";
 
 interface Field {
   label: string;
@@ -41,10 +59,12 @@ interface SectionGroup {
   id: string;
   title: string;
   sections: Section[];
+  chatTopic?: string;
 }
 
 export default function EditProfilePage() {
   const [, setLocation] = useLocation();
+  const [manualEditOpen, setManualEditOpen] = useState(false);
   
   const { data: user, isLoading } = useQuery<any>({ queryKey: ["/api/auth/user"] });
 
@@ -61,17 +81,17 @@ export default function EditProfilePage() {
 
   const age = user.birthdate ? calculateAge(user.birthdate) : null;
   const ageDisplay = age ? formatAge(age) : null;
+  const { percentage, stars, missingFields } = calculateProfileCompletion(user);
 
-  // Calculate incomplete fields count for a section
   const getIncompleteCount = (fields: Field[]) => {
     return fields.filter(f => !f.value).length;
   };
 
-  // 4 Theme Groups (per UIUX expert recommendation)
   const sectionGroups: SectionGroup[] = [
     {
       id: "identity",
       title: "身份基础",
+      chatTopic: "基本信息",
       sections: [
         {
           id: "basic",
@@ -90,6 +110,7 @@ export default function EditProfilePage() {
     {
       id: "life",
       title: "生活快照",
+      chatTopic: "生活状态",
       sections: [
         {
           id: "life-status",
@@ -119,6 +140,7 @@ export default function EditProfilePage() {
     {
       id: "growth",
       title: "成长与职业",
+      chatTopic: "工作背景",
       sections: [
         {
           id: "education",
@@ -152,6 +174,7 @@ export default function EditProfilePage() {
     {
       id: "social-prefs",
       title: "社交偏好",
+      chatTopic: "兴趣爱好",
       sections: [
         {
           id: "interests",
@@ -201,9 +224,23 @@ export default function EditProfilePage() {
     },
   ];
 
+  const groupsWithMissingFields = sectionGroups.filter(group => 
+    group.sections.some(section => getIncompleteCount(section.fields) > 0)
+  );
+
+  const totalMissingCount = sectionGroups.reduce((acc, group) => 
+    acc + group.sections.reduce((sAcc, section) => sAcc + getIncompleteCount(section.fields), 0), 0
+  );
+
+  const handleChatWithXiaoyue = (topic?: string) => {
+    const url = topic 
+      ? `/registration/chat?mode=enrichment&topic=${encodeURIComponent(topic)}`
+      : '/registration/chat?mode=enrichment';
+    setLocation(url);
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b">
         <div className="flex items-center h-14 px-4">
           <Button 
@@ -218,67 +255,151 @@ export default function EditProfilePage() {
         </div>
       </div>
 
-      {/* Content - 4 Theme Groups */}
-      <div className="p-4 space-y-6 max-w-2xl mx-auto">
-        {sectionGroups.map((group) => (
-          <div key={group.id} className="space-y-3">
-            {/* Group Title */}
-            <h2 className="text-sm font-medium text-muted-foreground px-1">{group.title}</h2>
-            
-            {/* Sections in Group */}
-            <div className="space-y-2">
-              {group.sections.map((section) => {
-                const incompleteCount = getIncompleteCount(section.fields);
-                
+      <div className="p-4 space-y-4 max-w-2xl mx-auto">
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-4">
+              <div className="relative flex-shrink-0">
+                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary/30 shadow-lg">
+                  <img 
+                    src={xiaoyueAvatar} 
+                    alt="小悦" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
+                  <span className="text-[8px] text-white">在线</span>
+                </div>
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-semibold text-base">小悦</span>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                    AI助手
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  {totalMissingCount > 0 
+                    ? `还有${totalMissingCount}项资料可以补充，聊几句就能搞定~`
+                    : "资料已经很完善啦！随时来聊聊~"
+                  }
+                </p>
+
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs text-muted-foreground">画像精细度</span>
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Star 
+                        key={i}
+                        className={`h-3.5 w-3.5 transition-all ${
+                          i <= stars 
+                            ? "fill-amber-400 text-amber-400" 
+                            : "text-muted-foreground/30"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{percentage}%</span>
+                </div>
+
+                <Button 
+                  onClick={() => handleChatWithXiaoyue()}
+                  className="w-full gap-2"
+                  data-testid="button-chat-xiaoyue-main"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  和小悦聊聊，补齐资料
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {groupsWithMissingFields.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 px-1">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">快速补充</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {groupsWithMissingFields.map((group) => {
+                const groupMissingCount = group.sections.reduce(
+                  (acc, section) => acc + getIncompleteCount(section.fields), 0
+                );
                 return (
-                  <Card 
-                    key={section.id} 
-                    className="border shadow-sm cursor-pointer hover-elevate active-elevate-2 transition-all"
-                    onClick={() => setLocation(section.path)}
-                    data-testid={`card-${section.id}`}
+                  <Button
+                    key={group.id}
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 hover-elevate"
+                    onClick={() => handleChatWithXiaoyue(group.chatTopic)}
+                    data-testid={`chip-chat-${group.id}`}
                   >
-                    <CardHeader className="pb-2 pt-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {section.icon}
-                          <CardTitle className="text-base">{section.title}</CardTitle>
-                          {incompleteCount > 0 && (
-                            <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5">
-                              {incompleteCount}项待填
-                            </Badge>
-                          )}
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pb-3 pt-0">
-                      {/* Compact chip-style display for filled values */}
-                      <div className="flex flex-wrap gap-1.5">
-                        {section.fields.filter(f => f.value).map((field, idx) => (
-                          <span 
-                            key={idx} 
-                            className="inline-flex items-center text-xs bg-muted/50 px-2 py-1 rounded-md"
-                          >
-                            <span className="text-muted-foreground mr-1">{field.label}:</span>
-                            <span className="font-medium truncate max-w-[120px]">{field.value}</span>
-                          </span>
-                        ))}
-                        {section.fields.filter(f => !f.value).length === section.fields.length && (
-                          <span className="text-xs text-muted-foreground">点击填写</span>
-                        )}
-                      </div>
-                      {section.hint && (
-                        <div className="text-xs text-muted-foreground mt-2 opacity-70">
-                          {section.hint}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    聊聊{group.chatTopic}
+                    <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0 h-4">
+                      {groupMissingCount}项
+                    </Badge>
+                  </Button>
                 );
               })}
             </div>
           </div>
-        ))}
+        )}
+
+        <Collapsible open={manualEditOpen} onOpenChange={setManualEditOpen}>
+          <CollapsibleTrigger asChild>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-between h-10 px-3 text-muted-foreground hover:text-foreground"
+              data-testid="button-toggle-manual-edit"
+            >
+              <div className="flex items-center gap-2">
+                <Settings2 className="h-4 w-4" />
+                <span className="text-sm">精细调整</span>
+              </div>
+              <ChevronDown className={`h-4 w-4 transition-transform ${manualEditOpen ? "rotate-180" : ""}`} />
+            </Button>
+          </CollapsibleTrigger>
+          
+          <CollapsibleContent className="pt-2">
+            <Card className="border">
+              <CardContent className="p-0 divide-y">
+                {sectionGroups.flatMap((group) => 
+                  group.sections.map((section) => {
+                    const incompleteCount = getIncompleteCount(section.fields);
+                    const filledCount = section.fields.filter(f => f.value).length;
+                    const totalCount = section.fields.length;
+                    
+                    return (
+                      <div 
+                        key={section.id}
+                        className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover-elevate active-elevate-2"
+                        onClick={() => setLocation(section.path)}
+                        data-testid={`row-${section.id}`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-muted-foreground">{section.icon}</span>
+                          <span className="text-sm">{section.title}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {filledCount}/{totalCount}
+                          </span>
+                          {incompleteCount > 0 && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                          )}
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     </div>
   );
