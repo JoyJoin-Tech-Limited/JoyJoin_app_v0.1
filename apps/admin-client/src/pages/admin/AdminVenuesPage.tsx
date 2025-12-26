@@ -760,6 +760,16 @@ export default function AdminVenuesPage() {
       return;
     }
 
+    // 深圳场地必须选择片区和商圈
+    if (formData.city === "深圳" && (!formData.clusterId || !formData.districtId)) {
+      toast({
+        title: "位置信息不完整",
+        description: "深圳场地必须选择片区和商圈",
+        variant: "destructive",
+      });
+      return;
+    }
+
     createMutation.mutate({
       name: formData.name,
       type: formData.type,
@@ -776,6 +786,7 @@ export default function AdminVenuesPage() {
       tags: formData.tags.length > 0 ? formData.tags : undefined,
       cuisines: formData.cuisines.length > 0 ? formData.cuisines : undefined,
       decorStyle: formData.decorStyle.length > 0 ? formData.decorStyle : undefined,
+      tasteIntensity: formData.tasteIntensity.length > 0 ? formData.tasteIntensity : undefined,
       notes: formData.notes || undefined,
       // 酒吧特有字段
       barThemes: formData.barThemes.length > 0 ? formData.barThemes : undefined,
@@ -814,6 +825,16 @@ export default function AdminVenuesPage() {
   const handleUpdate = () => {
     if (!selectedVenue) return;
 
+    // 深圳场地必须选择片区和商圈
+    if (formData.city === "深圳" && (!formData.clusterId || !formData.districtId)) {
+      toast({
+        title: "位置信息不完整",
+        description: "深圳场地必须选择片区和商圈",
+        variant: "destructive",
+      });
+      return;
+    }
+
     updateMutation.mutate({
       id: selectedVenue.id,
       data: {
@@ -832,6 +853,7 @@ export default function AdminVenuesPage() {
         tags: formData.tags.length > 0 ? formData.tags : null,
         cuisines: formData.cuisines.length > 0 ? formData.cuisines : null,
         decorStyle: formData.decorStyle.length > 0 ? formData.decorStyle : null,
+        tasteIntensity: formData.tasteIntensity.length > 0 ? formData.tasteIntensity : null,
         notes: formData.notes || null,
         // 酒吧特有字段
         barThemes: formData.barThemes.length > 0 ? formData.barThemes : null,
