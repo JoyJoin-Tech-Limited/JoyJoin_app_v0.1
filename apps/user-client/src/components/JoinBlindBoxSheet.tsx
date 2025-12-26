@@ -496,9 +496,7 @@ export default function JoinBlindBoxSheet({
                           className="w-full justify-center whitespace-nowrap"
                           data-testid={`button-budget-${option.value}`}
                         >
-                          {option.value === "150以下" 
-                            ? `≤${getCurrencySymbol(eventData.city || "深圳")}150` 
-                            : `${getCurrencySymbol(eventData.city || "深圳")}${option.label}`}
+                          {option.label}
                         </MultiSelectButton>
                       ))}
                     </div>
