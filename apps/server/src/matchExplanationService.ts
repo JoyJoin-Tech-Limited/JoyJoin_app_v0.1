@@ -54,37 +54,28 @@ async function withRetry<T>(
 }
 
 /**
- * 控制并发的批量执行器
+ * 控制并发的批量执行器（使用队列模式）
  */
 async function runWithConcurrencyLimit<T, R>(
   items: T[],
   fn: (item: T) => Promise<R>,
   limit: number = API_CONFIG.CONCURRENCY_LIMIT
 ): Promise<R[]> {
-  const results: R[] = [];
-  const executing: Promise<void>[] = [];
+  const results: R[] = new Array(items.length);
+  let currentIndex = 0;
   
-  for (const item of items) {
-    const promise = fn(item).then(result => {
-      results.push(result);
-    });
-    executing.push(promise);
-    
-    if (executing.length >= limit) {
-      await Promise.race(executing);
-      // Remove completed promises
-      for (let i = executing.length - 1; i >= 0; i--) {
-        const p = executing[i];
-        Promise.race([p, Promise.resolve('pending')]).then(val => {
-          if (val !== 'pending') {
-            executing.splice(i, 1);
-          }
-        });
-      }
+  async function worker(): Promise<void> {
+    while (currentIndex < items.length) {
+      const index = currentIndex++;
+      const item = items[index];
+      results[index] = await fn(item);
     }
   }
   
-  await Promise.all(executing);
+  // Create 'limit' number of workers that process items from the queue
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker());
+  await Promise.all(workers);
+  
   return results;
 }
 

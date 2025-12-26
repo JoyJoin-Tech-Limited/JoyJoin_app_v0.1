@@ -9292,7 +9292,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // ============ KPI Dashboard API ============
 
   // Get KPI dashboard data
-  app.get('/api/admin/kpi/dashboard', requireAdmin, async (req: any, res) => {
+  app.get('/api/admin/kpi/dashboard', kpiEndpointLimiter, requireAdmin, async (req: any, res) => {
     try {
       const days = parseInt(req.query.days as string) || 30;
       const { kpiService } = await import('./kpiService');
@@ -9305,7 +9305,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Get churn analysis
-  app.get('/api/admin/kpi/churn-analysis', requireAdmin, async (req: any, res) => {
+  app.get('/api/admin/kpi/churn-analysis', kpiEndpointLimiter, requireAdmin, async (req: any, res) => {
     try {
       const { kpiService } = await import('./kpiService');
       const analysis = await kpiService.getChurnAnalysis();
@@ -9317,7 +9317,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Generate daily KPI snapshot (can be called manually or via cron)
-  app.post('/api/admin/kpi/generate-snapshot', requireAdmin, async (req: any, res) => {
+  app.post('/api/admin/kpi/generate-snapshot', kpiEndpointLimiter, requireAdmin, async (req: any, res) => {
     try {
       const { kpiService } = await import('./kpiService');
       await kpiService.generateDailyKpiSnapshot();
@@ -9329,7 +9329,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Update user engagement metrics
-  app.post('/api/admin/kpi/update-user-engagement/:userId', requireAdmin, async (req: any, res) => {
+  app.post('/api/admin/kpi/update-user-engagement/:userId', kpiEndpointLimiter, requireAdmin, async (req: any, res) => {
     try {
       const { userId } = req.params;
       const { kpiService } = await import('./kpiService');
@@ -9342,7 +9342,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Calculate current CSAT and NPS scores
-  app.get('/api/admin/kpi/satisfaction-scores', requireAdmin, async (req: any, res) => {
+  app.get('/api/admin/kpi/satisfaction-scores', kpiEndpointLimiter, requireAdmin, async (req: any, res) => {
     try {
       const { kpiService } = await import('./kpiService');
       const days = parseInt(req.query.days as string) || 30;
