@@ -294,13 +294,18 @@ export const eventPoolRegistrations = pgTable("event_pool_registrations", {
   userId: varchar("user_id").notNull().references(() => users.id),
   
   // 用户临时偏好（软约束 - 仅用于本次活动）
-  budgetRange: text("budget_range").array(), // 预算范围，多选：["150以下", "150-200", "200-300", "300-500"]
+  budgetRange: text("budget_range").array(), // 饭局预算范围，多选：["150以下", "150-200", "200-300", "300-500"]
   preferredLanguages: text("preferred_languages").array(), // 首选语言：["普通话", "粤语", "英语"]
   socialGoals: text("social_goals").array(), // 社交目的：["交朋友", "扩展人脉", "放松心情", "行业交流", "flexible"]
   cuisinePreferences: text("cuisine_preferences").array(), // 饮食偏好：["中餐", "川菜", "粤菜", "日料", "西餐"]
   dietaryRestrictions: text("dietary_restrictions").array(), // 忌口：["素食", "不吃辣", "清真"]
   tasteIntensity: text("taste_intensity").array(), // 口味强度：["爱吃辣", "不辣/清淡为主"]
   decorStylePreferences: text("decor_style_preferences").array(), // 场地风格偏好：["轻奢现代风", "绿植花园风", "复古工业风", "温馨日式风"]
+  
+  // 酒局特有偏好
+  barThemes: text("bar_themes").array(), // 酒吧主题偏好：["精酿", "清吧", "私密调酒·Homebar"]
+  alcoholComfort: text("alcohol_comfort").array(), // 饮酒舒适度：["可以喝酒", "微醺就好", "无酒精饮品"]
+  barBudgetRange: text("bar_budget_range").array(), // 酒局预算范围（每杯）：["80以下", "80-150"]
   
   // 匹配结果
   matchStatus: varchar("match_status").default("pending"), // pending | matched | unmatched
@@ -896,6 +901,7 @@ export const venues = pgTable("venues", {
   // 酒吧特有标签 (仅当 venueType='bar' 时使用)
   barThemes: text("bar_themes").array(), // 酒吧主题: 精酿, 清吧, 鸡尾酒吧, Whisky Bar, Wine Bar
   alcoholOptions: text("alcohol_options").array(), // 支持的饮酒选项: 可以喝酒, 微醺就好, 无酒精饮品
+  barPriceRange: text("bar_price_range"), // 酒吧价格档次（每杯）: "80以下", "80-150"
   vibeDescriptor: text("vibe_descriptor"), // 氛围描述（编辑性文字，非结构化标签）
   
   // Capacity management

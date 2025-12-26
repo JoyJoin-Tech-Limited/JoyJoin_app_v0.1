@@ -112,10 +112,12 @@ export default function JoinBlindBoxSheet({
       // 切换到饭局时，清空酒局偏好
       setSelectedBarThemes([]);
       setSelectedAlcoholComfort([]);
+      setBarBudgetPreference([]);
     } else if (eventData.eventType === "酒局") {
       // 切换到酒局时，清空饭局偏好
       setSelectedTasteIntensity([]);
       setSelectedCuisines([]);
+      setBudgetPreference([]);
     }
   }, [eventData.eventType]);
   
@@ -133,15 +135,23 @@ export default function JoinBlindBoxSheet({
   // 酒局偏好 - 酒吧主题和饮酒程度
   const [selectedBarThemes, setSelectedBarThemes] = useState<string[]>([]);
   const [selectedAlcoholComfort, setSelectedAlcoholComfort] = useState<string[]>([]);
+  const [barBudgetPreference, setBarBudgetPreference] = useState<string[]>([]);
   
   // 参与意图 - Event-specific intent (multi-select)
   const [selectedIntent, setSelectedIntent] = useState<string[]>([]);
 
+  // 饭局预算选项
   const budgetOptions = [
-    { value: "150以下", label: "≤150" },
-    { value: "150-200", label: "150-200" },
-    { value: "200-300", label: "200-300" },
-    { value: "300-500", label: "300-500" },
+    { value: "150以下", label: "≤¥150" },
+    { value: "150-200", label: "¥150-200" },
+    { value: "200-300", label: "¥200-300" },
+    { value: "300-500", label: "¥300-500" },
+  ];
+
+  // 酒局预算选项（每杯）
+  const barBudgetOptions = [
+    { value: "80以下", label: "≤¥80/杯" },
+    { value: "80-150", label: "¥80-150/杯" },
   ];
 
   const languageOptions = [
@@ -298,11 +308,15 @@ export default function JoinBlindBoxSheet({
     },
   });
 
+  // 获取当前活动类型对应的预算选择
+  const currentBudgetSelection = eventData.eventType === "饭局" ? budgetPreference : barBudgetPreference;
+  const hasBudgetSelected = currentBudgetSelection.length > 0;
+
   const handleConfirm = () => {
-    if (budgetPreference.length === 0) {
+    if (!hasBudgetSelected) {
       toast({
         title: "请选择预算范围",
-        description: "至少选择一个预算档位",
+        description: eventData.eventType === "饭局" ? "至少选择一个预算档位" : "至少选择一个消费档位",
         variant: "destructive",
       });
       return;
@@ -355,8 +369,11 @@ export default function JoinBlindBoxSheet({
         area,
 
         // 预算：数组 + 主预算档，兼容后端的 budget / budgetTier 逻辑
-        budgetTier: primaryBudgetTier,
-        budget: budgetPreference,
+        // 饭局使用 budgetTier/budget, 酒局使用 barBudgetTier/barBudget
+        budgetTier: eventData.eventType === "饭局" ? primaryBudgetTier : "",
+        budget: eventData.eventType === "饭局" ? budgetPreference : [],
+        barBudgetTier: eventData.eventType === "酒局" ? (barBudgetPreference[0] || "") : "",
+        barBudget: eventData.eventType === "酒局" ? barBudgetPreference : [],
 
         // 偏好信息
         selectedDistricts,
@@ -461,30 +478,59 @@ export default function JoinBlindBoxSheet({
                 <Badge variant="destructive" className="text-xs">必填</Badge>
               </div>
               
-              {/* 预算选择 - 2列布局，单行文字 */}
+              {/* 预算选择 - 根据活动类型显示不同选项 */}
               <div className="mb-6">
-                <MultiSelectGroup
-                  label="你的预算范围？"
-                  hint="多选可提升42%匹配率"
-                  selectedCount={budgetPreference.length}
-                  showCounter={true}
-                >
-                  <div className="grid grid-cols-2 gap-3 w-full">
-                    {budgetOptions.map((option) => (
-                      <MultiSelectButton
-                        key={option.value}
-                        selected={budgetPreference.includes(option.value)}
-                        onClick={() => toggleBudget(option.value)}
-                        className="w-full justify-center whitespace-nowrap"
-                        data-testid={`button-budget-${option.value}`}
-                      >
-                        {option.value === "150以下" 
-                          ? `≤${getCurrencySymbol(eventData.city || "深圳")}150` 
-                          : `${getCurrencySymbol(eventData.city || "深圳")}${option.label}`}
-                      </MultiSelectButton>
-                    ))}
-                  </div>
-                </MultiSelectGroup>
+                {eventData.eventType === "饭局" ? (
+                  <MultiSelectGroup
+                    label="你的预算范围？"
+                    hint="多选可提升42%匹配率"
+                    selectedCount={budgetPreference.length}
+                    showCounter={true}
+                  >
+                    <div className="grid grid-cols-2 gap-3 w-full">
+                      {budgetOptions.map((option) => (
+                        <MultiSelectButton
+                          key={option.value}
+                          selected={budgetPreference.includes(option.value)}
+                          onClick={() => toggleBudget(option.value)}
+                          className="w-full justify-center whitespace-nowrap"
+                          data-testid={`button-budget-${option.value}`}
+                        >
+                          {option.value === "150以下" 
+                            ? `≤${getCurrencySymbol(eventData.city || "深圳")}150` 
+                            : `${getCurrencySymbol(eventData.city || "深圳")}${option.label}`}
+                        </MultiSelectButton>
+                      ))}
+                    </div>
+                  </MultiSelectGroup>
+                ) : (
+                  <MultiSelectGroup
+                    label="你的预算范围？（每杯）"
+                    hint="选择适合你的消费档位"
+                    selectedCount={barBudgetPreference.length}
+                    showCounter={true}
+                  >
+                    <div className="grid grid-cols-2 gap-3 w-full">
+                      {barBudgetOptions.map((option) => (
+                        <MultiSelectButton
+                          key={option.value}
+                          selected={barBudgetPreference.includes(option.value)}
+                          onClick={() => {
+                            setBarBudgetPreference(prev => 
+                              prev.includes(option.value) 
+                                ? prev.filter(v => v !== option.value)
+                                : [...prev, option.value]
+                            );
+                          }}
+                          className="w-full justify-center whitespace-nowrap"
+                          data-testid={`button-bar-budget-${option.value}`}
+                        >
+                          {option.label}
+                        </MultiSelectButton>
+                      ))}
+                    </div>
+                  </MultiSelectGroup>
+                )}
               </div>
 
               {/* 选择商圈 - Checkbox列表样式 */}
@@ -1012,12 +1058,12 @@ export default function JoinBlindBoxSheet({
               className="w-full" 
               size="lg"
               onClick={handleConfirm}
-              disabled={budgetPreference.length === 0}
+              disabled={!hasBudgetSelected}
               data-testid="button-confirm-join"
             >
               {getConfirmButtonText()}
             </Button>
-            {budgetPreference.length === 0 && (
+            {!hasBudgetSelected && (
               <p className="text-xs text-center text-muted-foreground">
                 请先选择预算范围
               </p>
@@ -1057,11 +1103,14 @@ export default function JoinBlindBoxSheet({
 
           {/* 2. 预算 */}
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold">预算</h3>
+            <h3 className="text-sm font-semibold">
+              预算{eventData.eventType === "酒局" ? "（每杯）" : ""}
+            </h3>
             <div className="grid grid-cols-2 gap-2">
-              {budgetOptions.map((option) => {
-                const isSelected = budgetPreference.includes(option.value);
-                const isRecommended = option.value === "100-200"; // 示例：100-200为本区推荐
+              {(eventData.eventType === "饭局" ? budgetOptions : barBudgetOptions).map((option) => {
+                const isSelected = eventData.eventType === "饭局" 
+                  ? budgetPreference.includes(option.value)
+                  : barBudgetPreference.includes(option.value);
                 return (
                   <div
                     key={option.value}
@@ -1080,13 +1129,8 @@ export default function JoinBlindBoxSheet({
                       )}
                     </div>
                     <span className={`text-sm ${isSelected ? "font-medium" : ""}`}>
-                      {getCurrencySymbol(eventData.city || "深圳")}{option.label}
+                      {option.label}
                     </span>
-                    {isRecommended && (
-                      <Badge variant="secondary" className="absolute -top-2 -right-2 text-[10px] h-4 px-1">
-                        本区推荐
-                      </Badge>
-                    )}
                   </div>
                 );
               })}
@@ -1094,7 +1138,7 @@ export default function JoinBlindBoxSheet({
           </div>
 
           {/* 3. 我的偏好 */}
-          {(selectedLanguages.length > 0 || selectedTasteIntensity.length > 0 || selectedCuisines.length > 0) && (
+          {(selectedLanguages.length > 0 || selectedTasteIntensity.length > 0 || selectedCuisines.length > 0 || selectedBarThemes.length > 0 || selectedAlcoholComfort.length > 0) && (
             <div className="space-y-3 pb-4 border-b">
               <h3 className="text-sm font-semibold">我的偏好</h3>
               <div className="space-y-2 text-sm">
@@ -1104,6 +1148,7 @@ export default function JoinBlindBoxSheet({
                     <span className="font-medium ml-2">{selectedLanguages.join(' · ')}</span>
                   </div>
                 )}
+                {/* 饭局偏好 */}
                 {selectedTasteIntensity.length > 0 && (
                   <div>
                     <span className="text-muted-foreground">口味强度：</span>
@@ -1114,6 +1159,19 @@ export default function JoinBlindBoxSheet({
                   <div>
                     <span className="text-muted-foreground">菜系：</span>
                     <span className="font-medium ml-2">{selectedCuisines.join(' · ')}</span>
+                  </div>
+                )}
+                {/* 酒局偏好 */}
+                {selectedBarThemes.length > 0 && (
+                  <div>
+                    <span className="text-muted-foreground">酒吧主题：</span>
+                    <span className="font-medium ml-2">{selectedBarThemes.join(' · ')}</span>
+                  </div>
+                )}
+                {selectedAlcoholComfort.length > 0 && (
+                  <div>
+                    <span className="text-muted-foreground">饮酒程度：</span>
+                    <span className="font-medium ml-2">{selectedAlcoholComfort.join(' · ')}</span>
                   </div>
                 )}
               </div>
