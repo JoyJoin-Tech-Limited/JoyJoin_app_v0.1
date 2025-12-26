@@ -77,17 +77,18 @@ export default function PersonalityRadarChart({
       <svg width="100%" height="auto" viewBox="-10 -10 320 320" className="max-w-[320px]">
         <defs>
           <radialGradient id="radarGradient" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.05" />
+            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.15" />
+            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.03" />
           </radialGradient>
         </defs>
 
         <polygon
           points={maxPolygonPoints}
           fill="none"
-          stroke="hsl(var(--border))"
+          stroke="hsl(var(--muted-foreground))"
           strokeWidth="1"
           strokeDasharray="4,4"
+          opacity="0.5"
         />
 
         {[0.25, 0.5, 0.75].map((scale) => {
@@ -103,9 +104,9 @@ export default function PersonalityRadarChart({
               key={scale}
               points={scaledPoints}
               fill="none"
-              stroke="hsl(var(--border))"
-              strokeWidth="0.5"
-              opacity="0.3"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="0.75"
+              opacity="0.4"
             />
           );
         })}
@@ -121,9 +122,9 @@ export default function PersonalityRadarChart({
               y1={centerY}
               x2={x}
               y2={y}
-              stroke="hsl(var(--border))"
-              strokeWidth="0.5"
-              opacity="0.3"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="0.75"
+              opacity="0.4"
             />
           );
         })}

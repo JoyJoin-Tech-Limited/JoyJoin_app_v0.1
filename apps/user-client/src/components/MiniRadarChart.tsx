@@ -117,10 +117,8 @@ export default function MiniRadarChart({ progress, answeredQuestions, totalQuest
         <motion.div
           initial={{ opacity: 0, scale: 0 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold"
-        >
-          ✨
-        </motion.div>
+          className="absolute -bottom-1 -right-1 bg-primary rounded-full w-3 h-3"
+        />
       )}
     </div>
   );
