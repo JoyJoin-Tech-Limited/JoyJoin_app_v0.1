@@ -1296,7 +1296,7 @@ function ThinkingDots() {
   );
 }
 
-// 顶部轻量进度条组件
+// 顶部轻量进度条组件 (保留用于fallback)
 function RegistrationProgressBar({ 
   progress, 
   isComplete 
@@ -1314,6 +1314,156 @@ function RegistrationProgressBar({
       />
     </div>
   );
+}
+
+// ============ 小悦聊天头部 + 星星栏组合组件 ============
+interface XiaoyueChatHeaderProps {
+  isEnrichmentMode: boolean;
+  estimatedTime: string;
+  filledStars: number;
+  isComplete?: boolean;
+}
+
+function XiaoyueChatHeader({ isEnrichmentMode, estimatedTime, filledStars, isComplete = false }: XiaoyueChatHeaderProps) {
+  const subtitle = isEnrichmentMode 
+    ? "补几个小问题，帮你找更合拍的人~" 
+    : "几分钟认识你，帮你找到合拍的人~";
+
+  const totalStars = 5;
+
+  return (
+    <header className="flex-shrink-0 w-full bg-background/95 backdrop-blur-sm border-b z-40" data-testid="header-xiaoyue-chat">
+      {/* 主头部区域 */}
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-3">
+          <motion.div 
+            className="relative w-10 h-10 rounded-full overflow-hidden bg-white dark:bg-gray-800 shadow-md flex-shrink-0"
+            animate={{ 
+              boxShadow: [
+                "0 0 0 0 rgba(139, 92, 246, 0)",
+                "0 0 0 4px rgba(139, 92, 246, 0.2)",
+                "0 0 0 0 rgba(139, 92, 246, 0)"
+              ]
+            }}
+            transition={{ 
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
+            <img 
+              src={xiaoyueAvatar} 
+              alt="小悦" 
+              className="w-full h-full object-cover object-top"
+            />
+          </motion.div>
+          <div className="flex flex-col">
+            <span className="text-base font-semibold text-foreground">和小悦聊聊</span>
+            <span className="text-xs text-muted-foreground">{subtitle}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+          <Zap className="w-3 h-3" />
+          <span>{estimatedTime}</span>
+        </div>
+      </div>
+      
+      {/* 画像精细度星星栏 - 在头部内部作为子区域 */}
+      <div 
+        className="flex items-center justify-center gap-3 py-2 px-4 border-t border-border/50 bg-muted/30"
+        data-testid="bar-profile-stars"
+      >
+        <span className="text-xs text-muted-foreground font-medium">画像精细度</span>
+        <div className="flex items-center gap-1">
+          {Array.from({ length: totalStars }).map((_, index) => {
+            const isFilled = index < filledStars;
+            const isJustFilled = index === filledStars - 1 && filledStars > 0;
+            
+            return (
+              <motion.div
+                key={index}
+                className="relative"
+                initial={false}
+                animate={isJustFilled ? {
+                  scale: [1, 1.3, 1],
+                } : {}}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              >
+                {isFilled ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
+                  >
+                    <Star 
+                      className={`w-5 h-5 ${isComplete ? 'text-green-500 fill-green-500' : 'text-amber-400 fill-amber-400'}`} 
+                    />
+                    {isJustFilled && (
+                      <motion.div
+                        className="absolute inset-0"
+                        initial={{ opacity: 1 }}
+                        animate={{ opacity: 0 }}
+                        transition={{ duration: 0.6, delay: 0.2 }}
+                      >
+                        <Sparkles className={`w-5 h-5 ${isComplete ? 'text-green-300' : 'text-amber-300'}`} />
+                      </motion.div>
+                    )}
+                  </motion.div>
+                ) : (
+                  <Star className="w-5 h-5 text-muted-foreground/30" />
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// 计算画像星星数量的函数（5个维度分组）
+// 支持 enrichment 模式：合并已有数据 + 新收集数据
+function calculateProfileStars(info: CollectedInfo, existingProfile?: EnrichmentContext['existingProfile']): number {
+  let filledDimensions = 0;
+  
+  // 合并已有数据和新收集数据
+  const merged = {
+    gender: info.gender || existingProfile?.gender,
+    birthdate: info.birthdate || existingProfile?.birthdate,
+    currentCity: info.currentCity || existingProfile?.currentCity,
+    industry: info.industry,
+    occupation: info.occupation || existingProfile?.occupation,
+    educationLevel: info.educationLevel || existingProfile?.educationLevel,
+    socialStyle: info.socialStyle || existingProfile?.socialStyle,
+    topicAvoidances: info.topicAvoidances,
+    topInterests: info.topInterests || existingProfile?.topInterests,
+    interestsTop: info.interestsTop,
+    hometown: info.hometown || existingProfile?.hometownCountry,
+    relationshipStatus: info.relationshipStatus || existingProfile?.relationshipStatus,
+    languagesComfort: info.languagesComfort || existingProfile?.languagesComfort,
+  };
+  
+  // 维度1: 基础画像 (性别、年龄、城市)
+  const hasBasic = !!(merged.gender || merged.birthdate || merged.currentCity);
+  if (hasBasic) filledDimensions++;
+  
+  // 维度2: 职业背景 (行业、职位、学历)
+  const hasCareer = !!(merged.industry || merged.occupation || merged.educationLevel);
+  if (hasCareer) filledDimensions++;
+  
+  // 维度3: 社交风格 (社交风格、话题避开)
+  const hasSocial = !!(merged.socialStyle || merged.topicAvoidances?.length);
+  if (hasSocial) filledDimensions++;
+  
+  // 维度4: 兴趣个性 (兴趣爱好)
+  const hasInterests = !!(merged.topInterests?.length || merged.interestsTop?.length);
+  if (hasInterests) filledDimensions++;
+  
+  // 维度5: 深度信息 (家乡、感情状态、语言)
+  const hasDeep = !!(merged.hometown || merged.relationshipStatus || merged.languagesComfort?.length);
+  if (hasDeep) filledDimensions++;
+  
+  return filledDimensions;
 }
 
 // ============ 小悦碎嘴推理系统 V2 ============
@@ -4030,20 +4180,13 @@ export default function ChatRegistrationPage() {
       <div className={`absolute inset-0 bg-gradient-to-b ${themeConfig.gradient} pointer-events-none z-0 opacity-50`} />
       
       <div className="relative z-10 flex flex-col min-h-dvh">
-      <MobileHeader title="注册中 · 小悦" action={
-        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-          <Zap className="w-3 h-3" />
-          <span>{selectedMode === 'express' ? '≈2分钟' : selectedMode === 'deep' ? '≈10分钟' : '≈5分钟'}</span>
-        </div>
-      } />
-      
-      {/* 顶部轻量进度条 - sticky悬浮在顶部 */}
-      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm">
-        <RegistrationProgressBar 
-          progress={calculateProfileCompletionUtil(collectedInfo).percentage} 
-          isComplete={isComplete} 
-        />
-      </div>
+      {/* 小悦聊天头部 - 带头像、副标题和星星栏 */}
+      <XiaoyueChatHeader 
+        isEnrichmentMode={isEnrichmentMode}
+        estimatedTime={selectedMode === 'express' ? '≈2分钟' : selectedMode === 'deep' ? '≈10分钟' : isEnrichmentMode ? '≈4分钟' : '≈5分钟'}
+        filledStars={calculateProfileStars(collectedInfo, enrichmentContext?.existingProfile)}
+        isComplete={isComplete}
+      />
 
           <div 
             ref={scrollRef}
