@@ -12,11 +12,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { archetypeGradients, archetypeAvatars } from '@/lib/archetypeAvatars';
 import { archetypeConfig } from '@/lib/archetypes';
 import { getTopCompatibleArchetypes, getCompatibilityCategory } from '@/lib/archetypeCompatibility';
+import { getCompatibilityDescription } from '@/lib/archetypeCompatibilityDescriptions';
 import { useState, useEffect } from 'react';
 
 export default function PersonalityTestResultPage() {
   const [, setLocation] = useLocation();
-  const [showCountdown, setShowCountdown] = useState(true);
+  const [showOverlay, setShowOverlay] = useState(true);
   const [countdown, setCountdown] = useState(3);
   const [animationPhase, setAnimationPhase] = useState<'countdown' | 'reveal'>('countdown');
 
@@ -32,32 +33,40 @@ export default function PersonalityTestResultPage() {
     queryKey: ['/api/personality/role-distribution'],
   });
 
-  // Countdown timer effect
+  // Reset animation state on component mount
+  // This ensures the countdown runs every time user navigates to this page
   useEffect(() => {
-    if (!result || !showCountdown) return;
+    // Always start fresh on mount
+    setShowOverlay(true);
+    setCountdown(3);
+    setAnimationPhase('countdown');
+  }, []); // Empty dependency - only runs on mount
 
-    if (countdown > 0) {
+  // Countdown timer effect - using single continuous overlay
+  useEffect(() => {
+    if (!result || !showOverlay) return;
+
+    if (animationPhase === 'countdown') {
+      if (countdown > 0) {
+        const timer = setTimeout(() => {
+          setCountdown(countdown - 1);
+        }, 1000);
+        return () => clearTimeout(timer);
+      } else {
+        // Countdown finished, transition to reveal phase
+        const timer = setTimeout(() => {
+          setAnimationPhase('reveal');
+        }, 200);
+        return () => clearTimeout(timer);
+      }
+    } else if (animationPhase === 'reveal') {
+      // Stay on reveal for 4 seconds before closing overlay
       const timer = setTimeout(() => {
-        setCountdown(countdown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else {
-      const timer = setTimeout(() => {
-        setShowCountdown(false);
-      }, 800);
+        setShowOverlay(false);
+      }, 4000);
       return () => clearTimeout(timer);
     }
-  }, [countdown, result, showCountdown]);
-
-  // Transition to reveal phase after countdown finishes
-  useEffect(() => {
-    if (countdown === 0 && animationPhase === 'countdown') {
-      const timer = setTimeout(() => {
-        setAnimationPhase('reveal');
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown, animationPhase]);
+  }, [countdown, result, showOverlay, animationPhase]);
 
   if (isLoading) {
     return (
@@ -162,125 +171,159 @@ export default function PersonalityTestResultPage() {
     }
   };
 
-  // Countdown Reveal Animation - Separated into two phases
+  // Countdown Reveal Animation - Single continuous overlay without flickering
   const CountdownReveal = () => (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.5 }}
       className="fixed inset-0 bg-background z-50 flex items-center justify-center"
     >
-      <div className="text-center space-y-8">
-        {/* Phase 1: Countdown Numbers - Completely separate layer */}
-        {animationPhase === 'countdown' && (
-          <AnimatePresence mode="wait">
+      <div className="text-center flex flex-col items-center justify-center min-h-[60vh]">
+        {/* Phase 1: Countdown Numbers */}
+        <AnimatePresence mode="wait">
+          {animationPhase === 'countdown' && countdown > 0 && (
             <motion.div
-              key={countdown}
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: [0.5, 1.15, 1], opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
+              key={`countdown-${countdown}`}
+              initial={{ scale: 0.3, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 1.5, opacity: 0 }}
               transition={{ 
-                duration: 0.5,
-                ease: "easeOut"
+                duration: 0.4,
+                ease: [0.22, 1, 0.36, 1]
               }}
-              className="text-9xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
-              style={{ willChange: 'transform, opacity' }}
+              className="text-[120px] md:text-[180px] font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent leading-none"
             >
-              {countdown > 0 ? countdown : ''}
+              {countdown}
             </motion.div>
-          </AnimatePresence>
-        )}
+          )}
+        </AnimatePresence>
 
-        {/* Phase 2: Reveal Animation - Only renders after countdown phase ends */}
-        {animationPhase === 'reveal' && (
-          <motion.div
-            key="reveal"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="space-y-6"
-          >
+        {/* Phase 2: Reveal Animation - Larger avatar with dramatic entrance */}
+        <AnimatePresence>
+          {animationPhase === 'reveal' && (
             <motion.div
-              animate={{
-                scale: [1, 1.08, 1],
-                rotate: [0, 3, -3, 0],
+              key="reveal-content"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ 
+                duration: 0.6, 
+                ease: [0.22, 1, 0.36, 1],
+                type: "spring",
+                stiffness: 200,
+                damping: 20
               }}
-              transition={{
-                duration: 0.5,
-                ease: "easeInOut"
-              }}
-              className="flex justify-center"
+              className="flex flex-col items-center space-y-6"
             >
-              {primaryAvatar ? (
-                <img
-                  src={primaryAvatar}
-                  alt={result.primaryRole}
-                  className="w-28 h-28 md:w-36 md:h-36 rounded-full object-cover shadow-lg"
-                />
-              ) : (
-                <Sparkles className="w-28 h-28 md:w-36 md:h-36 text-primary" />
+              {/* Larger avatar with glow effect */}
+              <motion.div
+                animate={{
+                  scale: [1, 1.05, 1],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className="relative"
+              >
+                {/* Glow ring */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${gradient} rounded-full blur-xl opacity-40 scale-110`} />
+                
+                {/* Avatar container */}
+                <div className={`relative w-40 h-40 md:w-52 md:h-52 rounded-full bg-gradient-to-br ${gradient} p-1 shadow-2xl`}>
+                  {primaryAvatar ? (
+                    <img
+                      src={primaryAvatar}
+                      alt={result.primaryRole}
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-background flex items-center justify-center">
+                      <Sparkles className="w-20 h-20 text-primary" />
+                    </div>
+                  )}
+                </div>
+                
+                {/* Particle explosion effect */}
+                {[...Array(12)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ 
+                      x: 0, 
+                      y: 0, 
+                      scale: 1,
+                      opacity: 0.9 
+                    }}
+                    animate={{
+                      x: Math.cos((i * 360 / 12) * Math.PI / 180) * 140,
+                      y: Math.sin((i * 360 / 12) * Math.PI / 180) * 140,
+                      scale: 0,
+                      opacity: 0
+                    }}
+                    transition={{
+                      duration: 0.8,
+                      ease: "easeOut",
+                      delay: i * 0.03
+                    }}
+                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"
+                  />
+                ))}
+              </motion.div>
+              
+              <motion.h2
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.4 }}
+                className={`text-4xl md:text-5xl font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}
+              >
+                {result.primaryRole}
+              </motion.h2>
+              
+              {nickname && (
+                <motion.p
+                  initial={{ y: 15, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.5, duration: 0.4 }}
+                  className="text-xl md:text-2xl font-medium text-primary"
+                >
+                  {nickname}
+                </motion.p>
               )}
+              
+              <motion.p
+                initial={{ y: 15, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.7, duration: 0.4 }}
+                className="text-base md:text-lg text-muted-foreground italic"
+              >
+                {tagline || result.roleSubtype}
+              </motion.p>
+              
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.2 }}
+                className="text-sm text-muted-foreground/70 mt-4"
+              >
+                你的独特社交DNA已解锁
+              </motion.p>
             </motion.div>
-            
-            {/* Particle explosion effect */}
-            <div className="relative">
-              {[...Array(16)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ 
-                    x: 0, 
-                    y: 0, 
-                    scale: 1,
-                    opacity: 0.8 
-                  }}
-                  animate={{
-                    x: Math.cos((i * 360 / 16) * Math.PI / 180) * 120,
-                    y: Math.sin((i * 360 / 16) * Math.PI / 180) * 120,
-                    scale: 0,
-                    opacity: 0
-                  }}
-                  transition={{
-                    duration: 0.6,
-                    ease: "easeOut",
-                    delay: i * 0.02
-                  }}
-                  className="absolute left-1/2 top-1/2 w-2 h-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"
-                  style={{
-                    willChange: 'transform, opacity'
-                  }}
-                />
-              ))}
-            </div>
-            
-            <motion.h2
-              initial={{ y: 15, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2, duration: 0.3 }}
-              className={`text-4xl font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}
-            >
-              {result.primaryRole}
-            </motion.h2>
-            
-            <motion.p
-              initial={{ y: 15, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.35, duration: 0.3 }}
-              className="text-lg text-muted-foreground"
-            >
-              {result.roleSubtype}
-            </motion.p>
-          </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Loading hint during countdown */}
+        {animationPhase === 'countdown' && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="text-sm text-muted-foreground mt-8"
+          >
+            即将揭晓你的社交角色...
+          </motion.p>
         )}
-        
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="text-sm text-muted-foreground"
-        >
-          {animationPhase === 'countdown' ? '即将揭晓你的社交角色...' : '你的独特社交DNA已解锁！'}
-        </motion.p>
       </div>
     </motion.div>
   );
@@ -289,7 +332,7 @@ export default function PersonalityTestResultPage() {
     <div className="min-h-screen bg-background">
       {/* Countdown Animation */}
       <AnimatePresence>
-        {showCountdown && result && <CountdownReveal />}
+        {showOverlay && result && <CountdownReveal />}
       </AnimatePresence>
       {/* Compact Hero Section - Mobile Optimized */}
       <motion.div
@@ -303,23 +346,25 @@ export default function PersonalityTestResultPage() {
         
         {/* Content */}
         <div className="relative z-10 text-center space-y-4 md:space-y-8 max-w-2xl mx-auto">
-          {/* Avatar/Emoji - Responsive Size */}
+          {/* Avatar/Emoji - Enlarged for impact */}
           <motion.div
             initial={{ scale: 0.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             className="flex justify-center"
           >
-            <div className={`w-32 h-32 md:w-48 md:h-48 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center shadow-2xl`}>
+            <div className={`w-44 h-44 md:w-56 md:h-56 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center shadow-2xl p-1`}>
               {primaryAvatar ? (
                 <img
                   src={primaryAvatar}
                   alt={result.primaryRole}
-                  className="w-24 h-24 md:w-40 md:h-40 rounded-full object-cover"
+                  className="w-full h-full rounded-full object-cover"
                   data-testid="text-role-avatar"
                 />
               ) : (
-                <span className="text-6xl md:text-9xl" data-testid="text-role-avatar">🌟</span>
+                <div className="w-full h-full rounded-full bg-background flex items-center justify-center">
+                  <Sparkles className="w-16 h-16 text-primary" data-testid="text-role-avatar" />
+                </div>
               )}
             </div>
           </motion.div>
@@ -452,32 +497,49 @@ export default function PersonalityTestResultPage() {
                 </p>
               </div>
 
-              {/* Ideal Friend Types */}
-              <div className="space-y-2">
+              {/* Ideal Friend Types - Enhanced with larger avatars and descriptions */}
+              <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-semibold">
                   <Users className="w-4 h-4 text-primary" />
                   <span>理想朋友类型</span>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-3">
                   {result.idealFriendTypes?.map((type: string) => {
                     const avatar = archetypeAvatars[type];
+                    const compatDesc = getCompatibilityDescription(result.primaryRole, type);
                     return (
-                      <Badge
+                      <div
                         key={type}
-                        variant="outline"
-                        data-testid={`badge-ideal-friend-${type}`}
+                        className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                        data-testid={`card-ideal-friend-${type}`}
                       >
-                        {avatar ? (
-                          <img
-                            src={avatar}
-                            alt={type}
-                            className="w-4 h-4 rounded-full mr-1 inline-block"
-                          />
-                        ) : (
-                          <span className="mr-1">👥</span>
-                        )}
-                        {type}
-                      </Badge>
+                        {/* Larger avatar */}
+                        <div className="flex-shrink-0">
+                          {avatar ? (
+                            <img
+                              src={avatar}
+                              alt={type}
+                              className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                              <Users className="w-6 h-6 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        {/* Name and description */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-sm">{type}</span>
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                              {compatDesc.highlight}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {compatDesc.description}
+                          </p>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
