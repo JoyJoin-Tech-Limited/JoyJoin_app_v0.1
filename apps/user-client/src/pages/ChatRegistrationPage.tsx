@@ -30,6 +30,7 @@ import {
 } from "@shared/constants";
 import { calculateProfileCompletion as calculateProfileCompletionUtil, getMatchingBoostEstimate } from "@/lib/profileCompletion";
 import { getInsightCategoryConfig, INSIGHT_CONFIDENCE_THRESHOLD, INSIGHT_DISPLAY_LIMIT } from "@/lib/insightCategoryConfig";
+import { useScrollInputIntoView } from "@/hooks/useVisualViewport";
 
 // 注册模式配置
 type RegistrationMode = "express" | "standard" | "deep" | "enrichment";
@@ -2990,6 +2991,9 @@ export default function ChatRegistrationPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  // iOS Safari 键盘处理 - 自动滚动输入框到可见区域
+  useScrollInputIntoView(inputRef);
   
   // 断点续聊状态
   const [showResumePrompt, setShowResumePrompt] = useState(false);
