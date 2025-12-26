@@ -8,7 +8,9 @@
     "build": "esbuild ./src/index.ts --platform=node --packages=external --external:./vite --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "lint": "tsc --noEmit",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@joyjoin/shared": "^1.0.0",

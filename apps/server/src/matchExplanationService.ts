@@ -8,10 +8,85 @@
 import OpenAI from 'openai';
 import { chemistryMatrix } from './archetypeChemistry';
 
+// Configure DeepSeek client with 10-second timeout
 const deepseekClient = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
   baseURL: 'https://api.deepseek.com',
+  timeout: 10000, // 10 second timeout
+  maxRetries: 0, // We handle retries manually
 });
+
+// ============ 配置常量 ============
+
+const API_CONFIG = {
+  MAX_RETRIES: 2,
+  RETRY_DELAY_MS: 1000,
+  CONCURRENCY_LIMIT: 3, // Max concurrent API calls
+};
+
+// ============ 重试与并发控制 ============
+
+/**
+ * 带指数退避的重试逻辑
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = API_CONFIG.MAX_RETRIES,
+  baseDelayMs: number = API_CONFIG.RETRY_DELAY_MS
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      console.warn(`[MatchExplanation] Attempt ${attempt + 1} failed:`, (error as Error).message);
+      
+      if (attempt < maxRetries) {
+        const delay = baseDelayMs * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
+/**
+ * 控制并发的批量执行器
+ */
+async function runWithConcurrencyLimit<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+  limit: number = API_CONFIG.CONCURRENCY_LIMIT
+): Promise<R[]> {
+  const results: R[] = [];
+  const executing: Promise<void>[] = [];
+  
+  for (const item of items) {
+    const promise = fn(item).then(result => {
+      results.push(result);
+    });
+    executing.push(promise);
+    
+    if (executing.length >= limit) {
+      await Promise.race(executing);
+      // Remove completed promises
+      for (let i = executing.length - 1; i >= 0; i--) {
+        const p = executing[i];
+        Promise.race([p, Promise.resolve('pending')]).then(val => {
+          if (val !== 'pending') {
+            executing.splice(i, 1);
+          }
+        });
+      }
+    }
+  }
+  
+  await Promise.all(executing);
+  return results;
+}
 
 // ============ 类型定义 ============
 
@@ -140,11 +215,13 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
 请用中文回复，语气温暖友好，突出他们可能的互补或共鸣点。不要使用"用户A/B"的称呼，直接用描述性语言。回复长度控制在50-80字。`;
 
   try {
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 200,
-      temperature: 0.7,
+    const response = await withRetry(async () => {
+      return deepseekClient.chat.completions.create({
+        model: 'deepseek-chat',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 200,
+        temperature: 0.7,
+      });
     });
     
     const explanation = response.choices[0]?.message?.content?.trim() || 
@@ -158,7 +235,7 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
       connectionPoints,
     };
   } catch (error) {
-    console.error('[MatchExplanation] Error generating explanation:', error);
+    console.error('[MatchExplanation] Error generating explanation after retries:', error);
     // 降级处理：返回基于化学反应分数的模板解释
     return {
       pairKey: getPairKey(member1.userId, member2.userId),
@@ -196,21 +273,24 @@ export async function generateGroupAnalysis(
   members: MatchMember[],
   eventType: string = "饭局"
 ): Promise<GroupAnalysis> {
-  // 计算整体化学反应
-  let totalChemistry = 0;
-  let pairCount = 0;
-  const pairExplanations: MatchExplanation[] = [];
-  
-  // 生成所有两两配对的解释
+  // 构建所有配对
+  const pairs: Array<{ member1: MatchMember; member2: MatchMember }> = [];
   for (let i = 0; i < members.length; i++) {
     for (let j = i + 1; j < members.length; j++) {
-      const explanation = await generatePairExplanation(members[i], members[j]);
-      pairExplanations.push(explanation);
-      totalChemistry += explanation.chemistryScore;
-      pairCount++;
+      pairs.push({ member1: members[i], member2: members[j] });
     }
   }
   
+  // 并行生成所有配对的解释（带并发限制）
+  const pairExplanations = await runWithConcurrencyLimit(
+    pairs,
+    async (pair) => generatePairExplanation(pair.member1, pair.member2),
+    API_CONFIG.CONCURRENCY_LIMIT
+  );
+  
+  // 计算整体化学反应
+  const totalChemistry = pairExplanations.reduce((sum, exp) => sum + exp.chemistryScore, 0);
+  const pairCount = pairExplanations.length;
   const avgChemistry = pairCount > 0 ? totalChemistry / pairCount : 50;
   
   // 确定化学反应等级
@@ -305,11 +385,13 @@ ${commonInterests.length > 0 ? `共同兴趣: ${commonInterests.join('、')}` : 
 请直接列出话题，不要加序号或前缀。`;
 
   try {
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 300,
-      temperature: 0.8,
+    const response = await withRetry(async () => {
+      return deepseekClient.chat.completions.create({
+        model: 'deepseek-chat',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 300,
+        temperature: 0.8,
+      });
     });
     
     const content = response.choices[0]?.message?.content?.trim() || '';
@@ -319,11 +401,11 @@ ${commonInterests.length > 0 ? `共同兴趣: ${commonInterests.join('、')}` : 
       .filter(line => line.length > 5 && line.length < 100)
       .slice(0, 5);
     
-    if (iceBreakers.length >= 3) {
+    if (iceBreakers.length >= 2) { // Lowered threshold from 3 to 2
       return iceBreakers;
     }
   } catch (error) {
-    console.error('[IceBreakers] Error generating ice-breakers:', error);
+    console.error('[IceBreakers] Error generating ice-breakers after retries:', error);
   }
   
   // 降级：返回预设话题

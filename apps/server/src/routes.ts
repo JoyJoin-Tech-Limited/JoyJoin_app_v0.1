@@ -11,6 +11,7 @@ import { broadcastEventStatusChanged, broadcastAdminAction } from "./eventBroadc
 import { matchEventPool, saveMatchResults } from "./poolMatchingService";
 import { roleTraits, roleInsights } from "./archetypeConfig";
 import { processTestV2, type AnswerV2 } from "./personalityMatchingV2";
+import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -9003,7 +9004,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // ============ Match Explanation & Ice-Breaker API ============
 
   // Get match explanations for an event pool group
-  app.get('/api/event-pool-groups/:groupId/match-explanations', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/event-pool-groups/:groupId/match-explanations', isPhoneAuthenticated, aiEndpointLimiter, async (req: any, res) => {
     try {
       const { groupId } = req.params;
       const userId = req.user?.id || req.session?.userId;
@@ -9082,7 +9083,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Get ice-breakers for an event pool group (part of 活动工具包)
-  app.get('/api/event-pool-groups/:groupId/ice-breakers', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/event-pool-groups/:groupId/ice-breakers', isPhoneAuthenticated, aiEndpointLimiter, async (req: any, res) => {
     try {
       const { groupId } = req.params;
       const userId = req.user?.id || req.session?.userId;
@@ -9153,7 +9154,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Match explanations for blind box events (using matchedAttendees field)
-  app.get('/api/blind-box-events/:eventId/match-explanations', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/blind-box-events/:eventId/match-explanations', isPhoneAuthenticated, aiEndpointLimiter, async (req: any, res) => {
     try {
       const { eventId } = req.params;
       const userId = req.user?.id || req.session?.userId;
