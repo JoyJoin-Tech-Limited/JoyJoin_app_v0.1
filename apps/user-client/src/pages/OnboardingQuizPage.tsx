@@ -84,10 +84,11 @@ export default function OnboardingQuizPage() {
   return (
     <div className="mobile-page">
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b">
-        <div className="flex items-center h-12 px-3 gap-2">
+        <div className="flex items-center min-h-[48px] px-3 gap-2">
           <Button 
             variant="ghost" 
-            size="icon" 
+            size="default" 
+            className="min-w-[48px] min-h-[48px] p-2"
             onClick={() => stage === "results" ? handleFinish() : skipOnboardingMutation.mutate()}
             data-testid="button-back"
           >

@@ -169,7 +169,8 @@ export default function DeepFeedbackFlow() {
           <div className="flex items-center justify-between mb-2">
             <Button
               variant="ghost"
-              size="sm"
+              size="default"
+              className="min-h-[48px]"
               onClick={() => navigate("/events")}
               data-testid="button-back"
             >

@@ -154,10 +154,11 @@ export default function EventFeedbackFlow() {
       {/* Header */}
       {currentStep !== "completion" && (
         <header className="sticky top-0 z-10 bg-background border-b shrink-0">
-          <div className="flex items-center justify-between p-3">
+          <div className="flex items-center justify-between p-2">
             <Button 
               variant="ghost" 
-              size="icon"
+              size="default"
+              className="min-w-[48px] min-h-[48px] p-2"
               onClick={handleBack}
               data-testid="button-back"
             >
