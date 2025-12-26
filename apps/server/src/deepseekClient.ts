@@ -1293,15 +1293,31 @@ export async function continueXiaoyueChat(
   isComplete: boolean;
   conversationHistory: ChatMessage[];
 }> {
-  const updatedHistory: ChatMessage[] = [
+  // 检测用户消息中是否包含生日信息，如果有则精确计算年龄
+  const birthInfo = parseBirthDateFromInput(userMessage);
+  let ageHint = '';
+  if (birthInfo.birthYear) {
+    const preciseAge = calculatePreciseAge(birthInfo.birthYear, birthInfo.birthMonth, birthInfo.birthDay);
+    const now = new Date();
+    const dateStr = birthInfo.birthMonth && birthInfo.birthDay 
+      ? `${birthInfo.birthYear}年${birthInfo.birthMonth}月${birthInfo.birthDay}日`
+      : birthInfo.birthMonth 
+        ? `${birthInfo.birthYear}年${birthInfo.birthMonth}月`
+        : `${birthInfo.birthYear}年`;
+    ageHint = `\n\n【系统提示：用户提到的生日是${dateStr}，根据今天${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日计算，TA今年${preciseAge}岁。请使用这个准确年龄，记录birthYear为${birthInfo.birthYear}】`;
+    console.log(`[AgeCalc NonStream] Detected birth date: ${dateStr}, calculated age: ${preciseAge}`);
+  }
+  
+  // API调用用的历史（包含ageHint，仅用于API调用）
+  const apiCallHistory: ChatMessage[] = [
     ...conversationHistory,
-    { role: 'user', content: userMessage }
+    { role: 'user', content: userMessage + ageHint }
   ];
 
   try {
     const response = await deepseekClient.chat.completions.create({
       model: 'deepseek-chat',
-      messages: updatedHistory.map(msg => ({
+      messages: apiCallHistory.map(msg => ({
         role: msg.role as 'system' | 'user' | 'assistant',
         content: msg.content
       })),
@@ -1333,8 +1349,10 @@ export async function continueXiaoyueChat(
     // 多问号验证器：检测并修复一条消息问多个问题的情况
     cleanMessage = enforceOneQuestionPerTurn(cleanMessage);
 
+    // 保存历史时使用原始userMessage（不含ageHint），避免污染上下文
     const finalHistory: ChatMessage[] = [
-      ...updatedHistory,
+      ...conversationHistory,
+      { role: 'user', content: userMessage },
       { role: 'assistant', content: assistantMessage }
     ];
 
@@ -1463,7 +1481,8 @@ export async function* continueXiaoyueChatStream(
     console.log(`[AgeCalc] Detected birth date: ${dateStr}, calculated age: ${preciseAge}`);
   }
   
-  const updatedHistory: ChatMessage[] = [
+  // API调用用的历史（包含ageHint，仅用于API调用）
+  const apiCallHistory: ChatMessage[] = [
     ...conversationHistory,
     { role: 'user', content: userMessage + ageHint }
   ];
@@ -1471,7 +1490,7 @@ export async function* continueXiaoyueChatStream(
   try {
     const stream = await deepseekClient.chat.completions.create({
       model: 'deepseek-chat',
-      messages: updatedHistory.map(msg => ({
+      messages: apiCallHistory.map(msg => ({
         role: msg.role as 'system' | 'user' | 'assistant',
         content: msg.content
       })),
@@ -1506,8 +1525,10 @@ export async function* continueXiaoyueChatStream(
     // 多问号验证器：检测并修复一条消息问多个问题的情况
     cleanMessage = enforceOneQuestionPerTurn(cleanMessage);
 
+    // 保存历史时使用原始userMessage（不含ageHint），避免污染上下文
     const finalHistory: ChatMessage[] = [
-      ...updatedHistory,
+      ...conversationHistory,
+      { role: 'user', content: userMessage },
       { role: 'assistant', content: fullContent }
     ];
 
