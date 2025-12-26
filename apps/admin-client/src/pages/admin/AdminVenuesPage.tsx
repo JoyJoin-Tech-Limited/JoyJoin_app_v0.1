@@ -127,7 +127,7 @@ const DECOR_STYLES = ["轻奢现代风", "绿植花园风", "复古工业风", "
 // 酒吧特有选项 - 与用户表单对齐
 const BAR_THEMES = ["精酿", "清吧", "私密调酒·Homebar"];
 // 口味偏好选项（餐厅）
-const TASTE_INTENSITY_OPTIONS = ["爱吃辣", "不辣/清淡为主"];
+const TASTE_INTENSITY_OPTIONS = ["爱吃辣", "不辣清淡为主"];
 const ALCOHOL_OPTIONS = ["可以喝酒", "微醺就好", "无酒精饮品"];
 
 interface AllTimeSlot extends VenueTimeSlot {
