@@ -818,12 +818,26 @@ true
 好的对话应该让用户觉得在和一个有趣又靠谱的人聊天，而不是在填问卷。`;
 
 /**
- * 生成动态系统提示词，包含当前日期
+ * 生成动态系统提示词，包含当前日期和年份
  * 每次对话时自动获取最新日期，确保小悦能准确计算用户年龄
  */
 function getXiaoyueSystemPrompt(): string {
-  const today = format(new Date(), 'yyyy年MM月dd日', { locale: zhCN });
-  return `${XIAOYUE_SYSTEM_PROMPT}\n\n【当前日期】：今天是 ${today}（用户提供的日期信息基于这一天计算）`;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const today = format(now, 'yyyy年MM月dd日 EEEE', { locale: zhCN });
+  
+  return `${XIAOYUE_SYSTEM_PROMPT}
+
+## 【当前时间信息】
+- 今天是：${today}
+- 当前年份：${currentYear}年
+
+**年龄计算规则（重要！）**：
+- 用户说"我是1980年出生" → 年龄约为 ${currentYear} - 1980 = ${currentYear - 1980}岁，birthYear记录为1980
+- 用户说"我今年30岁" → birthYear记录为 ${currentYear} - 30 = ${currentYear - 30}
+- 用户说"95后" → birthYear记录为1995，年龄约为${currentYear - 1995}岁
+- 用户说"00后" → birthYear记录为2000，年龄约为${currentYear - 2000}岁
+- 所有年龄相关计算都基于当前年份${currentYear}年`;
 }
 
 // 注册模式类型
