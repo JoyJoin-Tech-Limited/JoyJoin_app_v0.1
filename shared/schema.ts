@@ -2582,3 +2582,28 @@ export type InsertUserEngagementMetrics = z.infer<typeof insertUserEngagementMet
 
 export type EventSatisfactionSummary = typeof eventSatisfactionSummary.$inferSelect;
 export type InsertEventSatisfactionSummary = z.infer<typeof insertEventSatisfactionSummarySchema>;
+
+// ============ Gossip Cache System V3 ============
+
+export const gossipCache = pgTable("gossip_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clusterHash: varchar("cluster_hash", { length: 255 }).notNull(),
+  triggerType: varchar("trigger_type", { length: 100 }).notNull(),
+  variants: text("variants").array().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  usageCount: integer("usage_count").default(0).notNull(),
+  lastUsedAt: timestamp("last_used_at"),
+  avgRating: numeric("avg_rating", { precision: 3, scale: 2 }),
+}, (table) => [
+  index("idx_gossip_cache_cluster").on(table.clusterHash),
+  index("idx_gossip_cache_trigger").on(table.triggerType),
+  index("idx_gossip_cache_cluster_trigger").on(table.clusterHash, table.triggerType),
+]);
+
+export const insertGossipCacheSchema = createInsertSchema(gossipCache).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type GossipCache = typeof gossipCache.$inferSelect;
+export type InsertGossipCache = z.infer<typeof insertGossipCacheSchema>;

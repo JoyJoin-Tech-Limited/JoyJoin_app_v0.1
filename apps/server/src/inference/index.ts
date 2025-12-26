@@ -28,8 +28,16 @@ export {
   fullInfer,
   generateXiaoyueContext,
   type InferenceEngineResult,
-  type InferenceLog
+  type InferenceLog,
+  type ProcessOptions
 } from './engine';
+
+// 异步推断队列
+export {
+  AsyncInferenceQueue,
+  asyncInferenceQueue,
+  type AsyncInferenceStatus
+} from './asyncInferenceQueue';
 
 // 语义匹配器
 export { SemanticMatcher, semanticMatcher } from './semanticMatcher';

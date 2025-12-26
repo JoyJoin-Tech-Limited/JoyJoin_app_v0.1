@@ -14,6 +14,7 @@ import { semanticMatcher } from './semanticMatcher';
 import { llmReasoner, type LLMReasonerResult, getTelemetryLogs } from './llmReasoner';
 import { stateManager } from './stateManager';
 import { matchIndustryFromText } from './industryOntology';
+import { asyncInferenceQueue, type AsyncInferenceStatus } from './asyncInferenceQueue';
 
 export interface InferenceEngineResult {
   extracted: Record<string, ExtractedValue>;
@@ -28,7 +29,15 @@ export interface InferenceEngineResult {
     llmCalled: boolean;
     llmLatencyMs?: number;
     totalLatencyMs: number;
+    asyncMode?: boolean;
+    usedPreviousAsyncResult?: boolean;
+    asyncInferenceTriggered?: boolean;
   };
+}
+
+export interface ProcessOptions {
+  asyncMode?: boolean;
+  sessionId?: string;
 }
 
 export interface InferenceLog {
@@ -61,30 +70,58 @@ export class InferenceEngine {
   
   /**
    * 主处理函数：对用户消息进行推断
+   * @param userMessage 用户消息
+   * @param conversationHistory 对话历史
+   * @param currentState 当前状态
+   * @param options 处理选项（支持 sessionId 字符串或 ProcessOptions 对象）
    */
   async process(
     userMessage: string,
     conversationHistory: Array<{ role: string; content: string }>,
     currentState: UserAttributeMap,
-    sessionId?: string
+    options?: string | ProcessOptions
   ): Promise<InferenceEngineResult> {
     const startTime = Date.now();
+    
+    const opts: ProcessOptions = typeof options === 'string' 
+      ? { sessionId: options } 
+      : (options || {});
+    const { asyncMode = false, sessionId } = opts;
     
     // 1. 快速匹配层
     const matcherResult = semanticMatcher.match(userMessage, currentState);
     const matcherHit = matcherResult.matched && matcherResult.confidence >= 0.7;
     
-    // 2. 如果快速匹配置信度不够高，调用LLM
+    // 2. 处理 LLM 推断（同步或异步模式）
     let llmResult: LLMReasonerResult | null = null;
     let llmCalled = false;
+    let usedPreviousAsyncResult = false;
+    let asyncInferenceTriggered = false;
     
     if (this.config.enableLLMFallback && !matcherHit) {
-      llmCalled = true;
-      llmResult = await llmReasoner.infer(
-        userMessage,
-        conversationHistory,
-        currentState
-      );
+      if (asyncMode && sessionId) {
+        // 异步模式：先检查是否有上一轮的异步结果
+        const previousResult = asyncInferenceQueue.getLatestCompletedResult(sessionId);
+        if (previousResult) {
+          llmResult = previousResult;
+          llmCalled = true;
+          usedPreviousAsyncResult = true;
+          console.log(`[InferenceEngine] 使用上一轮异步推断结果 (session: ${sessionId})`);
+        }
+        
+        // 触发本轮的异步推断（不等待），返回消息 ID
+        const messageId = asyncInferenceQueue.triggerAsync(sessionId, userMessage, conversationHistory, currentState);
+        asyncInferenceTriggered = true;
+        console.log(`[InferenceEngine] 触发异步推断 (session: ${sessionId}, messageId: ${messageId})`);
+      } else {
+        // 同步模式：直接等待 LLM 结果
+        llmCalled = true;
+        llmResult = await llmReasoner.infer(
+          userMessage,
+          conversationHistory,
+          currentState
+        );
+      }
     }
     
     // 3. 合并结果
@@ -109,7 +146,10 @@ export class InferenceEngine {
         matcherConfidence: matcherResult.confidence,
         llmCalled,
         llmLatencyMs: llmResult?.latencyMs,
-        totalLatencyMs
+        totalLatencyMs,
+        asyncMode,
+        usedPreviousAsyncResult,
+        asyncInferenceTriggered
       }
     };
     
@@ -119,6 +159,35 @@ export class InferenceEngine {
     }
     
     return result;
+  }
+  
+  /**
+   * 获取异步推断状态
+   */
+  getAsyncInferenceStatus(sessionId: string): AsyncInferenceStatus | null {
+    const isPending = asyncInferenceQueue.hasPendingInference(sessionId);
+    const messageId = asyncInferenceQueue.getPendingMessageId(sessionId);
+    if (isPending && messageId) {
+      return { isPending: true, messageId };
+    }
+    if (asyncInferenceQueue.hasCompletedResult(sessionId)) {
+      return { isPending: false, messageId: 'completed' };
+    }
+    return null;
+  }
+  
+  /**
+   * 检查是否有待处理的异步推断
+   */
+  hasPendingAsyncInference(sessionId: string): boolean {
+    return asyncInferenceQueue.hasPendingInference(sessionId);
+  }
+  
+  /**
+   * 获取异步推断队列统计
+   */
+  getAsyncQueueStats() {
+    return asyncInferenceQueue.getStats();
   }
   
   /**

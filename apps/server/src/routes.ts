@@ -515,12 +515,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
     
     const { message, conversationHistory, sessionId: clientSessionId } = req.body;
     const userId = req.session?.userId;
     
     if (!message || !conversationHistory) {
       res.write(`data: ${JSON.stringify({ type: 'error', content: '缺少必要参数' })}\n\n`);
+      if (typeof (res as any).flush === 'function') (res as any).flush();
       res.end();
       return;
     }
@@ -537,6 +539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           action: abuseCheck.action,
           violationType: abuseCheck.violationType
         })}\n\n`);
+        if (typeof (res as any).flush === 'function') (res as any).flush();
         res.end();
         return;
       }
@@ -545,6 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'warning', 
           content: abuseCheck.message 
         })}\n\n`);
+        if (typeof (res as any).flush === 'function') (res as any).flush();
       }
     }
     
@@ -570,6 +574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         chunkCount++;
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+        if (typeof (res as any).flush === 'function') (res as any).flush();
       }
       
       const reqEnd = Date.now();
@@ -578,6 +583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in streaming chat:", error);
       res.write(`data: ${JSON.stringify({ type: 'error', content: '小悦暂时走神了，请重试' })}\n\n`);
+      if (typeof (res as any).flush === 'function') (res as any).flush();
     }
     
     res.end();
