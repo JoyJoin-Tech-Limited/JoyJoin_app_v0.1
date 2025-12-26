@@ -1,0 +1,2061 @@
+{
+  "stats": {
+    "totalUsers": 1000,
+    "usersWithInsight": 1000,
+    "triggerDistribution": {
+      "combo_outdoor_food": 94,
+      "migration": 425,
+      "intent_deep": 99,
+      "combo_music_live": 54,
+      "combo_creative_sz": 28,
+      "combo_00_finance_hk": 2,
+      "combo_95_finance_hk": 5,
+      "combo_outdoor_movie": 107,
+      "combo_food_drink": 34,
+      "combo_creative_hk": 17,
+      "combo_media": 22,
+      "combo_startup": 29,
+      "combo_tech_sz": 27,
+      "combo_finance_sz": 23,
+      "combo_95_pro_hk": 7,
+      "combo_95_tech_sz": 11,
+      "combo_00_tech_sz": 12,
+      "combo_finance_hk": 2,
+      "combo_travel_art": 2
+    },
+    "pillarDistribution": {
+      "energy": 291,
+      "identity": 610,
+      "value": 99
+    },
+    "uniqueTexts": 188,
+    "textRepetitionRate": 0.812,
+    "averageScores": {
+      "accuracy": 3.8993712327199623,
+      "wit": 3.851393024692997,
+      "resonance": 4.001123471749084,
+      "personalization": 3.979394681082434,
+      "iceBreaking": 3.7198412493156847,
+      "emotionalSafety": 4.50059974358383,
+      "anticipation": 3.50796535397392,
+      "characterConsistency": 3.9994207111869557
+    },
+    "scoresByTrigger": {
+      "combo_outdoor_food": {
+        "accuracy": 3.8327724741812936,
+        "wit": 3.9797339138928534,
+        "resonance": 4.2157925688634,
+        "personalization": 3.671810901897114,
+        "iceBreaking": 4.228032674396716,
+        "emotionalSafety": 4.5095343061069775,
+        "anticipation": 3.5049369219913324,
+        "characterConsistency": 3.9857251089543144
+      },
+      "migration": {
+        "accuracy": 3.741389740575045,
+        "wit": 3.7997020300086413,
+        "resonance": 3.9703932491347618,
+        "personalization": 4.099700094862309,
+        "iceBreaking": 3.482891008191841,
+        "emotionalSafety": 4.49680260684013,
+        "anticipation": 3.517466470311554,
+        "characterConsistency": 3.991799668659953
+      },
+      "intent_deep": {
+        "accuracy": 3.8251292111919186,
+        "wit": 3.4952826426892507,
+        "resonance": 4.201792263840483,
+        "personalization": 3.958050969630718,
+        "iceBreaking": 3.550739099043812,
+        "emotionalSafety": 4.5016270062616845,
+        "anticipation": 3.528932831554097,
+        "characterConsistency": 4.001822480552655
+      },
+      "combo_music_live": {
+        "accuracy": 3.8050394715965496,
+        "wit": 4.023420628739528,
+        "resonance": 4.372917022662322,
+        "personalization": 3.6854291373155132,
+        "iceBreaking": 4.184073885494408,
+        "emotionalSafety": 4.507596466989616,
+        "anticipation": 3.4600518054393854,
+        "characterConsistency": 3.992754762632609
+      },
+      "combo_creative_sz": {
+        "accuracy": 4.417533601770389,
+        "wit": 4.0301377615139105,
+        "resonance": 3.4910105494503556,
+        "personalization": 4.320945631192208,
+        "iceBreaking": 3.4657117825054824,
+        "emotionalSafety": 4.4872126550994205,
+        "anticipation": 3.4643882294875423,
+        "characterConsistency": 3.992545337879077
+      },
+      "combo_00_finance_hk": {
+        "accuracy": 4.822135784065426,
+        "wit": 4.259904733257609,
+        "resonance": 3.752063503463216,
+        "personalization": 4.595117818663731,
+        "iceBreaking": 3.3585967363673133,
+        "emotionalSafety": 4.452714918767838,
+        "anticipation": 3.2445828215686556,
+        "characterConsistency": 4.015645549567806
+      },
+      "combo_95_finance_hk": {
+        "accuracy": 4.93248045931089,
+        "wit": 3.8607232218460132,
+        "resonance": 3.623215538386917,
+        "personalization": 4.75068330280316,
+        "iceBreaking": 3.443139815795462,
+        "emotionalSafety": 4.551734477394003,
+        "anticipation": 3.6494889766995557,
+        "characterConsistency": 4.066690533560844
+      },
+      "combo_outdoor_movie": {
+        "accuracy": 3.808897221300684,
+        "wit": 3.9996441048895957,
+        "resonance": 4.319270849500452,
+        "personalization": 3.6029035572167563,
+        "iceBreaking": 4.201003312047114,
+        "emotionalSafety": 4.4984193879444465,
+        "anticipation": 3.5061776738996655,
+        "characterConsistency": 4.003336969358651
+      },
+      "combo_food_drink": {
+        "accuracy": 3.866479034822789,
+        "wit": 4.285131208088991,
+        "resonance": 4.333243156887458,
+        "personalization": 3.6580114925741434,
+        "iceBreaking": 4.583779145023898,
+        "emotionalSafety": 4.519715134288702,
+        "anticipation": 3.5254683793431956,
+        "characterConsistency": 4.031282345186592
+      },
+      "combo_creative_hk": {
+        "accuracy": 4.4873067718825075,
+        "wit": 3.8290389958199533,
+        "resonance": 3.442483383972122,
+        "personalization": 4.391664139799519,
+        "iceBreaking": 3.6405860175110445,
+        "emotionalSafety": 4.50029709303043,
+        "anticipation": 3.4369200360802536,
+        "characterConsistency": 4.039955317573077
+      },
+      "combo_media": {
+        "accuracy": 4.204053719808524,
+        "wit": 4.03730173929855,
+        "resonance": 3.4355489460409587,
+        "personalization": 3.9230295367092967,
+        "iceBreaking": 3.5170982836184788,
+        "emotionalSafety": 4.482066540582663,
+        "anticipation": 3.4787220188437855,
+        "characterConsistency": 4.015577128394566
+      },
+      "combo_startup": {
+        "accuracy": 4.1736521492812635,
+        "wit": 3.968383101044788,
+        "resonance": 3.61795713402545,
+        "personalization": 4.102537443181347,
+        "iceBreaking": 3.437094386114714,
+        "emotionalSafety": 4.520885295153281,
+        "anticipation": 3.461046336283988,
+        "characterConsistency": 4.033532148350132
+      },
+      "combo_tech_sz": {
+        "accuracy": 4.317551824352821,
+        "wit": 3.528416476773027,
+        "resonance": 3.5068987366865487,
+        "personalization": 3.8974454944335055,
+        "iceBreaking": 3.4594072772062185,
+        "emotionalSafety": 4.496901648877416,
+        "anticipation": 3.5861762685483747,
+        "characterConsistency": 4.039394108604321
+      },
+      "combo_finance_sz": {
+        "accuracy": 4.586732833559453,
+        "wit": 3.787526667938612,
+        "resonance": 3.486994179702964,
+        "personalization": 4.45210219586324,
+        "iceBreaking": 3.5337424175129746,
+        "emotionalSafety": 4.519975593903044,
+        "anticipation": 3.5616374090322944,
+        "characterConsistency": 3.9936846959920556
+      },
+      "combo_95_pro_hk": {
+        "accuracy": 4.4759133094666215,
+        "wit": 3.960105147945059,
+        "resonance": 3.5609645447272835,
+        "personalization": 4.417464331460738,
+        "iceBreaking": 3.6806361486719283,
+        "emotionalSafety": 4.465849318288933,
+        "anticipation": 3.440831789537594,
+        "characterConsistency": 4.00086839923268
+      },
+      "combo_95_tech_sz": {
+        "accuracy": 4.566012697200337,
+        "wit": 3.945795507594811,
+        "resonance": 3.4706683662226463,
+        "personalization": 4.35893341608833,
+        "iceBreaking": 3.6742386338028408,
+        "emotionalSafety": 4.4586323901699085,
+        "anticipation": 3.5090642108449845,
+        "characterConsistency": 3.998410919658437
+      },
+      "combo_00_tech_sz": {
+        "accuracy": 4.8127521016767645,
+        "wit": 4.033350941879954,
+        "resonance": 3.4751239448039857,
+        "personalization": 4.5105153693918245,
+        "iceBreaking": 3.683335115455451,
+        "emotionalSafety": 4.520610175430136,
+        "anticipation": 3.3258310347062268,
+        "characterConsistency": 3.9883539108311
+      },
+      "combo_finance_hk": {
+        "accuracy": 4.303098568062352,
+        "wit": 3.054736760116387,
+        "resonance": 3.22910082924939,
+        "personalization": 4.404599827977744,
+        "iceBreaking": 3.1454780294008655,
+        "emotionalSafety": 4.498572814310531,
+        "anticipation": 3.317463365719001,
+        "characterConsistency": 3.9938104693534284
+      },
+      "combo_travel_art": {
+        "accuracy": 4.017666771425296,
+        "wit": 3.8956872288328923,
+        "resonance": 3.6350808234663186,
+        "personalization": 3.9123442539216278,
+        "iceBreaking": 4.045840879158241,
+        "emotionalSafety": 4.520770977649946,
+        "anticipation": 3.649876108420309,
+        "characterConsistency": 4.06630753868358
+      }
+    },
+    "uncoveredProfiles": [],
+    "lowScoreInsights": []
+  },
+  "sampleUsers": [
+    {
+      "id": 0,
+      "profile": {
+        "displayName": "小悦",
+        "gender": "女",
+        "birthYear": "1992",
+        "currentCity": "重庆",
+        "hometown": "福建",
+        "industry": "物流/供应链",
+        "interestsTop": [
+          "爬山",
+          "livehouse",
+          "咖啡",
+          "跑步",
+          "桌游"
+        ],
+        "socialStyle": "内敛安静",
+        "intent": "随缘社交",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "又能动又能吃，因为这种会享受生活的态度很吸引人，期待一起探索好吃好玩的～",
+        "pillar": "energy",
+        "confidence": 0.8,
+        "trigger": "combo_outdoor_food"
+      },
+      "trigger": "combo_outdoor_food",
+      "scores": {
+        "accuracy": 3.8192547114730164,
+        "wit": 4.26549783748121,
+        "resonance": 4.184534291114138,
+        "personalization": 3.345460266412127,
+        "iceBreaking": 3.8033020148323358,
+        "emotionalSafety": 4.514646497184511,
+        "anticipation": 3.756717240960903,
+        "characterConsistency": 4.022512899305421
+      }
+    },
+    {
+      "id": 1,
+      "profile": {
+        "displayName": "大伟",
+        "gender": "男",
+        "birthYear": "1991",
+        "currentCity": "深圳",
+        "hometown": "福建",
+        "industry": "建筑/工程",
+        "interestsTop": [
+          "综艺",
+          "烘焙"
+        ],
+        "socialStyle": "I人",
+        "intent": "商业合作",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "从福建到深圳闯荡，说明你不是安于现状的人",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 3.8941405081685043,
+        "wit": 3.3491067959647705,
+        "resonance": 4.226171030765743,
+        "personalization": 3.6132360825629557,
+        "iceBreaking": 3.4311857035865363,
+        "emotionalSafety": 4.578528058898831,
+        "anticipation": 3.0626679348857735,
+        "characterConsistency": 4.169229806790631
+      }
+    },
+    {
+      "id": 2,
+      "profile": {
+        "displayName": "Andy",
+        "gender": "男",
+        "birthYear": "1998",
+        "currentCity": "香港",
+        "hometown": "山东",
+        "industry": "政府/事业单位",
+        "interestsTop": [
+          "读书",
+          "乐器",
+          "跑步",
+          "二次元",
+          "桌游"
+        ],
+        "socialStyle": "中间型",
+        "intent": "寻找同好",
+        "hasPets": true
+      },
+      "insight": {
+        "text": "从山东到香港闯荡，说明你不是安于现状的人",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 3.8087528635271464,
+        "wit": 3.4117495755781837,
+        "resonance": 3.7576218583136,
+        "personalization": 3.7607722128805205,
+        "iceBreaking": 3.7296250904003956,
+        "emotionalSafety": 4.592288851270743,
+        "anticipation": 3.4405002616347327,
+        "characterConsistency": 3.910749192416483
+      }
+    },
+    {
+      "id": 3,
+      "profile": {
+        "displayName": "雯雯",
+        "gender": "女",
+        "birthYear": "1995",
+        "currentCity": "深圳",
+        "hometown": "湖北",
+        "industry": "教育/培训",
+        "interestsTop": [
+          "小酌",
+          "电影",
+          "桌游",
+          "冥想",
+          "投资理财"
+        ],
+        "socialStyle": "中间型",
+        "intent": "深度讨论",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "喜欢深度讨论，说明你不满足于表面社交，想找到真正聊得来的人～",
+        "pillar": "value",
+        "confidence": 0.8,
+        "trigger": "intent_deep"
+      },
+      "trigger": "intent_deep",
+      "scores": {
+        "accuracy": 3.9378134621933842,
+        "wit": 3.0152458166151908,
+        "resonance": 3.702217486590975,
+        "personalization": 3.6776233701048993,
+        "iceBreaking": 3.4717333624563254,
+        "emotionalSafety": 4.559154651451886,
+        "anticipation": 3.301568690474576,
+        "characterConsistency": 3.9554490797399797
+      }
+    },
+    {
+      "id": 4,
+      "profile": {
+        "displayName": "晓晓",
+        "gender": "女",
+        "birthYear": "1996",
+        "currentCity": "深圳",
+        "hometown": "山东",
+        "industry": "法律/咨询",
+        "interestsTop": [
+          "livehouse",
+          "PS5"
+        ],
+        "socialStyle": "中间型",
+        "intent": "认识有趣的人",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "livehouse常客，因为喜欢现场的人一般感受力都很强，期待一起蹲场好演出～",
+        "pillar": "energy",
+        "confidence": 0.8,
+        "trigger": "combo_music_live"
+      },
+      "trigger": "combo_music_live",
+      "scores": {
+        "accuracy": 3.7596540696638447,
+        "wit": 3.5055383766142416,
+        "resonance": 4.1781634572685835,
+        "personalization": 3.9103048705427312,
+        "iceBreaking": 4.105877099578237,
+        "emotionalSafety": 4.634766745697947,
+        "anticipation": 3.260793904840458,
+        "characterConsistency": 3.947583963376688
+      }
+    },
+    {
+      "id": 5,
+      "profile": {
+        "displayName": "Tony",
+        "gender": "男",
+        "birthYear": "1997",
+        "currentCity": "深圳",
+        "hometown": "浙江",
+        "industry": "传媒/内容",
+        "interestsTop": [
+          "livehouse",
+          "瑜伽",
+          "健身"
+        ],
+        "socialStyle": "活跃外向",
+        "intent": "约会交友",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "现场派，因为懂音乐的人聊起来应该很有共鸣，期待交换演出信息～",
+        "pillar": "energy",
+        "confidence": 0.8,
+        "trigger": "combo_music_live"
+      },
+      "trigger": "combo_music_live",
+      "scores": {
+        "accuracy": 3.9350446817308233,
+        "wit": 4.036971635409329,
+        "resonance": 4.384885137422308,
+        "personalization": 3.4430977038915787,
+        "iceBreaking": 4.125915283212468,
+        "emotionalSafety": 4.637015920540165,
+        "anticipation": 3.2591156790557987,
+        "characterConsistency": 3.879166421622986
+      }
+    },
+    {
+      "id": 6,
+      "profile": {
+        "displayName": "Kevin",
+        "gender": "男",
+        "birthYear": "1999",
+        "currentCity": "深圳",
+        "hometown": "浙江",
+        "industry": "学生/应届生",
+        "interestsTop": [
+          "TED",
+          "爬山",
+          "烹饪",
+          "副业",
+          "读书"
+        ],
+        "socialStyle": "E人",
+        "intent": "约会交友",
+        "hasPets": true
+      },
+      "insight": {
+        "text": "运动完吃好的，因为懂生活的人一般都挺有趣，期待聊聊你最爱的餐厅～",
+        "pillar": "energy",
+        "confidence": 0.8,
+        "trigger": "combo_outdoor_food"
+      },
+      "trigger": "combo_outdoor_food",
+      "scores": {
+        "accuracy": 3.9082595112156193,
+        "wit": 3.852255372621025,
+        "resonance": 3.936433147039949,
+        "personalization": 3.8757717696040186,
+        "iceBreaking": 4.068949718017078,
+        "emotionalSafety": 4.428769102432272,
+        "anticipation": 3.1608171680817296,
+        "characterConsistency": 4.003271873037093
+      }
+    },
+    {
+      "id": 7,
+      "profile": {
+        "displayName": "甜甜",
+        "gender": "女",
+        "birthYear": "2000",
+        "currentCity": "香港",
+        "hometown": "广西",
+        "industry": "建筑/工程",
+        "interestsTop": [
+          "TED",
+          "星座",
+          "烘焙",
+          "烹饪"
+        ],
+        "socialStyle": "内敛安静",
+        "intent": "找饭搭子",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "从广西到香港打拼，独立又勇敢，这种人一般都挺有故事的～",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 4.119699364538761,
+        "wit": 3.3288145853795146,
+        "resonance": 4.10097235240803,
+        "personalization": 3.7896504524526957,
+        "iceBreaking": 3.1950256253721876,
+        "emotionalSafety": 4.362528637147124,
+        "anticipation": 3.547524895270427,
+        "characterConsistency": 4.003357829324294
+      }
+    },
+    {
+      "id": 8,
+      "profile": {
+        "displayName": "柚子",
+        "gender": "女",
+        "birthYear": "1990",
+        "currentCity": "广州",
+        "hometown": "河北",
+        "industry": "建筑/工程",
+        "interestsTop": [
+          "旅行",
+          "动漫",
+          "追剧",
+          "威士忌"
+        ],
+        "socialStyle": "E人",
+        "intent": "寻找同好",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "从河北到广州打拼，独立又勇敢，这种人一般都挺有故事的～",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 3.990009414285793,
+        "wit": 4.025218195967065,
+        "resonance": 3.6787145546119273,
+        "personalization": 3.6453051578298696,
+        "iceBreaking": 3.8548067805556396,
+        "emotionalSafety": 4.463548375246376,
+        "anticipation": 3.2874451818202353,
+        "characterConsistency": 3.989401002387085
+      }
+    },
+    {
+      "id": 9,
+      "profile": {
+        "displayName": "雯雯",
+        "gender": "女",
+        "birthYear": "1989",
+        "currentCity": "重庆",
+        "hometown": "广西",
+        "industry": "传媒/内容",
+        "interestsTop": [
+          "爬山",
+          "PS5",
+          "音乐"
+        ],
+        "socialStyle": "活跃外向",
+        "intent": "深度讨论",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "喜欢深度讨论，说明你不满足于表面社交，想找到真正聊得来的人～",
+        "pillar": "value",
+        "confidence": 0.8,
+        "trigger": "intent_deep"
+      },
+      "trigger": "intent_deep",
+      "scores": {
+        "accuracy": 4.228491460959925,
+        "wit": 3.6770078505644634,
+        "resonance": 4.177710631986846,
+        "personalization": 3.67905861480219,
+        "iceBreaking": 3.509087534030217,
+        "emotionalSafety": 4.6066603800216885,
+        "anticipation": 3.0246942485786077,
+        "characterConsistency": 4.140126353807116
+      }
+    },
+    {
+      "id": 10,
+      "profile": {
+        "displayName": "Amy",
+        "gender": "女",
+        "birthYear": "2002",
+        "currentCity": "深圳",
+        "hometown": "江西",
+        "industry": "设计/创意",
+        "interestsTop": [
+          "TED"
+        ],
+        "socialStyle": "内敛安静",
+        "intent": "随缘社交",
+        "hasPets": true
+      },
+      "insight": {
+        "text": "深圳创意圈的姐姐，审美在线又有执行力，作品应该很能打～",
+        "pillar": "identity",
+        "confidence": 0.78,
+        "trigger": "combo_creative_sz"
+      },
+      "trigger": "combo_creative_sz",
+      "scores": {
+        "accuracy": 4.203718688480899,
+        "wit": 3.849469487558923,
+        "resonance": 3.811972698894194,
+        "personalization": 4.671923152636641,
+        "iceBreaking": 3.175931955025627,
+        "emotionalSafety": 4.586314101181754,
+        "anticipation": 3.440974900640322,
+        "characterConsistency": 4.085116211979908
+      }
+    },
+    {
+      "id": 11,
+      "profile": {
+        "displayName": "Mia",
+        "gender": "女",
+        "birthYear": "1999",
+        "currentCity": "深圳",
+        "hometown": "云南",
+        "industry": "设计/创意",
+        "interestsTop": [
+          "电影",
+          "烘焙",
+          "星座",
+          "威士忌"
+        ],
+        "socialStyle": "中间型",
+        "intent": "认识有趣的人",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "深圳创意圈的姐姐，审美在线又有执行力，作品应该很能打～",
+        "pillar": "identity",
+        "confidence": 0.78,
+        "trigger": "combo_creative_sz"
+      },
+      "trigger": "combo_creative_sz",
+      "scores": {
+        "accuracy": 4.3222566890749405,
+        "wit": 4.008496975543961,
+        "resonance": 3.6315916151183227,
+        "personalization": 4.814108673123698,
+        "iceBreaking": 3.878829447530702,
+        "emotionalSafety": 4.550216055734552,
+        "anticipation": 3.1808432808187623,
+        "characterConsistency": 3.932387581549642
+      }
+    },
+    {
+      "id": 12,
+      "profile": {
+        "displayName": "Sophie",
+        "gender": "女",
+        "birthYear": "1999",
+        "currentCity": "香港",
+        "hometown": "内蒙古",
+        "industry": "房地产",
+        "interestsTop": [
+          "跑步",
+          "瑜伽",
+          "星座",
+          "副业"
+        ],
+        "socialStyle": "中间型",
+        "intent": "寻找同好",
+        "hasPets": true
+      },
+      "insight": {
+        "text": "从内蒙到香港打拼，独立又勇敢，这种人一般都挺有故事的～",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 3.6693365381081033,
+        "wit": 3.618301412653792,
+        "resonance": 3.734371078789251,
+        "personalization": 3.8433088920944036,
+        "iceBreaking": 3.9594290207402807,
+        "emotionalSafety": 4.469247496214512,
+        "anticipation": 3.5268945799870766,
+        "characterConsistency": 3.814151511520852
+      }
+    },
+    {
+      "id": 13,
+      "profile": {
+        "displayName": "Zoe",
+        "gender": "女",
+        "birthYear": "1994",
+        "currentCity": "深圳",
+        "hometown": "云南",
+        "industry": "政府/事业单位",
+        "interestsTop": [
+          "综艺"
+        ],
+        "socialStyle": "I人",
+        "intent": "寻找同好",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "从云南到深圳打拼，独立又勇敢，这种人一般都挺有故事的～",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 3.552847660896587,
+        "wit": 3.665590730851234,
+        "resonance": 4.257896041730356,
+        "personalization": 4.0228928760704115,
+        "iceBreaking": 3.0275572147353436,
+        "emotionalSafety": 4.368877690765122,
+        "anticipation": 3.838163108346248,
+        "characterConsistency": 4.248724056832197
+      }
+    },
+    {
+      "id": 14,
+      "profile": {
+        "displayName": "David",
+        "gender": "男",
+        "birthYear": "2001",
+        "currentCity": "香港",
+        "hometown": "安徽",
+        "industry": "金融/投资",
+        "interestsTop": [
+          "咖啡",
+          "户外运动",
+          "摄影",
+          "爬山",
+          "手办",
+          "PS5"
+        ],
+        "socialStyle": "慢热型",
+        "intent": "随缘社交",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "00后港漂金融人，见过世面但不端着，我猜你周末闲不住",
+        "pillar": "identity",
+        "confidence": 0.85,
+        "trigger": "combo_00_finance_hk"
+      },
+      "trigger": "combo_00_finance_hk",
+      "scores": {
+        "accuracy": 4.644271568130852,
+        "wit": 4.069761344888481,
+        "resonance": 3.810653698955213,
+        "personalization": 4.930081114298487,
+        "iceBreaking": 3.4597660322575132,
+        "emotionalSafety": 4.383134073381009,
+        "anticipation": 3.1494714392883036,
+        "characterConsistency": 3.8783459355358287
+      }
+    },
+    {
+      "id": 15,
+      "profile": {
+        "displayName": "Mia",
+        "gender": "女",
+        "birthYear": "1997",
+        "currentCity": "香港",
+        "hometown": "湖北",
+        "industry": "金融/投资",
+        "interestsTop": [
+          "综艺",
+          "户外运动",
+          "星座",
+          "旅行"
+        ],
+        "socialStyle": "中间型",
+        "intent": "随缘社交",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "在香港做金融的一级市场姐姐，专业又精致，感觉你对品味很有追求～",
+        "pillar": "identity",
+        "confidence": 0.88,
+        "trigger": "combo_95_finance_hk"
+      },
+      "trigger": "combo_95_finance_hk",
+      "scores": {
+        "accuracy": 5,
+        "wit": 3.772440225607135,
+        "resonance": 3.5832091929389787,
+        "personalization": 5,
+        "iceBreaking": 3.3977851941852273,
+        "emotionalSafety": 4.4644176356972505,
+        "anticipation": 3.6914391170531404,
+        "characterConsistency": 4.096590541729675
+      }
+    },
+    {
+      "id": 16,
+      "profile": {
+        "displayName": "Ryan",
+        "gender": "男",
+        "birthYear": "1989",
+        "currentCity": "香港",
+        "hometown": "江苏",
+        "industry": "制造业",
+        "interestsTop": [
+          "游戏",
+          "桌游",
+          "瑜伽"
+        ],
+        "socialStyle": "社恐但网聊可",
+        "intent": "随缘社交",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "从江苏到香港闯荡，说明你不是安于现状的人",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 3.2446689102302493,
+        "wit": 3.4368430087019015,
+        "resonance": 4.0209229310271075,
+        "personalization": 4.543357450619865,
+        "iceBreaking": 3.6813711847534747,
+        "emotionalSafety": 4.351933416936225,
+        "anticipation": 3.400021646956798,
+        "characterConsistency": 3.904868731401886
+      }
+    },
+    {
+      "id": 17,
+      "profile": {
+        "displayName": "Zoe",
+        "gender": "女",
+        "birthYear": "1995",
+        "currentCity": "深圳",
+        "hometown": "江西",
+        "industry": "餐饮",
+        "interestsTop": [
+          "综艺",
+          "展览",
+          "心理学",
+          "副业",
+          "养宠物",
+          "Switch"
+        ],
+        "socialStyle": "活跃外向",
+        "intent": "深度讨论",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "喜欢深度讨论，说明你不满足于表面社交，想找到真正聊得来的人～",
+        "pillar": "value",
+        "confidence": 0.8,
+        "trigger": "intent_deep"
+      },
+      "trigger": "intent_deep",
+      "scores": {
+        "accuracy": 3.52730864805031,
+        "wit": 3.8776345216434134,
+        "resonance": 3.860009497038666,
+        "personalization": 4.218198496171025,
+        "iceBreaking": 3.4538357967688484,
+        "emotionalSafety": 4.578990749811975,
+        "anticipation": 3.961912662472832,
+        "characterConsistency": 4.234842169423258
+      }
+    },
+    {
+      "id": 18,
+      "profile": {
+        "displayName": "Zoe",
+        "gender": "女",
+        "birthYear": "1999",
+        "currentCity": "深圳",
+        "hometown": "内蒙古",
+        "industry": "自由职业",
+        "interestsTop": [
+          "旅行"
+        ],
+        "socialStyle": "看场合",
+        "intent": "认识有趣的人",
+        "hasPets": true
+      },
+      "insight": {
+        "text": "从内蒙到深圳打拼，独立又勇敢，这种人一般都挺有故事的～",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 3.757024435811739,
+        "wit": 3.5291649883479224,
+        "resonance": 4.279833490602398,
+        "personalization": 3.7871204876002897,
+        "iceBreaking": 3.25282235986428,
+        "emotionalSafety": 4.401118336187481,
+        "anticipation": 3.042661950832315,
+        "characterConsistency": 4.220325697616812
+      }
+    },
+    {
+      "id": 19,
+      "profile": {
+        "displayName": "Luna",
+        "gender": "女",
+        "birthYear": "1989",
+        "currentCity": "深圳",
+        "hometown": "海南",
+        "industry": "制造业",
+        "interestsTop": [
+          "跑步",
+          "养宠物",
+          "爬山",
+          "音乐",
+          "投资理财"
+        ],
+        "socialStyle": "慢热型",
+        "intent": "拓展人脉",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "从海南到深圳打拼，独立又勇敢，这种人一般都挺有故事的～",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 3.3869123302445328,
+        "wit": 4.1590006265747075,
+        "resonance": 4.3398031165876185,
+        "personalization": 4.528307593338244,
+        "iceBreaking": 3.420663158990474,
+        "emotionalSafety": 4.599128842353944,
+        "anticipation": 3.4531981698874445,
+        "characterConsistency": 3.8345534531045278
+      }
+    },
+    {
+      "id": 20,
+      "profile": {
+        "displayName": "Leo",
+        "gender": "男",
+        "birthYear": "1991",
+        "currentCity": "香港",
+        "hometown": "湖北",
+        "industry": "自由职业",
+        "interestsTop": [
+          "健身",
+          "动漫"
+        ],
+        "socialStyle": "E人",
+        "intent": "约会交友",
+        "hasPets": true
+      },
+      "insight": {
+        "text": "能动能静，因为这种平衡感很难得，期待聊聊你最近在追什么好片～",
+        "pillar": "energy",
+        "confidence": 0.8,
+        "trigger": "combo_outdoor_movie"
+      },
+      "trigger": "combo_outdoor_movie",
+      "scores": {
+        "accuracy": 4.175716428236713,
+        "wit": 4.462653618921527,
+        "resonance": 4.757282310863321,
+        "personalization": 3.6248372115012604,
+        "iceBreaking": 4.010133071605817,
+        "emotionalSafety": 4.595018002017743,
+        "anticipation": 3.239063815801444,
+        "characterConsistency": 3.8232326380325468
+      }
+    },
+    {
+      "id": 21,
+      "profile": {
+        "displayName": "Ryan",
+        "gender": "男",
+        "birthYear": "1999",
+        "currentCity": "广州",
+        "hometown": "内蒙古",
+        "industry": "制造业",
+        "interestsTop": [
+          "遛狗",
+          "知识讨论"
+        ],
+        "socialStyle": "中间型",
+        "intent": "深度讨论",
+        "hasPets": true
+      },
+      "insight": {
+        "text": "追求深度交流，不是随便聊聊就行的那种",
+        "pillar": "value",
+        "confidence": 0.8,
+        "trigger": "intent_deep"
+      },
+      "trigger": "intent_deep",
+      "scores": {
+        "accuracy": 4.259610836793248,
+        "wit": 3.8351239882127945,
+        "resonance": 3.8752853452857288,
+        "personalization": 3.647117304143976,
+        "iceBreaking": 3.3490648604740185,
+        "emotionalSafety": 4.364291432000824,
+        "anticipation": 3.719516626261375,
+        "characterConsistency": 3.811886112132855
+      }
+    },
+    {
+      "id": 22,
+      "profile": {
+        "displayName": "思思",
+        "gender": "女",
+        "birthYear": "2000",
+        "currentCity": "深圳",
+        "hometown": "浙江",
+        "industry": "人力资源",
+        "interestsTop": [
+          "威士忌",
+          "cosplay",
+          "博物馆",
+          "美食探店",
+          "烹饪",
+          "副业"
+        ],
+        "socialStyle": "活跃外向",
+        "intent": "约会交友",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "美食配小酌，因为这种会享受的人一般生活品味都不错，期待交换私藏店铺～",
+        "pillar": "energy",
+        "confidence": 0.85,
+        "trigger": "combo_food_drink"
+      },
+      "trigger": "combo_food_drink",
+      "scores": {
+        "accuracy": 4.262743598904704,
+        "wit": 4.295977246636442,
+        "resonance": 4.304794833673904,
+        "personalization": 3.801322641099851,
+        "iceBreaking": 4.208117742728934,
+        "emotionalSafety": 4.641564070525737,
+        "anticipation": 3.2467778858965906,
+        "characterConsistency": 4.10075363247998
+      }
+    },
+    {
+      "id": 23,
+      "profile": {
+        "displayName": "Zoe",
+        "gender": "女",
+        "birthYear": "1994",
+        "currentCity": "香港",
+        "hometown": "浙江",
+        "industry": "设计/创意",
+        "interestsTop": [
+          "烹饪"
+        ],
+        "socialStyle": "中间型",
+        "intent": "认识有趣的人",
+        "hasPets": true
+      },
+      "insight": {
+        "text": "香港创意圈的，中西审美融合得应该很好，作品肯定很有调性～",
+        "pillar": "identity",
+        "confidence": 0.78,
+        "trigger": "combo_creative_hk"
+      },
+      "trigger": "combo_creative_hk",
+      "scores": {
+        "accuracy": 4.2799352909727855,
+        "wit": 3.7070533637726197,
+        "resonance": 3.8595293342891086,
+        "personalization": 4.762704693962517,
+        "iceBreaking": 3.9577612599166248,
+        "emotionalSafety": 4.435505723299233,
+        "anticipation": 3.1906293095482763,
+        "characterConsistency": 3.891028713448356
+      }
+    },
+    {
+      "id": 24,
+      "profile": {
+        "displayName": "小马",
+        "gender": "男",
+        "birthYear": "1995",
+        "currentCity": "深圳",
+        "hometown": "陕西",
+        "industry": "制造业",
+        "interestsTop": [
+          "二次元"
+        ],
+        "socialStyle": "内敛安静",
+        "intent": "找饭搭子",
+        "hasPets": true
+      },
+      "insight": {
+        "text": "从陕西到深圳闯荡，说明你不是安于现状的人",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 4.1299458514174185,
+        "wit": 3.6859849394187796,
+        "resonance": 3.670665464752526,
+        "personalization": 4.246373095377499,
+        "iceBreaking": 3.378036011569815,
+        "emotionalSafety": 4.395874246254132,
+        "anticipation": 3.0096491899383535,
+        "characterConsistency": 3.7711868396765373
+      }
+    },
+    {
+      "id": 25,
+      "profile": {
+        "displayName": "晓晓",
+        "gender": "女",
+        "birthYear": "2002",
+        "currentCity": "香港",
+        "hometown": "内蒙古",
+        "industry": "传媒/内容",
+        "interestsTop": [
+          "小酌",
+          "Switch"
+        ],
+        "socialStyle": "社恐但网聊可",
+        "intent": "随缘社交",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "做内容的姐姐，讲故事能力应该很强，聊天应该很有料～",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "combo_media"
+      },
+      "trigger": "combo_media",
+      "scores": {
+        "accuracy": 3.8917510254925967,
+        "wit": 4.0980669056882295,
+        "resonance": 3.1560935472939384,
+        "personalization": 3.5317724259593284,
+        "iceBreaking": 3.335532477402836,
+        "emotionalSafety": 4.368068156208935,
+        "anticipation": 3.985526758604794,
+        "characterConsistency": 3.9177430660369237
+      }
+    },
+    {
+      "id": 26,
+      "profile": {
+        "displayName": "Mia",
+        "gender": "女",
+        "birthYear": "1998",
+        "currentCity": "深圳",
+        "hometown": "东北",
+        "industry": "自由职业",
+        "interestsTop": [
+          "咖啡",
+          "PS5",
+          "二次元",
+          "演唱会"
+        ],
+        "socialStyle": "内敛安静",
+        "intent": "认识有趣的人",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "从东北到深圳打拼，独立又勇敢，这种人一般都挺有故事的～",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 3.296735153418246,
+        "wit": 3.9941885539987636,
+        "resonance": 3.595800367848638,
+        "personalization": 4.006322646644957,
+        "iceBreaking": 3.4205225817580707,
+        "emotionalSafety": 4.5686741963855475,
+        "anticipation": 3.8582371522357155,
+        "characterConsistency": 4.157904189538004
+      }
+    },
+    {
+      "id": 27,
+      "profile": {
+        "displayName": "Eric",
+        "gender": "男",
+        "birthYear": "1993",
+        "currentCity": "广州",
+        "hometown": "云南",
+        "industry": "AI/大数据",
+        "interestsTop": [
+          "综艺",
+          "爬山",
+          "Switch",
+          "PS5",
+          "游戏",
+          "手办"
+        ],
+        "socialStyle": "内敛安静",
+        "intent": "拓展人脉",
+        "hasPets": true
+      },
+      "insight": {
+        "text": "能动能静，因为这种平衡感很难得，期待聊聊你最近在追什么好片～",
+        "pillar": "energy",
+        "confidence": 0.8,
+        "trigger": "combo_outdoor_movie"
+      },
+      "trigger": "combo_outdoor_movie",
+      "scores": {
+        "accuracy": 3.4539862837634105,
+        "wit": 4.31052423990953,
+        "resonance": 4.515672894910338,
+        "personalization": 3.9066175134729884,
+        "iceBreaking": 3.8656700805444304,
+        "emotionalSafety": 4.414416391754353,
+        "anticipation": 3.7587187134882853,
+        "characterConsistency": 3.968463397372543
+      }
+    },
+    {
+      "id": 28,
+      "profile": {
+        "displayName": "Luna",
+        "gender": "女",
+        "birthYear": "1990",
+        "currentCity": "香港",
+        "hometown": "福建",
+        "industry": "人力资源",
+        "interestsTop": [
+          "小酌",
+          "美食探店",
+          "烘焙"
+        ],
+        "socialStyle": "内敛安静",
+        "intent": "深度讨论",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "美食配小酌，因为这种会享受的人一般生活品味都不错，期待交换私藏店铺～",
+        "pillar": "energy",
+        "confidence": 0.85,
+        "trigger": "combo_food_drink"
+      },
+      "trigger": "combo_food_drink",
+      "scores": {
+        "accuracy": 3.761717900794599,
+        "wit": 4.353230950645404,
+        "resonance": 4.7416313417231635,
+        "personalization": 3.4178604394185848,
+        "iceBreaking": 4.799061778687383,
+        "emotionalSafety": 4.615881338610819,
+        "anticipation": 3.45357553401922,
+        "characterConsistency": 4.172173637627806
+      }
+    },
+    {
+      "id": 29,
+      "profile": {
+        "displayName": "婷婷",
+        "gender": "女",
+        "birthYear": "1989",
+        "currentCity": "深圳",
+        "hometown": "贵州",
+        "industry": "人力资源",
+        "interestsTop": [
+          "撸猫"
+        ],
+        "socialStyle": "内敛安静",
+        "intent": "深度讨论",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "喜欢深度讨论，说明你不满足于表面社交，想找到真正聊得来的人～",
+        "pillar": "value",
+        "confidence": 0.8,
+        "trigger": "intent_deep"
+      },
+      "trigger": "intent_deep",
+      "scores": {
+        "accuracy": 4.225758160123352,
+        "wit": 3.913730213637227,
+        "resonance": 4.653882448909815,
+        "personalization": 3.71059643897661,
+        "iceBreaking": 3.267483109139561,
+        "emotionalSafety": 4.450005030390013,
+        "anticipation": 3.6346633077317323,
+        "characterConsistency": 4.120911436802334
+      }
+    },
+    {
+      "id": 30,
+      "profile": {
+        "displayName": "小陈",
+        "gender": "男",
+        "birthYear": "1997",
+        "currentCity": "深圳",
+        "hometown": "安徽",
+        "industry": "房地产",
+        "interestsTop": [
+          "撸猫",
+          "创业",
+          "跑步",
+          "星座",
+          "展览",
+          "PS5"
+        ],
+        "socialStyle": "看场合",
+        "intent": "深度讨论",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "追求深度交流，不是随便聊聊就行的那种",
+        "pillar": "value",
+        "confidence": 0.8,
+        "trigger": "intent_deep"
+      },
+      "trigger": "intent_deep",
+      "scores": {
+        "accuracy": 4.011293914165607,
+        "wit": 3.362049785446626,
+        "resonance": 3.9078507987567956,
+        "personalization": 3.969840350633869,
+        "iceBreaking": 3.5480143113145894,
+        "emotionalSafety": 4.4853011540366845,
+        "anticipation": 3.6481953090079298,
+        "characterConsistency": 3.821848985344178
+      }
+    },
+    {
+      "id": 31,
+      "profile": {
+        "displayName": "Tony",
+        "gender": "男",
+        "birthYear": "1990",
+        "currentCity": "香港",
+        "hometown": "广西",
+        "industry": "医疗/健康",
+        "interestsTop": [
+          "副业",
+          "乐器",
+          "心理学"
+        ],
+        "socialStyle": "E人",
+        "intent": "认识有趣的人",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "从广西到香港闯荡，说明你不是安于现状的人",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 3.7952555169395916,
+        "wit": 3.807774528338304,
+        "resonance": 3.839812550221251,
+        "personalization": 4.147043797300567,
+        "iceBreaking": 3.2804566146337932,
+        "emotionalSafety": 4.478241227910447,
+        "anticipation": 3.2035474920287257,
+        "characterConsistency": 3.9164025921141503
+      }
+    },
+    {
+      "id": 32,
+      "profile": {
+        "displayName": "Kevin",
+        "gender": "男",
+        "birthYear": "2001",
+        "currentCity": "香港",
+        "hometown": "东北",
+        "industry": "制造业",
+        "interestsTop": [
+          "Switch",
+          "小酌",
+          "livehouse"
+        ],
+        "socialStyle": "内敛安静",
+        "intent": "认识有趣的人",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "现场派，因为懂音乐的人聊起来应该很有共鸣，期待交换演出信息～",
+        "pillar": "energy",
+        "confidence": 0.8,
+        "trigger": "combo_music_live"
+      },
+      "trigger": "combo_music_live",
+      "scores": {
+        "accuracy": 3.697614104776452,
+        "wit": 4.17179183835221,
+        "resonance": 4.742788231530183,
+        "personalization": 3.533557929676619,
+        "iceBreaking": 4.474022275505857,
+        "emotionalSafety": 4.5435645462796135,
+        "anticipation": 3.669233057808774,
+        "characterConsistency": 3.7718645942657947
+      }
+    },
+    {
+      "id": 33,
+      "profile": {
+        "displayName": "阿杰",
+        "gender": "男",
+        "birthYear": "1995",
+        "currentCity": "佛山",
+        "hometown": "福建",
+        "industry": "餐饮",
+        "interestsTop": [
+          "投资理财"
+        ],
+        "socialStyle": "I人",
+        "intent": "约会交友",
+        "hasPets": true
+      },
+      "insight": {
+        "text": "从福建到佛山闯荡，说明你不是安于现状的人",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 3.993648741844423,
+        "wit": 4.299753228308896,
+        "resonance": 3.6578297704953657,
+        "personalization": 4.148194047188475,
+        "iceBreaking": 3.661322001383269,
+        "emotionalSafety": 4.441389778662695,
+        "anticipation": 3.965350160173803,
+        "characterConsistency": 4.187997183438828
+      }
+    },
+    {
+      "id": 34,
+      "profile": {
+        "displayName": "Amy",
+        "gender": "女",
+        "birthYear": "1993",
+        "currentCity": "香港",
+        "hometown": "东北",
+        "industry": "旅游/酒店",
+        "interestsTop": [
+          "爬山"
+        ],
+        "socialStyle": "慢热型",
+        "intent": "深度讨论",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "喜欢深度讨论，说明你不满足于表面社交，想找到真正聊得来的人～",
+        "pillar": "value",
+        "confidence": 0.8,
+        "trigger": "intent_deep"
+      },
+      "trigger": "intent_deep",
+      "scores": {
+        "accuracy": 3.9293702117814764,
+        "wit": 3.705035019607962,
+        "resonance": 3.775459960007902,
+        "personalization": 3.8988124650842515,
+        "iceBreaking": 3.677736615856837,
+        "emotionalSafety": 4.368805246717793,
+        "anticipation": 3.19264311197439,
+        "characterConsistency": 4.003076769599181
+      }
+    },
+    {
+      "id": 35,
+      "profile": {
+        "displayName": "晓晓",
+        "gender": "女",
+        "birthYear": "2002",
+        "currentCity": "深圳",
+        "hometown": "广东",
+        "industry": "制造业",
+        "interestsTop": [
+          "遛狗",
+          "Switch",
+          "威士忌",
+          "旅行",
+          "心理学"
+        ],
+        "socialStyle": "内敛安静",
+        "intent": "随缘社交",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "从广东到深圳打拼，独立又勇敢，这种人一般都挺有故事的～",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 3.5959194567502117,
+        "wit": 3.369613614703134,
+        "resonance": 4.1796140535109965,
+        "personalization": 4.274629769873142,
+        "iceBreaking": 3.5040714170039062,
+        "emotionalSafety": 4.648995918363952,
+        "anticipation": 3.390890252891337,
+        "characterConsistency": 3.7522849203368946
+      }
+    },
+    {
+      "id": 36,
+      "profile": {
+        "displayName": "甜甜",
+        "gender": "女",
+        "birthYear": "1994",
+        "currentCity": "深圳",
+        "hometown": "福建",
+        "industry": "广告/营销",
+        "interestsTop": [
+          "TED"
+        ],
+        "socialStyle": "看场合",
+        "intent": "随缘社交",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "深圳创意圈的姐姐，审美在线又有执行力，作品应该很能打～",
+        "pillar": "identity",
+        "confidence": 0.78,
+        "trigger": "combo_creative_sz"
+      },
+      "trigger": "combo_creative_sz",
+      "scores": {
+        "accuracy": 4.017465295407855,
+        "wit": 3.621424603525602,
+        "resonance": 3.4959005628486324,
+        "personalization": 4.202236882400821,
+        "iceBreaking": 3.7313998471026935,
+        "emotionalSafety": 4.57628914622901,
+        "anticipation": 3.1818833745406816,
+        "characterConsistency": 3.9377798772645116
+      }
+    },
+    {
+      "id": 37,
+      "profile": {
+        "displayName": "婷婷",
+        "gender": "女",
+        "birthYear": "1990",
+        "currentCity": "上海",
+        "hometown": "内蒙古",
+        "industry": "法律/咨询",
+        "interestsTop": [
+          "冥想",
+          "桌游",
+          "爬山"
+        ],
+        "socialStyle": "社恐但网聊可",
+        "intent": "深度讨论",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "喜欢深度讨论，说明你不满足于表面社交，想找到真正聊得来的人～",
+        "pillar": "value",
+        "confidence": 0.8,
+        "trigger": "intent_deep"
+      },
+      "trigger": "intent_deep",
+      "scores": {
+        "accuracy": 3.439978170659659,
+        "wit": 3.785697216044255,
+        "resonance": 4.164616967379198,
+        "personalization": 3.7704103623655136,
+        "iceBreaking": 3.8666750160795225,
+        "emotionalSafety": 4.494334636574503,
+        "anticipation": 3.371747967726183,
+        "characterConsistency": 3.8412196065082544
+      }
+    },
+    {
+      "id": 38,
+      "profile": {
+        "displayName": "甜甜",
+        "gender": "女",
+        "birthYear": "1994",
+        "currentCity": "深圳",
+        "hometown": "福建",
+        "industry": "AI/大数据",
+        "interestsTop": [
+          "乐器",
+          "养宠物",
+          "桌游"
+        ],
+        "socialStyle": "中间型",
+        "intent": "深度讨论",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "喜欢深度讨论，说明你不满足于表面社交，想找到真正聊得来的人～",
+        "pillar": "value",
+        "confidence": 0.8,
+        "trigger": "intent_deep"
+      },
+      "trigger": "intent_deep",
+      "scores": {
+        "accuracy": 3.4379767731040314,
+        "wit": 3.0544777110890196,
+        "resonance": 4.184327832871355,
+        "personalization": 3.6284098575059778,
+        "iceBreaking": 3.2113663406573636,
+        "emotionalSafety": 4.495850136471453,
+        "anticipation": 3.1563963156092703,
+        "characterConsistency": 4.0092680940306575
+      }
+    },
+    {
+      "id": 39,
+      "profile": {
+        "displayName": "Luna",
+        "gender": "女",
+        "birthYear": "1993",
+        "currentCity": "深圳",
+        "hometown": "湖北",
+        "industry": "房地产",
+        "interestsTop": [
+          "美食探店"
+        ],
+        "socialStyle": "E人",
+        "intent": "认识有趣的人",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "从湖北到深圳打拼，独立又勇敢，这种人一般都挺有故事的～",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 3.365810813903976,
+        "wit": 3.803037944775153,
+        "resonance": 3.74266738948805,
+        "personalization": 4.527483908129832,
+        "iceBreaking": 3.6910338871037105,
+        "emotionalSafety": 4.524318008605528,
+        "anticipation": 3.5040195757187442,
+        "characterConsistency": 3.8532745319310786
+      }
+    },
+    {
+      "id": 40,
+      "profile": {
+        "displayName": "甜甜",
+        "gender": "女",
+        "birthYear": "1989",
+        "currentCity": "深圳",
+        "hometown": "河北",
+        "industry": "创业中",
+        "interestsTop": [
+          "追剧"
+        ],
+        "socialStyle": "内敛安静",
+        "intent": "随缘社交",
+        "hasPets": true
+      },
+      "insight": {
+        "text": "创业中的姐姐，独立又有野心，respect～",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "combo_startup"
+      },
+      "trigger": "combo_startup",
+      "scores": {
+        "accuracy": 4.266153901033149,
+        "wit": 3.9777778667642205,
+        "resonance": 3.3713814838921135,
+        "personalization": 4.313892840046684,
+        "iceBreaking": 3.264686785344262,
+        "emotionalSafety": 4.552520383421736,
+        "anticipation": 3.696446939069439,
+        "characterConsistency": 3.9842751271589796
+      }
+    },
+    {
+      "id": 41,
+      "profile": {
+        "displayName": "Vivian",
+        "gender": "女",
+        "birthYear": "1996",
+        "currentCity": "深圳",
+        "hometown": "福建",
+        "industry": "设计/创意",
+        "interestsTop": [
+          "小酌",
+          "摄影",
+          "跑步",
+          "冥想"
+        ],
+        "socialStyle": "内敛安静",
+        "intent": "拓展人脉",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "深圳创意圈的姐姐，审美在线又有执行力，作品应该很能打～",
+        "pillar": "identity",
+        "confidence": 0.78,
+        "trigger": "combo_creative_sz"
+      },
+      "trigger": "combo_creative_sz",
+      "scores": {
+        "accuracy": 4.393160463000619,
+        "wit": 4.143566827884513,
+        "resonance": 3.7509496252363137,
+        "personalization": 4.445651728081265,
+        "iceBreaking": 3.949355326311509,
+        "emotionalSafety": 4.441449062710785,
+        "anticipation": 3.8356247436794844,
+        "characterConsistency": 4.133117221242543
+      }
+    },
+    {
+      "id": 42,
+      "profile": {
+        "displayName": "浩哥",
+        "gender": "男",
+        "birthYear": "2000",
+        "currentCity": "香港",
+        "hometown": "山东",
+        "industry": "医疗/健康",
+        "interestsTop": [
+          "展览",
+          "创业",
+          "PS5",
+          "星座",
+          "综艺"
+        ],
+        "socialStyle": "慢热型",
+        "intent": "商业合作",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "从山东到香港闯荡，说明你不是安于现状的人",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 3.321329041970529,
+        "wit": 4.122009156574092,
+        "resonance": 4.161726521154788,
+        "personalization": 3.6659147576644457,
+        "iceBreaking": 3.9791855059480308,
+        "emotionalSafety": 4.596545582273619,
+        "anticipation": 3.32206421845247,
+        "characterConsistency": 4.0075434455179835
+      }
+    },
+    {
+      "id": 43,
+      "profile": {
+        "displayName": "Luna",
+        "gender": "女",
+        "birthYear": "1989",
+        "currentCity": "深圳",
+        "hometown": "湖南",
+        "industry": "设计/创意",
+        "interestsTop": [
+          "跑步",
+          "心理学",
+          "音乐",
+          "撸猫",
+          "手办"
+        ],
+        "socialStyle": "活跃外向",
+        "intent": "认识有趣的人",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "深圳创意圈的姐姐，审美在线又有执行力，作品应该很能打～",
+        "pillar": "identity",
+        "confidence": 0.78,
+        "trigger": "combo_creative_sz"
+      },
+      "trigger": "combo_creative_sz",
+      "scores": {
+        "accuracy": 4.623667050339232,
+        "wit": 3.9604143880517944,
+        "resonance": 3.54769270063651,
+        "personalization": 4.580186123612891,
+        "iceBreaking": 3.4337908467239364,
+        "emotionalSafety": 4.386694650900658,
+        "anticipation": 3.271998669016223,
+        "characterConsistency": 4.075763522701839
+      }
+    },
+    {
+      "id": 44,
+      "profile": {
+        "displayName": "Andy",
+        "gender": "男",
+        "birthYear": "1998",
+        "currentCity": "香港",
+        "hometown": "云南",
+        "industry": "广告/营销",
+        "interestsTop": [
+          "PS5",
+          "追剧",
+          "手办",
+          "咖啡",
+          "爬山",
+          "小酌"
+        ],
+        "socialStyle": "I人",
+        "intent": "约会交友",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "能动能静，因为这种平衡感很难得，期待聊聊你最近在追什么好片～",
+        "pillar": "energy",
+        "confidence": 0.8,
+        "trigger": "combo_outdoor_movie"
+      },
+      "trigger": "combo_outdoor_movie",
+      "scores": {
+        "accuracy": 3.534924530107945,
+        "wit": 4.412723275069359,
+        "resonance": 4.319376077444621,
+        "personalization": 3.3801947286829535,
+        "iceBreaking": 4.617951027348576,
+        "emotionalSafety": 4.49919847314031,
+        "anticipation": 3.9261005486961817,
+        "characterConsistency": 4.012036983955072
+      }
+    },
+    {
+      "id": 45,
+      "profile": {
+        "displayName": "Vivian",
+        "gender": "女",
+        "birthYear": "1997",
+        "currentCity": "广州",
+        "hometown": "福建",
+        "industry": "房地产",
+        "interestsTop": [
+          "知识讨论",
+          "音乐",
+          "展览",
+          "心理学"
+        ],
+        "socialStyle": "社恐但网聊可",
+        "intent": "商业合作",
+        "hasPets": true
+      },
+      "insight": {
+        "text": "从福建到广州打拼，独立又勇敢，这种人一般都挺有故事的～",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 4.094971243680415,
+        "wit": 3.717052631312834,
+        "resonance": 4.263965900941057,
+        "personalization": 3.7224942575537154,
+        "iceBreaking": 3.0583352825282333,
+        "emotionalSafety": 4.4295723909228135,
+        "anticipation": 3.7958672673922154,
+        "characterConsistency": 4.1392209118026715
+      }
+    },
+    {
+      "id": 46,
+      "profile": {
+        "displayName": "芒果",
+        "gender": "女",
+        "birthYear": "1991",
+        "currentCity": "香港",
+        "hometown": "陕西",
+        "industry": "生物科技",
+        "interestsTop": [
+          "撸猫",
+          "综艺",
+          "烹饪",
+          "徒步hiking",
+          "演唱会",
+          "桌游"
+        ],
+        "socialStyle": "I人",
+        "intent": "随缘社交",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "户外能撒欢，回家能追剧，因为这种动静皆宜的状态很难得，期待一起发现好玩的活动～",
+        "pillar": "energy",
+        "confidence": 0.8,
+        "trigger": "combo_outdoor_movie"
+      },
+      "trigger": "combo_outdoor_movie",
+      "scores": {
+        "accuracy": 3.6199876379576734,
+        "wit": 4.17209395891531,
+        "resonance": 3.856195610912759,
+        "personalization": 3.92519445313369,
+        "iceBreaking": 4.252078875372215,
+        "emotionalSafety": 4.433896352633829,
+        "anticipation": 3.3803127611139607,
+        "characterConsistency": 3.8445076399148097
+      }
+    },
+    {
+      "id": 47,
+      "profile": {
+        "displayName": "Andy",
+        "gender": "男",
+        "birthYear": "1998",
+        "currentCity": "深圳",
+        "hometown": "山东",
+        "industry": "游戏",
+        "interestsTop": [
+          "健身",
+          "户外运动",
+          "投资理财"
+        ],
+        "socialStyle": "看场合",
+        "intent": "拓展人脉",
+        "hasPets": true
+      },
+      "insight": {
+        "text": "从山东到深圳闯荡，说明你不是安于现状的人",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 4.179128085490404,
+        "wit": 3.5974230576549497,
+        "resonance": 3.8724014643662055,
+        "personalization": 3.8397391511833745,
+        "iceBreaking": 3.199263136126671,
+        "emotionalSafety": 4.54218080045843,
+        "anticipation": 3.4874896910918554,
+        "characterConsistency": 3.979152301880768
+      }
+    },
+    {
+      "id": 48,
+      "profile": {
+        "displayName": "小悦",
+        "gender": "女",
+        "birthYear": "1991",
+        "currentCity": "广州",
+        "hometown": "福建",
+        "industry": "电商/零售",
+        "interestsTop": [
+          "美食探店",
+          "Switch",
+          "威士忌",
+          "TED",
+          "跑步"
+        ],
+        "socialStyle": "社恐但网聊可",
+        "intent": "找饭搭子",
+        "hasPets": false
+      },
+      "insight": {
+        "text": "又能动又能吃，因为这种会享受生活的态度很吸引人，期待一起探索好吃好玩的～",
+        "pillar": "energy",
+        "confidence": 0.8,
+        "trigger": "combo_outdoor_food"
+      },
+      "trigger": "combo_outdoor_food",
+      "scores": {
+        "accuracy": 3.8700142278927476,
+        "wit": 3.80423162109634,
+        "resonance": 3.9061380039876292,
+        "personalization": 3.9764267047486945,
+        "iceBreaking": 3.807094848212111,
+        "emotionalSafety": 4.606878556141515,
+        "anticipation": 3.6059634991744085,
+        "characterConsistency": 4.128349751616702
+      }
+    },
+    {
+      "id": 49,
+      "profile": {
+        "displayName": "小马",
+        "gender": "男",
+        "birthYear": "1989",
+        "currentCity": "香港",
+        "hometown": "浙江",
+        "industry": "医疗/健康",
+        "interestsTop": [
+          "冥想",
+          "旅行",
+          "知识讨论",
+          "心理学"
+        ],
+        "socialStyle": "E人",
+        "intent": "商业合作",
+        "hasPets": true
+      },
+      "insight": {
+        "text": "从浙江到香港闯荡，说明你不是安于现状的人",
+        "pillar": "identity",
+        "confidence": 0.75,
+        "trigger": "migration"
+      },
+      "trigger": "migration",
+      "scores": {
+        "accuracy": 3.612851846155481,
+        "wit": 4.173767617980886,
+        "resonance": 3.683944532625655,
+        "personalization": 3.6660762296323304,
+        "iceBreaking": 3.476086539800301,
+        "emotionalSafety": 4.608261167659944,
+        "anticipation": 3.530362025964346,
+        "characterConsistency": 4.091247019605408
+      }
+    }
+  ]
+}
