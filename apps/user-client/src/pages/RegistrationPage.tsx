@@ -514,7 +514,7 @@ export default function RegistrationPage() {
   const GuidanceIcon = currentGuidance.icon;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="mobile-page">
       <RegistrationProgress 
         currentStage="basic" 
         currentStep={step}
@@ -523,20 +523,20 @@ export default function RegistrationPage() {
 
       <CelebrationConfetti show={showCelebration} type="step" />
 
-      <div className="p-4 bg-background">
+      <div className="px-3 py-2 bg-background shrink-0">
         <motion.div
           key={step}
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="max-w-md mx-auto"
         >
-          <div className="flex items-start gap-3 mb-4">
-            <div className="p-2 rounded-full bg-primary/10">
-              <GuidanceIcon className="h-5 w-5 text-primary" />
+          <div className="flex items-start gap-2 mb-2">
+            <div className="p-1.5 rounded-full bg-primary/10">
+              <GuidanceIcon className="h-4 w-4 text-primary" />
             </div>
             <div className="flex-1">
-              <h1 className="text-lg font-bold">{currentGuidance.title}</h1>
-              <p className="text-sm text-muted-foreground">{currentGuidance.subtitle}</p>
+              <h1 className="text-base font-bold">{currentGuidance.title}</h1>
+              <p className="text-xs text-muted-foreground">{currentGuidance.subtitle}</p>
             </div>
           </div>
           
@@ -550,7 +550,7 @@ export default function RegistrationPage() {
         </motion.div>
       </div>
 
-      <div className="flex-1 p-4 overflow-y-auto overflow-x-hidden">
+      <div className="flex-1 px-3 py-2 overflow-y-auto overflow-x-hidden">
         <form className="max-w-md mx-auto space-y-6 pb-20">
           <AnimatePresence mode="wait" initial={false}>
             {step === 1 && (
@@ -1287,9 +1287,9 @@ export default function RegistrationPage() {
         </form>
       </div>
 
-      <div className="border-t p-4 bg-background sticky bottom-0">
-        <div className="max-w-md mx-auto space-y-3">
-          <div className="flex gap-3">
+      <div className="mobile-footer">
+        <div className="max-w-md mx-auto space-y-2">
+          <div className="flex gap-2">
             {step > 1 && (
               <Button
                 variant="outline"
@@ -1297,7 +1297,7 @@ export default function RegistrationPage() {
                 className="flex-1"
                 data-testid="button-back"
               >
-                <ChevronLeft className="h-4 w-4 mr-2" />
+                <ChevronLeft className="h-4 w-4 mr-1" />
                 上一步
               </Button>
             )}
@@ -1312,7 +1312,7 @@ export default function RegistrationPage() {
               ) : (
                 <>
                   下一步
-                  <ChevronRight className="h-4 w-4 ml-2" />
+                  <ChevronRight className="h-4 w-4 ml-1" />
                 </>
               )}
             </Button>

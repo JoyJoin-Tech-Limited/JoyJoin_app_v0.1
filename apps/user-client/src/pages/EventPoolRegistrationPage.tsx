@@ -208,10 +208,10 @@ export default function EventPoolRegistrationPage() {
   const deadline = parseISO(pool.registrationDeadline);
 
   return (
-    <div className="min-h-screen bg-background pb-6">
+    <div className="mobile-page">
       <MobileHeader title="活动报名" />
 
-      <div className="px-4 py-6 space-y-6">
+      <div className="mobile-content-compact overflow-y-auto space-y-4">
         {/* Event Pool Info Card */}
         <Card>
           <CardHeader>

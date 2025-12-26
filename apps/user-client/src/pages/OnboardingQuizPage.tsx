@@ -82,9 +82,9 @@ export default function OnboardingQuizPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="mobile-page">
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b">
-        <div className="flex items-center h-14 px-4">
+        <div className="flex items-center h-12 px-3 gap-2">
           <Button 
             variant="ghost" 
             size="icon" 
@@ -93,7 +93,7 @@ export default function OnboardingQuizPage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="ml-2 font-semibold">
+          <h1 className="font-semibold">
             {stage === "intro" && "性格测评"}
             {stage === "quiz" && "语音问答"}
             {stage === "results" && "测评结果"}
@@ -101,7 +101,7 @@ export default function OnboardingQuizPage() {
         </div>
       </div>
 
-      <div className="px-4 py-6">
+      <div className="mobile-content-compact overflow-y-auto">
         {stage === "intro" && (
           <QuizIntro 
             onStart={handleStartQuiz}
@@ -118,9 +118,9 @@ export default function OnboardingQuizPage() {
         )}
 
         {stage === "results" && results && (
-          <div className="space-y-4">
-            <div className="text-center space-y-2 pb-4">
-              <h2 className="text-2xl font-display font-bold">测评完成！</h2>
+          <div className="space-y-3">
+            <div className="text-center space-y-1 pb-2">
+              <h2 className="text-xl font-display font-bold">测评完成！</h2>
               <p className="text-sm text-muted-foreground">
                 以下是你的性格分析结果
               </p>
@@ -135,7 +135,6 @@ export default function OnboardingQuizPage() {
 
             <Button 
               className="w-full" 
-              size="lg"
               onClick={handleFinish}
               disabled={savePersonalityMutation.isPending}
               data-testid="button-finish-quiz"
