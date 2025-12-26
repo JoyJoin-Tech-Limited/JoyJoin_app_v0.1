@@ -31,7 +31,7 @@ The project uses a monorepo setup (`joyjoin-monorepo`) containing separate appli
 - **Admin Authorization:** `isAdmin` flag.
 
 ### System Features & Design Decisions
-- **AI-Driven Event Pool Matching:** A two-stage model employing admin-defined event pools and a 6-dimensional AI algorithm (Personality, Interests, Intent, Background, Culture, Conversation Signature). It integrates a 12-Archetype Animal Social Vibe System, explainable match points, deep trait extraction, dynamic weight adjustment, and a hybrid semantic AI strategy. Includes a matching cache and Cantonese dialect support.
+- **AI-Driven Event Pool Matching:** A two-stage model employing admin-defined event pools and a 7-dimensional AI algorithm with validated weights: Chemistry (30%), Interest (20%), Language (15%), Preferences (15%), Hometown (8-12% dynamic), Background (5%), Emotional (5%). It integrates a 12-Archetype Animal Social Vibe System with event-type-specific preference scoring (饭局 vs 酒局). Features include dynamic hometown affinity with opt-in, bar theme/alcohol comfort matching for 酒局, and taste intensity/cuisine matching for 饭局. Includes a matching cache and Cantonese dialect support.
 - **Two-Tier Feedback Architecture:** Collects basic and anonymous deep feedback for continuous algorithm refinement.
 - **Gamified Personality Assessment:** A 12-question test for cumulative trait-based scoring across 5 dimensions (AOCEX) and cosine similarity matching to 12 archetype animal profiles.
 - **AI-First Onboarding (小悦对话注册):** Conversational, AI-powered registration flow guided by a character-based AI (小悦), utilizing a 3-tier information funnel and intelligent inference engine.

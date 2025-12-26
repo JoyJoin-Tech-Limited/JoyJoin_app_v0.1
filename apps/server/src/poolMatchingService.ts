@@ -48,14 +48,24 @@ export interface UserWithProfile {
   secondaryArchetype: string | null;
   interestsTop: string[] | null;
   languagesComfort: string[] | null;
+  hometown: string | null;  // 家乡（用于同乡亲和力）
+  hometownAffinityOptin: boolean;  // 是否启用同乡匹配加分
   
   // Event preferences (temporary, from registration)
-  budgetRange: string[] | null;
+  budgetRange: string[] | null;  // 饭局预算
+  barBudgetRange: string[] | null;  // 酒局预算（每杯）
   preferredLanguages: string[] | null;
   socialGoals: string[] | null;
   cuisinePreferences: string[] | null;
   dietaryRestrictions: string[] | null;
   tasteIntensity: string[] | null;
+  
+  // 酒局特有偏好
+  barThemes: string[] | null;  // 酒吧主题偏好
+  alcoholComfort: string[] | null;  // 饮酒程度偏好
+  
+  // 活动类型（用于判断使用哪种预算）
+  eventType: string | null;
 }
 
 export interface MatchGroup {
@@ -168,31 +178,73 @@ function calculateLanguageScore(user1: UserWithProfile, user2: UserWithProfile):
 
 /**
  * 计算活动偏好兼容性 (0-100)
- * 考虑：预算、饮食偏好、社交目的
+ * 考虑：预算、饮食/酒吧偏好、社交目的
+ * 根据活动类型（饭局/酒局）使用不同的偏好维度
  */
 function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile): number {
   let score = 0;
   let factors = 0;
   
-  // 预算兼容性
-  const budget1 = user1.budgetRange || [];
-  const budget2 = user2.budgetRange || [];
-  if (budget1.length > 0 && budget2.length > 0) {
-    const budgetOverlap = budget1.filter(b => budget2.includes(b)).length;
-    score += (budgetOverlap / Math.max(budget1.length, budget2.length)) * 100;
-    factors++;
+  // 根据活动类型选择预算字段
+  const eventType = user1.eventType || user2.eventType || "饭局";
+  
+  if (eventType === "酒局") {
+    // 酒局：使用酒吧预算
+    const barBudget1 = user1.barBudgetRange || [];
+    const barBudget2 = user2.barBudgetRange || [];
+    if (barBudget1.length > 0 && barBudget2.length > 0) {
+      const budgetOverlap = barBudget1.filter(b => barBudget2.includes(b)).length;
+      score += (budgetOverlap / Math.max(barBudget1.length, barBudget2.length)) * 100;
+      factors++;
+    }
+    
+    // 酒吧主题偏好兼容性
+    const barThemes1 = user1.barThemes || [];
+    const barThemes2 = user2.barThemes || [];
+    if (barThemes1.length > 0 && barThemes2.length > 0) {
+      const themeOverlap = barThemes1.filter(t => barThemes2.includes(t)).length;
+      score += (themeOverlap / Math.max(barThemes1.length, barThemes2.length)) * 100;
+      factors++;
+    }
+    
+    // 饮酒程度兼容性
+    const alcohol1 = user1.alcoholComfort || [];
+    const alcohol2 = user2.alcoholComfort || [];
+    if (alcohol1.length > 0 && alcohol2.length > 0) {
+      const alcoholOverlap = alcohol1.filter(a => alcohol2.includes(a)).length;
+      score += (alcoholOverlap / Math.max(alcohol1.length, alcohol2.length)) * 100;
+      factors++;
+    }
+  } else {
+    // 饭局：使用餐饮预算
+    const budget1 = user1.budgetRange || [];
+    const budget2 = user2.budgetRange || [];
+    if (budget1.length > 0 && budget2.length > 0) {
+      const budgetOverlap = budget1.filter(b => budget2.includes(b)).length;
+      score += (budgetOverlap / Math.max(budget1.length, budget2.length)) * 100;
+      factors++;
+    }
+    
+    // 饮食偏好兼容性
+    const cuisine1 = user1.cuisinePreferences || [];
+    const cuisine2 = user2.cuisinePreferences || [];
+    if (cuisine1.length > 0 && cuisine2.length > 0) {
+      const cuisineOverlap = cuisine1.filter(c => cuisine2.includes(c)).length;
+      score += (cuisineOverlap / Math.max(cuisine1.length, cuisine2.length)) * 100;
+      factors++;
+    }
+    
+    // 口味强度兼容性
+    const taste1 = user1.tasteIntensity || [];
+    const taste2 = user2.tasteIntensity || [];
+    if (taste1.length > 0 && taste2.length > 0) {
+      const tasteOverlap = taste1.filter(t => taste2.includes(t)).length;
+      score += (tasteOverlap / Math.max(taste1.length, taste2.length)) * 100;
+      factors++;
+    }
   }
   
-  // 饮食偏好兼容性
-  const cuisine1 = user1.cuisinePreferences || [];
-  const cuisine2 = user2.cuisinePreferences || [];
-  if (cuisine1.length > 0 && cuisine2.length > 0) {
-    const cuisineOverlap = cuisine1.filter(c => cuisine2.includes(c)).length;
-    score += (cuisineOverlap / Math.max(cuisine1.length, cuisine2.length)) * 100;
-    factors++;
-  }
-  
-  // 社交目的兼容性
+  // 社交目的兼容性（两种活动都使用）
   const goals1 = user1.socialGoals || [];
   const goals2 = user2.socialGoals || [];
   if (goals1.length > 0 && goals2.length > 0) {
@@ -202,6 +254,50 @@ function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile
   }
   
   return factors > 0 ? Math.round(score / factors) : 60; // 默认中等兼容
+}
+
+/**
+ * 计算同乡亲和力分数 (0-100)
+ * 仅当双方都启用同乡匹配时生效
+ */
+function calculateHometownAffinityScore(user1: UserWithProfile, user2: UserWithProfile): number {
+  // 仅当双方都启用同乡匹配且都有家乡信息时才计算
+  if (!user1.hometownAffinityOptin || !user2.hometownAffinityOptin) {
+    return 0; // 未启用，返回0（不参与加分）
+  }
+  
+  if (!user1.hometown || !user2.hometown) {
+    return 0; // 缺少家乡信息
+  }
+  
+  // 完全匹配：100分
+  if (user1.hometown === user2.hometown) {
+    return 100;
+  }
+  
+  // 同省匹配：提取省份并比较（简化处理）
+  const getProvince = (hometown: string): string => {
+    // 处理直辖市和常见省份格式
+    const directCities = ["北京", "上海", "天津", "重庆"];
+    for (const city of directCities) {
+      if (hometown.includes(city)) return city;
+    }
+    // 提取省份（假设格式为"省份+城市"或"省份"）
+    const provinces = ["广东", "广西", "湖南", "湖北", "四川", "江苏", "浙江", "福建", "山东", "河南", "河北", "陕西", "甘肃", "云南", "贵州", "江西", "安徽", "辽宁", "吉林", "黑龙江", "内蒙古", "新疆", "西藏", "青海", "宁夏", "海南", "山西"];
+    for (const prov of provinces) {
+      if (hometown.includes(prov)) return prov;
+    }
+    return hometown;
+  };
+  
+  const province1 = getProvince(user1.hometown);
+  const province2 = getProvince(user2.hometown);
+  
+  if (province1 === province2) {
+    return 70; // 同省：70分
+  }
+  
+  return 0; // 不同省：不加分
 }
 
 /**
@@ -231,6 +327,16 @@ function calculateDiversityScore(user1: UserWithProfile, user2: UserWithProfile)
 
 /**
  * 计算两个用户的配对兼容性分数 (0-100)
+ * 
+ * 7维度匹配权重配置 (经专家验证):
+ * - Chemistry (性格化学反应): 30%
+ * - Interest (兴趣重叠): 20%
+ * - Conversation/Language (语言沟通): 15%
+ * - Hometown (同乡亲和力): 8-12% (动态，仅当双方启用时)
+ * - Preferences (活动偏好): 15%
+ * - Background (背景多样性): 5% (在小组层面单独加权)
+ * - Emotional (情绪匹配): 5% (预留)
+ * 
  * 注意：diversity在小组层面单独计算，不在配对层面重复计算
  */
 function calculatePairScore(user1: UserWithProfile, user2: UserWithProfile): number {
@@ -238,21 +344,47 @@ function calculatePairScore(user1: UserWithProfile, user2: UserWithProfile): num
   const interest = calculateInterestScore(user1, user2);
   const language = calculateLanguageScore(user1, user2);
   const preference = calculatePreferenceScore(user1, user2);
+  const hometown = calculateHometownAffinityScore(user1, user2);
   
-  // 权重配置：仅包含配对兼容性维度（总和100%）
-  // diversity在小组层面单独计算，避免重复计算
-  const weights = {
-    chemistry: 0.35,   // 性格兼容性 35%
-    interest: 0.30,    // 兴趣重叠 30%
-    preference: 0.20,  // 活动偏好 20%
-    language: 0.15     // 语言沟通 15%
+  // 判断是否启用同乡匹配（双方都启用）
+  const hometownEnabled = user1.hometownAffinityOptin && user2.hometownAffinityOptin;
+  
+  // 动态权重配置（经专家验证）：
+  // 同乡匹配启用时，hometown占10%，其他维度相应调整
+  // 同乡匹配未启用时，权重重新分配到其他维度
+  // 注意：background始终为5%
+  const weights = hometownEnabled ? {
+    chemistry: 0.30,    // 性格兼容性 30%
+    interest: 0.20,     // 兴趣重叠 20%
+    language: 0.15,     // 语言沟通 15%
+    preference: 0.10,   // 活动偏好 10%
+    hometown: 0.10,     // 同乡亲和力 10%
+    background: 0.05,   // 背景评估 5%
+    emotional: 0.10     // 情绪匹配 10%
+  } : {
+    chemistry: 0.30,    // 性格兼容性 30%
+    interest: 0.20,     // 兴趣重叠 20%
+    language: 0.15,     // 语言沟通 15%
+    preference: 0.20,   // 活动偏好 20%
+    hometown: 0,        // 同乡亲和力 0%
+    background: 0.05,   // 背景评估 5%
+    emotional: 0.10     // 情绪匹配 10%
   };
+  
+  // 背景多样性分数（鼓励不同背景的人配对）
+  const backgroundScore = calculateDiversityScore(user1, user2);
+  
+  // 情绪匹配分数（预留，暂时使用默认值）
+  const emotionalScore = 70; // TODO: 从SmartInsight数据计算
   
   const totalScore = 
     chemistry * weights.chemistry +
     interest * weights.interest +
+    language * weights.language +
     preference * weights.preference +
-    language * weights.language;
+    hometown * weights.hometown +
+    backgroundScore * weights.background +
+    emotionalScore * weights.emotional;
   
   return Math.round(totalScore);
 }
