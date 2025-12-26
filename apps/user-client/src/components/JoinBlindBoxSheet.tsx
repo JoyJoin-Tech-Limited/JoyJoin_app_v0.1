@@ -31,11 +31,6 @@ import {
   Check
 } from "lucide-react";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -466,7 +461,7 @@ export default function JoinBlindBoxSheet({
                 <Badge variant="destructive" className="text-xs">必填</Badge>
               </div>
               
-              {/* 预算选择 */}
+              {/* 预算选择 - 2列布局，单行文字 */}
               <div className="mb-6">
                 <MultiSelectGroup
                   label="你的预算范围？"
@@ -474,34 +469,32 @@ export default function JoinBlindBoxSheet({
                   selectedCount={budgetPreference.length}
                   showCounter={true}
                 >
-                  <div className="grid grid-cols-4 gap-2 w-full">
+                  <div className="grid grid-cols-2 gap-3 w-full">
                     {budgetOptions.map((option) => (
                       <MultiSelectButton
                         key={option.value}
                         selected={budgetPreference.includes(option.value)}
                         onClick={() => toggleBudget(option.value)}
-                        className="w-full justify-center"
+                        className="w-full justify-center whitespace-nowrap"
                         data-testid={`button-budget-${option.value}`}
                       >
-                        {getCurrencySymbol(eventData.city || "深圳")}{option.label}
+                        {option.value === "150以下" 
+                          ? `≤${getCurrencySymbol(eventData.city || "深圳")}150` 
+                          : `${getCurrencySymbol(eventData.city || "深圳")}${option.label}`}
                       </MultiSelectButton>
                     ))}
                   </div>
                 </MultiSelectGroup>
               </div>
 
-              {/* 选择商圈 - 移到必填区 */}
+              {/* 选择商圈 - Checkbox列表样式 */}
               <div>
-                <div className="mb-3">
-                  <h3 className="text-base font-semibold mb-1">选择商圈</h3>
-                  <p className="text-xs text-muted-foreground">多选商圈可提升匹配成功率</p>
-                </div>
-
-                {selectedDistricts.length > 0 && (
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      已选 <span className="font-medium text-foreground">{selectedDistricts.length}</span> 个商圈
-                    </span>
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-semibold mb-1">选择商圈</h3>
+                    <p className="text-xs text-muted-foreground">多选商圈可提升匹配成功率</p>
+                  </div>
+                  {selectedDistricts.length > 0 && (
                     <button
                       onClick={() => setSelectedDistricts([])}
                       className="text-xs text-destructive hover:underline"
@@ -509,107 +502,125 @@ export default function JoinBlindBoxSheet({
                     >
                       清空
                     </button>
+                  )}
+                </div>
+
+                {/* 已选摘要 */}
+                {selectedDistricts.length > 0 && (
+                  <div className="mb-3 p-2 bg-primary/5 rounded-lg border border-primary/20">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-muted-foreground">已选:</span>
+                      {selectedDistricts.slice(0, 4).map(id => {
+                        const district = getDistrictById(id);
+                        return district ? (
+                          <Badge key={id} variant="secondary" className="text-xs">
+                            {district.name}
+                          </Badge>
+                        ) : null;
+                      })}
+                      {selectedDistricts.length > 4 && (
+                        <span className="text-xs text-muted-foreground">+{selectedDistricts.length - 4}个</span>
+                      )}
+                    </div>
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  {shenzhenClusters.map(cluster => (
-                    <Collapsible 
-                      key={cluster.id}
-                      open={expandedClusters.includes(cluster.id)} 
-                      onOpenChange={() => {
-                        setExpandedClusters(prev => 
-                          prev.includes(cluster.id) 
-                            ? prev.filter(id => id !== cluster.id)
-                            : [...prev, cluster.id]
-                        );
-                      }}
-                    >
-                      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover-elevate">
-                        <div className="flex items-center gap-2">
-                          {expandedClusters.includes(cluster.id) ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                          <span className="font-medium text-sm">{cluster.name}</span>
-                          {cluster.districts.filter(d => selectedDistricts.includes(d.id)).length > 0 && (
-                            <Badge variant="default" className="text-xs">
-                              {cluster.districts.filter(d => selectedDistricts.includes(d.id)).length}
-                            </Badge>
-                          )}
-                        </div>
-                        {!expandedClusters.includes(cluster.id) && (
-                          <span className="text-xs text-muted-foreground">查看更多</span>
-                        )}
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="pt-3 pl-6">
-                        {(() => {
-                          const allClusterDistrictIds = cluster.districts.map(d => d.id);
-                          const allSelected = allClusterDistrictIds.every(id => selectedDistricts.includes(id));
-                          
-                          return (
-                            <>
-                              <div className="flex items-center gap-2 mb-2">
+                <div className="space-y-2 border rounded-lg overflow-hidden">
+                  {shenzhenClusters.map(cluster => {
+                    const clusterSelectedCount = cluster.districts.filter(d => selectedDistricts.includes(d.id)).length;
+                    const allClusterDistrictIds = cluster.districts.map(d => d.id);
+                    const allSelected = allClusterDistrictIds.every(id => selectedDistricts.includes(id));
+                    const isExpanded = expandedClusters.includes(cluster.id) || clusterSelectedCount > 0;
+                    
+                    return (
+                      <div key={cluster.id} className="border-b last:border-b-0">
+                        {/* 区域头部 - sticky header样式 */}
+                        <button
+                          onClick={() => {
+                            setExpandedClusters(prev => 
+                              prev.includes(cluster.id) 
+                                ? prev.filter(id => id !== cluster.id)
+                                : [...prev, cluster.id]
+                            );
+                          }}
+                          className="flex items-center justify-between w-full p-3 bg-muted/30 hover-elevate"
+                          data-testid={`button-cluster-${cluster.id}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <span className="font-medium text-sm">{cluster.name}</span>
+                            {clusterSelectedCount > 0 && (
+                              <Badge variant="default" className="text-xs">
+                                {clusterSelectedCount}/{cluster.districts.length}
+                              </Badge>
+                            )}
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (allSelected) {
+                                setSelectedDistricts(prev => prev.filter(id => !allClusterDistrictIds.includes(id)));
+                              } else {
+                                setSelectedDistricts(prev => {
+                                  const newSelection = [...prev];
+                                  allClusterDistrictIds.forEach(id => {
+                                    if (!newSelection.includes(id)) {
+                                      newSelection.push(id);
+                                    }
+                                  });
+                                  return newSelection;
+                                });
+                              }
+                            }}
+                            className="text-xs text-primary hover:underline px-2"
+                            data-testid={`button-select-all-${cluster.id}`}
+                          >
+                            {allSelected ? '取消全选' : '全选'}
+                          </button>
+                        </button>
+                        
+                        {/* 商圈列表 - checkbox list */}
+                        {isExpanded && (
+                          <div className="divide-y">
+                            {cluster.districts.map(district => {
+                              const isSelected = selectedDistricts.includes(district.id);
+                              return (
                                 <button
+                                  key={district.id}
                                   onClick={() => {
-                                    if (allSelected) {
-                                      setSelectedDistricts(prev => prev.filter(id => !allClusterDistrictIds.includes(id)));
+                                    if (isSelected) {
+                                      setSelectedDistricts(prev => prev.filter(id => id !== district.id));
                                     } else {
-                                      setSelectedDistricts(prev => {
-                                        const newSelection = [...prev];
-                                        allClusterDistrictIds.forEach(id => {
-                                          if (!newSelection.includes(id)) {
-                                            newSelection.push(id);
-                                          }
-                                        });
-                                        return newSelection;
-                                      });
+                                      setSelectedDistricts(prev => [...prev, district.id]);
                                     }
                                   }}
-                                  className="text-xs text-primary hover:underline"
-                                  data-testid={`button-select-all-${cluster.id}`}
+                                  className={`flex items-center gap-3 w-full p-3 pl-10 min-h-[44px] text-left transition-colors ${
+                                    isSelected ? 'bg-primary/5' : 'hover:bg-muted/50'
+                                  }`}
+                                  data-testid={`checkbox-district-${district.id}`}
                                 >
-                                  {allSelected ? '取消全选' : '全选'}
+                                  <div className={`h-5 w-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                                    isSelected 
+                                      ? 'bg-primary border-primary' 
+                                      : 'border-muted-foreground/30'
+                                  }`}>
+                                    {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                                  </div>
+                                  <span className={`text-sm ${isSelected ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
+                                    {district.name}
+                                  </span>
                                 </button>
-                                {allSelected && (
-                                  <Badge variant="outline" className="text-xs border-primary text-primary bg-primary/5">
-                                    已全选
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className={`flex flex-wrap gap-2 p-2 -m-2 rounded-lg transition-all duration-300 ${
-                                allSelected 
-                                  ? 'border-2 border-dashed border-primary/60 bg-primary/5' 
-                                  : 'border-2 border-transparent'
-                              }`}>
-                                {cluster.districts.map(district => {
-                                  const isSelected = selectedDistricts.includes(district.id);
-                                  return (
-                                    <MultiSelectButton
-                                      key={district.id}
-                                      selected={isSelected}
-                                      onClick={() => {
-                                        if (isSelected) {
-                                          setSelectedDistricts(prev => prev.filter(id => id !== district.id));
-                                        } else {
-                                          setSelectedDistricts(prev => [...prev, district.id]);
-                                        }
-                                      }}
-                                      className="rounded-full"
-                                      data-testid={`chip-district-${district.id}`}
-                                    >
-                                      {district.name}
-                                    </MultiSelectButton>
-                                  );
-                                })}
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </CollapsibleContent>
-                    </Collapsible>
-                  ))}
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {selectedDistricts.length < 2 && (
