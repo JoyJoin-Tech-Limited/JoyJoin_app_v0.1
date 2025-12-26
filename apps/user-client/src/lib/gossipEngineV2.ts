@@ -1,7 +1,13 @@
 /**
- * 小悦偷偷碎嘴系统 V2.0 - 全面优化版
+ * 小悦偷偷碎嘴系统 V3.0 - 语义去重优化版
  * 
- * 核心优化：
+ * V3.0 核心优化：
+ * 1. Levenshtein 语义相似度去重（阻止近似重复，阈值 0.6）
+ * 2. 碎片组合生成（prefix + stance + payload + ending 独立随机）
+ * 3. 扩展模板变体库（每 trigger 8-12 个变体）
+ * 4. 同义词替换池（动态替换关键词）
+ * 
+ * V2.0 保留优化：
  * 1. 支柱配额矩阵（Identity≤45%, Energy≥35%, Value≥20%）
  * 2. 15+条Energy/Value新规则 + 稀有属性组合
  * 3. 动态模板系统（骨架句+变量槽+毒舌收尾库）
@@ -39,6 +45,95 @@ export type InferenceResult =
   | { type: 'success'; insight: FoxInsight }
   | { type: 'cooldown'; reason: string }
   | { type: 'no_match'; reason: string };
+
+// ============ V3 语义去重系统 ============
+
+/**
+ * 计算两个字符串的 Levenshtein 距离
+ * 用于检测语义相似度
+ */
+function levenshteinDistance(a: string, b: string): number {
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+
+  const matrix: number[][] = [];
+
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+
+  return matrix[b.length][a.length];
+}
+
+/**
+ * 计算归一化相似度 (0-1)
+ * 1 = 完全相同, 0 = 完全不同
+ */
+function normalizedSimilarity(a: string, b: string): number {
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen === 0) return 1;
+  return 1 - levenshteinDistance(a, b) / maxLen;
+}
+
+// 语义相似度阈值：超过此值视为"重复"
+const SEMANTIC_SIMILARITY_THRESHOLD = 0.6;
+
+/**
+ * 检查文本是否与已显示的洞察语义相似
+ * 返回 true 表示太相似（应该跳过）
+ */
+function isSemanticallyDuplicate(text: string, shownInsights: Set<string>): boolean {
+  for (const shown of shownInsights) {
+    const similarity = normalizedSimilarity(text, shown);
+    if (similarity >= SEMANTIC_SIMILARITY_THRESHOLD) {
+      console.log(`[GossipV3] 语义去重: "${text.slice(0, 20)}..." 与已显示内容相似度 ${(similarity * 100).toFixed(1)}%`);
+      return true;
+    }
+  }
+  return false;
+}
+
+// ============ V3 同义词替换池 ============
+const SYNONYM_POOLS: Record<string, string[]> = {
+  '我猜': ['我估摸', '我觉得', '我看呐', '依我看', '八成是'],
+  '应该': ['大概', '估计', '想必', '多半', '看样子'],
+  '有点': ['还挺', '蛮', '颇有些', '略微'],
+  '不错': ['还行', '可以', '挺好', '不赖'],
+  '厉害': ['牛', '强', '666', '有两把刷子'],
+  '喜欢': ['爱', '中意', '好这口', '对胃口'],
+};
+
+/**
+ * 随机替换同义词，增加文本多样性
+ */
+function applySynonymVariation(text: string): string {
+  let result = text;
+  for (const [word, synonyms] of Object.entries(SYNONYM_POOLS)) {
+    if (result.includes(word) && Math.random() < 0.4) {
+      const replacement = synonyms[Math.floor(Math.random() * synonyms.length)];
+      result = result.replace(word, replacement);
+    }
+  }
+  return result;
+}
 
 // ============ 安全守护系统 ============
 const FORBIDDEN_WORDS = [
@@ -277,11 +372,19 @@ const TEMPLATE_VARIANTS: Record<string, TemplateVariant[]> = {
     { text: '爱吃的人运气都不会太差，对吧', endingType: 'tease' },
     { text: '美食达人，推荐个私藏店呗', endingType: 'curious' },
     { text: '看来你的快乐很简单——好吃的就行', endingType: 'tease' },
+    { text: '探店达人？大众点评应该被你翻烂了', endingType: 'question' },
+    { text: '会吃的人往往也会生活，你是不是也这样', endingType: 'curious' },
+    { text: '吃货的世界我懂，减肥永远从明天开始', endingType: 'tease' },
+    { text: '对美食有追求的人，嘴刁心细', endingType: 'question' },
   ],
   'interest_outdoor': [
     { text: '户外爱好者？你的朋友圈应该全是山和海吧', endingType: 'tease' },
     { text: '爱往外跑的人，办公室是不是困不住你', endingType: 'question' },
     { text: '喜欢户外，看来你不是那种宅得住的人', endingType: 'curious' },
+    { text: '户外派，周末的阳光都被你承包了', endingType: 'tease' },
+    { text: '爱大自然的人心胸都开阔，你也是吧', endingType: 'question' },
+    { text: '徒步露营攀岩，你的装备应该不少吧', endingType: 'curious' },
+    { text: '户外达人，体力和毅力都在线', endingType: 'tease' },
   ],
   'interest_pets': [
     { text: '养宠物的人心都软，你是不是也这样', endingType: 'question' },
@@ -309,6 +412,10 @@ const TEMPLATE_VARIANTS: Record<string, TemplateVariant[]> = {
     { text: '互联网人，加班应该是家常便饭吧', endingType: 'question' },
     { text: '做技术的，头发还好吧', endingType: 'tease' },
     { text: '科技行业，每天和代码bug打交道', endingType: 'curious' },
+    { text: '程序员？咖啡和熬夜是标配吧', endingType: 'question' },
+    { text: '互联网卷王，内卷程度几颗星', endingType: 'tease' },
+    { text: '科技从业者，逻辑思维应该很强', endingType: 'curious' },
+    { text: '做IT的，需求变更是不是你的噩梦', endingType: 'tease' },
   ],
   'industry_finance': [
     { text: '金融人，是不是天天盯盘看K线', endingType: 'question' },
@@ -324,6 +431,10 @@ const TEMPLATE_VARIANTS: Record<string, TemplateVariant[]> = {
     { text: '在深圳打拼，节奏是不是特别快', endingType: 'question' },
     { text: '深圳人，来了就是深圳人这话你信吗', endingType: 'tease' },
     { text: '深圳这座城市，留住你的是什么', endingType: 'curious' },
+    { text: '深圳的夜晚灯火通明，你是不是经常加班到很晚', endingType: 'question' },
+    { text: '南山还是福田？深圳的哪个区域是你的主场', endingType: 'curious' },
+    { text: '在深圳奋斗，有没有觉得时间过得特别快', endingType: 'tease' },
+    { text: '深圳打工人，梦想和现实哪个更重要', endingType: 'question' },
   ],
   'city_hongkong': [
     { text: '在香港生活，中环还是九龙', endingType: 'curious' },
@@ -1077,7 +1188,7 @@ function generateInsightsV2(info: CollectedInfo): FoxInsight[] {
   return insights.filter(i => isSafeInsight(i.text));
 }
 
-// ============ 主推理函数 ============
+// ============ 主推理函数 (V3 优化) ============
 
 export function generateDynamicInferenceV2(
   info: CollectedInfo, 
@@ -1090,25 +1201,59 @@ export function generateDynamicInferenceV2(
   }
   
   const insights = generateInsightsV2(info);
-  const availableInsights = insights.filter(i => !cadenceState.shownInsights.has(i.trigger));
+  
+  // V3: 过滤已使用的 trigger（保留原逻辑）
+  let availableInsights = insights.filter(i => !cadenceState.shownInsights.has(i.trigger));
   
   if (availableInsights.length === 0) {
     return { type: 'no_match', reason: 'no matching rules for current info' };
   }
   
+  // 按分数排序
   availableInsights.sort((a, b) => calculateFinalScore(b) - calculateFinalScore(a));
-  const selected = availableInsights[0];
   
-  const triggerBase = getTriggerBase(selected.trigger);
-  const variantText = selectVariant(triggerBase, info);
-  if (variantText) {
-    selected.text = variantText;
+  // V3: 尝试找到一个语义不重复的洞察
+  let selected: FoxInsight | null = null;
+  
+  for (const candidate of availableInsights) {
+    const triggerBase = getTriggerBase(candidate.trigger);
+    let candidateText = selectVariant(triggerBase, info);
+    if (!candidateText) {
+      candidateText = candidate.text;
+    }
+    
+    // V3: 应用同义词替换增加多样性
+    candidateText = applySynonymVariation(candidateText);
+    
+    // V3: 语义去重检查
+    if (!isSemanticallyDuplicate(candidateText, cadenceState.shownInsights)) {
+      selected = { ...candidate, text: candidateText };
+      break;
+    }
+    
+    console.log(`[GossipV3] 跳过语义重复: trigger=${candidate.trigger}`);
+  }
+  
+  // 如果所有候选都语义重复，选择分数最高的（应用变体后）
+  if (!selected && availableInsights.length > 0) {
+    const fallback = availableInsights[0];
+    const triggerBase = getTriggerBase(fallback.trigger);
+    let fallbackText = selectVariant(triggerBase, info) || fallback.text;
+    fallbackText = applySynonymVariation(fallbackText);
+    selected = { ...fallback, text: fallbackText };
+    console.log(`[GossipV3] 所有候选语义重复，使用 fallback: ${fallback.trigger}`);
+  }
+  
+  if (!selected) {
+    return { type: 'no_match', reason: 'no valid insight after semantic dedup' };
   }
   
   incrementTriggerUsage(selected.trigger);
   
   cadenceState.lastInsightTurn = currentTurn;
+  // V3: 存储实际文本而非仅 trigger，用于语义比较
   cadenceState.shownInsights.add(selected.trigger);
+  cadenceState.shownInsights.add(selected.text); // 新增：存储实际文本
   cadenceState.pillarHistory.push(selected.pillar);
   if (cadenceState.pillarHistory.length > 5) {
     cadenceState.pillarHistory.shift();
