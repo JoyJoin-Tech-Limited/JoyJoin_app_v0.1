@@ -403,6 +403,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post('/api/registration/chat/message/stream', async (req: any, res) => {
+    const reqStart = Date.now();
+    console.log(`\n[ROUTE PERF] ========== 请求到达 /api/registration/chat/message/stream ==========`);
+    console.log(`[ROUTE PERF] 时间: ${new Date().toISOString()}`);
+    
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -416,6 +420,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.end();
       return;
     }
+    
+    const t1_afterValidation = Date.now();
+    console.log(`[ROUTE PERF] 参数验证耗时: ${t1_afterValidation - reqStart}ms`);
     
     if (userId) {
       const abuseCheck = await checkUserAbuse(userId, message);
@@ -437,15 +444,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     
+    const t2_afterAbuseCheck = Date.now();
+    console.log(`[ROUTE PERF] 滥用检查耗时: ${t2_afterAbuseCheck - t1_afterValidation}ms`);
+    
     try {
       // 使用带推断引擎的增强版流式对话函数
       const { continueXiaoyueChatStreamWithInference } = await import('./deepseekClient');
+      const t3_afterImport = Date.now();
+      console.log(`[ROUTE PERF] 动态import耗时: ${t3_afterImport - t2_afterAbuseCheck}ms`);
+      
       // sessionId: 优先使用客户端传入的，其次用userId，最后用会话ID（express-session会自动生成稳定的session ID）
       const sessionId = clientSessionId || userId || req.sessionID || `anon_${Date.now()}`;
       
+      let chunkCount = 0;
+      let firstChunkTime: number | null = null;
+      
       for await (const chunk of continueXiaoyueChatStreamWithInference(message, conversationHistory, sessionId)) {
+        if (firstChunkTime === null) {
+          firstChunkTime = Date.now();
+          console.log(`[ROUTE PERF] 首个chunk到达，从请求开始: ${firstChunkTime - reqStart}ms`);
+        }
+        chunkCount++;
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
       }
+      
+      const reqEnd = Date.now();
+      console.log(`[ROUTE PERF] 发送chunks: ${chunkCount}, 请求总耗时: ${reqEnd - reqStart}ms`);
+      console.log(`[ROUTE PERF] ========== 请求结束 ==========\n`);
     } catch (error) {
       console.error("Error in streaming chat:", error);
       res.write(`data: ${JSON.stringify({ type: 'error', content: '小悦暂时走神了，请重试' })}\n\n`);

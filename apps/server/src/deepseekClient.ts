@@ -2236,21 +2236,37 @@ export async function* continueXiaoyueChatStreamWithInference(
     inferred: Array<{ field: string; value: string }>;
   };
 }> {
+  // ============ 性能计时 ============
+  const t0_functionStart = Date.now();
+  console.log(`\n[PERF] ========== 新请求开始 ==========`);
+  console.log(`[PERF] t0 函数入口: ${new Date().toISOString()}`);
+  console.log(`[PERF] 消息长度: ${userMessage.length}字符, 历史轮数: ${conversationHistory.length}`);
+  
+  // 计算输入token估算（中文约1.5字符/token）
+  const estimatedInputTokens = Math.ceil(
+    conversationHistory.reduce((sum, m) => sum + m.content.length, 0) / 1.5 + userMessage.length / 1.5
+  );
+  console.log(`[PERF] 预估输入tokens: ~${estimatedInputTokens}`);
+  
   // 1. 获取当前推断状态
   const currentState = getSessionInferenceState(sessionId);
   
   // 2. 运行推断引擎
+  const t1_inferenceStart = Date.now();
   const inferenceResult = await inferenceEngine.process(
     userMessage,
     conversationHistory.map(m => ({ role: m.role, content: m.content })),
     currentState,
     sessionId
   );
+  const t1_inferenceEnd = Date.now();
+  console.log(`[PERF] t1 推断引擎耗时: ${t1_inferenceEnd - t1_inferenceStart}ms`);
   
   // 3. 更新推断状态
   updateSessionInferenceState(sessionId, inferenceResult.newState);
   
   // 3.5 AI Evolution: 实时洞察检测 (per-message) + L3完整分析 + 累积存储 + 持久化
+  const t2_insightStart = Date.now();
   try {
     const { insightDetectorService } = await import('./insightDetectorService');
     const { dialogueEmbeddingsService } = await import('./dialogueEmbeddingsService');
@@ -2290,6 +2306,8 @@ export async function* continueXiaoyueChatStreamWithInference(
     console.error('[L3 Analysis Stream] 洞察检测错误:', insightError);
     // Non-blocking
   }
+  const t2_insightEnd = Date.now();
+  console.log(`[PERF] t2 洞察检测耗时: ${t2_insightEnd - t2_insightStart}ms`);
   
   // 4. 生成推断上下文补充
   const context = generateXiaoyueContext(inferenceResult.newState);
@@ -2354,6 +2372,7 @@ ${context}
   }
   
   // 5. 构建增强的消息历史（只用于API调用，不保存）
+  const t3_promptBuildStart = Date.now();
   const enhancedHistory: ChatMessage[] = conversationHistory.map((msg, idx) => {
     if (idx === 0 && msg.role === 'system') {
       return { ...msg, content: msg.content + inferenceAddition + orchestratorAddition };
@@ -2365,8 +2384,15 @@ ${context}
     ...enhancedHistory,
     { role: 'user', content: userMessage + ageHint }
   ];
+  const t3_promptBuildEnd = Date.now();
+  console.log(`[PERF] t3 Prompt构建耗时: ${t3_promptBuildEnd - t3_promptBuildStart}ms`);
+  console.log(`[PERF] === 准备调用DeepSeek API ===`);
+  console.log(`[PERF] 预处理总耗时: ${t3_promptBuildEnd - t0_functionStart}ms`);
 
   try {
+    const t4_apiCallStart = Date.now();
+    console.log(`[PERF] t4 API调用开始: ${new Date().toISOString()}`);
+    
     const stream = await deepseekClient.chat.completions.create({
       model: 'deepseek-chat',
       messages: updatedHistory.map(msg => ({
@@ -2377,15 +2403,38 @@ ${context}
       max_tokens: 800,
       stream: true,
     });
+    
+    const t4_streamCreated = Date.now();
+    console.log(`[PERF] t4 Stream创建耗时: ${t4_streamCreated - t4_apiCallStart}ms (连接建立+首次握手)`);
 
     let fullContent = '';
+    let firstTokenTime: number | null = null;
+    let tokenCount = 0;
+    
     for await (const chunk of stream) {
       const content = chunk.choices[0]?.delta?.content || '';
       if (content) {
+        if (firstTokenTime === null) {
+          firstTokenTime = Date.now();
+          const ttft = firstTokenTime - t4_apiCallStart;
+          console.log(`[PERF] ⚡ TTFT (首Token时间): ${ttft}ms`);
+        }
+        tokenCount++;
         fullContent += content;
         yield { type: 'content', content };
       }
     }
+    
+    const t5_streamEnd = Date.now();
+    const totalApiTime = t5_streamEnd - t4_apiCallStart;
+    const generationTime = firstTokenTime ? t5_streamEnd - firstTokenTime : 0;
+    const tps = generationTime > 0 ? (tokenCount / (generationTime / 1000)).toFixed(1) : 'N/A';
+    
+    console.log(`[PERF] t5 流式结束: ${new Date().toISOString()}`);
+    console.log(`[PERF] 输出tokens: ${tokenCount}, 生成耗时: ${generationTime}ms, TPS: ${tps}`);
+    console.log(`[PERF] API总耗时: ${totalApiTime}ms`);
+    console.log(`[PERF] 端到端总耗时: ${t5_streamEnd - t0_functionStart}ms`);
+    console.log(`[PERF] ========== 请求结束 ==========\n`);
 
     const collectedInfo = extractCollectedInfo(fullContent);
     const isComplete = fullContent.includes('```registration_complete');
@@ -2427,6 +2476,8 @@ ${context}
       }
     };
   } catch (error) {
+    const errorTime = Date.now();
+    console.error(`[PERF] API错误，耗时: ${errorTime - t0_functionStart}ms`);
     console.error('DeepSeek streaming API error:', error);
     yield { type: 'error', content: '小悦暂时有点忙，请稍后再试～' };
   }
