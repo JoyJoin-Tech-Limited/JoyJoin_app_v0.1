@@ -120,12 +120,14 @@ const BAR_PRICE_RANGES = [
 const PRICE_RANGES = RESTAURANT_PRICE_RANGES;
 
 const TAGS = ["cozy", "lively", "upscale", "casual"];
-// 餐厅专属菜系（移除"酒吧"）
-const CUISINES = ["粤菜", "川菜", "日料", "西餐", "火锅", "烧烤", "东南亚菜", "融合菜"];
+// 餐厅专属菜系 - 与用户表单对齐
+const CUISINES = ["中餐", "川菜", "粤菜", "火锅", "烧烤", "西餐", "日料"];
 const DECOR_STYLES = ["轻奢现代风", "绿植花园风", "复古工业风", "温馨日式风"];
 
-// 酒吧特有选项
-const BAR_THEMES = ["精酿", "清吧", "鸡尾酒吧", "Whisky Bar", "Wine Bar"];
+// 酒吧特有选项 - 与用户表单对齐
+const BAR_THEMES = ["精酿", "清吧", "私密调酒·Homebar"];
+// 口味偏好选项（餐厅）
+const TASTE_INTENSITY_OPTIONS = ["爱吃辣", "不辣/清淡为主"];
 const ALCOHOL_OPTIONS = ["可以喝酒", "微醺就好", "无酒精饮品"];
 
 interface AllTimeSlot extends VenueTimeSlot {
@@ -238,11 +240,12 @@ export default function AdminVenuesPage() {
     contactName: "",
     contactPhone: "",
     commissionRate: "20",
-    priceRange: "100-200",
+    priceRange: "150以下",
     maxConcurrentEvents: "1",
     tags: [] as string[],
     cuisines: [] as string[],
     decorStyle: [] as string[],
+    tasteIntensity: [] as string[],
     notes: "",
     // 酒吧特有字段
     barThemes: [] as string[],
@@ -734,11 +737,12 @@ export default function AdminVenuesPage() {
       contactName: "",
       contactPhone: "",
       commissionRate: "20",
-      priceRange: "100-200",
+      priceRange: "150以下",
       maxConcurrentEvents: "1",
       tags: [],
       cuisines: [],
       decorStyle: [],
+      tasteIntensity: [],
       notes: "",
       barThemes: [],
       alcoholOptions: [],
@@ -793,11 +797,12 @@ export default function AdminVenuesPage() {
       contactName: venue.contactName || "",
       contactPhone: venue.contactPhone || "",
       commissionRate: venue.commissionRate.toString(),
-      priceRange: venue.priceRange || "100-200",
+      priceRange: venue.priceRange || "150以下",
       maxConcurrentEvents: venue.maxConcurrentEvents.toString(),
       tags: venue.tags || [],
       cuisines: venue.cuisines || [],
       decorStyle: venue.decorStyle || [],
+      tasteIntensity: (venue as any).tasteIntensity || [],
       notes: venue.notes || "",
       barThemes: venue.barThemes || [],
       alcoholOptions: venue.alcoholOptions || [],
@@ -869,6 +874,15 @@ export default function AdminVenuesPage() {
       cuisines: prev.cuisines.includes(cuisine)
         ? prev.cuisines.filter(c => c !== cuisine)
         : [...prev.cuisines, cuisine]
+    }));
+  };
+
+  const toggleTasteIntensity = (taste: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tasteIntensity: prev.tasteIntensity.includes(taste)
+        ? prev.tasteIntensity.filter(t => t !== taste)
+        : [...prev.tasteIntensity, taste]
     }));
   };
 
@@ -1501,6 +1515,26 @@ export default function AdminVenuesPage() {
               </div>
             )}
 
+            {/* 餐厅专属：口味偏好支持 */}
+            {formData.type === "restaurant" && (
+              <div className="space-y-2">
+                <Label>支持的口味偏好</Label>
+                <div className="flex flex-wrap gap-2">
+                  {TASTE_INTENSITY_OPTIONS.map(taste => (
+                    <Badge
+                      key={taste}
+                      variant={formData.tasteIntensity.includes(taste) ? "default" : "outline"}
+                      className="cursor-pointer hover-elevate active-elevate-2"
+                      onClick={() => toggleTasteIntensity(taste)}
+                      data-testid={`taste-${taste}`}
+                    >
+                      {taste}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>装修风格</Label>
               <div className="flex flex-wrap gap-2">
@@ -1818,6 +1852,26 @@ export default function AdminVenuesPage() {
                       data-testid={`edit-cuisine-${cuisine}`}
                     >
                       {cuisine}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 餐厅专属：口味偏好支持 */}
+            {formData.type === "restaurant" && (
+              <div className="space-y-2">
+                <Label>支持的口味偏好</Label>
+                <div className="flex flex-wrap gap-2">
+                  {TASTE_INTENSITY_OPTIONS.map(taste => (
+                    <Badge
+                      key={taste}
+                      variant={formData.tasteIntensity.includes(taste) ? "default" : "outline"}
+                      className="cursor-pointer hover-elevate active-elevate-2"
+                      onClick={() => toggleTasteIntensity(taste)}
+                      data-testid={`edit-taste-${taste}`}
+                    >
+                      {taste}
                     </Badge>
                   ))}
                 </div>

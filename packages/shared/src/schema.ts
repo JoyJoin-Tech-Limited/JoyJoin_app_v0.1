@@ -896,12 +896,13 @@ export const venues = pgTable("venues", {
   
   // Venue tags for matching
   tags: text("tags").array(), // atmosphere tags: cozy, lively, upscale, casual
-  cuisines: text("cuisines").array(), // 粤菜, 川菜, 日料, 西餐 etc.
+  cuisines: text("cuisines").array(), // 菜系: 中餐, 川菜, 粤菜, 火锅, 烧烤, 西餐, 日料
   priceRange: text("price_range"), // 预算档次: "150以下", "150-200", "200-300", "300-500"
   decorStyle: text("decor_style").array(), // 装修风格: 轻奢现代风, 绿植花园风, 复古工业风, 温馨日式风
+  tasteIntensity: text("taste_intensity").array(), // 口味偏好支持: 爱吃辣, 不辣/清淡为主
   
   // 酒吧特有标签 (仅当 venueType='bar' 时使用)
-  barThemes: text("bar_themes").array(), // 酒吧主题: 精酿, 清吧, 鸡尾酒吧, Whisky Bar, Wine Bar
+  barThemes: text("bar_themes").array(), // 酒吧主题: 精酿, 清吧, 私密调酒·Homebar
   alcoholOptions: text("alcohol_options").array(), // 支持的饮酒选项: 可以喝酒, 微醺就好, 无酒精饮品
   barPriceRange: text("bar_price_range"), // 酒吧价格档次（每杯）: "80以下", "80-150"
   vibeDescriptor: text("vibe_descriptor"), // 氛围描述（编辑性文字，非结构化标签）

@@ -1570,8 +1570,21 @@ export class DatabaseStorage implements IStorage {
 
   async createVenue(data: any): Promise<any> {
     const result = await db.execute(sql`
-      INSERT INTO venues (name, type, address, city, district, contact_name, contact_phone, commission_rate, tags, cuisines, price_range, max_concurrent_events, is_active, notes)
-      VALUES (${data.name}, ${data.type}, ${data.address}, ${data.city}, ${data.district}, ${data.contactName || null}, ${data.contactPhone || null}, ${data.commissionRate || 20}, ${data.tags || []}, ${data.cuisines || []}, ${data.priceRange || null}, ${data.maxConcurrentEvents || 1}, ${data.isActive !== false}, ${data.notes || null})
+      INSERT INTO venues (
+        name, type, address, city, district, cluster_id, district_id,
+        contact_name, contact_phone, commission_rate, tags, cuisines, 
+        price_range, decor_style, taste_intensity, max_concurrent_events, 
+        is_active, notes, bar_themes, alcohol_options, vibe_descriptor
+      )
+      VALUES (
+        ${data.name}, ${data.type}, ${data.address}, ${data.city}, ${data.district},
+        ${data.clusterId || null}, ${data.districtId || null},
+        ${data.contactName || null}, ${data.contactPhone || null}, ${data.commissionRate || 20},
+        ${data.tags || []}, ${data.cuisines || []}, ${data.priceRange || null},
+        ${data.decorStyle || []}, ${data.tasteIntensity || []}, ${data.maxConcurrentEvents || 1},
+        ${data.isActive !== false}, ${data.notes || null},
+        ${data.barThemes || []}, ${data.alcoholOptions || []}, ${data.vibeDescriptor || null}
+      )
       RETURNING *
     `);
     return result.rows[0];
@@ -1636,6 +1649,34 @@ export class DatabaseStorage implements IStorage {
     if (updates.notes !== undefined) {
       setClauses.push(`notes = $${values.length + 1}`);
       values.push(updates.notes);
+    }
+    if (updates.clusterId !== undefined) {
+      setClauses.push(`cluster_id = $${values.length + 1}`);
+      values.push(updates.clusterId);
+    }
+    if (updates.districtId !== undefined) {
+      setClauses.push(`district_id = $${values.length + 1}`);
+      values.push(updates.districtId);
+    }
+    if (updates.decorStyle !== undefined) {
+      setClauses.push(`decor_style = $${values.length + 1}`);
+      values.push(updates.decorStyle);
+    }
+    if (updates.tasteIntensity !== undefined) {
+      setClauses.push(`taste_intensity = $${values.length + 1}`);
+      values.push(updates.tasteIntensity);
+    }
+    if (updates.barThemes !== undefined) {
+      setClauses.push(`bar_themes = $${values.length + 1}`);
+      values.push(updates.barThemes);
+    }
+    if (updates.alcoholOptions !== undefined) {
+      setClauses.push(`alcohol_options = $${values.length + 1}`);
+      values.push(updates.alcoholOptions);
+    }
+    if (updates.vibeDescriptor !== undefined) {
+      setClauses.push(`vibe_descriptor = $${values.length + 1}`);
+      values.push(updates.vibeDescriptor);
     }
     // 新增字段：合作场地优惠系统
     if (updates.avgPrice !== undefined) {
