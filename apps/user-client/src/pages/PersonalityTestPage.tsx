@@ -753,7 +753,7 @@ export default function PersonalityTestPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="mobile-page bg-background">
       <AnimatePresence>{showIntro && !showResumePrompt && <IntroScreen />}</AnimatePresence>
       <AnimatePresence>{showResumePrompt && <ResumePrompt />}</AnimatePresence>
       <AnimatePresence>{showBlindBox && <BlindBoxReveal />}</AnimatePresence>
@@ -761,8 +761,8 @@ export default function PersonalityTestPage() {
 
       {/* 简化的进度条 - sticky悬浮 */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b">
-        <div className="p-3">
-          <div className="flex items-center justify-between mb-2">
+        <div className="mobile-header-compact">
+          <div className="flex items-center justify-between mb-1.5">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary" />
               <h1 className="text-base font-semibold">性格测试</h1>
@@ -771,12 +771,12 @@ export default function PersonalityTestPage() {
               {effectiveQuestionNumber}/{totalQuestions}
             </span>
           </div>
-          <Progress value={progress} className="h-1.5" />
+          <Progress value={progress} className="h-1" />
         </div>
       </div>
 
-      <div className="flex-1 p-6 overflow-y-auto">
-        <div className="max-w-2xl mx-auto space-y-6">
+      <div className="mobile-content-compact">
+        <div className="max-w-2xl mx-auto space-y-4">
           {/* ========== 低能量校准模式渲染 ========== */}
           {lowEnergyCalibrationActive && currentLowEnergyQuestion ? (
             <>
@@ -791,13 +791,13 @@ export default function PersonalityTestPage() {
                   <span>{currentLowEnergyQuestion.category}</span>
                   <Badge variant="outline" className="text-xs">精准校准</Badge>
                 </div>
-                <p className="text-sm text-muted-foreground mb-3 italic leading-relaxed">
+                <p className="text-sm text-muted-foreground mb-2 italic leading-snug">
                   {currentLowEnergyQuestion.scenarioText}
                 </p>
-                <h2 className="text-xl font-bold mb-6">{currentLowEnergyQuestion.questionText}</h2>
+                <h2 className="text-lg font-bold mb-3 text-balance">{currentLowEnergyQuestion.questionText}</h2>
               </motion.div>
 
-              <div className="space-y-3">
+              <div className="options-compact">
                 {currentLowEnergyQuestion.options.map((option) => {
                   const isSelected = answers[currentLowEnergyQuestion.id]?.value === option.value;
                   return (
@@ -805,22 +805,15 @@ export default function PersonalityTestPage() {
                       key={option.value}
                       type="button"
                       onClick={() => handleLowEnergyChoice(option.value, option.traitScores)}
-                      className={`
-                        w-full px-4 py-4 text-left rounded-lg border-2 transition-all text-base flex flex-col gap-2
-                        ${
-                          isSelected
-                            ? "border-primary bg-primary/5 text-foreground"
-                            : "border-border hover-elevate active-elevate-2"
-                        }
-                      `}
+                      className={`option-compact ${isSelected ? "selected" : ""}`}
                       data-testid={`button-low-energy-${currentLowEnergyQuestion.id}-${option.value}`}
                     >
-                      <div className="flex items-start gap-3 w-full">
-                        <span className="font-semibold shrink-0">{option.value}.</span>
+                      <div className="flex items-start gap-2 w-full">
+                        <span className="font-semibold shrink-0 text-muted-foreground">{option.value}.</span>
                         <span className="flex-1">{option.text}</span>
                         {isSelected && (
                           <span className="text-primary font-bold shrink-0">
-                            <Sparkles className="w-4 h-4" />
+                            <Sparkles className="w-3.5 h-3.5" />
                           </span>
                         )}
                       </div>
@@ -828,7 +821,7 @@ export default function PersonalityTestPage() {
                         <div className="flex justify-end w-full">
                           <Badge 
                             variant={isSelected ? "default" : "secondary"} 
-                            className="text-xs px-2 py-0.5"
+                            className="text-xs px-1.5 py-0"
                           >
                             {option.tag}
                           </Badge>
@@ -848,17 +841,17 @@ export default function PersonalityTestPage() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="text-sm text-muted-foreground mb-2">
+            <div className="text-sm text-muted-foreground mb-1">
               {currentQ.category}
             </div>
-            <p className="text-sm text-muted-foreground mb-3 italic leading-relaxed">
+            <p className="text-sm text-muted-foreground mb-2 italic leading-snug">
               {currentQ.scenarioText}
             </p>
-            <h2 className="text-xl font-bold mb-6">{currentQ.questionText}</h2>
+            <h2 className="text-lg font-bold mb-3 text-balance">{currentQ.questionText}</h2>
           </motion.div>
 
           {currentQ.questionType === "single" ? (
-            <div className="space-y-3">
+            <div className="options-compact">
               {currentQ.options.map((option) => {
                 const isSelected = answers[currentQ.id]?.value === option.value;
                 return (
@@ -868,22 +861,15 @@ export default function PersonalityTestPage() {
                     onClick={() =>
                       handleSingleChoice(option.value, option.traitScores)
                     }
-                    className={`
-                      w-full px-4 py-4 text-left rounded-lg border-2 transition-all text-base flex flex-col gap-2
-                      ${
-                        isSelected
-                          ? "border-primary bg-primary/5 text-foreground"
-                          : "border-border hover-elevate active-elevate-2"
-                      }
-                    `}
+                    className={`option-compact ${isSelected ? "selected" : ""}`}
                     data-testid={`button-q${currentQ.id}-${option.value}`}
                   >
-                    <div className="flex items-start gap-3 w-full">
-                      <span className="font-semibold shrink-0">{option.value}.</span>
+                    <div className="flex items-start gap-2 w-full">
+                      <span className="font-semibold shrink-0 text-muted-foreground">{option.value}.</span>
                       <span className="flex-1">{option.text}</span>
                       {isSelected && (
                         <span className="text-primary font-bold shrink-0">
-                          <Sparkles className="w-4 h-4" />
+                          <Sparkles className="w-3.5 h-3.5" />
                         </span>
                       )}
                     </div>
@@ -891,7 +877,7 @@ export default function PersonalityTestPage() {
                       <div className="flex justify-end w-full">
                         <Badge 
                           variant={isSelected ? "default" : "secondary"} 
-                          className="text-xs px-2 py-0.5"
+                          className="text-xs px-1.5 py-0"
                         >
                           {option.tag}
                         </Badge>
@@ -902,10 +888,10 @@ export default function PersonalityTestPage() {
               })}
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <div className="text-sm font-medium mb-3">最像我的（主选）</div>
-                <div className="space-y-3">
+                <div className="text-sm font-medium mb-2">最像我的（主选）</div>
+                <div className="options-compact">
                   {currentQ.options.map((option) => {
                     const isSelected =
                       answers[currentQ.id]?.mostLike === option.value;
@@ -920,24 +906,21 @@ export default function PersonalityTestPage() {
                           handleDualChoice("most", option.value, option.traitScores)
                         }
                         disabled={isDisabled}
-                        className={`
-                          w-full px-4 py-4 text-left rounded-lg border-2 transition-all text-base flex flex-col gap-2
-                          ${
-                            isDisabled
-                              ? "opacity-50 cursor-not-allowed border-border"
-                              : isSelected
-                              ? "border-primary bg-primary/5 text-foreground"
-                              : "border-border hover-elevate active-elevate-2"
-                          }
-                        `}
+                        className={`option-compact ${
+                          isDisabled
+                            ? "opacity-50 cursor-not-allowed"
+                            : isSelected
+                            ? "selected"
+                            : ""
+                        }`}
                         data-testid={`button-q${currentQ.id}-most-${option.value}`}
                       >
-                        <div className="flex items-start gap-3 w-full">
-                          <span className="font-semibold shrink-0">{option.value}.</span>
+                        <div className="flex items-start gap-2 w-full">
+                          <span className="font-semibold shrink-0 text-muted-foreground">{option.value}.</span>
                           <span className="flex-1">{option.text}</span>
                           {isSelected && (
                             <span className="text-primary font-bold shrink-0">
-                              <Sparkles className="w-4 h-4" />
+                              <Sparkles className="w-3.5 h-3.5" />
                             </span>
                           )}
                         </div>
@@ -945,7 +928,7 @@ export default function PersonalityTestPage() {
                           <div className="flex justify-end w-full">
                             <Badge 
                               variant={isSelected ? "default" : "secondary"} 
-                              className="text-xs px-2 py-0.5"
+                              className="text-xs px-1.5 py-0"
                             >
                               {option.tag}
                             </Badge>
@@ -958,8 +941,8 @@ export default function PersonalityTestPage() {
               </div>
 
               <div>
-                <div className="text-sm font-medium mb-3">其次像我的（副选）</div>
-                <div className="space-y-3">
+                <div className="text-sm font-medium mb-2">其次像我的（副选）</div>
+                <div className="options-compact">
                   {currentQ.options.map((option) => {
                     const isSelected =
                       answers[currentQ.id]?.secondLike === option.value;
@@ -978,24 +961,21 @@ export default function PersonalityTestPage() {
                           )
                         }
                         disabled={isDisabled}
-                        className={`
-                          w-full px-4 py-4 text-left rounded-lg border-2 transition-all text-base flex flex-col gap-2
-                          ${
-                            isDisabled
-                              ? "opacity-50 cursor-not-allowed border-border"
-                              : isSelected
-                              ? "border-primary bg-primary/5 text-foreground"
-                              : "border-border hover-elevate active-elevate-2"
-                          }
-                        `}
+                        className={`option-compact ${
+                          isDisabled
+                            ? "opacity-50 cursor-not-allowed"
+                            : isSelected
+                            ? "selected"
+                            : ""
+                        }`}
                         data-testid={`button-q${currentQ.id}-second-${option.value}`}
                       >
-                        <div className="flex items-start gap-3 w-full">
-                          <span className="font-semibold shrink-0">{option.value}.</span>
+                        <div className="flex items-start gap-2 w-full">
+                          <span className="font-semibold shrink-0 text-muted-foreground">{option.value}.</span>
                           <span className="flex-1">{option.text}</span>
                           {isSelected && (
                             <span className="text-primary font-bold shrink-0">
-                              <Sparkles className="w-4 h-4" />
+                              <Sparkles className="w-3.5 h-3.5" />
                             </span>
                           )}
                         </div>
@@ -1003,7 +983,7 @@ export default function PersonalityTestPage() {
                           <div className="flex justify-end w-full">
                             <Badge 
                               variant={isSelected ? "default" : "secondary"} 
-                              className="text-xs px-2 py-0.5"
+                              className="text-xs px-1.5 py-0"
                             >
                               {option.tag}
                             </Badge>
@@ -1021,22 +1001,24 @@ export default function PersonalityTestPage() {
         </div>
       </div>
 
-      <div className="border-t p-4 bg-background">
-        <div className="max-w-2xl mx-auto flex gap-3">
+      <div className="mobile-footer">
+        <div className="max-w-2xl mx-auto flex gap-2">
           <Button
             variant="outline"
             onClick={handleBack}
             disabled={currentQuestionIndex === 0}
             className="flex-1"
+            size="default"
             data-testid="button-back"
           >
-            <ChevronLeft className="h-4 w-4 mr-2" />
+            <ChevronLeft className="h-4 w-4 mr-1" />
             上一题
           </Button>
           <Button
             onClick={handleNext}
             disabled={!canProceed() || submitTestMutation.isPending}
             className="flex-1"
+            size="default"
             data-testid="button-next"
           >
             {isLastQuestion ? (
@@ -1048,7 +1030,7 @@ export default function PersonalityTestPage() {
             ) : (
               <>
                 下一题
-                <ChevronRight className="h-4 w-4 ml-2" />
+                <ChevronRight className="h-4 w-4 ml-1" />
               </>
             )}
           </Button>
