@@ -17,8 +17,10 @@ import {
   Flower2, Target, Sun, Play, Volume2, VolumeX
 } from "lucide-react";
 import joyJoinLogo from "@assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi_1765650184831.png";
-import xiaoyueFoxAvatar from "@assets/Xiao_Yue_Avatar-06_1766766685632.png";
-import { SiWechat } from "react-icons/si";
+
+import xiaoyueFoxAvatar from "@assets/generated_images/fox_mascot_purple_eyes_accessories.png";
+// import { SiWechat } from "react-icons/si"; // 暂时注释：微信登录功能
+
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -131,9 +133,10 @@ export default function LoginPage() {
   const [, setLocation] = useLocation();
   const [areaCode, setAreaCode] = useState("+86");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
-  const [countdown, setCountdown] = useState(0);
+  // 暂时注释：短信验证码相关状态
+  // const [verificationCode, setVerificationCode] = useState("");
+  // const [codeSent, setCodeSent] = useState(false);
+  // const [countdown, setCountdown] = useState(0);
   const [isVideoMuted, setIsVideoMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isDevelopment = import.meta.env.DEV;
@@ -160,36 +163,37 @@ export default function LoginPage() {
     retry: false,
   });
 
-  const sendCodeMutation = useMutation({
-    mutationFn: async (phone: string) => {
-      return await apiRequest("POST", "/api/auth/send-code", { phoneNumber: phone });
-    },
-    onSuccess: () => {
-      setCodeSent(true);
-      setCountdown(60);
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      
-      toast({
-        title: "验证码已发送",
-        description: "请查收短信验证码",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "发送失败",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  // 暂时注释：发送短信验证码的mutation
+  // const sendCodeMutation = useMutation({
+  //   mutationFn: async (phone: string) => {
+  //     return await apiRequest("POST", "/api/auth/send-code", { phoneNumber: phone });
+  //   },
+  //   onSuccess: () => {
+  //     setCodeSent(true);
+  //     setCountdown(60);
+  //     const timer = setInterval(() => {
+  //       setCountdown((prev) => {
+  //         if (prev <= 1) {
+  //           clearInterval(timer);
+  //           return 0;
+  //         }
+  //         return prev - 1;
+  //       });
+  //     }, 1000);
+  //     
+  //     toast({
+  //       title: "验证码已发送",
+  //       description: "请查收短信验证码",
+  //     });
+  //   },
+  //   onError: (error: Error) => {
+  //     toast({
+  //       title: "发送失败",
+  //       description: error.message,
+  //       variant: "destructive",
+  //     });
+  //   },
+  // });
 
   const loginMutation = useMutation({
     mutationFn: async (data: { phoneNumber: string; code: string }) => {
@@ -256,7 +260,23 @@ export default function LoginPage() {
     return 11;
   };
 
-  const handleSendCode = () => {
+  // 暂时注释：发送验证码的处理函数
+  // const handleSendCode = () => {
+  //   const expectedLength = getPhoneLength();
+  //   if (!phoneNumber || phoneNumber.length !== expectedLength) {
+  //     toast({
+  //       title: "手机号格式错误",
+  //       description: `请输入${expectedLength}位手机号`,
+  //       variant: "destructive",
+  //     });
+  //     return;
+  //   }
+  //   const fullPhone = `${areaCode}${phoneNumber}`;
+  //   sendCodeMutation.mutate(fullPhone);
+  // };
+
+  const handleLogin = () => {
+    // 修改为只需要手机号即可登录，使用固定的DEMO验证码
     const expectedLength = getPhoneLength();
     if (!phoneNumber || phoneNumber.length !== expectedLength) {
       toast({
@@ -267,28 +287,17 @@ export default function LoginPage() {
       return;
     }
     const fullPhone = `${areaCode}${phoneNumber}`;
-    sendCodeMutation.mutate(fullPhone);
+    // 使用固定的DEMO验证码，暂时不需要用户输入验证码
+    loginMutation.mutate({ phoneNumber: fullPhone, code: "666666" });
   };
 
-  const handleLogin = () => {
-    if (!phoneNumber || !verificationCode) {
-      toast({
-        title: "信息不完整",
-        description: "请输入手机号和验证码",
-        variant: "destructive",
-      });
-      return;
-    }
-    const fullPhone = `${areaCode}${phoneNumber}`;
-    loginMutation.mutate({ phoneNumber: fullPhone, code: verificationCode });
-  };
-
-  const handleWeChatLogin = () => {
-    toast({
-      title: "微信登录",
-      description: "微信授权登录功能开发中，敬请期待",
-    });
-  };
+  // 暂时注释：微信登录处理函数
+  // const handleWeChatLogin = () => {
+  //   toast({
+  //     title: "微信登录",
+  //     description: "微信授权登录功能开发中，敬请期待",
+  //   });
+  // };
 
   // Stats display with fallback values
   const displayStats = [
@@ -492,8 +501,8 @@ export default function LoginPage() {
           >
             <Card className="border shadow-lg">
               <CardContent className="p-6 space-y-5">
-                {/* WeChat Login */}
-                <Button
+                {/* 暂时注释：微信登录按钮 */}
+                {/* <Button
                   size="lg"
                   className="w-full bg-[#07C160] hover:bg-[#06AD56] text-white border-0"
                   onClick={handleWeChatLogin}
@@ -501,17 +510,17 @@ export default function LoginPage() {
                 >
                   <SiWechat className="h-5 w-5 mr-2" />
                   微信一键登录
-                </Button>
+                </Button> */}
 
-                {/* Divider */}
-                <div className="relative">
+                {/* 暂时注释：分隔线 */}
+                {/* <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-border"></div>
                   </div>
                   <div className="relative flex justify-center text-xs">
                     <span className="bg-card px-3 text-muted-foreground">或使用手机号登录</span>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Phone Number Login */}
                 <div className="space-y-4">
@@ -550,7 +559,8 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  {/* 暂时注释：验证码输入框和发送验证码按钮 */}
+                  {/* <div className="space-y-2">
                     <Label htmlFor="code" className="text-sm font-medium">验证码</Label>
                     <div className="flex gap-2">
                       <Input
@@ -574,7 +584,7 @@ export default function LoginPage() {
                         {countdown > 0 ? `${countdown}秒` : codeSent ? "重新发送" : "发送验证码"}
                       </Button>
                     </div>
-                  </div>
+                  </div> */}
 
                   <Button
                     size="lg"
