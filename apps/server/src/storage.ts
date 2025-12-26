@@ -157,6 +157,7 @@ export interface IStorage {
   createVenue(data: any): Promise<any>;
   updateVenue(id: string, updates: any): Promise<any>;
   deleteVenue(id: string): Promise<void>;
+  getActiveVenueDistricts(venueType?: string): Promise<{ clusterId: string; districtId: string; count: number }[]>;
   
   // Venue Deal operations (场地优惠)
   getVenueDeals(venueId: string): Promise<any[]>;
@@ -1566,6 +1567,29 @@ export class DatabaseStorage implements IStorage {
       LIMIT 1
     `);
     return result.rows[0];
+  }
+
+  async getActiveVenueDistricts(venueType?: string): Promise<{ clusterId: string; districtId: string; count: number }[]> {
+    // 获取有激活场地的商圈列表，按活动类型过滤（饭局->restaurant, 酒局->bar）
+    const typeFilter = venueType === '饭局' ? 'restaurant' : venueType === '酒局' ? 'bar' : null;
+    
+    const result = await db.execute(sql`
+      SELECT 
+        COALESCE(cluster_id, 'nanshan') as cluster_id,
+        COALESCE(district_id, 'keji') as district_id,
+        COUNT(*)::int as count
+      FROM venues 
+      WHERE is_active = true
+        ${typeFilter ? sql`AND type = ${typeFilter}` : sql``}
+      GROUP BY cluster_id, district_id
+      ORDER BY count DESC
+    `);
+    
+    return result.rows.map(row => ({
+      clusterId: row.cluster_id as string,
+      districtId: row.district_id as string,
+      count: Number(row.count)
+    }));
   }
 
   async createVenue(data: any): Promise<any> {

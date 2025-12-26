@@ -6459,6 +6459,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get active venue districts (public - for event join form)
+  app.get("/api/venues/active-districts", async (req, res) => {
+    try {
+      const { eventType } = req.query;
+      const districts = await storage.getActiveVenueDistricts(eventType as string | undefined);
+      res.json(districts);
+    } catch (error) {
+      console.error("Error fetching active venue districts:", error);
+      res.status(500).json({ message: "Failed to fetch active districts" });
+    }
+  });
+
   // Venue Booking - Check availability
   app.post("/api/venues/check-availability", requireAuth, async (req, res) => {
     try {

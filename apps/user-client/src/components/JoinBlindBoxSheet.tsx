@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { getCurrencySymbol } from "@/lib/currency";
 import { 
@@ -96,14 +96,16 @@ export default function JoinBlindBoxSheet({
     // 初始化时自动选中用户片区的所有商圈
     return getDistrictIdsByCluster(userClusterId);
   });
-  const [expandedClusters, setExpandedClusters] = useState<string[]>([userClusterId]);
+  // 默认收起 - 如果已有选择，不展开任何片区
+  const [expandedClusters, setExpandedClusters] = useState<string[]>([]);
   
-  // 当用户切换片区时，重新计算预选商圈
+  // 当用户切换片区时，重新计算预选商圈（保持收起状态）
   useEffect(() => {
     const newClusterId = getUserClusterId();
     const newDistrictIds = getDistrictIdsByCluster(newClusterId);
     setSelectedDistricts(newDistrictIds);
-    setExpandedClusters([newClusterId]);
+    // 不自动展开 - 用户可以点击展开
+    setExpandedClusters([]);
   }, [eventData.area]);
 
   // 当活动类型切换时，重置不相关的偏好数据
@@ -120,6 +122,28 @@ export default function JoinBlindBoxSheet({
       setBudgetPreference([]);
     }
   }, [eventData.eventType]);
+
+  // 获取有激活场地的商圈列表
+  const { data: activeVenueDistricts } = useQuery<{ clusterId: string; districtId: string; count: number }[]>({
+    queryKey: ['/api/venues/active-districts', eventData.eventType],
+    queryFn: async () => {
+      const response = await fetch(`/api/venues/active-districts?eventType=${encodeURIComponent(eventData.eventType)}`);
+      if (!response.ok) throw new Error('Failed to fetch active districts');
+      return response.json();
+    },
+    enabled: open, // 只在弹窗打开时加载
+  });
+
+  // 根据激活场地过滤商圈列表
+  const filteredClusters = shenzhenClusters.map(cluster => {
+    const filteredDistricts = cluster.districts.filter(district => {
+      // 如果没有数据或数据为空，显示所有商圈（fallback）
+      if (!activeVenueDistricts || activeVenueDistricts.length === 0) return true;
+      // 只显示有激活场地的商圈
+      return activeVenueDistricts.some(v => v.districtId === district.id);
+    });
+    return { ...cluster, districts: filteredDistricts };
+  }).filter(cluster => cluster.districts.length > 0); // 只显示有商圈的片区
   
   // 组队邀请状态
   const [showTeamInvite, setShowTeamInvite] = useState(false);
@@ -567,11 +591,11 @@ export default function JoinBlindBoxSheet({
                 )}
 
                 <div className="space-y-2 border rounded-lg overflow-hidden">
-                  {shenzhenClusters.map(cluster => {
+                  {filteredClusters.map(cluster => {
                     const clusterSelectedCount = cluster.districts.filter(d => selectedDistricts.includes(d.id)).length;
                     const allClusterDistrictIds = cluster.districts.map(d => d.id);
                     const allSelected = allClusterDistrictIds.every(id => selectedDistricts.includes(id));
-                    const isExpanded = expandedClusters.includes(cluster.id) || clusterSelectedCount > 0;
+                    const isExpanded = expandedClusters.includes(cluster.id);
                     
                     return (
                       <div key={cluster.id} className="border-b last:border-b-0">
@@ -795,7 +819,7 @@ export default function JoinBlindBoxSheet({
                           key={option.value}
                           selected={selectedLanguages.includes(option.value)}
                           onClick={() => toggleLanguage(option.value)}
-                          className="w-full justify-center"
+                          className="w-full justify-center text-xs whitespace-nowrap px-2"
                           data-testid={`button-language-${option.value}`}
                         >
                           {option.label}
@@ -872,7 +896,7 @@ export default function JoinBlindBoxSheet({
                               key={option.value}
                               selected={selectedBarThemes.includes(option.value)}
                               onClick={() => toggleBarTheme(option.value)}
-                              className="w-full justify-center text-xs"
+                              className="w-full justify-center text-xs whitespace-nowrap px-2"
                               data-testid={`button-bar-theme-${option.value}`}
                             >
                               {option.label}
@@ -893,7 +917,7 @@ export default function JoinBlindBoxSheet({
                               key={option.value}
                               selected={selectedAlcoholComfort.includes(option.value)}
                               onClick={() => toggleAlcoholComfort(option.value)}
-                              className="w-full justify-center"
+                              className="w-full justify-center text-xs whitespace-nowrap px-2"
                               data-testid={`button-alcohol-${option.value}`}
                             >
                               {option.label}
