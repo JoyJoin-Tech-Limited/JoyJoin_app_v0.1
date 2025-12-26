@@ -1573,15 +1573,21 @@ export class DatabaseStorage implements IStorage {
     // 获取有激活场地的商圈列表，按活动类型过滤（饭局->restaurant, 酒局->bar）
     const typeFilter = venueType === '饭局' ? 'restaurant' : venueType === '酒局' ? 'bar' : null;
     
+    // 根据 area 推断 clusterId: 南山区->nanshan, 福田区->futian
     const result = await db.execute(sql`
       SELECT 
-        COALESCE(cluster_id, 'nanshan') as cluster_id,
+        CASE 
+          WHEN area = '南山区' THEN 'nanshan'
+          WHEN area = '福田区' THEN 'futian'
+          ELSE 'nanshan'
+        END as cluster_id,
         COALESCE(district_id, 'keji') as district_id,
         COUNT(*)::int as count
       FROM venues 
       WHERE is_active = true
-        ${typeFilter ? sql`AND type = ${typeFilter}` : sql``}
-      GROUP BY cluster_id, district_id
+        AND district_id IS NOT NULL
+        ${typeFilter ? sql`AND venue_type = ${typeFilter}` : sql``}
+      GROUP BY area, district_id
       ORDER BY count DESC
     `);
     

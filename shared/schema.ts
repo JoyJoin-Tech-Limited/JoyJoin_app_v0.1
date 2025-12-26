@@ -888,6 +888,7 @@ export const venues = pgTable("venues", {
   address: text("address").notNull(),
   city: text("city").notNull(), // 深圳, 香港
   area: text("area").notNull(), // 南山区, 中环 etc.
+  districtId: text("district_id"), // 商圈ID: keji, houhai, shenzhenwan, shekou, qianhai, huaqiaocheng
   contactPerson: text("contact_person"),
   contactPhone: text("contact_phone"),
   commissionRate: integer("commission_rate").default(20), // percentage
