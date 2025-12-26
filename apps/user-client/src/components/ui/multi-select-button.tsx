@@ -85,7 +85,7 @@ export function MultiSelectGroup({
     <div>
       <div className="mb-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="text-base font-semibold">{label}</h3>
+          <h4 className="text-sm font-semibold">{label}</h4>
           {showCounter && selectedCount > 0 && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
               已选 {selectedCount}{maxCount ? `/${maxCount}` : ''}
@@ -93,7 +93,7 @@ export function MultiSelectGroup({
           )}
         </div>
         {hint && (
-          <p className="text-xs text-muted-foreground mt-1">{hint}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>
         )}
       </div>
       <div className="flex flex-wrap gap-2">

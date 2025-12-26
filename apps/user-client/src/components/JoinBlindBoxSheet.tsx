@@ -812,7 +812,7 @@ export default function JoinBlindBoxSheet({
                   {/* 饭局偏好 - 仅饭局显示 */}
                   {eventData.eventType === "饭局" && (
                     <div className="space-y-4">
-                      <h4 className="text-sm font-medium">口味偏好（用于匹配餐厅）</h4>
+                      <h3 className="text-base font-semibold mb-3">口味偏好（用于匹配餐厅）</h3>
                     
                       {/* 口味强度 */}
                       <MultiSelectGroup
@@ -862,7 +862,7 @@ export default function JoinBlindBoxSheet({
                   {/* 酒局偏好 - 仅酒局显示 */}
                   {eventData.eventType === "酒局" && (
                     <div className="space-y-4">
-                      <h4 className="text-sm font-medium">酒吧偏好（用于匹配场地）</h4>
+                      <h3 className="text-base font-semibold mb-3">酒吧偏好（用于匹配场地）</h3>
                       
                       {/* 酒吧主题 - 多选 */}
                       <MultiSelectGroup
@@ -889,8 +889,8 @@ export default function JoinBlindBoxSheet({
                       {/* 饮酒程度 - 单选 */}
                       <div>
                         <div className="mb-3">
-                          <h3 className="text-sm font-medium">饮酒程度</h3>
-                          <p className="text-xs text-muted-foreground">请选一个</p>
+                          <h4 className="text-sm font-semibold">饮酒程度</h4>
+                          <p className="text-xs text-muted-foreground mt-0.5">请选一个</p>
                         </div>
                         <div className="grid grid-cols-3 gap-2 w-full">
                           {alcoholComfortOptions.map((option) => (

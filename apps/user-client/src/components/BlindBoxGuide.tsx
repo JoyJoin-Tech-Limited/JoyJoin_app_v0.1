@@ -9,19 +9,32 @@ const GUIDE_DISMISSED_KEY = "blindbox_guide_dismissed";
 interface BlindBoxGuideProps {
   className?: string;
   onLearnMore?: () => void;
+  forceShow?: boolean;
 }
 
-export default function BlindBoxGuide({ className, onLearnMore }: BlindBoxGuideProps) {
+export default function BlindBoxGuide({ className, onLearnMore, forceShow = false }: BlindBoxGuideProps) {
   const [isDismissed, setIsDismissed] = useState(true);
+  const [debugMode, setDebugMode] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const showGuideParam = urlParams.get('showGuide');
+    
+    if (showGuideParam === 'true' || forceShow) {
+      setDebugMode(true);
+      setIsDismissed(false);
+      return;
+    }
+    
     const dismissed = localStorage.getItem(GUIDE_DISMISSED_KEY);
     setIsDismissed(dismissed === "true");
-  }, []);
+  }, [forceShow]);
 
   const handleDismiss = () => {
-    localStorage.setItem(GUIDE_DISMISSED_KEY, "true");
+    if (!debugMode) {
+      localStorage.setItem(GUIDE_DISMISSED_KEY, "true");
+    }
     setIsDismissed(true);
   };
 
@@ -53,6 +66,12 @@ export default function BlindBoxGuide({ className, onLearnMore }: BlindBoxGuideP
           <X className="h-4 w-4" />
         </Button>
 
+        {debugMode && (
+          <div className="absolute top-2 left-2 text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-600 rounded">
+            DEBUG
+          </div>
+        )}
+
         <div className="flex items-start gap-4">
           <div className="relative flex-shrink-0">
             <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
@@ -60,9 +79,17 @@ export default function BlindBoxGuide({ className, onLearnMore }: BlindBoxGuideP
             </div>
             {!prefersReducedMotion && (
               <motion.div 
-                className="absolute -inset-1 rounded-2xl border-2 border-primary/40"
-                animate={{ scale: [1, 1.15, 1], opacity: [0.8, 0, 0.8] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+                className="absolute -inset-1 rounded-2xl border border-primary/30"
+                animate={{ 
+                  scale: [1, 1.08, 1], 
+                  opacity: [0.6, 0, 0.6] 
+                }}
+                transition={{ 
+                  duration: 2.5, 
+                  repeat: Infinity, 
+                  ease: "easeInOut",
+                  times: [0, 0.5, 1]
+                }}
               />
             )}
           </div>
@@ -71,21 +98,32 @@ export default function BlindBoxGuide({ className, onLearnMore }: BlindBoxGuideP
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-bold text-base">盲盒社交 · 惊喜匹配</h3>
-                <Sparkles className="h-4 w-4 text-primary" />
+                {!prefersReducedMotion && (
+                  <motion.div
+                    animate={{ rotate: [0, 15, -15, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <Sparkles className="h-4 w-4 text-primary" />
+                  </motion.div>
+                )}
+                {prefersReducedMotion && (
+                  <Sparkles className="h-4 w-4 text-primary" />
+                )}
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 小悦会根据你的性格与兴趣，为你匹配最合拍的同桌伙伴
               </p>
             </div>
 
-            <div className="flex items-center gap-1.5 pt-1">
+            {/* Step flow - improved layout */}
+            <div className="flex items-center justify-between pt-2 px-1">
               {steps.map((step, index) => (
-                <div key={step.id} className="flex items-center">
+                <div key={step.id} className="flex items-center flex-1">
                   <div className="flex flex-col items-center">
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                    <div className={`h-9 w-9 rounded-full flex items-center justify-center transition-colors ${
                       step.completed 
                         ? 'bg-primary text-primary-foreground' 
-                        : 'bg-muted'
+                        : 'bg-muted/80 text-muted-foreground'
                     }`}>
                       {step.completed ? (
                         <CheckCircle2 className="h-4 w-4" />
@@ -93,16 +131,16 @@ export default function BlindBoxGuide({ className, onLearnMore }: BlindBoxGuideP
                         <step.icon className="h-4 w-4" />
                       )}
                     </div>
-                    <span className="text-[10px] mt-1 text-muted-foreground">{step.label}</span>
+                    <span className="text-xs mt-1.5 text-muted-foreground font-medium">{step.label}</span>
                   </div>
                   {index < steps.length - 1 && (
-                    <div className="w-6 h-0.5 bg-gradient-to-r from-primary/30 to-primary/10 mx-1 -mt-4" />
+                    <div className="flex-1 h-[2px] mx-2 -mt-5 bg-gradient-to-r from-primary/40 via-primary/20 to-primary/40 rounded-full" />
                   )}
                 </div>
               ))}
             </div>
 
-            <div className="flex flex-wrap gap-3 pt-2">
+            <div className="flex flex-wrap gap-2 pt-1">
               <div className="flex items-center gap-1.5 text-xs bg-muted/50 px-2.5 py-1.5 rounded-full">
                 <Clock className="h-3.5 w-3.5 text-primary" />
                 <span>提前1天揭晓</span>
@@ -142,9 +180,9 @@ export default function BlindBoxGuide({ className, onLearnMore }: BlindBoxGuideP
   return (
     <motion.div 
       className={className}
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
     >
       {cardElement}
     </motion.div>
