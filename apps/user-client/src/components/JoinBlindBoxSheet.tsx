@@ -124,7 +124,7 @@ export default function JoinBlindBoxSheet({
   }, [eventData.eventType]);
 
   // 获取有激活场地的商圈列表
-  const { data: activeVenueDistricts } = useQuery<{ clusterId: string; districtId: string; count: number }[]>({
+  const { data: activeVenueDistricts, isLoading: isLoadingDistricts } = useQuery<{ clusterId: string; districtId: string; count: number }[]>({
     queryKey: ['/api/venues/active-districts', eventData.eventType],
     queryFn: async () => {
       const response = await fetch(`/api/venues/active-districts?eventType=${encodeURIComponent(eventData.eventType)}`);
@@ -134,16 +134,19 @@ export default function JoinBlindBoxSheet({
     enabled: open, // 只在弹窗打开时加载
   });
 
-  // 根据激活场地过滤商圈列表
-  const filteredClusters = shenzhenClusters.map(cluster => {
-    const filteredDistricts = cluster.districts.filter(district => {
-      // 如果没有数据或数据为空，显示所有商圈（fallback）
-      if (!activeVenueDistricts || activeVenueDistricts.length === 0) return true;
-      // 只显示有激活场地的商圈
-      return activeVenueDistricts.some(v => v.districtId === district.id);
-    });
-    return { ...cluster, districts: filteredDistricts };
-  }).filter(cluster => cluster.districts.length > 0); // 只显示有商圈的片区
+  // 检查是否有激活场地的商圈（区分加载中和无数据状态）
+  const hasActiveVenueDistricts = (activeVenueDistricts?.length ?? 0) > 0;
+  const isDistrictsDataLoaded = activeVenueDistricts !== undefined;
+
+  // 根据激活场地过滤商圈列表（不再 fallback 显示全部）
+  const filteredClusters = hasActiveVenueDistricts 
+    ? shenzhenClusters.map(cluster => {
+        const filteredDistricts = cluster.districts.filter(district => 
+          activeVenueDistricts!.some(v => v.districtId === district.id)
+        );
+        return { ...cluster, districts: filteredDistricts };
+      }).filter(cluster => cluster.districts.length > 0)
+    : []; // 无激活场地时返回空数组
   
   // 组队邀请状态
   const [showTeamInvite, setShowTeamInvite] = useState(false);
@@ -590,6 +593,22 @@ export default function JoinBlindBoxSheet({
                   </div>
                 )}
 
+                {/* 加载中显示骨架 */}
+                {isLoadingDistricts && (
+                  <div className="p-4 text-center text-muted-foreground bg-muted/30 rounded-lg border border-dashed animate-pulse">
+                    <p className="text-sm">加载中...</p>
+                  </div>
+                )}
+
+                {/* 无可选商圈时显示提示（仅在数据加载完成后） */}
+                {isDistrictsDataLoaded && !hasActiveVenueDistricts && (
+                  <div className="p-4 text-center text-muted-foreground bg-muted/30 rounded-lg border border-dashed">
+                    <p className="text-sm">暂无可选商圈，敬请期待</p>
+                  </div>
+                )}
+
+                {/* 有可选商圈时显示列表 */}
+                {isDistrictsDataLoaded && hasActiveVenueDistricts && (
                 <div className="space-y-2 border rounded-lg overflow-hidden">
                   {filteredClusters.map(cluster => {
                     const clusterSelectedCount = cluster.districts.filter(d => selectedDistricts.includes(d.id)).length;
@@ -690,8 +709,9 @@ export default function JoinBlindBoxSheet({
                     );
                   })}
                 </div>
+                )}
 
-                {selectedDistricts.length < 2 && (
+                {isDistrictsDataLoaded && hasActiveVenueDistricts && selectedDistricts.length < 2 && (
                   <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg mt-3">
                     <Sparkles className="h-4 w-4 text-primary" />
                     <span className="text-sm text-primary">
