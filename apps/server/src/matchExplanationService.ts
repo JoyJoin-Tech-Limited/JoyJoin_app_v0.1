@@ -119,24 +119,60 @@ export interface GroupAnalysis {
 
 // ============ 缓存类型 ============
 
-interface CachedPairExplanation extends MatchExplanation {
-  generatedAt: string; // ISO date string
+interface PairExplanationsCache {
+  memberHash: string; // Hash of sorted member IDs for validation
+  pairCount: number;
+  generatedAt: string;
+  explanations: MatchExplanation[];
 }
 
-interface CachedIceBreakers {
+interface IceBreakersCache {
+  memberHash: string; // Hash of sorted member IDs for validation
+  eventType: string;
+  generatedAt: string;
   topics: string[];
-  generatedAt: string; // ISO date string
+}
+
+// Legacy types for backwards compatibility during migration
+interface LegacyCachedPairExplanation extends MatchExplanation {
+  generatedAt: string;
+}
+
+interface LegacyCachedIceBreakers {
+  topics: string[];
+  generatedAt: string;
 }
 
 // Cache expiry: 7 days
 const CACHE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
+// ============ 缓存辅助函数 ============
+
+/**
+ * 生成成员ID的哈希用于缓存验证
+ * 使用排序后的成员ID列表生成简单哈希
+ */
+function generateMemberHash(members: MatchMember[]): string {
+  const sortedIds = members.map(m => m.userId).sort();
+  return sortedIds.join(',');
+}
+
+/**
+ * 计算配对数量（n choose 2）
+ */
+function calculatePairCount(memberCount: number): number {
+  return (memberCount * (memberCount - 1)) / 2;
+}
+
 // ============ 缓存函数 ============
 
 /**
- * 从数据库加载缓存的配对解释
+ * 从数据库加载缓存的配对解释（带roster验证）
  */
-async function loadCachedPairExplanations(groupId: string): Promise<CachedPairExplanation[] | null> {
+async function loadCachedPairExplanations(
+  groupId: string,
+  members: MatchMember[]
+): Promise<MatchExplanation[] | null> {
   try {
     const group = await db.query.eventPoolGroups.findFirst({
       where: eq(eventPoolGroups.id, groupId),
@@ -144,20 +180,43 @@ async function loadCachedPairExplanations(groupId: string): Promise<CachedPairEx
     
     if (!group?.pairExplanationsCache) return null;
     
-    const cached = group.pairExplanationsCache as CachedPairExplanation[];
-    if (!Array.isArray(cached) || cached.length === 0) return null;
+    const rawCache = group.pairExplanationsCache;
     
-    // Check if cache is still valid
-    const firstEntry = cached[0];
-    if (firstEntry?.generatedAt) {
-      const generatedTime = new Date(firstEntry.generatedAt).getTime();
+    // Handle new cache format with roster validation
+    if (rawCache && typeof rawCache === 'object' && 'memberHash' in rawCache) {
+      const cached = rawCache as PairExplanationsCache;
+      const currentHash = generateMemberHash(members);
+      const expectedPairCount = calculatePairCount(members.length);
+      
+      // Validate roster hasn't changed
+      if (cached.memberHash !== currentHash) {
+        console.log(`[MatchExplanation] Cache invalidated for group ${groupId}: roster changed`);
+        return null;
+      }
+      
+      // Validate pair count matches
+      if (cached.pairCount !== expectedPairCount) {
+        console.log(`[MatchExplanation] Cache invalidated for group ${groupId}: pair count mismatch`);
+        return null;
+      }
+      
+      // Check if cache is still valid
+      const generatedTime = new Date(cached.generatedAt).getTime();
       if (Date.now() - generatedTime > CACHE_EXPIRY_MS) {
         console.log(`[MatchExplanation] Cache expired for group ${groupId}`);
         return null;
       }
+      
+      return cached.explanations;
     }
     
-    return cached;
+    // Handle legacy cache format (without memberHash) - invalidate and regenerate
+    if (Array.isArray(rawCache) && rawCache.length > 0) {
+      console.log(`[MatchExplanation] Legacy cache format detected for group ${groupId}, invalidating`);
+      return null;
+    }
+    
+    return null;
   } catch (error) {
     console.warn('[MatchExplanation] Error loading cache:', error);
     return null;
@@ -165,36 +224,42 @@ async function loadCachedPairExplanations(groupId: string): Promise<CachedPairEx
 }
 
 /**
- * 保存配对解释到数据库缓存
+ * 保存配对解释到数据库缓存（带roster元数据）
  */
 async function savePairExplanationsCache(
   groupId: string, 
+  members: MatchMember[],
   explanations: MatchExplanation[]
 ): Promise<void> {
   try {
-    const now = new Date().toISOString();
-    const cached: CachedPairExplanation[] = explanations.map(exp => ({
-      ...exp,
-      generatedAt: now,
-    }));
+    const cache: PairExplanationsCache = {
+      memberHash: generateMemberHash(members),
+      pairCount: explanations.length,
+      generatedAt: new Date().toISOString(),
+      explanations,
+    };
     
     await db.update(eventPoolGroups)
       .set({ 
-        pairExplanationsCache: cached,
+        pairExplanationsCache: cache,
         updatedAt: new Date(),
       })
       .where(eq(eventPoolGroups.id, groupId));
     
-    console.log(`[MatchExplanation] Saved ${cached.length} pair explanations to cache for group ${groupId}`);
+    console.log(`[MatchExplanation] Saved ${explanations.length} pair explanations to cache for group ${groupId}`);
   } catch (error) {
     console.warn('[MatchExplanation] Error saving cache:', error);
   }
 }
 
 /**
- * 从数据库加载缓存的破冰话题
+ * 从数据库加载缓存的破冰话题（带roster验证）
  */
-async function loadCachedIceBreakers(groupId: string): Promise<string[] | null> {
+async function loadCachedIceBreakers(
+  groupId: string,
+  members: MatchMember[],
+  eventType: string
+): Promise<string[] | null> {
   try {
     const group = await db.query.eventPoolGroups.findFirst({
       where: eq(eventPoolGroups.id, groupId),
@@ -202,19 +267,42 @@ async function loadCachedIceBreakers(groupId: string): Promise<string[] | null> 
     
     if (!group?.iceBreakersCache) return null;
     
-    const cached = group.iceBreakersCache as CachedIceBreakers;
-    if (!cached?.topics || !Array.isArray(cached.topics)) return null;
+    const rawCache = group.iceBreakersCache;
     
-    // Check if cache is still valid
-    if (cached.generatedAt) {
+    // Handle new cache format with roster validation
+    if (rawCache && typeof rawCache === 'object' && 'memberHash' in rawCache) {
+      const cached = rawCache as IceBreakersCache;
+      const currentHash = generateMemberHash(members);
+      
+      // Validate roster hasn't changed
+      if (cached.memberHash !== currentHash) {
+        console.log(`[IceBreakers] Cache invalidated for group ${groupId}: roster changed`);
+        return null;
+      }
+      
+      // Validate event type matches
+      if (cached.eventType !== eventType) {
+        console.log(`[IceBreakers] Cache invalidated for group ${groupId}: event type changed`);
+        return null;
+      }
+      
+      // Check if cache is still valid
       const generatedTime = new Date(cached.generatedAt).getTime();
       if (Date.now() - generatedTime > CACHE_EXPIRY_MS) {
         console.log(`[IceBreakers] Cache expired for group ${groupId}`);
         return null;
       }
+      
+      return cached.topics;
     }
     
-    return cached.topics;
+    // Handle legacy cache format - invalidate and regenerate
+    if (rawCache && typeof rawCache === 'object' && 'topics' in rawCache) {
+      console.log(`[IceBreakers] Legacy cache format detected for group ${groupId}, invalidating`);
+      return null;
+    }
+    
+    return null;
   } catch (error) {
     console.warn('[IceBreakers] Error loading cache:', error);
     return null;
@@ -222,18 +310,25 @@ async function loadCachedIceBreakers(groupId: string): Promise<string[] | null> 
 }
 
 /**
- * 保存破冰话题到数据库缓存
+ * 保存破冰话题到数据库缓存（带roster元数据）
  */
-async function saveIceBreakersCache(groupId: string, topics: string[]): Promise<void> {
+async function saveIceBreakersCache(
+  groupId: string,
+  members: MatchMember[],
+  eventType: string,
+  topics: string[]
+): Promise<void> {
   try {
-    const cached: CachedIceBreakers = {
-      topics,
+    const cache: IceBreakersCache = {
+      memberHash: generateMemberHash(members),
+      eventType,
       generatedAt: new Date().toISOString(),
+      topics,
     };
     
     await db.update(eventPoolGroups)
       .set({ 
-        iceBreakersCache: cached,
+        iceBreakersCache: cache,
         updatedAt: new Date(),
       })
       .where(eq(eventPoolGroups.id, groupId));
@@ -422,23 +517,23 @@ export async function generateGroupAnalysis(
   let pairExplanations: MatchExplanation[] = [];
   let iceBreakers: string[] = [];
   
-  // Try to load from cache first
+  // Try to load from cache first (with roster validation)
   if (useCache) {
-    const cachedExplanations = await loadCachedPairExplanations(groupId);
-    const cachedIceBreakers = await loadCachedIceBreakers(groupId);
+    const cachedExplanations = await loadCachedPairExplanations(groupId, members);
+    const cachedIceBreakers = await loadCachedIceBreakers(groupId, members, eventType);
     
     if (cachedExplanations && cachedIceBreakers) {
       console.log(`[MatchExplanation] Using cached data for group ${groupId}`);
       pairExplanations = cachedExplanations;
       iceBreakers = cachedIceBreakers;
     } else {
-      // Cache miss or partial cache - regenerate
+      // Cache miss, expired, or roster changed - regenerate
       pairExplanations = await generateFreshPairExplanations(members);
       iceBreakers = await generateIceBreakers(members, eventType);
       
-      // Save to cache (fire and forget)
-      savePairExplanationsCache(groupId, pairExplanations).catch(() => {});
-      saveIceBreakersCache(groupId, iceBreakers).catch(() => {});
+      // Save to cache with roster metadata (fire and forget)
+      savePairExplanationsCache(groupId, members, pairExplanations).catch(() => {});
+      saveIceBreakersCache(groupId, members, eventType, iceBreakers).catch(() => {});
     }
   } else {
     // No cache requested - generate fresh
