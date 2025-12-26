@@ -162,18 +162,18 @@ export default function DeepFeedbackFlow() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="mobile-page">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-3">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b shrink-0">
+        <div className="max-w-2xl mx-auto px-3 py-3">
+          <div className="flex items-center justify-between mb-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate("/events")}
               data-testid="button-back"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
+              <ArrowLeft className="h-4 w-4 mr-1" />
               返回
             </Button>
             <Badge variant="outline" className="gap-1">
@@ -183,18 +183,18 @@ export default function DeepFeedbackFlow() {
           </div>
 
           {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">进度</span>
               <span className="font-medium">{currentStep}/{totalSteps}</span>
             </div>
-            <Progress value={progress} className="h-2" />
+            <Progress value={progress} className="h-1.5" />
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-2xl mx-auto px-4 py-10">
+      <div className="mobile-content-compact overflow-y-auto">
         <AnimatePresence mode="wait">
           {currentStep === 1 && (
             <motion.div

@@ -150,11 +150,11 @@ export default function EventFeedbackFlow() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="mobile-page">
       {/* Header */}
       {currentStep !== "completion" && (
-        <header className="sticky top-0 z-10 bg-background border-b">
-          <div className="flex items-center justify-between p-4">
+        <header className="sticky top-0 z-10 bg-background border-b shrink-0">
+          <div className="flex items-center justify-between p-3">
             <Button 
               variant="ghost" 
               size="icon"
@@ -163,19 +163,19 @@ export default function EventFeedbackFlow() {
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
-            <div className="flex-1 mx-4">
-              <Progress value={progressPercentage} className="h-2" />
-              <p className="text-xs text-muted-foreground text-center mt-2">
+            <div className="flex-1 mx-3">
+              <Progress value={progressPercentage} className="h-1.5" />
+              <p className="text-xs text-muted-foreground text-center mt-1">
                 {currentStepIndex}/{steps.length - 2}
               </p>
             </div>
-            <div className="w-10" /> {/* Spacer for symmetry */}
+            <div className="w-9" /> {/* Spacer for symmetry */}
           </div>
         </header>
       )}
 
       {/* Step Content */}
-      <div className="p-4">
+      <div className="mobile-content-compact overflow-y-auto">
         {currentStep === "intro" && (
           <IntroStep event={event} onNext={() => handleNext({})} />
         )}
