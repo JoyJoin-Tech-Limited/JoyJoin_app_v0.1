@@ -1,5 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Sparkles } from "lucide-react";
+import { XiaoyueInsightCard } from "@/components/XiaoyueInsightCard";
 
 interface WhyThisTableProps {
   explanation: string;
@@ -12,18 +11,14 @@ export default function WhyThisTable({ explanation }: WhyThisTableProps) {
   
   return (
     <div className="space-y-3" data-testid="section-why-this-table">
-      <h3 className="text-lg font-semibold flex items-center gap-2">
-        <Sparkles className="h-5 w-5 text-primary" />
-        为什么是这桌？
-      </h3>
-      
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="p-4">
-          <p className="text-sm leading-relaxed" data-testid="text-match-explanation">
-            {explanation}
-          </p>
-        </CardContent>
-      </Card>
+      <XiaoyueInsightCard
+        title="为什么是这桌？"
+        content={explanation}
+        pose="thinking"
+        tone="confident"
+        badgeText="小悦分析"
+        avatarSize="md"
+      />
     </div>
   );
 }

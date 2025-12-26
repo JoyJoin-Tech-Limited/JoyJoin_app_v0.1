@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil, Calendar, CalendarDays, Laptop, Bot, Cpu, Car, Globe, TrendingUp, Megaphone, Palette, Video, Stethoscope, GraduationCap, Scale, Building, Plane, MoreHorizontal, Languages, Banknote, UtensilsCrossed, Landmark, LineChart, Wallet, PiggyBank, ShieldCheck, FileText, HardHat, Hammer, ChevronDown, ThumbsUp, ThumbsDown } from "lucide-react";
-import xiaoyueAvatar from "@assets/generated_images/final_fox_with_collar_sunglasses.png";
+import xiaoyueAvatar from "@assets/Xiao_Yue_Avatar-01_1766766685652.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Label } from "@/components/ui/label";
@@ -1986,13 +1986,6 @@ function FoxInsightBubble({ insight }: { insight: FoxInsight }) {
     }
   }, [isComplete, isExpanded]);
   
-  // 支柱图标映射
-  const pillarIcons = {
-    identity: '🦊',
-    energy: '⚡',
-    value: '💎',
-  };
-  
   const handleFeedback = async (type: 'up' | 'down') => {
     setFeedback(type);
     // 发送反馈到后端
@@ -2027,21 +2020,34 @@ function FoxInsightBubble({ insight }: { insight: FoxInsight }) {
       className="mt-2"
     >
       <Card className="bg-gradient-to-r from-violet-50/80 via-primary/5 to-violet-50/80 dark:from-violet-900/20 dark:via-primary/10 dark:to-violet-900/20 border-violet-200/40 dark:border-violet-700/30 overflow-hidden shadow-sm">
-        {/* 可点击的标题栏 */}
+        {/* 可点击的标题栏 - 带小悦头像 */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="w-full px-3 py-2 flex items-center justify-between hover-elevate"
           data-testid="button-toggle-fox-insight"
         >
           <div className="flex items-center gap-2">
-            <motion.span 
-              className="text-xs"
-              animate={{ rotate: isExpanded ? [0, -10, 10, 0] : 0 }}
+            <motion.div 
+              className="w-6 h-6 rounded-full overflow-hidden bg-white dark:bg-gray-800 shadow-sm flex-shrink-0"
+              animate={{ rotate: isExpanded ? [0, -5, 5, 0] : 0 }}
               transition={{ duration: 0.4 }}
             >
-              {pillarIcons[insight.pillar]}
-            </motion.span>
-            <span className="text-[11px] text-muted-foreground/70">小悦偷偷碎嘴</span>
+              <img 
+                src={xiaoyueAvatar} 
+                alt="小悦" 
+                className="w-full h-full object-cover object-top"
+              />
+            </motion.div>
+            <span className="text-[11px] text-muted-foreground/70 font-medium">小悦偷偷碎嘴</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+              insight.pillar === 'identity' 
+                ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400' 
+                : insight.pillar === 'energy' 
+                  ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+                  : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+            }`}>
+              {insight.pillar === 'identity' ? '身份' : insight.pillar === 'energy' ? '能量' : '价值'}
+            </span>
             <motion.div
               animate={{ rotate: isExpanded ? 180 : 0 }}
               transition={{ duration: 0.2 }}
