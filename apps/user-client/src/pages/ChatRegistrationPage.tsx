@@ -4010,7 +4010,7 @@ export default function ChatRegistrationPage() {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col relative overflow-hidden`}>
+    <div className={`min-h-dvh flex flex-col relative overflow-hidden`}>
       <motion.div 
         className={`absolute inset-0 bg-gradient-to-b ${warmthGradient} pointer-events-none z-0`}
         animate={{ opacity: 1 }}
@@ -4019,7 +4019,7 @@ export default function ChatRegistrationPage() {
       />
       <div className={`absolute inset-0 bg-gradient-to-b ${themeConfig.gradient} pointer-events-none z-0 opacity-50`} />
       
-      <div className="relative z-10 flex flex-col min-h-screen">
+      <div className="relative z-10 flex flex-col min-h-dvh">
       <MobileHeader title="注册中 · 小悦" action={
         <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
           <Zap className="w-3 h-3" />
@@ -4287,7 +4287,7 @@ export default function ChatRegistrationPage() {
         })()}
       </AnimatePresence>
 
-      <div className="p-4 border-t bg-background/80 backdrop-blur-sm relative z-20">
+      <div className="p-4 pt-4 border-t bg-background/80 backdrop-blur-sm relative z-20 chat-footer">
         {/* 网络错误重试提示 */}
         <AnimatePresence>
           {networkError && !isTyping && (

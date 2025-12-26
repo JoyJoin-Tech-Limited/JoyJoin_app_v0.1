@@ -432,4 +432,30 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
+  /* iOS Safe Area Utilities */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .safe-area-bottom-with-padding {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+  }
+
+  /* Dynamic viewport height for iOS Safari */
+  .min-h-dvh {
+    min-height: 100vh; /* Fallback */
+    min-height: 100dvh;
+  }
+
+  .h-dvh {
+    height: 100vh; /* Fallback */
+    height: 100dvh;
+  }
+
+  /* Chat input footer with smooth transition for keyboard */
+  .chat-footer {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+    transition: padding-bottom 0.2s ease-out;
+  }
 }
