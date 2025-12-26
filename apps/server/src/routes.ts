@@ -167,21 +167,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Amap config endpoint - provides map API keys for frontend (Admin Portal only)
-  app.get('/api/config/amap', (_req, res) => {
-    const apiKey = process.env.AMAP_API_KEY;
-    const securityKey = process.env.AMAP_SECURITY_KEY;
-    
-    if (!apiKey || !securityKey) {
-      return res.status(503).json({ error: 'Amap configuration not available' });
-    }
-    
-    res.json({
-      apiKey,
-      securityKey
-    });
-  });
-
   // Session middleware
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
@@ -5495,6 +5480,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // ============ ADMIN API ROUTES ============
+  
+  // Amap config endpoint - provides map API keys for frontend (Admin Portal only)
+  app.get('/api/config/amap', requireAdmin, (_req, res) => {
+    const apiKey = process.env.AMAP_API_KEY;
+    const securityKey = process.env.AMAP_SECURITY_KEY;
+    
+    if (!apiKey || !securityKey) {
+      return res.status(503).json({ error: 'Amap configuration not available' });
+    }
+    
+    res.json({
+      apiKey,
+      securityKey
+    });
+  });
   
   // Simple profile completeness calculator for stats (used before main function is defined)
   function calculateProfileCompletenessSimple(user: any): { score: number; starRating: number; missingFields: string[] } {

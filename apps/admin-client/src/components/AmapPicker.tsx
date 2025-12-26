@@ -39,8 +39,16 @@ export default function AmapPicker({ open, onOpenChange, onSelect, initialCenter
 
   useEffect(() => {
     if (open) {
-      fetch('/api/config/amap')
-        .then(res => res.json())
+      fetch('/api/config/amap', { credentials: 'include' })
+        .then(res => {
+          if (!res.ok) {
+            if (res.status === 401 || res.status === 403) {
+              throw new Error('请先登录管理员账号');
+            }
+            throw new Error('无法加载地图配置');
+          }
+          return res.json();
+        })
         .then(data => {
           if (data.error) {
             setError('地图配置不可用，请联系管理员');
@@ -48,8 +56,8 @@ export default function AmapPicker({ open, onOpenChange, onSelect, initialCenter
             setConfig(data);
           }
         })
-        .catch(() => {
-          setError('无法加载地图配置');
+        .catch((err) => {
+          setError(err.message || '无法加载地图配置');
         });
     }
   }, [open]);

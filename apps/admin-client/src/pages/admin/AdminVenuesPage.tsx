@@ -34,11 +34,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Store, Plus, Edit, Trash2, Building, TrendingUp, Calendar, DollarSign, Clock, X, CalendarDays, LayoutGrid, AlertTriangle, ArrowRightLeft, Gift, Percent, Tag, CircleDollarSign, Eye, EyeOff, MapPin } from "lucide-react";
+import { Store, Plus, Edit, Trash2, Building, TrendingUp, Calendar, DollarSign, Clock, X, CalendarDays, LayoutGrid, AlertTriangle, ArrowRightLeft, Gift, Percent, Tag, CircleDollarSign, Eye, EyeOff, MapPin, Map } from "lucide-react";
 import { shenzhenClusters, getDistrictsByCluster, getDistrictById, getClusterById } from "@shared/districts";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
+import AmapPicker from "@/components/AmapPicker";
 
 interface VenueTimeSlot {
   id: string;
@@ -208,6 +209,9 @@ export default function AdminVenuesPage() {
   const [showDealFormDialog, setShowDealFormDialog] = useState(false);
   const [editingDeal, setEditingDeal] = useState<VenueDeal | null>(null);
   const [dealFilterStatus, setDealFilterStatus] = useState<"all" | "active" | "inactive" | "expired">("all");
+  
+  // Map picker state
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [dealFormData, setDealFormData] = useState({
     title: "",
     discountType: "percentage" as "percentage" | "fixed" | "gift",
@@ -1302,14 +1306,28 @@ export default function AdminVenuesPage() {
 
             <div className="space-y-2">
               <Label htmlFor="address">地址 *</Label>
-              <Textarea
-                id="address"
-                placeholder="详细地址"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                rows={2}
-                data-testid="input-address"
-              />
+              <div className="flex gap-2">
+                <Textarea
+                  id="address"
+                  placeholder="详细地址"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  rows={2}
+                  className="flex-1"
+                  data-testid="input-address"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-auto"
+                  onClick={() => setShowMapPicker(true)}
+                  title="在地图上选择"
+                  data-testid="button-open-map"
+                >
+                  <Map className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -1611,14 +1629,28 @@ export default function AdminVenuesPage() {
 
             <div className="space-y-2">
               <Label htmlFor="edit-address">地址 *</Label>
-              <Textarea
-                id="edit-address"
-                placeholder="详细地址"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                rows={2}
-                data-testid="input-edit-address"
-              />
+              <div className="flex gap-2">
+                <Textarea
+                  id="edit-address"
+                  placeholder="详细地址"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  rows={2}
+                  className="flex-1"
+                  data-testid="input-edit-address"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-auto"
+                  onClick={() => setShowMapPicker(true)}
+                  title="在地图上选择"
+                  data-testid="button-edit-open-map"
+                >
+                  <Map className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -2507,6 +2539,16 @@ export default function AdminVenuesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Amap Picker Dialog */}
+      <AmapPicker
+        open={showMapPicker}
+        onOpenChange={setShowMapPicker}
+        onSelect={(location) => {
+          setFormData({ ...formData, address: location.address });
+        }}
+        initialCenter={{ lat: 22.5431, lng: 114.0579 }}
+      />
     </div>
   );
 }
