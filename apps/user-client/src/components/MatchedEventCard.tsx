@@ -78,16 +78,14 @@ export default function MatchedEventCard({ event }: MatchedEventCardProps) {
     
     if (diff <= 0) return "活动进行中";
     
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    // Convert to total hours (including days converted to hours)
+    const totalMinutes = Math.floor(diff / (1000 * 60));
     
-    if (days > 0) {
-      return `报名截止 · ${days}天${hours}小时`;
-    } else if (hours > 0) {
-      return `报名截止 · ${hours}小时`;
+    if (totalMinutes >= 60) {
+      const totalHours = Math.ceil(diff / (1000 * 60 * 60));
+      return `报名截止 · ${totalHours}小时`;
     } else {
-      return `报名截止 · ${minutes}分钟`;
+      return `报名截止 · ${totalMinutes}分钟`;
     }
   };
 
