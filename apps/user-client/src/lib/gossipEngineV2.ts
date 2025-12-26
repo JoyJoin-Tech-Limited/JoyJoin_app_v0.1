@@ -1268,4 +1268,4 @@ export function testGenerateInsightsV2(info: CollectedInfo): FoxInsight[] {
   return generateInsightsV2(info);
 }
 
-export { calculateEmotionalRisk, isSafeInsight };
+export { calculateEmotionalRisk, isSafeInsight, levenshteinDistance, normalizedSimilarity, applySynonymVariation, isSemanticallyDuplicate };
