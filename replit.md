@@ -40,6 +40,9 @@ The project uses a monorepo setup (`joyjoin-monorepo`) containing separate appli
 - **Intelligent Venue Matching & Booking:** Algorithm-based venue scoring with a transactional booking system.
 - **Venue Partnership System:** Supports collaborative restaurant/bar partnerships with exclusive deals.
 - **Personalized Icebreaker Topics:** Algorithm-curated topics based on common interests and archetypes.
+- **AI-Generated Match Explanations (桌友分析):** DeepSeek-powered service that generates personalized explanations for each pair of matched users, explaining why they might connect well based on archetypes, shared interests, and connection points. Includes group dynamics analysis with chemistry temperature levels (fire/warm/mild/cold).
+- **Personalized Ice-Breaker Generation:** AI-generated conversation starters customized to group composition, analyzing common interests, archetypes, and event type (饭局 vs 酒局). Fallback templates for API failures.
+- **KPI Tracking System:** Comprehensive metrics collection including CSAT (Customer Satisfaction Score), NPS (Net Promoter Score), user engagement tracking, churn analysis, and daily KPI snapshots. Database tables: `kpi_snapshots`, `user_engagement_metrics`, `event_satisfaction_summary`. Admin API endpoints for dashboard visualization.
 - **King Game (国王游戏) Digital Card System:** Interactive digital poker game with multi-device WebSocket synchronization.
 - **小悦进化系统 (AI Evolution System V2.0):** Enables the Xiaoyue chatbot to learn and improve through user feedback and multi-armed bandit optimization, including real-time insight detection and an Admin Evolution Portal.
 - **Intelligent Information Collection System:** Extracts and structures professional information, featuring a SmartInsight System and an Industry Ontology Knowledge Base.

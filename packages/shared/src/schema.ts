@@ -294,13 +294,18 @@ export const eventPoolRegistrations = pgTable("event_pool_registrations", {
   userId: varchar("user_id").notNull().references(() => users.id),
   
   // 用户临时偏好（软约束 - 仅用于本次活动）
-  budgetRange: text("budget_range").array(), // 预算范围，多选：["150以下", "150-200", "200-300", "300-500"]
+  budgetRange: text("budget_range").array(), // 饭局预算范围，多选：["150以下", "150-200", "200-300", "300-500"]
   preferredLanguages: text("preferred_languages").array(), // 首选语言：["普通话", "粤语", "英语"]
   socialGoals: text("social_goals").array(), // 社交目的：["交朋友", "扩展人脉", "放松心情", "行业交流", "flexible"]
   cuisinePreferences: text("cuisine_preferences").array(), // 饮食偏好：["中餐", "川菜", "粤菜", "日料", "西餐"]
   dietaryRestrictions: text("dietary_restrictions").array(), // 忌口：["素食", "不吃辣", "清真"]
   tasteIntensity: text("taste_intensity").array(), // 口味强度：["爱吃辣", "不辣/清淡为主"]
   decorStylePreferences: text("decor_style_preferences").array(), // 场地风格偏好：["轻奢现代风", "绿植花园风", "复古工业风", "温馨日式风"]
+  
+  // 酒局特有偏好
+  barThemes: text("bar_themes").array(), // 酒吧主题偏好：["精酿", "清吧", "私密调酒·Homebar"]
+  alcoholComfort: text("alcohol_comfort").array(), // 饮酒舒适度：["可以喝酒", "微醺就好", "无酒精饮品"]
+  barBudgetRange: text("bar_budget_range").array(), // 酒局预算范围（每杯）：["80以下", "80-150"]
   
   // 匹配结果
   matchStatus: varchar("match_status").default("pending"), // pending | matched | unmatched
@@ -883,10 +888,6 @@ export const venues = pgTable("venues", {
   address: text("address").notNull(),
   city: text("city").notNull(), // 深圳, 香港
   area: text("area").notNull(), // 南山区, 中环 etc.
-  
-  // 商圈定位（与用户报名商圈匹配）
-  clusterId: text("cluster_id"), // 片区ID: nanshan, futian, oct, qianhai
-  districtId: text("district_id"), // 商圈ID: keji, houhai, chegongmiao etc.
   contactPerson: text("contact_person"),
   contactPhone: text("contact_phone"),
   commissionRate: integer("commission_rate").default(20), // percentage
@@ -896,6 +897,12 @@ export const venues = pgTable("venues", {
   cuisines: text("cuisines").array(), // 粤菜, 川菜, 日料, 西餐 etc.
   priceRange: text("price_range"), // 预算档次: "150以下", "150-200", "200-300", "300-500"
   decorStyle: text("decor_style").array(), // 装修风格: 轻奢现代风, 绿植花园风, 复古工业风, 温馨日式风
+  
+  // 酒吧特有标签 (仅当 venueType='bar' 时使用)
+  barThemes: text("bar_themes").array(), // 酒吧主题: 精酿, 清吧, 鸡尾酒吧, Whisky Bar, Wine Bar
+  alcoholOptions: text("alcohol_options").array(), // 支持的饮酒选项: 可以喝酒, 微醺就好, 无酒精饮品
+  barPriceRange: text("bar_price_range"), // 酒吧价格档次（每杯）: "80以下", "80-150"
+  vibeDescriptor: text("vibe_descriptor"), // 氛围描述（编辑性文字，非结构化标签）
   
   // Capacity management
   capacity: integer("capacity").default(1), // How many events can run at same time
@@ -2393,6 +2400,160 @@ export const insertDialogueFeedbackSchema = createInsertSchema(dialogueFeedback)
   createdAt: true,
 });
 
+// ============ KPI Tracking System ============
+
+// Daily KPI Snapshots - Aggregated metrics for dashboard visualization
+export const kpiSnapshots = pgTable("kpi_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Time period
+  snapshotDate: date("snapshot_date").notNull(), // Date for this snapshot
+  periodType: varchar("period_type").default("daily"), // daily, weekly, monthly
+  
+  // User Metrics
+  totalUsers: integer("total_users").default(0),
+  newUsersToday: integer("new_users_today").default(0),
+  activeUsersToday: integer("active_users_today").default(0), // Users who logged in
+  activeUsersWeek: integer("active_users_week").default(0), // WAU
+  activeUsersMonth: integer("active_users_month").default(0), // MAU
+  
+  // Onboarding Metrics
+  registrationStarts: integer("registration_starts").default(0),
+  registrationCompletions: integer("registration_completions").default(0),
+  registrationConversionRate: numeric("registration_conversion_rate", { precision: 5, scale: 4 }),
+  
+  // Event Metrics
+  totalEvents: integer("total_events").default(0),
+  newEventsToday: integer("new_events_today").default(0),
+  eventsMatchedToday: integer("events_matched_today").default(0),
+  eventsCompletedToday: integer("events_completed_today").default(0),
+  
+  // Satisfaction Metrics (CSAT)
+  feedbackCount: integer("feedback_count").default(0),
+  avgAtmosphereScore: numeric("avg_atmosphere_score", { precision: 3, scale: 2 }), // 1-5 average
+  avgConnectionQuality: numeric("avg_connection_quality", { precision: 3, scale: 2 }), // From connectionRadar
+  csatScore: numeric("csat_score", { precision: 5, scale: 2 }), // Percentage 0-100
+  npsScore: integer("nps_score"), // Net Promoter Score -100 to 100
+  
+  // Retention Metrics
+  repeatAttendanceRate: numeric("repeat_attendance_rate", { precision: 5, scale: 4 }), // % of users attending 2+ events
+  day7RetentionRate: numeric("day7_retention_rate", { precision: 5, scale: 4 }),
+  day30RetentionRate: numeric("day30_retention_rate", { precision: 5, scale: 4 }),
+  churnedUsersCount: integer("churned_users_count").default(0), // Users inactive >30 days
+  
+  // Engagement Metrics
+  avgEventsPerUser: numeric("avg_events_per_user", { precision: 5, scale: 2 }),
+  avgMatchScore: numeric("avg_match_score", { precision: 5, scale: 2 }),
+  connectionRate: numeric("connection_rate", { precision: 5, scale: 4 }), // % of attendees who made connections
+  
+  // AI Metrics
+  xiaoyueChatCount: integer("xiaoyue_chat_count").default(0),
+  avgXiaoyueRating: numeric("avg_xiaoyue_rating", { precision: 3, scale: 2 }),
+  insightsCollectedCount: integer("insights_collected_count").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_kpi_snapshot_date").on(table.snapshotDate),
+  index("idx_kpi_period_type").on(table.periodType),
+]);
+
+// User Engagement Tracking - Per-user metrics for cohort analysis
+export const userEngagementMetrics = pgTable("user_engagement_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // Activity counters
+  totalEventsAttended: integer("total_events_attended").default(0),
+  totalEventsHosted: integer("total_events_hosted").default(0),
+  totalFeedbackGiven: integer("total_feedback_given").default(0),
+  totalConnectionsMade: integer("total_connections_made").default(0),
+  
+  // Time-based metrics
+  firstEventDate: date("first_event_date"),
+  lastEventDate: date("last_event_date"),
+  lastActiveDate: date("last_active_date"),
+  daysSinceLastActivity: integer("days_since_last_activity"),
+  
+  // Satisfaction aggregates
+  avgSatisfactionScore: numeric("avg_satisfaction_score", { precision: 3, scale: 2 }),
+  avgConnectionQuality: numeric("avg_connection_quality", { precision: 3, scale: 2 }),
+  wouldRecommendCount: integer("would_recommend_count").default(0),
+  
+  // Churn indicators
+  isChurned: boolean("is_churned").default(false), // Inactive > 30 days
+  churnRiskScore: numeric("churn_risk_score", { precision: 3, scale: 2 }), // 0-1 (AI predicted)
+  churnedAt: date("churned_at"),
+  reactivatedAt: date("reactivated_at"),
+  
+  // Cohort tracking
+  registrationCohort: varchar("registration_cohort"), // YYYY-MM format
+  registrationMethod: varchar("registration_method"), // form or chat
+  
+  // Lifetime value indicators
+  totalSpend: integer("total_spend").default(0), // In cents
+  eventCreditsUsed: integer("event_credits_used").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_user_engagement_user").on(table.userId),
+  index("idx_user_engagement_churned").on(table.isChurned),
+  index("idx_user_engagement_last_active").on(table.lastActiveDate),
+]);
+
+// Event Satisfaction Summary - Per-event aggregated satisfaction
+export const eventSatisfactionSummary = pgTable("event_satisfaction_summary", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull(), // Can be event pool ID or blind box event ID
+  eventType: varchar("event_type").notNull(), // 饭局/酒局
+  
+  // Feedback aggregates
+  feedbackCount: integer("feedback_count").default(0),
+  avgAtmosphereScore: numeric("avg_atmosphere_score", { precision: 3, scale: 2 }),
+  avgConnectionQuality: numeric("avg_connection_quality", { precision: 3, scale: 2 }),
+  
+  // Connection outcomes
+  totalConnectionsMade: integer("total_connections_made").default(0),
+  connectionRate: numeric("connection_rate", { precision: 5, scale: 4 }), // % who made connections
+  
+  // Venue satisfaction
+  venueLikeCount: integer("venue_like_count").default(0),
+  venueNeutralCount: integer("venue_neutral_count").default(0),
+  venueDislikeCount: integer("venue_dislike_count").default(0),
+  
+  // Match quality
+  avgMatchScore: integer("avg_match_score"),
+  temperatureLevel: varchar("temperature_level"), // fire/warm/mild/cold
+  
+  // Repeat indicators
+  attendeesWithPriorEvents: integer("attendees_with_prior_events").default(0),
+  repeatAttendeeRate: numeric("repeat_attendee_rate", { precision: 5, scale: 4 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_event_satisfaction_event").on(table.eventId),
+  index("idx_event_satisfaction_type").on(table.eventType),
+]);
+
+// Insert schemas for KPI system
+export const insertKpiSnapshotSchema = createInsertSchema(kpiSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserEngagementMetricsSchema = createInsertSchema(userEngagementMetrics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEventSatisfactionSummarySchema = createInsertSchema(eventSatisfactionSummary).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types for evolution system
 export type GoldenDialogue = typeof goldenDialogues.$inferSelect;
 export type InsertGoldenDialogue = z.infer<typeof insertGoldenDialogueSchema>;
@@ -2411,3 +2572,13 @@ export type InsertTriggerPerformance = z.infer<typeof insertTriggerPerformanceSc
 
 export type DialogueFeedback = typeof dialogueFeedback.$inferSelect;
 export type InsertDialogueFeedback = z.infer<typeof insertDialogueFeedbackSchema>;
+
+// Types for KPI system
+export type KpiSnapshot = typeof kpiSnapshots.$inferSelect;
+export type InsertKpiSnapshot = z.infer<typeof insertKpiSnapshotSchema>;
+
+export type UserEngagementMetrics = typeof userEngagementMetrics.$inferSelect;
+export type InsertUserEngagementMetrics = z.infer<typeof insertUserEngagementMetricsSchema>;
+
+export type EventSatisfactionSummary = typeof eventSatisfactionSummary.$inferSelect;
+export type InsertEventSatisfactionSummary = z.infer<typeof insertEventSatisfactionSummarySchema>;

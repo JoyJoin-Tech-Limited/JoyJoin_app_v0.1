@@ -9000,6 +9000,371 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  // ============ Match Explanation & Ice-Breaker API ============
+
+  // Get match explanations for an event pool group
+  app.get('/api/event-pool-groups/:groupId/match-explanations', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { groupId } = req.params;
+      const userId = req.user?.id || req.session?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Get the group
+      const group = await db.query.eventPoolGroups.findFirst({
+        where: eq(eventPoolGroups.id, groupId),
+      });
+
+      if (!group) {
+        return res.status(404).json({ message: 'Group not found' });
+      }
+
+      // Check if user is in this group
+      const userRegistration = await db.query.eventPoolRegistrations.findFirst({
+        where: and(
+          eq(eventPoolRegistrations.userId, userId),
+          eq(eventPoolRegistrations.assignedGroupId, groupId)
+        ),
+      });
+
+      if (!userRegistration) {
+        return res.status(403).json({ message: 'Not a member of this group' });
+      }
+
+      // Get all group members
+      const groupMembers = await db.query.eventPoolRegistrations.findMany({
+        where: eq(eventPoolRegistrations.assignedGroupId, groupId),
+      });
+
+      // Get full user info for group members
+      const memberIds = groupMembers.map(m => m.userId);
+      const members = await db.query.users.findMany({
+        where: sql`${users.id} = ANY(${memberIds})`,
+      });
+
+      const { matchExplanationService } = await import('./matchExplanationService');
+      
+      const matchMembers = members.map((m) => ({
+        userId: m.id,
+        displayName: m.displayName || '神秘嘉宾',
+        archetype: m.archetype,
+        secondaryArchetype: m.secondaryRole,
+        interestsTop: m.interestsTop,
+        industry: m.industry,
+        hometown: m.hometownRegionCity,
+        socialStyle: m.socialStyle,
+      }));
+
+      // Get event pool info for event type
+      const pool = await db.query.eventPools.findFirst({
+        where: eq(eventPools.id, group.poolId),
+      });
+
+      const groupAnalysis = await matchExplanationService.generateGroupAnalysis(
+        groupId,
+        matchMembers,
+        pool?.eventType || '饭局'
+      );
+
+      res.json({
+        groupId,
+        overallChemistry: groupAnalysis.overallChemistry,
+        groupDynamics: groupAnalysis.groupDynamics,
+        explanations: groupAnalysis.pairExplanations,
+        iceBreakers: groupAnalysis.iceBreakers,
+      });
+    } catch (error: any) {
+      console.error('[Match Explanations] Error:', error);
+      res.status(500).json({ message: 'Failed to generate match explanations', error: error.message });
+    }
+  });
+
+  // Get ice-breakers for an event pool group (part of 活动工具包)
+  app.get('/api/event-pool-groups/:groupId/ice-breakers', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { groupId } = req.params;
+      const userId = req.user?.id || req.session?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Get the group
+      const group = await db.query.eventPoolGroups.findFirst({
+        where: eq(eventPoolGroups.id, groupId),
+      });
+
+      if (!group) {
+        return res.status(404).json({ message: 'Group not found' });
+      }
+
+      // Check membership
+      const userRegistration = await db.query.eventPoolRegistrations.findFirst({
+        where: and(
+          eq(eventPoolRegistrations.userId, userId),
+          eq(eventPoolRegistrations.assignedGroupId, groupId)
+        ),
+      });
+
+      if (!userRegistration) {
+        return res.status(403).json({ message: 'Not a member of this group' });
+      }
+
+      // Get group members
+      const groupMembers = await db.query.eventPoolRegistrations.findMany({
+        where: eq(eventPoolRegistrations.assignedGroupId, groupId),
+      });
+
+      const memberIds = groupMembers.map(m => m.userId);
+      const members = await db.query.users.findMany({
+        where: sql`${users.id} = ANY(${memberIds})`,
+      });
+
+      const { matchExplanationService } = await import('./matchExplanationService');
+      
+      const matchMembers = members.map((m) => ({
+        userId: m.id,
+        displayName: m.displayName || '神秘嘉宾',
+        archetype: m.archetype,
+        secondaryArchetype: m.secondaryRole,
+        interestsTop: m.interestsTop,
+        industry: m.industry,
+        hometown: m.hometownRegionCity,
+        socialStyle: m.socialStyle,
+      }));
+
+      // Get event pool info for event type
+      const pool = await db.query.eventPools.findFirst({
+        where: eq(eventPools.id, group.poolId),
+      });
+
+      const iceBreakers = await matchExplanationService.generateIceBreakers(
+        matchMembers,
+        pool?.eventType || '饭局'
+      );
+
+      res.json({ iceBreakers });
+    } catch (error: any) {
+      console.error('[Ice-Breakers] Error:', error);
+      res.status(500).json({ message: 'Failed to generate ice-breakers', error: error.message });
+    }
+  });
+
+  // Match explanations for blind box events (using matchedAttendees field)
+  app.get('/api/blind-box-events/:eventId/match-explanations', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const userId = req.user?.id || req.session?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Get the blind box event
+      const event = await db.query.blindBoxEvents.findFirst({
+        where: eq(blindBoxEvents.id, eventId),
+      });
+
+      if (!event) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+
+      // Check if user is the creator or in matched attendees
+      const matchedAttendees = event.matchedAttendees as any[];
+      const isParticipant = event.userId === userId || 
+        matchedAttendees?.some((a: any) => a.userId === userId);
+
+      if (!isParticipant) {
+        return res.status(403).json({ message: 'Not a participant in this event' });
+      }
+
+      if (!matchedAttendees || matchedAttendees.length === 0) {
+        return res.status(404).json({ message: 'Match not ready yet' });
+      }
+
+      // Get full user info for matched attendees
+      const memberIds = matchedAttendees.map((a: any) => a.userId);
+      const members = await db.query.users.findMany({
+        where: sql`${users.id} = ANY(${memberIds})`,
+      });
+
+      const { matchExplanationService } = await import('./matchExplanationService');
+      
+      const matchMembers = members.map((m) => ({
+        userId: m.id,
+        displayName: m.displayName || '神秘嘉宾',
+        archetype: m.archetype,
+        secondaryArchetype: m.secondaryRole,
+        interestsTop: m.interestsTop,
+        industry: m.industry,
+        hometown: m.hometownRegionCity,
+        socialStyle: m.socialStyle,
+      }));
+
+      const groupAnalysis = await matchExplanationService.generateGroupAnalysis(
+        eventId,
+        matchMembers,
+        event.eventType || '饭局'
+      );
+
+      res.json({
+        eventId,
+        overallChemistry: groupAnalysis.overallChemistry,
+        groupDynamics: groupAnalysis.groupDynamics,
+        explanations: groupAnalysis.pairExplanations,
+        iceBreakers: groupAnalysis.iceBreakers,
+        existingExplanation: event.matchExplanation,
+      });
+    } catch (error: any) {
+      console.error('[Match Explanations] Error:', error);
+      res.status(500).json({ message: 'Failed to generate match explanations', error: error.message });
+    }
+  });
+
+  // Admin endpoint to regenerate explanations for an event pool
+  app.post('/api/admin/event-pools/:poolId/regenerate-explanations', requireAdmin, async (req: any, res) => {
+    try {
+      const { poolId } = req.params;
+
+      // Get all groups in this pool
+      const groups = await db.query.eventPoolGroups.findMany({
+        where: eq(eventPoolGroups.poolId, poolId),
+      });
+
+      if (groups.length === 0) {
+        return res.status(404).json({ message: 'No groups found for this pool' });
+      }
+
+      const pool = await db.query.eventPools.findFirst({
+        where: eq(eventPools.id, poolId),
+      });
+
+      const { matchExplanationService } = await import('./matchExplanationService');
+      const allAnalyses = [];
+
+      for (const group of groups) {
+        const groupMembers = await db.query.eventPoolRegistrations.findMany({
+          where: eq(eventPoolRegistrations.assignedGroupId, group.id),
+        });
+
+        const memberIds = groupMembers.map(m => m.userId);
+        const members = await db.query.users.findMany({
+          where: sql`${users.id} = ANY(${memberIds})`,
+        });
+
+        const matchMembers = members.map((m) => ({
+          userId: m.id,
+          displayName: m.displayName || '神秘嘉宾',
+          archetype: m.archetype,
+          secondaryArchetype: m.secondaryRole,
+          interestsTop: m.interestsTop,
+          industry: m.industry,
+          hometown: m.hometownRegionCity,
+          socialStyle: m.socialStyle,
+        }));
+
+        const analysis = await matchExplanationService.generateGroupAnalysis(
+          group.id,
+          matchMembers,
+          pool?.eventType || '饭局'
+        );
+
+        allAnalyses.push({
+          ...analysis,
+          groupNumber: group.groupNumber,
+        });
+      }
+
+      res.json({
+        poolId,
+        groupCount: allAnalyses.length,
+        analyses: allAnalyses,
+      });
+    } catch (error: any) {
+      console.error('[Admin Match Explanations] Error:', error);
+      res.status(500).json({ message: 'Failed to regenerate explanations', error: error.message });
+    }
+  });
+
+  // ============ KPI Dashboard API ============
+
+  // Get KPI dashboard data
+  app.get('/api/admin/kpi/dashboard', requireAdmin, async (req: any, res) => {
+    try {
+      const days = parseInt(req.query.days as string) || 30;
+      const { kpiService } = await import('./kpiService');
+      const data = await kpiService.getKpiDashboardData(days);
+      res.json(data);
+    } catch (error: any) {
+      console.error('[KPI Dashboard] Error:', error);
+      res.status(500).json({ message: 'Failed to get KPI dashboard data', error: error.message });
+    }
+  });
+
+  // Get churn analysis
+  app.get('/api/admin/kpi/churn-analysis', requireAdmin, async (req: any, res) => {
+    try {
+      const { kpiService } = await import('./kpiService');
+      const analysis = await kpiService.getChurnAnalysis();
+      res.json(analysis);
+    } catch (error: any) {
+      console.error('[KPI Churn] Error:', error);
+      res.status(500).json({ message: 'Failed to get churn analysis', error: error.message });
+    }
+  });
+
+  // Generate daily KPI snapshot (can be called manually or via cron)
+  app.post('/api/admin/kpi/generate-snapshot', requireAdmin, async (req: any, res) => {
+    try {
+      const { kpiService } = await import('./kpiService');
+      await kpiService.generateDailyKpiSnapshot();
+      res.json({ success: true, message: 'KPI snapshot generated' });
+    } catch (error: any) {
+      console.error('[KPI Snapshot] Error:', error);
+      res.status(500).json({ message: 'Failed to generate KPI snapshot', error: error.message });
+    }
+  });
+
+  // Update user engagement metrics
+  app.post('/api/admin/kpi/update-user-engagement/:userId', requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { kpiService } = await import('./kpiService');
+      await kpiService.updateUserEngagement(userId);
+      res.json({ success: true, message: 'User engagement updated' });
+    } catch (error: any) {
+      console.error('[KPI User Engagement] Error:', error);
+      res.status(500).json({ message: 'Failed to update user engagement', error: error.message });
+    }
+  });
+
+  // Calculate current CSAT and NPS scores
+  app.get('/api/admin/kpi/satisfaction-scores', requireAdmin, async (req: any, res) => {
+    try {
+      const { kpiService } = await import('./kpiService');
+      const days = parseInt(req.query.days as string) || 30;
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      
+      const [csatScore, npsScore] = await Promise.all([
+        kpiService.calculateCSAT(startDate, endDate),
+        kpiService.calculateNPS(startDate, endDate),
+      ]);
+      
+      res.json({
+        csatScore: csatScore.toFixed(2),
+        npsScore: Math.round(npsScore),
+        period: `Last ${days} days`,
+      });
+    } catch (error: any) {
+      console.error('[KPI Satisfaction] Error:', error);
+      res.status(500).json({ message: 'Failed to get satisfaction scores', error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
