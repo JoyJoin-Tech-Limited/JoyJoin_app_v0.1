@@ -1,12 +1,13 @@
 /**
  * GPS城市定位工具
- * 用于检测用户当前所在城市（粤港澳大湾区）
+ * 用于检测用户当前所在城市和片区（粤港澳大湾区）
  * 优先使用高德地图逆地理编码API，备用本地边界框检测
  */
 
 export interface GeoLocationResult {
   success: boolean;
   city?: string;
+  district?: string;
   latitude?: number;
   longitude?: number;
   error?: string;
@@ -46,6 +47,7 @@ export async function getCurrentLocation(): Promise<GeoLocationResult> {
             resolve({
               success: true,
               city: data.city,
+              district: data.district,
               latitude,
               longitude,
               source: data.source,

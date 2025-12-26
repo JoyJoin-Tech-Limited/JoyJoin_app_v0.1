@@ -1,6 +1,6 @@
 import { Drawer } from "vaul";
 import { Button } from "@/components/ui/button";
-import { MapPin, X, Check, Flame, Zap } from "lucide-react";
+import { MapPin, X, Check, Flame, Zap, Navigation, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -8,6 +8,8 @@ import {
   heatConfig,
   type DistrictCluster
 } from "@shared/districts";
+import { getCurrentLocation } from "@/lib/gpsUtils";
+import { useToast } from "@/hooks/use-toast";
 
 interface LocationPickerSheetProps {
   open: boolean;
@@ -36,25 +38,86 @@ export default function LocationPickerSheet({
   selectedArea,
   onSave 
 }: LocationPickerSheetProps) {
+  const { toast } = useToast();
   const [tempCity, setTempCity] = useState<"香港" | "深圳">(selectedCity);
   const [tempClusterId, setTempClusterId] = useState<string>("");
+  const [isLocating, setIsLocating] = useState(false);
 
+  // Sync temp state with props when sheet opens or props change
   useEffect(() => {
-    if (selectedArea) {
-      // 根据 displayName 或 id 匹配片区
-      const cluster = shenzhenClusters.find(c => 
-        c.displayName === selectedArea || c.id === selectedArea
-      );
-      if (cluster) {
-        setTempClusterId(cluster.id);
+    if (open) {
+      setTempCity(selectedCity);
+      if (selectedArea) {
+        const cluster = shenzhenClusters.find(c => 
+          c.displayName === selectedArea || c.id === selectedArea
+        );
+        if (cluster) {
+          setTempClusterId(cluster.id);
+        } else {
+          setTempClusterId("");
+        }
+      } else {
+        setTempClusterId("");
       }
     }
-  }, [selectedArea]);
+  }, [open, selectedCity, selectedArea]);
+
+  const handleAutoLocate = async () => {
+    setIsLocating(true);
+    try {
+      const result = await getCurrentLocation();
+      if (result.success && result.district) {
+        // Find matching cluster by district name
+        const cluster = shenzhenClusters.find(c => 
+          c.displayName === result.district || 
+          result.district?.includes(c.displayName.replace("区", ""))
+        );
+        
+        if (cluster) {
+          // Update temp state first to avoid stale UI during close animation
+          setTempCity("深圳");
+          setTempClusterId(cluster.id);
+          // Then save and close drawer
+          onSave("深圳", cluster.displayName);
+          onOpenChange(false);
+          toast({
+            title: "定位成功",
+            description: `已切换到${cluster.displayName}`,
+          });
+        } else {
+          toast({
+            title: "定位成功",
+            description: `当前位于${result.district}，该区域暂未开放，请手动选择`,
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "定位失败",
+          description: result.error || "请手动选择片区",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "定位失败",
+        description: "请检查定位权限后重试",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLocating(false);
+    }
+  };
 
   const handleSave = () => {
-    const cluster = shenzhenClusters.find(c => c.id === tempClusterId);
-    // 保存片区的 displayName（如"南山区"）
-    onSave(tempCity, cluster?.displayName || "");
+    if (tempCity === "深圳") {
+      const cluster = shenzhenClusters.find(c => c.id === tempClusterId);
+      onSave(tempCity, cluster?.displayName || "");
+    } else {
+      // Hong Kong - use the cluster id directly as area
+      const hkCluster = hongkongClusters.find(c => c.id === tempClusterId);
+      onSave(tempCity, hkCluster?.displayName || "");
+    }
     onOpenChange(false);
   };
 
@@ -103,6 +166,27 @@ export default function LocationPickerSheet({
               </TabsList>
 
               <TabsContent value="深圳" className="mt-4 space-y-6">
+                {/* 自动定位按钮 */}
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={handleAutoLocate}
+                  disabled={isLocating}
+                  data-testid="button-auto-locate"
+                >
+                  {isLocating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>定位中...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Navigation className="h-4 w-4" />
+                      <span>使用当前位置</span>
+                    </>
+                  )}
+                </Button>
+
                 {/* 片区选择 - 简洁卡片设计 */}
                 <div>
                   <div className="text-sm text-muted-foreground mb-3">

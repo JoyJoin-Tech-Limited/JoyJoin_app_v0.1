@@ -50,10 +50,32 @@ interface CouponResponse {
   coupons: UserCoupon[];
 }
 
+const LOCATION_STORAGE_KEY = "joyjoin_user_location";
+
+// Safe localStorage read with SSR guard
+const getSavedLocation = (): { city: "香港" | "深圳"; area: string } => {
+  if (typeof window === "undefined") {
+    return { city: "深圳", area: "南山区" };
+  }
+  try {
+    const saved = localStorage.getItem(LOCATION_STORAGE_KEY);
+    if (saved) {
+      const { city, area } = JSON.parse(saved);
+      return { 
+        city: (city === "香港" || city === "深圳") ? city : "深圳", 
+        area: area || "南山区" 
+      };
+    }
+  } catch {}
+  return { city: "深圳", area: "南山区" };
+};
+
 export default function DiscoverPage() {
   const { user, isAuthenticated } = useAuth();
-  const [selectedCity, setSelectedCity] = useState<"香港" | "深圳">("深圳");
-  const [selectedArea, setSelectedArea] = useState<string>("南山区");
+  
+  const savedLocation = getSavedLocation();
+  const [selectedCity, setSelectedCity] = useState<"香港" | "深圳">(savedLocation.city);
+  const [selectedArea, setSelectedArea] = useState<string>(savedLocation.area);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const { mutate: markDiscoverAsRead } = useMarkNotificationsAsRead();
   const hasMarkedRef = useRef(false);
@@ -120,6 +142,10 @@ export default function DiscoverPage() {
   const handleLocationSave = (city: "香港" | "深圳", area: string) => {
     setSelectedCity(city);
     setSelectedArea(area);
+    // Persist to localStorage for returning users
+    try {
+      localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify({ city, area }));
+    } catch {}
   };
 
   // Transform event pools to blind box event card props
