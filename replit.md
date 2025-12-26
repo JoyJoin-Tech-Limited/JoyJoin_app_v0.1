@@ -5,6 +5,7 @@ JoyJoin is a social networking platform designed to connect users through curate
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
+Dialect support: Platform serves both Cantonese speakers and other 方言人群 (regional dialect groups) equally - do not over-emphasize any single dialect.
 
 ## System Architecture
 
