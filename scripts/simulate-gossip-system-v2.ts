@@ -144,6 +144,8 @@ interface CadenceState {
   shownInsights: Set<string>;
   pillarHistory: Array<'identity' | 'energy' | 'value'>;
   cooldownTurns: number;
+  triggerUsageCount: Map<string, number>;
+  variantIndex: Map<string, number>;
 }
 
 let cadenceState: CadenceState = {
@@ -151,6 +153,8 @@ let cadenceState: CadenceState = {
   shownInsights: new Set(),
   pillarHistory: [],
   cooldownTurns: 3,
+  triggerUsageCount: new Map(),
+  variantIndex: new Map(),
 };
 
 function resetCadence() {
@@ -159,7 +163,303 @@ function resetCadence() {
     shownInsights: new Set(),
     pillarHistory: [],
     cooldownTurns: 3,
+    triggerUsageCount: new Map(),
+    variantIndex: new Map(),
   };
+}
+
+const TRIGGER_DECAY_FACTOR = 0.85;
+
+function getTriggerBase(trigger: string): string {
+  if (trigger.startsWith('combo_outdoor')) return 'combo_outdoor';
+  if (trigger.startsWith('combo_food')) return 'combo_food';
+  if (trigger.startsWith('combo_music')) return 'combo_music';
+  if (trigger.startsWith('combo_deep')) return 'combo_deep';
+  if (trigger.startsWith('combo_95')) return 'combo_95';
+  if (trigger.startsWith('combo_creative')) return 'combo_creative';
+  if (trigger.startsWith('combo_media')) return 'combo_media';
+  if (trigger.startsWith('rare_creative')) return 'rare_creative';
+  if (trigger.startsWith('legendary_tech')) return 'legendary_tech';
+  if (trigger === 'intent_deep') return 'intent_deep';
+  if (trigger === 'intent_network') return 'intent_network';
+  if (trigger === 'interest_psych') return 'interest_psych';
+  
+  const triggerMappings: Record<string, string> = {
+    'migration': 'hometown_migration',
+    'cantonese': 'hometown_cantonese',
+    'sichuan': 'hometown_sichuan',
+    'dongbei': 'hometown_dongbei',
+    'interest_food': 'interest_food',
+    'interest_outdoor': 'interest_outdoor',
+    'interest_pets': 'interest_pets',
+    'interest_music': 'interest_music',
+    'interest_travel': 'interest_travel',
+    'interest_games': 'interest_games',
+    'industry_tech': 'industry_tech',
+    'industry_finance': 'industry_finance',
+    'industry_creative': 'industry_creative',
+    'city_shenzhen': 'city_shenzhen',
+    'city_hongkong': 'city_hongkong',
+    'intent_friends': 'intent_friends',
+    'age_90s': 'age_90s',
+    'age_95plus': 'age_95plus',
+    'style_introvert': 'style_introvert',
+    'style_extrovert': 'style_extrovert',
+  };
+  
+  if (triggerMappings[trigger]) return triggerMappings[trigger];
+  
+  for (const [key, value] of Object.entries(triggerMappings)) {
+    if (trigger.includes(key)) return value;
+  }
+  
+  const parts = trigger.split('_');
+  if (parts.length >= 2) {
+    return `${parts[0]}_${parts[1]}`;
+  }
+  return trigger;
+}
+
+function getTriggerDampeningPenalty(trigger: string): number {
+  const base = getTriggerBase(trigger);
+  const usageCount = cadenceState.triggerUsageCount.get(base) || 0;
+  if (usageCount === 0) return 0;
+  return 1 - Math.pow(TRIGGER_DECAY_FACTOR, usageCount);
+}
+
+function incrementTriggerUsage(trigger: string) {
+  const base = getTriggerBase(trigger);
+  const current = cadenceState.triggerUsageCount.get(base) || 0;
+  cadenceState.triggerUsageCount.set(base, current + 1);
+}
+
+// ============ 模板变体系统 V2 ============
+type TemplateVariant = {
+  text: string;
+  endingType: keyof typeof SNARKY_ENDINGS;
+};
+
+const TEMPLATE_VARIANTS: Record<string, TemplateVariant[]> = {
+  'hometown_migration': [
+    { text: '从{hometown}漂到{city}，我猜你是个有想法的人', endingType: 'question' },
+    { text: '{hometown}人在{city}打拼，这趟旅程不简单吧', endingType: 'curious' },
+    { text: '{hometown}到{city}，跨越大半个中国，图的是什么呢', endingType: 'question' },
+    { text: '背井离乡从{hometown}来{city}，你一定有故事', endingType: 'tease' },
+  ],
+  'hometown_cantonese': [
+    { text: '本地{genderWord}一枚？在这片土地上扎根挺深吧', endingType: 'question' },
+    { text: '广东人留在湾区，有种守护家园的感觉', endingType: 'curious' },
+    { text: '老广在{city}，应该有不少私藏的好去处吧', endingType: 'tease' },
+  ],
+  'hometown_sichuan': [
+    { text: '川渝人在{city}，嘴巴肯定还是要吃辣的吧', endingType: 'question' },
+    { text: '四川{genderWord}在外闯荡，想家的时候是不是特别馋火锅', endingType: 'tease' },
+    { text: '巴蜀之地走出来的人，骨子里都有股闯劲', endingType: 'curious' },
+  ],
+  'hometown_dongbei': [
+    { text: '东北人在南方，冬天是不是终于不用穿秋裤了', endingType: 'tease' },
+    { text: '大东北来的？喝酒唠嗑应该是你的强项吧', endingType: 'question' },
+    { text: '东北{genderWord}在{city}，有没有觉得这边太温柔了', endingType: 'curious' },
+  ],
+  'interest_food': [
+    { text: '吃货属性已暴露，你的收藏夹里藏了多少餐厅', endingType: 'question' },
+    { text: '爱吃的人运气都不会太差，对吧', endingType: 'tease' },
+    { text: '美食达人，推荐个私藏店呗', endingType: 'curious' },
+    { text: '看来你的快乐很简单——好吃的就行', endingType: 'tease' },
+  ],
+  'interest_outdoor': [
+    { text: '户外爱好者？你的朋友圈应该全是山和海吧', endingType: 'tease' },
+    { text: '爱往外跑的人，办公室是不是困不住你', endingType: 'question' },
+    { text: '喜欢户外，看来你不是那种宅得住的人', endingType: 'curious' },
+  ],
+  'interest_pets': [
+    { text: '养宠物的人心都软，你是不是也这样', endingType: 'question' },
+    { text: '铲屎官一枚？手机相册里主子照片占几成', endingType: 'tease' },
+    { text: '有毛孩子陪伴的人，生活多了很多小确幸吧', endingType: 'curious' },
+    { text: '看来你家里有个小主子需要伺候', endingType: 'tease' },
+  ],
+  'interest_music': [
+    { text: '爱音乐的人耳朵挑，你的歌单藏着什么宝藏', endingType: 'curious' },
+    { text: '音乐爱好者，是听的多还是自己也玩乐器', endingType: 'question' },
+    { text: '喜欢音乐的人情感都挺丰富的', endingType: 'tease' },
+  ],
+  'interest_travel': [
+    { text: '旅行爱好者，护照上盖了多少章了', endingType: 'curious' },
+    { text: '爱旅行的人都有颗不安分的心', endingType: 'tease' },
+    { text: '到处跑的人见识广，下一站去哪', endingType: 'question' },
+  ],
+  'interest_games': [
+    { text: '游戏玩家？你是休闲党还是硬核玩家', endingType: 'question' },
+    { text: '爱打游戏的人手速都不错吧', endingType: 'tease' },
+    { text: '游戏爱好者，最近在肝什么', endingType: 'curious' },
+  ],
+  'industry_tech': [
+    { text: '科技圈的人，是不是每天都在改变世界', endingType: 'tease' },
+    { text: '互联网人，加班应该是家常便饭吧', endingType: 'question' },
+    { text: '做技术的，头发还好吧', endingType: 'tease' },
+    { text: '科技行业，每天和代码bug打交道', endingType: 'curious' },
+  ],
+  'industry_finance': [
+    { text: '金融人，是不是天天盯盘看K线', endingType: 'question' },
+    { text: '做金融的，数字敏感度应该很高吧', endingType: 'tease' },
+    { text: '金融圈的，有什么内幕消息不', endingType: 'tease' },
+  ],
+  'industry_creative': [
+    { text: '创意行业的人，脑洞应该很大吧', endingType: 'question' },
+    { text: '做设计的，审美眼光肯定毒', endingType: 'tease' },
+    { text: '创意工作者，灵感枯竭的时候怎么办', endingType: 'curious' },
+  ],
+  'city_shenzhen': [
+    { text: '在深圳打拼，节奏是不是特别快', endingType: 'question' },
+    { text: '深圳人，来了就是深圳人这话你信吗', endingType: 'tease' },
+    { text: '深圳这座城市，留住你的是什么', endingType: 'curious' },
+  ],
+  'city_hongkong': [
+    { text: '在香港生活，中环还是九龙', endingType: 'curious' },
+    { text: '港漂一族？粤语说得怎么样了', endingType: 'question' },
+    { text: '香港节奏那么快，周末怎么充电', endingType: 'tease' },
+  ],
+  'intent_friends': [
+    { text: '想交朋友？质量重要还是数量重要', endingType: 'question' },
+    { text: '想认识新朋友，看来你的社交圈要扩容了', endingType: 'tease' },
+    { text: '交友目的很纯粹，我喜欢', endingType: 'curious' },
+  ],
+  'age_90s': [
+    { text: '90后一枚，职场老油条了吧', endingType: 'tease' },
+    { text: '90后，上有老下有小的年纪', endingType: 'question' },
+    { text: '奔三的人，有没有感觉时间越来越快', endingType: 'curious' },
+  ],
+  'age_95plus': [
+    { text: '95后，职场新生代的主力军', endingType: 'tease' },
+    { text: '95后？整顿职场的先锋', endingType: 'question' },
+    { text: '年轻人，想法应该很多吧', endingType: 'curious' },
+  ],
+  'style_introvert': [
+    { text: '慢热型？熟了之后话应该很多吧', endingType: 'question' },
+    { text: '内向的人观察力都很强', endingType: 'tease' },
+    { text: '安静的人往往内心世界很丰富', endingType: 'curious' },
+  ],
+  'style_extrovert': [
+    { text: '外向的人能量感染力强', endingType: 'tease' },
+    { text: '社交达人，人脉应该很广吧', endingType: 'question' },
+    { text: '活跃分子，聚会的气氛担当', endingType: 'curious' },
+  ],
+  'intent_deep': [
+    { text: '想深度交友？看来你是认真的', endingType: 'curious' },
+    { text: '追求深度连接的人，都有故事', endingType: 'tease' },
+    { text: '想认真交朋友，不玩虚的对吧', endingType: 'question' },
+    { text: '深度社交需求者，眼光挺高的', endingType: 'tease' },
+  ],
+  'intent_network': [
+    { text: '拓展人脉？目标明确的人', endingType: 'curious' },
+    { text: '想拓圈子，事业心挺强的', endingType: 'tease' },
+    { text: '人脉拓展者，你的微信好友应该不少吧', endingType: 'question' },
+  ],
+  'interest_psych': [
+    { text: '对心理学感兴趣？你是想读懂别人还是读懂自己', endingType: 'question' },
+    { text: '心理学爱好者，分析人的小能手吧', endingType: 'tease' },
+    { text: '喜欢心理学的人，观察力都很敏锐', endingType: 'curious' },
+    { text: '心理学入坑了？MBTI测过几遍了', endingType: 'tease' },
+  ],
+  'combo_outdoor': [
+    { text: '户外+其他爱好，精力挺旺盛的', endingType: 'tease' },
+    { text: '户外派，周末应该闲不住', endingType: 'question' },
+    { text: '爱户外的人都有颗不安分的心', endingType: 'curious' },
+  ],
+  'combo_food': [
+    { text: '美食相关组合技，嘴挺刁的吧', endingType: 'question' },
+    { text: '吃货属性满点，幸福感来得容易', endingType: 'tease' },
+    { text: '美食爱好者，胃和心都需要被满足', endingType: 'curious' },
+  ],
+  'combo_music': [
+    { text: '音乐相关，耳朵挺挑的', endingType: 'tease' },
+    { text: '音乐爱好者，心思细腻的那种', endingType: 'curious' },
+    { text: '爱音乐的人情感都丰富', endingType: 'question' },
+  ],
+  'combo_deep': [
+    { text: '深度爱好组合，看来你不喜欢浅聊', endingType: 'tease' },
+    { text: '深度交流型，酒桌上应该有话聊', endingType: 'curious' },
+    { text: '喜欢深度内容的人，思考都比较多', endingType: 'question' },
+  ],
+  'combo_95': [
+    { text: '95后组合属性，年轻人想法就是多', endingType: 'tease' },
+    { text: '95后的活力，职场新生代的代表', endingType: 'curious' },
+    { text: '年轻人配置，卷得动吧', endingType: 'question' },
+  ],
+  'combo_creative': [
+    { text: '创意行业组合，脑洞应该很大', endingType: 'question' },
+    { text: '创意人的爱好，审美眼光不一般', endingType: 'tease' },
+    { text: '创意从业者，想法总是比较多', endingType: 'curious' },
+  ],
+  'rare_creative': [
+    { text: '创意行业稀有组合，有点意思', endingType: 'curious' },
+    { text: '创意人的稀有属性，与众不同', endingType: 'tease' },
+    { text: '这个组合不常见，你有点特别', endingType: 'question' },
+  ],
+  'legendary_tech': [
+    { text: '科技圈传说级组合，你这profile有点东西', endingType: 'curious' },
+    { text: '程序员的隐藏属性被我发现了', endingType: 'tease' },
+    { text: '科技人的反差萌，稀有物种', endingType: 'question' },
+  ],
+  'combo_media': [
+    { text: '传媒行业组合，天天和内容打交道', endingType: 'curious' },
+    { text: '媒体人的敏锐度应该很高', endingType: 'tease' },
+    { text: '内容行业，创意灵感是日常', endingType: 'question' },
+  ],
+};
+
+const DYNAMIC_PREFIXES = [
+  '哦？', '嗯...', '哈哈', '有意思，', '我看到了，', 
+  '等等，', '话说，', '好奇问一下，', '欸？', '嘿！',
+  '让我猜猜...', '我发现了，', '原来啊，', '说真的，', '不会吧，',
+];
+
+const DYNAMIC_TRANSITIONS = [
+  '，感觉', '，看起来', '，估计', '，应该', '，大概',
+  '，听上去', '，我觉得', '，不出意外', '，这么看来', '',
+];
+
+function selectVariant(trigger: string, info: CollectedInfo): string {
+  const variants = TEMPLATE_VARIANTS[trigger];
+  if (!variants || variants.length === 0) return '';
+  
+  const currentIndex = cadenceState.variantIndex.get(trigger) || 0;
+  const nextIndex = (currentIndex + 1) % variants.length;
+  cadenceState.variantIndex.set(trigger, nextIndex);
+  
+  const variant = variants[currentIndex];
+  let text = variant.text;
+  
+  const isFemale = info.gender?.includes('女');
+  const genderWord = isFemale ? '妹子' : '兄弟';
+  const hometownShort = info.hometown?.replace(/省|市|自治区/g, '').slice(0, 2) || '';
+  const cityShort = info.currentCity?.replace(/市/g, '') || '';
+  
+  text = text.replace('{hometown}', hometownShort);
+  text = text.replace('{city}', cityShort);
+  text = text.replace('{genderWord}', genderWord);
+  
+  const usePrefixRoll = Math.random();
+  if (usePrefixRoll < 0.6) {
+    const prefixIdx = Math.floor(Math.random() * DYNAMIC_PREFIXES.length);
+    text = DYNAMIC_PREFIXES[prefixIdx] + text;
+  }
+  
+  const useTransitionRoll = Math.random();
+  if (useTransitionRoll < 0.4 && !text.includes('，')) {
+    const transIdx = Math.floor(Math.random() * DYNAMIC_TRANSITIONS.length);
+    const transition = DYNAMIC_TRANSITIONS[transIdx];
+    if (transition) {
+      const insertPos = Math.floor(text.length * 0.3);
+      const beforeComma = text.slice(0, insertPos);
+      const afterComma = text.slice(insertPos);
+      text = beforeComma + transition + afterComma;
+    }
+  }
+  
+  text += getRandomEnding(variant.endingType);
+  
+  return text;
 }
 
 function getPillarPenalty(pillar: 'identity' | 'energy' | 'value'): number {
@@ -176,7 +476,8 @@ function calculateFinalScore(insight: FoxInsight): number {
   const rarityBonus = getRarityBonus(insight.rarity);
   const noveltyBonus = insight.noveltyScore * 0.2;
   const pillarPenalty = getPillarPenalty(insight.pillar);
-  return baseScore + rarityBonus + noveltyBonus - pillarPenalty;
+  const triggerPenalty = getTriggerDampeningPenalty(insight.trigger);
+  return baseScore + rarityBonus + noveltyBonus - pillarPenalty - triggerPenalty;
 }
 
 // ============ 规则引擎 V2 ============
@@ -940,6 +1241,16 @@ function generateDynamicInferenceV2(
   
   availableInsights.sort((a, b) => calculateFinalScore(b) - calculateFinalScore(a));
   const selected = availableInsights[0];
+  
+  // V2.1: 应用变体系统
+  const triggerBase = getTriggerBase(selected.trigger);
+  const variantText = selectVariant(triggerBase, info);
+  if (variantText) {
+    selected.text = variantText;
+  }
+  
+  // V2.1: 触发器衰减追踪
+  incrementTriggerUsage(selected.trigger);
   
   cadenceState.lastInsightTurn = currentTurn;
   cadenceState.shownInsights.add(selected.trigger);
