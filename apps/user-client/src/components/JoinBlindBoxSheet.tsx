@@ -556,7 +556,7 @@ export default function JoinBlindBoxSheet({
                   <div className="mb-3 p-2 bg-primary/5 rounded-lg border border-primary/20">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs text-muted-foreground">已选:</span>
-                      {selectedDistricts.slice(0, 4).map(id => {
+                      {selectedDistricts.slice(0, 6).map(id => {
                         const district = getDistrictById(id);
                         return district ? (
                           <Badge key={id} variant="secondary" className="text-xs">
@@ -564,8 +564,8 @@ export default function JoinBlindBoxSheet({
                           </Badge>
                         ) : null;
                       })}
-                      {selectedDistricts.length > 4 && (
-                        <span className="text-xs text-muted-foreground">+{selectedDistricts.length - 4}个</span>
+                      {selectedDistricts.length > 6 && (
+                        <span className="text-xs text-muted-foreground">+{selectedDistricts.length - 6}个</span>
                       )}
                     </div>
                   </div>
@@ -581,18 +581,20 @@ export default function JoinBlindBoxSheet({
                     return (
                       <div key={cluster.id} className="border-b last:border-b-0">
                         {/* 区域头部 - sticky header样式 */}
-                        <button
-                          onClick={() => {
-                            setExpandedClusters(prev => 
-                              prev.includes(cluster.id) 
-                                ? prev.filter(id => id !== cluster.id)
-                                : [...prev, cluster.id]
-                            );
-                          }}
-                          className="flex items-center justify-between w-full p-3 bg-muted/30 hover-elevate"
+                        <div
+                          className="flex items-center justify-between w-full p-3 bg-muted/30 hover-elevate cursor-pointer"
                           data-testid={`button-cluster-${cluster.id}`}
                         >
-                          <div className="flex items-center gap-2">
+                          <div 
+                            className="flex items-center gap-2 flex-1"
+                            onClick={() => {
+                              setExpandedClusters(prev => 
+                                prev.includes(cluster.id) 
+                                  ? prev.filter(id => id !== cluster.id)
+                                  : [...prev, cluster.id]
+                              );
+                            }}
+                          >
                             {isExpanded ? (
                               <ChevronDown className="h-4 w-4 text-muted-foreground" />
                             ) : (
@@ -606,6 +608,7 @@ export default function JoinBlindBoxSheet({
                             )}
                           </div>
                           <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               if (allSelected) {
@@ -627,7 +630,7 @@ export default function JoinBlindBoxSheet({
                           >
                             {allSelected ? '取消全选' : '全选'}
                           </button>
-                        </button>
+                        </div>
                         
                         {/* 商圈列表 - checkbox list */}
                         {isExpanded && (
