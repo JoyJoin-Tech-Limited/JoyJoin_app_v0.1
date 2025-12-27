@@ -3243,7 +3243,7 @@ export class DatabaseStorage implements IStorage {
     
     return results.filter(banner => {
       if (city && banner.city && banner.city !== city) return false;
-      if (placement && banner.placement !== placement) return false;
+      if (placement && banner.placement !== placement && banner.placement !== 'both') return false;
       if (banner.effectiveFrom && new Date(banner.effectiveFrom) > now) return false;
       if (banner.effectiveUntil && new Date(banner.effectiveUntil) < now) return false;
       return true;
