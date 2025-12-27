@@ -100,21 +100,16 @@ export default function CompletedEventCard({ event, feedback }: CompletedEventCa
             animate={{ 
               scale: [1, 1.05, 1],
               boxShadow: [
-                "0 0 10px rgba(251, 191, 36, 0.4)",
-                "0 0 20px rgba(251, 191, 36, 0.6)",
-                "0 0 10px rgba(251, 191, 36, 0.4)"
+                "0 0 10px rgba(168, 85, 247, 0.4)",
+                "0 0 20px rgba(168, 85, 247, 0.6)",
+                "0 0 10px rgba(168, 85, 247, 0.4)"
               ]
             }}
             transition={{ duration: 1.5, repeat: Infinity }}
             className="relative"
           >
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 to-fuchsia-500 flex items-center justify-center shadow-lg">
               <Gift className="h-7 w-7 text-white" />
-            </div>
-            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap">
-              <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0 font-bold shadow-md">
-                +50
-              </Badge>
             </div>
           </motion.div>
         )}
@@ -232,7 +227,7 @@ export default function CompletedEventCard({ event, feedback }: CompletedEventCa
           {!hasFeedback && (
             <Button 
               size="sm" 
-              className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md"
+              className="flex-1 bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white"
               onClick={(e) => {
                 e.stopPropagation();
                 setLocation(`/events/${event.id}/feedback`);

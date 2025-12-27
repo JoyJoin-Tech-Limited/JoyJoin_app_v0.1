@@ -231,7 +231,7 @@ function ModeSelectionScreen({
             <img 
               src={xiaoyueAvatar} 
               alt="小悦 - 悦聚AI社交助手" 
-              className="w-full h-full object-cover object-top"
+              className="w-full h-full object-cover object-center"
               data-testid="img-xiaoyue-avatar"
             />
           </div>
@@ -598,7 +598,7 @@ const XiaoyueAvatar = memo(({ emotion, size = "md" }: { emotion: XiaoyueEmotion;
       <img 
         src={xiaoyueAvatar} 
         alt="小悦" 
-        className="w-full h-full object-cover object-top"
+        className="w-full h-full object-cover object-center"
         loading="eager"
         decoding="async"
       />
@@ -1354,7 +1354,7 @@ function XiaoyueChatHeader({ isEnrichmentMode, estimatedTime, filledStars, isCom
             <img 
               src={xiaoyueAvatar} 
               alt="小悦" 
-              className="w-full h-full object-cover object-top"
+              className="w-full h-full object-cover object-center"
             />
           </motion.div>
           <div className="flex flex-col">
@@ -2185,7 +2185,7 @@ function FoxInsightBubble({ insight }: { insight: FoxInsight }) {
               <img 
                 src={xiaoyueAvatar} 
                 alt="小悦" 
-                className="w-full h-full object-cover object-top"
+                className="w-full h-full object-cover object-center"
               />
             </motion.div>
             <span className="text-[11px] text-muted-foreground/70 font-medium">小悦偷偷碎嘴</span>
