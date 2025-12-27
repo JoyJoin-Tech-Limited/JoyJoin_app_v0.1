@@ -48,26 +48,33 @@ admin.yuejuapp.com {
 api.yuejuapp.com {
     encode gzip
 
+    # 1. 通用安全与跨域头部 (对所有请求生效)
     header {
         X-Content-Type-Options nosniff
         X-Frame-Options SAMEORIGIN
         Referrer-Policy strict-origin-when-cross-origin
+        
+        # 允许携带凭据(Cookie)必须配合明确的 Origin，不能用 "*"
         Access-Control-Allow-Credentials true
+        # 动态将请求的 Origin 回传，满足跨子域需求
+        Access-Control-Allow-Origin "{header.Origin}"
     }
 
+    # 2. 专门处理 OPTIONS 预检请求
     @cors_preflight method OPTIONS
     handle @cors_preflight {
-        header Access-Control-Allow-Origin "{header.Origin}"
         header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
         header Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
         header Access-Control-Max-Age "86400"
         respond "" 204
     }
 
+    # 3. 代理到后端容器
     reverse_proxy joyjoin-api:5000 {
+        # 确保 Host 头传递，方便后端处理域名逻辑
+        header_up Host {host}
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
-        header_up Host {host}
     }
 }
