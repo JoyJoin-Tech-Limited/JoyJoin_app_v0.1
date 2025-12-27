@@ -21,63 +21,8 @@ import {
   formatAge, 
   getEducationDisplay
 } from "@/lib/userFieldMappings";
-
-// Archetype configuration with full descriptions
-const archetypeConfig: Record<string, { 
-  icon: string; 
-  color: string;
-  bgColor: string;
-  description: string;
-}> = {
-  "火花塞": { 
-    icon: "🙌", 
-    color: "text-orange-600 dark:text-orange-400",
-    bgColor: "bg-orange-100 dark:bg-orange-900/20",
-    description: "点燃话题的开场高手，能打破沉默，带动气氛"
-  },
-  "探索者": { 
-    icon: "🧭", 
-    color: "text-purple-600 dark:text-purple-400",
-    bgColor: "bg-purple-100 dark:bg-purple-900/20",
-    description: "好奇心驱动，喜欢发现新事物和深入讨论"
-  },
-  "故事家": { 
-    icon: "📖", 
-    color: "text-green-600 dark:text-green-400",
-    bgColor: "bg-green-100 dark:bg-green-900/20",
-    description: "善于分享经历，用故事连接人心"
-  },
-  "挑战者": { 
-    icon: "⚡", 
-    color: "text-red-600 dark:text-red-400",
-    bgColor: "bg-red-100 dark:bg-red-900/20",
-    description: "思维敏锐，喜欢辩论和挑战传统观点"
-  },
-  "连接者": { 
-    icon: "🤝", 
-    color: "text-cyan-600 dark:text-cyan-400",
-    bgColor: "bg-cyan-100 dark:bg-cyan-900/20",
-    description: "天生的社交桥梁，帮助他人建立联系"
-  },
-  "协调者": { 
-    icon: "🎯", 
-    color: "text-indigo-600 dark:text-indigo-400",
-    bgColor: "bg-indigo-100 dark:bg-indigo-900/20",
-    description: "平衡各方意见，确保每个人都被听到"
-  },
-  "氛围组": { 
-    icon: "🎭", 
-    color: "text-pink-600 dark:text-pink-400",
-    bgColor: "bg-pink-100 dark:bg-pink-900/20",
-    description: "活跃气氛，用幽默和活力感染他人"
-  },
-  "肯定者": { 
-    icon: "🌟", 
-    color: "text-yellow-600 dark:text-yellow-400",
-    bgColor: "bg-yellow-100 dark:bg-yellow-900/20",
-    description: "给予鼓励和支持，让他人感到被认可"
-  },
-};
+import { archetypeAvatars, archetypeBgColors } from "@/lib/archetypeAvatars";
+import { archetypeConfig } from "@/lib/archetypes";
 
 // Helper function to group messages by date
 function groupMessagesByDate(messages: Array<ChatMessage & { user: User }>) {
@@ -304,19 +249,24 @@ export default function EventChatDetailPage() {
               <span className="text-xs text-muted-foreground flex-shrink-0">参与者:</span>
               <div className="flex gap-2">
                 {participants.map((participant) => {
-                  const archetypeData = participant.archetype && archetypeConfig[participant.archetype]
-                    ? archetypeConfig[participant.archetype]
-                    : { icon: "✨", color: "text-muted-foreground", bgColor: "bg-muted", description: "独特个性" };
+                  const avatarImg = participant.archetype ? archetypeAvatars[participant.archetype] : null;
+                  const bgColor = participant.archetype ? archetypeBgColors[participant.archetype] : 'bg-muted';
                   
                   return (
                     <Tooltip key={participant.id}>
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => setSelectedParticipant(participant)}
-                          className={`h-8 w-8 rounded-full ${archetypeData.bgColor} flex items-center justify-center text-lg hover-elevate active-elevate-2 transition-all cursor-pointer`}
+                          className={`h-8 w-8 rounded-full ${bgColor || 'bg-muted'} flex items-center justify-center overflow-hidden hover-elevate active-elevate-2 transition-all cursor-pointer`}
                           data-testid={`badge-participant-${participant.id}`}
                         >
-                          {archetypeData.icon}
+                          {avatarImg ? (
+                            <img src={avatarImg} alt={participant.archetype || ''} className="w-full h-full object-contain p-0.5" />
+                          ) : (
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {(participant.displayName || participant.firstName || '?')[0]}
+                            </span>
+                          )}
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -385,9 +335,11 @@ export default function EventChatDetailPage() {
                         {/* Messages */}
                         {group.messages.map((msg, idx) => {
                           const isOwnMessage = currentUser?.id === msg.userId;
+                          const avatarImg = msg.user.archetype ? archetypeAvatars[msg.user.archetype] : null;
+                          const bgColor = msg.user.archetype ? archetypeBgColors[msg.user.archetype] : 'bg-muted';
                           const archetypeData = msg.user.archetype && archetypeConfig[msg.user.archetype]
                             ? archetypeConfig[msg.user.archetype]
-                            : { icon: "✨", color: "text-muted-foreground", bgColor: "bg-muted", description: "独特个性" };
+                            : { description: "独特个性" };
                           
                           return (
                             <div
@@ -401,20 +353,24 @@ export default function EventChatDetailPage() {
                               {!isOwnMessage && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Avatar className="h-10 w-10 flex-shrink-0 cursor-pointer ring-2 ring-transparent hover:ring-primary/20 transition-all">
-                                      {msg.user.profileImageUrl ? (
-                                        <AvatarImage src={msg.user.profileImageUrl} />
+                                    <div className={`h-10 w-10 flex-shrink-0 rounded-full ${bgColor || 'bg-muted'} flex items-center justify-center overflow-hidden cursor-pointer ring-2 ring-transparent hover:ring-primary/20 transition-all`}>
+                                      {avatarImg ? (
+                                        <img src={avatarImg} alt={msg.user.archetype || ''} className="w-full h-full object-contain p-0.5" />
                                       ) : (
-                                        <AvatarFallback className={`${archetypeData.bgColor} text-2xl`}>
-                                          {archetypeData.icon}
-                                        </AvatarFallback>
+                                        <span className="text-sm font-medium text-muted-foreground">
+                                          {(msg.user.displayName || msg.user.firstName || '?')[0]}
+                                        </span>
                                       )}
-                                    </Avatar>
+                                    </div>
                                   </TooltipTrigger>
                                   <TooltipContent side="right" className="max-w-xs">
                                     <div className="space-y-2">
                                       <div className="flex items-center gap-2">
-                                        <span className="text-2xl">{archetypeData.icon}</span>
+                                        {avatarImg && (
+                                          <div className={`h-8 w-8 rounded-full ${bgColor} flex items-center justify-center overflow-hidden`}>
+                                            <img src={avatarImg} alt={msg.user.archetype || ''} className="w-full h-full object-contain p-0.5" />
+                                          </div>
+                                        )}
                                         <div>
                                           <p className="font-semibold">{msg.user.archetype}</p>
                                           <p className="text-xs text-muted-foreground">
@@ -436,12 +392,14 @@ export default function EventChatDetailPage() {
                                     <span className="text-sm font-medium">
                                       {msg.user.displayName || msg.user.firstName || "用户"}
                                     </span>
-                                    <Badge 
-                                      variant="secondary" 
-                                      className={`text-[10px] h-5 px-1.5 ${archetypeData.color}`}
-                                    >
-                                      {msg.user.archetype}
-                                    </Badge>
+                                    {msg.user.archetype && (
+                                      <Badge 
+                                        variant="secondary" 
+                                        className="text-[10px] h-5 px-1.5"
+                                      >
+                                        {msg.user.archetype}
+                                      </Badge>
+                                    )}
                                   </div>
                                 )}
 

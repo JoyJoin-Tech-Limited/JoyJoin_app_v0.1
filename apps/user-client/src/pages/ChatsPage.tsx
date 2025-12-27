@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Calendar, MapPin, MessageSquare, Users, User, Lock, Clock } from "lucide-react";
+import { Calendar, MapPin, MessageSquare, Users, User, Lock, Clock, Sparkles } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
@@ -370,10 +370,17 @@ export default function ChatsPage() {
                 {directThreads.map((thread) => {
                   const otherUser = thread.otherUser;
                   const lastMessage = thread.lastMessage;
+                  const sourceEvent = (thread as any).sourceEvent as { title: string; eventType: string; district: string; dateTime: string | Date } | undefined;
                   const isExpanded = expandedThreadId === thread.id;
                   const archetypeData = otherUser.archetype && archetypeConfig[otherUser.archetype]
                     ? archetypeConfig[otherUser.archetype]
                     : null;
+                  
+                  // Format source event date
+                  const formatEventDate = (dateTime: string | Date) => {
+                    const date = new Date(dateTime);
+                    return `${date.getMonth() + 1}月${date.getDate()}日`;
+                  };
                   
                   return (
                     <Card 
@@ -383,6 +390,19 @@ export default function ChatsPage() {
                       data-testid={`card-direct-${thread.id}`}
                     >
                       <CardContent className="p-4">
+                        {/* Source Event Label */}
+                        {sourceEvent && (
+                          <div className="mb-2 pb-2 border-b border-dashed">
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Sparkles className="h-3 w-3 text-primary" />
+                              <span className="font-medium line-clamp-1">{sourceEvent.title}</span>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground/70 mt-0.5">
+                              {formatEventDate(sourceEvent.dateTime)} · {sourceEvent.district || sourceEvent.eventType}
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className="flex items-start gap-3">
                           {/* Avatar - clickable to expand */}
                           <div

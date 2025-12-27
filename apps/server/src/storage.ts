@@ -64,7 +64,7 @@ export interface IStorage {
   // Direct message operations
   findDirectMessageThread(userId1: string, userId2: string, eventId: string): Promise<DirectMessageThread | undefined>;
   createDirectMessageThread(data: InsertDirectMessageThread): Promise<DirectMessageThread>;
-  getUserDirectMessageThreads(userId: string): Promise<Array<DirectMessageThread & { otherUser: User; lastMessage?: DirectMessage }>>;
+  getUserDirectMessageThreads(userId: string): Promise<Array<DirectMessageThread & { otherUser: User; lastMessage?: DirectMessage; sourceEvent?: { title: string; eventType: string; district: string; dateTime: Date } }>>;
   getThreadMessages(threadId: string): Promise<Array<DirectMessage & { sender: User }>>;
   sendDirectMessage(senderId: string, data: InsertDirectMessage): Promise<DirectMessage>;
 
@@ -803,7 +803,7 @@ export class DatabaseStorage implements IStorage {
     return thread;
   }
 
-  async getUserDirectMessageThreads(userId: string): Promise<Array<DirectMessageThread & { otherUser: User; lastMessage?: DirectMessage }>> {
+  async getUserDirectMessageThreads(userId: string): Promise<Array<DirectMessageThread & { otherUser: User; lastMessage?: DirectMessage; sourceEvent?: { title: string; eventType: string; district: string; dateTime: Date } }>> {
     const threads = await db
       .select()
       .from(directMessageThreads)
@@ -812,7 +812,7 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(desc(directMessageThreads.lastMessageAt));
 
-    // Fetch other user data and last message for each thread
+    // Fetch other user data, last message, and source event for each thread
     const threadsWithData = await Promise.all(
       threads.map(async (thread) => {
         const otherUserId = thread.user1Id === userId ? thread.user2Id : thread.user1Id;
@@ -825,10 +825,51 @@ export class DatabaseStorage implements IStorage {
           .orderBy(desc(directMessages.createdAt))
           .limit(1);
 
+        // Try to fetch source event from blindBoxEvents (primary source for mutual matches)
+        let sourceEvent: { title: string; eventType: string; district: string; dateTime: Date } | undefined;
+        if (thread.eventId) {
+          const [blindBoxEvent] = await db
+            .select({
+              title: blindBoxEvents.title,
+              eventType: blindBoxEvents.eventType,
+              district: blindBoxEvents.district,
+              dateTime: blindBoxEvents.dateTime,
+            })
+            .from(blindBoxEvents)
+            .where(eq(blindBoxEvents.id, thread.eventId))
+            .limit(1);
+          
+          if (blindBoxEvent) {
+            sourceEvent = blindBoxEvent;
+          } else {
+            // Fallback to events table if not found in blindBoxEvents
+            const [eventData] = await db
+              .select({
+                title: events.title,
+                eventType: sql<string>`COALESCE(${events.iconName}, '饭局')`,
+                district: sql<string>`COALESCE(${events.area}, '')`,
+                dateTime: events.dateTime,
+              })
+              .from(events)
+              .where(eq(events.id, thread.eventId))
+              .limit(1);
+            
+            if (eventData) {
+              sourceEvent = {
+                title: eventData.title,
+                eventType: eventData.eventType,
+                district: eventData.district,
+                dateTime: eventData.dateTime,
+              };
+            }
+          }
+        }
+
         return {
           ...thread,
           otherUser: otherUser!,
           lastMessage,
+          sourceEvent,
         };
       })
     );
