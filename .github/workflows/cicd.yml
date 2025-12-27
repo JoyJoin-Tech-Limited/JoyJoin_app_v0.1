@@ -1,61 +1,80 @@
-name: JoyJoin Professional CI/CD
+name: JoyJoin Pro Pipeline (Enhanced Logs)
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  #code review
-  lint-and-test:
-    name: Quality Gate
+  # code review
+  lint:
+    name: 🎨 Code Quality Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
+
+      - name: Install All Dependencies
+        run: npm ci
+
+      - name: 🔍 Check User-Client Types
+        run: cd apps/user-client && npx tsc --noEmit
+
+      - name: 🔍 Check Admin-Client Types
+        run: cd apps/admin-client && npx tsc --noEmit
+
+      - name: 🔍 Check Server Types
+        run: cd apps/server && npx tsc --noEmit
+
+  # AI simulation test
+  test:
+    name: 🧪 AI Simulation Test
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
       - name: Install dependencies
         run: npm ci
-      - name: Type Check
-        run: |
-          cd apps/user-client && npx tsc --noEmit
-          cd ../admin-client && npx tsc --noEmit
-          cd ../server && npx tsc --noEmit
-      - name: Run AI Simulation Tests
+      - name:  Run Simulation (DeepSeek)
         run: npx tsx apps/server/src/tests/runSimulation.ts 100
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
-  #deploy
+  #  auto deploy to tencent cloud server
   deploy:
-    name: Real Deploy to Tencent Cloud
-    needs: lint-and-test
+    name:  Real Deployment
+    needs: test
     runs-on: ubuntu-latest
     steps:
-      - name: SSH Remote Deployment
+      - name:  SSH Execute Deployment
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # add more time to deploy
+          command_timeout: 20m 
           script: |
-            #auto deploy to tencent server!
             cd ~/JoyJoin
-            
-            
             git fetch --all
             git reset --hard origin/main
             
-            # 3. deploy to server
+            echo " Starting Docker Build..."
             cd deployment
             docker compose -f docker-compose.caddy.yml up -d --build
             
-            # 4. push to database
+            echo " Fixing DNS for Neon..."
             echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
+            
+            echo "🗄️ Syncing Neon Database..."
             cd ~/JoyJoin
             export DATABASE_URL="${{ secrets.DATABASE_URL }}"
-            npx drizzle-kit push --config=./drizzle.config.ts
-            
-            echo "🚀 [JoyJoin] deploy succueeful！"
+            # add verbose mode，so that can see detialed log
+            npx drizzle-kit push --config=./drizzle.config.ts --verbose
