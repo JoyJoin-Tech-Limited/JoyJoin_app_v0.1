@@ -35,17 +35,19 @@ export function getSession() {
   const isProduction = process.env.NODE_ENV === 'production';
   const cookieDomain = process.env.COOKIE_DOMAIN; // e.g., '.yuejuapp.com'
   
+  // Production: secure + sameSite:none for cross-subdomain HTTPS
+  // Development: not secure + sameSite:lax for local HTTP
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
-    proxy: true, // Always trust proxy for Caddy/reverse proxy
+    proxy: isProduction, // Trust proxy only in production (Caddy)
     cookie: {
       httpOnly: true,
-      secure: true, // Required for cross-subdomain with sameSite: 'none'
+      secure: isProduction, // true for HTTPS in production, false for HTTP in dev
       maxAge: sessionTtl,
-      sameSite: 'none', // Required for cross-subdomain auth between api/admin/www
+      sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-subdomain in prod
       ...(cookieDomain && { domain: cookieDomain }), // Cross-subdomain support
     },
   });
