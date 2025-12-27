@@ -33,6 +33,7 @@ import {
   formatArray,
 } from "@/lib/userFieldMappings";
 import { calculateProfileCompletion } from "@/lib/profileCompletion";
+import { INDUSTRY_ID_TO_LABEL, getIndustryDisplayLabel } from "@shared/occupations";
 
 type SectionType = "basic" | "education" | "work" | "personal" | "interests";
 
@@ -276,7 +277,7 @@ export default function ProfilePage() {
                   <div className="flex flex-wrap gap-2">
                     {user.industry && (
                       <span className="px-2.5 py-1 text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full">
-                        {user.industrySegment || user.industry}
+                        {user.industrySegment || INDUSTRY_ID_TO_LABEL[user.industry] || user.industry}
                       </span>
                     )}
                     {user.occupation && (

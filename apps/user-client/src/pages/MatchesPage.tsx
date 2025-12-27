@@ -8,24 +8,24 @@ import { Sparkles } from "lucide-react";
 //todo: remove mock functionality
 const matches = [
   {
-    name: "Sarah Johnson",
-    initials: "SJ",
+    name: "小美",
+    initials: "美",
     matchScore: 94,
-    sharedVibes: ["Coffee Chats", "Introvert", "Creative"],
+    sharedVibes: ["咖啡爱好者", "内敛型", "创意"],
     mutualEvents: 2
   },
   {
-    name: "Michael Chen",
-    initials: "MC",
+    name: "阿杰",
+    initials: "杰",
     matchScore: 89,
-    sharedVibes: ["Book Lover", "Tech", "Weekend Vibes"],
+    sharedVibes: ["书虫", "科技", "周末"],
     mutualEvents: 1
   },
   {
-    name: "Emma Davis",
-    initials: "ED",
+    name: "晓雯",
+    initials: "雯",
     matchScore: 86,
-    sharedVibes: ["Art", "Music", "Chill"],
+    sharedVibes: ["艺术", "音乐", "放松"],
     mutualEvents: 3
   }
 ];
@@ -33,11 +33,11 @@ const matches = [
 export default function MatchesPage() {
   return (
     <div className="min-h-screen bg-background pb-16">
-      <MobileHeader title="Matches" />
+      <MobileHeader title="我的连接" />
       
       <div className="px-4 py-4 space-y-3">
         <p className="text-sm text-muted-foreground">
-          People you've connected with at events
+          活动中结识的朋友
         </p>
 
         {matches.map((match, i) => (
@@ -68,7 +68,7 @@ export default function MatchesPage() {
                   </div>
                   
                   <p className="text-xs text-muted-foreground mt-1.5">
-                    {match.mutualEvents} mutual event{match.mutualEvents !== 1 ? 's' : ''}
+                    {match.mutualEvents}次共同活动
                   </p>
                 </div>
               </div>
