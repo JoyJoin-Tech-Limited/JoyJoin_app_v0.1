@@ -1,4 +1,3 @@
-//my path:/Users/felixg/projects/JoyJoin3/server/routes.ts
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
