@@ -1,0 +1,72 @@
+What the evidence proves
+✅ TLS terminates at Caddy
+
+docker ps shows joyjoin-caddy is the only thing bound to 0.0.0.0:443->443. So the HTTPS connection ends at Caddy, not at some host nginx.
+
+✅ Your API works fine directly
+
+curl http://127.0.0.1:5000/api/debug/echo-cookie returns 200 OK with X-App/X-Instance from Express. So the API itself is healthy.
+
+🔥 The “server: nginx/1.29.4” header is not your host nginx
+
+You don’t even have nginx installed on the VM (nginx: command not found).
+So that server: nginx/1.29.4 header is almost certainly coming from the admin frontend container, which is very likely serving via nginx internally (common: React/Vite build served by nginx).
+
+And your header chain shows:
+
+via: 1.1 Caddy (so Caddy is in the middle)
+
+x-app: joyjoin-api (so request reaches API for that endpoint)
+
+That means the server header you see can be misleading (it can be inherited / overwritten by upstreams or simply reflect another hop). The key is the behavior we’ve observed:
+
+🔥 The real bug: X-Forwarded-Proto reaches Node as http
+
+Your echo-cookie previously showed:
+
+xForwardedProto: "http"
+
+reqSecure: false
+
+But TLS is definitely at Caddy, so the only way Node sees http is:
+
+Caddy is sending X-Forwarded-Proto: http to the API, either because:
+
+your Caddyfile explicitly forwards the incoming X-Forwarded-Proto (which may be http), OR
+
+something before Caddy injects X-Forwarded-Proto: http into the request, and your Caddyfile is preserving it.
+
+Given Replit changed Caddy to:
+
+header_up X-Forwarded-Proto {http.request.header.X-Forwarded-Proto}
+
+
+That’s the smoking gun: if the incoming request to Caddy contains X-Forwarded-Proto: http, Caddy will forward that exact http to Node, making req.secure false.
+
+So even though the browser → Caddy is HTTPS, Node still believes it’s HTTP.
+
+✅ The fix (minimal + correct)
+
+Since Caddy is your TLS termination, the correct forwarded proto that Node should receive is https.
+
+So: do not preserve the incoming header. Override it.
+
+In your Caddyfile, for the reverse_proxy to joyjoin-api:5000, set:
+
+reverse_proxy joyjoin-api:5000 {
+  header_up X-Forwarded-Proto https
+  header_up X-Forwarded-Host {host}
+  header_up X-Forwarded-For {remote}
+}
+
+
+Or if you prefer not hardcoding, you can use Caddy’s actual request scheme—but only if Caddy is seeing https. Since Caddy terminates TLS here, it should be https:
+
+reverse_proxy joyjoin-api:5000 {
+  header_up X-Forwarded-Proto {scheme}
+}
+
+
+However, because you already observed xForwardedProto arriving as http, the safest is force https for requests coming through the HTTPS site.
+
+This is totally valid because Caddy is literally the HTTPS edge in your setup.
