@@ -158,6 +158,9 @@ function generateInsights(primaryRole: string, secondaryRole: string | null): {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // 🔧 确保 trust proxy 在 session 之前设置（防止 index.ts 漏掉）
+  app.set('trust proxy', 1);
+  
   // 🔧 DEBUG: Add identity headers to ALL API responses (Phase 1.1)
   app.use((req, res, next) => {
     res.setHeader("X-App", "joyjoin-api");
