@@ -12,7 +12,7 @@ import {
   normalizeInterestName,
   type AttendeeData,
 } from "@/lib/attendeeAnalytics";
-import { getOccupationDisplayLabel, getIndustryDisplayLabel } from "@shared/occupations";
+import { getOccupationDisplayLabel, getIndustryDisplayLabel, INDUSTRY_ID_TO_LABEL } from "@shared/occupations";
 import { getArchetypeImage } from "@/lib/archetypeImages";
 
 const INTEREST_ICONS: Record<string, LucideIcon> = {
@@ -278,7 +278,7 @@ export default function AttendeePreviewCard({
                       </>
                     ) : (
                       <>
-                        {attendee.industry && <span>{attendee.industry}</span>}
+                        {attendee.industry && <span>{INDUSTRY_ID_TO_LABEL[attendee.industry] || attendee.industry}</span>}
                         {attendee.seniority && (
                           <span className="text-xs text-muted-foreground">
                             {attendee.seniority === "Junior" ? "初级" : 
