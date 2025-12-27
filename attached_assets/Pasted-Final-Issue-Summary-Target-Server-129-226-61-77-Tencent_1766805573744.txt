@@ -1,0 +1,79 @@
+Final Issue Summary
+Target Server: 129.226.61.77 (Tencent Cloud)
+
+The Conflict: Your logs show Remote Address: 127.0.0.1. This means your browser is likely using a local dev tool or a "ghost" session that is interfering with the production cookie.
+
+Result: The server at 129.226.61.77 issues a secure cookie for .yuejuapp.com, but the browser ignores it because it thinks the request is "local" or "unsecure."
+
+The "Final Fix" Blueprint
+1. Express Session Configuration
+Open apps/server/src/routes.ts. We must ensure the cookie is broad enough to cover all subdomains and strict enough for HTTPS.
+
+TypeScript
+
+// Replace your existing app.use(session(...)) block
+app.use(session({
+  secret: process.env.SESSION_SECRET!,
+  store: sessionStore,
+  resave: false,
+  saveUninitialized: false,
+  proxy: true, // MUST be true for Caddy
+  cookie: {
+    domain: '.yuejuapp.com', // Covers api, admin, and www
+    httpOnly: true,
+    secure: true,            // Required for 129.226.61.77 via HTTPS
+    sameSite: 'none',        // Required for cross-subdomain auth
+    maxAge: sessionTtl,
+  },
+}));
+2. Caddyfile Header Alignment
+Ensure deployment/Caddyfile allows the Admin portal to "read" the results from the API.
+
+Code snippet
+
+api.yuejuapp.com {
+    header {
+        Access-Control-Allow-Credentials true
+        Access-Control-Allow-Origin "https://admin.yuejuapp.com"
+        # Optional: log the real client IP for debugging
+        header_up X-Real-IP {remote_host}
+    }
+    reverse_proxy joyjoin-api:5000
+}
+3. Deployment Script Update
+Update your cicd.yml to force the server to match GitHub and clear any local "IP ghosting."
+
+Bash
+
+# Inside Job 5: deploy
+script: |
+  set -e
+  cd ~/JoyJoin
+  git fetch --all
+  git reset --hard origin/main
+  git clean -fd  # Remove any local temporary files blocking the pull
+
+  cd deployment
+  # Ensure the IP 129.226.61.77 is not blocked by a stuck container
+  docker rm -f joyjoin-caddy || true
+  docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans
+Execution Plan
+Server IP Sync: Log into your server terminal and run:
+
+Bash
+
+cd ~/JoyJoin && git fetch --all && git reset --hard origin/main && git clean -fd
+Verify .env: Check that your SESSION_SECRET isn't empty:
+
+Bash
+
+grep "SESSION_SECRET" ~/JoyJoin/deployment/.env.production
+Browser Cleanse: This is the most common reason for a "success but fail" loop.
+
+Go to https://admin.yuejuapp.com.
+
+F12 -> Application -> Clear Site Data.
+
+Ensure no local proxies (like Vite's --proxy or local tunnels) are running on your computer that target 127.0.0.1:15236.
+
+Once you push these changes and clear your browser data, your login on 129.226.61.77 should finally stick. Would you like me to wait while you run these commands?
