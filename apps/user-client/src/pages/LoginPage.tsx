@@ -17,7 +17,8 @@ import {
   Flower2, Target, Sun, Play, Volume2, VolumeX
 } from "lucide-react";
 import joyJoinLogo from "@assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi_1765650184831.png";
-import heroVideo from "@assets/generated_videos/dusk_skyline_fades_to_cozy_dinner.mp4";
+import heroVideo from "@assets/generated_videos/shenzhen-hk_dusk_to_cozy_dinner.mp4";
+import heroPoster from "@assets/stock_images/shenzhen_city_roofto_e7cea581.jpg";
 
 import xiaoyueFoxAvatar from "@assets/Xiao_Yue_Avatar-06_1766766685632.png";
 // import { SiWechat } from "react-icons/si"; // 暂时注释：微信登录功能
@@ -337,7 +338,7 @@ export default function LoginPage() {
       >
         {/* Video Background Layer */}
         <div className="absolute inset-0 z-0">
-          {/* Video Background */}
+          {/* Video Background with poster for fast loading */}
           <video
             ref={videoRef}
             className="w-full h-full object-cover"
@@ -345,6 +346,7 @@ export default function LoginPage() {
             loop
             muted={isVideoMuted}
             playsInline
+            poster={heroPoster}
           >
             <source src={heroVideo} type="video/mp4" />
           </video>
@@ -389,21 +391,43 @@ export default function LoginPage() {
             </p>
           </motion.div>
 
-          {/* Mute button for video - show when video is active */}
-          {/* Uncomment when video is ready:
-          <button
-            className="absolute bottom-6 right-6 min-h-[44px] min-w-[44px] h-11 w-11 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center active:bg-black/70 transition-colors"
-            onClick={() => setIsVideoMuted(!isVideoMuted)}
-            data-testid="button-video-mute"
-            aria-label={isVideoMuted ? "开启声音" : "静音"}
+          {/* CTA Button - P0 优化 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
           >
-            {isVideoMuted ? (
-              <VolumeX className="h-5 w-5 text-white" />
-            ) : (
-              <Volume2 className="h-5 w-5 text-white" />
-            )}
-          </button>
-          */}
+            <Button
+              size="lg"
+              className="min-h-[52px] px-8 text-lg font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
+              onClick={() => setLocation('/registration/method')}
+              data-testid="button-hero-cta"
+            >
+              立即体验
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </motion.div>
+
+          {/* Safety Badges - P0 优化 */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            className="flex items-center justify-center gap-4 flex-wrap"
+          >
+            <div className="flex items-center gap-1.5 text-white/80 text-sm">
+              <Shield className="h-4 w-4" />
+              <span>实名认证</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-white/80 text-sm">
+              <CheckCircle2 className="h-4 w-4" />
+              <span>不满意全退</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-white/80 text-sm">
+              <Users className="h-4 w-4" />
+              <span>4-6人小局</span>
+            </div>
+          </motion.div>
         </div>
       </section>
 
@@ -413,6 +437,25 @@ export default function LoginPage() {
           placement="landing" 
           className="px-0"
         />
+      </div>
+
+      {/* P1-1: FAQ Quick Entry - 社恐安心提示 */}
+      <div className="px-4 pb-4" data-testid="section-faq-quick">
+        <a 
+          href="#faq-section"
+          className="block max-w-lg mx-auto"
+          onClick={(e) => {
+            e.preventDefault();
+            document.getElementById('faq-section')?.scrollIntoView({ behavior: 'smooth' });
+          }}
+          data-testid="link-faq-reassurance"
+        >
+          <div className="flex items-center justify-center gap-2 min-h-[44px] px-4 bg-primary/10 hover:bg-primary/15 rounded-lg transition-colors">
+            <Heart className="h-5 w-5 text-primary" />
+            <span className="text-base text-foreground">一个人去会不会尴尬？</span>
+            <ArrowRight className="h-5 w-5 text-muted-foreground" />
+          </div>
+        </a>
       </div>
 
       {/* Section 3: 小悦介绍区 - 卡片式全身展示 */}
@@ -679,7 +722,7 @@ export default function LoginPage() {
       </section>
 
       {/* Section 7: FAQ */}
-      <section className="py-12 px-6" data-testid="section-faq">
+      <section id="faq-section" className="py-12 px-6" data-testid="section-faq">
         <div className="max-w-lg mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
