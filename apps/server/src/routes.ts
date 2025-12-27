@@ -315,14 +315,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     saveUninitialized: false,
     // This must match your app.set('trust proxy', 1) in index.ts
     proxy: process.env.NODE_ENV === 'production', 
+    // cookie: {
+    //   // 👇 FIX: Force the leading dot domain in production
+    //   domain: process.env.NODE_ENV === 'production' ? '.yuejuapp.com' : undefined,
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === 'production', 
+    //   maxAge: sessionTtl,
+    //   sameSite: 'lax',
+    // },
     cookie: {
-      // 👇 FIX: Force the leading dot domain in production
       domain: process.env.NODE_ENV === 'production' ? '.yuejuapp.com' : undefined,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', 
+      secure: true, // Keep this true
       maxAge: sessionTtl,
-      sameSite: 'lax',
-    },
+      sameSite: 'none', // Change from 'lax' to 'none'
+},
   }));
   // Phone auth setup
   setupPhoneAuth(app);
