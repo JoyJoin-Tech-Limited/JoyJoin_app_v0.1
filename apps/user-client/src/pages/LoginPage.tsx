@@ -276,9 +276,12 @@ export default function LoginPage() {
   // };
 
   const handleLogin = () => {
+    console.log("🔧 [DEBUG] handleLogin called, phoneNumber:", phoneNumber, "areaCode:", areaCode);
     // 修改为只需要手机号即可登录，使用固定的DEMO验证码
     const expectedLength = getPhoneLength();
+    console.log("🔧 [DEBUG] expectedLength:", expectedLength, "actual:", phoneNumber.length);
     if (!phoneNumber || phoneNumber.length !== expectedLength) {
+      console.log("🔧 [DEBUG] Phone validation failed");
       toast({
         title: "手机号格式错误",
         description: `请输入${expectedLength}位手机号`,
@@ -287,6 +290,7 @@ export default function LoginPage() {
       return;
     }
     const fullPhone = `${areaCode}${phoneNumber}`;
+    console.log("🔧 [DEBUG] Calling loginMutation with fullPhone:", fullPhone);
     // 使用固定的DEMO验证码，暂时不需要用户输入验证码
     loginMutation.mutate({ phoneNumber: fullPhone, code: "666666" });
   };
