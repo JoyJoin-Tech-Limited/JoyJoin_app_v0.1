@@ -255,30 +255,30 @@ export default function EditProfilePage() {
         </div>
       </div>
 
-      <div className="px-3 py-3 space-y-3 max-w-2xl mx-auto">
-        {/* Hero 助手卡片 - 紧凑版 */}
+      <div className="px-4 py-4 space-y-5 max-w-2xl mx-auto">
+        {/* Hero 助手卡片 - 移动端友好版 */}
         <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background overflow-hidden">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
               <div className="relative flex-shrink-0">
-                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-primary/30 shadow-md">
+                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary/30 shadow-md">
                   <img 
                     src={xiaoyueAvatar} 
                     alt="小悦" 
                     className="w-full h-full object-cover object-top"
                   />
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-background" />
+                <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-green-500 rounded-full border-2 border-background" />
               </div>
               
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className="font-semibold text-[15px]">小悦</span>
-                  <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-semibold text-lg">小悦</span>
+                  <Badge variant="secondary" className="text-xs px-2 py-0.5">
                     AI助手
                   </Badge>
                 </div>
-                <p className="text-[13px] text-muted-foreground leading-tight">
+                <p className="text-base text-muted-foreground leading-snug">
                   {totalMissingCount > 0 
                     ? `还有${totalMissingCount}项可补充，聊几句搞定~`
                     : "资料很完善啦！"
@@ -288,38 +288,38 @@ export default function EditProfilePage() {
             </div>
             
             {/* 进度条 + CTA */}
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all"
                     style={{ width: `${percentage}%` }}
                   />
                 </div>
-                <span className="text-[11px] text-muted-foreground font-medium w-8">{percentage}%</span>
+                <span className="text-sm text-muted-foreground font-semibold min-w-[40px] text-right">{percentage}%</span>
               </div>
               
               <Button 
                 onClick={() => handleChatWithXiaoyue()}
-                size="sm"
-                className="w-full gap-1.5 h-9"
+                size="lg"
+                className="w-full gap-2"
                 data-testid="button-chat-xiaoyue-main"
               >
-                <MessageCircle className="h-3.5 w-3.5" />
+                <MessageCircle className="h-5 w-5" />
                 和小悦聊聊，补齐资料
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* 快速补充区 - 紧凑芯片 */}
+        {/* 快速补充区 - 移动端友好版 */}
         {groupsWithMissingFields.length > 0 && (
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5 px-0.5">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              <span className="text-[13px] font-medium">快速补充</span>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <span className="text-base font-semibold">快速补充</span>
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2.5">
               {groupsWithMissingFields.slice(0, 3).map((group) => {
                 const groupMissingCount = group.sections.reduce(
                   (acc, section) => acc + getIncompleteCount(section.fields), 0
@@ -327,13 +327,13 @@ export default function EditProfilePage() {
                 return (
                   <button
                     key={group.id}
-                    className="inline-flex items-center gap-1 h-8 px-2.5 rounded-full border bg-background text-[12px] hover-elevate active-elevate-2 transition-colors"
+                    className="inline-flex items-center gap-2 h-11 px-4 rounded-full border bg-background text-sm hover-elevate active-elevate-2 transition-colors"
                     onClick={() => handleChatWithXiaoyue(group.chatTopic)}
                     data-testid={`chip-chat-${group.id}`}
                   >
-                    <MessageCircle className="h-3 w-3 text-muted-foreground" />
+                    <MessageCircle className="h-4 w-4 text-muted-foreground" />
                     <span>{group.chatTopic}</span>
-                    <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded">
+                    <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md font-medium">
                       {groupMissingCount}
                     </span>
                   </button>
@@ -341,7 +341,7 @@ export default function EditProfilePage() {
               })}
               {groupsWithMissingFields.length > 3 && (
                 <button
-                  className="inline-flex items-center h-8 px-2.5 rounded-full border bg-background text-[12px] text-muted-foreground hover-elevate"
+                  className="inline-flex items-center h-11 px-4 rounded-full border bg-background text-sm text-muted-foreground hover-elevate"
                   onClick={() => setManualEditOpen(true)}
                   data-testid="chip-more"
                 >
@@ -352,22 +352,22 @@ export default function EditProfilePage() {
           </div>
         )}
 
-        {/* 手动编辑区 - 紧凑列表 */}
+        {/* 手动编辑区 - 移动端友好版 */}
         <Collapsible open={manualEditOpen} onOpenChange={setManualEditOpen}>
           <CollapsibleTrigger asChild>
             <button 
-              className="w-full flex items-center justify-between h-9 px-2 text-muted-foreground hover:text-foreground rounded-md hover-elevate transition-colors"
+              className="w-full flex items-center justify-between h-12 px-3 text-muted-foreground hover:text-foreground rounded-lg hover-elevate transition-colors"
               data-testid="button-toggle-manual-edit"
             >
-              <div className="flex items-center gap-1.5">
-                <Settings2 className="h-3.5 w-3.5" />
-                <span className="text-[13px]">精细调整</span>
+              <div className="flex items-center gap-2">
+                <Settings2 className="h-5 w-5" />
+                <span className="text-base">精细调整</span>
               </div>
-              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${manualEditOpen ? "rotate-180" : ""}`} />
+              <ChevronDown className={`h-5 w-5 transition-transform ${manualEditOpen ? "rotate-180" : ""}`} />
             </button>
           </CollapsibleTrigger>
           
-          <CollapsibleContent className="pt-1.5">
+          <CollapsibleContent className="pt-2">
             <Card className="border">
               <CardContent className="p-0 divide-y divide-border/50">
                 {sectionGroups.flatMap((group) => 
@@ -379,22 +379,22 @@ export default function EditProfilePage() {
                     return (
                       <div 
                         key={section.id}
-                        className="flex items-center justify-between px-2.5 py-2 cursor-pointer hover-elevate active-elevate-2"
+                        className="flex items-center justify-between px-4 py-3.5 cursor-pointer hover-elevate active-elevate-2"
                         onClick={() => setLocation(section.path)}
                         data-testid={`row-${section.id}`}
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground [&>svg]:h-3.5 [&>svg]:w-3.5">{section.icon}</span>
-                          <span className="text-[13px]">{section.title}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-muted-foreground [&>svg]:h-5 [&>svg]:w-5">{section.icon}</span>
+                          <span className="text-base">{section.title}</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">
                             {filledCount}/{totalCount}
                           </span>
                           {incompleteCount > 0 && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                            <div className="w-2 h-2 rounded-full bg-amber-400" />
                           )}
-                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
                         </div>
                       </div>
                     );
