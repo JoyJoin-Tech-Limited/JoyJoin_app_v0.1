@@ -17,7 +17,7 @@ import {
   Flower2, Target, Sun, Play, Volume2, VolumeX
 } from "lucide-react";
 import joyJoinLogo from "@assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi_1765650184831.png";
-import heroVideo from "@assets/generated_videos/shenzhen_ping_an_skyline_dusk.mp4";
+import heroVideo from "@assets/generated_videos/shenzhen-hk_dusk_to_cozy_dinner.mp4";
 import heroPoster from "@assets/stock_images/shenzhen_city_roofto_e7cea581.jpg";
 
 import xiaoyueFoxAvatar from "@assets/Xiao_Yue_Avatar-06_1766766685632.png";
@@ -396,17 +396,18 @@ export default function LoginPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
+            className="inline-flex"
           >
             <motion.div
               animate={{ 
                 boxShadow: [
-                  "0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(168, 85, 247, 0.2)",
-                  "0 0 30px rgba(168, 85, 247, 0.6), 0 0 60px rgba(168, 85, 247, 0.3)",
-                  "0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(168, 85, 247, 0.2)"
+                  "0 0 15px rgba(168, 85, 247, 0.4), 0 0 30px rgba(168, 85, 247, 0.2)",
+                  "0 0 25px rgba(168, 85, 247, 0.6), 0 0 50px rgba(168, 85, 247, 0.3)",
+                  "0 0 15px rgba(168, 85, 247, 0.4), 0 0 30px rgba(168, 85, 247, 0.2)"
                 ]
               }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="rounded-lg"
+              className="inline-flex rounded-md"
             >
               <Button
                 size="lg"
