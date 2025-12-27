@@ -47,9 +47,8 @@ const app = express();
 
 // Trust proxy for Caddy reverse proxy (required for secure cookies behind proxy)
 // This enables proper handling of X-Forwarded-* headers
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1);
-}
+// Set unconditionally - Replit also runs behind proxy in development
+app.set('trust proxy', 1);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

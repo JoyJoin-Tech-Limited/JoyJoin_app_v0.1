@@ -52,6 +52,10 @@ export function setupPhoneAuth(app: Express) {
       sessionID: req.sessionID || null,
       sessionUserId: req.session?.userId || null,
       sessionIsAdmin: req.session?.isAdmin || null,
+      // 🔧 关键诊断字段 - 检查 HTTPS/proxy 识别
+      reqSecure: req.secure,
+      xForwardedProto: req.headers['x-forwarded-proto'] || null,
+      protocol: req.protocol,
     });
   });
 
