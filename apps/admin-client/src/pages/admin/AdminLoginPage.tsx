@@ -21,15 +21,9 @@ export default function AdminLoginPage() {
   const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState("");
 
-  const { data: user } = useQuery({
+  // Use default queryFn which handles 401 gracefully and parses JSON
+  const { data: user } = useQuery<any>({
     queryKey: ['/api/auth/user'],
-    queryFn: async () => {
-      try {
-        return await apiRequest("GET", "/api/auth/user");
-      } catch {
-        return null;
-      }
-    },
     retry: false,
   });
 
