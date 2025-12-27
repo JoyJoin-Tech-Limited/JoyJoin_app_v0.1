@@ -5,35 +5,73 @@ on:
     branches: [ main ]
 
 jobs:
-  # Stage 1: Code quality and testing
-  lint-and-test:
-    name: Quality Control
+  # Job 1: Check User Client Types
+  lint-user:
+    name: Type Check User Client
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-          
       - name: Install dependencies
         run: npm ci
-        
-      - name: Type Check and AI Simulation
-        run: |
-          cd apps/user-client && npx tsc --noEmit
-          cd ../admin-client && npx tsc --noEmit
-          cd ../server && npx tsc --noEmit
-          npx tsx apps/server/src/tests/runSimulation.ts 100
+      - name: Run TSC
+        run: npx tsc -p apps/user-client/tsconfig.json --noEmit
+
+  # Job 2: Check Admin Client Types
+  lint-admin:
+    name: Type Check Admin Client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run TSC
+        run: npx tsc -p apps/admin-client/tsconfig.json --noEmit
+
+  # Job 3: Check Server Types
+  lint-server:
+    name: Type Check Server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run TSC
+        run: npx tsc -p apps/server/tsconfig.json --noEmit
+
+  # Job 4: AI Simulation (Depends on all Lint jobs)
+  ai-test:
+    name: AI Simulation Test
+    needs: [lint-user, lint-admin, lint-server]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Simulation
+        run: npx tsx apps/server/src/tests/runSimulation.ts 100
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
-  # Stage 2: Deployment and automated health checks
+  # Job 5: Production Deployment (Depends on AI test)
   deploy:
-    name: Verified Deployment
-    needs: lint-and-test
+    name: Production Deployment
+    needs: ai-test
     runs-on: ubuntu-latest
     steps:
       - name: SSH Remote Deployment
@@ -44,58 +82,41 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 20m 
           script: |
-            # Exit immediately if a command exits with a non-zero status
             set -e 
             
-            # 1. Synchronize code and rebuild images
+            # 1. Sync code
             cd ~/JoyJoin
             git fetch --all
             git reset --hard origin/main
             
+            # 2. Build and restart containers
             cd deployment
-            echo "Building Docker images and starting services..."
+            echo "Restarting Docker services..."
             docker compose -f docker-compose.caddy.yml up -d --build
             
-            # 2. Database synchronization
-            echo "Configuring DNS and syncing Neon database..."
+            # 3. Database Sync
+            echo "Fixing DNS and syncing database..."
             echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
             cd ~/JoyJoin
             export DATABASE_URL="${{ secrets.DATABASE_URL }}"
             npx drizzle-kit push --config=./drizzle.config.ts
             
-            # 3. Automated system health checks
-            echo "Starting post-deployment status checks..."
-            sleep 15 # Wait for containers to initialize
-
-            # Check API service on port 5000
-            echo "Checking JoyJoin-API on port 5000..."
-            if curl -s --retry 5 --retry-delay 5 http://localhost:5000 > /dev/null; then
-              echo "API (5000) is responding correctly."
-            else
-              echo "API (5000) check failed. Displaying logs:"
-              docker logs joyjoin-api --tail 50
-              exit 1
-            fi
-
-            # Check Admin service on port 8080
-            echo "Checking JoyJoin-Admin on port 8080..."
-            if curl -s --retry 3 --retry-delay 5 http://localhost:8080 > /dev/null; then
-              echo "Admin Panel (8080) is up."
-            else
-              echo "Admin Panel (8080) check failed. Displaying logs:"
-              docker logs joyjoin-admin --tail 50
-              exit 1
-            fi
-
-            # Verify container running status
+            # 4. Status Checks
+            echo "Verifying service status..."
+            sleep 15
+            
+            # Check API (5000)
+            curl -s --retry 5 --retry-delay 5 http://localhost:5000 > /dev/null || (docker logs joyjoin-api --tail 50 && exit 1)
+            
+            # Check Admin (8080)
+            curl -s --retry 3 --retry-delay 5 http://localhost:8080 > /dev/null || (docker logs joyjoin-admin --tail 50 && exit 1)
+            
+            # Verify containers
             CONTAINERS=("joyjoin-api" "joyjoin-user" "joyjoin-admin")
             for container in "${CONTAINERS[@]}"; do
-              if [ "$(docker inspect -f '{{.State.Running}}' $container)" == "true" ]; then
-                echo "Container $container is healthy."
-              else
-                echo "Container $container has failed."
+              if [ "$(docker inspect -f '{{.State.Running}}' $container)" != "true" ]; then
+                echo "Error: $container is not running."
                 exit 1
               fi
             done
-
-            echo "Deployment and status checks completed successfully."
+            echo "Deployment successful."
