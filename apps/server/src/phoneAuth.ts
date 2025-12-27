@@ -56,6 +56,10 @@ export function setupPhoneAuth(app: Express) {
       reqSecure: req.secure,
       xForwardedProto: req.headers['x-forwarded-proto'] || null,
       protocol: req.protocol,
+      // 🔧 额外诊断 - 定位是哪层出问题
+      xForwardedHost: req.headers['x-forwarded-host'] || null,
+      xForwardedFor: req.headers['x-forwarded-for'] || null,
+      host: req.headers.host || null,
     });
   });
 
