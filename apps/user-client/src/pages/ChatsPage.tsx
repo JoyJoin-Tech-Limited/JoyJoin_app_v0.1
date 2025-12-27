@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { archetypeConfig } from "@/lib/archetypes";
+import { archetypeAvatars, archetypeBgColors } from "@/lib/archetypeAvatars";
 import { 
   getGenderDisplay, 
   formatAge, 
@@ -392,9 +393,13 @@ export default function ChatsPage() {
                             className="cursor-pointer"
                             data-testid={`avatar-expand-${thread.id}`}
                           >
-                            {archetypeData ? (
-                              <div className={`h-12 w-12 flex-shrink-0 rounded-full ${archetypeData.bgColor} flex items-center justify-center text-2xl`}>
-                                {archetypeData.icon}
+                            {otherUser.archetype && archetypeAvatars[otherUser.archetype] ? (
+                              <div className={`h-12 w-12 flex-shrink-0 rounded-full ${archetypeBgColors[otherUser.archetype] || 'bg-muted'} flex items-center justify-center overflow-hidden`}>
+                                <img 
+                                  src={archetypeAvatars[otherUser.archetype]} 
+                                  alt={otherUser.archetype} 
+                                  className="w-full h-full object-contain p-1"
+                                />
                               </div>
                             ) : (
                               <Avatar className="h-12 w-12 flex-shrink-0">
