@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import joyJoinLogo from "@assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi_1765650184831.png";
 
-import xiaoyueFoxAvatar from "@assets/generated_images/fox_mascot_purple_eyes_accessories.png";
+import xiaoyueFoxAvatar from "@assets/Xiao_Yue_Avatar-06_1766766685632.png";
 // import { SiWechat } from "react-icons/si"; // 暂时注释：微信登录功能
 
 import { useToast } from "@/hooks/use-toast";
