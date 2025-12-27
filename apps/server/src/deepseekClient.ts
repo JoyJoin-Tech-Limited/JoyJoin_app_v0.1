@@ -2326,6 +2326,29 @@ ${context}
   console.log(`[PERF] t3 Prompt构建耗时: ${t3_promptBuildEnd - t3_promptBuildStart}ms`);
   console.log(`[PERF] === 准备调用DeepSeek API ===`);
   console.log(`[PERF] 预处理总耗时: ${t3_promptBuildEnd - t0_functionStart}ms`);
+  
+  // 🔧 DEBUG: 详细打印发送给 DeepSeek 的内容
+  const systemMsg = updatedHistory.find(m => m.role === 'system');
+  const systemMsgLen = systemMsg?.content?.length || 0;
+  const inferenceAdditionLen = inferenceAddition.length;
+  const orchestratorAdditionLen = orchestratorAddition.length;
+  const totalPromptChars = updatedHistory.reduce((sum, m) => sum + m.content.length, 0);
+  const estimatedTokens = Math.ceil(totalPromptChars / 1.5); // 中文约1.5字符/token
+  
+  console.log(`[DEBUG DeepSeek] ========== API请求详情 ==========`);
+  console.log(`[DEBUG DeepSeek] 消息数量: ${updatedHistory.length}`);
+  console.log(`[DEBUG DeepSeek] 系统提示词长度: ${systemMsgLen} 字符`);
+  console.log(`[DEBUG DeepSeek] 推断引擎补充长度: ${inferenceAdditionLen} 字符`);
+  console.log(`[DEBUG DeepSeek] 编排器补充长度: ${orchestratorAdditionLen} 字符`);
+  console.log(`[DEBUG DeepSeek] 总Prompt长度: ${totalPromptChars} 字符 (~${estimatedTokens} tokens)`);
+  console.log(`[DEBUG DeepSeek] 用户消息: "${userMessage.substring(0, 50)}..."`);
+  if (inferenceAdditionLen > 500) {
+    console.log(`[DEBUG DeepSeek] ⚠️ 推断引擎补充过长！前200字符: ${inferenceAddition.substring(0, 200)}...`);
+  }
+  if (orchestratorAdditionLen > 500) {
+    console.log(`[DEBUG DeepSeek] ⚠️ 编排器补充过长！前200字符: ${orchestratorAddition.substring(0, 200)}...`);
+  }
+  console.log(`[DEBUG DeepSeek] ========================================`);
 
   try {
     const t4_apiCallStart = Date.now();
