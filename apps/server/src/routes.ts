@@ -1,3 +1,4 @@
+//my path:/Users/felixg/projects/JoyJoin3/server/routes.ts
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -270,35 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // // Session middleware
-  // const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  // const pgStore = connectPg(session);
-  // const sessionStore = new pgStore({
-  //   conString: process.env.DATABASE_URL,
-  //   createTableIfMissing: true,
-  //   ttl: sessionTtl,
-  //   tableName: "sessions",
-  // });
-  
-  // // Cookie domain configuration for cross-subdomain session sharing
-  // // In production with yuejuapp.com, use '.yuejuapp.com' to share across subdomains
-  // const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
-  
-  // app.use(session({
-  //   secret: process.env.SESSION_SECRET!,
-  //   store: sessionStore,
-  //   resave: false,
-  //   saveUninitialized: false,
-  //   proxy: process.env.NODE_ENV === 'production', // Required for secure cookies behind Caddy proxy
-  //   cookie: {
-  //     domain: cookieDomain, // '.yuejuapp.com' enables sharing across api/admin/www subdomains
-  //     httpOnly: true,
-  //     secure: process.env.NODE_ENV === 'production', // true when Caddy provides HTTPS
-  //     maxAge: sessionTtl,
-  //     sameSite: 'lax',
-  //   },
-  // }));
-  // Session middleware fix on 12/27
+  // Session middleware
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
@@ -308,29 +281,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     tableName: "sessions",
   });
   
+  // Cookie domain configuration for cross-subdomain session sharing
+  // In production with yuejuapp.com, use '.yuejuapp.com' to share across subdomains
+  const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+  
   app.use(session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
-    // This must match your app.set('trust proxy', 1) in index.ts
-    proxy: process.env.NODE_ENV === 'production', 
-    // cookie: {
-    //   // 👇 FIX: Force the leading dot domain in production
-    //   domain: process.env.NODE_ENV === 'production' ? '.yuejuapp.com' : undefined,
-    //   httpOnly: true,
-    //   secure: process.env.NODE_ENV === 'production', 
-    //   maxAge: sessionTtl,
-    //   sameSite: 'lax',
-    // },
+    proxy: process.env.NODE_ENV === 'production', // Required for secure cookies behind Caddy proxy
     cookie: {
-      domain: process.env.NODE_ENV === 'production' ? '.yuejuapp.com' : undefined,
+      domain: cookieDomain, // '.yuejuapp.com' enables sharing across api/admin/www subdomains
       httpOnly: true,
-      secure: true, // Keep this true
+      secure: process.env.NODE_ENV === 'production', // true when Caddy provides HTTPS
       maxAge: sessionTtl,
-      sameSite: 'none', // Change from 'lax' to 'none'
-},
+      sameSite: 'lax',
+    },
   }));
+
   // Phone auth setup
   setupPhoneAuth(app);
 
