@@ -1,21 +1,13 @@
-name: JoyJoin CI/CD Pipeline
+name: JoyJoin Professional CI/CD
 
 on:
   push:
-    branches:
-      - main
-      - develop
-  pull_request:
-    branches:
-      - main
-
-env:
-  REGISTRY: ghcr.io
-  REPO_NAME: ${{ github.repository }}
+    branches: [ main ]
 
 jobs:
-  lint:
-    name: Lint & Type Check
+  #code review
+  lint-and-test:
+    name: Quality Gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,190 +15,47 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
       - name: Install dependencies
         run: npm ci
-      - name: Type check user-client
-        run: cd apps/user-client && npx tsc --noEmit
-      - name: Type check admin-client
-        run: cd apps/admin-client && npx tsc --noEmit
-      - name: Type check server
-        run: cd apps/server && npx tsc --noEmit
-
-  test:
-    name: Run Tests
-    needs: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Install dependencies
-        run: npm ci
-      - name: Run AI Chat Flow Tests
+      - name: Type Check
+        run: |
+          cd apps/user-client && npx tsc --noEmit
+          cd ../admin-client && npx tsc --noEmit
+          cd ../server && npx tsc --noEmit
+      - name: Run AI Simulation Tests
         run: npx tsx apps/server/src/tests/runSimulation.ts 100
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
-  build-user:
-    name: Build User Docker Image
-    needs: test
+  #deploy
+  deploy:
+    name: Real Deploy to Tencent Cloud
+    needs: lint-and-test
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
+      - name: SSH Remote Deployment
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/user
-          tags: |
-            type=sha,prefix=
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-      
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/user-client/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          build-args: |
-            VITE_API_URL=${{ vars.API_URL }}
-
-  build-admin:
-    name: Build Admin Docker Image
-    needs: test
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/admin
-          tags: |
-            type=sha,prefix=
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-      
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/admin-client/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          build-args: |
-            VITE_API_URL=${{ vars.API_URL }}
-
-  build-api:
-    name: Build API Docker Image
-    needs: test
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/api
-          tags: |
-            type=sha,prefix=
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-      
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/server/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-
-  deploy-staging:
-    name: Deploy to Staging
-    needs:
-      - build-user
-      - build-admin
-      - build-api
-    if: github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-      url: https://staging.joyjoin.com
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy containers to staging
-        run: |
-          echo "Deploying Docker images to staging..."
-          echo "User: ghcr.io/${{ env.REPO_NAME }}/user:develop"
-          echo "Admin: ghcr.io/${{ env.REPO_NAME }}/admin:develop"
-          echo "API: ghcr.io/${{ env.REPO_NAME }}/api:develop"
-
-  deploy-production:
-    name: Deploy to Production
-    needs:
-      - build-user
-      - build-admin
-      - build-api
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: https://app.joyjoin.com
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run Database Migrations
-        run: echo "Running database migrations..."
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      - name: Deploy containers to production
-        run: |
-          echo "Deploying Docker images to production..."
-          echo "User: ghcr.io/${{ env.REPO_NAME }}/user:main"
-          echo "Admin: ghcr.io/${{ env.REPO_NAME }}/admin:main"
-          echo "API: ghcr.io/${{ env.REPO_NAME }}/api:main"
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            #auto deploy to tencent server!
+            cd ~/JoyJoin
+            
+            
+            git fetch --all
+            git reset --hard origin/main
+            
+            # 3. deploy to server
+            cd deployment
+            docker compose -f docker-compose.caddy.yml up -d --build
+            
+            # 4. push to database
+            echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
+            cd ~/JoyJoin
+            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+            npx drizzle-kit push --config=./drizzle.config.ts
+            
+            echo "🚀 [JoyJoin] deploy succueeful！"
