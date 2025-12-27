@@ -3134,13 +3134,14 @@ export default function ChatRegistrationPage() {
     }
   }, [isSequentialDisplaying, sequentialDisplayMessageId, messages]);
   
-  // Debug: Log messages state changes
-  useEffect(() => {
-    console.log('[DEBUG] Messages state changed:', messages.length, 'messages');
-    messages.forEach((m, i) => {
-      console.log(`[DEBUG] Message ${i}: role=${m.role}, content="${m.content?.substring(0, 30)}...", streamId=${m.streamId || 'none'}`);
-    });
-  }, [messages]);
+  // Debug: Log messages state changes (disabled - too noisy)
+  // Uncomment for debugging message flow issues only
+  // useEffect(() => {
+  //   console.log('[DEBUG] Messages state changed:', messages.length, 'messages');
+  //   messages.forEach((m, i) => {
+  //     console.log(`[DEBUG] Message ${i}: role=${m.role}, content="${m.content?.substring(0, 30)}...", streamId=${m.streamId || 'none'}`);
+  //   });
+  // }, [messages]);
   const [collectedInfo, setCollectedInfo] = useState<CollectedInfo>({});
   const [isComplete, setIsComplete] = useState(false);
   const [infoConfirmed, setInfoConfirmed] = useState(false); // 用户确认信息无误
