@@ -125,44 +125,36 @@ export function setupPhoneAuth(app: Express) {
         }
       }
 
-      // 设置session - 添加详细日志用于调试
+      // 设置session - 简化版本，不用regenerate（调试用）
       console.log("🔐 [LOGIN] Starting session setup for userId:", userId);
-      console.log("🔐 [LOGIN] req.sessionID before regenerate:", req.sessionID);
-      console.log("🔐 [LOGIN] req.session before regenerate:", JSON.stringify(req.session, null, 2));
+      console.log("🔐 [LOGIN] req.sessionID:", req.sessionID);
       
-      req.session.regenerate(async (err) => {
+      // 直接写入 session（不用 regenerate，更简单可靠）
+      req.session.userId = userId;
+      (req.session as any).verifiedPhoneNumber = phoneNumber;
+      
+      console.log("🔐 [LOGIN] Session data set:", JSON.stringify(req.session, null, 2));
+      
+      // 使用 Promise 包装 save，确保完成后再响应
+      req.session.save((err) => {
         if (err) {
-          console.error("🔐 [LOGIN] Session regeneration error:", err);
+          console.error("🔐 [LOGIN] Session save error:", err);
           return res.status(500).json({ message: "Login failed" });
         }
         
-        console.log("🔐 [LOGIN] Session regenerated, new sessionID:", req.sessionID);
-
-        req.session.userId = userId;
-        (req.session as any).verifiedPhoneNumber = phoneNumber; // Store for AI Evolution insight linking
+        console.log("🔐 [LOGIN] Session saved successfully! sessionID:", req.sessionID);
         
-        console.log("🔐 [LOGIN] Session data set, calling save...");
-        console.log("🔐 [LOGIN] req.session after set:", JSON.stringify(req.session, null, 2));
-        
-        req.session.save(async (err) => {
-          if (err) {
-            console.error("🔐 [LOGIN] Session save error:", err);
-            return res.status(500).json({ message: "Login failed" });
-          }
-          
-          console.log("🔐 [LOGIN] Session saved successfully!");
-          console.log("🔐 [LOGIN] Final sessionID:", req.sessionID);
-
-          // 获取完整的用户数据并返回（包括isAdmin字段）
-          const user = await storage.getUserById(userId);
-          
+        // 获取完整的用户数据并返回
+        storage.getUserById(userId).then(user => {
           console.log("🔐 [LOGIN] Sending response for user:", user?.id, "isAdmin:", user?.isAdmin);
-          
           res.json({ 
             message: "Login successful",
             userId,
             ...user
           });
+        }).catch(err => {
+          console.error("🔐 [LOGIN] Get user error:", err);
+          res.status(500).json({ message: "Login failed" });
         });
       });
     } catch (error) {
