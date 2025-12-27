@@ -255,7 +255,7 @@ export default function EditProfilePage() {
         </div>
       </div>
 
-      <div className="px-4 py-4 space-y-5 max-w-2xl mx-auto">
+      <div className="px-4 py-3 space-y-4 max-w-2xl mx-auto">
         {/* Hero 助手卡片 - 移动端友好版 */}
         <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background overflow-hidden">
           <CardContent className="p-5">
@@ -314,12 +314,12 @@ export default function EditProfilePage() {
 
         {/* 快速补充区 - 移动端友好版 */}
         {groupsWithMissingFields.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div className="flex items-center gap-2 px-1">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <span className="text-base font-semibold">快速补充</span>
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">快速补充</span>
             </div>
-            <div className="flex flex-wrap gap-2.5">
+            <div className="flex flex-wrap gap-2">
               {groupsWithMissingFields.slice(0, 3).map((group) => {
                 const groupMissingCount = group.sections.reduce(
                   (acc, section) => acc + getIncompleteCount(section.fields), 0
