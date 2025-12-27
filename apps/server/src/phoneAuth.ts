@@ -13,6 +13,32 @@ function generateCode(): string {
 }
 
 export function setupPhoneAuth(app: Express) {
+  // 🔧 DEBUG: Test endpoint to verify Set-Cookie works through Caddy
+  app.get("/api/debug/set-cookie", (req: any, res) => {
+    console.log("🔧 [DEBUG] /api/debug/set-cookie called");
+    console.log("🔧 [DEBUG] req.sessionID:", req.sessionID);
+    console.log("🔧 [DEBUG] req.session:", JSON.stringify(req.session, null, 2));
+    
+    // Test 1: Direct cookie (bypasses express-session)
+    res.cookie("debug_direct", "1", {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: "/",
+    });
+    
+    // Test 2: Write to session (triggers express-session Set-Cookie)
+    req.session.debugTest = Date.now();
+    req.session.save((err: any) => {
+      if (err) {
+        console.error("🔧 [DEBUG] Session save error:", err);
+        return res.status(500).json({ ok: false, error: err.message });
+      }
+      console.log("🔧 [DEBUG] Session saved successfully, sessionID:", req.sessionID);
+      res.json({ ok: true, sessionID: req.sessionID, message: "Check Response Headers for Set-Cookie" });
+    });
+  });
+
   // 发送验证码
   app.post("/api/auth/send-code", async (req, res) => {
     try {
@@ -99,23 +125,38 @@ export function setupPhoneAuth(app: Express) {
         }
       }
 
-      // 设置session
+      // 设置session - 添加详细日志用于调试
+      console.log("🔐 [LOGIN] Starting session setup for userId:", userId);
+      console.log("🔐 [LOGIN] req.sessionID before regenerate:", req.sessionID);
+      console.log("🔐 [LOGIN] req.session before regenerate:", JSON.stringify(req.session, null, 2));
+      
       req.session.regenerate(async (err) => {
         if (err) {
-          console.error("Session regeneration error:", err);
+          console.error("🔐 [LOGIN] Session regeneration error:", err);
           return res.status(500).json({ message: "Login failed" });
         }
+        
+        console.log("🔐 [LOGIN] Session regenerated, new sessionID:", req.sessionID);
 
         req.session.userId = userId;
         (req.session as any).verifiedPhoneNumber = phoneNumber; // Store for AI Evolution insight linking
+        
+        console.log("🔐 [LOGIN] Session data set, calling save...");
+        console.log("🔐 [LOGIN] req.session after set:", JSON.stringify(req.session, null, 2));
+        
         req.session.save(async (err) => {
           if (err) {
-            console.error("Session save error:", err);
+            console.error("🔐 [LOGIN] Session save error:", err);
             return res.status(500).json({ message: "Login failed" });
           }
+          
+          console.log("🔐 [LOGIN] Session saved successfully!");
+          console.log("🔐 [LOGIN] Final sessionID:", req.sessionID);
 
           // 获取完整的用户数据并返回（包括isAdmin字段）
           const user = await storage.getUserById(userId);
+          
+          console.log("🔐 [LOGIN] Sending response for user:", user?.id, "isAdmin:", user?.isAdmin);
           
           res.json({ 
             message: "Login successful",
