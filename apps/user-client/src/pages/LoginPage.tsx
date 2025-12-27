@@ -17,7 +17,7 @@ import {
   Flower2, Target, Sun, Play, Volume2, VolumeX
 } from "lucide-react";
 import joyJoinLogo from "@assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi_1765650184831.png";
-import heroVideo from "@assets/generated_videos/shenzhen-hk_dusk_to_cozy_dinner.mp4";
+import heroVideo from "@assets/generated_videos/shenzhen_ping_an_skyline_dusk.mp4";
 import heroPoster from "@assets/stock_images/shenzhen_city_roofto_e7cea581.jpg";
 
 import xiaoyueFoxAvatar from "@assets/Xiao_Yue_Avatar-06_1766766685632.png";
@@ -391,21 +391,33 @@ export default function LoginPage() {
             </p>
           </motion.div>
 
-          {/* CTA Button - P0 优化 */}
+          {/* CTA Button - P0 优化：渐变+发光+脉冲动画 */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <Button
-              size="lg"
-              className="min-h-[52px] px-8 text-lg font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
-              onClick={() => setLocation('/registration/method')}
-              data-testid="button-hero-cta"
+            <motion.div
+              animate={{ 
+                boxShadow: [
+                  "0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(168, 85, 247, 0.2)",
+                  "0 0 30px rgba(168, 85, 247, 0.6), 0 0 60px rgba(168, 85, 247, 0.3)",
+                  "0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(168, 85, 247, 0.2)"
+                ]
+              }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              className="rounded-lg"
             >
-              立即体验
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+              <Button
+                size="lg"
+                className="min-h-[52px] px-10 text-lg font-bold bg-gradient-to-r from-purple-500 via-primary to-pink-500 hover:from-purple-600 hover:via-primary/90 hover:to-pink-600 text-white border-0 shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                onClick={() => setLocation('/registration/method')}
+                data-testid="button-hero-cta"
+              >
+                立即体验
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </motion.div>
           </motion.div>
 
           {/* Safety Badges - P0 优化 */}
