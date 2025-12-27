@@ -1,4 +1,5 @@
 import { User } from "lucide-react";
+import { archetypeAvatars, archetypeBgColors } from "@/lib/archetypeAvatars";
 
 interface Participant {
   id: string;
@@ -11,21 +12,6 @@ interface ParticipantAvatarsProps {
   maxDisplay?: number;
   size?: "sm" | "md" | "lg";
 }
-
-const ARCHETYPE_EMOJIS: Record<string, string> = {
-  '开心柯基': '🐕',
-  '太阳鸡': '🐓',
-  '夸夸豚': '🐬',
-  '机智狐': '🦊',
-  '淡定海豚': '🐬',
-  '织网蛛': '🕷️',
-  '暖心熊': '🐻',
-  '灵感章鱼': '🐙',
-  '沉思猫头鹰': '🦉',
-  '定心大象': '🐘',
-  '稳如龟': '🐢',
-  '隐身猫': '🐱',
-};
 
 const GRADIENT_COLORS = [
   "from-purple-400 to-indigo-400",
@@ -64,19 +50,24 @@ export default function ParticipantAvatars({
     <div className="flex items-center -space-x-2">
       {displayedParticipants.map((participant, index) => {
         const gradientColor = getGradientColor(index);
-        const emoji = participant.archetype ? ARCHETYPE_EMOJIS[participant.archetype] : null;
+        const avatarImg = participant.archetype ? archetypeAvatars[participant.archetype] : null;
+        const bgColor = participant.archetype ? archetypeBgColors[participant.archetype] : null;
         
         return (
           <div
             key={participant.id}
-            className={`${SIZE_CLASSES[size]} rounded-full bg-gradient-to-br ${gradientColor} flex items-center justify-center text-white border-2 border-background shadow-sm transition-transform hover:scale-110 hover:z-10`}
+            className={`${SIZE_CLASSES[size]} rounded-full ${avatarImg && bgColor ? bgColor : `bg-gradient-to-br ${gradientColor}`} flex items-center justify-center border-2 border-background shadow-sm transition-transform hover:scale-110 hover:z-10 overflow-hidden`}
             style={{ zIndex: displayedParticipants.length - index }}
             title={`${participant.displayName || "用户"}${participant.archetype ? ` · ${participant.archetype}` : ''}`}
           >
-            {emoji ? (
-              <span className="text-sm">{emoji}</span>
+            {avatarImg ? (
+              <img 
+                src={avatarImg} 
+                alt={participant.archetype || ""} 
+                className="w-full h-full object-contain p-0.5"
+              />
             ) : (
-              <User className={ICON_SIZE_CLASSES[size]} />
+              <User className={`${ICON_SIZE_CLASSES[size]} text-white`} />
             )}
           </div>
         );

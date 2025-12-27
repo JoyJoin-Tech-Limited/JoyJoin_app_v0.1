@@ -29,6 +29,22 @@ export const archetypeAvatars: Record<string, string> = {
   '隐身猫': catImg,
 };
 
+// Light background colors for avatar circles (used in chat module)
+export const archetypeBgColors: Record<string, string> = {
+  '开心柯基': 'bg-orange-100',
+  '太阳鸡': 'bg-amber-100',
+  '夸夸豚': 'bg-cyan-100',
+  '机智狐': 'bg-orange-100',
+  '淡定海豚': 'bg-blue-100',
+  '织网蛛': 'bg-purple-100',
+  '暖心熊': 'bg-rose-100',
+  '灵感章鱼': 'bg-violet-100',
+  '沉思猫头鹰': 'bg-slate-100',
+  '定心大象': 'bg-gray-100',
+  '稳如龟': 'bg-emerald-100',
+  '隐身猫': 'bg-indigo-100',
+};
+
 // Gradient backgrounds for each archetype (energy-based color mapping)
 export const archetypeGradients: Record<string, string> = {
   '开心柯基': 'from-yellow-500 via-orange-500 to-red-500',      // High energy
