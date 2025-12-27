@@ -1,80 +1,101 @@
-name: JoyJoin Pro Pipeline (Enhanced Logs)
+name: JoyJoin Production Pipeline
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  # code review
-  lint:
-    name: 🎨 Code Quality Check
+  # Stage 1: Code quality and testing
+  lint-and-test:
+    name: Quality Control
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node
+      
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-
-      - name: Install All Dependencies
-        run: npm ci
-
-      - name: 🔍 Check User-Client Types
-        run: cd apps/user-client && npx tsc --noEmit
-
-      - name: 🔍 Check Admin-Client Types
-        run: cd apps/admin-client && npx tsc --noEmit
-
-      - name: 🔍 Check Server Types
-        run: cd apps/server && npx tsc --noEmit
-
-  # AI simulation test
-  test:
-    name: 🧪 AI Simulation Test
-    needs: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+          
       - name: Install dependencies
         run: npm ci
-      - name:  Run Simulation (DeepSeek)
-        run: npx tsx apps/server/src/tests/runSimulation.ts 100
+        
+      - name: Type Check and AI Simulation
+        run: |
+          cd apps/user-client && npx tsc --noEmit
+          cd ../admin-client && npx tsc --noEmit
+          cd ../server && npx tsc --noEmit
+          npx tsx apps/server/src/tests/runSimulation.ts 100
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
-  #  auto deploy to tencent cloud server
+  # Stage 2: Deployment and automated health checks
   deploy:
-    name:  Real Deployment
-    needs: test
+    name: Verified Deployment
+    needs: lint-and-test
     runs-on: ubuntu-latest
     steps:
-      - name:  SSH Execute Deployment
+      - name: SSH Remote Deployment
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # add more time to deploy
           command_timeout: 20m 
           script: |
+            # Exit immediately if a command exits with a non-zero status
+            set -e 
+            
+            # 1. Synchronize code and rebuild images
             cd ~/JoyJoin
             git fetch --all
             git reset --hard origin/main
             
-            echo " Starting Docker Build..."
             cd deployment
+            echo "Building Docker images and starting services..."
             docker compose -f docker-compose.caddy.yml up -d --build
             
-            echo " Fixing DNS for Neon..."
+            # 2. Database synchronization
+            echo "Configuring DNS and syncing Neon database..."
             echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
-            
-            echo "🗄️ Syncing Neon Database..."
             cd ~/JoyJoin
             export DATABASE_URL="${{ secrets.DATABASE_URL }}"
-            # add verbose mode，so that can see detialed log
-            npx drizzle-kit push --config=./drizzle.config.ts --verbose
+            npx drizzle-kit push --config=./drizzle.config.ts
+            
+            # 3. Automated system health checks
+            echo "Starting post-deployment status checks..."
+            sleep 15 # Wait for containers to initialize
+
+            # Check API service on port 5000
+            echo "Checking JoyJoin-API on port 5000..."
+            if curl -s --retry 5 --retry-delay 5 http://localhost:5000 > /dev/null; then
+              echo "API (5000) is responding correctly."
+            else
+              echo "API (5000) check failed. Displaying logs:"
+              docker logs joyjoin-api --tail 50
+              exit 1
+            fi
+
+            # Check Admin service on port 8080
+            echo "Checking JoyJoin-Admin on port 8080..."
+            if curl -s --retry 3 --retry-delay 5 http://localhost:8080 > /dev/null; then
+              echo "Admin Panel (8080) is up."
+            else
+              echo "Admin Panel (8080) check failed. Displaying logs:"
+              docker logs joyjoin-admin --tail 50
+              exit 1
+            fi
+
+            # Verify container running status
+            CONTAINERS=("joyjoin-api" "joyjoin-user" "joyjoin-admin")
+            for container in "${CONTAINERS[@]}"; do
+              if [ "$(docker inspect -f '{{.State.Running}}' $container)" == "true" ]; then
+                echo "Container $container is healthy."
+              else
+                echo "Container $container has failed."
+                exit 1
+              fi
+            done
+
+            echo "Deployment and status checks completed successfully."
