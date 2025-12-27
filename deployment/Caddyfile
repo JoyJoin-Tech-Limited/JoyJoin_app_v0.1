@@ -20,11 +20,17 @@ yuejuapp.com, www.yuejuapp.com {
         Referrer-Policy strict-origin-when-cross-origin
     }
 
-    reverse_proxy joyjoin-user:80 {
-        header_up X-Forwarded-Proto https
-        header_up X-Forwarded-Host {host}
-        header_up X-Forwarded-For {remote}
+    # ✅ /api/* 直接路由到 API 容器（保留 /api 前缀）
+    handle /api/* {
+        reverse_proxy joyjoin-api:5000 {
+            header_up X-Forwarded-Proto https
+            header_up X-Forwarded-Host {host}
+            header_up X-Forwarded-For {remote}
+        }
     }
+
+    # 其他请求走 user 前端
+    reverse_proxy joyjoin-user:80
 }
 
 # 管理后台 (admin 子域名)
@@ -37,11 +43,17 @@ admin.yuejuapp.com {
         Referrer-Policy strict-origin-when-cross-origin
     }
 
-    reverse_proxy joyjoin-admin:80 {
-        header_up X-Forwarded-Proto https
-        header_up X-Forwarded-Host {host}
-        header_up X-Forwarded-For {remote}
+    # ✅ /api/* 直接路由到 API 容器（保留 /api 前缀）
+    handle /api/* {
+        reverse_proxy joyjoin-api:5000 {
+            header_up X-Forwarded-Proto https
+            header_up X-Forwarded-Host {host}
+            header_up X-Forwarded-For {remote}
+        }
     }
+
+    # 其他请求走 admin 前端
+    reverse_proxy joyjoin-admin:80
 }
 
 # 后端接口 (api 子域名)
