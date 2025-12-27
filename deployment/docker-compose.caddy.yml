@@ -30,9 +30,8 @@ services:
     env_file:
       - .env.production
     environment:
-      - NODE_ENV=production
-      - PORT=5000
-    # Map host port 5000 to container port 5000 (Matches Firewall)
+      - NODE_ENV: production
+      - PORT: 5000
     ports:
       - "5000:5000"
     networks:
@@ -47,7 +46,6 @@ services:
         - VITE_API_URL=https://api.yuejuapp.com
     container_name: joyjoin-user
     restart: unless-stopped
-    # Kept internal because Caddy handles port 80/443
     expose:
       - "80"
     networks:
@@ -62,8 +60,15 @@ services:
         - VITE_API_URL=https://api.yuejuapp.com
     container_name: joyjoin-admin
     restart: unless-stopped
-    # Map host port 8080 to container port 80 (Matches Firewall)
     ports:
       - "8080:80"
     networks:
       - joyjoin-network
+
+networks:
+  joyjoin-network:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
