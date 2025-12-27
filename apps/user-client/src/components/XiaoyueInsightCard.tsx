@@ -115,14 +115,14 @@ export function XiaoyueInsightCard({
       <div className="flex gap-3">
         <div
           className={cn(
-            "flex-shrink-0 rounded-full overflow-hidden bg-white dark:bg-gray-800 shadow-md",
+            "flex-shrink-0",
             avatarSizeClasses[avatarSize]
           )}
         >
           <img
             src={avatarImage}
             alt="小悦"
-            className="w-full h-full object-cover object-top"
+            className="w-full h-full object-contain"
             data-testid="img-xiaoyue-avatar"
           />
         </div>
