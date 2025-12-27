@@ -1,16 +1,7 @@
-# JoyJoin Docker Compose with Caddy
-# 智能网关 + 自动 HTTPS 部署配置
-#
-# 使用方法:
-# 1. 复制 .env.production.example 到 .env.production 并填写真实值
-# 2. 构建镜像: docker-compose -f docker-compose.caddy.yml build
-# 3. 启动服务: docker-compose -f docker-compose.caddy.yml up -d
-# 4. 查看日志: docker-compose -f docker-compose.caddy.yml logs -f
-
 version: '3.8'
 
 services:
-  # Caddy 反向代理 (自动 HTTPS)
+  # Caddy Reverse Proxy (Automatic HTTPS)
   caddy:
     image: caddy:2-alpine
     container_name: joyjoin-caddy
@@ -29,11 +20,11 @@ services:
     networks:
       - joyjoin-network
 
-  # 后端 API 服务
+  # Backend API Service
   joyjoin-api:
     build:
       context: ..
-      dockerfile: deployment/Dockerfile.api
+      dockerfile: apps/server/Dockerfile
     container_name: joyjoin-api
     restart: unless-stopped
     env_file:
@@ -41,43 +32,38 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=5000
-    expose:
-      - "5000"
+    # Map host port 5000 to container port 5000 (Matches Firewall)
+    ports:
+      - "5000:5000"
     networks:
       - joyjoin-network
 
-  # 用户端前端
+  # User Frontend
   joyjoin-user:
     build:
       context: ..
-      dockerfile: deployment/Dockerfile.user
+      dockerfile: apps/user-client/Dockerfile
       args:
         - VITE_API_URL=https://api.yuejuapp.com
     container_name: joyjoin-user
     restart: unless-stopped
+    # Kept internal because Caddy handles port 80/443
     expose:
       - "80"
     networks:
       - joyjoin-network
 
-  # 管理后台前端
+  # Admin Frontend
   joyjoin-admin:
     build:
       context: ..
-      dockerfile: deployment/Dockerfile.admin
+      dockerfile: apps/admin-client/Dockerfile
       args:
         - VITE_API_URL=https://api.yuejuapp.com
     container_name: joyjoin-admin
     restart: unless-stopped
-    expose:
-      - "80"
+    # Map host port 8080 to container port 80 (Matches Firewall)
+    ports:
+      - "8080:80"
     networks:
       - joyjoin-network
-
-volumes:
-  caddy_data:
-  caddy_config:
-
-networks:
-  joyjoin-network:
-    driver: bridge
