@@ -17,7 +17,7 @@ import {
   Flower2, Target, Sun, Play, Volume2, VolumeX
 } from "lucide-react";
 import joyJoinLogo from "@assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi_1765650184831.png";
-import heroVideo from "@assets/generated_videos/shenzhen-hk_dusk_to_cozy_dinner.mp4";
+import heroVideo from "@assets/generated_videos/dusk_skyline_fades_to_cozy_dinner.mp4";
 import heroPoster from "@assets/stock_images/shenzhen_city_roofto_e7cea581.jpg";
 
 import xiaoyueFoxAvatar from "@assets/Xiao_Yue_Avatar-06_1766766685632.png";
