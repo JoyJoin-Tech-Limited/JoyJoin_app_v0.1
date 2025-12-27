@@ -1,212 +1,128 @@
-name: JoyJoin CI/CD Pipeline
+name: JoyJoin Production Pipeline
 
 on:
   push:
-    branches:
-      - main
-      - develop
-  pull_request:
-    branches:
-      - main
-
-env:
-  REGISTRY: ghcr.io
-  REPO_NAME: ${{ github.repository }}
+    branches: [ main ]
 
 jobs:
-  lint:
-    name: Lint & Type Check
+  # Job 1: Check User Client Types
+  lint-user:
+    name: Type Check User Client
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
       - name: Install dependencies
         run: npm ci
-      - name: Type check user-client
-        run: cd apps/user-client && npx tsc --noEmit
-      - name: Type check admin-client
-        run: cd apps/admin-client && npx tsc --noEmit
-      - name: Type check server
-        run: cd apps/server && npx tsc --noEmit
+      - name: Run TSC
+        run: npx tsc -p apps/user-client/tsconfig.json --noEmit
 
-  test:
-    name: Run Tests
-    needs: lint
+  # Job 2: Check Admin Client Types
+  lint-admin:
+    name: Type Check Admin Client
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
       - name: Install dependencies
         run: npm ci
-      - name: Run AI Chat Flow Tests
+      - name: Run TSC
+        run: npx tsc -p apps/admin-client/tsconfig.json --noEmit
+
+  # Job 3: Check Server Types
+  lint-server:
+    name: Type Check Server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run TSC
+        run: npx tsc -p apps/server/tsconfig.json --noEmit
+
+  # Job 4: AI Simulation (Depends on all Lint jobs)
+  ai-test:
+    name: AI Simulation Test
+    needs: [lint-user, lint-admin, lint-server]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Simulation
         run: npx tsx apps/server/src/tests/runSimulation.ts 100
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
-  build-user:
-    name: Build User Docker Image
-    needs: test
+  # Job 5: Production Deployment (Depends on AI test)
+  deploy:
+    name: Production Deployment
+    needs: ai-test
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
+      - name: SSH Remote Deployment
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/user
-          tags: |
-            type=sha,prefix=
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-      
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/user-client/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          build-args: |
-            VITE_API_URL=${{ vars.API_URL }}
-
-  build-admin:
-    name: Build Admin Docker Image
-    needs: test
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/admin
-          tags: |
-            type=sha,prefix=
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-      
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/admin-client/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          build-args: |
-            VITE_API_URL=${{ vars.API_URL }}
-
-  build-api:
-    name: Build API Docker Image
-    needs: test
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/api
-          tags: |
-            type=sha,prefix=
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-      
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/server/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-
-  deploy-staging:
-    name: Deploy to Staging
-    needs:
-      - build-user
-      - build-admin
-      - build-api
-    if: github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-      url: https://staging.joyjoin.com
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy containers to staging
-        run: |
-          echo "Deploying Docker images to staging..."
-          echo "User: ghcr.io/${{ env.REPO_NAME }}/user:develop"
-          echo "Admin: ghcr.io/${{ env.REPO_NAME }}/admin:develop"
-          echo "API: ghcr.io/${{ env.REPO_NAME }}/api:develop"
-
-  deploy-production:
-    name: Deploy to Production
-    needs:
-      - build-user
-      - build-admin
-      - build-api
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: https://app.joyjoin.com
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run Database Migrations
-        run: echo "Running database migrations..."
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      - name: Deploy containers to production
-        run: |
-          echo "Deploying Docker images to production..."
-          echo "User: ghcr.io/${{ env.REPO_NAME }}/user:main"
-          echo "Admin: ghcr.io/${{ env.REPO_NAME }}/admin:main"
-          echo "API: ghcr.io/${{ env.REPO_NAME }}/api:main"
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 30m 
+          script: |
+            set -e 
+            
+            # 1. Sync code
+            cd ~/JoyJoin
+            git fetch --all
+            git reset --hard origin/main
+            
+            # 2. Build and restart containers
+            cd deployment
+            
+            # Selective cleanup: Remove conflicting Caddy container if it exists
+            if [ "$(docker ps -aq -f name=joyjoin-caddy)" ]; then
+                echo "Found existing Caddy container. Removing to prevent name conflict..."
+                docker rm -f joyjoin-caddy || true
+            fi
+            echo "Restarting Docker services with orphan cleanup..."
+            docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans
+            
+            # 3. Database Sync
+            echo "Fixing DNS and syncing database..."
+            echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
+            cd ~/JoyJoin
+            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+            npx drizzle-kit push --config=./drizzle.config.ts
+            
+            # 4. Status Checks
+            echo "Verifying service status..."
+            sleep 20 # Increased sleep to allow full initialization
+            
+            # Check API (5000)
+            curl -s --retry 5 --retry-delay 5 http://localhost:5000 > /dev/null || (docker logs joyjoin-api --tail 50 && exit 1)
+            
+            # Check Admin (8080)
+            curl -s --retry 3 --retry-delay 5 http://localhost:8080 > /dev/null || (docker logs joyjoin-admin --tail 50 && exit 1)
+            
+            # Verify all containers are running
+            CONTAINERS=("joyjoin-api" "joyjoin-user" "joyjoin-admin" "joyjoin-caddy")
+            for container in "${CONTAINERS[@]}"; do
+              if [ "$(docker inspect -f '{{.State.Running}}' $container)" != "true" ]; then
+                echo "Error: $container is not running."
+                exit 1
+              fi
+            done
+            echo "Deployment successful."
