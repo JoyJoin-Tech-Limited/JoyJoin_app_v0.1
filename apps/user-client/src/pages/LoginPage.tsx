@@ -17,6 +17,7 @@ import {
   Flower2, Target, Sun, Play, Volume2, VolumeX
 } from "lucide-react";
 import joyJoinLogo from "@assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi_1765650184831.png";
+import heroVideo from "@assets/generated_videos/dusk_skyline_fades_to_cozy_dinner.mp4";
 
 import xiaoyueFoxAvatar from "@assets/Xiao_Yue_Avatar-06_1766766685632.png";
 // import { SiWechat } from "react-icons/si"; // 暂时注释：微信登录功能
@@ -336,22 +337,17 @@ export default function LoginPage() {
       >
         {/* Video Background Layer */}
         <div className="absolute inset-0 z-0">
-          {/* Placeholder gradient until video is ready */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10" />
-          
-          {/* Uncomment when video is ready:
+          {/* Video Background */}
           <video
             ref={videoRef}
             className="w-full h-full object-cover"
             autoPlay
             loop
-            muted
+            muted={isVideoMuted}
             playsInline
-            poster="/video-poster.jpg"
           >
-            <source src={promoVideo} type="video/mp4" />
+            <source src={heroVideo} type="video/mp4" />
           </video>
-          */}
           
           {/* Dark wash overlay for text readability */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
