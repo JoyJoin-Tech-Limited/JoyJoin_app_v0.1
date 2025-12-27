@@ -23,7 +23,8 @@ yuejuapp.com, www.yuejuapp.com {
     reverse_proxy joyjoin-user:80 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
+        # 保留 Nginx 传来的 X-Forwarded-Proto
+        header_up X-Forwarded-Proto {>X-Forwarded-Proto}
     }
 }
 
@@ -40,7 +41,8 @@ admin.yuejuapp.com {
     reverse_proxy joyjoin-admin:80 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
+        # 保留 Nginx 传来的 X-Forwarded-Proto
+        header_up X-Forwarded-Proto {>X-Forwarded-Proto}
     }
 }
 
@@ -67,7 +69,9 @@ api.yuejuapp.com {
     reverse_proxy joyjoin-api:5000 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
+        # 🔧 FIX: 如果 Nginx 在前面，保留 Nginx 传来的 X-Forwarded-Proto
+        # 如果 header 不存在则用 {scheme} 作为 fallback
+        header_up X-Forwarded-Proto {>X-Forwarded-Proto}
         header_up Host {host}
     }
 }
