@@ -40,12 +40,12 @@ export function getSession() {
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
-    proxy: isProduction, // Trust proxy in production (Caddy)
+    proxy: true, // Always trust proxy for Caddy/reverse proxy
     cookie: {
       httpOnly: true,
-      secure: isProduction,
+      secure: true, // Required for cross-subdomain with sameSite: 'none'
       maxAge: sessionTtl,
-      sameSite: 'lax',
+      sameSite: 'none', // Required for cross-subdomain auth between api/admin/www
       ...(cookieDomain && { domain: cookieDomain }), // Cross-subdomain support
     },
   });
