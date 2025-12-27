@@ -80,7 +80,7 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 20m 
+          command_timeout: 30m 
           script: |
             set -e 
             
@@ -91,8 +91,15 @@ jobs:
             
             # 2. Build and restart containers
             cd deployment
-            echo "Restarting Docker services..."
-            docker compose -f docker-compose.caddy.yml up -d --build
+            
+            # Selective cleanup: Remove conflicting Caddy container if it exists
+            if [ "$(docker ps -aq -f name=joyjoin-caddy)" ]; then
+                echo "Found existing Caddy container. Removing to prevent name conflict..."
+                docker rm -f joyjoin-caddy || true
+            fi
+
+            echo "Restarting Docker services with orphan cleanup..."
+            docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans
             
             # 3. Database Sync
             echo "Fixing DNS and syncing database..."
@@ -103,7 +110,7 @@ jobs:
             
             # 4. Status Checks
             echo "Verifying service status..."
-            sleep 15
+            sleep 20 # Increased sleep to allow full initialization
             
             # Check API (5000)
             curl -s --retry 5 --retry-delay 5 http://localhost:5000 > /dev/null || (docker logs joyjoin-api --tail 50 && exit 1)
@@ -111,8 +118,8 @@ jobs:
             # Check Admin (8080)
             curl -s --retry 3 --retry-delay 5 http://localhost:8080 > /dev/null || (docker logs joyjoin-admin --tail 50 && exit 1)
             
-            # Verify containers
-            CONTAINERS=("joyjoin-api" "joyjoin-user" "joyjoin-admin")
+            # Verify all containers are running
+            CONTAINERS=("joyjoin-api" "joyjoin-user" "joyjoin-admin" "joyjoin-caddy")
             for container in "${CONTAINERS[@]}"; do
               if [ "$(docker inspect -f '{{.State.Running}}' $container)" != "true" ]; then
                 echo "Error: $container is not running."
