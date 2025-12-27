@@ -31,15 +31,22 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  
+  const isProduction = process.env.NODE_ENV === 'production';
+  const cookieDomain = process.env.COOKIE_DOMAIN; // e.g., '.yuejuapp.com'
+  
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    proxy: isProduction, // Trust proxy in production (Caddy)
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: isProduction,
       maxAge: sessionTtl,
+      sameSite: 'lax',
+      ...(cookieDomain && { domain: cookieDomain }), // Cross-subdomain support
     },
   });
 }
