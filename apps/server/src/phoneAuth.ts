@@ -13,21 +13,57 @@ function generateCode(): string {
 }
 
 export function setupPhoneAuth(app: Express) {
-  // 🔧 DEBUG: Test endpoint to verify Set-Cookie works through Caddy
+  const isProduction = process.env.NODE_ENV === 'production';
+  const DEBUG_AUTH = process.env.DEBUG_AUTH === "1";
+
+  // ============ Phase 2: Debug Endpoints (无依赖测试) ============
+  
+  // A) 强制 set 普通 cookie（验证链路是否吞 Set-Cookie）
+  app.get("/api/debug/cookie-direct", (req: any, res) => {
+    console.log("🔧 [DEBUG] /api/debug/cookie-direct called");
+    res.cookie("debug_direct", "1", { 
+      path: "/", 
+      secure: isProduction, 
+      sameSite: isProduction ? "none" : "lax" 
+    });
+    res.json({ ok: true, message: "Check for Set-Cookie: debug_direct=1" });
+  });
+
+  // B) 强制写 session 并保存（验证 session cookie 能否发出）
+  app.get("/api/debug/session-set", (req: any, res) => {
+    console.log("🔧 [DEBUG] /api/debug/session-set called, sessionID:", req.sessionID);
+    req.session.userId = "debug-user";
+    req.session.isAdmin = true;
+    req.session.save((err: any) => {
+      if (err) {
+        console.error("🔧 [DEBUG] Session save error:", err);
+        return res.status(500).json({ ok: false, err: String(err) });
+      }
+      console.log("🔧 [DEBUG] Session saved, sid:", req.sessionID);
+      res.json({ ok: true, sid: req.sessionID });
+    });
+  });
+
+  // C) 回显 cookie（验证浏览器是否带回 cookie）
+  app.get("/api/debug/echo-cookie", (req: any, res) => {
+    console.log("🔧 [DEBUG] /api/debug/echo-cookie called");
+    res.json({
+      cookieHeader: req.headers.cookie || null,
+      sessionID: req.sessionID || null,
+      sessionUserId: req.session?.userId || null,
+      sessionIsAdmin: req.session?.isAdmin || null,
+    });
+  });
+
+  // 兼容旧的 set-cookie 端点
   app.get("/api/debug/set-cookie", (req: any, res) => {
     console.log("🔧 [DEBUG] /api/debug/set-cookie called");
-    console.log("🔧 [DEBUG] req.sessionID:", req.sessionID);
-    console.log("🔧 [DEBUG] req.session:", JSON.stringify(req.session, null, 2));
-    
-    // Test 1: Direct cookie (bypasses express-session)
     res.cookie("debug_direct", "1", {
       httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       path: "/",
     });
-    
-    // Test 2: Write to session (triggers express-session Set-Cookie)
     req.session.debugTest = Date.now();
     req.session.save((err: any) => {
       if (err) {
@@ -125,18 +161,29 @@ export function setupPhoneAuth(app: Express) {
         }
       }
 
-      // 设置session - 简化版本，不用regenerate（调试用）
-      console.log("🔐 [LOGIN] Starting session setup for userId:", userId);
-      console.log("🔐 [LOGIN] req.sessionID:", req.sessionID);
+      // 设置session - Phase 4.1 DEBUG_AUTH logging
+      if (DEBUG_AUTH) {
+        console.log("[LOGIN] before", { sid: req.sessionID, cookie: req.headers.cookie });
+      }
       
       // 直接写入 session（不用 regenerate，更简单可靠）
       req.session.userId = userId;
       (req.session as any).verifiedPhoneNumber = phoneNumber;
       
-      console.log("🔐 [LOGIN] Session data set:", JSON.stringify(req.session, null, 2));
+      if (DEBUG_AUTH) {
+        console.log("[LOGIN] session written", { userId, sessionData: req.session });
+      }
       
       // 使用 Promise 包装 save，确保完成后再响应
       req.session.save((err) => {
+        if (DEBUG_AUTH) {
+          console.log("[LOGIN] after-save", {
+            err: err ? String(err) : null,
+            sid: req.sessionID,
+            setCookie: res.getHeader("set-cookie") || null,
+          });
+        }
+        
         if (err) {
           console.error("🔐 [LOGIN] Session save error:", err);
           return res.status(500).json({ message: "Login failed" });

@@ -158,6 +158,14 @@ function generateInsights(primaryRole: string, secondaryRole: string | null): {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // 🔧 DEBUG: Add identity headers to ALL API responses (Phase 1.1)
+  app.use((req, res, next) => {
+    res.setHeader("X-App", "joyjoin-api");
+    res.setHeader("X-Instance", process.env.HOSTNAME || "replit");
+    res.setHeader("X-Git", process.env.GIT_SHA || "unknown");
+    next();
+  });
+
   // Health check endpoint - must be before session middleware for cloud platform health checks
   app.get('/api/health', (_req, res) => {
     res.status(200).json({ 
@@ -368,6 +376,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth routes
   app.get('/api/auth/user', isPhoneAuthenticated, async (req: any, res) => {
+    // 🔧 DEBUG_AUTH logging (Phase 4.2)
+    if (process.env.DEBUG_AUTH === "1") {
+      console.log("[AUTH/USER]", {
+        sid: req.sessionID,
+        cookie: req.headers.cookie,
+        userId: req.session?.userId,
+        isAdmin: req.session?.isAdmin,
+      });
+    }
     try {
       const userId = req.session.userId;
       const user = await storage.getUser(userId);

@@ -1,0 +1,221 @@
+把问题定位到以下四类之一（只能落在其中一个）：
+
+phone-login 根本没发 Set-Cookie（后端没写/没保存/没触发 session）
+
+发了 Set-Cookie 但浏览器没保存（cookie 属性/冲突/被阻止）
+
+浏览器保存了但后端没读到（cookie 没带/多实例/store/secret）
+
+后端读到了 session，但 /auth/user 检查逻辑不一致（读 JWT/读错字段/读错路由）
+
+Phase 0：准备（一次性）
+0.1 统一“调试开关”
+
+后端加一个环境变量：
+
+DEBUG_AUTH=1
+
+只在 DEBUG_AUTH=1 时打印敏感调试信息（避免生产泄露）。
+
+Phase 1：标记请求到底命中哪个服务（最关键的第一刀）
+1.1 给所有 API 响应加“身份 header”
+
+在 API 服务（joyjoin-api） 全局中间件加：
+
+app.use((req, res, next) => {
+  res.setHeader("X-App", "joyjoin-api");
+  res.setHeader("X-Instance", process.env.HOSTNAME || "unknown");
+  res.setHeader("X-Git", process.env.GIT_SHA || "unknown");
+  next();
+});
+
+
+Replit：如果你有 admin/user 两套服务，也分别设置不同 X-App 值。
+
+1.2 期待结果
+
+浏览器 Network 里 phone-login 和 /auth/user 的 Response Headers 必须都能看到 X-App
+
+如果两个请求 X-App 不一样：直接定罪“走到了不同后端”（去查 Caddy/Nginx 的 reverse_proxy 路由规则）
+
+Phase 2：确认 Set-Cookie 是否真的从后端发出（不要只看前端）
+2.1 新增两个“无依赖”的调试端点（必须存在）
+
+放在和现有 debug/set-cookie 同一个 router 文件里（避免你之前 whoami 404 的情况）：
+
+A) 强制 set 普通 cookie（验证链路是否吞 Set-Cookie）
+
+GET /api/debug/cookie-direct
+
+直接 res.cookie("debug_direct","1",...)
+
+B) 强制写 session 并保存（验证 session cookie 能否发出）
+
+GET /api/debug/session-set
+
+req.session.userId="debug-user"; req.session.save(...)
+
+示例：
+
+router.get("/api/debug/cookie-direct", (req, res) => {
+  res.cookie("debug_direct", "1", { path: "/", secure: true, sameSite: "none" });
+  res.json({ ok: true });
+});
+
+router.get("/api/debug/session-set", (req, res) => {
+  req.session.userId = "debug-user";
+  req.session.isAdmin = true;
+  req.session.save((err) => {
+    if (err) return res.status(500).json({ ok: false, err: String(err) });
+    res.json({ ok: true, sid: req.sessionID });
+  });
+});
+
+2.2 用服务器 curl 验证（硬证据）
+
+在服务器跑：
+
+curl -sk -D - https://admin.yuejuapp.com/api/debug/cookie-direct -o /dev/null | grep -i set-cookie
+curl -sk -D - https://admin.yuejuapp.com/api/debug/session-set -o /dev/null | grep -i set-cookie
+
+2.3 结论分支
+
+两条都有 set-cookie → 反代/链路没吞，session 也能发，继续 Phase 3
+
+direct 有但 session-set 没有 → session 中间件/挂载顺序/store/saveUninitialized 问题
+
+两条都没有 → 反代/网关在吞 Set-Cookie（检查 nginx/caddy header 规则）
+
+Phase 3：浏览器是否真的保存并回传 session cookie
+3.1 先清 cookie（必须）
+
+Chrome DevTools → Application → Storage → Clear site data
+（特别是你之前改了 domain/samesite/secure，旧 cookie 会冲突）
+
+3.2 执行并观察
+
+打开 https://admin.yuejuapp.com/api/debug/session-set
+
+Network → 这个请求的 Response Headers 应该看到 Set-Cookie: connect.sid=...
+
+Application → Cookies → 看到 connect.sid（或你自定义 name）
+
+3.3 再看下一次请求是否带 cookie
+
+再访问：https://admin.yuejuapp.com/api/debug/echo-cookie（新增一个回显接口）
+
+新增接口：
+
+router.get("/api/debug/echo-cookie", (req, res) => {
+  res.json({
+    cookieHeader: req.headers.cookie || null,
+    sessionID: req.sessionID || null,
+    sessionUserId: req.session?.userId || null,
+  });
+});
+
+3.4 结论分支
+
+Application 里没有 connect.sid → 浏览器没保存（cookie 属性/冲突/被阻止）
+
+Application 有 connect.sid，但 echo-cookie 里 cookieHeader 没带 → 前端请求方式问题（极少见，同源一般不会）
+
+echo-cookie 里 cookieHeader 带了 connect.sid，但 sessionUserId 为空 → store 读取失败/secret 不一致/多实例
+
+Phase 4：把 phone-login 和 /auth/user 的 session 读写串起来
+4.1 在 phone-login 加这三类日志（仅 DEBUG_AUTH=1）
+
+在 phone-login 成功分支：
+
+if (process.env.DEBUG_AUTH === "1") {
+  console.log("[LOGIN] before", { sid: req.sessionID, cookie: req.headers.cookie });
+}
+req.session.userId = user.id;
+req.session.isAdmin = true;
+
+req.session.save((err) => {
+  if (process.env.DEBUG_AUTH === "1") {
+    console.log("[LOGIN] after-save", {
+      err: err ? String(err) : null,
+      sid: req.sessionID,
+      setCookie: res.getHeader("set-cookie") || null,
+    });
+  }
+  if (err) return res.status(500).json({ message: "Session save failed" });
+  return res.json({ message: "Login successful" });
+});
+
+4.2 在 /api/auth/user 入口加“读 session”日志
+if (process.env.DEBUG_AUTH === "1") {
+  console.log("[AUTH/USER]", {
+    sid: req.sessionID,
+    cookie: req.headers.cookie,
+    userId: req.session?.userId,
+    isAdmin: req.session?.isAdmin,
+  });
+}
+
+4.3 结论分支
+
+/auth/user 日志里 cookie 没有 connect.sid → cookie 没落地/没带回
+
+cookie 有 connect.sid，但 sid 不等于 login sid → cookie 冲突（多条 connect.sid）或多实例
+
+sid 一致但 userId 为空 → store/secret 不一致
+
+userId 有但仍 401 → /auth/user 的鉴权逻辑读错字段/走了 JWT
+
+Phase 5：最容易忽略的“cookie 冲突”检查（强烈建议做）
+
+当你设置过 domain=.yuejuapp.com 又改回 host-only 时，浏览器可能出现两条同名 cookie：
+
+5.1 检查方式
+
+Chrome → Application → Cookies
+看是否有 两条 connect.sid（不同 Domain/Path）
+
+5.2 修复方式
+
+清站点数据（必须）
+
+生产环境先不要设 domain（如果 API 同域 /api）
+
+sameSite 先用 'lax'（同域更稳）
+
+Phase 6：最后确认“是不是 admin/user 用错 endpoint”
+
+你说“admin 和 user 原来共用一套 login，后面才分开”。这非常容易造成：
+
+admin 登录写的是 req.session.adminId 或 req.session.userId + isAdmin
+
+但 /api/auth/user 检查的是“普通用户 token”或另一个字段
+→ 401 1ms
+
+6.1 快速定罪
+
+直接打开 /api/auth/user 代码，看它到底在 check 什么：
+
+req.session.userId？
+
+req.user？
+
+Authorization？
+
+如果它读的是 JWT 而你用的是 session，那就必须：
+
+admin 前端改成带 token
+或
+
+/auth/user 改成读 session
+
+给 Replit 的“交付清单”（一句话版）
+
+给所有 API 响应加 X-App/X-Instance/X-Git，确认 phone-login 和 /auth/user 是否命中同一 upstream
+
+新增 /api/debug/cookie-direct + /api/debug/session-set + /api/debug/echo-cookie
+
+服务器 curl 确认 set-cookie 存在
+
+浏览器 Application 确认 connect.sid 是否落地、是否有重复
+
+在 phone-login 和 /auth/user 打 sid/cookie/session.userId 日志，定位是“没带回/读不到/读错逻辑”
