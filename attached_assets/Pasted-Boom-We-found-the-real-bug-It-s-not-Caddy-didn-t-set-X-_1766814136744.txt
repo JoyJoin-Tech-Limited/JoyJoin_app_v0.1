@@ -1,0 +1,81 @@
+Boom. We found the real bug. It’s not “Caddy didn’t set X-Forwarded-Proto” — Caddy is setting it to "https"… but to the wrong upstream.
+
+What your caddy adapt output proves
+
+For admin.yuejuapp.com, Caddy is doing:
+
+reverse_proxy → joyjoin-admin:80
+
+and setting X-Forwarded-Proto: "https" for that hop
+
+You can see it clearly here:
+
+"host": ["admin.yuejuapp.com"],
+"handler": "reverse_proxy",
+"upstreams": [{"dial": "joyjoin-admin:80"}],
+"headers": {
+  "request": {
+    "set": {
+      "X-Forwarded-Proto": ["https"]
+    }
+  }
+}
+
+
+Meaning:
+
+Requests to https://admin.yuejuapp.com/... are being proxied to the admin frontend container, not the API container.
+
+So when you call:
+
+https://admin.yuejuapp.com/api/debug/echo-cookie
+
+that request is hitting joyjoin-admin first (nginx inside that container → hence server: nginx/1.29.4), and then something forwards to the API (or returns 404 depending on routes). That extra hop is where your forwarded proto gets messed up / or where cookies/session handling isn’t aligned.
+
+That’s why your Node echo-cookie still says xForwardedProto: "http" — because the request is not going directly Caddy → API.
+
+✅ The fix: route /api/* on admin.yuejuapp.com directly to joyjoin-api
+
+You need path-based routing in the admin.yuejuapp.com site block:
+
+Caddyfile (correct)
+admin.yuejuapp.com {
+  # security headers (keep yours)
+  header {
+    Referrer-Policy "strict-origin-when-cross-origin"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+  }
+
+  encode gzip
+
+  # ✅ IMPORTANT: /api goes straight to API container
+  handle_path /api/* {
+    reverse_proxy joyjoin-api:5000 {
+      header_up X-Forwarded-Proto https
+      header_up X-Forwarded-Host {host}
+      header_up X-Forwarded-For {remote}
+    }
+  }
+
+  # everything else goes to admin frontend
+  reverse_proxy joyjoin-admin:80
+}
+
+
+handle_path removes the /api prefix when proxying.
+If your API expects /api/... (most do), use handle instead:
+
+If your API expects to receive /api/... unchanged:
+handle /api/* {
+  reverse_proxy joyjoin-api:5000 {
+    header_up X-Forwarded-Proto https
+  }
+}
+
+
+Most Express apps are mounted under /api, so use handle (not handle_path) unless you’re sure your API routes don’t include /api.
+
+Given you have routes like /api/debug/echo-cookie, you almost certainly want to preserve /api, so:
+
+✅ Use handle /api/*
