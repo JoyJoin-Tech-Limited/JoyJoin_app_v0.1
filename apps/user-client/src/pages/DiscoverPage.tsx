@@ -168,6 +168,7 @@ export default function DiscoverPage() {
 
       return {
         id: pool.id,
+        poolId: pool.id, // 关键：传递 poolId 给 BlindBoxEventCard，用于后端报名
         date: chineseDate,
         time: chineseTime,
         eventType: (pool.eventType === "其他" ? "饭局" : pool.eventType) as "饭局" | "酒局",
