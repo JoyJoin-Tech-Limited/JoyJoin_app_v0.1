@@ -1,47 +1,3 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { X, ChevronDown, Sparkles, Zap, Gift, CheckCircle, AlertCircle, Loader, Ticket, Crown, Package, Users, Calendar, MessageCircle, Star, Shield } from "lucide-react";
-import { motion } from "framer-motion";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { getCurrencySymbol } from "@/lib/currency";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { SiWechat } from "react-icons/si";
-
-// Default fallback prices (used while loading or if API fails)
-const DEFAULT_SINGLE_PRICE = 8800; // ¥88.00 in cents (原价)
-const DEFAULT_PACK3_PRICE = 21100; // ¥211.00 for 3 events (原价¥264, 约¥70/次, 8折)
-const DEFAULT_PACK6_PRICE = 37000; // ¥370.00 for 6 events (原价¥528, 约¥62/次, 7折)
-const DEFAULT_VIP_MONTHLY_PRICE = 12800; // ¥128.00 VIP monthly
-const DEFAULT_VIP_QUARTERLY_PRICE = 26800; // ¥268.00 VIP quarterly (约¥89/月, 省¥116)
-
-// Original prices for savings calculation
-const ORIGINAL_PACK3_PRICE = 26400; // ¥264 = ¥88 x 3
-const ORIGINAL_PACK6_PRICE = 52800; // ¥528 = ¥88 x 6
-
-interface PricingPlan {
-  id: string;
-  planType: string;
-  displayName: string;
-  displayNameEn?: string;
-  description?: string;
-  price: number; // in yuan
-  originalPrice?: number | null; // in yuan
-  durationDays?: number;
-  isActive: boolean;
-  isFeatured: boolean;
-}
-
 export default function BlindBoxPaymentPage() {
   const [, setLocation] = useLocation();
   const [promoOpen, setPromoOpen] = useState(false);
@@ -50,58 +6,65 @@ export default function BlindBoxPaymentPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [discount, setDiscount] = useState(0);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<"single" | "pack3" | "pack6" | "vip_monthly" | "vip_quarterly">("single");
+  const [selectedPlan, setSelectedPlan] = useState<
+    "single" | "pack3" | "pack6" | "vip_monthly" | "vip_quarterly"
+  >("single");
   const [isProcessing, setIsProcessing] = useState(false);
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // Fetch dynamic pricing from API
   const { data: pricingData, isLoading: loadingPricing } = useQuery<PricingPlan[]>({
     queryKey: ["/api/pricing"],
     queryFn: async () => {
       const response = await fetch("/api/pricing");
       if (!response.ok) return [];
-      return response.json();
+      const json = await response.json();
+      return Array.isArray(json) ? json : [];
     },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
-  
+
   // Get prices from API data or use defaults
-  const singlePricing = pricingData?.find(p => p.planType === "event_single");
-  const pack3Pricing = pricingData?.find(p => p.planType === "pack_3");
-  const pack6Pricing = pricingData?.find(p => p.planType === "pack_6");
-  const vipMonthlyPricing = pricingData?.find(p => p.planType === "vip_monthly");
-  const vipQuarterlyPricing = pricingData?.find(p => p.planType === "vip_quarterly");
-  
+  const singlePricing = pricingData?.find((p) => p.planType === "event_single");
+  const pack3Pricing = pricingData?.find((p) => p.planType === "pack_3");
+  const pack6Pricing = pricingData?.find((p) => p.planType === "pack_6");
+  const vipMonthlyPricing = pricingData?.find((p) => p.planType === "vip_monthly");
+  const vipQuarterlyPricing = pricingData?.find((p) => p.planType === "vip_quarterly");
+
   const SINGLE_PRICE = singlePricing ? singlePricing.price * 100 : DEFAULT_SINGLE_PRICE;
   const PACK3_PRICE = pack3Pricing ? pack3Pricing.price * 100 : DEFAULT_PACK3_PRICE;
   const PACK6_PRICE = pack6Pricing ? pack6Pricing.price * 100 : DEFAULT_PACK6_PRICE;
   const VIP_MONTHLY_PRICE = vipMonthlyPricing ? vipMonthlyPricing.price * 100 : DEFAULT_VIP_MONTHLY_PRICE;
   const VIP_QUARTERLY_PRICE = vipQuarterlyPricing ? vipQuarterlyPricing.price * 100 : DEFAULT_VIP_QUARTERLY_PRICE;
-  
+
   // Original prices from API or fallback to calculated values
-  const PACK3_ORIGINAL = pack3Pricing?.originalPrice 
-    ? pack3Pricing.originalPrice * 100 
+  const PACK3_ORIGINAL = pack3Pricing?.originalPrice
+    ? pack3Pricing.originalPrice * 100
     : ORIGINAL_PACK3_PRICE;
-  const PACK6_ORIGINAL = pack6Pricing?.originalPrice 
-    ? pack6Pricing.originalPrice * 100 
+  const PACK6_ORIGINAL = pack6Pricing?.originalPrice
+    ? pack6Pricing.originalPrice * 100
     : ORIGINAL_PACK6_PRICE;
-  
+
   // Calculate per-event prices for display
   const PACK3_PER_EVENT = Math.round(PACK3_PRICE / 3);
   const PACK6_PER_EVENT = Math.round(PACK6_PRICE / 6);
-  
-  // Savings from API original prices
+
+  // Savings
   const PACK3_SAVINGS = PACK3_ORIGINAL - PACK3_PRICE;
   const PACK6_SAVINGS = PACK6_ORIGINAL - PACK6_PRICE;
-  const VIP_QUARTERLY_SAVINGS = (VIP_MONTHLY_PRICE * 3) - VIP_QUARTERLY_PRICE;
-  
-  // Calculate discount percentage for display
+  const VIP_QUARTERLY_SAVINGS = VIP_MONTHLY_PRICE * 3 - VIP_QUARTERLY_PRICE;
+
+  // Discount “x折” display
   const PACK3_DISCOUNT = Math.round((1 - PACK3_PRICE / PACK3_ORIGINAL) * 10);
   const PACK6_DISCOUNT = Math.round((1 - PACK6_PRICE / PACK6_ORIGINAL) * 10);
 
-  // Fetch user's available coupons
-  const { data: availableCoupons = { count: 0, coupons: [] }, isLoading: loadingCoupons } = useQuery<{ count: number; coupons: any[] }>({
+  // ✅ Fetch user's available coupons (STRUCTURE GUARANTEED)
+  const { data: availableCoupons, isLoading: loadingCoupons } = useQuery<{
+    count: number;
+    coupons: any[];
+  }>({
     queryKey: ["/api/user/coupons"],
     queryFn: async () => {
       try {
@@ -109,38 +72,61 @@ export default function BlindBoxPaymentPage() {
           credentials: "include",
         });
         if (!response.ok) return { count: 0, coupons: [] };
-        return response.json();
+
+        const json = await response.json();
+        return {
+          count: typeof json?.count === "number" ? json.count : 0,
+          coupons: Array.isArray(json?.coupons) ? json.coupons : [],
+        };
       } catch {
         return { count: 0, coupons: [] };
       }
     },
+    initialData: { count: 0, coupons: [] },
   });
-  
+
+  // ✅ Always-safe coupon list for .find / .map
+  const couponsList = Array.isArray(availableCoupons?.coupons)
+    ? availableCoupons.coupons
+    : [];
+
   // Check for first-time user welcome coupon (50% off)
-  const welcomeCoupon = availableCoupons.coupons?.find(
-    (c: any) => c.code?.startsWith('WELCOME50') && c.discountType === 'percentage' && c.discountValue === 50
+  const welcomeCoupon = couponsList.find(
+    (c: any) =>
+      c?.code?.startsWith("WELCOME50") &&
+      c?.discountType === "percentage" &&
+      c?.discountValue === 50
   );
   const hasWelcomeCoupon = !!welcomeCoupon;
-  
-  const city = (localStorage.getItem("blindbox_city") || "深圳") as "香港" | "深圳";
+
+  // City / currency
+  const city =
+    (typeof window !== "undefined"
+      ? (localStorage.getItem("blindbox_city") || "深圳")
+      : "深圳") as "香港" | "深圳";
   const currencySymbol = getCurrencySymbol(city);
-  
+
   // Get base price based on selected plan
   const getBasePrice = () => {
     switch (selectedPlan) {
-      case "single": return SINGLE_PRICE;
-      case "pack3": return PACK3_PRICE;
-      case "pack6": return PACK6_PRICE;
-      case "vip_monthly": return VIP_MONTHLY_PRICE;
-      case "vip_quarterly": return VIP_QUARTERLY_PRICE;
-      default: return SINGLE_PRICE;
+      case "single":
+        return SINGLE_PRICE;
+      case "pack3":
+        return PACK3_PRICE;
+      case "pack6":
+        return PACK6_PRICE;
+      case "vip_monthly":
+        return VIP_MONTHLY_PRICE;
+      case "vip_quarterly":
+        return VIP_QUARTERLY_PRICE;
+      default:
+        return SINGLE_PRICE;
     }
   };
-  
+
   const basePrice = getBasePrice();
-  const finalPrice = basePrice - (selectedPlan === "single" ? discount : 0); // 只有单次票支持优惠码
-  
-  // Check if plan is a pack or VIP
+  const finalPrice = basePrice - (selectedPlan === "single" ? discount : 0);
+
   const isPack = selectedPlan === "pack3" || selectedPlan === "pack6";
   const isVIP = selectedPlan === "vip_monthly" || selectedPlan === "vip_quarterly";
 
@@ -149,19 +135,15 @@ export default function BlindBoxPaymentPage() {
       return await apiRequest("POST", "/api/blind-box-events", eventData);
     },
     onSuccess: () => {
-      // 立即刷新Event Tab数据
       queryClient.invalidateQueries({ queryKey: ["/api/my-events"] });
-      // 刷新聊天页面数据（群聊列表）
       queryClient.invalidateQueries({ queryKey: ["/api/events/joined"] });
-      // 清除临时数据
       localStorage.removeItem("blindbox_event_data");
-      // 跳转到活动页面
       setLocation("/events");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "创建活动失败",
-        description: error.message,
+        description: error?.message || "创建失败",
         variant: "destructive",
       });
     },
@@ -179,13 +161,13 @@ export default function BlindBoxPaymentPage() {
 
     setValidatingCoupon(true);
     try {
-      const result = await apiRequest("POST", "/api/coupons/validate", {
+      const result = (await apiRequest("POST", "/api/coupons/validate", {
         code: couponCode.trim(),
         amount: SINGLE_PRICE,
         paymentType: "event",
-      }) as any;
+      })) as any;
 
-      if (result.valid) {
+      if (result?.valid) {
         setAppliedCoupon(result.coupon);
         setDiscount(result.discountAmount);
         toast({
@@ -196,14 +178,14 @@ export default function BlindBoxPaymentPage() {
       } else {
         toast({
           title: "优惠码无效",
-          description: result.message || "此优惠码不可用或已过期",
+          description: result?.message || "此优惠码不可用或已过期",
           variant: "destructive",
         });
       }
     } catch (error: any) {
       toast({
         title: "验证失败",
-        description: error.message || "无法验证优惠码，请稍后重试",
+        description: error?.message || "无法验证优惠码，请稍后重试",
         variant: "destructive",
       });
     } finally {
@@ -228,95 +210,94 @@ export default function BlindBoxPaymentPage() {
       discountType: coupon.discountType,
       discountValue: coupon.discountValue,
     });
-    
-    // Calculate discount (只适用于单次票)
-    let discount = 0;
+
+    let d = 0;
     if (coupon.discountType === "fixed_amount") {
-      discount = Math.min(coupon.discountValue, SINGLE_PRICE);
+      d = Math.min(coupon.discountValue, SINGLE_PRICE);
     } else if (coupon.discountType === "percentage") {
-      discount = Math.floor(SINGLE_PRICE * (coupon.discountValue / 100));
+      d = Math.floor(SINGLE_PRICE * (coupon.discountValue / 100));
     }
-    setDiscount(discount);
-    
+    setDiscount(d);
+
     toast({
       title: "优惠券已应用",
-      description: `节省 ${currencySymbol}${(discount / 100).toFixed(2)}`,
+      description: `节省 ${currencySymbol}${(d / 100).toFixed(2)}`,
     });
     setPromoOpen(false);
   };
 
   const handlePayment = async () => {
     try {
-      // VIP订阅流程
       if (isVIP) {
         setIsProcessing(true);
-        // Send the new plan type identifiers
         const planType = selectedPlan as "vip_monthly" | "vip_quarterly";
+
         const response = await fetch("/api/subscription/renew", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             planType,
-            couponCode: appliedCoupon?.code 
+            couponCode: appliedCoupon?.code,
           }),
         });
-        
+
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || "订阅失败");
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error?.message || "订阅失败");
         }
-        
+
         toast({
           title: "VIP订阅成功！",
-          description: selectedPlan === "vip_quarterly" 
-            ? "季度VIP已开通，享3个月无限活动 + 专属权益" 
-            : "月度VIP已开通，享无限盲盒活动",
+          description:
+            selectedPlan === "vip_quarterly"
+              ? "季度VIP已开通，享3个月无限活动 + 专属权益"
+              : "月度VIP已开通，享无限盲盒活动",
         });
-        
-        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
         setLocation("/discover");
         setIsProcessing(false);
         return;
       }
-      
-      // 次数包购买流程
+
       if (isPack) {
         setIsProcessing(true);
         const packCount = selectedPlan === "pack3" ? 3 : 6;
         const packPrice = selectedPlan === "pack3" ? PACK3_PRICE : PACK6_PRICE;
-        const validityDays = selectedPlan === "pack3" ? 90 : 180; // 3次包90天, 6次包180天(半年)
+        const validityDays = selectedPlan === "pack3" ? 90 : 180;
+
         const response = await fetch("/api/event-packs/purchase", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             packType: selectedPlan,
             eventCount: packCount,
             priceInCents: packPrice,
             validityDays,
           }),
         });
-        
+
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || "购买失败");
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error?.message || "购买失败");
         }
-        
+
         toast({
           title: "次数包购买成功！",
-          description: selectedPlan === "pack3" 
-            ? `${packCount}次活动券已充入账户，90天内有效`
-            : `${packCount}次活动券已充入账户，半年内有效`,
+          description:
+            selectedPlan === "pack3"
+              ? `${packCount}次活动券已充入账户，90天内有效`
+              : `${packCount}次活动券已充入账户，半年内有效`,
         });
-        
-        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
         setLocation("/discover");
         setIsProcessing(false);
         return;
       }
-      
-      // 单次盲盒票流程
+
       const eventDataStr = localStorage.getItem("blindbox_event_data");
       if (!eventDataStr) {
         toast({
@@ -327,19 +308,21 @@ export default function BlindBoxPaymentPage() {
         setLocation("/discover");
         return;
       }
-      
+
       const eventData = JSON.parse(eventDataStr);
-      
       if (appliedCoupon) {
         eventData.couponId = appliedCoupon.id;
       }
-      
+
       await createEventMutation.mutateAsync(eventData);
     } catch (error) {
       console.error("Payment error:", error);
       setIsProcessing(false);
     }
   };
+
+  // ✅ 到这里为止，下面就是你的 return (
+
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400">
