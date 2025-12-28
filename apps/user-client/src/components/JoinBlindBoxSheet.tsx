@@ -433,12 +433,13 @@ export default function JoinBlindBoxSheet({
       JSON.stringify(blindboxEventPayload)
     );
 
-    setShowConfirmDialog(false);
-    onOpenChange(false);
-    // 导航到付费页面
+    // 先导航到付费页面，避免Drawer关闭动画期间的状态问题
+    setLocation("/blindbox/payment");
+    // 延迟关闭Dialog和Drawer
     setTimeout(() => {
-      setLocation("/blindbox/payment");
-    }, 300);
+      setShowConfirmDialog(false);
+      onOpenChange(false);
+    }, 100);
   };
 
   const getConfirmButtonText = () => {
