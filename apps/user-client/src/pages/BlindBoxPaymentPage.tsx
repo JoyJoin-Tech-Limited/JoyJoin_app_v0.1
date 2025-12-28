@@ -28,6 +28,7 @@ import {
   MessageCircle,
   Star,
   Shield,
+  MapPin,
 } from "lucide-react";
 
 import { motion } from "framer-motion";
@@ -163,12 +164,29 @@ export default function BlindBoxPaymentPage() {
   );
   const hasWelcomeCoupon = !!welcomeCoupon;
 
+  // 读取盲盒事件数据用于显示和提交
+  const storedEventData = typeof window !== "undefined"
+    ? (() => {
+        try {
+          const str = localStorage.getItem("blindbox_event_data");
+          return str ? JSON.parse(str) : null;
+        } catch { return null; }
+      })()
+    : null;
+
   // City / currency
-  const city =
+  const city = (storedEventData?.city || 
     (typeof window !== "undefined"
       ? (localStorage.getItem("blindbox_city") || "深圳")
-      : "深圳") as "香港" | "深圳";
+      : "深圳")) as "香港" | "深圳";
   const currencySymbol = getCurrencySymbol(city);
+
+  // 活动显示数据
+  const displayDate = storedEventData?.date || "待定";
+  const displayTime = storedEventData?.time || "";
+  const displayEventType = storedEventData?.eventType || "饭局";
+  const displayArea = storedEventData?.area || storedEventData?.district || `${city}·南山区`;
+  const displayPoolId = storedEventData?.poolId;
 
   // Get base price based on selected plan
   const getBasePrice = () => {
@@ -493,16 +511,19 @@ export default function BlindBoxPaymentPage() {
 
           {/* 活动信息摘要 */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold">周三 19:00 · 饭局</h2>
-              <Badge variant="default" className="bg-purple-500 hover:bg-purple-600">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-xl font-bold">{displayDate} {displayTime} · {displayEventType}</h2>
+              <Badge variant="default" className="bg-purple-500 hover:bg-purple-600 shrink-0">
                 盲盒模式
               </Badge>
             </div>
             <div className="text-sm text-muted-foreground space-y-1">
-              <p>📍 深圳·南山区</p>
-              <p>👥 4-6人 · AI智能匹配</p>
+              <p className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {displayArea}</p>
+              <p className="flex items-center gap-1"><Users className="h-4 w-4" /> 4-6人 · AI智能匹配</p>
             </div>
+            {!displayPoolId && (
+              <p className="text-xs text-destructive">活动数据不完整，请返回重新选择</p>
+            )}
           </div>
 
           {/* 价格选项 - 次数包 + VIP */}
