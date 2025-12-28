@@ -793,7 +793,7 @@ export default function BlindBoxPaymentPage() {
                       </div>
                     ) : (
                       <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {availableCoupons.coupons.map((coupon: any) => (
+                        {couponsList.map((coupon: any) => (
                           <motion.div
                             key={coupon.id}
                             whileHover={{ scale: 1.01 }}
