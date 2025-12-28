@@ -1,3 +1,67 @@
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+
+import {
+  X,
+  ChevronDown,
+  Sparkles,
+  Zap,
+  Gift,
+  CheckCircle,
+  Loader,
+  Ticket,
+  Crown,
+  Package,
+  Users,
+  Calendar,
+  MessageCircle,
+  Star,
+  Shield,
+} from "lucide-react";
+
+import { motion } from "framer-motion";
+import { SiWechat } from "react-icons/si";
+
+import { getCurrencySymbol } from "@/lib/currency";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+// Default fallback prices (used while loading or if API fails)
+const DEFAULT_SINGLE_PRICE = 8800; // ¥88.00 in cents (原价)
+const DEFAULT_PACK3_PRICE = 21100; // ¥211.00 for 3 events (原价¥264, 约¥70/次, 8折)
+const DEFAULT_PACK6_PRICE = 37000; // ¥370.00 for 6 events (原价¥528, 约¥62/次, 7折)
+const DEFAULT_VIP_MONTHLY_PRICE = 12800; // ¥128.00 VIP monthly
+const DEFAULT_VIP_QUARTERLY_PRICE = 26800; // ¥268.00 VIP quarterly (约¥89/月, 省¥116)
+
+// Original prices for savings calculation (in cents)
+const ORIGINAL_PACK3_PRICE = 26400; // ¥264 = ¥88 x 3
+const ORIGINAL_PACK6_PRICE = 52800; // ¥528 = ¥88 x 6
+
+interface PricingPlan {
+  id: string;
+  planType: string;
+  displayName: string;
+  displayNameEn?: string;
+  description?: string;
+  price: number; // in yuan
+  originalPrice?: number | null; // in yuan
+  durationDays?: number;
+  isActive: boolean;
+  isFeatured: boolean;
+}
+
+
 export default function BlindBoxPaymentPage() {
   const [, setLocation] = useLocation();
   const [promoOpen, setPromoOpen] = useState(false);
