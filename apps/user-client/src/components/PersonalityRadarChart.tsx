@@ -1,4 +1,4 @@
-import { getTraitScoresForArchetype, normalizeScoreTo10 } from '@/lib/archetypeTraitScores';
+import { getTraitScoresForArchetype } from '@/lib/archetypeTraitScores';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useState } from 'react';
 
@@ -34,13 +34,25 @@ export default function PersonalityRadarChart({
   const rawScores = archetype ? getTraitScoresForArchetype(archetype) : null;
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   
+  // 分数范围：数据库存储0-100（V2测试），但原型配置是0-10
+  // 如果传入分数 > 10，说明是0-100范围；否则使用原型默认分数（0-10范围）
+  const normalizeScore = (score: number | undefined, fallback: number): number => {
+    if (score === undefined || score === null) return fallback;
+    // 已经是0-100范围的分数，直接使用
+    if (score > 10) return score;
+    // 0-10范围的分数，转换为0-100
+    return score * 10;
+  };
+  
+  const defaultScore = 50; // 基准分数（0-100范围）
+  
   const traits = [
-    { name: '亲和力', score: affinityScore ?? (rawScores ? normalizeScoreTo10(rawScores.affinity) : 5), maxScore: 10 },
-    { name: '开放性', score: opennessScore ?? (rawScores ? normalizeScoreTo10(rawScores.openness) : 5), maxScore: 10 },
-    { name: '责任心', score: conscientiousnessScore ?? (rawScores ? normalizeScoreTo10(rawScores.conscientiousness) : 5), maxScore: 10 },
-    { name: '情绪稳定性', score: emotionalStabilityScore ?? (rawScores ? normalizeScoreTo10(rawScores.emotionalStability) : 5), maxScore: 10 },
-    { name: '外向性', score: extraversionScore ?? (rawScores ? normalizeScoreTo10(rawScores.extraversion) : 5), maxScore: 10 },
-    { name: '正能量性', score: positivityScore ?? (rawScores ? normalizeScoreTo10(rawScores.positivity) : 5), maxScore: 10 },
+    { name: '亲和力', score: normalizeScore(affinityScore, rawScores ? rawScores.affinity * 10 : defaultScore), maxScore: 100 },
+    { name: '开放性', score: normalizeScore(opennessScore, rawScores ? rawScores.openness * 10 : defaultScore), maxScore: 100 },
+    { name: '责任心', score: normalizeScore(conscientiousnessScore, rawScores ? rawScores.conscientiousness * 10 : defaultScore), maxScore: 100 },
+    { name: '情绪稳定性', score: normalizeScore(emotionalStabilityScore, rawScores ? rawScores.emotionalStability * 10 : defaultScore), maxScore: 100 },
+    { name: '外向性', score: normalizeScore(extraversionScore, rawScores ? rawScores.extraversion * 10 : defaultScore), maxScore: 100 },
+    { name: '正能量性', score: normalizeScore(positivityScore, rawScores ? rawScores.positivity * 10 : defaultScore), maxScore: 100 },
   ];
 
   const centerX = 150;
