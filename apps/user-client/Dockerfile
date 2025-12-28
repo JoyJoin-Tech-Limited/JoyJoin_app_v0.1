@@ -1,5 +1,5 @@
 # Multi-stage build for JoyJoin User Client (Static SPA)
-FROM node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
