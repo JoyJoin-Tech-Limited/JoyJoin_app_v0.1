@@ -354,90 +354,91 @@ export default function JoinBlindBoxSheet({
   };
 
   const handleFinalConfirm = async () => {
-    // 保存预算偏好到用户profile
+    // 尝试保存预算偏好到用户profile（可选，即使失败也继续导航）
     try {
       await saveBudgetMutation.mutateAsync(budgetPreference);
+    } catch (error) {
+      // 忽略保存失败，继续执行导航
+      console.log("[JoinBlindBoxSheet] Budget save skipped:", error);
+    }
 
-      // 归一化前端要传给后端 / 支付页的数据
-      const city = eventData.city || "深圳";
-      const area = eventData.area;
-      // 目前后端将 district 用作「商圈/区域」键；先用 area 直接作为 district，保证与默认池 key 一致
-      const district = area;
+    // 归一化前端要传给后端 / 支付页的数据
+    const city = eventData.city || "深圳";
+    const area = eventData.area;
+    // 目前后端将 district 用作「商圈/区域」键；先用 area 直接作为 district，保证与默认池 key 一致
+    const district = area;
 
-      // 用户本次报名的主预算档（取所选中的第一个）
-      const primaryBudgetTier = budgetPreference[0] || "";
+    // 用户本次报名的主预算档（取所选中的第一个）
+    const primaryBudgetTier = budgetPreference[0] || "";
 
-      // 保存城市信息和用户偏好到localStorage用于后续页面
-      localStorage.setItem("blindbox_city", city);
-      localStorage.setItem(
-        "blindbox_preferences",
-        JSON.stringify({
-          languages: selectedLanguages,
-          tasteIntensity: selectedTasteIntensity,
-          cuisines: selectedCuisines,
-          barThemes: selectedBarThemes,
-          alcoholComfort: selectedAlcoholComfort,
-        })
-      );
-
-      // 保存盲盒事件数据到localStorage，用于支付页调用 /api/blind-box-events
-      const blindboxEventPayload = {
-        // 关联的活动池 ID（用于后端将用户报名写入正确的池子）
-        poolId: eventData.poolId || null,
-
-        // 基本信息
-        date: eventData.date,
-        time: eventData.time,
-        eventType: eventData.eventType,
-        city,
-
-        // 区域相关：同时写 district 和 area，后端会优先用 district，fallback 到 area
-        district,
-        area,
-
-        // 预算：数组 + 主预算档，兼容后端的 budget / budgetTier 逻辑
-        // 饭局使用 budgetTier/budget, 酒局使用 barBudgetTier/barBudget
-        budgetTier: eventData.eventType === "饭局" ? primaryBudgetTier : "",
-        budget: eventData.eventType === "饭局" ? budgetPreference : [],
-        barBudgetTier: eventData.eventType === "酒局" ? (barBudgetPreference[0] || "") : "",
-        barBudget: eventData.eventType === "酒局" ? barBudgetPreference : [],
-
-        // 偏好信息
-        selectedDistricts,
-        acceptNearby: selectedDistricts.length > 1,
-        selectedLanguages,
-        selectedTasteIntensity,
-        selectedCuisines,
+    // 保存城市信息和用户偏好到localStorage用于后续页面
+    localStorage.setItem("blindbox_city", city);
+    localStorage.setItem(
+      "blindbox_preferences",
+      JSON.stringify({
+        languages: selectedLanguages,
+        tasteIntensity: selectedTasteIntensity,
+        cuisines: selectedCuisines,
         barThemes: selectedBarThemes,
         alcoholComfort: selectedAlcoholComfort,
+      })
+    );
 
-        // 参与意图：同时写入 socialGoals 和 intent，方便后端与其它模块复用
-        socialGoals: selectedIntent,
-        intent: selectedIntent,
+    // 保存盲盒事件数据到localStorage，用于支付页调用 /api/blind-box-events
+    const blindboxEventPayload = {
+      // 关联的活动池 ID（用于后端将用户报名写入正确的池子）
+      poolId: eventData.poolId || null,
 
-        // 组队邀请相关
-        inviteFriends: showTeamInvite,
-        friendsCount: showTeamInvite ? 1 : 0,
-        inviteLink: showTeamInvite ? inviteLink : null,
-        mustMatchTogether: showTeamInvite ? mustMatchTogether : false,
-      };
+      // 基本信息
+      date: eventData.date,
+      time: eventData.time,
+      eventType: eventData.eventType,
+      city,
 
-      console.log("[JoinBlindBoxSheet] saving blindbox_event_data:", blindboxEventPayload);
+      // 区域相关：同时写 district 和 area，后端会优先用 district，fallback 到 area
+      district,
+      area,
 
-      localStorage.setItem(
-        "blindbox_event_data",
-        JSON.stringify(blindboxEventPayload)
-      );
+      // 预算：数组 + 主预算档，兼容后端的 budget / budgetTier 逻辑
+      // 饭局使用 budgetTier/budget, 酒局使用 barBudgetTier/barBudget
+      budgetTier: eventData.eventType === "饭局" ? primaryBudgetTier : "",
+      budget: eventData.eventType === "饭局" ? budgetPreference : [],
+      barBudgetTier: eventData.eventType === "酒局" ? (barBudgetPreference[0] || "") : "",
+      barBudget: eventData.eventType === "酒局" ? barBudgetPreference : [],
 
-      setShowConfirmDialog(false);
-      onOpenChange(false);
-      // 导航到付费页面
-      setTimeout(() => {
-        setLocation("/blindbox/payment");
-      }, 300);
-    } catch (error) {
-      // Error already handled by mutation's onError
-    }
+      // 偏好信息
+      selectedDistricts,
+      acceptNearby: selectedDistricts.length > 1,
+      selectedLanguages,
+      selectedTasteIntensity,
+      selectedCuisines,
+      barThemes: selectedBarThemes,
+      alcoholComfort: selectedAlcoholComfort,
+
+      // 参与意图：同时写入 socialGoals 和 intent，方便后端与其它模块复用
+      socialGoals: selectedIntent,
+      intent: selectedIntent,
+
+      // 组队邀请相关
+      inviteFriends: showTeamInvite,
+      friendsCount: showTeamInvite ? 1 : 0,
+      inviteLink: showTeamInvite ? inviteLink : null,
+      mustMatchTogether: showTeamInvite ? mustMatchTogether : false,
+    };
+
+    console.log("[JoinBlindBoxSheet] saving blindbox_event_data:", blindboxEventPayload);
+
+    localStorage.setItem(
+      "blindbox_event_data",
+      JSON.stringify(blindboxEventPayload)
+    );
+
+    setShowConfirmDialog(false);
+    onOpenChange(false);
+    // 导航到付费页面
+    setTimeout(() => {
+      setLocation("/blindbox/payment");
+    }, 300);
   };
 
   const getConfirmButtonText = () => {
