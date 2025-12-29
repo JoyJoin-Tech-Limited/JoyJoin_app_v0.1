@@ -422,6 +422,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simplified phone login (no SMS verification for MVP)
+  app.post('/api/auth/phone-login', async (req: any, res) => {
+    try {
+      const { phone } = req.body;
+      
+      if (!phone || phone.length < 8) {
+        return res.status(400).json({ message: "Invalid phone number" });
+      }
+      
+      // Find or create user by phone number
+      const existingUsers = await storage.getUserByPhone(phone);
+      let user = existingUsers && existingUsers.length > 0 ? existingUsers[0] : null;
+      
+      if (!user) {
+        user = await storage.createUserWithPhone({
+          phoneNumber: phone,
+          email: `${phone}@joyjoin.app`,
+          firstName: "用户",
+          lastName: phone.slice(-4),
+        });
+        console.log("[PHONE-LOGIN] Created new user:", user.id);
+      } else {
+        console.log("[PHONE-LOGIN] Found existing user:", user.id);
+      }
+      
+      req.session.regenerate((err: any) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ message: "Login failed" });
+        }
+        
+        req.session.userId = user!.id;
+        req.session.save((err: any) => {
+          if (err) {
+            console.error("Session save error:", err);
+            return res.status(500).json({ message: "Login failed" });
+          }
+          
+          console.log("[PHONE-LOGIN] Session created for user:", user!.id);
+          res.json({ 
+            message: "Login successful",
+            userId: user!.id
+          });
+        });
+      });
+    } catch (error) {
+      console.error("Error during phone login:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', isPhoneAuthenticated, async (req: any, res) => {
     // 🔧 DEBUG_AUTH logging (Phase 4.2)
