@@ -235,9 +235,9 @@ export default function LoginPage() {
       if (!userData.hasCompletedRegistration) {
         toast({
           title: "欢迎加入悦聚！",
-          description: "让我们开始注册流程吧~",
+          description: "让我们开始认识你吧~",
         });
-        setTimeout(() => setLocation("/registration"), 500);
+        setTimeout(() => setLocation("/onboarding"), 500);
       } else {
         toast({
           title: "登录成功",
