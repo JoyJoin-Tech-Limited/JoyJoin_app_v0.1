@@ -93,6 +93,9 @@ function AuthenticatedRouter() {
       <Switch>
         {/* 新版 Duolingo-style Onboarding 流程 */}
         <Route path="/onboarding" component={DuolingoOnboardingPage} />
+        {/* 性格测试 - onboarding 完成后进入 */}
+        <Route path="/personality-test" component={PersonalityTestPage} />
+        <Route path="/personality-test/results" component={PersonalityTestResultPage} />
         {/* 保留旧版注册供内部测试使用 */}
         <Route path="/registration" component={ChatRegistrationPage} />
         <Route path="/registration/chat" component={ChatRegistrationPage} />
