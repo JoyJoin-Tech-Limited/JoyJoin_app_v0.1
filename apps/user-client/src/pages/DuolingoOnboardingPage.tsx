@@ -669,6 +669,16 @@ export default function DuolingoOnboardingPage() {
             <p className="mt-6 text-sm text-muted-foreground text-center">
               2分钟完成剩余测试
             </p>
+
+            {import.meta.env.DEV && (
+              <button
+                onClick={handleNext}
+                className="mt-4 text-xs text-muted-foreground/50 hover:text-muted-foreground underline"
+                data-testid="button-skip-login"
+              >
+                跳过登录（测试用）
+              </button>
+            )}
           </motion.div>
         );
 
