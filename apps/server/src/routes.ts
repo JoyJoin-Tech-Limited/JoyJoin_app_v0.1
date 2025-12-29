@@ -377,6 +377,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dev-only login endpoint for testing
+  app.post('/api/auth/dev-login', async (req: any, res) => {
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(403).json({ message: "Dev login is only available in development mode" });
+    }
+    
+    try {
+      const testUsers = await storage.getUserByPhone("dev-test-12345");
+      let testUser = testUsers && testUsers.length > 0 ? testUsers[0] : null;
+      
+      if (!testUser) {
+        testUser = await storage.createUserWithPhone({
+          phoneNumber: "dev-test-12345",
+          email: "dev-test@joyjoin.app",
+          firstName: "测试",
+          lastName: "用户",
+        });
+      }
+      
+      req.session.regenerate((err: any) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ message: "Dev login failed" });
+        }
+        
+        req.session.userId = testUser!.id;
+        req.session.save((err: any) => {
+          if (err) {
+            console.error("Session save error:", err);
+            return res.status(500).json({ message: "Dev login failed" });
+          }
+          
+          console.log("[DEV-LOGIN] Test session created for user:", testUser!.id);
+          res.json({ 
+            message: "Dev login successful",
+            userId: testUser!.id
+          });
+        });
+      });
+    } catch (error) {
+      console.error("Error during dev login:", error);
+      res.status(500).json({ message: "Dev login failed" });
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', isPhoneAuthenticated, async (req: any, res) => {
     // 🔧 DEBUG_AUTH logging (Phase 4.2)
