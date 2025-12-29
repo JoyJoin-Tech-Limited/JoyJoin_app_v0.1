@@ -45,6 +45,7 @@ import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import NotFound from "@/pages/not-found";
 import LevelUpProvider from "@/components/LevelUpProvider";
+import DuolingoOnboardingPage from "@/pages/DuolingoOnboardingPage";
 
 function RedirectToRegistration() {
   const [, setLocation] = useLocation();
@@ -211,6 +212,8 @@ function Router() {
   if (!isAuthenticated) {
     return (
       <Switch>
+        {/* 新版 Duolingo-style Onboarding 流程 */}
+        <Route path="/onboarding" component={DuolingoOnboardingPage} />
         {/* AI对话注册（小悦）为唯一用户入口 */}
         <Route path="/registration" component={ChatRegistrationPage} />
         <Route path="/registration/chat" component={ChatRegistrationPage} />
