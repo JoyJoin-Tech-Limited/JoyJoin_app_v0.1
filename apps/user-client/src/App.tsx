@@ -47,10 +47,10 @@ import NotFound from "@/pages/not-found";
 import LevelUpProvider from "@/components/LevelUpProvider";
 import DuolingoOnboardingPage from "@/pages/DuolingoOnboardingPage";
 
-function RedirectToRegistration() {
+function RedirectToOnboarding() {
   const [, setLocation] = useLocation();
   useEffect(() => {
-    setLocation("/registration");
+    setLocation("/onboarding");
   }, [setLocation]);
   return null;
 }
@@ -91,12 +91,13 @@ function AuthenticatedRouter() {
   if (needsRegistration) {
     return (
       <Switch>
-        {/* AI对话注册（小悦）为唯一用户入口 */}
+        {/* 新版 Duolingo-style Onboarding 流程 */}
+        <Route path="/onboarding" component={DuolingoOnboardingPage} />
+        {/* 保留旧版注册供内部测试使用 */}
         <Route path="/registration" component={ChatRegistrationPage} />
         <Route path="/registration/chat" component={ChatRegistrationPage} />
-        {/* 保留表单注册供内部测试使用 */}
         <Route path="/registration/form" component={RegistrationPage} />
-        <Route path="*" component={RedirectToRegistration} />
+        <Route path="*" component={RedirectToOnboarding} />
       </Switch>
     );
   }
