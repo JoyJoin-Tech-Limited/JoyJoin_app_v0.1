@@ -423,7 +423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Simplified phone login (no SMS verification for MVP)
-  app.post('/api/auth/phone-login', async (req: any, res) => {
+  app.post('/api/auth/quick-login', async (req: any, res) => {
     try {
       const { phone } = req.body;
       

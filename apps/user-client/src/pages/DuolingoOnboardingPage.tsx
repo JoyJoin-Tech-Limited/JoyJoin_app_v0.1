@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Sparkles, PartyPopper, Phone, Mail, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ChevronLeft, Sparkles, PartyPopper, ArrowRight, Mail, Eye, EyeOff, Loader2 } from "lucide-react";
 import { SiApple } from "react-icons/si";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -572,7 +572,7 @@ export default function DuolingoOnboardingPage() {
             className="flex-1 flex flex-col px-4 py-4 pb-24 overflow-y-auto"
           >
             <div className="mb-3">
-              <p className="text-base text-muted-foreground mb-3 leading-relaxed">
+              <p className="text-xl text-foreground/80 mb-4 leading-relaxed font-medium">
                 {scenarioText}
               </p>
               <XiaoyueMascot 
@@ -666,12 +666,12 @@ export default function DuolingoOnboardingPage() {
                   }
                   try {
                     saveOnboardingAnswersForPersonalityTest(answers);
-                    await apiRequest("POST", "/api/auth/phone-login", { phone });
+                    await apiRequest("POST", "/api/auth/quick-login", { phone });
                     queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
                     clearCachedProgress();
                     setLocation("/personality-test");
                   } catch (error) {
-                    console.error("Phone login failed:", error);
+                    console.error("Quick login failed:", error);
                     toast({
                       title: "登录失败",
                       description: "请稍后再试",
@@ -682,8 +682,8 @@ export default function DuolingoOnboardingPage() {
                 disabled={phone.length < 8}
                 data-testid="button-phone-login"
               >
-                <Phone className="w-5 h-5 mr-2" />
                 继续
+                <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </div>
           </motion.div>
