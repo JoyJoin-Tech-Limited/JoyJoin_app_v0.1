@@ -61,11 +61,52 @@ function XiaoyueMascot({
   mood = "normal", 
   message,
   className,
+  horizontal = false,
 }: { 
   mood?: XiaoyueMood; 
   message: string;
   className?: string;
+  horizontal?: boolean;
 }) {
+  if (horizontal) {
+    return (
+      <div className={cn("flex items-start gap-3", className)}>
+        <motion.div
+          animate={{ 
+            scale: [1, 1.02, 1],
+            y: [0, -2, 0],
+          }}
+          transition={{ 
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="relative shrink-0"
+        >
+          <img 
+            src={XIAOYUE_AVATARS[mood]} 
+            alt="小悦" 
+            className="w-16 h-16 object-contain drop-shadow-lg"
+            data-testid="img-xiaoyue-avatar"
+          />
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, x: -10 }}
+          animate={{ opacity: 1, scale: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="relative bg-card border border-border rounded-2xl px-4 py-3 shadow-md flex-1"
+        >
+          <div className="absolute top-4 -left-2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-card" />
+          <div className="absolute top-4 -left-[9px] w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-border" />
+          <p className="text-lg leading-relaxed" data-testid="text-xiaoyue-message">
+            {message}
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("flex flex-col items-center gap-4", className)}>
       <motion.div
@@ -528,15 +569,16 @@ export default function DuolingoOnboardingPage() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
-            className="flex-1 flex flex-col px-6 py-4 overflow-y-auto"
+            className="flex-1 flex flex-col px-4 py-4 pb-24 overflow-y-auto"
           >
-            <div className="mb-4">
-              <p className="text-sm text-muted-foreground mb-2 leading-relaxed">
+            <div className="mb-3">
+              <p className="text-base text-muted-foreground mb-3 leading-relaxed">
                 {scenarioText}
               </p>
               <XiaoyueMascot 
                 mood="normal"
                 message={questionTextClean}
+                horizontal
               />
             </div>
             
@@ -546,7 +588,7 @@ export default function DuolingoOnboardingPage() {
               onSelect={(value) => handleAnswer(question.id, value)}
             />
 
-            <div className="mt-auto pt-4">
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t z-40">
               <Button 
                 size="lg"
                 className="w-full h-14 text-lg rounded-2xl"
@@ -566,7 +608,7 @@ export default function DuolingoOnboardingPage() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col items-center px-6 py-6"
+            className="flex-1 flex flex-col items-center px-6 py-6 pb-24"
           >
             <XiaoyueMascot 
               mood="excited"
@@ -574,76 +616,16 @@ export default function DuolingoOnboardingPage() {
             />
 
             <div className="w-full max-w-sm mt-8 space-y-4">
-              {!isCodeSent ? (
-                <>
-                  <div className="space-y-2">
-                    <Input
-                      type="tel"
-                      placeholder="输入手机号"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="h-14 text-lg rounded-2xl px-5"
-                      data-testid="input-phone"
-                    />
-                  </div>
-                  <Button 
-                    size="lg"
-                    className="w-full h-14 text-lg rounded-2xl"
-                    onClick={handleSendCode}
-                    disabled={phone.length < 8 || sendCodeMutation.isPending}
-                    data-testid="button-send-code"
-                  >
-                    {sendCodeMutation.isPending ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <>
-                        <Phone className="w-5 h-5 mr-2" />
-                        发送验证码
-                      </>
-                    )}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    <Input
-                      type="text"
-                      placeholder="输入6位验证码"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value.slice(0, 6))}
-                      className="h-14 text-lg rounded-2xl px-5 text-center tracking-widest"
-                      maxLength={6}
-                      data-testid="input-code"
-                    />
-                    <p className="text-sm text-muted-foreground text-center">
-                      验证码已发送到 {phone}
-                      {countdown > 0 ? (
-                        <span className="ml-2">({countdown}s)</span>
-                      ) : (
-                        <button
-                          onClick={handleSendCode}
-                          className="ml-2 text-primary underline"
-                        >
-                          重新发送
-                        </button>
-                      )}
-                    </p>
-                  </div>
-                  <Button 
-                    size="lg"
-                    className="w-full h-14 text-lg rounded-2xl"
-                    onClick={handleVerifyCode}
-                    disabled={verificationCode.length !== 6 || verifyCodeMutation.isPending}
-                    data-testid="button-verify-code"
-                  >
-                    {verifyCodeMutation.isPending ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      "验证登录"
-                    )}
-                  </Button>
-                </>
-              )}
+              <div className="space-y-2">
+                <Input
+                  type="tel"
+                  placeholder="输入手机号"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="h-14 text-lg rounded-2xl px-5"
+                  data-testid="input-phone"
+                />
+              </div>
 
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
@@ -670,30 +652,40 @@ export default function DuolingoOnboardingPage() {
               2分钟完成剩余测试
             </p>
 
-            {import.meta.env.DEV && (
-              <button
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t z-40">
+              <Button 
+                size="lg"
+                className="w-full h-14 text-lg rounded-2xl"
                 onClick={async () => {
+                  if (phone.length < 8) {
+                    toast({
+                      title: "请输入有效手机号",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
                   try {
                     saveOnboardingAnswersForPersonalityTest(answers);
-                    await apiRequest("POST", "/api/auth/dev-login", {});
+                    await apiRequest("POST", "/api/auth/phone-login", { phone });
                     queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
                     clearCachedProgress();
                     setLocation("/personality-test");
                   } catch (error) {
-                    console.error("Dev login failed:", error);
+                    console.error("Phone login failed:", error);
                     toast({
-                      title: "测试登录失败",
-                      description: "请检查控制台日志",
+                      title: "登录失败",
+                      description: "请稍后再试",
                       variant: "destructive",
                     });
                   }
                 }}
-                className="mt-4 text-xs text-muted-foreground/50 hover:text-muted-foreground underline"
-                data-testid="button-skip-login"
+                disabled={phone.length < 8}
+                data-testid="button-phone-login"
               >
-                跳过登录（测试用）
-              </button>
-            )}
+                <Phone className="w-5 h-5 mr-2" />
+                继续
+              </Button>
+            </div>
           </motion.div>
         );
 
