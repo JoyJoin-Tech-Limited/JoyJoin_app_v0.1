@@ -412,7 +412,7 @@ export default function LoginPage() {
               <Button
                 size="lg"
                 className="min-h-[52px] px-10 text-lg font-bold bg-gradient-to-r from-purple-500 via-primary to-pink-500 hover:from-purple-600 hover:via-primary/90 hover:to-pink-600 text-white border-0 shadow-xl transition-all duration-300 hover:scale-[1.02]"
-                onClick={() => document.getElementById('login-section')?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={() => setLocation("/onboarding")}
                 data-testid="button-hero-cta"
               >
                 立即体验
