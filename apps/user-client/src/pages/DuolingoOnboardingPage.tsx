@@ -11,12 +11,14 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { personalityQuestionsV2 } from "@/data/personalityQuestionsV2";
 
 import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01_1766766685652.png";
 import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03_1766766685650.png";
 import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
 
 const ONBOARDING_CACHE_KEY = "joyjoin_onboarding_progress";
+const ONBOARDING_ANSWERS_KEY = "joyjoin_onboarding_answers";
 const CACHE_EXPIRY_HOURS = 24;
 
 interface OnboardingState {
@@ -25,65 +27,12 @@ interface OnboardingState {
   timestamp: number;
 }
 
-interface OnboardingQuestion {
-  id: number;
-  question: string;
-  options: { value: string; label: string }[];
-  multiSelect?: boolean;
-}
+const ONBOARDING_QUESTIONS_COUNT = 6;
+const ONBOARDING_QUESTIONS = personalityQuestionsV2.slice(0, ONBOARDING_QUESTIONS_COUNT);
 
-const PRE_SIGNUP_QUESTIONS: OnboardingQuestion[] = [
-  {
-    id: 1,
-    question: "周末你更喜欢怎么度过？",
-    options: [
-      { value: "home", label: "在家充电刷剧" },
-      { value: "friends", label: "约朋友聚餐聊天" },
-      { value: "outdoor", label: "户外运动探索" },
-      { value: "random", label: "看心情随缘" },
-    ],
-  },
-  {
-    id: 2,
-    question: "社交场合你通常是哪种风格？",
-    options: [
-      { value: "initiator", label: "主动破冰，热场王" },
-      { value: "observer", label: "慢热观察，再出手" },
-      { value: "connector", label: "喜欢牵线搭桥" },
-      { value: "listener", label: "更爱倾听陪伴" },
-    ],
-  },
-  {
-    id: 3,
-    question: "聚会时你最享受哪种氛围？",
-    options: [
-      { value: "deep", label: "深度交流，聊人生" },
-      { value: "fun", label: "轻松搞笑，开心就好" },
-      { value: "learn", label: "互相学习，有收获" },
-      { value: "chill", label: "安静放松，不social" },
-    ],
-  },
-  {
-    id: 4,
-    question: "你希望认识什么样的新朋友？",
-    options: [
-      { value: "similar", label: "志同道合，兴趣相似" },
-      { value: "industry", label: "行业前辈，拓展人脉" },
-      { value: "creative", label: "有趣灵魂，脑洞大开" },
-      { value: "diverse", label: "各行各业，开阔视野" },
-    ],
-  },
-  {
-    id: 5,
-    question: "对于小型聚会（4-6人），你的期待是？",
-    options: [
-      { value: "quality", label: "质量优先，遇到合拍的人" },
-      { value: "frequency", label: "多参加，扩大社交圈" },
-      { value: "topic", label: "有主题，聊得有深度" },
-      { value: "casual", label: "随缘，开心就好" },
-    ],
-  },
-];
+function stripEmoji(text: string): string {
+  return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
+}
 
 const CITIES = [
   { value: "shenzhen", label: "深圳" },
@@ -202,7 +151,7 @@ function SelectionList({
   onSelect,
   multiSelect = false,
 }: {
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; tag?: string }[];
   selected: string | string[] | undefined;
   onSelect: (value: string | string[]) => void;
   multiSelect?: boolean;
@@ -238,7 +187,7 @@ function SelectionList({
           whileTap={{ scale: 0.98 }}
           onClick={() => handleSelect(option.value)}
           className={cn(
-            "w-full flex items-center gap-3 p-4 rounded-2xl border-2 transition-all duration-200 min-h-[56px]",
+            "w-full flex items-start gap-3 p-4 rounded-2xl border-2 transition-all duration-200 min-h-[56px]",
             "hover-elevate active-elevate-2",
             isSelected(option.value)
               ? "border-primary bg-primary/10 shadow-sm"
@@ -246,17 +195,24 @@ function SelectionList({
           )}
           data-testid={`button-option-${option.value}`}
         >
-          <span className={cn(
-            "text-base font-medium text-left flex-1",
-            isSelected(option.value) && "text-primary"
-          )}>
-            {option.label}
-          </span>
+          <div className="flex-1 text-left">
+            <span className={cn(
+              "text-base font-medium block",
+              isSelected(option.value) && "text-primary"
+            )}>
+              {option.label}
+            </span>
+            {option.tag && (
+              <span className="text-xs text-muted-foreground mt-1 block">
+                {option.tag}
+              </span>
+            )}
+          </div>
           {isSelected(option.value) && (
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0"
+              className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0 mt-0.5"
             >
               <Sparkles className="w-3 h-3 text-primary-foreground" />
             </motion.div>
@@ -302,6 +258,34 @@ function saveCachedProgress(data: Omit<OnboardingState, 'timestamp'>) {
 
 function clearCachedProgress() {
   localStorage.removeItem(ONBOARDING_CACHE_KEY);
+}
+
+function saveOnboardingAnswersForPersonalityTest(answers: Record<number, string | string[]>) {
+  try {
+    const formattedAnswers: Record<number, {
+      type: "single";
+      value: string;
+      traitScores: { A?: number; O?: number; C?: number; E?: number; X?: number; P?: number };
+    }> = {};
+    
+    ONBOARDING_QUESTIONS.forEach((question) => {
+      const answer = answers[question.id];
+      if (typeof answer === 'string') {
+        const selectedOption = question.options.find(opt => opt.value === answer);
+        if (selectedOption) {
+          formattedAnswers[question.id] = {
+            type: "single",
+            value: answer,
+            traitScores: { ...selectedOption.traitScores },
+          };
+        }
+      }
+    });
+    
+    localStorage.setItem(ONBOARDING_ANSWERS_KEY, JSON.stringify(formattedAnswers));
+  } catch {
+    // Ignore storage errors
+  }
 }
 
 export default function DuolingoOnboardingPage() {
@@ -366,7 +350,11 @@ export default function DuolingoOnboardingPage() {
   };
 
   const handleNext = () => {
-    setCurrentScreen(prev => prev + 1);
+    const nextScreen = currentScreen + 1;
+    if (nextScreen === 7) {
+      saveOnboardingAnswersForPersonalityTest(answers);
+    }
+    setCurrentScreen(nextScreen);
   };
 
   const handleBack = () => {
@@ -480,10 +468,10 @@ export default function DuolingoOnboardingPage() {
 
   const getScreenProgress = () => {
     if (currentScreen === 0) return 0;
-    if (currentScreen <= 5) return (currentScreen / 5) * 33;
-    if (currentScreen === 6) return 40;
-    if (currentScreen === 7) return 70;
-    if (currentScreen === 8) return 90;
+    if (currentScreen <= 6) return (currentScreen / 6) * 40;
+    if (currentScreen === 7) return 50;
+    if (currentScreen === 8) return 75;
+    if (currentScreen === 9) return 90;
     return 100;
   };
 
@@ -520,9 +508,18 @@ export default function DuolingoOnboardingPage() {
       case 3:
       case 4:
       case 5:
+      case 6:
         const questionIndex = currentScreen - 1;
-        const question = PRE_SIGNUP_QUESTIONS[questionIndex];
+        const question = ONBOARDING_QUESTIONS[questionIndex];
         const currentAnswer = answers[question.id];
+        const scenarioText = stripEmoji(question.scenarioText);
+        const questionTextClean = question.questionText;
+        
+        const optionsForList = question.options.map(opt => ({
+          value: opt.value,
+          label: opt.text,
+          tag: opt.tag,
+        }));
         
         return (
           <motion.div
@@ -531,22 +528,25 @@ export default function DuolingoOnboardingPage() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
-            className="flex-1 flex flex-col px-6 py-6"
+            className="flex-1 flex flex-col px-6 py-4 overflow-y-auto"
           >
-            <XiaoyueMascot 
-              mood="normal"
-              message={question.question}
-              className="mb-6"
-            />
+            <div className="mb-4">
+              <p className="text-sm text-muted-foreground mb-2 leading-relaxed">
+                {scenarioText}
+              </p>
+              <XiaoyueMascot 
+                mood="normal"
+                message={questionTextClean}
+              />
+            </div>
             
             <SelectionList
-              options={question.options}
-              selected={currentAnswer}
+              options={optionsForList}
+              selected={currentAnswer as string | undefined}
               onSelect={(value) => handleAnswer(question.id, value)}
-              multiSelect={question.multiSelect}
             />
 
-            <div className="mt-auto pt-6">
+            <div className="mt-auto pt-4">
               <Button 
                 size="lg"
                 className="w-full h-14 text-lg rounded-2xl"
@@ -560,7 +560,7 @@ export default function DuolingoOnboardingPage() {
           </motion.div>
         );
 
-      case 6:
+      case 7:
         return (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -672,7 +672,22 @@ export default function DuolingoOnboardingPage() {
 
             {import.meta.env.DEV && (
               <button
-                onClick={handleNext}
+                onClick={async () => {
+                  try {
+                    saveOnboardingAnswersForPersonalityTest(answers);
+                    await apiRequest("POST", "/api/auth/dev-login", {});
+                    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                    clearCachedProgress();
+                    setLocation("/personality-test");
+                  } catch (error) {
+                    console.error("Dev login failed:", error);
+                    toast({
+                      title: "测试登录失败",
+                      description: "请检查控制台日志",
+                      variant: "destructive",
+                    });
+                  }
+                }}
                 className="mt-4 text-xs text-muted-foreground/50 hover:text-muted-foreground underline"
                 data-testid="button-skip-login"
               >
@@ -682,7 +697,7 @@ export default function DuolingoOnboardingPage() {
           </motion.div>
         );
 
-      case 7:
+      case 8:
         return (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -782,7 +797,7 @@ export default function DuolingoOnboardingPage() {
           </motion.div>
         );
 
-      case 8:
+      case 9:
         const years = Array.from({ length: 40 }, (_, i) => 2006 - i);
         
         return (

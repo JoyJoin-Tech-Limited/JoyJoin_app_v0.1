@@ -21,6 +21,8 @@ import { evaluatePersonality } from "@/lib/cumulativeScoringSystem";
 import CelebrationConfetti from "@/components/CelebrationConfetti";
 
 const PERSONALITY_TEST_CACHE_KEY = "joyjoin_personality_test_progress";
+const ONBOARDING_ANSWERS_KEY = "joyjoin_onboarding_answers";
+const ONBOARDING_QUESTIONS_COUNT = 6;
 const CACHE_EXPIRY_DAYS = 7;
 
 interface AnswerV2 {
@@ -78,6 +80,27 @@ function clearCachedProgress() {
   localStorage.removeItem(PERSONALITY_TEST_CACHE_KEY);
 }
 
+function loadOnboardingAnswers(): Record<number, AnswerV2> | null {
+  try {
+    const stored = localStorage.getItem(ONBOARDING_ANSWERS_KEY);
+    if (!stored) return null;
+    
+    const parsed = JSON.parse(stored) as Record<number, AnswerV2>;
+    const questionCount = Object.keys(parsed).length;
+    
+    if (questionCount >= ONBOARDING_QUESTIONS_COUNT) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function clearOnboardingAnswers() {
+  localStorage.removeItem(ONBOARDING_ANSWERS_KEY);
+}
+
 const INTRO_SHOWN_KEY = "joyjoin_personality_intro_shown";
 
 export default function PersonalityTestPage() {
@@ -105,12 +128,22 @@ export default function PersonalityTestPage() {
   const [lowEnergyQuestionIndex, setLowEnergyQuestionIndex] = useState(0);
   const lowEnergyQuestions = useMemo(() => getLowEnergyCalibrationQuestions(), []);
   
-  // Load cached progress on mount
+  // Load cached progress or onboarding answers on mount
   useEffect(() => {
     const cached = loadCachedProgress();
     if (cached && cached.currentQuestionIndex > 0) {
       setCachedData(cached);
       setShowResumePrompt(true);
+      return;
+    }
+    
+    const onboardingAnswers = loadOnboardingAnswers();
+    if (onboardingAnswers) {
+      setAnswers(onboardingAnswers);
+      setCurrentQuestionIndex(ONBOARDING_QUESTIONS_COUNT);
+      localStorage.setItem(INTRO_SHOWN_KEY, "true");
+      setShowIntro(false);
+      clearOnboardingAnswers();
     }
   }, []);
   
