@@ -519,6 +519,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Complete personality test - sets hasCompletedPersonalityTest flag
+  app.post('/api/auth/complete-personality-test', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+
+      const updatedUser = await storage.updateUser(userId, {
+        hasCompletedPersonalityTest: true,
+        hasCompletedProfileSetup: true,
+      });
+      console.log("[COMPLETE-PERSONALITY-TEST] User completed personality test flow:", userId);
+
+      res.json({ message: "Personality test completed", user: updatedUser });
+    } catch (error) {
+      console.error("Error completing personality test:", error);
+      res.status(500).json({ message: "Failed to complete personality test" });
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', isPhoneAuthenticated, async (req: any, res) => {
     // 🔧 DEBUG_AUTH logging (Phase 4.2)
