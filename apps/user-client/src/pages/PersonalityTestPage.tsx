@@ -1022,40 +1022,20 @@ export default function PersonalityTestPage() {
                 <h2 className="text-lg font-bold mb-3 text-balance">{currentLowEnergyQuestion.questionText}</h2>
               </motion.div>
 
-              <div className="options-compact">
-                {currentLowEnergyQuestion.options.map((option) => {
-                  const isSelected = answers[currentLowEnergyQuestion.id]?.value === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => handleLowEnergyChoice(option.value, option.traitScores)}
-                      className={`option-compact ${isSelected ? "selected" : ""}`}
-                      data-testid={`button-low-energy-${currentLowEnergyQuestion.id}-${option.value}`}
-                    >
-                      <div className="flex items-start gap-2 w-full">
-                        <span className="font-semibold shrink-0 text-muted-foreground">{option.value}.</span>
-                        <span className="flex-1">{option.text}</span>
-                        {isSelected && (
-                          <span className="text-primary font-bold shrink-0">
-                            <Sparkles className="w-3.5 h-3.5" />
-                          </span>
-                        )}
-                      </div>
-                      {option.tag && (
-                        <div className="flex justify-end w-full">
-                          <Badge 
-                            variant={isSelected ? "default" : "secondary"} 
-                            className="text-xs px-1.5 py-0"
-                          >
-                            {option.tag}
-                          </Badge>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+              <SelectionList
+                options={currentLowEnergyQuestion.options.map(opt => ({
+                  value: opt.value,
+                  label: opt.text,
+                  tag: opt.tag,
+                }))}
+                selected={answers[currentLowEnergyQuestion.id]?.value}
+                onSelect={(value) => {
+                  const option = currentLowEnergyQuestion.options.find(o => o.value === value);
+                  if (option) {
+                    handleLowEnergyChoice(option.value, option.traitScores);
+                  }
+                }}
+              />
             </>
           ) : (
             /* ========== 普通题目渲染 (Onboarding-style UI) ========== */
