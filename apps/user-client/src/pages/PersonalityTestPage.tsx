@@ -558,7 +558,8 @@ export default function PersonalityTestPage() {
   const effectiveQuestionNumber = lowEnergyCalibrationActive 
     ? allQuestions.length + lowEnergyQuestionIndex + 1 
     : currentQuestionIndex + 1;
-  const progress = (effectiveQuestionNumber / totalQuestions) * 100;
+  // Progress: Start at 8%, grow to 92% as questions are answered (never show 0% or 100% until complete)
+  const progress = Math.min(92, Math.max(8, ((effectiveQuestionNumber - 1) / totalQuestions) * 100 + 8));
 
   const getProgressLabel = () => {
     if (lowEnergyCalibrationActive) return "静谧小屋 · 精准校准";
@@ -974,19 +975,28 @@ export default function PersonalityTestPage() {
       <AnimatePresence>{showBlindBox && <BlindBoxReveal />}</AnimatePresence>
       <AnimatePresence>{showMilestone && <MilestoneCard />}</AnimatePresence>
 
-      {/* 简化的进度条 - sticky悬浮 */}
+      {/* 顶部导航 - 匹配 onboarding 样式 */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b">
-        <div className="mobile-header-compact">
-          <div className="flex items-center justify-between mb-1.5">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <h1 className="text-base font-semibold">性格测试</h1>
-            </div>
-            <span className="text-sm font-medium text-primary">
-              {effectiveQuestionNumber}/{totalQuestions}
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-3">
+            {currentQuestionIndex > 0 && !lowEnergyCalibrationActive ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleBack}
+                className="shrink-0 -ml-2"
+                data-testid="button-back-top"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </Button>
+            ) : (
+              <div className="w-9 shrink-0" />
+            )}
+            <Progress value={progress} className="flex-1 h-1.5" />
+            <span className="text-sm font-medium text-muted-foreground shrink-0 min-w-[3rem] text-right">
+              {Math.round(progress)}%
             </span>
           </div>
-          <Progress value={progress} className="h-1" />
         </div>
       </div>
 
@@ -1200,39 +1210,24 @@ export default function PersonalityTestPage() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
-        <div className="max-w-2xl mx-auto px-4 py-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
-          <div className="flex flex-col gap-3">
-            {currentQuestionIndex > 0 && (
-              <button
-                onClick={handleBack}
-                className="flex items-center justify-center gap-1 text-muted-foreground hover:text-foreground transition-colors text-sm py-2"
-                data-testid="button-back"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                上一题
-              </button>
-            )}
-            <Button
-              onClick={handleNext}
-              disabled={!canProceed() || submitTestMutation.isPending}
-              className="w-full min-h-[68px] text-base font-semibold bg-gradient-to-r from-primary to-primary/80 shadow-lg"
-              size="lg"
-              data-testid="button-next"
-            >
-              {isLastQuestion ? (
-                submitTestMutation.isPending ? (
-                  "提交中..."
-                ) : (
-                  "完成测试"
-                )
+        <div className="max-w-2xl mx-auto px-4 py-5 pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)]">
+          <Button
+            onClick={handleNext}
+            disabled={!canProceed() || submitTestMutation.isPending}
+            className="w-full min-h-[56px] text-base font-semibold bg-gradient-to-r from-primary to-primary/80 shadow-lg"
+            size="lg"
+            data-testid="button-next"
+          >
+            {isLastQuestion ? (
+              submitTestMutation.isPending ? (
+                "提交中..."
               ) : (
-                <>
-                  下一题
-                  <ChevronRight className="h-5 w-5 ml-2" />
-                </>
-              )}
-            </Button>
-          </div>
+                "完成测试"
+              )
+            ) : (
+              "继续"
+            )}
+          </Button>
         </div>
       </div>
       <div className="h-32" />
