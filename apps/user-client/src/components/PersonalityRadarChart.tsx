@@ -116,9 +116,9 @@ export default function PersonalityRadarChart({
               key={scale}
               points={scaledPoints}
               fill="none"
-              stroke="hsl(var(--muted-foreground))"
-              strokeWidth="0.75"
-              opacity="0.4"
+              stroke="hsl(var(--border))"
+              strokeWidth="1"
+              opacity="0.7"
             />
           );
         })}
@@ -134,9 +134,9 @@ export default function PersonalityRadarChart({
               y1={centerY}
               x2={x}
               y2={y}
-              stroke="hsl(var(--muted-foreground))"
-              strokeWidth="0.75"
-              opacity="0.4"
+              stroke="hsl(var(--border))"
+              strokeWidth="1"
+              opacity="0.7"
             />
           );
         })}
