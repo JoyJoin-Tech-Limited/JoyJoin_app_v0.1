@@ -1199,41 +1199,43 @@ export default function PersonalityTestPage() {
         </div>
       </div>
 
-      <div className="mobile-footer">
-        <div className="max-w-2xl mx-auto flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            disabled={currentQuestionIndex === 0}
-            className="flex-1"
-            size="default"
-            data-testid="button-back"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            上一题
-          </Button>
-          <Button
-            onClick={handleNext}
-            disabled={!canProceed() || submitTestMutation.isPending}
-            className="flex-1"
-            size="default"
-            data-testid="button-next"
-          >
-            {isLastQuestion ? (
-              submitTestMutation.isPending ? (
-                "提交中..."
-              ) : (
-                "完成测试"
-              )
-            ) : (
-              <>
-                下一题
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </>
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
+        <div className="max-w-2xl mx-auto px-4 py-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
+          <div className="flex flex-col gap-3">
+            {currentQuestionIndex > 0 && (
+              <button
+                onClick={handleBack}
+                className="flex items-center justify-center gap-1 text-muted-foreground hover:text-foreground transition-colors text-sm py-2"
+                data-testid="button-back"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                上一题
+              </button>
             )}
-          </Button>
+            <Button
+              onClick={handleNext}
+              disabled={!canProceed() || submitTestMutation.isPending}
+              className="w-full min-h-[68px] text-base font-semibold bg-gradient-to-r from-primary to-primary/80 shadow-lg"
+              size="lg"
+              data-testid="button-next"
+            >
+              {isLastQuestion ? (
+                submitTestMutation.isPending ? (
+                  "提交中..."
+                ) : (
+                  "完成测试"
+                )
+              ) : (
+                <>
+                  下一题
+                  <ChevronRight className="h-5 w-5 ml-2" />
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
+      <div className="h-32" />
     </div>
   );
 }
