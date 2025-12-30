@@ -218,7 +218,7 @@ function SelectionList({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {options.map((option, index) => (
         <motion.button
           key={option.value}
@@ -228,7 +228,7 @@ function SelectionList({
           whileTap={{ scale: 0.98 }}
           onClick={() => handleSelect(option.value)}
           className={cn(
-            "w-full flex items-start gap-3 p-4 rounded-2xl border-2 transition-all duration-200 min-h-[56px]",
+            "w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all duration-200 min-h-[48px]",
             "hover-elevate active-elevate-2",
             isSelected(option.value)
               ? "border-primary bg-primary/10 shadow-sm"
@@ -238,13 +238,13 @@ function SelectionList({
         >
           <div className="flex-1 text-left">
             <span className={cn(
-              "text-base font-medium block",
+              "text-base font-medium",
               isSelected(option.value) && "text-primary"
             )}>
               {option.label}
             </span>
             {option.tag && (
-              <span className="text-xs text-muted-foreground mt-1 block">
+              <span className="text-xs text-muted-foreground ml-2">
                 {option.tag}
               </span>
             )}
@@ -253,7 +253,7 @@ function SelectionList({
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0 mt-0.5"
+              className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0"
             >
               <Sparkles className="w-3 h-3 text-primary-foreground" />
             </motion.div>
@@ -569,10 +569,10 @@ export default function DuolingoOnboardingPage() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
-            className="flex-1 flex flex-col px-4 py-4 pb-24 overflow-y-auto"
+            className="flex-1 flex flex-col px-4 py-3"
           >
-            <div className="mb-3">
-              <p className="text-xl text-foreground/80 mb-4 leading-relaxed font-medium">
+            <div className="mb-2">
+              <p className="text-lg text-foreground/80 mb-2 leading-relaxed font-medium">
                 {scenarioText}
               </p>
               <XiaoyueMascot 
@@ -582,13 +582,15 @@ export default function DuolingoOnboardingPage() {
               />
             </div>
             
-            <SelectionList
-              options={optionsForList}
-              selected={currentAnswer as string | undefined}
-              onSelect={(value) => handleAnswer(question.id, value)}
-            />
+            <div className="flex-1 flex flex-col justify-center py-2">
+              <SelectionList
+                options={optionsForList}
+                selected={currentAnswer as string | undefined}
+                onSelect={(value) => handleAnswer(question.id, value)}
+              />
+            </div>
 
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t z-40">
+            <div className="py-3 mt-auto">
               <Button 
                 size="lg"
                 className="w-full h-14 text-lg rounded-2xl"

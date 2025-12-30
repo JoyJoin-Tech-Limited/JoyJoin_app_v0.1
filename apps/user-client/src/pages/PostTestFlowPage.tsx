@@ -207,11 +207,13 @@ function SelectionChips({
   selected,
   onSelect,
   multiSelect = false,
+  compact = false,
 }: {
   options: { value: string; label: string; description?: string }[];
   selected: string | string[];
   onSelect: (value: string | string[]) => void;
   multiSelect?: boolean;
+  compact?: boolean;
 }) {
   const handleSelect = (value: string) => {
     if (multiSelect) {
@@ -243,7 +245,7 @@ function SelectionChips({
   };
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className={cn("flex flex-wrap", compact ? "gap-1.5" : "gap-2")}>
       {options.map((option, index) => (
         <motion.button
           key={option.value}
@@ -253,8 +255,9 @@ function SelectionChips({
           whileTap={{ scale: 0.95 }}
           onClick={() => handleSelect(option.value)}
           className={cn(
-            "px-3 py-2 rounded-lg border transition-all duration-200 min-h-[44px]",
+            "rounded-lg border transition-all duration-200",
             "hover-elevate active-elevate-2",
+            compact ? "px-2.5 py-1.5 min-h-[44px]" : "px-3 py-2 min-h-[44px]",
             isSelected(option.value)
               ? "border-primary bg-primary/10 shadow-sm"
               : "border-border bg-card hover:border-primary/50"
@@ -262,7 +265,7 @@ function SelectionChips({
           data-testid={`chip-${option.value}`}
         >
           <span className={cn(
-            "text-[15px] font-medium",
+            "font-medium text-base",
             isSelected(option.value) && "text-primary"
           )}>
             {option.label}
@@ -293,7 +296,7 @@ function ButtonGroup({
           whileTap={{ scale: 0.97 }}
           onClick={() => onSelect(option)}
           className={cn(
-            "flex-1 py-4 px-4 rounded-xl border-2 transition-all duration-200 min-h-[56px]",
+            "flex-1 py-3 px-3 rounded-xl border-2 transition-all duration-200 min-h-[48px]",
             "hover-elevate active-elevate-2 text-base font-medium",
             selected === option
               ? "border-primary bg-primary/10 text-primary shadow-sm"
@@ -589,7 +592,7 @@ export default function PostTestFlowPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
       <AnimatePresence>
         {showReveal && (
           <motion.div
@@ -656,7 +659,7 @@ export default function PostTestFlowPage() {
       </div>
       )}
 
-      <div className="p-4 pb-32">
+      <div className="flex-1 flex flex-col p-4">
         <AnimatePresence mode="wait">
           {step === "results" && (
             <motion.div
@@ -664,15 +667,15 @@ export default function PostTestFlowPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="max-w-md mx-auto space-y-6"
+              className="max-w-md mx-auto flex-1 flex flex-col"
             >
-              <div className="text-center space-y-4">
+              <div className="text-center space-y-3">
                 <motion.div
                   initial={{ scale: 0, rotate: -180 }}
                   animate={{ scale: 1, rotate: 0 }}
                   transition={{ type: "spring", duration: 0.8, delay: 0.2 }}
                   className={cn(
-                    "w-32 h-32 mx-auto rounded-full p-1",
+                    "w-24 h-24 mx-auto rounded-full p-1",
                     "bg-gradient-to-br",
                     archetypeGradient
                   )}
@@ -681,7 +684,7 @@ export default function PostTestFlowPage() {
                     <img 
                       src={archetypeAvatar} 
                       alt={archetype}
-                      className="w-28 h-28 object-contain"
+                      className="w-20 h-20 object-contain"
                       data-testid="img-archetype-avatar"
                     />
                   </div>
@@ -691,10 +694,10 @@ export default function PostTestFlowPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="space-y-2"
+                  className="space-y-1"
                 >
-                  <p className="text-muted-foreground">你是</p>
-                  <h1 className="text-3xl font-bold text-foreground" data-testid="text-archetype-name">
+                  <p className="text-sm text-muted-foreground">你是</p>
+                  <h1 className="text-2xl font-bold text-foreground" data-testid="text-archetype-name">
                     {archetype}
                   </h1>
                   <Badge variant="secondary" className="text-sm">
@@ -707,7 +710,7 @@ export default function PostTestFlowPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 }}
-                className="bg-card rounded-2xl p-5 border shadow-sm"
+                className="bg-card rounded-xl p-4 border shadow-sm mt-4"
               >
                 <p className="text-base leading-relaxed text-foreground/80" data-testid="text-archetype-description">
                   {archetypeData?.description || "独特的社交风格"}
@@ -718,17 +721,17 @@ export default function PostTestFlowPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.9 }}
-                className="space-y-3"
+                className="flex-1 flex flex-col justify-center py-3"
               >
-                <h3 className="font-semibold text-center">你的核心特质</h3>
-                <div className="space-y-2">
-                  {(archetypeData?.traits || ["独特", "有趣", "友善"]).map((trait, index) => (
+                <h3 className="font-semibold text-center mb-2">你的核心特质</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {(archetypeData?.traits || ["独特", "有趣", "友善"]).slice(0, 3).map((trait, index) => (
                     <motion.div
                       key={trait}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 1 + index * 0.1 }}
-                      className="flex items-center gap-3 bg-card rounded-xl p-4 border"
+                      className="flex flex-col items-center gap-2 bg-card rounded-xl p-3 border"
                       data-testid={`trait-${index}`}
                     >
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -736,7 +739,7 @@ export default function PostTestFlowPage() {
                          index === 1 ? <Star className="w-4 h-4 text-primary" /> :
                          <Heart className="w-4 h-4 text-primary" />}
                       </div>
-                      <span className="text-base font-medium">{trait}</span>
+                      <span className="text-sm font-medium text-center">{trait}</span>
                     </motion.div>
                   ))}
                 </div>
@@ -750,84 +753,65 @@ export default function PostTestFlowPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="max-w-md mx-auto space-y-6"
+              className="max-w-md mx-auto flex-1 flex flex-col w-full"
             >
               <XiaoyueMascot
                 mood="normal"
-                message="最后4个问题，帮你找到最合拍的人"
+                message="最后几个问题，帮你找到合拍的人"
                 horizontal
-                size="large"
               />
 
-              <div className="space-y-5">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="space-y-2"
-                >
-                  <Label className="flex items-center gap-2 text-base">
-                    <User className="w-4 h-4 text-primary" />
-                    昵称
-                  </Label>
-                  <Input
-                    value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
-                    placeholder="至少2个字符"
-                    className="h-14 text-base rounded-xl"
-                    data-testid="input-nickname"
-                  />
-                </motion.div>
+              <div className="flex-1 flex flex-col justify-center py-3 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1.5 text-sm">
+                      <User className="w-3.5 h-3.5 text-primary" />
+                      昵称
+                    </Label>
+                    <Input
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value)}
+                      placeholder="至少2个字符"
+                      className="h-12 text-base rounded-xl"
+                      data-testid="input-nickname"
+                    />
+                  </div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="space-y-2"
-                >
-                  <Label className="flex items-center gap-2 text-base">
-                    <Heart className="w-4 h-4 text-primary" />
-                    性别
-                  </Label>
-                  <ButtonGroup
-                    options={GENDER_OPTIONS.filter(g => g !== "不透露") as unknown as string[]}
-                    selected={gender}
-                    onSelect={setGender}
-                  />
-                </motion.div>
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1.5 text-sm">
+                      <Heart className="w-3.5 h-3.5 text-primary" />
+                      性别
+                    </Label>
+                    <ButtonGroup
+                      options={GENDER_OPTIONS.filter(g => g !== "不透露") as unknown as string[]}
+                      selected={gender}
+                      onSelect={setGender}
+                    />
+                  </div>
+                </div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="space-y-2"
-                >
-                  <Label className="flex items-center gap-2 text-base">
-                    <MapPin className="w-4 h-4 text-primary" />
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5 text-sm">
+                    <MapPin className="w-3.5 h-3.5 text-primary" />
                     所在城市
                   </Label>
                   <Select value={city} onValueChange={setCity}>
-                    <SelectTrigger className="h-14 text-base rounded-xl" data-testid="select-city">
+                    <SelectTrigger className="h-12 text-base rounded-xl" data-testid="select-city">
                       <SelectValue placeholder="选择城市" />
                     </SelectTrigger>
                     <SelectContent>
                       {CURRENT_CITY_OPTIONS.map((c) => (
-                        <SelectItem key={c} value={c} className="text-base py-3">
+                        <SelectItem key={c} value={c} className="text-base py-2">
                           {c}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </motion.div>
+                </div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="space-y-2"
-                >
-                  <Label className="flex items-center gap-2 text-base">
-                    <Target className="w-4 h-4 text-primary" />
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5 text-sm">
+                    <Target className="w-3.5 h-3.5 text-primary" />
                     活动意图（可多选）
                   </Label>
                   <SelectionChips
@@ -836,7 +820,7 @@ export default function PostTestFlowPage() {
                     onSelect={(v) => setIntent(v as string[])}
                     multiSelect
                   />
-                </motion.div>
+                </div>
               </div>
             </motion.div>
           )}
@@ -847,132 +831,109 @@ export default function PostTestFlowPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="max-w-md mx-auto space-y-6"
+              className="max-w-md mx-auto flex-1 flex flex-col w-full overflow-y-auto"
             >
               <XiaoyueMascot
                 mood="pointing"
-                message="再多了解一点，匹配更精准"
+                message="选填几项，匹配更精准"
                 horizontal
-                size="large"
               />
 
-              <div className="space-y-5">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2 text-base">
-                      <Calendar className="w-4 h-4 text-primary" />
-                      出生年份
-                    </Label>
-                    <button
-                      onClick={() => setBirthYearVisible(!birthYearVisible)}
-                      className={cn(
-                        "text-sm px-3 py-1 rounded-full transition-colors",
-                        birthYearVisible 
-                          ? "bg-primary/10 text-primary" 
-                          : "bg-muted text-muted-foreground"
-                      )}
-                      data-testid="toggle-birth-visibility"
-                    >
-                      {birthYearVisible ? "显示" : "保密"}
-                    </button>
+              <div className="flex-1 py-3 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-1.5 text-sm">
+                        <Calendar className="w-3.5 h-3.5 text-primary" />
+                        出生年份
+                      </Label>
+                      <button
+                        onClick={() => setBirthYearVisible(!birthYearVisible)}
+                        className={cn(
+                          "text-sm px-3 py-1 rounded-full transition-colors min-h-[44px]",
+                          birthYearVisible 
+                            ? "bg-primary/10 text-primary" 
+                            : "bg-muted text-muted-foreground"
+                        )}
+                        data-testid="toggle-birth-visibility"
+                      >
+                        {birthYearVisible ? "显示" : "保密"}
+                      </button>
+                    </div>
+                    <Select value={birthYear} onValueChange={setBirthYear}>
+                      <SelectTrigger className="h-11 text-base rounded-xl" data-testid="select-birthyear">
+                        <SelectValue placeholder="选择年份" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[200px]">
+                        {birthYearOptions.map((year) => (
+                          <SelectItem key={year} value={year} className="text-base py-2">
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <Select value={birthYear} onValueChange={setBirthYear}>
-                    <SelectTrigger className="h-14 text-base rounded-xl" data-testid="select-birthyear">
-                      <SelectValue placeholder="选择年份" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {birthYearOptions.map((year) => (
-                        <SelectItem key={year} value={year} className="text-base py-3">
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </motion.div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="space-y-2"
-                >
-                  <Label className="flex items-center gap-2 text-base">
-                    <Heart className="w-4 h-4 text-primary" />
-                    感情状态
-                  </Label>
-                  <SelectionChips
-                    options={RELATIONSHIP_STATUS_OPTIONS.filter(r => r !== "不透露").map(r => ({ value: r, label: r }))}
-                    selected={relationshipStatus}
-                    onSelect={(v) => setRelationshipStatus(v as string)}
-                  />
-                </motion.div>
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1.5 text-sm">
+                      <Heart className="w-3.5 h-3.5 text-primary" />
+                      感情状态
+                    </Label>
+                    <SelectionChips
+                      options={RELATIONSHIP_STATUS_OPTIONS.filter(r => r !== "不透露").map(r => ({ value: r, label: r }))}
+                      selected={relationshipStatus}
+                      onSelect={(v) => setRelationshipStatus(v as string)}
+                      compact
+                    />
+                  </div>
+                </div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="space-y-2"
-                >
-                  <Label className="flex items-center gap-2 text-base">
-                    <Briefcase className="w-4 h-4 text-primary" />
-                    工作状态
-                  </Label>
-                  <SelectionChips
-                    options={WORK_MODE_OPTIONS.map(w => ({ 
-                      value: w, 
-                      label: WORK_MODE_LABELS[w] 
-                    }))}
-                    selected={workMode}
-                    onSelect={(v) => setWorkMode(v as string)}
-                  />
-                </motion.div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1.5 text-sm">
+                      <Briefcase className="w-3.5 h-3.5 text-primary" />
+                      工作状态
+                    </Label>
+                    <SelectionChips
+                      options={WORK_MODE_OPTIONS.map(w => ({ 
+                        value: w, 
+                        label: WORK_MODE_LABELS[w] 
+                      }))}
+                      selected={workMode}
+                      onSelect={(v) => setWorkMode(v as string)}
+                      compact
+                    />
+                  </div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="space-y-2"
-                >
-                  <Label className="flex items-center gap-2 text-base">
-                    <Briefcase className="w-4 h-4 text-primary" />
-                    所在行业
-                  </Label>
-                  <SelectionChips
-                    options={INDUSTRY_OPTIONS.map(i => ({ 
-                      value: i.id, 
-                      label: i.label 
-                    }))}
-                    selected={industry}
-                    onSelect={(v) => setIndustry(v as string)}
-                  />
-                </motion.div>
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1.5 text-sm">
+                      <Briefcase className="w-3.5 h-3.5 text-primary" />
+                      所在行业
+                    </Label>
+                    <SelectionChips
+                      options={INDUSTRY_OPTIONS.slice(0, 6).map(i => ({ 
+                        value: i.id, 
+                        label: i.label 
+                      }))}
+                      selected={industry}
+                      onSelect={(v) => setIndustry(v as string)}
+                      compact
+                    />
+                  </div>
+                </div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className="space-y-2"
-                >
-                  <Label className="flex items-center gap-2 text-base">
-                    <Star className="w-4 h-4 text-primary" />
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5 text-sm">
+                    <Star className="w-3.5 h-3.5 text-primary" />
                     兴趣爱好（最多5个）
                   </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {INTERESTS_OPTIONS.map((interest, index) => (
-                      <motion.button
+                  <div className="flex flex-wrap gap-1.5 max-h-[180px] overflow-y-auto">
+                    {INTERESTS_OPTIONS.map((interest) => (
+                      <button
                         key={interest.id}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.2, delay: index * 0.02 }}
-                        whileTap={{ scale: 0.95 }}
                         onClick={() => toggleInterest(interest.id)}
                         className={cn(
-                          "px-3 py-2 rounded-xl border-2 transition-all duration-200 min-h-[44px]",
+                          "px-2.5 py-2 rounded-lg border transition-all duration-200 min-h-[44px]",
                           "hover-elevate active-elevate-2",
                           interests.includes(interest.id)
                             ? "border-primary bg-primary/10 shadow-sm"
@@ -981,15 +942,15 @@ export default function PostTestFlowPage() {
                         data-testid={`chip-interest-${interest.id}`}
                       >
                         <span className={cn(
-                          "text-[15px] font-medium",
+                          "text-base font-medium",
                           interests.includes(interest.id) && "text-primary"
                         )}>
                           {interest.label}
                         </span>
-                      </motion.button>
+                      </button>
                     ))}
                   </div>
-                </motion.div>
+                </div>
               </div>
             </motion.div>
           )}
@@ -1120,28 +1081,27 @@ export default function PostTestFlowPage() {
       </div>
 
       {step !== "complete" && (
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t p-4">
+      <div className="shrink-0 bg-background/95 backdrop-blur-sm border-t p-4 safe-area-bottom">
         <div className="max-w-md mx-auto">
           {step === "results" && (
-            <div className="space-y-3">
-              <Button
-                onClick={() => setLocation("/personality-test/result")}
-                className="w-full min-h-[68px] text-lg rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-lg"
-                size="lg"
-                data-testid="button-view-results"
-              >
-                查看完整结果
-                <Sparkles className="w-5 h-5 ml-2" />
-              </Button>
+            <div className="flex gap-3">
               <Button
                 onClick={handleResultsContinue}
-                variant="outline"
-                className="w-full min-h-[56px] text-base rounded-xl"
+                className="flex-1 min-h-[52px] text-base rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-lg"
                 size="lg"
                 data-testid="button-continue-results"
               >
-                继续完善资料
+                继续
                 <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+              <Button
+                onClick={() => setLocation("/personality-test/result")}
+                variant="outline"
+                className="min-h-[52px] px-4 text-base rounded-xl"
+                size="lg"
+                data-testid="button-view-results"
+              >
+                查看详情
               </Button>
             </div>
           )}
@@ -1149,7 +1109,7 @@ export default function PostTestFlowPage() {
           {step === "essential" && (
             <Button
               onClick={handleEssentialContinue}
-              className="w-full h-14 text-lg rounded-xl"
+              className="w-full min-h-[52px] text-base rounded-xl"
               size="lg"
               data-testid="button-continue-essential"
             >
@@ -1159,10 +1119,10 @@ export default function PostTestFlowPage() {
           )}
 
           {step === "extended" && (
-            <div className="space-y-3">
+            <div className="flex items-center gap-3">
               <Button
                 onClick={handleExtendedComplete}
-                className="w-full h-14 text-lg rounded-xl"
+                className="flex-1 min-h-[52px] text-base rounded-xl"
                 size="lg"
                 disabled={saveProfileMutation.isPending}
                 data-testid="button-complete"
@@ -1179,10 +1139,10 @@ export default function PostTestFlowPage() {
               <button
                 onClick={handleSkipExtended}
                 disabled={saveProfileMutation.isPending}
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-2 min-h-[44px]"
                 data-testid="button-skip"
               >
-                稍后完善
+                跳过
               </button>
             </div>
           )}
