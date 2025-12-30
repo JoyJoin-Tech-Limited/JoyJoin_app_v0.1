@@ -179,7 +179,7 @@ function SelectionList({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {options.map((option, index) => (
         <motion.button
           key={option.value}
@@ -189,7 +189,7 @@ function SelectionList({
           whileTap={{ scale: 0.98 }}
           onClick={() => handleSelect(option.value)}
           className={cn(
-            "w-full flex items-start gap-3 p-4 rounded-2xl border-2 transition-all duration-200 min-h-[56px]",
+            "w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all duration-200 min-h-[48px]",
             "hover-elevate active-elevate-2",
             isSelected(option.value)
               ? "border-primary bg-primary/10 shadow-sm"
@@ -199,13 +199,13 @@ function SelectionList({
         >
           <div className="flex-1 text-left">
             <span className={cn(
-              "text-base font-medium block",
+              "text-base font-medium",
               isSelected(option.value) && "text-primary"
             )}>
               {option.label}
             </span>
             {option.tag && (
-              <span className="text-xs text-muted-foreground mt-1 block">
+              <span className="text-xs text-muted-foreground ml-2">
                 {option.tag}
               </span>
             )}
@@ -214,7 +214,7 @@ function SelectionList({
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0 mt-0.5"
+              className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0"
             >
               <Sparkles className="w-3 h-3 text-primary-foreground" />
             </motion.div>
@@ -1000,16 +1000,17 @@ export default function PersonalityTestPage() {
         </div>
       </div>
 
-      <div className="mobile-content-compact">
-        <div className="max-w-2xl mx-auto space-y-4">
+      <div className="flex-1 flex flex-col px-4 py-3">
+        <div className="max-w-2xl mx-auto flex-1 flex flex-col w-full">
           {/* ========== 低能量校准模式渲染 ========== */}
           {lowEnergyCalibrationActive && currentLowEnergyQuestion ? (
-            <>
+            <div className="flex-1 flex flex-col">
               <motion.div
                 key={`low-energy-${lowEnergyQuestionIndex}`}
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3 }}
+                className="mb-2"
               >
                 <div className="flex items-center gap-2 text-sm text-primary mb-2">
                   <Star className="w-4 h-4" />
@@ -1019,37 +1020,39 @@ export default function PersonalityTestPage() {
                 <p className="text-sm text-muted-foreground mb-2 italic leading-snug">
                   {currentLowEnergyQuestion.scenarioText}
                 </p>
-                <h2 className="text-lg font-bold mb-3 text-balance">{currentLowEnergyQuestion.questionText}</h2>
+                <h2 className="text-lg font-bold mb-2 text-balance">{currentLowEnergyQuestion.questionText}</h2>
               </motion.div>
 
-              <SelectionList
-                options={currentLowEnergyQuestion.options.map(opt => ({
-                  value: opt.value,
-                  label: opt.text,
-                  tag: opt.tag,
-                }))}
-                selected={answers[currentLowEnergyQuestion.id]?.value}
-                onSelect={(value) => {
-                  const option = currentLowEnergyQuestion.options.find(o => o.value === value);
-                  if (option) {
-                    handleLowEnergyChoice(option.value, option.traitScores);
-                  }
-                }}
-              />
-            </>
+              <div className="flex-1 flex flex-col justify-center">
+                <SelectionList
+                  options={currentLowEnergyQuestion.options.map(opt => ({
+                    value: opt.value,
+                    label: opt.text,
+                    tag: opt.tag,
+                  }))}
+                  selected={answers[currentLowEnergyQuestion.id]?.value}
+                  onSelect={(value) => {
+                    const option = currentLowEnergyQuestion.options.find(o => o.value === value);
+                    if (option) {
+                      handleLowEnergyChoice(option.value, option.traitScores);
+                    }
+                  }}
+                />
+              </div>
+            </div>
           ) : (
             /* ========== 普通题目渲染 (Onboarding-style UI) ========== */
-            <>
+            <div className="flex-1 flex flex-col">
           <motion.div
             key={currentQuestionIndex}
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
-            className="pb-24"
+            className="flex-1 flex flex-col"
           >
-            <div className="mb-3">
-              <p className="text-xl text-foreground/80 mb-4 leading-relaxed font-medium">
+            <div className="mb-2">
+              <p className="text-lg text-foreground/80 mb-2 leading-relaxed font-medium">
                 {stripEmoji(currentQ.scenarioText)}
               </p>
               <XiaoyueMascot 
@@ -1184,17 +1187,15 @@ export default function PersonalityTestPage() {
             </div>
           )}
           </motion.div>
-          </>
+          </div>
           )}
         </div>
-      </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
-        <div className="max-w-2xl mx-auto px-4 py-5 pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)]">
+        <div className="py-3 mt-auto">
           <Button
             onClick={handleNext}
             disabled={!canProceed() || submitTestMutation.isPending}
-            className="w-full min-h-[56px] text-base font-semibold bg-gradient-to-r from-primary to-primary/80 shadow-lg"
+            className="w-full h-14 text-lg rounded-2xl"
             size="lg"
             data-testid="button-next"
           >
@@ -1210,7 +1211,6 @@ export default function PersonalityTestPage() {
           </Button>
         </div>
       </div>
-      <div className="h-32" />
     </div>
   );
 }
