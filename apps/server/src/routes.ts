@@ -473,6 +473,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Complete onboarding - sets registration flags and user profile data
+  app.post('/api/auth/complete-onboarding', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const {
+        displayName,
+        gender,
+        currentCity,
+        intent,
+        birthYear,
+        showBirthYear,
+        relationshipStatus,
+        preSignupAnswers,
+      } = req.body;
+
+      if (!displayName || !gender || !currentCity || !intent || intent.length === 0) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const updateData: Partial<User> = {
+        displayName,
+        gender,
+        currentCity,
+        intent,
+        hasCompletedRegistration: true,
+        hasCompletedInterestsTopics: true, // Skip interests step in new flow
+      };
+
+      // Convert birthYear to birthdate if provided
+      if (birthYear && typeof birthYear === 'number') {
+        updateData.birthdate = `${birthYear}-01-01`;
+      }
+      if (relationshipStatus) {
+        updateData.relationshipStatus = relationshipStatus;
+      }
+
+      const updatedUser = await storage.updateUser(userId, updateData);
+      console.log("[COMPLETE-ONBOARDING] Updated user:", userId, { displayName, gender, currentCity });
+
+      res.json({ message: "Onboarding completed", user: updatedUser });
+    } catch (error) {
+      console.error("Error completing onboarding:", error);
+      res.status(500).json({ message: "Failed to complete onboarding" });
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', isPhoneAuthenticated, async (req: any, res) => {
     // 🔧 DEBUG_AUTH logging (Phase 4.2)
