@@ -50,6 +50,41 @@ import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
 const POST_TEST_CACHE_KEY = "joyjoin_post_test_flow";
 const CACHE_EXPIRY_HOURS = 24;
 
+// Interest options for extended data (simplified from InterestsTopicsPage)
+const INTERESTS_OPTIONS = [
+  { id: "food_dining", label: "美食探店" },
+  { id: "travel", label: "说走就走" },
+  { id: "city_walk", label: "City Walk" },
+  { id: "drinks_bar", label: "喝酒小酌" },
+  { id: "music_live", label: "音乐Live" },
+  { id: "photography", label: "拍拍拍" },
+  { id: "sports_fitness", label: "撸铁运动" },
+  { id: "arts_culture", label: "看展看剧" },
+  { id: "games_video", label: "打游戏" },
+  { id: "pets_animals", label: "吸猫撸狗" },
+  { id: "reading_books", label: "看书充电" },
+  { id: "tech_gadgets", label: "数码控" },
+  { id: "outdoor_adventure", label: "徒步露营" },
+  { id: "games_board", label: "桌游卡牌" },
+  { id: "entrepreneurship", label: "创业商业" },
+];
+
+// Industry options for extended data
+const INDUSTRY_OPTIONS = [
+  { id: "tech_internet", label: "互联网/科技" },
+  { id: "finance_banking", label: "金融/银行" },
+  { id: "consulting_professional", label: "咨询/专业服务" },
+  { id: "media_entertainment", label: "媒体/娱乐" },
+  { id: "education_research", label: "教育/科研" },
+  { id: "healthcare_medical", label: "医疗/健康" },
+  { id: "retail_consumer", label: "零售/消费" },
+  { id: "manufacturing", label: "制造/工业" },
+  { id: "real_estate", label: "房地产" },
+  { id: "government_ngo", label: "政府/公益" },
+  { id: "creative_design", label: "创意/设计" },
+  { id: "other", label: "其他" },
+];
+
 type FlowStep = "results" | "essential" | "extended" | "complete";
 
 interface PostTestData {
@@ -62,6 +97,8 @@ interface PostTestData {
   birthYearVisible: boolean;
   relationshipStatus: string;
   workMode: string;
+  industry: string;
+  interests: string[];
   timestamp: number;
 }
 
@@ -305,6 +342,8 @@ function saveCachedData(data: Partial<PostTestData>) {
       birthYearVisible: data.birthYearVisible ?? existing?.birthYearVisible ?? true,
       relationshipStatus: data.relationshipStatus ?? existing?.relationshipStatus ?? "",
       workMode: data.workMode ?? existing?.workMode ?? "",
+      industry: data.industry ?? existing?.industry ?? "",
+      interests: data.interests ?? existing?.interests ?? [],
       timestamp: Date.now(),
     };
     localStorage.setItem(POST_TEST_CACHE_KEY, JSON.stringify(updated));
@@ -334,6 +373,8 @@ export default function PostTestFlowPage() {
   const [birthYearVisible, setBirthYearVisible] = useState(true);
   const [relationshipStatus, setRelationshipStatus] = useState("");
   const [workMode, setWorkMode] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [interests, setInterests] = useState<string[]>([]);
   
   const [completeCountdown, setCompleteCountdown] = useState(3);
 
@@ -361,6 +402,8 @@ export default function PostTestFlowPage() {
       setBirthYearVisible(cached.birthYearVisible);
       setRelationshipStatus(cached.relationshipStatus);
       setWorkMode(cached.workMode);
+      setIndustry(cached.industry || "");
+      setInterests(cached.interests || []);
     }
   }, []);
 
@@ -485,8 +528,26 @@ export default function PostTestFlowPage() {
     if (workMode) {
       profileData.workMode = workMode;
     }
+    if (industry) {
+      profileData.industry = industry;
+    }
+    if (interests.length > 0) {
+      profileData.interestsTop = interests;
+    }
 
     saveProfileMutation.mutate(profileData);
+  };
+
+  const toggleInterest = (interestId: string) => {
+    if (interests.includes(interestId)) {
+      setInterests(interests.filter(id => id !== interestId));
+    } else {
+      if (interests.length >= 5) {
+        toast({ title: "最多选择5个兴趣", variant: "destructive" });
+        return;
+      }
+      setInterests([...interests, interestId]);
+    }
   };
 
   const handleSkipExtended = () => {
@@ -879,6 +940,65 @@ export default function PostTestFlowPage() {
                     selected={workMode}
                     onSelect={(v) => setWorkMode(v as string)}
                   />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="space-y-2"
+                >
+                  <Label className="flex items-center gap-2 text-base">
+                    <Briefcase className="w-4 h-4 text-primary" />
+                    所在行业
+                  </Label>
+                  <SelectionChips
+                    options={INDUSTRY_OPTIONS.map(i => ({ 
+                      value: i.id, 
+                      label: i.label 
+                    }))}
+                    selected={industry}
+                    onSelect={(v) => setIndustry(v as string)}
+                  />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="space-y-2"
+                >
+                  <Label className="flex items-center gap-2 text-base">
+                    <Star className="w-4 h-4 text-primary" />
+                    兴趣爱好（最多5个）
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {INTERESTS_OPTIONS.map((interest, index) => (
+                      <motion.button
+                        key={interest.id}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.2, delay: index * 0.02 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => toggleInterest(interest.id)}
+                        className={cn(
+                          "px-3 py-2 rounded-xl border-2 transition-all duration-200 min-h-[44px]",
+                          "hover-elevate active-elevate-2",
+                          interests.includes(interest.id)
+                            ? "border-primary bg-primary/10 shadow-sm"
+                            : "border-border bg-card hover:border-primary/50"
+                        )}
+                        data-testid={`chip-interest-${interest.id}`}
+                      >
+                        <span className={cn(
+                          "text-[15px] font-medium",
+                          interests.includes(interest.id) && "text-primary"
+                        )}>
+                          {interest.label}
+                        </span>
+                      </motion.button>
+                    ))}
+                  </div>
                 </motion.div>
               </div>
             </motion.div>
