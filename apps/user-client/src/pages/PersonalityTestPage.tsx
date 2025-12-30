@@ -19,6 +19,10 @@ import {
 } from "@/data/adaptiveCalibrationQuestions";
 import { evaluatePersonality } from "@/lib/cumulativeScoringSystem";
 import CelebrationConfetti from "@/components/CelebrationConfetti";
+import { cn } from "@/lib/utils";
+import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01_1766766685652.png";
+import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03_1766766685650.png";
+import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
 
 const PERSONALITY_TEST_CACHE_KEY = "joyjoin_personality_test_progress";
 const ONBOARDING_ANSWERS_KEY = "joyjoin_onboarding_answers";
@@ -41,6 +45,184 @@ interface CachedProgress {
   lowEnergyCalibrationActive: boolean;
   lowEnergyQuestionIndex: number;
   timestamp: number;
+}
+
+type XiaoyueMood = "normal" | "excited" | "pointing";
+
+const XIAOYUE_AVATARS: Record<XiaoyueMood, string> = {
+  normal: xiaoyueNormal,
+  excited: xiaoyueExcited,
+  pointing: xiaoyuePointing,
+};
+
+function stripEmoji(text: string): string {
+  return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
+}
+
+function XiaoyueMascot({ 
+  mood = "normal", 
+  message,
+  className,
+  horizontal = false,
+}: { 
+  mood?: XiaoyueMood; 
+  message: string;
+  className?: string;
+  horizontal?: boolean;
+}) {
+  if (horizontal) {
+    return (
+      <div className={cn("flex items-start gap-3", className)}>
+        <motion.div
+          animate={{ 
+            scale: [1, 1.02, 1],
+            y: [0, -2, 0],
+          }}
+          transition={{ 
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="relative shrink-0"
+        >
+          <img 
+            src={XIAOYUE_AVATARS[mood]} 
+            alt="小悦" 
+            className="w-16 h-16 object-contain drop-shadow-lg"
+            data-testid="img-xiaoyue-avatar"
+          />
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, x: -10 }}
+          animate={{ opacity: 1, scale: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="relative bg-card border border-border rounded-2xl px-4 py-3 shadow-md flex-1"
+        >
+          <div className="absolute top-4 -left-2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-card" />
+          <div className="absolute top-4 -left-[9px] w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-border" />
+          <p className="text-lg leading-relaxed" data-testid="text-xiaoyue-message">
+            {message}
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("flex flex-col items-center gap-4", className)}>
+      <motion.div
+        animate={{ 
+          scale: [1, 1.02, 1],
+          y: [0, -3, 0],
+        }}
+        transition={{ 
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="relative"
+      >
+        <img 
+          src={XIAOYUE_AVATARS[mood]} 
+          alt="小悦" 
+          className="w-28 h-28 object-contain drop-shadow-lg"
+          data-testid="img-xiaoyue-avatar"
+        />
+      </motion.div>
+      
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        className="relative bg-card border border-border rounded-2xl px-5 py-3 shadow-md max-w-[280px]"
+      >
+        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-card" />
+        <div className="absolute -top-[9px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-border" />
+        <p className="text-center text-base leading-relaxed" data-testid="text-xiaoyue-message">
+          {message}
+        </p>
+      </motion.div>
+    </div>
+  );
+}
+
+function SelectionList({
+  options,
+  selected,
+  onSelect,
+  multiSelect = false,
+}: {
+  options: { value: string; label: string; tag?: string }[];
+  selected: string | string[] | undefined;
+  onSelect: (value: string | string[]) => void;
+  multiSelect?: boolean;
+}) {
+  const handleSelect = (value: string) => {
+    if (multiSelect) {
+      const currentSelected = Array.isArray(selected) ? selected : [];
+      if (currentSelected.includes(value)) {
+        onSelect(currentSelected.filter(v => v !== value));
+      } else {
+        onSelect([...currentSelected, value]);
+      }
+    } else {
+      onSelect(value);
+    }
+  };
+
+  const isSelected = (value: string) => {
+    if (multiSelect) {
+      return Array.isArray(selected) && selected.includes(value);
+    }
+    return selected === value;
+  };
+
+  return (
+    <div className="space-y-3">
+      {options.map((option, index) => (
+        <motion.button
+          key={option.value}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: index * 0.05 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => handleSelect(option.value)}
+          className={cn(
+            "w-full flex items-start gap-3 p-4 rounded-2xl border-2 transition-all duration-200 min-h-[56px]",
+            "hover-elevate active-elevate-2",
+            isSelected(option.value)
+              ? "border-primary bg-primary/10 shadow-sm"
+              : "border-border bg-card hover:border-primary/50"
+          )}
+          data-testid={`button-option-${option.value}`}
+        >
+          <div className="flex-1 text-left">
+            <span className={cn(
+              "text-base font-medium block",
+              isSelected(option.value) && "text-primary"
+            )}>
+              {option.label}
+            </span>
+            {option.tag && (
+              <span className="text-xs text-muted-foreground mt-1 block">
+                {option.tag}
+              </span>
+            )}
+          </div>
+          {isSelected(option.value) && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0 mt-0.5"
+            >
+              <Sparkles className="w-3 h-3 text-primary-foreground" />
+            </motion.div>
+          )}
+        </motion.button>
+      ))}
+    </div>
+  );
 }
 
 function loadCachedProgress(): CachedProgress | null {
@@ -866,61 +1048,43 @@ export default function PersonalityTestPage() {
               </div>
             </>
           ) : (
-            /* ========== 普通题目渲染 ========== */
+            /* ========== 普通题目渲染 (Onboarding-style UI) ========== */
             <>
           <motion.div
             key={currentQuestionIndex}
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
+            className="pb-24"
           >
-            <div className="text-sm text-muted-foreground mb-1">
-              {currentQ.category}
+            <div className="mb-3">
+              <p className="text-xl text-foreground/80 mb-4 leading-relaxed font-medium">
+                {stripEmoji(currentQ.scenarioText)}
+              </p>
+              <XiaoyueMascot 
+                mood="normal"
+                message={currentQ.questionText}
+                horizontal
+              />
             </div>
-            <p className="text-sm text-muted-foreground mb-2 italic leading-snug">
-              {currentQ.scenarioText}
-            </p>
-            <h2 className="text-lg font-bold mb-3 text-balance">{currentQ.questionText}</h2>
-          </motion.div>
 
-          {currentQ.questionType === "single" ? (
-            <div className="options-compact">
-              {currentQ.options.map((option) => {
-                const isSelected = answers[currentQ.id]?.value === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() =>
-                      handleSingleChoice(option.value, option.traitScores)
-                    }
-                    className={`option-compact ${isSelected ? "selected" : ""}`}
-                    data-testid={`button-q${currentQ.id}-${option.value}`}
-                  >
-                    <div className="flex items-start gap-2 w-full">
-                      <span className="font-semibold shrink-0 text-muted-foreground">{option.value}.</span>
-                      <span className="flex-1">{option.text}</span>
-                      {isSelected && (
-                        <span className="text-primary font-bold shrink-0">
-                          <Sparkles className="w-3.5 h-3.5" />
-                        </span>
-                      )}
-                    </div>
-                    {option.tag && (
-                      <div className="flex justify-end w-full">
-                        <Badge 
-                          variant={isSelected ? "default" : "secondary"} 
-                          className="text-xs px-1.5 py-0"
-                        >
-                          {option.tag}
-                        </Badge>
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
+            {currentQ.questionType === "single" ? (
+              <SelectionList
+                options={currentQ.options.map(opt => ({
+                  value: opt.value,
+                  label: opt.text,
+                  tag: opt.tag,
+                }))}
+                selected={answers[currentQ.id]?.value}
+                onSelect={(value) => {
+                  const option = currentQ.options.find(o => o.value === value);
+                  if (option) {
+                    handleSingleChoice(option.value, option.traitScores);
+                  }
+                }}
+              />
+            ) : (
             <div className="space-y-4">
               <div>
                 <div className="text-sm font-medium mb-2">最像我的（主选）</div>
@@ -1029,6 +1193,7 @@ export default function PersonalityTestPage() {
               </div>
             </div>
           )}
+          </motion.div>
           </>
           )}
         </div>
