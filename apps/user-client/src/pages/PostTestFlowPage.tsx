@@ -216,7 +216,7 @@ function SelectionChips({
           whileTap={{ scale: 0.95 }}
           onClick={() => handleSelect(option.value)}
           className={cn(
-            "px-4 py-3 rounded-xl border-2 transition-all duration-200 min-h-[48px]",
+            "px-3 py-2 rounded-lg border transition-all duration-200 min-h-[44px]",
             "hover-elevate active-elevate-2",
             isSelected(option.value)
               ? "border-primary bg-primary/10 shadow-sm"
@@ -225,7 +225,7 @@ function SelectionChips({
           data-testid={`chip-${option.value}`}
         >
           <span className={cn(
-            "text-base font-medium",
+            "text-[15px] font-medium",
             isSelected(option.value) && "text-primary"
           )}>
             {option.label}
@@ -873,15 +873,27 @@ export default function PostTestFlowPage() {
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t p-4">
         <div className="max-w-md mx-auto">
           {step === "results" && (
-            <Button
-              onClick={handleResultsContinue}
-              className="w-full h-14 text-lg rounded-xl"
-              size="lg"
-              data-testid="button-continue-results"
-            >
-              完善资料，找到同类
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
+            <div className="space-y-3">
+              <Button
+                onClick={() => setLocation("/personality-test/result")}
+                className="w-full min-h-[68px] text-lg rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-lg"
+                size="lg"
+                data-testid="button-view-results"
+              >
+                查看完整结果
+                <Sparkles className="w-5 h-5 ml-2" />
+              </Button>
+              <Button
+                onClick={handleResultsContinue}
+                variant="outline"
+                className="w-full min-h-[56px] text-base rounded-xl"
+                size="lg"
+                data-testid="button-continue-results"
+              >
+                继续完善资料
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </div>
           )}
 
           {step === "essential" && (
