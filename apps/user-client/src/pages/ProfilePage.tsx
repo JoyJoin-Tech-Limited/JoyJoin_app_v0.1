@@ -382,7 +382,15 @@ export default function ProfilePage() {
                         重新测试
                       </Button>
                     </div>
-                    <PersonalityRadarChart archetype={personalityResults.primaryRole} />
+                    <PersonalityRadarChart 
+                      archetype={personalityResults.primaryRole}
+                      affinityScore={personalityResults.affinityScore}
+                      opennessScore={personalityResults.opennessScore}
+                      conscientiousnessScore={personalityResults.conscientiousnessScore}
+                      emotionalStabilityScore={personalityResults.emotionalStabilityScore}
+                      extraversionScore={personalityResults.extraversionScore}
+                      positivityScore={personalityResults.positivityScore}
+                    />
                   </div>
 
                   {/* Role Details */}

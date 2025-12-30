@@ -376,7 +376,6 @@ export default function PostTestFlowPage() {
   const [industry, setIndustry] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
   
-  const [completeCountdown, setCompleteCountdown] = useState(3);
 
   const { data: result, isLoading } = useQuery<RoleResult>({
     queryKey: ['/api/personality-test/results'],
@@ -419,16 +418,7 @@ export default function PostTestFlowPage() {
     }
   }, [countdown, result, showReveal]);
 
-  useEffect(() => {
-    if (step !== "complete") return;
-
-    if (completeCountdown > 0) {
-      const timer = setTimeout(() => setCompleteCountdown(completeCountdown - 1), 1000);
-      return () => clearTimeout(timer);
-    } else {
-      setLocation("/discover");
-    }
-  }, [step, completeCountdown, setLocation]);
+  // Removed auto-redirect - user must click "开始探索" button to proceed
 
   const progress = useMemo(() => {
     switch (step) {
@@ -1050,7 +1040,7 @@ export default function PostTestFlowPage() {
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
+                transition={{ delay: 0.5 }}
                 className="text-3xl font-bold mb-3"
                 data-testid="text-complete-title"
               >
@@ -1060,7 +1050,7 @@ export default function PostTestFlowPage() {
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
+                transition={{ delay: 0.8 }}
                 className="text-lg text-muted-foreground mb-8"
                 data-testid="text-complete-subtitle"
               >
@@ -1070,16 +1060,20 @@ export default function PostTestFlowPage() {
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5 }}
+                transition={{ delay: 1.1 }}
                 className="flex items-center gap-4 mb-8"
               >
                 <div 
                   className={cn(
-                    "w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg",
+                    "w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg bg-gradient-to-br",
                     archetypeGradient
                   )}
                 >
-                  <span className="text-4xl">{archetypeAvatar}</span>
+                  <img 
+                    src={archetypeAvatar} 
+                    alt={archetype}
+                    className="w-14 h-14 object-contain"
+                  />
                 </div>
                 <div className="text-left">
                   <p className="text-sm text-muted-foreground">你的社交人格</p>
@@ -1090,7 +1084,7 @@ export default function PostTestFlowPage() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
+                transition={{ delay: 1.4 }}
                 className="w-full max-w-xs"
               >
                 <Button
@@ -1104,42 +1098,11 @@ export default function PostTestFlowPage() {
                 </Button>
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.8 }}
-                className="flex items-center gap-2 text-sm text-muted-foreground mt-4"
-              >
-                <div className="relative w-5 h-5">
-                  <svg className="w-5 h-5 transform -rotate-90">
-                    <circle
-                      cx="10"
-                      cy="10"
-                      r="8"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      fill="none"
-                      className="opacity-20"
-                    />
-                    <circle
-                      cx="10"
-                      cy="10"
-                      r="8"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      fill="none"
-                      strokeDasharray={`${(completeCountdown / 3) * 50.26} 50.26`}
-                      className="text-primary transition-all duration-1000"
-                    />
-                  </svg>
-                </div>
-                <span>{completeCountdown} 秒后自动跳转</span>
-              </motion.div>
 
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.9 }}
+                transition={{ delay: 1.8 }}
                 className="text-sm text-muted-foreground mt-12"
               >
                 想要更精准的匹配？
