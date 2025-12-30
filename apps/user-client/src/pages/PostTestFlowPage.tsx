@@ -50,7 +50,7 @@ import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
 const POST_TEST_CACHE_KEY = "joyjoin_post_test_flow";
 const CACHE_EXPIRY_HOURS = 24;
 
-type FlowStep = "results" | "essential" | "extended";
+type FlowStep = "results" | "essential" | "extended" | "complete";
 
 interface PostTestData {
   step: FlowStep;
@@ -334,6 +334,8 @@ export default function PostTestFlowPage() {
   const [birthYearVisible, setBirthYearVisible] = useState(true);
   const [relationshipStatus, setRelationshipStatus] = useState("");
   const [workMode, setWorkMode] = useState("");
+  
+  const [completeCountdown, setCompleteCountdown] = useState(3);
 
   const { data: result, isLoading } = useQuery<RoleResult>({
     queryKey: ['/api/personality-test/results'],
@@ -374,11 +376,23 @@ export default function PostTestFlowPage() {
     }
   }, [countdown, result, showReveal]);
 
+  useEffect(() => {
+    if (step !== "complete") return;
+
+    if (completeCountdown > 0) {
+      const timer = setTimeout(() => setCompleteCountdown(completeCountdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setLocation("/discover");
+    }
+  }, [step, completeCountdown, setLocation]);
+
   const progress = useMemo(() => {
     switch (step) {
       case "results": return 33;
       case "essential": return 66;
       case "extended": return 100;
+      case "complete": return 100;
       default: return 0;
     }
   }, [step]);
@@ -409,7 +423,7 @@ export default function PostTestFlowPage() {
       await apiRequest("POST", "/api/auth/complete-personality-test");
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       clearCachedData();
-      setLocation("/discover");
+      setStep("complete");
     },
     onError: (error: Error) => {
       toast({
@@ -562,6 +576,7 @@ export default function PostTestFlowPage() {
         )}
       </AnimatePresence>
 
+      {step !== "complete" && (
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-2">
@@ -588,6 +603,7 @@ export default function PostTestFlowPage() {
           <Progress value={progress} className="h-1.5" />
         </div>
       </div>
+      )}
 
       <div className="p-4 pb-32">
         <AnimatePresence mode="wait">
@@ -867,9 +883,160 @@ export default function PostTestFlowPage() {
               </div>
             </motion.div>
           )}
+
+          {step === "complete" && (
+            <motion.div
+              key="complete"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4"
+            >
+              <motion.div
+                animate={{ 
+                  scale: [1, 1.05, 1],
+                  rotate: [0, 2, -2, 0],
+                }}
+                transition={{ 
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="relative mb-8"
+              >
+                <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl scale-150" />
+                <img 
+                  src={xiaoyueExcited} 
+                  alt="小悦" 
+                  className="w-32 h-32 object-contain relative z-10 drop-shadow-xl"
+                  data-testid="img-xiaoyue-celebration"
+                />
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className="absolute -top-2 -right-2"
+                >
+                  <Sparkles className="w-8 h-8 text-yellow-400" />
+                </motion.div>
+                <motion.div
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] }}
+                  transition={{ duration: 1.8, repeat: Infinity, delay: 0.3 }}
+                  className="absolute -bottom-1 -left-3"
+                >
+                  <Star className="w-6 h-6 text-primary fill-primary" />
+                </motion.div>
+              </motion.div>
+
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-3xl font-bold mb-3"
+                data-testid="text-complete-title"
+              >
+                太棒了，小悦已经认识你啦！
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-lg text-muted-foreground mb-8"
+                data-testid="text-complete-subtitle"
+              >
+                现在去看看有哪些适合你的小聚
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.5 }}
+                className="flex items-center gap-4 mb-8"
+              >
+                <div 
+                  className={cn(
+                    "w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg",
+                    archetypeGradient
+                  )}
+                >
+                  <span className="text-4xl">{archetypeAvatar}</span>
+                </div>
+                <div className="text-left">
+                  <p className="text-sm text-muted-foreground">你的社交人格</p>
+                  <p className="text-xl font-bold">{archetype}</p>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="w-full max-w-xs"
+              >
+                <Button
+                  onClick={() => setLocation("/discover")}
+                  className="w-full min-h-[68px] text-lg rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-lg"
+                  size="lg"
+                  data-testid="button-start-explore"
+                >
+                  开始探索
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.8 }}
+                className="flex items-center gap-2 text-sm text-muted-foreground mt-4"
+              >
+                <div className="relative w-5 h-5">
+                  <svg className="w-5 h-5 transform -rotate-90">
+                    <circle
+                      cx="10"
+                      cy="10"
+                      r="8"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      fill="none"
+                      className="opacity-20"
+                    />
+                    <circle
+                      cx="10"
+                      cy="10"
+                      r="8"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      fill="none"
+                      strokeDasharray={`${(completeCountdown / 3) * 50.26} 50.26`}
+                      className="text-primary transition-all duration-1000"
+                    />
+                  </svg>
+                </div>
+                <span>{completeCountdown} 秒后自动跳转</span>
+              </motion.div>
+
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.9 }}
+                className="text-sm text-muted-foreground mt-12"
+              >
+                想要更精准的匹配？
+                <button 
+                  onClick={() => setLocation("/profile/enrich")}
+                  className="text-primary hover:underline ml-1"
+                  data-testid="link-enrich-profile"
+                >
+                  稍后可以继续完善资料
+                </button>
+              </motion.p>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
+      {step !== "complete" && (
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t p-4">
         <div className="max-w-md mx-auto">
           {step === "results" && (
@@ -938,6 +1105,7 @@ export default function PostTestFlowPage() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }
