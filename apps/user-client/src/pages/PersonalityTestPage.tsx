@@ -397,7 +397,7 @@ export default function PersonalityTestPage() {
       clearCachedProgress();
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['/api/personality-test/results'] });
-        setLocation(`/personality-test/results`);
+        setLocation(`/personality-test/complete`);
       }, 2000);
     },
     onError: (error: Error) => {
