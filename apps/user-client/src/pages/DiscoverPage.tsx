@@ -52,31 +52,50 @@ interface CouponResponse {
 
 const LOCATION_STORAGE_KEY = "joyjoin_user_location";
 
-// Safe localStorage read with SSR guard
-const getSavedLocation = (): { city: "香港" | "深圳"; area: string } => {
-  if (typeof window === "undefined") {
-    return { city: "深圳", area: "南山区" };
+// Safe localStorage read with SSR guard, with user profile fallback
+const getSavedLocation = (userCity?: string): { city: "香港" | "深圳"; area: string } => {
+  // First check localStorage for user's explicit selection
+  if (typeof window !== "undefined") {
+    try {
+      const saved = localStorage.getItem(LOCATION_STORAGE_KEY);
+      if (saved) {
+        const { city, area } = JSON.parse(saved);
+        return { 
+          city: (city === "香港" || city === "深圳") ? city : "深圳", 
+          area: area || (city === "香港" ? "中环" : "南山区")
+        };
+      }
+    } catch {}
   }
-  try {
-    const saved = localStorage.getItem(LOCATION_STORAGE_KEY);
-    if (saved) {
-      const { city, area } = JSON.parse(saved);
-      return { 
-        city: (city === "香港" || city === "深圳") ? city : "深圳", 
-        area: area || "南山区" 
-      };
-    }
-  } catch {}
+  
+  // Fall back to user's registered city from profile
+  if (userCity === "香港" || userCity === "深圳") {
+    return { 
+      city: userCity, 
+      area: userCity === "香港" ? "中环" : "南山区" 
+    };
+  }
+  
   return { city: "深圳", area: "南山区" };
 };
 
 export default function DiscoverPage() {
   const { user, isAuthenticated } = useAuth();
   
-  const savedLocation = getSavedLocation();
+  // Use user's registered city as fallback when no localStorage selection exists
+  const savedLocation = getSavedLocation(user?.currentCity ?? undefined);
   const [selectedCity, setSelectedCity] = useState<"香港" | "深圳">(savedLocation.city);
   const [selectedArea, setSelectedArea] = useState<string>(savedLocation.area);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  
+  // Update location when user data loads (for first-time visitors without localStorage)
+  useEffect(() => {
+    if (user?.currentCity && !localStorage.getItem(LOCATION_STORAGE_KEY)) {
+      const userLocation = getSavedLocation(user.currentCity ?? undefined);
+      setSelectedCity(userLocation.city);
+      setSelectedArea(userLocation.area);
+    }
+  }, [user?.currentCity]);
   const { mutate: markDiscoverAsRead } = useMarkNotificationsAsRead();
   const hasMarkedRef = useRef(false);
   const eventListRef = useRef<HTMLDivElement>(null);
