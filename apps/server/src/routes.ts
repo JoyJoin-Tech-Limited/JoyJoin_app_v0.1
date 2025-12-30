@@ -527,6 +527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedUser = await storage.updateUser(userId, {
         hasCompletedPersonalityTest: true,
         hasCompletedProfileSetup: true,
+        hasCompletedRegistration: true,
       });
       console.log("[COMPLETE-PERSONALITY-TEST] User completed personality test flow:", userId);
 
@@ -1789,7 +1790,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.updateFullProfile(userId, result.data);
       
-      res.json(user);
+      // Set hasCompletedRegistration if profile is being set with essential data
+      if (user && (req.body.displayName || req.body.gender || req.body.currentCity)) {
+        const updatedUser = await storage.updateUser(user.id, { hasCompletedRegistration: true });
+        res.json(updatedUser);
+      } else {
+        res.json(user);
+      }
     } catch (error) {
       console.error("Error updating full profile:", error);
       res.status(500).json({ message: "Failed to update profile" });
