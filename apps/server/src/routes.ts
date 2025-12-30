@@ -528,6 +528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasCompletedPersonalityTest: true,
         hasCompletedProfileSetup: true,
         hasCompletedRegistration: true,
+        hasCompletedInterestsTopics: true, // Skip interests-topics page, collected in extended data
       });
       console.log("[COMPLETE-PERSONALITY-TEST] User completed personality test flow:", userId);
 
