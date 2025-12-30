@@ -392,6 +392,64 @@ export default function PersonalityTestResultPage() {
               )}
             </div>
           </motion.div>
+
+          {/* Snapshot Section - Dual traits + Action tip + Xiaoyue quote */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="w-full max-w-sm mx-auto space-y-3"
+          >
+            {/* Dual Trait Pills */}
+            {primaryRoleConfig?.traits && primaryRoleConfig.traits.length >= 2 && (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 bg-card border rounded-lg p-3 min-h-[44px]">
+                  <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span className="text-sm font-medium">{primaryRoleConfig.traits[0]}</span>
+                </div>
+                <div className="flex items-center gap-2 bg-card border rounded-lg p-3 min-h-[44px]">
+                  <Heart className="w-4 h-4 text-pink-500 flex-shrink-0" />
+                  <span className="text-sm font-medium">{primaryRoleConfig.traits[1]}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Action Tip Card */}
+            <div className="bg-card border rounded-lg p-4 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span>马上可以用</span>
+              </div>
+              <p className="text-sm text-foreground/90 leading-relaxed" data-testid="text-action-tip">
+                {result.primaryRole === "开心柯基" && "在小聚中，主动抛出一个有趣的话题，这是你天然的破冰优势！"}
+                {result.primaryRole === "太阳鸡" && "保持你标志性的乐观态度，你的存在本身就能让氛围变暖！"}
+                {result.primaryRole === "夸夸豚" && "多给同桌的分享真诚的回应和鼓励，这是你的超能力！"}
+                {result.primaryRole === "机智狐" && "分享你发现的新奇事物或隐藏好店，大家会很期待！"}
+                {result.primaryRole === "淡定海豚" && "当气氛微妙时，用你的情商化解紧张，你很擅长这个！"}
+                {result.primaryRole === "织网蛛" && "帮助初次见面的人找到共同点，你是天生的连接者！"}
+                {result.primaryRole === "暖心熊" && "用心倾听每个人的故事，你的共情让人感到被理解！"}
+                {result.primaryRole === "灵感章鱼" && "抛出你的奇思妙想，让平凡的话题变得有趣！"}
+                {result.primaryRole === "稳重猫头鹰" && "在关键时刻给出你的见解，大家会很看重你的判断！"}
+                {result.primaryRole === "优雅天鹅" && "展现你的品味和审美，你的气质会感染整个场域！"}
+                {result.primaryRole === "好奇水獭" && "保持你的探索精神，尝试新体验并带动大家！"}
+                {result.primaryRole === "守护犬" && "照顾好场域里的每个人，你的细心让人安心！"}
+                {!["开心柯基", "太阳鸡", "夸夸豚", "机智狐", "淡定海豚", "织网蛛", "暖心熊", "灵感章鱼", "稳重猫头鹰", "优雅天鹅", "好奇水獭", "守护犬"].includes(result.primaryRole) && "发挥你的独特优势，期待你在小聚中的精彩表现！"}
+              </p>
+            </div>
+
+            {/* Xiaoyue Quote Bubble */}
+            <div className="flex items-start gap-2 bg-primary/5 border border-primary/20 rounded-lg p-3">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <span className="text-base">🐰</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground mb-0.5">小悦说</p>
+                <p className="text-sm text-foreground" data-testid="text-xiaoyue-quote">
+                  {nickname ? `${nickname}在饭局里最受欢迎，期待你的表现~` : `期待在小聚里见到你~`}
+                </p>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </motion.div>
 

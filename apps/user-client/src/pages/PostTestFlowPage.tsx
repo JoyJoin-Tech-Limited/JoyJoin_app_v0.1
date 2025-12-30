@@ -1012,28 +1012,28 @@ export default function PostTestFlowPage() {
                   repeat: Infinity,
                   ease: "easeInOut",
                 }}
-                className="relative mb-8"
+                className="relative mb-5"
               >
                 <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl scale-150" />
                 <img 
                   src={xiaoyueExcited} 
                   alt="小悦" 
-                  className="w-32 h-32 object-contain relative z-10 drop-shadow-xl"
+                  className="w-28 h-28 object-contain relative z-10 drop-shadow-xl"
                   data-testid="img-xiaoyue-celebration"
                 />
                 <motion.div
                   animate={{ scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
-                  className="absolute -top-2 -right-2"
+                  className="absolute -top-1 -right-1"
                 >
-                  <Sparkles className="w-8 h-8 text-yellow-400" />
+                  <Sparkles className="w-6 h-6 text-yellow-400" />
                 </motion.div>
                 <motion.div
                   animate={{ scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] }}
                   transition={{ duration: 1.8, repeat: Infinity, delay: 0.3 }}
-                  className="absolute -bottom-1 -left-3"
+                  className="absolute -bottom-1 -left-2"
                 >
-                  <Star className="w-6 h-6 text-primary fill-primary" />
+                  <Star className="w-5 h-5 text-primary fill-primary" />
                 </motion.div>
               </motion.div>
 
@@ -1041,43 +1041,43 @@ export default function PostTestFlowPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="text-3xl font-bold mb-3"
+                className="text-2xl font-bold mb-2 max-w-[320px]"
                 data-testid="text-complete-title"
               >
-                太棒了，小悦已经认识你啦！
+                太棒了，小悦完全读懂你了！
               </motion.h1>
 
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
-                className="text-lg text-muted-foreground mb-8"
+                className="text-base text-muted-foreground mb-6"
                 data-testid="text-complete-subtitle"
               >
-                现在去看看有哪些适合你的小聚
+                去看看有哪些适合你的小聚
               </motion.p>
 
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 1.1 }}
-                className="flex items-center gap-4 mb-8"
+                className="flex items-center gap-3 mb-6 p-3 rounded-xl bg-card border"
               >
                 <div 
                   className={cn(
-                    "w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg bg-gradient-to-br",
+                    "w-16 h-16 rounded-xl flex items-center justify-center shadow-md bg-gradient-to-br flex-shrink-0",
                     archetypeGradient
                   )}
                 >
                   <img 
                     src={archetypeAvatar} 
                     alt={archetype}
-                    className="w-14 h-14 object-contain"
+                    className="w-11 h-11 object-contain"
                   />
                 </div>
                 <div className="text-left">
-                  <p className="text-sm text-muted-foreground">你的社交人格</p>
-                  <p className="text-xl font-bold">{archetype}</p>
+                  <p className="text-xs text-muted-foreground">你的社交人格</p>
+                  <p className="text-lg font-bold">{archetype}</p>
                 </div>
               </motion.div>
 
@@ -1085,11 +1085,11 @@ export default function PostTestFlowPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.4 }}
-                className="w-full max-w-xs"
+                className="w-full max-w-xs space-y-3"
               >
                 <Button
                   onClick={() => setLocation("/discover")}
-                  className="w-full min-h-[68px] text-lg rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-lg"
+                  className="w-full min-h-[56px] text-base rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-lg"
                   size="lg"
                   data-testid="button-start-explore"
                 >

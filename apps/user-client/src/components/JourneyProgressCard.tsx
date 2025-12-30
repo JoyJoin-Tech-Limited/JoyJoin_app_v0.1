@@ -37,10 +37,10 @@ export default function JourneyProgressCard({
   const steps: JourneyStep[] = [
     {
       id: "register",
-      title: "完成注册",
+      title: "验证手机",
       completed: isLoggedIn,
       icon: UserCheck,
-      actionLabel: "去注册",
+      actionLabel: "去验证",
       actionPath: "/register",
     },
     {
@@ -53,7 +53,7 @@ export default function JourneyProgressCard({
     },
     {
       id: "first-event",
-      title: "报名首场活动",
+      title: "报名首场",
       completed: hasRegisteredEvent,
       icon: CalendarPlus,
       actionLabel: "立即选择 ↓",
@@ -147,7 +147,10 @@ export default function JourneyProgressCard({
 
         {nextStep && (
           <p className="text-xs text-muted-foreground mt-3 text-center">
-            完成{nextStep.title}后，小悦就能为你精准匹配同桌啦
+            {nextStep.id === "first-event" 
+              ? "完成报名后，小悦就能为你精准匹配同桌啦"
+              : `完成${nextStep.title}后，继续下一步`
+            }
           </p>
         )}
       </CardContent>
