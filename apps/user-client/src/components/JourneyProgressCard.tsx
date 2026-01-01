@@ -8,7 +8,8 @@ import {
   Brain, 
   CalendarPlus,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  UserCircle
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -24,6 +25,7 @@ interface JourneyStep {
 interface JourneyProgressCardProps {
   isLoggedIn: boolean;
   hasCompletedPersonalityTest: boolean;
+  hasCompletedBasicInfo?: boolean;
   hasRegisteredEvent: boolean;
   onSelectEvent?: () => void;
 }
@@ -31,6 +33,7 @@ interface JourneyProgressCardProps {
 export default function JourneyProgressCard({
   isLoggedIn,
   hasCompletedPersonalityTest,
+  hasCompletedBasicInfo = false,
   hasRegisteredEvent,
   onSelectEvent,
 }: JourneyProgressCardProps) {
@@ -50,6 +53,14 @@ export default function JourneyProgressCard({
       icon: Brain,
       actionLabel: "开始测试",
       actionPath: "/personality-test",
+    },
+    {
+      id: "basic-info",
+      title: "基础信息",
+      completed: hasCompletedBasicInfo,
+      icon: UserCircle,
+      actionLabel: "去填写",
+      actionPath: "/personality-test/complete",
     },
     {
       id: "first-event",
