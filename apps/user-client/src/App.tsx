@@ -153,6 +153,7 @@ function AuthenticatedRouter() {
       <Route path="/chats" component={ChatsPage} />
       <Route path="/chats/:eventId" component={EventChatDetailPage} />
       <Route path="/direct-chat/:threadId" component={DirectChatPage} />
+      <Route path="/chat-registration" component={ChatRegistrationPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/rewards" component={RewardsPage} />
       <Route path="/profile/edit" component={EditProfilePage} />
