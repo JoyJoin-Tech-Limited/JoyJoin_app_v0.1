@@ -233,11 +233,11 @@ export default function DiscoverPage() {
 
         {/* 用户旅程进度卡片 - 引导完成关键步骤 */}
         {isAuthenticated && (
-          <div className="px-4">
+          <div className="px-4 -mt-2">
             <JourneyProgressCard
-              isLoggedIn={isAuthenticated}
               hasCompletedPersonalityTest={user?.hasCompletedPersonalityTest || false}
               hasCompletedBasicInfo={Boolean(user?.displayName && user?.gender && user?.currentCity)}
+              hasCompletedEnrichment={user?.hasCompletedVoiceQuiz || false}
               hasRegisteredEvent={registrations.length > 0}
               onSelectEvent={handleSelectEvent}
             />
