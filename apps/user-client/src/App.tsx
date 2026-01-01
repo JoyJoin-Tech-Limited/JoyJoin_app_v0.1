@@ -99,6 +99,7 @@ function AuthenticatedRouter() {
         <Route path="/personality-test/complete" component={PostTestFlowPage} />
         <Route path="/personality-test/results" component={PersonalityTestResultPage} />
         {/* 保留旧版注册供内部测试使用 */}
+        <Route path="/chat-registration" component={ChatRegistrationPage} />
         <Route path="/registration" component={ChatRegistrationPage} />
         <Route path="/registration/chat" component={ChatRegistrationPage} />
         <Route path="/registration/form" component={RegistrationPage} />
