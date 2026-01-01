@@ -53,6 +53,7 @@ interface CouponResponse {
 const LOCATION_STORAGE_KEY = "joyjoin_user_location";
 
 // Safe localStorage read with SSR guard, with user profile fallback
+// Note: Hong Kong areas are currently "coming soon", so default to Shenzhen
 const getSavedLocation = (userCity?: string): { city: "香港" | "深圳"; area: string } => {
   // First check localStorage for user's explicit selection
   if (typeof window !== "undefined") {
@@ -60,22 +61,20 @@ const getSavedLocation = (userCity?: string): { city: "香港" | "深圳"; area:
       const saved = localStorage.getItem(LOCATION_STORAGE_KEY);
       if (saved) {
         const { city, area } = JSON.parse(saved);
+        // Hong Kong areas are coming soon, fall back to Shenzhen if HK selected
+        if (city === "香港") {
+          return { city: "深圳", area: "南山区" };
+        }
         return { 
-          city: (city === "香港" || city === "深圳") ? city : "深圳", 
-          area: area || (city === "香港" ? "中环" : "南山区")
+          city: city === "深圳" ? city : "深圳", 
+          area: area || "南山区"
         };
       }
     } catch {}
   }
   
   // Fall back to user's registered city from profile
-  if (userCity === "香港" || userCity === "深圳") {
-    return { 
-      city: userCity, 
-      area: userCity === "香港" ? "中环" : "南山区" 
-    };
-  }
-  
+  // Hong Kong areas are coming soon, so always default to Shenzhen
   return { city: "深圳", area: "南山区" };
 };
 
@@ -238,6 +237,7 @@ export default function DiscoverPage() {
             <JourneyProgressCard
               isLoggedIn={isAuthenticated}
               hasCompletedPersonalityTest={user?.hasCompletedPersonalityTest || false}
+              hasCompletedBasicInfo={Boolean(user?.displayName && user?.gender && user?.currentCity)}
               hasRegisteredEvent={registrations.length > 0}
               onSelectEvent={handleSelectEvent}
             />

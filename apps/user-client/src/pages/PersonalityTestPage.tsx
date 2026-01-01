@@ -1017,10 +1017,15 @@ export default function PersonalityTestPage() {
                   <span>{currentLowEnergyQuestion.category}</span>
                   <Badge variant="outline" className="text-xs">精准校准</Badge>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2 italic leading-snug">
+                <p className="text-lg text-foreground/80 mb-2 leading-relaxed font-medium">
                   {currentLowEnergyQuestion.scenarioText}
                 </p>
-                <h2 className="text-lg font-bold mb-2 text-balance">{currentLowEnergyQuestion.questionText}</h2>
+                <h2 className="sr-only">{currentLowEnergyQuestion.questionText}</h2>
+                <XiaoyueMascot 
+                  mood="normal"
+                  message={currentLowEnergyQuestion.questionText}
+                  horizontal
+                />
               </motion.div>
 
               <div className="flex-1 flex flex-col justify-center">

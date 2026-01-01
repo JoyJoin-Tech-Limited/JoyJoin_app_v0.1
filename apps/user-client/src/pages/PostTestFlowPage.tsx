@@ -1095,7 +1095,7 @@ export default function PostTestFlowPage() {
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
               <Button
-                onClick={() => setLocation("/personality-test/result")}
+                onClick={() => setLocation("/personality-test/results")}
                 variant="outline"
                 className="min-h-[52px] px-4 text-base rounded-xl"
                 size="lg"
