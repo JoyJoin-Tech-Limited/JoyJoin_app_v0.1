@@ -197,7 +197,7 @@ export default function PersonalityTestResultPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative min-h-[70vh] flex flex-col items-center justify-center px-4 py-6 overflow-hidden"
+        className="relative min-h-[70vh] flex flex-col items-center justify-center px-4 py-6"
       >
         <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-10`} />
         <div className="relative z-10 text-center space-y-4 max-w-2xl mx-auto">
@@ -218,7 +218,7 @@ export default function PersonalityTestResultPage() {
         </div>
       </motion.div>
 
-      <div className="max-w-2xl mx-auto p-4 pb-8 space-y-4">
+      <div className="max-w-2xl mx-auto p-4 pb-24 space-y-4">
         {(epicDescription || styleQuote) && (
           <Card>
             <CardHeader><CardTitle className="flex items-center gap-2"><Sparkles className="w-5 h-5 text-primary" />角色解读</CardTitle></CardHeader>
