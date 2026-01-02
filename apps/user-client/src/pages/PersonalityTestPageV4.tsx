@@ -1,0 +1,432 @@
+import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { ChevronLeft, Sparkles, Loader2, Gift, Star, PartyPopper } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
+import { useAdaptiveAssessment, type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
+import CelebrationConfetti from "@/components/CelebrationConfetti";
+
+import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01_1766766685652.png";
+import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03_1766766685650.png";
+import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
+
+const V4_ANSWERS_KEY = "joyjoin_v4_presignup_answers";
+
+type XiaoyueMood = "normal" | "excited" | "pointing";
+
+const XIAOYUE_AVATARS: Record<XiaoyueMood, string> = {
+  normal: xiaoyueNormal,
+  excited: xiaoyueExcited,
+  pointing: xiaoyuePointing,
+};
+
+function stripEmoji(text: string): string {
+  return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
+}
+
+function XiaoyueMascot({ 
+  mood = "normal", 
+  message,
+  className,
+  horizontal = false,
+}: { 
+  mood?: XiaoyueMood; 
+  message: string;
+  className?: string;
+  horizontal?: boolean;
+}) {
+  if (horizontal) {
+    return (
+      <div className={cn("flex items-start gap-3", className)}>
+        <motion.div
+          animate={{ 
+            scale: [1, 1.02, 1],
+            y: [0, -2, 0],
+          }}
+          transition={{ 
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="relative shrink-0"
+        >
+          <img 
+            src={XIAOYUE_AVATARS[mood]} 
+            alt="小悦" 
+            className="w-16 h-16 object-contain drop-shadow-lg"
+            data-testid="img-xiaoyue-avatar"
+          />
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, x: -10 }}
+          animate={{ opacity: 1, scale: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="relative bg-card border border-border rounded-2xl px-4 py-3 shadow-md flex-1"
+        >
+          <div className="absolute top-4 -left-2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-card" />
+          <div className="absolute top-4 -left-[9px] w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-border" />
+          <p className="text-lg leading-relaxed" data-testid="text-xiaoyue-message">
+            {message}
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("flex flex-col items-center gap-4", className)}>
+      <motion.div
+        animate={{ 
+          scale: [1, 1.02, 1],
+          y: [0, -3, 0],
+        }}
+        transition={{ 
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="relative"
+      >
+        <img 
+          src={XIAOYUE_AVATARS[mood]} 
+          alt="小悦" 
+          className="w-28 h-28 object-contain drop-shadow-lg"
+          data-testid="img-xiaoyue-avatar"
+        />
+      </motion.div>
+      
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        className="relative bg-card border border-border rounded-2xl px-5 py-3 shadow-md max-w-[280px]"
+      >
+        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-card" />
+        <div className="absolute -top-[9px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-border" />
+        <p className="text-center text-base leading-relaxed" data-testid="text-xiaoyue-message">
+          {message}
+        </p>
+      </motion.div>
+    </div>
+  );
+}
+
+function SelectionList({
+  options,
+  selected,
+  onSelect,
+}: {
+  options: { value: string; label: string }[];
+  selected: string | undefined;
+  onSelect: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {options.map((option, index) => (
+        <motion.button
+          key={option.value}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: index * 0.05 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => onSelect(option.value)}
+          className={cn(
+            "w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all duration-200 min-h-[48px]",
+            "hover-elevate active-elevate-2",
+            selected === option.value
+              ? "border-primary bg-primary/10 shadow-sm"
+              : "border-border bg-card hover:border-primary/50"
+          )}
+          data-testid={`button-option-${option.value}`}
+        >
+          <div className="flex-1 text-left">
+            <span className={cn(
+              "text-base font-medium",
+              selected === option.value && "text-primary"
+            )}>
+              {option.label}
+            </span>
+          </div>
+          {selected === option.value && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0"
+            >
+              <Sparkles className="w-3 h-3 text-primary-foreground" />
+            </motion.div>
+          )}
+        </motion.button>
+      ))}
+    </div>
+  );
+}
+
+function loadV4PreSignupAnswers(): PreSignupAnswer[] {
+  try {
+    const cached = localStorage.getItem(V4_ANSWERS_KEY);
+    return cached ? JSON.parse(cached) : [];
+  } catch {
+    return [];
+  }
+}
+
+function clearV4PreSignupAnswers() {
+  localStorage.removeItem(V4_ANSWERS_KEY);
+  localStorage.removeItem("joyjoin_v4_assessment_session");
+}
+
+export default function PersonalityTestPageV4() {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [selectedOption, setSelectedOption] = useState<string | undefined>();
+  const [showMilestone, setShowMilestone] = useState(false);
+  const [showBlindBox, setShowBlindBox] = useState(false);
+  
+  const {
+    sessionId,
+    currentQuestion,
+    progress,
+    currentMatches,
+    isComplete,
+    result,
+    encouragement,
+    isLoading,
+    isSubmitting,
+    startAssessment,
+    submitAnswer,
+    topArchetype,
+    answeredCount,
+  } = useAdaptiveAssessment();
+
+  useEffect(() => {
+    const preSignupAnswers = loadV4PreSignupAnswers();
+    if (preSignupAnswers.length > 0) {
+      startAssessment(true);
+    } else {
+      startAssessment(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (encouragement && answeredCount > 0 && answeredCount % 5 === 0) {
+      setShowMilestone(true);
+    }
+  }, [encouragement, answeredCount]);
+
+  useEffect(() => {
+    if (isComplete && result) {
+      clearV4PreSignupAnswers();
+      setShowBlindBox(true);
+      queryClient.invalidateQueries({ queryKey: ['/api/personality-test/results'] });
+      
+      setTimeout(() => {
+        setLocation('/personality-test/complete');
+      }, 2000);
+    }
+  }, [isComplete, result, setLocation]);
+
+  const handleSelectOption = useCallback((value: string) => {
+    setSelectedOption(value);
+  }, []);
+
+  const handleSubmitAnswer = useCallback(async () => {
+    if (!currentQuestion || !selectedOption) return;
+    
+    const selectedOpt = currentQuestion.options.find(o => o.value === selectedOption);
+    await submitAnswer(currentQuestion.id, selectedOption, selectedOpt?.traitScores || {});
+    setSelectedOption(undefined);
+  }, [currentQuestion, selectedOption, submitAnswer]);
+
+  const handleMilestoneContinue = useCallback(() => {
+    setShowMilestone(false);
+  }, []);
+
+  if (isLoading && !currentQuestion) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">加载测评中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const progressPercentage = progress 
+    ? Math.round((progress.answered / progress.softMaxQuestions) * 100) 
+    : 0;
+
+  if (showBlindBox) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative">
+        <CelebrationConfetti show={true} />
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", duration: 0.6 }}
+          className="text-center"
+        >
+          <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-primary/20 to-primary/40 rounded-3xl flex items-center justify-center">
+            <Gift className="w-16 h-16 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">测评完成！</h2>
+          <p className="text-muted-foreground">正在分析你的社交原型...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (showMilestone && encouragement) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center max-w-sm"
+        >
+          <XiaoyueMascot 
+            mood="excited"
+            message={encouragement.message}
+          />
+          
+          {topArchetype && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="mt-6 p-4 bg-primary/10 rounded-xl"
+            >
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Star className="w-5 h-5 text-primary" />
+                <span className="font-medium">当前最可能原型</span>
+              </div>
+              <p className="text-xl font-bold text-primary">{topArchetype}</p>
+              {currentMatches[0] && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  匹配度 {Math.round(currentMatches[0].confidence * 100)}%
+                </p>
+              )}
+            </motion.div>
+          )}
+          
+          <Button 
+            size="lg"
+            className="w-full mt-6 h-14 text-lg rounded-2xl"
+            onClick={handleMilestoneContinue}
+            data-testid="button-milestone-continue"
+          >
+            继续测评
+          </Button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (!currentQuestion) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">准备题目中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const scenarioText = stripEmoji(currentQuestion.scenarioText);
+  const optionsForList = currentQuestion.options.map(opt => ({
+    value: opt.value,
+    label: opt.text,
+  }));
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setLocation('/profile')}
+            className="min-w-[44px] min-h-[44px] shrink-0"
+            data-testid="button-back"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          
+          <div className="flex-1">
+            <Progress 
+              value={progressPercentage} 
+              className="h-2"
+            />
+            <div className="flex justify-between mt-1">
+              <span className="text-xs text-muted-foreground">
+                第{progress?.answered || 0}题
+              </span>
+              <span className="text-xs text-muted-foreground">
+                约剩{progress?.estimatedRemaining || 0}题
+              </span>
+            </div>
+          </div>
+          
+          {topArchetype && (
+            <Badge variant="secondary" className="shrink-0">
+              {topArchetype}
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentQuestion.id}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.3 }}
+          className="flex-1 flex flex-col px-4 py-4"
+        >
+          <div className="mb-4">
+            <p className="text-lg text-foreground/80 mb-3 leading-relaxed font-medium">
+              {scenarioText}
+            </p>
+            <XiaoyueMascot 
+              mood="normal"
+              message={currentQuestion.questionText}
+              horizontal
+            />
+          </div>
+          
+          <div className="flex-1 flex flex-col justify-center py-2">
+            <SelectionList
+              options={optionsForList}
+              selected={selectedOption}
+              onSelect={handleSelectOption}
+            />
+          </div>
+
+          <div className="py-4 mt-auto">
+            <Button 
+              size="lg"
+              className="w-full h-14 text-lg rounded-2xl"
+              onClick={handleSubmitAnswer}
+              disabled={!selectedOption || isSubmitting}
+              data-testid="button-submit-answer"
+            >
+              {isSubmitting ? (
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+              ) : null}
+              继续
+            </Button>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}
