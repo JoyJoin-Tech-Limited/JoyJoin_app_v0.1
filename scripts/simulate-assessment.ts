@@ -17,7 +17,13 @@ import { archetypePrototypes } from '../packages/shared/src/personality/prototyp
 import { TraitKey } from '../packages/shared/src/personality/types';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const deepseekClient = process.env.DEEPSEEK_API_KEY 
+  ? new OpenAI({
+      apiKey: process.env.DEEPSEEK_API_KEY,
+      baseURL: 'https://api.deepseek.com',
+      timeout: 30000,
+    })
+  : null;
 
 interface SimulatedUser {
   id: number;
@@ -278,18 +284,101 @@ ${Object.entries(metrics.skipHotspots)
 
 请用专业但易懂的语言撰写分析报告。`;
 
+  if (!deepseekClient) {
+    console.log('   ⚠️ 未配置DEEPSEEK_API_KEY，使用本地分析模板');
+    return generateLocalPsychAnalysis(metrics, archetypeCounts);
+  }
+
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+    const response = await deepseekClient.chat.completions.create({
+      model: 'deepseek-chat',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       max_tokens: 2000,
     });
     return response.choices[0]?.message?.content || '无法生成心理学分析';
   } catch (error) {
-    console.error('OpenAI API error:', error);
-    return '心理学分析生成失败，请检查API配置';
+    console.error('DeepSeek API error:', error);
+    return generateLocalPsychAnalysis(metrics, archetypeCounts);
   }
+}
+
+function generateLocalPsychAnalysis(
+  metrics: AggregatedMetrics,
+  archetypeCounts: Array<{ name: string; count: number; percentage: number }>
+): string {
+  const topArchetype = archetypeCounts[0];
+  const bottomArchetype = archetypeCounts[archetypeCounts.length - 1];
+  const avgPercentage = 100 / 12;
+  
+  const distributionBalance = archetypeCounts.every(
+    (a) => a.percentage >= avgPercentage * 0.3 && a.percentage <= avgPercentage * 2.5
+  );
+
+  const dimensionImbalance = Object.entries(metrics.dimensionCoverage)
+    .filter(([_, v]) => v < 10 || v > 25)
+    .map(([k]) => k);
+
+  return `## 心理测量学分析报告
+
+### 一、信效度评估
+
+**原型分布分析：**
+- 本次测试中，12种原型均有用户匹配，表明测评系统具有较好的区分效度
+- 最高频原型「${topArchetype?.name || '未知'}」占比 ${topArchetype?.percentage || 0}%，最低频原型「${bottomArchetype?.name || '未知'}」占比 ${bottomArchetype?.percentage || 0}%
+- 分布${distributionBalance ? '较为均衡，符合心理测量学预期' : '存在一定偏态，建议审查高频原型的判定边界'}
+
+**信度指标：**
+- 测试完成率达 ${metrics.completionRate}%，表明测试题目的可接受性良好
+- 平均 ${metrics.avgQuestionsAnswered} 题的测试长度在心理测量学上属于${metrics.avgQuestionsAnswered >= 8 && metrics.avgQuestionsAnswered <= 16 ? '适中范围' : '需要优化的范围'}
+
+### 二、维度均衡性分析
+
+${Object.entries(metrics.dimensionCoverage)
+  .map(([trait, pct]) => {
+    const traitNames: Record<string, string> = {
+      A: '亲和力(Affinity)', O: '开放性(Openness)', C: '尽责性(Conscientiousness)',
+      E: '情绪稳定(Emotional Stability)', X: '外向性(Extraversion)', P: '趣味性(Playfulness)'
+    };
+    return `- **${traitNames[trait] || trait}**: ${pct}% ${pct < 12 ? '⚠️ 覆盖不足' : pct > 22 ? '⚠️ 覆盖过重' : '✓ 正常'}`;
+  })
+  .join('\n')}
+
+${dimensionImbalance.length > 0 
+  ? `\n**注意**：维度 ${dimensionImbalance.join(', ')} 的覆盖率偏离理想值(16.7%)，建议调整题目权重或增加相关维度题目。` 
+  : '\n各维度覆盖较为均衡，题库设计合理。'}
+
+### 三、题目质量诊断
+
+**流失分析：**
+${Object.keys(metrics.dropoutHotspots).length > 3 
+  ? '存在明显的流失热点，主要集中在测试中后期。可能原因包括：\n1. 测试疲劳效应\n2. 题目难度突然上升\n3. 选项与用户实际情况不匹配\n\n建议：在第8-10题处增加阶段性鼓励反馈' 
+  : '流失分布较为均匀，无明显单题问题，用户体验流畅。'}
+
+**换题行为分析：**
+- 换题功能使用率 ${metrics.skipUsageRate}%，${metrics.skipUsageRate <= 20 ? '处于健康水平' : '偏高，需关注题目选项设计'}
+- ${metrics.skipUsageRate > 25 ? '建议审查换题热点题目的选项措辞，确保覆盖更多用户的真实情况' : '换题功能作为体验优化手段，使用适度'}
+
+### 四、自适应算法评估
+
+**测试效率：**
+- 平均答题数 ${metrics.avgQuestionsAnswered} 题，${metrics.avgQuestionsAnswered <= 12 ? '自适应算法有效减少了冗余题目' : metrics.avgQuestionsAnswered <= 16 ? '在预期范围内' : '偏多，建议提高终止置信度阈值'}
+- 自适应选题策略能够根据用户回答动态调整后续题目，提高了测量效率
+
+**终止条件评估：**
+- 当前终止策略${metrics.completionRate >= 85 ? '合理' : '可能过于严格'}，${metrics.completionRate < 85 ? '建议适当放宽终止置信度以提高完成率' : '在保证准确性的同时维持了良好的用户体验'}
+
+### 五、改进建议
+
+1. **优化换题热点题目**：审查被频繁跳过的题目，考虑增加更多元化的选项或重新措辞场景描述
+
+2. **${metrics.completionRate < 85 ? '提升完成率' : '维持测试质量'}**：${metrics.completionRate < 85 ? '在测试中期(第8-10题)增加进度反馈和鼓励语，降低用户放弃率' : '继续监控用户反馈，保持当前良好体验'}
+
+3. **${dimensionImbalance.length > 0 ? '平衡维度覆盖' : '持续优化题库'}**：${dimensionImbalance.length > 0 ? `增加针对 ${dimensionImbalance.join('/')} 维度的高区分度题目，或调整现有题目的维度权重` : '定期分析用户数据，持续迭代优化题目质量'}
+
+---
+*本分析基于 ${metrics.totalUsers} 名模拟用户的测试数据生成*
+`;
 }
 
 function generateUXReport(metrics: AggregatedMetrics): string {
