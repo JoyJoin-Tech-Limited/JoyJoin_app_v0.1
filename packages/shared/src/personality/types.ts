@@ -89,8 +89,8 @@ export interface AssessmentConfig {
 }
 
 export const DEFAULT_ASSESSMENT_CONFIG: AssessmentConfig = {
-  minQuestions: 10,
-  softMaxQuestions: 15,
+  minQuestions: 9,
+  softMaxQuestions: 14,
   hardMaxQuestions: 20,
   defaultConfidenceThreshold: 0.72,
   confusablePairThreshold: 0.78,
