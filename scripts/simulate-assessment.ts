@@ -44,7 +44,8 @@ interface SimulationResult {
   confidenceScore: number;
   satisfactionScore: number;
   trueArchetype: string;
-  isCorrectMatch: boolean;
+  isExactMatch: boolean;
+  isSimilarMatch: boolean;
   dropoutQuestion: string | null;
   timeSimulated: number;
   questionSequence: string[];
@@ -63,8 +64,9 @@ interface AggregatedMetrics {
   avgCompletionTime: number;
   questionFrequency: Record<string, number>;
   avgSatisfactionScore: number;
-  satisfactionByConfidence: { range: string; avgSatisfaction: number; count: number; correctMatchRate: number }[];
-  correctMatchRate: number;
+  satisfactionByConfidence: { range: string; avgSatisfaction: number; count: number; exactMatchRate: number; similarMatchRate: number }[];
+  exactMatchRate: number;
+  similarMatchRate: number;
 }
 
 function generateSimulatedUser(id: number): SimulatedUser {
@@ -103,6 +105,21 @@ function calculateTrueArchetype(userTraitProfile: Record<TraitKey, number>): str
     }
   }
   return bestMatch;
+}
+
+function isSimilarArchetype(trueArchetype: string, assignedArchetype: string | null): boolean {
+  if (!assignedArchetype) return false;
+  if (trueArchetype === assignedArchetype) return true;
+  
+  const trueProto = archetypePrototypes[trueArchetype];
+  const assignedProto = archetypePrototypes[assignedArchetype];
+  
+  if (!trueProto || !assignedProto) return false;
+  
+  if (trueProto.confusableWith?.includes(assignedArchetype)) return true;
+  if (assignedProto.confusableWith?.includes(trueArchetype)) return true;
+  
+  return false;
 }
 
 function calculateSatisfactionScore(
@@ -207,7 +224,8 @@ function simulateUser(user: SimulatedUser): SimulationResult {
   const confidenceScore = state.currentMatches[0]?.confidence || 0;
   
   const trueArchetype = calculateTrueArchetype(user.traitProfile);
-  const isCorrectMatch = finalArchetype === trueArchetype;
+  const isExactMatch = finalArchetype === trueArchetype;
+  const isSimilarMatch = isSimilarArchetype(trueArchetype, finalArchetype);
   const satisfactionScore = calculateSatisfactionScore(
     trueArchetype,
     finalArchetype,
@@ -226,7 +244,8 @@ function simulateUser(user: SimulatedUser): SimulationResult {
     confidenceScore,
     satisfactionScore,
     trueArchetype,
-    isCorrectMatch,
+    isExactMatch,
+    isSimilarMatch,
     dropoutQuestion,
     timeSimulated: Date.now() - startTime,
     questionSequence,
@@ -278,8 +297,10 @@ function aggregateResults(results: SimulationResult[]): AggregatedMetrics {
     completedUsers.reduce((sum, r) => sum + r.satisfactionScore, 0) / completedUsers.length * 10
   ) / 10;
 
-  const correctMatches = completedUsers.filter((r) => r.isCorrectMatch).length;
-  const correctMatchRate = Math.round((correctMatches / completedUsers.length) * 100);
+  const exactMatches = completedUsers.filter((r) => r.isExactMatch).length;
+  const similarMatches = completedUsers.filter((r) => r.isSimilarMatch).length;
+  const exactMatchRate = Math.round((exactMatches / completedUsers.length) * 100);
+  const similarMatchRate = Math.round((similarMatches / completedUsers.length) * 100);
 
   const confidenceRanges = [
     { range: '0.50-0.60', min: 0.50, max: 0.60 },
@@ -298,9 +319,11 @@ function aggregateResults(results: SimulationResult[]): AggregatedMetrics {
     const avgSatisfaction = count > 0
       ? Math.round(usersInRange.reduce((sum, r) => sum + r.satisfactionScore, 0) / count * 10) / 10
       : 0;
-    const correctInRange = usersInRange.filter((r) => r.isCorrectMatch).length;
-    const correctMatchRate = count > 0 ? Math.round((correctInRange / count) * 100) : 0;
-    return { range, avgSatisfaction, count, correctMatchRate };
+    const exactInRange = usersInRange.filter((r) => r.isExactMatch).length;
+    const similarInRange = usersInRange.filter((r) => r.isSimilarMatch).length;
+    const exactMatchRate = count > 0 ? Math.round((exactInRange / count) * 100) : 0;
+    const similarMatchRate = count > 0 ? Math.round((similarInRange / count) * 100) : 0;
+    return { range, avgSatisfaction, count, exactMatchRate, similarMatchRate };
   });
 
   return {
@@ -320,7 +343,8 @@ function aggregateResults(results: SimulationResult[]): AggregatedMetrics {
     questionFrequency,
     avgSatisfactionScore,
     satisfactionByConfidence,
-    correctMatchRate,
+    exactMatchRate,
+    similarMatchRate,
   };
 }
 
@@ -516,16 +540,17 @@ function generateUXReport(metrics: AggregatedMetrics): string {
 | 换题使用率 | **${metrics.skipUsageRate}%** | ${metrics.skipUsageRate <= 30 ? '健康' : '偏高，需关注题目质量'} |
 | 平均换题次数 | **${metrics.avgSkipsUsed} 次** | - |
 | **用户满意度** | **${metrics.avgSatisfactionScore}/100** | ${metrics.avgSatisfactionScore >= 80 ? '优秀' : metrics.avgSatisfactionScore >= 70 ? '良好' : '需改进'} |
-| **原型匹配准确率** | **${metrics.correctMatchRate}%** | ${metrics.correctMatchRate >= 70 ? '优秀' : metrics.correctMatchRate >= 50 ? '良好' : '需改进'} |
+| **精确匹配率** | **${metrics.exactMatchRate}%** | 完全匹配真实原型 |
+| **相似匹配率** | **${metrics.similarMatchRate}%** | ${metrics.similarMatchRate >= 50 ? '优秀' : metrics.similarMatchRate >= 40 ? '良好' : '需改进'} |
 
 ---
 
 ## 二、满意度与置信度关系分析
 
-| 置信度区间 | 用户数 | 平均满意度 | 匹配准确率 |
-|-----------|--------|-----------|-----------|
-${metrics.satisfactionByConfidence.map(({ range, count, avgSatisfaction, correctMatchRate }) => 
-  `| ${range} | ${count}人 | ${avgSatisfaction}/100 | ${correctMatchRate}% |`
+| 置信度区间 | 用户数 | 满意度 | 精确匹配 | 相似匹配 |
+|-----------|--------|--------|---------|---------|
+${metrics.satisfactionByConfidence.map(({ range, count, avgSatisfaction, exactMatchRate, similarMatchRate }) => 
+  `| ${range} | ${count}人 | ${avgSatisfaction}/100 | ${exactMatchRate}% | ${similarMatchRate}% |`
 ).join('\n')}
 
 ### 置信度阈值建议
@@ -682,12 +707,13 @@ ${psychAnalysis}
   console.log(`   - 平均答题数: ${metrics.avgQuestionsAnswered}`);
   console.log(`   - 换题使用率: ${metrics.skipUsageRate}%`);
   console.log(`   - 用户满意度: ${metrics.avgSatisfactionScore}/100`);
-  console.log(`   - 匹配准确率: ${metrics.correctMatchRate}%`);
+  console.log(`   - 精确匹配率: ${metrics.exactMatchRate}%`);
+  console.log(`   - 相似匹配率: ${metrics.similarMatchRate}%`);
   console.log(`   - 原型数量: ${Object.keys(metrics.archetypeDistribution).length}`);
   console.log('\n📊 置信度-满意度分析:');
-  metrics.satisfactionByConfidence.forEach(({ range, count, avgSatisfaction, correctMatchRate }) => {
+  metrics.satisfactionByConfidence.forEach(({ range, count, avgSatisfaction, exactMatchRate, similarMatchRate }) => {
     if (count > 0) {
-      console.log(`   ${range}: ${count}人, 满意度${avgSatisfaction}, 准确率${correctMatchRate}%`);
+      console.log(`   ${range}: ${count}人, 满意度${avgSatisfaction}, 精确${exactMatchRate}%, 相似${similarMatchRate}%`);
     }
   });
 }
