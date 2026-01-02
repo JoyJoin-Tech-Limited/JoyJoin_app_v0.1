@@ -173,7 +173,7 @@ function OnboardingProgress({
   onBack?: () => void;
   showBack?: boolean;
 }) {
-  const percentage = Math.round((current / total) * 100);
+  const percentage = Math.round((current / 12) * 100);
   
   return (
     <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
@@ -194,10 +194,15 @@ function OnboardingProgress({
             value={percentage} 
             className="h-2 transition-all duration-500" 
           />
+          <div className="flex justify-between mt-1">
+            <span className="text-xs text-muted-foreground">
+              第{current}题
+            </span>
+            <span className="text-xs text-muted-foreground">
+              约剩{12 - current}题
+            </span>
+          </div>
         </div>
-        <span className="text-sm text-muted-foreground shrink-0 min-w-[40px] text-right">
-          {percentage}%
-        </span>
       </div>
     </div>
   );
