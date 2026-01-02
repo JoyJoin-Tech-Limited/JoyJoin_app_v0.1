@@ -137,30 +137,30 @@ export const questionsV4: AdaptiveQuestion[] = [
     id: "Q5",
     level: 1,
     category: "团体形象",
-    scenarioText: "📸 聚会合影时，大家闹哄哄地摆姿势。",
-    questionText: "你通常的位置和状态是？",
+    scenarioText: "📸 周末和朋友们一起去了新开的网红餐厅，吃完饭大家说要拍个合影发朋友圈。",
+    questionText: "你会自然而然地做什么？",
     primaryTraits: ["X", "A", "E"],
     isAnchor: true,
     discriminationIndex: 0.52,
     options: [
       {
         value: "A",
-        text: "主动指挥或提议搞怪姿势，站在中心附近——承担被关注的压力。",
+        text: "主动拿过手机当摄影师，指挥大家'往左靠一点''笑得自然些'——享受掌控场面的感觉。",
         traitScores: { A: 0, C: 0, E: 0, O: 0, X: 3, P: 2 }
       },
       {
         value: "B",
-        text: "把害羞的人拉到身边，照顾每个人——牺牲自己的舒适位置。",
+        text: "注意到有人站得很边缘，主动把ta拉进来，确保每个人都在镜头里——照顾他人比自己好看更重要。",
         traitScores: { A: 3, C: 1, E: 0, O: 0, X: 0, P: 0 }
       },
       {
         value: "C",
-        text: "听从安排，微笑，快速完成——随大流，不出头。",
+        text: "找个位置站好，配合大家的节奏，拍完就好——不想成为焦点，也不想添麻烦。",
         traitScores: { A: 0, C: 1, E: 2, O: 0, X: 0, P: 0 }
       },
       {
         value: "D",
-        text: "站在边缘，表情可能略显僵硬——宁愿不太上镜也要舒服。",
+        text: "悄悄站在最边上或者假装在看手机，尽量不入镜——拍照让我不太自在。",
         traitScores: { A: 0, C: 0, E: 1, O: 0, X: -2, P: 0 }
       }
     ]
@@ -349,31 +349,31 @@ export const questionsV4: AdaptiveQuestion[] = [
     id: "Q12",
     level: 1,
     category: "决策风格",
-    scenarioText: "🍽️ 点餐时，面对一本厚厚的陌生菜单。",
-    questionText: "你倾向于？",
+    scenarioText: "🍽️ 周五晚上，你和3个朋友约好一起吃饭。大家在群里讨论去哪家餐厅，推荐了好几个选择。",
+    questionText: "你在群里的反应是？",
     primaryTraits: ["O", "C", "X"],
     isAnchor: true,
     discriminationIndex: 0.38,
     options: [
       {
         value: "A",
-        text: "快速扫过，凭眼缘或名字有趣来点——可能踩雷但省时间。",
-        traitScores: { A: 0, C: 0, E: 0, O: 2, X: 1, P: 0 }
+        text: "'随便哪个都行，你们定！'——比起选什么，更在意和谁一起吃。",
+        traitScores: { A: 0, C: 0, E: 2, O: 0, X: -1, P: 0 }
       },
       {
         value: "B",
-        text: "询问服务员招牌菜，或看邻桌点什么——借助外部信息。",
-        traitScores: { A: 1, C: 1, E: 0, O: 1, X: 0, P: 0 }
-      },
-      {
-        value: "C",
-        text: "仔细研究配料和做法，可能查评价——花时间确保不出错。",
+        text: "点开每家餐厅的大众点评，对比评分、人均和菜品，然后发个分析图——做足功课才安心。",
         traitScores: { A: 0, C: 3, E: 0, O: 1, X: 0, P: 0 }
       },
       {
+        value: "C",
+        text: "'我看有家新开的店好像很特别，要不试试？'——喜欢尝鲜，踩雷也是一种体验。",
+        traitScores: { A: 0, C: 0, E: 0, O: 2, X: 1, P: 0 }
+      },
+      {
         value: "D",
-        text: "让同伴推荐或决定，省心——放弃选择权换取轻松。",
-        traitScores: { A: 0, C: 0, E: 2, O: 0, X: -1, P: 0 }
+        text: "问问其中你最信任的那个朋友'你觉得哪家好？'，然后跟着ta的选择走——相信ta的判断。",
+        traitScores: { A: 1, C: 1, E: 0, O: 1, X: 0, P: 0 }
       }
     ]
   },
@@ -381,30 +381,30 @@ export const questionsV4: AdaptiveQuestion[] = [
     id: "Q13",
     level: 1,
     category: "赠礼思维",
-    scenarioText: "🎁 要为刚认识但投缘的新朋友选礼物。",
-    questionText: "你更侧重？",
+    scenarioText: "🎁 你在活动中认识了一个很聊得来的新朋友，下周是ta的生日。你想送个小礼物表示心意。",
+    questionText: "你会怎么选？",
     primaryTraits: ["A", "O", "C"],
     isAnchor: true,
     discriminationIndex: 0.41,
     options: [
       {
         value: "A",
-        text: "投其所好，选TA明确喜欢/需要的——花心思了解对方。",
+        text: "回想ta聊天时提到过喜欢什么，比如某个乐队、某款游戏，专门去找相关的周边——送到心坎上才有意义。",
         traitScores: { A: 3, C: 2, E: 0, O: 0, X: 0, P: 0 }
       },
       {
         value: "B",
-        text: "选能代表我独特心意/品味的——展示自我风格。",
+        text: "选一个我自己也很喜欢的小众好物，希望ta也能发现这个宝藏——分享我的品味是一种交流方式。",
         traitScores: { A: 0, C: 0, E: 0, O: 2, X: 1, P: 0 }
       },
       {
         value: "C",
-        text: "选实用、不出错的品质好物——安全稳妥的选择。",
+        text: "买个百元左右的实用好物，比如护手霜、挂耳咖啡、香薰蜡烛——不踩雷、有品质、不显得刻意。",
         traitScores: { A: 0, C: 2, E: 2, O: 0, X: 0, P: 0 }
       },
       {
         value: "D",
-        text: "自制或有特殊纪念意义的东西——投入时间精力创造独特。",
+        text: "手写一张卡片或者做个小手工，附上我们认识的照片——用心比贵重更重要。",
         traitScores: { A: 2, C: 1, E: 0, O: 3, X: 0, P: 0 }
       }
     ]
@@ -1768,7 +1768,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   {
     id: "Q56",
-    level: 3,
+    level: 2,
     category: "助人天赋",
     scenarioText: "👂 当朋友遇到困扰向你倾诉时，你觉得自己更擅长？",
     questionText: "（请选择一个更符合你天赋的选项）",
@@ -1828,7 +1828,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   {
     id: "Q58",
-    level: 3,
+    level: 2,
     category: "助人消耗",
     scenarioText: "💆 同样是在帮助遇到困扰的朋友时，你认为哪件事更消耗你的心力（让你更累）？",
     questionText: "（与Q56配对验证一致性）",
@@ -2178,6 +2178,258 @@ export const questionsV4: AdaptiveQuestion[] = [
         value: "D",
         text: "先广泛了解不同方法，找到最适合自己的再深入——探索式。",
         traitScores: { A: 0, C: 1, E: 0, O: 3, X: 0, P: 0 }
+      }
+    ]
+  },
+
+  // ==================== 新增P维度题目 (Q70-Q74) ====================
+  {
+    id: "Q70",
+    level: 2,
+    category: "冒险尝鲜",
+    scenarioText: "🎢 朋友说发现了一个很刺激但略有风险的新活动（比如室内攀岩、VR密室、蹦极体验课）。",
+    questionText: "你的第一反应是？",
+    primaryTraits: ["P", "O", "X"],
+    discriminationIndex: 0.45,
+    options: [
+      {
+        value: "A",
+        text: "'走！这种刺激的我最喜欢了！'——享受肾上腺素飙升的感觉。",
+        traitScores: { A: 0, C: 0, E: 0, O: 2, X: 1, P: 3 }
+      },
+      {
+        value: "B",
+        text: "'听起来有意思，我先查查安全措施再决定。'——好奇但谨慎。",
+        traitScores: { A: 0, C: 2, E: 1, O: 1, X: 0, P: 1 }
+      },
+      {
+        value: "C",
+        text: "'你们去吧，我在旁边给你们拍照加油！'——参与但不亲自上阵。",
+        traitScores: { A: 1, C: 0, E: 2, O: 0, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "'这种我不太行，有没有其他选择？'——诚实表达自己的边界。",
+        traitScores: { A: 0, C: 1, E: 2, O: 0, X: -1, P: -1 }
+      }
+    ]
+  },
+  {
+    id: "Q71",
+    level: 2,
+    category: "玩乐态度",
+    scenarioText: "🎲 周末约了朋友玩桌游，其中有个规则有点复杂的策略游戏。",
+    questionText: "你更期待的是？",
+    primaryTraits: ["P", "C", "X"],
+    discriminationIndex: 0.42,
+    options: [
+      {
+        value: "A",
+        text: "认真研究策略，争取赢得比赛——胜负很重要！",
+        traitScores: { A: 0, C: 3, E: 0, O: 0, X: 1, P: 0 }
+      },
+      {
+        value: "B",
+        text: "边玩边搞笑，制造欢乐氛围——开心最重要！",
+        traitScores: { A: 1, C: 0, E: 0, O: 0, X: 2, P: 3 }
+      },
+      {
+        value: "C",
+        text: "观察每个人的玩法风格，很有趣——人比游戏更有意思。",
+        traitScores: { A: 2, C: 1, E: 1, O: 1, X: 0, P: 1 }
+      },
+      {
+        value: "D",
+        text: "希望规则简单点，复杂的有点累——轻松就好。",
+        traitScores: { A: 0, C: 0, E: 2, O: 0, X: -1, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q72",
+    level: 2,
+    category: "即兴能力",
+    scenarioText: "🎤 聚会上有人提议玩即兴表演游戏，随机抽题目现场表演。",
+    questionText: "你会？",
+    primaryTraits: ["P", "X", "E"],
+    discriminationIndex: 0.48,
+    options: [
+      {
+        value: "A",
+        text: "第一个举手参加！即兴发挥最好玩了——享受意料之外的惊喜。",
+        traitScores: { A: 0, C: 0, E: -1, O: 1, X: 3, P: 3 }
+      },
+      {
+        value: "B",
+        text: "等别人先上，看看什么难度再决定——先观察后行动。",
+        traitScores: { A: 0, C: 1, E: 2, O: 0, X: 0, P: 1 }
+      },
+      {
+        value: "C",
+        text: "负责出题或当裁判，贡献氛围但不上场——幕后支持。",
+        traitScores: { A: 1, C: 1, E: 1, O: 0, X: 0, P: 1 }
+      },
+      {
+        value: "D",
+        text: "这种太社死了，我选择观众席——保护自己的舒适区。",
+        traitScores: { A: 0, C: 0, E: 2, O: 0, X: -2, P: -1 }
+      }
+    ]
+  },
+  {
+    id: "Q73",
+    level: 2,
+    category: "幽默风格",
+    scenarioText: "😄 和朋友聊天时，你说了一句话把大家逗笑了。",
+    questionText: "你内心的感受是？",
+    primaryTraits: ["P", "X", "A"],
+    discriminationIndex: 0.44,
+    options: [
+      {
+        value: "A",
+        text: "超开心！继续抖包袱，让气氛更嗨——我就是快乐源泉。",
+        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 3, P: 3 }
+      },
+      {
+        value: "B",
+        text: "有点小得意，但不会刻意表演——自然流露就好。",
+        traitScores: { A: 0, C: 1, E: 1, O: 0, X: 1, P: 2 }
+      },
+      {
+        value: "C",
+        text: "有点意外，没想到自己会这么逗——可能是无心插柳。",
+        traitScores: { A: 0, C: 0, E: 2, O: 1, X: 0, P: 1 }
+      },
+      {
+        value: "D",
+        text: "笑完就过了，不太在意这种事——情绪比较平稳。",
+        traitScores: { A: 0, C: 1, E: 2, O: 0, X: -1, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q74",
+    level: 2,
+    category: "惊喜偏好",
+    scenarioText: "🎁 朋友说给你准备了一个神秘惊喜，但要等几天才能揭晓。",
+    questionText: "你的状态是？",
+    primaryTraits: ["P", "E", "O"],
+    discriminationIndex: 0.40,
+    options: [
+      {
+        value: "A",
+        text: "超期待！每天都在猜测是什么——喜欢这种悬念感。",
+        traitScores: { A: 0, C: 0, E: 0, O: 2, X: 1, P: 3 }
+      },
+      {
+        value: "B",
+        text: "开心但也有点焦虑，不知道是好惊喜还是吓一跳——又期待又忐忑。",
+        traitScores: { A: 0, C: 1, E: -1, O: 1, X: 0, P: 1 }
+      },
+      {
+        value: "C",
+        text: "平常心，到时候知道就知道了——不太会因为这个情绪起伏。",
+        traitScores: { A: 0, C: 0, E: 3, O: 0, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "其实更希望直接告诉我，不太喜欢等待——确定感更重要。",
+        traitScores: { A: 0, C: 2, E: 1, O: -1, X: 0, P: -1 }
+      }
+    ]
+  },
+
+  // ==================== 新增O维度题目 (Q75-Q77) ====================
+  {
+    id: "Q75",
+    level: 2,
+    category: "新观点接纳",
+    scenarioText: "💭 朋友分享了一个你从未听过、甚至有点颠覆认知的观点或理论。",
+    questionText: "你的第一反应是？",
+    primaryTraits: ["O", "C", "E"],
+    discriminationIndex: 0.46,
+    options: [
+      {
+        value: "A",
+        text: "'哇，这个角度好新颖！'——立刻被激发好奇心，想深入了解。",
+        traitScores: { A: 0, C: 0, E: 0, O: 3, X: 1, P: 1 }
+      },
+      {
+        value: "B",
+        text: "'有意思，但我想先查证一下。'——保持开放但需要验证。",
+        traitScores: { A: 0, C: 3, E: 1, O: 1, X: 0, P: 0 }
+      },
+      {
+        value: "C",
+        text: "'这个...我需要时间消化一下。'——不排斥但也不急于接受。",
+        traitScores: { A: 0, C: 1, E: 2, O: 0, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "'听起来不太靠谱吧？'——对颠覆性观点本能保持怀疑。",
+        traitScores: { A: 0, C: 1, E: 1, O: -2, X: 0, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q76",
+    level: 2,
+    category: "艺术体验",
+    scenarioText: "🎨 朋友带你去看一个先锋艺术展，作品都很抽象、看不太懂。",
+    questionText: "你的感受是？",
+    primaryTraits: ["O", "A", "P"],
+    discriminationIndex: 0.43,
+    options: [
+      {
+        value: "A",
+        text: "'好有意思！我想知道艺术家想表达什么。'——享受解读的过程。",
+        traitScores: { A: 0, C: 0, E: 0, O: 3, X: 0, P: 1 }
+      },
+      {
+        value: "B",
+        text: "'虽然不太懂，但氛围挺特别的。'——感受整体体验而非具体内容。",
+        traitScores: { A: 1, C: 0, E: 1, O: 1, X: 0, P: 0 }
+      },
+      {
+        value: "C",
+        text: "'老实说有点困惑，但陪朋友看看也行。'——不太感兴趣但愿意配合。",
+        traitScores: { A: 2, C: 0, E: 1, O: 0, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "'这种我真的欣赏不来，能早点走吗？'——对抽象艺术接受度低。",
+        traitScores: { A: 0, C: 0, E: 1, O: -2, X: 0, P: -1 }
+      }
+    ]
+  },
+  {
+    id: "Q77",
+    level: 2,
+    category: "探索欲望",
+    scenarioText: "🗺️ 旅行时，你有半天自由活动时间。",
+    questionText: "你更想怎么安排？",
+    primaryTraits: ["O", "C", "X"],
+    discriminationIndex: 0.47,
+    options: [
+      {
+        value: "A",
+        text: "随便走走，看到有趣的就进去——享受未知的惊喜。",
+        traitScores: { A: 0, C: 0, E: 0, O: 3, X: 1, P: 2 }
+      },
+      {
+        value: "B",
+        text: "提前查好小众景点，按计划探索——有目标的冒险。",
+        traitScores: { A: 0, C: 2, E: 0, O: 2, X: 0, P: 0 }
+      },
+      {
+        value: "C",
+        text: "去大众点评上评分最高的地方——降低踩雷风险。",
+        traitScores: { A: 0, C: 2, E: 1, O: 0, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "找个舒服的咖啡馆待着，不想到处跑——休息比探索更重要。",
+        traitScores: { A: 0, C: 0, E: 2, O: -1, X: -1, P: 0 }
       }
     ]
   },
