@@ -42,10 +42,10 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
     "D": "看懂了再加入，谨慎入场。"
   },
   "Q5": {
-    "A": "摄影师+导演，掌控全场。",
-    "B": "照顾每个人，很贴心。",
-    "C": "配合大家，不添麻烦。",
-    "D": "边缘躲镜头，低调派。"
+    "A": "指挥全场，掌控型。",
+    "B": "照顾他人，贴心派。",
+    "C": "配合大家，随和型。",
+    "D": "低调站边，内敛派。"
   },
   "Q6": {
     "A": "直接提优化，效率派。",
@@ -84,16 +84,16 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
     "D": "设置免打扰，省电模式。"
   },
   "Q12": {
-    "A": "随便都行，重要的是人。",
-    "B": "做足功课，分析派。",
-    "C": "喜欢尝鲜，探索者。",
+    "A": "随便都行，随和派。",
+    "B": "查评分再定，分析派。",
+    "C": "尝尝鲜，探索派。",
     "D": "跟着朋友走，省心。"
   },
   "Q13": {
     "A": "投其所好，用心派。",
-    "B": "分享我的宝藏，品味。",
+    "B": "分享品味，独特派。",
     "C": "实用好物，稳妥派。",
-    "D": "手写卡片，心意派。"
+    "D": "手工心意，走心派。"
   },
   "Q14": {
     "A": "开心延续联系，热情。",
@@ -564,20 +564,20 @@ export interface MilestoneConfig {
 
 export const milestoneConfigs: MilestoneConfig[] = [
   {
-    position: 8,
+    position: 5,
     message: "嗯嗯，开始有点懂你了~",
     xiaoyueMood: 'curious',
     animation: 'bounce'
   },
   {
-    position: 12,
-    message: "越来越清晰啦！你的性格画像快成型了~",
+    position: 8,
+    message: "越来越清晰啦！快成型了~",
     xiaoyueMood: 'encouraging',
     animation: 'pulse'
   },
   {
-    position: 16,
-    message: "就差一点点了！帮我确认最后几个细节~",
+    position: 11,
+    message: "最后几题确认一下~",
     xiaoyueMood: 'excited',
     animation: 'wiggle'
   }
