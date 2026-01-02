@@ -137,30 +137,30 @@ export const questionsV4: AdaptiveQuestion[] = [
     id: "Q5",
     level: 1,
     category: "团体形象",
-    scenarioText: "📸 周末和朋友们一起去了新开的网红餐厅，吃完饭大家说要拍个合影发朋友圈。",
-    questionText: "你会自然而然地做什么？",
+    scenarioText: "📸 朋友聚餐后要拍合影发朋友圈。",
+    questionText: "你会？",
     primaryTraits: ["X", "A", "E"],
     isAnchor: true,
     discriminationIndex: 0.52,
     options: [
       {
         value: "A",
-        text: "主动拿过手机当摄影师，指挥大家'往左靠一点''笑得自然些'——享受掌控场面的感觉。",
+        text: "主动当摄影师，指挥大家站位",
         traitScores: { A: 0, C: 0, E: 0, O: 0, X: 3, P: 2 }
       },
       {
         value: "B",
-        text: "注意到有人站得很边缘，主动把ta拉进来，确保每个人都在镜头里——照顾他人比自己好看更重要。",
+        text: "把站边缘的人拉进来，照顾每个人",
         traitScores: { A: 3, C: 1, E: 0, O: 0, X: 0, P: 0 }
       },
       {
         value: "C",
-        text: "找个位置站好，配合大家的节奏，拍完就好——不想成为焦点，也不想添麻烦。",
+        text: "找个位置站好，配合大家",
         traitScores: { A: 0, C: 1, E: 2, O: 0, X: 0, P: 0 }
       },
       {
         value: "D",
-        text: "悄悄站在最边上或者假装在看手机，尽量不入镜——拍照让我不太自在。",
+        text: "站最边上，尽量不抢镜",
         traitScores: { A: 0, C: 0, E: 1, O: 0, X: -2, P: 0 }
       }
     ]
@@ -349,30 +349,30 @@ export const questionsV4: AdaptiveQuestion[] = [
     id: "Q12",
     level: 1,
     category: "决策风格",
-    scenarioText: "🍽️ 周五晚上，你和3个朋友约好一起吃饭。大家在群里讨论去哪家餐厅，推荐了好几个选择。",
-    questionText: "你在群里的反应是？",
+    scenarioText: "🍽️ 朋友群里讨论周五去哪吃饭，推荐了好几家。",
+    questionText: "你的反应是？",
     primaryTraits: ["O", "C", "X"],
     isAnchor: true,
     discriminationIndex: 0.38,
     options: [
       {
         value: "A",
-        text: "'随便哪个都行，你们定！'——比起选什么，更在意和谁一起吃。",
+        text: "随便都行，你们定！",
         traitScores: { A: 0, C: 0, E: 2, O: 0, X: -1, P: 0 }
       },
       {
         value: "B",
-        text: "点开每家餐厅的大众点评，对比评分、人均和菜品，然后发个分析图——做足功课才安心。",
+        text: "查大众点评对比评分再决定",
         traitScores: { A: 0, C: 3, E: 0, O: 1, X: 0, P: 0 }
       },
       {
         value: "C",
-        text: "'我看有家新开的店好像很特别，要不试试？'——喜欢尝鲜，踩雷也是一种体验。",
+        text: "推荐一家新开的店，尝尝鲜",
         traitScores: { A: 0, C: 0, E: 0, O: 2, X: 1, P: 0 }
       },
       {
         value: "D",
-        text: "问问其中你最信任的那个朋友'你觉得哪家好？'，然后跟着ta的选择走——相信ta的判断。",
+        text: "问最懂吃的朋友，跟着ta选",
         traitScores: { A: 1, C: 1, E: 0, O: 1, X: 0, P: 0 }
       }
     ]
@@ -381,30 +381,30 @@ export const questionsV4: AdaptiveQuestion[] = [
     id: "Q13",
     level: 1,
     category: "赠礼思维",
-    scenarioText: "🎁 你在活动中认识了一个很聊得来的新朋友，下周是ta的生日。你想送个小礼物表示心意。",
-    questionText: "你会怎么选？",
+    scenarioText: "🎁 新朋友下周生日，你想送个小礼物。",
+    questionText: "你会选？",
     primaryTraits: ["A", "O", "C"],
     isAnchor: true,
     discriminationIndex: 0.41,
     options: [
       {
         value: "A",
-        text: "回想ta聊天时提到过喜欢什么，比如某个乐队、某款游戏，专门去找相关的周边——送到心坎上才有意义。",
+        text: "找ta提过喜欢的东西，投其所好",
         traitScores: { A: 3, C: 2, E: 0, O: 0, X: 0, P: 0 }
       },
       {
         value: "B",
-        text: "选一个我自己也很喜欢的小众好物，希望ta也能发现这个宝藏——分享我的品味是一种交流方式。",
+        text: "送我喜欢的小众好物，分享品味",
         traitScores: { A: 0, C: 0, E: 0, O: 2, X: 1, P: 0 }
       },
       {
         value: "C",
-        text: "买个百元左右的实用好物，比如护手霜、挂耳咖啡、香薰蜡烛——不踩雷、有品质、不显得刻意。",
+        text: "买个实用好物，不踩雷有品质",
         traitScores: { A: 0, C: 2, E: 2, O: 0, X: 0, P: 0 }
       },
       {
         value: "D",
-        text: "手写一张卡片或者做个小手工，附上我们认识的照片——用心比贵重更重要。",
+        text: "手写卡片或做手工，用心最重要",
         traitScores: { A: 2, C: 1, E: 0, O: 3, X: 0, P: 0 }
       }
     ]
@@ -2280,29 +2280,29 @@ export const questionsV4: AdaptiveQuestion[] = [
     id: "Q73",
     level: 2,
     category: "幽默风格",
-    scenarioText: "😄 和朋友聊天时，你说了一句话把大家逗笑了。",
-    questionText: "你内心的感受是？",
+    scenarioText: "😄 你说了句话把朋友们逗笑了。",
+    questionText: "你的感觉是？",
     primaryTraits: ["P", "X", "A"],
     discriminationIndex: 0.44,
     options: [
       {
         value: "A",
-        text: "超开心！继续抖包袱，让气氛更嗨——我就是快乐源泉。",
+        text: "超开心！继续抖包袱",
         traitScores: { A: 0, C: 0, E: 0, O: 0, X: 3, P: 3 }
       },
       {
         value: "B",
-        text: "有点小得意，但不会刻意表演——自然流露就好。",
+        text: "有点小得意，自然流露就好",
         traitScores: { A: 0, C: 1, E: 1, O: 0, X: 1, P: 2 }
       },
       {
         value: "C",
-        text: "有点意外，没想到自己会这么逗——可能是无心插柳。",
+        text: "有点意外，无心插柳",
         traitScores: { A: 0, C: 0, E: 2, O: 1, X: 0, P: 1 }
       },
       {
         value: "D",
-        text: "笑完就过了，不太在意这种事——情绪比较平稳。",
+        text: "笑完就过了，不太在意",
         traitScores: { A: 0, C: 1, E: 2, O: 0, X: -1, P: 0 }
       }
     ]
@@ -2375,29 +2375,29 @@ export const questionsV4: AdaptiveQuestion[] = [
     id: "Q76",
     level: 2,
     category: "艺术体验",
-    scenarioText: "🎨 朋友带你去看一个先锋艺术展，作品都很抽象、看不太懂。",
-    questionText: "你的感受是？",
+    scenarioText: "🎨 朋友带你看先锋艺术展，作品很抽象。",
+    questionText: "你的感觉是？",
     primaryTraits: ["O", "A", "P"],
     discriminationIndex: 0.43,
     options: [
       {
         value: "A",
-        text: "'好有意思！我想知道艺术家想表达什么。'——享受解读的过程。",
+        text: "好有意思！想知道艺术家想表达什么",
         traitScores: { A: 0, C: 0, E: 0, O: 3, X: 0, P: 1 }
       },
       {
         value: "B",
-        text: "'虽然不太懂，但氛围挺特别的。'——感受整体体验而非具体内容。",
+        text: "不太懂，但氛围挺特别的",
         traitScores: { A: 1, C: 0, E: 1, O: 1, X: 0, P: 0 }
       },
       {
         value: "C",
-        text: "'老实说有点困惑，但陪朋友看看也行。'——不太感兴趣但愿意配合。",
+        text: "有点困惑，但陪朋友看看",
         traitScores: { A: 2, C: 0, E: 1, O: 0, X: 0, P: 0 }
       },
       {
         value: "D",
-        text: "'这种我真的欣赏不来，能早点走吗？'——对抽象艺术接受度低。",
+        text: "真的欣赏不来，想早点走",
         traitScores: { A: 0, C: 0, E: 1, O: -2, X: 0, P: -1 }
       }
     ]

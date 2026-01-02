@@ -89,14 +89,14 @@ export interface AssessmentConfig {
 }
 
 export const DEFAULT_ASSESSMENT_CONFIG: AssessmentConfig = {
-  minQuestions: 9,
-  softMaxQuestions: 14,
-  hardMaxQuestions: 20,
-  defaultConfidenceThreshold: 0.72,
-  confusablePairThreshold: 0.78,
+  minQuestions: 8,
+  softMaxQuestions: 10,
+  hardMaxQuestions: 14,
+  defaultConfidenceThreshold: 0.65,
+  confusablePairThreshold: 0.70,
   anchorQuestionCount: 6,
-  validityCheckPositions: [6, 12],
-  milestonePositions: [8, 12, 16],
+  validityCheckPositions: [6, 10],
+  milestonePositions: [5, 8, 11],
 };
 
 export interface ConfusableArchetypePair {
@@ -147,7 +147,7 @@ export interface MilestoneMessage {
 }
 
 export const MILESTONE_MESSAGES: MilestoneMessage[] = [
-  { position: 8, message: '嗯嗯，开始有点懂你了~', xiaoyueMood: 'thinking' },
-  { position: 12, message: '越来越清晰啦！你的性格画像快成型了~', xiaoyueMood: 'encouraging' },
-  { position: 16, message: '就差一点点了！帮我确认最后几个细节~', xiaoyueMood: 'excited' },
+  { position: 5, message: '嗯嗯，开始有点懂你了~', xiaoyueMood: 'thinking' },
+  { position: 8, message: '越来越清晰啦！快成型了~', xiaoyueMood: 'encouraging' },
+  { position: 11, message: '最后几题确认一下~', xiaoyueMood: 'excited' },
 ];
