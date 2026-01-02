@@ -9961,6 +9961,104 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  // Skip current question and get alternative
+  app.post('/api/assessment/v4/:sessionId/skip', async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      const { questionId } = req.body;
+      
+      if (!questionId) {
+        return res.status(400).json({ message: 'questionId is required' });
+      }
+      
+      const session = await storage.getAssessmentSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: 'Session not found' });
+      }
+      
+      const { 
+        questionsV4, 
+        initializeEngineState, 
+        processAnswer, 
+        skipQuestion,
+        MAX_SKIP_COUNT,
+        DEFAULT_ASSESSMENT_CONFIG 
+      } = await import('@shared/personality');
+      
+      // Get current skip count from session
+      const currentSkipCount = session.skipCount || 0;
+      const skippedQuestionIds: string[] = (session.skippedQuestionIds as string[]) || [];
+      
+      if (currentSkipCount >= MAX_SKIP_COUNT) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Maximum skip limit reached',
+          skipCount: currentSkipCount,
+          canSkip: false,
+          remainingSkips: 0,
+        });
+      }
+      
+      // Rebuild engine state with skipped questions
+      const answers = await storage.getAssessmentAnswers(sessionId);
+      let engineState = initializeEngineState(DEFAULT_ASSESSMENT_CONFIG);
+      
+      // Add previously skipped questions to state
+      for (const skippedId of skippedQuestionIds) {
+        engineState.skippedQuestionIds.add(skippedId);
+      }
+      engineState.skipCount = currentSkipCount;
+      
+      // Process previous answers
+      for (const answer of answers) {
+        const q = questionsV4.find(quest => quest.id === answer.questionId);
+        if (q) {
+          engineState = processAnswer(engineState, q, answer.selectedOption);
+        }
+      }
+      
+      // Skip current question
+      const skipResult = skipQuestion(engineState, questionId);
+      
+      if (!skipResult) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Cannot skip question',
+          skipCount: currentSkipCount,
+          canSkip: false,
+          remainingSkips: 0,
+        });
+      }
+      
+      // Update session with new skip info
+      const newSkippedIds = [...skippedQuestionIds, questionId];
+      await storage.updateAssessmentSession(sessionId, {
+        skipCount: skipResult.newState.skipCount,
+        skippedQuestionIds: newSkippedIds,
+      });
+      
+      const newQuestion = skipResult.newQuestion;
+      
+      res.json({
+        success: true,
+        newQuestion: newQuestion ? {
+          id: newQuestion.id,
+          level: newQuestion.level,
+          category: newQuestion.category,
+          scenarioText: newQuestion.scenarioText,
+          questionText: newQuestion.questionText,
+          options: shuffleOptions(newQuestion.options),
+        } : null,
+        skipCount: skipResult.newState.skipCount,
+        canSkip: skipResult.newState.skipCount < MAX_SKIP_COUNT,
+        remainingSkips: MAX_SKIP_COUNT - skipResult.newState.skipCount,
+      });
+    } catch (error: any) {
+      console.error('[Assessment V4 Skip] Error:', error);
+      res.status(500).json({ message: 'Failed to skip question', error: error.message });
+    }
+  });
+
   // Get assessment results
   app.get('/api/assessment/v4/:sessionId/result', async (req: any, res) => {
     try {

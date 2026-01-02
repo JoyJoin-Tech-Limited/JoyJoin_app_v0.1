@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Sparkles, Loader2, Gift, Star, PartyPopper } from "lucide-react";
+import { ChevronLeft, Sparkles, Loader2, Gift, Star, PartyPopper, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -199,8 +199,12 @@ export default function PersonalityTestPageV4() {
     encouragement,
     isLoading,
     isSubmitting,
+    isSkipping,
     startAssessment,
     submitAnswer,
+    skipQuestion,
+    canSkip,
+    remainingSkips,
     topArchetype,
     answeredCount,
   } = useAdaptiveAssessment();
@@ -247,6 +251,18 @@ export default function PersonalityTestPageV4() {
   const handleMilestoneContinue = useCallback(() => {
     setShowMilestone(false);
   }, []);
+
+  const handleSkipQuestion = useCallback(async () => {
+    if (!currentQuestion || !canSkip) return;
+    
+    const success = await skipQuestion(currentQuestion.id);
+    if (success) {
+      setSelectedOption(undefined);
+      toast({
+        description: "已换一道题",
+      });
+    }
+  }, [currentQuestion, canSkip, skipQuestion, toast]);
 
   if (isLoading && !currentQuestion) {
     return (
@@ -411,12 +427,12 @@ export default function PersonalityTestPageV4() {
             />
           </div>
 
-          <div className="py-4 mt-auto">
+          <div className="py-4 mt-auto space-y-3">
             <Button 
               size="lg"
               className="w-full h-14 text-lg rounded-2xl"
               onClick={handleSubmitAnswer}
-              disabled={!selectedOption || isSubmitting}
+              disabled={!selectedOption || isSubmitting || isSkipping}
               data-testid="button-submit-answer"
             >
               {isSubmitting ? (
@@ -424,6 +440,29 @@ export default function PersonalityTestPageV4() {
               ) : null}
               继续
             </Button>
+            
+            {canSkip && (
+              <div className="flex flex-col items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSkipQuestion}
+                  disabled={isSkipping || isSubmitting}
+                  className="text-muted-foreground gap-2"
+                  data-testid="button-skip-question"
+                >
+                  {isSkipping ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  换一道
+                </Button>
+                <span className="text-xs text-muted-foreground/70">
+                  选项都不合适？还剩{remainingSkips}次机会
+                </span>
+              </div>
+            )}
           </div>
         </motion.div>
       </AnimatePresence>

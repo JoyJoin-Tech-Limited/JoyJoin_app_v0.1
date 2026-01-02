@@ -1,22 +1,9 @@
-/**
- * V4 Adaptive Assessment - Xiaoyue Feedback System
- * 小悦反馈系统 - 生动版（69题完整版）
- */
+# **小悦风格反馈库 - 恰到好处的生动版**
 
-import { TraitKey } from './types';
-
-export interface OptionFeedback {
-  text: string;
-  traitHints: TraitKey[];
-}
-
-export interface QuestionFeedbackConfig {
-  questionId: string;
-  options: Record<string, OptionFeedback>;
-}
-
-export const xiaoyueFeedback: Record<string, Record<string, string>> = {
-  // ============ L1: 基础枢纽题 (Q1-Q15) ============
+```typescript
+// 小悦反馈库 - 保持克制但略带生动的风格
+export const XiaoyueBalancedFeedback = {
+  // ============ L1: 基础枢纽题 ============
   "Q1": {
     "A": "破冰专家上线。记下了。",
     "B": "先看看安排，很谨慎嘛。",
@@ -57,7 +44,7 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
     "A": "直接抛出观点，不怯场。",
     "B": "观察时机再提，很稳。",
     "C": "私下分享，注重关系。",
-    "D": "保护气氛，谨慎型。"
+    "D": "怕破坏气氛，谨慎型。"
   },
   "Q8": {
     "A": "有点焦躁，希望推进。",
@@ -99,7 +86,7 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
     "A": "开心延续联系，热情。",
     "B": "平常心聊天，自然派。",
     "C": "斟酌回复，谨慎型。",
-    "D": "喜欢有目的的交流。"
+    "D": "感到压力，需要目的。"
   },
   "Q15": {
     "A": "欢呼庆祝，享受胜利。",
@@ -108,7 +95,7 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
     "D": "低调避免刺激，体谅。"
   },
   
-  // ============ L2: 核心探索题 (Q16-Q50) ============
+  // ============ L2: 核心探索题 ============
   "Q16": {
     "A": "专注倾听，情感支持型。",
     "B": "帮ta梳理步骤，解决方案派。",
@@ -155,7 +142,7 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
     "A": "主动自我介绍，不怯场。",
     "B": "紧跟朋友，借力型。",
     "C": "先观察再融入，谨慎。",
-    "D": "等别人主动找，随缘型。"
+    "D": "等别人主动找，被动型。"
   },
   "Q24": {
     "A": "点热门歌曲，跟潮流。",
@@ -182,7 +169,7 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
     "D": "补充优化别人，配合者。"
   },
   "Q28": {
-    "A": "会反思表达，心思细腻。",
+    "A": "怀疑说错话，敏感型。",
     "B": "无所谓，淡定派。",
     "C": "主动@救场，积极型。",
     "D": "反思表达方式，严谨。"
@@ -190,8 +177,8 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
   "Q29": {
     "A": "惊喜感动，情感丰富。",
     "B": "兴奋大笑，享受关注。",
-    "C": "有点意外但配合，随和型。",
-    "D": "惊喜有点意外，需要消化。"
+    "C": "不知所措但配合，紧张型。",
+    "D": "觉得是负担，压力派。"
   },
   "Q30": {
     "A": "认真提建议，负责型。",
@@ -245,7 +232,7 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
     "A": "渐入佳境，享受能量场。",
     "B": "需要透气休息，耗电快。",
     "C": "找小圈子聊天，舒适型。",
-    "D": "能量快见底，想充电了。"
+    "D": "想早点离开，超负荷。"
   },
   "Q39": {
     "A": "我来做！喜欢演讲。",
@@ -287,11 +274,11 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
     "A": "严格遵循步骤，完美主义。",
     "B": "加入自己创意，改造派。",
     "C": "和别人交流想法，合作型。",
-    "D": "希望老师多指导，学习型。"
+    "D": "希望老师多指导，依赖。"
   },
   "Q46": {
     "A": "感到被挑战，更努力阐述。",
-    "B": "想结束对峙，回避型。",
+    "B": "紧张想结束对峙，回避型。",
     "C": "好奇对方立场，探索者。",
     "D": "觉得正常，淡定派。"
   },
@@ -317,10 +304,10 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
     "A": "绝对保密，就当不知道。",
     "B": "告诉最信任的朋友，分享型。",
     "C": "以关心方式聊起，体贴。",
-    "D": "有点纠结，需要消化。"
+    "D": "觉得有负担，压力。"
   },
   
-  // ============ L3: 精准决胜题 (Q51-Q60) ============
+  // ============ L3: 精准决胜题 ============
   "Q51": {
     "A": "让气氛愉快，开心果型。",
     "B": "提供情感支持，治愈系。",
@@ -328,10 +315,10 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
     "D": "确保事情顺利，可靠后盾。"
   },
   "Q52": {
-    "A": "不太喜欢冷场的感觉。",
-    "B": "在意表达是否得体。",
-    "C": "不喜欢突然成为焦点。",
-    "D": "不太想卷入人际冲突。"
+    "A": "最怕冷场尴尬。",
+    "B": "怕说错话被负面看待。",
+    "C": "怕成为焦点要即兴。",
+    "D": "怕卷入人际冲突。"
   },
   "Q53": {
     "A": "火花塞，点燃气氛。",
@@ -381,71 +368,11 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
     "C": "大家玩得开心笑声不断。",
     "D": "安排得当流程顺畅舒适。",
     "E": "可以放松做自己没压力。"
-  },
-
-  // ============ 新增题目 (Q61-Q69) ============
-  // Q61-Q62: 反向计分题
-  "Q61": {
-    "A": "有点烦躁，保护个人空间。",
-    "B": "犹豫但还是会去，有责任感。",
-    "C": "开心！正好想出去玩。",
-    "D": "看情况，理性评估派。"
-  },
-  "Q62": {
-    "A": "专注聊天，享受当下。",
-    "B": "帮大家拍照，服务型。",
-    "C": "积极参与，融入热闹。",
-    "D": "找个安静角落，需要喘息。"
-  },
-  // Q63-Q65: E维度（情绪稳定性）直接测量题
-  "Q63": {
-    "A": "几秒钟就过去了，弹性好。",
-    "B": "当时介意，很快就忘。",
-    "C": "可能影响一段时间心情。",
-    "D": "会反复想，深度消化型。"
-  },
-  "Q64": {
-    "A": "深呼吸冷静，自我调节。",
-    "B": "找人倾诉，需要出口。",
-    "C": "默默处理，独自消化。",
-    "D": "转移注意力，做别的事。"
-  },
-  "Q65": {
-    "A": "第二天精神满满，恢复快。",
-    "B": "需要半天缓冲，正常。",
-    "C": "可能需要一整天恢复。",
-    "D": "好几天都有点累。"
-  },
-  // Q66-Q68: 工作/学习场景题
-  "Q66": {
-    "A": "咖啡馆背景音，有氛围。",
-    "B": "完全安静，专注型。",
-    "C": "轻音乐陪伴，放松。",
-    "D": "和朋友一起自习，互相督促。"
-  },
-  "Q67": {
-    "A": "先开始再说，边做边调整。",
-    "B": "列清单规划，有条理。",
-    "C": "看心情，灵活安排。",
-    "D": "设定奖励机制，激励自己。"
-  },
-  "Q68": {
-    "A": "主动申请，喜欢挑战。",
-    "B": "被安排也OK，配合型。",
-    "C": "有点紧张但愿意试。",
-    "D": "希望先观察别人怎么做。"
-  },
-  // Q69: 注意力检查题
-  "Q69": {
-    "A": "认真作答，选了这个。",
-    "B": "看到了，选B。",
-    "C": "收到指令，选C。",
-    "D": "仔细看了，选D。"
   }
 };
 
-// 进度反馈（基于完成百分比）
-export const progressFeedback: Record<number, string> = {
+// 进度反馈
+export const XiaoyueProgressFeedback = {
   0.2: "三分之一了，有点意思。",
   0.5: "过半了，继续。",
   0.8: "快齐活儿了，坚持一下。",
@@ -453,8 +380,8 @@ export const progressFeedback: Record<number, string> = {
   1.0: "齐活儿，分析完了。"
 };
 
-// 原型暗示（12种动物原型）
-export const prototypeHintTexts: Record<string, string> = {
+// 原型暗示
+export const XiaoyuePrototypeHints = {
   "暖心熊": "看起来是温暖挂选手。",
   "机智狐": "有点机灵鬼的意思。",
   "定心大象": "稳当型选手，靠谱。",
@@ -468,121 +395,61 @@ export const prototypeHintTexts: Record<string, string> = {
   "织网蛛": "连接型选手，会搭桥。",
   "沉思猫头鹰": "深度思考型选手。"
 };
+```
 
-export interface PrototypeHint {
-  leadingTraits: TraitKey[];
-  hint: string;
+## **使用示例**
+
+```typescript
+// 获取反馈的简单函数
+export function getXiaoyueFeedback(questionId: string, optionIndex: number): string {
+  const optionKey = String.fromCharCode(65 + optionIndex); // A, B, C, D, E
+  return XiaoyueBalancedFeedback[questionId]?.[optionKey] || "记下了。";
 }
 
-export const prototypeHints: Record<string, PrototypeHint> = {
-  "high_X_high_P": {
-    leadingTraits: ["X", "P"],
-    hint: "感觉你是个很会带动气氛的人呢！"
-  },
-  "high_A_high_E": {
-    leadingTraits: ["A", "E"],
-    hint: "你给人很温暖稳定的感觉~"
-  },
-  "high_O_high_C": {
-    leadingTraits: ["O", "C"],
-    hint: "既有创意又有条理，很厉害！"
-  },
-  "high_E_low_X": {
-    leadingTraits: ["E"],
-    hint: "你很沉稳，喜欢自己的节奏~"
-  },
-  "high_A_high_P": {
-    leadingTraits: ["A", "P"],
-    hint: "你是个很暖心的开心果！"
-  },
-  "high_C_high_E": {
-    leadingTraits: ["C", "E"],
-    hint: "靠谱又稳重，值得信赖！"
-  },
-  "high_O_low_X": {
-    leadingTraits: ["O"],
-    hint: "内心世界很丰富呢~"
-  }
-};
-
-export interface MilestoneConfig {
-  position: number;
-  message: string;
-  xiaoyueMood: 'thinking' | 'excited' | 'encouraging' | 'curious';
-  animation?: string;
-}
-
-export const milestoneConfigs: MilestoneConfig[] = [
-  {
-    position: 5,
-    message: "开始有点了解你了~",
-    xiaoyueMood: 'curious',
-    animation: 'bounce'
-  },
-  {
-    position: 10,
-    message: "越来越了解你了！继续加油~",
-    xiaoyueMood: 'encouraging',
-    animation: 'pulse'
-  },
-  {
-    position: 15,
-    message: "快完成了！最后几题帮我确认一下~",
-    xiaoyueMood: 'excited',
-    animation: 'wiggle'
-  }
-];
-
-export function getOptionFeedback(questionId: string, optionValue: string): string | undefined {
-  return xiaoyueFeedback[questionId]?.[optionValue];
-}
-
-export function getMilestoneMessage(questionNumber: number): MilestoneConfig | undefined {
-  return milestoneConfigs.find(m => m.position === questionNumber);
-}
-
-export function getProgressFeedback(progress: number): string | undefined {
+// 获取进度反馈
+export function getProgressFeedback(progress: number): string | null {
   const milestones = [0.2, 0.5, 0.8, 0.95, 1.0];
   for (const milestone of milestones) {
     if (Math.abs(progress - milestone) < 0.05) {
-      return progressFeedback[milestone];
+      return XiaoyueProgressFeedback[milestone];
     }
   }
-  return undefined;
+  return null;
 }
 
-export function getPrototypeHintByName(archetypeName: string): string | undefined {
-  return prototypeHintTexts[archetypeName];
+// 原型暗示（每场测评最多显示2次）
+let prototypeHintCount = 0;
+export function getPrototypeHint(prototypeName: string): string | null {
+  if (prototypeHintCount >= 2) return null;
+  
+  const hint = XiaoyuePrototypeHints[prototypeName];
+  if (hint) {
+    prototypeHintCount++;
+    return hint;
+  }
+  return null;
 }
 
-export function getPrototypeHint(traits: Record<TraitKey, number>): PrototypeHint | undefined {
-  const entries = Object.entries(traits) as [TraitKey, number][];
-  entries.sort((a, b) => b[1] - a[1]);
-  
-  const topTraits = entries.slice(0, 2).map(([trait]) => trait);
-  const lowTraits = entries.slice(-2).map(([trait]) => trait);
-  
-  if (topTraits.includes('X') && topTraits.includes('P')) {
-    return prototypeHints['high_X_high_P'];
-  }
-  if (topTraits.includes('A') && topTraits.includes('E')) {
-    return prototypeHints['high_A_high_E'];
-  }
-  if (topTraits.includes('O') && topTraits.includes('C')) {
-    return prototypeHints['high_O_high_C'];
-  }
-  if (topTraits.includes('A') && topTraits.includes('P')) {
-    return prototypeHints['high_A_high_P'];
-  }
-  if (topTraits.includes('C') && topTraits.includes('E')) {
-    return prototypeHints['high_C_high_E'];
-  }
-  if (topTraits.includes('E') && lowTraits.includes('X')) {
-    return prototypeHints['high_E_low_X'];
-  }
-  if (topTraits.includes('O') && lowTraits.includes('X')) {
-    return prototypeHints['high_O_low_X'];
-  }
-  
-  return undefined;
+// 重置计数器
+export function resetFeedbackCounters() {
+  prototypeHintCount = 0;
 }
+```
+
+## **移动端显示建议**
+
+```typescript
+// React Native 示例
+const XiaoyueFeedback = ({ feedback, visible, type = 'normal' }) => {
+  return (
+    <Animated.View 
+      style={[
+        styles.container,
+        {
+          opacity: visible ? 1 : 0,
+          transform: [{ translateY: visible ? 0 : 10 }]
+        }
+      ]}
+    >
+      <View style={styles.bubble}>
+        <Text style

@@ -337,6 +337,8 @@ export interface IStorage {
     preSignupAnswers: any;
     finalResult: any;
     completedAt: Date;
+    skipCount: number;
+    skippedQuestionIds: string[];
   }>): Promise<any>;
   createAssessmentAnswer(data: {
     sessionId: string;
@@ -3868,6 +3870,8 @@ export class DatabaseStorage implements IStorage {
     preSignupAnswers: any;
     finalResult: any;
     completedAt: Date;
+    skipCount: number;
+    skippedQuestionIds: string[];
   }>): Promise<any> {
     const [session] = await db
       .update(assessmentSessions)

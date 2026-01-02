@@ -68,12 +68,22 @@ interface AnswerResponse {
   result?: AssessmentResult;
   progress?: AssessmentProgress;
   currentMatches?: ArchetypeMatch[];
+  skipCount?: number;
+  canSkip?: boolean;
   encouragement?: {
     message: string;
     progressPercentage: number;
     archetype?: string;
     confidence?: number;
   } | null;
+}
+
+interface SkipResponse {
+  success: boolean;
+  newQuestion?: AssessmentQuestion;
+  skipCount: number;
+  canSkip: boolean;
+  remainingSkips: number;
 }
 
 interface PreSignupAnswer {
@@ -87,6 +97,8 @@ const PRESIGNUP_SESSION_KEY = "joyjoin_v4_assessment_session";
 const PRESIGNUP_ANSWERS_KEY = "joyjoin_v4_presignup_answers";
 const CACHE_EXPIRY_HOURS = 24;
 
+const MAX_SKIP_COUNT = 3;
+
 export function useAdaptiveAssessment() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [phase, setPhase] = useState<string>("pre_signup");
@@ -97,6 +109,8 @@ export function useAdaptiveAssessment() {
   const [result, setResult] = useState<AssessmentResult | null>(null);
   const [encouragement, setEncouragement] = useState<AnswerResponse['encouragement']>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [skipCount, setSkipCount] = useState(0);
+  const [canSkip, setCanSkip] = useState(true);
 
   const loadCachedSession = useCallback(() => {
     try {
@@ -248,6 +262,26 @@ export function useAdaptiveAssessment() {
     },
   });
 
+  const skipMutation = useMutation({
+    mutationFn: async (questionId: string) => {
+      if (!sessionId) throw new Error("No active session");
+      
+      const response = await apiRequest(
+        "POST",
+        `/api/assessment/v4/${sessionId}/skip`,
+        { questionId }
+      );
+      return response.json() as Promise<SkipResponse>;
+    },
+    onSuccess: (data) => {
+      setSkipCount(data.skipCount);
+      setCanSkip(data.canSkip);
+      if (data.newQuestion) {
+        setCurrentQuestion(data.newQuestion);
+      }
+    },
+  });
+
   const startAssessment = useCallback(async (resumeFromCache = true) => {
     if (resumeFromCache) {
       const cached = loadCachedSession();
@@ -285,6 +319,16 @@ export function useAdaptiveAssessment() {
     await getResultMutation.mutateAsync();
   }, [getResultMutation]);
 
+  const skipQuestion = useCallback(async (questionId: string) => {
+    if (!canSkip) return false;
+    try {
+      await skipMutation.mutateAsync(questionId);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [canSkip, skipMutation]);
+
   return {
     sessionId,
     phase,
@@ -296,14 +340,20 @@ export function useAdaptiveAssessment() {
     encouragement,
     isInitialized,
     
+    skipCount,
+    canSkip,
+    remainingSkips: MAX_SKIP_COUNT - skipCount,
+    
     isLoading: startMutation.isPending || answerMutation.isPending,
     isSubmitting: answerMutation.isPending,
+    isSkipping: skipMutation.isPending,
     isLinkingUser: linkUserMutation.isPending,
-    error: startMutation.error || answerMutation.error || linkUserMutation.error,
+    error: startMutation.error || answerMutation.error || linkUserMutation.error || skipMutation.error,
     
     startAssessment,
     startFreshAssessment,
     submitAnswer,
+    skipQuestion,
     continueAfterSignup,
     fetchResult,
     clearCache,
