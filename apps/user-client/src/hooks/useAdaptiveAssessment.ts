@@ -111,6 +111,7 @@ export function useAdaptiveAssessment() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [skipCount, setSkipCount] = useState(0);
   const [canSkip, setCanSkip] = useState(true);
+  const [baselineAnswered, setBaselineAnswered] = useState<number>(0);
 
   const loadCachedSession = useCallback(() => {
     try {
@@ -164,7 +165,11 @@ export function useAdaptiveAssessment() {
   }, []);
 
   const startMutation = useMutation({
-    mutationFn: async (params?: { preSignupAnswers?: PreSignupAnswer[] }) => {
+    mutationFn: async (params?: { 
+      sessionId?: string;
+      preSignupAnswers?: PreSignupAnswer[]; 
+      forceNew?: boolean 
+    }) => {
       const response = await apiRequest("POST", "/api/assessment/v4/start", params || {});
       return response.json() as Promise<StartResponse>;
     },
@@ -176,6 +181,8 @@ export function useAdaptiveAssessment() {
       setCurrentMatches(data.currentMatches);
       setIsComplete(data.isComplete);
       setIsInitialized(true);
+      // Record baseline for relative question counting
+      setBaselineAnswered(data.progress?.answered || 0);
       cacheSession({ sessionId: data.sessionId, phase: data.phase });
     },
   });
@@ -285,18 +292,27 @@ export function useAdaptiveAssessment() {
   const startAssessment = useCallback(async (resumeFromCache = true) => {
     const cachedAnswers = getCachedAnswers();
     const preSignupAnswers = cachedAnswers.length > 0 ? cachedAnswers : undefined;
+    
+    // Always force new session when we have preSignupAnswers (post-login flow)
+    // This ensures we don't accumulate answers from previous incomplete sessions
+    const forceNew = preSignupAnswers && preSignupAnswers.length > 0;
 
-    if (resumeFromCache) {
+    if (resumeFromCache && !forceNew) {
       const cached = loadCachedSession();
       if (cached?.sessionId) {
         setSessionId(cached.sessionId);
         setPhase(cached.phase);
-        await startMutation.mutateAsync({ preSignupAnswers });
+        // Send sessionId to backend to resume existing session
+        await startMutation.mutateAsync({ 
+          sessionId: cached.sessionId, 
+          preSignupAnswers, 
+          forceNew: false 
+        });
         return;
       }
     }
     
-    await startMutation.mutateAsync({ preSignupAnswers });
+    await startMutation.mutateAsync({ preSignupAnswers, forceNew });
   }, [loadCachedSession, getCachedAnswers, startMutation]);
 
   const startFreshAssessment = useCallback(async () => {
@@ -364,6 +380,7 @@ export function useAdaptiveAssessment() {
     topConfidence: currentMatches[0]?.confidence || 0,
     answeredCount: progress?.answered || 0,
     estimatedRemaining: progress?.estimatedRemaining || 0,
+    baselineAnswered,
   };
 }
 
