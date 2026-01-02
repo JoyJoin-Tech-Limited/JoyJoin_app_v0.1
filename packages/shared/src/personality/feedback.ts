@@ -30,7 +30,7 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
     "D": "安静聊天，喜欢深度。"
   },
   "Q3": {
-    "A": "挣扎但赴约，热闹更重要。",
+    "A": "太棒了！立刻调整计划，这种热情真有感染力。",
     "B": "坚守计划，执行力强。",
     "C": "想拉朋友一起，会协调。",
     "D": "需要消化冲突，理解。"
