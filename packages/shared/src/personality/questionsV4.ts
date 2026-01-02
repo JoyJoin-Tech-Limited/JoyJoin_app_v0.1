@@ -1,26 +1,12 @@
 /**
  * V4 Adaptive Assessment - 60-Question Bank (Optimized)
  * 自适应性格测评 V4 - 优化后的60题题库
- * 
- * 优化内容：
- * 1. 原型区分度优化 - 为边界模糊原型对增加二级区分维度
- * 2. 巴纳姆效应防护 - 加入"代价/权衡"表述
- * 3. L1层P维度覆盖 - Q9/Q15添加P到primaryTraits
- * 4. E维度正向路径 - Q3/Q8/Q14确保正向E积累
- * 5. L3分数平衡 - Q52/Q53/Q59正负平衡
- * 6. 测谎题重设计 - Q56/Q58构建一致性检测
- * 7. 社会期望修复 - Q30/Q50同等期望性表述
- * 8. 文化本地化 - Q1/Q17/Q34港深职场场景适配
- * 9. primaryTraits补全 - 所有题目标注完整
- * 10. 高鉴别力锚点题 - 标记6道anchor题用于pre-signup
  */
 
-import { AdaptiveQuestion, TraitKey } from './types';
+import { AdaptiveQuestion } from './types';
 
 export const questionsV4: AdaptiveQuestion[] = [
   // ==================== L1 基础枢纽题 (Q1-Q15) ====================
-  // 6道锚点题用于Pre-signup阶段
-  
   {
     id: "Q1",
     level: 1,
@@ -485,7 +471,6 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
 
   // ==================== L2 核心探索题 (Q16-Q50) ====================
-  
   {
     id: "Q16",
     level: 2,
@@ -964,7 +949,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "D",
-        text: "反思消息的内容和形式，看是否可以提高表达清晰度——理性分析。",
+        text: "反思消息的内容 and 形式，看是否可以提高表达清晰度——理性分析。",
         traitScores: { A: 0, C: 2, E: 0, O: 0, X: 0, P: 0 }
       }
     ]
@@ -1079,7 +1064,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "C",
-        text: "根据在场的人的熟悉程度和气氛来决定——灵活应对。",
+        text: "根据在场的人的熟悉程度 and 气氛来决定——灵活应对。",
         traitScores: { A: 2, C: 1, E: 1, O: 0, X: 0, P: 0 }
       },
       {
@@ -1179,6 +1164,9 @@ export const questionsV4: AdaptiveQuestion[] = [
       }
     ]
   },
+  {
+    id: "Q36",
+    level: 2,
     category: "接受新事物",
     scenarioText: "🔄 朋友向你推荐一个TA非常喜欢、但你之前从未接触过的活动（如某种舞蹈、冥想、攀岩）。",
     questionText: "你的第一反应是？",
@@ -1186,113 +1174,23 @@ export const questionsV4: AdaptiveQuestion[] = [
     options: [
       {
         value: "A",
-        text: "听起来很酷！立刻询问细节并计划尝试——拥抱未知。",
-        traitScores: { A: 0, C: 0, E: 0, O: 3, X: 2, P: 1 }
+        text: "听起来很有趣，我很愿意尝试一下——高开放性。",
+        traitScores: { A: 1, C: 0, E: 0, O: 3, X: 1, P: 1 }
       },
       {
         value: "B",
-        text: "谢谢推荐，我会去查查相关资料和评价，再决定——谨慎评估。",
-        traitScores: { A: 0, C: 3, E: 0, O: 1, X: 0, P: 0 }
+        text: "先了解一下细节（如时间、难度、危险性）再决定——审慎尝试。",
+        traitScores: { A: 0, C: 3, E: 1, O: 1, X: 0, P: 0 }
       },
       {
         value: "C",
-        text: "感谢TA的分享，但因为不确定是否适合自己，可能不会行动——保守观望。",
-        traitScores: { A: 1, C: 1, E: 2, O: 0, X: 0, P: 0 }
+        text: "如果朋友陪我一起去，我可能愿意试一试——社交驱动。",
+        traitScores: { A: 3, C: 0, E: 0, O: 1, X: 1, P: 1 }
       },
       {
         value: "D",
-        text: "为了不辜负朋友的好意，答应一起去体验一次——社交驱动。",
-        traitScores: { A: 2, C: 0, E: 0, O: 0, X: 0, P: 1 }
-      }
-    ]
-  },
-  {
-    id: "Q34",
-    level: 2,
-    category: "团队节奏",
-    scenarioText: "🏃 周末和朋友去梧桐山徒步，队伍分成了快慢两组。你属于中等速度。",
-    questionText: "你更可能？",
-    primaryTraits: ["X", "A", "E"],
-    options: [
-      {
-        value: "A",
-        text: "努力跟上快组，把这当成一次挑战——追求突破，但可能很累。",
-        traitScores: { A: 0, C: 1, E: -1, O: 1, X: 2, P: 0 }
-      },
-      {
-        value: "B",
-        text: "留在慢组，陪体力较弱的人，确保没人掉队——照顾他人。",
-        traitScores: { A: 3, C: 0, E: 0, O: 0, X: 0, P: 1 }
-      },
-      {
-        value: "C",
-        text: "按照自己最舒适的节奏走，可能前后浮动——自我节奏。",
-        traitScores: { A: 0, C: 0, E: 3, O: 0, X: 0, P: 0 }
-      },
-      {
-        value: "D",
-        text: "观察队伍整体情况，向领队建议是否需要调整计划——全局视角。",
-        traitScores: { A: 1, C: 2, E: 0, O: 0, X: 0, P: 0 }
-      }
-    ]
-  },
-  {
-    id: "Q35",
-    level: 2,
-    category: "讨论风格",
-    scenarioText: "📖 读书会上，大家对一本书的评价两极分化。",
-    questionText: "你更享受哪种讨论？（考虑你可能需要付出的精力和可能的收获）",
-    primaryTraits: ["C", "A", "O", "P"],
-    options: [
-      {
-        value: "A",
-        text: "激烈但有依据的观点交锋——烧脑但收获深刻理解。",
-        traitScores: { A: 0, C: 2, E: 0, O: 2, X: 1, P: 0 }
-      },
-      {
-        value: "B",
-        text: "温和地分享各自感受，理解彼此视角的不同——轻松但可能流于表面。",
-        traitScores: { A: 3, C: 0, E: 1, O: 0, X: 0, P: 1 }
-      },
-      {
-        value: "C",
-        text: "由一个核心争议点展开哲学或社会层面的延伸探讨——深度但可能跑题。",
-        traitScores: { A: 0, C: 1, E: 0, O: 3, X: 0, P: 0 }
-      },
-      {
-        value: "D",
-        text: "轻松地聊聊天，不必太严肃，聊到哪里是哪里——愉悦但可能无收获。",
-        traitScores: { A: 0, C: 0, E: 2, O: 0, X: 0, P: 2 }
-      }
-    ]
-  },
-  {
-    id: "Q36",
-    level: 2,
-    category: "礼物选择",
-    scenarioText: "🎁 交换礼物环节，你抽到了不太熟悉的人，对他/她的喜好一无所知。",
-    questionText: "你会如何选择礼物？",
-    primaryTraits: ["C", "A", "O"],
-    options: [
-      {
-        value: "A",
-        text: "选一个安全、通用的精美礼品（如香薰、文具）——稳妥但可能无惊喜。",
-        traitScores: { A: 0, C: 2, E: 2, O: 0, X: 0, P: 0 }
-      },
-      {
-        value: "B",
-        text: "通过共同朋友或社交媒体悄悄了解TA的喜好——花时间调研。",
-        traitScores: { A: 2, C: 2, E: 0, O: 0, X: 0, P: 0 }
-      },
-      {
-        value: "C",
-        text: "选一个能代表你个人特色或你觉得特别的东西——表达自我。",
-        traitScores: { A: 0, C: 0, E: 0, O: 3, X: 1, P: 0 }
-      },
-      {
-        value: "D",
-        text: "选一个有趣、能引发话题的互动性礼物（如桌游、趣味书）——创造连接。",
-        traitScores: { A: 1, C: 0, E: 0, O: 1, X: 2, P: 2 }
+        text: "不太感兴趣，我更倾向于待在自己的舒适区——守旧倾向。",
+        traitScores: { A: 0, C: 1, E: 2, O: -1, X: -1, P: 0 }
       }
     ]
   },
@@ -1316,7 +1214,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "C",
-        text: "分享你自己或你知道的类似经历和结果——故事分享。",
+        text: "分享自己或他人的类似经历和结果——故事分享。",
         traitScores: { A: 1, C: 0, E: 0, O: 0, X: 2, P: 1 }
       },
       {
@@ -1396,7 +1294,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     options: [
       {
         value: "A",
-        text: "知道很多人的名字、职业和基本背景，有几个聊得来的——广泛了解。",
+        text: "知道很多人的名字、职业 and 基本背景，有几个聊得来的——广泛了解。",
         traitScores: { A: 3, C: 1, E: 0, O: 0, X: 1, P: 0 }
       },
       {
@@ -1496,7 +1394,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "C",
-        text: "更喜欢留白，最多提前一周安排，且需要独处时间——保护空间。",
+        text: "更喜欢留白，最多提前一周安排， and 需要独处时间——保护空间。",
         traitScores: { A: 0, C: 0, E: 3, O: 0, X: -1, P: 0 }
       },
       {
@@ -1551,7 +1449,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "B",
-        text: "在基础框架上加入自己的创意和改造——创新尝试。",
+        text: "在基础框架上加入自己的创意 and 改造——创新尝试。",
         traitScores: { A: 0, C: 1, E: 0, O: 3, X: 1, P: 0 }
       },
       {
@@ -1718,7 +1616,6 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
 
   // ==================== L3 精准决胜题 (Q51-Q60) ====================
-  
   {
     id: "Q51",
     level: 3,
