@@ -103,11 +103,11 @@ export const DEFAULT_ASSESSMENT_CONFIG: AssessmentConfig = {
   anchorQuestionCount: 6,
   validityCheckPositions: [6, 10],
   milestonePositions: [5, 8, 11],
-  enableTieredThreshold: true,
+  enableTieredThreshold: false,
   tieredThresholdConfig: {
-    confidenceGapThreshold: 0.12,
-    dimensionCoverageThreshold: 0.85,
-    maxExtraQuestions: 2,
+    confidenceGapThreshold: 0.10,
+    dimensionCoverageThreshold: 0.75,
+    maxExtraQuestions: 1,
   },
 };
 
