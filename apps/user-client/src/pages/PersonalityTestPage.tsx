@@ -23,11 +23,24 @@ import { cn } from "@/lib/utils";
 import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01_1766766685652.png";
 import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03_1766766685650.png";
 import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
+import PersonalityTestPageV4 from "./PersonalityTestPageV4";
 
 const PERSONALITY_TEST_CACHE_KEY = "joyjoin_personality_test_progress";
 const ONBOARDING_ANSWERS_KEY = "joyjoin_onboarding_answers";
+const V4_ANSWERS_KEY = "joyjoin_v4_presignup_answers";
 const ONBOARDING_QUESTIONS_COUNT = 6;
 const CACHE_EXPIRY_DAYS = 7;
+
+function hasV4PreSignupAnswers(): boolean {
+  try {
+    const cached = localStorage.getItem(V4_ANSWERS_KEY);
+    if (!cached) return false;
+    const answers = JSON.parse(cached);
+    return Array.isArray(answers) && answers.length > 0;
+  } catch {
+    return false;
+  }
+}
 
 interface AnswerV2 {
   type: "single" | "dual";
@@ -286,6 +299,19 @@ function clearOnboardingAnswers() {
 const INTRO_SHOWN_KEY = "joyjoin_personality_intro_shown";
 
 export default function PersonalityTestPage() {
+  const [useV4, setUseV4] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return hasV4PreSignupAnswers();
+  });
+
+  if (useV4) {
+    return <PersonalityTestPageV4 />;
+  }
+
+  return <PersonalityTestPageV2 />;
+}
+
+function PersonalityTestPageV2() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
