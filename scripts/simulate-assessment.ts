@@ -41,6 +41,10 @@ interface SimulationResult {
   skippedQuestionIds: string[];
   finalArchetype: string | null;
   archetypeMatch: number;
+  confidenceScore: number;
+  satisfactionScore: number;
+  trueArchetype: string;
+  isCorrectMatch: boolean;
   dropoutQuestion: string | null;
   timeSimulated: number;
   questionSequence: string[];
@@ -58,6 +62,9 @@ interface AggregatedMetrics {
   dimensionCoverage: Record<TraitKey, number>;
   avgCompletionTime: number;
   questionFrequency: Record<string, number>;
+  avgSatisfactionScore: number;
+  satisfactionByConfidence: { range: string; avgSatisfaction: number; count: number; correctMatchRate: number }[];
+  correctMatchRate: number;
 }
 
 function generateSimulatedUser(id: number): SimulatedUser {
@@ -75,6 +82,57 @@ function generateSimulatedUser(id: number): SimulatedUser {
   const impatienceLevel = Math.random();
 
   return { id, traitProfile, skipTendency, dropoutThreshold, impatienceLevel };
+}
+
+function calculateTrueArchetype(userTraitProfile: Record<TraitKey, number>): string {
+  let bestMatch = '';
+  let bestScore = -Infinity;
+
+  for (const [name, proto] of Object.entries(archetypePrototypes)) {
+    let score = 0;
+    const traits: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
+    for (const trait of traits) {
+      const protoValue = proto.traitProfile[trait] || 50;
+      const userValue = userTraitProfile[trait] || 50;
+      const diff = Math.abs(protoValue - userValue);
+      score -= diff;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = name;
+    }
+  }
+  return bestMatch;
+}
+
+function calculateSatisfactionScore(
+  trueArchetype: string,
+  assignedArchetype: string | null,
+  confidenceScore: number,
+  userTraitProfile: Record<TraitKey, number>
+): number {
+  if (!assignedArchetype) return 0;
+
+  const isCorrect = trueArchetype === assignedArchetype;
+  
+  const trueProto = archetypePrototypes[trueArchetype];
+  const assignedProto = archetypePrototypes[assignedArchetype];
+  
+  if (!trueProto || !assignedProto) return 50;
+
+  let traitSimilarity = 0;
+  const traits: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
+  for (const trait of traits) {
+    const diff = Math.abs((trueProto.traitProfile[trait] || 50) - (assignedProto.traitProfile[trait] || 50));
+    traitSimilarity += (1 - diff / 100);
+  }
+  traitSimilarity = traitSimilarity / traits.length;
+
+  const baseSatisfaction = isCorrect ? 90 : 50 + traitSimilarity * 30;
+  const confidenceBonus = confidenceScore * 10;
+  const randomVariation = (Math.random() - 0.5) * 10;
+
+  return Math.min(100, Math.max(0, baseSatisfaction + confidenceBonus + randomVariation));
 }
 
 function selectOptionForUser(
@@ -146,6 +204,16 @@ function simulateUser(user: SimulatedUser): SimulationResult {
   const completed = !dropoutQuestion && shouldTerminate(state);
   const finalArchetype = state.currentMatches[0]?.archetype || null;
   const archetypeMatch = state.currentMatches[0]?.score || 0;
+  const confidenceScore = state.currentMatches[0]?.confidence || 0;
+  
+  const trueArchetype = calculateTrueArchetype(user.traitProfile);
+  const isCorrectMatch = finalArchetype === trueArchetype;
+  const satisfactionScore = calculateSatisfactionScore(
+    trueArchetype,
+    finalArchetype,
+    confidenceScore,
+    user.traitProfile
+  );
 
   return {
     userId: user.id,
@@ -155,6 +223,10 @@ function simulateUser(user: SimulatedUser): SimulationResult {
     skippedQuestionIds,
     finalArchetype,
     archetypeMatch,
+    confidenceScore,
+    satisfactionScore,
+    trueArchetype,
+    isCorrectMatch,
     dropoutQuestion,
     timeSimulated: Date.now() - startTime,
     questionSequence,
@@ -202,6 +274,35 @@ function aggregateResults(results: SimulationResult[]): AggregatedMetrics {
     dimensionCoverage[trait] = Math.round((dimensionCoverage[trait] / totalDimensionHits) * 100);
   }
 
+  const avgSatisfactionScore = Math.round(
+    completedUsers.reduce((sum, r) => sum + r.satisfactionScore, 0) / completedUsers.length * 10
+  ) / 10;
+
+  const correctMatches = completedUsers.filter((r) => r.isCorrectMatch).length;
+  const correctMatchRate = Math.round((correctMatches / completedUsers.length) * 100);
+
+  const confidenceRanges = [
+    { range: '0.50-0.60', min: 0.50, max: 0.60 },
+    { range: '0.60-0.65', min: 0.60, max: 0.65 },
+    { range: '0.65-0.70', min: 0.65, max: 0.70 },
+    { range: '0.70-0.75', min: 0.70, max: 0.75 },
+    { range: '0.75-0.80', min: 0.75, max: 0.80 },
+    { range: '0.80+', min: 0.80, max: 1.0 },
+  ];
+
+  const satisfactionByConfidence = confidenceRanges.map(({ range, min, max }) => {
+    const usersInRange = completedUsers.filter(
+      (r) => r.confidenceScore >= min && r.confidenceScore < max
+    );
+    const count = usersInRange.length;
+    const avgSatisfaction = count > 0
+      ? Math.round(usersInRange.reduce((sum, r) => sum + r.satisfactionScore, 0) / count * 10) / 10
+      : 0;
+    const correctInRange = usersInRange.filter((r) => r.isCorrectMatch).length;
+    const correctMatchRate = count > 0 ? Math.round((correctInRange / count) * 100) : 0;
+    return { range, avgSatisfaction, count, correctMatchRate };
+  });
+
   return {
     totalUsers,
     completionRate: Math.round((completedUsers.length / totalUsers) * 100),
@@ -217,6 +318,9 @@ function aggregateResults(results: SimulationResult[]): AggregatedMetrics {
     avgCompletionTime:
       Math.round(results.reduce((sum, r) => sum + r.timeSimulated, 0) / totalUsers),
     questionFrequency,
+    avgSatisfactionScore,
+    satisfactionByConfidence,
+    correctMatchRate,
   };
 }
 
@@ -411,10 +515,29 @@ function generateUXReport(metrics: AggregatedMetrics): string {
 | 平均答题数 | **${metrics.avgQuestionsAnswered} 题** | ${metrics.avgQuestionsAnswered >= 8 && metrics.avgQuestionsAnswered <= 16 ? '理想范围' : '偏离预期'} |
 | 换题使用率 | **${metrics.skipUsageRate}%** | ${metrics.skipUsageRate <= 30 ? '健康' : '偏高，需关注题目质量'} |
 | 平均换题次数 | **${metrics.avgSkipsUsed} 次** | - |
+| **用户满意度** | **${metrics.avgSatisfactionScore}/100** | ${metrics.avgSatisfactionScore >= 80 ? '优秀' : metrics.avgSatisfactionScore >= 70 ? '良好' : '需改进'} |
+| **原型匹配准确率** | **${metrics.correctMatchRate}%** | ${metrics.correctMatchRate >= 70 ? '优秀' : metrics.correctMatchRate >= 50 ? '良好' : '需改进'} |
 
 ---
 
-## 二、12原型分布分析
+## 二、满意度与置信度关系分析
+
+| 置信度区间 | 用户数 | 平均满意度 | 匹配准确率 |
+|-----------|--------|-----------|-----------|
+${metrics.satisfactionByConfidence.map(({ range, count, avgSatisfaction, correctMatchRate }) => 
+  `| ${range} | ${count}人 | ${avgSatisfaction}/100 | ${correctMatchRate}% |`
+).join('\n')}
+
+### 置信度阈值建议
+${metrics.satisfactionByConfidence.filter(s => s.count > 0 && s.avgSatisfaction < 75).length > 0 
+  ? `- ⚠️ 低置信度区间满意度偏低，建议提高阈值
+- 0.65-0.70区间: 满意度${metrics.satisfactionByConfidence.find(s => s.range === '0.65-0.70')?.avgSatisfaction || 'N/A'}/100
+- 建议阈值: 0.70+ (满意度${metrics.satisfactionByConfidence.find(s => s.range === '0.70-0.75')?.avgSatisfaction || 'N/A'}/100)`
+  : '- ✅ 各置信度区间满意度均达标，当前阈值合适'}
+
+---
+
+## 三、12原型分布分析
 
 ${archetypeSorted.map(([name, count], i) => {
   const pct = Math.round((count / metrics.totalUsers) * 100);
@@ -558,7 +681,15 @@ ${psychAnalysis}
   console.log(`   - 完成率: ${metrics.completionRate}%`);
   console.log(`   - 平均答题数: ${metrics.avgQuestionsAnswered}`);
   console.log(`   - 换题使用率: ${metrics.skipUsageRate}%`);
+  console.log(`   - 用户满意度: ${metrics.avgSatisfactionScore}/100`);
+  console.log(`   - 匹配准确率: ${metrics.correctMatchRate}%`);
   console.log(`   - 原型数量: ${Object.keys(metrics.archetypeDistribution).length}`);
+  console.log('\n📊 置信度-满意度分析:');
+  metrics.satisfactionByConfidence.forEach(({ range, count, avgSatisfaction, correctMatchRate }) => {
+    if (count > 0) {
+      console.log(`   ${range}: ${count}人, 满意度${avgSatisfaction}, 准确率${correctMatchRate}%`);
+    }
+  });
 }
 
 main().catch(console.error);
