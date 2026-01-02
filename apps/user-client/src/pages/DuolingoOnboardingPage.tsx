@@ -110,7 +110,7 @@ function XiaoyueMascot({
           className="relative shrink-0"
         >
           <img 
-            src={XIAOYUE_AVATARS[mood]} 
+            src={XIAOYUE_AVATARS.normal} 
             alt="小悦" 
             className="w-16 h-16 object-contain drop-shadow-lg"
             data-testid="img-xiaoyue-avatar"
@@ -157,7 +157,7 @@ function XiaoyueMascot({
         className="relative"
       >
         <img 
-          src={XIAOYUE_AVATARS[mood]} 
+          src={XIAOYUE_AVATARS.normal} 
           alt="小悦" 
           className="w-28 h-28 object-contain drop-shadow-lg"
           data-testid="img-xiaoyue-avatar"
