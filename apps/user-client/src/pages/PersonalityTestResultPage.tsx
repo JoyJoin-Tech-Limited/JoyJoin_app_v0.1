@@ -12,10 +12,12 @@ import { archetypeGradients, archetypeAvatars } from '@/lib/archetypeAvatars';
 import { archetypeConfig } from '@/lib/archetypes';
 import { getArchetypeInsight } from '@/lib/archetypeInsights';
 import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import xiaoyueAvatar from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
 
 export default function PersonalityTestResultPage() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [showOverlay, setShowOverlay] = useState(true);
   const [countdown, setCountdown] = useState(3);
   const [animationPhase, setAnimationPhase] = useState<'countdown' | 'reveal'>('countdown');
