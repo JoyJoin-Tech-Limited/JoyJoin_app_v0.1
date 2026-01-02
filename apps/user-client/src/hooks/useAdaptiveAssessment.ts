@@ -164,7 +164,7 @@ export function useAdaptiveAssessment() {
   }, []);
 
   const startMutation = useMutation({
-    mutationFn: async (params?: { preSignupData?: PreSignupAnswer[] }) => {
+    mutationFn: async (params?: { preSignupAnswers?: PreSignupAnswer[] }) => {
       const response = await apiRequest("POST", "/api/assessment/v4/start", params || {});
       return response.json() as Promise<StartResponse>;
     },
@@ -290,7 +290,7 @@ export function useAdaptiveAssessment() {
         setPhase(cached.phase);
         
         const cachedAnswers = getCachedAnswers();
-        await startMutation.mutateAsync({ preSignupData: cachedAnswers.length > 0 ? cachedAnswers : undefined });
+        await startMutation.mutateAsync({ preSignupAnswers: cachedAnswers.length > 0 ? cachedAnswers : undefined });
         return;
       }
     }

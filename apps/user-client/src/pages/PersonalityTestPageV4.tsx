@@ -461,19 +461,19 @@ export default function PersonalityTestPageV4() {
             {canSkip && (
               <div className="flex flex-col items-center gap-1">
                 <Button
-                  variant="ghost"
-                  size="sm"
+                  variant="outline"
+                  size="lg"
                   onClick={handleSkipQuestion}
                   disabled={isSkipping || isSubmitting}
-                  className="text-muted-foreground gap-2"
+                  className="w-full h-14 text-lg rounded-2xl gap-2 border-dashed"
                   data-testid="button-skip-question"
                 >
                   {isSkipping ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    <RefreshCw className="h-4 w-4" />
+                    <RefreshCw className="h-5 w-5" />
                   )}
-                  换一道
+                  换一道题
                 </Button>
                 <span className="text-xs text-muted-foreground/70">
                   选项都不合适？还剩{remainingSkips}次机会
