@@ -164,7 +164,14 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
   
   scoredQuestions.sort((a, b) => b.score - a.score);
   
-  return scoredQuestions[0]?.question || null;
+  // Implement option randomization
+  const selectedQuestion = scoredQuestions[0]?.question || null;
+  if (selectedQuestion) {
+    const randomizedOptions = [...selectedQuestion.options].sort(() => Math.random() - 0.5);
+    return { ...selectedQuestion, options: randomizedOptions };
+  }
+  
+  return null;
 }
 
 export function skipQuestion(
@@ -184,6 +191,12 @@ export function skipQuestion(
   const currentLevel = currentQuestion?.level || 2;
   
   const newQuestion = selectAlternativeQuestion(newState, currentLevel);
+  
+  // Implement option randomization for skipped question
+  if (newQuestion) {
+    const randomizedOptions = [...newQuestion.options].sort(() => Math.random() - 0.5);
+    return { newState, newQuestion: { ...newQuestion, options: randomizedOptions } };
+  }
   
   return { newState, newQuestion };
 }
@@ -206,7 +219,12 @@ export function selectAlternativeQuestion(
       score: calculateQuestionUtility(q, state),
     }));
     scoredQuestions.sort((a, b) => b.score - a.score);
-    return scoredQuestions[0]?.question || null;
+    
+    const selectedQuestion = scoredQuestions[0]?.question || null;
+    if (selectedQuestion) {
+      const randomizedOptions = [...selectedQuestion.options].sort(() => Math.random() - 0.5);
+      return { ...selectedQuestion, options: randomizedOptions };
+    }
   }
   
   return selectNextQuestion(state);
