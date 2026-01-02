@@ -5,7 +5,6 @@ import BlindBoxSection from "@/components/BlindBoxSection";
 import HeroWelcome from "@/components/HeroWelcome";
 import LocationPickerSheet from "@/components/LocationPickerSheet";
 import { PromotionBannerCarousel } from "@/components/PromotionBannerCarousel";
-import BlindBoxGuide from "@/components/BlindBoxGuide";
 import InviteFriendCard from "@/components/InviteFriendCard";
 import JourneyProgressCard from "@/components/JourneyProgressCard";
 import { Sparkles } from "lucide-react";
@@ -228,8 +227,6 @@ export default function DiscoverPage() {
           onLocationClick={() => setLocationPickerOpen(true)}
         />
 
-        {/* 盲盒模式引导 - 仅首次访问显示 */}
-        <BlindBoxGuide className="px-4" />
 
         {/* 用户旅程进度卡片 - 引导完成关键步骤 */}
         {isAuthenticated && (

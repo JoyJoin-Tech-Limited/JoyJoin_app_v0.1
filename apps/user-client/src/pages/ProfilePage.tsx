@@ -8,7 +8,7 @@ import GamificationCard from "@/components/GamificationCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target, RefreshCw, MessageCircle, Star, ChevronDown, Dna, Briefcase, Globe, Users, Coffee } from "lucide-react";
+import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target, RefreshCw, MessageCircle, Star, ChevronDown, Dna, Globe, Users, Coffee } from "lucide-react";
 import { getInsightCategoryConfig, INSIGHT_CONFIDENCE_THRESHOLD, INSIGHT_DISPLAY_LIMIT } from "@/lib/insightCategoryConfig";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
@@ -260,81 +260,6 @@ export default function ProfilePage() {
             </Card>
           );
         })()}
-
-        {/* Career & Insights Card - 职业信息和小悦洞察 */}
-        {!userLoading && user && (user.industry || user.occupation || user.companyName || (user.insightLedger && Array.isArray(user.insightLedger) && user.insightLedger.length > 0)) && (
-          <Card className="border shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Briefcase className="w-5 h-5 text-blue-500" />
-                职业画像
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* 职业基本信息 */}
-              {(user.industry || user.occupation || user.companyName) && (
-                <div className="space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    {user.industry && (
-                      <span className="px-2.5 py-1 text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full">
-                        {user.industrySegment || INDUSTRY_ID_TO_LABEL[user.industry] || user.industry}
-                      </span>
-                    )}
-                    {user.occupation && (
-                      <span className="px-2.5 py-1 text-xs bg-violet-500/10 text-violet-600 dark:text-violet-400 rounded-full">
-                        {user.structuredOccupation || user.occupation}
-                      </span>
-                    )}
-                    {user.seniority && (
-                      <span className="px-2.5 py-1 text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full">
-                        {getSeniorityDisplay(user.seniority)}
-                      </span>
-                    )}
-                  </div>
-                  {user.companyName && (
-                    <p className="text-sm text-muted-foreground">
-                      {user.companyType && <span className="font-medium">{user.companyType} · </span>}
-                      {user.companyName}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* 小悦洞察 - 来自insightLedger */}
-              {user.insightLedger && Array.isArray(user.insightLedger) && user.insightLedger.length > 0 && (
-                <div className="pt-2 border-t space-y-2">
-                  <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-amber-500" />
-                    小悦的洞察
-                  </p>
-                  <div className="space-y-1.5">
-                    {user.insightLedger
-                      .filter((insight: any) => insight.confidence >= INSIGHT_CONFIDENCE_THRESHOLD)
-                      .slice(0, INSIGHT_DISPLAY_LIMIT)
-                      .map((insight: any, idx: number) => {
-                        const config = getInsightCategoryConfig(insight.category);
-                        const IconComponent = config.icon;
-                        return (
-                          <div
-                            key={`insight-${idx}`}
-                            className={`px-2.5 py-1.5 rounded-lg text-xs flex items-start gap-2 ${config.color} border border-current/10`}
-                          >
-                            <IconComponent className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                            <span className="line-clamp-2">{insight.insight}</span>
-                          </div>
-                        );
-                      })}
-                    {user.insightLedger.filter((insight: any) => insight.confidence >= INSIGHT_CONFIDENCE_THRESHOLD).length === 0 && (
-                      <p className="text-xs text-muted-foreground italic">
-                        暂无高置信度洞察，继续和小悦聊天可解锁更多发现
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
 
         {/* Gamification Card - Level, XP, Coins, Streak */}
         <GamificationCard />
