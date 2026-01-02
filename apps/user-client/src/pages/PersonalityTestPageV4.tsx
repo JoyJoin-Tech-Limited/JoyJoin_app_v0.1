@@ -438,7 +438,7 @@ export default function PersonalityTestPageV4() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <OnboardingProgress
-        current={progress?.answered || 0}
+        current={7 + (progress?.answered || 0)}
         total={progress?.softMaxQuestions || 12}
         progress={progressPercentage}
         onBack={() => setLocation('/profile')}
