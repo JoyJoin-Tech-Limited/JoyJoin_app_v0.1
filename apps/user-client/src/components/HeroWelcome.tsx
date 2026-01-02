@@ -23,7 +23,7 @@ export default function HeroWelcome({
   const displayLocation = `${selectedCity}•${displayArea}`;
   
   return (
-    <div className="px-4 py-6 space-y-3">
+    <div className="px-4 pt-4 pb-2 space-y-2">
       {/* 问候语 */}
       <h1 className="text-3xl font-bold font-brand" data-testid="text-hero-greeting">
         Hi {userName} 👋

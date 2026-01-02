@@ -230,7 +230,7 @@ export default function DiscoverPage() {
 
         {/* 用户旅程进度卡片 - 引导完成关键步骤 */}
         {isAuthenticated && (
-          <div className="px-4 -mt-2">
+          <div className="px-4 -mt-4">
             <JourneyProgressCard
               hasCompletedPersonalityTest={user?.hasCompletedPersonalityTest || false}
               hasCompletedBasicInfo={Boolean(user?.displayName && user?.gender && user?.currentCity)}
