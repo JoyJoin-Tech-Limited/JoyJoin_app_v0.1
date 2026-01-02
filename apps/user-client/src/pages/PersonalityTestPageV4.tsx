@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useAdaptiveAssessment, type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
 import CelebrationConfetti from "@/components/CelebrationConfetti";
+import { getOptionFeedback } from "@shared/personality/feedback";
 
 import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01_1766766685652.png";
 import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03_1766766685650.png";
@@ -121,49 +122,74 @@ function SelectionList({
   options,
   selected,
   onSelect,
+  questionId,
 }: {
   options: { value: string; label: string }[];
   selected: string | undefined;
   onSelect: (value: string) => void;
+  questionId: string;
 }) {
   return (
-    <div className="space-y-2">
-      {options.map((option, index) => (
-        <motion.button
-          key={option.value}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.05 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => onSelect(option.value)}
-          className={cn(
-            "w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all duration-200 min-h-[48px]",
-            "hover-elevate active-elevate-2",
-            selected === option.value
-              ? "border-primary bg-primary/10 shadow-sm"
-              : "border-border bg-card hover:border-primary/50"
-          )}
-          data-testid={`button-option-${option.value}`}
-        >
-          <div className="flex-1 text-left">
-            <span className={cn(
-              "text-base font-medium",
-              selected === option.value && "text-primary"
-            )}>
-              {option.label}
-            </span>
-          </div>
-          {selected === option.value && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0"
+    <div className="space-y-3">
+      {options.map((option, index) => {
+        const feedback = selected === option.value ? getOptionFeedback(questionId, option.value) : null;
+        
+        return (
+          <motion.div
+            key={option.value}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.05 }}
+            className="flex flex-col gap-2"
+          >
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={() => onSelect(option.value)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-4 rounded-2xl border-2 transition-all duration-200 min-h-[64px]",
+                "hover-elevate active-elevate-2 shadow-sm",
+                selected === option.value
+                  ? "border-primary bg-primary/10"
+                  : "border-border bg-card hover:border-primary/50"
+              )}
+              data-testid={`button-option-${option.value}`}
             >
-              <Sparkles className="w-3 h-3 text-primary-foreground" />
-            </motion.div>
-          )}
-        </motion.button>
-      ))}
+              <div className="flex-1 text-left">
+                <span className={cn(
+                  "text-lg font-medium leading-snug",
+                  selected === option.value ? "text-primary" : "text-foreground/90"
+                )}>
+                  {option.label}
+                </span>
+              </div>
+              {selected === option.value && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
+                </motion.div>
+              )}
+            </motion.button>
+            
+            <AnimatePresence>
+              {feedback && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="px-4 pb-2"
+                >
+                  <p className="text-sm text-primary font-medium italic">
+                    小悦：{feedback}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
@@ -409,13 +435,14 @@ export default function PersonalityTestPageV4() {
           className="flex-1 flex flex-col px-4 py-4"
         >
           <div className="mb-4">
-            <p className="text-lg text-foreground/80 mb-3 leading-relaxed font-medium">
+            <p className="text-xl text-foreground mb-4 leading-relaxed font-bold">
               {scenarioText}
             </p>
             <XiaoyueMascot 
               mood="normal"
               message={currentQuestion.questionText}
               horizontal
+              className="mb-2"
             />
           </div>
           
@@ -424,6 +451,7 @@ export default function PersonalityTestPageV4() {
               options={optionsForList}
               selected={selectedOption}
               onSelect={handleSelectOption}
+              questionId={currentQuestion.id}
             />
           </div>
 
