@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,49 @@ function stripEmoji(text: string): string {
     .replace(/\*\*/g, '')
     .replace(/'/g, '')
     .trim();
+}
+
+function OnboardingProgress({ 
+  current, 
+  total, 
+  progress,
+  onBack,
+  showBack = true,
+}: { 
+  current: number; 
+  total: number;
+  progress: number;
+  onBack?: () => void;
+  showBack?: boolean;
+}) {
+  return (
+    <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
+      <div className="flex items-center gap-3">
+        {showBack && onBack && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onBack}
+            className="min-w-[44px] min-h-[44px] shrink-0"
+            data-testid="button-onboarding-back"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+        )}
+        <div className="flex-1">
+          <Progress 
+            value={progress} 
+            className="h-2 transition-all duration-500" 
+          />
+          <div className="flex justify-between mt-1">
+            <span className="text-xs text-muted-foreground">
+              第{Math.floor(current)}题 / 约12题
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function XiaoyueMascot({ 
@@ -376,40 +419,13 @@ export default function PersonalityTestPageV4() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setLocation('/profile')}
-            className="min-w-[44px] min-h-[44px] shrink-0"
-            data-testid="button-back"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          
-          <div className="flex-1">
-            <Progress 
-              value={progressPercentage} 
-              className="h-2"
-            />
-            <div className="flex justify-between mt-1">
-              <span className="text-xs text-muted-foreground">
-                第{progress?.answered || 0}题
-              </span>
-              <span className="text-xs text-muted-foreground">
-                约剩{progress?.estimatedRemaining || 0}题
-              </span>
-            </div>
-          </div>
-          
-          {topArchetype && (
-            <Badge variant="secondary" className="shrink-0">
-              {topArchetype}
-            </Badge>
-          )}
-        </div>
-      </div>
+      <OnboardingProgress
+        current={progress?.answered || 0}
+        total={progress?.softMaxQuestions || 12}
+        progress={progressPercentage}
+        onBack={() => setLocation('/profile')}
+        showBack={true}
+      />
 
       <AnimatePresence mode="wait">
         <motion.div
