@@ -9794,7 +9794,15 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         // If we have pre-signup answers, process them (only for new session)
         if (preSignupAnswers && Array.isArray(preSignupAnswers)) {
           const { questionsV4 } = await import('@shared/personality');
+          
+          // Defensive deduplication: keep only the latest answer per questionId
+          const dedupedAnswers = new Map<string, typeof preSignupAnswers[0]>();
           for (const ans of preSignupAnswers) {
+            dedupedAnswers.set(ans.questionId, ans);
+          }
+          const uniqueAnswers = Array.from(dedupedAnswers.values());
+          
+          for (const ans of uniqueAnswers) {
             const question = questionsV4.find(q => q.id === ans.questionId);
             if (question) {
               engineState = processAnswer(engineState, question, ans.selectedOption);

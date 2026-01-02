@@ -144,7 +144,13 @@ export function useAdaptiveAssessment() {
     try {
       const cached = localStorage.getItem(PRESIGNUP_ANSWERS_KEY);
       const answers: PreSignupAnswer[] = cached ? JSON.parse(cached) : [];
-      answers.push(answer);
+      // Replace existing answer for same question (not append)
+      const existingIndex = answers.findIndex(a => a.questionId === answer.questionId);
+      if (existingIndex >= 0) {
+        answers[existingIndex] = answer;
+      } else {
+        answers.push(answer);
+      }
       localStorage.setItem(PRESIGNUP_ANSWERS_KEY, JSON.stringify(answers));
     } catch {
     }
@@ -153,7 +159,14 @@ export function useAdaptiveAssessment() {
   const getCachedAnswers = useCallback((): PreSignupAnswer[] => {
     try {
       const cached = localStorage.getItem(PRESIGNUP_ANSWERS_KEY);
-      return cached ? JSON.parse(cached) : [];
+      if (!cached) return [];
+      const answers: PreSignupAnswer[] = JSON.parse(cached);
+      // Deduplicate by questionId, keeping the latest answer (last occurrence)
+      const deduped = new Map<string, PreSignupAnswer>();
+      for (const answer of answers) {
+        deduped.set(answer.questionId, answer);
+      }
+      return Array.from(deduped.values());
     } catch {
       return [];
     }
@@ -183,6 +196,11 @@ export function useAdaptiveAssessment() {
       setIsInitialized(true);
       // Record baseline for relative question counting
       setBaselineAnswered(data.progress?.answered || 0);
+      // Clear ALL pre-signup cache after successful session creation
+      // This prevents stale answers and session from being reused
+      localStorage.removeItem(PRESIGNUP_ANSWERS_KEY);
+      localStorage.removeItem(PRESIGNUP_SESSION_KEY);
+      // Cache new session
       cacheSession({ sessionId: data.sessionId, phase: data.phase });
     },
   });
