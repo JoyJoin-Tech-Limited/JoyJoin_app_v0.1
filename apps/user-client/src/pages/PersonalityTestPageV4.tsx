@@ -87,6 +87,15 @@ function XiaoyueMascot({
   className?: string;
   horizontal?: boolean;
 }) {
+  const controls = useAnimation();
+
+  useEffect(() => {
+    controls.start({
+      x: [0, -5, 5, -5, 5, 0],
+      transition: { duration: 0.4 }
+    });
+  }, [message, controls]);
+
   if (horizontal) {
     return (
       <div className={cn("flex items-start gap-3", className)}>
@@ -94,29 +103,23 @@ function XiaoyueMascot({
           animate={{ 
             scale: [1, 1.05, 1],
           }}
-          key={message}
-          initial={{ x: 0 }}
-          whileInView={{ 
-            x: [0, -5, 5, -5, 5, 0],
-          }}
           transition={{ 
             scale: {
               duration: 3,
               repeat: Infinity,
               ease: "easeInOut",
-            },
-            x: {
-              duration: 0.4,
             }
           }}
           className="relative shrink-0"
         >
-          <img 
-            src={XIAOYUE_AVATARS.normal} 
-            alt="小悦" 
-            className="w-16 h-16 object-contain drop-shadow-lg"
-            data-testid="img-xiaoyue-avatar"
-          />
+          <motion.div animate={controls}>
+            <img 
+              src={XIAOYUE_AVATARS.normal} 
+              alt="小悦" 
+              className="w-16 h-16 object-contain drop-shadow-lg"
+              data-testid="img-xiaoyue-avatar"
+            />
+          </motion.div>
         </motion.div>
         
         <motion.div
@@ -141,29 +144,23 @@ function XiaoyueMascot({
         animate={{ 
           scale: [1, 1.05, 1],
         }}
-        key={message}
-        initial={{ x: 0 }}
-        whileInView={{ 
-          x: [0, -5, 5, -5, 5, 0],
-        }}
         transition={{ 
           scale: {
             duration: 3,
             repeat: Infinity,
             ease: "easeInOut",
-          },
-          x: {
-            duration: 0.4,
           }
         }}
         className="relative"
       >
-        <img 
-          src={XIAOYUE_AVATARS.normal} 
-          alt="小悦" 
-          className="w-28 h-28 object-contain drop-shadow-lg"
-          data-testid="img-xiaoyue-avatar"
-        />
+        <motion.div animate={controls}>
+          <img 
+            src={XIAOYUE_AVATARS.normal} 
+            alt="小悦" 
+            className="w-28 h-28 object-contain drop-shadow-lg"
+            data-testid="img-xiaoyue-avatar"
+          />
+        </motion.div>
       </motion.div>
       
       <motion.div
