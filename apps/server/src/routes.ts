@@ -528,9 +528,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasCompletedPersonalityTest: true,
         hasCompletedProfileSetup: true,
         hasCompletedRegistration: true,
-        hasCompletedInterestsTopics: true, // Skip interests-topics page, collected in extended data
+        hasCompletedInterestsTopics: true, 
       });
       console.log("[COMPLETE-PERSONALITY-TEST] User completed personality test flow:", userId);
+
+      // Invalidate user cache to reflect role changes immediately
+      if (req.session) {
+        // Force session save to ensure state is consistent
+        req.session.save(() => {});
+      }
 
       res.json({ message: "Personality test completed", user: updatedUser });
     } catch (error) {
