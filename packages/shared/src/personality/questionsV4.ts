@@ -789,6 +789,37 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
+    id: "Q23_v1",
+    level: 2,
+    category: "账单处理",
+    scenarioText: "🧺 几个朋友一起租车出游，加油费产生了一些零头 and 尾数。",
+    questionText: "你会？",
+    primaryTraits: ["A", "C", "E"],
+    variantOf: "Q23",
+    options: [
+      {
+        value: "A",
+        text: "我是发起人，这点零头我就直接出了。",
+        traitScores: { A: 3, C: 1, E: 2, O: 0, X: 1, P: 1 }
+      },
+      {
+        value: "B",
+        text: "用账单小程序计算，确保每人分摊完全公平。",
+        traitScores: { A: 0, C: 3, E: 1, O: 0, X: 0, P: 0 }
+      },
+      {
+        value: "C",
+        text: "大概分一下就行，不用算那么细。",
+        traitScores: { A: 2, C: -1, E: 2, O: 1, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "先让大家记账，最后总金额算清楚。",
+        traitScores: { A: 1, C: 2, E: 2, O: 0, X: 0, P: 0 }
+      }
+    ]
+  },
+  {
     id: "Q24",
     level: 2,
     category: "信息来源",
