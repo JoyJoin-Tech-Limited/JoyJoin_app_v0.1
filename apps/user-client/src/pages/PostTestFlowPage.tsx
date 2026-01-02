@@ -599,7 +599,7 @@ export default function PostTestFlowPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-background overflow-y-auto">
       <AnimatePresence>
         {showReveal && (
           <motion.div

@@ -9921,10 +9921,45 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           phase: 'completed',
           currentQuestionIndex: answers.length,
           traitConfidences: engineState.traitConfidences,
-          archetypeMatches: engineState.currentMatches,
+          topArchetypes: engineState.currentMatches,
           finalResult,
           completedAt: new Date(),
         });
+        
+        // Sync V4 result to role_results table (overwrite any previous results)
+        if (session.userId) {
+          const primaryRole = finalResult.primaryArchetype;
+          const secondaryRole = finalResult.secondaryArchetype || null;
+          const roleSubtype = determineSubtype(primaryRole, {});
+          const insights = generateInsights(primaryRole, secondaryRole);
+          
+          // Use actual archetype match scores from engineState
+          const primaryMatchScore = engineState.currentMatches[0]?.score || 80;
+          const secondaryMatchScore = engineState.currentMatches[1]?.score || 70;
+          
+          await storage.saveRoleResult(session.userId, {
+            userId: session.userId,
+            primaryRole,
+            primaryRoleScore: Math.round(primaryMatchScore),
+            secondaryRole,
+            secondaryRoleScore: secondaryRole ? Math.round(secondaryMatchScore) : 0,
+            roleSubtype,
+            roleScores: {},
+            affinityScore: finalResult.traitScores?.A || 50,
+            opennessScore: finalResult.traitScores?.O || 50,
+            conscientiousnessScore: finalResult.traitScores?.C || 50,
+            emotionalStabilityScore: finalResult.traitScores?.E || 50,
+            extraversionScore: finalResult.traitScores?.X || 50,
+            positivityScore: finalResult.traitScores?.P || 50,
+            ...insights,
+            testVersion: 4,
+          });
+          
+          // Mark personality test as complete
+          await storage.markPersonalityTestComplete(session.userId);
+          
+          console.log(`[Assessment V4] Synced result to role_results: ${primaryRole} (score: ${primaryMatchScore}) for user ${session.userId}`);
+        }
         
         res.json({
           isComplete: true,
@@ -9952,7 +9987,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         await storage.updateAssessmentSession(sessionId, {
           currentQuestionIndex: answers.length,
           traitConfidences: engineState.traitConfidences,
-          archetypeMatches: engineState.currentMatches,
+          topArchetypes: engineState.currentMatches,
         });
         
         res.json({
@@ -10099,7 +10134,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         completedAt: session.completedAt,
         result: session.finalResult,
         traitConfidences: session.traitConfidences,
-        archetypeMatches: session.archetypeMatches,
+        topArchetypes: session.topArchetypes,
       });
     } catch (error: any) {
       console.error('[Assessment V4 Result] Error:', error);

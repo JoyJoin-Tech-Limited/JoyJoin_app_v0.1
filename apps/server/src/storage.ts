@@ -333,7 +333,7 @@ export interface IStorage {
     phase: string;
     currentQuestionIndex: number;
     traitConfidences: any;
-    archetypeMatches: any;
+    topArchetypes: any;
     preSignupAnswers: any;
     finalResult: any;
     completedAt: Date;
@@ -3866,7 +3866,7 @@ export class DatabaseStorage implements IStorage {
     phase: string;
     currentQuestionIndex: number;
     traitConfidences: any;
-    archetypeMatches: any;
+    topArchetypes: any;
     preSignupAnswers: any;
     finalResult: any;
     completedAt: Date;
