@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAdaptiveAssessment, type AssessmentQuestion, type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
+import { getOptionFeedback } from "@shared/personality/feedback";
 
 import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01_1766766685652.png";
 import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03_1766766685650.png";
@@ -204,11 +205,13 @@ function SelectionList({
   selected,
   onSelect,
   multiSelect = false,
+  questionId,
 }: {
   options: { value: string; label: string; tag?: string }[];
   selected: string | string[] | undefined;
   onSelect: (value: string | string[]) => void;
   multiSelect?: boolean;
+  questionId?: string;
 }) {
   const handleSelect = (value: string) => {
     if (multiSelect) {
@@ -231,48 +234,73 @@ function SelectionList({
   };
 
   return (
-    <div className="space-y-2">
-      {options.map((option, index) => (
-        <motion.button
-          key={option.value}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.05 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => handleSelect(option.value)}
-          className={cn(
-            "w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all duration-200 min-h-[48px]",
-            "hover-elevate active-elevate-2",
-            isSelected(option.value)
-              ? "border-primary bg-primary/10 shadow-sm"
-              : "border-border bg-card hover:border-primary/50"
-          )}
-          data-testid={`button-option-${option.value}`}
-        >
-          <div className="flex-1 text-left">
-            <span className={cn(
-              "text-base font-medium",
-              isSelected(option.value) && "text-primary"
-            )}>
-              {option.label}
-            </span>
-            {option.tag && (
-              <span className="text-xs text-muted-foreground ml-2">
-                {option.tag}
-              </span>
-            )}
-          </div>
-          {isSelected(option.value) && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0"
+    <div className="space-y-3">
+      {options.map((option, index) => {
+        const feedback = (!multiSelect && questionId && isSelected(option.value)) 
+          ? getOptionFeedback(questionId, option.value) 
+          : null;
+
+        return (
+          <motion.div
+            key={option.value}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.05 }}
+            className="flex flex-col gap-2"
+          >
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={() => handleSelect(option.value)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-4 rounded-2xl border-2 transition-all duration-200 min-h-[64px]",
+                "hover-elevate active-elevate-2 shadow-sm",
+                isSelected(option.value)
+                  ? "border-primary bg-primary/10"
+                  : "border-border bg-card hover:border-primary/50"
+              )}
+              data-testid={`button-option-${option.value}`}
             >
-              <Sparkles className="w-3 h-3 text-primary-foreground" />
-            </motion.div>
-          )}
-        </motion.button>
-      ))}
+              <div className="flex-1 text-left">
+                <span className={cn(
+                  "text-lg font-medium leading-snug",
+                  isSelected(option.value) ? "text-primary" : "text-foreground/90"
+                )}>
+                  {option.label}
+                </span>
+                {option.tag && (
+                  <span className="text-xs text-muted-foreground ml-2">
+                    {option.tag}
+                  </span>
+                )}
+              </div>
+              {isSelected(option.value) && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
+                </motion.div>
+              )}
+            </motion.button>
+            
+            <AnimatePresence>
+              {feedback && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="px-4 pb-1"
+                >
+                  <p className="text-sm text-primary font-medium italic">
+                    小悦：{feedback}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
@@ -603,13 +631,14 @@ export default function DuolingoOnboardingPage() {
             className="flex-1 flex flex-col px-4 py-3"
           >
             <div className="mb-2">
-              <p className="text-lg text-foreground/80 mb-2 leading-relaxed font-medium">
+              <p className="text-xl text-foreground mb-4 leading-relaxed font-bold">
                 {scenarioText}
               </p>
               <XiaoyueMascot 
                 mood="normal"
                 message={questionTextClean}
                 horizontal
+                className="mb-2"
               />
             </div>
             
@@ -622,6 +651,7 @@ export default function DuolingoOnboardingPage() {
                   const selectedOpt = question.options.find(o => o.value === val);
                   handleAnswer(question.id, val, selectedOpt?.traitScores);
                 }}
+                questionId={question.id}
               />
             </div>
 
