@@ -229,7 +229,14 @@ export default function ProfilePage() {
             }
           };
 
-          const matchTierInfo = getMatchTier();
+          const getMatchTier = () => {
+            if (completion.percentage >= 80) return { tier: "VIP匹配", icon: <Crown className="h-3.5 w-3.5 text-amber-500" />, color: "text-amber-500" };
+            if (completion.percentage >= 50) return { tier: "优先匹配", icon: <Zap className="h-3.5 w-3.5 text-primary" />, color: "text-primary" };
+            return { tier: "普通匹配", icon: <Star className="h-3.5 w-3.5 text-muted-foreground" />, color: "text-muted-foreground" };
+          };
+
+          const matchTier = getMatchTier();
+          const xiaoyueState = getXiaoyueState();
           const itemsToNextTier = Math.ceil((80 - completion.percentage) / 5);
           
           return (
