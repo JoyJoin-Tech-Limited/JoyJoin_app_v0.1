@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target, RefreshCw, MessageCircle, Star, ChevronDown, Dna, Globe, Users, Coffee, Zap, Crown, ArrowRight } from "lucide-react";
+import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target, RefreshCw, MessageCircle, Star, ChevronDown, Dna, Globe, Users, Coffee, Zap, Crown, ArrowRight, Check } from "lucide-react";
+import { motion } from "framer-motion";
 import { getInsightCategoryConfig, INSIGHT_CONFIDENCE_THRESHOLD, INSIGHT_DISPLAY_LIMIT } from "@/lib/insightCategoryConfig";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
@@ -222,29 +223,24 @@ export default function ProfilePage() {
             if (completion.percentage >= 70) {
               return { avatar: xiaoyueExcited, message: "快完成了！再补几项就能解锁VIP匹配~" };
             } else if (completion.percentage >= 40) {
-              return { avatar: xiaoyueAvatar, message: "不错哦！让我更了解你，帮你找更合拍的人~" };
+              return { avatar: xiaoyueAvatar, message: "不错哦！再补充几项就能解锁VIP匹配啦" };
             } else {
               return { avatar: xiaoyueThinking, message: "期待认识你！聊几句就能提升匹配精准度~" };
             }
           };
-          
-          const getMatchTier = () => {
-            if (completion.percentage >= 80) return { tier: "VIP匹配", icon: <Crown className="h-3.5 w-3.5 text-amber-500" />, color: "text-amber-500" };
-            if (completion.percentage >= 50) return { tier: "优先匹配", icon: <Zap className="h-3.5 w-3.5 text-primary" />, color: "text-primary" };
-            return { tier: "普通匹配", icon: <Star className="h-3.5 w-3.5 text-muted-foreground" />, color: "text-muted-foreground" };
-          };
-          
-          const xiaoyueState = getXiaoyueState();
-          const matchTier = getMatchTier();
+
+          const matchTierInfo = getMatchTier();
+          const itemsToNextTier = Math.ceil((80 - completion.percentage) / 5);
           
           return (
             <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background overflow-hidden shadow-sm">
               <CardContent className="p-5">
-                <div className="flex flex-col items-center text-center">
+                {/* 小悦头像 + 呼吸动画 */}
+                <div className="flex flex-col items-center text-center mb-4">
                   <div className="relative mb-3">
                     <div 
                       className="absolute inset-0 rounded-full bg-primary/20 animate-pulse"
-                      style={{ transform: "scale(1.2)" }}
+                      style={{ transform: "scale(1.15)" }}
                     />
                     <div className="relative w-20 h-20 rounded-full overflow-hidden border-3 border-primary/40 shadow-lg">
                       <img 
@@ -254,47 +250,101 @@ export default function ProfilePage() {
                         data-testid="img-xiaoyue-completion"
                       />
                     </div>
-                    <Badge className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] px-2 py-0.5 bg-green-500 border-2 border-background">
+                  </div>
+                  
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-semibold text-lg">小悦</span>
+                    <Badge variant="secondary" className="text-xs px-2 py-0.5">
                       AI助手
                     </Badge>
                   </div>
-                  
-                  <p className="text-sm text-foreground/90 leading-relaxed max-w-[260px] mb-4" data-testid="text-xiaoyue-prompt">
+                  <p className="text-sm text-muted-foreground leading-snug max-w-[280px]" data-testid="text-xiaoyue-prompt">
                     {xiaoyueState.message}
                   </p>
-                  
-                  <div className="w-full space-y-2 mb-4">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5">
-                        {matchTier.icon}
-                        <span className={matchTier.color}>{matchTier.tier}</span>
-                      </div>
-                      <span className="text-muted-foreground font-semibold">{completion.percentage}%</span>
+                </div>
+                
+                {/* 里程碑提示 */}
+                <div className="bg-muted/50 rounded-lg p-3 mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {matchTier.icon}
+                      <span className="font-medium text-sm">{matchTier.tier}</span>
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full transition-all ${
-                          completion.percentage >= 80 
-                            ? "bg-gradient-to-r from-amber-400 to-amber-500" 
-                            : completion.percentage >= 50 
-                              ? "bg-gradient-to-r from-primary to-primary/80"
-                              : "bg-gradient-to-r from-slate-400 to-slate-500"
-                        }`}
-                        style={{ width: `${completion.percentage}%` }}
-                      />
-                    </div>
+                    <span className="text-sm text-muted-foreground font-semibold">{completion.percentage}%</span>
                   </div>
                   
+                  {/* 进度条 */}
+                  <div className="h-2.5 bg-muted rounded-full overflow-hidden mb-2">
+                    <div 
+                      className={`h-full rounded-full transition-all ${
+                        completion.percentage >= 80 
+                          ? "bg-gradient-to-r from-amber-400 to-amber-500" 
+                          : completion.percentage >= 50 
+                            ? "bg-gradient-to-r from-primary to-primary/80"
+                            : "bg-gradient-to-r from-slate-400 to-slate-500"
+                      }`}
+                      style={{ width: `${completion.percentage}%` }}
+                    />
+                  </div>
+                  
+                  {/* 升级提示 */}
+                  {completion.percentage < 80 ? (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Sparkles className="h-3 w-3 text-primary" />
+                      再补充 {itemsToNextTier > 0 ? itemsToNextTier : 1} 项 → 解锁「VIP匹配」
+                    </p>
+                  ) : (
+                    <p className="text-xs text-primary flex items-center gap-1">
+                      <Check className="h-3 w-3" />
+                      已解锁最高匹配等级！
+                    </p>
+                  )}
+                </div>
+                
+                {/* CTA按钮 - 升级版 */}
+                <motion.div
+                  className="relative"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {/* 呼吸光环 */}
+                  <motion.div
+                    className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/40 via-purple-400/40 to-pink-400/40 blur-lg"
+                    animate={{
+                      opacity: [0.5, 0.8, 0.5],
+                      scale: [1, 1.05, 1],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  />
                   <Button 
-                    className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 shadow-md"
                     onClick={() => setLocation('/registration/chat?mode=enrichment')}
+                    size="lg"
+                    className="relative w-full gap-3 bg-gradient-to-r from-primary via-purple-500 to-pink-500 shadow-xl border-0 min-h-[56px] text-base font-semibold"
                     data-testid="button-chat-with-xiaoyue"
                   >
-                    <MessageCircle className="w-4 h-4" />
-                    和小悦聊聊，补齐资料
-                    <ArrowRight className="w-4 h-4" />
+                    {/* 小悦头像 */}
+                    <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/30 flex-shrink-0">
+                      <img 
+                        src={xiaoyueExcited} 
+                        alt="小悦" 
+                        className="w-full h-full object-cover object-top"
+                      />
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="leading-tight">立即补齐，解锁VIP匹配</span>
+                      <span className="text-[10px] opacity-80 font-normal">小悦陪你3分钟搞定</span>
+                    </div>
+                    
+                    {/* XP奖励气泡 */}
+                    <div className="ml-auto bg-amber-400 text-amber-950 text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-sm animate-bounce">
+                      +200XP
+                    </div>
                   </Button>
-                </div>
+                </motion.div>
               </CardContent>
             </Card>
           );
