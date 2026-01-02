@@ -283,19 +283,20 @@ export function useAdaptiveAssessment() {
   });
 
   const startAssessment = useCallback(async (resumeFromCache = true) => {
+    const cachedAnswers = getCachedAnswers();
+    const preSignupAnswers = cachedAnswers.length > 0 ? cachedAnswers : undefined;
+
     if (resumeFromCache) {
       const cached = loadCachedSession();
       if (cached?.sessionId) {
         setSessionId(cached.sessionId);
         setPhase(cached.phase);
-        
-        const cachedAnswers = getCachedAnswers();
-        await startMutation.mutateAsync({ preSignupAnswers: cachedAnswers.length > 0 ? cachedAnswers : undefined });
+        await startMutation.mutateAsync({ preSignupAnswers });
         return;
       }
     }
     
-    await startMutation.mutateAsync({});
+    await startMutation.mutateAsync({ preSignupAnswers });
   }, [loadCachedSession, getCachedAnswers, startMutation]);
 
   const startFreshAssessment = useCallback(async () => {
