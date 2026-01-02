@@ -461,6 +461,12 @@ export default function PostTestFlowPage() {
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       clearCachedData();
       setStep("complete");
+      
+      // Essential and extended data collected, registration is truly complete
+      toast({ title: "资料保存成功！" });
+      setTimeout(() => {
+        setLocation("/discover");
+      }, 1500);
     },
     onError: (error: Error) => {
       toast({
