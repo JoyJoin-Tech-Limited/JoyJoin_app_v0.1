@@ -122,8 +122,12 @@ export default function PersonalityTestResultPage() {
       try { await navigator.share(shareData); } catch (err) {}
     } else {
       navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
-      alert('已复制到剪贴板！');
+      toast({ title: '已复制到剪贴板！' });
     }
+  };
+
+  const handleContinue = () => {
+    setLocation('/personality-test/complete');
   };
 
   const CountdownReveal = () => (
@@ -290,8 +294,9 @@ export default function PersonalityTestResultPage() {
         </motion.div>
 
         <div className="flex flex-col gap-3 py-6">
-          <Button className="w-full h-12 rounded-xl" onClick={handleShare}><Share2 className="w-5 h-5 mr-2" />分享原型</Button>
-          <Button variant="ghost" className="w-full" onClick={() => setLocation('/personality-test')}>重新测试</Button>
+          <Button className="w-full h-12 rounded-xl" onClick={handleContinue}>继续完善资料</Button>
+          <Button variant="outline" className="w-full" onClick={handleShare}><Share2 className="w-5 h-5 mr-2" />分享原型</Button>
+          <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => setLocation('/personality-test')}>重新测试</Button>
         </div>
       </div>
     </div>

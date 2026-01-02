@@ -18,7 +18,6 @@ export function useAuth() {
     isAuthenticated,
     needsRegistration: user && !user.hasCompletedRegistration,
     needsPersonalityTest: user && user.hasCompletedRegistration && !user.hasCompletedPersonalityTest,
-    // ProfileSetup no longer needed - displayName collected during registration
-    needsProfileSetup: false,
+    needsProfileSetup: user && user.hasCompletedRegistration && user.hasCompletedPersonalityTest && (!user.displayName || !user.gender || !user.currentCity),
   };
 }
