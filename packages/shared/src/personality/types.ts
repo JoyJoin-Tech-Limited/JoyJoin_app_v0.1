@@ -86,6 +86,12 @@ export interface AssessmentConfig {
   anchorQuestionCount: number;
   validityCheckPositions: number[];
   milestonePositions: number[];
+  enableTieredThreshold: boolean;
+  tieredThresholdConfig: {
+    confidenceGapThreshold: number;
+    dimensionCoverageThreshold: number;
+    maxExtraQuestions: number;
+  };
 }
 
 export const DEFAULT_ASSESSMENT_CONFIG: AssessmentConfig = {
@@ -97,6 +103,12 @@ export const DEFAULT_ASSESSMENT_CONFIG: AssessmentConfig = {
   anchorQuestionCount: 6,
   validityCheckPositions: [6, 10],
   milestonePositions: [5, 8, 11],
+  enableTieredThreshold: true,
+  tieredThresholdConfig: {
+    confidenceGapThreshold: 0.12,
+    dimensionCoverageThreshold: 0.85,
+    maxExtraQuestions: 2,
+  },
 };
 
 export interface ConfusableArchetypePair {

@@ -282,6 +282,14 @@ export function shouldTerminate(state: EngineState): boolean {
   
   if (questionCount >= config.softMaxQuestions) {
     if (avgConfidence >= requiredConfidence && minConfidence >= requiredConfidence * 0.8) {
+      if (config.enableTieredThreshold) {
+        const needsExtraQuestions = checkTieredThresholdConditions(state, config);
+        const extraQuestionsUsed = questionCount - config.softMaxQuestions;
+        
+        if (needsExtraQuestions && extraQuestionsUsed < config.tieredThresholdConfig.maxExtraQuestions) {
+          return false;
+        }
+      }
       return true;
     }
     
@@ -304,6 +312,35 @@ export function shouldTerminate(state: EngineState): boolean {
       currentMatches[0]?.confidence >= requiredConfidence) {
     
     if (!hasConfusablePair) {
+      if (config.enableTieredThreshold) {
+        const needsExtraQuestions = checkTieredThresholdConditions(state, config);
+        if (needsExtraQuestions) {
+          return false;
+        }
+      }
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+function checkTieredThresholdConditions(state: EngineState, config: AssessmentConfig): boolean {
+  const { currentMatches, traitConfidences, traitSampleCounts } = state;
+  const tieredConfig = config.tieredThresholdConfig;
+  
+  if (currentMatches.length >= 2) {
+    const confidenceGap = currentMatches[0].confidence - currentMatches[1].confidence;
+    if (confidenceGap < tieredConfig.confidenceGapThreshold) {
+      return true;
+    }
+  }
+  
+  const totalSamples = Object.values(traitSampleCounts).reduce((a, b) => a + b, 0);
+  if (totalSamples > 0) {
+    const coveredDimensions = Object.values(traitConfidences).filter(t => t.confidence >= 0.6).length;
+    const coverageRatio = coveredDimensions / ALL_TRAITS.length;
+    if (coverageRatio < tieredConfig.dimensionCoverageThreshold) {
       return true;
     }
   }
