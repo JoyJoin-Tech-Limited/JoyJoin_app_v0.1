@@ -279,6 +279,21 @@ export default function PersonalityTestPageV4() {
     answeredCount,
   } = useAdaptiveAssessment();
 
+  const displayCurrent = useMemo(() => {
+    if (!progress) return 7;
+    return progress.answered + 1;
+  }, [progress]);
+
+  const displayTotal = useMemo(() => {
+    if (!progress) return "8-16";
+    return `${progress.minQuestions}-${progress.softMaxQuestions}`;
+  }, [progress]);
+
+  const progressPercentage = useMemo(() => {
+    if (!progress) return 0;
+    return Math.min(100, Math.round((progress.answered / progress.softMaxQuestions) * 100));
+  }, [progress]);
+
   useEffect(() => {
     const preSignupAnswers = loadV4PreSignupAnswers();
     if (preSignupAnswers.length > 0) {
@@ -344,25 +359,6 @@ export default function PersonalityTestPageV4() {
       </div>
     );
   }
-
-  const displayCurrent = useMemo(() => {
-    if (!progress) return 7;
-    // progress.answered comes from backend and already includes the 6 anchor questions
-    // So if answered = 6 (after anchor questions), current should be 7.
-    return progress.answered + 1;
-  }, [progress]);
-
-  const displayTotal = useMemo(() => {
-    if (!progress) return "8-16";
-    // For V4, we want to show the range of possible questions
-    return `${progress.minQuestions}-${progress.softMaxQuestions}`;
-  }, [progress]);
-
-  const progressPercentage = useMemo(() => {
-    if (!progress) return 0;
-    // Use softMaxQuestions as the baseline for 100% progress during assessment
-    return Math.min(100, Math.round((progress.answered / progress.softMaxQuestions) * 100));
-  }, [progress]);
 
   if (showBlindBox) {
     return (
