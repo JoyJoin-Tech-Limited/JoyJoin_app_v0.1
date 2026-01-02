@@ -9729,6 +9729,322 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  // ============ V4 Adaptive Personality Assessment API ============
+
+  // Start assessment session (with optional pre-signup answers from onboarding)
+  app.post('/api/assessment/v4/start', async (req: any, res) => {
+    try {
+      const { preSignupAnswers, sessionId: existingSessionId } = req.body;
+      const userId = req.session?.userId || null;
+      
+      // Import adaptive engine
+      const { 
+        initializeEngineState, 
+        processAnswer, 
+        selectNextQuestion, 
+        DEFAULT_ASSESSMENT_CONFIG 
+      } = await import('@shared/personality');
+      
+      let session;
+      let engineState;
+      
+      // If resuming existing session
+      if (existingSessionId) {
+        session = await storage.getAssessmentSession(existingSessionId);
+        if (!session) {
+          return res.status(404).json({ message: 'Session not found' });
+        }
+        
+        // Reconstruct engine state from session data
+        const answers = await storage.getAssessmentAnswers(existingSessionId);
+        engineState = initializeEngineState(DEFAULT_ASSESSMENT_CONFIG);
+        
+        // Replay answers to rebuild state
+        for (const answer of answers) {
+          const question = (await import('@shared/personality')).questionsV4.find(
+            q => q.id === answer.questionId
+          );
+          if (question) {
+            engineState = processAnswer(engineState, question, answer.selectedOption);
+          }
+        }
+      } else {
+        // Create new session
+        session = await storage.createAssessmentSession({
+          userId,
+          phase: userId ? 'post_signup' : 'pre_signup',
+          preSignupAnswers: preSignupAnswers || null,
+        });
+        
+        engineState = initializeEngineState(DEFAULT_ASSESSMENT_CONFIG);
+        
+        // If we have pre-signup answers, process them
+        if (preSignupAnswers && Array.isArray(preSignupAnswers)) {
+          const { questionsV4 } = await import('@shared/personality');
+          for (const ans of preSignupAnswers) {
+            const question = questionsV4.find(q => q.id === ans.questionId);
+            if (question) {
+              engineState = processAnswer(engineState, question, ans.selectedOption);
+              
+              // Save answer to database
+              await storage.createAssessmentAnswer({
+                sessionId: session.id,
+                questionId: ans.questionId,
+                questionLevel: question.level,
+                selectedOption: ans.selectedOption,
+                traitScores: question.options.find(o => o.value === ans.selectedOption)?.traitScores || {},
+              });
+            }
+          }
+        }
+      }
+      
+      // Get next question
+      const nextQuestion = selectNextQuestion(engineState);
+      
+      res.json({
+        sessionId: session.id,
+        phase: session.phase,
+        currentQuestionIndex: engineState.answeredQuestionIds.size,
+        nextQuestion: nextQuestion ? {
+          id: nextQuestion.id,
+          level: nextQuestion.level,
+          category: nextQuestion.category,
+          scenarioText: nextQuestion.scenarioText,
+          questionText: nextQuestion.questionText,
+          options: shuffleOptions(nextQuestion.options),
+        } : null,
+        progress: {
+          answered: engineState.answeredQuestionIds.size,
+          minQuestions: engineState.config.minQuestions,
+          softMaxQuestions: engineState.config.softMaxQuestions,
+          hardMaxQuestions: engineState.config.hardMaxQuestions,
+          estimatedRemaining: Math.max(0, engineState.config.minQuestions - engineState.answeredQuestionIds.size),
+        },
+        currentMatches: engineState.currentMatches.slice(0, 3),
+        isComplete: nextQuestion === null,
+      });
+    } catch (error: any) {
+      console.error('[Assessment V4 Start] Error:', error);
+      res.status(500).json({ message: 'Failed to start assessment', error: error.message });
+    }
+  });
+
+  // Submit answer and get next question
+  app.post('/api/assessment/v4/:sessionId/answer', async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      const { questionId, selectedOption } = req.body;
+      
+      if (!questionId || !selectedOption) {
+        return res.status(400).json({ message: 'questionId and selectedOption are required' });
+      }
+      
+      const session = await storage.getAssessmentSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: 'Session not found' });
+      }
+      
+      // Import modules
+      const { 
+        questionsV4, 
+        initializeEngineState, 
+        processAnswer, 
+        selectNextQuestion,
+        shouldTerminate,
+        getFinalResult,
+        DEFAULT_ASSESSMENT_CONFIG 
+      } = await import('@shared/personality');
+      
+      // Find the question
+      const question = questionsV4.find(q => q.id === questionId);
+      if (!question) {
+        return res.status(400).json({ message: 'Invalid question ID' });
+      }
+      
+      // Validate option
+      const option = question.options.find(o => o.value === selectedOption);
+      if (!option) {
+        return res.status(400).json({ message: 'Invalid option selected' });
+      }
+      
+      // Save answer
+      await storage.createAssessmentAnswer({
+        sessionId,
+        questionId,
+        questionLevel: question.level,
+        selectedOption,
+        traitScores: option.traitScores,
+      });
+      
+      // Rebuild engine state
+      const answers = await storage.getAssessmentAnswers(sessionId);
+      let engineState = initializeEngineState(DEFAULT_ASSESSMENT_CONFIG);
+      
+      for (const answer of answers) {
+        const q = questionsV4.find(quest => quest.id === answer.questionId);
+        if (q) {
+          engineState = processAnswer(engineState, q, answer.selectedOption);
+        }
+      }
+      
+      // Check if complete
+      const isComplete = shouldTerminate(engineState);
+      
+      if (isComplete) {
+        // Generate final result
+        const finalResult = getFinalResult(engineState);
+        
+        // Update session
+        await storage.updateAssessmentSession(sessionId, {
+          phase: 'completed',
+          currentQuestionIndex: answers.length,
+          traitConfidences: engineState.traitConfidences,
+          archetypeMatches: engineState.currentMatches,
+          finalResult,
+          completedAt: new Date(),
+        });
+        
+        res.json({
+          isComplete: true,
+          result: finalResult,
+          progress: {
+            answered: answers.length,
+            minQuestions: engineState.config.minQuestions,
+            softMaxQuestions: engineState.config.softMaxQuestions,
+            hardMaxQuestions: engineState.config.hardMaxQuestions,
+          },
+        });
+      } else {
+        // Get next question
+        const nextQuestion = selectNextQuestion(engineState);
+        
+        // Generate milestone encouragement if applicable
+        let encouragement = null;
+        const { getMilestoneMessage } = await import('@shared/personality');
+        const milestoneMsg = getMilestoneMessage(answers.length);
+        if (milestoneMsg) {
+          encouragement = milestoneMsg.message;
+        }
+        
+        // Update session progress
+        await storage.updateAssessmentSession(sessionId, {
+          currentQuestionIndex: answers.length,
+          traitConfidences: engineState.traitConfidences,
+          archetypeMatches: engineState.currentMatches,
+        });
+        
+        res.json({
+          isComplete: false,
+          nextQuestion: nextQuestion ? {
+            id: nextQuestion.id,
+            level: nextQuestion.level,
+            category: nextQuestion.category,
+            scenarioText: nextQuestion.scenarioText,
+            questionText: nextQuestion.questionText,
+            options: shuffleOptions(nextQuestion.options),
+          } : null,
+          progress: {
+            answered: answers.length,
+            minQuestions: engineState.config.minQuestions,
+            softMaxQuestions: engineState.config.softMaxQuestions,
+            hardMaxQuestions: engineState.config.hardMaxQuestions,
+            estimatedRemaining: Math.max(0, engineState.config.minQuestions - answers.length),
+          },
+          currentMatches: engineState.currentMatches.slice(0, 3),
+          encouragement,
+        });
+      }
+    } catch (error: any) {
+      console.error('[Assessment V4 Answer] Error:', error);
+      res.status(500).json({ message: 'Failed to submit answer', error: error.message });
+    }
+  });
+
+  // Get assessment results
+  app.get('/api/assessment/v4/:sessionId/result', async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      
+      const session = await storage.getAssessmentSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: 'Session not found' });
+      }
+      
+      if (session.phase !== 'completed') {
+        return res.status(400).json({ message: 'Assessment not yet completed' });
+      }
+      
+      res.json({
+        sessionId: session.id,
+        completedAt: session.completedAt,
+        result: session.finalResult,
+        traitConfidences: session.traitConfidences,
+        archetypeMatches: session.archetypeMatches,
+      });
+    } catch (error: any) {
+      console.error('[Assessment V4 Result] Error:', error);
+      res.status(500).json({ message: 'Failed to get result', error: error.message });
+    }
+  });
+
+  // Link session to user after signup (called from onboarding)
+  app.post('/api/assessment/v4/:sessionId/link-user', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      const userId = req.user!.id;
+      
+      const session = await storage.getAssessmentSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: 'Session not found' });
+      }
+      
+      // Update session with user ID
+      await storage.updateAssessmentSession(sessionId, {
+        userId,
+        phase: 'post_signup',
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('[Assessment V4 Link] Error:', error);
+      res.status(500).json({ message: 'Failed to link user', error: error.message });
+    }
+  });
+
+  // Get anchor questions for pre-signup onboarding
+  app.get('/api/assessment/v4/anchor-questions', async (req: any, res) => {
+    try {
+      const { getAnchorQuestions } = await import('@shared/personality');
+      const anchors = getAnchorQuestions();
+      
+      res.json({
+        questions: anchors.map(q => ({
+          id: q.id,
+          level: q.level,
+          category: q.category,
+          scenarioText: q.scenarioText,
+          questionText: q.questionText,
+          options: shuffleOptions(q.options),
+        })),
+        count: anchors.length,
+      });
+    } catch (error: any) {
+      console.error('[Assessment V4 Anchors] Error:', error);
+      res.status(500).json({ message: 'Failed to get anchor questions', error: error.message });
+    }
+  });
+
+  // Helper function to shuffle options (prevent order bias)
+  function shuffleOptions(options: any[]): any[] {
+    const shuffled = [...options];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
   const httpServer = createServer(app);
 
   return httpServer;

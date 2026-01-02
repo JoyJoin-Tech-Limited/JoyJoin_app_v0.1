@@ -16,7 +16,8 @@ import {
   users, events, eventAttendance, chatMessages, eventFeedback, blindBoxEvents, testResponses, roleResults, notifications,
   directMessageThreads, directMessages, payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs,
   pricingSettings, promotionBanners, eventPools, eventPoolGroups, venueTimeSlots, venueTimeSlotBookings, venues,
-  icebreakerSessions, icebreakerCheckins, icebreakerReadyVotes, icebreakerActivityLogs, registrationSessions
+  icebreakerSessions, icebreakerCheckins, icebreakerReadyVotes, icebreakerActivityLogs, registrationSessions,
+  assessmentSessions, assessmentAnswers
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
@@ -318,6 +319,33 @@ export interface IStorage {
     completedLast7Days: number;
     completedPrevious7Days: number;
   }>;
+
+  // V4 Adaptive Assessment operations
+  createAssessmentSession(data: { 
+    userId?: string; 
+    phase?: string;
+    preSignupAnswers?: any;
+  }): Promise<any>;
+  getAssessmentSession(id: string): Promise<any | undefined>;
+  getAssessmentSessionByUser(userId: string): Promise<any | undefined>;
+  updateAssessmentSession(id: string, updates: Partial<{
+    userId: string;
+    phase: string;
+    currentQuestionIndex: number;
+    traitConfidences: any;
+    archetypeMatches: any;
+    preSignupAnswers: any;
+    finalResult: any;
+    completedAt: Date;
+  }>): Promise<any>;
+  createAssessmentAnswer(data: {
+    sessionId: string;
+    questionId: string;
+    questionLevel: number;
+    selectedOption: string;
+    traitScores: any;
+  }): Promise<any>;
+  getAssessmentAnswers(sessionId: string): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3790,6 +3818,85 @@ export class DatabaseStorage implements IStorage {
       completedLast7Days,
       completedPrevious7Days,
     };
+  }
+
+  // V4 Adaptive Assessment operations
+  async createAssessmentSession(data: { 
+    userId?: string; 
+    phase?: string;
+    preSignupAnswers?: any;
+  }): Promise<any> {
+    const [session] = await db
+      .insert(assessmentSessions)
+      .values({
+        userId: data.userId || null,
+        phase: data.phase || 'pre_signup',
+        preSignupData: data.preSignupAnswers || null,
+        currentQuestionIndex: 0,
+      })
+      .returning();
+    return session;
+  }
+
+  async getAssessmentSession(id: string): Promise<any | undefined> {
+    const [session] = await db
+      .select()
+      .from(assessmentSessions)
+      .where(eq(assessmentSessions.id, id));
+    return session;
+  }
+
+  async getAssessmentSessionByUser(userId: string): Promise<any | undefined> {
+    const [session] = await db
+      .select()
+      .from(assessmentSessions)
+      .where(and(
+        eq(assessmentSessions.userId, userId),
+        sql`${assessmentSessions.completedAt} IS NULL`
+      ))
+      .orderBy(desc(assessmentSessions.createdAt))
+      .limit(1);
+    return session;
+  }
+
+  async updateAssessmentSession(id: string, updates: Partial<{
+    userId: string;
+    phase: string;
+    currentQuestionIndex: number;
+    traitConfidences: any;
+    archetypeMatches: any;
+    preSignupAnswers: any;
+    finalResult: any;
+    completedAt: Date;
+  }>): Promise<any> {
+    const [session] = await db
+      .update(assessmentSessions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(assessmentSessions.id, id))
+      .returning();
+    return session;
+  }
+
+  async createAssessmentAnswer(data: {
+    sessionId: string;
+    questionId: string;
+    questionLevel: number;
+    selectedOption: string;
+    traitScores: any;
+  }): Promise<any> {
+    const [answer] = await db
+      .insert(assessmentAnswers)
+      .values(data)
+      .returning();
+    return answer;
+  }
+
+  async getAssessmentAnswers(sessionId: string): Promise<any[]> {
+    return db
+      .select()
+      .from(assessmentAnswers)
+      .where(eq(assessmentAnswers.sessionId, sessionId))
+      .orderBy(assessmentAnswers.answeredAt);
   }
 }
 
