@@ -2610,3 +2610,55 @@ export const insertGossipCacheSchema = createInsertSchema(gossipCache).omit({
 
 export type GossipCache = typeof gossipCache.$inferSelect;
 export type InsertGossipCache = z.infer<typeof insertGossipCacheSchema>;
+
+// ============ V4 Adaptive Personality Assessment ============
+
+export const assessmentSessions = pgTable("assessment_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  phase: varchar("phase").notNull().default("pre_signup"), // pre_signup, post_signup, completed
+  currentQuestionIndex: integer("current_question_index").default(0),
+  traitScores: jsonb("trait_scores"), // { A: number, C: number, E: number, O: number, X: number, P: number }
+  traitConfidences: jsonb("trait_confidences"), // { A: {score, confidence, sampleCount}, ... }
+  topArchetypes: jsonb("top_archetypes"), // [{ archetype: string, score: number, confidence: number }]
+  preSignupData: jsonb("pre_signup_data"), // Cached answers from before signup
+  validityScore: numeric("validity_score", { precision: 3, scale: 2 }),
+  totalQuestions: integer("total_questions").default(0),
+  isExtended: boolean("is_extended").default(false), // Whether session was extended to 20 questions
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_assessment_session_user").on(table.userId),
+  index("idx_assessment_session_phase").on(table.phase),
+]);
+
+export const assessmentAnswers = pgTable("assessment_answers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => assessmentSessions.id),
+  questionId: varchar("question_id").notNull(),
+  questionLevel: integer("question_level").notNull(), // 1, 2, or 3
+  selectedOption: varchar("selected_option").notNull(),
+  traitScores: jsonb("trait_scores").notNull(), // The trait scores from selected option
+  answeredAt: timestamp("answered_at").defaultNow(),
+}, (table) => [
+  index("idx_assessment_answer_session").on(table.sessionId),
+  index("idx_assessment_answer_question").on(table.questionId),
+]);
+
+export const insertAssessmentSessionSchema = createInsertSchema(assessmentSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAssessmentAnswerSchema = createInsertSchema(assessmentAnswers).omit({
+  id: true,
+  answeredAt: true,
+});
+
+export type AssessmentSession = typeof assessmentSessions.$inferSelect;
+export type InsertAssessmentSession = z.infer<typeof insertAssessmentSessionSchema>;
+
+export type AssessmentAnswer = typeof assessmentAnswers.$inferSelect;
+export type InsertAssessmentAnswer = z.infer<typeof insertAssessmentAnswerSchema>;

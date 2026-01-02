@@ -33,3 +33,4 @@ export {
 } from './occupations';
 export * from './atmospherePrediction';
 export * from './districts';
+export * from './personality';
