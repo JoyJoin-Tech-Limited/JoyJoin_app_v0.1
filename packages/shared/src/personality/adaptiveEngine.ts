@@ -18,8 +18,12 @@ import { archetypePrototypes, findBestMatchingArchetypes, normalizeTraitScore } 
 
 const ALL_TRAITS: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
 
+export const MAX_SKIP_COUNT = 3;
+
 export interface EngineState {
   answeredQuestionIds: Set<string>;
+  skippedQuestionIds: Set<string>;
+  skipCount: number;
   traitScores: Record<TraitKey, number>;
   traitSampleCounts: Record<TraitKey, number>;
   traitConfidences: Record<TraitKey, TraitConfidence>;
@@ -46,6 +50,8 @@ export function initializeEngineState(config?: Partial<AssessmentConfig>): Engin
   
   return {
     answeredQuestionIds: new Set(),
+    skippedQuestionIds: new Set(),
+    skipCount: 0,
     traitScores,
     traitSampleCounts,
     traitConfidences,
@@ -127,12 +133,14 @@ function calculateTraitConfidence(sampleCount: number, totalScore: number): numb
 }
 
 export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null {
-  const { answeredQuestionIds, config, currentMatches, traitConfidences } = state;
+  const { answeredQuestionIds, skippedQuestionIds, config } = state;
   const questionCount = answeredQuestionIds.size;
   
   if (questionCount < config.anchorQuestionCount) {
     const anchors = getAnchorQuestions();
-    const unansweredAnchors = anchors.filter(q => !answeredQuestionIds.has(q.id));
+    const unansweredAnchors = anchors.filter(q => 
+      !answeredQuestionIds.has(q.id) && !skippedQuestionIds.has(q.id)
+    );
     if (unansweredAnchors.length > 0) {
       return unansweredAnchors[0];
     }
@@ -142,7 +150,9 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
     return null;
   }
   
-  const availableQuestions = questionsV4.filter(q => !answeredQuestionIds.has(q.id));
+  const availableQuestions = questionsV4.filter(q => 
+    !answeredQuestionIds.has(q.id) && !skippedQuestionIds.has(q.id)
+  );
   if (availableQuestions.length === 0) {
     return null;
   }
@@ -155,6 +165,59 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
   scoredQuestions.sort((a, b) => b.score - a.score);
   
   return scoredQuestions[0]?.question || null;
+}
+
+export function skipQuestion(
+  state: EngineState,
+  currentQuestionId: string
+): { newState: EngineState; newQuestion: AdaptiveQuestion | null } | null {
+  if (state.skipCount >= MAX_SKIP_COUNT) {
+    return null;
+  }
+  
+  const newState = { ...state };
+  newState.skippedQuestionIds = new Set(state.skippedQuestionIds);
+  newState.skippedQuestionIds.add(currentQuestionId);
+  newState.skipCount = state.skipCount + 1;
+  
+  const currentQuestion = questionsV4.find(q => q.id === currentQuestionId);
+  const currentLevel = currentQuestion?.level || 2;
+  
+  const newQuestion = selectAlternativeQuestion(newState, currentLevel);
+  
+  return { newState, newQuestion };
+}
+
+export function selectAlternativeQuestion(
+  state: EngineState,
+  preferredLevel: 1 | 2 | 3
+): AdaptiveQuestion | null {
+  const { answeredQuestionIds, skippedQuestionIds } = state;
+  
+  const sameLevelQuestions = questionsV4.filter(q => 
+    q.level === preferredLevel &&
+    !answeredQuestionIds.has(q.id) && 
+    !skippedQuestionIds.has(q.id)
+  );
+  
+  if (sameLevelQuestions.length > 0) {
+    const scoredQuestions = sameLevelQuestions.map(q => ({
+      question: q,
+      score: calculateQuestionUtility(q, state),
+    }));
+    scoredQuestions.sort((a, b) => b.score - a.score);
+    return scoredQuestions[0]?.question || null;
+  }
+  
+  return selectNextQuestion(state);
+}
+
+export function canSkipQuestion(state: EngineState): boolean {
+  return state.skipCount < MAX_SKIP_COUNT;
+}
+
+export function getRemainingSkips(state: EngineState): number {
+  return MAX_SKIP_COUNT - state.skipCount;
 }
 
 function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState): number {

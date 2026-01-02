@@ -2625,6 +2625,8 @@ export const assessmentSessions = pgTable("assessment_sessions", {
   validityScore: numeric("validity_score", { precision: 3, scale: 2 }),
   totalQuestions: integer("total_questions").default(0),
   isExtended: boolean("is_extended").default(false), // Whether session was extended to 20 questions
+  skipCount: integer("skip_count").default(0), // Number of questions skipped
+  skippedQuestionIds: jsonb("skipped_question_ids"), // Array of skipped question IDs
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
