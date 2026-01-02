@@ -12,7 +12,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     level: 1,
     category: "社交启动",
     scenarioText: "🎉 工作日傍晚，同事群里突然有人发起：今晚有人想一起去新开的居酒屋吗？",
-    questionText: "你的**第一反应和接下来的行动**会是？",
+    questionText: "你的第一反应和接下来的行动会是？",
     primaryTraits: ["X", "C", "E"],
     isAnchor: true,
     discriminationIndex: 0.42,

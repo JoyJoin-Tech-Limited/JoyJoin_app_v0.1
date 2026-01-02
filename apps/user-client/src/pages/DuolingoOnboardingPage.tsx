@@ -982,8 +982,9 @@ export default function DuolingoOnboardingPage() {
     <div className="min-h-screen flex flex-col bg-background">
       {currentScreen > 0 && (
         <OnboardingProgress
-          current={getScreenProgress()}
-          total={100}
+          current={currentScreen}
+          total={6}
+          progress={getScreenProgress()}
           onBack={handleBack}
           showBack={currentScreen > 0}
         />
