@@ -83,8 +83,8 @@ export const questionsV4: AdaptiveQuestion[] = [
     options: [
       {
         value: "A",
-        text: "略带挣扎，但大概率会赴约",
-        traitScores: { A: 0, C: -1, E: 0, O: 0, X: 2, P: 1 }
+        text: "太好了！立刻调整计划加入，越多人越开心",
+        traitScores: { A: 0, C: -1, E: 0, O: 0, X: 4, P: 2 }
       },
       {
         value: "B",
