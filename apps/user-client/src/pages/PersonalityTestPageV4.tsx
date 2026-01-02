@@ -36,12 +36,14 @@ function stripEmoji(text: string): string {
 function OnboardingProgress({ 
   current, 
   total, 
+  remaining,
   progress,
   onBack,
   showBack = true,
 }: { 
   current: number; 
-  total: number;
+  total: number | string;
+  remaining?: number;
   progress: number;
   onBack?: () => void;
   showBack?: boolean;
@@ -67,7 +69,10 @@ function OnboardingProgress({
           />
           <div className="flex justify-between mt-1">
             <span className="text-xs text-muted-foreground" data-testid="text-progress-indicator">
-              第{Math.floor(current)}题 / 约{total}题
+              {remaining !== undefined && remaining > 0 
+                ? `第${Math.floor(current)}题，还剩约${remaining}题`
+                : `第${Math.floor(current)}题 / 约${total}题`
+              }
             </span>
           </div>
         </div>
@@ -277,22 +282,30 @@ export default function PersonalityTestPageV4() {
     remainingSkips,
     topArchetype,
     answeredCount,
+    estimatedRemaining,
   } = useAdaptiveAssessment();
 
+  // Simple question number: answered + 1 (working on next question)
+  // Backend now correctly resets session, so progress.answered is accurate
   const displayCurrent = useMemo(() => {
-    if (!progress) return 7;
+    if (!progress) return 1;
     return progress.answered + 1;
   }, [progress]);
 
+  // Dynamic remaining count
   const displayTotal = useMemo(() => {
     if (!progress) return "8-16";
-    return `${progress.minQuestions}-${progress.softMaxQuestions}`;
-  }, [progress]);
+    // Show total as answered + remaining
+    const total = progress.answered + estimatedRemaining;
+    return String(Math.max(total, progress.answered + 1));
+  }, [progress, estimatedRemaining]);
 
   const progressPercentage = useMemo(() => {
     if (!progress) return 0;
-    return Math.min(100, Math.round((progress.answered / progress.softMaxQuestions) * 100));
-  }, [progress]);
+    const total = progress.answered + estimatedRemaining;
+    if (total <= 0) return 100;
+    return Math.min(100, Math.round((progress.answered / total) * 100));
+  }, [progress, estimatedRemaining]);
 
   useEffect(() => {
     const preSignupAnswers = loadV4PreSignupAnswers();
@@ -448,6 +461,7 @@ export default function PersonalityTestPageV4() {
       <OnboardingProgress
         current={displayCurrent}
         total={displayTotal as any}
+        remaining={estimatedRemaining}
         progress={progressPercentage}
         onBack={() => setLocation('/profile')}
         showBack={true}

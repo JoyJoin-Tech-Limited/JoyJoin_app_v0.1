@@ -9740,7 +9740,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // Start assessment session (with optional pre-signup answers from onboarding)
   app.post('/api/assessment/v4/start', async (req: any, res) => {
     try {
-      const { preSignupAnswers, sessionId: existingSessionId } = req.body;
+      const { preSignupAnswers, sessionId: existingSessionId, forceNew } = req.body;
       const userId = req.session?.userId || null;
       
       // Import adaptive engine
@@ -9754,8 +9754,15 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       let session;
       let engineState;
       
-      // If resuming existing session
-      if (existingSessionId) {
+      // ALWAYS create new session when:
+      // 1. User is logged in (post-signup flow)
+      // 2. Has preSignupAnswers (fresh assessment with onboarding data)
+      // 3. forceNew flag is set
+      // This prevents accumulating answers from previous incomplete sessions
+      const shouldCreateNew = forceNew || (userId && preSignupAnswers && preSignupAnswers.length > 0);
+      
+      // If resuming existing session (only for pre-signup anonymous users)
+      if (existingSessionId && !shouldCreateNew) {
         session = await storage.getAssessmentSession(existingSessionId);
         if (!session) {
           return res.status(404).json({ message: 'Session not found' });
@@ -9775,7 +9782,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           }
         }
       } else {
-        // Create new session
+        // Create new session - fresh start
         session = await storage.createAssessmentSession({
           userId,
           phase: userId ? 'post_signup' : 'pre_signup',
@@ -9784,7 +9791,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         
         engineState = initializeEngineState(DEFAULT_ASSESSMENT_CONFIG);
         
-        // If we have pre-signup answers, process them
+        // If we have pre-signup answers, process them (only for new session)
         if (preSignupAnswers && Array.isArray(preSignupAnswers)) {
           const { questionsV4 } = await import('@shared/personality');
           for (const ans of preSignupAnswers) {
