@@ -27,7 +27,10 @@ const XIAOYUE_AVATARS: Record<XiaoyueMood, string> = {
 };
 
 function stripEmoji(text: string): string {
-  return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
+  return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '')
+    .replace(/\*\*/g, '')
+    .replace(/'/g, '')
+    .trim();
 }
 
 function XiaoyueMascot({ 
@@ -132,8 +135,6 @@ function SelectionList({
   return (
     <div className="space-y-3">
       {options.map((option, index) => {
-        const feedback = selected === option.value ? getOptionFeedback(questionId, option.value) : null;
-        
         return (
           <motion.div
             key={option.value}
@@ -172,21 +173,6 @@ function SelectionList({
                 </motion.div>
               )}
             </motion.button>
-            
-            <AnimatePresence>
-              {feedback && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="px-4 pb-2"
-                >
-                  <p className="text-sm text-primary font-medium italic">
-                    小悦：{feedback}
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </motion.div>
         );
       })}
@@ -439,8 +425,11 @@ export default function PersonalityTestPageV4() {
               {scenarioText}
             </p>
             <XiaoyueMascot 
-              mood="normal"
-              message={currentQuestion.questionText}
+              mood={selectedOption ? "excited" : "normal"}
+              message={selectedOption 
+                ? getOptionFeedback(currentQuestion.id, selectedOption) || "记下了，很有意思的选择！" 
+                : currentQuestion.questionText
+              }
               horizontal
               className="mb-2"
             />
