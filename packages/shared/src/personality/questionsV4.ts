@@ -1092,6 +1092,93 @@ export const questionsV4: AdaptiveQuestion[] = [
   {
     id: "Q33",
     level: 2,
+    category: "意外冲突",
+    scenarioText: "🚶 在狭窄的过道，你不小心和迎面走来的人撞了一下，对方看起来心情不好并咕哝了一句不客气的话。",
+    questionText: "你的第一反应是？",
+    primaryTraits: ["E", "A", "C"],
+    options: [
+      {
+        value: "A",
+        text: "立刻道歉并快步离开，不想卷入冲突——回避型处理。",
+        traitScores: { A: 2, C: 0, E: 3, O: 0, X: -1, P: 1 }
+      },
+      {
+        value: "B",
+        text: "皱眉或回看一眼，内心虽然不悦但忍住不发作——压抑型处理。",
+        traitScores: { A: 0, C: 1, E: 1, O: 0, X: 0, P: 0 }
+      },
+      {
+        value: "C",
+        text: "理直气壮地回一句'你也撞到我了'，维护自己的边界——防御型处理。",
+        traitScores: { A: -2, C: 0, E: -1, O: 0, X: 2, P: -1 }
+      },
+      {
+        value: "D",
+        text: "心平气和地说一句'不好意思'，并观察对方是否需要帮助——超越型处理。",
+        traitScores: { A: 3, C: 1, E: 2, O: 1, X: 0, P: 2 }
+      }
+    ]
+  },
+  {
+    id: "Q34",
+    level: 2,
+    category: "信息分享",
+    scenarioText: "📰 看到一条关于你某个朋友感兴趣领域的深度干货，但内容很长且有一定的门槛。",
+    questionText: "你会？",
+    primaryTraits: ["A", "O", "C", "X"],
+    options: [
+      {
+        value: "A",
+        text: "立刻转发给ta，并附带一句'这个你应该感兴趣'——快捷分享。",
+        traitScores: { A: 2, C: 0, E: 0, O: 2, X: 1, P: 0 }
+      },
+      {
+        value: "B",
+        text: "自己先看完并总结出几个核心点，连同链接一起发给ta——深度分享。",
+        traitScores: { A: 3, C: 3, E: 0, O: 3, X: 0, P: 1 }
+      },
+      {
+        value: "C",
+        text: "先收藏，等下次见面或深度聊天时再当面交流——沉浸分享。",
+        traitScores: { A: 1, C: 1, E: 1, O: 1, X: -1, P: 2 }
+      },
+      {
+        value: "D",
+        text: "觉得可能打扰到对方，或者对方自己也能看到，就不发了——谨慎分享。",
+        traitScores: { A: 0, C: 1, E: 2, O: 0, X: -2, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q35",
+    level: 2,
+    category: "计划变动",
+    scenarioText: "📅 期待已久的周末出游计划因为天气原因临时取消，改为室内聚会。",
+    questionText: "你的心态转变是？",
+    primaryTraits: ["E", "O", "P"],
+    options: [
+      {
+        value: "A",
+        text: "非常失望，觉得心情全毁了，参与室内聚会也提不起劲——低韧性表现。",
+        traitScores: { A: 0, C: 0, E: -3, O: -1, X: 0, P: -2 }
+      },
+      {
+        value: "B",
+        text: "虽然遗憾，但很快开始寻找室内的好玩项目——中高韧性表现。",
+        traitScores: { A: 1, C: 1, E: 2, O: 2, X: 1, P: 1 }
+      },
+      {
+        value: "C",
+        text: "觉得室内聚会也挺好，可以更安静地聊天，也不错——高适应性表现。",
+        traitScores: { A: 2, C: 0, E: 3, O: 1, X: 0, P: 2 }
+      },
+      {
+        value: "D",
+        text: "索性不去了，打算在家里休息或做自己的事——自主性表现。",
+        traitScores: { A: 0, C: 1, E: 1, O: 0, X: -2, P: 0 }
+      }
+    ]
+  },
     category: "接受新事物",
     scenarioText: "🔄 朋友向你推荐一个TA非常喜欢、但你之前从未接触过的活动（如某种舞蹈、冥想、攀岩）。",
     questionText: "你的第一反应是？",
