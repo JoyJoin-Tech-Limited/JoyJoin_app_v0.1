@@ -9,26 +9,39 @@ import { ChevronLeft, Sparkles, PartyPopper, ArrowRight, Mail, Eye, EyeOff, Load
 import { SiApple } from "react-icons/si";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { personalityQuestionsV2 } from "@/data/personalityQuestionsV2";
+import { useAdaptiveAssessment, type AssessmentQuestion, type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
 
 import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01_1766766685652.png";
 import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03_1766766685650.png";
 import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
 
 const ONBOARDING_CACHE_KEY = "joyjoin_onboarding_progress";
-const ONBOARDING_ANSWERS_KEY = "joyjoin_onboarding_answers";
+const V4_SESSION_KEY = "joyjoin_v4_assessment_session";
+const V4_ANSWERS_KEY = "joyjoin_v4_presignup_answers";
 const CACHE_EXPIRY_HOURS = 24;
 
 interface OnboardingState {
   currentScreen: number;
-  answers: Record<number, string | string[]>;
+  answers: Record<string, string>;
   timestamp: number;
 }
 
+interface V4AnchorQuestion {
+  id: string;
+  level: number;
+  category: string;
+  scenarioText: string;
+  questionText: string;
+  options: Array<{
+    value: string;
+    text: string;
+    traitScores: Record<string, number>;
+  }>;
+}
+
 const ONBOARDING_QUESTIONS_COUNT = 6;
-const ONBOARDING_QUESTIONS = personalityQuestionsV2.slice(0, ONBOARDING_QUESTIONS_COUNT);
 
 function stripEmoji(text: string): string {
   return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
@@ -299,33 +312,35 @@ function saveCachedProgress(data: Omit<OnboardingState, 'timestamp'>) {
 
 function clearCachedProgress() {
   localStorage.removeItem(ONBOARDING_CACHE_KEY);
+  localStorage.removeItem(V4_SESSION_KEY);
+  localStorage.removeItem(V4_ANSWERS_KEY);
 }
 
-function saveOnboardingAnswersForPersonalityTest(answers: Record<number, string | string[]>) {
+function saveV4AnswerToCache(
+  questionId: string, 
+  selectedOption: string, 
+  traitScores: Record<string, number>
+) {
   try {
-    const formattedAnswers: Record<number, {
-      type: "single";
-      value: string;
-      traitScores: { A?: number; O?: number; C?: number; E?: number; X?: number; P?: number };
-    }> = {};
-    
-    ONBOARDING_QUESTIONS.forEach((question) => {
-      const answer = answers[question.id];
-      if (typeof answer === 'string') {
-        const selectedOption = question.options.find(opt => opt.value === answer);
-        if (selectedOption) {
-          formattedAnswers[question.id] = {
-            type: "single",
-            value: answer,
-            traitScores: { ...selectedOption.traitScores },
-          };
-        }
-      }
+    const cached = localStorage.getItem(V4_ANSWERS_KEY);
+    const answers: PreSignupAnswer[] = cached ? JSON.parse(cached) : [];
+    answers.push({
+      questionId,
+      selectedOption,
+      traitScores,
+      answeredAt: new Date().toISOString(),
     });
-    
-    localStorage.setItem(ONBOARDING_ANSWERS_KEY, JSON.stringify(formattedAnswers));
+    localStorage.setItem(V4_ANSWERS_KEY, JSON.stringify(answers));
   } catch {
-    // Ignore storage errors
+  }
+}
+
+function getV4CachedAnswers(): PreSignupAnswer[] {
+  try {
+    const cached = localStorage.getItem(V4_ANSWERS_KEY);
+    return cached ? JSON.parse(cached) : [];
+  } catch {
+    return [];
   }
 }
 
@@ -334,7 +349,7 @@ export default function DuolingoOnboardingPage() {
   const { toast } = useToast();
   
   const [currentScreen, setCurrentScreen] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string | string[]>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   
   const [phone, setPhone] = useState("");
@@ -351,6 +366,14 @@ export default function DuolingoOnboardingPage() {
   const [showBirthYear, setShowBirthYear] = useState(true);
   const [relationshipStatus, setRelationshipStatus] = useState<string>("");
 
+  const { data: anchorQuestionsData, isLoading: isLoadingQuestions } = useQuery<{
+    questions: V4AnchorQuestion[];
+    count: number;
+  }>({
+    queryKey: ['/api/assessment/v4/anchor-questions'],
+  });
+
+  const anchorQuestions = anchorQuestionsData?.questions || [];
   const TOTAL_SCREENS = 9;
 
   useEffect(() => {
@@ -386,15 +409,15 @@ export default function DuolingoOnboardingPage() {
     setShowResumePrompt(false);
   };
 
-  const handleAnswer = (questionId: number, value: string | string[]) => {
+  const handleAnswer = (questionId: string, value: string, traitScores?: Record<string, number>) => {
     setAnswers(prev => ({ ...prev, [questionId]: value }));
+    if (traitScores) {
+      saveV4AnswerToCache(questionId, value, traitScores);
+    }
   };
 
   const handleNext = () => {
     const nextScreen = currentScreen + 1;
-    if (nextScreen === 7) {
-      saveOnboardingAnswersForPersonalityTest(answers);
-    }
     setCurrentScreen(nextScreen);
   };
 
@@ -551,15 +574,23 @@ export default function DuolingoOnboardingPage() {
       case 5:
       case 6:
         const questionIndex = currentScreen - 1;
-        const question = ONBOARDING_QUESTIONS[questionIndex];
+        const question = anchorQuestions[questionIndex];
+        
+        if (!question || isLoadingQuestions) {
+          return (
+            <div className="flex-1 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          );
+        }
+        
         const currentAnswer = answers[question.id];
         const scenarioText = stripEmoji(question.scenarioText);
         const questionTextClean = question.questionText;
         
-        const optionsForList = question.options.map(opt => ({
+        const optionsForList = question.options.map((opt) => ({
           value: opt.value,
           label: opt.text,
-          tag: opt.tag,
         }));
         
         return (
@@ -585,8 +616,12 @@ export default function DuolingoOnboardingPage() {
             <div className="flex-1 flex flex-col justify-center py-2">
               <SelectionList
                 options={optionsForList}
-                selected={currentAnswer as string | undefined}
-                onSelect={(value) => handleAnswer(question.id, value)}
+                selected={currentAnswer}
+                onSelect={(value) => {
+                  const val = Array.isArray(value) ? value[0] : value;
+                  const selectedOpt = question.options.find(o => o.value === val);
+                  handleAnswer(question.id, val, selectedOpt?.traitScores);
+                }}
               />
             </div>
 
@@ -667,10 +702,8 @@ export default function DuolingoOnboardingPage() {
                     return;
                   }
                   try {
-                    saveOnboardingAnswersForPersonalityTest(answers);
                     await apiRequest("POST", "/api/auth/quick-login", { phone });
                     queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-                    clearCachedProgress();
                     setLocation("/personality-test");
                   } catch (error) {
                     console.error("Quick login failed:", error);
