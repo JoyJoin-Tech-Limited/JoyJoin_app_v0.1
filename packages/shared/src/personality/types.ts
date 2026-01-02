@@ -32,7 +32,10 @@ export interface AdaptiveQuestion {
   options: QuestionOption[];
   isAnchor?: boolean;
   variants?: string[];
+  variantOf?: string;
   discriminationIndex?: number;
+  isReversed?: boolean;
+  isAttentionCheck?: boolean;
 }
 
 export interface TraitConfidence {
