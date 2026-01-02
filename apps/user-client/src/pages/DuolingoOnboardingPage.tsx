@@ -81,7 +81,7 @@ function XiaoyueMascot({
   horizontal = false,
 }: { 
   mood?: XiaoyueMood; 
-  message: string;
+  message: string; 
   className?: string;
   horizontal?: boolean;
 }) {
@@ -90,13 +90,22 @@ function XiaoyueMascot({
       <div className={cn("flex items-start gap-3", className)}>
         <motion.div
           animate={{ 
-            scale: [1, 1.02, 1],
-            y: [0, -2, 0],
+            scale: [1, 1.05, 1],
+          }}
+          key={message}
+          initial={{ x: 0 }}
+          whileInView={{ 
+            x: [0, -5, 5, -5, 5, 0],
           }}
           transition={{ 
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut",
+            scale: {
+              duration: 3,
+              repeat: Infinity,
+              ease: "easeInOut",
+            },
+            x: {
+              duration: 0.4,
+            }
           }}
           className="relative shrink-0"
         >
@@ -128,13 +137,22 @@ function XiaoyueMascot({
     <div className={cn("flex flex-col items-center gap-4", className)}>
       <motion.div
         animate={{ 
-          scale: [1, 1.02, 1],
-          y: [0, -3, 0],
+          scale: [1, 1.05, 1],
+        }}
+        key={message}
+        initial={{ x: 0 }}
+        whileInView={{ 
+          x: [0, -5, 5, -5, 5, 0],
         }}
         transition={{ 
-          duration: 2,
-          repeat: Infinity,
-          ease: "easeInOut",
+          scale: {
+            duration: 3,
+            repeat: Infinity,
+            ease: "easeInOut",
+          },
+          x: {
+            duration: 0.4,
+          }
         }}
         className="relative"
       >
