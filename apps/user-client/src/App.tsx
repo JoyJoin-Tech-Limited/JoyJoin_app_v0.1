@@ -56,14 +56,6 @@ function RedirectToOnboarding() {
   return null;
 }
 
-function RedirectToInterestsTopics() {
-  const [, setLocation] = useLocation();
-  useEffect(() => {
-    setLocation("/interests-topics");
-  }, [setLocation]);
-  return null;
-}
-
 function RedirectToPersonalityTest() {
   const [, setLocation] = useLocation();
   useEffect(() => {
@@ -81,7 +73,7 @@ function RedirectToSetup() {
 }
 
 function AuthenticatedRouter() {
-  const { user, needsRegistration, needsInterestsTopics, needsPersonalityTest, needsProfileSetup } = useAuth();
+  const { user, needsRegistration, needsPersonalityTest, needsProfileSetup } = useAuth();
   const [location] = useLocation();
 
   // Admin routes - separate from user flow
@@ -104,15 +96,6 @@ function AuthenticatedRouter() {
         <Route path="/registration/chat" component={ChatRegistrationPage} />
         <Route path="/registration/form" component={RegistrationPage} />
         <Route path="*" component={RedirectToOnboarding} />
-      </Switch>
-    );
-  }
-
-  if (needsInterestsTopics) {
-    return (
-      <Switch>
-        <Route path="/interests-topics" component={InterestsTopicsPage} />
-        <Route path="*" component={RedirectToInterestsTopics} />
       </Switch>
     );
   }
