@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -387,16 +388,49 @@ export default function EditProfilePage() {
               )}
             </div>
             
-            {/* CTA按钮 */}
-            <Button 
-              onClick={() => handleChatWithXiaoyue()}
-              size="lg"
-              className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 shadow-lg"
-              data-testid="button-chat-xiaoyue-main"
+            {/* CTA按钮 - 升级版 */}
+            <motion.div
+              className="relative"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              <MessageCircle className="h-5 w-5" />
-              和小悦聊聊，补齐资料
-            </Button>
+              {/* 呼吸光环 */}
+              <motion.div
+                className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/40 via-purple-400/40 to-pink-400/40 blur-lg"
+                animate={{
+                  opacity: [0.5, 0.8, 0.5],
+                  scale: [1, 1.05, 1],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+              <Button 
+                onClick={() => handleChatWithXiaoyue()}
+                size="lg"
+                className="relative w-full gap-3 bg-gradient-to-r from-primary via-purple-500 to-pink-500 shadow-xl border-0 min-h-[56px] text-base font-semibold"
+                data-testid="button-chat-xiaoyue-main"
+              >
+                {/* 小悦头像 */}
+                <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/30 flex-shrink-0">
+                  <img 
+                    src={xiaoyueExcited} 
+                    alt="小悦" 
+                    className="w-full h-full object-cover object-top"
+                  />
+                </div>
+                <div className="flex flex-col items-start">
+                  <span>立即补齐，解锁VIP匹配</span>
+                  <span className="text-xs opacity-80 font-normal">小悦陪你3分钟搞定</span>
+                </div>
+                {/* XP奖励气泡 */}
+                <Badge className="absolute -top-2 -right-2 bg-amber-400 text-amber-900 border-0 shadow-md">
+                  +{Math.max(20, (100 - percentage))}XP
+                </Badge>
+              </Button>
+            </motion.div>
           </CardContent>
         </Card>
 
@@ -478,6 +512,11 @@ export default function EditProfilePage() {
                     const filledCount = section.fields.filter(f => f.value).length;
                     const totalCount = section.fields.length;
                     const isComplete = incompleteCount === 0;
+                    // Normalize to 5 stars for visual consistency
+                    // Use floor to avoid showing 5 stars when incomplete, only 5 when truly complete
+                    const normalizedFilled = totalCount > 0 
+                      ? (isComplete ? 5 : Math.min(4, Math.floor((filledCount / totalCount) * 5)))
+                      : 0;
                     
                     return (
                       <div 
@@ -498,7 +537,7 @@ export default function EditProfilePage() {
                             </div>
                           ) : (
                             <>
-                              <StarProgress filled={filledCount} total={totalCount} />
+                              <StarProgress filled={normalizedFilled} total={5} />
                               <div className="w-2 h-2 rounded-full bg-amber-400" />
                             </>
                           )}
