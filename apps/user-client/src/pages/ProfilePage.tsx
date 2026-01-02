@@ -8,7 +8,8 @@ import GamificationCard from "@/components/GamificationCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target, RefreshCw, MessageCircle, Star, ChevronDown, Dna, Globe, Users, Coffee } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target, RefreshCw, MessageCircle, Star, ChevronDown, Dna, Globe, Users, Coffee, Zap, Crown, ArrowRight } from "lucide-react";
 import { getInsightCategoryConfig, INSIGHT_CONFIDENCE_THRESHOLD, INSIGHT_DISPLAY_LIMIT } from "@/lib/insightCategoryConfig";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
@@ -21,6 +22,10 @@ import { archetypeConfig } from "@/lib/archetypes";
 import { archetypeGradients, archetypeAvatars, archetypeEmojis } from "@/lib/archetypeAvatars";
 import { getArchetypeImage } from "@/lib/archetypeImages";
 import { getTopCompatibleArchetypes, getCompatibilityCategory } from "@/lib/archetypeCompatibility";
+import { getMatchesWithDescriptions } from "@/lib/archetypeCompatibilityDescriptions";
+import xiaoyueAvatar from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
+import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03_1766766685650.png";
+import xiaoyueThinking from "@assets/Xiao_Yue_Avatar-01_1766766685652.png";
 import {
   getGenderDisplay,
   calculateAge,
@@ -208,54 +213,88 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Profile Completion Card */}
+        {/* Profile Completion Card - Redesigned with Big Xiaoyue */}
         {!userLoading && user && (() => {
           const completion = calculateProfileCompletion(user);
-          // Only show if profile is less than 90% complete
           if (completion.percentage >= 90) return null;
           
+          const getXiaoyueState = () => {
+            if (completion.percentage >= 70) {
+              return { avatar: xiaoyueExcited, message: "快完成了！再补几项就能解锁VIP匹配~" };
+            } else if (completion.percentage >= 40) {
+              return { avatar: xiaoyueAvatar, message: "不错哦！让我更了解你，帮你找更合拍的人~" };
+            } else {
+              return { avatar: xiaoyueThinking, message: "期待认识你！聊几句就能提升匹配精准度~" };
+            }
+          };
+          
+          const getMatchTier = () => {
+            if (completion.percentage >= 80) return { tier: "VIP匹配", icon: <Crown className="h-3.5 w-3.5 text-amber-500" />, color: "text-amber-500" };
+            if (completion.percentage >= 50) return { tier: "优先匹配", icon: <Zap className="h-3.5 w-3.5 text-primary" />, color: "text-primary" };
+            return { tier: "普通匹配", icon: <Star className="h-3.5 w-3.5 text-muted-foreground" />, color: "text-muted-foreground" };
+          };
+          
+          const xiaoyueState = getXiaoyueState();
+          const matchTier = getMatchTier();
+          
           return (
-            <Card className="border shadow-sm">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    <span className="font-medium text-sm">资料完善度</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {[1, 2, 3, 4, 5].map((starNum) => (
-                      <Star 
-                        key={starNum}
-                        className={`w-3.5 h-3.5 ${
-                          starNum <= completion.stars 
-                            ? 'text-yellow-500 fill-yellow-500' 
-                            : 'text-muted-foreground/30'
-                        }`}
+            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background overflow-hidden shadow-sm">
+              <CardContent className="p-5">
+                <div className="flex flex-col items-center text-center">
+                  <div className="relative mb-3">
+                    <div 
+                      className="absolute inset-0 rounded-full bg-primary/20 animate-pulse"
+                      style={{ transform: "scale(1.2)" }}
+                    />
+                    <div className="relative w-20 h-20 rounded-full overflow-hidden border-3 border-primary/40 shadow-lg">
+                      <img 
+                        src={xiaoyueState.avatar} 
+                        alt="小悦" 
+                        className="w-full h-full object-cover object-top"
+                        data-testid="img-xiaoyue-completion"
                       />
-                    ))}
+                    </div>
+                    <Badge className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] px-2 py-0.5 bg-green-500 border-2 border-background">
+                      AI助手
+                    </Badge>
                   </div>
-                </div>
-                
-                <div className="space-y-1.5">
-                  <Progress value={completion.percentage} className="h-2" />
-                  <p className="text-xs text-muted-foreground">
-                    已完成 {completion.percentage}%
-                    {completion.missingFields.length > 0 && (
-                      <span> · 缺少: {completion.missingFields.slice(0, 3).join('、')}{completion.missingFields.length > 3 ? '等' : ''}</span>
-                    )}
+                  
+                  <p className="text-sm text-foreground/90 leading-relaxed max-w-[260px] mb-4" data-testid="text-xiaoyue-prompt">
+                    {xiaoyueState.message}
                   </p>
+                  
+                  <div className="w-full space-y-2 mb-4">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        {matchTier.icon}
+                        <span className={matchTier.color}>{matchTier.tier}</span>
+                      </div>
+                      <span className="text-muted-foreground font-semibold">{completion.percentage}%</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all ${
+                          completion.percentage >= 80 
+                            ? "bg-gradient-to-r from-amber-400 to-amber-500" 
+                            : completion.percentage >= 50 
+                              ? "bg-gradient-to-r from-primary to-primary/80"
+                              : "bg-gradient-to-r from-slate-400 to-slate-500"
+                        }`}
+                        style={{ width: `${completion.percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 shadow-md"
+                    onClick={() => setLocation('/registration/chat?mode=enrichment')}
+                    data-testid="button-chat-with-xiaoyue"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    和小悦聊聊，补齐资料
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
                 </div>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full"
-                  onClick={() => setLocation('/registration/chat?mode=enrichment')}
-                  data-testid="button-chat-with-xiaoyue"
-                >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  和小悦聊聊，补充资料
-                </Button>
               </CardContent>
             </Card>
           );
@@ -355,7 +394,7 @@ export default function ProfilePage() {
                     </div>
                   )}
 
-                  {/* Best Matches */}
+                  {/* Best Matches - With Compatibility Descriptions */}
                   <div className="space-y-3 pt-2 border-t">
                     <h4 className="font-medium text-sm flex items-center gap-2">
                       <Heart className="w-4 h-4 text-red-500" />
@@ -364,29 +403,39 @@ export default function ProfilePage() {
                     <p className="text-xs text-muted-foreground">
                       作为<span className="font-semibold text-foreground">{personalityResults.primaryRole}</span>，你在活动中最有化学反应的角色：
                     </p>
-                    <div className="space-y-2">
-                      {getTopCompatibleArchetypes(personalityResults.primaryRole, 3).map((match) => (
-                        <div key={match.archetype} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                          <div className="flex items-center gap-3 flex-1">
-                            {getArchetypeImage(match.archetype) ? (
-                              <img 
-                                src={getArchetypeImage(match.archetype)!} 
-                                alt={match.archetype}
-                                className="h-10 w-10 rounded-full object-contain"
-                              />
-                            ) : (
-                              <img 
-                                src={archetypeAvatars[match.archetype]} 
-                                alt={match.archetype}
-                                className="h-10 w-10 rounded-full object-cover"
-                              />
-                            )}
-                            <div>
-                              <div className="font-semibold text-sm">{match.archetype}</div>
-                              <div className="text-xs text-muted-foreground">{getCompatibilityCategory(match.score)}</div>
+                    <div className="space-y-3">
+                      {getMatchesWithDescriptions(
+                        personalityResults.primaryRole, 
+                        getTopCompatibleArchetypes(personalityResults.primaryRole, 3)
+                      ).map((match) => (
+                        <div key={match.archetype} className="p-3 rounded-lg bg-muted/30 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 flex-1">
+                              {getArchetypeImage(match.archetype) ? (
+                                <img 
+                                  src={getArchetypeImage(match.archetype)!} 
+                                  alt={match.archetype}
+                                  className="h-10 w-10 rounded-full object-contain"
+                                />
+                              ) : (
+                                <img 
+                                  src={archetypeAvatars[match.archetype]} 
+                                  alt={match.archetype}
+                                  className="h-10 w-10 rounded-full object-cover"
+                                />
+                              )}
+                              <div>
+                                <div className="font-semibold text-sm">{match.archetype}</div>
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                  {match.highlight}
+                                </Badge>
+                              </div>
                             </div>
+                            <div className="text-lg font-bold text-primary">{match.score}%</div>
                           </div>
-                          <div className="text-lg font-bold text-primary">{match.score}%</div>
+                          <p className="text-xs text-muted-foreground leading-relaxed pl-13">
+                            {match.description}
+                          </p>
                         </div>
                       ))}
                     </div>

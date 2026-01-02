@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import PersonalityRadarChart from '@/components/PersonalityRadarChart';
-import { Sparkles, Users, TrendingUp, AlertTriangle, Heart, Share2, Quote, Target } from 'lucide-react';
+import { Sparkles, Users, TrendingUp, AlertTriangle, Heart, Share2, Quote, Target, Eye, Utensils, Crown, Lightbulb } from 'lucide-react';
 import type { RoleResult } from '@shared/schema';
 import { queryClient } from '@/lib/queryClient';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,7 +13,9 @@ import { archetypeGradients, archetypeAvatars } from '@/lib/archetypeAvatars';
 import { archetypeConfig } from '@/lib/archetypes';
 import { getTopCompatibleArchetypes, getCompatibilityCategory } from '@/lib/archetypeCompatibility';
 import { getCompatibilityDescription } from '@/lib/archetypeCompatibilityDescriptions';
+import { getArchetypeInsight } from '@/lib/archetypeInsights';
 import { useState, useEffect } from 'react';
+import xiaoyueAvatar from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
 
 export default function PersonalityTestResultPage() {
   const [, setLocation] = useLocation();
@@ -506,6 +508,79 @@ export default function PersonalityTestResultPage() {
             </Card>
           </motion.div>
         )}
+
+        {/* Counter-Intuitive Insights & Scenario Simulation Card */}
+        {(() => {
+          const insight = getArchetypeInsight(result.primaryRole);
+          if (!insight) return null;
+          
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Eye className="w-5 h-5 text-primary" />
+                      你可能不知道的自己
+                    </CardTitle>
+                    <Badge variant="outline" className="text-xs">
+                      <Crown className="w-3 h-3 mr-1 text-amber-500" />
+                      前{insight.rarityPercentage}%
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Counter-Intuitive Insight */}
+                  <div className="space-y-2">
+                    <p className="text-sm leading-relaxed text-foreground/90" data-testid="text-counter-intuitive">
+                      {insight.counterIntuitive}
+                    </p>
+                  </div>
+
+                  {/* Hidden Strength */}
+                  <div className="flex items-start gap-3 bg-primary/5 rounded-lg p-3 border border-primary/10">
+                    <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-primary">隐藏优势</p>
+                      <p className="text-sm text-foreground" data-testid="text-hidden-strength">
+                        {insight.hiddenStrength}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Scenario Simulation */}
+                  <div className="space-y-2 pt-2 border-t">
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                      <Utensils className="w-4 h-4 text-orange-500" />
+                      <span>当你在饭局...</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-3" data-testid="text-scenario">
+                      {insight.scenarioSimulation}
+                    </p>
+                  </div>
+
+                  {/* Xiaoyue Dynamic Comment */}
+                  <div className="flex items-start gap-2 bg-card border rounded-lg p-3">
+                    <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                      <img src={xiaoyueAvatar} alt="小悦" className="w-full h-full object-cover object-top" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground mb-0.5">小悦说</p>
+                      <p className="text-sm text-foreground" data-testid="text-xiaoyue-dynamic">
+                        {insight.xiaoyueComment}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })()}
 
         {/* Radar Chart Card */}
         <motion.div

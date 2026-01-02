@@ -34,6 +34,7 @@ import {
 import { archetypeConfig } from "@/lib/archetypes";
 import { archetypeAvatars, archetypeGradients } from "@/lib/archetypeAvatars";
 import { intentOptions } from "@/lib/userFieldMappings";
+import { getArchetypeInsight, getInsightPreview } from "@/lib/archetypeInsights";
 import { 
   GENDER_OPTIONS, 
   CURRENT_CITY_OPTIONS, 
@@ -706,21 +707,73 @@ export default function PostTestFlowPage() {
                 </motion.div>
               </div>
 
+              {/* Rarity Badge + Description */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 }}
-                className="bg-card rounded-xl p-4 border shadow-sm mt-4"
+                className="bg-card rounded-xl p-4 border shadow-sm mt-4 space-y-3"
               >
+                {(() => {
+                  const insight = getArchetypeInsight(archetype);
+                  return insight ? (
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+                        <Star className="w-3 h-3 mr-1 text-amber-500 fill-amber-500" />
+                        你是前{insight.rarityPercentage}%的{archetype}
+                      </Badge>
+                    </div>
+                  ) : null;
+                })()}
                 <p className="text-base leading-relaxed text-foreground/80" data-testid="text-archetype-description">
                   {archetypeData?.description || "独特的社交风格"}
                 </p>
               </motion.div>
 
+              {/* Insight Preview - Teaser */}
+              {(() => {
+                const insightPreview = getInsightPreview(archetype);
+                const insight = getArchetypeInsight(archetype);
+                if (!insightPreview || !insight) return null;
+                
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.85 }}
+                    className="bg-gradient-to-br from-primary/5 to-background rounded-xl p-4 border border-primary/20 mt-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border-2 border-primary/30">
+                        <img 
+                          src={xiaoyuePointing} 
+                          alt="小悦" 
+                          className="w-full h-full object-cover object-top"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground mb-1">小悦偷偷告诉你</p>
+                        <p className="text-sm text-foreground/80 leading-relaxed">
+                          {insight.xiaoyueComment}
+                        </p>
+                        {/* Insight Preview Teaser Text */}
+                        <p className="text-sm text-muted-foreground/70 leading-relaxed mt-2 italic" data-testid="text-insight-preview">
+                          "{insightPreview}"
+                        </p>
+                        <p className="text-xs text-primary mt-2 flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" />
+                          点击"查看详情"解锁完整洞察
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })()}
+
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9 }}
+                transition={{ delay: 0.95 }}
                 className="flex-1 flex flex-col justify-center py-3"
               >
                 <h3 className="font-semibold text-center mb-2">你的核心特质</h3>

@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   ChevronLeft, 
@@ -18,7 +18,10 @@ import {
   MapPin,
   MessageCircle,
   Sparkles,
-  Settings2
+  Settings2,
+  Zap,
+  Check,
+  Crown
 } from "lucide-react";
 import {
   getGenderDisplay,
@@ -40,6 +43,8 @@ import { getInterestLabel, getTopicLabel } from "@/data/interestsTopicsData";
 import { calculateProfileCompletion } from "@/lib/profileCompletion";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import xiaoyueAvatar from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
+import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03_1766766685650.png";
+import xiaoyueThinking from "@assets/Xiao_Yue_Avatar-01_1766766685652.png";
 
 interface Field {
   label: string;
@@ -62,6 +67,57 @@ interface SectionGroup {
   chatTopic?: string;
 }
 
+type MatchTier = "普通匹配" | "优先匹配" | "VIP匹配";
+
+function getMatchTier(percentage: number): { tier: MatchTier; nextTier: MatchTier | null; nextThreshold: number; icon: ReactNode } {
+  if (percentage >= 80) {
+    return { tier: "VIP匹配", nextTier: null, nextThreshold: 100, icon: <Crown className="h-4 w-4 text-amber-500" /> };
+  } else if (percentage >= 50) {
+    return { tier: "优先匹配", nextTier: "VIP匹配", nextThreshold: 80, icon: <Zap className="h-4 w-4 text-primary" /> };
+  } else {
+    return { tier: "普通匹配", nextTier: "优先匹配", nextThreshold: 50, icon: <Star className="h-4 w-4 text-muted-foreground" /> };
+  }
+}
+
+function getXiaoyueState(percentage: number): { avatar: string; message: string; mood: "thinking" | "normal" | "excited" } {
+  if (percentage >= 80) {
+    return {
+      avatar: xiaoyueExcited,
+      message: "太棒了！资料超完善，匹配精准度Max~",
+      mood: "excited"
+    };
+  } else if (percentage >= 50) {
+    return {
+      avatar: xiaoyueAvatar,
+      message: "不错哦！再补充几项就能解锁VIP匹配啦~",
+      mood: "normal"
+    };
+  } else {
+    return {
+      avatar: xiaoyueThinking,
+      message: "期待更了解你，聊几句就能提升匹配精准度~",
+      mood: "thinking"
+    };
+  }
+}
+
+function StarProgress({ filled, total }: { filled: number; total: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: total }).map((_, i) => (
+        <Star
+          key={i}
+          className={`h-3.5 w-3.5 transition-all ${
+            i < filled
+              ? "text-amber-400 fill-amber-400"
+              : "text-muted-foreground/30"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function EditProfilePage() {
   const [, setLocation] = useLocation();
   const [manualEditOpen, setManualEditOpen] = useState(false);
@@ -81,7 +137,9 @@ export default function EditProfilePage() {
 
   const age = user.birthdate ? calculateAge(user.birthdate) : null;
   const ageDisplay = age ? formatAge(age) : null;
-  const { percentage, stars, missingFields } = calculateProfileCompletion(user);
+  const { percentage } = calculateProfileCompletion(user);
+  const matchTierInfo = getMatchTier(percentage);
+  const xiaoyueState = getXiaoyueState(percentage);
 
   const getIncompleteCount = (fields: Field[]) => {
     return fields.filter(f => !f.value).length;
@@ -228,16 +286,16 @@ export default function EditProfilePage() {
     group.sections.some(section => getIncompleteCount(section.fields) > 0)
   );
 
-  const totalMissingCount = sectionGroups.reduce((acc, group) => 
-    acc + group.sections.reduce((sAcc, section) => sAcc + getIncompleteCount(section.fields), 0), 0
-  );
-
   const handleChatWithXiaoyue = (topic?: string) => {
     const url = topic 
       ? `/registration/chat?mode=enrichment&topic=${encodeURIComponent(topic)}`
       : '/registration/chat?mode=enrichment';
     setLocation(url);
   };
+
+  const itemsToNextTier = matchTierInfo.nextTier 
+    ? Math.ceil((matchTierInfo.nextThreshold - percentage) / 5)
+    : 0;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -256,63 +314,93 @@ export default function EditProfilePage() {
       </div>
 
       <div className="px-4 py-3 space-y-4 max-w-2xl mx-auto">
-        {/* Hero 助手卡片 - 移动端友好版 */}
+        {/* Hero 助手卡片 - Gamified版 */}
         <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background overflow-hidden">
           <CardContent className="p-5">
-            <div className="flex items-center gap-4">
-              <div className="relative flex-shrink-0">
-                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary/30 shadow-md">
+            {/* 小悦头像 + 呼吸动画 */}
+            <div className="flex flex-col items-center text-center mb-4">
+              <div className="relative mb-3">
+                <div 
+                  className="absolute inset-0 rounded-full bg-primary/20 animate-pulse"
+                  style={{ transform: "scale(1.15)" }}
+                />
+                <div className="relative w-20 h-20 rounded-full overflow-hidden border-3 border-primary/40 shadow-lg">
                   <img 
-                    src={xiaoyueAvatar} 
+                    src={xiaoyueState.avatar} 
                     alt="小悦" 
                     className="w-full h-full object-cover object-top"
+                    data-testid="img-xiaoyue-avatar"
                   />
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-green-500 rounded-full border-2 border-background" />
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
+                  <span className="text-white text-xs">AI</span>
+                </div>
               </div>
               
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-lg">小悦</span>
-                  <Badge variant="secondary" className="text-xs px-2 py-0.5">
-                    AI助手
-                  </Badge>
-                </div>
-                <p className="text-base text-muted-foreground leading-snug">
-                  {totalMissingCount > 0 
-                    ? `还有${totalMissingCount}项可补充，聊几句搞定~`
-                    : "资料很完善啦！"
-                  }
-                </p>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-semibold text-lg">小悦</span>
+                <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                  AI助手
+                </Badge>
               </div>
+              <p className="text-base text-muted-foreground leading-snug max-w-[280px]" data-testid="text-xiaoyue-message">
+                {xiaoyueState.message}
+              </p>
+            </div>
+
+            {/* 里程碑提示 */}
+            <div className="bg-muted/50 rounded-lg p-3 mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  {matchTierInfo.icon}
+                  <span className="font-medium text-sm">{matchTierInfo.tier}</span>
+                </div>
+                <span className="text-sm text-muted-foreground font-semibold">{percentage}%</span>
+              </div>
+              
+              {/* 进度条 */}
+              <div className="h-2.5 bg-muted rounded-full overflow-hidden mb-2">
+                <div 
+                  className={`h-full rounded-full transition-all ${
+                    percentage >= 80 
+                      ? "bg-gradient-to-r from-amber-400 to-amber-500" 
+                      : percentage >= 50 
+                        ? "bg-gradient-to-r from-primary to-primary/80"
+                        : "bg-gradient-to-r from-slate-400 to-slate-500"
+                  }`}
+                  style={{ width: `${percentage}%` }}
+                />
+              </div>
+              
+              {/* 升级提示 */}
+              {matchTierInfo.nextTier && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-primary" />
+                  再补充 {itemsToNextTier} 项 → 解锁「{matchTierInfo.nextTier}」
+                </p>
+              )}
+              {!matchTierInfo.nextTier && (
+                <p className="text-xs text-primary flex items-center gap-1">
+                  <Check className="h-3 w-3" />
+                  已解锁最高匹配等级！
+                </p>
+              )}
             </div>
             
-            {/* 进度条 + CTA */}
-            <div className="mt-4 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all"
-                    style={{ width: `${percentage}%` }}
-                  />
-                </div>
-                <span className="text-sm text-muted-foreground font-semibold min-w-[40px] text-right">{percentage}%</span>
-              </div>
-              
-              <Button 
-                onClick={() => handleChatWithXiaoyue()}
-                size="lg"
-                className="w-full gap-2"
-                data-testid="button-chat-xiaoyue-main"
-              >
-                <MessageCircle className="h-5 w-5" />
-                和小悦聊聊，补齐资料
-              </Button>
-            </div>
+            {/* CTA按钮 */}
+            <Button 
+              onClick={() => handleChatWithXiaoyue()}
+              size="lg"
+              className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 shadow-lg"
+              data-testid="button-chat-xiaoyue-main"
+            >
+              <MessageCircle className="h-5 w-5" />
+              和小悦聊聊，补齐资料
+            </Button>
           </CardContent>
         </Card>
 
-        {/* 快速补充区 - 移动端友好版 */}
+        {/* 快速补充区 - 带推荐标签和XP提示 */}
         {groupsWithMissingFields.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center gap-2 px-1">
@@ -320,21 +408,35 @@ export default function EditProfilePage() {
               <span className="text-sm font-semibold">快速补充</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {groupsWithMissingFields.slice(0, 3).map((group) => {
+              {groupsWithMissingFields.slice(0, 3).map((group, index) => {
                 const groupMissingCount = group.sections.reduce(
                   (acc, section) => acc + getIncompleteCount(section.fields), 0
                 );
+                const isRecommended = index === 0;
                 return (
                   <button
                     key={group.id}
-                    className="inline-flex items-center gap-2 h-11 px-4 rounded-full border bg-background text-sm hover-elevate active-elevate-2 transition-colors"
+                    className={`relative inline-flex items-center gap-2 h-11 px-4 rounded-full border text-sm hover-elevate active-elevate-2 transition-colors ${
+                      isRecommended 
+                        ? "bg-primary/5 border-primary/30" 
+                        : "bg-background"
+                    }`}
                     onClick={() => handleChatWithXiaoyue(group.chatTopic)}
                     data-testid={`chip-chat-${group.id}`}
                   >
-                    <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                    {isRecommended && (
+                      <Badge className="absolute -top-2 -right-1 text-[10px] px-1.5 py-0 bg-primary">
+                        推荐
+                      </Badge>
+                    )}
+                    <MessageCircle className={`h-4 w-4 ${isRecommended ? "text-primary" : "text-muted-foreground"}`} />
                     <span>{group.chatTopic}</span>
-                    <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md font-medium">
-                      {groupMissingCount}
+                    <span className={`text-xs px-1.5 py-0.5 rounded-md font-medium ${
+                      isRecommended 
+                        ? "bg-primary/10 text-primary" 
+                        : "bg-muted text-muted-foreground"
+                    }`}>
+                      +{groupMissingCount * 5}XP
                     </span>
                   </button>
                 );
@@ -352,7 +454,7 @@ export default function EditProfilePage() {
           </div>
         )}
 
-        {/* 手动编辑区 - 移动端友好版 */}
+        {/* 手动编辑区 - 带星星进度 */}
         <Collapsible open={manualEditOpen} onOpenChange={setManualEditOpen}>
           <CollapsibleTrigger asChild>
             <button 
@@ -375,6 +477,7 @@ export default function EditProfilePage() {
                     const incompleteCount = getIncompleteCount(section.fields);
                     const filledCount = section.fields.filter(f => f.value).length;
                     const totalCount = section.fields.length;
+                    const isComplete = incompleteCount === 0;
                     
                     return (
                       <div 
@@ -388,11 +491,16 @@ export default function EditProfilePage() {
                           <span className="text-base">{section.title}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">
-                            {filledCount}/{totalCount}
-                          </span>
-                          {incompleteCount > 0 && (
-                            <div className="w-2 h-2 rounded-full bg-amber-400" />
+                          {isComplete ? (
+                            <div className="flex items-center gap-1.5 text-green-600">
+                              <Check className="h-4 w-4" />
+                              <span className="text-xs font-medium">已完成</span>
+                            </div>
+                          ) : (
+                            <>
+                              <StarProgress filled={filledCount} total={totalCount} />
+                              <div className="w-2 h-2 rounded-full bg-amber-400" />
+                            </>
                           )}
                           <ChevronRight className="h-5 w-5 text-muted-foreground" />
                         </div>
