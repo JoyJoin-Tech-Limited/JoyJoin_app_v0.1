@@ -165,16 +165,16 @@ function XiaoyueMascot({
 function OnboardingProgress({ 
   current, 
   total, 
+  progress,
   onBack,
   showBack = true,
 }: { 
   current: number; 
   total: number;
+  progress: number;
   onBack?: () => void;
   showBack?: boolean;
 }) {
-  const percentage = Math.round((current / 12) * 100);
-  
   return (
     <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
       <div className="flex items-center gap-3">
@@ -191,15 +191,12 @@ function OnboardingProgress({
         )}
         <div className="flex-1">
           <Progress 
-            value={percentage} 
+            value={progress} 
             className="h-2 transition-all duration-500" 
           />
           <div className="flex justify-between mt-1">
             <span className="text-xs text-muted-foreground">
-              第{current}题
-            </span>
-            <span className="text-xs text-muted-foreground">
-              约剩{12 - current}题
+              第{Math.floor(current)}题 / 约12题
             </span>
           </div>
         </div>
