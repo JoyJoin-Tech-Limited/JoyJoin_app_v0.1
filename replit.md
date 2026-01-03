@@ -1,7 +1,7 @@
 # Local Micro-Events Social Network (JoyJoin)
 
 ## Overview
-JoyJoin is a social networking platform designed to connect users through curated local micro-events (5-10 attendees) in the Hong Kong/Shenzhen market. It leverages AI for intelligent user matching based on interests, personality, and social compatibility, emphasizing psychological safety and inclusivity. Key capabilities include AI-powered matching, comprehensive feedback, streamlined event management, and a robust Admin Portal. A distinctive feature is the 12-Archetype Animal Social Vibe System, aimed at enhancing group dynamics and chemistry.
+JoyJoin is a social networking platform designed for the Hong Kong/Shenzhen market, connecting users through curated local micro-events (5-10 attendees). It leverages AI for intelligent user matching based on interests, personality, and social compatibility, ensuring psychological safety and inclusivity. The platform features AI-powered matching, comprehensive feedback mechanisms, streamlined event management, and a robust Admin Portal. A unique element is the 12-Archetype Animal Social Vibe System, aimed at enhancing group dynamics.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -10,13 +10,13 @@ Dialect support: Platform serves both Cantonese speakers and other 方言人群 
 ## System Architecture
 
 ### Monorepo Structure
-The project uses a monorepo setup (`joyjoin-monorepo`) containing separate applications for the user client, admin client, and API server, along with a shared package for common schemas and types.
+The project utilizes a monorepo (`joyjoin-monorepo`) encompassing user client, admin client, API server, and a shared package for common schemas and types.
 
 ### Frontend
 - **Frameworks:** React 18 with TypeScript, Vite, Wouter.
-- **UI/Styling:** Mobile-first design utilizing Radix UI, shadcn/ui, and Tailwind CSS. Features include dark mode, a purple-centric warm color palette, bilingual support (Chinese/English), and design principles focused on warmth, accessibility, responsiveness, and progressive anxiety reduction.
+- **UI/Styling:** Mobile-first design using Radix UI, shadcn/ui, and Tailwind CSS. Features include dark mode, a purple-centric warm color palette, bilingual support (Chinese/English), and design principles emphasizing warmth, accessibility, responsiveness, and progressive anxiety reduction.
 - **State Management:** TanStack Query for server state.
-- **Animations:** Framer-motion, with accessibility support for reduced motion preferences.
+- **Animations:** Framer-motion, with accessibility support.
 
 ### Backend
 - **Runtime:** Node.js with Express.js, TypeScript.
@@ -24,7 +24,7 @@ The project uses a monorepo setup (`joyjoin-monorepo`) containing separate appli
 
 ### Data Storage
 - **Database:** PostgreSQL (Neon serverless) managed with Drizzle ORM.
-- **Data Entities:** Users, Events, Matching Algorithm data, Feedback/Ratings, and Admin Portal entities.
+- **Key Entities:** Users, Events, Matching Algorithm data, Feedback/Ratings, and Admin Portal entities.
 
 ### Authentication & Authorization
 - **User Authentication:** Phone number + SMS verification.
@@ -32,29 +32,23 @@ The project uses a monorepo setup (`joyjoin-monorepo`) containing separate appli
 - **Admin Authorization:** `isAdmin` flag.
 
 ### System Features & Design Decisions
-- **AI-Driven Event Pool Matching:** A two-stage model employing admin-defined event pools and a 7-dimensional AI algorithm with validated weights: Chemistry (30%), Interest (20%), Language (15%), Preferences (15%), Hometown (8-12% dynamic), Background (5%), Emotional (5%). It integrates a 12-Archetype Animal Social Vibe System with event-type-specific preference scoring (饭局 vs 酒局). Features include dynamic hometown affinity with opt-in, bar theme/alcohol comfort matching for 酒局, and taste intensity/cuisine matching for 饭局. Includes a matching cache and Cantonese dialect support.
+- **AI-Driven Event Pool Matching:** A two-stage model combining admin-defined event pools and a 7-dimensional AI algorithm (Chemistry, Interest, Language, Preferences, Hometown, Background, Emotional). Integrates a 12-Archetype Animal Social Vibe System with event-type-specific preference scoring (e.g., 饭局 vs 酒局).
 - **Two-Tier Feedback Architecture:** Collects basic and anonymous deep feedback for continuous algorithm refinement.
-- **Gamified Personality Assessment (V4 Adaptive):** Upgraded from static 12-question test to 66-question adaptive assessment (L1:6, L2:50, L3:10) that dynamically selects 8-16 questions (extending to 20 for boundary cases) based on real-time confidence scores. Flow integrates with onboarding: 6 anchor questions pre-signup → signup gate → 2-14 questions post-signup continuation. Features: (1) **Adaptive Engine** with 3-level question difficulty, termination based on archetype confidence and confusable-pair detection, (2) **6 AOCEXP Traits** (Agreeableness, Openness, Conscientiousness, Extraversion, Sociability X, Patience P), (3) **Real-time Archetype Predictions** showing top matches during test, (4) **Milestone Encouragement** at question 5/8/11, (5) **Option Randomization** to prevent order bias, (6) **Pre-signup Data Caching** via localStorage with 24-hour expiry, (7) **Similar Archetype Matching** using confusableWith relationships - increases perceived accuracy from 28% exact match to 47% similar match, (8) **Tiered Threshold System** with feature flag (`enableTieredThreshold`) for A/B testing - adds 1-2 extra questions when confidence gap <0.10 or dimension coverage <75%. **Recent Updates (Jan 2026)**: Added 6 new L2 questions (Q78-Q83) targeting social desirability bias reduction with negative-score options for A/X/P traits. Adjusted 4 archetype prototype trait profiles: 开心柯基(A:70→60), 机智狐(A:55→45, X:80→72, O:90→92), 织网蛛(A:80→70, C:70→78), 灵感章鱼(C:45→35, X:60→65, P:65→70). Simulation metrics: 50% exact match, 64% similar match (B-grade). Known issues: A/O dimensions show systematic overestimation due to social desirability; problem archetypes: 开心柯基, 机智狐, 织网蛛, 灵感章鱼. Database: `assessment_sessions` and `assessment_answers` tables. API: `/api/assessment/v4/start`, `/api/assessment/v4/:sessionId/answer`, `/api/assessment/v4/:sessionId/result`, `/api/assessment/v4/anchor-questions`. Modules: `packages/shared/src/personality/adaptiveEngine.ts`, `questionsV4.ts`, `prototypes.ts`. Frontend: `useAdaptiveAssessment.ts` hook, `PersonalityTestPageV4.tsx`. Simulation: `scripts/simulate-assessment.ts`, `scripts/simulate-psychologist-panel.ts`. Legacy V2 (12-question static) preserved for users without V4 pre-signup answers.
-- **Duolingo-Style Onboarding (新版引导流程):** Template-based 9-screen onboarding replacing the AI-chat initial registration. Flow: Welcome → 5 pre-signup personality questions → Sign-up gate (phone verification/Replit Auth) → Essential data (nickname, gender, city, intent) → Extended data (birth year, relationship status). Features: XiaoyueMascot component with 3 mood states and breathing animation, OnboardingProgress with smooth transitions, SelectionList with stagger animations and 44px touch targets, localStorage persistence for 24-hour incomplete session cache. Route: `/onboarding`. Module: `apps/user-client/src/pages/DuolingoOnboardingPage.tsx`. After onboarding, users proceed to the full personality test.
-- **AI-First Onboarding (小悦对话注册, Legacy):** Conversational, AI-powered registration flow guided by a character-based AI (小悦), utilizing a 3-tier information funnel and intelligent inference engine. Performance optimizations: (1) V3 state-driven conversation trimming with structured summaries like "[已收集] 昵称:X | 性别:X | 年龄:X岁 | 行业:X" replacing generic placeholders, (2) Adaptive history window (4-6 turns based on pending followups), (3) DeepSeek automatic prefix caching enabled (~90% cost reduction on cache hits), (4) HTTP Keep-Alive for connection reuse (saves 80-120ms per request). Module: `apps/server/src/deepseekClient.ts`.
-- **XiaoyueChatHeader 聊天头部组件:** Combined header component for chat registration featuring: (1) Xiaoyue avatar with breathing light animation effect, (2) Dual-layer titles with mode-specific subtitles (registration: "几分钟认识你，帮你找到合拍的伙伴~", enrichment: "补几个小问题，帮你找更合拍的人~"), (3) Time estimate badge, (4) 5-star "画像精细度" progress meter without text labels (mystery design) with scale+sparkle animations. The `calculateProfileStars` function supports enrichment mode by merging existing profile data with new responses across 5 dimensions (basic/career/social/interests/deep). Module: `apps/user-client/src/pages/ChatRegistrationPage.tsx`.
-- **Admin Portal:** Desktop-first interface with comprehensive management tools and a real-time Admin Matching Lab for algorithm tuning.
+- **Gamified Personality Assessment (V4 Adaptive):** An adaptive 66-question assessment dynamically selecting 8-16 questions based on real-time confidence, integrating with onboarding. Features an adaptive engine with 3-level question difficulty, real-time archetype predictions, and milestone encouragement.
+- **Duolingo-Style Onboarding (新版引导流程):** A template-based 9-screen onboarding flow replacing initial AI chat, featuring a mascot component, smooth progress transitions, and localStorage persistence.
+- **AI-Generated Match Explanations (桌友分析):** DeepSeek-powered service providing personalized explanations for matched users, including group dynamics analysis and chemistry temperature levels.
+- **Personalized Ice-Breaker Generation:** AI-generated conversation starters customized for group composition, interests, and event type.
+- **Admin Portal:** Desktop-first interface with comprehensive management tools and a real-time Admin Matching Lab.
 - **Payment & Subscription System:** Full payment infrastructure including WeChat Pay integration.
-- **Intelligent Venue Matching & Booking:** Algorithm-based venue scoring with a transactional booking system.
-- **Venue Partnership System:** Supports collaborative restaurant/bar partnerships with exclusive deals.
-- **Personalized Icebreaker Topics:** Algorithm-curated topics based on common interests and archetypes.
-- **AI-Generated Match Explanations (桌友分析):** DeepSeek-powered service that generates personalized explanations for each pair of matched users, explaining why they might connect well based on archetypes, shared interests, and connection points. Includes group dynamics analysis with chemistry temperature levels (fire/warm/mild/cold).
-- **Personalized Ice-Breaker Generation:** AI-generated conversation starters customized to group composition, analyzing common interests, archetypes, and event type (饭局 vs 酒局). Fallback templates for API failures.
-- **KPI Tracking System:** Comprehensive metrics collection including CSAT (Customer Satisfaction Score), NPS (Net Promoter Score), user engagement tracking, churn analysis, and daily KPI snapshots. Database tables: `kpi_snapshots`, `user_engagement_metrics`, `event_satisfaction_summary`. Admin API endpoints for dashboard visualization.
-- **King Game (国王游戏) Digital Card System:** Interactive digital poker game with multi-device WebSocket synchronization.
-- **小悦进化系统 (AI Evolution System V2.0):** Enables the Xiaoyue chatbot to learn and improve through user feedback and multi-armed bandit optimization, including real-time insight detection and an Admin Evolution Portal.
-- **偷偷碎嘴系统 V3.0 (Gossip Engine V3.0):** Upgraded personality inference system with enhanced deduplication: (1) **Semantic Deduplication** using Levenshtein distance with 0.6 similarity threshold - rejects near-duplicate insights before display, (2) **Synonym Variation System** with 6 synonym pools (40% replacement rate) for text diversity, (3) **Expanded Template Pool** with high-frequency triggers now having 6-8 variants (up from 3-4), (4) All V2.1 features retained: Pillar quota matrix (Identity 27.7%, Energy 50.1%, Value 22.2%), 4-tier rarity grading, 30+ inference rules, dynamic prefix/transition systems, trigger dampening (0.85^n decay), "毒舌公式" snarky endings, safety guard. **Expected improvement**: repetition rate 41.3% → 15-20%. Test monitoring via `[GossipV3]` console logs. Module: `apps/user-client/src/lib/gossipEngineV2.ts`.
-- **小悦品牌组件系统 (Xiaoyue Branding System):** Unified visual identity for all AI-generated content with `XiaoyueInsightCard` component. Features 4 avatar poses (thinking, casual, pointing, fullBody) and 4 tone styles (playful, confident, alert, neutral). Includes `XiaoyueRecommendBadge` and `XiaoyueAnalysisBadge` components. Avatar assets: `Avatar-01` (thinking) for analytical content, `Avatar-03` (casual) for recommendations, `Avatar-04/06` (pointing) for CTAs. Module: `apps/user-client/src/components/XiaoyueInsightCard.tsx`.
-- **Intelligent Information Collection System:** Extracts and structures professional information, featuring a SmartInsight System and an Industry Ontology Knowledge Base.
-- **Location Structure:** Simplified to two main clusters (南山区, 福田区) with distinct districts, providing a card-based selection UI.
-- **Event Type Preferences:** Implemented dual-track preference system for Dining (饭局) and Bar (酒局) events, with conditional UI for specific options like cuisine, taste intensity, bar themes, and alcohol comfort levels. Event-type-specific budget options: 饭局 (≤¥150, ¥150-200, ¥200-300, ¥300-500 per person) vs 酒局 (≤¥80/杯, ¥80-150/杯 per drink).
-- **Timezone Handling:** All timestamps are stored as China timezone (UTC+8) directly in the database. Frontend uses `chineseDateTime.ts` utilities with `parseAsChinaTime()` helper to parse without timezone conversion. Time format uses Chinese periods (凌晨/上午/中午/下午/晚上) with 12-hour format.
-- **Profile Gamification System:** Comprehensive gamification across profile editing and personality test flows to increase engagement and profile completion rates. Features: (1) **Three-Tier Matching System** (普通匹配 0-49%, 优先匹配 50-79%, VIP匹配 80%+) with upgrade path prompts tied to real matching weights, (2) **Dynamic Xiaoyue Avatars** with breathing glow animations (thinking/normal/excited states based on completion %), (3) **Quest-Style Quick Fill Buttons** with "推荐" tags and +XP reward indicators, (4) **Star-Based Visual Progress** replacing numeric fractions for collection satisfaction, (5) **Counter-Intuitive Insights Module** ("你可能不知道的自己") using Barnum effect psychology for engaging self-discovery, (6) **Scenario Simulations** ("当你在饭局遇到...") for situational predictions, (7) **Rarity Badges** ("前X%的XX型") for archetype exclusivity feeling. Data source: `apps/user-client/src/lib/archetypeInsights.ts`. Key pages: `EditProfilePage.tsx`, `ProfilePage.tsx`, `PersonalityTestResultPage.tsx`, `PostTestFlowPage.tsx`.
+- **Intelligent Venue Matching & Booking:** Algorithm-based venue scoring and transactional booking system.
+- **KPI Tracking System:** Comprehensive metrics collection for CSAT, NPS, user engagement, and churn analysis.
+- **小悦进化系统 (AI Evolution System V2.0):** Enables Xiaoyue chatbot learning and improvement through user feedback and multi-armed bandit optimization.
+- **偷偷碎嘴系统 V3.0 (Gossip Engine V3.0):** Upgraded personality inference system with semantic deduplication, synonym variation, and expanded template pools to reduce repetition.
+- **小悦品牌组件系统 (Xiaoyue Branding System):** Unified visual identity for AI-generated content with `XiaoyueInsightCard` component, featuring multiple avatar poses and tone styles.
+- **Profile Gamification System:** Gamification across profile editing and personality test flows to increase engagement, featuring tiered matching, dynamic Xiaoyue avatars, quest-style quick-fill buttons, star-based progress, and counter-intuitive insights.
+- **Location Structure:** Simplified to two main clusters (南山区, 福田区) with distinct districts and a card-based selection UI.
+- **Event Type Preferences:** Dual-track preference system for Dining (饭局) and Bar (酒局) events, with conditional UI for specific options like cuisine, taste intensity, bar themes, and alcohol comfort levels.
+- **Timezone Handling:** All timestamps stored as China timezone (UTC+8); frontend utilities parse without conversion, using Chinese period-based time formatting.
 
 ## External Dependencies
 
@@ -68,18 +62,3 @@ The project uses a monorepo setup (`joyjoin-monorepo`) containing separate appli
 - **Validation:** `zod`.
 - **Authentication:** `express-session`, `connect-pg-simple`.
 - **AI Services:** DeepSeek API.
-
-## Deployment Configuration
-
-### Production Deployment (Caddy + Docker)
-- **Domain:** yuejuapp.com with subdomains (www, api, admin)
-- **Reverse Proxy:** Caddy for automatic HTTPS via Let's Encrypt
-- **Session Sharing:** Cross-subdomain cookie with `.yuejuapp.com` domain
-- **Files:**
-  - `deployment/Caddyfile` - Caddy reverse proxy configuration
-  - `deployment/docker-compose.caddy.yml` - Docker Compose with Caddy
-  - `deployment/.env.production.example` - Production environment template
-- **Key Settings:**
-  - `COOKIE_DOMAIN=.yuejuapp.com` enables session sharing across subdomains
-  - `app.set('trust proxy', 1)` allows Express to trust Caddy's X-Forwarded headers
-  - `proxy: true` in session config for secure cookies behind proxy
