@@ -1,6 +1,7 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { prefetchXiaoyueAnalysis } from "./useXiaoyueAnalysis";
 
 interface TraitScores {
   A?: number;
@@ -112,6 +113,7 @@ export function useAdaptiveAssessment() {
   const [skipCount, setSkipCount] = useState(0);
   const [canSkip, setCanSkip] = useState(true);
   const [baselineAnswered, setBaselineAnswered] = useState<number>(0);
+  const prefetchTriggeredRef = useRef(false);
 
   const loadCachedSession = useCallback(() => {
     try {
@@ -250,6 +252,17 @@ export function useAdaptiveAssessment() {
       }
       if (data.currentMatches) {
         setCurrentMatches(data.currentMatches);
+        
+        // Prefetch xiaoyue analysis when we have a confident match
+        const topMatch = data.currentMatches[0];
+        if (topMatch && topMatch.confidence >= 0.7 && !prefetchTriggeredRef.current) {
+          prefetchTriggeredRef.current = true;
+          const currentTraits = data.progress ? {} : {};
+          // Use trait scores from result if available, otherwise use empty object
+          const traitScoresToPrefetch = data.result?.traitScores || {};
+          prefetchXiaoyueAnalysis(topMatch.archetype, traitScoresToPrefetch, topMatch.confidence);
+          console.log('[AdaptiveAssessment] Prefetching xiaoyue analysis for:', topMatch.archetype);
+        }
       }
     },
   });
