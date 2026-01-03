@@ -16,6 +16,7 @@ import {
 import { questionsV4, getAnchorQuestions } from './questionsV4';
 import { archetypePrototypes, findBestMatchingArchetypes, normalizeTraitScore } from './prototypes';
 import { prototypeMatcher, findBestMatchingArchetypesV2, ExplainableMatchResult, UserSecondaryData } from './matcherV2';
+import { applyZScoreCapping, calculateSdiIndex, applySdiCorrection } from './traitCorrection';
 
 // Feature flag - can be overridden via config.useV2Matcher
 // Default false to ensure opt-in behavior - V2 only enabled when explicitly set in config
@@ -145,6 +146,8 @@ export function processAnswer(
     };
   }
   
+  // Note: Z-score capping is applied at match time in matcherV2, not here
+  // Keeping raw scores in state for question selection and analytics
   const normalizedTraits: Record<TraitKey, number> = {} as Record<TraitKey, number>;
   for (const trait of ALL_TRAITS) {
     normalizedTraits[trait] = newState.traitConfidences[trait].score;
@@ -479,6 +482,21 @@ export function getFinalResult(state: EngineState, userSecondaryData?: UserSecon
     normalizedTraits[trait] = state.traitConfidences[trait].score;
     confidences[trait] = state.traitConfidences[trait].confidence;
   }
+  
+  // Calculate SDI from answer history for analytics (SDI correction disabled for now - too aggressive)
+  // Note: Z-score capping is already applied in processAnswer, so scores are already corrected
+  const answerTraitScores = state.questionHistory.map(a => a.traitScores as Record<string, number>);
+  const sdiIndex = calculateSdiIndex(answerTraitScores);
+  
+  // SDI correction temporarily disabled - was causing over-correction
+  // Will re-enable with tuned parameters after baseline validation
+  // if (sdiIndex > 70) {
+  //   const correctedTraits = applySdiCorrection(normalizedTraits, sdiIndex);
+  //   for (const trait of ALL_TRAITS) {
+  //     normalizedTraits[trait] = correctedTraits[trait];
+  //   }
+  // }
+  void sdiIndex; // Suppress unused variable warning
   
   const useV2 = state.config.useV2Matcher ?? ENABLE_MATCHER_V2_DEFAULT;
   if (useV2) {

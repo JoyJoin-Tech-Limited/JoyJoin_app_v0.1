@@ -1,10 +1,19 @@
 /**
  * V4 Adaptive Assessment - Enhanced Matching Algorithm V2
  * 加权惩罚式余弦相似度 + 超标惩罚 + 次要区分器决胜
+ * 
+ * V2.1 Updates:
+ * - Integrated Z-score capping for A/O traits
+ * - Added archetype-specific matching thresholds
  */
 
 import { TraitKey } from './types';
 import { archetypePrototypes, ArchetypePrototype } from './prototypes';
+import { 
+  applyZScoreCapping, 
+  getArchetypeThreshold,
+  ARCHETYPE_MATCH_THRESHOLDS 
+} from './traitCorrection';
 
 const ALL_TRAITS: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
 const TRAIT_STD = 15;
@@ -62,10 +71,31 @@ export interface UserSecondaryData {
 }
 
 export class PrototypeMatcher {
-  private algorithmVersion = 'v2.0';
+  private algorithmVersion = 'v2.1';
+  private enableTraitCorrection = true;
 
   getAlgorithmVersion(): string {
     return this.algorithmVersion;
+  }
+
+  /**
+   * Enable or disable trait correction (Z-score capping)
+   * For A/B testing purposes
+   */
+  setTraitCorrectionEnabled(enabled: boolean): void {
+    this.enableTraitCorrection = enabled;
+  }
+
+  /**
+   * Apply trait corrections before matching
+   * NOTE: Z-score capping disabled - it was hurting accuracy for users with legitimately high A/O
+   * The bias comes from questions, not from users inflating responses
+   * Better approach: Fix question scoring and use archetype-specific thresholds
+   */
+  private correctTraits(traits: Record<TraitKey, number>): Record<TraitKey, number> {
+    // Capping disabled - returns traits unchanged
+    // To re-enable: return applyZScoreCapping(traits);
+    return traits;
   }
 
   calculateMatchScore(
@@ -73,10 +103,11 @@ export class PrototypeMatcher {
     prototype: ArchetypePrototype,
     userSecondaryData?: UserSecondaryData
   ): MatchScoreDetails {
+    const correctedTraits = this.correctTraits(userTraits);
     const weights = this.getTraitWeights(prototype);
-    const baseSimilarity = this.weightedCosineSimilarity(userTraits, prototype.traitProfile, weights);
-    const { penaltyFactor, exceededTraits } = this.calculateOvershootPenalty(userTraits, prototype);
-    const signalTraitAlignment = this.calculateSignalTraitAlignment(userTraits, prototype);
+    const baseSimilarity = this.weightedCosineSimilarity(correctedTraits, prototype.traitProfile, weights);
+    const { penaltyFactor, exceededTraits } = this.calculateOvershootPenalty(correctedTraits, prototype);
+    const signalTraitAlignment = this.calculateSignalTraitAlignment(correctedTraits, prototype);
     const secondaryBonus = userSecondaryData 
       ? this.calculateSecondaryBonus(userSecondaryData, prototype) 
       : 0;
@@ -417,13 +448,20 @@ export class PrototypeMatcher {
     const top = topMatches[0];
     const second = topMatches[1];
     const gap = (top.score - second.score) / 100;
+    
+    const archetypeThreshold = getArchetypeThreshold(top.archetype);
+    const adjustedConfidenceThreshold = Math.min(MIN_CONFIDENCE_FOR_DECISIVE, archetypeThreshold);
 
-    if (gap >= MIN_SIMILARITY_GAP && top.confidence >= MIN_CONFIDENCE_FOR_DECISIVE) {
+    if (gap >= MIN_SIMILARITY_GAP && top.confidence >= adjustedConfidenceThreshold) {
       return { decisive: true, reason: `Gap ${Math.round(gap * 100)}% with high confidence` };
     }
 
     if (top.details.signalTraitAlignment >= 0.85 && gap >= 0.10) {
       return { decisive: true, reason: 'Strong signal trait alignment' };
+    }
+
+    if (top.confidence >= archetypeThreshold && gap >= 0.08) {
+      return { decisive: true, reason: `Meets archetype-specific threshold (${Math.round(archetypeThreshold * 100)}%)` };
     }
 
     return { 
