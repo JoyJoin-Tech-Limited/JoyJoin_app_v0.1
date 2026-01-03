@@ -36,6 +36,7 @@ export interface AdaptiveQuestion {
   discriminationIndex?: number;
   isReversed?: boolean;
   isAttentionCheck?: boolean;
+  isForcedChoice?: boolean; // Forced-choice tradeoff questions between competing traits
 }
 
 export interface TraitConfidence {

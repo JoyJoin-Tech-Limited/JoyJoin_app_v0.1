@@ -395,7 +395,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "B",
         text: "送我喜欢的小众好物，分享品味",
-        traitScores: { A: 0, C: 0, E: 0, O: 2, X: 1, P: 0 }
+        traitScores: { A: -1, C: 0, E: 0, O: 2, X: 1, P: 0 }
       },
       {
         value: "C",
@@ -404,6 +404,11 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "D",
+        text: "发个红包，省事又不出错",
+        traitScores: { A: -1, C: 0, E: 1, O: -2, X: 0, P: 0 }
+      },
+      {
+        value: "E",
         text: "手写卡片或做手工，用心最重要",
         traitScores: { A: 2, C: 1, E: 0, O: 3, X: 0, P: 0 }
       }
@@ -460,7 +465,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "C",
         text: "分析我们赢在哪，对方输在哪",
-        traitScores: { A: 0, C: 2, E: 1, O: 1, X: 0, P: 0 }
+        traitScores: { A: -1, C: 2, E: 1, O: 1, X: 0, P: -1 }
       },
       {
         value: "D",
@@ -496,6 +501,11 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "D",
+        text: "心里有点烦，希望ta别在聚会上聊这些负面话题",
+        traitScores: { A: -2, C: 0, E: 0, O: 0, X: 0, P: -2 }
+      },
+      {
+        value: "E",
         text: "提议做些别的事情分散注意力",
         traitScores: { A: 0, C: 0, E: 0, O: 1, X: 2, P: 2 }
       }
@@ -616,6 +626,11 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "D",
+        text: "直接当众纠正，不管ta是否尴尬，事实就是事实",
+        traitScores: { A: -2, C: 2, E: 0, O: 0, X: 1, P: -1 }
+      },
+      {
+        value: "E",
         text: "顺着错误开个玩笑，把话题引向更有趣的方向",
         traitScores: { A: 0, C: 0, E: 0, O: 0, X: 2, P: 2 }
       }
@@ -663,7 +678,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "自己闷声发大财，先抢到再说。",
-        traitScores: { A: 0, C: 1, E: 0, O: 3, X: 1, P: 0 }
+        traitScores: { A: -2, C: 1, E: 0, O: 2, X: 1, P: -1 }
       },
       {
         value: "B",
@@ -889,6 +904,11 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "D",
+        text: "我是边缘观察者/偶尔露面的人",
+        traitScores: { A: -1, C: 0, E: 2, O: -1, X: -2, P: -1 }
+      },
+      {
+        value: "E",
         text: "我是稳定参与者/支持性成员",
         traitScores: { A: 2, C: 1, E: 2, O: 0, X: -1, P: 0 }
       }
@@ -1129,6 +1149,11 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "D",
+        text: "没兴趣帮别人筛选信息，ta自己会看到的",
+        traitScores: { A: -2, C: 0, E: 1, O: -1, X: 0, P: -1 }
+      },
+      {
+        value: "E",
         text: "觉得可能打扰到对方，或者对方自己也能看到，就不发了",
         traitScores: { A: 0, C: 1, E: 2, O: 0, X: -2, P: 0 }
       }
@@ -1219,6 +1244,11 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "D",
+        text: "直接给出我的建议，不绕弯子，就算TA可能不爱听",
+        traitScores: { A: -2, C: 1, E: 0, O: 0, X: 1, P: -1 }
+      },
+      {
+        value: "E",
         text: "鼓励TA跟随内心的直觉，你会支持TA的任何决定",
         traitScores: { A: 2, C: 0, E: 0, O: 0, X: 0, P: 3 }
       }
@@ -1828,6 +1858,11 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "D",
+        text: "我不太确定...我更多是享受参与，而非扮演特定角色",
+        traitScores: { A: -1, C: 0, E: 2, O: -1, X: -1, P: -1 }
+      },
+      {
+        value: "E",
         text: "我能确保事情顺利运行，考虑周全",
         traitScores: { A: 0, C: 3, E: 1, O: 0, X: 0, P: 0 }
       }
@@ -1978,6 +2013,11 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "D",
+        text: "老实说，我不太擅长处理别人的情绪问题",
+        traitScores: { A: -2, C: 0, E: 1, O: 0, X: -1, P: -2 }
+      },
+      {
+        value: "E",
         text: "分享我相关的经历和感受，让ta知道并不孤单",
         traitScores: { A: 1, C: 0, E: 0, O: 1, X: 1, P: 1 }
       }
@@ -1994,7 +2034,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "放大这个笑点，开玩笑说这是今晚的高光时刻，让它成为经典梗",
-        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 3, P: 2 }
+        traitScores: { A: -1, C: 0, E: 0, O: 0, X: 3, P: 2 }
       },
       {
         value: "B",
@@ -2008,6 +2048,11 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "D",
+        text: "觉得无聊，玩手机等这波热闹过去",
+        traitScores: { A: -2, C: 0, E: 1, O: 0, X: -2, P: -1 }
+      },
+      {
+        value: "E",
         text: "跟着大家笑，但不会特别突出，等自然进入下一个话题",
         traitScores: { A: 0, C: 0, E: 2, O: 0, X: 0, P: 0 }
       }
@@ -2103,6 +2148,11 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "E",
+        text: "活动快点结束，我能回家充电",
+        traitScores: { A: -1, C: 0, E: 2, O: -1, X: -2, P: -1 }
+      },
+      {
+        value: "F",
         text: "我可以放松地做自己，没有压力和负担",
         traitScores: { A: 0, C: 0, E: 3, O: 0, X: 0, P: 0 }
       }
@@ -2650,6 +2700,196 @@ export const questionsV4: AdaptiveQuestion[] = [
         value: "D",
         text: "我选择这个选项。",
         traitScores: { A: 0, C: 0, E: 0, O: 0, X: 0, P: 0 }
+      }
+    ]
+  },
+
+  // ==================== 强制选择权衡题 (Q84-Q89) ====================
+  // 这类题目强制用户在两个积极特质之间做选择，帮助区分相似原型
+  
+  {
+    id: "Q84",
+    level: 2,
+    category: "权衡选择-亲和vs开放",
+    scenarioText: "⚖️ 朋友想尝试一家评价两极分化的新餐厅，你内心更倾向...",
+    questionText: "",
+    primaryTraits: ["A", "O"],
+    isForcedChoice: true,
+    options: [
+      {
+        value: "A",
+        text: "顺着朋友的意愿去试试，ta开心比较重要",
+        traitScores: { A: 3, C: 0, E: 0, O: -1, X: 0, P: 1 }
+      },
+      {
+        value: "B",
+        text: "建议去另一家更稳妥的选择，避免踩雷",
+        traitScores: { A: 1, C: 2, E: 1, O: -2, X: 0, P: 0 }
+      },
+      {
+        value: "C",
+        text: "好奇心驱动！评价两极反而更想亲自验证",
+        traitScores: { A: -1, C: 0, E: 0, O: 3, X: 1, P: 0 }
+      },
+      {
+        value: "D",
+        text: "无所谓，反正是一起吃饭，去哪都行",
+        traitScores: { A: 0, C: 0, E: 2, O: 0, X: 0, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q85",
+    level: 2,
+    category: "权衡选择-外向vs情绪稳定",
+    scenarioText: "⚖️ 连续参加了三天高强度社交活动，第四天又有个重要聚会。",
+    questionText: "你会？",
+    primaryTraits: ["X", "E"],
+    isForcedChoice: true,
+    options: [
+      {
+        value: "A",
+        text: "继续参加！社交让我越来越有能量",
+        traitScores: { A: 0, C: 0, E: -2, O: 0, X: 4, P: 2 }
+      },
+      {
+        value: "B",
+        text: "去但早点撤，平衡社交和休息",
+        traitScores: { A: 0, C: 2, E: 2, O: 0, X: 0, P: 0 }
+      },
+      {
+        value: "C",
+        text: "推掉，我需要时间恢复才能保持好状态",
+        traitScores: { A: 0, C: 0, E: 3, O: 0, X: -2, P: -1 }
+      },
+      {
+        value: "D",
+        text: "虽然累但硬撑，不想错过任何可能的精彩",
+        traitScores: { A: 0, C: -1, E: -1, O: 1, X: 2, P: 1 }
+      }
+    ]
+  },
+  {
+    id: "Q86",
+    level: 2,
+    category: "权衡选择-亲和vs正能量",
+    scenarioText: "⚖️ 朋友连续抱怨同一件事已经第三次了，你感觉...",
+    questionText: "",
+    primaryTraits: ["A", "P"],
+    isForcedChoice: true,
+    options: [
+      {
+        value: "A",
+        text: "继续耐心倾听，朋友需要我的支持",
+        traitScores: { A: 3, C: 0, E: 1, O: 0, X: 0, P: -1 }
+      },
+      {
+        value: "B",
+        text: "有点烦了，但还是配合表面应付",
+        traitScores: { A: 0, C: 0, E: 1, O: 0, X: 0, P: -2 }
+      },
+      {
+        value: "C",
+        text: "委婉转移话题，聊点开心的事",
+        traitScores: { A: 1, C: 1, E: 0, O: 0, X: 1, P: 2 }
+      },
+      {
+        value: "D",
+        text: "直接说：要不我们想办法解决它？总抱怨也不是办法",
+        traitScores: { A: -1, C: 2, E: 0, O: 0, X: 0, P: 3 }
+      }
+    ]
+  },
+  {
+    id: "Q87",
+    level: 2,
+    category: "权衡选择-开放vs责任心",
+    scenarioText: "⚖️ 团队项目快到deadline，这时有个很吸引你的新想法冒出来。",
+    questionText: "你会？",
+    primaryTraits: ["O", "C"],
+    isForcedChoice: true,
+    options: [
+      {
+        value: "A",
+        text: "先把现有任务完成，新想法记下来以后再说",
+        traitScores: { A: 0, C: 3, E: 1, O: -1, X: 0, P: 0 }
+      },
+      {
+        value: "B",
+        text: "立刻跟团队分享，说不定能让项目更出彩",
+        traitScores: { A: 1, C: -1, E: 0, O: 3, X: 1, P: 1 }
+      },
+      {
+        value: "C",
+        text: "自己先快速验证可行性，再决定是否提出",
+        traitScores: { A: 0, C: 2, E: 0, O: 2, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "觉得现阶段改动太冒险，放弃这个想法",
+        traitScores: { A: 0, C: 2, E: 2, O: -2, X: 0, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q88",
+    level: 2,
+    category: "权衡选择-外向vs亲和",
+    scenarioText: "⚖️ 聚会上你发现一个人独自站在角落，看起来有点格格不入。",
+    questionText: "你会？",
+    primaryTraits: ["X", "A"],
+    isForcedChoice: true,
+    options: [
+      {
+        value: "A",
+        text: "主动过去攀谈，把ta带入大家的圈子",
+        traitScores: { A: 3, C: 0, E: 0, O: 0, X: 2, P: 1 }
+      },
+      {
+        value: "B",
+        text: "继续和现有的朋友们热闘，ta可能更喜欢独处",
+        traitScores: { A: -1, C: 0, E: 0, O: 0, X: 2, P: 0 }
+      },
+      {
+        value: "C",
+        text: "等合适的时机再搭话，不想显得太刻意",
+        traitScores: { A: 1, C: 1, E: 1, O: 0, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "注意到了但不会主动，我自己也有点社恐",
+        traitScores: { A: 0, C: 0, E: 1, O: 0, X: -2, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q89",
+    level: 2,
+    category: "权衡选择-正能量vs情绪稳定",
+    scenarioText: "⚖️ 今天运气很背，连续遇到好几件倒霉事。",
+    questionText: "你的心态是？",
+    primaryTraits: ["P", "E"],
+    isForcedChoice: true,
+    options: [
+      {
+        value: "A",
+        text: "虽然烦躁，但告诉自己明天会更好",
+        traitScores: { A: 0, C: 0, E: 1, O: 0, X: 0, P: 3 }
+      },
+      {
+        value: "B",
+        text: "需要一些时间消化这些负面情绪",
+        traitScores: { A: 0, C: 0, E: 2, O: 0, X: 0, P: -1 }
+      },
+      {
+        value: "C",
+        text: "主动找朋友吐槽发泄，然后就能释怀",
+        traitScores: { A: 1, C: 0, E: 0, O: 0, X: 1, P: 2 }
+      },
+      {
+        value: "D",
+        text: "心情会受影响很久，很难快速调节",
+        traitScores: { A: 0, C: 0, E: -2, O: 0, X: 0, P: -2 }
       }
     ]
   }
