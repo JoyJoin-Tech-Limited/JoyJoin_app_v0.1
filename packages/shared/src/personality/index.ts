@@ -8,3 +8,4 @@ export * from './questionsV4';
 export * from './prototypes';
 export * from './feedback';
 export * from './adaptiveEngine';
+export * from './matcherV2';

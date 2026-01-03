@@ -92,6 +92,7 @@ export interface AssessmentConfig {
     dimensionCoverageThreshold: number;
     maxExtraQuestions: number;
   };
+  useV2Matcher?: boolean;
 }
 
 export const DEFAULT_ASSESSMENT_CONFIG: AssessmentConfig = {
@@ -109,6 +110,25 @@ export const DEFAULT_ASSESSMENT_CONFIG: AssessmentConfig = {
     dimensionCoverageThreshold: 0.75,
     maxExtraQuestions: 1,
   },
+  useV2Matcher: false,
+};
+
+export const V2_ASSESSMENT_CONFIG: AssessmentConfig = {
+  minQuestions: 12,
+  softMaxQuestions: 16,
+  hardMaxQuestions: 20,
+  defaultConfidenceThreshold: 0.70,
+  confusablePairThreshold: 0.80,
+  anchorQuestionCount: 6,
+  validityCheckPositions: [8, 12, 16],
+  milestonePositions: [6, 10, 14],
+  enableTieredThreshold: true,
+  tieredThresholdConfig: {
+    confidenceGapThreshold: 0.15,
+    dimensionCoverageThreshold: 0.80,
+    maxExtraQuestions: 2,
+  },
+  useV2Matcher: true,
 };
 
 export interface ConfusableArchetypePair {

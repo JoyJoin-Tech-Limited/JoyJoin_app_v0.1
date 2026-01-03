@@ -9748,8 +9748,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         initializeEngineState, 
         processAnswer, 
         selectNextQuestion, 
-        DEFAULT_ASSESSMENT_CONFIG 
+        DEFAULT_ASSESSMENT_CONFIG,
+        V2_ASSESSMENT_CONFIG 
       } = await import('@shared/personality');
+      
+      // Use V2 config when ENABLE_MATCHER_V2 is set
+      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
+      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
       
       let session;
       let engineState;
@@ -9770,7 +9775,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         
         // Reconstruct engine state from session data
         const answers = await storage.getAssessmentAnswers(existingSessionId);
-        engineState = initializeEngineState(DEFAULT_ASSESSMENT_CONFIG);
+        engineState = initializeEngineState(assessmentConfig);
         
         // Replay answers to rebuild state
         for (const answer of answers) {
@@ -9789,7 +9794,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           preSignupAnswers: preSignupAnswers || null,
         });
         
-        engineState = initializeEngineState(DEFAULT_ASSESSMENT_CONFIG);
+        engineState = initializeEngineState(assessmentConfig);
         
         // If we have pre-signup answers, process them (only for new session)
         if (preSignupAnswers && Array.isArray(preSignupAnswers)) {
@@ -9874,8 +9879,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         selectNextQuestion,
         shouldTerminate,
         getFinalResult,
-        DEFAULT_ASSESSMENT_CONFIG 
+        DEFAULT_ASSESSMENT_CONFIG,
+        V2_ASSESSMENT_CONFIG 
       } = await import('@shared/personality');
+      
+      // Use V2 config when ENABLE_MATCHER_V2 is set
+      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
+      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
       
       // Find the question
       const question = questionsV4.find(q => q.id === questionId);
@@ -9900,7 +9910,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       
       // Rebuild engine state
       const answers = await storage.getAssessmentAnswers(sessionId);
-      let engineState = initializeEngineState(DEFAULT_ASSESSMENT_CONFIG);
+      let engineState = initializeEngineState(assessmentConfig);
       
       for (const answer of answers) {
         const q = questionsV4.find(quest => quest.id === answer.questionId);
@@ -9958,7 +9968,10 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           // Mark personality test as complete
           await storage.markPersonalityTestComplete(session.userId);
           
-          console.log(`[Assessment V4] Synced result to role_results: ${primaryRole} (score: ${primaryMatchScore}) for user ${session.userId}`);
+          // Log algorithm version and match details for A/B testing
+          const algorithmVersion = finalResult.algorithmVersion || 'v1.0';
+          const isDecisive = finalResult.isDecisive ?? true;
+          console.log(`[Assessment V4] Algorithm: ${algorithmVersion} | Result: ${primaryRole} (score: ${primaryMatchScore}) | Decisive: ${isDecisive} | User: ${session.userId}`);
         }
         
         res.json({
@@ -10038,8 +10051,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         processAnswer, 
         skipQuestion,
         MAX_SKIP_COUNT,
-        DEFAULT_ASSESSMENT_CONFIG 
+        DEFAULT_ASSESSMENT_CONFIG,
+        V2_ASSESSMENT_CONFIG 
       } = await import('@shared/personality');
+      
+      // Use V2 config when ENABLE_MATCHER_V2 is set
+      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
+      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
       
       // Get current skip count from session
       const currentSkipCount = session.skipCount || 0;
@@ -10057,7 +10075,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       
       // Rebuild engine state with skipped questions
       const answers = await storage.getAssessmentAnswers(sessionId);
-      let engineState = initializeEngineState(DEFAULT_ASSESSMENT_CONFIG);
+      let engineState = initializeEngineState(assessmentConfig);
       
       // Add previously skipped questions to state
       for (const skippedId of skippedQuestionIds) {

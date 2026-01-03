@@ -15,6 +15,11 @@ import {
 } from './types';
 import { questionsV4, getAnchorQuestions } from './questionsV4';
 import { archetypePrototypes, findBestMatchingArchetypes, normalizeTraitScore } from './prototypes';
+import { prototypeMatcher, findBestMatchingArchetypesV2, ExplainableMatchResult, UserSecondaryData } from './matcherV2';
+
+// Feature flag - can be overridden via config.useV2Matcher
+// Default false to ensure opt-in behavior - V2 only enabled when explicitly set in config
+export const ENABLE_MATCHER_V2_DEFAULT = false;
 
 const ALL_TRAITS: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
 
@@ -106,7 +111,12 @@ export function processAnswer(
     normalizedTraits[trait] = newState.traitConfidences[trait].score;
   }
   
-  newState.currentMatches = findBestMatchingArchetypes(normalizedTraits, 3);
+  const useV2 = newState.config.useV2Matcher ?? ENABLE_MATCHER_V2_DEFAULT;
+  if (useV2) {
+    newState.currentMatches = findBestMatchingArchetypesV2(normalizedTraits, undefined, 3);
+  } else {
+    newState.currentMatches = findBestMatchingArchetypes(normalizedTraits, 3);
+  }
   
   newState.questionHistory = [
     ...state.questionHistory,
@@ -410,19 +420,43 @@ export function calculateValidityScore(state: EngineState): number {
   return 0.85;
 }
 
-export function getFinalResult(state: EngineState): {
+export interface FinalResultV2 {
   primaryArchetype: string;
   secondaryArchetype?: string;
   traitScores: Record<TraitKey, number>;
   confidences: Record<TraitKey, number>;
   validityScore: number;
-} {
+  algorithmVersion: string;
+  matchDetails?: ExplainableMatchResult;
+  isDecisive?: boolean;
+  decisiveReason?: string;
+}
+
+export function getFinalResult(state: EngineState, userSecondaryData?: UserSecondaryData): FinalResultV2 {
   const normalizedTraits: Record<TraitKey, number> = {} as Record<TraitKey, number>;
   const confidences: Record<TraitKey, number> = {} as Record<TraitKey, number>;
   
   for (const trait of ALL_TRAITS) {
     normalizedTraits[trait] = state.traitConfidences[trait].score;
     confidences[trait] = state.traitConfidences[trait].confidence;
+  }
+  
+  const useV2 = state.config.useV2Matcher ?? ENABLE_MATCHER_V2_DEFAULT;
+  if (useV2) {
+    const matches = prototypeMatcher.findBestMatches(normalizedTraits, userSecondaryData, 3);
+    const decisiveCheck = prototypeMatcher.isDecisiveMatch(matches);
+    
+    return {
+      primaryArchetype: matches[0]?.archetype || '开心柯基',
+      secondaryArchetype: matches[1]?.archetype,
+      traitScores: normalizedTraits,
+      confidences,
+      validityScore: calculateValidityScore(state),
+      algorithmVersion: prototypeMatcher.getAlgorithmVersion(),
+      matchDetails: matches[0],
+      isDecisive: decisiveCheck.decisive,
+      decisiveReason: decisiveCheck.reason,
+    };
   }
   
   const matches = findBestMatchingArchetypes(normalizedTraits, 2);
@@ -433,6 +467,7 @@ export function getFinalResult(state: EngineState): {
     traitScores: normalizedTraits,
     confidences,
     validityScore: calculateValidityScore(state),
+    algorithmVersion: 'v1.0',
   };
 }
 
