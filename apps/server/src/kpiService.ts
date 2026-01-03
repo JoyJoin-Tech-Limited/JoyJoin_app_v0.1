@@ -419,6 +419,139 @@ export async function getChurnAnalysis() {
   };
 }
 
+// ============ V2 Assessment Metrics ============
+
+export interface AssessmentMetrics {
+  totalAssessments: number;
+  v1Count: number;
+  v2Count: number;
+  v2Percentage: number;
+  decisiveCount: number;
+  decisiveRatio: number;
+  avgConfidence: number;
+  avgQuestions: number;
+  confidenceDistribution: {
+    low: number;    // < 0.5
+    medium: number; // 0.5 - 0.7
+    high: number;   // > 0.7
+  };
+  completionRates: {
+    v1: number;
+    v2: number;
+  };
+}
+
+/**
+ * Get V2 assessment metrics for monitoring and A/B test analysis
+ */
+export async function getAssessmentMetrics(startDate: Date, endDate: Date): Promise<AssessmentMetrics> {
+  // Query assessment sessions within date range
+  const sessions = await db.execute(sql`
+    SELECT 
+      algorithm_version,
+      is_decisive,
+      confidence_score,
+      answer_count,
+      status
+    FROM assessment_sessions
+    WHERE created_at >= ${startDate}
+      AND created_at <= ${endDate}
+  `);
+
+  const rows = sessions.rows as Array<{
+    algorithm_version: string | null;
+    is_decisive: boolean | null;
+    confidence_score: string | null;
+    answer_count: number | null;
+    status: string | null;
+  }>;
+
+  if (rows.length === 0) {
+    return {
+      totalAssessments: 0,
+      v1Count: 0,
+      v2Count: 0,
+      v2Percentage: 0,
+      decisiveCount: 0,
+      decisiveRatio: 0,
+      avgConfidence: 0,
+      avgQuestions: 0,
+      confidenceDistribution: { low: 0, medium: 0, high: 0 },
+      completionRates: { v1: 0, v2: 0 },
+    };
+  }
+
+  const completed = rows.filter(r => r.status === 'completed');
+  const v1Sessions = completed.filter(r => !r.algorithm_version || r.algorithm_version === 'v1');
+  const v2Sessions = completed.filter(r => r.algorithm_version === 'v2');
+
+  const decisiveCount = v2Sessions.filter(r => r.is_decisive === true).length;
+
+  // Confidence distribution for V2 sessions
+  let lowConf = 0, medConf = 0, highConf = 0;
+  let totalConfidence = 0;
+  let confCount = 0;
+
+  v2Sessions.forEach(r => {
+    if (r.confidence_score) {
+      const conf = parseFloat(r.confidence_score);
+      totalConfidence += conf;
+      confCount++;
+      if (conf < 0.5) lowConf++;
+      else if (conf <= 0.7) medConf++;
+      else highConf++;
+    }
+  });
+
+  // Average questions
+  const totalQuestions = completed.reduce((sum, r) => sum + (r.answer_count || 0), 0);
+
+  // Completion rates (started vs completed)
+  const v1Started = rows.filter(r => !r.algorithm_version || r.algorithm_version === 'v1').length;
+  const v2Started = rows.filter(r => r.algorithm_version === 'v2').length;
+
+  return {
+    totalAssessments: completed.length,
+    v1Count: v1Sessions.length,
+    v2Count: v2Sessions.length,
+    v2Percentage: completed.length > 0 ? (v2Sessions.length / completed.length) * 100 : 0,
+    decisiveCount,
+    decisiveRatio: v2Sessions.length > 0 ? decisiveCount / v2Sessions.length : 0,
+    avgConfidence: confCount > 0 ? totalConfidence / confCount : 0,
+    avgQuestions: completed.length > 0 ? totalQuestions / completed.length : 0,
+    confidenceDistribution: {
+      low: lowConf,
+      medium: medConf,
+      high: highConf,
+    },
+    completionRates: {
+      v1: v1Started > 0 ? v1Sessions.length / v1Started : 0,
+      v2: v2Started > 0 ? v2Sessions.length / v2Started : 0,
+    },
+  };
+}
+
+/**
+ * Log assessment completion for telemetry
+ */
+export function logAssessmentCompletion(data: {
+  userId: number;
+  sessionId: string;
+  algorithmVersion: 'v1' | 'v2';
+  isDecisive: boolean;
+  confidenceScore: number;
+  questionCount: number;
+  archetype: string;
+}) {
+  console.log(`[Assessment Telemetry] User ${data.userId} completed ${data.algorithmVersion} assessment:`, {
+    sessionId: data.sessionId,
+    archetype: data.archetype,
+    isDecisive: data.isDecisive,
+    confidence: data.confidenceScore.toFixed(3),
+    questions: data.questionCount,
+  });
+}
+
 // ============ 导出服务 ============
 
 export const kpiService = {
@@ -429,4 +562,6 @@ export const kpiService = {
   generateDailyKpiSnapshot,
   getKpiDashboardData,
   getChurnAnalysis,
+  getAssessmentMetrics,
+  logAssessmentCompletion,
 };
