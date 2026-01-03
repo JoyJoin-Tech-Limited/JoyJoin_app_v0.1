@@ -2903,6 +2903,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     questionText: "你的第一反应是？",
     primaryTraits: ["X", "E", "C"],
     isForcedChoice: true,
+    targetPairs: ["开心柯基", "太阳鸡"],
     options: [
       {
         value: "A",
@@ -2934,6 +2935,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     questionText: "你通常会？",
     primaryTraits: ["C", "O"],
     isForcedChoice: true,
+    targetPairs: ["机智狐", "灵感章鱼"],
     options: [
       {
         value: "A",
@@ -2965,6 +2967,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     questionText: "你倾向于？",
     primaryTraits: ["A", "C", "E"],
     isForcedChoice: true,
+    targetPairs: ["淡定海豚", "夸夸豚", "暖心熊"],
     options: [
       {
         value: "A",
@@ -2996,6 +2999,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     questionText: "你更倾向于？",
     primaryTraits: ["A", "C", "X"],
     isForcedChoice: true,
+    targetPairs: ["暖心熊", "定心大象", "织网蛛"],
     options: [
       {
         value: "A",
@@ -3027,6 +3031,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     questionText: "你通常会？",
     primaryTraits: ["O", "C", "X"],
     isForcedChoice: true,
+    targetPairs: ["沉思猫头鹰", "稳如龟", "灵感章鱼"],
     options: [
       {
         value: "A",
