@@ -156,6 +156,8 @@ function isSimilarArchetype(trueArchetype: string, assignedArchetype: string | n
 }
 
 function runPsychologistTest(profile: PsychologistProfile): TestResult {
+  // Note: V2 matcher tested but showed lower accuracy (32% vs 50% exact)
+  // Keeping V1 matcher for now until V2 is further tuned
   let state = initializeEngineState();
   let questionsAnswered = 0;
   let currentQuestion = selectNextQuestion(state);
