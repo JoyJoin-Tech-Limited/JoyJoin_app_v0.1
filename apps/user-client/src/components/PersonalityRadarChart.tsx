@@ -1,6 +1,7 @@
 import { getTraitScoresForArchetype } from '@/lib/archetypeTraitScores';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useState } from 'react';
+import { useMemo } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface PersonalityRadarChartProps {
   archetype?: string;
@@ -10,9 +11,10 @@ interface PersonalityRadarChartProps {
   emotionalStabilityScore?: number;
   extraversionScore?: number;
   positivityScore?: number;
+  showArchetypeOverlay?: boolean;
+  showDeltaChips?: boolean;
 }
 
-// 维度含义说明
 const traitDescriptions: Record<string, string> = {
   '亲和力': '与他人建立温暖联系的能力，包括友善、共情、关心他人',
   '开放性': '对新事物的好奇心和接纳度，包括创新思维、探索精神',
@@ -30,67 +32,99 @@ export default function PersonalityRadarChart({
   emotionalStabilityScore,
   extraversionScore,
   positivityScore,
+  showArchetypeOverlay = true,
+  showDeltaChips = true,
 }: PersonalityRadarChartProps) {
-  const rawScores = archetype ? getTraitScoresForArchetype(archetype) : null;
-  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const archetypeScores = archetype ? getTraitScoresForArchetype(archetype) : null;
   
-  // 分数范围：数据库存储0-100（V2测试），但原型配置是0-10
-  // 如果传入分数 > 10，说明是0-100范围；否则使用原型默认分数（0-10范围）
   const normalizeScore = (score: number | undefined, fallback: number): number => {
     if (score === undefined || score === null) return fallback;
-    // 已经是0-100范围的分数，直接使用
-    if (score > 10) return score;
-    // 0-10范围的分数，转换为0-100
-    return score * 10;
+    // V2 adaptive engine stores scores as 0-1, convert to 0-100
+    if (score <= 1) return Math.round(score * 100);
+    // Legacy 0-10 range (archetype trait scores)
+    if (score <= 10) return Math.round(score * 10);
+    // Already 0-100 range
+    return Math.round(score);
   };
   
-  const defaultScore = 50; // 基准分数（0-100范围）
+  const defaultScore = 50;
   
-  const traits = [
-    { name: '亲和力', score: normalizeScore(affinityScore, rawScores ? rawScores.affinity * 10 : defaultScore), maxScore: 100 },
-    { name: '开放性', score: normalizeScore(opennessScore, rawScores ? rawScores.openness * 10 : defaultScore), maxScore: 100 },
-    { name: '责任心', score: normalizeScore(conscientiousnessScore, rawScores ? rawScores.conscientiousness * 10 : defaultScore), maxScore: 100 },
-    { name: '情绪稳定性', score: normalizeScore(emotionalStabilityScore, rawScores ? rawScores.emotionalStability * 10 : defaultScore), maxScore: 100 },
-    { name: '外向性', score: normalizeScore(extraversionScore, rawScores ? rawScores.extraversion * 10 : defaultScore), maxScore: 100 },
-    { name: '正能量性', score: normalizeScore(positivityScore, rawScores ? rawScores.positivity * 10 : defaultScore), maxScore: 100 },
-  ];
+  const userTraits = useMemo(() => [
+    { name: '亲和力', key: 'affinity', score: normalizeScore(affinityScore, defaultScore), maxScore: 100 },
+    { name: '开放性', key: 'openness', score: normalizeScore(opennessScore, defaultScore), maxScore: 100 },
+    { name: '责任心', key: 'conscientiousness', score: normalizeScore(conscientiousnessScore, defaultScore), maxScore: 100 },
+    { name: '情绪稳定性', key: 'emotionalStability', score: normalizeScore(emotionalStabilityScore, defaultScore), maxScore: 100 },
+    { name: '外向性', key: 'extraversion', score: normalizeScore(extraversionScore, defaultScore), maxScore: 100 },
+    { name: '正能量性', key: 'positivity', score: normalizeScore(positivityScore, defaultScore), maxScore: 100 },
+  ], [affinityScore, opennessScore, conscientiousnessScore, emotionalStabilityScore, extraversionScore, positivityScore]);
+
+  const archetypeTraits = useMemo(() => {
+    if (!archetypeScores) return null;
+    return [
+      { name: '亲和力', score: archetypeScores.affinity * 10, maxScore: 100 },
+      { name: '开放性', score: archetypeScores.openness * 10, maxScore: 100 },
+      { name: '责任心', score: archetypeScores.conscientiousness * 10, maxScore: 100 },
+      { name: '情绪稳定性', score: archetypeScores.emotionalStability * 10, maxScore: 100 },
+      { name: '外向性', score: archetypeScores.extraversion * 10, maxScore: 100 },
+      { name: '正能量性', score: archetypeScores.positivity * 10, maxScore: 100 },
+    ];
+  }, [archetypeScores]);
+
+  const traitDeltas = useMemo(() => {
+    if (!archetypeTraits) return null;
+    return userTraits.map((trait, index) => ({
+      name: trait.name,
+      delta: Math.round(trait.score - archetypeTraits[index].score),
+      isSignificant: Math.abs(trait.score - archetypeTraits[index].score) >= 15,
+    }));
+  }, [userTraits, archetypeTraits]);
 
   const centerX = 150;
   const centerY = 150;
   const maxRadius = 100;
   
-  const points = traits.map((trait, index) => {
-    const angle = (Math.PI * 2 * index) / traits.length - Math.PI / 2;
-    const ratio = trait.score / trait.maxScore;
-    const x = centerX + Math.cos(angle) * maxRadius * ratio;
-    const y = centerY + Math.sin(angle) * maxRadius * ratio;
-    return { x, y, angle, ratio };
-  });
+  const calculatePoints = (traits: Array<{ name: string; score: number; maxScore: number }>) => {
+    return traits.map((trait, index) => {
+      const angle = (Math.PI * 2 * index) / traits.length - Math.PI / 2;
+      const ratio = trait.score / trait.maxScore;
+      const x = centerX + Math.cos(angle) * maxRadius * ratio;
+      const y = centerY + Math.sin(angle) * maxRadius * ratio;
+      return { x, y, angle, ratio };
+    });
+  };
 
-  const polygonPoints = points.map(p => `${p.x},${p.y}`).join(' ');
+  const userPoints = calculatePoints(userTraits);
+  const archetypePoints = archetypeTraits ? calculatePoints(archetypeTraits) : null;
 
-  const maxPolygonPoints = traits.map((_, index) => {
-    const angle = (Math.PI * 2 * index) / traits.length - Math.PI / 2;
+  const userPolygonPoints = userPoints.map(p => `${p.x},${p.y}`).join(' ');
+  const archetypePolygonPoints = archetypePoints?.map(p => `${p.x},${p.y}`).join(' ');
+
+  const maxPolygonPoints = userTraits.map((_, index) => {
+    const angle = (Math.PI * 2 * index) / userTraits.length - Math.PI / 2;
     const x = centerX + Math.cos(angle) * maxRadius;
     const y = centerY + Math.sin(angle) * maxRadius;
     return `${x},${y}`;
   }).join(' ');
 
-  const labelPoints = traits.map((trait, index) => {
-    const angle = (Math.PI * 2 * index) / traits.length - Math.PI / 2;
+  const labelPoints = userTraits.map((trait, index) => {
+    const angle = (Math.PI * 2 * index) / userTraits.length - Math.PI / 2;
     const labelRadius = maxRadius + 35;
     const x = centerX + Math.cos(angle) * labelRadius;
     const y = centerY + Math.sin(angle) * labelRadius;
-    return { x, y, trait, angle };
+    return { x, y, trait, angle, index };
   });
 
   return (
     <div className="flex flex-col items-center justify-center w-full py-4">
       <svg width="100%" height="auto" viewBox="-10 -10 320 320" className="max-w-[320px]">
         <defs>
-          <radialGradient id="radarGradient" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.03" />
+          <radialGradient id="userRadarGradient" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.05" />
+          </radialGradient>
+          <radialGradient id="archetypeRadarGradient" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="hsl(var(--muted-foreground))" stopOpacity="0.1" />
+            <stop offset="100%" stopColor="hsl(var(--muted-foreground))" stopOpacity="0.02" />
           </radialGradient>
         </defs>
 
@@ -104,8 +138,8 @@ export default function PersonalityRadarChart({
         />
 
         {[0.25, 0.5, 0.75].map((scale) => {
-          const scaledPoints = traits.map((_, index) => {
-            const angle = (Math.PI * 2 * index) / traits.length - Math.PI / 2;
+          const scaledPoints = userTraits.map((_, index) => {
+            const angle = (Math.PI * 2 * index) / userTraits.length - Math.PI / 2;
             const x = centerX + Math.cos(angle) * maxRadius * scale;
             const y = centerY + Math.sin(angle) * maxRadius * scale;
             return `${x},${y}`;
@@ -123,8 +157,8 @@ export default function PersonalityRadarChart({
           );
         })}
 
-        {traits.map((_, index) => {
-          const angle = (Math.PI * 2 * index) / traits.length - Math.PI / 2;
+        {userTraits.map((_, index) => {
+          const angle = (Math.PI * 2 * index) / userTraits.length - Math.PI / 2;
           const x = centerX + Math.cos(angle) * maxRadius;
           const y = centerY + Math.sin(angle) * maxRadius;
           return (
@@ -141,22 +175,61 @@ export default function PersonalityRadarChart({
           );
         })}
 
+        {showArchetypeOverlay && archetypePolygonPoints && (
+          <polygon
+            points={archetypePolygonPoints}
+            fill="url(#archetypeRadarGradient)"
+            stroke="hsl(var(--muted-foreground))"
+            strokeWidth="1.5"
+            strokeDasharray="4,2"
+            opacity="0.6"
+          />
+        )}
+
         <polygon
-          points={polygonPoints}
-          fill="url(#radarGradient)"
+          points={userPolygonPoints}
+          fill="url(#userRadarGradient)"
           stroke="hsl(var(--primary))"
           strokeWidth="2"
         />
 
-        {points.map((point, index) => (
+        {showArchetypeOverlay && archetypePoints?.map((point, index) => (
           <circle
-            key={index}
+            key={`archetype-${index}`}
             cx={point.x}
             cy={point.y}
-            r="4"
-            fill="hsl(var(--primary))"
+            r="3"
+            fill="hsl(var(--muted-foreground))"
+            opacity="0.6"
           />
         ))}
+
+        {userPoints.map((point, index) => {
+          const isSignificant = traitDeltas?.[index]?.isSignificant;
+          return (
+            <g key={index}>
+              {isSignificant && (
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r="8"
+                  fill="none"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth="1.5"
+                  opacity="0.5"
+                  className="animate-pulse"
+                />
+              )}
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r="5"
+                fill="hsl(var(--primary))"
+                className={isSignificant ? 'drop-shadow-lg' : ''}
+              />
+            </g>
+          );
+        })}
 
         {labelPoints.map((label, index) => {
           let textAnchor: "start" | "middle" | "end" = "middle";
@@ -176,6 +249,8 @@ export default function PersonalityRadarChart({
             dy = "-0.3em";
           }
 
+          const isSignificant = traitDeltas?.[index]?.isSignificant;
+
           return (
             <g key={index} className="cursor-help">
               <text
@@ -183,7 +258,7 @@ export default function PersonalityRadarChart({
                 y={label.y}
                 textAnchor={textAnchor}
                 dy={dy}
-                className="text-[11px] font-medium fill-foreground"
+                className={`text-[11px] font-medium ${isSignificant ? 'fill-primary' : 'fill-foreground'}`}
                 style={{ userSelect: 'none' }}
               >
                 {label.trait.name}
@@ -193,6 +268,39 @@ export default function PersonalityRadarChart({
           );
         })}
       </svg>
+
+      {showArchetypeOverlay && archetype && (
+        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-0.5 bg-primary rounded" />
+            <span>你的特质</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-0.5 bg-muted-foreground rounded opacity-60" style={{ borderStyle: 'dashed' }} />
+            <span>{archetype}典型值</span>
+          </div>
+        </div>
+      )}
+
+      {showDeltaChips && traitDeltas && (
+        <div className="flex flex-wrap justify-center gap-2 mt-4">
+          {traitDeltas.filter(d => d.isSignificant).map((delta) => (
+            <Badge
+              key={delta.name}
+              variant={delta.delta > 0 ? 'default' : 'secondary'}
+              className="text-xs gap-1"
+              data-testid={`delta-chip-${delta.name}`}
+            >
+              {delta.delta > 0 ? (
+                <TrendingUp className="w-3 h-3" />
+              ) : (
+                <TrendingDown className="w-3 h-3" />
+              )}
+              {delta.name} {delta.delta > 0 ? '+' : ''}{delta.delta}%
+            </Badge>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
