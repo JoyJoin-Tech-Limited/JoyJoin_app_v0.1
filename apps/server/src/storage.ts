@@ -3891,6 +3891,14 @@ export class DatabaseStorage implements IStorage {
     const [answer] = await db
       .insert(assessmentAnswers)
       .values(data)
+      .onConflictDoUpdate({
+        target: [assessmentAnswers.sessionId, assessmentAnswers.questionId],
+        set: {
+          selectedOption: data.selectedOption,
+          traitScores: data.traitScores,
+          answeredAt: new Date(),
+        },
+      })
       .returning();
     return answer;
   }
