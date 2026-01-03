@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   index,
+  unique,
   jsonb,
   pgTable,
   timestamp,
@@ -2644,6 +2645,7 @@ export const assessmentAnswers = pgTable("assessment_answers", {
 }, (table) => [
   index("idx_assessment_answer_session").on(table.sessionId),
   index("idx_assessment_answer_question").on(table.questionId),
+  unique("assessment_answer_session_question_unique").on(table.sessionId, table.questionId),
 ]);
 
 export const insertAssessmentSessionSchema = createInsertSchema(assessmentSessions).omit({
