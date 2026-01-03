@@ -3,8 +3,10 @@ import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import PersonalityRadarChart from '@/components/PersonalityRadarChart';
-import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown } from 'lucide-react';
+import { XiaoyueInsightCard } from '@/components/XiaoyueInsightCard';
+import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { archetypeGradients, archetypeAvatars } from '@/lib/archetypeAvatars';
 import { archetypeConfig } from '@/lib/archetypes';
@@ -12,6 +14,15 @@ import { getArchetypeInsight } from '@/lib/archetypeInsights';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import xiaoyueAvatar from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
+
+const traitLabels: Record<string, string> = {
+  A: '亲和力',
+  O: '开放性',
+  C: '责任心',
+  E: '情绪稳定',
+  X: '外向性',
+  P: '正能量',
+};
 
 interface UnifiedAssessmentResult {
   algorithmVersion: string;
@@ -30,6 +41,99 @@ interface UnifiedAssessmentResult {
   matchDetails: any;
   isDecisive: boolean;
   completedAt: string;
+}
+
+function MatchExplanationSection({ result }: { result: UnifiedAssessmentResult }) {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  const generateMatchExplanation = () => {
+    const archetype = result.primaryRole;
+    const config = archetypeConfig[archetype];
+    
+    if (result.isDecisive) {
+      return `根据你回答的${result.totalQuestions}道题目，你的特质轮廓与「${archetype}」高度匹配！你在社交中展现出的特点，与这个原型的核心特质非常契合。`;
+    }
+    
+    return `通过${result.totalQuestions}道测试题的分析，我们发现你具有「${archetype}」的核心特质。虽然你可能也有其他原型的一些影子，但整体上最接近这个类型。`;
+  };
+
+  const getTopTraits = () => {
+    const traits = [
+      { key: 'A', label: traitLabels.A, score: result.affinityScore },
+      { key: 'O', label: traitLabels.O, score: result.opennessScore },
+      { key: 'C', label: traitLabels.C, score: result.conscientiousnessScore },
+      { key: 'E', label: traitLabels.E, score: result.emotionalStabilityScore },
+      { key: 'X', label: traitLabels.X, score: result.extraversionScore },
+      { key: 'P', label: traitLabels.P, score: result.positivityScore },
+    ];
+    
+    return traits.sort((a, b) => b.score - a.score).slice(0, 3);
+  };
+
+  const topTraits = getTopTraits();
+
+  return (
+    <Card data-testid="match-explanation-card">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2">
+          <Zap className="w-5 h-5 text-primary" />
+          匹配解读
+          {result.isDecisive && (
+            <Badge variant="outline" className="ml-2 text-xs">
+              高置信
+            </Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <XiaoyueInsightCard
+          content={generateMatchExplanation()}
+          pose="thinking"
+          tone={result.isDecisive ? "confident" : "playful"}
+          badgeText="小悦分析"
+          avatarSize="sm"
+          animate={false}
+        />
+        
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-between text-muted-foreground"
+              data-testid="button-trait-breakdown-toggle"
+            >
+              <span className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                查看关键特质
+              </span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-3">
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground mb-3">你的三大核心特质:</p>
+              {topTraits.map((trait, index) => (
+                <div 
+                  key={trait.key}
+                  className="flex items-center justify-between p-2 bg-muted/50 rounded-lg"
+                  data-testid={`top-trait-${index}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs w-6 h-6 p-0 flex items-center justify-center">
+                      {index + 1}
+                    </Badge>
+                    <span className="font-medium text-sm">{trait.label}</span>
+                  </div>
+                  <span className="text-primary font-bold">{Math.round(trait.score)}%</span>
+                </div>
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function PersonalityTestResultPage() {
@@ -252,6 +356,17 @@ export default function PersonalityTestResultPage() {
             </CardContent>
           </Card>
         </motion.div>
+
+        {result.algorithmVersion === 'v2' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+          >
+            <MatchExplanationSection result={result} />
+          </motion.div>
+        )}
 
         {result.chemistryList && result.chemistryList.length > 0 && (
           <motion.div
