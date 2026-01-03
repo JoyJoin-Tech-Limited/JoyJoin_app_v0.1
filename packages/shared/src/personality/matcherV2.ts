@@ -126,13 +126,11 @@ export class PrototypeMatcher {
   /**
    * Get trait weights for matching, with dynamic adjustments based on user trait profile
    * 
-   * High-O users (O >= 70) get increased O weight to help distinguish:
-   * - 灵感章鱼 (O:95, X:60) from 开心柯基 (O:65, X:95)
-   * - 机智狐 (O:92, X:72) from 开心柯基
-   * - 沉思猫头鹰 (O:90, X:35) from other types
-   * 
-   * This prevents the "开心柯基 attractor effect" where high-X prototypes
-   * dominate matching for users who actually have higher O than X.
+   * Dynamic boosts based on user traits to prevent attractor effects:
+   * - High-O: 灵感章鱼/机智狐/沉思猫头鹰 vs 开心柯基
+   * - High-P: 夸夸豚 vs 开心柯基
+   * - High-E: 太阳鸡 vs 开心柯基
+   * - High-A: 暖心熊/夸夸豚 vs others
    */
   private getTraitWeights(
     prototype: ArchetypePrototype, 
@@ -151,28 +149,45 @@ export class PrototypeMatcher {
       const userX = userTraits.X || 50;
       const userA = userTraits.A || 50;
       const userP = userTraits.P || 50;
+      const userE = userTraits.E || 50;
       
-      // High-O boost: When user shows high openness (O >= 70), 
-      // increase O weight to differentiate creative types from social types
+      // High-O boost: Differentiate creative types from social types
+      // Targets: 灵感章鱼, 机智狐, 沉思猫头鹰
       if (userO >= 70) {
         weights.O = Math.max(weights.O, SIGNAL_TRAIT_WEIGHT * 1.2);
       }
       
-      // O > X differential: When O exceeds X by significant margin,
-      // boost O weight further to prevent X-dominant prototypes winning
+      // O > X differential: Boost O weight to prevent X-dominant prototypes winning
       if (userO - userX >= 15) {
         weights.O = Math.max(weights.O, SIGNAL_TRAIT_WEIGHT * 1.4);
-        weights.X = Math.min(weights.X, 1.2); // Slightly reduce X influence
+        weights.X = Math.min(weights.X, 1.2);
       }
       
-      // High-A boost: When user shows high affinity (A >= 70),
-      // increase A weight to differentiate warmth-focused types
+      // High-P boost: Differentiate praise-focused types (夸夸豚, 暖心熊)
+      // from social-energy types (开心柯基, 太阳鸡)
+      if (userP >= 75) {
+        weights.P = Math.max(weights.P, SIGNAL_TRAIT_WEIGHT * 1.3);
+      }
+      
+      // P > X differential: When P exceeds X, boost P weight
+      // Helps differentiate 夸夸豚 from 开心柯基
+      if (userP - userX >= 10) {
+        weights.P = Math.max(weights.P, SIGNAL_TRAIT_WEIGHT * 1.2);
+        weights.X = Math.min(weights.X, 1.3);
+      }
+      
+      // High-E boost: Differentiate energy-stability focused types
+      // Targets: 太阳鸡 (E:80), 淡定海豚 (E:75)
+      if (userE >= 70) {
+        weights.E = Math.max(weights.E, SIGNAL_TRAIT_WEIGHT * 1.2);
+      }
+      
+      // High-A boost: Differentiate warmth-focused types
       if (userA >= 70) {
         weights.A = Math.max(weights.A, SIGNAL_TRAIT_WEIGHT * 1.1);
       }
       
-      // A > X differential: When A exceeds X, boost A weight
-      // Helps differentiate 夸夸豚 from 开心柯基
+      // A > X differential: Boost A weight for affiliative types
       if (userA - userX >= 10) {
         weights.A = Math.max(weights.A, SIGNAL_TRAIT_WEIGHT * 1.2);
       }
