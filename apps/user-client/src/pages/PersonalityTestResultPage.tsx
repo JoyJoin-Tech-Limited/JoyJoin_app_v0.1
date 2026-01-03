@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import PersonalityRadarChart from '@/components/PersonalityRadarChart';
 import { XiaoyueInsightCard } from '@/components/XiaoyueInsightCard';
+import { XiaoyueChatBubble } from '@/components/XiaoyueChatBubble';
 import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { archetypeGradients, archetypeAvatars } from '@/lib/archetypeAvatars';
@@ -14,7 +15,7 @@ import { getArchetypeInsight } from '@/lib/archetypeInsights';
 import { useState, useEffect, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
-import xiaoyueAvatar from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
+import { useXiaoyueAnalysis } from '@/hooks/useXiaoyueAnalysis';
 
 const staggerContainerVariants = {
   hidden: { opacity: 0 },
@@ -57,6 +58,24 @@ const traitLabels: Record<string, string> = {
   X: '外向性',
   P: '正能量',
 };
+
+function getFallbackAnalysis(archetype: string): string {
+  const fallbacks: Record<string, string> = {
+    "开心柯基": "开心柯基，能量满满的那种。你的正能量和亲和力都不低，这让你在聚会里很容易成为气氛组。不过别忘了，偶尔也给自己充充电。",
+    "太阳鸡": "太阳鸡，稳定输出型选手。情绪稳定性和正能量是你的强项，遇到事不慌，还能给别人打气。这种人在饭局上是定海神针。",
+    "夸夸豚": "夸夸豚，真诚赞美的行家。亲和力拉满，善于发现别人的闪光点。你给的认可不是客套，是真心觉得对方不错。",
+    "机智狐": "机智狐，点子王。开放性高，新东西对你有吸引力，思路也灵活。在聚会上你多半是那个提议去新地方的人。",
+    "淡定海豚": "淡定海豚，高情商选手。情绪稳定性和亲和力都不错，能在人群里游刃有余。你的淡定不是冷漠，是心里有数。",
+    "织网蛛": "织网蛛，社交连接器。你喜欢撮合人，看到两个人有共同话题会暗暗高兴。这种能力很多人学不来。",
+    "暖心熊": "暖心熊，天生的倾听者。亲和力是你的主场，让人愿意敞开心扉。不过也记得给自己留点空间。",
+    "灵感章鱼": "灵感章鱼，创意脑洞王。开放性拉满，联想能力强，能把八竿子打不着的东西联系起来。这是创意工作的核心技能。",
+    "沉思猫头鹰": "沉思猫头鹰，深度思考派。你更擅长一对一的深聊，热闹场合可能需要预热一下。但你的观点往往一针见血。",
+    "定心大象": "定心大象，安全感担当。情绪稳定性和责任心都在线，让人觉得靠谱。出了状况你多半是那个拿主意的。",
+    "稳如龟": "稳如龟，慢热但可靠。你看人的眼光准，认定了就是认定了。这种判断力在社交里很稀缺。",
+    "隐身猫": "隐身猫，安静的观察者。你不是不想社交，只是大群体让你消耗大。一对一的深度交流才是你的主场。",
+  };
+  return fallbacks[archetype] || `${archetype}，你的特质组合挺有意思。继续探索一下自己的社交风格吧。`;
+}
 
 interface UnifiedAssessmentResult {
   algorithmVersion: string;
@@ -192,6 +211,19 @@ export default function PersonalityTestResultPage() {
 
   const { data: stats } = useQuery<Record<string, number>>({
     queryKey: ['/api/personality-test/stats'],
+  });
+
+  const xiaoyueAnalysis = useXiaoyueAnalysis({
+    archetype: result?.primaryRole || null,
+    traitScores: result ? {
+      A: result.affinityScore / 100,
+      O: result.opennessScore / 100,
+      C: result.conscientiousnessScore / 100,
+      E: result.emotionalStabilityScore / 100,
+      X: result.extraversionScore / 100,
+      P: result.positivityScore / 100,
+    } : null,
+    enabled: !!result && !showReveal,
   });
 
   useEffect(() => {
@@ -352,6 +384,16 @@ export default function PersonalityTestResultPage() {
           </motion.div>
         )}
 
+        <motion.div variants={itemVariants}>
+          <XiaoyueChatBubble
+            content={xiaoyueAnalysis.analysis || getFallbackAnalysis(result.primaryRole)}
+            pose={xiaoyueAnalysis.hasAnalysis ? "casual" : "thinking"}
+            isLoading={xiaoyueAnalysis.isLoading}
+            loadingText="小悦正在分析你的特质..."
+            animate={!prefersReducedMotion}
+          />
+        </motion.div>
+
         {(() => {
           const insight = getArchetypeInsight(result.primaryRole);
           if (!insight) return null;
@@ -366,10 +408,6 @@ export default function PersonalityTestResultPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm leading-relaxed">{insight.counterIntuitive}</p>
-                  <div className="flex items-start gap-2 bg-card border rounded-lg p-3">
-                    <div className="w-10 h-10 shrink-0"><img src={xiaoyueAvatar} alt="小悦" className="w-8 h-8 object-contain" /></div>
-                    <p className="text-sm italic">"{insight.xiaoyueComment}"</p>
-                  </div>
                 </CardContent>
               </Card>
             </motion.div>
@@ -381,7 +419,6 @@ export default function PersonalityTestResultPage() {
             <CardHeader><CardTitle>维度概览</CardTitle></CardHeader>
             <CardContent>
               <PersonalityRadarChart 
-                archetype={result.primaryRole}
                 affinityScore={result.affinityScore}
                 opennessScore={result.opennessScore}
                 conscientiousnessScore={result.conscientiousnessScore}
