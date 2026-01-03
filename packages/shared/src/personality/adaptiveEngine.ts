@@ -21,6 +21,45 @@ import { prototypeMatcher, findBestMatchingArchetypesV2, ExplainableMatchResult,
 // Default false to ensure opt-in behavior - V2 only enabled when explicitly set in config
 export const ENABLE_MATCHER_V2_DEFAULT = false;
 
+// A/B test cohort percentage (0-100) for V2 matcher rollout
+// Set to 0 for disabled, 100 for full rollout
+export const V2_MATCHER_AB_PERCENTAGE = 50;
+
+/**
+ * Deterministic cohort assignment using user ID hash
+ * Same user always gets same cohort assignment for consistent experience
+ * @param userId - User ID (number or string)
+ * @param rolloutPercentage - Percentage of users assigned to V2 (0-100)
+ * @returns true if user should use V2 matcher
+ */
+export function shouldUseV2Matcher(
+  userId: number | string,
+  rolloutPercentage: number = V2_MATCHER_AB_PERCENTAGE
+): boolean {
+  if (rolloutPercentage <= 0) return false;
+  if (rolloutPercentage >= 100) return true;
+
+  // Simple hash function for deterministic assignment
+  const idStr = String(userId);
+  let hash = 0;
+  for (let i = 0; i < idStr.length; i++) {
+    const char = idStr.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  // Map hash to 0-99 range and compare against rollout percentage
+  const bucket = Math.abs(hash) % 100;
+  return bucket < rolloutPercentage;
+}
+
+/**
+ * Get cohort label for analytics/logging
+ */
+export function getCohortLabel(userId: number | string): 'v1' | 'v2' {
+  return shouldUseV2Matcher(userId) ? 'v2' : 'v1';
+}
+
 const ALL_TRAITS: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
 
 export const MAX_SKIP_COUNT = 3;

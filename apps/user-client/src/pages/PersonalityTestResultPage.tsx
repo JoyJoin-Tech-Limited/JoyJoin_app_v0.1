@@ -11,9 +11,43 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { archetypeGradients, archetypeAvatars } from '@/lib/archetypeAvatars';
 import { archetypeConfig } from '@/lib/archetypes';
 import { getArchetypeInsight } from '@/lib/archetypeInsights';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import xiaoyueAvatar from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
+
+const staggerContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.12,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const reducedMotionContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { duration: 0.2 },
+  },
+};
+
+const staggerItemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] },
+  },
+};
+
+const reducedMotionItemVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.15 } },
+};
 
 const traitLabels: Record<string, string> = {
   A: '亲和力',
@@ -140,6 +174,17 @@ export default function PersonalityTestResultPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showReveal, setShowReveal] = useState(true);
+  const prefersReducedMotion = useReducedMotion();
+
+  const containerVariants = useMemo(
+    () => (prefersReducedMotion ? reducedMotionContainerVariants : staggerContainerVariants),
+    [prefersReducedMotion]
+  );
+
+  const itemVariants = useMemo(
+    () => (prefersReducedMotion ? reducedMotionItemVariants : staggerItemVariants),
+    [prefersReducedMotion]
+  );
 
   const { data: result, isLoading } = useQuery<UnifiedAssessmentResult>({
     queryKey: ['/api/assessment/result'],
@@ -282,50 +327,54 @@ export default function PersonalityTestResultPage() {
         </div>
       </motion.div>
 
-      <div className="max-w-2xl mx-auto p-4 pb-24 space-y-4">
+      <motion.div
+        className="max-w-2xl mx-auto p-4 pb-24 space-y-4"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {(epicDescription || styleQuote) && (
-          <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><Sparkles className="w-5 h-5 text-primary" />角色解读</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              {epicDescription && <p className="text-sm leading-relaxed">{epicDescription}</p>}
-              {styleQuote && (
-                <div className={`relative bg-gradient-to-br ${gradient} bg-opacity-10 rounded-lg p-4 border-l-4 border-primary/50`}>
-                  <Quote className="w-6 h-6 text-primary/40 absolute top-2 left-2" />
-                  <p className="text-sm font-medium italic pl-8">{styleQuote}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <motion.div variants={itemVariants}>
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Sparkles className="w-5 h-5 text-primary" />角色解读</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                {epicDescription && <p className="text-sm leading-relaxed">{epicDescription}</p>}
+                {styleQuote && (
+                  <div className={`relative bg-gradient-to-br ${gradient} bg-opacity-10 rounded-lg p-4 border-l-4 border-primary/50`}>
+                    <Quote className="w-6 h-6 text-primary/40 absolute top-2 left-2" />
+                    <p className="text-sm font-medium italic pl-8">{styleQuote}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
 
         {(() => {
           const insight = getArchetypeInsight(result.primaryRole);
           if (!insight) return null;
           return (
-            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2"><Eye className="w-5 h-5 text-primary" />你的特质</CardTitle>
-                  <Badge variant="outline">前{insight.rarityPercentage}%</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm leading-relaxed">{insight.counterIntuitive}</p>
-                <div className="flex items-start gap-2 bg-card border rounded-lg p-3">
-                  <div className="w-10 h-10 shrink-0"><img src={xiaoyueAvatar} alt="小悦" className="w-8 h-8 object-contain" /></div>
-                  <p className="text-sm italic">"{insight.xiaoyueComment}"</p>
-                </div>
-              </CardContent>
-            </Card>
+            <motion.div variants={itemVariants}>
+              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2"><Eye className="w-5 h-5 text-primary" />你的特质</CardTitle>
+                    <Badge variant="outline">前{insight.rarityPercentage}%</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm leading-relaxed">{insight.counterIntuitive}</p>
+                  <div className="flex items-start gap-2 bg-card border rounded-lg p-3">
+                    <div className="w-10 h-10 shrink-0"><img src={xiaoyueAvatar} alt="小悦" className="w-8 h-8 object-contain" /></div>
+                    <p className="text-sm italic">"{insight.xiaoyueComment}"</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           );
         })()}
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-        >
+        <motion.div variants={itemVariants}>
           <Card>
             <CardHeader><CardTitle>维度概览</CardTitle></CardHeader>
             <CardContent>
@@ -358,23 +407,13 @@ export default function PersonalityTestResultPage() {
         </motion.div>
 
         {result.algorithmVersion === 'v2' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.15 }}
-          >
+          <motion.div variants={itemVariants}>
             <MatchExplanationSection result={result} />
           </motion.div>
         )}
 
         {result.chemistryList && result.chemistryList.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
+          <motion.div variants={itemVariants}>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -414,7 +453,7 @@ export default function PersonalityTestResultPage() {
           </motion.div>
         )}
 
-        <div className="flex flex-col gap-3 py-6">
+        <motion.div variants={itemVariants} className="flex flex-col gap-3 py-6">
           <Button className="w-full h-12 rounded-xl" onClick={handleContinue} data-testid="button-continue">
             继续完善资料
           </Button>
@@ -424,8 +463,8 @@ export default function PersonalityTestResultPage() {
           <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => setLocation('/personality-test')} data-testid="button-retest">
             重新测试
           </Button>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
