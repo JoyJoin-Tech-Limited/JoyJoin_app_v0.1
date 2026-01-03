@@ -35,26 +35,30 @@ interface TestResult {
 }
 
 // 10位心理学家，每人代表一种典型原型人格
+// 特质配置与prototypes.ts保持一致，添加±2随机波动以模拟真实场景
 const psychologistPanel: PsychologistProfile[] = [
   {
     id: 1,
     name: "Dr. 陈阳光",
     specialty: "正向心理学",
     targetArchetype: "开心柯基",
-    traitProfile: { A: 72, C: 48, E: 62, O: 67, X: 96, P: 92 }
+    // 原型: { A: 60, C: 50, E: 60, O: 65, X: 95, P: 90 }
+    traitProfile: { A: 58, C: 52, E: 62, O: 67, X: 96, P: 92 }
   },
   {
     id: 2,
     name: "Dr. 李稳健",
     specialty: "情绪调节研究",
     targetArchetype: "太阳鸡",
-    traitProfile: { A: 68, C: 74, E: 90, O: 53, X: 76, P: 94 }
+    // 原型: { A: 70, C: 72, E: 88, O: 55, X: 78, P: 92 }
+    traitProfile: { A: 72, C: 74, E: 90, O: 53, X: 76, P: 94 }
   },
   {
     id: 3,
     name: "Dr. 王温暖",
     specialty: "人际关系治疗",
     targetArchetype: "夸夸豚",
+    // 原型: { A: 90, C: 50, E: 65, O: 62, X: 82, P: 88 }
     traitProfile: { A: 92, C: 48, E: 67, O: 60, X: 84, P: 86 }
   },
   {
@@ -62,13 +66,15 @@ const psychologistPanel: PsychologistProfile[] = [
     name: "Dr. 张灵活",
     specialty: "创新思维研究",
     targetArchetype: "机智狐",
-    traitProfile: { A: 53, C: 52, E: 58, O: 92, X: 82, P: 63 }
+    // 原型: { A: 45, C: 50, E: 60, O: 92, X: 72, P: 65 }
+    traitProfile: { A: 43, C: 52, E: 58, O: 94, X: 70, P: 63 }
   },
   {
     id: 5,
     name: "Dr. 刘从容",
     specialty: "压力管理",
     targetArchetype: "淡定海豚",
+    // 原型: { A: 70, C: 70, E: 85, O: 65, X: 60, P: 70 }
     traitProfile: { A: 72, C: 68, E: 87, O: 63, X: 58, P: 72 }
   },
   {
@@ -76,13 +82,15 @@ const psychologistPanel: PsychologistProfile[] = [
     name: "Dr. 赵连接",
     specialty: "社会网络分析",
     targetArchetype: "织网蛛",
-    traitProfile: { A: 82, C: 72, E: 63, O: 68, X: 58, P: 62 }
+    // 原型: { A: 70, C: 78, E: 65, O: 70, X: 60, P: 60 }
+    traitProfile: { A: 68, C: 80, E: 63, O: 68, X: 58, P: 62 }
   },
   {
     id: 7,
     name: "Dr. 孙关怀",
     specialty: "共情与依恋",
     targetArchetype: "暖心熊",
+    // 原型: { A: 90, C: 65, E: 80, O: 60, X: 55, P: 70 }
     traitProfile: { A: 92, C: 63, E: 82, O: 58, X: 53, P: 72 }
   },
   {
@@ -90,13 +98,15 @@ const psychologistPanel: PsychologistProfile[] = [
     name: "Dr. 周创意",
     specialty: "发散思维研究",
     targetArchetype: "灵感章鱼",
-    traitProfile: { A: 48, C: 43, E: 57, O: 97, X: 58, P: 67 }
+    // 原型: { A: 50, C: 35, E: 55, O: 95, X: 65, P: 70 }
+    traitProfile: { A: 48, C: 33, E: 57, O: 97, X: 63, P: 68 }
   },
   {
     id: 9,
     name: "Dr. 吴深思",
     specialty: "认知心理学",
     targetArchetype: "沉思猫头鹰",
+    // 原型: { A: 45, C: 80, E: 75, O: 85, X: 40, P: 50 }
     traitProfile: { A: 43, C: 82, E: 77, O: 87, X: 38, P: 48 }
   },
   {
@@ -104,6 +114,7 @@ const psychologistPanel: PsychologistProfile[] = [
     name: "Dr. 郑沉稳",
     specialty: "人格稳定性研究",
     targetArchetype: "定心大象",
+    // 原型: { A: 70, C: 90, E: 90, O: 50, X: 40, P: 60 }
     traitProfile: { A: 72, C: 92, E: 88, O: 48, X: 38, P: 62 }
   }
 ];

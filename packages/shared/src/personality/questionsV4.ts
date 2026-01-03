@@ -1708,6 +1708,99 @@ export const questionsV4: AdaptiveQuestion[] = [
       }
     ]
   },
+  {
+    id: "Q81",
+    level: 2,
+    category: "帮助边界",
+    scenarioText: "🆘 朋友半夜发消息说心情不好想聊聊。",
+    questionText: "你会怎么做？",
+    primaryTraits: ["A", "E", "P"],
+    discriminationIndex: 0.55,
+    options: [
+      {
+        value: "A",
+        text: "立刻回复，陪ta聊到凌晨也没问题",
+        traitScores: { A: 4, C: 0, E: 0, O: 0, X: 1, P: 2 }
+      },
+      {
+        value: "B",
+        text: "简单安慰几句，约明天再细聊",
+        traitScores: { A: 1, C: 2, E: 2, O: 0, X: 0, P: 0 }
+      },
+      {
+        value: "C",
+        text: "已经睡了不一定能看到，明天再说吧",
+        traitScores: { A: -1, C: 1, E: 2, O: 0, X: -1, P: -1 }
+      },
+      {
+        value: "D",
+        text: "看到了但不太想回，假装没看见",
+        traitScores: { A: -3, C: 0, E: 1, O: 0, X: -2, P: -2 }
+      }
+    ]
+  },
+  {
+    id: "Q82",
+    level: 2,
+    category: "活力状态",
+    scenarioText: "☀️ 周末早上醒来，天气很好。",
+    questionText: "你的第一反应是？",
+    primaryTraits: ["X", "P", "O"],
+    discriminationIndex: 0.52,
+    options: [
+      {
+        value: "A",
+        text: "太棒了！叫上朋友出去玩",
+        traitScores: { A: 1, C: 0, E: 0, O: 1, X: 4, P: 3 }
+      },
+      {
+        value: "B",
+        text: "自己出门走走，享受阳光",
+        traitScores: { A: 0, C: 0, E: 1, O: 1, X: 1, P: 1 }
+      },
+      {
+        value: "C",
+        text: "在家里待着，开窗晒晒太阳就好",
+        traitScores: { A: 0, C: 1, E: 1, O: 0, X: -2, P: 0 }
+      },
+      {
+        value: "D",
+        text: "继续睡觉，天气好不好跟我没关系",
+        traitScores: { A: 0, C: 0, E: 0, O: 0, X: -3, P: -2 }
+      }
+    ]
+  },
+  {
+    id: "Q83",
+    level: 2,
+    category: "观点态度",
+    scenarioText: "💬 朋友分享了一个你觉得有问题的观点。",
+    questionText: "你通常会怎么反应？",
+    primaryTraits: ["A", "O", "E"],
+    discriminationIndex: 0.54,
+    options: [
+      {
+        value: "A",
+        text: "直接指出问题，不怕讨论冲突",
+        traitScores: { A: -2, C: 0, E: 2, O: 2, X: 1, P: 0 }
+      },
+      {
+        value: "B",
+        text: "委婉提出不同看法，注意措辞",
+        traitScores: { A: 2, C: 1, E: 1, O: 1, X: 0, P: 0 }
+      },
+      {
+        value: "C",
+        text: "想说但又懒得解释，算了不说了",
+        traitScores: { A: 0, C: 0, E: 0, O: 0, X: -1, P: -1 }
+      },
+      {
+        value: "D",
+        text: "表面附和，心里不认同",
+        traitScores: { A: 0, C: -1, E: -1, O: -1, X: 0, P: 0 }
+      }
+    ]
+  },
 
   // ==================== L3 精准决胜题 (Q51-Q60) ====================
   {
