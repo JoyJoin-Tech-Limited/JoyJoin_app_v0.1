@@ -2630,6 +2630,10 @@ export const assessmentSessions = pgTable("assessment_sessions", {
   answeredQuestionIds: jsonb("answered_question_ids").default("[]"),
   currentMatches: jsonb("current_matches").default("[]"),
   questionHistory: jsonb("question_history").default("[]"),
+  algorithmVersion: varchar("algorithm_version", { length: 20 }), // v1 or v2 matcher algorithm
+  matchDetailsJson: jsonb("match_details_json"), // V2 explainable match result with traitDeltas, decisiveReason
+  primaryArchetype: varchar("primary_archetype", { length: 50 }), // Final matched archetype
+  isDecisive: boolean("is_decisive"), // Whether match was decisive (clear winner)
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

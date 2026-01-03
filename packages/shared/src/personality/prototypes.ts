@@ -350,3 +350,59 @@ export const archetypeDescriptions: Record<string, ArchetypeDescription> = {
 export function getArchetypeDescription(name: string): ArchetypeDescription | undefined {
   return archetypeDescriptions[name];
 }
+
+export interface CompatibilityResult {
+  archetype: string;
+  percentage: number;
+  reason: string;
+}
+
+export function generateDynamicChemistry(primaryArchetype: string, topN: number = 3): CompatibilityResult[] {
+  const description = archetypeDescriptions[primaryArchetype];
+  const prototype = archetypePrototypes[primaryArchetype];
+  
+  if (!description || !prototype) {
+    return [];
+  }
+
+  const results: CompatibilityResult[] = [];
+  
+  description.idealPartners.forEach((partner, index) => {
+    const partnerPrototype = archetypePrototypes[partner];
+    if (partnerPrototype) {
+      const baseScore = 95 - (index * 4);
+      const energyBonus = Math.abs(prototype.energyLevel - partnerPrototype.energyLevel) < 20 ? 2 : 0;
+      results.push({
+        archetype: partner,
+        percentage: Math.min(98, baseScore + energyBonus),
+        reason: `${partner}与你在社交风格上互补`
+      });
+    }
+  });
+
+  prototype.confusableWith.forEach((similar) => {
+    if (!results.some(r => r.archetype === similar)) {
+      const similarPrototype = archetypePrototypes[similar];
+      if (similarPrototype) {
+        results.push({
+          archetype: similar,
+          percentage: 78 + Math.floor(Math.random() * 8),
+          reason: `${similar}与你有相似的社交特质`
+        });
+      }
+    }
+  });
+
+  return results.slice(0, topN);
+}
+
+const chemistryCache = new Map<string, CompatibilityResult[]>();
+
+export function getChemistryForArchetype(archetype: string): CompatibilityResult[] {
+  if (chemistryCache.has(archetype)) {
+    return chemistryCache.get(archetype)!;
+  }
+  const chemistry = generateDynamicChemistry(archetype, 3);
+  chemistryCache.set(archetype, chemistry);
+  return chemistry;
+}
