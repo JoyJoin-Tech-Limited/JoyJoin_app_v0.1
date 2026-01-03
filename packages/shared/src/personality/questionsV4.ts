@@ -206,22 +206,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "直接抛出，引发新讨论",
-        traitScores: { A: 0, C: 0, E: 0, O: 3, X: 2, P: 1 }
+        traitScores: { A: -1, C: -1, E: 0, O: 3, X: 2, P: 1 }
       },
       {
         value: "B",
         text: "先观察大家反应，时机合适再提",
-        traitScores: { A: 0, C: 2, E: 2, O: 1, X: 0, P: 0 }
+        traitScores: { A: 0, C: 2, E: 2, O: 0, X: -1, P: -1 }
       },
       {
         value: "C",
         text: "私下跟聊得最嗨的人分享",
-        traitScores: { A: 2, C: 0, E: 0, O: 0, X: 0, P: 0 }
+        traitScores: { A: 2, C: 0, E: 0, O: -1, X: -1, P: 0 }
       },
       {
         value: "D",
         text: "想想算了",
-        traitScores: { A: 0, C: 0, E: 1, O: 0, X: -2, P: 0 }
+        traitScores: { A: 0, C: 0, E: 1, O: -1, X: -2, P: -1 }
       }
     ]
   },
@@ -522,22 +522,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "立刻拍照发朋友圈/群里，并@几个朋友计划周末就去探险",
-        traitScores: { A: 0, C: 0, E: 0, O: 2, X: 2, P: 1 }
+        traitScores: { A: -1, C: -1, E: 0, O: 2, X: 2, P: 1 }
       },
       {
         value: "B",
         text: "沉迷于研究它的历史、店主故事或设计理念",
-        traitScores: { A: 0, C: 1, E: 0, O: 3, X: -1, P: 0 }
+        traitScores: { A: -1, C: 1, E: 0, O: 3, X: -1, P: -1 }
       },
       {
         value: "C",
         text: "收藏地址，等有特别适合的朋友或场合时再分享",
-        traitScores: { A: 2, C: 1, E: 1, O: 1, X: 0, P: 0 }
+        traitScores: { A: 2, C: 1, E: 1, O: 0, X: -1, P: 0 }
       },
       {
         value: "D",
         text: "自己一个人先去体验一次，再决定是否告诉别人",
-        traitScores: { A: 0, C: 0, E: 2, O: 1, X: 0, P: 0 }
+        traitScores: { A: 0, C: 0, E: 2, O: 0, X: -1, P: 0 }
       }
     ]
   },
@@ -800,22 +800,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "我是发起人，这点零头我就直接出了。",
-        traitScores: { A: 3, C: 1, E: 2, O: 0, X: 1, P: 1 }
+        traitScores: { A: 3, C: 0, E: 1, O: -1, X: 1, P: 1 }
       },
       {
         value: "B",
         text: "用账单小程序计算，确保每人分摊完全公平。",
-        traitScores: { A: 0, C: 3, E: 1, O: 0, X: 0, P: 0 }
+        traitScores: { A: -1, C: 3, E: 1, O: 0, X: -1, P: -1 }
       },
       {
         value: "C",
         text: "大概分一下就行，不用算那么细。",
-        traitScores: { A: 2, C: -1, E: 2, O: 1, X: 0, P: 0 }
+        traitScores: { A: 2, C: -2, E: 2, O: 1, X: 0, P: 0 }
       },
       {
         value: "D",
         text: "先让大家记账，最后总金额算清楚。",
-        traitScores: { A: 1, C: 2, E: 2, O: 0, X: 0, P: 0 }
+        traitScores: { A: 0, C: 2, E: 2, O: -1, X: 0, P: -1 }
       }
     ]
   },
@@ -830,22 +830,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "问群里有没有人去过或有推荐",
-        traitScores: { A: 1, C: 0, E: 0, O: 0, X: 2, P: 0 }
+        traitScores: { A: 1, C: -1, E: 0, O: -1, X: 2, P: 0 }
       },
       {
         value: "B",
         text: "刷点评APP，综合分析评分、评论、人均",
-        traitScores: { A: 0, C: 3, E: 0, O: 1, X: 0, P: 0 }
+        traitScores: { A: -1, C: 3, E: 0, O: 0, X: -1, P: 0 }
       },
       {
         value: "C",
         text: "回忆自己去过或听说过的地方",
-        traitScores: { A: 0, C: 1, E: 1, O: 0, X: 0, P: 0 }
+        traitScores: { A: 0, C: 1, E: 1, O: -1, X: -1, P: 0 }
       },
       {
         value: "D",
         text: "随便挑一个看起来不错的，到时候再说",
-        traitScores: { A: 0, C: -1, E: 1, O: 2, X: 0, P: 1 }
+        traitScores: { A: -1, C: -2, E: 1, O: 2, X: 0, P: 1 }
       }
     ]
   },
