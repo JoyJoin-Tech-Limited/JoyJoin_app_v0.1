@@ -37,6 +37,7 @@ export interface AdaptiveQuestion {
   isReversed?: boolean;
   isAttentionCheck?: boolean;
   isForcedChoice?: boolean; // Forced-choice tradeoff questions between competing traits
+  targetPairs?: string[]; // Archetype names this question is designed to differentiate
 }
 
 export interface TraitConfidence {
