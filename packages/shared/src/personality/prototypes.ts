@@ -72,7 +72,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
     name: "机智狐",
     icon: "🦊",
     energyLevel: 82,
-    traitProfile: { A: 45, C: 50, E: 60, O: 92, X: 72, P: 65 },
+    traitProfile: { A: 40, C: 50, E: 60, O: 92, X: 72, P: 58 },
     secondaryDifferentiators: {
       motivationDirection: 'external',
       conflictPosture: 'approach',
@@ -132,7 +132,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
     name: "灵感章鱼",
     icon: "🐙",
     energyLevel: 68,
-    traitProfile: { A: 50, C: 35, E: 55, O: 95, X: 65, P: 70 },
+    traitProfile: { A: 50, C: 28, E: 55, O: 95, X: 60, P: 70 },
     secondaryDifferentiators: {
       motivationDirection: 'internal',
       conflictPosture: 'avoid',
@@ -140,7 +140,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
       statusOrientation: 'independent'
     },
     confusableWith: ["机智狐", "沉思猫头鹰"],
-    uniqueSignalTraits: ["O"]
+    uniqueSignalTraits: ["O", "C"]
   },
   "沉思猫头鹰": {
     id: "owl",
@@ -192,7 +192,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
     name: "隐身猫",
     icon: "🐱",
     energyLevel: 30,
-    traitProfile: { A: 50, C: 55, E: 80, O: 45, X: 25, P: 50 },
+    traitProfile: { A: 50, C: 50, E: 80, O: 45, X: 20, P: 50 },
     secondaryDifferentiators: {
       motivationDirection: 'internal',
       conflictPosture: 'avoid',

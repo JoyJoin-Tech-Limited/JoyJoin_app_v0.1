@@ -22,6 +22,13 @@ export interface QuestionOption {
 
 export type QuestionLevel = 1 | 2 | 3;
 
+export type CohortType = 
+  | 'creative_explorer'    // 灵感章鱼, 机智狐, 沉思猫头鹰 (high O + mid X)
+  | 'quiet_anchor'         // 隐身猫, 稳如龟, 定心大象 (low X + high C)
+  | 'social_catalyst'      // 开心柯基, 太阳鸡, 夸夸豚 (high X + high P)
+  | 'steady_harmonizer'    // 暖心熊, 淡定海豚, 织网蛛 (high A + mid-high E)
+  | 'universal';           // Works for all cohorts
+
 export interface AdaptiveQuestion {
   id: string;
   level: QuestionLevel;
@@ -38,6 +45,7 @@ export interface AdaptiveQuestion {
   isAttentionCheck?: boolean;
   isForcedChoice?: boolean; // Forced-choice tradeoff questions between competing traits
   targetPairs?: string[]; // Archetype names this question is designed to differentiate
+  cohortTag?: CohortType; // Which cohort this question is best suited for
 }
 
 export interface TraitConfidence {
@@ -98,14 +106,14 @@ export interface AssessmentConfig {
 }
 
 export const DEFAULT_ASSESSMENT_CONFIG: AssessmentConfig = {
-  minQuestions: 8,
-  softMaxQuestions: 10,
-  hardMaxQuestions: 14,
+  minQuestions: 10,
+  softMaxQuestions: 12,
+  hardMaxQuestions: 16,
   defaultConfidenceThreshold: 0.65,
   confusablePairThreshold: 0.70,
-  anchorQuestionCount: 6,
-  validityCheckPositions: [6, 10],
-  milestonePositions: [5, 8, 11],
+  anchorQuestionCount: 8,
+  validityCheckPositions: [8, 12],
+  milestonePositions: [4, 8, 12],
   enableTieredThreshold: false,
   tieredThresholdConfig: {
     confidenceGapThreshold: 0.10,
@@ -121,9 +129,9 @@ export const V2_ASSESSMENT_CONFIG: AssessmentConfig = {
   hardMaxQuestions: 20,
   defaultConfidenceThreshold: 0.70,
   confusablePairThreshold: 0.80,
-  anchorQuestionCount: 6,
+  anchorQuestionCount: 8,
   validityCheckPositions: [8, 12, 16],
-  milestonePositions: [6, 10, 14],
+  milestonePositions: [4, 8, 14],
   enableTieredThreshold: true,
   tieredThresholdConfig: {
     confidenceGapThreshold: 0.15,
