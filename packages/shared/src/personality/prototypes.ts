@@ -205,7 +205,12 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
 };
 
 export function normalizeTraitScore(rawScore: number): number {
-  const normalized = 50 + (rawScore * 5);
+  // Scale factor: average option trait scores are in [-3, +3] range
+  // To map to archetype range [~20, ~95], use multiplier of 15
+  // avg = +3 → 50 + 45 = 95
+  // avg = 0 → 50
+  // avg = -3 → 50 - 45 = 5
+  const normalized = 50 + (rawScore * 15);
   return Math.max(0, Math.min(100, Math.round(normalized)));
 }
 

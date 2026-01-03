@@ -136,7 +136,9 @@ export function processAnswer(
   for (const trait of ALL_TRAITS) {
     const rawScore = newState.traitScores[trait];
     const sampleCount = newState.traitSampleCounts[trait];
-    const normalizedScore = normalizeTraitScore(rawScore / Math.max(1, sampleCount) * sampleCount);
+    // Fix: Normalize the AVERAGE score, not the total score
+    const avgScore = rawScore / Math.max(1, sampleCount);
+    const normalizedScore = normalizeTraitScore(avgScore);
     
     const confidence = calculateTraitConfidence(sampleCount, rawScore);
     
