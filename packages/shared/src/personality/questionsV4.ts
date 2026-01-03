@@ -262,6 +262,8 @@ export const questionsV4: AdaptiveQuestion[] = [
     scenarioText: "🎭 活动有个需要才艺展示的环节，自愿参与。",
     questionText: "你会？",
     primaryTraits: ["X", "E", "P"],
+    isAnchor: true,
+    discriminationIndex: 0.48,
     options: [
       {
         value: "A",
@@ -451,6 +453,8 @@ export const questionsV4: AdaptiveQuestion[] = [
     scenarioText: "🏆 团队游戏你们这组赢了，对方组有些失落。",
     questionText: "你更可能？",
     primaryTraits: ["P", "A", "E", "X"],
+    isAnchor: true,
+    discriminationIndex: 0.45,
     options: [
       {
         value: "A",

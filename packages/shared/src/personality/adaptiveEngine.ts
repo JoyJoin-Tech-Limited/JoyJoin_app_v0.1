@@ -12,6 +12,7 @@ import {
   CONFUSABLE_ARCHETYPE_PAIRS,
   AssessmentConfig,
   AdaptiveQuestion,
+  CohortType,
 } from './types';
 import { questionsV4, getAnchorQuestions } from './questionsV4';
 import { archetypePrototypes, findBestMatchingArchetypes, normalizeTraitScore } from './prototypes';
@@ -75,6 +76,7 @@ export interface EngineState {
   currentMatches: ArchetypeMatch[];
   questionHistory: AnsweredQuestion[];
   config: AssessmentConfig;
+  detectedCohort?: CohortType;
 }
 
 export function initializeEngineState(config?: Partial<AssessmentConfig>): EngineState {
@@ -184,8 +186,63 @@ function calculateTraitConfidence(sampleCount: number, totalScore: number): numb
   return Math.min(1, baseSampleWeight * 0.8 + consistencyBonus);
 }
 
+/**
+ * Detect user cohort based on trait signals after anchor questions
+ * Used to route users to cohort-specific differentiation questions
+ * 
+ * Cohort thresholds (after 8 anchors):
+ * - creative_explorer: O≥78, 55≤X≤78 (灵感章鱼, 机智狐, 沉思猫头鹰)
+ * - quiet_anchor: X≤42, C≥72 (隐身猫, 稳如龟, 定心大象)
+ * - social_catalyst: X≥78, P≥75 (开心柯基, 太阳鸡, 夸夸豚)
+ * - steady_harmonizer: A≥78, 55≤E≤85, 60≤C≤80 (暖心熊, 淡定海豚, 织网蛛)
+ */
+export function detectCohort(normalizedTraits: Record<TraitKey, number>): CohortType {
+  const { A, C, E, O, X, P } = normalizedTraits;
+  
+  // Priority order: most distinctive patterns first
+  
+  // Creative Explorer: High openness with moderate extraversion
+  if (O >= 78 && X >= 55 && X <= 78) {
+    return 'creative_explorer';
+  }
+  
+  // Quiet Anchor: Low extraversion with high conscientiousness  
+  if (X <= 42 && C >= 72) {
+    return 'quiet_anchor';
+  }
+  
+  // Social Catalyst: High extraversion with high positivity
+  if (X >= 78 && P >= 75) {
+    return 'social_catalyst';
+  }
+  
+  // Steady Harmonizer: High affinity with moderate emotional stability
+  if (A >= 78 && E >= 55 && E <= 85 && C >= 60 && C <= 80) {
+    return 'steady_harmonizer';
+  }
+  
+  // Fallback: check for partial matches with relaxed thresholds
+  // Creative tendency
+  if (O >= 70) {
+    return 'creative_explorer';
+  }
+  
+  // Introverted tendency
+  if (X <= 45) {
+    return 'quiet_anchor';
+  }
+  
+  // Social tendency
+  if (X >= 70) {
+    return 'social_catalyst';
+  }
+  
+  // Default to harmonizer (most balanced)
+  return 'steady_harmonizer';
+}
+
 export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null {
-  const { answeredQuestionIds, skippedQuestionIds, config } = state;
+  const { answeredQuestionIds, skippedQuestionIds, config, traitConfidences } = state;
   const questionCount = answeredQuestionIds.size;
   
   if (questionCount < config.anchorQuestionCount) {
@@ -198,7 +255,17 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
     }
   }
   
-  if (shouldTerminate(state)) {
+  // Detect cohort after anchor questions if not already detected
+  let updatedState = state;
+  if (!state.detectedCohort && questionCount >= config.anchorQuestionCount) {
+    const normalizedTraits: Record<TraitKey, number> = {} as Record<TraitKey, number>;
+    for (const trait of ALL_TRAITS) {
+      normalizedTraits[trait] = traitConfidences[trait]?.score ?? 50;
+    }
+    updatedState = { ...state, detectedCohort: detectCohort(normalizedTraits) };
+  }
+  
+  if (shouldTerminate(updatedState)) {
     return null;
   }
   
@@ -211,7 +278,7 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
   
   const scoredQuestions = availableQuestions.map(q => ({
     question: q,
-    score: calculateQuestionUtility(q, state),
+    score: calculateQuestionUtility(q, updatedState),
   }));
   
   scoredQuestions.sort((a, b) => b.score - a.score);
@@ -291,7 +358,7 @@ export function getRemainingSkips(state: EngineState): number {
 }
 
 function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState): number {
-  const { traitConfidences, currentMatches } = state;
+  const { traitConfidences, currentMatches, detectedCohort } = state;
   
   let informationGain = 0;
   for (const trait of question.primaryTraits) {
@@ -339,13 +406,29 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
   // Forced choice questions get a small boost when differentiating close matches
   const forcedChoiceBonus = question.isForcedChoice && currentMatches.length >= 2 ? 0.1 : 0;
   
+  // Cohort-based routing bonus/penalty
+  let cohortBonus = 0;
+  if (detectedCohort && question.cohortTag) {
+    if (question.cohortTag === detectedCohort) {
+      // Strong bonus for cohort-matched questions (+0.12)
+      cohortBonus = 0.12;
+    } else if (question.cohortTag === 'universal') {
+      // No bonus or penalty for universal questions
+      cohortBonus = 0;
+    } else {
+      // Penalty for mismatched cohort questions (-0.08)
+      cohortBonus = -0.08;
+    }
+  }
+  
   return (
     informationGain * 0.3 +
     discriminationBonus * 0.2 +
     targetedPairBonus * 0.25 +
     discriminationIndex * 0.15 +
     levelBonus * 0.05 +
-    forcedChoiceBonus * 0.05
+    forcedChoiceBonus * 0.05 +
+    cohortBonus
   );
 }
 
