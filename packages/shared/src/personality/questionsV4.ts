@@ -146,7 +146,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "主动当摄影师，指挥大家站位",
-        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 3, P: 2 }
+        traitScores: { A: -1, C: 0, E: -1, O: 0, X: 3, P: 2 }
       },
       {
         value: "B",
@@ -156,12 +156,12 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "C",
         text: "找个位置站好，配合大家",
-        traitScores: { A: 0, C: 1, E: 2, O: 0, X: 0, P: 0 }
+        traitScores: { A: 0, C: 1, E: 2, O: -1, X: -1, P: 0 }
       },
       {
         value: "D",
         text: "站最边上，尽量不抢镜",
-        traitScores: { A: 0, C: 0, E: 1, O: 0, X: -2, P: 0 }
+        traitScores: { A: 0, C: 0, E: 1, O: 0, X: -2, P: -1 }
       }
     ]
   },
@@ -552,22 +552,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "立刻回家，确保有至少2小时完全独处的时间",
-        traitScores: { A: 0, C: 0, E: 2, O: 0, X: -2, P: 0 }
+        traitScores: { A: -1, C: 0, E: 2, O: 0, X: -2, P: -1 }
       },
       {
         value: "B",
         text: "在活动线上群里继续回味，发照片、聊天，延续兴奋感",
-        traitScores: { A: 1, C: 0, E: -1, O: 0, X: 2, P: 2 }
+        traitScores: { A: 1, C: -1, E: -1, O: 0, X: 2, P: 2 }
       },
       {
         value: "C",
         text: "和1-2个最亲近的参与者找个安静地方简单复盘，然后各自回家",
-        traitScores: { A: 2, C: 1, E: 1, O: 1, X: 0, P: 0 }
+        traitScores: { A: 2, C: 1, E: 1, O: 0, X: -1, P: 0 }
       },
       {
         value: "D",
         text: "需要一些低刺激的独处活动，如看书、听播客，但不必完全隔绝",
-        traitScores: { A: 0, C: 1, E: 2, O: 1, X: 0, P: 0 }
+        traitScores: { A: 0, C: 1, E: 2, O: 0, X: -1, P: 0 }
       }
     ]
   },
@@ -708,22 +708,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "我觉得...不太是我的菜",
-        traitScores: { A: 0, C: 0, E: 0, O: 2, X: 1, P: 0 }
+        traitScores: { A: -1, C: 0, E: 0, O: 2, X: 1, P: -1 }
       },
       {
         value: "B",
         text: "还不错，画面挺好看的！",
-        traitScores: { A: 2, C: 0, E: 1, O: 0, X: 0, P: 1 }
+        traitScores: { A: 2, C: 0, E: 1, O: -1, X: 0, P: 1 }
       },
       {
         value: "C",
         text: "哈哈你真的很喜欢这类型的对吧？",
-        traitScores: { A: 2, C: 1, E: 0, O: 1, X: 0, P: 0 }
+        traitScores: { A: 2, C: 1, E: 0, O: 0, X: 0, P: -1 }
       },
       {
         value: "D",
         text: "含糊带过，期待话题自然转移",
-        traitScores: { A: 0, C: 0, E: 2, O: 0, X: -1, P: 0 }
+        traitScores: { A: 0, C: 0, E: 2, O: -1, X: -1, P: 0 }
       }
     ]
   },
@@ -1535,22 +1535,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "立刻点赞评论，写一段热情洋溢的祝福",
-        traitScores: { A: 2, C: 0, E: 0, O: 0, X: 1, P: 3 }
+        traitScores: { A: 1, C: -1, E: -1, O: 0, X: 1, P: 3 }
       },
       {
         value: "B",
         text: "私聊TA，表达更个人化的祝贺和关心",
-        traitScores: { A: 3, C: 0, E: 0, O: 0, X: 0, P: 0 }
+        traitScores: { A: 3, C: 0, E: 0, O: 0, X: -1, P: 0 }
       },
       {
         value: "C",
         text: "点个赞，或者简单评论恭喜！",
-        traitScores: { A: 0, C: 0, E: 2, O: 0, X: 0, P: 0 }
+        traitScores: { A: -1, C: 0, E: 2, O: 0, X: 0, P: -1 }
       },
       {
         value: "D",
         text: "可能会记在心里，下次见面时再当面祝贺",
-        traitScores: { A: 1, C: 1, E: 1, O: 0, X: -1, P: 0 }
+        traitScores: { A: 1, C: 1, E: 1, O: 0, X: -2, P: -1 }
       }
     ]
   },
@@ -1565,22 +1565,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "上网进行碎片化搜索，看很多相关视频和短文",
-        traitScores: { A: 0, C: 0, E: 0, O: 2, X: 1, P: 0 }
+        traitScores: { A: -1, C: -1, E: 0, O: 2, X: 1, P: 0 }
       },
       {
         value: "B",
         text: "找一本权威书籍或长篇深度报道系统学习",
-        traitScores: { A: 0, C: 2, E: 0, O: 3, X: 0, P: 0 }
+        traitScores: { A: -1, C: 2, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "C",
         text: "找对这个话题感兴趣的朋友一起讨论研究",
-        traitScores: { A: 2, C: 0, E: 0, O: 1, X: 1, P: 0 }
+        traitScores: { A: 2, C: 0, E: -1, O: 1, X: 1, P: 0 }
       },
       {
         value: "D",
         text: "如果和工作生活无关，可能过一阵兴趣就淡了",
-        traitScores: { A: 0, C: 0, E: 2, O: 0, X: 0, P: 0 }
+        traitScores: { A: 0, C: 0, E: 2, O: -2, X: 0, P: 0 }
       }
     ]
   },
@@ -2335,22 +2335,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "先花时间了解对方的工作风格和偏好",
-        traitScores: { A: 3, C: 1, E: 0, O: 0, X: 1, P: 0 }
+        traitScores: { A: 3, C: 0, E: -1, O: 0, X: 1, P: 0 }
       },
       {
         value: "B",
         text: "直接讨论分工，各自负责各自的部分",
-        traitScores: { A: 0, C: 2, E: 1, O: 0, X: 0, P: 0 }
+        traitScores: { A: -1, C: 2, E: 1, O: -1, X: 0, P: 0 }
       },
       {
         value: "C",
         text: "边做边磨合，遇到问题再沟通",
-        traitScores: { A: 1, C: 0, E: 1, O: 2, X: 0, P: 1 }
+        traitScores: { A: 1, C: -1, E: 1, O: 2, X: 0, P: 1 }
       },
       {
         value: "D",
         text: "希望有明确的流程和规则，减少不确定性",
-        traitScores: { A: 0, C: 3, E: 1, O: 0, X: -1, P: 0 }
+        traitScores: { A: -1, C: 3, E: 1, O: -1, X: -1, P: 0 }
       }
     ]
   },
@@ -2463,22 +2463,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "认真研究策略，争取赢得比赛",
-        traitScores: { A: 0, C: 3, E: 0, O: 0, X: 1, P: 0 }
+        traitScores: { A: -1, C: 3, E: 0, O: 0, X: 1, P: -1 }
       },
       {
         value: "B",
         text: "边玩边搞笑，制造欢乐氛围",
-        traitScores: { A: 1, C: 0, E: 0, O: 0, X: 2, P: 3 }
+        traitScores: { A: 1, C: -1, E: -1, O: 0, X: 2, P: 3 }
       },
       {
         value: "C",
         text: "观察每个人的玩法风格，很有趣",
-        traitScores: { A: 2, C: 1, E: 1, O: 1, X: 0, P: 1 }
+        traitScores: { A: 2, C: 0, E: 1, O: 1, X: -1, P: 0 }
       },
       {
         value: "D",
         text: "希望规则简单点，复杂的有点累",
-        traitScores: { A: 0, C: 0, E: 2, O: 0, X: -1, P: 0 }
+        traitScores: { A: 0, C: -1, E: 2, O: -1, X: -1, P: 0 }
       }
     ]
   },
@@ -2940,22 +2940,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "先列出详细的执行计划和时间表，一步步推进",
-        traitScores: { A: 0, C: 3, E: 1, O: 1, X: 0, P: 0 }
+        traitScores: { A: -1, C: 3, E: 1, O: -1, X: 0, P: 0 }
       },
       {
         value: "B",
         text: "趁着灵感还在就直接动手，边做边调整",
-        traitScores: { A: 0, C: -2, E: 0, O: 3, X: 1, P: 1 }
+        traitScores: { A: -1, C: -2, E: 0, O: 3, X: 1, P: 1 }
       },
       {
         value: "C",
         text: "先和别人分享讨论，收集反馈再决定怎么做",
-        traitScores: { A: 2, C: 1, E: 0, O: 1, X: 1, P: 0 }
+        traitScores: { A: 2, C: 0, E: -1, O: 1, X: 1, P: 0 }
       },
       {
         value: "D",
         text: "想法太多反而选择困难，可能最后什么都没做",
-        traitScores: { A: 0, C: -1, E: -1, O: 2, X: 0, P: -1 }
+        traitScores: { A: 0, C: -1, E: -1, O: 2, X: -1, P: -1 }
       }
     ]
   },
@@ -3052,6 +3052,102 @@ export const questionsV4: AdaptiveQuestion[] = [
         value: "D",
         text: "边学边实践，在应用中加深理解",
         traitScores: { A: 0, C: 1, E: 0, O: 1, X: 1, P: 1 }
+      }
+    ]
+  },
+  {
+    id: "Q95",
+    level: 2,
+    category: "原型区分-沉思猫头鹰vs稳如龟",
+    scenarioText: "🤔 面对一个复杂的问题，你需要做出决定。",
+    questionText: "你更倾向于？",
+    primaryTraits: ["O", "C", "E"],
+    isForcedChoice: true,
+    targetPairs: ["沉思猫头鹰", "稳如龟"],
+    options: [
+      {
+        value: "A",
+        text: "从多个角度深度分析，探索各种可能性和隐含意义",
+        traitScores: { A: -1, C: 1, E: 1, O: 3, X: -1, P: 0 }
+      },
+      {
+        value: "B",
+        text: "保持冷静，按照经验和常识稳妥地做出判断",
+        traitScores: { A: 0, C: 2, E: 3, O: -1, X: 0, P: 0 }
+      },
+      {
+        value: "C",
+        text: "先收集足够信息，再做出有把握的决定",
+        traitScores: { A: 0, C: 3, E: 1, O: 1, X: 0, P: -1 }
+      },
+      {
+        value: "D",
+        text: "和信任的人讨论，听取不同意见再决定",
+        traitScores: { A: 2, C: 1, E: 0, O: 0, X: 1, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q96",
+    level: 2,
+    category: "原型区分-机智狐vs织网蛛",
+    scenarioText: "💼 你在工作中发现了一个可以改进的机会。",
+    questionText: "你会怎么做？",
+    primaryTraits: ["C", "A", "X"],
+    isForcedChoice: true,
+    targetPairs: ["机智狐", "织网蛛"],
+    options: [
+      {
+        value: "A",
+        text: "制定详细的改进计划，一步步推进实施",
+        traitScores: { A: -1, C: 3, E: 1, O: 0, X: 0, P: 0 }
+      },
+      {
+        value: "B",
+        text: "找到关键人物，协调各方资源一起推动",
+        traitScores: { A: 3, C: 1, E: 0, O: 0, X: 1, P: 0 }
+      },
+      {
+        value: "C",
+        text: "先小范围试验，验证可行后再推广",
+        traitScores: { A: 0, C: 2, E: 1, O: 1, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "分享想法看大家反应，有人支持再行动",
+        traitScores: { A: 1, C: 0, E: 0, O: 1, X: 2, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q97",
+    level: 2,
+    category: "原型区分-开心柯基vs夸夸豚",
+    scenarioText: "🎉 朋友刚完成一个重要项目，看起来很疲惫。",
+    questionText: "你会？",
+    primaryTraits: ["P", "A", "X"],
+    isForcedChoice: true,
+    targetPairs: ["开心柯基", "夸夸豚"],
+    options: [
+      {
+        value: "A",
+        text: "热情庆祝！拉着ta去吃好吃的庆功",
+        traitScores: { A: 0, C: -1, E: -1, O: 0, X: 3, P: 2 }
+      },
+      {
+        value: "B",
+        text: "认真表扬ta的努力和成果，让ta感到被认可",
+        traitScores: { A: 2, C: 1, E: 0, O: 0, X: 0, P: 3 }
+      },
+      {
+        value: "C",
+        text: "先问ta需要什么，休息还是庆祝由ta决定",
+        traitScores: { A: 3, C: 1, E: 1, O: 0, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "给ta一些独处空间，需要的时候再陪伴",
+        traitScores: { A: 1, C: 0, E: 2, O: 0, X: -1, P: 0 }
       }
     ]
   }
