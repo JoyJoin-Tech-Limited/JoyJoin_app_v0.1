@@ -256,6 +256,8 @@ export default function PersonalityTestResultPage() {
     setLocation('/personality-test/complete');
   };
 
+  const isLegacyV1 = result.algorithmVersion === 'v1' || !result.algorithmVersion;
+
   const RevealAnimation = () => (
     <motion.div
       initial={{ opacity: 1 }}
@@ -460,9 +462,26 @@ export default function PersonalityTestResultPage() {
           <Button variant="outline" className="w-full" onClick={handleShare} data-testid="button-share">
             <Share2 className="w-5 h-5 mr-2" />分享原型
           </Button>
-          <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => setLocation('/personality-test')} data-testid="button-retest">
-            重新测试
-          </Button>
+          {isLegacyV1 ? (
+            <div className="space-y-2 p-4 bg-primary/5 rounded-xl border border-primary/10">
+              <p className="text-xs text-center text-muted-foreground">
+                我们升级了测试算法，新版本更精准。
+              </p>
+              <Button 
+                variant="outline" 
+                className="w-full bg-background hover:bg-primary/5" 
+                onClick={() => setLocation('/personality-test')} 
+                data-testid="button-upgrade-retest"
+              >
+                <Zap className="w-4 h-4 mr-2 text-primary" />
+                体验新版算法重新测试
+              </Button>
+            </div>
+          ) : (
+            <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => setLocation('/personality-test')} data-testid="button-retest">
+              重新测试
+            </Button>
+          )}
         </motion.div>
       </motion.div>
     </div>
