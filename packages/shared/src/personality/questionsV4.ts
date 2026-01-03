@@ -197,10 +197,11 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   {
     id: "Q7",
-    level: 1,
+    level: 2,
     category: "观点表达",
     scenarioText: "💬 群里话题聊得正热，你有个截然不同但有趣的角度。",
     questionText: "你会？",
+    cohortTag: 'creative_explorer',
     primaryTraits: ["X", "O", "E"],
     options: [
       {
@@ -227,10 +228,11 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   {
     id: "Q8",
-    level: 1,
+    level: 2,
     category: "延迟反应",
     scenarioText: "🕙 活动比预定时间晚了半小时才开始，大家都在等待。",
     questionText: "你逐渐感到？",
+    cohortTag: 'quiet_anchor',
     primaryTraits: ["E", "A", "C"],
     options: [
       {
@@ -289,10 +291,11 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   {
     id: "Q10",
-    level: 1,
+    level: 2,
     category: "应变态度",
     scenarioText: "🌧️ 户外活动当天早晨，发现天气可能变坏。",
     questionText: "你的第一念头是？",
+    cohortTag: 'creative_explorer',
     primaryTraits: ["O", "C", "E", "P"],
     options: [
       {
@@ -319,10 +322,11 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   {
     id: "Q11",
-    level: 1,
+    level: 2,
     category: "入群行为",
     scenarioText: "👥 你被拉进一个全是陌生人的活动预备群。",
     questionText: "入群后，你通常会？",
+    cohortTag: 'quiet_anchor',
     primaryTraits: ["X", "C", "E"],
     options: [
       {
@@ -349,10 +353,11 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   {
     id: "Q12",
-    level: 1,
+    level: 2,
     category: "决策风格",
     scenarioText: "🍽️ 朋友群里讨论周五去哪吃饭，推荐了好几家。",
     questionText: "你的反应是？",
+    cohortTag: 'steady_harmonizer',
     primaryTraits: ["O", "C", "X"],
     isAnchor: true,
     discriminationIndex: 0.38,
@@ -381,10 +386,11 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   {
     id: "Q13",
-    level: 1,
+    level: 2,
     category: "赠礼思维",
     scenarioText: "🎁 新朋友下周生日，你想送个小礼物。",
     questionText: "你会选？",
+    cohortTag: 'steady_harmonizer',
     primaryTraits: ["A", "O", "C"],
     isAnchor: true,
     discriminationIndex: 0.41,
@@ -418,10 +424,11 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   {
     id: "Q14",
-    level: 1,
+    level: 2,
     category: "关系推进",
     scenarioText: "🤝 通过活动认识的新朋友，第二天在微信上找你闲聊。",
     questionText: "你的感受和回应倾向是？",
+    cohortTag: 'social_catalyst',
     primaryTraits: ["A", "E", "X"],
     options: [
       {
@@ -2908,6 +2915,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     primaryTraits: ["X", "E", "C"],
     isForcedChoice: true,
     targetPairs: ["开心柯基", "太阳鸡"],
+    cohortTag: 'social_catalyst',
     options: [
       {
         value: "A",
@@ -2940,6 +2948,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     primaryTraits: ["C", "O"],
     isForcedChoice: true,
     targetPairs: ["机智狐", "灵感章鱼"],
+    cohortTag: 'creative_explorer',
     options: [
       {
         value: "A",
@@ -2972,6 +2981,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     primaryTraits: ["A", "C", "E"],
     isForcedChoice: true,
     targetPairs: ["淡定海豚", "夸夸豚", "暖心熊"],
+    cohortTag: 'steady_harmonizer',
     options: [
       {
         value: "A",
@@ -3004,6 +3014,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     primaryTraits: ["A", "C", "X"],
     isForcedChoice: true,
     targetPairs: ["暖心熊", "定心大象", "织网蛛"],
+    cohortTag: 'steady_harmonizer',
     options: [
       {
         value: "A",
@@ -3036,6 +3047,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     primaryTraits: ["O", "C", "X"],
     isForcedChoice: true,
     targetPairs: ["沉思猫头鹰", "稳如龟", "灵感章鱼"],
+    cohortTag: 'quiet_anchor',
     options: [
       {
         value: "A",
@@ -3068,6 +3080,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     primaryTraits: ["O", "E"],
     isForcedChoice: true,
     targetPairs: ["沉思猫头鹰", "稳如龟"],
+    cohortTag: 'quiet_anchor',
     options: [
       {
         value: "A",
@@ -3100,6 +3113,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     primaryTraits: ["A", "O", "X"],
     isForcedChoice: true,
     targetPairs: ["机智狐", "织网蛛"],
+    cohortTag: 'creative_explorer',
     options: [
       {
         value: "A",
@@ -3132,6 +3146,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     primaryTraits: ["X", "A", "P"],
     isForcedChoice: true,
     targetPairs: ["开心柯基", "夸夸豚"],
+    cohortTag: 'social_catalyst',
     options: [
       {
         value: "A",
@@ -3152,6 +3167,176 @@ export const questionsV4: AdaptiveQuestion[] = [
         value: "D",
         text: "表达祝贺，顺便问问接下来的打算",
         traitScores: { A: 1, C: 1, E: 1, O: 0, X: 0, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q98",
+    level: 3,
+    category: "原型区分-灵感章鱼vs开心柯基",
+    scenarioText: "🌈 周末有两个活动邀请：一个是朋友组织的热闹派对，另一个是小众艺术展览开幕。",
+    questionText: "你更想去？",
+    primaryTraits: ["O", "X", "P"],
+    isForcedChoice: true,
+    targetPairs: ["灵感章鱼", "开心柯基"],
+    cohortTag: 'creative_explorer',
+    discriminationIndex: 0.55,
+    options: [
+      {
+        value: "A",
+        text: "派对！热闹的氛围让我充满活力",
+        traitScores: { A: 0, C: -1, E: 0, O: -1, X: 3, P: 2 }
+      },
+      {
+        value: "B",
+        text: "艺术展！独特的体验比热闹更吸引我",
+        traitScores: { A: 0, C: 1, E: 0, O: 3, X: -1, P: 0 }
+      },
+      {
+        value: "C",
+        text: "先去展览逛逛，再赶去派对凑热闹",
+        traitScores: { A: 0, C: 0, E: 0, O: 2, X: 1, P: 1 }
+      },
+      {
+        value: "D",
+        text: "看看哪边朋友更多再决定",
+        traitScores: { A: 1, C: 0, E: 1, O: 0, X: 1, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q99",
+    level: 3,
+    category: "原型区分-隐身猫vs定心大象",
+    scenarioText: "🏠 新搬到一个社区，邻居们组织了一个欢迎聚会。",
+    questionText: "你会？",
+    primaryTraits: ["X", "C", "A"],
+    isForcedChoice: true,
+    targetPairs: ["隐身猫", "定心大象"],
+    cohortTag: 'quiet_anchor',
+    discriminationIndex: 0.52,
+    options: [
+      {
+        value: "A",
+        text: "找个借口婉拒，私下和邻居一对一认识就好",
+        traitScores: { A: 0, C: 0, E: 1, O: 0, X: -3, P: 0 }
+      },
+      {
+        value: "B",
+        text: "去但保持低调，观察环境和人群",
+        traitScores: { A: 0, C: 2, E: 2, O: 1, X: -1, P: 0 }
+      },
+      {
+        value: "C",
+        text: "准时参加，主动帮忙布置或端茶倒水",
+        traitScores: { A: 2, C: 2, E: 0, O: 0, X: 0, P: 1 }
+      },
+      {
+        value: "D",
+        text: "参加并尝试记住每个人的名字和特点",
+        traitScores: { A: 1, C: 3, E: 0, O: 0, X: 1, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q100",
+    level: 3,
+    category: "原型区分-机智狐vs开心柯基",
+    scenarioText: "💡 团队头脑风暴会议上，你有一个很棒的点子。",
+    questionText: "你倾向于？",
+    primaryTraits: ["O", "X", "C"],
+    isForcedChoice: true,
+    targetPairs: ["机智狐", "开心柯基"],
+    cohortTag: 'creative_explorer',
+    discriminationIndex: 0.50,
+    options: [
+      {
+        value: "A",
+        text: "立刻大声分享，让大家一起讨论完善",
+        traitScores: { A: 0, C: -1, E: -1, O: 0, X: 3, P: 2 }
+      },
+      {
+        value: "B",
+        text: "先思考如何更好地表达，确保点子足够精彩再说",
+        traitScores: { A: 0, C: 2, E: 0, O: 2, X: 0, P: 0 }
+      },
+      {
+        value: "C",
+        text: "用幽默有趣的方式讲出来，带动气氛",
+        traitScores: { A: 0, C: 0, E: 0, O: 1, X: 2, P: 2 }
+      },
+      {
+        value: "D",
+        text: "先私下和信任的同事讨论，再一起提出",
+        traitScores: { A: 1, C: 1, E: 1, O: 1, X: -1, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q101",
+    level: 3,
+    category: "原型区分-灵感章鱼vs沉思猫头鹰",
+    scenarioText: "📖 发现一个很有深度的话题，你想深入了解。",
+    questionText: "你的方式是？",
+    primaryTraits: ["O", "C", "X"],
+    isForcedChoice: true,
+    targetPairs: ["灵感章鱼", "沉思猫头鹰"],
+    cohortTag: 'creative_explorer',
+    discriminationIndex: 0.48,
+    options: [
+      {
+        value: "A",
+        text: "随性探索，跟着兴趣跳转到各种相关话题",
+        traitScores: { A: 0, C: -2, E: 0, O: 3, X: 1, P: 1 }
+      },
+      {
+        value: "B",
+        text: "系统地收集资料，按逻辑整理后深入研究",
+        traitScores: { A: 0, C: 3, E: 1, O: 2, X: -1, P: 0 }
+      },
+      {
+        value: "C",
+        text: "和懂这个话题的人聊聊，从对话中获取灵感",
+        traitScores: { A: 1, C: 0, E: 0, O: 2, X: 2, P: 0 }
+      },
+      {
+        value: "D",
+        text: "找一本权威书籍，从头到尾认真读完",
+        traitScores: { A: 0, C: 3, E: 2, O: 1, X: -2, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q102",
+    level: 3,
+    category: "原型区分-隐身猫vs稳如龟",
+    scenarioText: "🎤 被邀请在小型聚会上分享自己的专业经验。",
+    questionText: "你的反应是？",
+    primaryTraits: ["X", "E", "C"],
+    isForcedChoice: true,
+    targetPairs: ["隐身猫", "稳如龟"],
+    cohortTag: 'quiet_anchor',
+    discriminationIndex: 0.45,
+    options: [
+      {
+        value: "A",
+        text: "婉拒，觉得自己不适合在众人面前讲话",
+        traitScores: { A: 0, C: 0, E: 1, O: 0, X: -3, P: -1 }
+      },
+      {
+        value: "B",
+        text: "接受，但会提前认真准备，确保讲得清楚",
+        traitScores: { A: 0, C: 3, E: 1, O: 0, X: -1, P: 0 }
+      },
+      {
+        value: "C",
+        text: "建议改成小范围讨论，这样更自在",
+        traitScores: { A: 1, C: 1, E: 2, O: 0, X: -2, P: 0 }
+      },
+      {
+        value: "D",
+        text: "勉强答应但心里很紧张，担心表现不好",
+        traitScores: { A: 0, C: 0, E: -2, O: 0, X: -1, P: -1 }
       }
     ]
   }
