@@ -1,18 +1,12 @@
-import { getTraitScoresForArchetype } from '@/lib/archetypeTraitScores';
 import { useMemo } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface PersonalityRadarChartProps {
-  archetype?: string;
   affinityScore?: number;
   opennessScore?: number;
   conscientiousnessScore?: number;
   emotionalStabilityScore?: number;
   extraversionScore?: number;
   positivityScore?: number;
-  showArchetypeOverlay?: boolean;
-  showDeltaChips?: boolean;
 }
 
 const traitDescriptions: Record<string, string> = {
@@ -25,25 +19,17 @@ const traitDescriptions: Record<string, string> = {
 };
 
 export default function PersonalityRadarChart({
-  archetype,
   affinityScore,
   opennessScore,
   conscientiousnessScore,
   emotionalStabilityScore,
   extraversionScore,
   positivityScore,
-  showArchetypeOverlay = true,
-  showDeltaChips = true,
 }: PersonalityRadarChartProps) {
-  const archetypeScores = archetype ? getTraitScoresForArchetype(archetype) : null;
-  
   const normalizeScore = (score: number | undefined, fallback: number): number => {
     if (score === undefined || score === null) return fallback;
-    // V2 adaptive engine stores scores as 0-1, convert to 0-100
     if (score <= 1) return Math.round(score * 100);
-    // Legacy 0-10 range (archetype trait scores)
     if (score <= 10) return Math.round(score * 10);
-    // Already 0-100 range
     return Math.round(score);
   };
   
@@ -57,27 +43,6 @@ export default function PersonalityRadarChart({
     { name: '外向性', key: 'extraversion', score: normalizeScore(extraversionScore, defaultScore), maxScore: 100 },
     { name: '正能量性', key: 'positivity', score: normalizeScore(positivityScore, defaultScore), maxScore: 100 },
   ], [affinityScore, opennessScore, conscientiousnessScore, emotionalStabilityScore, extraversionScore, positivityScore]);
-
-  const archetypeTraits = useMemo(() => {
-    if (!archetypeScores) return null;
-    return [
-      { name: '亲和力', score: archetypeScores.affinity * 10, maxScore: 100 },
-      { name: '开放性', score: archetypeScores.openness * 10, maxScore: 100 },
-      { name: '责任心', score: archetypeScores.conscientiousness * 10, maxScore: 100 },
-      { name: '情绪稳定性', score: archetypeScores.emotionalStability * 10, maxScore: 100 },
-      { name: '外向性', score: archetypeScores.extraversion * 10, maxScore: 100 },
-      { name: '正能量性', score: archetypeScores.positivity * 10, maxScore: 100 },
-    ];
-  }, [archetypeScores]);
-
-  const traitDeltas = useMemo(() => {
-    if (!archetypeTraits) return null;
-    return userTraits.map((trait, index) => ({
-      name: trait.name,
-      delta: Math.round(trait.score - archetypeTraits[index].score),
-      isSignificant: Math.abs(trait.score - archetypeTraits[index].score) >= 15,
-    }));
-  }, [userTraits, archetypeTraits]);
 
   const centerX = 150;
   const centerY = 150;
@@ -94,10 +59,7 @@ export default function PersonalityRadarChart({
   };
 
   const userPoints = calculatePoints(userTraits);
-  const archetypePoints = archetypeTraits ? calculatePoints(archetypeTraits) : null;
-
   const userPolygonPoints = userPoints.map(p => `${p.x},${p.y}`).join(' ');
-  const archetypePolygonPoints = archetypePoints?.map(p => `${p.x},${p.y}`).join(' ');
 
   const maxPolygonPoints = userTraits.map((_, index) => {
     const angle = (Math.PI * 2 * index) / userTraits.length - Math.PI / 2;
@@ -121,10 +83,6 @@ export default function PersonalityRadarChart({
           <radialGradient id="userRadarGradient" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
             <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.05" />
-          </radialGradient>
-          <radialGradient id="archetypeRadarGradient" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="hsl(var(--muted-foreground))" stopOpacity="0.1" />
-            <stop offset="100%" stopColor="hsl(var(--muted-foreground))" stopOpacity="0.02" />
           </radialGradient>
         </defs>
 
@@ -175,17 +133,6 @@ export default function PersonalityRadarChart({
           );
         })}
 
-        {showArchetypeOverlay && archetypePolygonPoints && (
-          <polygon
-            points={archetypePolygonPoints}
-            fill="url(#archetypeRadarGradient)"
-            stroke="hsl(var(--muted-foreground))"
-            strokeWidth="1.5"
-            strokeDasharray="4,2"
-            opacity="0.6"
-          />
-        )}
-
         <polygon
           points={userPolygonPoints}
           fill="url(#userRadarGradient)"
@@ -193,43 +140,15 @@ export default function PersonalityRadarChart({
           strokeWidth="2"
         />
 
-        {showArchetypeOverlay && archetypePoints?.map((point, index) => (
+        {userPoints.map((point, index) => (
           <circle
-            key={`archetype-${index}`}
+            key={index}
             cx={point.x}
             cy={point.y}
-            r="3"
-            fill="hsl(var(--muted-foreground))"
-            opacity="0.6"
+            r="5"
+            fill="hsl(var(--primary))"
           />
         ))}
-
-        {userPoints.map((point, index) => {
-          const isSignificant = traitDeltas?.[index]?.isSignificant;
-          return (
-            <g key={index}>
-              {isSignificant && (
-                <circle
-                  cx={point.x}
-                  cy={point.y}
-                  r="8"
-                  fill="none"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth="1.5"
-                  opacity="0.5"
-                  className="animate-pulse"
-                />
-              )}
-              <circle
-                cx={point.x}
-                cy={point.y}
-                r="5"
-                fill="hsl(var(--primary))"
-                className={isSignificant ? 'drop-shadow-lg' : ''}
-              />
-            </g>
-          );
-        })}
 
         {labelPoints.map((label, index) => {
           let textAnchor: "start" | "middle" | "end" = "middle";
@@ -249,8 +168,6 @@ export default function PersonalityRadarChart({
             dy = "-0.3em";
           }
 
-          const isSignificant = traitDeltas?.[index]?.isSignificant;
-
           return (
             <g key={index} className="cursor-help">
               <text
@@ -258,7 +175,7 @@ export default function PersonalityRadarChart({
                 y={label.y}
                 textAnchor={textAnchor}
                 dy={dy}
-                className={`text-[11px] font-medium ${isSignificant ? 'fill-primary' : 'fill-foreground'}`}
+                className="text-[11px] font-medium fill-foreground"
                 style={{ userSelect: 'none' }}
               >
                 {label.trait.name}
@@ -268,39 +185,6 @@ export default function PersonalityRadarChart({
           );
         })}
       </svg>
-
-      {showArchetypeOverlay && archetype && (
-        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-0.5 bg-primary rounded" />
-            <span>你的特质</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-0.5 bg-muted-foreground rounded opacity-60" style={{ borderStyle: 'dashed' }} />
-            <span>{archetype}典型值</span>
-          </div>
-        </div>
-      )}
-
-      {showDeltaChips && traitDeltas && (
-        <div className="flex flex-wrap justify-center gap-2 mt-4">
-          {traitDeltas.filter(d => d.isSignificant).map((delta) => (
-            <Badge
-              key={delta.name}
-              variant={delta.delta > 0 ? 'default' : 'secondary'}
-              className="text-xs gap-1"
-              data-testid={`delta-chip-${delta.name}`}
-            >
-              {delta.delta > 0 ? (
-                <TrendingUp className="w-3 h-3" />
-              ) : (
-                <TrendingDown className="w-3 h-3" />
-              )}
-              {delta.name} {delta.delta > 0 ? '+' : ''}{delta.delta}%
-            </Badge>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
