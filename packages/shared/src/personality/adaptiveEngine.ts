@@ -192,50 +192,52 @@ function calculateTraitConfidence(sampleCount: number, totalScore: number): numb
  * Detect user cohort based on trait signals after anchor questions
  * Used to route users to cohort-specific differentiation questions
  * 
- * Cohort thresholds (after 8 anchors):
- * - creative_explorer: O≥78, 55≤X≤78 (灵感章鱼, 机智狐, 沉思猫头鹰)
- * - quiet_anchor: X≤42, C≥72 (隐身猫, 稳如龟, 定心大象)
- * - social_catalyst: X≥78, P≥75 (开心柯基, 太阳鸡, 夸夸豚)
- * - steady_harmonizer: A≥78, 55≤E≤85, 60≤C≤80 (暖心熊, 淡定海豚, 织网蛛)
+ * Cohort thresholds (relaxed for avg-normalized scale):
+ * - creative_explorer: O≥65, X<75 (灵感章鱼, 机智狐, 沉思猫头鹰)
+ * - quiet_anchor: X≤45, C≥60 (隐身猫, 稳如龟, 定心大象)
+ * - social_catalyst: X≥75, P≥65 (开心柯基, 太阳鸡, 夸夸豚)
+ * - steady_harmonizer: A≥65, E≥55 (暖心熊, 淡定海豚, 织网蛛)
  */
 export function detectCohort(normalizedTraits: Record<TraitKey, number>): CohortType {
   const { A, C, E, O, X, P } = normalizedTraits;
   
   // Priority order: most distinctive patterns first
+  // Thresholds relaxed to work with avg-based normalization (scale ~35-95)
   
-  // Creative Explorer: High openness with moderate extraversion
-  if (O >= 78 && X >= 55 && X <= 78) {
+  // Creative Explorer: High openness with moderate/low extraversion
+  // Targets: 灵感章鱼 (O:95, X:60), 机智狐 (O:92, X:72), 沉思猫头鹰 (O:90, X:35)
+  if (O >= 65 && X < 75) {
     return 'creative_explorer';
   }
   
-  // Quiet Anchor: Low extraversion with high conscientiousness  
-  if (X <= 42 && C >= 72) {
+  // Quiet Anchor: Low extraversion with structured approach
+  // Targets: 隐身猫 (X:20), 稳如龟 (X:30), 定心大象 (X:40)
+  if (X <= 45 && C >= 55) {
     return 'quiet_anchor';
   }
   
   // Social Catalyst: High extraversion with high positivity
-  if (X >= 78 && P >= 75) {
+  // Targets: 开心柯基 (X:95, P:90), 太阳鸡 (X:85, E:80), 夸夸豚 (X:75, P:95)
+  if (X >= 70 && P >= 60) {
     return 'social_catalyst';
   }
   
-  // Steady Harmonizer: High affinity with moderate emotional stability
-  if (A >= 78 && E >= 55 && E <= 85 && C >= 60 && C <= 80) {
+  // Steady Harmonizer: High affinity, emotionally balanced
+  // Targets: 暖心熊 (A:90), 淡定海豚 (A:65, E:75), 织网蛛 (A:75)
+  if (A >= 60 && E >= 55) {
     return 'steady_harmonizer';
   }
   
-  // Fallback: check for partial matches with relaxed thresholds
-  // Creative tendency
-  if (O >= 70) {
+  // Fallback classification based on dominant trait
+  if (O >= 60) {
     return 'creative_explorer';
   }
   
-  // Introverted tendency
-  if (X <= 45) {
+  if (X <= 50) {
     return 'quiet_anchor';
   }
   
-  // Social tendency
-  if (X >= 70) {
+  if (X >= 65) {
     return 'social_catalyst';
   }
   
@@ -412,14 +414,14 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
   let cohortBonus = 0;
   if (detectedCohort && question.cohortTag) {
     if (question.cohortTag === detectedCohort) {
-      // Strong bonus for cohort-matched questions (+0.12)
-      cohortBonus = 0.12;
+      // Strong bonus for cohort-matched questions (+0.20)
+      cohortBonus = 0.20;
     } else if (question.cohortTag === 'universal') {
       // No bonus or penalty for universal questions
       cohortBonus = 0;
     } else {
-      // Penalty for mismatched cohort questions (-0.08)
-      cohortBonus = -0.08;
+      // Penalty for mismatched cohort questions (-0.12)
+      cohortBonus = -0.12;
     }
   }
   
