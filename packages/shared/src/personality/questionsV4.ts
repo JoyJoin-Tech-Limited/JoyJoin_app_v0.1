@@ -52,22 +52,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "我都可以！哪个都好玩！",
-        traitScores: { A: 1, C: 0, E: 0, O: 3, X: 0, P: 2 }
+        traitScores: { A: 1, C: -1, E: 0, O: 3, X: 0, P: 2 }
       },
       {
         value: "B",
         text: "我查下距离和评分，做比较表？",
-        traitScores: { A: 1, C: 3, E: 0, O: 1, X: 0, P: 0 }
+        traitScores: { A: 0, C: 3, E: 0, O: -1, X: 0, P: -1 }
       },
       {
         value: "C",
         text: "要不试试最特别的那个？",
-        traitScores: { A: 0, C: 0, E: 0, O: 3, X: 1, P: 0 }
+        traitScores: { A: -1, C: -1, E: 0, O: 3, X: 1, P: 0 }
       },
       {
         value: "D",
         text: "我想去能安静聊天的地方。",
-        traitScores: { A: 0, C: 1, E: 2, O: 0, X: -1, P: 0 }
+        traitScores: { A: 0, C: 1, E: 2, O: -1, X: -1, P: -1 }
       }
     ]
   },
@@ -925,22 +925,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "大量短平快的点子，其中几个可能很有趣",
-        traitScores: { A: 0, C: 0, E: 0, O: 2, X: 2, P: 1 }
+        traitScores: { A: 0, C: -1, E: 0, O: 2, X: 2, P: 1 }
       },
       {
         value: "B",
         text: "几个经过初步推敲、可行性较高的方案",
-        traitScores: { A: 0, C: 3, E: 0, O: 1, X: 0, P: 0 }
+        traitScores: { A: 0, C: 3, E: 0, O: -1, X: 0, P: 0 }
       },
       {
         value: "C",
         text: "一个深入、系统但可能略显复杂的框架性想法",
-        traitScores: { A: 0, C: 2, E: 0, O: 3, X: 0, P: 0 }
+        traitScores: { A: -1, C: 2, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "D",
         text: "在别人想法的基础上进行补充和优化",
-        traitScores: { A: 1, C: 2, E: 1, O: 0, X: 0, P: 0 }
+        traitScores: { A: 1, C: 2, E: 1, O: -1, X: 0, P: 0 }
       }
     ]
   },
@@ -1385,22 +1385,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "主动提起他们可能都感兴趣的话题，或分享关于双方的趣事",
-        traitScores: { A: 3, C: 1, E: 0, O: 0, X: 1, P: 0 }
+        traitScores: { A: 3, C: 1, E: -1, O: 0, X: 1, P: 0 }
       },
       {
         value: "B",
         text: "感到有点责任，努力寻找他们之间的连接点",
-        traitScores: { A: 2, C: 2, E: -1, O: 0, X: 0, P: 0 }
+        traitScores: { A: 2, C: 2, E: -1, O: 0, X: 0, P: -1 }
       },
       {
         value: "C",
         text: "顺其自然，如果他们没话聊，也不用强求",
-        traitScores: { A: 0, C: 0, E: 3, O: 0, X: 0, P: 0 }
+        traitScores: { A: -1, C: 0, E: 3, O: 0, X: -1, P: 0 }
       },
       {
         value: "D",
         text: "开个玩笑缓和气氛，或者提议去做点别的事情",
-        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 2, P: 2 }
+        traitScores: { A: 0, C: -1, E: 0, O: 0, X: 2, P: 2 }
       }
     ]
   },
@@ -1688,22 +1688,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "天马行空的脑洞，可能不太现实但很有趣",
-        traitScores: { A: 0, C: -1, E: 0, O: 4, X: 1, P: 2 }
+        traitScores: { A: -1, C: -2, E: 0, O: 4, X: 1, P: 2 }
       },
       {
         value: "B",
         text: "结合现实条件的创意，可行性高",
-        traitScores: { A: 0, C: 2, E: 1, O: 2, X: 1, P: 0 }
+        traitScores: { A: 0, C: 2, E: 1, O: 1, X: 0, P: -1 }
       },
       {
         value: "C",
         text: "倾向于改良别人的想法，让它更完善",
-        traitScores: { A: 1, C: 2, E: 0, O: 1, X: 0, P: 0 }
+        traitScores: { A: 1, C: 2, E: 0, O: -1, X: -1, P: 0 }
       },
       {
         value: "D",
         text: "不太主动提想法，但会认真评估每个方案",
-        traitScores: { A: 0, C: 2, E: 1, O: 0, X: -2, P: 0 }
+        traitScores: { A: 0, C: 2, E: 1, O: -1, X: -2, P: -1 }
       }
     ]
   },
@@ -1719,22 +1719,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "单纯觉得有意思，想认识更多人",
-        traitScores: { A: 0, C: 0, E: 0, O: 1, X: 3, P: 2 }
+        traitScores: { A: -1, C: 0, E: 0, O: 1, X: 3, P: 2 }
       },
       {
         value: "B",
         text: "ta看起来有点落单，想让ta感觉被欢迎",
-        traitScores: { A: 4, C: 0, E: 1, O: 0, X: 0, P: 0 }
+        traitScores: { A: 4, C: 0, E: 1, O: -1, X: 0, P: -1 }
       },
       {
         value: "C",
         text: "觉得ta可能和我某个朋友合得来，想当个桥梁",
-        traitScores: { A: 2, C: 2, E: 0, O: 0, X: 1, P: 0 }
+        traitScores: { A: 2, C: 2, E: 0, O: -1, X: 1, P: 0 }
       },
       {
         value: "D",
         text: "说实话我一般不会主动找新认识的人聊",
-        traitScores: { A: 0, C: 0, E: 1, O: 0, X: -3, P: 0 }
+        traitScores: { A: -1, C: 0, E: 1, O: 0, X: -3, P: -1 }
       }
     ]
   },
@@ -1909,22 +1909,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "火花塞",
-        traitScores: { A: 0, C: 0, E: -1, O: 0, X: 3, P: 2 }
+        traitScores: { A: -1, C: -1, E: -1, O: 0, X: 3, P: 2 }
       },
       {
         value: "B",
         text: "粘合剂",
-        traitScores: { A: 3, C: 1, E: 0, O: 0, X: 0, P: 0 }
+        traitScores: { A: 3, C: 1, E: 0, O: -1, X: -1, P: 0 }
       },
       {
         value: "C",
         text: "指南针",
-        traitScores: { A: 0, C: 3, E: 1, O: 1, X: 0, P: 0 }
+        traitScores: { A: -1, C: 3, E: 1, O: 1, X: 0, P: -1 }
       },
       {
         value: "D",
         text: "观察者",
-        traitScores: { A: 0, C: 1, E: 2, O: 2, X: -1, P: 0 }
+        traitScores: { A: -1, C: 1, E: 2, O: 2, X: -2, P: -1 }
       }
     ]
   },
@@ -2399,22 +2399,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "找几个人一起学，互相讨论和督促",
-        traitScores: { A: 2, C: 0, E: 0, O: 0, X: 2, P: 1 }
+        traitScores: { A: 2, C: -1, E: 0, O: 0, X: 2, P: 1 }
       },
       {
         value: "B",
         text: "自己按照系统的教程一步一步来",
-        traitScores: { A: 0, C: 3, E: 1, O: 0, X: -1, P: 0 }
+        traitScores: { A: -1, C: 3, E: 1, O: -1, X: -1, P: 0 }
       },
       {
         value: "C",
         text: "边做边学，遇到问题再查资料",
-        traitScores: { A: 0, C: 0, E: 0, O: 2, X: 0, P: 2 }
+        traitScores: { A: 0, C: -1, E: 0, O: 2, X: 0, P: 2 }
       },
       {
         value: "D",
         text: "先广泛了解不同方法，找到最适合自己的再深入",
-        traitScores: { A: 0, C: 1, E: 0, O: 3, X: 0, P: 0 }
+        traitScores: { A: 0, C: 1, E: 0, O: 3, X: -1, P: 0 }
       }
     ]
   },
@@ -2972,22 +2972,22 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "热情地给ta加油打气，分享正能量语录鼓励ta",
-        traitScores: { A: 2, C: 0, E: 0, O: 0, X: 2, P: 3 }
+        traitScores: { A: 1, C: -1, E: -1, O: 0, X: 2, P: 3 }
       },
       {
         value: "B",
         text: "陪ta聊天，用温暖的态度给予情感支持",
-        traitScores: { A: 3, C: 0, E: 2, O: 0, X: 0, P: 1 }
+        traitScores: { A: 3, C: -1, E: 2, O: -1, X: 0, P: 0 }
       },
       {
         value: "C",
         text: "帮ta理性分析问题，提供实用的解决建议",
-        traitScores: { A: 1, C: 3, E: 2, O: 1, X: 0, P: 0 }
+        traitScores: { A: 0, C: 3, E: 1, O: 1, X: 0, P: -1 }
       },
       {
         value: "D",
         text: "默默陪伴，觉得有时候安静的陪伴比说什么都重要",
-        traitScores: { A: 2, C: 1, E: 2, O: 0, X: -1, P: 0 }
+        traitScores: { A: 2, C: 0, E: 2, O: 0, X: -2, P: -1 }
       }
     ]
   },
