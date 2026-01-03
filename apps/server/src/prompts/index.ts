@@ -1,4 +1,4 @@
-import { XIAOYUE_PERSONA, GENDER_ADAPTATION } from './persona';
+import { XIAOYUE_PERSONA, GENDER_NEUTRAL, GENDER_ADAPTATION } from './persona';
 import { 
   XIAOYUE_PHRASES, 
   RESPONSE_TECHNIQUES, 
@@ -20,6 +20,7 @@ import {
 
 export interface PromptModules {
   persona: string;
+  genderNeutral: string;
   genderAdaptation: string;
   phrases: string;
   responseTechniques: string;
@@ -37,6 +38,7 @@ export interface PromptModules {
 
 export const promptModules: PromptModules = {
   persona: XIAOYUE_PERSONA,
+  genderNeutral: GENDER_NEUTRAL,
   genderAdaptation: GENDER_ADAPTATION,
   phrases: XIAOYUE_PHRASES,
   responseTechniques: RESPONSE_TECHNIQUES,
@@ -129,6 +131,7 @@ export function getReasoningModules(): string {
 
 export {
   XIAOYUE_PERSONA,
+  GENDER_NEUTRAL,
   GENDER_ADAPTATION,
   XIAOYUE_PHRASES,
   RESPONSE_TECHNIQUES,
