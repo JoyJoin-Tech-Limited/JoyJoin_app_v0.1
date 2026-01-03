@@ -190,35 +190,46 @@ function calculateTraitConfidence(sampleCount: number, totalScore: number): numb
 
 /**
  * Detect user cohort based on trait signals after anchor questions
- * Used to route users to cohort-specific differentiation questions
+ * Uses differential-based priority to prevent early misclassification
  * 
- * Cohort thresholds (relaxed for avg-normalized scale):
- * - creative_explorer: O≥65, X<75 (灵感章鱼, 机智狐, 沉思猫头鹰)
- * - quiet_anchor: X≤45, C≥60 (隐身猫, 稳如龟, 定心大象)
- * - social_catalyst: X≥75, P≥65 (开心柯基, 太阳鸡, 夸夸豚)
- * - steady_harmonizer: A≥65, E≥55 (暖心熊, 淡定海豚, 织网蛛)
+ * Key insight: Use (O-X) vs (X-O) differential to determine creative vs social priority
+ * - When O > X: likely creative_explorer
+ * - When X > O and P high: likely social_catalyst
  */
 export function detectCohort(normalizedTraits: Record<TraitKey, number>): CohortType {
   const { A, C, E, O, X, P } = normalizedTraits;
   
-  // Priority order: most distinctive patterns first
-  // Thresholds relaxed to work with avg-based normalization (scale ~35-95)
+  // Calculate key differentials
+  const creativeSignal = O - X;  // Positive = creative tendency
+  const socialSignal = X + P - O; // Positive = social tendency
   
-  // Creative Explorer: High openness with moderate/low extraversion
-  // Targets: 灵感章鱼 (O:95, X:60), 机智狐 (O:92, X:72), 沉思猫头鹰 (O:90, X:35)
-  if (O >= 65 && X < 75) {
-    return 'creative_explorer';
-  }
-  
-  // Quiet Anchor: Low extraversion with structured approach
+  // Quiet Anchor: Low extraversion with structured approach (check early)
   // Targets: 隐身猫 (X:20), 稳如龟 (X:30), 定心大象 (X:40)
   if (X <= 45 && C >= 55) {
     return 'quiet_anchor';
   }
   
-  // Social Catalyst: High extraversion with high positivity
-  // Targets: 开心柯基 (X:95, P:90), 太阳鸡 (X:85, E:80), 夸夸豚 (X:75, P:95)
-  if (X >= 70 && P >= 60) {
+  // Use differential to determine creative vs social priority
+  // 灵感章鱼 (O:95, X:60) → creativeSignal = +35
+  // 开心柯基 (O:65, X:95, P:90) → creativeSignal = -30, socialSignal = +120
+  // 夸夸豚 (O:50, X:75, P:95) → creativeSignal = -25, socialSignal = +120
+  
+  if (creativeSignal >= 10) {
+    // Strong creative signal - O dominates X
+    return 'creative_explorer';
+  }
+  
+  if (creativeSignal <= -10 && (P >= 60 || X >= 70)) {
+    // Strong social signal - X dominates O with high P or X
+    return 'social_catalyst';
+  }
+  
+  // For borderline cases, use absolute thresholds
+  if (O >= 65 && O > X) {
+    return 'creative_explorer';
+  }
+  
+  if ((X >= 70 && P >= 55) || (P >= 70 && X >= 55)) {
     return 'social_catalyst';
   }
   
@@ -229,15 +240,11 @@ export function detectCohort(normalizedTraits: Record<TraitKey, number>): Cohort
   }
   
   // Fallback classification based on dominant trait
-  if (O >= 60) {
+  if (O >= 55) {
     return 'creative_explorer';
   }
   
-  if (X <= 50) {
-    return 'quiet_anchor';
-  }
-  
-  if (X >= 65) {
+  if (X >= 60 || P >= 60) {
     return 'social_catalyst';
   }
   
@@ -414,14 +421,15 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
   let cohortBonus = 0;
   if (detectedCohort && question.cohortTag) {
     if (question.cohortTag === detectedCohort) {
-      // Strong bonus for cohort-matched questions (+0.20)
-      cohortBonus = 0.20;
+      // Very strong bonus for cohort-matched questions (+0.35)
+      // This ensures cohort questions are prioritized over generic high-discrimination items
+      cohortBonus = 0.35;
     } else if (question.cohortTag === 'universal') {
       // No bonus or penalty for universal questions
       cohortBonus = 0;
     } else {
-      // Penalty for mismatched cohort questions (-0.12)
-      cohortBonus = -0.12;
+      // Significant penalty for mismatched cohort questions (-0.18)
+      cohortBonus = -0.18;
     }
   }
   
