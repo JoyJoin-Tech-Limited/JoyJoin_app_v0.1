@@ -104,7 +104,7 @@ export class PrototypeMatcher {
     userSecondaryData?: UserSecondaryData
   ): MatchScoreDetails {
     const correctedTraits = this.correctTraits(userTraits);
-    const weights = this.getTraitWeights(prototype);
+    const weights = this.getTraitWeights(prototype, correctedTraits);
     const baseSimilarity = this.weightedCosineSimilarity(correctedTraits, prototype.traitProfile, weights);
     const { penaltyFactor, exceededTraits } = this.calculateOvershootPenalty(correctedTraits, prototype);
     const signalTraitAlignment = this.calculateSignalTraitAlignment(correctedTraits, prototype);
@@ -123,11 +123,61 @@ export class PrototypeMatcher {
     };
   }
 
-  private getTraitWeights(prototype: ArchetypePrototype): Record<TraitKey, number> {
+  /**
+   * Get trait weights for matching, with dynamic adjustments based on user trait profile
+   * 
+   * High-O users (O >= 70) get increased O weight to help distinguish:
+   * - 灵感章鱼 (O:95, X:60) from 开心柯基 (O:65, X:95)
+   * - 机智狐 (O:92, X:72) from 开心柯基
+   * - 沉思猫头鹰 (O:90, X:35) from other types
+   * 
+   * This prevents the "开心柯基 attractor effect" where high-X prototypes
+   * dominate matching for users who actually have higher O than X.
+   */
+  private getTraitWeights(
+    prototype: ArchetypePrototype, 
+    userTraits?: Record<TraitKey, number>
+  ): Record<TraitKey, number> {
     const weights: Record<TraitKey, number> = { A: 1, C: 1, E: 1, O: 1, X: 1, P: 1 };
+    
+    // Apply prototype signal trait weights
     for (const signalTrait of prototype.uniqueSignalTraits) {
       weights[signalTrait] = SIGNAL_TRAIT_WEIGHT;
     }
+    
+    // Dynamic user-trait-based weight adjustments
+    if (userTraits) {
+      const userO = userTraits.O || 50;
+      const userX = userTraits.X || 50;
+      const userA = userTraits.A || 50;
+      const userP = userTraits.P || 50;
+      
+      // High-O boost: When user shows high openness (O >= 70), 
+      // increase O weight to differentiate creative types from social types
+      if (userO >= 70) {
+        weights.O = Math.max(weights.O, SIGNAL_TRAIT_WEIGHT * 1.2);
+      }
+      
+      // O > X differential: When O exceeds X by significant margin,
+      // boost O weight further to prevent X-dominant prototypes winning
+      if (userO - userX >= 15) {
+        weights.O = Math.max(weights.O, SIGNAL_TRAIT_WEIGHT * 1.4);
+        weights.X = Math.min(weights.X, 1.2); // Slightly reduce X influence
+      }
+      
+      // High-A boost: When user shows high affinity (A >= 70),
+      // increase A weight to differentiate warmth-focused types
+      if (userA >= 70) {
+        weights.A = Math.max(weights.A, SIGNAL_TRAIT_WEIGHT * 1.1);
+      }
+      
+      // A > X differential: When A exceeds X, boost A weight
+      // Helps differentiate 夸夸豚 from 开心柯基
+      if (userA - userX >= 10) {
+        weights.A = Math.max(weights.A, SIGNAL_TRAIT_WEIGHT * 1.2);
+      }
+    }
+    
     return weights;
   }
 

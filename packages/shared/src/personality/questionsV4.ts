@@ -3339,6 +3339,280 @@ export const questionsV4: AdaptiveQuestion[] = [
         traitScores: { A: 0, C: 0, E: -2, O: 0, X: -1, P: -1 }
       }
     ]
+  },
+  // ==================== Q103-Q110: 开心柯基 Attractor 专项区分题 ====================
+  // 针对 灵感章鱼/机智狐/太阳鸡/夸夸豚 → 开心柯基 的主要混淆
+  {
+    id: "Q103",
+    level: 3,
+    category: "原型区分-灵感章鱼vs开心柯基-创意深度",
+    scenarioText: "💡 朋友分享了一个有趣的新想法，邀请你一起参与。",
+    questionText: "你更看重的是？",
+    primaryTraits: ["O", "X", "P"],
+    isForcedChoice: true,
+    targetPairs: ["灵感章鱼", "开心柯基"],
+    cohortTag: 'creative_explorer',
+    discriminationIndex: 0.55,
+    options: [
+      {
+        value: "A",
+        text: "这个想法有多独特、能延伸出多少可能性",
+        traitScores: { A: 0, C: 0, E: 0, O: 4, X: -2, P: -1 }
+      },
+      {
+        value: "B",
+        text: "做这件事的过程会不会开心、氛围好不好",
+        traitScores: { A: 0, C: 0, E: 0, O: -1, X: 4, P: 3 }
+      },
+      {
+        value: "C",
+        text: "能不能认识新朋友、扩大社交圈",
+        traitScores: { A: 1, C: 0, E: 0, O: -1, X: 4, P: 2 }
+      },
+      {
+        value: "D",
+        text: "这件事是否值得我投入时间和精力",
+        traitScores: { A: 0, C: 3, E: 1, O: 0, X: -1, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q104",
+    level: 3,
+    category: "原型区分-机智狐vs开心柯基-思考vs氛围",
+    scenarioText: "🎭 参加一个话题讨论活动，气氛开始变得热闘。",
+    questionText: "你内心更期待的是？",
+    primaryTraits: ["O", "X", "P"],
+    isForcedChoice: true,
+    targetPairs: ["机智狐", "开心柯基"],
+    cohortTag: 'creative_explorer',
+    discriminationIndex: 0.55,
+    options: [
+      {
+        value: "A",
+        text: "听到让我眼前一亮的观点或角度",
+        traitScores: { A: 0, C: 0, E: 0, O: 4, X: -2, P: -1 }
+      },
+      {
+        value: "B",
+        text: "大家笑成一团、气氛嗨到极点",
+        traitScores: { A: 0, C: 0, E: 0, O: -1, X: 4, P: 3 }
+      },
+      {
+        value: "C",
+        text: "巧妙地化解分歧，让讨论更有建设性",
+        traitScores: { A: 1, C: 1, E: 1, O: 2, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "交到几个聊得来的新朋友",
+        traitScores: { A: 2, C: 0, E: 0, O: -1, X: 3, P: 2 }
+      }
+    ]
+  },
+  {
+    id: "Q105",
+    level: 3,
+    category: "原型区分-灵感章鱼vs开心柯基-独处创造",
+    scenarioText: "🌙 一个安静的周末晚上，你有一整晚自由时间。",
+    questionText: "你最想做的是？",
+    primaryTraits: ["O", "X", "C"],
+    isForcedChoice: true,
+    targetPairs: ["灵感章鱼", "开心柯基"],
+    cohortTag: 'creative_explorer',
+    discriminationIndex: 0.58,
+    options: [
+      {
+        value: "A",
+        text: "沉浸在某个创意项目或探索新领域",
+        traitScores: { A: 0, C: 0, E: 0, O: 4, X: -3, P: -1 }
+      },
+      {
+        value: "B",
+        text: "约几个好友出来聚聚、聊聊天",
+        traitScores: { A: 1, C: 0, E: 0, O: -1, X: 4, P: 2 }
+      },
+      {
+        value: "C",
+        text: "在社交媒体上互动、看看朋友们在干嘛",
+        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 2, P: 1 }
+      },
+      {
+        value: "D",
+        text: "看部好电影或读本好书，享受独处",
+        traitScores: { A: 0, C: 1, E: 1, O: 3, X: -2, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q106",
+    level: 3,
+    category: "原型区分-机智狐vs开心柯基-问题解决",
+    scenarioText: "🧩 遇到一个棘手的问题需要解决。",
+    questionText: "你的第一反应是？",
+    primaryTraits: ["O", "C", "X"],
+    isForcedChoice: true,
+    targetPairs: ["机智狐", "开心柯基"],
+    cohortTag: 'creative_explorer',
+    discriminationIndex: 0.52,
+    options: [
+      {
+        value: "A",
+        text: "从不同角度分析，找出创新的解法",
+        traitScores: { A: 0, C: 1, E: 0, O: 4, X: -2, P: -1 }
+      },
+      {
+        value: "B",
+        text: "找大家一起头脑风暴，集思广益",
+        traitScores: { A: 1, C: 0, E: 0, O: 0, X: 4, P: 2 }
+      },
+      {
+        value: "C",
+        text: "按部就班，用已验证的方法一步步解决",
+        traitScores: { A: 0, C: 3, E: 1, O: -1, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "先放一放，也许灵感会在不经意间出现",
+        traitScores: { A: 0, C: -1, E: 2, O: 2, X: -1, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q107",
+    level: 3,
+    category: "原型区分-太阳鸡vs开心柯基-能量来源",
+    scenarioText: "⚡ 连续工作一周后，你感觉能量有点低。",
+    questionText: "什么能最快让你恢复活力？",
+    primaryTraits: ["X", "E", "P"],
+    isForcedChoice: true,
+    targetPairs: ["太阳鸡", "开心柯基"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.50,
+    options: [
+      {
+        value: "A",
+        text: "去热闘的场合感受氛围，被人群的能量感染",
+        traitScores: { A: 0, C: 0, E: 2, O: 0, X: 4, P: 1 }
+      },
+      {
+        value: "B",
+        text: "和亲近的朋友深度聊天，互相鼓励打气",
+        traitScores: { A: 2, C: 0, E: 0, O: 0, X: 2, P: 3 }
+      },
+      {
+        value: "C",
+        text: "做点让自己开心的事，比如吃顿好的、看个喜剧",
+        traitScores: { A: 0, C: 0, E: 1, O: 0, X: 1, P: 2 }
+      },
+      {
+        value: "D",
+        text: "好好睡一觉，安静地休息恢复",
+        traitScores: { A: 0, C: 1, E: 2, O: 0, X: -2, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q108",
+    level: 3,
+    category: "原型区分-太阳鸡vs开心柯基-社交目标",
+    scenarioText: "🥳 参加一个人比较多的聚会活动。",
+    questionText: "你最期待的是什么？",
+    primaryTraits: ["X", "E", "A"],
+    isForcedChoice: true,
+    targetPairs: ["太阳鸡", "开心柯基"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.48,
+    options: [
+      {
+        value: "A",
+        text: "成为焦点、带动全场气氛high起来",
+        traitScores: { A: 0, C: 0, E: 3, O: 0, X: 4, P: 1 }
+      },
+      {
+        value: "B",
+        text: "和每个人都聊得开心、让大家都舒服",
+        traitScores: { A: 2, C: 0, E: 0, O: 0, X: 3, P: 3 }
+      },
+      {
+        value: "C",
+        text: "找到几个特别聊得来的人深入交流",
+        traitScores: { A: 1, C: 1, E: 0, O: 1, X: 1, P: 1 }
+      },
+      {
+        value: "D",
+        text: "观察大家的互动，感受社交的有趣之处",
+        traitScores: { A: 0, C: 1, E: 0, O: 2, X: -1, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q109",
+    level: 3,
+    category: "原型区分-夸夸豚vs开心柯基-表达方式",
+    scenarioText: "🎁 朋友完成了一件很棒的事情。",
+    questionText: "你会怎么表达你的欣赏？",
+    primaryTraits: ["P", "A", "X"],
+    isForcedChoice: true,
+    targetPairs: ["夸夸豚", "开心柯基"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.52,
+    options: [
+      {
+        value: "A",
+        text: "真诚地赞美ta的努力和成果，具体说出优点",
+        traitScores: { A: 2, C: 1, E: 0, O: 0, X: 0, P: 4 }
+      },
+      {
+        value: "B",
+        text: "热情地庆祝，提议一起出去high一下！",
+        traitScores: { A: 1, C: 0, E: 0, O: 0, X: 4, P: 2 }
+      },
+      {
+        value: "C",
+        text: "分享到朋友圈帮ta宣传，让更多人知道",
+        traitScores: { A: 1, C: 0, E: 0, O: 0, X: 2, P: 2 }
+      },
+      {
+        value: "D",
+        text: "默默记在心里，下次有机会帮ta一把",
+        traitScores: { A: 2, C: 2, E: 1, O: 0, X: -1, P: 1 }
+      }
+    ]
+  },
+  {
+    id: "Q110",
+    level: 3,
+    category: "原型区分-夸夸豚vs开心柯基-关注焦点",
+    scenarioText: "👥 在一个新认识的小群体里。",
+    questionText: "你自然而然会注意什么？",
+    primaryTraits: ["A", "P", "X"],
+    isForcedChoice: true,
+    targetPairs: ["夸夸豚", "开心柯基"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.50,
+    options: [
+      {
+        value: "A",
+        text: "每个人的情绪状态，谁需要被关注和肯定",
+        traitScores: { A: 3, C: 0, E: 1, O: 0, X: 0, P: 3 }
+      },
+      {
+        value: "B",
+        text: "怎么让气氛更活跃、让大家玩得更开心",
+        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 4, P: 2 }
+      },
+      {
+        value: "C",
+        text: "谁比较有趣、值得深入认识",
+        traitScores: { A: 0, C: 1, E: 0, O: 2, X: 2, P: 0 }
+      },
+      {
+        value: "D",
+        text: "整体的群体动态和人际关系结构",
+        traitScores: { A: 1, C: 2, E: 0, O: 2, X: 0, P: 0 }
+      }
+    ]
   }
 ];
 
