@@ -52,7 +52,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "我都可以！哪个都好玩！",
-        traitScores: { A: 1, C: -1, E: 0, O: 3, X: 0, P: 2 }
+        traitScores: { A: 1, C: -1, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "B",
@@ -62,7 +62,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "C",
         text: "要不试试最特别的那个？",
-        traitScores: { A: -1, C: -1, E: 0, O: 3, X: 1, P: 0 }
+        traitScores: { A: -1, C: -1, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "D",
@@ -207,7 +207,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "直接抛出，引发新讨论",
-        traitScores: { A: -1, C: -1, E: 0, O: 3, X: 2, P: 1 }
+        traitScores: { A: -1, C: -1, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "B",
@@ -301,7 +301,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "刺激！雨中玩耍别有风味。",
-        traitScores: { A: 0, C: 0, E: 1, O: 3, X: 0, P: 2 }
+        traitScores: { A: 0, C: 0, E: 1, O: 3, X: -1, P: 0 }
       },
       {
         value: "B",
@@ -658,7 +658,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "立刻兴奋地指出并利用，享受策略成功的快感",
-        traitScores: { A: 0, C: 2, E: 0, O: 3, X: 1, P: 1 }
+        traitScores: { A: 0, C: 2, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "B",
@@ -1211,7 +1211,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "听起来很有趣，我很愿意尝试一下",
-        traitScores: { A: 1, C: 0, E: 0, O: 3, X: 1, P: 1 }
+        traitScores: { A: 1, C: 0, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "B",
@@ -1491,7 +1491,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "B",
         text: "在基础框架上加入自己的创意 and 改造",
-        traitScores: { A: 0, C: 1, E: 0, O: 3, X: 1, P: 0 }
+        traitScores: { A: 0, C: 1, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "C",
@@ -1699,7 +1699,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "天马行空的脑洞，可能不太现实但很有趣",
-        traitScores: { A: -1, C: -2, E: 0, O: 4, X: 1, P: 2 }
+        traitScores: { A: -1, C: -2, E: 0, O: 4, X: -1, P: 0 }
       },
       {
         value: "B",
@@ -1865,7 +1865,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "C",
         text: "我能提供独特的视角、知识或创意灵感",
-        traitScores: { A: 0, C: 0, E: 0, O: 3, X: 1, P: 0 }
+        traitScores: { A: 0, C: 0, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "D",
@@ -2145,7 +2145,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "B",
         text: "充满了新鲜感、创意和意想不到的惊喜",
-        traitScores: { A: 0, C: 0, E: 0, O: 3, X: 1, P: 0 }
+        traitScores: { A: 0, C: 0, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "C",
@@ -2600,7 +2600,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "哇，这个角度好新颖！",
-        traitScores: { A: 0, C: 0, E: 0, O: 3, X: 1, P: 1 }
+        traitScores: { A: 0, C: 0, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "B",
@@ -2662,7 +2662,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "随便走走，看到有趣的就进去",
-        traitScores: { A: 0, C: 0, E: 0, O: 3, X: 1, P: 2 }
+        traitScores: { A: 0, C: 0, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "B",
@@ -2740,7 +2740,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "C",
         text: "好奇心驱动！评价两极反而更想亲自验证",
-        traitScores: { A: -1, C: 0, E: 0, O: 3, X: 1, P: 0 }
+        traitScores: { A: -1, C: 0, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "D",
@@ -2828,7 +2828,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "B",
         text: "立刻跟团队分享，说不定能让项目更出彩",
-        traitScores: { A: 1, C: -1, E: 0, O: 3, X: 1, P: 1 }
+        traitScores: { A: 1, C: -1, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "C",
@@ -2958,7 +2958,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "B",
         text: "趁着灵感还在就直接动手，边做边调整",
-        traitScores: { A: -1, C: -2, E: 0, O: 3, X: 1, P: 1 }
+        traitScores: { A: -1, C: -2, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "C",
@@ -3062,7 +3062,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "C",
         text: "喜欢跳跃式学习，哪里有灵感就学哪里",
-        traitScores: { A: 0, C: -2, E: 0, O: 3, X: 1, P: 1 }
+        traitScores: { A: 0, C: -2, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "D",
@@ -3095,7 +3095,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "C",
         text: "思考事物之间的联系，寻找创新的解决思路",
-        traitScores: { A: 0, C: 0, E: -1, O: 3, X: 1, P: 0 }
+        traitScores: { A: 0, C: 0, E: -1, O: 3, X: -1, P: 0 }
       },
       {
         value: "D",
@@ -3118,7 +3118,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "想出几个创意方案，灵活应变找到突破口",
-        traitScores: { A: -1, C: 0, E: 0, O: 3, X: 1, P: 2 }
+        traitScores: { A: -1, C: 0, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "B",
@@ -3287,7 +3287,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "随性探索，跟着兴趣跳转到各种相关话题",
-        traitScores: { A: 0, C: -2, E: 0, O: 3, X: 1, P: 1 }
+        traitScores: { A: 0, C: -2, E: 0, O: 3, X: -1, P: 0 }
       },
       {
         value: "B",
@@ -3556,27 +3556,27 @@ export const questionsV4: AdaptiveQuestion[] = [
     isForcedChoice: true,
     targetPairs: ["夸夸豚", "开心柯基"],
     cohortTag: 'social_catalyst',
-    discriminationIndex: 0.52,
+    discriminationIndex: 0.55,
     options: [
       {
         value: "A",
         text: "真诚地赞美ta的努力和成果，具体说出优点",
-        traitScores: { A: 2, C: 1, E: 0, O: 0, X: 0, P: 4 }
+        traitScores: { A: 2, C: 1, E: 0, O: 0, X: -2, P: 4 }
       },
       {
         value: "B",
         text: "热情地庆祝，提议一起出去high一下！",
-        traitScores: { A: 1, C: 0, E: 0, O: 0, X: 4, P: 2 }
+        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 4, P: -1 }
       },
       {
         value: "C",
         text: "分享到朋友圈帮ta宣传，让更多人知道",
-        traitScores: { A: 1, C: 0, E: 0, O: 0, X: 2, P: 2 }
+        traitScores: { A: 1, C: 0, E: 0, O: 0, X: 1, P: 2 }
       },
       {
         value: "D",
         text: "默默记在心里，下次有机会帮ta一把",
-        traitScores: { A: 2, C: 2, E: 1, O: 0, X: -1, P: 1 }
+        traitScores: { A: 2, C: 2, E: 1, O: 0, X: -2, P: 1 }
       }
     ]
   },
@@ -3590,17 +3590,17 @@ export const questionsV4: AdaptiveQuestion[] = [
     isForcedChoice: true,
     targetPairs: ["夸夸豚", "开心柯基"],
     cohortTag: 'social_catalyst',
-    discriminationIndex: 0.50,
+    discriminationIndex: 0.55,
     options: [
       {
         value: "A",
         text: "每个人的情绪状态，谁需要被关注和肯定",
-        traitScores: { A: 3, C: 0, E: 1, O: 0, X: 0, P: 3 }
+        traitScores: { A: 3, C: 0, E: 1, O: 0, X: -2, P: 4 }
       },
       {
         value: "B",
         text: "怎么让气氛更活跃、让大家玩得更开心",
-        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 4, P: 2 }
+        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 4, P: -1 }
       },
       {
         value: "C",
@@ -3611,6 +3611,144 @@ export const questionsV4: AdaptiveQuestion[] = [
         value: "D",
         text: "整体的群体动态和人际关系结构",
         traitScores: { A: 1, C: 2, E: 0, O: 2, X: 0, P: 0 }
+      }
+    ]
+  },
+  // Q111-Q112: 价值取舍题 - 区分赞美驱动(夸夸豚) vs 玩乐驱动(开心柯基)
+  {
+    id: "Q111",
+    level: 3,
+    category: "价值取舍-夸夸豚vs开心柯基-社交满足感",
+    scenarioText: "🌟 回顾一次让你特别满足的社交经历。",
+    questionText: "是什么让你觉得这次经历特别好？",
+    primaryTraits: ["P", "X", "A"],
+    isForcedChoice: true,
+    targetPairs: ["夸夸豚", "开心柯基"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.58,
+    options: [
+      {
+        value: "A",
+        text: "我让在场的人感受到了被认可和支持",
+        traitScores: { A: 2, C: 0, E: 1, O: 0, X: -2, P: 4 }
+      },
+      {
+        value: "B",
+        text: "整个过程充满欢笑，大家都玩得很嗨",
+        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 4, P: -1 }
+      },
+      {
+        value: "C",
+        text: "交到了新朋友，扩展了社交圈子",
+        traitScores: { A: 1, C: 0, E: 0, O: 1, X: 2, P: 1 }
+      },
+      {
+        value: "D",
+        text: "进行了有深度的对话，收获了新的想法",
+        traitScores: { A: 0, C: 1, E: 0, O: 3, X: -1, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q112",
+    level: 3,
+    category: "价值取舍-夸夸豚vs开心柯基-给予方式",
+    scenarioText: "💝 朋友正在经历低谷期，需要你的支持。",
+    questionText: "你最可能怎么帮助ta？",
+    primaryTraits: ["P", "A", "X"],
+    isForcedChoice: true,
+    targetPairs: ["夸夸豚", "开心柯基"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.58,
+    options: [
+      {
+        value: "A",
+        text: "认真倾听，给予真诚的鼓励和肯定",
+        traitScores: { A: 3, C: 1, E: 1, O: 0, X: -2, P: 4 }
+      },
+      {
+        value: "B",
+        text: "带ta去做些好玩的事，用快乐转移注意力",
+        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 4, P: -1 }
+      },
+      {
+        value: "C",
+        text: "帮ta分析问题，一起想解决方案",
+        traitScores: { A: 0, C: 2, E: 0, O: 2, X: 0, P: 1 }
+      },
+      {
+        value: "D",
+        text: "默默陪伴，让ta知道我一直在",
+        traitScores: { A: 2, C: 0, E: 2, O: 0, X: -2, P: 2 }
+      }
+    ]
+  },
+  // Q113-Q114: 太阳鸡 vs 暖心熊 专项区分题 (E+X vs A+P)
+  {
+    id: "Q113",
+    level: 3,
+    category: "原型区分-太阳鸡vs暖心熊-社交能量",
+    scenarioText: "🎉 聚会上气氛开始变得热烈起来。",
+    questionText: "你更倾向于怎么做？",
+    primaryTraits: ["E", "X", "A", "P"],
+    isForcedChoice: true,
+    targetPairs: ["太阳鸡", "暖心熊"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.60,
+    options: [
+      {
+        value: "A",
+        text: "自然地成为焦点，用热情感染全场",
+        traitScores: { A: 0, C: 0, E: 4, O: 0, X: 4, P: -1 }
+      },
+      {
+        value: "B",
+        text: "关注每个人的状态，确保没人被冷落",
+        traitScores: { A: 4, C: 0, E: -1, O: 0, X: -1, P: 3 }
+      },
+      {
+        value: "C",
+        text: "和身边的人深入聊天，享受高质量对话",
+        traitScores: { A: 2, C: 1, E: 0, O: 1, X: 0, P: 1 }
+      },
+      {
+        value: "D",
+        text: "安静享受热闹的氛围，不太参与中心互动",
+        traitScores: { A: 0, C: 1, E: 2, O: 0, X: -2, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q114",
+    level: 3,
+    category: "原型区分-太阳鸡vs暖心熊-给予方式",
+    scenarioText: "💫 朋友向你倾诉最近的烦恼。",
+    questionText: "你通常会怎么回应？",
+    primaryTraits: ["A", "P", "E", "X"],
+    isForcedChoice: true,
+    targetPairs: ["太阳鸡", "暖心熊"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.58,
+    options: [
+      {
+        value: "A",
+        text: "用幽默和乐观的态度帮ta振作起来",
+        traitScores: { A: 0, C: 0, E: 3, O: 0, X: 4, P: 0 }
+      },
+      {
+        value: "B",
+        text: "认真倾听，给予温暖的理解和支持",
+        traitScores: { A: 4, C: 0, E: 0, O: 0, X: -2, P: 4 }
+      },
+      {
+        value: "C",
+        text: "分享自己的经验，提供实用的建议",
+        traitScores: { A: 1, C: 2, E: 0, O: 1, X: 1, P: 1 }
+      },
+      {
+        value: "D",
+        text: "陪ta做点开心的事，转移注意力",
+        traitScores: { A: 1, C: 0, E: 1, O: 0, X: 3, P: 1 }
       }
     ]
   }
