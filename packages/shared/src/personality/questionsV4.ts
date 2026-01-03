@@ -2892,6 +2892,163 @@ export const questionsV4: AdaptiveQuestion[] = [
         traitScores: { A: 0, C: 0, E: -2, O: 0, X: 0, P: -2 }
       }
     ]
+  },
+  // === 针对易混淆原型的精准区分题 ===
+  // Q90-Q92: 针对开心柯基vs太阳鸡、机智狐vs灵感章鱼、淡定海豚vs夸夸豚/暖心熊
+  {
+    id: "Q90",
+    level: 2,
+    category: "原型区分-柯基vs太阳鸡",
+    scenarioText: "🎉 朋友聚会上，气氛有点冷场。",
+    questionText: "你的第一反应是？",
+    primaryTraits: ["X", "E", "C"],
+    isForcedChoice: true,
+    options: [
+      {
+        value: "A",
+        text: "立刻开始讲笑话、起哄，用自己的热情带动气氛",
+        traitScores: { A: 0, C: -1, E: 0, O: 1, X: 3, P: 2 }
+      },
+      {
+        value: "B",
+        text: "细心观察每个人的状态，找话题让大家都能参与进来",
+        traitScores: { A: 2, C: 2, E: 2, O: 0, X: 1, P: 1 }
+      },
+      {
+        value: "C",
+        text: "默默准备些零食饮料，照顾好大家的需要",
+        traitScores: { A: 2, C: 2, E: 2, O: 0, X: -1, P: 0 }
+      },
+      {
+        value: "D",
+        text: "等别人先打破僵局，我不太擅长主导场面",
+        traitScores: { A: 0, C: 0, E: 1, O: 0, X: -2, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q91",
+    level: 2,
+    category: "原型区分-机智狐vs灵感章鱼",
+    scenarioText: "💡 你有一个很棒的创意想法，需要把它变成现实。",
+    questionText: "你通常会？",
+    primaryTraits: ["C", "O"],
+    isForcedChoice: true,
+    options: [
+      {
+        value: "A",
+        text: "先列出详细的执行计划和时间表，一步步推进",
+        traitScores: { A: 0, C: 3, E: 1, O: 1, X: 0, P: 0 }
+      },
+      {
+        value: "B",
+        text: "趁着灵感还在就直接动手，边做边调整",
+        traitScores: { A: 0, C: -2, E: 0, O: 3, X: 1, P: 1 }
+      },
+      {
+        value: "C",
+        text: "先和别人分享讨论，收集反馈再决定怎么做",
+        traitScores: { A: 2, C: 1, E: 0, O: 1, X: 1, P: 0 }
+      },
+      {
+        value: "D",
+        text: "想法太多反而选择困难，可能最后什么都没做",
+        traitScores: { A: 0, C: -1, E: -1, O: 2, X: 0, P: -1 }
+      }
+    ]
+  },
+  {
+    id: "Q92",
+    level: 2,
+    category: "原型区分-海豚vs夸夸豚vs暖心熊",
+    scenarioText: "😊 好朋友最近工作压力大，向你倾诉烦恼。",
+    questionText: "你倾向于？",
+    primaryTraits: ["A", "C", "E"],
+    isForcedChoice: true,
+    options: [
+      {
+        value: "A",
+        text: "热情地给ta加油打气，分享正能量语录鼓励ta",
+        traitScores: { A: 2, C: 0, E: 0, O: 0, X: 2, P: 3 }
+      },
+      {
+        value: "B",
+        text: "陪ta聊天，用温暖的态度给予情感支持",
+        traitScores: { A: 3, C: 0, E: 2, O: 0, X: 0, P: 1 }
+      },
+      {
+        value: "C",
+        text: "帮ta理性分析问题，提供实用的解决建议",
+        traitScores: { A: 1, C: 3, E: 2, O: 1, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "默默陪伴，觉得有时候安静的陪伴比说什么都重要",
+        traitScores: { A: 2, C: 1, E: 2, O: 0, X: -1, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q93",
+    level: 2,
+    category: "原型区分-暖心熊vs定心大象vs织网蛛",
+    scenarioText: "🤝 朋友遇到困难需要帮忙，你通常会？",
+    questionText: "你更倾向于？",
+    primaryTraits: ["A", "C", "X"],
+    isForcedChoice: true,
+    options: [
+      {
+        value: "A",
+        text: "第一时间放下手头的事去帮忙，朋友有难义不容辞",
+        traitScores: { A: 3, C: 0, E: 0, O: 0, X: 1, P: 1 }
+      },
+      {
+        value: "B",
+        text: "先了解清楚情况，制定合理的帮助计划再行动",
+        traitScores: { A: 1, C: 3, E: 2, O: 0, X: 0, P: 0 }
+      },
+      {
+        value: "C",
+        text: "帮忙的同时也会协调其他资源，让帮助更有效率",
+        traitScores: { A: 2, C: 2, E: 1, O: 1, X: 1, P: 0 }
+      },
+      {
+        value: "D",
+        text: "想帮但不太确定怎么帮最好，先观察再说",
+        traitScores: { A: 1, C: 1, E: 1, O: 0, X: -1, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q94",
+    level: 2,
+    category: "原型区分-沉思猫头鹰vs稳如龟vs灵感章鱼",
+    scenarioText: "📚 学习新知识或技能时，你的习惯是？",
+    questionText: "你通常会？",
+    primaryTraits: ["O", "C", "X"],
+    isForcedChoice: true,
+    options: [
+      {
+        value: "A",
+        text: "深入研究原理和细节，追求真正理解而非表面了解",
+        traitScores: { A: 0, C: 2, E: 1, O: 2, X: 0, P: 0 }
+      },
+      {
+        value: "B",
+        text: "稳扎稳打，按部就班地学习，不急于求成",
+        traitScores: { A: 0, C: 3, E: 2, O: 0, X: -1, P: 0 }
+      },
+      {
+        value: "C",
+        text: "喜欢跳跃式学习，哪里有灵感就学哪里",
+        traitScores: { A: 0, C: -2, E: 0, O: 3, X: 1, P: 1 }
+      },
+      {
+        value: "D",
+        text: "边学边实践，在应用中加深理解",
+        traitScores: { A: 0, C: 1, E: 0, O: 1, X: 1, P: 1 }
+      }
+    ]
   }
 ];
 

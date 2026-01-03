@@ -290,6 +290,17 @@ export function getRemainingSkips(state: EngineState): number {
   return MAX_SKIP_COUNT - state.skipCount;
 }
 
+// Mapping from question category keywords to confusable archetype pairs
+const TARGETED_QUESTION_PAIRS: Record<string, string[]> = {
+  '柯基vs太阳鸡': ['开心柯基', '太阳鸡'],
+  '机智狐vs灵感章鱼': ['机智狐', '灵感章鱼'],
+  '海豚vs夸夸豚vs暖心熊': ['淡定海豚', '夸夸豚', '暖心熊'],
+  '织网蛛vs暖心熊': ['织网蛛', '暖心熊'],
+  '沉思猫头鹰vs稳如龟': ['沉思猫头鹰', '稳如龟'],
+  '暖心熊vs定心大象vs织网蛛': ['暖心熊', '定心大象', '织网蛛'],
+  '沉思猫头鹰vs稳如龟vs灵感章鱼': ['沉思猫头鹰', '稳如龟', '灵感章鱼'],
+};
+
 function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState): number {
   const { traitConfidences, currentMatches } = state;
   
@@ -303,6 +314,8 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
   informationGain /= question.primaryTraits.length;
   
   let discriminationBonus = 0;
+  let targetedPairBonus = 0;
+  
   if (currentMatches.length >= 2) {
     const top2 = currentMatches.slice(0, 2);
     const proto1 = archetypePrototypes[top2[0].archetype];
@@ -314,6 +327,23 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
         discriminationBonus += diff / 100;
       }
       discriminationBonus /= question.primaryTraits.length;
+      
+      // Check if this question specifically targets the current confusable pair
+      const topArchetypes = [top2[0].archetype, top2[1].archetype];
+      for (const [categoryKey, targetPairs] of Object.entries(TARGETED_QUESTION_PAIRS)) {
+        if (question.category.includes(categoryKey)) {
+          // Check if both top archetypes are in this question's target pairs
+          const matchCount = topArchetypes.filter(a => targetPairs.includes(a)).length;
+          if (matchCount >= 2) {
+            // Strong bonus - this question is designed exactly for this confusion
+            targetedPairBonus = 0.5;
+          } else if (matchCount >= 1) {
+            // Moderate bonus - at least one archetype matches
+            targetedPairBonus = 0.2;
+          }
+          break;
+        }
+      }
     }
   }
   
@@ -321,11 +351,16 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
   
   const discriminationIndex = question.discriminationIndex || 0.3;
   
+  // Forced choice questions get a small boost when differentiating close matches
+  const forcedChoiceBonus = question.isForcedChoice && currentMatches.length >= 2 ? 0.1 : 0;
+  
   return (
-    informationGain * 0.4 +
-    discriminationBonus * 0.3 +
-    discriminationIndex * 0.2 +
-    levelBonus * 0.1
+    informationGain * 0.3 +
+    discriminationBonus * 0.2 +
+    targetedPairBonus * 0.25 +
+    discriminationIndex * 0.15 +
+    levelBonus * 0.05 +
+    forcedChoiceBonus * 0.05
   );
 }
 
