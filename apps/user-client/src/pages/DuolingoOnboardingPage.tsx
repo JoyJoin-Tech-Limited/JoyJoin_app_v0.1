@@ -183,12 +183,14 @@ function OnboardingProgress({
   progress,
   onBack,
   showBack = true,
+  displayRange,
 }: { 
   current: number; 
   total: number;
   progress: number;
   onBack?: () => void;
   showBack?: boolean;
+  displayRange?: string;
 }) {
   return (
     <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
@@ -211,7 +213,7 @@ function OnboardingProgress({
           />
           <div className="flex justify-between mt-1">
             <span className="text-xs text-muted-foreground">
-              第{Math.floor(current)}题 / 约12题
+              第{Math.floor(current)}题 / 约{displayRange || "12-16"}题
             </span>
           </div>
         </div>

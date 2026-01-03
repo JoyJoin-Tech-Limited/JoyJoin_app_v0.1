@@ -2626,6 +2626,10 @@ export const assessmentSessions = pgTable("assessment_sessions", {
   validityScore: numeric("validity_score", { precision: 3, scale: 2 }),
   totalQuestions: integer("total_questions").default(0),
   isExtended: boolean("is_extended").default(false), // Whether session was extended to 20 questions
+  algorithmVersion: varchar("algorithm_version", { length: 20 }), // v1 or v2 matcher algorithm
+  matchDetailsJson: jsonb("match_details_json"), // V2 explainable match result with traitDeltas, decisiveReason
+  primaryArchetype: varchar("primary_archetype", { length: 50 }), // Final matched archetype
+  isDecisive: boolean("is_decisive"), // Whether match was decisive (clear winner)
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

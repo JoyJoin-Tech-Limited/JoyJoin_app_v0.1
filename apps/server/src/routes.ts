@@ -10217,6 +10217,112 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     return shuffled;
   }
 
+  // ============ Unified Assessment Result Endpoint (V2 Integration) ============
+  // This endpoint normalizes both V1 and V2 results into a consistent shape
+  app.get('/api/assessment/result', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user!.id;
+      const { getChemistryForArchetype, archetypePrototypes } = await import('@shared/personality/prototypes');
+      
+      // First try to get V4 assessment session
+      const session = await storage.getAssessmentSessionByUser(userId);
+      
+      if (session && session.phase === 'completed') {
+        const finalResult = session.finalResult as any;
+        const primaryArchetype = session.primaryArchetype || finalResult?.primaryArchetype || finalResult?.archetype;
+        
+        if (!primaryArchetype) {
+          return res.status(400).json({ message: 'No archetype found in result' });
+        }
+
+        // Generate dynamic chemistry from prototypes
+        const chemistryList = getChemistryForArchetype(primaryArchetype);
+        
+        // Get archetype prototype for trait profile
+        const prototype = archetypePrototypes[primaryArchetype];
+        
+        // Normalize trait scores (V2 stores 0-1, V1 expects 0-100)
+        const traitScores = session.traitScores as Record<string, number> || {};
+        const normalizeScore = (score: number | undefined, fallback: number = 50): number => {
+          if (score === undefined || score === null) return fallback;
+          // V2 scores are 0-1, convert to 0-100 percentage
+          if (score <= 1) return Math.round(score * 100);
+          // Already in 0-100 range
+          return Math.round(score);
+        };
+        
+        const normalizedTraits = {
+          affinityScore: normalizeScore(traitScores.A),
+          opennessScore: normalizeScore(traitScores.O),
+          conscientiousnessScore: normalizeScore(traitScores.C),
+          emotionalStabilityScore: normalizeScore(traitScores.E),
+          extraversionScore: normalizeScore(traitScores.X),
+          positivityScore: normalizeScore(traitScores.P),
+        };
+
+        // Get total questions from session answers count
+        const answers = await storage.getAssessmentAnswers(session.id);
+        const totalQuestions = answers?.length || finalResult?.questionCount || 12;
+
+        // Build normalized response
+        const response = {
+          algorithmVersion: session.algorithmVersion || 'v1',
+          primaryRole: primaryArchetype,  // V1 compatible field name
+          primaryArchetype: primaryArchetype,
+          secondaryRole: finalResult?.secondaryArchetype,
+          ...normalizedTraits,
+          totalQuestions,
+          chemistryList: chemistryList.map(c => ({
+            role: c.archetype,
+            percentage: c.percentage,
+            reason: c.reason,
+          })),
+          archetypeTraitProfile: prototype?.traitProfile || null,
+          matchDetails: session.matchDetailsJson || null,
+          isDecisive: session.isDecisive || false,
+          completedAt: session.completedAt,
+        };
+        
+        return res.json(response);
+      }
+      
+      // Fallback to legacy role_results table
+      const legacyResult = await storage.getRoleResult(userId);
+      if (legacyResult) {
+        const chemistryList = getChemistryForArchetype(legacyResult.primaryRole);
+        const prototype = archetypePrototypes[legacyResult.primaryRole];
+        
+        return res.json({
+          algorithmVersion: 'v1',
+          primaryRole: legacyResult.primaryRole,
+          primaryArchetype: legacyResult.primaryRole,
+          secondaryRole: legacyResult.secondaryRole,
+          affinityScore: legacyResult.affinityScore,
+          opennessScore: legacyResult.opennessScore,
+          conscientiousnessScore: legacyResult.conscientiousnessScore,
+          emotionalStabilityScore: legacyResult.emotionalStabilityScore,
+          extraversionScore: legacyResult.extraversionScore,
+          positivityScore: legacyResult.positivityScore,
+          totalQuestions: 12,
+          chemistryList: chemistryList.map(c => ({
+            role: c.archetype,
+            percentage: c.percentage,
+            reason: c.reason,
+          })),
+          archetypeTraitProfile: prototype?.traitProfile || null,
+          matchDetails: null,
+          isDecisive: false,
+          completedAt: legacyResult.createdAt,
+        });
+      }
+      
+      return res.status(404).json({ message: 'No assessment result found' });
+    } catch (error: any) {
+      console.error('[Unified Assessment Result] Error:', error);
+      res.status(500).json({ message: 'Failed to get result', error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
