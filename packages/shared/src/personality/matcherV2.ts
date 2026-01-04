@@ -608,8 +608,117 @@ function calculateAsymmetricAvoidPenalty(
   return { totalPenalty, penaltyDetails };
 }
 
+/**
+ * V2.4: Bidirectional Opposite-Pole Conflict Gate
+ * 
+ * Detects when user and archetype are on OPPOSITE sides of the 50-point midpoint.
+ * This represents a qualitative personality mismatch (e.g., introvert vs extrovert).
+ * 
+ * Rule: If (archetype <50 AND user >55) OR (archetype >55 AND user <45) → conflict
+ * 
+ * Penalty scales with z-gap:
+ * - ≥0.8 SD (12 pts): 0.4 multiplier
+ * - ≥1.2 SD (18 pts): 0.2 multiplier  
+ * - ≥1.8 SD (27 pts): 0.1 multiplier
+ */
+interface OppositePoleConflict {
+  trait: TraitKey;
+  archetypeScore: number;
+  userScore: number;
+  gapSD: number;
+  multiplier: number;
+  traitImportance: 'primary' | 'secondary' | 'avoid' | 'neutral';
+}
+
+function calculateOppositePoleConflictMultiplier(
+  userTraits: Record<TraitKey, number>,
+  archetypeProfile: Record<TraitKey, number>,
+  archetypeName: string
+): { finalMultiplier: number; conflicts: OppositePoleConflict[] } {
+  const conflicts: OppositePoleConflict[] = [];
+  let combinedMultiplier = 1.0;
+  
+  // Get soul trait config for importance weighting
+  const soulConfig = PROTOTYPE_SOUL_TRAITS[archetypeName];
+  
+  for (const trait of ALL_TRAITS) {
+    const archetypeScore = archetypeProfile[trait];
+    const userScore = userTraits[trait] ?? TRAIT_MEAN;
+    
+    // Check for opposite-pole conflict
+    const archetypeLow = archetypeScore < 50;
+    const archetypeHigh = archetypeScore > 55;
+    const userLow = userScore < 45;
+    const userHigh = userScore > 55;
+    
+    const isConflict = (archetypeLow && userHigh) || (archetypeHigh && userLow);
+    
+    if (!isConflict) continue;
+    
+    // Calculate z-gap
+    const gapSD = Math.abs(toZScore(userScore) - toZScore(archetypeScore));
+    
+    // Determine trait importance
+    let traitImportance: 'primary' | 'secondary' | 'avoid' | 'neutral' = 'neutral';
+    let importanceMultiplier = 1.0;
+    
+    if (soulConfig) {
+      if (trait in soulConfig.primary) {
+        traitImportance = 'primary';
+        importanceMultiplier = 1.2; // Primary traits are more important
+      } else if (trait in soulConfig.avoid) {
+        traitImportance = 'avoid';
+        importanceMultiplier = 1.5; // Avoid traits get strongest penalty
+      } else if (trait in soulConfig.secondary) {
+        traitImportance = 'secondary';
+        importanceMultiplier = 1.0;
+      }
+    }
+    
+    // Calculate base multiplier based on z-gap (graduated penalty)
+    let baseMultiplier = 1.0;
+    if (gapSD >= 1.8) {
+      baseMultiplier = 0.1; // Extreme mismatch
+    } else if (gapSD >= 1.2) {
+      baseMultiplier = 0.2; // Severe mismatch
+    } else if (gapSD >= 0.8) {
+      baseMultiplier = 0.4; // Moderate mismatch
+    } else if (gapSD >= 0.5) {
+      baseMultiplier = 0.6; // Mild mismatch
+    } else {
+      // Gap too small for conflict penalty
+      continue;
+    }
+    
+    // Apply importance multiplier (lower multiplier = stronger penalty)
+    const adjustedMultiplier = Math.pow(baseMultiplier, importanceMultiplier);
+    
+    conflicts.push({
+      trait,
+      archetypeScore,
+      userScore,
+      gapSD,
+      multiplier: adjustedMultiplier,
+      traitImportance,
+    });
+    
+    // Combine multipliers (multiplicative)
+    combinedMultiplier *= adjustedMultiplier;
+  }
+  
+  // Log conflicts if debug enabled
+  if (DEBUG_MATCHER && conflicts.length > 0) {
+    console.log(`[OppositePole] ${archetypeName} conflicts:`, 
+      conflicts.map(c => `${c.trait}(arch=${c.archetypeScore}, user=${c.userScore}, gap=${c.gapSD.toFixed(2)}SD, mult=${c.multiplier.toFixed(2)}, ${c.traitImportance})`).join('; ')
+    );
+    console.log(`[OppositePole] ${archetypeName} combined multiplier: ${combinedMultiplier.toFixed(3)}`);
+  }
+  
+  return { finalMultiplier: combinedMultiplier, conflicts };
+}
+
 export class PrototypeMatcher {
-  private algorithmVersion = 'v2.3-optimized';
+  private algorithmVersion = 'v2.4-opposite-pole';
   private enableTraitCorrection = true;
 
   getAlgorithmVersion(): string {
@@ -735,7 +844,8 @@ export class PrototypeMatcher {
   }
   
   /**
-   * Apply two-phase veto rules for improved archetype differentiation
+   * Apply multi-phase veto rules for improved archetype differentiation
+   * Phase 0: Opposite-pole conflict gate (V2.4) - qualitative personality mismatch
    * Phase 1: Signature thresholds (trait-based pre-filtering with bonuses/penalties)
    * Phase 2: Archetype veto rules + confusion pair gates
    */
@@ -743,7 +853,23 @@ export class PrototypeMatcher {
     userTraits: Record<TraitKey, number>,
     scores: Array<{ archetype: string; details: MatchScoreDetails }>
   ): void {
-    // Phase 1: Apply signature threshold multipliers FIRST (most impactful)
+    // Phase 0 (V2.4): Apply opposite-pole conflict gate FIRST
+    // This catches qualitative mismatches where user is on opposite side of 50
+    for (const result of scores) {
+      const prototype = archetypePrototypes[result.archetype];
+      if (prototype) {
+        const { finalMultiplier, conflicts } = calculateOppositePoleConflictMultiplier(
+          userTraits,
+          prototype.traitProfile,
+          result.archetype
+        );
+        if (finalMultiplier < 1.0) {
+          result.details.finalScore *= finalMultiplier;
+        }
+      }
+    }
+    
+    // Phase 1: Apply signature threshold multipliers
     for (const result of scores) {
       const thresholdRule = SIGNATURE_THRESHOLDS[result.archetype];
       if (thresholdRule) {
