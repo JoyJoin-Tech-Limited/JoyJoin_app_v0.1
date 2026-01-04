@@ -171,6 +171,59 @@ function simulateUser(trueArchetype: string): SimulationResult {
   };
 }
 
+// 收集各原型的特质分数分布
+function analyzeTraitDistributions(results: SimulationResult[]) {
+  console.log("\n" + "═".repeat(65));
+  console.log("【特质分数分布分析 - 用于阈值校准】");
+  console.log("═".repeat(65));
+  
+  const traitsByArchetype: Record<string, Record<TraitKey, number[]>> = {};
+  
+  for (const archetype of ALL_ARCHETYPES) {
+    traitsByArchetype[archetype] = { A: [], C: [], E: [], O: [], X: [], P: [] };
+  }
+  
+  for (const r of results) {
+    for (const trait of ALL_TRAITS) {
+      traitsByArchetype[r.trueArchetype][trait].push(r.traitScores[trait]);
+    }
+  }
+  
+  console.log("\n各原型实际特质分数范围（P10-P50-P90）：");
+  console.log("─".repeat(65));
+  
+  const recommendations: string[] = [];
+  
+  for (const archetype of ALL_ARCHETYPES) {
+    console.log(`\n${archetype}:`);
+    const prototype = archetypePrototypes[archetype];
+    
+    for (const trait of ALL_TRAITS) {
+      const scores = traitsByArchetype[archetype][trait].sort((a, b) => a - b);
+      const p10 = scores[Math.floor(scores.length * 0.1)];
+      const p50 = scores[Math.floor(scores.length * 0.5)];
+      const p90 = scores[Math.floor(scores.length * 0.9)];
+      const expected = prototype?.traitProfile[trait] || 50;
+      const gap = Math.abs(p50 - expected);
+      
+      const indicator = gap > 15 ? '⚠️' : gap > 10 ? '△' : '✓';
+      console.log(`  ${trait}: ${p10.toFixed(0)}-${p50.toFixed(0)}-${p90.toFixed(0)} (原型定义:${expected}) ${indicator}`);
+      
+      if (gap > 15) {
+        recommendations.push(`${archetype}的${trait}特质：实际${p50.toFixed(0)} vs 定义${expected}，差距${gap.toFixed(0)}`);
+      }
+    }
+  }
+  
+  if (recommendations.length > 0) {
+    console.log("\n" + "─".repeat(65));
+    console.log("⚠️ 需要调整的阈值（实际分数与原型定义差距>15）：");
+    recommendations.forEach(r => console.log(`  - ${r}`));
+  }
+  
+  return traitsByArchetype;
+}
+
 // 主模拟函数
 function runSimulation() {
   console.log("╔═══════════════════════════════════════════════════════════════╗");
@@ -373,6 +426,11 @@ function runSimulation() {
   if (avgConfidence < 0.7) {
     console.log("  📊 置信度偏低，建议增加高区分度问题");
   }
+  
+  // ═══════════════════════════════════════════════════════════════
+  // 7. 特质分数分布分析（用于阈值校准）
+  // ═══════════════════════════════════════════════════════════════
+  analyzeTraitDistributions(results);
   
   console.log("\n" + "═".repeat(65));
   console.log("测试完成！");
