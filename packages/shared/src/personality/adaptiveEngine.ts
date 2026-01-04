@@ -67,6 +67,54 @@ const ALL_TRAITS: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
 export const MAX_SKIP_COUNT = 3;
 
 /**
+ * Instrumentation for tracking targetPair question selection
+ * Used for debugging and calibration analysis
+ */
+export interface TargetPairInstrumentation {
+  persistentPairDetected: number;
+  persistentPairTriggersByPair: Record<string, number>;
+  targetPairQuestionsSelected: number;
+  targetPairMatchTypes: {
+    exact: number;    // Question targets both archetypes in confusion pair
+    partial: number;  // Question targets one archetype
+    trait: number;    // Question targets differentiating traits
+  };
+  scoreGapWhenTriggered: number[];
+}
+
+let _instrumentation: TargetPairInstrumentation | null = null;
+
+export function enableInstrumentation(): void {
+  _instrumentation = {
+    persistentPairDetected: 0,
+    persistentPairTriggersByPair: {},
+    targetPairQuestionsSelected: 0,
+    targetPairMatchTypes: { exact: 0, partial: 0, trait: 0 },
+    scoreGapWhenTriggered: [],
+  };
+}
+
+export function disableInstrumentation(): void {
+  _instrumentation = null;
+}
+
+export function getInstrumentation(): TargetPairInstrumentation | null {
+  return _instrumentation;
+}
+
+export function resetInstrumentation(): void {
+  if (_instrumentation) {
+    _instrumentation = {
+      persistentPairDetected: 0,
+      persistentPairTriggersByPair: {},
+      targetPairQuestionsSelected: 0,
+      targetPairMatchTypes: { exact: 0, partial: 0, trait: 0 },
+      scoreGapWhenTriggered: [],
+    };
+  }
+}
+
+/**
  * Persistent confusion pairs that resist tuning
  * These require targeted disambiguation questions when detected
  * Format: [archetype1, archetype2] - order doesn't matter
@@ -446,6 +494,15 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
       // ENHANCED: Persistent confusion pair detection with threshold trigger
       const confusionDetection = detectPersistentConfusionPair(currentMatches);
       if (confusionDetection.isPersistentPair && confusionDetection.scoreGap < 0.05) {
+        // Instrumentation: track detection
+        if (_instrumentation) {
+          _instrumentation.persistentPairDetected++;
+          const pairKey = confusionDetection.pair!.sort().join(',');
+          _instrumentation.persistentPairTriggersByPair[pairKey] = 
+            (_instrumentation.persistentPairTriggersByPair[pairKey] || 0) + 1;
+          _instrumentation.scoreGapWhenTriggered.push(confusionDetection.scoreGap);
+        }
+        
         // When we detect a persistent confusion pair with close scores,
         // give a very strong boost to questions targeting that pair
         if (question.targetPairs && question.targetPairs.length > 0) {
@@ -460,9 +517,19 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
           if (targetsBothInPair) {
             // Maximum priority - question targets exactly this confusion pair
             persistentPairBonus = 0.8;
+            // Instrumentation: track exact match
+            if (_instrumentation) {
+              _instrumentation.targetPairQuestionsSelected++;
+              _instrumentation.targetPairMatchTypes.exact++;
+            }
           } else if (targetsOneInPair) {
             // High priority - question targets one of the confusing archetypes
             persistentPairBonus = 0.4;
+            // Instrumentation: track partial match
+            if (_instrumentation) {
+              _instrumentation.targetPairQuestionsSelected++;
+              _instrumentation.targetPairMatchTypes.partial++;
+            }
           }
         }
         
@@ -471,6 +538,11 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
         const traitsOverlap = question.primaryTraits.filter(t => pairTraits.includes(t)).length;
         if (traitsOverlap > 0 && persistentPairBonus < 0.4) {
           persistentPairBonus = Math.max(persistentPairBonus, 0.3 * traitsOverlap);
+          // Instrumentation: track trait match
+          if (_instrumentation) {
+            _instrumentation.targetPairQuestionsSelected++;
+            _instrumentation.targetPairMatchTypes.trait++;
+          }
         }
       }
     }
