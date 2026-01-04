@@ -8,6 +8,9 @@ import {
   processAnswer,
   selectNextQuestion,
   shouldTerminate,
+  enableInstrumentation,
+  getInstrumentation,
+  resetInstrumentation,
 } from '../packages/shared/src/personality/adaptiveEngine';
 import { archetypePrototypes } from '../packages/shared/src/personality/prototypes';
 import { TraitKey } from '../packages/shared/src/personality/types';
@@ -292,8 +295,40 @@ function printReport(stats: AggregateStats) {
   console.log('\n' + '='.repeat(70));
 }
 
+function printInstrumentationReport() {
+  const inst = getInstrumentation();
+  if (!inst) {
+    console.log('\n📊 Instrumentation: Disabled');
+    return;
+  }
+  
+  console.log('\n🔍 TargetPair触发埋点报告');
+  console.log('-'.repeat(50));
+  console.log(`   持续混淆对检测次数: ${inst.persistentPairDetected}`);
+  console.log(`   targetPair问题选中次数: ${inst.targetPairQuestionsSelected}`);
+  console.log(`   匹配类型分布:`);
+  console.log(`     - 精确匹配(双原型): ${inst.targetPairMatchTypes.exact}`);
+  console.log(`     - 部分匹配(单原型): ${inst.targetPairMatchTypes.partial}`);
+  console.log(`     - 特质匹配: ${inst.targetPairMatchTypes.trait}`);
+  
+  console.log('\n   各混淆对触发次数:');
+  const sortedPairs = Object.entries(inst.persistentPairTriggersByPair)
+    .sort((a, b) => b[1] - a[1]);
+  for (const [pair, count] of sortedPairs) {
+    console.log(`     - ${pair}: ${count}次`);
+  }
+  
+  if (inst.scoreGapWhenTriggered.length > 0) {
+    const avgGap = inst.scoreGapWhenTriggered.reduce((a, b) => a + b, 0) / inst.scoreGapWhenTriggered.length;
+    console.log(`\n   触发时平均分数差: ${(avgGap * 100).toFixed(2)}%`);
+  }
+}
+
 async function main() {
   console.log('🚀 开始1000用户大规模模拟测试...\n');
+  
+  // Enable instrumentation for this run
+  enableInstrumentation();
   
   const users: SimulatedUser[] = [];
   for (let i = 1; i <= TOTAL_USERS; i++) {
@@ -322,6 +357,9 @@ async function main() {
   
   const stats = calculateStats(results);
   printReport(stats);
+  
+  // Print instrumentation report
+  printInstrumentationReport();
 }
 
 main().catch(console.error);
