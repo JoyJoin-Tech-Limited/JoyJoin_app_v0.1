@@ -9593,6 +9593,77 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  // Conversation topics for event participants (DeepSeek AI)
+  app.post('/api/events/:eventId/conversation-topics', isPhoneAuthenticated, aiEndpointLimiter, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const userId = req.user?.id || req.session?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Try to find blind box event first
+      const blindBoxEvent = await db.query.blindBoxEvents.findFirst({
+        where: eq(blindBoxEvents.id, eventId),
+      });
+
+      if (!blindBoxEvent) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+
+      // Verify user is a participant
+      const matchedAttendees = blindBoxEvent.matchedAttendees as any[];
+      const isParticipant = blindBoxEvent.userId === userId || 
+        matchedAttendees?.some((a: any) => a.userId === userId);
+
+      if (!isParticipant) {
+        return res.status(403).json({ message: 'Not authorized to view this event' });
+      }
+
+      // SECURITY: Only use validated participant IDs from the event data
+      // Never trust caller-provided userIds to prevent data exfiltration
+      const validParticipantIds = matchedAttendees?.map((a: any) => a.userId) || [];
+      
+      if (validParticipantIds.length === 0) {
+        return res.json({
+          topics: [],
+          commonInterests: [],
+          generatedAt: new Date().toISOString(),
+        });
+      }
+
+      // Only fetch minimal profile data needed for topic generation
+      const participants = await db.query.users.findMany({
+        where: sql`${users.id} = ANY(${validParticipantIds})`,
+        columns: {
+          id: true,
+          displayName: true,
+          archetype: true,
+          interestsTop: true,
+          topicsHappy: true,
+          topicsAvoid: true,
+        },
+      });
+
+      const { generateConversationTopics } = await import('./conversationTopicsService');
+      
+      const profiles = participants.map(p => ({
+        displayName: p.displayName || '嘉宾',
+        archetype: p.archetype,
+        interests: p.interestsTop || undefined,
+        topicsHappy: p.topicsHappy || undefined,
+        topicsAvoid: p.topicsAvoid || undefined,
+      }));
+
+      const result = await generateConversationTopics(profiles, blindBoxEvent.eventType || '饭局');
+      res.json(result);
+    } catch (error: any) {
+      console.error('[Conversation Topics] Error:', error);
+      res.status(500).json({ message: 'Failed to generate conversation topics', error: error.message });
+    }
+  });
+
   // Admin endpoint to regenerate explanations for an event pool
   app.post('/api/admin/event-pools/:poolId/regenerate-explanations', requireAdmin, async (req: any, res) => {
     try {
