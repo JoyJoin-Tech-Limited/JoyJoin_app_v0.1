@@ -200,7 +200,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q7",
+    id: "Q9",
     level: 2,
     category: "观点表达",
     scenarioText: "💬 群里话题聊得正热，你有个截然不同但有趣的角度。",
@@ -231,7 +231,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q8",
+    id: "Q10",
     level: 2,
     category: "延迟反应",
     scenarioText: "🕙 活动比预定时间晚了半小时才开始，大家都在等待。",
@@ -262,7 +262,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q9",
+    id: "Q11",
     level: 2,
     category: "自我展示",
     scenarioText: "🎭 活动有个需要才艺展示的环节，自愿参与。",
@@ -294,7 +294,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q10",
+    id: "Q12",
     level: 2,
     category: "应变态度",
     scenarioText: "🌧️ 户外活动当天早晨，发现天气可能变坏。",
@@ -325,7 +325,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q11",
+    id: "Q13",
     level: 2,
     category: "入群行为",
     scenarioText: "👥 你被拉进一个全是陌生人的活动预备群。",
@@ -356,7 +356,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q12",
+    id: "Q14",
     level: 2,
     category: "决策风格",
     scenarioText: "🍽️ 朋友群里讨论周五去哪吃饭，推荐了好几家。",
@@ -388,7 +388,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q13",
+    id: "Q7",
     level: 1,
     category: "赠礼思维",
     scenarioText: "🎁 新朋友下周生日，你想送个小礼物。",
@@ -425,7 +425,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q14",
+    id: "Q15",
     level: 2,
     category: "关系推进",
     scenarioText: "🤝 通过活动认识的新朋友，第二天在微信上找你闲聊。",
@@ -456,7 +456,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q15",
+    id: "Q8",
     level: 1,
     category: "胜负反应",
     scenarioText: "🏆 团队游戏你们这组赢了，对方组有些失落。",
