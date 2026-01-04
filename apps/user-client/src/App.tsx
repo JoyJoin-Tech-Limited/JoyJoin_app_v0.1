@@ -10,7 +10,7 @@ import RegistrationPage from "@/pages/RegistrationPage";
 // RegistrationMethodPage kept for internal reference only - not imported in user routes
 import ChatRegistrationPage from "@/pages/ChatRegistrationPage";
 import InterestsTopicsPage from "@/pages/InterestsTopicsPage";
-import PersonalityTestPage from "@/pages/PersonalityTestPage";
+import PersonalityTestPageV4 from "@/pages/PersonalityTestPageV4";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
 import PostTestFlowPage from "@/pages/PostTestFlowPage";
 import ProfileSetupPage from "@/pages/ProfileSetupPage";
@@ -87,7 +87,7 @@ function AuthenticatedRouter() {
         {/* 新版 Duolingo-style Onboarding 流程 */}
         <Route path="/onboarding" component={DuolingoOnboardingPage} />
         {/* 性格测试 - onboarding 完成后进入 */}
-        <Route path="/personality-test" component={PersonalityTestPage} />
+        <Route path="/personality-test" component={PersonalityTestPageV4} />
         <Route path="/personality-test/complete" component={PostTestFlowPage} />
         <Route path="/personality-test/results" component={PersonalityTestResultPage} />
         {/* 保留旧版注册供内部测试使用 */}
@@ -103,7 +103,7 @@ function AuthenticatedRouter() {
   if (needsPersonalityTest) {
     return (
       <Switch>
-        <Route path="/personality-test" component={PersonalityTestPage} />
+        <Route path="/personality-test" component={PersonalityTestPageV4} />
         <Route path="/personality-test/complete" component={PostTestFlowPage} />
         <Route path="/personality-test/results" component={PersonalityTestResultPage} />
         <Route path="*" component={RedirectToPersonalityTest} />
@@ -150,7 +150,7 @@ function AuthenticatedRouter() {
       <Route path="/registration/chat" component={ChatRegistrationPage} />
       <Route path="/event/:id" component={EventDetailPage} />
       <Route path="/invite" component={InvitePage} />
-      <Route path="/personality-test" component={PersonalityTestPage} />
+      <Route path="/personality-test" component={PersonalityTestPageV4} />
       <Route path="/personality-test/complete" component={PostTestFlowPage} />
       <Route path="/personality-test/results" component={PersonalityTestResultPage} />
       <Route component={NotFound} />
