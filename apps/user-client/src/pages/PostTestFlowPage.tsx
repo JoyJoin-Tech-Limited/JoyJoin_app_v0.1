@@ -760,7 +760,7 @@ export default function PostTestFlowPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-muted-foreground mb-1">小悦偷偷告诉你</p>
                         <p className="text-sm text-foreground/80 leading-relaxed">
-                          {insight.xiaoyueComment}
+                          {insight.hiddenStrength}
                         </p>
                         {/* Insight Preview Teaser Text */}
                         <p className="text-sm text-muted-foreground/70 leading-relaxed mt-2 italic" data-testid="text-insight-preview">

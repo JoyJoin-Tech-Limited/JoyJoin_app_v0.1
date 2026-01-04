@@ -332,6 +332,7 @@ export interface IStorage {
     userId: string;
     phase: string;
     currentQuestionIndex: number;
+    traitScores: any;
     traitConfidences: any;
     topArchetypes: any;
     preSignupAnswers: any;
@@ -339,6 +340,7 @@ export interface IStorage {
     completedAt: Date;
     skipCount: number;
     skippedQuestionIds: string[];
+    answeredQuestionIds: string[];
   }>): Promise<any>;
   createAssessmentAnswer(data: {
     sessionId: string;
@@ -3865,6 +3867,7 @@ export class DatabaseStorage implements IStorage {
     userId: string;
     phase: string;
     currentQuestionIndex: number;
+    traitScores: any;
     traitConfidences: any;
     topArchetypes: any;
     preSignupAnswers: any;
@@ -3872,6 +3875,7 @@ export class DatabaseStorage implements IStorage {
     completedAt: Date;
     skipCount: number;
     skippedQuestionIds: string[];
+    answeredQuestionIds: string[];
   }>): Promise<any> {
     const [session] = await db
       .update(assessmentSessions)

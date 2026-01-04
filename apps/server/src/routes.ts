@@ -9927,15 +9927,33 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       let session;
       let engineState;
       
-      // ALWAYS create new session when:
-      // 1. User is logged in (post-signup flow)
-      // 2. Has preSignupAnswers (fresh assessment with onboarding data)
-      // 3. forceNew flag is set
-      // This prevents accumulating answers from previous incomplete sessions
-      const shouldCreateNew = forceNew || (userId && preSignupAnswers && preSignupAnswers.length > 0);
+      // First, check if logged-in user already has an active session (created by presignup-sync)
+      if (userId && !forceNew) {
+        const existingUserSession = await storage.getAssessmentSessionByUser(userId);
+        if (existingUserSession && !existingUserSession.completedAt) {
+          // Resume existing session - it was created by presignup-sync
+          session = existingUserSession;
+          
+          // Reconstruct engine state from session data
+          const answers = await storage.getAssessmentAnswers(session.id);
+          engineState = initializeEngineState(assessmentConfig);
+          
+          // Replay answers to rebuild state
+          for (const answer of answers) {
+            const question = (await import('@shared/personality')).questionsV4.find(
+              q => q.id === answer.questionId
+            );
+            if (question) {
+              engineState = processAnswer(engineState, question, answer.selectedOption);
+            }
+          }
+          
+          console.log('[V4 Start] Resuming existing session for user:', userId, 'with', answers.length, 'answers');
+        }
+      }
       
-      // If resuming existing session (only for pre-signup anonymous users)
-      if (existingSessionId && !shouldCreateNew) {
+      // If resuming by session ID (anonymous pre-signup flow)
+      if (!session && existingSessionId && !forceNew) {
         session = await storage.getAssessmentSession(existingSessionId);
         if (!session) {
           return res.status(404).json({ message: 'Session not found' });
@@ -9954,7 +9972,10 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
             engineState = processAnswer(engineState, question, answer.selectedOption);
           }
         }
-      } else {
+      }
+      
+      // Create new session if none exists
+      if (!session) {
         // Create new session - fresh start
         session = await storage.createAssessmentSession({
           userId,
@@ -10372,6 +10393,115 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     } catch (error: any) {
       console.error('[Assessment V4 Anchors] Error:', error);
       res.status(500).json({ message: 'Failed to get anchor questions', error: error.message });
+    }
+  });
+
+  // Sync pre-signup answers after login - creates session and seeds L1 answers
+  app.post('/api/assessment/v4/presignup-sync', async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized - must be logged in' });
+      }
+
+      const { preSignupAnswers } = req.body;
+      if (!preSignupAnswers || !Array.isArray(preSignupAnswers) || preSignupAnswers.length === 0) {
+        return res.status(400).json({ message: 'No pre-signup answers provided' });
+      }
+
+      console.log('[Presignup Sync] Syncing', preSignupAnswers.length, 'answers for user:', userId);
+
+      // Import adaptive engine
+      const { 
+        initializeEngineState, 
+        processAnswer,
+        questionsV4,
+        DEFAULT_ASSESSMENT_CONFIG,
+        V2_ASSESSMENT_CONFIG 
+      } = await import('@shared/personality');
+
+      // Use V2 config when ENABLE_MATCHER_V2 is set
+      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
+      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
+
+      // Check if user already has an active session
+      let session = await storage.getAssessmentSessionByUser(userId);
+      
+      if (session) {
+        // If session already has answers, don't overwrite
+        const existingAnswers = await storage.getAssessmentAnswers(session.id);
+        if (existingAnswers.length > 0) {
+          console.log('[Presignup Sync] Session already has', existingAnswers.length, 'answers, skipping sync');
+          return res.json({ 
+            sessionId: session.id, 
+            message: 'Session already has answers',
+            answersCount: existingAnswers.length 
+          });
+        }
+      } else {
+        // Create new session for logged-in user
+        session = await storage.createAssessmentSession({
+          userId,
+          phase: 'post_signup',
+          preSignupAnswers: preSignupAnswers,
+        });
+        console.log('[Presignup Sync] Created new session:', session.id);
+      }
+
+      // Initialize engine state and process pre-signup answers
+      let engineState = initializeEngineState(assessmentConfig);
+      
+      // Deduplicate answers - keep only latest answer per question
+      const dedupedAnswers = new Map<string, typeof preSignupAnswers[0]>();
+      for (const ans of preSignupAnswers) {
+        dedupedAnswers.set(ans.questionId, ans);
+      }
+      const uniqueAnswers = Array.from(dedupedAnswers.values());
+      
+      // Process and save each answer
+      for (const ans of uniqueAnswers) {
+        const question = questionsV4.find(q => q.id === ans.questionId);
+        if (question) {
+          engineState = processAnswer(engineState, question, ans.selectedOption);
+          
+          // Save answer to database
+          await storage.createAssessmentAnswer({
+            sessionId: session.id,
+            questionId: ans.questionId,
+            questionLevel: question.level,
+            selectedOption: ans.selectedOption,
+            traitScores: question.options.find(o => o.value === ans.selectedOption)?.traitScores || {},
+          });
+        }
+      }
+
+      // Update session with current state
+      const traitScoresObj: Record<string, number> = {};
+      const traitConfidencesObj: Record<string, number> = {};
+      for (const [trait, conf] of Object.entries(engineState.traitConfidences)) {
+        traitScoresObj[trait] = conf.score;
+        traitConfidencesObj[trait] = conf.confidence;
+      }
+
+      await storage.updateAssessmentSession(session.id, {
+        phase: 'post_signup',
+        currentQuestionIndex: uniqueAnswers.length,
+        traitScores: traitScoresObj,
+        traitConfidences: traitConfidencesObj,
+        topArchetypes: engineState.currentMatches.slice(0, 3).map(m => m.archetype),
+        answeredQuestionIds: Array.from(engineState.answeredQuestionIds),
+      });
+
+      console.log('[Presignup Sync] Synced', uniqueAnswers.length, 'answers to session:', session.id);
+
+      res.json({ 
+        sessionId: session.id, 
+        answersCount: uniqueAnswers.length,
+        message: 'Pre-signup answers synced successfully'
+      });
+    } catch (error: any) {
+      console.error('[Presignup Sync] Error:', error);
+      res.status(500).json({ message: 'Failed to sync pre-signup answers', error: error.message });
     }
   });
 
