@@ -14,7 +14,7 @@ interface ProfileSpotlightProps {
     displayName: string;
     archetype?: string;
     topInterests?: string[];
-    age?: number;
+    ageRange?: string;
     industry?: string;
     ageVisible?: boolean;
     industryVisible?: boolean;
@@ -90,7 +90,7 @@ export default function ProfileSpotlight({ open, onOpenChange, user, compatibili
           </motion.div>
 
           <div className="grid grid-cols-2 gap-3">
-            {user.ageVisible !== false && user.age && (
+            {user.ageVisible !== false && user.ageRange && (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -98,7 +98,7 @@ export default function ProfileSpotlight({ open, onOpenChange, user, compatibili
                 className="bg-muted/50 rounded-xl p-3"
               >
                 <p className="text-xs text-muted-foreground mb-1">年龄</p>
-                <p className="font-medium">{user.age}岁</p>
+                <p className="font-medium">{user.ageRange}岁</p>
               </motion.div>
             )}
 

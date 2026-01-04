@@ -9664,6 +9664,103 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  // Profile spotlight for tablemates (auth-gated, limited to event participants)
+  app.get('/api/events/:eventId/spotlight/:targetUserId', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, targetUserId } = req.params;
+      const userId = req.user?.id || req.session?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Get the blind box event
+      const blindBoxEvent = await db.query.blindBoxEvents.findFirst({
+        where: eq(blindBoxEvents.id, eventId),
+      });
+
+      if (!blindBoxEvent) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+
+      // Verify requesting user is a participant
+      const matchedAttendees = blindBoxEvent.matchedAttendees as any[];
+      const isParticipant = blindBoxEvent.userId === userId || 
+        matchedAttendees?.some((a: any) => a.userId === userId);
+
+      if (!isParticipant) {
+        return res.status(403).json({ message: 'Not authorized to view this event' });
+      }
+
+      // SECURITY: Only allow viewing profiles of event participants
+      const isTargetParticipant = blindBoxEvent.userId === targetUserId ||
+        matchedAttendees?.some((a: any) => a.userId === targetUserId);
+
+      if (!isTargetParticipant) {
+        return res.status(403).json({ message: 'Target user is not a participant' });
+      }
+
+      // Fetch minimal profile data for spotlight
+      const targetUser = await db.query.users.findFirst({
+        where: eq(users.id, targetUserId),
+        columns: {
+          id: true,
+          displayName: true,
+          archetype: true,
+          secondaryRole: true,
+          industry: true,
+          interestsTop: true,
+          socialStyle: true,
+          ageVisibility: true,
+          workVisibility: true,
+          birthdate: true,
+        },
+      });
+
+      if (!targetUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Calculate age based on visibility preference
+      let age: number | undefined;
+      let ageRange: string | undefined;
+      
+      if (targetUser.birthdate && targetUser.ageVisibility !== 'hide_all') {
+        const birthDate = new Date(targetUser.birthdate);
+        const today = new Date();
+        const exactAge = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        const adjustedAge = (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) ? exactAge - 1 : exactAge;
+        
+        // PRIVACY: Only show age range, never exact age
+        if (targetUser.ageVisibility === 'show_age_range') {
+          // Calculate age range (e.g., "25-29", "30-34")
+          const lowerBound = Math.floor(adjustedAge / 5) * 5;
+          const upperBound = lowerBound + 4;
+          ageRange = `${lowerBound}-${upperBound}`;
+        }
+      }
+
+      res.json({
+        profile: {
+          userId: targetUser.id,
+          displayName: targetUser.displayName || '神秘嘉宾',
+          archetype: targetUser.archetype,
+          secondaryArchetype: targetUser.secondaryRole,
+          industry: targetUser.workVisibility !== 'hide_all' ? targetUser.industry : undefined,
+          ageRange: ageRange,
+          interests: targetUser.interestsTop || [],
+          socialStyle: targetUser.socialStyle,
+          ageVisible: targetUser.ageVisibility !== 'hide_all',
+          industryVisible: targetUser.workVisibility !== 'hide_all',
+        },
+      });
+    } catch (error: any) {
+      console.error('[Profile Spotlight] Error:', error);
+      res.status(500).json({ message: 'Failed to fetch profile', error: error.message });
+    }
+  });
+
   // Admin endpoint to regenerate explanations for an event pool
   app.post('/api/admin/event-pools/:poolId/regenerate-explanations', requireAdmin, async (req: any, res) => {
     try {
