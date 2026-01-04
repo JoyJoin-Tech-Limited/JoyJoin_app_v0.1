@@ -33,6 +33,21 @@ function stripEmoji(text: string): string {
     .trim();
 }
 
+function stripOptionLabel(text: string): string {
+  const patterns = [
+    /\s+[主被借隐观稳淡定暖机灵织沉]+[动力身察定心智感网思]+[破冰社交连接观察再入融入]+$/,
+    /\s+[\u4e00-\u9fa5]{2,4}$/,
+  ];
+  let result = text;
+  for (const pattern of patterns) {
+    const match = result.match(pattern);
+    if (match && match[0].length <= 6) {
+      result = result.replace(pattern, '');
+    }
+  }
+  return result.trim();
+}
+
 function OnboardingProgress({ 
   current, 
   total, 
@@ -70,8 +85,8 @@ function OnboardingProgress({
           <div className="flex justify-between mt-1">
             <span className="text-xs text-muted-foreground" data-testid="text-progress-indicator">
               {remaining !== undefined && remaining > 0 
-                ? `第${Math.floor(current)}题，还剩约${remaining}题`
-                : `第${Math.floor(current)}题 / 约${total}题`
+                ? `第${Math.floor(current)}题/剩下约${remaining}题`
+                : `第${Math.floor(current)}题`
               }
             </span>
           </div>
@@ -453,7 +468,7 @@ export default function PersonalityTestPageV4() {
   const scenarioText = stripEmoji(currentQuestion.scenarioText);
   const optionsForList = currentQuestion.options.map(opt => ({
     value: opt.value,
-    label: opt.text,
+    label: stripOptionLabel(opt.text),
   }));
 
   return (
