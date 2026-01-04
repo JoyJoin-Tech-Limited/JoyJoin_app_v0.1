@@ -46,37 +46,36 @@ interface SimulationResult {
   satisfactionScore: number;
 }
 
-// 根据原型生成模拟用户的回答倾向
-function generateUserResponseBias(archetype: string): Record<TraitKey, number> {
-  const prototype = archetypePrototypes[archetype];
-  if (!prototype) return { A: 0.5, C: 0.5, E: 0.5, O: 0.5, X: 0.5, P: 0.5 };
-  
-  const bias: Record<TraitKey, number> = {} as Record<TraitKey, number>;
-  for (const trait of ALL_TRAITS) {
-    // 将原型特质(0-100)转换为选择倾向(0-1)，加入随机噪声
-    const baseValue = prototype.traitProfile[trait] / 100;
-    const noise = (Math.random() - 0.5) * 0.3; // ±15%噪声
-    bias[trait] = Math.max(0.1, Math.min(0.9, baseValue + noise));
-  }
-  return bias;
-}
-
-// 根据用户偏好选择答案
-function selectAnswerByBias(question: typeof questionsV4[0], bias: Record<TraitKey, number>): string {
+// 根据用户偏好选择答案 - 基于目标特质分数与当前选项的一致性
+function selectAnswerByBias(question: typeof questionsV4[0], targetTraits: Record<TraitKey, number>): string {
   let bestOption = question.options[0];
   let bestScore = -Infinity;
   
   for (const option of question.options) {
     let score = 0;
     for (const trait of ALL_TRAITS) {
-      const traitScore = option.traitScores[trait] || 0;
-      // 高分特质 + 高偏好 = 高匹配分
-      score += traitScore * bias[trait] * 2;
-      // 负分特质 + 低偏好 = 也是好的匹配
-      score += traitScore * (1 - bias[trait]) * (-0.5);
+      const optionTraitScore = option.traitScores[trait] || 0;
+      const targetValue = targetTraits[trait]; // 0-100 scale
+      
+      // 如果目标特质高(>70)且选项给正分，加分
+      // 如果目标特质低(<30)且选项给负分，加分
+      if (targetValue > 70 && optionTraitScore > 0) {
+        score += optionTraitScore * (targetValue - 50) / 50;
+      } else if (targetValue < 30 && optionTraitScore < 0) {
+        score += Math.abs(optionTraitScore) * (50 - targetValue) / 50;
+      } else if (targetValue >= 30 && targetValue <= 70) {
+        // 中等特质，根据偏离程度决定
+        score += optionTraitScore * (targetValue - 50) / 100;
+      } else {
+        // 高特质但负分选项，或低特质但正分选项，惩罚
+        if ((targetValue > 70 && optionTraitScore < 0) || 
+            (targetValue < 30 && optionTraitScore > 0)) {
+          score -= Math.abs(optionTraitScore) * 0.5;
+        }
+      }
     }
-    // 添加少量随机性
-    score += (Math.random() - 0.5) * 2;
+    // 添加随机性以模拟真实用户的不一致性
+    score += (Math.random() - 0.5) * 3;
     
     if (score > bestScore) {
       bestScore = score;
@@ -112,12 +111,27 @@ function calculateSatisfaction(questionsAsked: number, isExactMatch: boolean, co
   return Math.max(0, Math.min(100, score));
 }
 
+// 获取用户的目标特质分数（带噪声）
+function generateTargetTraits(archetype: string): Record<TraitKey, number> {
+  const prototype = archetypePrototypes[archetype];
+  if (!prototype) return { A: 50, C: 50, E: 50, O: 50, X: 50, P: 50 };
+  
+  const targetTraits: Record<TraitKey, number> = {} as Record<TraitKey, number>;
+  for (const trait of ALL_TRAITS) {
+    const baseValue = prototype.traitProfile[trait];
+    // 添加 ±10 的随机噪声，模拟用户不完美符合原型
+    const noise = (Math.random() - 0.5) * 20;
+    targetTraits[trait] = Math.max(15, Math.min(95, baseValue + noise));
+  }
+  return targetTraits;
+}
+
 // 模拟单个用户完成测评
 function simulateUser(trueArchetype: string): SimulationResult {
   const config = { ...DEFAULT_ASSESSMENT_CONFIG, useV2Matcher: true };
   let state = initializeEngineState(config);
   const askedQuestions: string[] = [];
-  const bias = generateUserResponseBias(trueArchetype);
+  const targetTraits = generateTargetTraits(trueArchetype);
   
   // 运行测评直到完成
   while (true) {
@@ -125,15 +139,19 @@ function simulateUser(trueArchetype: string): SimulationResult {
     if (!question) break;
     
     askedQuestions.push(question.id);
-    const answer = selectAnswerByBias(question, bias);
+    const answer = selectAnswerByBias(question, targetTraits);
     state = processAnswer(state, question, answer);
     
     // 安全限制
     if (askedQuestions.length >= 20) break;
   }
   
-  // 获取匹配结果
-  const matchResults = findBestMatchingArchetypesV2(state.traitScores);
+  // 获取匹配结果 - 使用归一化后的特质分数
+  const normalizedTraits: Record<TraitKey, number> = {} as Record<TraitKey, number>;
+  for (const trait of ALL_TRAITS) {
+    normalizedTraits[trait] = state.traitConfidences[trait]?.score || 50;
+  }
+  const matchResults = findBestMatchingArchetypesV2(normalizedTraits);
   const predictedArchetype = matchResults[0]?.archetype || "unknown";
   const confidence = matchResults[0]?.confidence || 0;
   
@@ -148,7 +166,7 @@ function simulateUser(trueArchetype: string): SimulationResult {
     questionsAsked: askedQuestions.length,
     isExactMatch,
     isSimilarMatch,
-    traitScores: state.traitScores,
+    traitScores: normalizedTraits,
     satisfactionScore: calculateSatisfaction(askedQuestions.length, isExactMatch, confidence)
   };
 }
