@@ -42,7 +42,7 @@ interface V4AnchorQuestion {
   }>;
 }
 
-const ONBOARDING_QUESTIONS_COUNT = 6;
+const ONBOARDING_QUESTIONS_COUNT = 8;
 
 function stripEmoji(text: string): string {
   return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '')
@@ -563,9 +563,9 @@ export default function DuolingoOnboardingPage() {
 
   const getScreenProgress = () => {
     if (currentScreen === 0) return 0;
-    if (currentScreen <= 6) return (currentScreen / 6) * 40;
-    if (currentScreen === 7) return 50;
-    if (currentScreen === 8) return 75;
+    // 8 anchor questions: screens 1-8 = 10% to 80%
+    if (currentScreen <= 8) return (currentScreen / 8) * 80;
+    // Login screen = 90%
     if (currentScreen === 9) return 90;
     return 100;
   };
@@ -604,6 +604,8 @@ export default function DuolingoOnboardingPage() {
       case 4:
       case 5:
       case 6:
+      case 7:
+      case 8:
         const questionIndex = currentScreen - 1;
         const question = anchorQuestions[questionIndex];
         
@@ -675,7 +677,8 @@ export default function DuolingoOnboardingPage() {
           </motion.div>
         );
 
-      case 7:
+      case 9:
+        // Login screen - after completing all 8 anchor questions
         return (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -685,7 +688,7 @@ export default function DuolingoOnboardingPage() {
           >
             <XiaoyueMascot 
               mood="excited"
-              message="快要揭晓你的社交角色了！登录查看结果"
+              message="快要揭晓你的社交角色了！登录继续"
             />
 
             <div className="w-full max-w-sm mt-8 space-y-4">
@@ -722,7 +725,7 @@ export default function DuolingoOnboardingPage() {
             </div>
 
             <p className="mt-6 text-sm text-muted-foreground text-center">
-              2分钟完成剩余测试
+              还需约8-12题即可揭晓结果
             </p>
 
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t z-40">
@@ -738,8 +741,20 @@ export default function DuolingoOnboardingPage() {
                     return;
                   }
                   try {
+                    // 1. Login first
                     await apiRequest("POST", "/api/auth/quick-login", { phone });
                     queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                    
+                    // 2. Sync pre-signup answers to the assessment session
+                    const cachedAnswers = getV4CachedAnswers();
+                    if (cachedAnswers.length > 0) {
+                      await apiRequest("POST", "/api/assessment/v4/presignup-sync", {
+                        preSignupAnswers: cachedAnswers,
+                      });
+                    }
+                    
+                    // 3. Clear cache and redirect to personality test to continue
+                    clearCachedProgress();
                     setLocation("/personality-test");
                   } catch (error) {
                     console.error("Quick login failed:", error);
@@ -753,204 +768,9 @@ export default function DuolingoOnboardingPage() {
                 disabled={phone.length < 8}
                 data-testid="button-phone-login"
               >
-                继续
+                继续测试
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
-            </div>
-          </motion.div>
-        );
-
-      case 8:
-        return (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="flex-1 flex flex-col px-6 py-6"
-          >
-            <XiaoyueMascot 
-              mood="pointing"
-              message="最后几个问题，帮你找到最合拍的人"
-            />
-
-            <div className="mt-6 space-y-5">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">昵称</label>
-                <Input
-                  placeholder="至少2个字符"
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  className="h-12 rounded-xl"
-                  data-testid="input-nickname"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">性别</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { value: "female", label: "女生" },
-                    { value: "male", label: "男生" },
-                  ].map((option) => (
-                    <Button
-                      key={option.value}
-                      variant={gender === option.value ? "default" : "outline"}
-                      className="h-12 rounded-xl"
-                      onClick={() => setGender(option.value)}
-                      data-testid={`button-gender-${option.value}`}
-                    >
-                      {option.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">常驻城市</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {CITIES.map((option) => (
-                    <Button
-                      key={option.value}
-                      variant={city === option.value ? "default" : "outline"}
-                      className="h-12 rounded-xl"
-                      onClick={() => setCity(option.value)}
-                      data-testid={`button-city-${option.value}`}
-                    >
-                      {option.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">活动意图（可多选）</label>
-                <div className="flex flex-wrap gap-2">
-                  {INTENTS.map((option) => (
-                    <Badge
-                      key={option.value}
-                      variant={intents.includes(option.value) ? "default" : "outline"}
-                      className="px-4 py-2 text-sm cursor-pointer rounded-full"
-                      onClick={() => {
-                        if (intents.includes(option.value)) {
-                          setIntents(intents.filter(i => i !== option.value));
-                        } else {
-                          setIntents([...intents, option.value]);
-                        }
-                      }}
-                      data-testid={`badge-intent-${option.value}`}
-                    >
-                      {option.label}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-auto pt-6">
-              <Button 
-                size="lg"
-                className="w-full h-14 text-lg rounded-2xl"
-                onClick={handleCompleteEssential}
-                disabled={nickname.length < 2 || !gender || !city || intents.length === 0}
-                data-testid="button-continue-essential"
-              >
-                继续
-              </Button>
-            </div>
-          </motion.div>
-        );
-
-      case 9:
-        const years = Array.from({ length: 40 }, (_, i) => 2006 - i);
-        
-        return (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="flex-1 flex flex-col px-6 py-6"
-          >
-            <XiaoyueMascot 
-              mood="normal"
-              message="再多了解一点，匹配更精准"
-            />
-
-            <div className="mt-6 space-y-5">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">出生年份</label>
-                <div className="flex gap-3">
-                  <select
-                    value={birthYear}
-                    onChange={(e) => setBirthYear(e.target.value)}
-                    className="flex-1 h-12 px-4 rounded-xl border border-input bg-background"
-                    data-testid="select-birth-year"
-                  >
-                    <option value="">选择年份</option>
-                    {years.map((year) => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-12 w-12 rounded-xl shrink-0"
-                    onClick={() => setShowBirthYear(!showBirthYear)}
-                    data-testid="button-toggle-birth-visibility"
-                  >
-                    {showBirthYear ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {showBirthYear ? "年龄将对其他用户可见" : "年龄将保密"}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">感情状态</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { value: "single", label: "单身" },
-                    { value: "dating", label: "恋爱中" },
-                    { value: "married", label: "已婚" },
-                  ].map((option) => (
-                    <Button
-                      key={option.value}
-                      variant={relationshipStatus === option.value ? "default" : "outline"}
-                      className="h-12 rounded-xl"
-                      onClick={() => setRelationshipStatus(option.value)}
-                      data-testid={`button-relationship-${option.value}`}
-                    >
-                      {option.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-auto pt-6 space-y-3">
-              <Button 
-                size="lg"
-                className="w-full h-14 text-lg rounded-2xl"
-                onClick={() => handleCompleteOnboarding(false)}
-                disabled={completeOnboardingMutation.isPending}
-                data-testid="button-complete"
-              >
-                {completeOnboardingMutation.isPending ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <PartyPopper className="w-5 h-5 mr-2" />
-                    完成
-                  </>
-                )}
-              </Button>
-              <button
-                onClick={() => handleCompleteOnboarding(true)}
-                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
-                data-testid="button-skip-extended"
-              >
-                稍后完善
-              </button>
             </div>
           </motion.div>
         );
@@ -997,10 +817,11 @@ export default function DuolingoOnboardingPage() {
       {currentScreen > 0 && (
         <OnboardingProgress
           current={currentScreen}
-          total={6}
+          total={8}
           progress={getScreenProgress()}
           onBack={handleBack}
           showBack={currentScreen > 0}
+          displayRange="8-16"
         />
       )}
       
