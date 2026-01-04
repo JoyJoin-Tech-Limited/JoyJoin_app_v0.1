@@ -2632,6 +2632,7 @@ export const assessmentSessions = pgTable("assessment_sessions", {
   isDecisive: boolean("is_decisive"), // Whether match was decisive (clear winner)
   skipCount: integer("skip_count").default(0), // Number of questions skipped
   skippedQuestionIds: jsonb("skipped_question_ids").default([]), // List of IDs for skipped questions
+  answeredQuestionIds: jsonb("answered_question_ids").default([]), // List of IDs for answered questions (to avoid repeats)
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
