@@ -14,6 +14,8 @@ import {
 } from '../packages/shared/src/personality/adaptiveEngine';
 import { archetypePrototypes } from '../packages/shared/src/personality/prototypes';
 import { TraitKey } from '../packages/shared/src/personality/types';
+import { TrainingDataCollector, trainingDataCollector } from '../packages/shared/src/personality/trainingDataCollector';
+import * as fs from 'fs';
 
 const TOTAL_USERS = 1000;
 const ARCHETYPES = Object.keys(archetypePrototypes);
@@ -124,7 +126,7 @@ function simulateUserFeedback(isExact: boolean, isSimilar: boolean): { feedback:
   }
 }
 
-function runUserTest(user: SimulatedUser): UserResult {
+function runUserTest(user: SimulatedUser, collectTrainingData: boolean = true): UserResult {
   let state = initializeEngineState();
   let questionsAnswered = 0;
   let currentQuestion = selectNextQuestion(state);
@@ -138,9 +140,24 @@ function runUserTest(user: SimulatedUser): UserResult {
 
   const assignedArchetype = state.currentMatches[0]?.archetype || null;
   const confidence = state.currentMatches[0]?.confidence || 0;
+  const top2Archetype = state.currentMatches[1]?.archetype || null;
+  const top2Confidence = state.currentMatches[1]?.confidence || 0;
   const isExactMatch = user.trueArchetype === assignedArchetype;
   const isSimilarMatch = isSimilarArchetype(user.trueArchetype, assignedArchetype);
   const { feedback, satisfaction } = simulateUserFeedback(isExactMatch, isSimilarMatch);
+
+  if (collectTrainingData && assignedArchetype && top2Archetype) {
+    trainingDataCollector.collectFromResult(
+      user.id,
+      user.traitProfile,
+      assignedArchetype,
+      confidence,
+      top2Archetype,
+      top2Confidence,
+      user.trueArchetype,
+      isSimilarMatch
+    );
+  }
 
   return {
     user,
@@ -360,6 +377,40 @@ async function main() {
   
   // Print instrumentation report
   printInstrumentationReport();
+  
+  // Export training data
+  exportTrainingData();
+}
+
+function exportTrainingData() {
+  const dataset = trainingDataCollector.getDataset();
+  
+  console.log('\n📦 训练数据集统计');
+  console.log('-'.repeat(50));
+  console.log(`   总样本数: ${dataset.totalSamples}`);
+  console.log(`   混淆对样本数: ${dataset.confusionPairSamples}`);
+  console.log(`   持续混淆对样本数: ${dataset.persistentPairSamples}`);
+  
+  console.log('\n   各混淆对准确率:');
+  const sortedPairs = Object.entries(dataset.confusionPairBreakdown)
+    .filter(([_, data]) => data.total >= 10)
+    .sort((a, b) => a[1].accuracy - b[1].accuracy);
+  
+  for (const [pair, data] of sortedPairs.slice(0, 15)) {
+    const bar = '█'.repeat(Math.floor(data.accuracy / 5)) + '░'.repeat(20 - Math.floor(data.accuracy / 5));
+    console.log(`     ${pair.padEnd(25)} | ${bar} ${data.accuracy}% (${data.correct}/${data.total})`);
+  }
+  
+  // Export to JSON file
+  const outputPath = 'scripts/training-data.json';
+  fs.writeFileSync(outputPath, trainingDataCollector.exportToJSON());
+  console.log(`\n   ✅ 训练数据已导出到: ${outputPath}`);
+  
+  // Also export just the persistent confusion pair data
+  const persistentPairData = trainingDataCollector.getPersistentPairSnapshots();
+  const persistentOutputPath = 'scripts/persistent-pairs-training.json';
+  fs.writeFileSync(persistentOutputPath, JSON.stringify(persistentPairData, null, 2));
+  console.log(`   ✅ 持续混淆对数据已导出到: ${persistentOutputPath} (${persistentPairData.length}条)`);
 }
 
 main().catch(console.error);
