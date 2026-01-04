@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { MapPin, Clock, DollarSign, Users, Navigation, CheckCircle2, Sparkles } from "lucide-react";
+import { MapPin, Clock, DollarSign, Users, Navigation, CheckCircle2, Sparkles, Ticket } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -10,6 +10,9 @@ import type { BlindBoxEvent } from "@shared/schema";
 import { getCurrencySymbol } from "@/lib/currency";
 import { useLocation } from "wouter";
 import { formatDateInHongKong, getHongKongDateForComparison } from "@/lib/hongKongTime";
+import { useState } from "react";
+import InvitePreviewSheet from "./InvitePreviewSheet";
+import JoyRadar from "./JoyRadar";
 
 interface MatchedEventCardProps {
   event: BlindBoxEvent;
@@ -24,6 +27,7 @@ interface SessionData {
 
 export default function MatchedEventCard({ event }: MatchedEventCardProps) {
   const [, setLocation] = useLocation();
+  const [showInvite, setShowInvite] = useState(false);
   const currencySymbol = getCurrencySymbol(event.city as "香港" | "深圳");
 
   // Check if event is in progress
@@ -135,10 +139,18 @@ export default function MatchedEventCard({ event }: MatchedEventCardProps) {
           </div>
         </div>
 
-        {/* 人数与性别 */}
-        <div className="flex items-center gap-2 text-sm">
-          <Users className="h-4 w-4 text-muted-foreground" />
-          <span className="font-medium">{getParticipantInfo()}</span>
+        {/* 人数与性别 + Joy Radar */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{getParticipantInfo()}</span>
+          </div>
+          {event.currentParticipants != null && event.totalParticipants != null && (
+            <JoyRadar 
+              currentParticipants={event.currentParticipants} 
+              maxParticipants={event.totalParticipants} 
+            />
+          )}
         </div>
 
         {/* 地点 */}
@@ -263,6 +275,18 @@ export default function MatchedEventCard({ event }: MatchedEventCardProps) {
               <Button 
                 size="sm" 
                 variant="outline"
+                className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:from-amber-100 hover:to-orange-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowInvite(true);
+                }}
+                data-testid={`button-view-invite-${event.id}`}
+              >
+                <Ticket className="h-4 w-4" />
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleNavigation();
@@ -275,6 +299,12 @@ export default function MatchedEventCard({ event }: MatchedEventCardProps) {
           )}
         </div>
       </CardContent>
+
+      <InvitePreviewSheet
+        open={showInvite}
+        onOpenChange={setShowInvite}
+        event={event}
+      />
     </Card>
   );
 }
