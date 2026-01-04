@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import PersonalityRadarChart from '@/components/PersonalityRadarChart';
 import { XiaoyueInsightCard } from '@/components/XiaoyueInsightCard';
 import { XiaoyueChatBubble } from '@/components/XiaoyueChatBubble';
+import StyleSpectrum from '@/components/StyleSpectrum';
 import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap, Star, Layers, MessageSquare, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { archetypeGradients, archetypeAvatars } from '@/lib/archetypeAvatars';
@@ -16,6 +17,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useXiaoyueAnalysis } from '@/hooks/useXiaoyueAnalysis';
+import { getStyleSpectrum } from '@shared/personality/matcherV2';
 
 const staggerContainerVariants = {
   hidden: { opacity: 0 },
@@ -455,6 +457,23 @@ export default function PersonalityTestResultPage() {
     enabled: !!result && !showReveal,
   });
 
+  const styleSpectrum = useMemo(() => {
+    if (!result) return null;
+    try {
+      const traits = {
+        A: result.affinityScore,
+        O: result.opennessScore,
+        C: result.conscientiousnessScore,
+        E: result.emotionalStabilityScore,
+        X: result.extraversionScore,
+        P: result.positivityScore,
+      };
+      return getStyleSpectrum(traits);
+    } catch {
+      return null;
+    }
+  }, [result]);
+
   useEffect(() => {
     if (result) {
       const timer = setTimeout(() => {
@@ -622,6 +641,17 @@ export default function PersonalityTestResultPage() {
             animate={!prefersReducedMotion}
           />
         </motion.div>
+
+        {styleSpectrum && (
+          <motion.div variants={itemVariants}>
+            <StyleSpectrum
+              primary={styleSpectrum.primary}
+              adjacentStyles={styleSpectrum.adjacentStyles}
+              spectrumPosition={styleSpectrum.spectrumPosition}
+              isDecisive={styleSpectrum.isDecisive}
+            />
+          </motion.div>
+        )}
 
         {(() => {
           const insight = getArchetypeInsight(result.primaryRole);
