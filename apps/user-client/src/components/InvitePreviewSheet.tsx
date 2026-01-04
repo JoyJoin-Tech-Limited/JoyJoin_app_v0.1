@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
-import { QrCode, Share2, MapPin, Clock, Users, Sparkles, Crown, X } from "lucide-react";
-import { useState, useRef } from "react";
+import { QrCode, Share2, MapPin, Clock, Users, Sparkles, Crown, X, Download, Image as ImageIcon } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { BlindBoxEvent } from "@shared/schema";
 import { archetypeAvatars } from "@/lib/archetypeAvatars";
 import { formatDateInHongKong } from "@/lib/hongKongTime";
+import html2canvas from "html2canvas";
 
 interface InvitePreviewSheetProps {
   open: boolean;
@@ -55,6 +56,74 @@ export default function InvitePreviewSheet({ open, onOpenChange, event }: Invite
   const handleReveal = () => {
     setIsRevealed(true);
   };
+
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSaveImage = useCallback(async () => {
+    if (!inviteRef.current) return;
+    
+    setIsSaving(true);
+    try {
+      const inviteCard = inviteRef.current.querySelector('.invite-card-content') as HTMLElement;
+      if (!inviteCard) {
+        throw new Error('Invite card not found');
+      }
+
+      const canvas = await html2canvas(inviteCard, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#fffbeb',
+        logging: false,
+      });
+
+      // Use canvas.toBlob for iOS Safari compatibility (fetch on data URLs doesn't work on iOS)
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => {
+          if (b) resolve(b);
+          else reject(new Error('Failed to create blob'));
+        }, 'image/png');
+      });
+      
+      // Try native share API with file sharing
+      if (navigator.share && navigator.canShare) {
+        const file = new File([blob], `joyjoin-invite-${event.id}.png`, { type: 'image/png' });
+        
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: 'JoyJoin 邀请函',
+            });
+            return;
+          } catch (err) {
+            // User cancelled share, fall back to download
+            console.log('Share cancelled, falling back to download');
+          }
+        }
+      }
+      
+      // Fallback: create object URL and download
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `joyjoin-invite-${event.id}.png`;
+      link.href = objectUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+      
+      toast({ title: '邀请函已保存！' });
+    } catch (error) {
+      console.error('Failed to save image:', error);
+      toast({ 
+        title: '保存失败',
+        description: '请尝试截图保存',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [event.id, toast]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -137,7 +206,7 @@ export default function InvitePreviewSheet({ open, onOpenChange, event }: Invite
               </SheetHeader>
 
               <div className="flex-1 overflow-auto">
-                <div className="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-950/20 dark:via-orange-950/20 dark:to-yellow-950/20 p-4 m-4 rounded-2xl border-2 border-amber-200 dark:border-amber-800 shadow-lg">
+                <div className="invite-card-content bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-950/20 dark:via-orange-950/20 dark:to-yellow-950/20 p-4 m-4 rounded-2xl border-2 border-amber-200 dark:border-amber-800 shadow-lg">
                   <div className="text-center mb-6">
                     <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white mb-2">
                       VIP INVITATION
@@ -243,15 +312,32 @@ export default function InvitePreviewSheet({ open, onOpenChange, event }: Invite
                 </div>
               </div>
 
-              <div className="p-4 border-t bg-background/80 backdrop-blur-sm flex gap-3">
+              <div className="p-4 border-t bg-background/80 backdrop-blur-sm flex gap-2">
                 <Button
                   variant="outline"
-                  className="flex-1"
+                  size="icon"
                   onClick={() => setShowQR(true)}
                   data-testid="button-quick-show"
                 >
-                  <QrCode className="w-4 h-4 mr-2" />
-                  快速亮出
+                  <QrCode className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleSaveImage}
+                  disabled={isSaving}
+                  data-testid="button-save-image"
+                >
+                  {isSaving ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                    >
+                      <Download className="w-4 h-4" />
+                    </motion.div>
+                  ) : (
+                    <ImageIcon className="w-4 h-4" />
+                  )}
                 </Button>
                 <Button
                   className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
