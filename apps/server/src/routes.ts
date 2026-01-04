@@ -10323,6 +10323,31 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  // ============ Assessment Feedback Endpoint ============
+  app.post('/api/assessment/feedback', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      const { archetype, accuracy } = req.body;
+      
+      if (!archetype || !accuracy) {
+        return res.status(400).json({ message: 'Missing archetype or accuracy' });
+      }
+      
+      if (!['accurate', 'partial', 'inaccurate'].includes(accuracy)) {
+        return res.status(400).json({ message: 'Invalid accuracy value' });
+      }
+
+      console.log(`[Assessment Feedback] User ${userId} rated ${archetype} as ${accuracy}`);
+      
+      // Store feedback for analysis (could be extended to save to DB)
+      // For now, just log it for collection
+      res.json({ success: true, message: 'Feedback recorded' });
+    } catch (error: any) {
+      console.error('[Assessment Feedback] Error:', error);
+      res.status(500).json({ message: 'Failed to record feedback', error: error.message });
+    }
+  });
+
   // ============ Xiaoyue AI Analysis Endpoint ============
   app.post('/api/xiaoyue/analysis', async (req: any, res) => {
     try {
