@@ -128,8 +128,8 @@ export class PrototypeMatcher {
    * 
    * Dynamic boosts based on user traits to prevent attractor effects:
    * - High-O: 灵感章鱼/机智狐/沉思猫头鹰 vs 开心柯基
-   * - High-P (gated): Only boost when prototype has P as signal trait (夸夸豚, 暖心熊)
-   * - High-E+X counterweight: Protect 太阳鸡/淡定海豚 from P-dominated prototypes
+   * - High-P: 夸夸豚 vs 开心柯基 (only when P clearly dominates X)
+   * - High-E: 太阳鸡/淡定海豚/稳如龟
    * - High-A: 暖心熊/夸夸豚 vs others
    */
   private getTraitWeights(
@@ -142,11 +142,6 @@ export class PrototypeMatcher {
     for (const signalTrait of prototype.uniqueSignalTraits) {
       weights[signalTrait] = SIGNAL_TRAIT_WEIGHT;
     }
-    
-    // Check if prototype has P as a signal trait
-    const prototypeHasPSignal = prototype.uniqueSignalTraits.includes('P');
-    const prototypeHasXSignal = prototype.uniqueSignalTraits.includes('X');
-    const prototypeHasESignal = prototype.uniqueSignalTraits.includes('E');
     
     // Dynamic user-trait-based weight adjustments
     if (userTraits) {
@@ -168,33 +163,16 @@ export class PrototypeMatcher {
         weights.X = Math.min(weights.X, 1.2);
       }
       
-      // High-P boost (GATED): Only apply when prototype has P as signal trait
-      // This prevents P-heavy users from wrongly matching to 暖心熊 when they're actually 太阳鸡
-      if (userP >= 75 && prototypeHasPSignal) {
-        weights.P = Math.max(weights.P, SIGNAL_TRAIT_WEIGHT * 1.3);
-      }
-      
-      // P > X differential (GATED): Only when prototype has P signal
-      if (userP - userX >= 10 && prototypeHasPSignal) {
+      // High-P boost: Only when P strongly dominates X
+      // Helps differentiate 夸夸豚 (P:80) from 开心柯基 (P:65)
+      if (userP >= 75 && userP - userX >= 15) {
         weights.P = Math.max(weights.P, SIGNAL_TRAIT_WEIGHT * 1.2);
-      }
-      
-      // X/E counterweight: When both X and E are high, boost their weights
-      // This protects 太阳鸡 (X:85, E:80) and 淡定海豚 (X:55, E:75) from P-dominated matching
-      if (userX >= 70 && userE >= 70) {
-        weights.X = Math.max(weights.X, SIGNAL_TRAIT_WEIGHT * 1.3);
-        weights.E = Math.max(weights.E, SIGNAL_TRAIT_WEIGHT * 1.2);
       }
       
       // High-E boost: Differentiate energy-stability focused types
       // Targets: 太阳鸡 (E:80), 淡定海豚 (E:75), 稳如龟 (E:85)
-      if (userE >= 70) {
+      if (userE >= 75) {
         weights.E = Math.max(weights.E, SIGNAL_TRAIT_WEIGHT * 1.2);
-      }
-      
-      // High-X boost: When prototype has X as signal, boost for high-X users
-      if (userX >= 75 && prototypeHasXSignal) {
-        weights.X = Math.max(weights.X, SIGNAL_TRAIT_WEIGHT * 1.3);
       }
       
       // High-A boost: Differentiate warmth-focused types
