@@ -2633,6 +2633,8 @@ export const assessmentSessions = pgTable("assessment_sessions", {
   skipCount: integer("skip_count").default(0), // Number of questions skipped
   skippedQuestionIds: jsonb("skipped_question_ids").default([]), // List of IDs for skipped questions
   answeredQuestionIds: jsonb("answered_question_ids").default([]), // List of IDs for answered questions (to avoid repeats)
+  currentMatches: jsonb("current_matches").default([]), // Current archetype matches for session continuity
+  questionHistory: jsonb("question_history").default([]), // History of questions asked
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
