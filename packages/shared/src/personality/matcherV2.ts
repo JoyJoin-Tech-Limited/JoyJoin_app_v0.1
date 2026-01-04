@@ -690,8 +690,13 @@ function calculateOppositePoleConflictMultiplier(
       continue;
     }
     
-    // Apply importance multiplier (lower multiplier = stronger penalty)
-    const adjustedMultiplier = Math.pow(baseMultiplier, importanceMultiplier);
+    // Calculate penalty from base multiplier and scale by importance
+    // baseMultiplier 0.4 = penalty of 0.6 (1 - 0.4)
+    // With importance 1.2, penalty becomes 0.72, so multiplier = 1 - 0.72 = 0.28
+    const basePenalty = 1.0 - baseMultiplier;
+    const scaledPenalty = basePenalty * importanceMultiplier;
+    // Clamp to ensure multiplier doesn't go below 0.05
+    const adjustedMultiplier = Math.max(0.05, 1.0 - scaledPenalty);
     
     conflicts.push({
       trait,
