@@ -33,21 +33,6 @@ function stripEmoji(text: string): string {
     .trim();
 }
 
-function stripOptionLabel(text: string): string {
-  const patterns = [
-    /\s+[主被借隐观稳淡定暖机灵织沉]+[动力身察定心智感网思]+[破冰社交连接观察再入融入]+$/,
-    /\s+[\u4e00-\u9fa5]{2,4}$/,
-  ];
-  let result = text;
-  for (const pattern of patterns) {
-    const match = result.match(pattern);
-    if (match && match[0].length <= 6) {
-      result = result.replace(pattern, '');
-    }
-  }
-  return result.trim();
-}
-
 function OnboardingProgress({ 
   current, 
   total, 
@@ -468,7 +453,7 @@ export default function PersonalityTestPageV4() {
   const scenarioText = stripEmoji(currentQuestion.scenarioText);
   const optionsForList = currentQuestion.options.map(opt => ({
     value: opt.value,
-    label: stripOptionLabel(opt.text),
+    label: opt.text,
   }));
 
   return (
