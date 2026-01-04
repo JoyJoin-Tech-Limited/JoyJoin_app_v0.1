@@ -3751,6 +3751,144 @@ export const questionsV4: AdaptiveQuestion[] = [
         traitScores: { A: 1, C: 0, E: 1, O: 0, X: 3, P: 1 }
       }
     ]
+  },
+  // Q115-Q116: 沉思猫头鹰 vs 稳如龟 专项区分题 (O+reflection vs E+steadiness)
+  {
+    id: "Q115",
+    level: 3,
+    category: "原型区分-沉思猫头鹰vs稳如龟-充电方式",
+    scenarioText: "🌙 一场热闹的社交活动结束后。",
+    questionText: "你最可能怎么恢复能量？",
+    primaryTraits: ["O", "E", "C"],
+    isForcedChoice: true,
+    targetPairs: ["沉思猫头鹰", "稳如龟"],
+    cohortTag: 'reflective_stabilizer',
+    discriminationIndex: 0.62,
+    options: [
+      {
+        value: "A",
+        text: "安静地回顾和分析今天遇到的人和对话",
+        traitScores: { A: 0, C: 2, E: -1, O: 4, X: -1, P: 0 }
+      },
+      {
+        value: "B",
+        text: "做些熟悉的放松活动，让自己回到舒适状态",
+        traitScores: { A: 0, C: 2, E: 4, O: -1, X: -1, P: 0 }
+      },
+      {
+        value: "C",
+        text: "和亲近的朋友聊聊今天的感受",
+        traitScores: { A: 2, C: 0, E: 1, O: 1, X: 1, P: 1 }
+      },
+      {
+        value: "D",
+        text: "早点休息，充足睡眠最重要",
+        traitScores: { A: 0, C: 1, E: 2, O: 0, X: -2, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q116",
+    level: 3,
+    category: "原型区分-沉思猫头鹰vs稳如龟-处事风格",
+    scenarioText: "🎯 团队在讨论一个重要决定。",
+    questionText: "你更倾向于怎么参与？",
+    primaryTraits: ["O", "E", "C", "X"],
+    isForcedChoice: true,
+    targetPairs: ["沉思猫头鹰", "稳如龟"],
+    cohortTag: 'reflective_stabilizer',
+    discriminationIndex: 0.60,
+    options: [
+      {
+        value: "A",
+        text: "仔细观察各方观点，提出深度分析和见解",
+        traitScores: { A: 0, C: 3, E: 0, O: 4, X: 0, P: 0 }
+      },
+      {
+        value: "B",
+        text: "保持稳定态度，帮助团队专注于核心问题",
+        traitScores: { A: 1, C: 3, E: 4, O: 0, X: -1, P: 1 }
+      },
+      {
+        value: "C",
+        text: "积极推动讨论，确保每个人的意见被听到",
+        traitScores: { A: 2, C: 0, E: 1, O: 0, X: 2, P: 2 }
+      },
+      {
+        value: "D",
+        text: "安静倾听，需要时再补充想法",
+        traitScores: { A: 0, C: 1, E: 2, O: 1, X: -2, P: 0 }
+      }
+    ]
+  },
+  // Q117-Q118: 机智狐 vs 灵感章鱼 专项区分题 (X+advocacy vs O+incubation)
+  {
+    id: "Q117",
+    level: 3,
+    category: "原型区分-机智狐vs灵感章鱼-创意分享",
+    scenarioText: "💡 你想到了一个很棒的新点子。",
+    questionText: "你更倾向于怎么处理这个点子？",
+    primaryTraits: ["O", "X", "C"],
+    isForcedChoice: true,
+    targetPairs: ["机智狐", "灵感章鱼"],
+    cohortTag: 'creative_explorer',
+    discriminationIndex: 0.65,
+    options: [
+      {
+        value: "A",
+        text: "迫不及待地和大家分享，听听反馈",
+        traitScores: { A: 0, C: 0, E: 0, O: 2, X: 4, P: 0 }
+      },
+      {
+        value: "B",
+        text: "先自己深入思考完善，再选择性地分享",
+        traitScores: { A: 0, C: 2, E: 0, O: 4, X: -2, P: 0 }
+      },
+      {
+        value: "C",
+        text: "找一两个信任的人讨论，一起打磨",
+        traitScores: { A: 2, C: 1, E: 0, O: 2, X: 0, P: 1 }
+      },
+      {
+        value: "D",
+        text: "记录下来，等合适的时机再说",
+        traitScores: { A: 0, C: 2, E: 1, O: 1, X: -1, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q118",
+    level: 3,
+    category: "原型区分-机智狐vs灵感章鱼-社交能量",
+    scenarioText: "🎪 一个创意活动正在进行。",
+    questionText: "你更可能怎么参与？",
+    primaryTraits: ["O", "X", "E"],
+    isForcedChoice: true,
+    targetPairs: ["机智狐", "灵感章鱼"],
+    cohortTag: 'creative_explorer',
+    discriminationIndex: 0.58,
+    options: [
+      {
+        value: "A",
+        text: "主动提出新奇想法，引导讨论方向",
+        traitScores: { A: 0, C: 0, E: 0, O: 3, X: 4, P: 0 }
+      },
+      {
+        value: "B",
+        text: "安静吸收灵感，在脑海中构建自己的想法",
+        traitScores: { A: 0, C: 1, E: 1, O: 4, X: -2, P: 0 }
+      },
+      {
+        value: "C",
+        text: "和身边的人讨论，碰撞出新火花",
+        traitScores: { A: 1, C: 0, E: 0, O: 2, X: 2, P: 0 }
+      },
+      {
+        value: "D",
+        text: "观察别人的创意，学习不同的思路",
+        traitScores: { A: 0, C: 1, E: 0, O: 2, X: -1, P: 0 }
+      }
+    ]
   }
 ];
 
