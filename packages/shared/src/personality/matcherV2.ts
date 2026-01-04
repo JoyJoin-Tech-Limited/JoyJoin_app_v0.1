@@ -22,6 +22,325 @@ const OVERSHOOT_THRESHOLD_SD = 1.5;
 const MIN_SIMILARITY_GAP = 0.15;
 const MIN_CONFIDENCE_FOR_DECISIVE = 0.7;
 
+/**
+ * 12原型灵魂特质权重矩阵
+ * primary: 核心特质 (权重2.0)
+ * secondary: 次要特质 (权重1.5)
+ * avoid: 应避免的特质 (权重降低)
+ */
+export const PROTOTYPE_SOUL_TRAITS: Record<string, {
+  primary: Partial<Record<TraitKey, number>>;
+  secondary: Partial<Record<TraitKey, number>>;
+  avoid: Partial<Record<TraitKey, number>>;
+}> = {
+  // Reduced weights for Manhattan distance: primary 1.6-1.8, secondary 1.2-1.3, avoid 0.6-0.8
+  "定心大象": {
+    primary: { E: 1.8 },
+    secondary: { C: 1.3, A: 1.2 },
+    avoid: { X: 0.7, O: 0.7 }
+  },
+  "织网蛛": {
+    primary: { C: 1.8 },
+    secondary: { E: 1.3, A: 1.2 },
+    avoid: { P: 0.7, X: 0.8 }
+  },
+  "太阳鸡": {
+    primary: { P: 1.8 },
+    secondary: { E: 1.3, C: 1.2, X: 1.2 },
+    avoid: { O: 0.6 }
+  },
+  "夸夸豚": {
+    primary: { A: 1.7, X: 1.6 },
+    secondary: { P: 1.3 },
+    avoid: { C: 0.7, O: 0.8 }
+  },
+  "机智狐": {
+    primary: { O: 1.8 },
+    secondary: { X: 1.3, P: 1.2 },
+    avoid: { A: 0.7, C: 0.7 }
+  },
+  "暖心熊": {
+    primary: { A: 1.8 },
+    secondary: { E: 1.3, P: 1.2 },
+    avoid: { O: 0.7, X: 0.8 }
+  },
+  "稳如龟": {
+    primary: { E: 1.8, C: 1.7 },
+    secondary: { A: 1.2 },
+    avoid: { X: 0.6, O: 0.6, P: 0.7 }
+  },
+  "开心柯基": {
+    primary: { X: 1.7, P: 1.6 },
+    secondary: { A: 1.3, E: 1.2 },
+    avoid: { C: 0.8, O: 0.8 }
+  },
+  "沉思猫头鹰": {
+    primary: { O: 1.8 },
+    secondary: { C: 1.3, E: 1.2 },
+    avoid: { X: 0.6, A: 0.7, P: 0.7 }
+  },
+  "淡定海豚": {
+    primary: { E: 1.7, O: 1.5 },
+    secondary: { A: 1.2 },
+    avoid: { X: 0.7, P: 0.6 }
+  },
+  "隐身猫": {
+    primary: { E: 1.6 },
+    secondary: { O: 1.2 },
+    avoid: { X: 0.6, A: 0.6 }
+  },
+  "灵感章鱼": {
+    primary: { O: 1.8 },
+    secondary: { P: 1.3, X: 1.2 },
+    avoid: { C: 0.6, E: 0.8 }
+  }
+};
+
+/**
+ * 原型专属调整规则 (返回乘数 0.3-1.3)
+ * 1.0 = 中性, <1.0 = 惩罚, >1.0 = 加成
+ * 规则更简单，依赖灵魂特质权重做主要区分
+ */
+export const ARCHETYPE_VETO_RULES: Record<string, (traits: Record<TraitKey, number>) => number> = {
+  "太阳鸡": (t) => {
+    // P是太阳鸡的灵魂 - 高P加成，低P惩罚
+    if (t.P >= 85) return 1.25;
+    if (t.P >= 80) return 1.1;
+    if (t.P < 70) return 0.5;
+    return 1.0;
+  },
+  "淡定海豚": (t) => {
+    // 淡定海豚: 高E + 适中P (不是极高P)
+    if (t.P >= 85) return 0.5; // 高P更像太阳鸡
+    if (t.E >= 80 && t.P < 75) return 1.15;
+    return 1.0;
+  },
+  "沉思猫头鹰": (t) => {
+    // 猫头鹰核心: 高O(88) + 低X(40) - 区别于龟的O(65)
+    if (t.O >= 80 && t.X < 50) return 1.35;
+    if (t.O >= 75) return 1.15;
+    if (t.O < 70) return 0.5; // 低O不是猫头鹰
+    if (t.X > 60) return 0.6;
+    return 1.0;
+  },
+  "稳如龟": (t) => {
+    // 龟核心: 高E+C + 低X + 低O - 区别于猫头鹰的高O
+    if (t.O > 80) return 0.4; // 高O绝对更像猫头鹰
+    if (t.O > 75) return 0.6;
+    if (t.X < 40 && t.O < 70) return 1.3;
+    return 1.0;
+  },
+  "机智狐": (t) => t.O >= 80 ? 1.15 : (t.O < 65 ? 0.5 : 1.0),
+  "灵感章鱼": (t) => {
+    if (t.O >= 85 && t.C < 50) return 1.2;
+    if (t.C > 70) return 0.6;
+    return 1.0;
+  },
+  "隐身猫": (t) => {
+    if (t.X < 35 && t.A < 50) return 1.2;
+    if (t.X > 55) return 0.5;
+    return 1.0;
+  },
+  "暖心熊": (t) => t.A >= 85 ? 1.15 : (t.A < 70 ? 0.6 : 1.0),
+  "夸夸豚": (t) => (t.A >= 85 && t.X >= 75) ? 1.15 : 1.0,
+  "开心柯基": (t) => (t.X >= 85 && t.P >= 75) ? 1.15 : 1.0,
+  "定心大象": (t) => t.E >= 85 ? 1.15 : (t.E < 75 ? 0.6 : 1.0),
+  "织网蛛": (t) => t.C >= 80 ? 1.1 : (t.C < 65 ? 0.6 : 1.0)
+};
+
+/**
+ * 混淆对门控规则 - 针对已知的高混淆原型对
+ * 当用户特质明确属于某一原型时，大幅抑制竞争原型的分数
+ */
+export const CONFUSION_PAIR_GATES: Array<{
+  trueArchetype: string;
+  rivalArchetype: string;
+  gate: (t: Record<TraitKey, number>) => number; // 返回rival的乘数
+}> = [
+  {
+    // 太阳鸡(P=92) vs 淡定海豚(P=68): P≥82的用户明显是太阳鸡
+    trueArchetype: "太阳鸡",
+    rivalArchetype: "淡定海豚",
+    gate: (t) => {
+      if (t.P >= 85) return 0.2;
+      if (t.P >= 82) return 0.4;
+      if (t.P >= 78) return 0.6;
+      return 1.0;
+    }
+  },
+  {
+    // 淡定海豚(P=68) vs 太阳鸡(P=92): P<75的用户明显是淡定海豚
+    trueArchetype: "淡定海豚",
+    rivalArchetype: "太阳鸡",
+    gate: (t) => {
+      if (t.P < 70) return 0.3;
+      if (t.P < 75) return 0.5;
+      return 1.0;
+    }
+  },
+  {
+    // 沉思猫头鹰(O=88) vs 稳如龟(O=65): O≥78的用户明显是猫头鹰
+    trueArchetype: "沉思猫头鹰",
+    rivalArchetype: "稳如龟",
+    gate: (t) => {
+      if (t.O >= 82 && t.X < 50) return 0.15;
+      if (t.O >= 78) return 0.35;
+      if (t.O >= 75) return 0.55;
+      return 1.0;
+    }
+  },
+  {
+    // 稳如龟(O=65) vs 沉思猫头鹰(O=88): O<72的用户明显是龟
+    trueArchetype: "稳如龟",
+    rivalArchetype: "沉思猫头鹰",
+    gate: (t) => {
+      if (t.O < 68) return 0.3;
+      if (t.O < 72) return 0.5;
+      return 1.0;
+    }
+  },
+  {
+    // 隐身猫(X=25) vs 稳如龟(X=38): X<32的用户明显是隐身猫
+    trueArchetype: "隐身猫",
+    rivalArchetype: "稳如龟",
+    gate: (t) => {
+      if (t.X < 30 && t.A < 50) return 0.3;
+      if (t.X < 35) return 0.6;
+      return 1.0;
+    }
+  },
+  {
+    // 机智狐(O=85, X=70) vs 开心柯基(O=65, X=90): 高O用户更可能是狐狸
+    trueArchetype: "机智狐",
+    rivalArchetype: "开心柯基",
+    gate: (t) => {
+      if (t.O >= 80) return 0.5;
+      if (t.O >= 75) return 0.7;
+      return 1.0;
+    }
+  },
+  {
+    // 夸夸豚(A=90, X=85) vs 开心柯基(A=70, X=90): 高A区分
+    trueArchetype: "夸夸豚",
+    rivalArchetype: "开心柯基",
+    gate: (t) => {
+      if (t.A >= 85) return 0.5;
+      if (t.A >= 80) return 0.7;
+      return 1.0;
+    }
+  },
+  {
+    // 织网蛛(C=88) vs 淡定海豚(C=70): 高C用户更可能是蜘蛛
+    trueArchetype: "织网蛛",
+    rivalArchetype: "淡定海豚",
+    gate: (t) => {
+      if (t.C >= 82) return 0.5;
+      if (t.C >= 78) return 0.7;
+      return 1.0;
+    }
+  }
+];
+
+/**
+ * 计算logistic形式的特质匹配分数
+ * 使距离差异平滑地映射到0-1范围
+ */
+function logisticTraitScore(diff: number, steepness: number = 0.08): number {
+  return 1 / (1 + Math.exp(steepness * diff));
+}
+
+/**
+ * Phase 1: 签名特质阈值 - 用于预过滤候选原型
+ * 返回一个分数乘数：1.0=保留, <1.0=降权/排除
+ */
+export const SIGNATURE_THRESHOLDS: Record<string, (t: Record<TraitKey, number>) => number> = {
+  "太阳鸡": (t) => {
+    // 太阳鸡的灵魂是P=92
+    if (t.P >= 85) return 1.35;
+    if (t.P >= 80) return 1.15;
+    if (t.P >= 75) return 1.0;
+    if (t.P >= 70) return 0.7;
+    return 0.45;
+  },
+  "淡定海豚": (t) => {
+    // 淡定海豚P=68, E=85 - 高P用户不应匹配海豚
+    if (t.P >= 85) return 0.35;
+    if (t.P >= 80) return 0.55;
+    if (t.P < 75 && t.E >= 78) return 1.25;
+    return 1.0;
+  },
+  "沉思猫头鹰": (t) => {
+    // 猫头鹰O=88, X=40 - 高O低X是标志
+    if (t.O >= 82 && t.X < 50) return 1.45;
+    if (t.O >= 78 && t.X < 55) return 1.25;
+    if (t.O >= 75) return 1.1;
+    if (t.O < 72) return 0.5;
+    return 1.0;
+  },
+  "稳如龟": (t) => {
+    // 龟O=65 - 高O用户更像猫头鹰
+    if (t.O >= 80) return 0.35;
+    if (t.O >= 75) return 0.55;
+    if (t.O < 70 && t.E >= 80) return 1.35;
+    if (t.O < 72) return 1.15;
+    return 1.0;
+  },
+  "隐身猫": (t) => {
+    // 隐身猫X=25, A=40 - 极低社交
+    if (t.X < 32 && t.A < 50) return 1.4;
+    if (t.X < 38) return 1.1;
+    if (t.X >= 55) return 0.4;
+    return 1.0;
+  },
+  "暖心熊": (t) => {
+    // 暖心熊A=88 - 高亲和力
+    if (t.A >= 85) return 1.3;
+    if (t.A >= 80) return 1.1;
+    if (t.A < 72) return 0.6;
+    return 1.0;
+  },
+  "机智狐": (t) => {
+    // 机智狐O=85 - 高开放性
+    if (t.O >= 82) return 1.3;
+    if (t.O >= 78) return 1.15;
+    if (t.O < 70) return 0.5;
+    return 1.0;
+  },
+  "灵感章鱼": (t) => {
+    // 章鱼O=90, C=38 - 高开放低条理
+    if (t.O >= 85 && t.C < 50) return 1.4;
+    if (t.O >= 80) return 1.15;
+    if (t.C >= 70) return 0.5;
+    return 1.0;
+  },
+  "夸夸豚": (t) => {
+    // 夸夸豚A=90, X=85 - 高亲和高社交
+    if (t.A >= 85 && t.X >= 80) return 1.4;
+    if (t.A >= 82) return 1.1;
+    return 1.0;
+  },
+  "开心柯基": (t) => {
+    // 柯基X=90, P=80 - 高社交高正能量
+    if (t.X >= 85 && t.P >= 75) return 1.3;
+    if (t.X >= 80) return 1.1;
+    return 1.0;
+  },
+  "定心大象": (t) => {
+    // 大象E=92 - 极高稳定性
+    if (t.E >= 88) return 1.3;
+    if (t.E >= 82) return 1.1;
+    if (t.E < 75) return 0.5;
+    return 1.0;
+  },
+  "织网蛛": (t) => {
+    // 蜘蛛C=88 - 高条理性
+    if (t.C >= 85) return 1.25;
+    if (t.C >= 78) return 1.1;
+    if (t.C < 68) return 0.6;
+    return 1.0;
+  }
+};
+
 export interface MatchScoreDetails {
   baseSimilarity: number;
   penaltyFactor: number;
@@ -71,7 +390,7 @@ export interface UserSecondaryData {
 }
 
 export class PrototypeMatcher {
-  private algorithmVersion = 'v2.1';
+  private algorithmVersion = 'v2.2-manhattan';
   private enableTraitCorrection = true;
 
   getAlgorithmVersion(): string {
@@ -105,7 +424,8 @@ export class PrototypeMatcher {
   ): MatchScoreDetails {
     const correctedTraits = this.correctTraits(userTraits);
     const weights = this.getTraitWeights(prototype, correctedTraits);
-    const baseSimilarity = this.weightedCosineSimilarity(correctedTraits, prototype.traitProfile, weights);
+    // Use Manhattan distance for better separation of confusable archetypes
+    const baseSimilarity = this.weightedManhattanSimilarity(correctedTraits, prototype.traitProfile, weights);
     const { penaltyFactor, exceededTraits } = this.calculateOvershootPenalty(correctedTraits, prototype);
     const signalTraitAlignment = this.calculateSignalTraitAlignment(correctedTraits, prototype);
     const secondaryBonus = userSecondaryData 
@@ -124,13 +444,12 @@ export class PrototypeMatcher {
   }
 
   /**
-   * Get trait weights for matching, with dynamic adjustments based on user trait profile
+   * Get trait weights for matching using Soul Trait Weight Matrix
    * 
-   * Dynamic boosts based on user traits to prevent attractor effects:
-   * - High-O: 灵感章鱼/机智狐/沉思猫头鹰 vs 开心柯基
-   * - High-P: 夸夸豚 vs 开心柯基 (only when P clearly dominates X)
-   * - High-E: 太阳鸡/淡定海豚/稳如龟
-   * - High-A: 暖心熊/夸夸豚 vs others
+   * Uses PROTOTYPE_SOUL_TRAITS to assign weights:
+   * - primary traits: 1.8-2.0x weight (灵魂特质)
+   * - secondary traits: 1.3-1.5x weight
+   * - avoid traits: 0.3-0.8x weight (反向权重)
    */
   private getTraitWeights(
     prototype: ArchetypePrototype, 
@@ -138,57 +457,115 @@ export class PrototypeMatcher {
   ): Record<TraitKey, number> {
     const weights: Record<TraitKey, number> = { A: 1, C: 1, E: 1, O: 1, X: 1, P: 1 };
     
-    // Apply prototype signal trait weights
-    for (const signalTrait of prototype.uniqueSignalTraits) {
-      weights[signalTrait] = SIGNAL_TRAIT_WEIGHT;
-    }
+    // Get soul trait config for this archetype
+    const soulConfig = PROTOTYPE_SOUL_TRAITS[prototype.name];
     
-    // Dynamic user-trait-based weight adjustments
-    if (userTraits) {
-      const userO = userTraits.O || 50;
-      const userX = userTraits.X || 50;
-      const userA = userTraits.A || 50;
-      const userP = userTraits.P || 50;
-      const userE = userTraits.E || 50;
-      
-      // High-O boost: Differentiate creative types from social types
-      // Targets: 灵感章鱼, 机智狐, 沉思猫头鹰
-      if (userO >= 70) {
-        weights.O = Math.max(weights.O, SIGNAL_TRAIT_WEIGHT * 1.2);
+    if (soulConfig) {
+      // Apply primary soul trait weights (highest priority)
+      for (const [trait, weight] of Object.entries(soulConfig.primary)) {
+        weights[trait as TraitKey] = weight;
       }
       
-      // O > X differential: Boost O weight to prevent X-dominant prototypes winning
-      if (userO - userX >= 15) {
-        weights.O = Math.max(weights.O, SIGNAL_TRAIT_WEIGHT * 1.4);
-        weights.X = Math.min(weights.X, 1.2);
+      // Apply secondary trait weights
+      for (const [trait, weight] of Object.entries(soulConfig.secondary)) {
+        if (weights[trait as TraitKey] === 1) {
+          weights[trait as TraitKey] = weight;
+        }
       }
       
-      // High-P boost: Only when P strongly dominates X
-      // Helps differentiate 夸夸豚 (P:80) from 开心柯基 (P:65)
-      if (userP >= 75 && userP - userX >= 15) {
-        weights.P = Math.max(weights.P, SIGNAL_TRAIT_WEIGHT * 1.2);
+      // Apply avoid trait weights (de-emphasize)
+      for (const [trait, weight] of Object.entries(soulConfig.avoid)) {
+        weights[trait as TraitKey] = weight;
       }
-      
-      // High-E boost: Differentiate energy-stability focused types
-      // Targets: 太阳鸡 (E:80), 淡定海豚 (E:75), 稳如龟 (E:85)
-      if (userE >= 75) {
-        weights.E = Math.max(weights.E, SIGNAL_TRAIT_WEIGHT * 1.2);
-      }
-      
-      // High-A boost: Differentiate warmth-focused types
-      if (userA >= 70) {
-        weights.A = Math.max(weights.A, SIGNAL_TRAIT_WEIGHT * 1.1);
-      }
-      
-      // A > X differential: Boost A weight for affiliative types
-      if (userA - userX >= 10) {
-        weights.A = Math.max(weights.A, SIGNAL_TRAIT_WEIGHT * 1.2);
+    } else {
+      // Fallback to signal trait weights if no soul config
+      for (const signalTrait of prototype.uniqueSignalTraits) {
+        weights[signalTrait] = SIGNAL_TRAIT_WEIGHT;
       }
     }
     
     return weights;
   }
+  
+  /**
+   * Apply two-phase veto rules for improved archetype differentiation
+   * Phase 1: Signature thresholds (trait-based pre-filtering with bonuses/penalties)
+   * Phase 2: Archetype veto rules + confusion pair gates
+   */
+  private applyVetoRules(
+    userTraits: Record<TraitKey, number>,
+    scores: Array<{ archetype: string; details: MatchScoreDetails }>
+  ): void {
+    // Phase 1: Apply signature threshold multipliers FIRST (most impactful)
+    for (const result of scores) {
+      const thresholdRule = SIGNATURE_THRESHOLDS[result.archetype];
+      if (thresholdRule) {
+        const multiplier = thresholdRule(userTraits);
+        result.details.finalScore *= multiplier;
+      }
+    }
+    
+    // Phase 2a: Apply archetype-specific veto rules
+    for (const result of scores) {
+      const vetoRule = ARCHETYPE_VETO_RULES[result.archetype];
+      if (vetoRule) {
+        const multiplier = vetoRule(userTraits);
+        result.details.finalScore *= multiplier;
+      }
+    }
+    
+    // Phase 2b: Apply confusion pair gates to suppress rivals
+    for (const gate of CONFUSION_PAIR_GATES) {
+      const rivalResult = scores.find(s => s.archetype === gate.rivalArchetype);
+      if (rivalResult) {
+        const gateMultiplier = gate.gate(userTraits);
+        if (gateMultiplier < 1.0) {
+          rivalResult.details.finalScore *= gateMultiplier;
+        }
+      }
+    }
+  }
 
+  /**
+   * Weighted Manhattan Distance with Logistic Normalization
+   * Replaces cosine similarity to avoid quadratic penalties on deviations
+   * 
+   * Formula:
+   * 1. D = Σ w_t * |u_t - p_t| (weighted distance)
+   * 2. d_norm = D / (Σ w_t * 100) (normalized to 0-1)
+   * 3. S_base = exp(-λ * d_norm) (convert to similarity with λ≈3)
+   */
+  private weightedManhattanSimilarity(
+    userTraits: Record<TraitKey, number>,
+    prototypeTraits: Record<TraitKey, number>,
+    weights: Record<TraitKey, number>,
+    lambda: number = 3.5
+  ): number {
+    let weightedDistance = 0;
+    let totalWeight = 0;
+
+    for (const trait of ALL_TRAITS) {
+      const userScore = userTraits[trait] ?? 50;
+      const protoScore = prototypeTraits[trait];
+      const weight = weights[trait];
+
+      weightedDistance += weight * Math.abs(userScore - protoScore);
+      totalWeight += weight * 100; // Max possible distance per trait
+    }
+
+    if (totalWeight === 0) return 0;
+
+    // Normalize distance to 0-1 range
+    const normalizedDistance = weightedDistance / totalWeight;
+    
+    // Convert to similarity using exponential decay
+    // λ=3.5 gives good spread: d_norm=0 → S=1.0, d_norm=0.15 → S≈0.59, d_norm=0.3 → S≈0.35
+    const baseSimilarity = Math.exp(-lambda * normalizedDistance);
+
+    return baseSimilarity;
+  }
+
+  // Keep legacy cosine for comparison/A-B testing
   private weightedCosineSimilarity(
     userTraits: Record<TraitKey, number>,
     prototypeTraits: Record<TraitKey, number>,
@@ -316,6 +693,9 @@ export class PrototypeMatcher {
       const details = this.calculateMatchScore(userTraits, prototype, userSecondaryData);
       results.push({ archetype: name, prototype, details });
     }
+
+    // Apply veto rules before sorting
+    this.applyVetoRules(userTraits, results);
 
     results.sort((a, b) => b.details.finalScore - a.details.finalScore);
 
