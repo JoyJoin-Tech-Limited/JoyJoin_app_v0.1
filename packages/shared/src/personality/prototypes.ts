@@ -35,7 +35,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
       statusOrientation: 'leader'
     },
     confusableWith: ["太阳鸡"],
-    uniqueSignalTraits: ["X", "P"]
+    uniqueSignalTraits: ["P", "A", "X"]
   },
   "太阳鸡": {
     id: "rooster",
@@ -50,7 +50,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
       statusOrientation: 'supporter'
     },
     confusableWith: ["开心柯基", "夸夸豚"],
-    uniqueSignalTraits: ["E", "C"]
+    uniqueSignalTraits: ["P", "X", "E"]
   },
   "夸夸豚": {
     id: "dolphin_praise",
@@ -65,7 +65,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
       statusOrientation: 'supporter'
     },
     confusableWith: ["淡定海豚", "太阳鸡"],
-    uniqueSignalTraits: ["A", "X"]
+    uniqueSignalTraits: ["A", "X", "P"]
   },
   "机智狐": {
     id: "fox",
@@ -80,7 +80,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
       statusOrientation: 'independent'
     },
     confusableWith: ["灵感章鱼"],
-    uniqueSignalTraits: ["O", "X"]
+    uniqueSignalTraits: ["O", "X", "P"]
   },
   "淡定海豚": {
     id: "dolphin_calm",
@@ -95,7 +95,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
       statusOrientation: 'supporter'
     },
     confusableWith: ["夸夸豚", "暖心熊"],
-    uniqueSignalTraits: ["E", "C"]
+    uniqueSignalTraits: ["E", "O", "A"]
   },
   "织网蛛": {
     id: "spider",
@@ -110,7 +110,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
       statusOrientation: 'independent'
     },
     confusableWith: ["暖心熊"],
-    uniqueSignalTraits: ["A", "C"]
+    uniqueSignalTraits: ["C", "E", "A"]
   },
   "暖心熊": {
     id: "bear",
@@ -125,7 +125,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
       statusOrientation: 'supporter'
     },
     confusableWith: ["定心大象", "织网蛛"],
-    uniqueSignalTraits: ["A", "E"]
+    uniqueSignalTraits: ["A", "E", "P"]
   },
   "灵感章鱼": {
     id: "octopus",
@@ -140,7 +140,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
       statusOrientation: 'independent'
     },
     confusableWith: ["机智狐", "沉思猫头鹰"],
-    uniqueSignalTraits: ["O", "C"]
+    uniqueSignalTraits: ["O", "P", "X"]
   },
   "沉思猫头鹰": {
     id: "owl",
@@ -155,7 +155,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
       statusOrientation: 'independent'
     },
     confusableWith: ["稳如龟", "灵感章鱼"],
-    uniqueSignalTraits: ["C", "O"]
+    uniqueSignalTraits: ["O", "C", "E"]
   },
   "定心大象": {
     id: "elephant",
@@ -170,7 +170,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
       statusOrientation: 'supporter'
     },
     confusableWith: ["暖心熊", "稳如龟"],
-    uniqueSignalTraits: ["C", "E"]
+    uniqueSignalTraits: ["E", "C", "A"]
   },
   "稳如龟": {
     id: "turtle",
@@ -185,7 +185,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
       statusOrientation: 'independent'
     },
     confusableWith: ["沉思猫头鹰", "隐身猫"],
-    uniqueSignalTraits: ["E", "C"]
+    uniqueSignalTraits: ["E", "C", "A"]
   },
   "隐身猫": {
     id: "cat",
@@ -200,7 +200,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
       statusOrientation: 'independent'
     },
     confusableWith: ["稳如龟"],
-    uniqueSignalTraits: ["X", "E"]
+    uniqueSignalTraits: ["E", "O"]
   }
 };
 
