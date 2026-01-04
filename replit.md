@@ -51,6 +51,11 @@ The project utilizes a monorepo (`joyjoin-monorepo`) encompassing user client, a
 - **Location Structure:** Simplified to two main clusters (南山区, 福田区) with distinct districts and a card-based selection UI.
 - **Event Type Preferences:** Dual-track preference system for Dining (饭局) and Bar (酒局) events, with conditional UI for specific options like cuisine, taste intensity, bar themes, and alcohol comfort levels.
 - **Timezone Handling:** All timestamps stored as China timezone (UTC+8); frontend utilities parse without conversion, using Chinese period-based time formatting.
+- **Electronic Invitation System:** Golden ticket design with envelope reveal animation, InvitePreviewSheet full-screen display, and iOS Safari-compatible image export using canvas.toBlob with Web Share API fallback.
+- **Profile Spotlight Drawer:** Half-screen sliding drawer for viewing tablemate profiles with privacy-respecting age ranges (5-year buckets when ageVisibility='show_age_range') and work visibility controls.
+- **JoyRadar Pulse Indicator:** Real-time seat availability visualization with animated pulse effect on event cards.
+- **JoyOrbit Orbital Visualization:** Full-screen immersive group member display with drag-to-rotate gesture interaction.
+- **AI Conversation Topics (DeepSeek):** Rate-limited, auth-gated endpoint for generating personalized icebreaker topics based on participant profiles, with participant validation to prevent data exfiltration.
 
 ## External Dependencies
 
