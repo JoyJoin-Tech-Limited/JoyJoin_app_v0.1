@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import PersonalityRadarChart from '@/components/PersonalityRadarChart';
 import { XiaoyueInsightCard } from '@/components/XiaoyueInsightCard';
 import { XiaoyueChatBubble } from '@/components/XiaoyueChatBubble';
-import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap } from 'lucide-react';
+import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap, Star, Layers, MessageSquare, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { archetypeGradients, archetypeAvatars } from '@/lib/archetypeAvatars';
 import { archetypeConfig } from '@/lib/archetypes';
@@ -94,6 +94,216 @@ interface UnifiedAssessmentResult {
   matchDetails: any;
   isDecisive: boolean;
   completedAt: string;
+}
+
+const archetypeUniqueTraits: Record<string, { trait: string; description: string }[]> = {
+  "开心柯基": [
+    { trait: "自带氛围感", description: "你走到哪里，快乐就跟到哪里" },
+    { trait: "破冰达人", description: "让陌生人也能迅速放下防备" },
+  ],
+  "太阳鸡": [
+    { trait: "正能量持久输出", description: "不是一时兴起，是稳定发电" },
+    { trait: "情绪恒温器", description: "遇事不慌，还能稳住别人" },
+  ],
+  "夸夸豚": [
+    { trait: "真诚赞美", description: "你的夸奖不是客套，是真心认可" },
+    { trait: "情感敏锐", description: "总能捕捉到别人的闪光点" },
+  ],
+  "机智狐": [
+    { trait: "创意脑洞", description: "能把无聊变有趣，点子源源不断" },
+    { trait: "快速适应", description: "什么话题都能接得住" },
+  ],
+  "淡定海豚": [
+    { trait: "张弛有度", description: "热闹和安静之间自如切换" },
+    { trait: "情商在线", description: "懂得什么时候该说什么" },
+  ],
+  "织网蛛": [
+    { trait: "人脉连接", description: "善于发现谁和谁会聊得来" },
+    { trait: "长情维护", description: "记得每个朋友的特点和喜好" },
+  ],
+  "暖心熊": [
+    { trait: "主动关怀", description: "不用别人开口，就能感知需要" },
+    { trait: "安全感担当", description: "让人愿意敞开心扉" },
+  ],
+  "灵感章鱼": [
+    { trait: "跨界联想", description: "能把八竿子打不着的事联系起来" },
+    { trait: "深度对话", description: "一对一时特别有洞察力" },
+  ],
+  "沉思猫头鹰": [
+    { trait: "观察敏锐", description: "别人没注意的细节你都看到了" },
+    { trait: "一针见血", description: "说话不多，但说出来就是重点" },
+  ],
+  "定心大象": [
+    { trait: "稳定可靠", description: "关键时刻总是那个拿主意的" },
+    { trait: "责任担当", description: "说到就能做到" },
+  ],
+  "稳如龟": [
+    { trait: "看人准", description: "不轻易下判断，但判断准" },
+    { trait: "深度交往", description: "认定了就是一辈子的朋友" },
+  ],
+  "隐身猫": [
+    { trait: "独立自主", description: "有自己的世界和节奏" },
+    { trait: "质量至上", description: "选择少而精的社交" },
+  ],
+};
+
+const similarArchetypes: Record<string, string[]> = {
+  "开心柯基": ["太阳鸡"],
+  "太阳鸡": ["开心柯基", "夸夸豚", "淡定海豚"],
+  "夸夸豚": ["淡定海豚", "暖心熊"],
+  "机智狐": ["灵感章鱼"],
+  "淡定海豚": ["夸夸豚", "暖心熊", "太阳鸡"],
+  "织网蛛": ["暖心熊"],
+  "暖心熊": ["定心大象", "织网蛛", "淡定海豚"],
+  "灵感章鱼": ["机智狐", "沉思猫头鹰"],
+  "沉思猫头鹰": ["稳如龟", "灵感章鱼"],
+  "定心大象": ["暖心熊", "稳如龟"],
+  "稳如龟": ["沉思猫头鹰", "隐身猫"],
+  "隐身猫": ["稳如龟"],
+};
+
+function UniqueTraitsSection({ archetype }: { archetype: string }) {
+  const traits = archetypeUniqueTraits[archetype];
+  if (!traits || traits.length === 0) return null;
+
+  return (
+    <Card data-testid="unique-traits-card" className="border-primary/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2">
+          <Star className="w-5 h-5 text-yellow-500" />
+          你的独特之处
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {traits.map((item, index) => (
+          <div 
+            key={index} 
+            className="flex items-start gap-3 p-3 bg-gradient-to-r from-primary/5 to-transparent rounded-lg"
+            data-testid={`unique-trait-${index}`}
+          >
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <span className="text-primary font-bold text-sm">{index + 1}</span>
+            </div>
+            <div>
+              <span className="font-medium text-sm">{item.trait}</span>
+              <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SimilarArchetypesHint({ archetype, isDecisive }: { archetype: string; isDecisive: boolean }) {
+  const similar = similarArchetypes[archetype];
+  if (!similar || similar.length === 0 || isDecisive) return null;
+
+  return (
+    <Card data-testid="similar-archetypes-card" className="bg-muted/30 border-dashed">
+      <CardContent className="py-4">
+        <div className="flex items-start gap-3">
+          <Layers className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              你可能融合了多种特质，也带有一点{similar.slice(0, 2).join("和")}的影子
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {similar.slice(0, 2).map((name) => (
+                <Badge 
+                  key={name} 
+                  variant="outline" 
+                  className="text-xs"
+                  data-testid={`similar-archetype-${name}`}
+                >
+                  {name}
+                </Badge>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground/70 italic">
+              这不是"不准"，而是你的特质更丰富
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MatchFeedbackSection({ archetype }: { archetype: string }) {
+  const [feedback, setFeedback] = useState<'accurate' | 'partial' | 'inaccurate' | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const { toast } = useToast();
+
+  const handleFeedback = async (value: 'accurate' | 'partial' | 'inaccurate') => {
+    setFeedback(value);
+    try {
+      await fetch('/api/assessment/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archetype, accuracy: value }),
+      });
+      setSubmitted(true);
+    } catch (error) {
+      toast({ title: '反馈提交失败，请稍后再试', variant: 'destructive' });
+    }
+  };
+
+  if (submitted) {
+    return (
+      <Card data-testid="feedback-submitted-card" className="bg-primary/5 border-primary/20">
+        <CardContent className="py-4">
+          <div className="flex items-center gap-3">
+            <MessageSquare className="w-5 h-5 text-primary" />
+            <p className="text-sm text-muted-foreground">感谢反馈！你的意见帮助我们做得更好</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card data-testid="feedback-card">
+      <CardContent className="py-4">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-muted-foreground" />
+            <p className="text-sm">这个结果符合你对自己的认知吗？</p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant={feedback === 'accurate' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleFeedback('accurate')}
+              data-testid="feedback-accurate"
+              className="gap-1"
+            >
+              <ThumbsUp className="w-4 h-4" />
+              很准
+            </Button>
+            <Button
+              variant={feedback === 'partial' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleFeedback('partial')}
+              data-testid="feedback-partial"
+            >
+              部分符合
+            </Button>
+            <Button
+              variant={feedback === 'inaccurate' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleFeedback('inaccurate')}
+              data-testid="feedback-inaccurate"
+              className="gap-1"
+            >
+              <ThumbsDown className="w-4 h-4" />
+              不太像
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function MatchExplanationSection({ result }: { result: UnifiedAssessmentResult }) {
@@ -450,6 +660,20 @@ export default function PersonalityTestResultPage() {
             <MatchExplanationSection result={result} />
           </motion.div>
         )}
+
+        <motion.div variants={itemVariants}>
+          <UniqueTraitsSection archetype={result.primaryRole} />
+        </motion.div>
+
+        {!result.isDecisive && (
+          <motion.div variants={itemVariants}>
+            <SimilarArchetypesHint archetype={result.primaryRole} isDecisive={result.isDecisive} />
+          </motion.div>
+        )}
+
+        <motion.div variants={itemVariants}>
+          <MatchFeedbackSection archetype={result.primaryRole} />
+        </motion.div>
 
         {result.chemistryList && result.chemistryList.length > 0 && (
           <motion.div variants={itemVariants}>
