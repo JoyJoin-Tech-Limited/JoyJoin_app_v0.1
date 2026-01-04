@@ -3891,6 +3891,146 @@ export const questionsV4: AdaptiveQuestion[] = [
         traitScores: { A: 0, C: 0, E: 0, O: 2, X: -1, P: 0 }
       }
     ]
+  },
+  // Q119-Q120: 太阳鸡 vs 淡定海豚 专项区分题 (P+X tradeoff)
+  // Key diff: 太阳鸡 P:92/X:85, 淡定海豚 P:68/X:55 - need P and X differentiation
+  {
+    id: "Q119",
+    level: 3,
+    category: "原型区分-太阳鸡vs淡定海豚-社交节奏",
+    scenarioText: "🎈 朋友邀请你参加一个派对。",
+    questionText: "你对这次聚会的期待是？",
+    primaryTraits: ["P", "X"],
+    isForcedChoice: true,
+    targetPairs: ["太阳鸡", "淡定海豚"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.65,
+    options: [
+      {
+        value: "A",
+        text: "超级兴奋！准备认识很多新朋友，把气氛搞起来",
+        traitScores: { A: 0, C: 0, E: 2, O: 0, X: 5, P: 3 }
+      },
+      {
+        value: "B",
+        text: "期待去开心一下，和熟悉的朋友待在一起就好",
+        traitScores: { A: 1, C: 0, E: 2, O: 0, X: 1, P: 0 }
+      },
+      {
+        value: "C",
+        text: "随缘参加，不会刻意社交，享受氛围就行",
+        traitScores: { A: 0, C: 0, E: 3, O: 0, X: -2, P: -2 }
+      },
+      {
+        value: "D",
+        text: "可能待一会儿就走，社交太久会累",
+        traitScores: { A: 0, C: 0, E: 1, O: 0, X: -4, P: 0 }
+      }
+    ]
+  },
+  {
+    id: "Q120",
+    level: 3,
+    category: "原型区分-太阳鸡vs淡定海豚-耐心程度",
+    scenarioText: "⏰ 等待的事情比预期延迟了很久。",
+    questionText: "你通常会怎么应对？",
+    primaryTraits: ["P", "E"],
+    isForcedChoice: true,
+    targetPairs: ["太阳鸡", "淡定海豚"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.62,
+    options: [
+      {
+        value: "A",
+        text: "没关系！找周围的人聊天，时间很快过去",
+        traitScores: { A: 1, C: 0, E: 2, O: 0, X: 4, P: 4 }
+      },
+      {
+        value: "B",
+        text: "做点自己的事打发时间，比如看手机或看书",
+        traitScores: { A: 0, C: 1, E: 1, O: 0, X: 0, P: 1 }
+      },
+      {
+        value: "C",
+        text: "心平气和地等着，反正急也没用",
+        traitScores: { A: 0, C: 0, E: 4, O: 0, X: -2, P: -2 }
+      },
+      {
+        value: "D",
+        text: "主动问一下进度，看看能不能加快",
+        traitScores: { A: 0, C: 2, E: 0, O: 0, X: 1, P: -1 }
+      }
+    ]
+  },
+  // Q121-Q122: 暖心熊 vs 淡定海豚 专项区分题 (A tradeoff)
+  // Key diff: 暖心熊 A:88, 淡定海豚 A:70 - need A differentiation
+  {
+    id: "Q121",
+    level: 3,
+    category: "原型区分-暖心熊vs淡定海豚-关怀方式",
+    scenarioText: "😢 一个不太熟的同事看起来心情很低落。",
+    questionText: "你会怎么做？",
+    primaryTraits: ["A", "X"],
+    isForcedChoice: true,
+    targetPairs: ["暖心熊", "淡定海豚"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.60,
+    options: [
+      {
+        value: "A",
+        text: "主动过去关心一下，看看能不能帮到ta",
+        traitScores: { A: 5, C: 0, E: 0, O: 0, X: 2, P: 2 }
+      },
+      {
+        value: "B",
+        text: "悄悄买杯咖啡放ta桌上，不打扰但表达关心",
+        traitScores: { A: 3, C: 0, E: 1, O: 0, X: -1, P: 2 }
+      },
+      {
+        value: "C",
+        text: "如果ta主动找我聊，我会认真倾听",
+        traitScores: { A: 1, C: 0, E: 2, O: 0, X: -2, P: 0 }
+      },
+      {
+        value: "D",
+        text: "不太会特别注意，ta可能想要私人空间",
+        traitScores: { A: -2, C: 0, E: 2, O: 0, X: -1, P: -1 }
+      }
+    ]
+  },
+  {
+    id: "Q122",
+    level: 3,
+    category: "原型区分-暖心熊vs淡定海豚-情感投入",
+    scenarioText: "🤝 朋友分享了一个好消息。",
+    questionText: "你的反应更接近哪个？",
+    primaryTraits: ["A", "X"],
+    isForcedChoice: true,
+    targetPairs: ["暖心熊", "淡定海豚"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.58,
+    options: [
+      {
+        value: "A",
+        text: "超级开心！立刻送上热情的祝贺和拥抱",
+        traitScores: { A: 5, C: 0, E: 1, O: 0, X: 3, P: 2 }
+      },
+      {
+        value: "B",
+        text: "真心为ta高兴，表达诚挚的祝福",
+        traitScores: { A: 3, C: 0, E: 1, O: 0, X: 0, P: 1 }
+      },
+      {
+        value: "C",
+        text: "替ta开心，问问接下来的计划",
+        traitScores: { A: 1, C: 1, E: 1, O: 0, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "说声恭喜，内心替ta感到高兴",
+        traitScores: { A: -1, C: 0, E: 2, O: 0, X: -2, P: 0 }
+      }
+    ]
   }
 ];
 
