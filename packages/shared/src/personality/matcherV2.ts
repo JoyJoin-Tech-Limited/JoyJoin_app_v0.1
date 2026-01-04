@@ -104,7 +104,8 @@ export const PROTOTYPE_SOUL_TRAITS: Record<string, {
   "暖心熊": {
     primary: { A: 1.8 },
     secondary: { E: 1.3, P: 1.2 },
-    avoid: { O: 0.7, X: 0.8 }
+    // V2.3 FIX: X avoid weight lowered to 0.4 for stronger penalty on high-X users
+    avoid: { O: 0.7, X: 0.4 }
   },
   "稳如龟": {
     primary: { E: 1.8, C: 1.7 },
@@ -192,11 +193,14 @@ export const ARCHETYPE_VETO_RULES: Record<string, (traits: Record<TraitKey, numb
     return 1.0;
   },
   "暖心熊": (t) => {
-    // V2.3 FIX: Must also check X - 暖心熊 has X:48, high-X users should NOT match
-    // If user X >= 70, they're too extroverted for 暖心熊
-    if (t.X >= 70) return 0.4; // Strong penalty for high-X users
-    if (t.X >= 60) return 0.7; // Moderate penalty
-    if (t.A >= 78) return 1.15;
+    // V2.3 FIX: HARD VETO for high-X users - 暖心熊 has X:48
+    // High-X users (X >= 65) should NEVER match 暖心熊
+    if (t.X >= 75) return 0.15; // Near-VETO for very high-X users
+    if (t.X >= 70) return 0.25; // Severe penalty
+    if (t.X >= 65) return 0.35; // Strong penalty
+    if (t.X >= 60) return 0.5; // Moderate penalty
+    // Only give bonus for A if X is appropriate (low-X users)
+    if (t.A >= 78 && t.X < 55) return 1.15;
     if (t.A < 65) return 0.6;
     return 1.0;
   },
@@ -430,11 +434,13 @@ export const SIGNATURE_THRESHOLDS: Record<string, (t: Record<TraitKey, number>) 
     return 1.0;
   },
   "暖心熊": (t) => {
-    // V2.3 FIX: 暖心熊 A=90, X=48 - 高亲和力 + 低外向性
-    // High-X users should NOT match 暖心熊
-    if (t.X >= 70) return 0.35; // Strong penalty for very extroverted users
-    if (t.X >= 60) return 0.55; // Moderate penalty for extroverted users
-    // Only apply A bonus if X is appropriate
+    // V2.3 FIX: HARD VETO for high-X users - 暖心熊 A=90, X=48
+    // This is a critical gate: X is the differentiator between 暖心熊 and 开心柯基
+    if (t.X >= 75) return 0.1; // Near-VETO for very high-X users
+    if (t.X >= 70) return 0.2; // Severe penalty
+    if (t.X >= 65) return 0.3; // Strong penalty
+    if (t.X >= 60) return 0.45; // Moderate penalty
+    // Only apply A bonus if X is appropriate (low-X users)
     if (t.A >= 85 && t.X < 55) return 1.4; // High A + low X = strong match
     if (t.A >= 80 && t.X < 58) return 1.2;
     if (t.A >= 75) return 1.0;
@@ -558,28 +564,44 @@ function toZScoreVector(traits: Record<TraitKey, number>): Record<TraitKey, numb
  * V2.3 Helper: Calculate asymmetric penalty for avoid traits
  * Heavily penalizes when user trait diverges significantly from archetype's profile
  * on traits marked as "avoid" in the soul trait config
+ * 
+ * Uses the avoid weight to scale the penalty - lower weight = stronger penalty needed
  */
 function calculateAsymmetricAvoidPenalty(
   userTraits: Record<TraitKey, number>,
   archetypeProfile: Record<TraitKey, number>,
   avoidTraits: Partial<Record<TraitKey, number>>
-): { totalPenalty: number; penaltyDetails: Array<{ trait: TraitKey; gap: number; penalty: number }> } {
+): { totalPenalty: number; penaltyDetails: Array<{ trait: TraitKey; gap: number; penalty: number; weight: number }> } {
   let totalPenalty = 0;
-  const penaltyDetails: Array<{ trait: TraitKey; gap: number; penalty: number }> = [];
+  const penaltyDetails: Array<{ trait: TraitKey; gap: number; penalty: number; weight: number }> = [];
 
   for (const [traitStr, weight] of Object.entries(avoidTraits)) {
     const trait = traitStr as TraitKey;
+    const avoidWeight = weight ?? 0.7; // Default avoid weight if not specified
     const userZ = toZScore(userTraits[trait] ?? TRAIT_MEAN);
     const archetypeZ = toZScore(archetypeProfile[trait]);
     const gapSD = Math.abs(userZ - archetypeZ);
 
-    // Only apply penalty if gap exceeds threshold
+    // V2.3 FIX: Apply penalty based on gap and inverse of avoid weight
+    // Lower avoid weight = stronger penalty multiplier
+    // For avoid weight 0.7, penalty multiplier is ~1.43x
+    // For avoid weight 0.5, penalty multiplier is 2x
+    const weightMultiplier = 1 / Math.max(0.3, avoidWeight);
+
+    // Apply penalty if gap exceeds threshold (0.5 SD)
     if (gapSD > ASYMMETRIC_PENALTY_THRESHOLD_SD) {
       const excessGap = gapSD - ASYMMETRIC_PENALTY_THRESHOLD_SD;
-      // Quadratic penalty for larger gaps
-      const penalty = ASYMMETRIC_PENALTY_LAMBDA * Math.pow(excessGap, 2);
+      // V2.3 FIX: Stronger quadratic penalty with weight multiplier
+      // Use lambda=3.0 for stronger penalties (was 2.0)
+      const basePenalty = 3.0 * Math.pow(excessGap, 2);
+      const penalty = basePenalty * weightMultiplier;
       totalPenalty += penalty;
-      penaltyDetails.push({ trait, gap: gapSD, penalty });
+      penaltyDetails.push({ trait, gap: gapSD, penalty, weight: avoidWeight });
+    } else if (gapSD > 0.3) {
+      // V2.3: Also apply mild linear penalty for moderate gaps (0.3-0.5 SD)
+      const mildPenalty = 0.5 * (gapSD - 0.3) * weightMultiplier;
+      totalPenalty += mildPenalty;
+      penaltyDetails.push({ trait, gap: gapSD, penalty: mildPenalty, weight: avoidWeight });
     }
   }
 
@@ -632,25 +654,30 @@ export class PrototypeMatcher {
     // V2.3: Apply asymmetric penalty for avoid traits
     const soulConfig = PROTOTYPE_SOUL_TRAITS[prototype.name];
     let asymmetricPenaltyFactor = 1.0;
+    let avoidPenaltyDetails: Array<{ trait: TraitKey; gap: number; penalty: number; weight: number }> = [];
+    
     if (soulConfig?.avoid) {
       const { totalPenalty, penaltyDetails } = calculateAsymmetricAvoidPenalty(
         correctedTraits,
         prototype.traitProfile,
         soulConfig.avoid
       );
+      avoidPenaltyDetails = penaltyDetails;
       // Convert penalty to a multiplicative factor (penalty of 0 = factor 1.0, higher = lower)
       // Use sigmoid-like decay: factor = 1 / (1 + penalty)
       asymmetricPenaltyFactor = 1 / (1 + totalPenalty);
       
       if (DEBUG_MATCHER && penaltyDetails.length > 0) {
-        console.log(`[Matcher] ${prototype.name} asymmetric penalties:`, penaltyDetails);
+        console.log(`[Matcher] ${prototype.name} asymmetric penalties (totalPenalty=${totalPenalty.toFixed(3)}, factor=${asymmetricPenaltyFactor.toFixed(3)}):`, 
+          penaltyDetails.map(p => `${p.trait}: gap=${p.gap.toFixed(2)}SD, penalty=${p.penalty.toFixed(3)}, weight=${p.weight}`).join('; ')
+        );
       }
     }
 
     const finalScore = (baseSimilarity * penaltyFactor * asymmetricPenaltyFactor) + secondaryBonus;
 
     if (DEBUG_MATCHER) {
-      console.log(`[Matcher] ${prototype.name}: base=${baseSimilarity.toFixed(3)}, overshoot=${penaltyFactor.toFixed(3)}, asymm=${asymmetricPenaltyFactor.toFixed(3)}, final=${(finalScore * 100).toFixed(1)}`);
+      console.log(`[Matcher] ${prototype.name}: base=${baseSimilarity.toFixed(3)}, overshoot=${penaltyFactor.toFixed(3)}, asymm=${asymmetricPenaltyFactor.toFixed(3)}, combined=${(penaltyFactor * asymmetricPenaltyFactor).toFixed(3)}, final=${(finalScore * 100).toFixed(1)}`);
     }
 
     return {
