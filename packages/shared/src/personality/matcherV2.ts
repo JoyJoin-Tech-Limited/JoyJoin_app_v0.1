@@ -101,126 +101,185 @@ export const PROTOTYPE_SOUL_TRAITS: Record<string, {
  * 1.0 = 中性, <1.0 = 惩罚, >1.0 = 加成
  * 规则更简单，依赖灵魂特质权重做主要区分
  */
+/**
+ * V2.2 校准版：根据10k用户模拟的实际分数分布调整阈值
+ * 实际分数范围约55-80，原阈值基于理想化的85+分数，需降低10-15点
+ */
 export const ARCHETYPE_VETO_RULES: Record<string, (traits: Record<TraitKey, number>) => number> = {
   "太阳鸡": (t) => {
-    // P是太阳鸡的灵魂 - 高P加成，低P惩罚
-    if (t.P >= 85) return 1.25;
-    if (t.P >= 80) return 1.1;
-    if (t.P < 70) return 0.5;
+    // P是太阳鸡的灵魂 - 实际P分布: 61-74-88
+    // 降低阈值：85→75, 80→70
+    if (t.P >= 78) return 1.25;
+    if (t.P >= 72) return 1.1;
+    if (t.P < 60) return 0.5;
     return 1.0;
   },
   "淡定海豚": (t) => {
-    // 淡定海豚: 高E + 适中P (不是极高P)
-    if (t.P >= 85) return 0.5; // 高P更像太阳鸡
-    if (t.E >= 80 && t.P < 75) return 1.15;
+    // 淡定海豚: 高E + 低X + 适中P（实际X分布: 33-42-70）
+    if (t.P >= 78) return 0.5; // 高P更像太阳鸡
+    if (t.E >= 75 && t.X < 55 && t.P < 65) return 1.25; // 强化低X信号
+    if (t.E >= 72 && t.P < 68) return 1.1;
     return 1.0;
   },
   "沉思猫头鹰": (t) => {
-    // 猫头鹰核心: 高O(88) + 低X(40) - 区别于龟的O(65)
-    if (t.O >= 80 && t.X < 50) return 1.35;
-    if (t.O >= 75) return 1.15;
-    if (t.O < 70) return 0.5; // 低O不是猫头鹰
-    if (t.X > 60) return 0.6;
+    // 猫头鹰核心: 高O + 低X - 实际O分布: 65-75-83
+    if (t.O >= 75 && t.X < 45) return 1.35;
+    if (t.O >= 70) return 1.15;
+    if (t.O < 65) return 0.5;
+    if (t.X > 55) return 0.6;
     return 1.0;
   },
   "稳如龟": (t) => {
-    // 龟核心: 高E+C + 低X + 低O - 区别于猫头鹰的高O
-    if (t.O > 80) return 0.4; // 高O绝对更像猫头鹰
-    if (t.O > 75) return 0.6;
-    if (t.X < 40 && t.O < 70) return 1.3;
+    // 龟核心: 高E+C + 低X + 低O - 实际O分布: 45-53-65
+    if (t.O > 72) return 0.4; // 高O更像猫头鹰
+    if (t.O > 68) return 0.6;
+    if (t.X < 38 && t.O < 60) return 1.3;
     return 1.0;
   },
-  "机智狐": (t) => t.O >= 80 ? 1.15 : (t.O < 65 ? 0.5 : 1.0),
+  "机智狐": (t) => t.O >= 75 ? 1.15 : (t.O < 60 ? 0.5 : 1.0),
   "灵感章鱼": (t) => {
-    if (t.O >= 85 && t.C < 50) return 1.2;
-    if (t.C > 70) return 0.6;
+    // 实际O分布: 83-89-95, C分布: 40-50-60
+    if (t.O >= 82 && t.C < 60) return 1.2;
+    if (t.C > 65) return 0.7;
     return 1.0;
   },
   "隐身猫": (t) => {
-    if (t.X < 35 && t.A < 50) return 1.2;
-    if (t.X > 55) return 0.5;
+    // 实际X分布: 25-28-32
+    if (t.X < 35 && t.A < 60) return 1.2;
+    if (t.X > 50) return 0.5;
     return 1.0;
   },
-  "暖心熊": (t) => t.A >= 85 ? 1.15 : (t.A < 70 ? 0.6 : 1.0),
-  "夸夸豚": (t) => (t.A >= 85 && t.X >= 75) ? 1.15 : 1.0,
-  "开心柯基": (t) => (t.X >= 85 && t.P >= 75) ? 1.15 : 1.0,
-  "定心大象": (t) => t.E >= 85 ? 1.15 : (t.E < 75 ? 0.6 : 1.0),
-  "织网蛛": (t) => t.C >= 80 ? 1.1 : (t.C < 65 ? 0.6 : 1.0)
+  "暖心熊": (t) => t.A >= 78 ? 1.15 : (t.A < 65 ? 0.6 : 1.0),
+  "夸夸豚": (t) => {
+    // 实际A分布: 65-74-88, X分布: 73-83-88
+    if (t.A >= 72 && t.X >= 78) return 1.2;
+    if (t.A >= 68 && t.X >= 72) return 1.1;
+    return 1.0;
+  },
+  "开心柯基": (t) => {
+    // 实际X分布: 80-84-88, P分布: 76-88-91
+    if (t.X >= 80 && t.P >= 80) return 1.2;
+    if (t.X >= 78 && t.P >= 72) return 1.1;
+    return 1.0;
+  },
+  "定心大象": (t) => {
+    // 实际E分布: 76-79-81, P分布: 35-35-55 (很低!)
+    // 区分于稳如龟：大象有更高A和P
+    if (t.E >= 76 && t.A >= 70 && t.P >= 40) return 1.25;
+    if (t.E >= 75) return 1.1;
+    if (t.E < 72) return 0.6;
+    return 1.0;
+  },
+  "织网蛛": (t) => t.C >= 73 ? 1.1 : (t.C < 60 ? 0.6 : 1.0)
 };
 
 /**
  * 混淆对门控规则 - 针对已知的高混淆原型对
  * 当用户特质明确属于某一原型时，大幅抑制竞争原型的分数
  */
+/**
+ * V2.2 校准版：根据实际分数分布调整门控阈值
+ */
 export const CONFUSION_PAIR_GATES: Array<{
   trueArchetype: string;
   rivalArchetype: string;
-  gate: (t: Record<TraitKey, number>) => number; // 返回rival的乘数
+  gate: (t: Record<TraitKey, number>) => number;
 }> = [
   {
-    // 太阳鸡(P=92) vs 淡定海豚(P=68): P≥82的用户明显是太阳鸡
+    // 太阳鸡 vs 淡定海豚: 实际P分布 太阳鸡74 vs 海豚55
     trueArchetype: "太阳鸡",
     rivalArchetype: "淡定海豚",
     gate: (t) => {
-      if (t.P >= 85) return 0.2;
-      if (t.P >= 82) return 0.4;
-      if (t.P >= 78) return 0.6;
+      if (t.P >= 78) return 0.2;
+      if (t.P >= 72) return 0.4;
+      if (t.P >= 68) return 0.6;
       return 1.0;
     }
   },
   {
-    // 淡定海豚(P=68) vs 太阳鸡(P=92): P<75的用户明显是淡定海豚
+    // 淡定海豚 vs 太阳鸡: P<65的用户明显是淡定海豚
     trueArchetype: "淡定海豚",
     rivalArchetype: "太阳鸡",
     gate: (t) => {
-      if (t.P < 70) return 0.3;
-      if (t.P < 75) return 0.5;
+      if (t.P < 58 && t.X < 55) return 0.25; // 低P+低X强信号
+      if (t.P < 62) return 0.4;
+      if (t.P < 68) return 0.6;
       return 1.0;
     }
   },
   {
-    // 沉思猫头鹰(O=88) vs 稳如龟(O=65): O≥78的用户明显是猫头鹰
+    // 沉思猫头鹰 vs 稳如龟: 实际O分布 猫头鹰75 vs 龟53
     trueArchetype: "沉思猫头鹰",
     rivalArchetype: "稳如龟",
     gate: (t) => {
-      if (t.O >= 82 && t.X < 50) return 0.15;
-      if (t.O >= 78) return 0.35;
-      if (t.O >= 75) return 0.55;
+      if (t.O >= 75 && t.X < 45) return 0.15;
+      if (t.O >= 72) return 0.35;
+      if (t.O >= 68) return 0.55;
       return 1.0;
     }
   },
   {
-    // 稳如龟(O=65) vs 沉思猫头鹰(O=88): O<72的用户明显是龟
+    // 稳如龟 vs 沉思猫头鹰: O<60的用户明显是龟
     trueArchetype: "稳如龟",
     rivalArchetype: "沉思猫头鹰",
     gate: (t) => {
-      if (t.O < 68) return 0.3;
-      if (t.O < 72) return 0.5;
+      if (t.O < 58) return 0.3;
+      if (t.O < 65) return 0.5;
       return 1.0;
     }
   },
   {
-    // 隐身猫(X=25) vs 稳如龟(X=38): X<32的用户明显是隐身猫
+    // 隐身猫 vs 稳如龟: 实际X分布 隐身猫28 vs 龟32
     trueArchetype: "隐身猫",
     rivalArchetype: "稳如龟",
     gate: (t) => {
-      if (t.X < 30 && t.A < 50) return 0.3;
+      if (t.X < 30 && t.A < 60) return 0.3;
       if (t.X < 35) return 0.6;
       return 1.0;
     }
   },
   {
-    // 机智狐(O=85, X=70) vs 开心柯基(O=65, X=90): 高O用户更可能是狐狸
+    // 机智狐 vs 开心柯基: 实际O分布 狐狸82 vs 柯基80
     trueArchetype: "机智狐",
     rivalArchetype: "开心柯基",
     gate: (t) => {
-      if (t.O >= 80) return 0.5;
+      if (t.O >= 78 && t.X < 75) return 0.5;
       if (t.O >= 75) return 0.7;
       return 1.0;
     }
   },
   {
-    // 夸夸豚(A=90, X=85) vs 开心柯基(A=70, X=90): 高A区分
+    // 开心柯基 vs 太阳鸡: 柯基X更高(84 vs 74)，P接近
+    trueArchetype: "开心柯基",
+    rivalArchetype: "太阳鸡",
+    gate: (t) => {
+      if (t.X >= 82 && t.P >= 80) return 0.4; // 超高X+P是柯基
+      if (t.X >= 80) return 0.6;
+      return 1.0;
+    }
+  },
+  {
+    // 太阳鸡 vs 开心柯基: 太阳鸡A更高(84 vs 56)
+    trueArchetype: "太阳鸡",
+    rivalArchetype: "开心柯基",
+    gate: (t) => {
+      if (t.A >= 78 && t.X < 82) return 0.4;
+      if (t.A >= 72) return 0.6;
+      return 1.0;
+    }
+  },
+  {
+    // 定心大象 vs 稳如龟: 大象A更高(74 vs 60)
+    trueArchetype: "定心大象",
+    rivalArchetype: "稳如龟",
+    gate: (t) => {
+      if (t.A >= 72 && t.P >= 38) return 0.4;
+      if (t.A >= 68) return 0.6;
+      return 1.0;
+    }
+  },
+  {
+    // 夸夸豚 vs 太阳鸡: 夸夸豚X更高(83 vs 74)
     trueArchetype: "夸夸豚",
     rivalArchetype: "开心柯基",
     gate: (t) => {
