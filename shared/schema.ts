@@ -2630,6 +2630,8 @@ export const assessmentSessions = pgTable("assessment_sessions", {
   matchDetailsJson: jsonb("match_details_json"), // V2 explainable match result with traitDeltas, decisiveReason
   primaryArchetype: varchar("primary_archetype", { length: 50 }), // Final matched archetype
   isDecisive: boolean("is_decisive"), // Whether match was decisive (clear winner)
+  skipCount: integer("skip_count").default(0), // Number of questions skipped
+  skippedQuestionIds: jsonb("skipped_question_ids").default([]), // List of IDs for skipped questions
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
