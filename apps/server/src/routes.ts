@@ -9949,6 +9949,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           }
           
           console.log('[V4 Start] Resuming existing session for user:', userId, 'with', answers.length, 'answers');
+        } else if (existingUserSession && existingUserSession.completedAt) {
+          // User has a completed session - start fresh
+          console.log('[V4 Start] User has completed session, creating new one');
         }
       }
       
@@ -10012,6 +10015,11 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
             }
           }
         }
+      }
+      
+      // Ensure engineState is initialized (should always be by this point)
+      if (!engineState) {
+        engineState = initializeEngineState(assessmentConfig);
       }
       
       // Get next question
