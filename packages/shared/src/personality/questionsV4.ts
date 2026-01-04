@@ -200,7 +200,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q7",
+    id: "Q9",
     level: 2,
     category: "观点表达",
     scenarioText: "💬 群里话题聊得正热，你有个截然不同但有趣的角度。",
@@ -231,7 +231,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q8",
+    id: "Q10",
     level: 2,
     category: "延迟反应",
     scenarioText: "🕙 活动比预定时间晚了半小时才开始，大家都在等待。",
@@ -262,7 +262,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q9",
+    id: "Q11",
     level: 2,
     category: "自我展示",
     scenarioText: "🎭 活动有个需要才艺展示的环节，自愿参与。",
@@ -294,7 +294,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q10",
+    id: "Q12",
     level: 2,
     category: "应变态度",
     scenarioText: "🌧️ 户外活动当天早晨，发现天气可能变坏。",
@@ -325,7 +325,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q11",
+    id: "Q13",
     level: 2,
     category: "入群行为",
     scenarioText: "👥 你被拉进一个全是陌生人的活动预备群。",
@@ -356,7 +356,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q12",
+    id: "Q14",
     level: 2,
     category: "决策风格",
     scenarioText: "🍽️ 朋友群里讨论周五去哪吃饭，推荐了好几家。",
@@ -388,7 +388,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q13",
+    id: "Q7",
     level: 1,
     category: "赠礼思维",
     scenarioText: "🎁 新朋友下周生日，你想送个小礼物。",
@@ -425,7 +425,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q14",
+    id: "Q15",
     level: 2,
     category: "关系推进",
     scenarioText: "🤝 通过活动认识的新朋友，第二天在微信上找你闲聊。",
@@ -456,7 +456,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q15",
+    id: "Q8",
     level: 1,
     category: "胜负反应",
     scenarioText: "🏆 团队游戏你们这组赢了，对方组有些失落。",
@@ -525,7 +525,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q17",
+    id: "Q16",
     level: 2,
     category: "新奇发现",
     scenarioText: "🗺️ 你在城市某个角落偶然发现一家隐藏在小巷里、风格极其独特的咖啡店。",
@@ -555,7 +555,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q18",
+    id: "Q16",
     level: 2,
     category: "能量恢复",
     scenarioText: "🔋 参加了一场持续4小时、需要高度社交投入的活动后，你感觉电量耗尽。",
@@ -585,7 +585,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q19",
+    id: "Q16",
     level: 2,
     category: "助人行为",
     scenarioText: "❓ 活动群里，有人问一个你恰好知道答案的问题。",
@@ -615,7 +615,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q20",
+    id: "Q16",
     level: 2,
     category: "纠错倾向",
     scenarioText: "💬 大家在热烈讨论一部电影，但其中一个人反复提到一个明显的事实错误。",
@@ -650,7 +650,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q21",
+    id: "Q16",
     level: 2,
     category: "规则利用",
     scenarioText: "🎲 玩桌游时，你发现有一条未被充分利用但完全合理的规则，可以让你的局面逆转。",
@@ -711,7 +711,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q22",
+    id: "Q16",
     level: 2,
     category: "意见保留",
     scenarioText: "🗣️ 朋友推荐了一部ta极度喜爱的电影/音乐，但你看完后完全无感。",
@@ -772,7 +772,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q23",
+    id: "Q16",
     level: 2,
     category: "账单处理",
     scenarioText: "💰 AA结账时，发现金额有些零头，不太好平分。",
@@ -833,7 +833,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q24",
+    id: "Q16",
     level: 2,
     category: "信息来源",
     scenarioText: "📱 组织聚会前，你需要确定一家餐厅。",
@@ -863,7 +863,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q25",
+    id: "Q16",
     level: 2,
     category: "技能教授",
     scenarioText: "🎓 别人请你教一个你擅长的技能。",
@@ -893,7 +893,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q26",
+    id: "Q16",
     level: 2,
     category: "圈子定位",
     scenarioText: "👥 如果把你放在一个10人的社交圈子里，",
@@ -928,7 +928,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q27",
+    id: "Q16",
     level: 2,
     category: "创意产出",
     scenarioText: "💡 团队 brainstorming 时，领导说任何天马行空的想法都可以。",
@@ -958,7 +958,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q28",
+    id: "Q16",
     level: 2,
     category: "社交焦虑",
     scenarioText: "📱 在一个热闹的微信群中，你发了一条消息，但一段时间内无人回应。",
@@ -988,7 +988,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q29",
+    id: "Q16",
     level: 2,
     category: "惊喜反应",
     scenarioText: "🎉 朋友为你准备了一个惊喜生日派对。当你推开门，所有人齐声欢呼时，",
@@ -1018,7 +1018,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q30",
+    id: "Q16",
     level: 2,
     category: "反馈行为",
     scenarioText: "📝 活动结束后，组织者在群里发起匿名反馈问卷。",
@@ -1048,7 +1048,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q31",
+    id: "Q16",
     level: 2,
     category: "集体决策",
     scenarioText: "👥 你和一群朋友计划一次旅行，有几种不同的风格选择。",
@@ -1078,7 +1078,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q32",
+    id: "Q16",
     level: 2,
     category: "游戏偏好",
     scenarioText: "🎭 聚会上，大家玩真心话大冒险。轮到你选择时，",
@@ -1108,7 +1108,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q33",
+    id: "Q16",
     level: 2,
     category: "意外冲突",
     scenarioText: "🚶 在狭窄的过道，你不小心和迎面走来的人撞了一下，对方看起来心情不好并咕哝了一句不客气的话。",
@@ -1138,7 +1138,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q34",
+    id: "Q16",
     level: 2,
     category: "信息分享",
     scenarioText: "📰 看到一条关于你某个朋友感兴趣领域的深度干货，但内容很长且有一定的门槛。",
@@ -1173,7 +1173,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q35",
+    id: "Q16",
     level: 2,
     category: "计划变动",
     scenarioText: "📅 期待已久的周末出游计划因为天气原因临时取消，改为室内聚会。",
@@ -1203,7 +1203,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q36",
+    id: "Q16",
     level: 2,
     category: "接受新事物",
     scenarioText: "🔄 朋友向你推荐一个TA非常喜欢、但你之前从未接触过的活动。",
@@ -1233,7 +1233,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q37",
+    id: "Q16",
     level: 2,
     category: "重大建议",
     scenarioText: "🤔 当朋友问你我该不该换工作/结束一段关系？这类重大人生抉择时，",
@@ -1268,7 +1268,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q38",
+    id: "Q16",
     level: 2,
     category: "高强度社交",
     scenarioText: "🎉 在一个大型庆祝派对上，音乐很响，人非常多。",
@@ -1298,7 +1298,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q39",
+    id: "Q16",
     level: 2,
     category: "展示偏好",
     scenarioText: "📊 你们小组完成了一个项目，被要求派代表做总结展示。",
@@ -1328,7 +1328,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q40",
+    id: "Q16",
     level: 2,
     category: "关系深度",
     scenarioText: "🌱 你加入了一个每周活动的社团，已经三个月。",
@@ -1358,7 +1358,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q41",
+    id: "Q16",
     level: 2,
     category: "事后讨论",
     scenarioText: "🎬 和朋友看完一场电影，走出影院时，",
@@ -1388,7 +1388,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q42",
+    id: "Q16",
     level: 2,
     category: "介绍朋友",
     scenarioText: "🔄 你介绍两个原本不认识的朋友互相认识，但他们似乎没什么共同话题，对话冷场。",
@@ -1418,7 +1418,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q43",
+    id: "Q16",
     level: 2,
     category: "日程风格",
     scenarioText: "📅 你的周末时间安排，更符合以下哪种模式？",
@@ -1448,7 +1448,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q44",
+    id: "Q16",
     level: 2,
     category: "求助方式",
     scenarioText: "🤝 你需要找一个朋友帮你一个不大不小的忙。",
@@ -1478,7 +1478,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q45",
+    id: "Q16",
     level: 2,
     category: "创造力表达",
     scenarioText: "🎨 参加一个手工DIY工作坊，老师讲解了基本步骤后让大家自由发挥。",
@@ -1508,7 +1508,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q46",
+    id: "Q16",
     level: 2,
     category: "观点冲突",
     scenarioText: "🗣️ 在讨论中，你提出了一个观点，但被另一个人强烈反对。",
@@ -1538,7 +1538,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q47",
+    id: "Q16",
     level: 2,
     category: "祝贺方式",
     scenarioText: "🌟 朋友取得了一个很棒的成就，在朋友圈公布。",
@@ -1568,7 +1568,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q48",
+    id: "Q16",
     level: 2,
     category: "知识探索",
     scenarioText: "🕵️ 你对一个历史/科学/文化话题产生了浓厚兴趣。",
@@ -1598,7 +1598,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q49",
+    id: "Q16",
     level: 2,
     category: "探索行为",
     scenarioText: "🎪 一个大型节日市集，有各种小吃、手作和表演。",
@@ -1628,7 +1628,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q50",
+    id: "Q16",
     level: 2,
     category: "秘密处理",
     scenarioText: "🤫 你无意中得知了一个关于某位朋友的、并非恶意的秘密。",
@@ -1659,7 +1659,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   // ==================== L2 补充题 - 减少社会期望偏差 ====================
   {
-    id: "Q78",
+    id: "Q16",
     level: 2,
     category: "独处偏好",
     scenarioText: "🎧 周五晚上，你独自一人待在家，突然收到多个朋友的邀约。",
@@ -1690,7 +1690,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q79",
+    id: "Q16",
     level: 2,
     category: "创意类型",
     scenarioText: "💡 头脑风暴环节，大家在想活动创意。",
@@ -1721,7 +1721,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q80",
+    id: "Q16",
     level: 2,
     category: "社交动机",
     scenarioText: "🤝 你在聚会上主动和新认识的人交流。",
@@ -1752,7 +1752,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q81",
+    id: "Q16",
     level: 2,
     category: "帮助边界",
     scenarioText: "🆘 朋友半夜发消息说心情不好想聊聊。",
@@ -1783,7 +1783,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q82",
+    id: "Q16",
     level: 2,
     category: "活力状态",
     scenarioText: "☀️ 周末早上醒来，天气很好。",
@@ -1814,7 +1814,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q83",
+    id: "Q16",
     level: 2,
     category: "观点态度",
     scenarioText: "💬 朋友分享了一个你觉得有问题的观点。",
@@ -1847,7 +1847,7 @@ export const questionsV4: AdaptiveQuestion[] = [
 
   // ==================== L3 精准决胜题 (Q51-Q60) ====================
   {
-    id: "Q51",
+    id: "Q16",
     level: 3,
     category: "自我价值认知",
     scenarioText: "🎯 在社交中，你认为自己最大的价值是？",
@@ -1882,7 +1882,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q52",
+    id: "Q16",
     level: 3,
     category: "负向恐惧",
     scenarioText: "😅 社交场合中，你最担心发生哪种情况？",
@@ -1912,7 +1912,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q53",
+    id: "Q16",
     level: 3,
     category: "隐喻认知",
     scenarioText: "🧩 如果用一个比喻来形容你在社交网络中的角色，你觉得最接近？",
@@ -1942,7 +1942,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q54",
+    id: "Q16",
     level: 3,
     category: "价值观权衡",
     scenarioText: "⚖️ 对你而言，在社交中，做真实的自己和让周围的人感到舒服",
@@ -1972,7 +1972,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q55",
+    id: "Q16",
     level: 3,
     category: "历史模式",
     scenarioText: "🔄 回顾你过往的社交经历，哪种模式更常发生？",
@@ -2002,7 +2002,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q56",
+    id: "Q16",
     level: 2,
     category: "助人天赋",
     scenarioText: "👂 当朋友遇到困扰向你倾诉时，你觉得自己更擅长？",
@@ -2037,7 +2037,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q57",
+    id: "Q16",
     level: 3,
     category: "高精度区分",
     scenarioText: "😂 聚会中，一个朋友因为手滑，把饮料洒在了自己身上，大家先是一愣，随即笑作一团。",
@@ -2072,7 +2072,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q58",
+    id: "Q16",
     level: 2,
     category: "助人消耗",
     scenarioText: "💆 同样是在帮助遇到困扰的朋友时，你认为哪件事更消耗你的心力？",
@@ -2102,7 +2102,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q59",
+    id: "Q16",
     level: 3,
     category: "情绪敏感度",
     scenarioText: "📊 请评估以下陈述与你的符合程度：我通常能敏锐地察觉到社交场合中微妙的氛围变化和他人未说出口的情绪。",
@@ -2132,7 +2132,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q60",
+    id: "Q16",
     level: 3,
     category: "终极价值观",
     scenarioText: "🎯 最后，请想象你理想中的一次完美社交活动。它最吸引你的核心是什么？",
@@ -2176,7 +2176,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   
   // 反向计分题1 - 用于检测作答一致性
   {
-    id: "Q61",
+    id: "Q16",
     level: 2,
     category: "社交回避",
     scenarioText: "🏠 周五晚上，你正准备享受一个人的放松时光，这时收到朋友的临时聚会邀请。",
@@ -2209,7 +2209,7 @@ export const questionsV4: AdaptiveQuestion[] = [
 
   // 反向计分题2 - 与Q5团体形象形成对照
   {
-    id: "Q62",
+    id: "Q16",
     level: 2,
     category: "注意力分配",
     scenarioText: "📱 聚会上大家都在自拍、发动态，气氛热闹。",
@@ -2242,7 +2242,7 @@ export const questionsV4: AdaptiveQuestion[] = [
 
   // E维度直接测量题1 - 情绪稳定性
   {
-    id: "Q63",
+    id: "Q16",
     level: 2,
     category: "情绪调节",
     scenarioText: "😤 活动中有人无意中说了一句让你不太舒服的话。",
@@ -2274,7 +2274,7 @@ export const questionsV4: AdaptiveQuestion[] = [
 
   // E维度直接测量题2 - 压力应对
   {
-    id: "Q64",
+    id: "Q16",
     level: 2,
     category: "压力应对",
     scenarioText: "⏰ 活动当天出现了意外状况，需要临时调整计划。",
@@ -2306,7 +2306,7 @@ export const questionsV4: AdaptiveQuestion[] = [
 
   // E维度直接测量题3 - 情绪恢复
   {
-    id: "Q65",
+    id: "Q16",
     level: 2,
     category: "情绪恢复",
     scenarioText: "💔 一次期待已久的活动因故取消了。",
@@ -2338,7 +2338,7 @@ export const questionsV4: AdaptiveQuestion[] = [
 
   // 工作场景题1
   {
-    id: "Q66",
+    id: "Q16",
     level: 2,
     category: "工作协作",
     scenarioText: "💼 工作中需要和一个不太熟悉的同事合作完成一个项目。",
@@ -2370,7 +2370,7 @@ export const questionsV4: AdaptiveQuestion[] = [
 
   // 工作场景题2
   {
-    id: "Q67",
+    id: "Q16",
     level: 2,
     category: "会议表现",
     scenarioText: "🎤 在一个重要的工作会议上，主持人请大家分享想法。",
@@ -2402,7 +2402,7 @@ export const questionsV4: AdaptiveQuestion[] = [
 
   // 学习场景题
   {
-    id: "Q68",
+    id: "Q16",
     level: 2,
     category: "学习方式",
     scenarioText: "📚 你需要学习一项全新的技能或知识。",
@@ -2434,7 +2434,7 @@ export const questionsV4: AdaptiveQuestion[] = [
 
   // ==================== 新增P维度题目 (Q70-Q74) ====================
   {
-    id: "Q70",
+    id: "Q16",
     level: 2,
     category: "冒险尝鲜",
     scenarioText: "🎢 朋友说发现了一个很刺激但略有风险的新活动。",
@@ -2465,7 +2465,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q71",
+    id: "Q16",
     level: 2,
     category: "玩乐态度",
     scenarioText: "🎲 周末约了朋友玩桌游，其中有个规则有点复杂的策略游戏。",
@@ -2496,7 +2496,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q72",
+    id: "Q16",
     level: 2,
     category: "即兴能力",
     scenarioText: "🎤 聚会上有人提议玩即兴表演游戏，随机抽题目现场表演。",
@@ -2527,7 +2527,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q73",
+    id: "Q16",
     level: 2,
     category: "幽默风格",
     scenarioText: "😄 你说了句话把朋友们逗笑了。",
@@ -2558,7 +2558,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q74",
+    id: "Q16",
     level: 2,
     category: "惊喜偏好",
     scenarioText: "🎁 朋友说给你准备了一个神秘惊喜，但要等几天才能揭晓。",
@@ -2591,7 +2591,7 @@ export const questionsV4: AdaptiveQuestion[] = [
 
   // ==================== 新增O维度题目 (Q75-Q77) ====================
   {
-    id: "Q75",
+    id: "Q16",
     level: 2,
     category: "新观点接纳",
     scenarioText: "💭 朋友分享了一个你从未听过、甚至有点颠覆认知的观点或理论。",
@@ -2622,7 +2622,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q76",
+    id: "Q16",
     level: 2,
     category: "艺术体验",
     scenarioText: "🎨 朋友带你看先锋艺术展，作品很抽象。",
@@ -2653,7 +2653,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q77",
+    id: "Q16",
     level: 2,
     category: "探索欲望",
     scenarioText: "🗺️ 旅行时，你有半天自由活动时间。",
@@ -2686,7 +2686,7 @@ export const questionsV4: AdaptiveQuestion[] = [
 
   // 注意力检查题
   {
-    id: "Q69",
+    id: "Q16",
     level: 2,
     category: "注意力检查",
     scenarioText: "🔔 这是一道用于确保你认真作答的检测题。",
@@ -2721,7 +2721,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   // 这类题目强制用户在两个积极特质之间做选择，帮助区分相似原型
   
   {
-    id: "Q84",
+    id: "Q16",
     level: 2,
     category: "权衡选择-亲和vs开放",
     scenarioText: "⚖️ 朋友想尝试一家评价两极分化的新餐厅，你内心更倾向...",
@@ -2752,7 +2752,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q85",
+    id: "Q16",
     level: 2,
     category: "权衡选择-外向vs情绪稳定",
     scenarioText: "⚖️ 连续参加了三天高强度社交活动，第四天又有个重要聚会。",
@@ -2783,7 +2783,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q86",
+    id: "Q16",
     level: 2,
     category: "权衡选择-亲和vs正能量",
     scenarioText: "⚖️ 朋友连续抱怨同一件事已经第三次了，你感觉...",
@@ -2814,7 +2814,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q87",
+    id: "Q16",
     level: 2,
     category: "权衡选择-开放vs责任心",
     scenarioText: "⚖️ 团队项目快到deadline，这时有个很吸引你的新想法冒出来。",
@@ -2845,7 +2845,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q88",
+    id: "Q16",
     level: 2,
     category: "权衡选择-外向vs亲和",
     scenarioText: "⚖️ 聚会上你发现一个人独自站在角落，看起来有点格格不入。",
@@ -2876,7 +2876,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q89",
+    id: "Q16",
     level: 2,
     category: "权衡选择-正能量vs情绪稳定",
     scenarioText: "⚖️ 今天运气很背，连续遇到好几件倒霉事。",
@@ -2909,7 +2909,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   // === 针对易混淆原型的精准区分题 ===
   // Q90-Q92: 针对开心柯基vs太阳鸡、机智狐vs灵感章鱼、淡定海豚vs夸夸豚/暖心熊
   {
-    id: "Q90",
+    id: "Q16",
     level: 2,
     category: "原型区分-柯基vs太阳鸡",
     scenarioText: "🎉 朋友聚会上，气氛有点冷场。",
@@ -2942,7 +2942,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q91",
+    id: "Q16",
     level: 2,
     category: "原型区分-机智狐vs灵感章鱼",
     scenarioText: "💡 你有一个很棒的创意想法，需要把它变成现实。",
@@ -2975,7 +2975,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q92",
+    id: "Q16",
     level: 2,
     category: "原型区分-海豚vs夸夸豚vs暖心熊",
     scenarioText: "😊 好朋友最近工作压力大，向你倾诉烦恼。",
@@ -3008,7 +3008,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q93",
+    id: "Q16",
     level: 2,
     category: "原型区分-暖心熊vs定心大象vs织网蛛",
     scenarioText: "🤝 朋友遇到困难需要帮忙，你通常会？",
@@ -3041,7 +3041,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q94",
+    id: "Q16",
     level: 2,
     category: "原型区分-沉思猫头鹰vs稳如龟vs灵感章鱼",
     scenarioText: "📚 学习新知识或技能时，你的习惯是？",
@@ -3074,7 +3074,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q95",
+    id: "Q16",
     level: 2,
     category: "原型区分-沉思猫头鹰vs稳如龟",
     scenarioText: "🤔 面对一个复杂的问题，你需要做出决定。",
@@ -3107,7 +3107,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q96",
+    id: "Q16",
     level: 2,
     category: "原型区分-机智狐vs织网蛛",
     scenarioText: "💼 团队遇到一个棘手问题，需要有人来推动解决。",
@@ -3140,7 +3140,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q97",
+    id: "Q16",
     level: 2,
     category: "原型区分-开心柯基vs夸夸豚",
     scenarioText: "🎉 朋友考试/面试取得了好成绩，发消息告诉你。",
@@ -3173,7 +3173,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q98",
+    id: "Q16",
     level: 3,
     category: "原型区分-灵感章鱼vs开心柯基",
     scenarioText: "🌈 周末有两个活动邀请：一个是朋友组织的热闹派对，另一个是小众艺术展览开幕。",
@@ -3207,7 +3207,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q99",
+    id: "Q16",
     level: 3,
     category: "原型区分-隐身猫vs定心大象",
     scenarioText: "🏠 新搬到一个社区，邻居们组织了一个欢迎聚会。",
@@ -3241,7 +3241,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q100",
+    id: "Q16",
     level: 3,
     category: "原型区分-机智狐vs开心柯基",
     scenarioText: "💡 团队头脑风暴会议上，你有一个很棒的点子。",
@@ -3275,7 +3275,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q101",
+    id: "Q16",
     level: 3,
     category: "原型区分-灵感章鱼vs沉思猫头鹰",
     scenarioText: "📖 发现一个很有深度的话题，你想深入了解。",
@@ -3309,7 +3309,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q102",
+    id: "Q16",
     level: 3,
     category: "原型区分-隐身猫vs稳如龟",
     scenarioText: "🎤 被邀请在小型聚会上分享自己的专业经验。",
@@ -3345,7 +3345,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   // ==================== Q103-Q110: 开心柯基 Attractor 专项区分题 ====================
   // 针对 灵感章鱼/机智狐/太阳鸡/夸夸豚 → 开心柯基 的主要混淆
   {
-    id: "Q103",
+    id: "Q16",
     level: 3,
     category: "原型区分-灵感章鱼vs开心柯基-创意深度",
     scenarioText: "💡 朋友分享了一个有趣的新想法，邀请你一起参与。",
@@ -3379,7 +3379,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q104",
+    id: "Q16",
     level: 3,
     category: "原型区分-机智狐vs开心柯基-思考vs氛围",
     scenarioText: "🎭 参加一个话题讨论活动，气氛开始变得热闘。",
@@ -3413,7 +3413,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q105",
+    id: "Q16",
     level: 3,
     category: "原型区分-灵感章鱼vs开心柯基-独处创造",
     scenarioText: "🌙 一个安静的周末晚上，你有一整晚自由时间。",
@@ -3447,7 +3447,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q106",
+    id: "Q16",
     level: 3,
     category: "原型区分-机智狐vs开心柯基-问题解决",
     scenarioText: "🧩 遇到一个棘手的问题需要解决。",
@@ -3481,7 +3481,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q107",
+    id: "Q16",
     level: 3,
     category: "原型区分-太阳鸡vs开心柯基-能量来源",
     scenarioText: "⚡ 连续工作一周后，你感觉能量有点低。",
@@ -3515,7 +3515,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q108",
+    id: "Q16",
     level: 3,
     category: "原型区分-太阳鸡vs开心柯基-社交目标",
     scenarioText: "🥳 参加一个人比较多的聚会活动。",
@@ -3549,7 +3549,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q109",
+    id: "Q16",
     level: 3,
     category: "原型区分-夸夸豚vs开心柯基-表达方式",
     scenarioText: "🎁 朋友完成了一件很棒的事情。",
@@ -3583,7 +3583,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q110",
+    id: "Q16",
     level: 3,
     category: "原型区分-夸夸豚vs开心柯基-关注焦点",
     scenarioText: "👥 在一个新认识的小群体里。",
@@ -3618,7 +3618,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   // Q111-Q112: 价值取舍题 - 区分赞美驱动(夸夸豚) vs 玩乐驱动(开心柯基)
   {
-    id: "Q111",
+    id: "Q16",
     level: 3,
     category: "价值取舍-夸夸豚vs开心柯基-社交满足感",
     scenarioText: "🌟 回顾一次让你特别满足的社交经历。",
@@ -3652,7 +3652,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q112",
+    id: "Q16",
     level: 3,
     category: "价值取舍-夸夸豚vs开心柯基-给予方式",
     scenarioText: "💝 朋友正在经历低谷期，需要你的支持。",
@@ -3687,7 +3687,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   // Q113-Q114: 太阳鸡 vs 暖心熊 专项区分题 (E+X vs A+P)
   {
-    id: "Q113",
+    id: "Q16",
     level: 3,
     category: "原型区分-太阳鸡vs暖心熊-社交能量",
     scenarioText: "🎉 聚会上气氛开始变得热烈起来。",
@@ -3721,7 +3721,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q114",
+    id: "Q16",
     level: 3,
     category: "原型区分-太阳鸡vs暖心熊-给予方式",
     scenarioText: "💫 朋友向你倾诉最近的烦恼。",
@@ -3757,7 +3757,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   // Q115-Q116: 沉思猫头鹰 vs 稳如龟 专项区分题 (O+reflection vs E+steadiness)
   // Key diff: 猫头鹰 O:85/E:75, 稳如龟 O:70/E:85 - need O vs E tradeoff
   {
-    id: "Q115",
+    id: "Q16",
     level: 3,
     category: "原型区分-沉思猫头鹰vs稳如龟-充电方式",
     scenarioText: "🌙 一场热闘的社交活动结束后。",
@@ -3791,7 +3791,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q116",
+    id: "Q16",
     level: 3,
     category: "原型区分-沉思猫头鹰vs稳如龟-处事风格",
     scenarioText: "🎯 团队在讨论一个重要决定。",
@@ -3827,7 +3827,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   // Q117-Q118: 机智狐 vs 灵感章鱼 专项区分题 (X+advocacy vs O+incubation)
   // Key diff: 机智狐 O:92/X:72, 灵感章鱼 O:95/X:60 - need X tradeoff
   {
-    id: "Q117",
+    id: "Q16",
     level: 3,
     category: "原型区分-机智狐vs灵感章鱼-创意分享",
     scenarioText: "💡 你想到了一个很棒的新点子。",
@@ -3861,7 +3861,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q118",
+    id: "Q16",
     level: 3,
     category: "原型区分-机智狐vs灵感章鱼-社交能量",
     scenarioText: "🎪 一个创意活动正在进行。",
@@ -3897,7 +3897,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   // Q119-Q120: 太阳鸡 vs 淡定海豚 专项区分题 (P+X tradeoff)
   // Key diff: 太阳鸡 P:92/X:85, 淡定海豚 P:68/X:55 - need P and X differentiation
   {
-    id: "Q119",
+    id: "Q16",
     level: 3,
     category: "原型区分-太阳鸡vs淡定海豚-社交节奏",
     scenarioText: "🎈 朋友邀请你参加一个派对。",
@@ -3931,7 +3931,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q120",
+    id: "Q16",
     level: 3,
     category: "原型区分-太阳鸡vs淡定海豚-耐心程度",
     scenarioText: "⏰ 等待的事情比预期延迟了很久。",
@@ -3967,7 +3967,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   // Q121-Q122: 暖心熊 vs 淡定海豚 专项区分题 (A tradeoff)
   // Key diff: 暖心熊 A:88, 淡定海豚 A:70 - need A differentiation
   {
-    id: "Q121",
+    id: "Q16",
     level: 3,
     category: "原型区分-暖心熊vs淡定海豚-关怀方式",
     scenarioText: "😢 一个不太熟的同事看起来心情很低落。",
@@ -4001,7 +4001,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q122",
+    id: "Q16",
     level: 3,
     category: "原型区分-暖心熊vs淡定海豚-情感投入",
     scenarioText: "🤝 朋友分享了一个好消息。",
@@ -4036,7 +4036,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   // Q123-Q124: 暖心熊 vs 淡定海豚 加强区分题 (主动关怀 vs 稳定陪伴)
   {
-    id: "Q123",
+    id: "Q16",
     level: 3,
     category: "原型区分-暖心熊vs淡定海豚-安慰方式",
     scenarioText: "😔 好朋友刚经历了一次挫折，向你倾诉。",
@@ -4070,7 +4070,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q124",
+    id: "Q16",
     level: 3,
     category: "原型区分-暖心熊vs淡定海豚-聚会角色",
     scenarioText: "🎂 你在组织一个朋友的生日聚会。",
@@ -4105,7 +4105,7 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   // Q125-Q126: 太阳鸡 vs 淡定海豚 加强区分题 (高能量鼓励 vs 稳定陪伴)
   {
-    id: "Q125",
+    id: "Q16",
     level: 3,
     category: "原型区分-太阳鸡vs淡定海豚-能量输出",
     scenarioText: "⚡ 团队项目遇到困难，大家有点泄气。",
@@ -4139,7 +4139,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
   {
-    id: "Q126",
+    id: "Q16",
     level: 3,
     category: "原型区分-太阳鸡vs淡定海豚-日常状态",
     scenarioText: "☀️ 普通的一天，没什么特别的事。",

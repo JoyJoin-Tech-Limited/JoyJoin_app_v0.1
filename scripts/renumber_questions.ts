@@ -1,132 +1,159 @@
 /**
- * Question Renumbering Script
+ * Question Renumbering Script - Simple Version
  * 
- * New Anchor Questions (Q1-Q8):
- * - New Q1 = Old Q1 (社交启动, X主测)
- * - New Q2 = Old Q5 (团体形象, X+A)
- * - New Q3 = Old Q2 (决策参与, O主测)
- * - New Q4 = Old Q6 (优化倾向, O+C)
- * - New Q5 = Old Q13 (赠礼思维, A主测)
- * - New Q6 = Old Q15 (胜负反应, P主测)
- * - New Q7 = Old Q3 (能量优先级, E主测)
- * - New Q8 = Old Q4 (学习偏好, C主测)
+ * Current L1 anchors: Q1, Q2, Q3, Q4, Q5, Q6, Q13, Q15
+ * Target L1 anchors: Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8
  * 
- * L2 questions start from Q9
- * L3 questions follow after L2
+ * Simple approach: 
+ * - Keep Q1-Q6 unchanged
+ * - Q13 → Q7 (becomes L1 anchor)
+ * - Q15 → Q8 (becomes L1 anchor) 
+ * - Q7 → Q9 (becomes L2)
+ * - Q8 → Q10
+ * - Q9 → Q11
+ * - Q10 → Q12
+ * - Q11 → Q13
+ * - Q12 → Q14
+ * - Q14 → Q15
+ * - Q16+ → Q(n+1) to fill the gap left by Q15
  */
 
-// Mapping: oldId -> newId for anchors
-const anchorMapping: Record<string, string> = {
-  'Q1': 'Q1',   // X - 社交启动
-  'Q5': 'Q2',   // X+A - 团体形象
-  'Q2': 'Q3',   // O - 决策参与
-  'Q6': 'Q4',   // O+C - 优化倾向
-  'Q13': 'Q5',  // A - 赠礼思维
-  'Q15': 'Q6',  // P - 胜负反应
-  'Q3': 'Q7',   // E - 能量优先级
-  'Q4': 'Q8',   // C - 学习偏好
-};
+import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
 
-// Questions that will become anchors (new Q1-Q8)
-const newAnchorOldIds = ['Q1', 'Q5', 'Q2', 'Q6', 'Q13', 'Q15', 'Q3', 'Q4'];
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Questions that should NOT be anchors anymore
-const removeAnchorOldIds = ['Q9', 'Q12'];
-
-console.log('=== Question Renumbering Plan ===\n');
-
-console.log('New Anchor Questions (Q1-Q8):');
-for (const [oldId, newId] of Object.entries(anchorMapping)) {
-  console.log(`  ${oldId} -> ${newId}`);
+// Build the mapping
+function buildMapping(): Record<string, string> {
+  const mapping: Record<string, string> = {};
+  
+  // Q1-Q6: unchanged
+  // Q13 → Q7
+  mapping['Q13'] = 'Q7';
+  // Q15 → Q8  
+  mapping['Q15'] = 'Q8';
+  
+  // Q7-Q12 shift to Q9-Q14
+  for (let i = 7; i <= 12; i++) {
+    mapping[`Q${i}`] = `Q${i + 2}`;
+  }
+  
+  // Q14 → Q15
+  mapping['Q14'] = 'Q15';
+  
+  // Q16 onwards shift by 1 (because Q15 left a gap)
+  for (let i = 16; i <= 129; i++) {
+    mapping[`Q${i}`] = `Q${i + 1}`;
+  }
+  
+  return mapping;
 }
 
-console.log('\nQuestions losing isAnchor status:');
-for (const id of removeAnchorOldIds) {
-  console.log(`  ${id} (will become L2)`);
+const mapping = buildMapping();
+
+console.log('=== Question Renumbering Mapping ===');
+console.log('Key changes:');
+console.log('  Q13 -> Q7 (promoted to L1)');
+console.log('  Q15 -> Q8 (promoted to L1)');
+console.log('  Q7-Q12 -> Q9-Q14 (shifted)');
+console.log('  Q14 -> Q15');
+console.log('  Q16+ -> Q(n+1)');
+
+// Read and process files
+const questionsPath = path.join(__dirname, '../packages/shared/src/personality/questionsV4.ts');
+const feedbackPath = path.join(__dirname, '../packages/shared/src/personality/feedback.ts');
+
+let questionsContent = fs.readFileSync(questionsPath, 'utf-8');
+let feedbackContent = fs.readFileSync(feedbackPath, 'utf-8');
+
+// Use placeholder replacement to avoid collisions
+console.log('\n=== Processing questionsV4.ts ===');
+
+// Pass 1: Replace with placeholders (highest numbers first to avoid Q1 matching Q10, etc.)
+const sortedOldIds = Object.keys(mapping).sort((a, b) => {
+  const numA = parseInt(a.substring(1));
+  const numB = parseInt(b.substring(1));
+  return numB - numA; // Descending order
+});
+
+for (const oldId of sortedOldIds) {
+  const placeholder = `__TEMP_${mapping[oldId]}__`;
+  const pattern = new RegExp(`id: "${oldId}"`, 'g');
+  questionsContent = questionsContent.replace(pattern, `id: "${placeholder}"`);
 }
 
-console.log('\n=== Full Renumbering Map ===\n');
-
-// Build complete mapping
-// First, list all old IDs in order
-const oldL1 = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q9', 'Q15'];
-const oldL2WithAnchor = ['Q12', 'Q13']; // These were L2 but had isAnchor
-
-// L2 questions (excluding those becoming anchors)
-const oldL2 = [
-  'Q7', 'Q8', 'Q10', 'Q11', 'Q12', 'Q14', 'Q16', 'Q17', 'Q18', 'Q19', 'Q20',
-  'Q21', 'Q22', 'Q23', 'Q24', 'Q25', 'Q26', 'Q27', 'Q28', 'Q29', 'Q30',
-  'Q31', 'Q32', 'Q33', 'Q34', 'Q35', 'Q36', 'Q37', 'Q38', 'Q39', 'Q40',
-  'Q41', 'Q42', 'Q43', 'Q44', 'Q45', 'Q46', 'Q47', 'Q48', 'Q49', 'Q50',
-  'Q56', 'Q58', 'Q61', 'Q62', 'Q63', 'Q64', 'Q65', 'Q66', 'Q67', 'Q68',
-  'Q69', 'Q70', 'Q71', 'Q72', 'Q73', 'Q74', 'Q75', 'Q76', 'Q77', 'Q78',
-  'Q79', 'Q80', 'Q81', 'Q82', 'Q83', 'Q84', 'Q85', 'Q86', 'Q87', 'Q88',
-  'Q89', 'Q90', 'Q91', 'Q92', 'Q93', 'Q94', 'Q95', 'Q96', 'Q97'
-];
-
-// Remove Q13 from L2 (it becomes anchor Q5)
-const l2ForRenumber = oldL2.filter(id => id !== 'Q13');
-
-// Add Q9 to L2 (it was L1 with isAnchor, now becomes L2)
-// Q9 stays in its position but loses anchor status
-
-// L3 questions
-const oldL3 = [
-  'Q51', 'Q52', 'Q53', 'Q54', 'Q55', 'Q57', 'Q59', 'Q60',
-  'Q98', 'Q99', 'Q100', 'Q101', 'Q102', 'Q103', 'Q104', 'Q105',
-  'Q106', 'Q107', 'Q108', 'Q109', 'Q110', 'Q111', 'Q112', 'Q113',
-  'Q114', 'Q115', 'Q116', 'Q117', 'Q118', 'Q119', 'Q120', 'Q121',
-  'Q122', 'Q123', 'Q124', 'Q125', 'Q126'
-];
-
-// Build complete mapping
-const fullMapping: Record<string, { newId: string; level: 1 | 2 | 3; isAnchor: boolean }> = {};
-
-// Anchors (Q1-Q8)
-for (const [oldId, newId] of Object.entries(anchorMapping)) {
-  fullMapping[oldId] = { newId, level: 1, isAnchor: true };
+// Pass 2: Replace placeholders with new IDs
+for (const oldId of sortedOldIds) {
+  const placeholder = `__TEMP_${mapping[oldId]}__`;
+  const newId = mapping[oldId];
+  questionsContent = questionsContent.replace(new RegExp(placeholder, 'g'), newId);
 }
 
-// L2 questions (Q9+)
-let l2Counter = 9;
-// Q9 (was anchor, now L2) and Q12 (was L2 anchor, stays L2)
-fullMapping['Q9'] = { newId: `Q${l2Counter++}`, level: 2, isAnchor: false };
-fullMapping['Q12'] = { newId: `Q${l2Counter++}`, level: 2, isAnchor: false };
+console.log('=== Processing feedback.ts ===');
 
-// Rest of L2
-for (const oldId of l2ForRenumber) {
-  if (!fullMapping[oldId]) {
-    fullMapping[oldId] = { newId: `Q${l2Counter++}`, level: 2, isAnchor: false };
+// Same for feedback.ts - need to be careful with the pattern
+for (const oldId of sortedOldIds) {
+  const placeholder = `__TEMP_${mapping[oldId]}__`;
+  // Match Q13: { or Q13: \n at start of object property
+  const pattern = new RegExp(`(^\\s*|,\\s*)${oldId}:`, 'gm');
+  feedbackContent = feedbackContent.replace(pattern, `$1${placeholder}:`);
+}
+
+for (const oldId of sortedOldIds) {
+  const placeholder = `__TEMP_${mapping[oldId]}__`;
+  const newId = mapping[oldId];
+  feedbackContent = feedbackContent.replace(new RegExp(placeholder, 'g'), newId);
+}
+
+// Write files
+fs.writeFileSync(questionsPath, questionsContent);
+fs.writeFileSync(feedbackPath, feedbackContent);
+
+console.log('\n=== Files Updated ===');
+
+// Verify
+const updatedQuestions = fs.readFileSync(questionsPath, 'utf-8');
+const idMatches = [...updatedQuestions.matchAll(/id: "Q(\d+)"/g)];
+const questionIds = idMatches.map(m => parseInt(m[1])).sort((a, b) => a - b);
+
+console.log(`\n=== Verification ===`);
+console.log(`Total questions: ${questionIds.length}`);
+console.log(`First 10 IDs: Q${questionIds.slice(0, 10).join(', Q')}`);
+
+// Check for gaps and duplicates
+const uniqueIds = [...new Set(questionIds)];
+const duplicates = questionIds.length - uniqueIds.length;
+
+if (duplicates > 0) {
+  console.log(`WARNING: ${duplicates} duplicate IDs found!`);
+  const counts: Record<number, number> = {};
+  questionIds.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
+  const dupeIds = Object.entries(counts).filter(([_, count]) => count > 1).map(([id]) => `Q${id}`);
+  console.log(`Duplicates: ${dupeIds.join(', ')}`);
+}
+
+// Check sequence
+const minId = Math.min(...questionIds);
+const maxId = Math.max(...questionIds);
+console.log(`ID range: Q${minId} to Q${maxId}`);
+
+// Find missing in sequence
+const missing: number[] = [];
+for (let i = minId; i <= maxId; i++) {
+  if (!questionIds.includes(i)) {
+    missing.push(i);
   }
 }
 
-// L3 questions (after L2)
-for (const oldId of oldL3) {
-  if (!fullMapping[oldId]) {
-    fullMapping[oldId] = { newId: `Q${l2Counter++}`, level: 3, isAnchor: false };
-  }
+if (missing.length > 0) {
+  console.log(`Missing IDs: Q${missing.join(', Q')}`);
+} else {
+  console.log('No gaps in sequence.');
 }
 
-// Print the mapping
-console.log('Anchor Questions (new Q1-Q8):');
-for (const [oldId, info] of Object.entries(fullMapping).filter(([_, v]) => v.isAnchor)) {
-  console.log(`  ${oldId} -> ${info.newId} (L${info.level}, anchor)`);
-}
-
-console.log('\nL2 Questions (new Q9+):');
-const l2Entries = Object.entries(fullMapping)
-  .filter(([_, v]) => v.level === 2)
-  .sort((a, b) => parseInt(a[1].newId.slice(1)) - parseInt(b[1].newId.slice(1)));
-console.log(`  Total: ${l2Entries.length} questions`);
-console.log(`  Range: ${l2Entries[0]?.[1].newId} - ${l2Entries[l2Entries.length-1]?.[1].newId}`);
-
-console.log('\nL3 Questions:');
-const l3Entries = Object.entries(fullMapping)
-  .filter(([_, v]) => v.level === 3)
-  .sort((a, b) => parseInt(a[1].newId.slice(1)) - parseInt(b[1].newId.slice(1)));
-console.log(`  Total: ${l3Entries.length} questions`);
-console.log(`  Range: ${l3Entries[0]?.[1].newId} - ${l3Entries[l3Entries.length-1]?.[1].newId}`);
-
-// Export for use
-console.log('\n=== JSON Mapping ===');
-console.log(JSON.stringify(fullMapping, null, 2));
+// Verify L1 anchors
+const l1Pattern = /level: 1,[\s\S]*?isAnchor: true/g;
+const anchorMatches = [...updatedQuestions.matchAll(/id: "(Q\d+)"[\s\S]*?level: 1,/g)];
+console.log(`\nL1 questions found: ${anchorMatches.length}`);
