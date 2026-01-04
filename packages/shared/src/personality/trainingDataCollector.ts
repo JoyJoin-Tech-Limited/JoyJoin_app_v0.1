@@ -20,7 +20,8 @@ export interface MatchSnapshot {
   trueArchetype: string;
   isCorrect: boolean;
   isSimilarMatch: boolean;
-  confusionPair: string | null;
+  confusionPairOrdered: string | null;
+  confusionPairSorted: string | null;
   isPersistentConfusionPair: boolean;
 }
 
@@ -66,8 +67,12 @@ export class TrainingDataCollector {
     const isCorrect = top1Archetype === trueArchetype;
     const scoreGap = top1Score - top2Score;
     
+    const confusionPairOrdered = top1Archetype !== top2Archetype 
+      ? `${top1Archetype}|${top2Archetype}` 
+      : null;
+    
     const sortedPair = [top1Archetype, top2Archetype].sort();
-    const confusionPair = top1Archetype !== top2Archetype 
+    const confusionPairSorted = top1Archetype !== top2Archetype 
       ? sortedPair.join(',') 
       : null;
     
@@ -86,7 +91,8 @@ export class TrainingDataCollector {
       trueArchetype,
       isCorrect,
       isSimilarMatch,
-      confusionPair,
+      confusionPairOrdered,
+      confusionPairSorted,
       isPersistentConfusionPair,
     });
   }
@@ -98,15 +104,15 @@ export class TrainingDataCollector {
     let persistentPairSamples = 0;
 
     for (const snapshot of this.snapshots) {
-      if (snapshot.confusionPair) {
+      if (snapshot.confusionPairSorted) {
         confusionPairSamples++;
         
-        if (!confusionPairBreakdown[snapshot.confusionPair]) {
-          confusionPairBreakdown[snapshot.confusionPair] = { total: 0, correct: 0, accuracy: 0 };
+        if (!confusionPairBreakdown[snapshot.confusionPairSorted]) {
+          confusionPairBreakdown[snapshot.confusionPairSorted] = { total: 0, correct: 0, accuracy: 0 };
         }
-        confusionPairBreakdown[snapshot.confusionPair].total++;
+        confusionPairBreakdown[snapshot.confusionPairSorted].total++;
         if (snapshot.isCorrect) {
-          confusionPairBreakdown[snapshot.confusionPair].correct++;
+          confusionPairBreakdown[snapshot.confusionPairSorted].correct++;
         }
       }
       
