@@ -110,6 +110,8 @@ export const questionsV4: AdaptiveQuestion[] = [
     scenarioText: "🎮 朋友教你玩一个规则复杂的新桌游，大家都在等。",
     questionText: "你希望的教学节奏是？",
     primaryTraits: ["O", "C", "X"],
+    isAnchor: true,
+    discriminationIndex: 0.44,
     options: [
       {
         value: "A",
@@ -172,6 +174,8 @@ export const questionsV4: AdaptiveQuestion[] = [
     scenarioText: "🚗 参加活动，发现组织者指的路线上有个明显更优的选择。",
     questionText: "你会怎么做？",
     primaryTraits: ["O", "A", "C"],
+    isAnchor: true,
+    discriminationIndex: 0.46,
     options: [
       {
         value: "A",
@@ -259,12 +263,12 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   {
     id: "Q9",
-    level: 1,
+    level: 2,
     category: "自我展示",
     scenarioText: "🎭 活动有个需要才艺展示的环节，自愿参与。",
     questionText: "你会？",
     primaryTraits: ["X", "E", "P"],
-    isAnchor: true,
+    cohortTag: 'social_catalyst',
     discriminationIndex: 0.48,
     options: [
       {
@@ -359,7 +363,6 @@ export const questionsV4: AdaptiveQuestion[] = [
     questionText: "你的反应是？",
     cohortTag: 'steady_harmonizer',
     primaryTraits: ["O", "C", "X"],
-    isAnchor: true,
     discriminationIndex: 0.38,
     options: [
       {
@@ -386,11 +389,10 @@ export const questionsV4: AdaptiveQuestion[] = [
   },
   {
     id: "Q13",
-    level: 2,
+    level: 1,
     category: "赠礼思维",
     scenarioText: "🎁 新朋友下周生日，你想送个小礼物。",
     questionText: "你会选？",
-    cohortTag: 'steady_harmonizer',
     primaryTraits: ["A", "O", "C"],
     isAnchor: true,
     discriminationIndex: 0.41,
