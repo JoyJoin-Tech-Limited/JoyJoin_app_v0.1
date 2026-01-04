@@ -1144,3 +1144,128 @@ export function findBestMatchingArchetypesV2(
     confidence: r.confidence,
   }));
 }
+
+/**
+ * 风格谱系结果 - Style Spectrum Result
+ * 将匹配结果呈现为"主类型 + 相邻风格"的谱系形式
+ */
+export interface StyleSpectrumResult {
+  primary: {
+    archetype: string;
+    score: number;
+    confidence: number;
+    emoji: string;
+    tagline: string;
+  };
+  adjacentStyles: Array<{
+    archetype: string;
+    score: number;
+    similarity: number; // 0-100, 与主类型的相似度
+    blendLabel: string; // 如 "偶尔会像..."
+    emoji: string;
+  }>;
+  spectrumPosition: {
+    xAxis: { label: string; value: number }; // 如 内向↔外向
+    yAxis: { label: string; value: number }; // 如 感性↔理性
+  };
+  isDecisive: boolean;
+  decisionReason: string;
+}
+
+const ARCHETYPE_EMOJI: Record<string, string> = {
+  "开心柯基": "🐕",
+  "太阳鸡": "🐔",
+  "夸夸豚": "🐷",
+  "机智狐": "🦊",
+  "淡定海豚": "🐬",
+  "织网蛛": "🕷️",
+  "暖心熊": "🐻",
+  "灵感章鱼": "🐙",
+  "沉思猫头鹰": "🦉",
+  "定心大象": "🐘",
+  "稳如龟": "🐢",
+  "隐身猫": "🐱"
+};
+
+const ARCHETYPE_TAGLINE: Record<string, string> = {
+  "开心柯基": "快乐感染者，派对灵魂",
+  "太阳鸡": "积极阳光，热情洋溢",
+  "夸夸豚": "暖场达人，社交催化剂",
+  "机智狐": "灵动聪慧，观察敏锐",
+  "淡定海豚": "从容不迫，温和可靠",
+  "织网蛛": "细心周到，默默付出",
+  "暖心熊": "温暖陪伴，善解人意",
+  "灵感章鱼": "创意无限，思维跳跃",
+  "沉思猫头鹰": "深度思考，洞察本质",
+  "定心大象": "稳重可靠，值得信赖",
+  "稳如龟": "踏实内敛，专注当下",
+  "隐身猫": "独立自在，享受独处"
+};
+
+/**
+ * 获取风格谱系结果 - 用于趣味化呈现
+ */
+export function getStyleSpectrum(
+  userTraits: Record<TraitKey, number>,
+  userSecondaryData?: UserSecondaryData
+): StyleSpectrumResult {
+  const matches = prototypeMatcher.findBestMatches(userTraits, userSecondaryData, 4);
+  const top = matches[0];
+  const { decisive, reason } = prototypeMatcher.isDecisiveMatch(matches);
+
+  // 计算谱系位置（基于X和O特质）
+  const xPosition = Math.round((userTraits.X || 50));
+  const yPosition = Math.round((userTraits.O || 50));
+
+  // 构建相邻风格
+  const adjacentStyles = matches.slice(1, 4).map((m, i) => {
+    const similarity = Math.round(100 - Math.abs(top.score - m.score));
+    const blendLabels = [
+      "有时候也会像",
+      "某些场合下会变成",
+      "在特定情境中可能是"
+    ];
+    
+    return {
+      archetype: m.archetype,
+      score: m.score,
+      similarity: Math.min(95, Math.max(20, similarity)),
+      blendLabel: blendLabels[i] || "有相似特质的",
+      emoji: ARCHETYPE_EMOJI[m.archetype] || "🎭"
+    };
+  });
+
+  return {
+    primary: {
+      archetype: top.archetype,
+      score: top.score,
+      confidence: top.confidence,
+      emoji: ARCHETYPE_EMOJI[top.archetype] || "🎭",
+      tagline: ARCHETYPE_TAGLINE[top.archetype] || "独特的你"
+    },
+    adjacentStyles,
+    spectrumPosition: {
+      xAxis: { label: "独处←→社交", value: xPosition },
+      yAxis: { label: "务实←→开放", value: yPosition }
+    },
+    isDecisive: decisive,
+    decisionReason: reason
+  };
+}
+
+/**
+ * 获取简化版风格谱系（用于API响应）
+ */
+export function getStyleSpectrumSimple(
+  userTraits: Record<TraitKey, number>
+): { primary: string; spectrum: string[]; confidence: number } {
+  const spectrum = getStyleSpectrum(userTraits);
+  return {
+    primary: spectrum.primary.archetype,
+    spectrum: [
+      spectrum.primary.archetype,
+      ...spectrum.adjacentStyles.map(s => s.archetype)
+    ],
+    confidence: spectrum.primary.confidence
+  };
+}
