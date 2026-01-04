@@ -1,9 +1,6 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import { Pool, PoolConfig } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
-
-neonConfig.webSocketConstructor = ws;
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -11,21 +8,26 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ 
+const poolConfig: PoolConfig = {
   connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 30000,
   idleTimeoutMillis: 30000,
-});
-export const db = drizzle({ client: pool, schema });
+};
 
-// Warmup database connection on startup to prevent autosuspend issues
+if (process.env.DATABASE_URL.includes('neon.tech')) {
+  poolConfig.ssl = { rejectUnauthorized: false };
+}
+
+export const pool = new Pool(poolConfig);
+
+export const db = drizzle(pool, { schema });
+
 export async function warmupDatabase() {
   try {
     await pool.query('SELECT 1');
     console.log('Database connection warmed up successfully');
   } catch (error) {
     console.error('Database warmup failed:', error);
-    // Try again after a short delay
     setTimeout(async () => {
       try {
         await pool.query('SELECT 1');
