@@ -27,7 +27,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
     name: "开心柯基",
     icon: "🐕",
     energyLevel: 95,
-    traitProfile: { A: 60, C: 50, E: 60, O: 65, X: 95, P: 90 },
+    traitProfile: { A: 60, C: 50, E: 60, O: 65, X: 95, P: 85 },
     secondaryDifferentiators: {
       motivationDirection: 'external',
       conflictPosture: 'approach',
@@ -42,7 +42,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
     name: "太阳鸡",
     icon: "🐓",
     energyLevel: 90,
-    traitProfile: { A: 70, C: 72, E: 88, O: 55, X: 78, P: 92 },
+    traitProfile: { A: 70, C: 72, E: 88, O: 55, X: 85, P: 92 },
     secondaryDifferentiators: {
       motivationDirection: 'external',
       conflictPosture: 'mediate',
@@ -57,7 +57,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
     name: "夸夸豚",
     icon: "🐬",
     energyLevel: 85,
-    traitProfile: { A: 90, C: 50, E: 65, O: 62, X: 82, P: 88 },
+    traitProfile: { A: 95, C: 50, E: 65, O: 62, X: 82, P: 88 },
     secondaryDifferentiators: {
       motivationDirection: 'external',
       conflictPosture: 'mediate',
@@ -72,7 +72,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
     name: "机智狐",
     icon: "🦊",
     energyLevel: 82,
-    traitProfile: { A: 40, C: 50, E: 60, O: 92, X: 72, P: 58 },
+    traitProfile: { A: 40, C: 50, E: 60, O: 92, X: 78, P: 58 },
     secondaryDifferentiators: {
       motivationDirection: 'external',
       conflictPosture: 'approach',
@@ -87,7 +87,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
     name: "淡定海豚",
     icon: "🐬",
     energyLevel: 75,
-    traitProfile: { A: 70, C: 70, E: 85, O: 65, X: 60, P: 70 },
+    traitProfile: { A: 70, C: 72, E: 85, O: 65, X: 60, P: 70 },
     secondaryDifferentiators: {
       motivationDirection: 'balanced',
       conflictPosture: 'mediate',
@@ -102,7 +102,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
     name: "织网蛛",
     icon: "🕷️",
     energyLevel: 72,
-    traitProfile: { A: 70, C: 78, E: 65, O: 70, X: 60, P: 60 },
+    traitProfile: { A: 70, C: 85, E: 65, O: 70, X: 60, P: 60 },
     secondaryDifferentiators: {
       motivationDirection: 'balanced',
       conflictPosture: 'mediate',
@@ -117,7 +117,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
     name: "暖心熊",
     icon: "🐻",
     energyLevel: 70,
-    traitProfile: { A: 90, C: 65, E: 80, O: 60, X: 55, P: 70 },
+    traitProfile: { A: 90, C: 65, E: 80, O: 60, X: 48, P: 65 },
     secondaryDifferentiators: {
       motivationDirection: 'internal',
       conflictPosture: 'avoid',
@@ -132,7 +132,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
     name: "灵感章鱼",
     icon: "🐙",
     energyLevel: 68,
-    traitProfile: { A: 50, C: 28, E: 55, O: 95, X: 60, P: 70 },
+    traitProfile: { A: 50, C: 28, E: 55, O: 95, X: 52, P: 70 },
     secondaryDifferentiators: {
       motivationDirection: 'internal',
       conflictPosture: 'avoid',
@@ -147,7 +147,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
     name: "沉思猫头鹰",
     icon: "🦉",
     energyLevel: 55,
-    traitProfile: { A: 45, C: 80, E: 75, O: 85, X: 40, P: 50 },
+    traitProfile: { A: 45, C: 80, E: 75, O: 88, X: 40, P: 50 },
     secondaryDifferentiators: {
       motivationDirection: 'internal',
       conflictPosture: 'avoid',
@@ -162,7 +162,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
     name: "定心大象",
     icon: "🐘",
     energyLevel: 52,
-    traitProfile: { A: 70, C: 90, E: 90, O: 50, X: 40, P: 60 },
+    traitProfile: { A: 70, C: 90, E: 86, O: 50, X: 40, P: 60 },
     secondaryDifferentiators: {
       motivationDirection: 'internal',
       conflictPosture: 'avoid',
@@ -177,7 +177,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
     name: "稳如龟",
     icon: "🐢",
     energyLevel: 38,
-    traitProfile: { A: 45, C: 80, E: 85, O: 70, X: 30, P: 45 },
+    traitProfile: { A: 45, C: 80, E: 85, O: 65, X: 30, P: 45 },
     secondaryDifferentiators: {
       motivationDirection: 'internal',
       conflictPosture: 'avoid',
@@ -192,7 +192,7 @@ export const archetypePrototypes: Record<string, ArchetypePrototype> = {
     name: "隐身猫",
     icon: "🐱",
     energyLevel: 30,
-    traitProfile: { A: 50, C: 50, E: 80, O: 45, X: 20, P: 50 },
+    traitProfile: { A: 42, C: 50, E: 80, O: 45, X: 20, P: 50 },
     secondaryDifferentiators: {
       motivationDirection: 'internal',
       conflictPosture: 'avoid',
