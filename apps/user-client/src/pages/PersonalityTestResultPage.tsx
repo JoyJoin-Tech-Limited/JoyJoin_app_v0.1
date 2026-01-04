@@ -233,19 +233,35 @@ function SimilarArchetypesHint({ archetype, isDecisive }: { archetype: string; i
 function MatchFeedbackSection({ archetype }: { archetype: string }) {
   const [feedback, setFeedback] = useState<'accurate' | 'partial' | 'inaccurate' | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   const handleFeedback = async (value: 'accurate' | 'partial' | 'inaccurate') => {
     setFeedback(value);
+    setIsSubmitting(true);
     try {
-      await fetch('/api/assessment/feedback', {
+      const res = await fetch('/api/assessment/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ archetype, accuracy: value }),
       });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || `请求失败 (${res.status})`);
+      }
+      
       setSubmitted(true);
-    } catch (error) {
-      toast({ title: '反馈提交失败，请稍后再试', variant: 'destructive' });
+    } catch (error: any) {
+      setFeedback(null);
+      toast({ 
+        title: '反馈提交失败', 
+        description: error.message || '请稍后再试',
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -275,6 +291,7 @@ function MatchFeedbackSection({ archetype }: { archetype: string }) {
               variant={feedback === 'accurate' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleFeedback('accurate')}
+              disabled={isSubmitting}
               data-testid="feedback-accurate"
               className="gap-1"
             >
@@ -285,6 +302,7 @@ function MatchFeedbackSection({ archetype }: { archetype: string }) {
               variant={feedback === 'partial' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleFeedback('partial')}
+              disabled={isSubmitting}
               data-testid="feedback-partial"
             >
               部分符合
@@ -293,6 +311,7 @@ function MatchFeedbackSection({ archetype }: { archetype: string }) {
               variant={feedback === 'inaccurate' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleFeedback('inaccurate')}
+              disabled={isSubmitting}
               data-testid="feedback-inaccurate"
               className="gap-1"
             >
