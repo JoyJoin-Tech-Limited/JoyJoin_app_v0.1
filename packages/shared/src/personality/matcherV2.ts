@@ -565,10 +565,32 @@ export class PrototypeMatcher {
   }
   
   /**
+   * Calculate gradual bonus based on trait distance from midpoint
+   * Returns value in range [-maxBonus, +maxBonus]
+   * Positive favors archetype1, negative favors archetype2
+   */
+  private calculateGradualBonus(
+    userTrait: number,
+    proto1Trait: number,
+    proto2Trait: number,
+    maxBonus: number = 6
+  ): number {
+    const midpoint = (proto1Trait + proto2Trait) / 2;
+    const range = Math.abs(proto1Trait - proto2Trait) / 2;
+    if (range === 0) return 0;
+    
+    // Calculate normalized distance from midpoint, clamped to [-1, 1]
+    const normalizedDist = Math.max(-1, Math.min(1, (userTrait - midpoint) / range));
+    
+    // Apply sigmoid-like smoothing for gradual transition
+    // tanh gives smooth transition near midpoint, decisive at extremes
+    return normalizedDist * maxBonus * (1 - Math.exp(-Math.abs(normalizedDist) * 2));
+  }
+
+  /**
    * 太阳鸡 vs 淡定海豚: P is the key differentiator
-   * - P >= 85 → 太阳鸡 (prototype P=92)
-   * - P < 72 → 淡定海豚 (prototype P=68)
-   * - Between: use secondary trait X (太阳鸡 X=85, 淡定海豚 X=55)
+   * 太阳鸡 P=92/X=85, 淡定海豚 P=68/X=55
+   * Uses gradual scoring based on trait distance
    */
   private classifySunnyChickenVsDolphin(
     t: Record<TraitKey, number>,
@@ -580,19 +602,18 @@ export class PrototypeMatcher {
     const dolphin = results.find(r => r.archetype === '淡定海豚');
     if (!sunnyChicken || !dolphin) return;
     
-    if (t.P >= 85) {
-      // Definitely 太阳鸡
-      sunnyChicken.details.finalScore += 8;
-    } else if (t.P < 72) {
-      // Definitely 淡定海豚
-      dolphin.details.finalScore += 8;
+    // Primary trait: P (太阳鸡=92, 淡定海豚=68)
+    const pBonus = this.calculateGradualBonus(t.P, 92, 68, 5);
+    // Secondary trait: X (太阳鸡=85, 淡定海豚=55)
+    const xBonus = this.calculateGradualBonus(t.X, 85, 55, 3);
+    
+    // Combined bonus: primary has more weight
+    const totalBonus = pBonus + xBonus * 0.5;
+    
+    if (totalBonus > 0) {
+      sunnyChicken.details.finalScore += totalBonus;
     } else {
-      // Use X as tiebreaker: high X → 太阳鸡
-      if (t.X >= 70) {
-        sunnyChicken.details.finalScore += 4;
-      } else if (t.X < 60) {
-        dolphin.details.finalScore += 4;
-      }
+      dolphin.details.finalScore -= totalBonus;
     }
     
     // Re-sort after adjustment
@@ -601,9 +622,8 @@ export class PrototypeMatcher {
   
   /**
    * 沉思猫头鹰 vs 稳如龟: O is the key differentiator
-   * - O >= 80 + X < 50 → 沉思猫头鹰 (prototype O=88, X=40)
-   * - O < 70 → 稳如龟 (prototype O=65)
-   * - Between: use secondary trait X
+   * 猫头鹰 O=88/X=40/E=75, 稳如龟 O=65/X=30/E=85
+   * Uses gradual scoring based on trait distance
    */
   private classifyOwlVsTurtle(
     t: Record<TraitKey, number>,
@@ -615,21 +635,18 @@ export class PrototypeMatcher {
     const turtle = results.find(r => r.archetype === '稳如龟');
     if (!owl || !turtle) return;
     
-    if (t.O >= 80 && t.X < 50) {
-      // Definite 沉思猫头鹰 pattern: high O + low X
-      owl.details.finalScore += 8;
-    } else if (t.O < 70) {
-      // Low O → 稳如龟
-      turtle.details.finalScore += 8;
+    // Primary trait: O (猫头鹰=88, 龟=65)
+    const oBonus = this.calculateGradualBonus(t.O, 88, 65, 5);
+    // Secondary trait: E (猫头鹰=75, 龟=85) - note: turtle has higher E
+    const eBonus = this.calculateGradualBonus(t.E, 75, 85, 3);
+    
+    // Combined bonus
+    const totalBonus = oBonus + eBonus * 0.5;
+    
+    if (totalBonus > 0) {
+      owl.details.finalScore += totalBonus;
     } else {
-      // Middle ground: use X as tiebreaker
-      // 猫头鹰 has lower X (40) than 龟 (30), but both are low
-      // If O is high but X is also moderately high, it's less like 猫头鹰
-      if (t.O >= 75 && t.X < 45) {
-        owl.details.finalScore += 4;
-      } else {
-        turtle.details.finalScore += 4;
-      }
+      turtle.details.finalScore -= totalBonus;
     }
     
     results.sort((a, b) => b.details.finalScore - a.details.finalScore);
@@ -637,9 +654,8 @@ export class PrototypeMatcher {
   
   /**
    * 暖心熊 vs 淡定海豚: A is the key differentiator
-   * - A >= 82 → 暖心熊 (prototype A=88)
-   * - A < 72 → 淡定海豚 (prototype A=70)
-   * - Between: use secondary trait P (熊 P=75, 海豚 P=68)
+   * 暖心熊 A=88/E=80, 淡定海豚 A=70/E=75
+   * Uses gradual scoring based on trait distance
    */
   private classifyBearVsDolphin(
     t: Record<TraitKey, number>,
@@ -651,20 +667,18 @@ export class PrototypeMatcher {
     const dolphin = results.find(r => r.archetype === '淡定海豚');
     if (!bear || !dolphin) return;
     
-    if (t.A >= 82) {
-      // High affinity → 暖心熊
-      bear.details.finalScore += 8;
-    } else if (t.A < 72) {
-      // Lower affinity → 淡定海豚
-      dolphin.details.finalScore += 8;
+    // Primary trait: A (暖心熊=88, 淡定海豚=70)
+    const aBonus = this.calculateGradualBonus(t.A, 88, 70, 5);
+    // Secondary trait: E (暖心熊=80, 淡定海豚=75) - bear slightly higher
+    const eBonus = this.calculateGradualBonus(t.E, 80, 75, 2);
+    
+    // Combined bonus
+    const totalBonus = aBonus + eBonus * 0.5;
+    
+    if (totalBonus > 0) {
+      bear.details.finalScore += totalBonus;
     } else {
-      // Use E (emotional stability) as tiebreaker
-      // 海豚 E=75, 熊 E=80 - both high, but 熊 slightly higher
-      if (t.E >= 78) {
-        bear.details.finalScore += 4;
-      } else {
-        dolphin.details.finalScore += 4;
-      }
+      dolphin.details.finalScore -= totalBonus;
     }
     
     results.sort((a, b) => b.details.finalScore - a.details.finalScore);
