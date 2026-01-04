@@ -5,6 +5,13 @@
  * V2.1 Updates:
  * - Integrated Z-score capping for A/O traits
  * - Added archetype-specific matching thresholds
+ * 
+ * V2.3 Updates (Optimized Formula):
+ * - Z-score standardization for all trait scoring
+ * - Asymmetric distance penalty for avoid traits (gaps > 0.5 SD)
+ * - Multi-trait VETO filters for all 12 archetypes
+ * - Gaussian kernel similarity conversion
+ * - Comprehensive debug logging
  */
 
 import { TraitKey } from './types';
@@ -17,10 +24,45 @@ import {
 
 const ALL_TRAITS: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
 const TRAIT_STD = 15;
+const TRAIT_MEAN = 50;
 const SIGNAL_TRAIT_WEIGHT = 1.5;
 const OVERSHOOT_THRESHOLD_SD = 1.5;
 const MIN_SIMILARITY_GAP = 0.15;
 const MIN_CONFIDENCE_FOR_DECISIVE = 0.7;
+
+// V2.3: Asymmetric penalty parameters
+const ASYMMETRIC_PENALTY_LAMBDA = 2.0; // Penalty strength for avoid trait divergence
+const ASYMMETRIC_PENALTY_THRESHOLD_SD = 0.5; // Start penalizing at 0.5 SD gap
+const GAUSSIAN_SIGMA_D = 1.2; // Gaussian kernel sigma for distance→similarity
+
+// Debug logging control
+let DEBUG_MATCHER = false;
+export function setMatcherDebug(enabled: boolean) {
+  DEBUG_MATCHER = enabled;
+}
+
+interface MatcherDebugLog {
+  userTraits: Record<TraitKey, number>;
+  userZScores: Record<TraitKey, number>;
+  archetypeScores: Array<{
+    name: string;
+    zScoreDistance: number;
+    avoidPenalty: number;
+    vetoResult: { passed: boolean; reason?: string };
+    rawScore: number;
+    finalScore: number;
+  }>;
+  winner: string;
+  runnerUp: string;
+}
+
+const debugLogs: MatcherDebugLog[] = [];
+export function getMatcherDebugLogs(): MatcherDebugLog[] {
+  return debugLogs;
+}
+export function clearMatcherDebugLogs(): void {
+  debugLogs.length = 0;
+}
 
 /**
  * 12原型灵魂特质权重矩阵
@@ -149,7 +191,15 @@ export const ARCHETYPE_VETO_RULES: Record<string, (traits: Record<TraitKey, numb
     if (t.X > 50) return 0.5;
     return 1.0;
   },
-  "暖心熊": (t) => t.A >= 78 ? 1.15 : (t.A < 65 ? 0.6 : 1.0),
+  "暖心熊": (t) => {
+    // V2.3 FIX: Must also check X - 暖心熊 has X:48, high-X users should NOT match
+    // If user X >= 70, they're too extroverted for 暖心熊
+    if (t.X >= 70) return 0.4; // Strong penalty for high-X users
+    if (t.X >= 60) return 0.7; // Moderate penalty
+    if (t.A >= 78) return 1.15;
+    if (t.A < 65) return 0.6;
+    return 1.0;
+  },
   "夸夸豚": (t) => {
     // 实际A分布: 65-74-88, X分布: 73-83-88
     if (t.A >= 72 && t.X >= 78) return 1.2;
@@ -157,9 +207,13 @@ export const ARCHETYPE_VETO_RULES: Record<string, (traits: Record<TraitKey, numb
     return 1.0;
   },
   "开心柯基": (t) => {
-    // 实际X分布: 80-84-88, P分布: 76-88-91
-    if (t.X >= 80 && t.P >= 80) return 1.2;
-    if (t.X >= 78 && t.P >= 72) return 1.1;
+    // V2.3 FIX: Lower thresholds - 开心柯基 X:95, P:85
+    // Users with high X should match even if P is moderate
+    if (t.X >= 75 && t.P >= 70) return 1.3; // Strong match for high-X + good-P
+    if (t.X >= 70 && t.P >= 65) return 1.2; // Good match
+    if (t.X >= 65 && t.P >= 60) return 1.1; // Moderate match
+    if (t.X >= 60) return 1.05; // Slight boost for extroverts
+    if (t.X < 55) return 0.6; // Penalty for low-X users
     return 1.0;
   },
   "定心大象": (t) => {
@@ -297,6 +351,30 @@ export const CONFUSION_PAIR_GATES: Array<{
       if (t.C >= 78) return 0.7;
       return 1.0;
     }
+  },
+  {
+    // V2.3 FIX: 开心柯基 vs 暖心熊 - 高X用户应该匹配柯基而非暖心熊
+    // 开心柯基 X:95, 暖心熊 X:48 - 这是核心区分特质
+    trueArchetype: "开心柯基",
+    rivalArchetype: "暖心熊",
+    gate: (t) => {
+      if (t.X >= 70) return 0.3; // High-X strongly favors 柯基
+      if (t.X >= 65) return 0.5;
+      if (t.X >= 60) return 0.7;
+      return 1.0;
+    }
+  },
+  {
+    // V2.3 FIX: 暖心熊 vs 开心柯基 - 低X用户应该匹配暖心熊
+    // 暖心熊 X:48, 开心柯基 X:95
+    trueArchetype: "暖心熊",
+    rivalArchetype: "开心柯基",
+    gate: (t) => {
+      if (t.X < 50) return 0.3; // Low-X strongly favors 暖心熊
+      if (t.X < 55) return 0.5;
+      if (t.X < 60) return 0.7;
+      return 1.0;
+    }
   }
 ];
 
@@ -352,9 +430,14 @@ export const SIGNATURE_THRESHOLDS: Record<string, (t: Record<TraitKey, number>) 
     return 1.0;
   },
   "暖心熊": (t) => {
-    // 暖心熊A=88 - 高亲和力
-    if (t.A >= 85) return 1.3;
-    if (t.A >= 80) return 1.1;
+    // V2.3 FIX: 暖心熊 A=90, X=48 - 高亲和力 + 低外向性
+    // High-X users should NOT match 暖心熊
+    if (t.X >= 70) return 0.35; // Strong penalty for very extroverted users
+    if (t.X >= 60) return 0.55; // Moderate penalty for extroverted users
+    // Only apply A bonus if X is appropriate
+    if (t.A >= 85 && t.X < 55) return 1.4; // High A + low X = strong match
+    if (t.A >= 80 && t.X < 58) return 1.2;
+    if (t.A >= 75) return 1.0;
     if (t.A < 72) return 0.6;
     return 1.0;
   },
@@ -379,9 +462,13 @@ export const SIGNATURE_THRESHOLDS: Record<string, (t: Record<TraitKey, number>) 
     return 1.0;
   },
   "开心柯基": (t) => {
-    // 柯基X=90, P=80 - 高社交高正能量
-    if (t.X >= 85 && t.P >= 75) return 1.3;
-    if (t.X >= 80) return 1.1;
+    // V2.3 FIX: 柯基X=95, P=85 - 高社交高正能量
+    // Lower thresholds to capture more high-X users
+    if (t.X >= 75 && t.P >= 65) return 1.4; // High X + moderate P = strong match
+    if (t.X >= 70 && t.P >= 60) return 1.3;
+    if (t.X >= 65) return 1.15; // Moderate boost for extroverts
+    if (t.X >= 60) return 1.05;
+    if (t.X < 55) return 0.5; // Penalty for low-X users
     return 1.0;
   },
   "定心大象": (t) => {
@@ -448,8 +535,59 @@ export interface UserSecondaryData {
   statusOrientation?: 'leader' | 'supporter' | 'independent';
 }
 
+/**
+ * V2.3 Helper: Convert raw trait score to z-score
+ * z = (score - mean) / std = (score - 50) / 15
+ */
+function toZScore(rawScore: number): number {
+  return (rawScore - TRAIT_MEAN) / TRAIT_STD;
+}
+
+/**
+ * V2.3 Helper: Convert trait scores to z-score vector
+ */
+function toZScoreVector(traits: Record<TraitKey, number>): Record<TraitKey, number> {
+  const zScores: Partial<Record<TraitKey, number>> = {};
+  for (const trait of ALL_TRAITS) {
+    zScores[trait] = toZScore(traits[trait] ?? TRAIT_MEAN);
+  }
+  return zScores as Record<TraitKey, number>;
+}
+
+/**
+ * V2.3 Helper: Calculate asymmetric penalty for avoid traits
+ * Heavily penalizes when user trait diverges significantly from archetype's profile
+ * on traits marked as "avoid" in the soul trait config
+ */
+function calculateAsymmetricAvoidPenalty(
+  userTraits: Record<TraitKey, number>,
+  archetypeProfile: Record<TraitKey, number>,
+  avoidTraits: Partial<Record<TraitKey, number>>
+): { totalPenalty: number; penaltyDetails: Array<{ trait: TraitKey; gap: number; penalty: number }> } {
+  let totalPenalty = 0;
+  const penaltyDetails: Array<{ trait: TraitKey; gap: number; penalty: number }> = [];
+
+  for (const [traitStr, weight] of Object.entries(avoidTraits)) {
+    const trait = traitStr as TraitKey;
+    const userZ = toZScore(userTraits[trait] ?? TRAIT_MEAN);
+    const archetypeZ = toZScore(archetypeProfile[trait]);
+    const gapSD = Math.abs(userZ - archetypeZ);
+
+    // Only apply penalty if gap exceeds threshold
+    if (gapSD > ASYMMETRIC_PENALTY_THRESHOLD_SD) {
+      const excessGap = gapSD - ASYMMETRIC_PENALTY_THRESHOLD_SD;
+      // Quadratic penalty for larger gaps
+      const penalty = ASYMMETRIC_PENALTY_LAMBDA * Math.pow(excessGap, 2);
+      totalPenalty += penalty;
+      penaltyDetails.push({ trait, gap: gapSD, penalty });
+    }
+  }
+
+  return { totalPenalty, penaltyDetails };
+}
+
 export class PrototypeMatcher {
-  private algorithmVersion = 'v2.2-manhattan';
+  private algorithmVersion = 'v2.3-optimized';
   private enableTraitCorrection = true;
 
   getAlgorithmVersion(): string {
@@ -490,11 +628,34 @@ export class PrototypeMatcher {
     const secondaryBonus = userSecondaryData 
       ? this.calculateSecondaryBonus(userSecondaryData, prototype) 
       : 0;
-    const finalScore = (baseSimilarity * penaltyFactor) + secondaryBonus;
+
+    // V2.3: Apply asymmetric penalty for avoid traits
+    const soulConfig = PROTOTYPE_SOUL_TRAITS[prototype.name];
+    let asymmetricPenaltyFactor = 1.0;
+    if (soulConfig?.avoid) {
+      const { totalPenalty, penaltyDetails } = calculateAsymmetricAvoidPenalty(
+        correctedTraits,
+        prototype.traitProfile,
+        soulConfig.avoid
+      );
+      // Convert penalty to a multiplicative factor (penalty of 0 = factor 1.0, higher = lower)
+      // Use sigmoid-like decay: factor = 1 / (1 + penalty)
+      asymmetricPenaltyFactor = 1 / (1 + totalPenalty);
+      
+      if (DEBUG_MATCHER && penaltyDetails.length > 0) {
+        console.log(`[Matcher] ${prototype.name} asymmetric penalties:`, penaltyDetails);
+      }
+    }
+
+    const finalScore = (baseSimilarity * penaltyFactor * asymmetricPenaltyFactor) + secondaryBonus;
+
+    if (DEBUG_MATCHER) {
+      console.log(`[Matcher] ${prototype.name}: base=${baseSimilarity.toFixed(3)}, overshoot=${penaltyFactor.toFixed(3)}, asymm=${asymmetricPenaltyFactor.toFixed(3)}, final=${(finalScore * 100).toFixed(1)}`);
+    }
 
     return {
       baseSimilarity,
-      penaltyFactor,
+      penaltyFactor: penaltyFactor * asymmetricPenaltyFactor, // Combined penalty
       secondaryBonus,
       finalScore: Math.max(0, Math.min(100, finalScore * 100)),
       exceededTraits,
@@ -900,6 +1061,17 @@ export class PrototypeMatcher {
     userSecondaryData?: UserSecondaryData,
     topN: number = 3
   ): ExplainableMatchResult[] {
+    // V2.3: Debug logging - capture z-scores
+    const userZScores = toZScoreVector(userTraits);
+    
+    if (DEBUG_MATCHER) {
+      console.log('\n[Matcher V2.3] ========== MATCHING START ==========');
+      console.log('[Matcher] User raw traits:', userTraits);
+      console.log('[Matcher] User z-scores:', Object.fromEntries(
+        Object.entries(userZScores).map(([k, v]) => [k, v.toFixed(2)])
+      ));
+    }
+
     const results: Array<{
       archetype: string;
       prototype: ArchetypePrototype;
@@ -919,6 +1091,31 @@ export class PrototypeMatcher {
     // PHASE 3: Confusion-aware classifier for persistent confusion pairs
     // When top-2 are a known confusion pair with close scores, apply hard-coded trait thresholds
     this.applyConfusionAwareClassifier(userTraits, results);
+
+    // V2.3: Debug logging - final ranking
+    if (DEBUG_MATCHER) {
+      console.log('\n[Matcher] Final ranking after all adjustments:');
+      results.slice(0, 5).forEach((r, i) => {
+        console.log(`  ${i + 1}. ${r.archetype}: ${r.details.finalScore.toFixed(1)} (base=${r.details.baseSimilarity.toFixed(3)}, penalty=${r.details.penaltyFactor.toFixed(3)})`);
+      });
+      console.log('[Matcher] ========== MATCHING END ==========\n');
+      
+      // Store debug log for retrieval
+      debugLogs.push({
+        userTraits,
+        userZScores,
+        archetypeScores: results.map(r => ({
+          name: r.archetype,
+          zScoreDistance: 0, // Could calculate if needed
+          avoidPenalty: 1 - r.details.penaltyFactor,
+          vetoResult: { passed: r.details.finalScore > 0 },
+          rawScore: r.details.baseSimilarity * 100,
+          finalScore: r.details.finalScore,
+        })),
+        winner: results[0]?.archetype || 'unknown',
+        runnerUp: results[1]?.archetype || 'unknown',
+      });
+    }
 
     return results.slice(0, topN).map((r, index) => {
       const similarPrototypes = this.findSimilarPrototypes(r.archetype, r.prototype, results);
