@@ -492,8 +492,9 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
       }
       
       // ENHANCED: Persistent confusion pair detection with threshold trigger
+      // Relaxed threshold from 0.05 to 0.08 to catch more cases
       const confusionDetection = detectPersistentConfusionPair(currentMatches);
-      if (confusionDetection.isPersistentPair && confusionDetection.scoreGap < 0.05) {
+      if (confusionDetection.isPersistentPair && confusionDetection.scoreGap < 0.08) {
         // Instrumentation: track detection
         if (_instrumentation) {
           _instrumentation.persistentPairDetected++;
@@ -504,7 +505,7 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
         }
         
         // When we detect a persistent confusion pair with close scores,
-        // give a very strong boost to questions targeting that pair
+        // give a VERY strong boost to questions targeting that pair
         if (question.targetPairs && question.targetPairs.length > 0) {
           const pair = confusionDetection.pair!;
           const targetsBothInPair = 
@@ -516,7 +517,8 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
           
           if (targetsBothInPair) {
             // Maximum priority - question targets exactly this confusion pair
-            persistentPairBonus = 0.8;
+            // Increased from 0.8 to 1.5 to ensure these questions win selection
+            persistentPairBonus = 1.5;
             // Instrumentation: track exact match
             if (_instrumentation) {
               _instrumentation.targetPairQuestionsSelected++;
@@ -524,7 +526,8 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
             }
           } else if (targetsOneInPair) {
             // High priority - question targets one of the confusing archetypes
-            persistentPairBonus = 0.4;
+            // Increased from 0.4 to 0.8
+            persistentPairBonus = 0.8;
             // Instrumentation: track partial match
             if (_instrumentation) {
               _instrumentation.targetPairQuestionsSelected++;
@@ -536,8 +539,9 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
         // Also boost questions that target the differentiating traits
         const pairTraits = getPersistentPairDifferentiatingTraits(confusionDetection.pair!);
         const traitsOverlap = question.primaryTraits.filter(t => pairTraits.includes(t)).length;
-        if (traitsOverlap > 0 && persistentPairBonus < 0.4) {
-          persistentPairBonus = Math.max(persistentPairBonus, 0.3 * traitsOverlap);
+        if (traitsOverlap > 0 && persistentPairBonus < 0.6) {
+          // Increased from 0.3 to 0.5 per trait overlap
+          persistentPairBonus = Math.max(persistentPairBonus, 0.5 * traitsOverlap);
           // Instrumentation: track trait match
           if (_instrumentation) {
             _instrumentation.targetPairQuestionsSelected++;
