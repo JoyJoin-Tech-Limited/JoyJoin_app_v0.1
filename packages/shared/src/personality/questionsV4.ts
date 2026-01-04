@@ -4031,6 +4031,144 @@ export const questionsV4: AdaptiveQuestion[] = [
         traitScores: { A: -1, C: 0, E: 2, O: 0, X: -2, P: 0 }
       }
     ]
+  },
+  // Q123-Q124: 暖心熊 vs 淡定海豚 加强区分题 (主动关怀 vs 稳定陪伴)
+  {
+    id: "Q123",
+    level: 3,
+    category: "原型区分-暖心熊vs淡定海豚-安慰方式",
+    scenarioText: "😔 好朋友刚经历了一次挫折，向你倾诉。",
+    questionText: "你会怎么回应？",
+    primaryTraits: ["A", "P"],
+    isForcedChoice: true,
+    targetPairs: ["暖心熊", "淡定海豚"],
+    cohortTag: 'steady_harmonizer',
+    discriminationIndex: 0.68,
+    options: [
+      {
+        value: "A",
+        text: "立刻放下手头的事，给ta一个大大的拥抱，陪ta聊到舒服为止",
+        traitScores: { A: 6, C: -1, E: 0, O: 0, X: 1, P: 3 }
+      },
+      {
+        value: "B",
+        text: "认真倾听，偶尔点头，让ta知道你在，不急着给建议",
+        traitScores: { A: 2, C: 1, E: 3, O: 0, X: -1, P: 0 }
+      },
+      {
+        value: "C",
+        text: "帮ta分析问题，提供一些实际的解决思路",
+        traitScores: { A: 0, C: 3, E: 1, O: 1, X: 0, P: -1 }
+      },
+      {
+        value: "D",
+        text: "给ta空间消化情绪，告诉ta需要的时候可以找你",
+        traitScores: { A: -1, C: 0, E: 2, O: 0, X: -2, P: -1 }
+      }
+    ]
+  },
+  {
+    id: "Q124",
+    level: 3,
+    category: "原型区分-暖心熊vs淡定海豚-聚会角色",
+    scenarioText: "🎂 你在组织一个朋友的生日聚会。",
+    questionText: "你最关心的是什么？",
+    primaryTraits: ["A", "X"],
+    isForcedChoice: true,
+    targetPairs: ["暖心熊", "淡定海豚"],
+    cohortTag: 'steady_harmonizer',
+    discriminationIndex: 0.65,
+    options: [
+      {
+        value: "A",
+        text: "确保每个人都被照顾到，没有人被冷落",
+        traitScores: { A: 6, C: 0, E: 0, O: 0, X: 0, P: 2 }
+      },
+      {
+        value: "B",
+        text: "让整体氛围轻松愉快，大家都玩得开心",
+        traitScores: { A: 2, C: 0, E: 2, O: 0, X: 2, P: 1 }
+      },
+      {
+        value: "C",
+        text: "活动流程顺畅，时间安排合理",
+        traitScores: { A: 0, C: 4, E: 1, O: 0, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "惊喜环节够特别，让寿星印象深刻",
+        traitScores: { A: 0, C: 0, E: 0, O: 3, X: 1, P: 1 }
+      }
+    ]
+  },
+  // Q125-Q126: 太阳鸡 vs 淡定海豚 加强区分题 (高能量鼓励 vs 稳定陪伴)
+  {
+    id: "Q125",
+    level: 3,
+    category: "原型区分-太阳鸡vs淡定海豚-能量输出",
+    scenarioText: "⚡ 团队项目遇到困难，大家有点泄气。",
+    questionText: "你会怎么做？",
+    primaryTraits: ["P", "X"],
+    isForcedChoice: true,
+    targetPairs: ["太阳鸡", "淡定海豚"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.70,
+    options: [
+      {
+        value: "A",
+        text: "主动打气！\"别灰心，我们一定能搞定！\"带动大家的情绪",
+        traitScores: { A: 1, C: 0, E: 1, O: 0, X: 5, P: 6 }
+      },
+      {
+        value: "B",
+        text: "保持冷静，说\"慢慢来，一步一步解决\"",
+        traitScores: { A: 0, C: 1, E: 4, O: 0, X: -1, P: 0 }
+      },
+      {
+        value: "C",
+        text: "默默多承担一些任务，用行动支持团队",
+        traitScores: { A: 2, C: 2, E: 1, O: 0, X: -2, P: 1 }
+      },
+      {
+        value: "D",
+        text: "分析问题出在哪里，提出调整方案",
+        traitScores: { A: 0, C: 3, E: 0, O: 2, X: 0, P: -1 }
+      }
+    ]
+  },
+  {
+    id: "Q126",
+    level: 3,
+    category: "原型区分-太阳鸡vs淡定海豚-日常状态",
+    scenarioText: "☀️ 普通的一天，没什么特别的事。",
+    questionText: "你的状态更接近哪个？",
+    primaryTraits: ["P", "E"],
+    isForcedChoice: true,
+    targetPairs: ["太阳鸡", "淡定海豚"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.72,
+    options: [
+      {
+        value: "A",
+        text: "心情自然就很好，看到什么都觉得挺开心的",
+        traitScores: { A: 0, C: 0, E: 2, O: 0, X: 2, P: 6 }
+      },
+      {
+        value: "B",
+        text: "心态平稳，不太有大起大落，该做什么做什么",
+        traitScores: { A: 0, C: 1, E: 4, O: 0, X: -1, P: -1 }
+      },
+      {
+        value: "C",
+        text: "需要找点有意思的事做，不然会有点无聊",
+        traitScores: { A: 0, C: -1, E: 0, O: 2, X: 1, P: 0 }
+      },
+      {
+        value: "D",
+        text: "享受安静的时光，自己待着也挺舒服",
+        traitScores: { A: 0, C: 0, E: 2, O: 0, X: -3, P: 0 }
+      }
+    ]
   }
 ];
 
