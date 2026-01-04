@@ -27,6 +27,7 @@ export type CohortType =
   | 'quiet_anchor'         // 隐身猫, 稳如龟, 定心大象 (low X + high C)
   | 'social_catalyst'      // 开心柯基, 太阳鸡, 夸夸豚 (high X + high P)
   | 'steady_harmonizer'    // 暖心熊, 淡定海豚, 织网蛛 (high A + mid-high E)
+  | 'reflective_stabilizer' // 沉思猫头鹰, 稳如龟 (high C + differentiated O/E)
   | 'universal';           // Works for all cohorts
 
 export interface AdaptiveQuestion {
