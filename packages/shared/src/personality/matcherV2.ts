@@ -525,6 +525,150 @@ export class PrototypeMatcher {
       }
     }
   }
+  
+  /**
+   * Phase 3: Confusion-Aware Classifier
+   * When top-2 archetypes are a persistent confusion pair with close scores,
+   * apply hard-coded trait thresholds to make a decisive choice.
+   * 
+   * This is a second-stage classifier that overrides the initial ranking
+   * only when we detect a known problematic pair.
+   */
+  private applyConfusionAwareClassifier(
+    userTraits: Record<TraitKey, number>,
+    results: Array<{ archetype: string; prototype: ArchetypePrototype; details: MatchScoreDetails }>
+  ): void {
+    if (results.length < 2) return;
+    
+    const top1 = results[0];
+    const top2 = results[1];
+    const scoreGap = top1.details.finalScore - top2.details.finalScore;
+    
+    // Apply for any close match (gap < 10 points on 100-point scale)
+    // This catches more edge cases where the wrong archetype barely wins
+    if (scoreGap >= 10) return;
+    
+    const pair = [top1.archetype, top2.archetype].sort().join(',');
+    
+    // Apply pair-specific hard-coded classifiers
+    switch (pair) {
+      case '太阳鸡,淡定海豚':
+        this.classifySunnyChickenVsDolphin(userTraits, results, top1, top2);
+        break;
+      case '沉思猫头鹰,稳如龟':
+        this.classifyOwlVsTurtle(userTraits, results, top1, top2);
+        break;
+      case '暖心熊,淡定海豚':
+        this.classifyBearVsDolphin(userTraits, results, top1, top2);
+        break;
+    }
+  }
+  
+  /**
+   * 太阳鸡 vs 淡定海豚: P is the key differentiator
+   * - P >= 85 → 太阳鸡 (prototype P=92)
+   * - P < 72 → 淡定海豚 (prototype P=68)
+   * - Between: use secondary trait X (太阳鸡 X=85, 淡定海豚 X=55)
+   */
+  private classifySunnyChickenVsDolphin(
+    t: Record<TraitKey, number>,
+    results: Array<{ archetype: string; details: MatchScoreDetails }>,
+    top1: { archetype: string; details: MatchScoreDetails },
+    top2: { archetype: string; details: MatchScoreDetails }
+  ): void {
+    const sunnyChicken = results.find(r => r.archetype === '太阳鸡');
+    const dolphin = results.find(r => r.archetype === '淡定海豚');
+    if (!sunnyChicken || !dolphin) return;
+    
+    if (t.P >= 85) {
+      // Definitely 太阳鸡
+      sunnyChicken.details.finalScore += 8;
+    } else if (t.P < 72) {
+      // Definitely 淡定海豚
+      dolphin.details.finalScore += 8;
+    } else {
+      // Use X as tiebreaker: high X → 太阳鸡
+      if (t.X >= 70) {
+        sunnyChicken.details.finalScore += 4;
+      } else if (t.X < 60) {
+        dolphin.details.finalScore += 4;
+      }
+    }
+    
+    // Re-sort after adjustment
+    results.sort((a, b) => b.details.finalScore - a.details.finalScore);
+  }
+  
+  /**
+   * 沉思猫头鹰 vs 稳如龟: O is the key differentiator
+   * - O >= 80 + X < 50 → 沉思猫头鹰 (prototype O=88, X=40)
+   * - O < 70 → 稳如龟 (prototype O=65)
+   * - Between: use secondary trait X
+   */
+  private classifyOwlVsTurtle(
+    t: Record<TraitKey, number>,
+    results: Array<{ archetype: string; details: MatchScoreDetails }>,
+    top1: { archetype: string; details: MatchScoreDetails },
+    top2: { archetype: string; details: MatchScoreDetails }
+  ): void {
+    const owl = results.find(r => r.archetype === '沉思猫头鹰');
+    const turtle = results.find(r => r.archetype === '稳如龟');
+    if (!owl || !turtle) return;
+    
+    if (t.O >= 80 && t.X < 50) {
+      // Definite 沉思猫头鹰 pattern: high O + low X
+      owl.details.finalScore += 8;
+    } else if (t.O < 70) {
+      // Low O → 稳如龟
+      turtle.details.finalScore += 8;
+    } else {
+      // Middle ground: use X as tiebreaker
+      // 猫头鹰 has lower X (40) than 龟 (30), but both are low
+      // If O is high but X is also moderately high, it's less like 猫头鹰
+      if (t.O >= 75 && t.X < 45) {
+        owl.details.finalScore += 4;
+      } else {
+        turtle.details.finalScore += 4;
+      }
+    }
+    
+    results.sort((a, b) => b.details.finalScore - a.details.finalScore);
+  }
+  
+  /**
+   * 暖心熊 vs 淡定海豚: A is the key differentiator
+   * - A >= 82 → 暖心熊 (prototype A=88)
+   * - A < 72 → 淡定海豚 (prototype A=70)
+   * - Between: use secondary trait P (熊 P=75, 海豚 P=68)
+   */
+  private classifyBearVsDolphin(
+    t: Record<TraitKey, number>,
+    results: Array<{ archetype: string; details: MatchScoreDetails }>,
+    top1: { archetype: string; details: MatchScoreDetails },
+    top2: { archetype: string; details: MatchScoreDetails }
+  ): void {
+    const bear = results.find(r => r.archetype === '暖心熊');
+    const dolphin = results.find(r => r.archetype === '淡定海豚');
+    if (!bear || !dolphin) return;
+    
+    if (t.A >= 82) {
+      // High affinity → 暖心熊
+      bear.details.finalScore += 8;
+    } else if (t.A < 72) {
+      // Lower affinity → 淡定海豚
+      dolphin.details.finalScore += 8;
+    } else {
+      // Use E (emotional stability) as tiebreaker
+      // 海豚 E=75, 熊 E=80 - both high, but 熊 slightly higher
+      if (t.E >= 78) {
+        bear.details.finalScore += 4;
+      } else {
+        dolphin.details.finalScore += 4;
+      }
+    }
+    
+    results.sort((a, b) => b.details.finalScore - a.details.finalScore);
+  }
 
   /**
    * Weighted Manhattan Distance with Logistic Normalization
@@ -698,6 +842,10 @@ export class PrototypeMatcher {
     this.applyVetoRules(userTraits, results);
 
     results.sort((a, b) => b.details.finalScore - a.details.finalScore);
+    
+    // PHASE 3: Confusion-aware classifier for persistent confusion pairs
+    // When top-2 are a known confusion pair with close scores, apply hard-coded trait thresholds
+    this.applyConfusionAwareClassifier(userTraits, results);
 
     return results.slice(0, topN).map((r, index) => {
       const similarPrototypes = this.findSimilarPrototypes(r.archetype, r.prototype, results);

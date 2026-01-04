@@ -66,6 +66,40 @@ const ALL_TRAITS: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
 
 export const MAX_SKIP_COUNT = 3;
 
+/**
+ * Persistent confusion pairs that resist tuning
+ * These require targeted disambiguation questions when detected
+ * Format: [archetype1, archetype2] - order doesn't matter
+ */
+export const PERSISTENT_CONFUSION_PAIRS: [string, string][] = [
+  ['太阳鸡', '淡定海豚'],       // P gap: 92 vs 68
+  ['沉思猫头鹰', '稳如龟'],     // O gap: 88 vs 65
+  ['淡定海豚', '暖心熊'],       // A gap: 70 vs 88
+];
+
+/**
+ * Check if top-2 archetypes form a known persistent confusion pair
+ */
+export function detectPersistentConfusionPair(
+  matches: ArchetypeMatch[]
+): { isPersistentPair: boolean; pair: [string, string] | null; scoreGap: number } {
+  if (matches.length < 2) {
+    return { isPersistentPair: false, pair: null, scoreGap: 1 };
+  }
+  
+  const top1 = matches[0].archetype;
+  const top2 = matches[1].archetype;
+  const scoreGap = matches[0].confidence - matches[1].confidence;
+  
+  for (const [a, b] of PERSISTENT_CONFUSION_PAIRS) {
+    if ((top1 === a && top2 === b) || (top1 === b && top2 === a)) {
+      return { isPersistentPair: true, pair: [a, b], scoreGap };
+    }
+  }
+  
+  return { isPersistentPair: false, pair: null, scoreGap };
+}
+
 export interface EngineState {
   answeredQuestionIds: Set<string>;
   skippedQuestionIds: Set<string>;
@@ -382,6 +416,7 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
   
   let discriminationBonus = 0;
   let targetedPairBonus = 0;
+  let persistentPairBonus = 0;
   
   if (currentMatches.length >= 2) {
     const top2 = currentMatches.slice(0, 2);
@@ -405,6 +440,37 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
         } else if (matchCount >= 1) {
           // Moderate bonus - at least one archetype matches
           targetedPairBonus = 0.2;
+        }
+      }
+      
+      // ENHANCED: Persistent confusion pair detection with threshold trigger
+      const confusionDetection = detectPersistentConfusionPair(currentMatches);
+      if (confusionDetection.isPersistentPair && confusionDetection.scoreGap < 0.05) {
+        // When we detect a persistent confusion pair with close scores,
+        // give a very strong boost to questions targeting that pair
+        if (question.targetPairs && question.targetPairs.length > 0) {
+          const pair = confusionDetection.pair!;
+          const targetsBothInPair = 
+            question.targetPairs.includes(pair[0]) && 
+            question.targetPairs.includes(pair[1]);
+          const targetsOneInPair = 
+            question.targetPairs.includes(pair[0]) || 
+            question.targetPairs.includes(pair[1]);
+          
+          if (targetsBothInPair) {
+            // Maximum priority - question targets exactly this confusion pair
+            persistentPairBonus = 0.8;
+          } else if (targetsOneInPair) {
+            // High priority - question targets one of the confusing archetypes
+            persistentPairBonus = 0.4;
+          }
+        }
+        
+        // Also boost questions that target the differentiating traits
+        const pairTraits = getPersistentPairDifferentiatingTraits(confusionDetection.pair!);
+        const traitsOverlap = question.primaryTraits.filter(t => pairTraits.includes(t)).length;
+        if (traitsOverlap > 0 && persistentPairBonus < 0.4) {
+          persistentPairBonus = Math.max(persistentPairBonus, 0.3 * traitsOverlap);
         }
       }
     }
@@ -434,14 +500,32 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
   }
   
   return (
-    informationGain * 0.3 +
-    discriminationBonus * 0.2 +
-    targetedPairBonus * 0.25 +
-    discriminationIndex * 0.15 +
-    levelBonus * 0.05 +
-    forcedChoiceBonus * 0.05 +
+    informationGain * 0.25 +
+    discriminationBonus * 0.15 +
+    targetedPairBonus * 0.2 +
+    persistentPairBonus * 0.25 +  // New: strong weight for persistent pair targeting
+    discriminationIndex * 0.1 +
+    levelBonus * 0.03 +
+    forcedChoiceBonus * 0.02 +
     cohortBonus
   );
+}
+
+/**
+ * Get the differentiating traits for a persistent confusion pair
+ */
+function getPersistentPairDifferentiatingTraits(pair: [string, string]): TraitKey[] {
+  const [a, b] = pair.sort();
+  
+  // Map of pairs to their key differentiating traits
+  const traitMap: Record<string, TraitKey[]> = {
+    '太阳鸡,淡定海豚': ['P', 'X'],      // P: 92 vs 68, X: 85 vs 55
+    '沉思猫头鹰,稳如龟': ['O', 'X'],     // O: 88 vs 65, X: 40 vs 30
+    '暖心熊,淡定海豚': ['A', 'P'],       // A: 88 vs 70, P: 75 vs 68
+  };
+  
+  const key = [a, b].sort().join(',');
+  return traitMap[key] || [];
 }
 
 export function shouldTerminate(state: EngineState): boolean {
