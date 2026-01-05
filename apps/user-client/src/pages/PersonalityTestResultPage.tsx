@@ -519,6 +519,24 @@ export default function PersonalityTestResultPage() {
     return () => timers.forEach(clearTimeout);
   }, [result, showReveal, revealPhase, countdown, prefersReducedMotion]);
 
+  // Mark personality test as complete and navigate to profile setup
+  const completeTestMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/auth/complete-personality-test");
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setLocation('/onboarding/setup');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "出错了",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -567,24 +585,6 @@ export default function PersonalityTestResultPage() {
       toast({ title: '已复制到剪贴板！' });
     }
   };
-
-  // Mark personality test as complete and navigate to profile setup
-  const completeTestMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("POST", "/api/auth/complete-personality-test");
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setLocation('/onboarding/setup');
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "出错了",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
 
   const handleContinue = () => {
     completeTestMutation.mutate();
