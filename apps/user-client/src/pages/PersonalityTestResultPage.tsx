@@ -437,6 +437,12 @@ export default function PersonalityTestResultPage() {
     }
   }, [result]);
 
+  // Cache filtered chemistry list (only show ≥70% compatibility)
+  const highCompatibilityPartners = useMemo(() => {
+    if (!result?.chemistryList) return [];
+    return result.chemistryList.filter(c => c.percentage >= 70);
+  }, [result?.chemistryList]);
+
   // Pokemon-style reveal animation timing
   useEffect(() => {
     if (!result || !showReveal) return;
@@ -937,8 +943,8 @@ export default function PersonalityTestResultPage() {
           />
         </motion.div>
 
-        {/* 3. 最佳搭档 - 移到小悦分析后面 */}
-        {result.chemistryList && result.chemistryList.length > 0 && (
+        {/* 3. 最佳搭档 - 移到小悦分析后面，只显示≥70%的搭档 */}
+        {highCompatibilityPartners.length > 0 && (
           <motion.div variants={itemVariants}>
             <Card>
               <CardHeader>
@@ -948,7 +954,7 @@ export default function PersonalityTestResultPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {result.chemistryList.map((chemistry, index) => (
+                {highCompatibilityPartners.map((chemistry, index) => (
                   <div
                     key={chemistry.role}
                     className="p-4 bg-muted/50 rounded-lg space-y-3"

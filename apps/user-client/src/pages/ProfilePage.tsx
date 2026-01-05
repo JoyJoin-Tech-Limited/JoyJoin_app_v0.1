@@ -404,7 +404,6 @@ export default function ProfilePage() {
                       </Button>
                     </div>
                     <PersonalityRadarChart 
-                      archetype={personalityResults.primaryRole}
                       affinityScore={personalityResults.affinityScore}
                       opennessScore={personalityResults.opennessScore}
                       conscientiousnessScore={personalityResults.conscientiousnessScore}
@@ -463,8 +462,8 @@ export default function ProfilePage() {
                     <div className="space-y-3">
                       {getMatchesWithDescriptions(
                         personalityResults.primaryRole, 
-                        getTopCompatibleArchetypes(personalityResults.primaryRole, 3)
-                      ).map((match) => (
+                        getTopCompatibleArchetypes(personalityResults.primaryRole, 5).filter(m => m.score >= 70)
+                      ).slice(0, 3).map((match) => (
                         <div key={match.archetype} className="p-3 rounded-lg bg-muted/30 space-y-2">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3 flex-1">
