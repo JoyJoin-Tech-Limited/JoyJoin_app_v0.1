@@ -12,7 +12,6 @@ import ChatRegistrationPage from "@/pages/ChatRegistrationPage";
 import InterestsTopicsPage from "@/pages/InterestsTopicsPage";
 import PersonalityTestPageV4 from "@/pages/PersonalityTestPageV4";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
-import PostTestFlowPage from "@/pages/PostTestFlowPage";
 import ProfileSetupPage from "@/pages/ProfileSetupPage";
 import DiscoverPage from "@/pages/DiscoverPage";
 import EventsPage from "@/pages/EventsPage";
@@ -88,7 +87,7 @@ function AuthenticatedRouter() {
         <Route path="/onboarding" component={DuolingoOnboardingPage} />
         {/* 性格测试 - onboarding 完成后进入 */}
         <Route path="/personality-test" component={PersonalityTestPageV4} />
-        <Route path="/personality-test/complete" component={PostTestFlowPage} />
+        <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
         <Route path="/personality-test/results" component={PersonalityTestResultPage} />
         {/* 保留旧版注册供内部测试使用 */}
         <Route path="/chat-registration" component={ChatRegistrationPage} />
@@ -104,7 +103,7 @@ function AuthenticatedRouter() {
     return (
       <Switch>
         <Route path="/personality-test" component={PersonalityTestPageV4} />
-        <Route path="/personality-test/complete" component={PostTestFlowPage} />
+        <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
         <Route path="/personality-test/results" component={PersonalityTestResultPage} />
         <Route path="*" component={RedirectToPersonalityTest} />
       </Switch>
@@ -151,7 +150,7 @@ function AuthenticatedRouter() {
       <Route path="/event/:id" component={EventDetailPage} />
       <Route path="/invite" component={InvitePage} />
       <Route path="/personality-test" component={PersonalityTestPageV4} />
-      <Route path="/personality-test/complete" component={PostTestFlowPage} />
+      <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
       <Route path="/personality-test/results" component={PersonalityTestResultPage} />
       <Route component={NotFound} />
     </Switch>
