@@ -321,6 +321,33 @@ export function useAdaptiveAssessment() {
   });
 
   const startAssessment = useCallback(async (resumeFromCache = true) => {
+    // Check if we have a synced session from onboarding (highest priority)
+    const syncedSessionId = localStorage.getItem("joyjoin_synced_session_id");
+    if (syncedSessionId) {
+      // Clear any stale cached answers since they've been synced
+      clearCache();
+      
+      // Resume from the synced session - no need to re-submit answers
+      setSessionId(syncedSessionId);
+      setPhase("assessment");
+      
+      try {
+        await startMutation.mutateAsync({ 
+          sessionId: syncedSessionId, 
+          forceNew: false 
+        });
+        // Only clear synced session marker AFTER successful resume
+        localStorage.removeItem("joyjoin_synced_session_id");
+        localStorage.removeItem("joyjoin_synced_answer_count");
+      } catch (error) {
+        // If resume fails, clear the marker so we don't get stuck
+        localStorage.removeItem("joyjoin_synced_session_id");
+        localStorage.removeItem("joyjoin_synced_answer_count");
+        throw error;
+      }
+      return;
+    }
+    
     const cachedAnswers = getCachedAnswers();
     const preSignupAnswers = cachedAnswers.length > 0 ? cachedAnswers : undefined;
     
@@ -344,7 +371,7 @@ export function useAdaptiveAssessment() {
     }
     
     await startMutation.mutateAsync({ preSignupAnswers, forceNew });
-  }, [loadCachedSession, getCachedAnswers, startMutation]);
+  }, [loadCachedSession, getCachedAnswers, startMutation, clearCache]);
 
   const startFreshAssessment = useCallback(async () => {
     clearCache();
