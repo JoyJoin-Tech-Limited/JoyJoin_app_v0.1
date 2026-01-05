@@ -19,6 +19,24 @@ import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01_1766766685652.png";
 import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03_1766766685650.png";
 import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
 
+// Archetype spotlight imports (subset for carousel)
+import corgiImg from '@assets/开心柯基_1763997660297.png';
+import foxImg from '@assets/机智狐_1763997660293.png';
+import bearImg from '@assets/暖心熊_1763997660292.png';
+import dolphinImg from '@assets/淡定海豚_1763997660293.png';
+import octopusImg from '@assets/灵感章鱼_1763997660292.png';
+import owlImg from '@assets/沉思猫头鹰_1763997660294.png';
+
+// Spotlight archetypes for carousel (curated selection for variety)
+const SPOTLIGHT_ARCHETYPES = [
+  { img: corgiImg, name: '开心柯基' },
+  { img: foxImg, name: '机智狐' },
+  { img: bearImg, name: '暖心熊' },
+  { img: dolphinImg, name: '淡定海豚' },
+  { img: octopusImg, name: '灵感章鱼' },
+  { img: owlImg, name: '沉思猫头鹰' },
+];
+
 const ONBOARDING_CACHE_KEY = "joyjoin_onboarding_progress";
 const V4_SESSION_KEY = "joyjoin_v4_assessment_session";
 const V4_ANSWERS_KEY = "joyjoin_v4_presignup_answers";
@@ -414,6 +432,16 @@ export default function DuolingoOnboardingPage() {
   const [birthYear, setBirthYear] = useState<string>("");
   const [showBirthYear, setShowBirthYear] = useState(true);
   const [relationshipStatus, setRelationshipStatus] = useState<string>("");
+  const [spotlightIndex, setSpotlightIndex] = useState(0);
+  
+  // Rotate spotlight archetype every 2.5 seconds (only if motion is enabled)
+  useEffect(() => {
+    if (currentScreen !== 0 || prefersReducedMotion) return;
+    const interval = setInterval(() => {
+      setSpotlightIndex((prev) => (prev + 1) % SPOTLIGHT_ARCHETYPES.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [currentScreen, prefersReducedMotion]);
 
   const { data: anchorQuestionsData, isLoading: isLoadingQuestions } = useQuery<{
     questions: V4AnchorQuestion[];
@@ -686,7 +714,7 @@ export default function DuolingoOnboardingPage() {
               </p>
             </motion.div>
             
-            {/* Subheadline */}
+            {/* Subheadline - whitespace-nowrap on last phrase prevents orphan */}
             <motion.p
               initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -694,15 +722,66 @@ export default function DuolingoOnboardingPage() {
               className="mt-4 text-center text-muted-foreground text-sm max-w-[280px] z-10"
               data-testid="text-welcome-subheadline"
             >
-              解锁12种社交动物原型，找到最合拍的同频伙伴
+              解锁12种社交动物原型，找到最合拍的<span className="whitespace-nowrap">同频伙伴</span>
             </motion.p>
+            
+            {/* Spotlight Archetype Carousel (static when reduced motion) */}
+            <motion.div
+              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: prefersReducedMotion ? 0 : 0.8, duration: 0.4 }}
+              className="mt-6 flex flex-col items-center z-10"
+            >
+              <div className="relative w-16 h-16">
+                {prefersReducedMotion ? (
+                  <img
+                    src={SPOTLIGHT_ARCHETYPES[0].img}
+                    alt={SPOTLIGHT_ARCHETYPES[0].name}
+                    className="w-16 h-16 object-contain drop-shadow-md"
+                    data-testid="img-spotlight-archetype"
+                  />
+                ) : (
+                  <AnimatePresence mode="wait">
+                    <motion.img
+                      key={spotlightIndex}
+                      src={SPOTLIGHT_ARCHETYPES[spotlightIndex].img}
+                      alt={SPOTLIGHT_ARCHETYPES[spotlightIndex].name}
+                      className="w-16 h-16 object-contain drop-shadow-md"
+                      data-testid="img-spotlight-archetype"
+                      initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+                      animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, rotate: 10 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                    />
+                  </AnimatePresence>
+                )}
+              </div>
+              <span 
+                className="mt-1 text-xs text-muted-foreground/70"
+                data-testid="text-spotlight-archetype-name"
+              >
+                {prefersReducedMotion ? SPOTLIGHT_ARCHETYPES[0].name : SPOTLIGHT_ARCHETYPES[spotlightIndex].name}
+              </span>
+              {/* Dot indicators */}
+              <div className="flex gap-1 mt-2">
+                {SPOTLIGHT_ARCHETYPES.map((_, i) => (
+                  <div 
+                    key={i} 
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full transition-colors duration-300",
+                      i === spotlightIndex ? "bg-primary" : "bg-muted-foreground/20"
+                    )}
+                  />
+                ))}
+              </div>
+            </motion.div>
             
             {/* CTA Button */}
             <motion.div 
               initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: prefersReducedMotion ? 0 : 0.9, duration: 0.4 }}
-              className="mt-8 w-full max-w-sm z-10"
+              transition={{ delay: prefersReducedMotion ? 0 : 1.0, duration: 0.4 }}
+              className="mt-6 w-full max-w-sm z-10"
             >
               <Button 
                 size="lg"
