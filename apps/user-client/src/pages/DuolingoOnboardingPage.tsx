@@ -13,6 +13,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAdaptiveAssessment, type AssessmentQuestion, type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
 import { getOptionFeedback } from "@shared/personality/feedback";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01_1766766685652.png";
 import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03_1766766685650.png";
@@ -375,9 +376,26 @@ function getV4CachedAnswers(): PreSignupAnswer[] {
   }
 }
 
+// Pre-generated stable particle configs (deterministic, no Math.random in render)
+const PARTICLE_CONFIGS = [
+  { x: 50, y: 150, scale: 0.7, delay: 0.2, duration: 5 },
+  { x: -80, y: 200, scale: 0.5, delay: 0.8, duration: 6 },
+  { x: 120, y: 100, scale: 0.9, delay: 1.5, duration: 4.5 },
+  { x: -40, y: 250, scale: 0.6, delay: 0.5, duration: 5.5 },
+  { x: 90, y: 180, scale: 0.8, delay: 2.0, duration: 4 },
+  { x: -100, y: 120, scale: 0.55, delay: 1.2, duration: 6.5 },
+  { x: 60, y: 220, scale: 0.75, delay: 0.3, duration: 5.2 },
+  { x: -60, y: 160, scale: 0.65, delay: 1.8, duration: 4.8 },
+  { x: 100, y: 140, scale: 0.85, delay: 2.5, duration: 5.8 },
+  { x: -20, y: 190, scale: 0.6, delay: 0.7, duration: 4.2 },
+  { x: 70, y: 230, scale: 0.7, delay: 1.0, duration: 5.5 },
+  { x: -90, y: 170, scale: 0.8, delay: 2.2, duration: 4.5 },
+];
+
 export default function DuolingoOnboardingPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const prefersReducedMotion = useReducedMotion();
   
   const [currentScreen, setCurrentScreen] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -578,23 +596,123 @@ export default function DuolingoOnboardingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col items-center justify-center px-6 py-8"
+            className="flex-1 flex flex-col items-center justify-center px-6 py-8 relative overflow-hidden"
           >
-            <XiaoyueMascot 
-              mood="normal"
-              message="嗨！我是小悦，帮你找到最合拍的朋友"
+            {/* Beat 1: Ambient floating particles background (stable configs) */}
+            {!prefersReducedMotion && (
+              <div className="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center">
+                {PARTICLE_CONFIGS.map((config, i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute w-2 h-2 rounded-full bg-primary/20"
+                    initial={{ 
+                      x: config.x,
+                      y: config.y,
+                      scale: config.scale,
+                      opacity: 0 
+                    }}
+                    animate={{ 
+                      y: [config.y, config.y - 150],
+                      opacity: [0, 0.6, 0],
+                      scale: [config.scale, config.scale * 1.2]
+                    }}
+                    transition={{
+                      duration: config.duration,
+                      repeat: Infinity,
+                      delay: config.delay,
+                      ease: "easeOut"
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+            
+            {/* Beat 2: Hero gradient backdrop */}
+            <motion.div
+              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="absolute top-1/4 w-64 h-64 rounded-full bg-gradient-to-br from-primary/10 via-primary/5 to-transparent blur-3xl pointer-events-none"
             />
             
-            <div className="mt-8 w-full max-w-sm">
+            {/* Beat 3: Mascot with spring entrance */}
+            <motion.div
+              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 50, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 200, 
+                damping: 20, 
+                delay: prefersReducedMotion ? 0 : 0.3 
+              }}
+              className="relative z-10"
+            >
+              <motion.div
+                animate={prefersReducedMotion ? {} : { 
+                  scale: [1, 1.05, 1],
+                  rotate: [0, -2, 2, 0]
+                }}
+                transition={{ 
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                <img 
+                  src={XIAOYUE_AVATARS.normal} 
+                  alt="小悦" 
+                  className="w-32 h-32 object-contain drop-shadow-xl"
+                  data-testid="img-xiaoyue-welcome"
+                />
+              </motion.div>
+            </motion.div>
+            
+            {/* Speech bubble with staggered entrance */}
+            <motion.div
+              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ 
+                type: "spring",
+                stiffness: 150,
+                damping: 15,
+                delay: prefersReducedMotion ? 0 : 0.5 
+              }}
+              className="relative mt-4 bg-card border border-border rounded-2xl px-5 py-4 shadow-lg max-w-[320px] z-10"
+            >
+              <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-card" />
+              <div className="absolute -top-[9px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-border" />
+              <p className="text-center text-lg leading-relaxed font-medium" data-testid="text-xiaoyue-welcome-message">
+                3分钟完成我们自研的氛围测试，让我精准了解你的社交节奏
+              </p>
+            </motion.div>
+            
+            {/* Subheadline */}
+            <motion.p
+              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: prefersReducedMotion ? 0 : 0.7, duration: 0.4 }}
+              className="mt-4 text-center text-muted-foreground text-sm max-w-[280px] z-10"
+              data-testid="text-welcome-subheadline"
+            >
+              解锁12种社交动物原型，找到最合拍的同频伙伴
+            </motion.p>
+            
+            {/* CTA Button */}
+            <motion.div 
+              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: prefersReducedMotion ? 0 : 0.9, duration: 0.4 }}
+              className="mt-8 w-full max-w-sm z-10"
+            >
               <Button 
                 size="lg"
-                className="w-full h-14 text-lg rounded-2xl"
+                className="w-full h-14 text-lg rounded-2xl shadow-lg"
                 onClick={handleNext}
                 data-testid="button-start-explore"
               >
-                开始探索
+                开始氛围测试
               </Button>
-            </div>
+            </motion.div>
           </motion.div>
         );
 
