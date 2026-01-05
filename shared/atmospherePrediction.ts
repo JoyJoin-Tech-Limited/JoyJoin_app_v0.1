@@ -234,7 +234,7 @@ export function predictAtmosphere(archetypes: string[]): AtmospherePrediction {
   } else if (avgEnergy >= 70 && highEnergy.length >= 2 && lowEnergy.length === 0) {
     // 活力主导但不极端
     type = "high_energy";
-    title = "欢乐热闘型";
+    title = "欢乐热闹型";
     description = "活力满满，气氛轻松愉快";
   } else if (warmArchetypes.length >= archetypes.length * 0.4 && avgEnergy >= 60) {
     // 温暖治愈型

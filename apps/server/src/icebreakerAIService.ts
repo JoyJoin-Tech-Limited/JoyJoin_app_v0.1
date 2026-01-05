@@ -174,7 +174,7 @@ export async function generateQuickWelcome(
     return `哇！${participantCount}位创意活力派小伙伴集合完毕，今天的脑洞碰撞一定超精彩！`;
   }
   if (hasHighEnergy) {
-    return `${participantCount}位小伙伴到齐！有活力派在场，今天的破冰一定很热闘！准备嗨起来～`;
+    return `${participantCount}位小伙伴到齐！有活力派在场，今天的破冰一定很热闹！准备嗨起来～`;
   }
   if (hasWarm && hasDeep) {
     return `欢迎${participantCount}位小伙伴！温暖的倾听者 + 深度思考者，今天的交流会很有质量！`;

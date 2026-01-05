@@ -2860,7 +2860,7 @@ export const questionsV4: AdaptiveQuestion[] = [
       },
       {
         value: "B",
-        text: "继续和现有的朋友们热闘，ta可能更喜欢独处",
+        text: "继续和现有的朋友们热闹，ta可能更喜欢独处",
         traitScores: { A: -1, C: 0, E: 0, O: 0, X: 2, P: 0 }
       },
       {
@@ -3382,7 +3382,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     id: "Q104",
     level: 3,
     category: "原型区分-机智狐vs开心柯基-思考vs氛围",
-    scenarioText: "🎭 参加一个话题讨论活动，气氛开始变得热闘。",
+    scenarioText: "🎭 参加一个话题讨论活动，气氛开始变得热闹。",
     questionText: "你内心更期待的是？",
     primaryTraits: ["O", "X", "P"],
     isForcedChoice: true,
@@ -3494,7 +3494,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     options: [
       {
         value: "A",
-        text: "去热闘的场合感受氛围，被人群的能量感染",
+        text: "去热闹的场合感受氛围，被人群的能量感染",
         traitScores: { A: 0, C: 0, E: 2, O: 0, X: 4, P: 1 }
       },
       {
@@ -3760,7 +3760,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     id: "Q115",
     level: 3,
     category: "原型区分-沉思猫头鹰vs稳如龟-充电方式",
-    scenarioText: "🌙 一场热闘的社交活动结束后。",
+    scenarioText: "🌙 一场热闹的社交活动结束后。",
     questionText: "你最可能怎么恢复能量？",
     primaryTraits: ["O", "E"],
     isForcedChoice: true,
@@ -4180,7 +4180,7 @@ export const questionsV4: AdaptiveQuestion[] = [
     id: "Q127",
     level: 3,
     category: "社交风格区分",
-    scenarioText: "🎭 朋友圈里有人发了一条很有争议的观点，评论区热闘得很。",
+    scenarioText: "🎭 朋友圈里有人发了一条很有争议的观点，评论区热闹得很。",
     questionText: "你更可能怎么做？",
     primaryTraits: ["X", "O", "A"],
     isForcedChoice: true,
