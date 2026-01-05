@@ -3,14 +3,18 @@ import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03_1766766685650.png";
 import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
 import xiaoyueFox from "@assets/Xiao_Yue_Avatar-06_1766766685632.png";
 
-import corgiImg from '@assets/开心柯基_1763997660297.png';
-import foxImg from '@assets/机智狐_1763997660293.png';
-import bearImg from '@assets/暖心熊_1763997660292.png';
-import dolphinImg from '@assets/淡定海豚_1763997660293.png';
-import octopusImg from '@assets/灵感章鱼_1763997660292.png';
-import owlImg from '@assets/沉思猫头鹰_1763997660294.png';
-import spiderImg from '@assets/织网蛛_1763997660291.png';
-import catImg from '@assets/隐身猫_1763997660297.png';
+import corgiImg from '@assets/开心柯基_transparent_1_1765650619462.png';
+import foxImg from '@assets/机智狐_transparent_2_1765650619453.png';
+import bearImg from '@assets/暖心熊_transparent_3_1765741025689.png';
+import spiderImg from '@assets/织网蛛_transparent_4_1765650619463.png';
+import pigImg from '@assets/夸夸豚_transparent_5_1765650619478.png';
+import chickenImg from '@assets/太阳鸡_transparent_6_1765650619458.png';
+import dolphinImg from '@assets/淡定海豚_transparent_7_1765650619477.png';
+import owlImg from '@assets/沉思猫头鹰_transparent_8_1765650619459.png';
+import turtleImg from '@assets/稳如龟_transparent_9_1765650619461.png';
+import catImg from '@assets/隐身猫_transparent_10_1765650619464.png';
+import elephantImg from '@assets/定心大象_transparent_11_1765650619460.png';
+import octopusImg from '@assets/灵感章鱼_transparent_12_1765650619464.png';
 
 const XIAOYUE_IMAGES = [
   xiaoyueNormal,
@@ -23,11 +27,15 @@ const ARCHETYPE_IMAGES = [
   corgiImg,
   foxImg,
   bearImg,
-  dolphinImg,
-  octopusImg,
-  owlImg,
   spiderImg,
+  pigImg,
+  chickenImg,
+  dolphinImg,
+  owlImg,
+  turtleImg,
   catImg,
+  elephantImg,
+  octopusImg,
 ];
 
 let preloaded = false;
