@@ -19,22 +19,28 @@ import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01_1766766685652.png";
 import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03_1766766685650.png";
 import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
 
-// Archetype spotlight imports (subset for carousel)
+// Archetype imports for floating background effect
 import corgiImg from '@assets/开心柯基_1763997660297.png';
 import foxImg from '@assets/机智狐_1763997660293.png';
 import bearImg from '@assets/暖心熊_1763997660292.png';
 import dolphinImg from '@assets/淡定海豚_1763997660293.png';
 import octopusImg from '@assets/灵感章鱼_1763997660292.png';
 import owlImg from '@assets/沉思猫头鹰_1763997660294.png';
+import spiderImg from '@assets/织网蛛_1763997660291.png';
+import catImg from '@assets/隐身猫_1763997660297.png';
 
-// Spotlight archetypes for carousel (curated selection for variety)
-const SPOTLIGHT_ARCHETYPES = [
-  { img: corgiImg, name: '开心柯基' },
-  { img: foxImg, name: '机智狐' },
-  { img: bearImg, name: '暖心熊' },
-  { img: dolphinImg, name: '淡定海豚' },
-  { img: octopusImg, name: '灵感章鱼' },
-  { img: owlImg, name: '沉思猫头鹰' },
+// Floating archetypes config - optimized for mobile performance
+// Uses CSS transforms only (GPU-accelerated), positioned around screen edges
+// Quick fade-in, gentle drift movement, varied sizes for depth effect
+const FLOATING_ARCHETYPES = [
+  { img: corgiImg, left: 5, top: 10, driftX: 12, driftY: -25, size: 44, delay: 0, duration: 12, opacity: 0.4 },
+  { img: foxImg, left: 80, top: 8, driftX: -15, driftY: -20, size: 40, delay: 0.2, duration: 14, opacity: 0.38 },
+  { img: bearImg, left: 3, top: 72, driftX: 18, driftY: -35, size: 48, delay: 0.4, duration: 16, opacity: 0.42 },
+  { img: dolphinImg, left: 78, top: 68, driftX: -12, driftY: -30, size: 42, delay: 0.3, duration: 13, opacity: 0.36 },
+  { img: octopusImg, left: 8, top: 38, driftX: 15, driftY: -18, size: 36, delay: 0.6, duration: 15, opacity: 0.32 },
+  { img: owlImg, left: 82, top: 42, driftX: -18, driftY: -25, size: 46, delay: 0.5, duration: 14, opacity: 0.4 },
+  { img: spiderImg, left: 15, top: 85, driftX: 8, driftY: -40, size: 34, delay: 0.1, duration: 17, opacity: 0.3 },
+  { img: catImg, left: 72, top: 82, driftX: -8, driftY: -38, size: 38, delay: 0.7, duration: 15, opacity: 0.35 },
 ];
 
 const ONBOARDING_CACHE_KEY = "joyjoin_onboarding_progress";
@@ -394,22 +400,6 @@ function getV4CachedAnswers(): PreSignupAnswer[] {
   }
 }
 
-// Pre-generated stable particle configs (deterministic, no Math.random in render)
-const PARTICLE_CONFIGS = [
-  { x: 50, y: 150, scale: 0.7, delay: 0.2, duration: 5 },
-  { x: -80, y: 200, scale: 0.5, delay: 0.8, duration: 6 },
-  { x: 120, y: 100, scale: 0.9, delay: 1.5, duration: 4.5 },
-  { x: -40, y: 250, scale: 0.6, delay: 0.5, duration: 5.5 },
-  { x: 90, y: 180, scale: 0.8, delay: 2.0, duration: 4 },
-  { x: -100, y: 120, scale: 0.55, delay: 1.2, duration: 6.5 },
-  { x: 60, y: 220, scale: 0.75, delay: 0.3, duration: 5.2 },
-  { x: -60, y: 160, scale: 0.65, delay: 1.8, duration: 4.8 },
-  { x: 100, y: 140, scale: 0.85, delay: 2.5, duration: 5.8 },
-  { x: -20, y: 190, scale: 0.6, delay: 0.7, duration: 4.2 },
-  { x: 70, y: 230, scale: 0.7, delay: 1.0, duration: 5.5 },
-  { x: -90, y: 170, scale: 0.8, delay: 2.2, duration: 4.5 },
-];
-
 export default function DuolingoOnboardingPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -432,16 +422,6 @@ export default function DuolingoOnboardingPage() {
   const [birthYear, setBirthYear] = useState<string>("");
   const [showBirthYear, setShowBirthYear] = useState(true);
   const [relationshipStatus, setRelationshipStatus] = useState<string>("");
-  const [spotlightIndex, setSpotlightIndex] = useState(0);
-  
-  // Rotate spotlight archetype every 2.5 seconds (only if motion is enabled)
-  useEffect(() => {
-    if (currentScreen !== 0 || prefersReducedMotion) return;
-    const interval = setInterval(() => {
-      setSpotlightIndex((prev) => (prev + 1) % SPOTLIGHT_ARCHETYPES.length);
-    }, 2500);
-    return () => clearInterval(interval);
-  }, [currentScreen, prefersReducedMotion]);
 
   const { data: anchorQuestionsData, isLoading: isLoadingQuestions } = useQuery<{
     questions: V4AnchorQuestion[];
@@ -626,34 +606,59 @@ export default function DuolingoOnboardingPage() {
             exit={{ opacity: 0 }}
             className="flex-1 flex flex-col items-center justify-center px-6 py-8 relative overflow-hidden"
           >
-            {/* Beat 1: Ambient floating particles background (stable configs) */}
-            {!prefersReducedMotion && (
-              <div className="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center">
-                {PARTICLE_CONFIGS.map((config, i) => (
-                  <motion.div
+            {/* Floating archetype avatars background - GPU-accelerated */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              {FLOATING_ARCHETYPES.map((archetype, i) => (
+                prefersReducedMotion ? (
+                  <img
                     key={i}
-                    className="absolute w-2 h-2 rounded-full bg-primary/20"
-                    initial={{ 
-                      x: config.x,
-                      y: config.y,
-                      scale: config.scale,
-                      opacity: 0 
+                    src={archetype.img}
+                    alt=""
+                    className="absolute object-contain"
+                    style={{
+                      width: archetype.size,
+                      height: archetype.size,
+                      left: `${archetype.left}%`,
+                      top: `${archetype.top}%`,
+                      opacity: archetype.opacity * 0.6,
                     }}
-                    animate={{ 
-                      y: [config.y, config.y - 150],
-                      opacity: [0, 0.6, 0],
-                      scale: [config.scale, config.scale * 1.2]
+                    data-testid={`img-floating-archetype-${i}`}
+                  />
+                ) : (
+                  <motion.img
+                    key={i}
+                    src={archetype.img}
+                    alt=""
+                    className="absolute object-contain"
+                    style={{
+                      width: archetype.size,
+                      height: archetype.size,
+                      left: `${archetype.left}%`,
+                      top: `${archetype.top}%`,
+                      willChange: 'transform, opacity',
+                    }}
+                    initial={{
+                      opacity: archetype.opacity * 0.5,
+                      scale: 0.85,
+                    }}
+                    animate={{
+                      x: [0, archetype.driftX, 0],
+                      y: [0, archetype.driftY, 0],
+                      opacity: [archetype.opacity * 0.5, archetype.opacity, archetype.opacity, archetype.opacity * 0.5],
+                      scale: [0.85, 1, 1, 0.85],
+                      rotate: [0, 6, -6, 0],
                     }}
                     transition={{
-                      duration: config.duration,
+                      duration: archetype.duration,
                       repeat: Infinity,
-                      delay: config.delay,
-                      ease: "easeOut"
+                      delay: archetype.delay,
+                      ease: "easeInOut",
                     }}
+                    data-testid={`img-floating-archetype-${i}`}
                   />
-                ))}
-              </div>
-            )}
+                )
+              ))}
+            </div>
             
             {/* Beat 2: Hero gradient backdrop */}
             <motion.div
@@ -725,63 +730,12 @@ export default function DuolingoOnboardingPage() {
               解锁12种社交动物原型，找到最合拍的<span className="whitespace-nowrap">同频伙伴</span>
             </motion.p>
             
-            {/* Spotlight Archetype Carousel (static when reduced motion) */}
-            <motion.div
-              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: prefersReducedMotion ? 0 : 0.8, duration: 0.4 }}
-              className="mt-6 flex flex-col items-center z-10"
-            >
-              <div className="relative w-16 h-16">
-                {prefersReducedMotion ? (
-                  <img
-                    src={SPOTLIGHT_ARCHETYPES[0].img}
-                    alt={SPOTLIGHT_ARCHETYPES[0].name}
-                    className="w-16 h-16 object-contain drop-shadow-md"
-                    data-testid="img-spotlight-archetype"
-                  />
-                ) : (
-                  <AnimatePresence mode="wait">
-                    <motion.img
-                      key={spotlightIndex}
-                      src={SPOTLIGHT_ARCHETYPES[spotlightIndex].img}
-                      alt={SPOTLIGHT_ARCHETYPES[spotlightIndex].name}
-                      className="w-16 h-16 object-contain drop-shadow-md"
-                      data-testid="img-spotlight-archetype"
-                      initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
-                      animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                      exit={{ opacity: 0, scale: 0.8, rotate: 10 }}
-                      transition={{ duration: 0.3, ease: "easeOut" }}
-                    />
-                  </AnimatePresence>
-                )}
-              </div>
-              <span 
-                className="mt-1 text-xs text-muted-foreground/70"
-                data-testid="text-spotlight-archetype-name"
-              >
-                {prefersReducedMotion ? SPOTLIGHT_ARCHETYPES[0].name : SPOTLIGHT_ARCHETYPES[spotlightIndex].name}
-              </span>
-              {/* Dot indicators */}
-              <div className="flex gap-1 mt-2">
-                {SPOTLIGHT_ARCHETYPES.map((_, i) => (
-                  <div 
-                    key={i} 
-                    className={cn(
-                      "w-1.5 h-1.5 rounded-full transition-colors duration-300",
-                      i === spotlightIndex ? "bg-primary" : "bg-muted-foreground/20"
-                    )}
-                  />
-                ))}
-              </div>
-            </motion.div>
-            
             {/* CTA Button */}
             <motion.div 
               initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: prefersReducedMotion ? 0 : 1.0, duration: 0.4 }}
-              className="mt-6 w-full max-w-sm z-10"
+              transition={{ delay: prefersReducedMotion ? 0 : 0.8, duration: 0.4 }}
+              className="mt-8 w-full max-w-sm z-10"
             >
               <Button 
                 size="lg"
