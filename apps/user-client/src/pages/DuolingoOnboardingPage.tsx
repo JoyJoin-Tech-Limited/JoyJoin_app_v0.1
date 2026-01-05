@@ -548,10 +548,32 @@ export default function DuolingoOnboardingPage() {
       relationshipStatus?: string;
       preSignupAnswers: Record<number, string | string[]>;
     }) => {
-      return await apiRequest("POST", "/api/auth/complete-onboarding", data);
+      // Step 1: Complete onboarding profile
+      await apiRequest("POST", "/api/auth/complete-onboarding", data);
+      
+      // Step 2: Sync presignup answers to assessment session (wait for completion)
+      const cachedAnswers = getV4CachedAnswers();
+      if (cachedAnswers.length > 0) {
+        const syncResponse = await apiRequest("POST", "/api/assessment/v4/presignup-sync", {
+          answers: cachedAnswers,
+        });
+        // apiRequest already returns parsed JSON, no need to call .json()
+        const syncData = syncResponse as { sessionId?: string; answeredCount?: number };
+        // Store synced sessionId so personality test can use it directly
+        if (syncData.sessionId) {
+          localStorage.setItem("joyjoin_synced_session_id", syncData.sessionId);
+          localStorage.setItem("joyjoin_synced_answer_count", String(syncData.answeredCount || cachedAnswers.length));
+        }
+      }
+      
+      return { success: true };
     },
     onSuccess: () => {
+      // Clear onboarding progress cache (but NOT the synced session markers - those are consumed by personality test)
       clearCachedProgress();
+      // Clear the presignup answers cache since they've been synced
+      localStorage.removeItem(V4_ANSWERS_KEY);
+      
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
         title: "欢迎加入悦聚",
@@ -587,7 +609,7 @@ export default function DuolingoOnboardingPage() {
   };
 
   const handleCompleteOnboarding = (skip: boolean = false) => {
-    // Deduplicate answers before sending to sync
+    // Build fallback preSignupAnswers for cases where sync might fail
     const cachedAnswers = getV4CachedAnswers();
     const dedupedAnswersMap = new Map();
     cachedAnswers.forEach(ans => dedupedAnswersMap.set(ans.questionId, ans));
@@ -595,7 +617,6 @@ export default function DuolingoOnboardingPage() {
 
     const preSignupAnswersRecord: Record<number, string | string[]> = {};
     uniqueAnswers.forEach(ans => {
-      // Assuming IDs can be parsed to number or handled as string keys
       const id = parseInt(ans.questionId.replace('Q', ''));
       if (!isNaN(id)) {
         preSignupAnswersRecord[id] = ans.selectedOption;
@@ -613,13 +634,7 @@ export default function DuolingoOnboardingPage() {
       ...(relationshipStatus && !skip && { relationshipStatus }),
     };
 
-    // Ensure state reflects completion before navigating to prevent race conditions
-    completeOnboardingMutation.mutate(data, {
-      onSuccess: () => {
-        // Redundantly clear cache after confirmed sync
-        localStorage.removeItem('v4_presignup_answers');
-      }
-    });
+    completeOnboardingMutation.mutate(data);
   };
 
   const getScreenProgress = () => {

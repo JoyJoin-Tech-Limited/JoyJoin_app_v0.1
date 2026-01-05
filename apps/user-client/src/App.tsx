@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
+import { preloadXiaoyueImages } from "@/lib/preloadImages";
 import LoginPage from "@/pages/LoginPage";
 import RegistrationPage from "@/pages/RegistrationPage";
 // RegistrationMethodPage kept for internal reference only - not imported in user routes
@@ -46,6 +47,8 @@ import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import NotFound from "@/pages/not-found";
 import LevelUpProvider from "@/components/LevelUpProvider";
 import DuolingoOnboardingPage from "@/pages/DuolingoOnboardingPage";
+
+preloadXiaoyueImages();
 
 function RedirectToOnboarding() {
   const [, setLocation] = useLocation();
