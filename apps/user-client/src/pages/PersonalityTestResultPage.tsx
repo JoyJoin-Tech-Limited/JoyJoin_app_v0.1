@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import PersonalityRadarChart from '@/components/PersonalityRadarChart';
 import { XiaoyueInsightCard } from '@/components/XiaoyueInsightCard';
 import { XiaoyueChatBubble } from '@/components/XiaoyueChatBubble';
 import StyleSpectrum from '@/components/StyleSpectrum';
-import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap, Star, Layers, MessageSquare, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap, Star, Layers, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   archetypeAvatars, 
@@ -16,12 +16,14 @@ import {
   getArchetypeNarrative, 
   getArchetypeInsights 
 } from '@/lib/archetypeAdapter';
+import { getCompatibilityDescription } from '@/lib/archetypeCompatibility';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useXiaoyueAnalysis } from '@/hooks/useXiaoyueAnalysis';
 import { getStyleSpectrum } from '@shared/personality/matcherV2';
 import { ArrowRight } from 'lucide-react';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 // Pokemon-style reveal animation phases
 type RevealPhase = 'countdown' | 'shake' | 'burst' | 'landing' | 'complete';
@@ -566,8 +568,26 @@ export default function PersonalityTestResultPage() {
     }
   };
 
+  // Mark personality test as complete and navigate to profile setup
+  const completeTestMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/auth/complete-personality-test");
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setLocation('/onboarding/setup');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "出错了",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleContinue = () => {
-    setLocation('/onboarding/setup');
+    completeTestMutation.mutate();
   };
 
   const isLegacyV1 = result.algorithmVersion === 'v1' || !result.algorithmVersion;
@@ -980,27 +1000,27 @@ export default function PersonalityTestResultPage() {
                 {result.chemistryList.map((chemistry, index) => (
                   <div
                     key={chemistry.role}
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                    className="p-4 bg-muted/50 rounded-lg space-y-3"
                     data-testid={`chemistry-item-${index}`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${getArchetypeGradient(chemistry.role) || 'from-gray-400 to-gray-500'} flex items-center justify-center`}>
-                        {archetypeAvatars[chemistry.role] ? (
-                          <img src={archetypeAvatars[chemistry.role]} alt={chemistry.role} className="w-full h-full rounded-full object-cover" />
-                        ) : (
-                          <Users className="w-5 h-5 text-white" />
-                        )}
-                      </div>
-                      <div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${getArchetypeGradient(chemistry.role) || 'from-gray-400 to-gray-500'} flex items-center justify-center`}>
+                          {archetypeAvatars[chemistry.role] ? (
+                            <img src={archetypeAvatars[chemistry.role]} alt={chemistry.role} className="w-full h-full rounded-full object-cover" />
+                          ) : (
+                            <Users className="w-5 h-5 text-white" />
+                          )}
+                        </div>
                         <span className="font-medium">{chemistry.role}</span>
-                        {chemistry.reason && (
-                          <p className="text-xs text-muted-foreground">{chemistry.reason}</p>
-                        )}
                       </div>
+                      <Badge variant="secondary" className="text-sm">
+                        {chemistry.percentage}%
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="text-sm">
-                      {chemistry.percentage}%
-                    </Badge>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {getCompatibilityDescription(result.primaryRole, chemistry.role)}
+                    </p>
                   </div>
                 ))}
               </CardContent>
@@ -1014,7 +1034,7 @@ export default function PersonalityTestResultPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-primary" />
-                关于你
+                关于{result.primaryRole}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -1182,11 +1202,21 @@ export default function PersonalityTestResultPage() {
         <div className="max-w-2xl mx-auto">
           <Button 
             className={`w-full h-14 rounded-2xl text-lg font-bold shadow-lg bg-gradient-to-r ${gradient} hover:opacity-90 transition-all duration-200 border-0`}
-            onClick={handleContinue} 
+            onClick={handleContinue}
+            disabled={completeTestMutation.isPending}
             data-testid="button-continue-profile"
           >
-            继续完善个人信息
-            <ArrowRight className="w-5 h-5 ml-2" />
+            {completeTestMutation.isPending ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                加载中...
+              </>
+            ) : (
+              <>
+                继续完善个人信息
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </>
+            )}
           </Button>
           <p className="text-center text-xs text-muted-foreground mt-2">
             完善资料，获得更精准的匹配推荐

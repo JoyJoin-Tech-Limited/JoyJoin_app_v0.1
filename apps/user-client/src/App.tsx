@@ -14,6 +14,8 @@ import InterestsTopicsPage from "@/pages/InterestsTopicsPage";
 import PersonalityTestPageV4 from "@/pages/PersonalityTestPageV4";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
 import ProfileSetupPage from "@/pages/ProfileSetupPage";
+import EssentialDataPage from "@/pages/EssentialDataPage";
+import ExtendedDataPage from "@/pages/ExtendedDataPage";
 import DiscoverPage from "@/pages/DiscoverPage";
 import EventsPage from "@/pages/EventsPage";
 import ChatsPage from "@/pages/ChatsPage";
@@ -116,7 +118,8 @@ function AuthenticatedRouter() {
   if (needsProfileSetup) {
     return (
       <Switch>
-        <Route path="/onboarding/setup" component={ProfileSetupPage} />
+        <Route path="/onboarding/setup" component={EssentialDataPage} />
+        <Route path="/onboarding/extended" component={ExtendedDataPage} />
         <Route path="*" component={RedirectToSetup} />
       </Switch>
     );
@@ -149,6 +152,7 @@ function AuthenticatedRouter() {
       <Route path="/profile/edit/intent" component={EditIntentPage} />
       <Route path="/profile/edit/interests" component={EditInterestsPage} />
       <Route path="/profile/edit/social" component={EditSocialPage} />
+      <Route path="/onboarding/extended" component={ExtendedDataPage} />
       <Route path="/registration/chat" component={ChatRegistrationPage} />
       <Route path="/event/:id" component={EventDetailPage} />
       <Route path="/invite" component={InvitePage} />
