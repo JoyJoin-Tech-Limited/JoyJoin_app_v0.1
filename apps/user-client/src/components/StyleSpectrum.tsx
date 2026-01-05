@@ -116,16 +116,15 @@ export default function StyleSpectrum({
                 {primary.tagline}
               </p>
               
-              <div className="flex items-center justify-center gap-2 mt-3">
-                <Badge 
-                  variant="secondary" 
-                  className={cn("font-medium", colors.bg, colors.text)}
-                >
-                  匹配度 {primary.score}%
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  置信度 {Math.round(primary.confidence * 100)}%
-                </Badge>
+              <div className="flex items-center justify-center gap-3 mt-4">
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-full border shadow-sm">
+                  <span className="text-[10px] text-muted-foreground font-medium whitespace-nowrap">匹配度</span>
+                  <span className="text-sm font-bold text-primary leading-none">{primary.score}%</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-full border shadow-sm">
+                  <span className="text-[10px] text-muted-foreground font-medium whitespace-nowrap">置信度</span>
+                  <span className="text-sm font-bold text-primary leading-none">{Math.round(primary.confidence * 100)}%</span>
+                </div>
               </div>
             </motion.div>
 
