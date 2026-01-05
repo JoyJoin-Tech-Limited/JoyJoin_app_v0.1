@@ -53,10 +53,10 @@ export default function AdjacentArchetypesOrbit({
     <Card data-testid="adjacent-archetypes-orbit" className="overflow-hidden">
       <CardContent className="py-6">
         <div className="text-center mb-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground px-4">
             你融合了多种特质，也带有一点
-            <span className="font-medium text-foreground">
-              {topAdjacent.slice(0, 2).map(s => s.archetype).join("和")}
+            <span className="font-semibold text-primary px-1">
+              {topAdjacent.map(s => s.archetype).join("、")}
             </span>
             的影子
           </p>
@@ -77,19 +77,19 @@ export default function AdjacentArchetypesOrbit({
           >
             <div 
               className={cn(
-                "w-24 h-24 rounded-full border-3 flex items-center justify-center shadow-lg",
-                ARCHETYPE_COLORS[primaryArchetype] || "border-primary/30 bg-primary/5"
+                "w-24 h-24 rounded-full border-3 flex items-center justify-center shadow-lg bg-white",
+                ARCHETYPE_COLORS[primaryArchetype] || "border-primary/30"
               )}
             >
               <img 
                 src={archetypeAvatars[primaryArchetype]} 
                 alt={primaryArchetype}
-                className="w-16 h-16 object-contain"
+                className="w-20 h-20 object-contain"
                 data-testid="img-orbit-primary"
               />
             </div>
             <div className="text-center mt-2">
-              <Badge variant="secondary" className="text-xs font-medium">
+              <Badge variant="secondary" className="text-xs font-medium px-3 py-1 shadow-sm">
                 {primaryArchetype}
               </Badge>
             </div>
@@ -118,8 +118,8 @@ export default function AdjacentArchetypesOrbit({
                   delay: 0.3 + index * 0.15 
                 }}
                 style={{ 
-                  marginLeft: "-28px",
-                  marginTop: "-28px"
+                  marginLeft: "-32px",
+                  marginTop: "-32px"
                 }}
               >
                 <motion.div
@@ -131,10 +131,11 @@ export default function AdjacentArchetypesOrbit({
                     repeat: Infinity, 
                     ease: "easeInOut" 
                   }}
+                  className="flex flex-col items-center"
                 >
                   <div 
                     className={cn(
-                      "w-14 h-14 rounded-full border-2 flex items-center justify-center bg-background shadow-md cursor-pointer hover:scale-110 transition-transform",
+                      "w-16 h-16 rounded-full border-2 flex items-center justify-center bg-white shadow-md cursor-pointer hover:scale-110 transition-transform",
                       ARCHETYPE_COLORS[adjacent.archetype] || "border-muted"
                     )}
                     data-testid={`orbit-adjacent-${index}`}
@@ -142,13 +143,16 @@ export default function AdjacentArchetypesOrbit({
                     <img 
                       src={archetypeAvatars[adjacent.archetype]} 
                       alt={adjacent.archetype}
-                      className="w-10 h-10 object-contain"
+                      className="w-12 h-12 object-contain"
                     />
                   </div>
-                  <div className="text-center mt-1">
-                    <span className="text-[10px] text-muted-foreground font-medium">
+                  <div className="text-center mt-1 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded-full shadow-xs border border-muted/20">
+                    <div className="text-[9px] font-bold text-foreground leading-none">
+                      {adjacent.archetype}
+                    </div>
+                    <div className="text-[8px] text-muted-foreground font-medium leading-tight">
                       {adjacent.similarity}%
-                    </span>
+                    </div>
                   </div>
                 </motion.div>
               </motion.div>

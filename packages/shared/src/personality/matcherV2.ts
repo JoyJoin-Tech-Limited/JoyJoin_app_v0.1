@@ -1281,7 +1281,7 @@ export class PrototypeMatcher {
 
       return {
         archetype: r.archetype,
-        score: Math.round(r.details.finalScore),
+        score: Math.round(r.details.finalScore * 100),
         confidence: this.calculateMatchConfidence(r.details, results, index),
         details: r.details,
         explanation,
@@ -1597,6 +1597,7 @@ export function getStyleSpectrum(
 
   // 构建相邻风格（排除主原型）
   const adjacentStyles = orderedMatches.slice(1, 4).map((m, i) => {
+    // 确保使用百分比分数计算相似度
     const similarity = Math.round(100 - Math.abs(top.score - m.score));
     const blendLabels = [
       "有时候也会像",
