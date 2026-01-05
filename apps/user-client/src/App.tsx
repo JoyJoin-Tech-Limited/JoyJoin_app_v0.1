@@ -118,6 +118,9 @@ function AuthenticatedRouter() {
   if (needsProfileSetup) {
     return (
       <Switch>
+        {/* 保留测试结果页面访问权限，让用户能看到结果后再继续设置 */}
+        <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
+        <Route path="/personality-test/results" component={PersonalityTestResultPage} />
         <Route path="/onboarding/setup" component={EssentialDataPage} />
         <Route path="/onboarding/extended" component={ExtendedDataPage} />
         <Route path="*" component={RedirectToSetup} />
