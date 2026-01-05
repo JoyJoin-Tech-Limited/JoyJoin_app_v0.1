@@ -270,6 +270,7 @@ export default function PersonalityTestPageV4() {
     progress,
     currentMatches,
     isComplete,
+    isInitialized,
     result,
     encouragement,
     isLoading,
