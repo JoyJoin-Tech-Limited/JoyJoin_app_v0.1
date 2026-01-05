@@ -10475,10 +10475,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
         // Save new answers and build engine state
         for (const ans of newAnswers) {
+          const question = questionsV4.find(q => q.id === ans.questionId);
           await storage.createAssessmentAnswer({
             sessionId: session.id,
             questionId: ans.questionId,
-            selectedOption: ans.selectedOption
+            questionLevel: question?.level || 1,
+            selectedOption: ans.selectedOption,
+            traitScores: question?.options.find(o => o.value === ans.selectedOption)?.traitScores || {}
           });
         }
 
