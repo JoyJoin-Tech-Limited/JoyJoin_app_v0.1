@@ -591,14 +591,23 @@ export default function DuolingoOnboardingPage() {
     const cachedAnswers = getV4CachedAnswers();
     const dedupedAnswersMap = new Map();
     cachedAnswers.forEach(ans => dedupedAnswersMap.set(ans.questionId, ans));
-    const uniqueAnswers = Array.from(dedupedIncoming.values());
+    const uniqueAnswers = Array.from(dedupedAnswersMap.values());
+
+    const preSignupAnswersRecord: Record<number, string | string[]> = {};
+    uniqueAnswers.forEach(ans => {
+      // Assuming IDs can be parsed to number or handled as string keys
+      const id = parseInt(ans.questionId.replace('Q', ''));
+      if (!isNaN(id)) {
+        preSignupAnswersRecord[id] = ans.selectedOption;
+      }
+    });
 
     const data = {
       displayName: nickname,
       gender,
       currentCity: city,
       intent: intents,
-      preSignupAnswers: uniqueAnswers,
+      preSignupAnswers: preSignupAnswersRecord,
       ...(birthYear && !skip && { birthYear: parseInt(birthYear) }),
       ...(!skip && { showBirthYear }),
       ...(relationshipStatus && !skip && { relationshipStatus }),
