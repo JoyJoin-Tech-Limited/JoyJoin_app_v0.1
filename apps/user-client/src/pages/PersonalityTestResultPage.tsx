@@ -8,7 +8,8 @@ import PersonalityRadarChart from '@/components/PersonalityRadarChart';
 import { XiaoyueInsightCard } from '@/components/XiaoyueInsightCard';
 import { XiaoyueChatBubble } from '@/components/XiaoyueChatBubble';
 import StyleSpectrum from '@/components/StyleSpectrum';
-import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap, Star, Layers, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
+import AdjacentArchetypesOrbit from '@/components/AdjacentArchetypesOrbit';
+import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   archetypeAvatars, 
@@ -158,21 +159,6 @@ const archetypeUniqueTraits: Record<string, { trait: string; description: string
   ],
 };
 
-const similarArchetypes: Record<string, string[]> = {
-  "开心柯基": ["太阳鸡"],
-  "太阳鸡": ["开心柯基", "夸夸豚", "淡定海豚"],
-  "夸夸豚": ["淡定海豚", "暖心熊"],
-  "机智狐": ["灵感章鱼"],
-  "淡定海豚": ["夸夸豚", "暖心熊", "太阳鸡"],
-  "织网蛛": ["暖心熊"],
-  "暖心熊": ["定心大象", "织网蛛", "淡定海豚"],
-  "灵感章鱼": ["机智狐", "沉思猫头鹰"],
-  "沉思猫头鹰": ["稳如龟", "灵感章鱼"],
-  "定心大象": ["暖心熊", "稳如龟"],
-  "稳如龟": ["沉思猫头鹰", "隐身猫"],
-  "隐身猫": ["稳如龟"],
-};
-
 function UniqueTraitsSection({ archetype }: { archetype: string }) {
   const traits = archetypeUniqueTraits[archetype];
   if (!traits || traits.length === 0) return null;
@@ -201,41 +187,6 @@ function UniqueTraitsSection({ archetype }: { archetype: string }) {
             </div>
           </div>
         ))}
-      </CardContent>
-    </Card>
-  );
-}
-
-function SimilarArchetypesHint({ archetype, isDecisive }: { archetype: string; isDecisive: boolean }) {
-  const similar = similarArchetypes[archetype];
-  if (!similar || similar.length === 0 || isDecisive) return null;
-
-  return (
-    <Card data-testid="similar-archetypes-card" className="bg-muted/30 border-dashed">
-      <CardContent className="py-4">
-        <div className="flex items-start gap-3">
-          <Layers className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              你可能融合了多种特质，也带有一点{similar.slice(0, 2).join("和")}的影子
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {similar.slice(0, 2).map((name) => (
-                <Badge 
-                  key={name} 
-                  variant="outline" 
-                  className="text-xs"
-                  data-testid={`similar-archetype-${name}`}
-                >
-                  {name}
-                </Badge>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground/70 italic">
-              这不是"不准"，而是你的特质更丰富
-            </p>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );
@@ -1152,9 +1103,13 @@ export default function PersonalityTestResultPage() {
           </Collapsible>
         </motion.div>
 
-        {!result.isDecisive && (
+        {!result.isDecisive && styleSpectrum && (
           <motion.div variants={itemVariants}>
-            <SimilarArchetypesHint archetype={result.primaryRole} isDecisive={result.isDecisive} />
+            <AdjacentArchetypesOrbit 
+              primaryArchetype={result.primaryRole} 
+              adjacentStyles={styleSpectrum.adjacentStyles}
+              isDecisive={result.isDecisive} 
+            />
           </motion.div>
         )}
 
