@@ -612,7 +612,14 @@ export default function DuolingoOnboardingPage() {
       ...(!skip && { showBirthYear }),
       ...(relationshipStatus && !skip && { relationshipStatus }),
     };
-    completeOnboardingMutation.mutate(data);
+
+    // Ensure state reflects completion before navigating to prevent race conditions
+    completeOnboardingMutation.mutate(data, {
+      onSuccess: () => {
+        // Redundantly clear cache after confirmed sync
+        localStorage.removeItem('v4_presignup_answers');
+      }
+    });
   };
 
   const getScreenProgress = () => {
