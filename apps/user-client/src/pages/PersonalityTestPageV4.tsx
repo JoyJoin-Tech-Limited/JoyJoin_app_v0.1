@@ -362,7 +362,13 @@ export default function PersonalityTestPageV4() {
     }
   }, [currentQuestion, canSkip, skipQuestion, toast]);
 
-  if (isLoading && !currentQuestion) {
+  useEffect(() => {
+    if (isInitialized && isComplete) {
+      setLocation("/personality-test/results");
+    }
+  }, [isInitialized, isComplete, setLocation]);
+
+  if (isLoading && !currentQuestion && !isComplete) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
