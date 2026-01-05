@@ -545,6 +545,13 @@
     text-wrap: balance;
   }
 
+  /* Anti-orphan utility for Chinese text - prevents lone characters on last line */
+  /* Usage: Apply to text containers, or wrap last phrase with .no-wrap span */
+  .no-orphan {
+    text-wrap: balance; /* Modern browsers */
+    word-break: keep-all; /* Prevents breaking within CJK words */
+  }
+
   /* Responsive spacing adjustments */
   @media (max-height: 700px) {
     /* Small screens like iPhone SE */

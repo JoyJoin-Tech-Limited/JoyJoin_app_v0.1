@@ -15,6 +15,7 @@ The project utilizes a monorepo (`joyjoin-monorepo`) encompassing user client, a
 ### Frontend
 - **Frameworks:** React 18 with TypeScript, Vite, Wouter.
 - **UI/Styling:** Mobile-first design using Radix UI, shadcn/ui, and Tailwind CSS. Features include dark mode, a purple-centric warm color palette, bilingual support (Chinese/English), and design principles emphasizing warmth, accessibility, responsiveness, and progressive anxiety reduction.
+- **Anti-Orphan Typography Rule:** For Chinese text on mobile, prevent lone characters (orphans) on last lines using: (1) wrap final 4-6 characters in `<span className="whitespace-nowrap">` or (2) apply `.no-orphan` utility class (combines `text-wrap: balance` + `word-break: keep-all`).
 - **State Management:** TanStack Query for server state.
 - **Animations:** Framer-motion, with accessibility support.
 
