@@ -474,7 +474,8 @@ export default function PersonalityTestResultPage() {
         X: result.extraversionScore,
         P: result.positivityScore,
       };
-      return getStyleSpectrum(traits);
+      // Pass primaryRole to ensure StyleSpectrum matches backend result
+      return getStyleSpectrum(traits, undefined, result.primaryRole);
     } catch {
       return null;
     }
@@ -939,33 +940,7 @@ export default function PersonalityTestResultPage() {
         initial="hidden"
         animate="visible"
       >
-        {(epicDescription || styleQuote) && (
-          <motion.div variants={itemVariants}>
-            <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><Sparkles className="w-5 h-5 text-primary" />角色解读</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                {epicDescription && <p className="text-sm leading-relaxed">{epicDescription}</p>}
-                {styleQuote && (
-                  <div className={`relative bg-gradient-to-br ${gradient} bg-opacity-10 rounded-lg p-4 border-l-4 border-primary/50`}>
-                    <Quote className="w-6 h-6 text-primary/40 absolute top-2 left-2" />
-                    <p className="text-sm font-medium italic pl-8">{styleQuote}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-
-        <motion.div variants={itemVariants}>
-          <XiaoyueChatBubble
-            content={xiaoyueAnalysis.analysis || getFallbackAnalysis(result.primaryRole)}
-            pose={xiaoyueAnalysis.hasAnalysis ? "casual" : "thinking"}
-            isLoading={xiaoyueAnalysis.isLoading}
-            loadingText="小悦正在分析你的特质..."
-            animate={!prefersReducedMotion}
-          />
-        </motion.div>
-
+        {/* 1. StyleSpectrum - 风格谱系展示 */}
         {styleSpectrum && (
           <motion.div variants={itemVariants}>
             <StyleSpectrum
@@ -977,77 +952,18 @@ export default function PersonalityTestResultPage() {
           </motion.div>
         )}
 
-        {(() => {
-          const insight = getArchetypeInsight(result.primaryRole);
-          if (!insight) return null;
-          return (
-            <motion.div variants={itemVariants}>
-              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2"><Eye className="w-5 h-5 text-primary" />你的特质</CardTitle>
-                    <Badge variant="outline">前{insight.rarityPercentage}%</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm leading-relaxed">{insight.counterIntuitive}</p>
-                </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })()}
-
+        {/* 2. 小悦分析 */}
         <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader><CardTitle>维度概览</CardTitle></CardHeader>
-            <CardContent>
-              <PersonalityRadarChart 
-                affinityScore={result.affinityScore}
-                opennessScore={result.opennessScore}
-                conscientiousnessScore={result.conscientiousnessScore}
-                emotionalStabilityScore={result.emotionalStabilityScore}
-                extraversionScore={result.extraversionScore}
-                positivityScore={result.positivityScore}
-              />
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                {[
-                  { key: 'A', label: '亲和力', score: result.affinityScore },
-                  { key: 'O', label: '开放性', score: result.opennessScore },
-                  { key: 'C', label: '责任心', score: result.conscientiousnessScore },
-                  { key: 'E', label: '情绪稳定', score: result.emotionalStabilityScore },
-                  { key: 'X', label: '外向性', score: result.extraversionScore },
-                  { key: 'P', label: '正能量', score: result.positivityScore },
-                ].map(({ key, label, score }) => (
-                  <div key={key} className="flex flex-col p-2 bg-muted/50 rounded-lg">
-                    <span className="text-xs text-muted-foreground">{label}</span>
-                    <span className="text-lg font-bold text-primary">{Math.round(score)}%</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <XiaoyueChatBubble
+            content={xiaoyueAnalysis.analysis || getFallbackAnalysis(result.primaryRole)}
+            pose={xiaoyueAnalysis.hasAnalysis ? "casual" : "thinking"}
+            isLoading={xiaoyueAnalysis.isLoading}
+            loadingText="小悦正在分析你的特质..."
+            animate={!prefersReducedMotion}
+          />
         </motion.div>
 
-        {result.algorithmVersion === 'v2' && (
-          <motion.div variants={itemVariants}>
-            <MatchExplanationSection result={result} />
-          </motion.div>
-        )}
-
-        <motion.div variants={itemVariants}>
-          <UniqueTraitsSection archetype={result.primaryRole} />
-        </motion.div>
-
-        {!result.isDecisive && (
-          <motion.div variants={itemVariants}>
-            <SimilarArchetypesHint archetype={result.primaryRole} isDecisive={result.isDecisive} />
-          </motion.div>
-        )}
-
-        <motion.div variants={itemVariants}>
-          <MatchFeedbackSection archetype={result.primaryRole} />
-        </motion.div>
-
+        {/* 3. 最佳搭档 - 移到小悦分析后面 */}
         {result.chemistryList && result.chemistryList.length > 0 && (
           <motion.div variants={itemVariants}>
             <Card>
@@ -1088,6 +1004,140 @@ export default function PersonalityTestResultPage() {
             </Card>
           </motion.div>
         )}
+
+        {/* 4. 关于你 - 合并角色解读、特质、独特之处 */}
+        <motion.div variants={itemVariants}>
+          <Card className="border-primary/20" data-testid="about-you-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                关于你
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* 角色解读 */}
+              {epicDescription && (
+                <div className="space-y-2">
+                  <p className="text-sm leading-relaxed">{epicDescription}</p>
+                </div>
+              )}
+              
+              {/* 风格语录 */}
+              {styleQuote && (
+                <div className={`relative bg-gradient-to-br ${gradient} bg-opacity-10 rounded-lg p-4 border-l-4 border-primary/50`}>
+                  <Quote className="w-6 h-6 text-primary/40 absolute top-2 left-2" />
+                  <p className="text-sm font-medium italic pl-8">{styleQuote}</p>
+                </div>
+              )}
+              
+              {/* 反直觉特质 */}
+              {(() => {
+                const insight = getArchetypeInsight(result.primaryRole);
+                if (!insight) return null;
+                return (
+                  <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium flex items-center gap-2">
+                        <Eye className="w-4 h-4 text-primary" />
+                        你可能不知道的
+                      </span>
+                      <Badge variant="outline" className="text-xs">前{insight.rarityPercentage}%</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{insight.counterIntuitive}</p>
+                  </div>
+                );
+              })()}
+              
+              {/* 独特之处 */}
+              {archetypeUniqueTraits[result.primaryRole] && archetypeUniqueTraits[result.primaryRole].length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium flex items-center gap-2">
+                    <Star className="w-4 h-4 text-yellow-500" />
+                    你的独特之处
+                  </h4>
+                  <div className="grid gap-2">
+                    {archetypeUniqueTraits[result.primaryRole].map((item, index) => (
+                      <div 
+                        key={index} 
+                        className="flex items-start gap-3 p-3 bg-gradient-to-r from-primary/5 to-transparent rounded-lg"
+                        data-testid={`unique-trait-${index}`}
+                      >
+                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <span className="text-primary font-bold text-xs">{index + 1}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-sm">{item.trait}</span>
+                          <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* 5. 维度概览 - 可折叠 */}
+        <motion.div variants={itemVariants}>
+          <Collapsible>
+            <Card>
+              <CollapsibleTrigger className="w-full">
+                <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover-elevate rounded-t-lg">
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-primary" />
+                    维度概览
+                  </CardTitle>
+                  <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent>
+                  <PersonalityRadarChart 
+                    affinityScore={result.affinityScore}
+                    opennessScore={result.opennessScore}
+                    conscientiousnessScore={result.conscientiousnessScore}
+                    emotionalStabilityScore={result.emotionalStabilityScore}
+                    extraversionScore={result.extraversionScore}
+                    positivityScore={result.positivityScore}
+                  />
+                  <div className="mt-6 grid grid-cols-2 gap-3">
+                    {[
+                      { key: 'A', label: '亲和力', score: result.affinityScore },
+                      { key: 'O', label: '开放性', score: result.opennessScore },
+                      { key: 'C', label: '责任心', score: result.conscientiousnessScore },
+                      { key: 'E', label: '情绪稳定', score: result.emotionalStabilityScore },
+                      { key: 'X', label: '外向性', score: result.extraversionScore },
+                      { key: 'P', label: '正能量', score: result.positivityScore },
+                    ].map(({ key, label, score }) => (
+                      <div key={key} className="flex flex-col p-2 bg-muted/50 rounded-lg">
+                        <span className="text-xs text-muted-foreground">{label}</span>
+                        <span className="text-lg font-bold text-primary">{Math.round(score)}%</span>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* 算法说明 */}
+                  {result.algorithmVersion === 'v2' && (
+                    <div className="mt-4 pt-4 border-t">
+                      <MatchExplanationSection result={result} />
+                    </div>
+                  )}
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        </motion.div>
+
+        {!result.isDecisive && (
+          <motion.div variants={itemVariants}>
+            <SimilarArchetypesHint archetype={result.primaryRole} isDecisive={result.isDecisive} />
+          </motion.div>
+        )}
+
+        <motion.div variants={itemVariants}>
+          <MatchFeedbackSection archetype={result.primaryRole} />
+        </motion.div>
 
         <motion.div variants={itemVariants} className="flex flex-col gap-3 py-6">
           <Button variant="outline" className="w-full" onClick={handleShare} data-testid="button-share">

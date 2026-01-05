@@ -1559,21 +1559,44 @@ const ARCHETYPE_TAGLINE: Record<string, string> = {
 
 /**
  * 获取风格谱系结果 - 用于趣味化呈现
+ * @param userTraits 用户特质分数
+ * @param userSecondaryData 用户二级数据（可选）
+ * @param overridePrimaryArchetype 覆盖主原型（可选，用于确保与后端结果一致）
  */
 export function getStyleSpectrum(
   userTraits: Record<TraitKey, number>,
-  userSecondaryData?: UserSecondaryData
+  userSecondaryData?: UserSecondaryData,
+  overridePrimaryArchetype?: string
 ): StyleSpectrumResult {
   const matches = prototypeMatcher.findBestMatches(userTraits, userSecondaryData, 4);
-  const top = matches[0];
-  const { decisive, reason } = prototypeMatcher.isDecisiveMatch(matches);
+  
+  // 如果指定了覆盖主原型，则重新排序以确保一致性
+  let orderedMatches = [...matches];
+  if (overridePrimaryArchetype) {
+    const overrideIndex = matches.findIndex(m => m.archetype === overridePrimaryArchetype);
+    if (overrideIndex > 0) {
+      // 将覆盖原型移到第一位
+      const overrideMatch = matches[overrideIndex];
+      orderedMatches = [overrideMatch, ...matches.filter((_, i) => i !== overrideIndex)];
+    } else if (overrideIndex === -1) {
+      // 覆盖原型不在前4名中，需要单独查找
+      const allMatches = prototypeMatcher.findBestMatches(userTraits, userSecondaryData, 12);
+      const found = allMatches.find(m => m.archetype === overridePrimaryArchetype);
+      if (found) {
+        orderedMatches = [found, ...matches.slice(0, 3)];
+      }
+    }
+  }
+  
+  const top = orderedMatches[0];
+  const { decisive, reason } = prototypeMatcher.isDecisiveMatch(orderedMatches);
 
   // 计算谱系位置（基于X和O特质）
   const xPosition = Math.round((userTraits.X || 50));
   const yPosition = Math.round((userTraits.O || 50));
 
-  // 构建相邻风格
-  const adjacentStyles = matches.slice(1, 4).map((m, i) => {
+  // 构建相邻风格（排除主原型）
+  const adjacentStyles = orderedMatches.slice(1, 4).map((m, i) => {
     const similarity = Math.round(100 - Math.abs(top.score - m.score));
     const blendLabels = [
       "有时候也会像",
