@@ -474,6 +474,19 @@ export default function DuolingoOnboardingPage() {
   };
 
   const handleNext = () => {
+    // Progress gate: Block moving from last question to login screen if anchors incomplete
+    if (currentScreen === ONBOARDING_QUESTIONS_COUNT) {
+      const cachedAnswers = getV4CachedAnswers();
+      const uniqueAnchorIds = new Set(cachedAnswers.map(a => a.questionId));
+      if (uniqueAnchorIds.size < ONBOARDING_QUESTIONS_COUNT) {
+        toast({
+          title: "请完成所有题目",
+          description: `你还剩 ${ONBOARDING_QUESTIONS_COUNT - uniqueAnchorIds.size} 道必答题未完成`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     const nextScreen = currentScreen + 1;
     setCurrentScreen(nextScreen);
   };
@@ -574,12 +587,18 @@ export default function DuolingoOnboardingPage() {
   };
 
   const handleCompleteOnboarding = (skip: boolean = false) => {
+    // Deduplicate answers before sending to sync
+    const cachedAnswers = getV4CachedAnswers();
+    const dedupedAnswersMap = new Map();
+    cachedAnswers.forEach(ans => dedupedAnswersMap.set(ans.questionId, ans));
+    const uniqueAnswers = Array.from(dedupedIncoming.values());
+
     const data = {
       displayName: nickname,
       gender,
       currentCity: city,
       intent: intents,
-      preSignupAnswers: answers,
+      preSignupAnswers: uniqueAnswers,
       ...(birthYear && !skip && { birthYear: parseInt(birthYear) }),
       ...(!skip && { showBirthYear }),
       ...(relationshipStatus && !skip && { relationshipStatus }),

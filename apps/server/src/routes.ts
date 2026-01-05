@@ -10444,16 +10444,76 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       let session = await storage.getAssessmentSessionByUser(userId);
       
       if (session) {
-        // If session already has answers, don't overwrite
+        // Merge answers instead of skipping
         const existingAnswers = await storage.getAssessmentAnswers(session.id);
-        if (existingAnswers.length > 0) {
-          console.log('[Presignup Sync] Session already has', existingAnswers.length, 'answers, skipping sync');
+        const existingQuestionIds = new Set(existingAnswers.map(a => a.questionId));
+        
+        // Deduplicate incoming answers and filter out ones already in DB
+        const dedupedIncoming = new Map<string, typeof preSignupAnswers[0]>();
+        for (const ans of preSignupAnswers) {
+          dedupedIncoming.set(ans.questionId, ans);
+        }
+        
+        const newAnswers = Array.from(dedupedIncoming.values()).filter(ans => !existingQuestionIds.has(ans.questionId));
+        
+        if (newAnswers.length === 0) {
+          console.log('[Presignup Sync] No new answers to sync for session:', session.id);
           return res.json({ 
             sessionId: session.id, 
-            message: 'Session already has answers',
+            message: 'All answers already synced',
             answersCount: existingAnswers.length 
           });
         }
+
+        console.log('[Presignup Sync] Syncing', newAnswers.length, 'new answers to existing session:', session.id);
+        
+        // Reconstruct engine state for full session (existing + new) to update current matches
+        const allUniqueAnswers = [...existingAnswers.map(a => ({ questionId: a.questionId, selectedOption: a.selectedOption })), ...newAnswers];
+        let engineState = initializeEngineState(assessmentConfig);
+        
+        const { questionsV4 } = await import('@shared/personality');
+
+        // Save new answers and build engine state
+        for (const ans of newAnswers) {
+          await storage.createAssessmentAnswer({
+            sessionId: session.id,
+            questionId: ans.questionId,
+            selectedOption: ans.selectedOption
+          });
+        }
+
+        // Replay ALL answers to ensure trait scores and matches are correct
+        for (const ans of allUniqueAnswers) {
+          const question = questionsV4.find(q => q.id === ans.questionId);
+          if (question) {
+            engineState = processAnswer(engineState, question, ans.selectedOption);
+          }
+        }
+
+        const traitScoresObj: Record<string, number> = {};
+        const traitConfidencesObj: Record<string, number> = {};
+        for (const [trait, conf] of Object.entries(engineState.traitConfidences)) {
+          traitScoresObj[trait] = conf.score;
+          traitConfidencesObj[trait] = conf.confidence;
+        }
+
+        // Phase validation: Only mark anchor phase complete if we have 8 unique answers
+        const uniqueAnsweredIds = new Set(allUniqueAnswers.map(a => a.questionId));
+        const currentPhase = uniqueAnsweredIds.size >= 8 ? 'adaptive' : 'anchor';
+
+        await storage.updateAssessmentSession(session.id, {
+          phase: currentPhase,
+          traitScores: traitScoresObj,
+          traitConfidences: traitConfidencesObj,
+          topArchetypes: engineState.currentMatches.slice(0, 3).map(m => m.archetype),
+          answeredQuestionIds: Array.from(engineState.answeredQuestionIds),
+        });
+
+        return res.json({
+          sessionId: session.id,
+          syncedCount: newAnswers.length,
+          totalCount: engineState.answeredQuestionIds.size
+        });
       } else {
         // Create new session for logged-in user
         session = await storage.createAssessmentSession({
