@@ -10,9 +10,12 @@ import { XiaoyueChatBubble } from '@/components/XiaoyueChatBubble';
 import StyleSpectrum from '@/components/StyleSpectrum';
 import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap, Star, Layers, MessageSquare, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { archetypeGradients, archetypeAvatars } from '@/lib/archetypeAvatars';
-import { archetypeConfig } from '@/lib/archetypes';
-import { getArchetypeInsight } from '@/lib/archetypeInsights';
+import { 
+  archetypeAvatars, 
+  getArchetypeGradient, 
+  getArchetypeNarrative, 
+  getArchetypeInsights 
+} from '@/lib/archetypeAdapter';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
@@ -336,7 +339,7 @@ function MatchExplanationSection({ result }: { result: UnifiedAssessmentResult }
   
   const generateMatchExplanation = () => {
     const archetype = result.primaryRole;
-    const config = archetypeConfig[archetype];
+    const config = getArchetypeNarrative(archetype);
     
     if (result.isDecisive) {
       return `根据你回答的${result.totalQuestions}道题目，你的特质轮廓与「${archetype}」高度匹配！你在社交中展现出的特点，与这个原型的核心特质非常契合。`;
@@ -541,9 +544,9 @@ export default function PersonalityTestResultPage() {
     );
   }
 
-  const gradient = archetypeGradients[result.primaryRole] || 'from-purple-500 to-pink-500';
+  const gradient = getArchetypeGradient(result.primaryRole) || 'from-purple-500 to-pink-500';
   const primaryAvatar = archetypeAvatars[result.primaryRole];
-  const primaryRoleConfig = archetypeConfig[result.primaryRole];
+  const primaryRoleConfig = getArchetypeNarrative(result.primaryRole);
   const nickname = primaryRoleConfig?.nickname || '';
   const tagline = primaryRoleConfig?.tagline || '';
   const epicDescription = primaryRoleConfig?.epicDescription || '';
@@ -981,7 +984,7 @@ export default function PersonalityTestResultPage() {
                     data-testid={`chemistry-item-${index}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${archetypeGradients[chemistry.role] || 'from-gray-400 to-gray-500'} flex items-center justify-center`}>
+                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${getArchetypeGradient(chemistry.role) || 'from-gray-400 to-gray-500'} flex items-center justify-center`}>
                         {archetypeAvatars[chemistry.role] ? (
                           <img src={archetypeAvatars[chemistry.role]} alt={chemistry.role} className="w-full h-full rounded-full object-cover" />
                         ) : (
@@ -1032,7 +1035,7 @@ export default function PersonalityTestResultPage() {
               
               {/* 反直觉特质 */}
               {(() => {
-                const insight = getArchetypeInsight(result.primaryRole);
+                const insight = getArchetypeInsights(result.primaryRole);
                 if (!insight) return null;
                 return (
                   <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
