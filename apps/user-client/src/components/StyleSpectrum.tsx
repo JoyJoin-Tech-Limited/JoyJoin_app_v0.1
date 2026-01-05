@@ -5,6 +5,7 @@ import { Sparkles, ChevronRight, ChevronLeft, Info } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { archetypeAvatars } from "@/lib/archetypeAvatars";
 
 interface AdjacentStyle {
   archetype: string;
@@ -100,7 +101,14 @@ export default function StyleSpectrum({
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
             >
-              <div className="text-6xl mb-2">{primary.emoji}</div>
+              <div className="mb-2 flex justify-center">
+                <img 
+                  src={archetypeAvatars[primary.archetype]} 
+                  alt={primary.archetype}
+                  className="w-20 h-20 object-contain"
+                  data-testid="img-spectrum-primary-avatar"
+                />
+              </div>
               <h2 className={cn("text-2xl font-bold mb-1", colors.text)}>
                 {primary.archetype}
               </h2>
@@ -151,8 +159,13 @@ export default function StyleSpectrum({
                     transition={{ duration: 0.2 }}
                     className="flex items-center gap-3 p-3 rounded-lg bg-background border"
                   >
-                    <div className="text-3xl flex-shrink-0">
-                      {adjacentStyles[activeAdjacentIndex]?.emoji}
+                    <div className="flex-shrink-0">
+                      <img 
+                        src={archetypeAvatars[adjacentStyles[activeAdjacentIndex]?.archetype]} 
+                        alt={adjacentStyles[activeAdjacentIndex]?.archetype}
+                        className="w-10 h-10 object-contain"
+                        data-testid={`img-spectrum-adjacent-${activeAdjacentIndex}`}
+                      />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
