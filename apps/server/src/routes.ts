@@ -9927,8 +9927,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       let session;
       let engineState;
       
-      // First, check if logged-in user already has an active session (created by presignup-sync)
-      if (userId && !forceNew) {
+      // Determine if this is an explicit restart request vs automatic forceNew from presignup flow
+      // forceNew + preSignupAnswers = automatic (post-login, should resume existing session)
+      // forceNew + NO preSignupAnswers = explicit restart (user wants fresh start)
+      const isExplicitRestart = forceNew && (!preSignupAnswers || preSignupAnswers.length === 0);
+      
+      // PRIORITY 1: For logged-in users, check for existing session first
+      // Resume existing session UNLESS user explicitly wants to restart
+      if (userId && !isExplicitRestart) {
         const existingUserSession = await storage.getAssessmentSessionByUser(userId);
         if (existingUserSession && !existingUserSession.completedAt) {
           // Resume existing session - it was created by presignup-sync
@@ -9953,6 +9959,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           // User has a completed session - start fresh
           console.log('[V4 Start] User has completed session, creating new one');
         }
+      } else if (userId && isExplicitRestart) {
+        console.log('[V4 Start] Explicit restart requested for user:', userId);
       }
       
       // If resuming by session ID (anonymous pre-signup flow)
