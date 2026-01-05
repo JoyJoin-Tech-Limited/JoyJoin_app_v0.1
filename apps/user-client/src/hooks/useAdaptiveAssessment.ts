@@ -348,7 +348,8 @@ export function useAdaptiveAssessment() {
 
   const startFreshAssessment = useCallback(async () => {
     clearCache();
-    await startMutation.mutateAsync({});
+    // Explicitly send forceNew:true WITHOUT preSignupAnswers to signal an intentional restart
+    await startMutation.mutateAsync({ forceNew: true });
   }, [clearCache, startMutation]);
 
   const submitAnswer = useCallback(async (
