@@ -9,3 +9,4 @@ export * from './prototypes';
 export * from './feedback';
 export * from './adaptiveEngine';
 export * from './matcherV2';
+export * from './archetypeCompatibility';
