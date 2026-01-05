@@ -10527,7 +10527,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // This endpoint normalizes both V1 and V2 results into a consistent shape
   app.get('/api/assessment/result', isPhoneAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user!.id;
+      // Use session userId fallback when req.user is undefined (phone auth uses session)
+      const userId = req.user?.id || req.session?.userId;
       const { getChemistryForArchetype, archetypePrototypes } = await import('@shared/personality/prototypes');
       
       // First try to get V4 assessment session
