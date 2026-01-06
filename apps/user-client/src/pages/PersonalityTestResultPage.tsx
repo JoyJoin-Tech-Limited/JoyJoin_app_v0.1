@@ -8,7 +8,6 @@ import PersonalityRadarChart from '@/components/PersonalityRadarChart';
 import { XiaoyueInsightCard } from '@/components/XiaoyueInsightCard';
 import { XiaoyueChatBubble } from '@/components/XiaoyueChatBubble';
 import StyleSpectrum from '@/components/StyleSpectrum';
-import AdjacentArchetypesOrbit from '@/components/AdjacentArchetypesOrbit';
 import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -1042,7 +1041,7 @@ export default function PersonalityTestResultPage() {
         initial="hidden"
         animate="visible"
       >
-        {/* 1. StyleSpectrum - 风格谱系展示 */}
+        {/* 1. StyleSpectrum - 风格谱系展示 (now includes unique traits and orbital visualization) */}
         {styleSpectrum && (
           <motion.div variants={itemVariants}>
             <StyleSpectrum
@@ -1058,6 +1057,7 @@ export default function PersonalityTestResultPage() {
                 X: result.extraversionScore,
                 P: result.positivityScore,
               }}
+              uniqueTraits={archetypeUniqueTraits[result.primaryRole]}
             />
           </motion.div>
         )}
@@ -1158,96 +1158,7 @@ export default function PersonalityTestResultPage() {
                 );
               })()}
               
-              {/* 独特之处 */}
-              {archetypeUniqueTraits[result.primaryRole] && archetypeUniqueTraits[result.primaryRole].length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium flex items-center gap-2">
-                    <Star className="w-4 h-4 text-yellow-500" />
-                    你的独特之处
-                  </h4>
-                  <div className="grid gap-2">
-                    {archetypeUniqueTraits[result.primaryRole].map((item, index) => (
-                      <div 
-                        key={index} 
-                        className="flex items-start gap-3 p-3 bg-gradient-to-r from-primary/5 to-transparent rounded-lg"
-                        data-testid={`unique-trait-${index}`}
-                      >
-                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <span className="text-primary font-bold text-xs">{index + 1}</span>
-                        </div>
-                        <div>
-                          <span className="font-medium text-sm">{item.trait}</span>
-                          <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 为什么是你 - 亚军对比洞察 with trait divergence analysis */}
-              {!result.isDecisive && result.chemistryList && result.chemistryList.length > 1 && (() => {
-                const runnerUp = result.chemistryList[1];
-                if (!runnerUp) return null;
-                
-                const userTraits = {
-                  A: result.affinityScore,
-                  O: result.opennessScore,
-                  C: result.conscientiousnessScore,
-                  E: result.emotionalStabilityScore,
-                  X: result.extraversionScore,
-                  P: result.positivityScore,
-                };
-                
-                const scoreDiff = result.chemistryList[0].percentage - runnerUp.percentage;
-                const differentiatingTrait = findDifferentiatingTrait(
-                  result.primaryRole,
-                  runnerUp.role,
-                  userTraits
-                );
-                
-                return (
-                  <div className="p-4 bg-muted/30 rounded-lg border border-dashed" data-testid="why-you-section">
-                    <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
-                      <Zap className="w-4 h-4 text-primary" />
-                      为什么是{result.primaryRole}？
-                    </h4>
-                    <div className="space-y-3 text-sm text-muted-foreground">
-                      <p>
-                        你和{runnerUp.role}只差 <span className="font-medium text-foreground">{scoreDiff.toFixed(1)}%</span>，
-                        分数很接近，但算法还是选了{result.primaryRole}。
-                      </p>
-                      <p className="text-foreground/80">
-                        <span className="font-medium text-primary">{differentiatingTrait.reason}</span>
-                      </p>
-                      {differentiatingTrait.weightContext && (
-                        <p className="text-xs text-muted-foreground/80 italic">
-                          {differentiatingTrait.weightContext}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-3 pt-1">
-                        <div className="flex items-center gap-1.5">
-                          <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${getArchetypeGradient(result.primaryRole)} flex items-center justify-center`}>
-                            {archetypeAvatars[result.primaryRole] && (
-                              <img src={archetypeAvatars[result.primaryRole]} alt="" className="w-full h-full rounded-full object-cover" />
-                            )}
-                          </div>
-                          <span className="text-xs font-medium">{result.chemistryList[0].percentage.toFixed(1)}%</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">vs</span>
-                        <div className="flex items-center gap-1.5">
-                          <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${getArchetypeGradient(runnerUp.role)} flex items-center justify-center opacity-60`}>
-                            {archetypeAvatars[runnerUp.role] && (
-                              <img src={archetypeAvatars[runnerUp.role]} alt="" className="w-full h-full rounded-full object-cover" />
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground">{runnerUp.percentage.toFixed(1)}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
+              {/* Note: Unique traits have been moved to StyleSpectrum component */}
             </CardContent>
           </Card>
         </motion.div>
@@ -1303,15 +1214,7 @@ export default function PersonalityTestResultPage() {
           </Collapsible>
         </motion.div>
 
-        {!result.isDecisive && styleSpectrum && (
-          <motion.div variants={itemVariants}>
-            <AdjacentArchetypesOrbit 
-              primaryArchetype={result.primaryRole} 
-              adjacentStyles={styleSpectrum.adjacentStyles}
-              isDecisive={result.isDecisive} 
-            />
-          </motion.div>
-        )}
+        {/* Note: AdjacentArchetypesOrbit has been merged into StyleSpectrum */}
 
         <motion.div variants={itemVariants}>
           <MatchFeedbackSection archetype={result.primaryRole} />
