@@ -304,6 +304,12 @@ export async function generateDailyKpiSnapshot(date: Date = new Date()): Promise
       .where(and(
         gte(dialogueFeedback.createdAt, monthAgo),
         lte(dialogueFeedback.createdAt, dayEnd)
+      )),
+    db.select({ avg: avg(dialogueFeedback.overallRating) })
+      .from(dialogueFeedback)
+      .where(and(
+        gte(dialogueFeedback.createdAt, monthAgo),
+        lte(dialogueFeedback.createdAt, dayEnd)
       ))
   ]);
 
