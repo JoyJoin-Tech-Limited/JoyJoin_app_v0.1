@@ -993,7 +993,6 @@ export default function DuolingoOnboardingPage() {
                     });
                   }
                 }}
-                disabled={phone.length < 8}
                 data-testid="button-phone-login"
               >
                 继续测试
