@@ -678,9 +678,9 @@ async function processReferralConversion(newUserId: string, referralCode: string
     const duration = Date.now() - startTime;
     
     // Sanitize stack trace for production: show only first 2 lines (error + location)
-    const sanitizedStack = isProduction && error.stack 
-      ? error.stack.split('\n').slice(0, 2).join('\n') 
-      : error.stack;
+    const sanitizedStack = error.stack 
+      ? (isProduction ? error.stack.split('\n').slice(0, 2).join('\n') : error.stack)
+      : 'No stack trace available';
     
     console.error('❌ [REFERRAL] Critical error processing conversion:', {
       error: error.message,
