@@ -1281,7 +1281,7 @@ export class PrototypeMatcher {
 
       return {
         archetype: r.archetype,
-        score: Math.round(r.details.finalScore * 100),
+        score: Math.round(r.details.finalScore),
         confidence: this.calculateMatchConfidence(r.details, results, index),
         details: r.details,
         explanation,

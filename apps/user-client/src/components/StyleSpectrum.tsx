@@ -1,10 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { Sparkles, Star } from "lucide-react";
+import { Sparkles, Star, Quote, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { archetypeAvatars } from "@/lib/archetypeAdapter";
-import HexResonanceBoard from "@/components/HexResonanceBoard";
 import TraitSpectrum from "@/components/TraitSpectrum";
 
 interface AdjacentStyle {
@@ -58,6 +57,12 @@ interface StyleSpectrumProps {
     P?: number;
   };
   uniqueTraits?: { trait: string; description: string }[];
+  epicDescription?: string;
+  styleQuote?: string;
+  counterIntuitiveInsight?: {
+    text: string;
+    rarityPercentage: number;
+  };
 }
 
 const ARCHETYPE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -124,7 +129,10 @@ export default function StyleSpectrum({
   isDecisive,
   onLearnMore,
   traitScores,
-  uniqueTraits
+  uniqueTraits,
+  epicDescription,
+  styleQuote,
+  counterIntuitiveInsight
 }: StyleSpectrumProps) {
   const colors = ARCHETYPE_COLORS[primary.archetype] || { 
     bg: "bg-primary/5", text: "text-primary", border: "border-primary/20" 
@@ -225,7 +233,40 @@ export default function StyleSpectrum({
               )}
             </motion.div>
 
-            {/* Unique traits section (moved from result page) */}
+            {/* Epic description - archetype narrative */}
+            {epicDescription && (
+              <motion.div
+                className="px-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {epicDescription}
+                </p>
+              </motion.div>
+            )}
+
+            {/* Style quote callout */}
+            {styleQuote && (
+              <motion.div 
+                className={cn(
+                  "relative rounded-lg p-4 border-l-4",
+                  colors.bg,
+                  colors.border
+                )}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Quote className={cn("w-5 h-5 absolute top-3 left-3 opacity-40", colors.text)} />
+                <p className={cn("text-sm font-medium italic pl-6", colors.text)}>
+                  {styleQuote}
+                </p>
+              </motion.div>
+            )}
+
+            {/* Unique traits section */}
             {uniqueTraits && uniqueTraits.length > 0 && (
               <div className="border-t pt-4">
                 <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
@@ -285,18 +326,20 @@ export default function StyleSpectrum({
                   >
                     <div className="relative">
                       <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl scale-125" />
-                      {archetypeAvatars[primary.archetype] ? (
-                        <img 
-                          src={archetypeAvatars[primary.archetype]} 
-                          alt={primary.archetype}
-                          className={cn("relative object-contain drop-shadow-lg", getImageSizeForScore(primary.score, true).image)}
-                          data-testid="img-orbit-primary"
-                        />
-                      ) : (
-                        <div className="relative w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Sparkles className="w-10 h-10 text-primary" />
-                        </div>
-                      )}
+                      <div className={cn("relative rounded-full overflow-hidden", getImageSizeForScore(primary.score, true).container)}>
+                        {archetypeAvatars[primary.archetype] ? (
+                          <img 
+                            src={archetypeAvatars[primary.archetype]} 
+                            alt={primary.archetype}
+                            className={cn("object-cover drop-shadow-lg", getImageSizeForScore(primary.score, true).image)}
+                            data-testid="img-orbit-primary"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                            <Sparkles className="w-10 h-10 text-primary" />
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="text-center mt-1">
                       <div className="text-xs font-semibold text-foreground">
@@ -355,7 +398,7 @@ export default function StyleSpectrum({
                       >
                         <div 
                           className={cn(
-                            "flex items-center justify-center cursor-pointer hover:scale-110 transition-transform",
+                            "flex items-center justify-center cursor-pointer hover:scale-110 transition-transform rounded-full overflow-hidden",
                             sizeClass.container
                           )}
                           data-testid={`orbit-adjacent-${index}`}
@@ -364,7 +407,7 @@ export default function StyleSpectrum({
                             <img 
                               src={archetypeAvatars[adjacent.archetype]} 
                               alt={adjacent.archetype}
-                              className={cn("object-contain drop-shadow-md", sizeClass.image)}
+                              className={cn("object-cover drop-shadow-md", sizeClass.image)}
                             />
                           ) : (
                             <div className={cn(
@@ -412,23 +455,34 @@ export default function StyleSpectrum({
                 <TraitSpectrum traitScores={traitScores} />
               </div>
             )}
+
+            {/* Counter-intuitive insight section */}
+            {counterIntuitiveInsight && (
+              <motion.div 
+                className="border-t pt-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+              >
+                <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-primary" />
+                      你可能不知道的
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      前{counterIntuitiveInsight.rarityPercentage}%
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {counterIntuitiveInsight.text}
+                  </p>
+                </div>
+              </motion.div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
-
-      {/* Hex Resonance Board - trait visualization */}
-      {traitScores && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <HexResonanceBoard 
-            traitScores={traitScores}
-            primaryArchetype={primary.archetype}
-          />
-        </motion.div>
-      )}
     </div>
   );
 }
