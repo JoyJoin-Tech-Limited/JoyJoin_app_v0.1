@@ -1041,7 +1041,7 @@ export default function PersonalityTestResultPage() {
         initial="hidden"
         animate="visible"
       >
-        {/* 1. StyleSpectrum - 风格谱系展示 (now includes unique traits and orbital visualization) */}
+        {/* 1. StyleSpectrum - 风格谱系展示 (now includes unique traits, orbital, and archetype info) */}
         {styleSpectrum && (
           <motion.div variants={itemVariants}>
             <StyleSpectrum
@@ -1058,6 +1058,15 @@ export default function PersonalityTestResultPage() {
                 P: result.positivityScore,
               }}
               uniqueTraits={archetypeUniqueTraits[result.primaryRole]}
+              epicDescription={epicDescription}
+              styleQuote={styleQuote}
+              counterIntuitiveInsight={(() => {
+                const insight = getArchetypeInsights(result.primaryRole);
+                return insight ? {
+                  text: insight.counterIntuitive,
+                  rarityPercentage: insight.rarityPercentage
+                } : undefined;
+              })()}
             />
           </motion.div>
         )}
@@ -1115,55 +1124,7 @@ export default function PersonalityTestResultPage() {
           </motion.div>
         )}
 
-        {/* 4. 关于你 - 合并角色解读、特质、独特之处 */}
-        <motion.div variants={itemVariants}>
-          <Card className="border-primary/20" data-testid="about-you-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
-                关于{result.primaryRole}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* 角色解读 */}
-              {epicDescription && (
-                <div className="space-y-2">
-                  <p className="text-sm leading-relaxed">{epicDescription}</p>
-                </div>
-              )}
-              
-              {/* 风格语录 */}
-              {styleQuote && (
-                <div className={`relative bg-gradient-to-br ${gradient} bg-opacity-10 rounded-lg p-4 border-l-4 border-primary/50`}>
-                  <Quote className="w-6 h-6 text-primary/40 absolute top-2 left-2" />
-                  <p className="text-sm font-medium italic pl-8">{styleQuote}</p>
-                </div>
-              )}
-              
-              {/* 反直觉特质 */}
-              {(() => {
-                const insight = getArchetypeInsights(result.primaryRole);
-                if (!insight) return null;
-                return (
-                  <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium flex items-center gap-2">
-                        <Eye className="w-4 h-4 text-primary" />
-                        你可能不知道的
-                      </span>
-                      <Badge variant="outline" className="text-xs">前{insight.rarityPercentage}%</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{insight.counterIntuitive}</p>
-                  </div>
-                );
-              })()}
-              
-              {/* Note: Unique traits have been moved to StyleSpectrum component */}
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* 5. 想了解更多？ - 可折叠的深度分析 */}
+        {/* 4. 想了解更多？ - 可折叠的深度分析 */}
         <motion.div variants={itemVariants}>
           <Collapsible>
             <Card>
