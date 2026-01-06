@@ -10602,10 +10602,12 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const userId = req.user?.id || req.session?.userId;
       const { getChemistryForArchetype, archetypePrototypes } = await import('@shared/personality/prototypes');
       
-      // First try to get V4 assessment session
-      const session = await storage.getAssessmentSessionByUser(userId);
+      // Get the latest COMPLETED V4 assessment session
+      // This ensures we always return the most recent finished result, even if user has 
+      // an incomplete retest session in progress
+      const session = await storage.getLatestCompletedAssessmentSessionByUser(userId);
       
-      if (session && session.phase === 'completed') {
+      if (session) {
         const finalResult = session.finalResult as any;
         const primaryArchetype = session.primaryArchetype || finalResult?.primaryArchetype || finalResult?.archetype;
         

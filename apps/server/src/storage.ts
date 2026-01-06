@@ -328,6 +328,8 @@ export interface IStorage {
   }): Promise<any>;
   getAssessmentSession(id: string): Promise<any | undefined>;
   getAssessmentSessionByUser(userId: string): Promise<any | undefined>;
+  getLatestAssessmentSessionByUser(userId: string): Promise<any | undefined>;
+  getLatestCompletedAssessmentSessionByUser(userId: string): Promise<any | undefined>;
   updateAssessmentSession(id: string, updates: Partial<{
     userId: string;
     phase: string;
@@ -3857,6 +3859,29 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(assessmentSessions.userId, userId),
         sql`${assessmentSessions.completedAt} IS NULL`
+      ))
+      .orderBy(desc(assessmentSessions.createdAt))
+      .limit(1);
+    return session;
+  }
+
+  async getLatestAssessmentSessionByUser(userId: string): Promise<any | undefined> {
+    const [session] = await db
+      .select()
+      .from(assessmentSessions)
+      .where(eq(assessmentSessions.userId, userId))
+      .orderBy(desc(assessmentSessions.createdAt))
+      .limit(1);
+    return session;
+  }
+
+  async getLatestCompletedAssessmentSessionByUser(userId: string): Promise<any | undefined> {
+    const [session] = await db
+      .select()
+      .from(assessmentSessions)
+      .where(and(
+        eq(assessmentSessions.userId, userId),
+        sql`${assessmentSessions.completedAt} IS NOT NULL`
       ))
       .orderBy(desc(assessmentSessions.createdAt))
       .limit(1);
