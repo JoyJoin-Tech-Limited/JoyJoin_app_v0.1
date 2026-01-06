@@ -531,9 +531,13 @@ export async function generateGroupAnalysis(
       pairExplanations = await generateFreshPairExplanations(members);
       iceBreakers = await generateIceBreakers(members, eventType);
       
-      // Save to cache with roster metadata (fire and forget)
-      savePairExplanationsCache(groupId, members, pairExplanations).catch(() => {});
-      saveIceBreakersCache(groupId, members, eventType, iceBreakers).catch(() => {});
+      // Save to cache with roster metadata (fire and forget with error handling)
+      savePairExplanationsCache(groupId, members, pairExplanations).catch((err) => {
+        console.error('[MatchExplanation] Failed to save pair explanations cache:', err);
+      });
+      saveIceBreakersCache(groupId, members, eventType, iceBreakers).catch((err) => {
+        console.error('[MatchExplanation] Failed to save ice breakers cache:', err);
+      });
     }
   } else {
     // No cache requested - generate fresh

@@ -165,5 +165,6 @@ export async function prefetchAnalysisIfReady(
   console.log('[XiaoyueAnalysis] Starting background prefetch for:', archetype);
   generateXiaoyueAnalysis({ archetype, traitScores, confidence }).catch(err => {
     console.error('[XiaoyueAnalysis] Background prefetch failed:', err);
+    // Error logged, prefetch is non-critical
   });
 }

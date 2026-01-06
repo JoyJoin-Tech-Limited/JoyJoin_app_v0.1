@@ -30,7 +30,12 @@ class MatchingCache {
 
   constructor(config: Partial<CacheConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    setInterval(() => this.cleanup(), 60 * 1000);
+    // Use setInterval with proper cleanup interval
+    const cleanupInterval = setInterval(() => this.cleanup(), 60 * 1000);
+    // Store reference for potential cleanup (though in practice this runs for app lifetime)
+    if (typeof process !== 'undefined') {
+      process.on('beforeExit', () => clearInterval(cleanupInterval));
+    }
   }
 
   private generateKey(prefix: string, ...args: unknown[]): string {
@@ -71,8 +76,8 @@ class MatchingCache {
     let oldestKey: string | null = null;
     let oldestTime = Infinity;
     
-    const entries = Array.from(this.cache.entries());
-    for (const [key, entry] of entries) {
+    // Find oldest entry more efficiently
+    for (const [key, entry] of this.cache.entries()) {
       if (entry.timestamp < oldestTime) {
         oldestTime = entry.timestamp;
         oldestKey = key;
@@ -86,11 +91,22 @@ class MatchingCache {
 
   private cleanup(): void {
     const now = Date.now();
-    const entries = Array.from(this.cache.entries());
-    for (const [key, entry] of entries) {
+    const entriesToDelete: string[] = [];
+    
+    // Collect expired entries
+    for (const [key, entry] of this.cache.entries()) {
       if (now > entry.expiresAt) {
-        this.cache.delete(key);
+        entriesToDelete.push(key);
       }
+    }
+    
+    // Batch delete to reduce iteration time
+    for (const key of entriesToDelete) {
+      this.cache.delete(key);
+    }
+    
+    if (entriesToDelete.length > 0) {
+      console.log(`[MatchingCache] Cleaned up ${entriesToDelete.length} expired entries`);
     }
   }
 
@@ -100,13 +116,18 @@ class MatchingCache {
       count = this.cache.size;
       this.cache.clear();
     } else {
-      const keys = Array.from(this.cache.keys());
-      for (const key of keys) {
+      const keysToDelete: string[] = [];
+      // Collect keys to delete first
+      for (const key of this.cache.keys()) {
         if (key.includes(pattern)) {
-          this.cache.delete(key);
-          count++;
+          keysToDelete.push(key);
         }
       }
+      // Then delete them in batch
+      for (const key of keysToDelete) {
+        this.cache.delete(key);
+      }
+      count = keysToDelete.length;
     }
     return count;
   }
