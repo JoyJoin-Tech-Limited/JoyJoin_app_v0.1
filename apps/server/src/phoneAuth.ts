@@ -567,8 +567,15 @@ async function processReferralConversion(newUserId: string, referralCode: string
   const isProduction = process.env.NODE_ENV === 'production';
   
   // Helper to sanitize IDs for logging (truncate in production)
-  const sanitizeId = (id: string) => isProduction ? `${id.slice(0, 8)}...` : id;
-  const sanitizeCode = (code: string) => isProduction ? `${code.slice(0, 3)}***` : code;
+  const sanitizeId = (id: string) => {
+    if (!id || typeof id !== 'string') return '[invalid]';
+    return isProduction && id.length > 8 ? `${id.slice(0, 8)}...` : id;
+  };
+  
+  const sanitizeCode = (code: string) => {
+    if (!code || typeof code !== 'string') return '[invalid]';
+    return isProduction && code.length > 3 ? `${code.slice(0, 3)}***` : code;
+  };
   
   try {
     // Input validation
@@ -669,9 +676,15 @@ async function processReferralConversion(newUserId: string, referralCode: string
     console.log(`✅ [REFERRAL] Conversion completed successfully in ${duration}ms: ${sanitizeCode(referralCode)} -> ${sanitizeId(newUserId)}`);
   } catch (error: any) {
     const duration = Date.now() - startTime;
+    
+    // Sanitize stack trace for production: show only first 2 lines (error + location)
+    const sanitizedStack = isProduction && error.stack 
+      ? error.stack.split('\n').slice(0, 2).join('\n') 
+      : error.stack;
+    
     console.error('❌ [REFERRAL] Critical error processing conversion:', {
       error: error.message,
-      stack: isProduction ? undefined : error.stack, // Don't log stack traces in production
+      stack: sanitizedStack,
       duration: `${duration}ms`,
     });
     // Don't throw - we want registration to succeed even if referral tracking fails
