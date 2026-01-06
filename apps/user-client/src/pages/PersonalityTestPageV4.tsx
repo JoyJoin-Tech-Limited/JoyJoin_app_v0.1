@@ -40,6 +40,7 @@ function OnboardingProgress({
   progress,
   onBack,
   showBack = true,
+  showExtendedMessage = false,
 }: { 
   current: number; 
   total: number | string;
@@ -47,6 +48,7 @@ function OnboardingProgress({
   progress: number;
   onBack?: () => void;
   showBack?: boolean;
+  showExtendedMessage?: boolean;
 }) {
   return (
     <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
@@ -67,12 +69,22 @@ function OnboardingProgress({
             value={progress} 
             className="h-2 transition-all duration-500" 
           />
-          <div className="flex justify-between mt-1">
+          <div className="flex justify-between items-center mt-1 gap-2">
             <span className="text-xs text-muted-foreground" data-testid="text-progress-indicator">
-              {remaining !== undefined && remaining > 0 
-                ? `第${Math.floor(current)}题/剩下约${remaining}题`
-                : `第${Math.floor(current)}题`
-              }
+              {showExtendedMessage ? (
+                <span className="flex items-center gap-1.5">
+                  <span>第{Math.floor(current)}题</span>
+                  <span className="text-primary/80">/</span>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                    <Sparkles className="w-2.5 h-2.5 mr-1" />
+                    你的特质很丰富，我们想多了解一点
+                  </Badge>
+                </span>
+              ) : remaining !== undefined && remaining > 0 ? (
+                `第${Math.floor(current)}题/剩下约${remaining}题`
+              ) : (
+                `第${Math.floor(current)}题`
+              )}
             </span>
           </div>
         </div>
@@ -472,6 +484,7 @@ export default function PersonalityTestPageV4() {
         progress={progressPercentage}
         onBack={() => setLocation('/profile')}
         showBack={true}
+        showExtendedMessage={answeredCount >= 8 && estimatedRemaining >= 3}
       />
 
       <AnimatePresence mode="wait">

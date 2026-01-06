@@ -928,6 +928,14 @@ export default function PersonalityTestResultPage() {
               adjacentStyles={styleSpectrum.adjacentStyles}
               spectrumPosition={styleSpectrum.spectrumPosition}
               isDecisive={styleSpectrum.isDecisive}
+              traitScores={{
+                A: result.affinityScore,
+                O: result.opennessScore,
+                C: result.conscientiousnessScore,
+                E: result.emotionalStabilityScore,
+                X: result.extraversionScore,
+                P: result.positivityScore,
+              }}
             />
           </motion.div>
         )}
@@ -1054,19 +1062,79 @@ export default function PersonalityTestResultPage() {
                   </div>
                 </div>
               )}
+
+              {/* 为什么是你 - 亚军对比洞察 */}
+              {!result.isDecisive && result.chemistryList && result.chemistryList.length > 1 && (() => {
+                const runnerUp = result.chemistryList[1];
+                if (!runnerUp) return null;
+                
+                const traitScores = {
+                  A: result.affinityScore,
+                  O: result.opennessScore,
+                  C: result.conscientiousnessScore,
+                  E: result.emotionalStabilityScore,
+                  X: result.extraversionScore,
+                  P: result.positivityScore,
+                };
+                
+                const sortedTraits = Object.entries(traitScores)
+                  .sort(([, a], [, b]) => b - a);
+                const highestTrait = sortedTraits[0];
+                const traitNames: Record<string, string> = {
+                  A: '亲和力', O: '开放性', C: '责任心', 
+                  E: '情绪稳定', X: '外向性', P: '正能量'
+                };
+                
+                const scoreDiff = result.chemistryList[0].percentage - runnerUp.percentage;
+                
+                return (
+                  <div className="p-4 bg-muted/30 rounded-lg border border-dashed" data-testid="why-you-section">
+                    <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
+                      <Zap className="w-4 h-4 text-primary" />
+                      为什么是{result.primaryRole}？
+                    </h4>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p>
+                        你和{runnerUp.role}只差 <span className="font-medium text-foreground">{scoreDiff.toFixed(1)}%</span>，
+                        但你的<span className="font-medium text-primary">{traitNames[highestTrait[0]]}</span>
+                        得分（{Math.round(highestTrait[1])}）更符合{result.primaryRole}的核心特质。
+                      </p>
+                      <div className="flex items-center gap-3 pt-2">
+                        <div className="flex items-center gap-1.5">
+                          <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${getArchetypeGradient(result.primaryRole)} flex items-center justify-center`}>
+                            {archetypeAvatars[result.primaryRole] && (
+                              <img src={archetypeAvatars[result.primaryRole]} alt="" className="w-full h-full rounded-full object-cover" />
+                            )}
+                          </div>
+                          <span className="text-xs font-medium">{result.chemistryList[0].percentage.toFixed(1)}%</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">vs</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${getArchetypeGradient(runnerUp.role)} flex items-center justify-center opacity-60`}>
+                            {archetypeAvatars[runnerUp.role] && (
+                              <img src={archetypeAvatars[runnerUp.role]} alt="" className="w-full h-full rounded-full object-cover" />
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">{runnerUp.percentage.toFixed(1)}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* 5. 维度概览 - 可折叠 */}
+        {/* 5. 想了解更多？ - 可折叠的深度分析 */}
         <motion.div variants={itemVariants}>
           <Collapsible>
             <Card>
               <CollapsibleTrigger className="w-full">
                 <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover-elevate rounded-t-lg">
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-primary" />
-                    维度概览
+                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                    <MessageSquare className="w-5 h-5" />
+                    想了解更多？
                   </CardTitle>
                   <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
                 </CardHeader>

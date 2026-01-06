@@ -43,10 +43,11 @@ export default function AdjacentArchetypesOrbit({
   }
 
   const topAdjacent = adjacentStyles.slice(0, 3);
+  // Fixed: Use 120° separation to prevent overlap (270°=top, 30°=bottom-right, 150°=bottom-left)
   const orbitPositions = [
-    { angle: -45, distance: 85 },
-    { angle: 45, distance: 85 },
-    { angle: 180, distance: 75 },
+    { angle: 270, distance: 80 },   // Top center
+    { angle: 30, distance: 80 },    // Bottom right
+    { angle: 150, distance: 80 },   // Bottom left
   ];
 
   return (
@@ -119,7 +120,8 @@ export default function AdjacentArchetypesOrbit({
                 }}
                 style={{ 
                   marginLeft: "-32px",
-                  marginTop: "-32px"
+                  marginTop: "-32px",
+                  zIndex: 10 + index
                 }}
               >
                 <motion.div
