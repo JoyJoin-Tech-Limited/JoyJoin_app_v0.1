@@ -541,9 +541,11 @@ class WebSocketService {
         }
       }
 
-      // Get all checkins with user data
-      const checkins = await storage.getSessionCheckins(sessionId);
-      const session = await storage.getIcebreakerSession(sessionId);
+      // Get all checkins with user data - parallelize for better performance
+      const [checkins, session] = await Promise.all([
+        storage.getSessionCheckins(sessionId),
+        storage.getIcebreakerSession(sessionId)
+      ]);
       const expectedAttendees = session?.expectedAttendees || checkins.length;
 
       // Broadcast checkin update
@@ -619,9 +621,11 @@ class WebSocketService {
         });
       }
 
-      // Get all ready votes for this phase
-      const votes = await storage.getSessionReadyVotes(sessionId, phase);
-      const checkins = await storage.getSessionCheckins(sessionId);
+      // Get all ready votes for this phase - parallelize for better performance
+      const [votes, checkins] = await Promise.all([
+        storage.getSessionReadyVotes(sessionId, phase),
+        storage.getSessionCheckins(sessionId)
+      ]);
       // Only count online participants for ready vote calculation
       const onlineCheckins = checkins.filter(c => c.isOnline);
       const totalCount = onlineCheckins.length;
