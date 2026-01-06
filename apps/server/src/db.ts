@@ -28,13 +28,14 @@ export async function warmupDatabase() {
     console.log('Database connection warmed up successfully');
   } catch (error) {
     console.error('Database warmup failed:', error);
-    setTimeout(async () => {
-      try {
-        await pool.query('SELECT 1');
-        console.log('Database connection warmed up successfully (retry)');
-      } catch (retryError) {
-        console.error('Database warmup retry failed:', retryError);
-      }
-    }, 2000);
+    // Retry after delay
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await pool.query('SELECT 1');
+      console.log('Database connection warmed up successfully (retry)');
+    } catch (retryError) {
+      console.error('Database warmup retry failed:', retryError);
+      // Both attempts failed, connection will be attempted on first query
+    }
   }
 }

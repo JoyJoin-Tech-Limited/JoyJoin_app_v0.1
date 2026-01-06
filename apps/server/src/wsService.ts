@@ -101,7 +101,10 @@ class WebSocketService {
             message: 'WebSocket connection error',
             metadata: { error: error.message, stack: error.stack },
           }),
-        }).catch(err => console.error('[WS] Failed to log error:', err));
+        }).catch(err => {
+          console.error('[WS] Failed to log error:', err);
+          // Error already logged, no need to throw
+        });
       });
     });
 
@@ -321,7 +324,7 @@ class WebSocketService {
     });
     console.log('[WS] Client disconnected');
     
-    // Log disconnection
+    // Log disconnection (fire and forget with proper error handling)
     fetch('http://localhost:5000/api/chat-logs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -331,7 +334,10 @@ class WebSocketService {
         severity: 'info',
         message: 'WebSocket client disconnected',
       }),
-    }).catch(err => console.error('[WS] Failed to log disconnection:', err));
+    }).catch(err => {
+      console.error('[WS] Failed to log disconnection:', err);
+      // Error already logged, no need to throw
+    });
   }
 
   private addClientToUser(userId: string, ws: AuthenticatedWebSocket) {
