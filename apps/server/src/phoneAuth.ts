@@ -169,11 +169,11 @@ export function setupPhoneAuth(app: Express) {
         if (!isUsingDemoCode) {
           await createDemoDataForUser(userId);
         }
-        
-        // Process referral code for new users
-        if (referralCode) {
-          await processReferralConversion(userId, referralCode);
-        }
+      }
+      
+      // Process referral code only for new users
+      if (isNewUser && referralCode) {
+        await processReferralConversion(userId, referralCode);
       }
 
       // 设置session - Phase 4.1 DEBUG_AUTH logging
