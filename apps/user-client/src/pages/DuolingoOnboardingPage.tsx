@@ -971,17 +971,27 @@ export default function DuolingoOnboardingPage() {
                   try {
                     // 1. Login first
                     await apiRequest("POST", "/api/auth/quick-login", { phone });
-                    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
                     
-                    // 2. Sync pre-signup answers to the assessment session
+                    // 2. Wait for auth state to update before proceeding
+                    await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                    await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
+                    
+                    // 3. Sync pre-signup answers to the assessment session
                     const cachedAnswers = getV4CachedAnswers();
                     if (cachedAnswers.length > 0) {
-                      await apiRequest("POST", "/api/assessment/v4/presignup-sync", {
+                      const syncResponse = await apiRequest("POST", "/api/assessment/v4/presignup-sync", {
                         preSignupAnswers: cachedAnswers,
                       });
+                      const syncData = await syncResponse.json();
+                      
+                      // Store the synced session ID for personality test to resume
+                      if (syncData.sessionId) {
+                        localStorage.setItem("joyjoin_synced_session_id", syncData.sessionId);
+                        localStorage.setItem("joyjoin_synced_answer_count", String(syncData.totalCount || cachedAnswers.length));
+                      }
                     }
                     
-                    // 3. Clear cache and redirect to personality test to continue
+                    // 4. Clear cache and redirect to personality test to continue
                     clearCachedProgress();
                     setLocation("/personality-test");
                   } catch (error) {
