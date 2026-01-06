@@ -399,7 +399,7 @@ export default function PersonalityTestPageV4() {
 
   if (isLoading && !currentQuestion && !isComplete) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="h-screen overflow-hidden bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-muted-foreground">加载测评中...</p>
@@ -410,7 +410,7 @@ export default function PersonalityTestPageV4() {
 
   if (showBlindBox) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative">
+      <div className="h-screen overflow-hidden bg-background flex flex-col items-center justify-center p-6 relative">
         <CelebrationConfetti show={true} />
         <motion.div
           initial={{ scale: 0 }}
@@ -430,7 +430,7 @@ export default function PersonalityTestPageV4() {
 
   if (showMilestone && encouragement) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+      <div className="h-screen overflow-hidden bg-background flex flex-col items-center justify-center p-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -476,7 +476,7 @@ export default function PersonalityTestPageV4() {
 
   if (!currentQuestion) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="h-screen overflow-hidden bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-muted-foreground">准备题目中...</p>
@@ -492,7 +492,7 @@ export default function PersonalityTestPageV4() {
   }));
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen overflow-hidden bg-background flex flex-col">
       <OnboardingProgress
         current={displayCurrent}
         total={displayTotal as any}
