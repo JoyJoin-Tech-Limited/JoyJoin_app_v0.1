@@ -198,7 +198,7 @@ export default function LoginPage() {
   // });
 
   const loginMutation = useMutation({
-    mutationFn: async (data: { phoneNumber: string; code: string }) => {
+    mutationFn: async (data: { phoneNumber: string; code: string; referralCode?: string }) => {
       const response = await apiRequest("POST", "/api/auth/phone-login", data);
       return await response.json();
     },
@@ -209,6 +209,13 @@ export default function LoginPage() {
         localStorage.removeItem('registration_progress');
       } catch (e) {
         console.warn('Failed to clear old registration state:', e);
+      }
+      
+      // Clear referral code after successful registration
+      try {
+        localStorage.removeItem('referral_code');
+      } catch (e) {
+        console.warn('Failed to clear referral code:', e);
       }
       
       try {
@@ -293,8 +300,19 @@ export default function LoginPage() {
     }
     const fullPhone = `${areaCode}${phoneNumber}`;
     console.log("🔧 [DEBUG] Calling loginMutation with fullPhone:", fullPhone);
+    
+    // Check for referral code in localStorage
+    const referralCode = localStorage.getItem('referral_code');
+    if (referralCode) {
+      console.log("🎁 [REFERRAL] Found referral code in localStorage:", referralCode);
+    }
+    
     // 使用固定的DEMO验证码，暂时不需要用户输入验证码
-    loginMutation.mutate({ phoneNumber: fullPhone, code: "666666" });
+    loginMutation.mutate({ 
+      phoneNumber: fullPhone, 
+      code: "666666",
+      ...(referralCode && { referralCode })
+    });
   };
 
   // 暂时注释：微信登录处理函数
