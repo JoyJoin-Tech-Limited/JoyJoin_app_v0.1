@@ -560,14 +560,27 @@ async function createDemoDataForUser(userId: string) {
 
 // Process referral conversion when a new user registers via referral link
 async function processReferralConversion(newUserId: string, referralCode: string) {
+  const startTime = Date.now();
+  
   try {
+    // Input validation
+    if (!newUserId || typeof newUserId !== 'string') {
+      console.error('❌ [REFERRAL] Invalid newUserId provided:', newUserId);
+      return;
+    }
+    
+    if (!referralCode || typeof referralCode !== 'string') {
+      console.error('❌ [REFERRAL] Invalid referralCode provided:', referralCode);
+      return;
+    }
+    
     const { db } = await import("./db");
     const { referralCodes, referralConversions } = await import("@shared/schema");
     const { eq, sql } = await import("drizzle-orm");
     
-    console.log(`🎁 Processing referral conversion for new user ${newUserId} with code ${referralCode}`);
+    console.log(`🎁 [REFERRAL] Processing conversion for user ${newUserId} with code ${referralCode}`);
     
-    // Find the referral code
+    // Find the referral code with additional validation
     const [referral] = await db
       .select()
       .from(referralCodes)
@@ -575,11 +588,19 @@ async function processReferralConversion(newUserId: string, referralCode: string
       .limit(1);
     
     if (!referral) {
-      console.warn(`⚠️ Referral code not found: ${referralCode}`);
+      console.warn(`⚠️ [REFERRAL] Code not found: ${referralCode}`);
       return;
     }
     
-    // Check if this user has already been counted for this referral code
+    console.log(`✓ [REFERRAL] Found referral code ID ${referral.id} for user ${referral.userId}`);
+    
+    // Prevent self-referral
+    if (referral.userId === newUserId) {
+      console.warn(`⚠️ [REFERRAL] Self-referral attempt blocked: user ${newUserId}`);
+      return;
+    }
+    
+    // Check if this user has already been counted for ANY referral code
     const [existingConversion] = await db
       .select()
       .from(referralConversions)
@@ -587,25 +608,62 @@ async function processReferralConversion(newUserId: string, referralCode: string
       .limit(1);
     
     if (existingConversion) {
-      console.log(`ℹ️ User ${newUserId} already has a referral conversion record`);
+      console.log(`ℹ️ [REFERRAL] User ${newUserId} already has conversion record (ID: ${existingConversion.id})`);
       return;
     }
     
-    // Create the referral conversion record
-    await db.insert(referralConversions).values({
-      referralCodeId: referral.id,
-      invitedUserId: newUserId,
-      inviterRewardIssued: false,
-      inviteeRewardIssued: false,
+    // Create the referral conversion record with error handling
+    let conversionRecord;
+    try {
+      [conversionRecord] = await db.insert(referralConversions).values({
+        referralCodeId: referral.id,
+        invitedUserId: newUserId,
+        inviterRewardIssued: false,
+        inviteeRewardIssued: false,
+      }).returning();
+      
+      console.log(`✓ [REFERRAL] Conversion record created with ID ${conversionRecord.id}`);
+    } catch (insertError: any) {
+      console.error('❌ [REFERRAL] Failed to insert conversion record:', {
+        error: insertError.message,
+        code: insertError.code,
+        referralCodeId: referral.id,
+        invitedUserId: newUserId,
+      });
+      throw insertError;
+    }
+    
+    // Update the referral code statistics with error handling
+    try {
+      const [updatedReferral] = await db.update(referralCodes)
+        .set({ totalConversions: sql`${referralCodes.totalConversions} + 1` })
+        .where(eq(referralCodes.id, referral.id))
+        .returning();
+      
+      const newCount = updatedReferral?.totalConversions ?? 'unknown';
+      console.log(`✓ [REFERRAL] Updated conversion count to ${newCount} for code ${referralCode}`);
+    } catch (updateError: any) {
+      console.error('❌ [REFERRAL] Failed to update referral code statistics:', {
+        error: updateError.message,
+        code: updateError.code,
+        referralId: referral.id,
+        referralCode: referralCode,
+      });
+      // Note: Conversion record was created, so we don't throw here
+      // This allows the registration to continue even if stats update fails
+    }
+    
+    const duration = Date.now() - startTime;
+    console.log(`✅ [REFERRAL] Conversion completed successfully in ${duration}ms: ${referralCode} -> ${newUserId}`);
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    console.error('❌ [REFERRAL] Critical error processing conversion:', {
+      error: error.message,
+      stack: error.stack,
+      newUserId,
+      referralCode,
+      duration: `${duration}ms`,
     });
-    
-    // Update the referral code statistics
-    await db.update(referralCodes)
-      .set({ totalConversions: sql`${referralCodes.totalConversions} + 1` })
-      .where(eq(referralCodes.id, referral.id));
-    
-    console.log(`✅ Referral conversion recorded: ${referralCode} -> ${newUserId}`);
-  } catch (error) {
-    console.error('❌ Failed to process referral conversion:', error);
+    // Don't throw - we want registration to succeed even if referral tracking fails
   }
 }

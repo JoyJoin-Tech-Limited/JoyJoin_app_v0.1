@@ -603,10 +603,19 @@ export default function PersonalityTestResultPage() {
       return await apiRequest("POST", "/api/auth/complete-personality-test");
     },
     onSuccess: async () => {
+      console.log('✅ [PERSONALITY-TEST] Test completed, invalidating user query');
+      
+      // Invalidate and wait for refetch to complete
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Add a small delay to ensure the query has refetched
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      console.log('✅ [PERSONALITY-TEST] Navigating to /onboarding/setup');
       setLocation('/onboarding/setup');
     },
     onError: (error: Error) => {
+      console.error('❌ [PERSONALITY-TEST] Failed to complete test:', error);
       toast({
         title: "出错了",
         description: error.message,
