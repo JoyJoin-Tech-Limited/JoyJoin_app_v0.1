@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Hexagon, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Sparkles } from "lucide-react";
 
 interface TraitData {
   key: string;
@@ -12,7 +11,6 @@ interface TraitData {
   description: string;
   lowLabel: string;
   highLabel: string;
-  color: string;
 }
 
 interface HexResonanceBoardProps {
@@ -35,7 +33,6 @@ const TRAIT_CONFIG: Record<string, Omit<TraitData, 'score'>> = {
     description: '与他人建立温暖联系的能力',
     lowLabel: '独立',
     highLabel: '亲和',
-    color: 'from-rose-400 to-pink-500',
   },
   O: {
     key: 'O',
@@ -44,7 +41,6 @@ const TRAIT_CONFIG: Record<string, Omit<TraitData, 'score'>> = {
     description: '对新事物的好奇心和接纳度',
     lowLabel: '务实',
     highLabel: '开放',
-    color: 'from-violet-400 to-purple-500',
   },
   C: {
     key: 'C',
@@ -53,7 +49,6 @@ const TRAIT_CONFIG: Record<string, Omit<TraitData, 'score'>> = {
     description: '可靠性和计划性',
     lowLabel: '灵活',
     highLabel: '严谨',
-    color: 'from-emerald-400 to-teal-500',
   },
   E: {
     key: 'E',
@@ -62,7 +57,6 @@ const TRAIT_CONFIG: Record<string, Omit<TraitData, 'score'>> = {
     description: '面对压力时的冷静程度',
     lowLabel: '敏感',
     highLabel: '稳定',
-    color: 'from-cyan-400 to-blue-500',
   },
   X: {
     key: 'X',
@@ -71,7 +65,6 @@ const TRAIT_CONFIG: Record<string, Omit<TraitData, 'score'>> = {
     description: '社交能量和主动性',
     lowLabel: '内敛',
     highLabel: '外向',
-    color: 'from-amber-400 to-orange-500',
   },
   P: {
     key: 'P',
@@ -80,26 +73,10 @@ const TRAIT_CONFIG: Record<string, Omit<TraitData, 'score'>> = {
     description: '乐观积极的态度',
     lowLabel: '沉稳',
     highLabel: '阳光',
-    color: 'from-yellow-400 to-amber-500',
   },
 };
 
-const HEX_POSITIONS = [
-  { x: 50, y: 8 },    // Top center - E
-  { x: 85, y: 30 },   // Top right - X
-  { x: 85, y: 70 },   // Bottom right - P
-  { x: 50, y: 92 },   // Bottom center - A
-  { x: 15, y: 70 },   // Bottom left - O
-  { x: 15, y: 30 },   // Top left - C
-];
-
 const TRAIT_ORDER = ['E', 'X', 'P', 'A', 'O', 'C'];
-
-function getScoreLevel(score: number): 'low' | 'medium' | 'high' {
-  if (score >= 70) return 'high';
-  if (score >= 40) return 'medium';
-  return 'low';
-}
 
 function getScoreLabel(score: number): string {
   if (score >= 80) return '非常突出';
@@ -113,12 +90,51 @@ function getScoreLabel(score: number): string {
 export default function HexResonanceBoard({ traitScores, primaryArchetype }: HexResonanceBoardProps) {
   const [selectedTrait, setSelectedTrait] = useState<string | null>(null);
 
+  // Check if we have actual trait scores
+  const hasAnyScores = traitScores && Object.values(traitScores).some(v => v !== undefined && v !== null);
+  
+  // Use neutral defaults (50) for missing scores
   const traits: TraitData[] = TRAIT_ORDER.map((key) => ({
     ...TRAIT_CONFIG[key],
-    score: traitScores[key as keyof typeof traitScores] ?? 50,
+    score: Math.max(0, Math.min(100, traitScores?.[key as keyof typeof traitScores] ?? 50)),
   }));
 
   const selectedTraitData = selectedTrait ? traits.find(t => t.key === selectedTrait) : null;
+
+  // Note: When hasAnyScores is false, we still render the neutral radar chart
+  // but show an explanatory message below it
+
+  // Calculate radar polygon points based on scores
+  const centerX = 50;
+  const centerY = 50;
+  const maxRadius = 35;
+  
+  // Calculate vertices for the data polygon
+  const getPolygonPoints = (scores: number[]) => {
+    return scores.map((score, i) => {
+      const angle = (i * 60 - 90) * (Math.PI / 180);
+      const radius = (score / 100) * maxRadius;
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+      return `${x},${y}`;
+    }).join(' ');
+  };
+
+  // Grid levels at 30, 50, 70, 100
+  const gridLevels = [30, 50, 70, 100];
+  
+  // Label positions outside the hex
+  const labelPositions = [
+    { x: 50, y: 6 },    // Top - E
+    { x: 88, y: 28 },   // Top right - X
+    { x: 88, y: 72 },   // Bottom right - P
+    { x: 50, y: 94 },   // Bottom - A
+    { x: 12, y: 72 },   // Bottom left - O
+    { x: 12, y: 28 },   // Top left - C
+  ];
+
+  const dataPoints = traits.map(t => t.score);
+  const polygonPoints = getPolygonPoints(dataPoints);
 
   return (
     <Card data-testid="hex-resonance-board" className="overflow-hidden">
@@ -129,102 +145,148 @@ export default function HexResonanceBoard({ traitScores, primaryArchetype }: Hex
         </CardTitle>
       </CardHeader>
       <CardContent className="pb-4">
-        <div className="relative w-full aspect-square max-w-[280px] mx-auto">
+        <div className="relative w-full aspect-square max-w-[300px] mx-auto">
           <svg viewBox="0 0 100 100" className="w-full h-full">
-            {traits.map((trait, index) => {
-              const pos = HEX_POSITIONS[index];
-              const level = getScoreLevel(trait.score);
-              const isSelected = selectedTrait === trait.key;
-              const opacity = level === 'high' ? 1 : level === 'medium' ? 0.7 : 0.4;
+            {/* Grid lines - hexagonal rings at each level */}
+            {gridLevels.map((level) => {
+              const radius = (level / 100) * maxRadius;
+              const points = [0, 1, 2, 3, 4, 5].map(i => {
+                const angle = (i * 60 - 90) * (Math.PI / 180);
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                return `${x},${y}`;
+              }).join(' ');
               
               return (
-                <g key={trait.key} className="cursor-pointer" onClick={() => setSelectedTrait(isSelected ? null : trait.key)}>
-                  <defs>
-                    <linearGradient id={`grad-${trait.key}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" className={cn("stop-color-current", trait.color.split(' ')[0].replace('from-', 'text-'))} style={{ stopColor: 'currentColor' }} />
-                      <stop offset="100%" className={cn("stop-color-current", trait.color.split(' ')[1]?.replace('to-', 'text-'))} style={{ stopColor: 'currentColor' }} />
-                    </linearGradient>
-                  </defs>
-                  <motion.polygon
-                    points="50,0 93.3,25 93.3,75 50,100 6.7,75 6.7,25"
-                    fill={`hsl(var(--primary) / ${opacity})`}
-                    stroke={isSelected ? 'hsl(var(--primary))' : 'hsl(var(--border))'}
-                    strokeWidth={isSelected ? 1.5 : 0.5}
-                    transform={`translate(${pos.x - 50}, ${pos.y - 50}) scale(0.16)`}
+                <polygon
+                  key={`grid-${level}`}
+                  points={points}
+                  fill="none"
+                  stroke="hsl(var(--muted-foreground) / 0.15)"
+                  strokeWidth="0.3"
+                />
+              );
+            })}
+
+            {/* Axis lines from center to each vertex */}
+            {[0, 1, 2, 3, 4, 5].map(i => {
+              const angle = (i * 60 - 90) * (Math.PI / 180);
+              const x = centerX + maxRadius * Math.cos(angle);
+              const y = centerY + maxRadius * Math.sin(angle);
+              return (
+                <line
+                  key={`axis-${i}`}
+                  x1={centerX}
+                  y1={centerY}
+                  x2={x}
+                  y2={y}
+                  stroke="hsl(var(--muted-foreground) / 0.2)"
+                  strokeWidth="0.3"
+                />
+              );
+            })}
+
+            {/* Data polygon - translucent fill with distinct stroke */}
+            <motion.polygon
+              points={polygonPoints}
+              fill="hsl(var(--primary) / 0.2)"
+              stroke="hsl(var(--primary))"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.2 }}
+              style={{ transformOrigin: '50% 50%' }}
+            />
+
+            {/* Data points at each vertex with glow for high scores */}
+            {traits.map((trait, i) => {
+              const angle = (i * 60 - 90) * (Math.PI / 180);
+              const radius = (trait.score / 100) * maxRadius;
+              const x = centerX + radius * Math.cos(angle);
+              const y = centerY + radius * Math.sin(angle);
+              const isHigh = trait.score >= 70;
+              const isSelected = selectedTrait === trait.key;
+              
+              return (
+                <g key={`point-${trait.key}`}>
+                  {/* Glow effect for high scores */}
+                  {isHigh && (
+                    <motion.circle
+                      cx={x}
+                      cy={y}
+                      r="3"
+                      fill="hsl(var(--primary) / 0.4)"
+                      animate={{
+                        r: [3, 5, 3],
+                        opacity: [0.4, 0.7, 0.4],
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        delay: i * 0.2,
+                      }}
+                    />
+                  )}
+                  <motion.circle
+                    cx={x}
+                    cy={y}
+                    r={isSelected ? 3.5 : 2.5}
+                    fill="hsl(var(--primary))"
+                    stroke="hsl(var(--background))"
+                    strokeWidth="1"
                     initial={{ scale: 0 }}
-                    animate={{ 
-                      scale: isSelected ? 1.15 : 1,
-                      opacity: 1
-                    }}
-                    transition={{ 
-                      type: "spring", 
-                      stiffness: 300, 
-                      delay: index * 0.08 
-                    }}
-                    style={{ transformOrigin: `${pos.x}% ${pos.y}%` }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.3 + i * 0.05 }}
+                    className="cursor-pointer"
+                    onClick={() => setSelectedTrait(isSelected ? null : trait.key)}
                   />
+                </g>
+              );
+            })}
+
+            {/* Trait labels outside the hexagon */}
+            {traits.map((trait, i) => {
+              const pos = labelPositions[i];
+              const isSelected = selectedTrait === trait.key;
+              const isHigh = trait.score >= 70;
+              
+              return (
+                <g 
+                  key={`label-${trait.key}`} 
+                  className="cursor-pointer"
+                  onClick={() => setSelectedTrait(isSelected ? null : trait.key)}
+                >
                   <text
                     x={pos.x}
-                    y={pos.y + 0.5}
+                    y={pos.y}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    className="text-[4px] font-bold fill-foreground pointer-events-none"
+                    className={`text-[10px] font-medium pointer-events-none transition-colors ${
+                      isSelected 
+                        ? 'fill-primary' 
+                        : isHigh 
+                          ? 'fill-foreground' 
+                          : 'fill-muted-foreground'
+                    }`}
                   >
                     {trait.nameCn}
                   </text>
                   <text
                     x={pos.x}
-                    y={pos.y + 4.5}
+                    y={pos.y + 8}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    className="text-[3px] fill-muted-foreground pointer-events-none"
+                    className={`text-[8px] pointer-events-none ${
+                      isHigh ? 'fill-primary font-medium' : 'fill-muted-foreground'
+                    }`}
                   >
-                    {trait.score}
+                    {Math.round(trait.score)}
                   </text>
                 </g>
               );
             })}
-            
-            {primaryArchetype && (
-              <text
-                x="50"
-                y="50"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="text-[5px] font-medium fill-primary/60"
-              >
-                {primaryArchetype}
-              </text>
-            )}
           </svg>
-
-          {traits.map((trait, index) => {
-            const pos = HEX_POSITIONS[index];
-            const level = getScoreLevel(trait.score);
-            
-            if (level !== 'high') return null;
-            
-            return (
-              <motion.div
-                key={`glow-${trait.key}`}
-                className="absolute w-3 h-3 rounded-full bg-primary/30 blur-sm"
-                style={{ 
-                  left: `${pos.x}%`, 
-                  top: `${pos.y}%`,
-                  transform: 'translate(-50%, -50%)'
-                }}
-                animate={{
-                  scale: [1, 1.5, 1],
-                  opacity: [0.3, 0.6, 0.3],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  delay: index * 0.3,
-                }}
-              />
-            );
-          })}
         </div>
 
         <AnimatePresence mode="wait">
@@ -258,9 +320,21 @@ export default function HexResonanceBoard({ traitScores, primaryArchetype }: Hex
                 <span className="text-[10px] text-muted-foreground">{selectedTraitData.highLabel}</span>
               </div>
               <div className="text-center mt-2">
-                <span className="text-lg font-bold text-primary">{selectedTraitData.score}</span>
+                <span className="text-lg font-bold text-primary">{Math.round(selectedTraitData.score)}</span>
                 <span className="text-xs text-muted-foreground">/100</span>
               </div>
+            </motion.div>
+          ) : !hasAnyScores ? (
+            <motion.div
+              key="calibrating"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="mt-4 p-3 bg-muted/30 rounded-lg border border-dashed text-center"
+            >
+              <p className="text-xs text-muted-foreground">
+                这是你的初始特质分布，完成更多问题后会更精准
+              </p>
             </motion.div>
           ) : (
             <motion.p
@@ -270,7 +344,7 @@ export default function HexResonanceBoard({ traitScores, primaryArchetype }: Hex
               exit={{ opacity: 0 }}
               className="text-xs text-muted-foreground text-center mt-4"
             >
-              点击六边形查看特质详情
+              点击标签查看特质详情
             </motion.p>
           )}
         </AnimatePresence>
