@@ -192,7 +192,10 @@ function XiaoyueMascot({
         initial={{ opacity: 0, scale: 0.9, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.1 }}
-        className="relative bg-card border border-border rounded-2xl px-5 py-3 shadow-md max-w-[280px]"
+        className={cn(
+          "relative bg-card border border-border rounded-2xl px-5 py-3 shadow-md max-w-[280px]",
+          !message && "hidden"
+        )}
       >
         <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-card" />
         <div className="absolute -top-[9px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-border" />
@@ -347,10 +350,13 @@ export default function PersonalityTestPageV4() {
     if (isComplete && result) {
       clearV4PreSignupAnswers();
       setShowBlindBox(true);
+      // Invalidate multiple query keys to ensure result page is fresh
+      queryClient.invalidateQueries({ queryKey: ['/api/assessment/result'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/results'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/personality-test/stats'] });
       
       setTimeout(() => {
-        setLocation('/personality-test/complete');
+        setLocation('/personality-test/results');
       }, 2000);
     }
   }, [isComplete, result, setLocation]);
