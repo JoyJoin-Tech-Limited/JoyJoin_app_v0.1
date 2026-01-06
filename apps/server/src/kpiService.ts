@@ -254,62 +254,64 @@ export async function generateDailyKpiSnapshot(date: Date = new Date()): Promise
   const weekAgo = subDays(date, 7);
   const monthAgo = subDays(date, 30);
 
-  // 用户指标
-  const [totalUsersResult] = await db.select({ count: count() }).from(users);
-  const [newUsersTodayResult] = await db.select({ count: count() })
-    .from(users)
-    .where(and(
-      gte(users.createdAt, dayStart),
-      lte(users.createdAt, dayEnd)
-    ));
-
-  // 活动指标
-  const [totalEventsResult] = await db.select({ count: count() }).from(events);
-  const [newEventsTodayResult] = await db.select({ count: count() })
-    .from(blindBoxEvents)
-    .where(and(
-      gte(blindBoxEvents.createdAt, dayStart),
-      lte(blindBoxEvents.createdAt, dayEnd)
-    ));
-
-  // 反馈和满意度指标
-  const [feedbackCountResult] = await db.select({ count: count() })
-    .from(eventFeedback)
-    .where(and(
-      gte(eventFeedback.createdAt, monthAgo),
-      lte(eventFeedback.createdAt, dayEnd)
-    ));
-
-  const [avgAtmosphereResult] = await db.select({ avg: avg(eventFeedback.atmosphereScore) })
-    .from(eventFeedback)
-    .where(and(
-      gte(eventFeedback.createdAt, monthAgo),
-      lte(eventFeedback.createdAt, dayEnd)
-    ));
-
-  // 计算 CSAT 和 NPS
-  const csatScore = await calculateCSAT(monthAgo, dayEnd);
-  const npsScore = await calculateNPS(monthAgo, dayEnd);
-
-  // 流失用户统计
-  const [churnedUsersResult] = await db.select({ count: count() })
-    .from(userEngagementMetrics)
-    .where(eq(userEngagementMetrics.isChurned, true));
-
-  // 小悦聊天统计
-  const [xiaoyueChatResult] = await db.select({ count: count() })
-    .from(dialogueFeedback)
-    .where(and(
-      gte(dialogueFeedback.createdAt, monthAgo),
-      lte(dialogueFeedback.createdAt, dayEnd)
-    ));
-
-  const [avgXiaoyueRatingResult] = await db.select({ avg: avg(dialogueFeedback.overallRating) })
-    .from(dialogueFeedback)
-    .where(and(
-      gte(dialogueFeedback.createdAt, monthAgo),
-      lte(dialogueFeedback.createdAt, dayEnd)
-    ));
+  // Parallelize all database queries for better performance
+  const [
+    [totalUsersResult],
+    [newUsersTodayResult],
+    [totalEventsResult],
+    [newEventsTodayResult],
+    [feedbackCountResult],
+    [avgAtmosphereResult],
+    csatScore,
+    npsScore,
+    [churnedUsersResult],
+    [xiaoyueChatResult],
+    [avgXiaoyueRatingResult]
+  ] = await Promise.all([
+    db.select({ count: count() }).from(users),
+    db.select({ count: count() })
+      .from(users)
+      .where(and(
+        gte(users.createdAt, dayStart),
+        lte(users.createdAt, dayEnd)
+      )),
+    db.select({ count: count() }).from(events),
+    db.select({ count: count() })
+      .from(blindBoxEvents)
+      .where(and(
+        gte(blindBoxEvents.createdAt, dayStart),
+        lte(blindBoxEvents.createdAt, dayEnd)
+      )),
+    db.select({ count: count() })
+      .from(eventFeedback)
+      .where(and(
+        gte(eventFeedback.createdAt, monthAgo),
+        lte(eventFeedback.createdAt, dayEnd)
+      )),
+    db.select({ avg: avg(eventFeedback.atmosphereScore) })
+      .from(eventFeedback)
+      .where(and(
+        gte(eventFeedback.createdAt, monthAgo),
+        lte(eventFeedback.createdAt, dayEnd)
+      )),
+    calculateCSAT(monthAgo, dayEnd),
+    calculateNPS(monthAgo, dayEnd),
+    db.select({ count: count() })
+      .from(userEngagementMetrics)
+      .where(eq(userEngagementMetrics.isChurned, true)),
+    db.select({ count: count() })
+      .from(dialogueFeedback)
+      .where(and(
+        gte(dialogueFeedback.createdAt, monthAgo),
+        lte(dialogueFeedback.createdAt, dayEnd)
+      )),
+    db.select({ avg: avg(dialogueFeedback.overallRating) })
+      .from(dialogueFeedback)
+      .where(and(
+        gte(dialogueFeedback.createdAt, monthAgo),
+        lte(dialogueFeedback.createdAt, dayEnd)
+      ))
+  ]);
 
   // 检查是否已存在今日快照
   const existing = await db.query.kpiSnapshots.findFirst({

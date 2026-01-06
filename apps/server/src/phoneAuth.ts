@@ -183,7 +183,7 @@ export function setupPhoneAuth(app: Express) {
       }
       
       // 使用 Promise 包装 save，确保完成后再响应
-      req.session.save((err) => {
+      req.session.save(async (err) => {
         if (DEBUG_AUTH) {
           console.log("[LOGIN] after-save", {
             err: err ? String(err) : null,
@@ -200,17 +200,18 @@ export function setupPhoneAuth(app: Express) {
         console.log("🔐 [LOGIN] Session saved successfully! sessionID:", req.sessionID);
         
         // 获取完整的用户数据并返回
-        storage.getUserById(userId).then(user => {
+        try {
+          const user = await storage.getUserById(userId);
           console.log("🔐 [LOGIN] Sending response for user:", user?.id, "isAdmin:", user?.isAdmin);
           res.json({ 
             message: "Login successful",
             userId,
             ...user
           });
-        }).catch(err => {
+        } catch (err) {
           console.error("🔐 [LOGIN] Get user error:", err);
           res.status(500).json({ message: "Login failed" });
-        });
+        }
       });
     } catch (error) {
       console.error("Error during phone login:", error);

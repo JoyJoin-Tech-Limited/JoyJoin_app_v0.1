@@ -7629,13 +7629,14 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
           .where(eq(invitations.code, invitationCode));
       }
 
-      // Trigger realtime matching scan after registration
+      // Trigger realtime matching scan after registration (fire and forget with error handling)
       // Import at top: import { scanPoolAndMatch } from "./poolRealtimeMatchingService";
       const { scanPoolAndMatch } = await import("./poolRealtimeMatchingService");
       
       // Async trigger (don't block response)
       scanPoolAndMatch(poolId, "realtime", "user_registration").catch(err => {
         console.error(`[Realtime Matching] Scan failed after registration:`, err);
+        // Error logged, operation continues
       });
 
       res.json(registration);
@@ -8578,8 +8579,11 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         return res.status(400).json({ message: "userId1 and userId2 are required" });
       }
       
-      const user1 = await storage.getUserById(userId1);
-      const user2 = await storage.getUserById(userId2);
+      // Parallelize user fetching for better performance
+      const [user1, user2] = await Promise.all([
+        storage.getUserById(userId1),
+        storage.getUserById(userId2)
+      ]);
       
       if (!user1 || !user2) {
         return res.status(404).json({ message: "One or both users not found" });
