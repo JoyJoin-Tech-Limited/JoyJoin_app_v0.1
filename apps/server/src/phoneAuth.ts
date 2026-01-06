@@ -566,15 +566,24 @@ async function processReferralConversion(newUserId: string, referralCode: string
   const startTime = Date.now();
   const isProduction = process.env.NODE_ENV === 'production';
   
+  // Production logging configuration
+  const LOG_ID_TRUNCATE_LENGTH = 8;
+  const LOG_CODE_TRUNCATE_LENGTH = 3;
+  const LOG_STACK_LINES_PRODUCTION = 2;
+  
   // Helper to sanitize IDs for logging (truncate in production)
   const sanitizeId = (id: string) => {
     if (!id || typeof id !== 'string') return '[invalid]';
-    return isProduction && id.length > 8 ? `${id.slice(0, 8)}...` : id;
+    return isProduction && id.length > LOG_ID_TRUNCATE_LENGTH 
+      ? `${id.slice(0, LOG_ID_TRUNCATE_LENGTH)}...` 
+      : id;
   };
   
   const sanitizeCode = (code: string) => {
     if (!code || typeof code !== 'string') return '[invalid]';
-    return isProduction && code.length > 3 ? `${code.slice(0, 3)}***` : code;
+    return isProduction && code.length > LOG_CODE_TRUNCATE_LENGTH 
+      ? `${code.slice(0, LOG_CODE_TRUNCATE_LENGTH)}***` 
+      : code;
   };
   
   try {
@@ -677,9 +686,9 @@ async function processReferralConversion(newUserId: string, referralCode: string
   } catch (error: any) {
     const duration = Date.now() - startTime;
     
-    // Sanitize stack trace for production: show only first 2 lines (error + location)
+    // Sanitize stack trace for production: show only first N lines (error + location)
     const sanitizedStack = error.stack 
-      ? (isProduction ? error.stack.split('\n').slice(0, 2).join('\n') : error.stack)
+      ? (isProduction ? error.stack.split('\n').slice(0, LOG_STACK_LINES_PRODUCTION).join('\n') : error.stack)
       : 'No stack trace available';
     
     console.error('❌ [REFERRAL] Critical error processing conversion:', {
