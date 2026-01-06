@@ -339,6 +339,8 @@ export interface IStorage {
     topArchetypes: any;
     preSignupAnswers: any;
     finalResult: any;
+    primaryArchetype: string;
+    isDecisive: boolean;
     completedAt: Date;
     skipCount: number;
     skippedQuestionIds: string[];
@@ -3897,6 +3899,8 @@ export class DatabaseStorage implements IStorage {
     topArchetypes: any;
     preSignupAnswers: any;
     finalResult: any;
+    primaryArchetype: string;
+    isDecisive: boolean;
     completedAt: Date;
     skipCount: number;
     skippedQuestionIds: string[];

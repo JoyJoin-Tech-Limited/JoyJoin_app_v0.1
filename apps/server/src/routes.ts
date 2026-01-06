@@ -10138,6 +10138,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           traitConfidences: engineState.traitConfidences,
           topArchetypes: engineState.currentMatches,
           finalResult,
+          primaryArchetype: finalResult.primaryArchetype,
+          isDecisive: finalResult.isDecisive,
           completedAt: new Date(),
         });
         
