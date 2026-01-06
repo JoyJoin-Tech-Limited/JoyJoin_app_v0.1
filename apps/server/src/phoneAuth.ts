@@ -113,7 +113,7 @@ export function setupPhoneAuth(app: Express) {
   // 手机号登录
   app.post("/api/auth/phone-login", async (req, res) => {
     try {
-      const { phoneNumber, code } = req.body;
+      const { phoneNumber, code, referralCode } = req.body;
 
       if (!phoneNumber || !code) {
         return res.status(400).json({ message: "Phone number and code are required" });
@@ -146,6 +146,7 @@ export function setupPhoneAuth(app: Express) {
       // 查找或创建用户
       const users = await storage.getUserByPhone(phoneNumber);
       let userId: string;
+      let isNewUser = false;
 
       if (users.length > 0) {
         // 用户已存在
@@ -159,6 +160,7 @@ export function setupPhoneAuth(app: Express) {
           lastName: phoneNumber.slice(-4), // 使用手机号后4位
         });
         userId = newUser.id;
+        isNewUser = true;
         
         // 🎯 DEMO MODE: 为新用户创建演示数据
         // 如果使用的是演示验证码666666，只创建基础账号让用户测试注册流程
@@ -167,6 +169,11 @@ export function setupPhoneAuth(app: Express) {
         if (!isUsingDemoCode) {
           await createDemoDataForUser(userId);
         }
+      }
+      
+      // Process referral code only for new users
+      if (isNewUser && referralCode) {
+        await processReferralConversion(userId, referralCode);
       }
 
       // 设置session - Phase 4.1 DEBUG_AUTH logging
@@ -548,5 +555,57 @@ async function createDemoDataForUser(userId: string) {
     console.log('✅ Demo data created successfully for user:', userId);
   } catch (error) {
     console.error('❌ Failed to create demo data:', error);
+  }
+}
+
+// Process referral conversion when a new user registers via referral link
+async function processReferralConversion(newUserId: string, referralCode: string) {
+  try {
+    const { db } = await import("./db");
+    const { referralCodes, referralConversions } = await import("@shared/schema");
+    const { eq, sql } = await import("drizzle-orm");
+    
+    console.log(`🎁 Processing referral conversion for new user ${newUserId} with code ${referralCode}`);
+    
+    // Find the referral code
+    const [referral] = await db
+      .select()
+      .from(referralCodes)
+      .where(eq(referralCodes.code, referralCode))
+      .limit(1);
+    
+    if (!referral) {
+      console.warn(`⚠️ Referral code not found: ${referralCode}`);
+      return;
+    }
+    
+    // Check if this user has already been counted for this referral code
+    const [existingConversion] = await db
+      .select()
+      .from(referralConversions)
+      .where(eq(referralConversions.invitedUserId, newUserId))
+      .limit(1);
+    
+    if (existingConversion) {
+      console.log(`ℹ️ User ${newUserId} already has a referral conversion record`);
+      return;
+    }
+    
+    // Create the referral conversion record
+    await db.insert(referralConversions).values({
+      referralCodeId: referral.id,
+      invitedUserId: newUserId,
+      inviterRewardIssued: false,
+      inviteeRewardIssued: false,
+    });
+    
+    // Update the referral code statistics
+    await db.update(referralCodes)
+      .set({ totalConversions: sql`${referralCodes.totalConversions} + 1` })
+      .where(eq(referralCodes.id, referral.id));
+    
+    console.log(`✅ Referral conversion recorded: ${referralCode} -> ${newUserId}`);
+  } catch (error) {
+    console.error('❌ Failed to process referral conversion:', error);
   }
 }
