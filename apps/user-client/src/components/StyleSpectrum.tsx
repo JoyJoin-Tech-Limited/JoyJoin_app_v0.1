@@ -5,6 +5,7 @@ import { Sparkles, Star, Quote, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { archetypeAvatars } from "@/lib/archetypeAdapter";
 import TraitSpectrum from "@/components/TraitSpectrum";
+import { useRef } from "react";
 
 interface AdjacentStyle {
   archetype: string;
@@ -80,7 +81,6 @@ const ARCHETYPE_COLORS: Record<string, { bg: string; text: string; border: strin
   "隐身猫": { bg: "bg-gray-50 dark:bg-gray-950/30", text: "text-gray-800 dark:text-gray-200", border: "border-gray-200 dark:border-gray-800" }
 };
 
-// Trait labels for generating narratives
 const traitLabels: Record<string, string> = {
   A: '亲和力',
   O: '开放性',
@@ -90,13 +90,11 @@ const traitLabels: Record<string, string> = {
   P: '正能量',
 };
 
-// Generate trait-based narrative explanation
 function generateTraitNarrative(
   archetype: string,
   traitScores: Record<string, number | undefined>,
   adjacentStyles: AdjacentStyle[]
 ): string {
-  // Find top 2 traits
   const traits = Object.entries(traitScores)
     .filter(([_, score]) => score !== undefined)
     .map(([key, score]) => ({ key, score: score as number }))
@@ -120,6 +118,50 @@ function generateTraitNarrative(
   }
   
   return narrative + '。';
+}
+
+function UniqueTraitsCarousel({ traits }: { traits: { trait: string; description: string }[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  
+  return (
+    <div className="border-t pt-4">
+      <h4 className="text-sm font-medium flex items-center gap-2 mb-3 px-1">
+        <Star className="w-4 h-4 text-yellow-500" />
+        你的独特之处
+      </h4>
+      <div 
+        ref={scrollRef}
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-2 px-2 scrollbar-hide"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {traits.map((item, index) => (
+          <motion.div 
+            key={index}
+            className="flex-shrink-0 min-w-[16rem] max-w-[18rem] snap-center rounded-xl border border-border/60 bg-card/90 p-4 space-y-2"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 + index * 0.1 }}
+            data-testid={`unique-trait-${index}`}
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <span className="text-primary font-bold text-xs">{index + 1}</span>
+              </div>
+              <span className="font-semibold text-base">{item.trait}</span>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {item.description}
+            </p>
+          </motion.div>
+        ))}
+      </div>
+      {traits.length > 1 && (
+        <div className="flex justify-center mt-3">
+          <div className="h-1 w-12 rounded-full bg-muted/70" />
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function StyleSpectrum({
@@ -147,6 +189,8 @@ export default function StyleSpectrum({
     ? generateTraitNarrative(primary.archetype, traitScores, adjacentStyles)
     : null;
 
+  const showOrbitalSection = highScoreAdjacent.length > 0;
+
   return (
     <div className="space-y-4" data-testid="style-spectrum">
       <motion.div
@@ -169,14 +213,12 @@ export default function StyleSpectrum({
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Primary archetype reveal */}
             <motion.div 
               className="text-center py-4"
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
             >
-              {/* Avatar with subtle drop shadow - transparent PNG with fallback */}
               <div className="mb-3 flex justify-center">
                 <motion.div
                   className="relative"
@@ -208,7 +250,6 @@ export default function StyleSpectrum({
                 {primary.tagline}
               </p>
               
-              {/* Trait-based narrative instead of badges */}
               {traitNarrative && (
                 <motion.p 
                   className="text-sm text-muted-foreground mt-4 px-4 leading-relaxed"
@@ -220,7 +261,6 @@ export default function StyleSpectrum({
                 </motion.p>
               )}
               
-              {/* For decisive archetypes, show secondary influences as text since orbit is hidden */}
               {isDecisive && adjacentStyles.length > 0 && (
                 <motion.p 
                   className="text-xs text-muted-foreground/70 mt-2 px-4"
@@ -233,7 +273,6 @@ export default function StyleSpectrum({
               )}
             </motion.div>
 
-            {/* Epic description - archetype narrative */}
             {epicDescription && (
               <motion.div
                 className="px-2"
@@ -247,7 +286,6 @@ export default function StyleSpectrum({
               </motion.div>
             )}
 
-            {/* Style quote callout */}
             {styleQuote && (
               <motion.div 
                 className={cn(
@@ -266,185 +304,29 @@ export default function StyleSpectrum({
               </motion.div>
             )}
 
-            {/* Unique traits section */}
             {uniqueTraits && uniqueTraits.length > 0 && (
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
-                  <Star className="w-4 h-4 text-yellow-500" />
-                  你的独特之处
-                </h4>
-                <div className="grid gap-2">
-                  {uniqueTraits.map((item, index) => (
-                    <motion.div 
-                      key={index} 
-                      className="flex items-start gap-3 p-3 bg-background/50 rounded-lg"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.1 + index * 0.1 }}
-                      data-testid={`unique-trait-${index}`}
-                    >
-                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <span className="text-primary font-bold text-xs">{index + 1}</span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-sm">{item.trait}</span>
-                        <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
+              <UniqueTraitsCarousel traits={uniqueTraits} />
             )}
 
-            {/* Orbital visualization - always show with primary in center */}
-            <div className="border-t pt-4">
-              <div className="text-center mb-2">
-                <p className="text-xs text-muted-foreground">
-                  你的社交风格光谱
-                </p>
-              </div>
+            {counterIntuitiveInsight && (
+              <motion.div 
+                className="border-t pt-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                <div className="rounded-xl border border-primary/20 bg-primary/5 dark:bg-primary/10 p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium">你可能不知道的</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {counterIntuitiveInsight.text}
+                  </p>
+                </div>
+              </motion.div>
+            )}
 
-              <div className="relative w-full aspect-square max-w-[280px] mx-auto">
-                {/* Rotating dashed orbit ring */}
-                <motion.div
-                  className="absolute inset-6 rounded-full border-2 border-dashed border-muted-foreground/15"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
-                />
-
-                {/* Center - Primary archetype with score */}
-                <motion.div
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
-                >
-                  <motion.div
-                    className="flex flex-col items-center"
-                    animate={{ y: [0, -4, 0] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                  >
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl scale-125" />
-                      <div className={cn("relative rounded-full overflow-hidden", getImageSizeForScore(primary.score, true).container)}>
-                        {archetypeAvatars[primary.archetype] ? (
-                          <img 
-                            src={archetypeAvatars[primary.archetype]} 
-                            alt={primary.archetype}
-                            className={cn("object-cover drop-shadow-lg", getImageSizeForScore(primary.score, true).image)}
-                            data-testid="img-orbit-primary"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-primary/10 flex items-center justify-center">
-                            <Sparkles className="w-10 h-10 text-primary" />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-center mt-1">
-                      <div className="text-xs font-semibold text-foreground">
-                        {primary.archetype}
-                      </div>
-                      <div className="text-[10px] text-primary font-bold">
-                        {Math.round(primary.score)}%
-                      </div>
-                    </div>
-                  </motion.div>
-                </motion.div>
-
-                {/* Adjacent archetypes with score >= 70% orbiting */}
-                {highScoreAdjacent.map((adjacent, index) => {
-                  if (!adjacent || !adjacent.archetype) return null;
-                  
-                  const angles = getOrbitAngles(highScoreAdjacent.length);
-                  const angle = angles[index];
-                  const distance = 95;
-                  const radian = (angle * Math.PI) / 180;
-                  const x = Math.cos(radian) * distance;
-                  const y = Math.sin(radian) * distance;
-                  
-                  const sizeClass = getImageSizeForScore(adjacent.score, false);
-
-                  return (
-                    <motion.div
-                      key={adjacent.archetype}
-                      className="absolute top-1/2 left-1/2"
-                      initial={{ opacity: 0, scale: 0 }}
-                      animate={{ 
-                        opacity: 1, 
-                        scale: 1,
-                        x: x,
-                        y: y,
-                      }}
-                      transition={{ 
-                        type: "spring", 
-                        stiffness: 150, 
-                        delay: 0.3 + index * 0.15 
-                      }}
-                      style={{ 
-                        marginLeft: "-32px",
-                        marginTop: "-32px",
-                        zIndex: 10 + index
-                      }}
-                    >
-                      <motion.div
-                        animate={{ y: [0, -3, 0] }}
-                        transition={{ 
-                          duration: 2 + index * 0.5, 
-                          repeat: Infinity, 
-                          ease: "easeInOut" 
-                        }}
-                        className="flex flex-col items-center"
-                      >
-                        <div 
-                          className={cn(
-                            "flex items-center justify-center cursor-pointer hover:scale-110 transition-transform rounded-full overflow-hidden",
-                            sizeClass.container
-                          )}
-                          data-testid={`orbit-adjacent-${index}`}
-                        >
-                          {archetypeAvatars[adjacent.archetype] ? (
-                            <img 
-                              src={archetypeAvatars[adjacent.archetype]} 
-                              alt={adjacent.archetype}
-                              className={cn("object-cover drop-shadow-md", sizeClass.image)}
-                            />
-                          ) : (
-                            <div className={cn(
-                              "rounded-full border-2 flex items-center justify-center shadow-sm",
-                              sizeClass.container,
-                              ARCHETYPE_COLORS[adjacent.archetype]?.bg || "bg-muted",
-                              ARCHETYPE_COLORS[adjacent.archetype]?.border || "border-border"
-                            )}>
-                              <span className={cn(
-                                "text-xs font-bold",
-                                ARCHETYPE_COLORS[adjacent.archetype]?.text || "text-foreground"
-                              )}>{adjacent.archetype.slice(0, 2)}</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-center mt-1 px-2 py-0.5 rounded-full">
-                          <div className="text-[9px] font-medium text-foreground leading-none">
-                            {adjacent.archetype}
-                          </div>
-                          <div className="text-[8px] text-muted-foreground font-medium leading-tight">
-                            {Math.round(adjacent.score)}%
-                          </div>
-                        </div>
-                      </motion.div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-
-              {highScoreAdjacent.length > 0 && (
-                <p className="text-[10px] text-muted-foreground/60 text-center mt-2 italic">
-                  这不是"不准"，而是你的特质更丰富
-                </p>
-              )}
-            </div>
-
-            {/* Trait Spectrum - bipolar slider visualization */}
             {traitScores && (
               <div className="border-t pt-4">
                 <div className="text-center mb-3">
@@ -456,29 +338,148 @@ export default function StyleSpectrum({
               </div>
             )}
 
-            {/* Counter-intuitive insight section */}
-            {counterIntuitiveInsight && (
-              <motion.div 
-                className="border-t pt-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-              >
-                <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium flex items-center gap-2">
-                      <Eye className="w-4 h-4 text-primary" />
-                      你可能不知道的
-                    </span>
-                    <Badge variant="outline" className="text-xs">
-                      前{counterIntuitiveInsight.rarityPercentage}%
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {counterIntuitiveInsight.text}
+            {showOrbitalSection && (
+              <div className="border-t pt-4">
+                <div className="text-center mb-2">
+                  <p className="text-xs text-muted-foreground">
+                    你的社交风格光谱
                   </p>
                 </div>
-              </motion.div>
+
+                <div className="relative w-full aspect-square max-w-[240px] mx-auto">
+                  <motion.div
+                    className="absolute inset-6 rounded-full border-2 border-dashed border-muted-foreground/15"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+                  />
+
+                  <motion.div
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+                  >
+                    <motion.div
+                      className="flex flex-col items-center"
+                      animate={{ y: [0, -4, 0] }}
+                      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl scale-125" />
+                        <div className={cn("relative rounded-full overflow-hidden", getImageSizeForScore(primary.score, true).container)}>
+                          {archetypeAvatars[primary.archetype] ? (
+                            <img 
+                              src={archetypeAvatars[primary.archetype]} 
+                              alt={primary.archetype}
+                              className={cn("object-cover drop-shadow-lg", getImageSizeForScore(primary.score, true).image)}
+                              data-testid="img-orbit-primary"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                              <Sparkles className="w-10 h-10 text-primary" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-center mt-1">
+                        <div className="text-xs font-semibold text-foreground">
+                          {primary.archetype}
+                        </div>
+                        <div className="text-[10px] text-primary font-bold">
+                          {Math.round(primary.score)}%
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+
+                  {highScoreAdjacent.map((adjacent, index) => {
+                    if (!adjacent || !adjacent.archetype) return null;
+                    
+                    const angles = getOrbitAngles(highScoreAdjacent.length);
+                    const angle = angles[index];
+                    const distance = 85;
+                    const radian = (angle * Math.PI) / 180;
+                    const x = Math.cos(radian) * distance;
+                    const y = Math.sin(radian) * distance;
+                    
+                    const sizeClass = getImageSizeForScore(adjacent.score, false);
+
+                    return (
+                      <motion.div
+                        key={adjacent.archetype}
+                        className="absolute top-1/2 left-1/2"
+                        initial={{ opacity: 0, scale: 0 }}
+                        animate={{ 
+                          opacity: 1, 
+                          scale: 1,
+                          x: x,
+                          y: y,
+                        }}
+                        transition={{ 
+                          type: "spring", 
+                          stiffness: 150, 
+                          delay: 0.3 + index * 0.15 
+                        }}
+                        style={{ 
+                          marginLeft: "-32px",
+                          marginTop: "-32px",
+                          zIndex: 10 + index
+                        }}
+                      >
+                        <motion.div
+                          animate={{ y: [0, -3, 0] }}
+                          transition={{ 
+                            duration: 2 + index * 0.5, 
+                            repeat: Infinity, 
+                            ease: "easeInOut" 
+                          }}
+                          className="flex flex-col items-center"
+                        >
+                          <div 
+                            className={cn(
+                              "flex items-center justify-center cursor-pointer hover:scale-110 transition-transform rounded-full overflow-hidden",
+                              sizeClass.container
+                            )}
+                            data-testid={`orbit-adjacent-${index}`}
+                          >
+                            {archetypeAvatars[adjacent.archetype] ? (
+                              <img 
+                                src={archetypeAvatars[adjacent.archetype]} 
+                                alt={adjacent.archetype}
+                                className={cn("object-cover drop-shadow-md", sizeClass.image)}
+                              />
+                            ) : (
+                              <div className={cn(
+                                "rounded-full border-2 flex items-center justify-center shadow-sm",
+                                sizeClass.container,
+                                ARCHETYPE_COLORS[adjacent.archetype]?.bg || "bg-muted",
+                                ARCHETYPE_COLORS[adjacent.archetype]?.border || "border-border"
+                              )}>
+                                <span className={cn(
+                                  "text-xs font-bold",
+                                  ARCHETYPE_COLORS[adjacent.archetype]?.text || "text-foreground"
+                                )}>{adjacent.archetype.slice(0, 2)}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-center mt-1 px-2 py-0.5 rounded-full">
+                            <div className="text-[9px] font-medium text-foreground leading-none">
+                              {adjacent.archetype}
+                            </div>
+                            <div className="text-[8px] text-muted-foreground font-medium leading-tight">
+                              {Math.round(adjacent.score)}%
+                            </div>
+                          </div>
+                        </motion.div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+
+                <p className="text-[10px] text-muted-foreground/60 text-center mt-2 italic">
+                  这不是"不准"，而是你的特质更丰富
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>

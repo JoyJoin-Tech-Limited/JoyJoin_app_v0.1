@@ -14,12 +14,12 @@ function TraitSlider({ leftLabel, rightLabel, value, index }: TraitSliderProps) 
   
   return (
     <motion.div
-      className="grid grid-cols-[4rem_1fr_4rem] items-center gap-3"
+      className="grid grid-cols-[4.5rem_1fr_4.5rem] items-center gap-2"
       initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ 
         duration: 0.3, 
-        delay: prefersReducedMotion ? 0 : index * 0.1 
+        delay: prefersReducedMotion ? 0 : index * 0.08 
       }}
       data-testid={`trait-slider-${index}`}
     >
@@ -27,44 +27,26 @@ function TraitSlider({ leftLabel, rightLabel, value, index }: TraitSliderProps) 
         {leftLabel}
       </span>
       
-      <div className="relative h-2 bg-muted rounded-full overflow-visible">
+      <div className="relative h-1.5 bg-muted rounded-full overflow-visible">
         <motion.div
-          className="absolute left-0 top-0 h-full bg-primary/30 rounded-full"
-          initial={prefersReducedMotion ? { width: `${position}%` } : { width: "0%" }}
-          animate={{ width: `${position}%` }}
-          transition={{
-            type: "spring",
-            stiffness: 100,
-            damping: 15,
-            delay: prefersReducedMotion ? 0 : 0.2 + index * 0.1
-          }}
-        />
-        
-        <motion.div
-          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full shadow-md"
-          initial={prefersReducedMotion ? { left: `calc(${position}% - 8px)`, y: "-50%" } : { left: "calc(50% - 8px)", scale: 0, y: "-50%" }}
+          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-primary rounded-full shadow-[0_2px_6px_rgba(88,63,184,0.25)]"
+          initial={prefersReducedMotion ? { left: `calc(${position}% - 6px)`, y: "-50%" } : { left: "calc(50% - 6px)", scale: 0, y: "-50%" }}
           animate={{ 
-            left: `calc(${position}% - 8px)`,
+            left: `calc(${position}% - 6px)`,
             scale: 1,
-            y: prefersReducedMotion ? "-50%" : ["-50%", "-70%", "-50%", "-60%", "-50%"]
+            y: "-50%"
           }}
           transition={{
             left: {
               type: "spring",
               stiffness: 180,
               damping: 16,
-              delay: prefersReducedMotion ? 0 : 0.3 + index * 0.1
+              delay: prefersReducedMotion ? 0 : 0.2 + index * 0.08
             },
             scale: {
               type: "spring",
               stiffness: 200,
-              delay: prefersReducedMotion ? 0 : 0.3 + index * 0.1
-            },
-            y: {
-              duration: 0.6,
-              times: [0, 0.2, 0.4, 0.7, 1],
-              ease: "easeOut",
-              delay: prefersReducedMotion ? 0 : 0.5 + index * 0.1
+              delay: prefersReducedMotion ? 0 : 0.2 + index * 0.08
             }
           }}
         />
@@ -89,12 +71,12 @@ interface TraitSpectrumProps {
 }
 
 const TRAIT_BIPOLAR_LABELS: { key: string; left: string; right: string }[] = [
-  { key: "E", left: "焦虑", right: "淡定" },
-  { key: "X", left: "内敛", right: "外放" },
-  { key: "P", left: "务实", right: "乐观" },
-  { key: "A", left: "独立", right: "亲和" },
-  { key: "O", left: "务实", right: "开放" },
-  { key: "C", left: "随性", right: "严谨" },
+  { key: "E", left: "敏感易感", right: "淡定从容" },
+  { key: "X", left: "安静内敛", right: "活跃外放" },
+  { key: "P", left: "谨慎现实", right: "乐观积极" },
+  { key: "A", left: "保持距离", right: "热情亲近" },
+  { key: "O", left: "传统务实", right: "开放探索" },
+  { key: "C", left: "随性自由", right: "严谨自律" },
 ];
 
 export default function TraitSpectrum({ traitScores }: TraitSpectrumProps) {
