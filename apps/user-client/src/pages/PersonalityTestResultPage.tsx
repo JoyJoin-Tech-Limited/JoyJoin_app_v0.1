@@ -71,6 +71,128 @@ const traitLabels: Record<string, string> = {
   P: '正能量',
 };
 
+// Canonical archetype trait weights from matcherV2 PROTOTYPE_SOUL_TRAITS
+// primary: 1.6-1.8x weight, secondary: 1.2-1.3x, avoid: 0.4-0.8x (penalized)
+const ARCHETYPE_TRAIT_WEIGHTS: Record<string, { 
+  primary: Record<string, number>; 
+  secondary: Record<string, number>;
+  avoid: Record<string, number>; 
+}> = {
+  "定心大象": { primary: { E: 1.8 }, secondary: { C: 1.3, A: 1.2 }, avoid: { X: 0.7, O: 0.7 } },
+  "织网蛛": { primary: { C: 1.8 }, secondary: { E: 1.3, A: 1.2 }, avoid: { P: 0.7, X: 0.8 } },
+  "太阳鸡": { primary: { P: 1.8 }, secondary: { E: 1.3, C: 1.2, X: 1.2 }, avoid: { O: 0.6 } },
+  "夸夸豚": { primary: { A: 1.7, X: 1.6 }, secondary: { P: 1.3 }, avoid: { C: 0.7, O: 0.8 } },
+  "机智狐": { primary: { O: 1.8 }, secondary: { X: 1.3, P: 1.2 }, avoid: { A: 0.7, C: 0.7 } },
+  "暖心熊": { primary: { A: 1.8 }, secondary: { E: 1.3, P: 1.2 }, avoid: { O: 0.7, X: 0.4 } },
+  "稳如龟": { primary: { E: 1.8, C: 1.7 }, secondary: { A: 1.2 }, avoid: { X: 0.6, O: 0.6, P: 0.7 } },
+  "开心柯基": { primary: { X: 1.7, P: 1.6 }, secondary: { A: 1.3, E: 1.2 }, avoid: { C: 0.8, O: 0.8 } },
+  "沉思猫头鹰": { primary: { O: 1.8 }, secondary: { C: 1.3, E: 1.2 }, avoid: { X: 0.6, A: 0.7, P: 0.7 } },
+  "淡定海豚": { primary: { E: 1.7, O: 1.5 }, secondary: { A: 1.2 }, avoid: { X: 0.7, P: 0.6 } },
+  "隐身猫": { primary: { E: 1.6 }, secondary: { O: 1.2 }, avoid: { X: 0.6, A: 0.6 } },
+  "灵感章鱼": { primary: { O: 1.8 }, secondary: { P: 1.3, X: 1.2 }, avoid: { C: 0.6, E: 0.8 } },
+};
+
+// Find the key differentiating trait between two archetypes with matcher weight context
+function findDifferentiatingTrait(
+  primaryArchetype: string,
+  runnerUpArchetype: string,
+  userTraits: Record<string, number>
+): { trait: string; reason: string; weightContext: string } {
+  const primaryWeights = ARCHETYPE_TRAIT_WEIGHTS[primaryArchetype];
+  const runnerUpWeights = ARCHETYPE_TRAIT_WEIGHTS[runnerUpArchetype];
+  
+  // Default fallback - always return something
+  const fallbackTrait = Object.keys(primaryWeights?.primary || { A: 1.0 })[0] || 'A';
+  const fallbackScore = userTraits[fallbackTrait] || 50;
+  const fallback = {
+    trait: fallbackTrait,
+    reason: `你的${traitLabels[fallbackTrait]}得分（${Math.round(fallbackScore)}）与${primaryArchetype}的风格更匹配`,
+    weightContext: ''
+  };
+  
+  if (!primaryWeights || !runnerUpWeights) return fallback;
+  
+  // Case 1: Find a trait that primary values highly (1.6-1.8x) but runner-up avoids (0.4-0.8x)
+  for (const [trait, weight] of Object.entries(primaryWeights.primary)) {
+    const avoidWeight = runnerUpWeights.avoid[trait];
+    if (avoidWeight !== undefined) {
+      const score = userTraits[trait] || 50;
+      return {
+        trait,
+        reason: `${traitLabels[trait]}是${primaryArchetype}的核心特质（${weight}×权重），而${runnerUpArchetype}反而会回避这项（${avoidWeight}×）`,
+        weightContext: `你的${traitLabels[trait]}得分 ${Math.round(score)}，正好符合${primaryArchetype}的偏好`
+      };
+    }
+  }
+  
+  // Case 2: Find a trait that primary avoids but runner-up values
+  for (const [trait, avoidWeight] of Object.entries(primaryWeights.avoid)) {
+    const runnerPrimaryWeight = runnerUpWeights.primary[trait];
+    if (runnerPrimaryWeight !== undefined) {
+      const score = userTraits[trait] || 50;
+      const isLow = score < 55;
+      return {
+        trait,
+        reason: isLow 
+          ? `你的${traitLabels[trait]}偏低（${Math.round(score)}），${primaryArchetype}对此不敏感（${avoidWeight}×），但${runnerUpArchetype}需要高${traitLabels[trait]}（${runnerPrimaryWeight}×）`
+          : `${runnerUpArchetype}需要高${traitLabels[trait]}（${runnerPrimaryWeight}×），但${primaryArchetype}的特质组合更平衡`,
+        weightContext: `算法权重差异：${primaryArchetype}对${traitLabels[trait]}权重${avoidWeight}× vs ${runnerUpArchetype}的${runnerPrimaryWeight}×`
+      };
+    }
+  }
+  
+  // Case 3: Compare the largest weighted gap between archetypes
+  // Find the trait where primary vs runner-up weights differ most
+  let bestDiff = 0;
+  let bestTrait = '';
+  let primaryWeight = 0;
+  let runnerWeight = 0;
+  
+  // Check all traits for the biggest weight difference
+  const allTraits = ['A', 'O', 'C', 'E', 'X', 'P'];
+  for (const trait of allTraits) {
+    const pWeight = primaryWeights.primary[trait] || primaryWeights.secondary[trait] || 
+                    (primaryWeights.avoid[trait] ? primaryWeights.avoid[trait] : 1.0);
+    const rWeight = runnerUpWeights.primary[trait] || runnerUpWeights.secondary[trait] || 
+                    (runnerUpWeights.avoid[trait] ? runnerUpWeights.avoid[trait] : 1.0);
+    const diff = Math.abs(pWeight - rWeight);
+    if (diff > bestDiff) {
+      bestDiff = diff;
+      bestTrait = trait;
+      primaryWeight = pWeight;
+      runnerWeight = rWeight;
+    }
+  }
+  
+  if (bestTrait && bestDiff > 0.2) {
+    const score = userTraits[bestTrait] || 50;
+    const primaryHigher = primaryWeight > runnerWeight;
+    return {
+      trait: bestTrait,
+      reason: primaryHigher
+        ? `${primaryArchetype}对${traitLabels[bestTrait]}的偏好更强（${primaryWeight}×），而${runnerUpArchetype}只有${runnerWeight}×`
+        : `${runnerUpArchetype}对${traitLabels[bestTrait]}权重${runnerWeight}×，${primaryArchetype}则是${primaryWeight}×——你的分数（${Math.round(score)}）更适合后者`,
+      weightContext: `两个原型的${traitLabels[bestTrait]}权重差距最大（${primaryWeight}× vs ${runnerWeight}×）`
+    };
+  }
+  
+  // Absolute fallback: just use primary's top trait with explicit comparison
+  const primaryTraitEntry = Object.entries(primaryWeights.primary)[0];
+  if (primaryTraitEntry) {
+    const [trait, weight] = primaryTraitEntry;
+    const score = userTraits[trait] || 50;
+    const runnerWeightForTrait = runnerUpWeights.primary[trait] || runnerUpWeights.secondary[trait] || 
+                                  (runnerUpWeights.avoid[trait] ? runnerUpWeights.avoid[trait] : 1.0);
+    return {
+      trait,
+      reason: `${primaryArchetype}对${traitLabels[trait]}权重${weight}×，${runnerUpArchetype}的权重是${runnerWeightForTrait}×——你的得分（${Math.round(score)}）更贴合${primaryArchetype}`,
+      weightContext: `核心特质权重对比：${weight}× vs ${runnerWeightForTrait}×`
+    };
+  }
+  
+  return fallback;
+}
+
 function getFallbackAnalysis(archetype: string): string {
   const fallbacks: Record<string, string> = {
     "开心柯基": "开心柯基，能量满满的那种。你的正能量和亲和力都不低，这让你在聚会里很容易成为气氛组。不过别忘了，偶尔也给自己充充电。",
@@ -1063,12 +1185,12 @@ export default function PersonalityTestResultPage() {
                 </div>
               )}
 
-              {/* 为什么是你 - 亚军对比洞察 */}
+              {/* 为什么是你 - 亚军对比洞察 with trait divergence analysis */}
               {!result.isDecisive && result.chemistryList && result.chemistryList.length > 1 && (() => {
                 const runnerUp = result.chemistryList[1];
                 if (!runnerUp) return null;
                 
-                const traitScores = {
+                const userTraits = {
                   A: result.affinityScore,
                   O: result.opennessScore,
                   C: result.conscientiousnessScore,
@@ -1077,15 +1199,12 @@ export default function PersonalityTestResultPage() {
                   P: result.positivityScore,
                 };
                 
-                const sortedTraits = Object.entries(traitScores)
-                  .sort(([, a], [, b]) => b - a);
-                const highestTrait = sortedTraits[0];
-                const traitNames: Record<string, string> = {
-                  A: '亲和力', O: '开放性', C: '责任心', 
-                  E: '情绪稳定', X: '外向性', P: '正能量'
-                };
-                
                 const scoreDiff = result.chemistryList[0].percentage - runnerUp.percentage;
+                const differentiatingTrait = findDifferentiatingTrait(
+                  result.primaryRole,
+                  runnerUp.role,
+                  userTraits
+                );
                 
                 return (
                   <div className="p-4 bg-muted/30 rounded-lg border border-dashed" data-testid="why-you-section">
@@ -1093,13 +1212,20 @@ export default function PersonalityTestResultPage() {
                       <Zap className="w-4 h-4 text-primary" />
                       为什么是{result.primaryRole}？
                     </h4>
-                    <div className="space-y-2 text-sm text-muted-foreground">
+                    <div className="space-y-3 text-sm text-muted-foreground">
                       <p>
                         你和{runnerUp.role}只差 <span className="font-medium text-foreground">{scoreDiff.toFixed(1)}%</span>，
-                        但你的<span className="font-medium text-primary">{traitNames[highestTrait[0]]}</span>
-                        得分（{Math.round(highestTrait[1])}）更符合{result.primaryRole}的核心特质。
+                        分数很接近，但算法还是选了{result.primaryRole}。
                       </p>
-                      <div className="flex items-center gap-3 pt-2">
+                      <p className="text-foreground/80">
+                        <span className="font-medium text-primary">{differentiatingTrait.reason}</span>
+                      </p>
+                      {differentiatingTrait.weightContext && (
+                        <p className="text-xs text-muted-foreground/80 italic">
+                          {differentiatingTrait.weightContext}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-3 pt-1">
                         <div className="flex items-center gap-1.5">
                           <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${getArchetypeGradient(result.primaryRole)} flex items-center justify-center`}>
                             {archetypeAvatars[result.primaryRole] && (
