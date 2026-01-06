@@ -559,18 +559,26 @@ async function createDemoDataForUser(userId: string) {
 }
 
 // Process referral conversion when a new user registers via referral link
+// Note: This function is designed to be non-blocking. Registration should succeed
+// even if referral tracking fails. Any data inconsistencies in referral stats
+// should be detected and reconciled through periodic audit jobs.
 async function processReferralConversion(newUserId: string, referralCode: string) {
   const startTime = Date.now();
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  // Helper to sanitize IDs for logging (truncate in production)
+  const sanitizeId = (id: string) => isProduction ? `${id.slice(0, 8)}...` : id;
+  const sanitizeCode = (code: string) => isProduction ? `${code.slice(0, 3)}***` : code;
   
   try {
     // Input validation
     if (!newUserId || typeof newUserId !== 'string') {
-      console.error('❌ [REFERRAL] Invalid newUserId provided:', newUserId);
+      console.error('❌ [REFERRAL] Invalid newUserId provided');
       return;
     }
     
     if (!referralCode || typeof referralCode !== 'string') {
-      console.error('❌ [REFERRAL] Invalid referralCode provided:', referralCode);
+      console.error('❌ [REFERRAL] Invalid referralCode provided');
       return;
     }
     
@@ -578,7 +586,7 @@ async function processReferralConversion(newUserId: string, referralCode: string
     const { referralCodes, referralConversions } = await import("@shared/schema");
     const { eq, sql } = await import("drizzle-orm");
     
-    console.log(`🎁 [REFERRAL] Processing conversion for user ${newUserId} with code ${referralCode}`);
+    console.log(`🎁 [REFERRAL] Processing conversion for user ${sanitizeId(newUserId)} with code ${sanitizeCode(referralCode)}`);
     
     // Find the referral code with additional validation
     const [referral] = await db
@@ -588,15 +596,15 @@ async function processReferralConversion(newUserId: string, referralCode: string
       .limit(1);
     
     if (!referral) {
-      console.warn(`⚠️ [REFERRAL] Code not found: ${referralCode}`);
+      console.warn(`⚠️ [REFERRAL] Code not found: ${sanitizeCode(referralCode)}`);
       return;
     }
     
-    console.log(`✓ [REFERRAL] Found referral code ID ${referral.id} for user ${referral.userId}`);
+    console.log(`✓ [REFERRAL] Found referral code ID ${sanitizeId(referral.id)} for user ${sanitizeId(referral.userId)}`);
     
     // Prevent self-referral
     if (referral.userId === newUserId) {
-      console.warn(`⚠️ [REFERRAL] Self-referral attempt blocked: user ${newUserId}`);
+      console.warn(`⚠️ [REFERRAL] Self-referral attempt blocked: user ${sanitizeId(newUserId)}`);
       return;
     }
     
@@ -608,7 +616,7 @@ async function processReferralConversion(newUserId: string, referralCode: string
       .limit(1);
     
     if (existingConversion) {
-      console.log(`ℹ️ [REFERRAL] User ${newUserId} already has conversion record (ID: ${existingConversion.id})`);
+      console.log(`ℹ️ [REFERRAL] User ${sanitizeId(newUserId)} already has conversion record (ID: ${sanitizeId(existingConversion.id)})`);
       return;
     }
     
@@ -622,18 +630,21 @@ async function processReferralConversion(newUserId: string, referralCode: string
         inviteeRewardIssued: false,
       }).returning();
       
-      console.log(`✓ [REFERRAL] Conversion record created with ID ${conversionRecord.id}`);
+      console.log(`✓ [REFERRAL] Conversion record created with ID ${sanitizeId(conversionRecord.id)}`);
     } catch (insertError: any) {
       console.error('❌ [REFERRAL] Failed to insert conversion record:', {
         error: insertError.message,
         code: insertError.code,
-        referralCodeId: referral.id,
-        invitedUserId: newUserId,
+        referralCodeId: sanitizeId(referral.id),
+        invitedUserId: sanitizeId(newUserId),
       });
       throw insertError;
     }
     
     // Update the referral code statistics with error handling
+    // Note: If this fails, the conversion record still exists but stats are inconsistent.
+    // Reconciliation: Run periodic audit job to recalculate totalConversions from actual
+    // conversion records. See docs/referral-audit.md for implementation details.
     try {
       const [updatedReferral] = await db.update(referralCodes)
         .set({ totalConversions: sql`${referralCodes.totalConversions} + 1` })
@@ -641,27 +652,26 @@ async function processReferralConversion(newUserId: string, referralCode: string
         .returning();
       
       const newCount = updatedReferral?.totalConversions ?? 'unknown';
-      console.log(`✓ [REFERRAL] Updated conversion count to ${newCount} for code ${referralCode}`);
+      console.log(`✓ [REFERRAL] Updated conversion count to ${newCount} for code ${sanitizeCode(referralCode)}`);
     } catch (updateError: any) {
       console.error('❌ [REFERRAL] Failed to update referral code statistics:', {
         error: updateError.message,
         code: updateError.code,
-        referralId: referral.id,
-        referralCode: referralCode,
+        referralId: sanitizeId(referral.id),
+        referralCode: sanitizeCode(referralCode),
       });
       // Note: Conversion record was created, so we don't throw here
       // This allows the registration to continue even if stats update fails
+      // Stats inconsistency will be detected and fixed by audit job
     }
     
     const duration = Date.now() - startTime;
-    console.log(`✅ [REFERRAL] Conversion completed successfully in ${duration}ms: ${referralCode} -> ${newUserId}`);
+    console.log(`✅ [REFERRAL] Conversion completed successfully in ${duration}ms: ${sanitizeCode(referralCode)} -> ${sanitizeId(newUserId)}`);
   } catch (error: any) {
     const duration = Date.now() - startTime;
     console.error('❌ [REFERRAL] Critical error processing conversion:', {
       error: error.message,
-      stack: error.stack,
-      newUserId,
-      referralCode,
+      stack: isProduction ? undefined : error.stack, // Don't log stack traces in production
       duration: `${duration}ms`,
     });
     // Don't throw - we want registration to succeed even if referral tracking fails

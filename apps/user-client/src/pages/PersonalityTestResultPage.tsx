@@ -605,11 +605,9 @@ export default function PersonalityTestResultPage() {
     onSuccess: async () => {
       console.log('✅ [PERSONALITY-TEST] Test completed, invalidating user query');
       
-      // Invalidate and wait for refetch to complete
+      // Invalidate and refetch to ensure user data is updated before navigation
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      
-      // Add a small delay to ensure the query has refetched
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       
       console.log('✅ [PERSONALITY-TEST] Navigating to /onboarding/setup');
       setLocation('/onboarding/setup');
