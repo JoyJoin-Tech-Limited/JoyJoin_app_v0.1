@@ -519,17 +519,22 @@ export async function generateGroupAnalysis(
   
   // Try to load from cache first (with roster validation)
   if (useCache) {
-    const cachedExplanations = await loadCachedPairExplanations(groupId, members);
-    const cachedIceBreakers = await loadCachedIceBreakers(groupId, members, eventType);
+    // Parallelize cache loading for better performance
+    const [cachedExplanations, cachedIceBreakers] = await Promise.all([
+      loadCachedPairExplanations(groupId, members),
+      loadCachedIceBreakers(groupId, members, eventType)
+    ]);
     
     if (cachedExplanations && cachedIceBreakers) {
       console.log(`[MatchExplanation] Using cached data for group ${groupId}`);
       pairExplanations = cachedExplanations;
       iceBreakers = cachedIceBreakers;
     } else {
-      // Cache miss, expired, or roster changed - regenerate
-      pairExplanations = await generateFreshPairExplanations(members);
-      iceBreakers = await generateIceBreakers(members, eventType);
+      // Cache miss, expired, or roster changed - regenerate in parallel
+      [pairExplanations, iceBreakers] = await Promise.all([
+        generateFreshPairExplanations(members),
+        generateIceBreakers(members, eventType)
+      ]);
       
       // Save to cache with roster metadata (fire and forget with error handling)
       savePairExplanationsCache(groupId, members, pairExplanations).catch((err) => {
@@ -540,9 +545,11 @@ export async function generateGroupAnalysis(
       });
     }
   } else {
-    // No cache requested - generate fresh
-    pairExplanations = await generateFreshPairExplanations(members);
-    iceBreakers = await generateIceBreakers(members, eventType);
+    // No cache requested - generate fresh in parallel
+    [pairExplanations, iceBreakers] = await Promise.all([
+      generateFreshPairExplanations(members),
+      generateIceBreakers(members, eventType)
+    ]);
   }
   
   // 计算整体化学反应
