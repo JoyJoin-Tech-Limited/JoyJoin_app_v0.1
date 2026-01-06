@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, Sparkles, PartyPopper, ArrowRight, Mail, Eye, EyeOff, Loader2 } from "lucide-react";
-import { SiApple } from "react-icons/si";
+import { SiWechat } from "react-icons/si";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -218,7 +218,7 @@ function OnboardingProgress({
   displayRange?: string;
 }) {
   return (
-    <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
+    <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3 safe-top">
       <div className="flex items-center gap-3">
         {showBack && onBack && (
           <Button 
@@ -237,11 +237,36 @@ function OnboardingProgress({
             className="h-2 transition-all duration-500" 
           />
           <div className="flex justify-between mt-1">
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground font-medium">
               第{Math.floor(current)}题 / 约{displayRange || "12-16"}题
+            </span>
+            <span className="text-xs font-bold text-primary">
+              {Math.round(progress)}%
             </span>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * MobileActionBar component for sticky bottom buttons on mobile
+ */
+function MobileActionBar({ 
+  children, 
+  className 
+}: { 
+  children: React.ReactNode; 
+  className?: string;
+}) {
+  return (
+    <div className={cn(
+      "sticky bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] transition-all duration-300",
+      className
+    )}>
+      <div className="max-w-md mx-auto w-full">
+        {children}
       </div>
     </div>
   );
@@ -408,6 +433,7 @@ export default function DuolingoOnboardingPage() {
   const [currentScreen, setCurrentScreen] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [justAuthenticated, setJustAuthenticated] = useState(false);
   
   const [phone, setPhone] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
@@ -435,10 +461,10 @@ export default function DuolingoOnboardingPage() {
 
   useEffect(() => {
     const cached = loadCachedProgress();
-    if (cached && cached.currentScreen > 0) {
+    if (cached && cached.currentScreen > 0 && !justAuthenticated) {
       setShowResumePrompt(true);
     }
-  }, []);
+  }, [justAuthenticated]);
 
   useEffect(() => {
     if (currentScreen > 0) {
@@ -526,6 +552,7 @@ export default function DuolingoOnboardingPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setJustAuthenticated(true);
       handleNext();
     },
     onError: (error: Error) => {
@@ -851,7 +878,7 @@ export default function DuolingoOnboardingPage() {
               />
             </div>
             
-            <div className="flex-1 flex flex-col justify-center py-2">
+            <div className="flex-1 flex flex-col justify-center py-2 overflow-y-auto">
               <SelectionList
                 options={optionsForList}
                 selected={currentAnswer}
@@ -864,7 +891,7 @@ export default function DuolingoOnboardingPage() {
               />
             </div>
 
-            <div className="py-3 mt-auto">
+            <MobileActionBar>
               <Button 
                 size="lg"
                 className="w-full h-14 text-lg rounded-2xl"
@@ -874,7 +901,7 @@ export default function DuolingoOnboardingPage() {
               >
                 继续
               </Button>
-            </div>
+            </MobileActionBar>
           </motion.div>
         );
 
@@ -920,8 +947,8 @@ export default function DuolingoOnboardingPage() {
                 onClick={() => window.location.href = "/api/login"}
                 data-testid="button-replit-auth"
               >
-                <SiApple className="w-5 h-5 mr-2" />
-                其他方式登录
+                <SiWechat className="w-5 h-5 mr-2 text-[#07C160]" />
+                微信一键登录
               </Button>
             </div>
 
