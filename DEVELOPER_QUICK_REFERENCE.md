@@ -1,86 +1,514 @@
 # JoyJoin Developer Quick Reference Guide
 
-**Version:** 1.1  
-**Last Updated:** November 20, 2025  
+**Version:** 2.0  
+**Last Updated:** January 2026  
 **For:** Tech Team Onboarding & Codebase Navigation
 
 ---
 
-## 🎯 Quick Start
+## Quick Start
 
-### Database Migration (REQUIRED)
+### Prerequisites
 ```bash
-# Run this FIRST after pulling latest changes
+# Ensure Node.js 20+ is installed
+node --version
+
+# Install dependencies
+npm install
+
+# Push database schema (REQUIRED after pulling changes)
 npm run db:push
 ```
-
-**Why:** New columns added to `eventPoolGroups` table (`energyBalance`, `temperatureLevel`)
 
 ### Development Server
 ```bash
 npm run dev
-# Runs on port 5000 - both frontend and backend
+# Runs on port 5000 - serves both frontend and backend
+```
+
+### Key Commands
+```bash
+npm run db:push          # Sync Drizzle schema to database
+npm run db:push --force  # Force sync (use when db:push fails)
+npm run db:studio        # Open Drizzle Studio (database GUI)
 ```
 
 ---
 
-## 📂 Codebase Structure
+## Monorepo Structure
 
 ```
-joyjoin/
-├── client/src/               # Frontend (React + TypeScript)
-│   ├── pages/                # Page components
-│   │   ├── admin/            # Admin portal pages
-│   │   └── *.tsx             # User-facing pages
-│   └── components/           # Reusable UI components
+joyjoin-monorepo/
+├── apps/
+│   ├── user-client/          # User-facing React app (mobile-first)
+│   │   ├── src/
+│   │   │   ├── pages/        # Page components (40+ pages)
+│   │   │   ├── components/   # Reusable UI components (90+ components)
+│   │   │   ├── hooks/        # Custom React hooks
+│   │   │   ├── lib/          # Utilities (queryClient, etc.)
+│   │   │   ├── data/         # Static data files
+│   │   │   └── App.tsx       # Main app with routing
+│   │   └── index.html
+│   │
+│   ├── admin-client/         # Admin portal React app (desktop-first)
+│   │   ├── src/
+│   │   │   ├── pages/admin/  # Admin-specific pages
+│   │   │   ├── components/   # Admin UI components
+│   │   │   └── AdminApp.tsx  # Admin app entry
+│   │   └── index.html
+│   │
+│   └── server/               # Express.js backend
+│       └── src/
+│           ├── routes.ts             # API endpoints (5000+ lines)
+│           ├── storage.ts            # Database storage interface
+│           ├── db.ts                 # Drizzle database connection
+│           ├── index.ts              # Server entry point
+│           ├── wsService.ts          # WebSocket service
+│           ├── poolMatchingService.ts       # Group matching logic
+│           ├── poolRealtimeMatchingService.ts  # Auto-matching scheduler
+│           ├── archetypeChemistry.ts        # Chemistry calculations
+│           ├── matchExplanationService.ts   # AI match explanations
+│           ├── xiaoyueAnalysisService.ts    # AI personality analysis
+│           ├── icebreakerAIService.ts       # AI conversation topics
+│           └── ...                          # Other services
 │
-├── server/                   # Backend (Express + TypeScript)
-│   ├── routes.ts             # API endpoints (3400+ lines)
-│   ├── *Service.ts           # Business logic services
-│   ├── db.ts                 # Database connection
-│   └── index.ts              # Server entry point
+├── packages/
+│   └── shared/               # Shared types, schemas, personality system
+│       └── src/
+│           ├── schema.ts             # Drizzle ORM database schema
+│           ├── wsEvents.ts           # WebSocket event interfaces
+│           ├── constants.ts          # Shared constants
+│           ├── districts.ts          # Location data (南山区, 福田区)
+│           ├── gamification.ts       # XP/Level system
+│           └── personality/          # Personality assessment system
+│               ├── matcherV2.ts          # MatcherV2 algorithm
+│               ├── questionsV4.ts        # V4 adaptive questions (130+)
+│               ├── adaptiveEngine.ts     # Question selection engine
+│               ├── archetypeRegistry.ts  # 12 archetype definitions
+│               ├── archetypeCompatibility.ts  # Chemistry matrix
+│               ├── types.ts              # Type definitions
+│               └── feedback.ts           # Feedback templates
 │
-└── shared/                   # Shared types & schemas
-    ├── schema.ts             # Drizzle ORM database schema
-    └── wsEvents.ts           # WebSocket event interfaces
+├── migrations/               # Drizzle database migrations
+├── scripts/                  # Utility scripts
+├── docs/                     # Documentation
+└── shared/                   # Legacy shared folder (deprecated, use packages/shared)
 ```
 
 ---
 
-## 🔥 Feature 1: Temperature Concept System
+## User Journey & Authentication Flow
 
-**What:** Dual-temperature visualization for match quality (Social Energy + Chemistry Reaction)
+### Authentication States
 
-### Files to Know
-
-| File | Purpose | Key Functions |
-|------|---------|---------------|
-| `server/archetypeChemistry.ts` | Core temperature logic | `ARCHETYPE_ENERGY` (energy mappings)<br>`calculateEnergyBalance()` (group energy calculation)<br>`getTemperatureLevel()` (emoji mapping)<br>`generateGroupExplanation()` (user-facing text) |
-| `server/poolMatchingService.ts` | Integration into matching | `formOptimalGroups()` - uses energy balance in scoring<br>`saveMatchResults()` - stores energy & temperature to DB |
-| `shared/schema.ts` | Database schema | `eventPoolGroups.energyBalance` (integer)<br>`eventPoolGroups.temperatureLevel` (varchar) |
-| `shared/wsEvents.ts` | WebSocket interface | `PoolMatchedData.temperatureLevel` (string) |
-| `client/src/pages/admin/AdminMatchingLogsPage.tsx` | Admin UI | `getTemperatureEmoji()` helper<br>Displays emoji next to avg score |
-| `client/src/pages/EventsPage.tsx` | User notifications | Toast displays temperature emoji |
-
-### Algorithm Formula (UPDATED)
+The app uses progressive authentication with 4 distinct states:
 
 ```typescript
-// OLD (Flawed): 70/30 split with diversity counted twice
-overallScore = avgPairScore × 0.7 + groupDiversity × 0.3
-
-// NEW (Corrected): 60/25/15 split
-overallScore = avgPairScore × 0.6 + groupDiversity × 0.25 + energyBalance × 0.15
+// From useAuth hook
+interface AuthState {
+  isAuthenticated: boolean;      // Has valid session
+  needsRegistration: boolean;    // Phone verified, no profile
+  needsPersonalityTest: boolean; // Profile exists, no test results
+  needsProfileSetup: boolean;    // Test done, profile incomplete
+}
 ```
 
-### Energy Levels Reference
+### Complete User Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         UNAUTHENTICATED                             │
+├─────────────────────────────────────────────────────────────────────┤
+│  /login              → LoginPage (SMS verification)                 │
+│  /registration       → ChatRegistrationPage (AI chat onboarding)   │
+│  /register           → ChatRegistrationPage                         │
+│  /invite/:code       → InviteLandingRouter (public invite links)   │
+│  /icebreaker-demo    → IcebreakerDemoPage (public demo)            │
+│  /admin/login        → AdminLoginPage                               │
+│  *                   → Redirects to LoginPage                       │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼ (After SMS verification)
+┌─────────────────────────────────────────────────────────────────────┐
+│                      needsRegistration = true                       │
+├─────────────────────────────────────────────────────────────────────┤
+│  /onboarding         → DuolingoOnboardingPage (9-screen flow)      │
+│  /personality-test   → PersonalityTestPageV4                        │
+│  /personality-test/complete → PersonalityTestResultPage             │
+│  *                   → Redirects to /onboarding                     │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼ (After onboarding complete)
+┌─────────────────────────────────────────────────────────────────────┐
+│                    needsPersonalityTest = true                      │
+├─────────────────────────────────────────────────────────────────────┤
+│  /personality-test   → PersonalityTestPageV4 (V4 adaptive)          │
+│  /personality-test/complete → PersonalityTestResultPage             │
+│  *                   → Redirects to /personality-test               │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼ (After test complete)
+┌─────────────────────────────────────────────────────────────────────┐
+│                     needsProfileSetup = true                        │
+├─────────────────────────────────────────────────────────────────────┤
+│  /onboarding/setup   → EssentialDataPage (name, gender, etc.)      │
+│  /onboarding/extended → ExtendedDataPage (work, education)         │
+│  /personality-test/results → PersonalityTestResultPage (viewable)  │
+│  *                   → Redirects to /onboarding/setup               │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼ (After profile complete)
+┌─────────────────────────────────────────────────────────────────────┐
+│                      FULLY AUTHENTICATED                            │
+├─────────────────────────────────────────────────────────────────────┤
+│  See "Main App Routes" section below                                │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Main App Routes (Fully Authenticated)
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/` | DiscoverPage | Home - event pool discovery |
+| `/discover` | DiscoverPage | Same as home |
+| `/events` | EventsPage | My events (pending/matched/completed tabs) |
+| `/chats` | ChatsPage | Chat list |
+| `/chats/:eventId` | EventChatDetailPage | Group chat |
+| `/direct-chat/:threadId` | DirectChatPage | 1-on-1 chat |
+| `/profile` | ProfilePage | User profile |
+| `/rewards` | RewardsPage | XP, levels, coupons |
+| `/invite` | InvitePage | Invite friends |
+
+### Event Flow Routes
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/event-pool/:id/register` | EventPoolRegistrationPage | Register for blind box event |
+| `/pool-groups/:groupId` | PoolGroupDetailPage | View matched group details |
+| `/blind-box-events/:eventId` | BlindBoxEventDetailPage | Event details |
+| `/blindbox/payment` | BlindBoxPaymentPage | Payment flow |
+| `/blindbox/confirmation` | BlindBoxConfirmationPage | Payment confirmation |
+| `/events/:eventId/feedback` | EventFeedbackFlow | Post-event feedback |
+| `/events/:eventId/deep-feedback` | DeepFeedbackFlow | Anonymous deep feedback |
+| `/icebreaker/:sessionId` | IcebreakerSessionPage | Icebreaker games |
+
+### Profile Edit Routes
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/profile/edit` | EditProfilePage | Profile edit hub |
+| `/profile/edit/basic` | EditBasicInfoPage | Name, avatar |
+| `/profile/edit/education` | EditEducationPage | Education info |
+| `/profile/edit/work` | EditWorkPage | Work info |
+| `/profile/edit/personal` | EditPersonalPage | Personal details |
+| `/profile/edit/intent` | EditIntentPage | Social intentions |
+| `/profile/edit/interests` | EditInterestsPage | Interests/hobbies |
+| `/profile/edit/social` | EditSocialPage | Social preferences |
+
+### Admin Routes
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/admin` | AdminDashboard | Admin home |
+| `/admin/users` | AdminUsersPage | User management |
+| `/admin/event-pools` | AdminEventPoolsPage | Create/manage event pools |
+| `/admin/events` | AdminEventsPage | Event management |
+| `/admin/matching` | AdminMatchingLabPage | Real-time matching lab |
+| `/admin/matching-config` | AdminMatchingConfigPage | Threshold tuning |
+| `/admin/matching-logs` | AdminMatchingLogsPage | Match history |
+| `/admin/feedback` | AdminFeedbackPage | User feedback |
+| `/admin/subscriptions` | AdminSubscriptionsPage | Subscription management |
+| `/admin/coupons` | AdminCouponsPage | Coupon management |
+| `/admin/venues` | AdminVenuesPage | Venue partners |
+| `/admin/evolution` | AdminEvolutionPage | AI evolution dashboard |
+
+---
+
+## 12-Archetype Animal Social Vibe System
+
+### Overview
+
+JoyJoin uses 12 unique Chinese social archetypes based on the ACOEXP 6-trait model:
+
+| Trait | Chinese | Description | Range |
+|-------|---------|-------------|-------|
+| A | 亲和力 (Affinity) | Warmth, cooperation, trust | 0-100 |
+| C | 责任心 (Conscientiousness) | Organization, reliability | 0-100 |
+| O | 开放性 (Openness) | Creativity, curiosity | 0-100 |
+| E | 情绪稳定 (Emotional Stability) | Calm under pressure | 0-100 |
+| X | 外向性 (Extraversion) | Social energy, talkative | 0-100 |
+| P | 积极性 (Positivity) | Optimism, enthusiasm | 0-100 |
+
+### The 12 Archetypes
+
+| Archetype | Nickname | Key Traits | Energy |
+|-----------|----------|------------|--------|
+| **开心柯基** | 摇尾点火官 | X:95, P:85 | 95 (Very High) |
+| **太阳鸡** | 咯咯小太阳 | P:92, E:88 | 90 (Very High) |
+| **夸夸豚** | 彩虹播撒机 | A:85, P:88 | 88 (High) |
+| **机智狐** | 场域操控师 | O:82, X:75 | 78 (High) |
+| **灵感章鱼** | 创意万花筒 | O:95, A:68 | 65 (Medium) |
+| **暖心熊** | 温柔守护者 | A:92, E:85 | 55 (Medium) |
+| **淡定海豚** | 和谐调频员 | E:90, A:75 | 52 (Medium) |
+| **织网蛛** | 人脉编织机 | C:80, A:72 | 48 (Medium) |
+| **沉思猫头鹰** | 智慧瞭望塔 | O:88, C:82 | 42 (Low) |
+| **定心大象** | 沉稳压舱石 | E:92, C:85 | 38 (Low) |
+| **隐身猫** | 安静观察者 | E:78, C:72 | 28 (Very Low) |
+| **稳如龟** | 踏实推进器 | C:88, E:85 | 25 (Very Low) |
+
+### Cohort Categories
+
+Archetypes are grouped into cohorts for question targeting:
 
 ```typescript
-High Energy (80-95):    社交蝴蝶 (95), 活动策划者 (90), 幽默大师 (85)
-Medium Energy (45-60):  知识分享者 (60), 创意思考者 (55), 倾听者 (50)
-Low Energy (25-40):     深度对话者 (40), 观察者 (30), 独立思考者 (25)
+type CohortType = 
+  | 'creative_explorer'     // 灵感章鱼, 机智狐, 沉思猫头鹰 (high O)
+  | 'quiet_anchor'          // 隐身猫, 稳如龟, 定心大象 (low X + high C)
+  | 'social_catalyst'       // 开心柯基, 太阳鸡, 夸夸豚 (high X + high P)
+  | 'steady_harmonizer'     // 暖心熊, 淡定海豚, 织网蛛 (high A + mid-high E)
+  | 'reflective_stabilizer' // 沉思猫头鹰, 稳如龟 (high C + differentiated O/E)
+  | 'universal';            // Works for all cohorts
 ```
 
-### Temperature Thresholds
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `packages/shared/src/personality/archetypeRegistry.ts` | Single source of truth for all archetype data |
+| `packages/shared/src/personality/archetypeCompatibility.ts` | Chemistry matrix between archetypes |
+| `apps/user-client/src/components/StyleSpectrum.tsx` | Archetype result visualization |
+| `apps/user-client/src/components/TraitSpectrum.tsx` | Bipolar trait slider display |
+
+---
+
+## MatcherV2 Algorithm
+
+### Overview
+
+MatcherV2 is the personality matching algorithm that assigns users to archetypes based on their trait scores.
+
+### Scoring Formula
+
+```typescript
+// Final score calculation (0-100 range)
+finalScore = (
+  baseScore * 0.35 +           // Euclidean distance to archetype profile
+  bonusPoints * 0.25 +         // Bonus for matching key traits
+  vetoAdjustment * 0.20 +      // Penalty for mismatched traits
+  disambiguationBonus * 0.20   // Bonus for confusable pair differentiation
+);
+```
+
+### VETO System
+
+Critical trait thresholds that can disqualify an archetype:
+
+```typescript
+// Example VETO rules for 暖心熊
+"暖心熊": (traits) => {
+  if (traits.A < 65) return { vetoed: true, reason: "A<65: 亲和力过低" };
+  if (traits.X > 75) return { vetoed: true, reason: "X>75: 外向性过高" };
+  return { vetoed: false };
+}
+```
+
+### Disambiguation Rules
+
+Handle confusable archetype pairs:
+
+```typescript
+const DISAMBIGUATION_RULES = [
+  {
+    trueArchetype: "沉思猫头鹰",
+    rivalArchetype: "稳如龟",
+    condition: (t) => t.O >= 70,  // High openness → Owl
+    bonusMultiplier: 1.15
+  },
+  // ... more rules
+];
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `packages/shared/src/personality/matcherV2.ts` | Main matching algorithm |
+| `packages/shared/src/personality/prototypes.ts` | Archetype trait profiles |
+| `packages/shared/src/personality/traitCorrection.ts` | Score calibration |
+
+---
+
+## V4 Adaptive Personality Assessment
+
+### Overview
+
+The V4 assessment dynamically selects 8-16 questions based on real-time confidence levels.
+
+### Question Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Phase 1: Anchor Questions (Q1-Q8)                              │
+│  - Core trait coverage                                           │
+│  - Establish baseline scores                                     │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Phase 2: Adaptive Questions (Q9-Q12+)                          │
+│  - Based on current archetype predictions                        │
+│  - Target confusable pairs                                       │
+│  - Stop when confidence threshold reached                        │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Phase 3: Differentiation Questions (if needed)                 │
+│  - Forced-choice tradeoff questions                              │
+│  - Target top confusion pairs                                    │
+│  - Maximum 16 questions total                                    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Assessment Configuration
+
+```typescript
+const DEFAULT_ASSESSMENT_CONFIG = {
+  minQuestions: 10,
+  softMaxQuestions: 12,
+  hardMaxQuestions: 16,
+  defaultConfidenceThreshold: 0.65,
+  confusablePairThreshold: 0.70,
+  anchorQuestionCount: 8,
+  useV2Matcher: true,  // Use MatcherV2 algorithm
+};
+```
+
+### Question Types
+
+| Type | Count | Purpose |
+|------|-------|---------|
+| Anchor | 8 | Core trait measurement |
+| Adaptive | Variable | Target weak confidence areas |
+| Forced-Choice | 6 | Tradeoff between competing traits |
+| Differentiation | 16 | Target specific archetype confusion pairs |
+| Attention Check | 2 | Validity verification |
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `packages/shared/src/personality/questionsV4.ts` | 130+ question bank |
+| `packages/shared/src/personality/adaptiveEngine.ts` | Question selection logic |
+| `packages/shared/src/personality/types.ts` | Type definitions |
+| `apps/user-client/src/pages/PersonalityTestPageV4.tsx` | Test UI |
+| `apps/user-client/src/pages/PersonalityTestResultPage.tsx` | Results display |
+
+---
+
+## Key UI Components
+
+### StyleSpectrum
+
+Displays archetype results with orbital visualization.
+
+```typescript
+interface StyleSpectrumProps {
+  primary: string;                    // Primary archetype name
+  adjacentStyles: Array<{
+    archetype: string;
+    score: number;
+  }>;
+  spectrumPosition: number;           // 0-100 position on spectrum
+  isDecisive?: boolean;               // High confidence match
+  traitScores?: TraitScores;          // ACOEXP scores
+  uniqueTraits?: string[];            // Archetype-specific traits
+  epicDescription?: string;           // Long narrative description
+  styleQuote?: string;                // Archetype quote
+  counterIntuitiveInsight?: {         // Hidden insight
+    text: string;
+    rarityPercentage: number;
+  };
+}
+```
+
+**Location:** `apps/user-client/src/components/StyleSpectrum.tsx`
+
+### TraitSpectrum
+
+Bipolar trait slider visualization with animated dots.
+
+```typescript
+interface TraitSpectrumProps {
+  traitScores: {
+    A?: number;  // Affinity
+    O?: number;  // Openness
+    C?: number;  // Conscientiousness
+    E?: number;  // Emotional Stability
+    X?: number;  // Extraversion
+    P?: number;  // Positivity
+  };
+}
+```
+
+**Location:** `apps/user-client/src/components/TraitSpectrum.tsx`
+
+### XiaoyueChatBubble
+
+AI mascot chat bubble with multiple poses.
+
+```typescript
+interface XiaoyueChatBubbleProps {
+  content: string;           // Message content
+  pose?: 'default' | 'thinking' | 'casual' | 'excited';
+  isLoading?: boolean;       // Show loading state
+  loadingText?: string;      // Loading message
+  animate?: boolean;         // Enable animations
+}
+```
+
+**Location:** `apps/user-client/src/components/XiaoyueChatBubble.tsx`
+
+### Other Important Components
+
+| Component | Purpose |
+|-----------|---------|
+| `BlindBoxEventCard.tsx` | Event pool discovery cards |
+| `PoolRegistrationCard.tsx` | Registration status display |
+| `ProfileSpotlight.tsx` | Tablemate profile drawer |
+| `JoyOrbit.tsx` | Full-screen group member orbital |
+| `ConversationTopicsCard.tsx` | AI-generated icebreakers |
+| `MatchCelebrationOverlay.tsx` | Match reveal animation |
+
+---
+
+## Event Pool Matching System
+
+### Two-Stage Model
+
+```
+Stage 1: Pool Registration
+├── User discovers event pool on DiscoverPage
+├── Submits soft preferences (budget, cuisine, social goals)
+└── Status: "pending"
+
+Stage 2: AI Matching
+├── Scheduler scans pool periodically
+├── Forms optimal groups based on chemistry
+├── Assigns venue and time
+└── Status: "matched"
+```
+
+### Matching Algorithm Formula
+
+```typescript
+overallScore = 
+  avgPairScore × 0.60 +      // Average pairwise compatibility
+  groupDiversity × 0.25 +    // Archetype diversity bonus
+  energyBalance × 0.15;      // Energy level balance
+```
+
+### Temperature Levels
 
 ```typescript
 🔥 炽热 (Fire):   score ≥ 85  // Exceptional compatibility
@@ -89,744 +517,202 @@ Low Energy (25-40):     深度对话者 (40), 观察者 (30), 独立思考者 (2
 ❄️ 冷淡 (Cold):   score < 55  // Low compatibility
 ```
 
-### Debugging Tips
-- Check `ARCHETYPE_ENERGY` constant for energy value mappings
-- Verify `calculateEnergyBalance()` logic if groups feel unbalanced
-- Monitor `eventPoolGroups` table for stored energy/temperature values
-- Admin Matching Logs page shows temperature emoji for visual verification
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `apps/server/src/poolMatchingService.ts` | Group formation logic |
+| `apps/server/src/poolRealtimeMatchingService.ts` | Auto-matching scheduler |
+| `apps/server/src/archetypeChemistry.ts` | Chemistry calculations |
+| `packages/shared/src/personality/archetypeCompatibility.ts` | Compatibility matrix |
 
 ---
 
-## 🔧 Feature 2: Matching Algorithm Fix (Diversity Double-Counting)
+## WebSocket Events
 
-**What:** Removed critical bug where diversity was counted twice in scoring
-
-### Files Modified
-
-| File | Change | Impact |
-|------|--------|--------|
-| `server/archetypeChemistry.ts` | Removed diversity from `calculatePairScore()` | Pair score now pure compatibility (chemistry + interest + preference + language) |
-| `server/poolMatchingService.ts` | Updated `formOptimalGroups()` formula | Changed from 70/30 to 60/25/15 weighting |
-
-### What Changed
-
-**Old Logic (FLAWED):**
-```typescript
-// calculatePairScore() included 10% diversity
-pairScore = chemistry × 0.4 + interest × 0.3 + preference × 0.2 + diversity × 0.1
-
-// Then diversity counted AGAIN at group level
-overallScore = avgPairScore × 0.7 + groupDiversity × 0.3
-// Result: Diversity weighted at ~37% total! 😱
-```
-
-**New Logic (CORRECTED):**
-```typescript
-// Pair Compatibility Score - 100% pure compatibility (NO diversity)
-pairScore = chemistry × 0.375 + interest × 0.3125 + preference × 0.25 + language × 0.1875
-
-// Diversity only counted ONCE at group level
-overallScore = avgPairScore × 0.6 + groupDiversity × 0.25 + energyBalance × 0.15
-```
-
-### Variable Renames for Clarity
-
-| Old Name | New Name | Reason |
-|----------|----------|--------|
-| `avgChemistry` | `avgPairScore` | More accurate - it's average of all pair compatibility scores |
-| `calculateGroupChemistry()` | `calculateGroupPairScore()` | Clarifies it's calculating pairwise compatibility |
-
-### Testing Impact
-- Groups should now have better balance between similarity (60%) and diversity (25%)
-- Energy balance (15%) prevents extreme energy groups
-- Monitor feedback: Are users happier with matches?
-
----
-
-## ⚡ Feature 3: Real-time Dynamic Matching System
-
-**What:** Automated continuous matching with adaptive thresholds (no manual admin intervention)
-
-### Files to Know
-
-| File | Purpose | Key Functions |
-|------|---------|---------------|
-| `server/poolRealtimeMatchingService.ts` | Core matching engine | `scanAllPools()` - Main scheduler function<br>`scanPoolForMatching()` - Single pool scan<br>`calculateTimeDecayThreshold()` - Adaptive thresholds<br>`logMatchingDecision()` - Audit trail |
-| `server/poolMatchingService.ts` | Group formation logic | `matchEventPool()` - Creates optimal groups<br>`saveMatchResults()` - Persists to database |
-| `shared/schema.ts` | Database tables | `matchingThresholds` - Configurable parameters<br>`poolMatchingLogs` - Decision history |
-| `client/src/pages/admin/AdminMatchingConfigPage.tsx` | Admin configuration UI | Threshold tuning interface |
-| `client/src/pages/admin/AdminMatchingLogsPage.tsx` | Decision history viewer | Visualizes scan results |
-| `server/routes.ts` | API endpoints | `GET /api/admin/matching-thresholds`<br>`PUT /api/admin/matching-thresholds/:poolId`<br>`POST /api/admin/trigger-matching/:poolId`<br>`GET /api/admin/matching-logs` |
-
-### Three-Tier Threshold System
+### Event Types
 
 ```typescript
-const DEFAULT_THRESHOLDS = {
-  highQualityThreshold: 85,    // Instant match (exceptional compatibility)
-  mediumQualityThreshold: 70,  // Wait for better options
-  lowQualityThreshold: 55,     // Wait until deadline
-  // < 55: Reject (insufficient compatibility)
-};
+type WebSocketEventType = 
+  | 'POOL_MATCHED'           // User matched to group
+  | 'EVENT_STATUS_CHANGED'   // Event status update
+  | 'NEW_MESSAGE'            // Chat message received
+  | 'TYPING_INDICATOR'       // User typing in chat
+  | 'PAYMENT_STATUS';        // Payment confirmation
 ```
 
-### Time Decay Algorithm
+### POOL_MATCHED Payload
 
 ```typescript
-function calculateTimeDecayThreshold(hoursUntilEvent, baseThreshold) {
-  if (hoursUntilEvent > 72) return baseThreshold;         // Full threshold
-  if (hoursUntilEvent > 48) return baseThreshold - 5;     // -5 points
-  if (hoursUntilEvent > 24) return baseThreshold - 10;    // -10 points
-  if (hoursUntilEvent > 12) return baseThreshold - 15;    // -15 points
-  return Math.max(50, baseThreshold - 20);                // -20 points (min 50)
-}
-```
-
-**Why:** Ensures users get matched even as deadline approaches (prevents last-minute unmatched users)
-
-### Matching Triggers
-
-1. **Instant Scan:** When user registers for event pool → `scanPoolForMatching(poolId)`
-2. **Hourly Scan:** Cron job every 60 minutes → `scanAllPools()`
-3. **Final 24h Scan:** Every 30 minutes in last 24 hours
-4. **Manual Trigger:** Admin clicks "Trigger Matching" → API call
-
-### Database Tables
-
-**matchingThresholds:**
-```sql
-CREATE TABLE matching_thresholds (
-  pool_id VARCHAR PRIMARY KEY REFERENCES event_pools(id),
-  high_quality_threshold INTEGER DEFAULT 85,
-  medium_quality_threshold INTEGER DEFAULT 70,
-  low_quality_threshold INTEGER DEFAULT 55,
-  updated_at TIMESTAMP
-);
-```
-
-**poolMatchingLogs:**
-```sql
-CREATE TABLE pool_matching_logs (
-  id VARCHAR PRIMARY KEY,
-  pool_id VARCHAR REFERENCES event_pools(id),
-  scan_type VARCHAR,                  -- "realtime" | "scheduled" | "manual"
-  pending_users_count INTEGER,
-  current_threshold INTEGER,
-  time_until_event INTEGER,
-  groups_formed INTEGER,
-  users_matched INTEGER,
-  avg_group_score INTEGER,
-  decision VARCHAR,                   -- "matched" | "waiting" | "insufficient"
-  reason TEXT,
-  triggered_by VARCHAR,               -- "user_registration" | "cron_job" | "admin_manual"
-  created_at TIMESTAMP
-);
-```
-
-### Debugging Tips
-- Check `poolMatchingLogs` table for decision history
-- Monitor `scanType` to see trigger source
-- Review `reason` field for why matching succeeded/failed
-- Admin Matching Logs page shows visual history
-- Use Admin Matching Config to tune thresholds per pool
-
----
-
-## 🎁 Feature 4: Invitation & Viral Growth System
-
-**What:** Auto-issue ¥50 INVITE_REWARD coupon when invited users match together
-
-### Files to Know
-
-| File | Purpose | Key Logic |
-|------|---------|-----------|
-| `server/poolMatchingService.ts` | Auto-coupon issuance | `saveMatchResults()` - Checks invitation relationships<br>Issues coupon to inviter when invitees match |
-| `shared/schema.ts` | Database tables | `invitations` - Tracks who invited whom<br>`invitation_uses` - Tracks coupon rewards<br>`user_coupons` - Coupon assignments |
-| Frontend UI components | Badge display | Purple "已邀请 [name]" for inviters<br>Blue "[name] 邀请的" for invitees |
-
-### Invitation Flow
-
-```typescript
-// 1. User A invites User B (creates invitation record)
-INSERT INTO invitations (inviter_id, invitee_id, invitation_code);
-
-// 2. User B registers using invitation code
-UPDATE invitations SET status = 'accepted' WHERE invitation_code = code;
-
-// 3. User B gets matched in an event pool
-// saveMatchResults() checks: "Is User B an invitee?"
-const invitation = await db.select().from(invitations)
-  .where(and(
-    eq(invitations.inviteeId, userB.id),
-    eq(invitations.status, 'accepted')
-  ));
-
-// 4. If yes, issue ¥50 coupon to User A (inviter)
-INSERT INTO user_coupons (user_id, coupon_type, amount, source)
-VALUES (invitationRecord.inviterId, 'INVITE_REWARD', 50, 'invitation_reward');
-
-// 5. Log the reward
-INSERT INTO invitation_uses (invitation_id, event_pool_id, rewarded_at);
-```
-
-### Database Tables
-
-**invitations:**
-```sql
-CREATE TABLE invitations (
-  id VARCHAR PRIMARY KEY,
-  inviter_id VARCHAR REFERENCES users(id),
-  invitee_id VARCHAR REFERENCES users(id),
-  invitation_code VARCHAR UNIQUE,
-  status VARCHAR,  -- "pending" | "accepted" | "expired"
-  created_at TIMESTAMP
-);
-```
-
-**invitation_uses:**
-```sql
-CREATE TABLE invitation_uses (
-  id VARCHAR PRIMARY KEY,
-  invitation_id VARCHAR REFERENCES invitations(id),
-  event_pool_id VARCHAR REFERENCES event_pools(id),
-  rewarded_at TIMESTAMP
-);
-```
-
-**user_coupons:**
-```sql
-CREATE TABLE user_coupons (
-  id VARCHAR PRIMARY KEY,
-  user_id VARCHAR REFERENCES users(id),
-  coupon_type VARCHAR,
-  amount INTEGER,
-  source VARCHAR,  -- "invitation_reward" | "admin_grant" | etc.
-  status VARCHAR,  -- "available" | "used" | "expired"
-  created_at TIMESTAMP
-);
-```
-
-### Debugging Tips
-- Check `invitation_uses` table to see if coupons were issued
-- Verify `invitations.status = 'accepted'` before expecting rewards
-- Monitor `user_coupons` for coupon assignments
-- Test with 2 test users: one invites, one accepts and gets matched
-
----
-
-## 🎭 Feature 5: Event Pool User Flow
-
-**What:** Complete two-stage matching model UI (users register for pools with soft preferences)
-
-### Files to Know
-
-| File | Purpose | Key Components |
-|------|---------|----------------|
-| `client/src/pages/DiscoverPage.tsx` | Event pool discovery | Fetches `/api/event-pools`<br>Displays blind box event cards |
-| `client/src/pages/EventPoolRegistrationPage.tsx` | User registration | Soft preference selection form<br>Budget, cuisine, social goals, dietary restrictions |
-| `client/src/pages/EventsPage.tsx` | Registration status | Displays pool registrations alongside events<br>Status-based filtering (pending/matched/completed) |
-| `client/src/components/PoolRegistrationCard.tsx` | Status display card | Shows registration status and match scores |
-| `client/src/components/BlindBoxEventCard.tsx` | Event pool card | Navigates to registration page on click |
-| `server/routes.ts` | API endpoints | `GET /api/event-pools` - List active pools<br>`POST /api/event-pools/:id/register` - Register with preferences |
-| `shared/schema.ts` | Database tables | `eventPools` - Admin-created pools<br>`eventPoolRegistrations` - User signups + preferences<br>`eventPoolGroups` - Matched groups |
-
-### User Journey
-
-```
-DiscoverPage 
-  ↓ (Click blind box event)
-EventPoolRegistrationPage 
-  ↓ (Submit preferences)
-EventsPage → "待匹配" tab
-  ↓ (Matching happens in background)
-EventsPage → "已匹配" tab (auto-switch via WebSocket)
-  ↓
-PoolRegistrationCard shows match score & temperature
-```
-
-### Registration Preferences (Soft Constraints)
-
-```typescript
-interface EventPoolRegistration {
-  userId: string;
-  poolId: string;
-  
-  // Soft preferences (used in matching algorithm)
-  budgetRange: string[];          // ["50-100", "100-200"]
-  languages: string[];            // ["粤语", "英语", "普通话"]
-  socialGoals: string[];          // ["认识新朋友", "扩展人脉", "深度交流"]
-  cuisinePreferences: string[];   // ["粤菜", "西餐", "日料"]
-  dietaryRestrictions: string[];  // ["素食", "清真", "无"]
-  tasteIntensity: string;         // "清淡" | "适中" | "重口味"
-  
-  status: string;                 // "pending" | "matched" | "completed" | "cancelled"
-  matchedGroupId: string | null;
-  matchScore: number | null;
-}
-```
-
-### Database Tables
-
-**eventPools:**
-```sql
-CREATE TABLE event_pools (
-  id VARCHAR PRIMARY KEY,
-  title VARCHAR,
-  description TEXT,
-  event_type VARCHAR,
-  event_date_time TIMESTAMP,
-  location VARCHAR,
-  
-  -- Hard constraints (admin-set)
-  gender_restrictions VARCHAR[],
-  industry_restrictions VARCHAR[],
-  seniority_restrictions VARCHAR[],
-  education_level_restrictions VARCHAR[],
-  
-  status VARCHAR,  -- "active" | "matching" | "completed" | "cancelled"
-  created_at TIMESTAMP
-);
-```
-
-**eventPoolRegistrations:**
-```sql
-CREATE TABLE event_pool_registrations (
-  id VARCHAR PRIMARY KEY,
-  user_id VARCHAR REFERENCES users(id),
-  pool_id VARCHAR REFERENCES event_pools(id),
-  
-  -- Soft preferences
-  budget_range VARCHAR[],
-  languages VARCHAR[],
-  social_goals VARCHAR[],
-  cuisine_preferences VARCHAR[],
-  dietary_restrictions VARCHAR[],
-  taste_intensity VARCHAR,
-  
-  status VARCHAR,
-  matched_group_id VARCHAR REFERENCES event_pool_groups(id),
-  match_score INTEGER,
-  created_at TIMESTAMP
-);
-```
-
-**eventPoolGroups:**
-```sql
-CREATE TABLE event_pool_groups (
-  id VARCHAR PRIMARY KEY,
-  pool_id VARCHAR REFERENCES event_pools(id),
-  group_number INTEGER,
-  
-  -- Scoring
-  avg_pair_score INTEGER,
-  diversity_score INTEGER,
-  energy_balance INTEGER,        -- NEW in v1.1
-  overall_score INTEGER,
-  temperature_level VARCHAR,     -- NEW in v1.1
-  
-  explanation TEXT,
-  created_at TIMESTAMP
-);
-```
-
-### API Endpoints
-
-```typescript
-// List active event pools
-GET /api/event-pools
-Response: EventPool[]
-
-// Register for event pool
-POST /api/event-pools/:poolId/register
-Body: {
-  budgetRange: string[],
-  languages: string[],
-  socialGoals: string[],
-  cuisinePreferences: string[],
-  dietaryRestrictions: string[],
-  tasteIntensity: string
-}
-Response: { registrationId: string }
-
-// Get user's pool registrations
-GET /api/event-pool-registrations
-Response: EventPoolRegistration[]
-```
-
-### Debugging Tips
-- Check `/api/event-pools` endpoint returns active pools
-- Verify `eventPools.status = 'active'` for discoverable pools
-- Monitor `eventPoolRegistrations` table for user signups
-- Check `EventsPage` properly filters by status (pending/matched/completed)
-- WebSocket `POOL_MATCHED` event should trigger auto-switch to "已匹配" tab
-
----
-
-## 🔔 Feature 6: WebSocket Real-time Notifications
-
-**What:** Instant user notifications when matched (POOL_MATCHED event)
-
-### Files to Know
-
-| File | Purpose | Key Logic |
-|------|---------|-----------|
-| `server/poolMatchingService.ts` | Broadcasts match event | `saveMatchResults()` calls `wsService.broadcastToUser()`<br>Sends `POOL_MATCHED` event to all matched users |
-| `shared/wsEvents.ts` | Event interface | `PoolMatchedData` interface with all match details |
-| `client/src/pages/EventsPage.tsx` | Event subscription | Subscribes to `POOL_MATCHED` via WebSocket<br>Displays toast notification<br>Invalidates cache + auto-switches to "已匹配" tab |
-| `server/wsService.ts` | WebSocket server | Manages connections and broadcasts |
-
-### WebSocket Event Flow
-
-```typescript
-// 1. Admin completes matching (or auto-matching triggers)
-await matchEventPool(poolId);
-
-// 2. Backend saves results and broadcasts
-for (const userId of matchedUserIds) {
-  wsService.broadcastToUser(userId, {
-    type: 'POOL_MATCHED',
-    data: {
-      poolId: pool.id,
-      poolTitle: pool.title,
-      groupId: group.id,
-      groupNumber: group.groupNumber,
-      matchScore: group.overallScore,
-      memberCount: group.members.length,
-      temperatureLevel: group.temperatureLevel  // NEW in v1.1
-    }
-  });
-}
-
-// 3. Frontend receives event
-useEffect(() => {
-  const ws = new WebSocket('/ws');
-  ws.onmessage = (event) => {
-    const message = JSON.parse(event.data);
-    if (message.type === 'POOL_MATCHED') {
-      // Show toast notification
-      toast({
-        title: "🎉 匹配成功！",
-        description: `${message.data.temperatureLevel} · 小组 ${message.data.groupNumber} · 匹配度 ${message.data.matchScore}分`
-      });
-      
-      // Invalidate cache
-      queryClient.invalidateQueries(['/api/event-pool-registrations']);
-      
-      // Auto-switch to matched tab
-      setActiveTab('matched');
-    }
-  };
-}, []);
-```
-
-### WebSocket Event Interface
-
-```typescript
-// shared/wsEvents.ts
-export interface PoolMatchedData {
+interface PoolMatchedData {
   poolId: string;
   poolTitle: string;
   groupId: string;
   groupNumber: number;
   matchScore: number;
   memberCount: number;
-  temperatureLevel: string;  // "🔥 炽热", "🌡️ 温暖", etc. (NEW in v1.1)
-}
-
-export interface WebSocketMessage {
-  type: 'POOL_MATCHED' | 'EVENT_STATUS_CHANGED' | ...;
-  data: PoolMatchedData | ...;
+  temperatureLevel: string;  // "🔥 炽热", "🌡️ 温暖", etc.
 }
 ```
 
-### Debugging Tips
-- Check WebSocket connection in browser DevTools (Network tab → WS)
-- Monitor `ws.readyState` to verify connection status
-- Log `ws.onmessage` events to see incoming messages
-- Verify `wsService.broadcastToUser()` is called in `saveMatchResults()`
-- Check toast notifications appear when `POOL_MATCHED` received
-- Confirm cache invalidation triggers re-fetch of registrations
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `packages/shared/src/wsEvents.ts` | Event type definitions |
+| `apps/server/src/wsService.ts` | WebSocket server |
+| `apps/user-client/src/hooks/useWebSocket.ts` | Client hook |
 
 ---
 
-## 🔍 Feature 7: Event Pool Discovery Fix
+## Database Schema
 
-**What:** Fixed `/api/event-pools` endpoint to display admin-created blind box events
+### Key Tables
 
-### Files Modified
+| Table | Purpose |
+|-------|---------|
+| `users` | User profiles and authentication |
+| `personalityTestResults` | Test scores and archetype |
+| `eventPools` | Admin-created event pools |
+| `eventPoolRegistrations` | User pool signups with preferences |
+| `eventPoolGroups` | Matched groups |
+| `events` | Confirmed events |
+| `eventAttendees` | Event participants |
+| `chatMessages` | Group and direct messages |
+| `invitations` | Referral tracking |
+| `userCoupons` | Discount coupons |
+| `subscriptions` | Premium subscriptions |
+| `matchingThresholds` | Per-pool matching config |
+| `poolMatchingLogs` | Matching decision history |
 
-| File | Change | Impact |
-|------|--------|--------|
-| `server/routes.ts` | Fixed `/api/event-pools` endpoint | Now returns active pools correctly |
-| `shared/schema.ts` | Schema synchronization | Added missing columns: `description`, `eventType`, `educationLevelRestrictions` |
-| `client/src/pages/DiscoverPage.tsx` | Data fetching | Successfully fetches and displays event pools |
+### Schema Location
 
-### What Was Broken
+`packages/shared/src/schema.ts`
 
-**Before:**
-- `/api/event-pools` returned empty array even with active pools
-- Status was inconsistent (`published` vs `recruiting` vs `active`)
-- Missing required columns in database schema
+### Database Commands
 
-**After:**
-- Unified status to `active` for all discoverable pools
-- Schema synchronized with all required fields
-- DiscoverPage successfully displays event pools
-
-### Database Schema Sync
-
-```sql
--- Ensure these columns exist
-ALTER TABLE event_pools 
-ADD COLUMN IF NOT EXISTS description TEXT,
-ADD COLUMN IF NOT EXISTS event_type VARCHAR,
-ADD COLUMN IF NOT EXISTS education_level_restrictions VARCHAR[];
-
--- Unified status values
-UPDATE event_pools SET status = 'active' WHERE status IN ('published', 'recruiting');
+```bash
+npm run db:push        # Sync schema to database
+npm run db:push --force # Force sync (destructive)
+npm run db:studio      # Open Drizzle Studio GUI
 ```
 
-### API Endpoint
+---
+
+## AI Services
+
+### DeepSeek Integration
+
+| Service | Purpose |
+|---------|---------|
+| `xiaoyueAnalysisService.ts` | Personality analysis |
+| `matchExplanationService.ts` | Match explanations |
+| `icebreakerAIService.ts` | Conversation topics |
+| `conversationTopicsService.ts` | Group icebreakers |
+
+### Rate Limiting
+
+All AI endpoints are rate-limited and auth-gated to prevent abuse.
+
+---
+
+## Environment Variables
+
+### Required Secrets
+
+| Variable | Purpose |
+|----------|---------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `SESSION_SECRET` | Express session encryption |
+| `AMAP_API_KEY` | Gaode Maps API |
+| `AMAP_SECURITY_KEY` | Gaode Maps security |
+| `DEEPSEEK_API_KEY` | AI service (via integration) |
+
+### Auto-Populated (via Replit)
+
+| Variable | Purpose |
+|----------|---------|
+| `REPL_ID` | Replit instance ID |
+| `REPLIT_DB_URL` | Replit KV store |
+
+---
+
+## Common Debugging Tips
+
+### Frontend Issues
+
+1. **Component not updating:** Check TanStack Query cache invalidation
+2. **Route not working:** Verify auth state in `useAuth` hook
+3. **Styles broken:** Check Tailwind class conflicts, dark mode variants
+
+### Backend Issues
+
+1. **API returning 401:** Check session middleware, auth state
+2. **Database errors:** Run `npm run db:push --force` to sync schema
+3. **WebSocket disconnects:** Check `wsService.ts` connection handling
+
+### Personality System Issues
+
+1. **Wrong archetype:** Check VETO thresholds in `matcherV2.ts`
+2. **Scores too high/low:** Verify no double multiplication in scoring
+3. **Missing adjacent styles:** Check `≥70%` threshold filter
+
+### Matching Issues
+
+1. **No matches formed:** Check `matchingThresholds` values
+2. **Poor match quality:** Review `archetypeChemistry.ts` formulas
+3. **Missing notifications:** Verify WebSocket `broadcastToUser` calls
+
+---
+
+## Code Conventions
+
+### Import Aliases
 
 ```typescript
-// GET /api/event-pools
-app.get("/api/event-pools", async (req, res) => {
-  const pools = await db
-    .select()
-    .from(eventPools)
-    .where(eq(eventPools.status, 'active'))  // Unified to 'active'
-    .orderBy(desc(eventPools.createdAt));
-  
-  res.json(pools);
+// User client
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import logo from "@assets/logo.png";
+
+// Shared package
+import { users, events } from "@shared/schema";
+import { TraitKey } from "@shared/personality/types";
+```
+
+### API Patterns
+
+```typescript
+// TanStack Query - fetching
+const { data, isLoading } = useQuery({
+  queryKey: ['/api/users', userId],
+});
+
+// TanStack Query - mutations
+const mutation = useMutation({
+  mutationFn: (data) => apiRequest('/api/users', 'POST', data),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+  },
 });
 ```
 
-### Debugging Tips
-- Verify `eventPools.status = 'active'` in database
-- Check schema has all required columns (description, eventType, etc.)
-- Test `/api/event-pools` endpoint directly (should return array)
-- Confirm DiscoverPage fetches and renders event pools
+### File Naming
+
+- Components: `PascalCase.tsx` (e.g., `StyleSpectrum.tsx`)
+- Pages: `PascalCasePage.tsx` (e.g., `ProfilePage.tsx`)
+- Hooks: `use*.ts` (e.g., `useAuth.ts`)
+- Services: `*Service.ts` (e.g., `poolMatchingService.ts`)
 
 ---
 
-## 🗄️ Database Schema Updates (v1.1)
+## Quick Links
 
-### New Columns
-
-**eventPoolGroups:**
-```sql
-ALTER TABLE event_pool_groups 
-ADD COLUMN energy_balance INTEGER,
-ADD COLUMN temperature_level VARCHAR;
-```
-
-### New Tables
-
-**matchingThresholds:**
-```sql
-CREATE TABLE matching_thresholds (
-  pool_id VARCHAR PRIMARY KEY REFERENCES event_pools(id),
-  high_quality_threshold INTEGER DEFAULT 85,
-  medium_quality_threshold INTEGER DEFAULT 70,
-  low_quality_threshold INTEGER DEFAULT 55,
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-**poolMatchingLogs:**
-```sql
-CREATE TABLE pool_matching_logs (
-  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
-  pool_id VARCHAR REFERENCES event_pools(id),
-  scan_type VARCHAR,
-  pending_users_count INTEGER DEFAULT 0,
-  current_threshold INTEGER,
-  time_until_event INTEGER,
-  groups_formed INTEGER DEFAULT 0,
-  users_matched INTEGER DEFAULT 0,
-  avg_group_score INTEGER,
-  decision VARCHAR,
-  reason TEXT,
-  triggered_by VARCHAR,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
----
-
-## 🔌 New API Endpoints (v1.1)
-
-### Admin Matching Configuration
-
-```typescript
-// Get matching thresholds for a pool
-GET /api/admin/matching-thresholds?poolId={poolId}
-Response: MatchingThreshold
-
-// Update matching thresholds
-PUT /api/admin/matching-thresholds/:poolId
-Body: {
-  highQualityThreshold: number,
-  mediumQualityThreshold: number,
-  lowQualityThreshold: number
-}
-Response: MatchingThreshold
-
-// Manually trigger matching scan
-POST /api/admin/trigger-matching/:poolId
-Response: { message: string, scanResult: MatchingScanResult }
-
-// Get matching decision history
-GET /api/admin/matching-logs?poolId={poolId}&scanType={type}&decision={decision}&limit={limit}
-Response: PoolMatchingLog[]
-```
-
----
-
-## 🧪 Testing Checklist
-
-### Temperature Concept
-- [ ] Verify `ARCHETYPE_ENERGY` mappings are correct
-- [ ] Test `calculateEnergyBalance()` with different group compositions
-- [ ] Check temperature emoji displays in Admin Matching Logs
-- [ ] Confirm WebSocket notifications include `temperatureLevel`
-- [ ] Validate toast notifications show correct temperature
-
-### Matching Algorithm
-- [ ] Verify diversity is only counted once (not twice)
-- [ ] Test scoring formula: 60% pair + 25% diversity + 15% energy
-- [ ] Check `avgPairScore` calculation excludes diversity
-- [ ] Monitor match quality feedback from users
-
-### Real-time Matching
-- [ ] Test instant scan on user registration
-- [ ] Verify hourly scheduled scans run correctly
-- [ ] Check time decay algorithm lowers thresholds near deadline
-- [ ] Confirm manual trigger works from Admin UI
-- [ ] Review `poolMatchingLogs` for decision history
-
-### Invitation System
-- [ ] Test invitation creation and acceptance flow
-- [ ] Verify ¥50 coupon auto-issued when invitee matches
-- [ ] Check `invitation_uses` table records rewards
-- [ ] Confirm badges display correctly (purple/blue)
-
-### Event Pool User Flow
-- [ ] Test user registration with soft preferences
-- [ ] Verify status filtering (pending/matched/completed)
-- [ ] Check `PoolRegistrationCard` displays correctly
-- [ ] Confirm navigation from DiscoverPage to RegistrationPage
-
-### WebSocket Notifications
-- [ ] Verify WebSocket connection establishes successfully
-- [ ] Test `POOL_MATCHED` event broadcasts to all matched users
-- [ ] Check toast notifications display with correct data
-- [ ] Confirm cache invalidation triggers re-fetch
-- [ ] Verify auto-switch to "已匹配" tab
-
-### Event Pool Discovery
-- [ ] Test `/api/event-pools` returns active pools
-- [ ] Verify DiscoverPage displays event pools
-- [ ] Check all required schema columns exist
-- [ ] Confirm status unified to `active`
-
----
-
-## 🚨 Common Issues & Solutions
-
-### Issue: "Column does not exist: energy_balance"
-**Solution:** Run `npm run db:push` to sync schema
-
-### Issue: Diversity still counted twice
-**Solution:** Check `calculatePairScore()` in `server/archetypeChemistry.ts` - should NOT include diversity parameter
-
-### Issue: WebSocket notifications not received
-**Solution:** 
-1. Check WebSocket connection in browser DevTools
-2. Verify `wsService.broadcastToUser()` is called in `saveMatchResults()`
-3. Confirm user ID matches WebSocket connection
-
-### Issue: Temperature emoji not showing
-**Solution:**
-1. Check `getTemperatureLevel()` function returns correct emoji string
-2. Verify `temperatureLevel` stored in `eventPoolGroups` table
-3. Confirm frontend displays `{temperatureLevel}` not just `{score}`
-
-### Issue: Event pools not showing in DiscoverPage
-**Solution:**
-1. Check `eventPools.status = 'active'` in database
-2. Verify schema has all required columns
-3. Test `/api/event-pools` endpoint directly
-
-### Issue: Matching not triggering automatically
-**Solution:**
-1. Check `server/index.ts` starts realtime matching scheduler
-2. Verify cron job interval (default: 60 minutes)
-3. Monitor `poolMatchingLogs` for scan records
-
----
-
-## 📚 Key Concepts for Tech Team
-
-### Pair Score vs Group Diversity
-- **Pair Score:** Measures compatibility between two individuals (similarity)
-- **Group Diversity:** Measures richness of backgrounds in the group (variety)
-- These are orthogonal dimensions - both contribute to group quality
-
-### Energy Balance
-- **High Energy Groups:** All extroverts → exhausting, chaotic
-- **Low Energy Groups:** All introverts → awkward silences, low engagement
-- **Balanced Groups:** Mix of energy levels → natural conversation flow
-
-### Hard Constraints vs Soft Preferences
-- **Hard Constraints:** Admin-set restrictions (gender, industry, seniority) - must match
-- **Soft Preferences:** User preferences (budget, cuisine, goals) - used in scoring, not filtering
-
-### Real-time vs Scheduled Matching
-- **Real-time:** Triggered immediately on user registration (instant scan)
-- **Scheduled:** Cron job runs every 60 minutes (batch scan)
-- **Final 24h:** Every 30 minutes in last 24 hours (intensive scan)
-
----
-
-## 🛠️ Development Workflow
-
-### Making Changes to Matching Algorithm
-
-1. **Update algorithm logic:** `server/poolMatchingService.ts` or `server/archetypeChemistry.ts`
-2. **Update PRD documentation:** `PRODUCT_REQUIREMENTS.md` Section 3.4/3.5
-3. **Test with real data:** Use Admin Matching Lab to test changes
-4. **Monitor feedback:** Check `poolMatchingLogs` and user feedback
-5. **Iterate:** Adjust weights/thresholds based on data
-
-### Adding New Features
-
-1. **Update database schema:** `shared/schema.ts`
-2. **Run migration:** `npm run db:push`
-3. **Add backend logic:** `server/routes.ts` + `server/*Service.ts`
-4. **Add frontend UI:** `client/src/pages/*.tsx`
-5. **Update PRD:** `PRODUCT_REQUIREMENTS.md`
-6. **Update this guide:** `DEVELOPER_QUICK_REFERENCE.md`
-
-### Debugging Production Issues
-
-1. **Check logs:** `refresh_all_logs` in Replit
-2. **Query database:** Use `execute_sql_tool` to inspect data
-3. **Monitor WebSocket:** Browser DevTools → Network → WS
-4. **Review matching logs:** Admin Matching Logs page
-5. **Test locally:** Replicate issue in development environment
-
----
-
-## 📞 Need Help?
-
-- **Algorithm Questions:** Review `server/poolMatchingService.ts` and `server/archetypeChemistry.ts`
-- **Database Questions:** Check `shared/schema.ts` for schema definitions
-- **API Questions:** See `server/routes.ts` for endpoint implementations
-- **UI Questions:** Explore `client/src/pages/` for page components
-
-**Remember:** This is a living codebase. When in doubt, read the code!
-
----
-
-**Last Updated:** November 20, 2025  
-**Maintainer:** JoyJoin Development Team
+| Resource | Location |
+|----------|----------|
+| Product Requirements | `PRODUCT_REQUIREMENTS.md` |
+| Design Guidelines | `design_guidelines.md` |
+| API Routes | `apps/server/src/routes.ts` |
+| Database Schema | `packages/shared/src/schema.ts` |
+| Archetype Data | `packages/shared/src/personality/archetypeRegistry.ts` |
+| Changelog | `CHANGELOG_24H.md` |
