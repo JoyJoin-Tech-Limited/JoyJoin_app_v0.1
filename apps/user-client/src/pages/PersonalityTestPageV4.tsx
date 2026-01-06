@@ -51,7 +51,7 @@ function OnboardingProgress({
   showExtendedMessage?: boolean;
 }) {
   return (
-    <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
+    <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3 safe-top">
       <div className="flex items-center gap-3">
         {showBack && onBack && (
           <Button 
@@ -69,23 +69,31 @@ function OnboardingProgress({
             value={progress} 
             className="h-2 transition-all duration-500" 
           />
-          <div className="flex justify-between items-center mt-1 gap-2">
-            <span className="text-xs text-muted-foreground" data-testid="text-progress-indicator">
+          <div className="flex flex-col mt-1.5 gap-0.5">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-muted-foreground font-medium" data-testid="text-progress-indicator">
+                {remaining !== undefined && remaining > 0 ? (
+                  `第${Math.floor(current)}题 · 还剩约${remaining}题`
+                ) : (
+                  `第${Math.floor(current)}题`
+                )}
+              </span>
+              <span className="text-xs font-bold text-primary">
+                {Math.round(progress)}%
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
               {showExtendedMessage ? (
-                <span className="flex items-center gap-1.5">
-                  <span>第{Math.floor(current)}题</span>
-                  <span className="text-primary/80">/</span>
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
-                    <Sparkles className="w-2.5 h-2.5 mr-1" />
-                    你的特质很丰富，我们想多了解一点
-                  </Badge>
-                </span>
-              ) : remaining !== undefined && remaining > 0 ? (
-                `第${Math.floor(current)}题/剩下约${remaining}题`
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                  <Sparkles className="w-2.5 h-2.5 mr-1" />
+                  差一点就能揭晓啦
+                </Badge>
               ) : (
-                `第${Math.floor(current)}题`
+                <span className="text-[10px] text-muted-foreground/70">
+                  精准校准你的社交风格
+                </span>
               )}
-            </span>
+            </div>
           </div>
         </div>
       </div>
