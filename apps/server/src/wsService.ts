@@ -101,7 +101,10 @@ class WebSocketService {
             message: 'WebSocket connection error',
             metadata: { error: error.message, stack: error.stack },
           }),
-        }).catch(err => console.error('[WS] Failed to log error:', err));
+        }).catch(err => {
+          console.error('[WS] Failed to log error:', err);
+          // Error already logged, no need to throw
+        });
       });
     });
 
@@ -321,7 +324,7 @@ class WebSocketService {
     });
     console.log('[WS] Client disconnected');
     
-    // Log disconnection
+    // Log disconnection (fire and forget with proper error handling)
     fetch('http://localhost:5000/api/chat-logs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -331,7 +334,10 @@ class WebSocketService {
         severity: 'info',
         message: 'WebSocket client disconnected',
       }),
-    }).catch(err => console.error('[WS] Failed to log disconnection:', err));
+    }).catch(err => {
+      console.error('[WS] Failed to log disconnection:', err);
+      // Error already logged, no need to throw
+    });
   }
 
   private addClientToUser(userId: string, ws: AuthenticatedWebSocket) {
@@ -535,9 +541,11 @@ class WebSocketService {
         }
       }
 
-      // Get all checkins with user data
-      const checkins = await storage.getSessionCheckins(sessionId);
-      const session = await storage.getIcebreakerSession(sessionId);
+      // Get all checkins with user data - parallelize for better performance
+      const [checkins, session] = await Promise.all([
+        storage.getSessionCheckins(sessionId),
+        storage.getIcebreakerSession(sessionId)
+      ]);
       const expectedAttendees = session?.expectedAttendees || checkins.length;
 
       // Broadcast checkin update
@@ -613,9 +621,11 @@ class WebSocketService {
         });
       }
 
-      // Get all ready votes for this phase
-      const votes = await storage.getSessionReadyVotes(sessionId, phase);
-      const checkins = await storage.getSessionCheckins(sessionId);
+      // Get all ready votes for this phase - parallelize for better performance
+      const [votes, checkins] = await Promise.all([
+        storage.getSessionReadyVotes(sessionId, phase),
+        storage.getSessionCheckins(sessionId)
+      ]);
       // Only count online participants for ready vote calculation
       const onlineCheckins = checkins.filter(c => c.isOnline);
       const totalCount = onlineCheckins.length;

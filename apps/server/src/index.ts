@@ -142,12 +142,37 @@ app.use((req, res, next) => {
 
     // Start realtime matching scheduler (runs every hour)
     const MATCHING_SCAN_INTERVAL = 60 * 60 * 1000; // 1 hour in milliseconds
-    setInterval(() => {
+    const matchingInterval = setInterval(() => {
       scanAllActivePools().catch((err) => {
         console.error("[Matching Scheduler] Error scanning pools:", err);
+        // Error logged, scheduler continues
       });
     }, MATCHING_SCAN_INTERVAL);
 
     log(`Realtime matching scheduler started (scanning every 60 minutes)`);
+
+    // Graceful shutdown handler
+    const shutdown = async (signal: string) => {
+      log(`Received ${signal}, starting graceful shutdown`);
+      
+      // Stop accepting new connections
+      server.close(() => {
+        log('HTTP server closed');
+      });
+      
+      // Clear intervals
+      clearInterval(matchingInterval);
+      subscriptionService.stopExpiryChecker();
+      
+      // Give pending operations time to complete
+      setTimeout(() => {
+        log('Forcing shutdown');
+        process.exit(0);
+      }, 10000); // 10 second timeout
+    };
+
+    // Register shutdown handlers
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
   });
 })();

@@ -14,14 +14,31 @@ interface RateLimitEntry {
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
 const CLEANUP_INTERVAL_MS = 60000;
-setInterval(() => {
+const cleanupInterval = setInterval(() => {
   const now = Date.now();
+  const keysToDelete: string[] = [];
+  
+  // Collect expired entries
   for (const [key, entry] of rateLimitStore.entries()) {
     if (now > entry.resetTime) {
-      rateLimitStore.delete(key);
+      keysToDelete.push(key);
     }
   }
+  
+  // Batch delete
+  for (const key of keysToDelete) {
+    rateLimitStore.delete(key);
+  }
+  
+  if (keysToDelete.length > 0) {
+    console.log(`[RateLimiter] Cleaned up ${keysToDelete.length} expired entries`);
+  }
 }, CLEANUP_INTERVAL_MS);
+
+// Register cleanup on process exit
+if (typeof process !== 'undefined') {
+  process.on('beforeExit', () => clearInterval(cleanupInterval));
+}
 
 interface RateLimitConfig {
   windowMs: number;
