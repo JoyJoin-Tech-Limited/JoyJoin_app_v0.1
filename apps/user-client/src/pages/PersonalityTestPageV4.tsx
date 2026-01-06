@@ -350,10 +350,12 @@ export default function PersonalityTestPageV4() {
     if (isComplete && result) {
       clearV4PreSignupAnswers();
       setShowBlindBox(true);
-      // Invalidate multiple query keys to ensure result page is fresh
+      // Invalidate multiple query keys to ensure result page AND profile page are fresh
       queryClient.invalidateQueries({ queryKey: ['/api/assessment/result'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/results'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/stats'] });
+      // Critical: Also invalidate user data so profile page shows updated archetype
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       
       setTimeout(() => {
         setLocation('/personality-test/results');
