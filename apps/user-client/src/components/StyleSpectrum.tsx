@@ -1,11 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ChevronRight, ChevronLeft, Info } from "lucide-react";
+import { Sparkles, ChevronRight, ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { archetypeAvatars } from "@/lib/archetypeAdapter";
+import HexResonanceBoard from "@/components/HexResonanceBoard";
 
 interface AdjacentStyle {
   archetype: string;
@@ -30,6 +31,14 @@ interface StyleSpectrumProps {
   };
   isDecisive: boolean;
   onLearnMore?: () => void;
+  traitScores?: {
+    A?: number;
+    O?: number;
+    C?: number;
+    E?: number;
+    X?: number;
+    P?: number;
+  };
 }
 
 const ARCHETYPE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -52,10 +61,10 @@ export default function StyleSpectrum({
   adjacentStyles,
   spectrumPosition,
   isDecisive,
-  onLearnMore
+  onLearnMore,
+  traitScores
 }: StyleSpectrumProps) {
   const [activeAdjacentIndex, setActiveAdjacentIndex] = useState(0);
-  const [showDetails, setShowDetails] = useState(false);
   
   const colors = ARCHETYPE_COLORS[primary.archetype] || { 
     bg: "bg-primary/5", text: "text-primary", border: "border-primary/20" 
@@ -211,82 +220,18 @@ export default function StyleSpectrum({
         </Card>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-      >
-        <Card className="border shadow-sm">
-          <CardContent className="p-4">
-            <button
-              onClick={() => setShowDetails(!showDetails)}
-              className="w-full flex items-center justify-between text-sm text-muted-foreground hover:text-foreground transition-colors"
-              data-testid="button-toggle-spectrum-details"
-            >
-              <span className="flex items-center gap-2">
-                <Info className="h-4 w-4" />
-                你的风格定位
-              </span>
-              <ChevronRight 
-                className={cn(
-                  "h-4 w-4 transition-transform",
-                  showDetails && "rotate-90"
-                )} 
-              />
-            </button>
-
-            <AnimatePresence>
-              {showDetails && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-4 space-y-3">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{spectrumPosition.xAxis.label.split("←")[0]?.trim()}</span>
-                        <span>{spectrumPosition.xAxis.label.split("→")[1]?.trim()}</span>
-                      </div>
-                      <div className="relative h-2 bg-muted rounded-full">
-                        <motion.div 
-                          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-primary shadow-md"
-                          initial={{ left: "50%" }}
-                          animate={{ left: `${spectrumPosition.xAxis.value}%` }}
-                          transition={{ type: "spring", stiffness: 300 }}
-                          style={{ marginLeft: "-8px" }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{spectrumPosition.yAxis.label.split("←")[0]?.trim()}</span>
-                        <span>{spectrumPosition.yAxis.label.split("→")[1]?.trim()}</span>
-                      </div>
-                      <div className="relative h-2 bg-muted rounded-full">
-                        <motion.div 
-                          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-primary shadow-md"
-                          initial={{ left: "50%" }}
-                          animate={{ left: `${spectrumPosition.yAxis.value}%` }}
-                          transition={{ type: "spring", stiffness: 300 }}
-                          style={{ marginLeft: "-8px" }}
-                        />
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-muted-foreground text-center pt-2">
-                      这些滑块展示你在不同维度上的位置
-                    </p>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </CardContent>
-        </Card>
-      </motion.div>
+      {traitScores && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <HexResonanceBoard 
+            traitScores={traitScores}
+            primaryArchetype={primary.archetype}
+          />
+        </motion.div>
+      )}
 
       {onLearnMore && (
         <motion.div
