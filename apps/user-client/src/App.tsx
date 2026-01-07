@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { preloadXiaoyueImages } from "@/lib/preloadImages";
 import LoginPage from "@/pages/LoginPage";
 import RegistrationPage from "@/pages/RegistrationPage";
@@ -49,6 +49,7 @@ import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import NotFound from "@/pages/not-found";
 import LevelUpProvider from "@/components/LevelUpProvider";
 import DuolingoOnboardingPage from "@/pages/DuolingoOnboardingPage";
+import { LoadingScreen } from "@/components/LoadingScreen";
 
 preloadXiaoyueImages();
 
@@ -172,14 +173,7 @@ function Router() {
   const [location] = useLocation();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-muted-foreground">加载中...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   // Preview login page (for demo purposes - shows complete login flow)
@@ -237,7 +231,9 @@ function App() {
       <TooltipProvider>
         <LevelUpProvider>
           <Toaster />
-          <Router />
+          <Suspense fallback={<LoadingScreen />}>
+            <Router />
+          </Suspense>
         </LevelUpProvider>
       </TooltipProvider>
     </QueryClientProvider>
