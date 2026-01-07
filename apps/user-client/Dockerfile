@@ -23,7 +23,7 @@ COPY packages/shared ./packages/shared
 COPY apps/user-client ./apps/user-client
 
 # Copy attached assets (images referenced by the app)
-COPY attached_assets ./attached_assets
+# COPY attached_assets ./attached_assets
 
 # Build the static assets
 WORKDIR /app/apps/user-client
