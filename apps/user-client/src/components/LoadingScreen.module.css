@@ -1,0 +1,188 @@
+:root {
+  --joy-purple: #a259c6;
+  --joy-cream: #fef3e6;
+  --joy-fox: #f2b17c;
+  --joy-koala: #9ca6b8;
+  --joy-turtle: #6db27e;
+  --shadow: 0 14px 28px rgba(0, 0, 0, 0.18), 0 10px 10px rgba(0, 0, 0, 0.12);
+}
+
+.wrapper {
+  min-height: 100vh;
+  background: radial-gradient(circle at 20% 20%, rgba(162, 89, 198, 0.15), transparent 30%),
+    radial-gradient(circle at 80% 80%, rgba(162, 89, 198, 0.18), transparent 32%),
+    #0f0a1f;
+  color: #f8f6ff;
+  display: grid;
+  place-items: center;
+  gap: 28px;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  text-align: center;
+  padding-top: calc(24px + env(safe-area-inset-top));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  padding-left: calc(16px + env(safe-area-inset-left));
+  padding-right: calc(16px + env(safe-area-inset-right));
+}
+
+/* Logo */
+.logo {
+  width: min(520px, 78vw);
+  max-height: 160px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.35));
+  animation: shimmer 2.8s ease-in-out infinite;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Box + mascots */
+.boxScene {
+  position: relative;
+  width: 220px;
+  height: 200px;
+  perspective: 900px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.box {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) rotateX(10deg);
+  width: 160px;
+  height: 120px;
+  transform-style: preserve-3d;
+}
+
+.boxFace {
+  position: absolute;
+  background: var(--joy-purple);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  color: #fff;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+}
+
+.front {
+  width: 160px;
+  height: 120px;
+  transform: translateZ(60px);
+}
+
+.side {
+  width: 120px;
+  height: 120px;
+  transform: rotateY(90deg) translateZ(80px) translateX(20px);
+  background: #8d46ae;
+}
+
+.lid {
+  width: 160px;
+  height: 160px;
+  transform-origin: top;
+  transform: translateZ(60px) translateY(-80px) rotateX(-92deg);
+  background: #b470d8;
+  animation: lidPop 2.4s ease-in-out infinite;
+}
+
+/* Mascots popping */
+.mascots {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  width: 200px;
+  height: 160px;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.mascot {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  transform-origin: bottom center;
+  animation: bob 2.4s ease-in-out infinite;
+}
+
+/* Individual mascot styles */
+.fox {
+  background: linear-gradient(160deg, var(--joy-fox), #f7cfa7);
+  position: relative;
+}
+.fox::after {
+  content: "";
+  position: absolute;
+  inset: 14% 18%;
+  background: radial-gradient(circle at 30% 40%, #fff 0 45%, transparent 45%),
+    radial-gradient(circle at 70% 40%, #fff 0 45%, transparent 45%),
+    radial-gradient(circle at 50% 75%, #b36b38 0 40%, transparent 40%);
+  border-radius: 50%;
+  opacity: 0.8;
+}
+
+.koala {
+  background: linear-gradient(150deg, #9ca6b8, #c0c7d4);
+  animation-delay: 0.2s;
+}
+
+.turtle {
+  background: linear-gradient(160deg, var(--joy-turtle), #89d09c);
+  animation-delay: 0.35s;
+}
+
+/* Status text */
+.status {
+  font-size: 16px;
+  color: #e6ddff;
+  letter-spacing: 0.04em;
+  animation: pulse 1.6s ease-in-out infinite;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+/* Keyframes */
+@keyframes shimmer {
+  0%, 100% { filter: drop-shadow(0 0 12px rgba(162, 89, 198, 0.32)); }
+  50% { filter: drop-shadow(0 0 22px rgba(162, 89, 198, 0.55)); }
+}
+
+@keyframes lidPop {
+  0%, 100% { transform: translateZ(60px) translateY(-80px) rotateX(-92deg); }
+  30% { transform: translateZ(70px) translateY(-70px) rotateX(-40deg); }
+  55% { transform: translateZ(60px) translateY(-80px) rotateX(-100deg); }
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30% { transform: translateY(-14px) rotate(-4deg); }
+  60% { transform: translateY(-6px) rotate(3deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Reduced motion: keep静态但保留布局 */
+@media (prefers-reduced-motion: reduce) {
+  .logo,
+  .mascot,
+  .lid,
+  .status {
+    animation: none !important;
+  }
+}
+
+/* Mobile: lighten shadow to reduce GPU/battery */
+@media (max-width: 480px) {
+  :root {
+    --shadow: 0 8px 16px rgba(0, 0, 0, 0.15), 0 6px 6px rgba(0, 0, 0, 0.10);
+  }
+}

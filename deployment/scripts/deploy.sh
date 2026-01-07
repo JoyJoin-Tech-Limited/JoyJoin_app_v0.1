@@ -36,14 +36,24 @@ docker build -t joyjoin-api:$ENVIRONMENT -f apps/server/Dockerfile .
 
 echo "📤 Step 3: Deploying..."
 
-#不要跳过staging的database push
-npm run db:push
 
-if [ "$ENVIRONMENT" == "production" ]; then
-    echo "  🔶 Production deployment - running migrations first..."
-    # Run database migrations
-    #npm run db:push
-fi
+#未知原因db push无法推新db
+cd ~/JoyJoin
+export DATABASE_URL="postgresql://neondb_owner:npg_NmTv6SY3fxXW@ep-square-math-ahiz6fm7-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
+echo "  🎯 Target: $(echo $DATABASE_URL | sed 's/:[^@]*@/:****@/')"
+npx drizzle-kit push --config=./drizzle.config.ts
+
+
+
+
+# #不要跳过staging的database push
+# npm run db:push
+
+# if [ "$ENVIRONMENT" == "production" ]; then
+#     echo "  🔶 Production deployment - running migrations first..."
+#     # Run database migrations
+#     #npm run db:push
+# fi
 
 # Deploy based on your platform (uncomment and modify as needed)
 
