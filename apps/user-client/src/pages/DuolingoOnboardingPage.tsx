@@ -861,9 +861,9 @@ export default function DuolingoOnboardingPage() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
-            className="flex-1 flex flex-col px-4 py-3"
+            className="flex-1 flex flex-col px-4 py-3 overflow-hidden"
           >
-            <div className="mb-2">
+            <div className="shrink-0 mb-2">
               <p className="text-xl text-foreground mb-4 leading-relaxed font-bold">
                 {scenarioText}
               </p>
@@ -878,17 +878,19 @@ export default function DuolingoOnboardingPage() {
               />
             </div>
             
-            <div className="flex-1 flex flex-col justify-center py-2 overflow-y-auto">
-              <SelectionList
-                options={optionsForList}
-                selected={currentAnswer}
-                onSelect={(value) => {
-                  const val = Array.isArray(value) ? value[0] : value;
-                  const selectedOpt = question.options.find(o => o.value === val);
-                  handleAnswer(question.id, val, selectedOpt?.traitScores);
-                }}
-                questionId={question.id}
-              />
+            <div className="flex-1 flex flex-col justify-center py-2 min-h-0">
+              <div className="overflow-y-auto -mx-4 px-4">
+                <SelectionList
+                  options={optionsForList}
+                  selected={currentAnswer}
+                  onSelect={(value) => {
+                    const val = Array.isArray(value) ? value[0] : value;
+                    const selectedOpt = question.options.find(o => o.value === val);
+                    handleAnswer(question.id, val, selectedOpt?.traitScores);
+                  }}
+                  questionId={question.id}
+                />
+              </div>
             </div>
 
             <MobileActionBar>
@@ -912,51 +914,53 @@ export default function DuolingoOnboardingPage() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col items-center px-6 py-6 pb-24"
+            className="flex-1 flex flex-col overflow-hidden"
           >
-            <XiaoyueMascot 
-              mood="excited"
-              message="快要揭晓你的社交角色了！登录继续"
-            />
+            <div className="flex-1 flex flex-col items-center px-6 py-6 overflow-y-auto min-h-0">
+              <XiaoyueMascot 
+                mood="excited"
+                message="快要揭晓你的社交角色了！登录继续"
+              />
 
-            <div className="w-full max-w-sm mt-8 space-y-4">
-              <div className="space-y-2">
-                <Input
-                  type="tel"
-                  placeholder="输入手机号"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="h-14 text-lg rounded-2xl px-5"
-                  data-testid="input-phone"
-                />
+              <div className="w-full max-w-sm mt-8 space-y-4">
+                <div className="space-y-2">
+                  <Input
+                    type="tel"
+                    placeholder="输入手机号"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="h-14 text-lg rounded-2xl px-5"
+                    data-testid="input-phone"
+                  />
+                </div>
+
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">或</span>
+                  </div>
+                </div>
+
+                <Button 
+                  variant="outline"
+                  size="lg"
+                  className="w-full h-14 text-lg rounded-2xl"
+                  onClick={() => window.location.href = "/api/login"}
+                  data-testid="button-replit-auth"
+                >
+                  <SiWechat className="w-5 h-5 mr-2 text-[#07C160]" />
+                  微信一键登录
+                </Button>
               </div>
 
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">或</span>
-                </div>
-              </div>
-
-              <Button 
-                variant="outline"
-                size="lg"
-                className="w-full h-14 text-lg rounded-2xl"
-                onClick={() => window.location.href = "/api/login"}
-                data-testid="button-replit-auth"
-              >
-                <SiWechat className="w-5 h-5 mr-2 text-[#07C160]" />
-                微信一键登录
-              </Button>
+              <p className="mt-6 text-sm text-muted-foreground text-center">
+                还需约8-12题即可揭晓结果
+              </p>
             </div>
 
-            <p className="mt-6 text-sm text-muted-foreground text-center">
-              还需约8-12题即可揭晓结果
-            </p>
-
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t z-40">
+            <div className="shrink-0 p-4 bg-background/95 backdrop-blur-sm border-t">
               <Button 
                 size="lg"
                 className="w-full h-14 text-lg rounded-2xl"
@@ -1019,7 +1023,7 @@ export default function DuolingoOnboardingPage() {
 
   if (showResumePrompt) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="h-screen overflow-hidden flex flex-col bg-background">
         <div className="flex-1 flex flex-col items-center justify-center px-6">
           <XiaoyueMascot 
             mood="normal"
@@ -1050,7 +1054,7 @@ export default function DuolingoOnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="h-screen overflow-hidden flex flex-col bg-background">
       {currentScreen > 0 && (
         <OnboardingProgress
           current={currentScreen}

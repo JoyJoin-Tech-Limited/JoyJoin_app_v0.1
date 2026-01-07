@@ -452,6 +452,12 @@
     height: 100vh; /* Fallback */
     height: 100dvh;
   }
+  
+  /* Override h-screen to use dvh for mobile compatibility */
+  .h-screen {
+    height: 100vh; /* Fallback */
+    height: 100dvh;
+  }
 
   /* Chat input footer with smooth transition for keyboard */
   .chat-footer {
@@ -462,38 +468,44 @@
   /* ========== Mobile Questionnaire Layout System ========== */
   /* 跨设备兼容：iPhone SE → iPhone 15 Pro Max → 华为/小米 → iPad */
   
-  /* Full-height flex container with vh/svh/dvh fallbacks */
+  /* Full-height flex container with dvh for dynamic viewport (iOS Safari keyboard handling) */
   .mobile-page {
     display: flex;
     flex-direction: column;
-    min-height: 100vh; /* Fallback for older browsers */
-    min-height: 100svh; /* Android Chrome keyboard handling */
-    min-height: 100dvh; /* iOS Safari dynamic viewport */
+    height: 100vh; /* Fallback for older browsers */
+    height: 100dvh; /* Modern browsers - dynamic viewport accounting for browser UI */
+    overflow: hidden; /* Prevent page-level scrolling */
   }
 
   /* Compact header for questionnaires (≤56px) */
   .mobile-header-compact {
     padding: 0.75rem 1rem; /* py-3 px-4 */
+    flex-shrink: 0;
   }
 
-  /* Main content area - scrollable */
+  /* Main content area - scrollable, but only within its flex container */
   .mobile-content {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 1rem; /* p-4 */
     -webkit-overflow-scrolling: touch;
+    min-height: 0; /* Critical for flex children to allow shrinking */
   }
 
   /* Compact content with less padding for dense layouts */
   .mobile-content-compact {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0.75rem 1rem; /* py-3 px-4 */
     -webkit-overflow-scrolling: touch;
+    min-height: 0; /* Critical for flex children to allow shrinking */
   }
 
   /* Sticky footer with safe-area and smooth transitions */
   .mobile-footer {
+    flex-shrink: 0;
     border-top: 1px solid hsl(var(--border));
     background: hsl(var(--background) / 0.95);
     backdrop-filter: blur(8px);
