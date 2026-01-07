@@ -514,7 +514,7 @@ export default function RegistrationPage() {
   const GuidanceIcon = currentGuidance.icon;
 
   return (
-    <div className="mobile-page">
+    <div className="h-screen overflow-hidden flex flex-col bg-background">
       <RegistrationProgress 
         currentStage="basic" 
         currentStep={step}
@@ -523,7 +523,7 @@ export default function RegistrationPage() {
 
       <CelebrationConfetti show={showCelebration} type="step" />
 
-      <div className="px-3 py-2 bg-background shrink-0">
+      <div className="shrink-0 px-3 py-2 bg-background">
         <motion.div
           key={step}
           initial={{ opacity: 0, y: -10 }}
@@ -550,8 +550,8 @@ export default function RegistrationPage() {
         </motion.div>
       </div>
 
-      <div className="flex-1 px-3 py-2 overflow-y-auto overflow-x-hidden">
-        <form className="max-w-md mx-auto space-y-6 pb-20">
+      <div className="flex-1 px-3 py-2 overflow-y-auto min-h-0">
+        <form className="max-w-md mx-auto space-y-6 pb-4">
           <AnimatePresence mode="wait" initial={false}>
             {step === 1 && (
               <motion.div
@@ -1287,7 +1287,7 @@ export default function RegistrationPage() {
         </form>
       </div>
 
-      <div className="mobile-footer">
+      <div className="shrink-0 border-t bg-background/95 backdrop-blur-sm p-3">
         <div className="max-w-md mx-auto space-y-2">
           <div className="flex gap-2">
             {step > 1 && (
