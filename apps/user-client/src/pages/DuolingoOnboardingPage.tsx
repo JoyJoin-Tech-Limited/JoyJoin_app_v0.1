@@ -15,9 +15,9 @@ import { useAdaptiveAssessment, type AssessmentQuestion, type PreSignupAnswer } 
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
-import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01_1766766685652.png";
-import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03_1766766685650.png";
-import xiaoyuePointing from "@/assets/Xiao_Yue_Avatar-04_1766766685649.png";
+import xiaoyueNormal from "@/assets/avatar_normal.png";
+import xiaoyueExcited from "@/assets/avatar_excited.png";
+import xiaoyuePointing from "@/assets/avatar_pointing.png";
 
 // Archetype imports for floating background effect
 import corgiImg from '@/assets/开心柯基_transparent_1.png';
