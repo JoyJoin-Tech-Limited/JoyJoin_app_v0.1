@@ -1244,7 +1244,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Scores are clear enough, return final result
         const primaryRole = top1[0];
-        const secondaryRole = top2[0];
+        const rawSecondaryRole = top2[0];
+        const secondaryRole = top2[1] >= 70 ? rawSecondaryRole : null;
         const roleSubtype = determineSubtype(primaryRole, responses);
         const traitScores = calculateTraitScores(primaryRole, secondaryRole);
         const insights = generateInsights(primaryRole, secondaryRole);
@@ -1255,7 +1256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             primaryRole,
             primaryRoleScore: top1[1],
             secondaryRole,
-            secondaryRoleScore: top2[1],
+            secondaryRoleScore: secondaryRole ? top2[1] : 0,
             roleSubtype,
             ...traitScores,
             ...insights,
@@ -1286,8 +1287,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const primaryRole = sortedRoles[0][0];
       const primaryRoleScore = sortedRoles[0][1];
-      const secondaryRole = sortedRoles[1]?.[0] || null;
-      const secondaryRoleScore = sortedRoles[1]?.[1] || 0;
+      const rawSecondaryRole = sortedRoles[1]?.[0] || null;
+      const secondaryRoleScoreRaw = sortedRoles[1]?.[1] || 0;
+      const secondaryRole = secondaryRoleScoreRaw >= 70 ? rawSecondaryRole : null;
+      const secondaryRoleScore = secondaryRole ? secondaryRoleScoreRaw : 0;
 
       // Determine subtype (simplified - based on highest scoring items)
       const roleSubtype = determineSubtype(primaryRole, responses);
@@ -1333,7 +1336,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const matchResult = processTestV2(responses);
 
       const primaryRole = matchResult.primaryRole;
-      const secondaryRole = matchResult.secondaryRole;
+      const rawSecondaryRole = matchResult.secondaryRole;
+      const secondaryRole = matchResult.secondaryMatchScore >= 70 ? rawSecondaryRole : null;
       const roleSubtype = determineSubtype(primaryRole, responses);
       const insights = generateInsights(primaryRole, secondaryRole);
 
@@ -1344,7 +1348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         primaryRole,
         primaryRoleScore: matchResult.primaryMatchScore,
         secondaryRole,
-        secondaryRoleScore: matchResult.secondaryMatchScore,
+        secondaryRoleScore: secondaryRole ? matchResult.secondaryMatchScore : 0,
         roleSubtype,
         roleScores: {}, // V2 uses trait vectors instead
         affinityScore: matchResult.userTraits.A,
