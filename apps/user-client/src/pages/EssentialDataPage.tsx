@@ -11,9 +11,9 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
-import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01.png";
-import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03.png";
-import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04.png";
+import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
+import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
+import xiaoyuePointing from "@/assets/Xiao_Yue_Avatar-04.png";
 
 const ESSENTIAL_CACHE_KEY = "joyjoin_essential_data_progress";
 

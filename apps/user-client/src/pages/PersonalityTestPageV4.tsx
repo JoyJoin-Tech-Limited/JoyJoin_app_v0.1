@@ -12,9 +12,9 @@ import { useAdaptiveAssessment, type PreSignupAnswer } from "@/hooks/useAdaptive
 import CelebrationConfetti from "@/components/CelebrationConfetti";
 import { getOptionFeedback } from "@shared/personality/feedback";
 
-import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01.png";
-import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03.png";
-import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04.png";
+import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
+import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
+import xiaoyuePointing from "@/assets/Xiao_Yue_Avatar-04.png";
 
 const V4_ANSWERS_KEY = "joyjoin_v4_presignup_answers";
 

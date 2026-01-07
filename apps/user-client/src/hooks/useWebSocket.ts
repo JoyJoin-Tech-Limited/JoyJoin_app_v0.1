@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import type { WSMessage, WSEventType } from '@/../../shared/wsEvents';
+import { useEffect, useRef, useState, useCallback } from "react";
+import type { WSMessage, WSEventType } from "@/../../shared/wsEvents";
 
 type MessageHandler = (message: WSMessage) => void;
 

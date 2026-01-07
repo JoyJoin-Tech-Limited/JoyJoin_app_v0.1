@@ -1,5 +1,5 @@
-import FeatureCard from '../FeatureCard';
-import { Sparkles, Users, Shield } from 'lucide-react';
+import FeatureCard from "../FeatureCard";
+import { Sparkles, Users, Shield } from "lucide-react";
 
 export default function FeatureCardExample() {
   return (

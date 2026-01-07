@@ -1,4 +1,4 @@
-import AttendeeAvatars from '../AttendeeAvatars';
+import AttendeeAvatars from "../AttendeeAvatars";
 
 export default function AttendeeAvatarsExample() {
   const attendees = [

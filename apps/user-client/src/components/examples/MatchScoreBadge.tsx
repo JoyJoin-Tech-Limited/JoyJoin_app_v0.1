@@ -1,4 +1,4 @@
-import MatchScoreBadge from '../MatchScoreBadge';
+import MatchScoreBadge from "../MatchScoreBadge";
 
 export default function MatchScoreBadgeExample() {
   return (

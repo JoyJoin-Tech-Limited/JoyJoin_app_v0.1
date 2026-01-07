@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
 
-import xiaoyueThinking from "@assets/Xiao_Yue_Avatar-01.png";
-import xiaoyueCasual from "@assets/Xiao_Yue_Avatar-03.png";
-import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04.png";
-import xiaoyueFullBody from "@assets/Xiao_Yue_Avatar-06.png";
+import xiaoyueThinking from "@/assets/Xiao_Yue_Avatar-01.png";
+import xiaoyueCasual from "@/assets/Xiao_Yue_Avatar-03.png";
+import xiaoyuePointing from "@/assets/Xiao_Yue_Avatar-04.png";
+import xiaoyueFullBody from "@/assets/Xiao_Yue_Avatar-06.png";
 
 export type XiaoyuePose = "thinking" | "casual" | "pointing" | "fullBody";
 export type XiaoyueTone = "playful" | "confident" | "alert" | "neutral";

@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef, useMemo, useId } from 'react';
-import Lottie, { LottieRefCurrentProps } from 'lottie-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState, useRef, useMemo, useId } from "react";
+import Lottie, { LottieRefCurrentProps } from "lottie-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface LottieWaveAnimationProps {
   messages?: string[];

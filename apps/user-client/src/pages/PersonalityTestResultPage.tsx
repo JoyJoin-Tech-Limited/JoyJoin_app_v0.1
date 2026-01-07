@@ -1,29 +1,29 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { useLocation } from 'wouter';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import PersonalityRadarChart from '@/components/PersonalityRadarChart';
-import { XiaoyueInsightCard } from '@/components/XiaoyueInsightCard';
-import { XiaoyueChatBubble } from '@/components/XiaoyueChatBubble';
-import StyleSpectrum from '@/components/StyleSpectrum';
-import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import PersonalityRadarChart from "@/components/PersonalityRadarChart";
+import { XiaoyueInsightCard } from "@/components/XiaoyueInsightCard";
+import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
+import StyleSpectrum from "@/components/StyleSpectrum";
+import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   archetypeAvatars, 
   getArchetypeGradient, 
   getArchetypeNarrative, 
   getArchetypeInsights 
 } from '@/lib/archetypeAdapter';
-import { getCompatibilityDescription } from '@/lib/archetypeCompatibility';
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { useReducedMotion } from '@/hooks/use-reduced-motion';
-import { useXiaoyueAnalysis } from '@/hooks/useXiaoyueAnalysis';
-import { getStyleSpectrum } from '@shared/personality/matcherV2';
-import { ArrowRight } from 'lucide-react';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { getCompatibilityDescription } from "@/lib/archetypeCompatibility";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useXiaoyueAnalysis } from "@/hooks/useXiaoyueAnalysis";
+import { getStyleSpectrum } from "@shared/personality/matcherV2";
+import { ArrowRight } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Pokemon-style reveal animation phases
 type RevealPhase = 'countdown' | 'shake' | 'burst' | 'landing' | 'complete';

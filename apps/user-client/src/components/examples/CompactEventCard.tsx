@@ -1,4 +1,4 @@
-import CompactEventCard from '../CompactEventCard';
+import CompactEventCard from "../CompactEventCard";
 
 export default function CompactEventCardExample() {
   return (

@@ -20,9 +20,9 @@ import {
 import { evaluatePersonality } from "@/lib/cumulativeScoringSystem";
 import CelebrationConfetti from "@/components/CelebrationConfetti";
 import { cn } from "@/lib/utils";
-import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01.png";
-import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03.png";
-import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04.png";
+import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
+import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
+import xiaoyuePointing from "@/assets/Xiao_Yue_Avatar-04.png";
 import PersonalityTestPageV4 from "./PersonalityTestPageV4";
 
 const PERSONALITY_TEST_CACHE_KEY = "joyjoin_personality_test_progress";

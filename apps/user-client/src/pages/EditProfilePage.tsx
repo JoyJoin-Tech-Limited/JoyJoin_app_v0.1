@@ -43,9 +43,9 @@ import { getOccupationDisplayLabel, getIndustryDisplayLabel, WORK_MODE_TO_LABEL,
 import { getInterestLabel, getTopicLabel } from "@/data/interestsTopicsData";
 import { calculateProfileCompletion } from "@/lib/profileCompletion";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import xiaoyueAvatar from "@assets/Xiao_Yue_Avatar-04.png";
-import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03.png";
-import xiaoyueThinking from "@assets/Xiao_Yue_Avatar-01.png";
+import xiaoyueAvatar from "@/assets/Xiao_Yue_Avatar-04.png";
+import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
+import xiaoyueThinking from "@/assets/Xiao_Yue_Avatar-01.png";
 
 interface Field {
   label: string;

@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion';
-import { Crown } from 'lucide-react';
+import { motion } from "framer-motion";
+import { Crown } from "lucide-react";
 
 interface PokerCardProps {
   number?: number;

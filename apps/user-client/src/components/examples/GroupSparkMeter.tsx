@@ -1,4 +1,4 @@
-import GroupSparkMeter from '../GroupSparkMeter';
+import GroupSparkMeter from "../GroupSparkMeter";
 
 export default function GroupSparkMeterExample() {
   return (

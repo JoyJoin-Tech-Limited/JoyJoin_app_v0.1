@@ -1,6 +1,6 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { WifiOff, RefreshCw, Monitor } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { motion, AnimatePresence } from "framer-motion";
+import { WifiOff, RefreshCw, Monitor } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface NetworkStatusBannerProps {
   isConnected: boolean;

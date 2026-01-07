@@ -1,8 +1,8 @@
-import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Heart, Flame, ThumbsUp, HelpCircle, Laugh, Hand } from 'lucide-react';
+import { useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Heart, Flame, ThumbsUp, HelpCircle, Laugh, Hand } from "lucide-react";
 
 interface Reaction {
   id: string;

@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { shouldShowGuide, resetGuideState } from '../useGuideFlow';
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { shouldShowGuide, resetGuideState } from "../useGuideFlow";
 
 // Mock localStorage and window
 const localStorageMock = (() => {

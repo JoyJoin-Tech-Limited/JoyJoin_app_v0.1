@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Users, MessageCircle, PartyPopper, Star, Check, ClipboardCheck, Hash, Coffee, Heart, Lightbulb, Gamepad2, HelpCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useIcebreakerOverlay } from './IcebreakerOverlayProvider';
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, Users, MessageCircle, PartyPopper, Star, Check, ClipboardCheck, Hash, Coffee, Heart, Lightbulb, Gamepad2, HelpCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useIcebreakerOverlay } from "./IcebreakerOverlayProvider";
 
 export type TransitionType = 'checkin_to_number' | 'number_to_icebreaker' | 'icebreaker_to_end';
 

@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   X,
   Users,
@@ -11,9 +11,9 @@ import {
   Globe,
   MessageCircle,
 } from 'lucide-react';
-import type { TopicCard } from '@shared/topicCards';
-import type { IcebreakerGame } from '@shared/icebreakerGames';
-import { SpinWheel } from './SpinWheel';
+import type { TopicCard } from "@shared/topicCards";
+import type { IcebreakerGame } from "@shared/icebreakerGames";
+import { SpinWheel } from "./SpinWheel";
 
 interface ActivitySpotlightProps {
   open: boolean;

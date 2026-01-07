@@ -1,4 +1,4 @@
-import BottomNav from '../BottomNav';
+import BottomNav from "../BottomNav";
 
 export default function BottomNavExample() {
   return <BottomNav />;

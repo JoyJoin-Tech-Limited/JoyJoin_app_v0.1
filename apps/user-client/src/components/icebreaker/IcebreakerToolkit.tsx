@@ -1,10 +1,10 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import useEmblaCarousel from 'embla-carousel-react';
-import { motion } from 'framer-motion';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { useState, useMemo, useEffect, useCallback } from "react";
+import useEmblaCarousel from "embla-carousel-react";
+import { motion } from "framer-motion";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   MessageCircle, 
   Clock, 
@@ -22,13 +22,13 @@ import {
   Utensils,
   Globe,
 } from 'lucide-react';
-import type { TopicCard } from '@shared/topicCards';
-import { icebreakerGames, sceneLabels, type IcebreakerGame } from '@shared/icebreakerGames';
-import { ActivitySpotlight } from './ActivitySpotlight';
-import { GameDetailView } from './GameDetailView';
-import { KingGameController } from './KingGameController';
-import { EndActivityConfirmModal } from './EndActivityConfirmModal';
-import { AtmosphereCheckModal, type AtmosphereRating } from './AtmosphereCheckModal';
+import type { TopicCard } from "@shared/topicCards";
+import { icebreakerGames, sceneLabels, type IcebreakerGame } from "@shared/icebreakerGames";
+import { ActivitySpotlight } from "./ActivitySpotlight";
+import { GameDetailView } from "./GameDetailView";
+import { KingGameController } from "./KingGameController";
+import { EndActivityConfirmModal } from "./EndActivityConfirmModal";
+import { AtmosphereCheckModal, type AtmosphereRating } from "./AtmosphereCheckModal";
 
 export interface RecommendedTopic {
   topic: TopicCard;

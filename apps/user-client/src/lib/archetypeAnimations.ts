@@ -3,7 +3,7 @@
  * 12个社交角色的专属出场动画配置
  */
 
-import { archetypeAvatars, archetypeGradients } from './archetypeAvatars';
+import { archetypeAvatars, archetypeGradients } from "./archetypeAvatars";
 
 export type AnimationType = 
   | 'bounce_wiggle'    // 蹦跳摇摆 (柯基)

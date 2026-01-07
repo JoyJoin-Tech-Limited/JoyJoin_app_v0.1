@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
-import useEmblaCarousel from 'embla-carousel-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { useState, useCallback, useEffect, useMemo } from "react";
+import useEmblaCarousel from "embla-carousel-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   MessageCircle, 
   Gamepad2, 
@@ -19,8 +19,8 @@ import {
   Play,
   RefreshCw,
 } from 'lucide-react';
-import type { TopicCard } from '@shared/topicCards';
-import { icebreakerGames, type IcebreakerGame } from '@shared/icebreakerGames';
+import type { TopicCard } from "@shared/topicCards";
+import { icebreakerGames, type IcebreakerGame } from "@shared/icebreakerGames";
 
 export interface RecommendedTopic {
   topic: TopicCard;
