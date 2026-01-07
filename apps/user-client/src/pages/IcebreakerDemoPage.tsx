@@ -1,20 +1,20 @@
-import { useState, useCallback } from 'react';
-import { useLocation } from 'wouter';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useIcebreakerTopics, type ParticipantProfile } from '@/hooks/use-icebreaker-topics';
-import { useGameRecommendation } from '@/hooks/useGameRecommendation';
-import { IcebreakerCheckinModal } from '@/components/icebreaker/IcebreakerCheckinModal';
-import { NumberPlateDisplay } from '@/components/icebreaker/NumberPlateDisplay';
-import { IcebreakerToolkit } from '@/components/icebreaker/IcebreakerToolkit';
-import { GameDetailView } from '@/components/icebreaker/GameDetailView';
-import { IcebreakerEndingScreen } from '@/components/icebreaker/IcebreakerEndingScreen';
-import { PhaseTransition, type TransitionType } from '@/components/icebreaker/PhaseTransition';
-import { IcebreakerOverlayProvider, IcebreakerSurface } from '@/components/icebreaker/IcebreakerOverlayProvider';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { LogOut, Clock, Info, Smartphone, Wifi } from 'lucide-react';
-import type { TopicCard } from '@shared/topicCards';
-import type { IcebreakerGame } from '@shared/icebreakerGames';
+import { useState, useCallback } from "react";
+import { useLocation } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
+import { useIcebreakerTopics, type ParticipantProfile } from "@/hooks/use-icebreaker-topics";
+import { useGameRecommendation } from "@/hooks/useGameRecommendation";
+import { IcebreakerCheckinModal } from "@/components/icebreaker/IcebreakerCheckinModal";
+import { NumberPlateDisplay } from "@/components/icebreaker/NumberPlateDisplay";
+import { IcebreakerToolkit } from "@/components/icebreaker/IcebreakerToolkit";
+import { GameDetailView } from "@/components/icebreaker/GameDetailView";
+import { IcebreakerEndingScreen } from "@/components/icebreaker/IcebreakerEndingScreen";
+import { PhaseTransition, type TransitionType } from "@/components/icebreaker/PhaseTransition";
+import { IcebreakerOverlayProvider, IcebreakerSurface } from "@/components/icebreaker/IcebreakerOverlayProvider";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { LogOut, Clock, Info, Smartphone, Wifi } from "lucide-react";
+import type { TopicCard } from "@shared/topicCards";
+import type { IcebreakerGame } from "@shared/icebreakerGames";
 
 type DemoPhase = 'checkin' | 'number_assign' | 'icebreaker' | 'ended';
 

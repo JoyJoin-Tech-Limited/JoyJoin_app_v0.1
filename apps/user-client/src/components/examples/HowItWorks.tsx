@@ -1,4 +1,4 @@
-import HowItWorks from '../HowItWorks';
+import HowItWorks from "../HowItWorks";
 
 export default function HowItWorksExample() {
   return <HowItWorks />;

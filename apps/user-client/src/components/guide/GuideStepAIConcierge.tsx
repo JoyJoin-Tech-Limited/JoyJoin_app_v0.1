@@ -3,7 +3,7 @@ import { MessageCircle, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { guideCopy } from "@/copy/guide";
 
-import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01.png";
+import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 
 interface GuideStepAIConciergeProps {
   /** 点击"和小悦聊聊"回调 */

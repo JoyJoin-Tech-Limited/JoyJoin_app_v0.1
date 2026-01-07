@@ -1,5 +1,5 @@
-import { queryClient } from './queryClient';
-import type { WSMessage } from '@/../../shared/wsEvents';
+import { queryClient } from "./queryClient";
+import type { WSMessage } from "@/../../shared/wsEvents";
 
 /**
  * 智能缓存失效系统

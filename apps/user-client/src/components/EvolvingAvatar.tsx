@@ -1,5 +1,5 @@
-import { useState, useEffect, useId } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useId } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface EvolvingAvatarProps {
   clarityLevel: number;

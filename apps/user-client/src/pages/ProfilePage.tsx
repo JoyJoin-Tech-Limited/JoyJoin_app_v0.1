@@ -24,9 +24,9 @@ import { archetypeGradients, archetypeAvatars, archetypeEmojis } from "@/lib/arc
 import { getArchetypeImage } from "@/lib/archetypeImages";
 import { getTopCompatibleArchetypes, getCompatibilityCategory } from "@/lib/archetypeCompatibility";
 import { getMatchesWithDescriptions } from "@/lib/archetypeCompatibilityDescriptions";
-import xiaoyueAvatar from "@assets/Xiao_Yue_Avatar-04.png";
-import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03.png";
-import xiaoyueThinking from "@assets/Xiao_Yue_Avatar-01.png";
+import xiaoyueAvatar from "@/assets/Xiao_Yue_Avatar-04.png";
+import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
+import xiaoyueThinking from "@/assets/Xiao_Yue_Avatar-01.png";
 import {
   getGenderDisplay,
   calculateAge,

@@ -10,7 +10,7 @@ import {
   levenshteinDistance,
   normalizedSimilarity,
 } from './gossipEngineV2';
-import type { CollectedInfo } from './gossipEngineV2';
+import type { CollectedInfo } from "./gossipEngineV2";
 
 // 模拟用户数据生成器
 function generateRandomUserInfo(): CollectedInfo {

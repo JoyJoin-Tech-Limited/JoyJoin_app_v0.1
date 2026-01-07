@@ -1,5 +1,5 @@
-import { useMutation } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 export interface ParticipantInfo {
   displayName: string;

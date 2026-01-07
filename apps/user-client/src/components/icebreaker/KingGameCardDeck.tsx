@@ -1,9 +1,9 @@
-import { useState, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Shuffle, RotateCcw, Users } from 'lucide-react';
-import { PokerCard } from './PokerCard';
+import { useState, useCallback, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Shuffle, RotateCcw, Users } from "lucide-react";
+import { PokerCard } from "./PokerCard";
 
 interface Card {
   id: string;

@@ -13,7 +13,6 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@shared': path.resolve(__dirname, '../../packages/shared/src'),
-      '@assets': path.resolve(__dirname, './src/assets'),
     },
   },
   server: {
@@ -26,8 +25,5 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
-  },
-  define: {
-    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || ''),
   },
 });

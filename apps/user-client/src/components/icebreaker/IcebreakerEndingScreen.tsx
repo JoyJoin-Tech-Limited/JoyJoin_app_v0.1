@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { useLocation } from 'wouter';
-import { Button } from '@/components/ui/button';
-import { Sparkles, Heart, Star, Clock, Users, PartyPopper, ArrowLeft, ClipboardList, MessageSquareHeart } from 'lucide-react';
+import { useMemo } from "react";
+import { motion } from "framer-motion";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Sparkles, Heart, Star, Clock, Users, PartyPopper, ArrowLeft, ClipboardList, MessageSquareHeart } from "lucide-react";
 
 interface IcebreakerEndingScreenProps {
   closingMessage?: string | null;

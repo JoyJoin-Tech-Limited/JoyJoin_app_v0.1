@@ -4,8 +4,8 @@
  * 柔和的波形动画 + 动态主题支持 + 呼吸感脉动
  */
 
-import { motion } from 'framer-motion';
-import { useState, useEffect, useMemo } from 'react';
+import { motion } from "framer-motion";
+import { useState, useEffect, useMemo } from "react";
 
 interface AnimationLoadingScreenProps {
   progress: number;

@@ -1,9 +1,9 @@
-import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   ArrowLeft,
   Shuffle, 
@@ -21,7 +21,7 @@ import {
   Crown,
   Sparkles,
 } from 'lucide-react';
-import { icebreakerGames, getRandomGame, type IcebreakerGame } from '@shared/icebreakerGames';
+import { icebreakerGames, getRandomGame, type IcebreakerGame } from "@shared/icebreakerGames";
 
 interface Participant {
   id: string;

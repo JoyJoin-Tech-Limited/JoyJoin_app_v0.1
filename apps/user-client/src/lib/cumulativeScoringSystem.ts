@@ -15,9 +15,9 @@
  * - 刘心怡(咨询师): 累加+T分数标准化，保护心理安全
  */
 
-import { TraitScores as OptionTraits } from '@/data/personalityQuestionsV2';
-import { TraitScores, archetypeTraitScores } from './archetypeTraitScores';
-import { archetypeTraitScoresOptimized, getABTestVariant, type ABTestVariant } from './archetypeTraitScoresOptimized';
+import { TraitScores as OptionTraits } from "@/data/personalityQuestionsV2";
+import { TraitScores, archetypeTraitScores } from "./archetypeTraitScores";
+import { archetypeTraitScoresOptimized, getABTestVariant, type ABTestVariant } from "./archetypeTraitScoresOptimized";
 
 /**
  * 获取当前A/B测试使用的原型分数

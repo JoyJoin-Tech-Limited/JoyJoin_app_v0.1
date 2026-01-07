@@ -7,14 +7,14 @@
  * Act 3: 队友汇聚成圈 (2.5s) - 团队归属感
  */
 
-import { useState, useEffect, useCallback, memo } from 'react';
-import { getOrAssignVariant, getTimingConfig } from '@/lib/abTestingFramework';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Share2, Sparkles, RotateCcw, RotateCw, Theater, Lightbulb } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { LoadingProgressTracker } from '@/lib/loadingProgressTracker';
-import { AnimationLoadingScreen } from '@/components/AnimationLoadingScreen';
-import { archetypeAvatars, archetypeGradients } from '@/lib/archetypeAvatars';
+import { useState, useEffect, useCallback, memo } from "react";
+import { getOrAssignVariant, getTimingConfig } from "@/lib/abTestingFramework";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Share2, Sparkles, RotateCcw, RotateCw, Theater, Lightbulb } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { LoadingProgressTracker } from "@/lib/loadingProgressTracker";
+import { AnimationLoadingScreen } from "@/components/AnimationLoadingScreen";
+import { archetypeAvatars, archetypeGradients } from "@/lib/archetypeAvatars";
 import { 
   archetypeAnimations, 
   getEventTypeTheme,

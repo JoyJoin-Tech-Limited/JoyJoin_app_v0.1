@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from "vitest";
 import { 
   accumulateTraitScores, 
   evaluatePersonality,
 } from '../cumulativeScoringSystem';
-import { personalityQuestionsV2, TraitScores } from '../../data/personalityQuestionsV2';
+import { personalityQuestionsV2, TraitScores } from "../../data/personalityQuestionsV2";
 
 const SCORE_RANGE = {
   A: { min: -4, max: 30 },

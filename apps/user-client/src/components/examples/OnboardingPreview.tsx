@@ -1,4 +1,4 @@
-import OnboardingPreview from '../OnboardingPreview';
+import OnboardingPreview from "../OnboardingPreview";
 
 export default function OnboardingPreviewExample() {
   return (

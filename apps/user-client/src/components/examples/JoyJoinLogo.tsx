@@ -1,4 +1,4 @@
-import JoyJoinLogo from '../JoyJoinLogo';
+import JoyJoinLogo from "../JoyJoinLogo";
 
 export default function JoyJoinLogoExample() {
   return (

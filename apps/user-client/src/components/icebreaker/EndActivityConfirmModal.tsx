@@ -1,6 +1,6 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Sparkles, LogOut, X } from 'lucide-react';
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Sparkles, LogOut, X } from "lucide-react";
 
 interface EndActivityConfirmModalProps {
   open: boolean;

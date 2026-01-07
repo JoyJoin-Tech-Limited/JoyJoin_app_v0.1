@@ -1,10 +1,10 @@
-import { useState, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { RotateCw, Crown, Sparkles, Users } from 'lucide-react';
-import { archetypeConfig } from '@/lib/archetypes';
+import { useState, useCallback, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { RotateCw, Crown, Sparkles, Users } from "lucide-react";
+import { archetypeConfig } from "@/lib/archetypes";
 
 export interface Participant {
   id: string;

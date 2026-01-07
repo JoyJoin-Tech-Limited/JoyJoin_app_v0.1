@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo } from "react";
 
 interface PersonalityRadarChartProps {
   affinityScore?: number;

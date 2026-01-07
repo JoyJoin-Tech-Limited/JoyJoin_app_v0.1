@@ -1,5 +1,5 @@
-import { useEffect, useCallback, useState, useRef } from 'react';
-import { useWebSocket } from './useWebSocket';
+import { useEffect, useCallback, useState, useRef } from "react";
+import { useWebSocket } from "./useWebSocket";
 import type { 
   WSMessage,
   KingGamePlayerJoinedData,

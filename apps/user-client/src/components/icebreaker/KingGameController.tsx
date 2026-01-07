@@ -1,10 +1,10 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Crown, 
   Shuffle, 
@@ -24,9 +24,9 @@ import {
   Wifi,
   WifiOff,
 } from 'lucide-react';
-import { KingGameCardDeck } from './KingGameCardDeck';
-import { useKingGameWebSocket, KingGameState, KingGamePhase } from '@/hooks/useKingGameWebSocket';
-import { archetypeAvatars } from '@/lib/archetypeAvatars';
+import { KingGameCardDeck } from "./KingGameCardDeck";
+import { useKingGameWebSocket, KingGameState, KingGamePhase } from "@/hooks/useKingGameWebSocket";
+import { archetypeAvatars } from "@/lib/archetypeAvatars";
 
 interface KingGameControllerProps {
   onBack: () => void;

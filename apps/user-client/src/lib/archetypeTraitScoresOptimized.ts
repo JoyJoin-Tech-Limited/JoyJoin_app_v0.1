@@ -12,7 +12,7 @@
  * - 保持原型的核心性格特征不变
  */
 
-import type { TraitScores } from './archetypeTraitScores';
+import type { TraitScores } from "./archetypeTraitScores";
 
 /**
  * 专家优化版原型向量 V2
