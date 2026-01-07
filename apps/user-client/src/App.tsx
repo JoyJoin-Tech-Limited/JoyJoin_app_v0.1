@@ -4,51 +4,49 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { preloadXiaoyueImages } from "@/lib/preloadImages";
-import LoginPage from "@/pages/LoginPage";
-import RegistrationPage from "@/pages/RegistrationPage";
-// RegistrationMethodPage kept for internal reference only - not imported in user routes
-import ChatRegistrationPage from "@/pages/ChatRegistrationPage";
-import InterestsTopicsPage from "@/pages/InterestsTopicsPage";
-import PersonalityTestPageV4 from "@/pages/PersonalityTestPageV4";
-import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
-import ProfileSetupPage from "@/pages/ProfileSetupPage";
-import EssentialDataPage from "@/pages/EssentialDataPage";
-import ExtendedDataPage from "@/pages/ExtendedDataPage";
-import DiscoverPage from "@/pages/DiscoverPage";
-import EventsPage from "@/pages/EventsPage";
-import ChatsPage from "@/pages/ChatsPage";
-import EventChatDetailPage from "@/pages/EventChatDetailPage";
-import DirectChatPage from "@/pages/DirectChatPage";
-import ProfilePage from "@/pages/ProfilePage";
-import EditProfilePage from "@/pages/EditProfilePage";
-import EditBasicInfoPage from "@/pages/EditBasicInfoPage";
-import EditEducationPage from "@/pages/EditEducationPage";
-import EditWorkPage from "@/pages/EditWorkPage";
-import EditPersonalPage from "@/pages/EditPersonalPage";
-import EditIntentPage from "@/pages/EditIntentPage";
-import EditInterestsPage from "@/pages/EditInterestsPage";
-import EditSocialPage from "@/pages/EditSocialPage";
-import EventDetailPage from "@/pages/EventDetailPage";
-import BlindBoxPaymentPage from "@/pages/BlindBoxPaymentPage";
-import BlindBoxConfirmationPage from "@/pages/BlindBoxConfirmationPage";
-import BlindBoxEventDetailPage from "@/pages/BlindBoxEventDetailPage";
-import EventPoolRegistrationPage from "@/pages/EventPoolRegistrationPage";
-import PoolGroupDetailPage from "@/pages/PoolGroupDetailPage";
-import InvitationLandingPage from "@/pages/InvitationLandingPage";
-import InviteLandingRouter from "@/pages/InviteLandingRouter";
-import InvitePage from "@/pages/InvitePage";
-import EventFeedbackFlow from "@/pages/EventFeedbackFlow";
-import DeepFeedbackFlow from "@/pages/DeepFeedbackFlow";
-import IcebreakerSessionPage from "@/pages/IcebreakerSessionPage";
-import IcebreakerDemoPage from "@/pages/IcebreakerDemoPage";
-import RewardsPage from "@/pages/RewardsPage";
-import AdminLayout from "@/pages/admin/AdminLayout";
-import AdminLoginPage from "@/pages/admin/AdminLoginPage";
-import NotFound from "@/pages/not-found";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import LevelUpProvider from "@/components/LevelUpProvider";
-import DuolingoOnboardingPage from "@/pages/DuolingoOnboardingPage";
+
+const LoginPage = lazy(() => import("@/pages/LoginPage"));
+const RegistrationPage = lazy(() => import("@/pages/RegistrationPage"));
+const ChatRegistrationPage = lazy(() => import("@/pages/ChatRegistrationPage"));
+const PersonalityTestPageV4 = lazy(() => import("@/pages/PersonalityTestPageV4"));
+const PersonalityTestResultPage = lazy(() => import("@/pages/PersonalityTestResultPage"));
+const EssentialDataPage = lazy(() => import("@/pages/EssentialDataPage"));
+const ExtendedDataPage = lazy(() => import("@/pages/ExtendedDataPage"));
+const DiscoverPage = lazy(() => import("@/pages/DiscoverPage"));
+const EventsPage = lazy(() => import("@/pages/EventsPage"));
+const ChatsPage = lazy(() => import("@/pages/ChatsPage"));
+const EventChatDetailPage = lazy(() => import("@/pages/EventChatDetailPage"));
+const DirectChatPage = lazy(() => import("@/pages/DirectChatPage"));
+const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
+const EditProfilePage = lazy(() => import("@/pages/EditProfilePage"));
+const EditBasicInfoPage = lazy(() => import("@/pages/EditBasicInfoPage"));
+const EditEducationPage = lazy(() => import("@/pages/EditEducationPage"));
+const EditWorkPage = lazy(() => import("@/pages/EditWorkPage"));
+const EditPersonalPage = lazy(() => import("@/pages/EditPersonalPage"));
+const EditIntentPage = lazy(() => import("@/pages/EditIntentPage"));
+const EditInterestsPage = lazy(() => import("@/pages/EditInterestsPage"));
+const EditSocialPage = lazy(() => import("@/pages/EditSocialPage"));
+const EventDetailPage = lazy(() => import("@/pages/EventDetailPage"));
+const BlindBoxPaymentPage = lazy(() => import("@/pages/BlindBoxPaymentPage"));
+const BlindBoxConfirmationPage = lazy(() => import("@/pages/BlindBoxConfirmationPage"));
+const BlindBoxEventDetailPage = lazy(() => import("@/pages/BlindBoxEventDetailPage"));
+const EventPoolRegistrationPage = lazy(() => import("@/pages/EventPoolRegistrationPage"));
+const PoolGroupDetailPage = lazy(() => import("@/pages/PoolGroupDetailPage"));
+const InviteLandingRouter = lazy(() => import("@/pages/InviteLandingRouter"));
+const InvitePage = lazy(() => import("@/pages/InvitePage"));
+const EventFeedbackFlow = lazy(() => import("@/pages/EventFeedbackFlow"));
+const DeepFeedbackFlow = lazy(() => import("@/pages/DeepFeedbackFlow"));
+const IcebreakerSessionPage = lazy(() => import("@/pages/IcebreakerSessionPage"));
+const IcebreakerDemoPage = lazy(() => import("@/pages/IcebreakerDemoPage"));
+const RewardsPage = lazy(() => import("@/pages/RewardsPage"));
+const AdminLayout = lazy(() => import("@/pages/admin/AdminLayout"));
+const AdminLoginPage = lazy(() => import("@/pages/admin/AdminLoginPage"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+const DuolingoOnboardingPage = lazy(() => import("@/pages/DuolingoOnboardingPage"));
 
 preloadXiaoyueImages();
 
@@ -172,14 +170,7 @@ function Router() {
   const [location] = useLocation();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-muted-foreground">加载中...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   // Preview login page (for demo purposes - shows complete login flow)
@@ -237,7 +228,9 @@ function App() {
       <TooltipProvider>
         <LevelUpProvider>
           <Toaster />
-          <Router />
+          <Suspense fallback={<LoadingScreen />}>
+            <Router />
+          </Suspense>
         </LevelUpProvider>
       </TooltipProvider>
     </QueryClientProvider>
