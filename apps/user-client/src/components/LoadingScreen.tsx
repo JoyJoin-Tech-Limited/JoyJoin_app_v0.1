@@ -1,5 +1,5 @@
-import { OS1FullScreenLoader } from "./OS1LoadingAnimation";
+import { LoadingLogoSleek } from "./LoadingLogoSleek";
 
 export function LoadingScreen() {
-  return <OS1FullScreenLoader />;
+  return <LoadingLogoSleek loop />;
 }
