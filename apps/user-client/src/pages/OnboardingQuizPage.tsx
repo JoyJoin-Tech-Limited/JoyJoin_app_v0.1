@@ -82,8 +82,8 @@ export default function OnboardingQuizPage() {
   };
 
   return (
-    <div className="mobile-page">
-      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b">
+    <div className="h-screen overflow-hidden flex flex-col bg-background">
+      <div className="shrink-0 bg-background/95 backdrop-blur-sm border-b">
         <div className="flex items-center min-h-[48px] px-3 gap-2">
           <Button 
             variant="ghost" 
@@ -102,7 +102,7 @@ export default function OnboardingQuizPage() {
         </div>
       </div>
 
-      <div className="mobile-content-compact overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0 px-4 py-3">
         {stage === "intro" && (
           <QuizIntro 
             onStart={handleStartQuiz}
