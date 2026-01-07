@@ -510,9 +510,9 @@ export default function PersonalityTestPageV4() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3 }}
-          className="flex-1 flex flex-col px-4 py-4"
+          className="flex-1 flex flex-col px-4 py-4 overflow-hidden"
         >
-          <div className="mb-4">
+          <div className="shrink-0 mb-4">
             <p className="text-xl text-foreground mb-4 leading-relaxed font-bold">
               {scenarioText}
             </p>
@@ -527,16 +527,18 @@ export default function PersonalityTestPageV4() {
             />
           </div>
           
-          <div className="flex-1 flex flex-col justify-center py-2">
-            <SelectionList
-              options={optionsForList}
-              selected={selectedOption}
-              onSelect={handleSelectOption}
-              questionId={currentQuestion.id}
-            />
+          <div className="flex-1 flex flex-col justify-center py-2 min-h-0">
+            <div className="overflow-y-auto -mx-4 px-4">
+              <SelectionList
+                options={optionsForList}
+                selected={selectedOption}
+                onSelect={handleSelectOption}
+                questionId={currentQuestion.id}
+              />
+            </div>
           </div>
 
-          <div className="py-4 mt-auto space-y-3">
+          <div className="shrink-0 py-4 space-y-3">
             <Button 
               size="lg"
               className="w-full h-14 text-lg rounded-2xl"
