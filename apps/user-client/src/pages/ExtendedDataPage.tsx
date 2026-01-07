@@ -279,7 +279,8 @@ export default function ExtendedDataPage() {
     onSuccess: async () => {
       localStorage.removeItem(EXTENDED_CACHE_KEY);
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setLocation("/");
+      // 跳转到引导页
+      setLocation("/guide");
     },
     onError: (error: Error) => {
       toast({
@@ -369,9 +370,9 @@ export default function ExtendedDataPage() {
   };
 
   const handleSkip = () => {
-    // Skip extended data and go to home
+    // Skip extended data and go to guide
     localStorage.removeItem(EXTENDED_CACHE_KEY);
-    setLocation("/");
+    setLocation("/guide");
   };
 
   const containerVariants = prefersReducedMotion 
