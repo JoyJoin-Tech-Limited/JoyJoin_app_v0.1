@@ -231,52 +231,52 @@ interface UnifiedAssessmentResult {
 
 const archetypeUniqueTraits: Record<string, { trait: string; description: string }[]> = {
   "开心柯基": [
-    { trait: "自带氛围感", description: "你走到哪里，快乐就跟到哪里" },
-    { trait: "破冰达人", description: "让陌生人也能迅速放下防备" },
+    { trait: "自带氛围感", description: "你走到哪里，快乐就跟到哪里。这种天然的感染力让你在人群中像发光体一样，总能带动周围人的情绪。" },
+    { trait: "破冰达人", description: "让陌生人也能迅速放下防备。你善于寻找轻松的话题切入点，能敏锐察觉尴尬气氛并用幽默化解，让初次见面变得简单。" },
   ],
   "太阳鸡": [
-    { trait: "正能量持久输出", description: "不是一时兴起，是稳定发电" },
-    { trait: "情绪恒温器", description: "遇事不慌，还能稳住别人" },
+    { trait: "正能量持久输出", description: "你的积极态度不是一时兴起，而是源于内在的稳定发电。即便在压力之下，你也能保持乐观，给予他人持续的鼓舞。" },
+    { trait: "情绪恒温器", description: "遇事不慌，还能稳住别人。你拥有强大的自我调节能力，像一个恒温器一样维持着环境的心理安全感。" },
   ],
   "夸夸豚": [
-    { trait: "真诚赞美", description: "你的夸奖不是客套，是真心认可" },
-    { trait: "情感敏锐", description: "总能捕捉到别人的闪光点" },
+    { trait: "真诚赞美", description: "你的夸奖从不是客套的奉承，而是基于细致观察后的真心认可。这种真诚让你播撒的善意拥有真实的力量。" },
+    { trait: "情感敏锐", description: "你总能敏锐地捕捉到别人被忽略的闪光点。通过你这面镜子，周围的人往往能看到一个更美好、更有价值的自己。" },
   ],
   "机智狐": [
-    { trait: "创意脑洞", description: "能把无聊变有趣，点子源源不断" },
-    { trait: "快速适应", description: "什么话题都能接得住" },
+    { trait: "创意脑洞", description: "你能把平凡的事物变得趣味横生，点子源源不断且不落俗套。你的存在让原本枯燥的聚会总能多出一份惊喜。" },
+    { trait: "快速适应", description: "无论环境如何变化，你总能迅速找准定位并与不同背景的人接轨。这种灵活的认知切换让你在各种场合都能游刃有余。" },
   ],
   "淡定海豚": [
-    { trait: "张弛有度", description: "热闹和安静之间自如切换" },
-    { trait: "情商在线", description: "懂得什么时候该说什么" },
+    { trait: "张弛有度", description: "你在热闹喧嚣与宁静独处之间自如切换。你懂得在社交中释放魅力，也懂得在安静中通过自我思考来沉淀和恢复。" },
+    { trait: "情商在线", description: "你对社交分寸感的把握精准。你能在不冒犯他人的前提下表达真实见解，在人际网络中游走得既自在又得体。" },
   ],
   "织网蛛": [
-    { trait: "人脉连接", description: "善于发现谁和谁会聊得来" },
-    { trait: "长情维护", description: "记得每个朋友的特点和喜好" },
+    { trait: "人脉连接", description: "你不仅是信息的汇聚点，更是人际关系的桥接者。你总能一眼看出谁和谁会碰撞出火花，并乐于成就他人的连接。" },
+    { trait: "长情维护", description: "你珍视每一份关系，记得朋友们那些细碎的喜好与重要时刻。你的细水长流让关系网络不仅广阔，而且温润持久。" },
   ],
   "暖心熊": [
-    { trait: "主动关怀", description: "不用别人开口，就能感知需要" },
-    { trait: "安全感担当", description: "让人愿意敞开心扉" },
+    { trait: "主动关怀", description: "你拥有极强的共情能力，往往在对方开口之前就已感知其需求。这种无声的理解往往比任何言语都更具疗愈力。" },
+    { trait: "安全感担当", description: "你温和且包容的特质让人不自觉地想要敞开心扉。在你面前，人们无需伪装，这种心理安全感是你给予他人最珍贵的礼物。" },
   ],
   "灵感章鱼": [
-    { trait: "跨界联想", description: "能把八竿子打不着的事联系起来" },
-    { trait: "深度对话", description: "一对一时特别有洞察力" },
+    { trait: "跨界联想", description: "你的思维跳跃且广阔，能将互不相关的领域奇妙地联系起来。这种独特的跨界洞察力让你总能提供令人耳目一新的视角。" },
+    { trait: "深度对话", description: "你厌倦浅尝辄止的社交，更倾心于直抵灵魂的深度交流。在这一对一的深谈中，你的智慧和深度总能带给对方深刻启发。" },
   ],
   "沉思猫头鹰": [
-    { trait: "观察敏锐", description: "别人没注意的细节你都看到了" },
-    { trait: "一针见血", description: "说话不多，但说出来就是重点" },
+    { trait: "观察敏锐", description: "你像是一个冷静的旁观者，那些被大多数人忽略的细节和底层逻辑都逃不过你的眼睛。这让你总能把握事物的本质。" },
+    { trait: "一针见血", description: "你不喜欢废话，但每一次开口都直指核心。你的言语虽然不多，但分量十足，总能在关键时刻提供关键的决策参考。" },
   ],
   "定心大象": [
-    { trait: "稳定可靠", description: "关键时刻总是那个拿主意的" },
-    { trait: "责任担当", description: "说到就能做到" },
+    { trait: "稳定可靠", description: "你是团队中的定海神针，在混乱局面中依然能保持定力。这种基于实力的稳重，让你自然而然地成为大家的依赖。" },
+    { trait: "责任担当", description: "你对承诺有着近乎偏执的坚守，言出必行是你的底色。这种极高的可预测性，构建了你无可替代的个人品牌信誉。" },
   ],
   "稳如龟": [
-    { trait: "看人准", description: "不轻易下判断，但判断准" },
-    { trait: "深度交往", description: "认定了就是一辈子的朋友" },
+    { trait: "看人准", description: "你从不急于对人下定论，而是通过长期的静默观察来过滤噪音。这种慢火烘焙出的洞察力，让你极少在重大判断上失误。" },
+    { trait: "深度交往", description: "你的朋友圈可能不大，但每一段关系都历经考验且深厚无比。你更愿意把精力投入在那些值得深交一生的人身上。" },
   ],
   "隐身猫": [
-    { trait: "独立自主", description: "有自己的世界和节奏" },
-    { trait: "质量至上", description: "选择少而精的社交" },
+    { trait: "独立自主", description: "你拥有一个丰盈且自洽的内心世界，不随波逐流。这种精神上的独立让你即便身处孤身，也能自得其乐且保持高昂的能量。" },
+    { trait: "质量至上", description: "你对社交极度挑剔，坚持‘无意义的社交不如高质量的独处’。这种对品质的坚持，确保了你生活中的每一份连接都是真实且有意义的。" },
   ],
 };
 
@@ -285,26 +285,28 @@ function UniqueTraitsSection({ archetype }: { archetype: string }) {
   if (!traits || traits.length === 0) return null;
 
   return (
-    <Card data-testid="unique-traits-card" className="border-primary/20">
+    <Card data-testid="unique-traits-card" className="border-primary/20 overflow-hidden">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2">
           <Star className="w-5 h-5 text-yellow-500" />
           你的独特之处
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-4">
         {traits.map((item, index) => (
           <div 
             key={index} 
-            className="flex items-start gap-3 p-3 bg-gradient-to-r from-primary/5 to-transparent rounded-lg"
+            className="flex items-start gap-4 p-4 bg-gradient-to-br from-primary/5 to-transparent rounded-xl border border-primary/5"
             data-testid={`unique-trait-${index}`}
           >
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <span className="text-primary font-bold text-sm">{index + 1}</span>
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 shadow-inner">
+              <span className="text-primary font-bold text-lg">{index + 1}</span>
             </div>
-            <div>
-              <span className="font-medium text-sm">{item.trait}</span>
-              <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
+            <div className="flex-1 min-w-0">
+              <span className="font-semibold text-base block text-primary/90">{item.trait}</span>
+              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                <span className="no-orphan">{item.description}</span>
+              </p>
             </div>
           </div>
         ))}

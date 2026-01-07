@@ -27,7 +27,7 @@ function TraitSlider({ leftLabel, rightLabel, value, index }: TraitSliderProps) 
         {leftLabel}
       </span>
       
-      <div className="relative h-1.5 bg-muted rounded-full overflow-visible">
+      <div className="relative h-1.5 bg-primary/10 rounded-full overflow-visible">
         <motion.div
           className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-primary rounded-full shadow-[0_2px_6px_rgba(88,63,184,0.25)]"
           initial={prefersReducedMotion ? { left: `calc(${position}% - 6px)`, y: "-50%" } : { left: "calc(50% - 6px)", scale: 0, y: "-50%" }}
