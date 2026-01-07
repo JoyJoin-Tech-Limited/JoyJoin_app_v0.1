@@ -36,10 +36,13 @@ docker build -t joyjoin-api:$ENVIRONMENT -f apps/server/Dockerfile .
 
 echo "📤 Step 3: Deploying..."
 
+#不要跳过staging的database push
+npm run db:push
+
 if [ "$ENVIRONMENT" == "production" ]; then
     echo "  🔶 Production deployment - running migrations first..."
     # Run database migrations
-    npm run db:push
+    #npm run db:push
 fi
 
 # Deploy based on your platform (uncomment and modify as needed)
