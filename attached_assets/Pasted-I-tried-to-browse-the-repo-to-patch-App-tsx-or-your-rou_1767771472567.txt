@@ -1,0 +1,63 @@
+I tried to browse the repo to patch `App.tsx` (or your route-level fallback), but the repo tree wasn’t accessible from here. Can you confirm the right entry point and framework? Two common patterns:
+
+- React Vite/SPA: `apps/user-client/src/App.tsx` or `apps/user-client/src/main.tsx`
+- Next.js: `apps/user-client/app/layout.tsx` (or `_app.tsx`), with a suspense fallback in routes.
+
+If you tell me the exact file where your current loading/suspense/route fallback lives, I’ll wire the `LoadingScreen` in for you. In the meantime, here’s how to integrate it in a typical React SPA `App.tsx`:
+
+````typescript name=apps/user-client/src/App.tsx
+import React, { Suspense } from "react";
+import { LoadingScreen } from "./components/LoadingScreen";
+import { AppRoutes } from "./AppRoutes"; // or your main router
+
+export default function App() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <AppRoutes />
+    </Suspense>
+  );
+}
+````
+
+If you use a router element fallback (e.g., React Router):
+
+````typescript name=apps/user-client/src/AppRoutes.tsx
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { LoadingScreen } from "./components/LoadingScreen";
+// ... your routes
+const router = createBrowserRouter([
+  {
+    element: <RootLayout />,
+    children: [
+      // your routes…
+    ],
+    loader: async () => {/* ... */},
+    // suspense-like fallback
+    errorElement: <LoadingScreen />,
+  },
+]);
+
+export function AppRoutes() {
+  return <RouterProvider router={router} fallbackElement={<LoadingScreen />} />;
+}
+````
+
+For Next.js (App Router):
+
+````typescript name=apps/user-client/app/layout.tsx
+import "./globals.css";
+import { Suspense } from "react";
+import { LoadingScreen } from "../components/LoadingScreen";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <Suspense fallback={<LoadingScreen />}>{children}</Suspense>
+      </body>
+    </html>
+  );
+}
+````
+
+Let me know your actual entry file/path and I’ll drop in the exact patch.

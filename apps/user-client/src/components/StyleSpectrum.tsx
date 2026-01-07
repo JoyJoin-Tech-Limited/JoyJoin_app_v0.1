@@ -113,7 +113,7 @@ function generateTraitNarrative(
   
   let narrative = `你的${topLabel}(${Math.round(topTrait.score)}分)和${secondLabel}(${Math.round(secondTrait.score)}分)让你展现出${archetype}的特质`;
   
-  if (runnerUp && runnerUp.similarity >= 15) {
+  if (runnerUp && runnerUp.score >= 70) {
     narrative += `，同时也有一点${runnerUp.archetype}的影子`;
   }
   

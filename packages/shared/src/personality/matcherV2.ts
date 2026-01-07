@@ -1608,7 +1608,7 @@ export function getStyleSpectrum(
     return {
       archetype: m.archetype,
       score: m.score,
-      similarity: Math.min(95, Math.max(20, similarity)),
+      similarity: m.score,
       blendLabel: blendLabels[i] || "有相似特质的",
       emoji: ARCHETYPE_EMOJI[m.archetype] || "🎭"
     };
