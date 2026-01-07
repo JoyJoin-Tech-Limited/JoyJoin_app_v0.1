@@ -176,7 +176,6 @@ function Router() {
     return <LoadingScreen />;
   }
 
-
   // Preview login page (for demo purposes - shows complete login flow)
   if (location === "/preview-login") {
     return <Route path="/preview-login" component={LoginPage} />;
