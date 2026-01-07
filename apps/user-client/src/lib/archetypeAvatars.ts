@@ -1,17 +1,17 @@
 // 12-Archetype Animal Social Vibe System
 // Avatar image mapping system with high-res transparent illustrations
-import corgiImg from '@assets/开心柯基_transparent_1_1767673999923.png';
-import foxImg from '@assets/机智狐_transparent_2_1767673999921.png';
-import bearImg from '@assets/暖心熊_transparent_3_1767673999919.png';
-import spiderImg from '@assets/织网蛛_transparent_4_1767673999924.png';
-import dolphinImg from '@assets/夸夸豚_transparent_5_1767673999925.png';
-import chickenImg from '@assets/太阳鸡_transparent_6_1767673999921.png';
-import calmDolphinImg from '@assets/淡定海豚_transparent_7_1767673999925.png';
-import owlImg from '@assets/沉思猫头鹰_transparent_8_1767673999922.png';
-import turtleImg from '@assets/稳如龟_transparent_9_1767673999923.png';
-import catImg from '@assets/隐身猫_transparent_10_1767673999924.png';
-import elephantImg from '@assets/定心大象_transparent_11_1767673999922.png';
-import octopusImg from '@assets/灵感章鱼_transparent_12_1767673999924.png';
+import corgiImg from '@assets/开心柯基_transparent_1.png';
+import foxImg from '@assets/机智狐_transparent_2.png';
+import bearImg from '@assets/暖心熊_transparent_3.png';
+import spiderImg from '@assets/织网蛛_transparent_4.png';
+import dolphinImg from '@assets/夸夸豚_transparent_5.png';
+import chickenImg from '@assets/太阳鸡_transparent_6.png';
+import calmDolphinImg from '@assets/淡定海豚_transparent_7.png';
+import owlImg from '@assets/沉思猫头鹰_transparent_8.png';
+import turtleImg from '@assets/稳如龟_transparent_9.png';
+import catImg from '@assets/隐身猫_transparent_10.png';
+import elephantImg from '@assets/定心大象_transparent_11.png';
+import octopusImg from '@assets/灵感章鱼_transparent_12.png';
 
 export const archetypeAvatars: Record<string, string> = {
   '开心柯基': corgiImg,
