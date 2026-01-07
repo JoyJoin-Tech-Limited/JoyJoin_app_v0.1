@@ -1,7 +1,7 @@
-import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01_1766766685652.png";
-import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03_1766766685650.png";
-import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04_1766766685649.png";
-import xiaoyueFox from "@assets/Xiao_Yue_Avatar-06_1766766685632.png";
+import xiaoyueNormal from "@assets/Xiao_Yue_Avatar-01.png";
+import xiaoyueExcited from "@assets/Xiao_Yue_Avatar-03.png";
+import xiaoyuePointing from "@assets/Xiao_Yue_Avatar-04.png";
+import xiaoyueFox from "@assets/Xiao_Yue_Avatar-06.png";
 
 import corgiImg from "@assets/开心柯基_transparent_1.png";
 import foxImg from "@assets/机智狐_transparent_2.png";
