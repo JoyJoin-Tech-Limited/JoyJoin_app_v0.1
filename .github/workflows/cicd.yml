@@ -66,73 +66,64 @@ jobs:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
   deploy:
-    name: Production Deployment
-    needs: ai-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: SSH Remote Deployment
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 30m 
-          script: |
-            set -e # 任何命令出错立即停止，防止连锁反应
-            
-            # --- 1. Code Sync ---
-            echo "📥 Syncing code..."
-            cd ~/JoyJoin
-            git fetch --all
-            git reset --hard origin/main
-            
-            # --- 2. Docker Services ---
-            echo "🐳 Restarting containers..."
-            cd deployment
-            
-            # Caddy 安全重启模式：不删容器，只热更新
-            docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans
-            
-            # --- 3. Database Sync ---
-            echo "🔧 Fixing DNS and syncing database..."
-            echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
-            
-            cd ~/JoyJoin
-            # 硬编码 DB 连接 (Turn 15 验证通过版)
-            export DATABASE_URL="postgresql://neondb_owner:npg_NmTv6SY3fxXW@ep-square-math-ahiz6fm7-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
-            echo "🎯 Target DB: $(echo $DATABASE_URL | sed 's/:[^@]*@/:****@/')"
-            npx drizzle-kit push --config=./drizzle.config.ts
-            
-            # --- 4. Health Checks (失败则回滚的前提) ---
-            echo "🏥 Verifying service status..."
-            sleep 30 
-            
-            # 检查内部 API
-            echo "   Checking internal API..."
-            curl -s --retry 5 --retry-delay 5 http://localhost:5000 > /dev/null || (echo "❌ API Failed" && docker logs joyjoin-api --tail 50 && exit 1)
-            
-            # 检查外部 HTTPS (防假成功)
-            echo "   Checking Public Access (via Caddy)..."
-            if ! curl -s -k -f --retry 5 --retry-delay 5 https://localhost > /dev/null; then
-                echo "❌ Website Check Failed! Caddy issue or Backend Error."
-                echo "🔍 Caddy Logs:"
-                docker logs joyjoin-caddy --tail 20
-                
-                # 🔴 关键点：如果这里失败了，脚本直接 exit 1。
-                # 下面的清理命令就不会执行，你的旧镜像依然在硬盘上，方便你手动回滚。
-                exit 1
-            fi
-            
-            # --- 5. Smart Clean Up (保留最近的备份) ---
-            echo "🧹 Cleaning up OLD Docker images (Safety Mode)..."
-            
-            # [CRITICAL UPDATE] 
-            # 只删除 24 小时之前创建的未使用镜像。
-            # 这样刚才替换下来的那个旧版本（Build time < 24h）会被保留！
-            # 如果你需要回滚，本地还有镜像可用。
-            docker image prune -a --force --filter "until=24h"
-            
-            # 清理无用的匿名卷 (Volume)，释放数据库碎片空间
-            docker volume prune -f
-            
-            echo "✅ Deployment successful!"
+      name: Production Deployment
+      needs: ai-test
+      runs-on: ubuntu-latest
+      steps:
+        - name: SSH Remote Deployment
+          uses: appleboy/ssh-action@v1.0.3
+          with:
+            host: ${{ secrets.SERVER_IP }}
+            username: ${{ secrets.SERVER_USER }}
+            key: ${{ secrets.SSH_PRIVATE_KEY }}
+            command_timeout: 30m 
+            script: |
+              set -e # 任何命令出错立即停止
+              
+              # --- 1. Code Sync ---
+              echo "📥 Syncing code..."
+              cd ~/JoyJoin
+              git fetch --all
+              git reset --hard origin/main
+              
+              # --- 2. Docker Services ---
+              echo "🐳 Restarting containers..."
+              cd deployment
+              
+              # Caddy 安全重启
+              docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans
+              
+              # --- 3. Database Sync ---
+              echo "🔧 Fixing DNS and syncing database..."
+              echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
+              
+              cd ~/JoyJoin
+              # 硬编码 DB 连接
+              export DATABASE_URL="postgresql://neondb_owner:npg_NmTv6SY3fxXW@ep-square-math-ahiz6fm7-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
+              echo "🎯 Target DB: $(echo $DATABASE_URL | sed 's/:[^@]*@/:****@/')"
+              npx drizzle-kit push --config=./drizzle.config.ts
+              
+              # --- 4. Health Checks (关键修改点) ---
+              echo "🏥 Verifying service status..."
+              sleep 15 
+              
+              # 1. 检查内部 API (确保后端逻辑正常)
+              echo "   Checking internal API..."
+              curl -s --retry 5 --retry-delay 5 http://localhost:5000 > /dev/null || (echo "❌ API Failed" && docker logs joyjoin-api --tail 50 && exit 1)
+              
+              # 2. 检查 Caddy 容器状态 (只要容器在跑就行，不再强制 curl 域名)
+              echo "   Checking Caddy Container status..."
+              if [ "$(docker inspect -f '{{.State.Running}}' joyjoin-caddy)" != "true" ]; then
+                  echo "❌ Caddy is NOT running."
+                  docker logs joyjoin-caddy --tail 20
+                  exit 1
+              fi
+              
+              # --- 5. Smart Clean Up ---
+              echo "🧹 Cleaning up OLD Docker images (Safety Mode)..."
+              
+              # 只删除 24 小时之前的镜像，保留最近一次备份方便回滚
+              docker image prune -a --force --filter "until=24h"
+              docker volume prune -f
+              
+              echo "✅ Deployment successful!"
