@@ -1,0 +1,263 @@
+Objective: Let new users preview events pre-registration, then onboard them via a registration form and a personality-role assessment that assigns one of eight core “social engine” roles with a hexagonal trait radar chart and insights.
+
+High-level user flow
+- Entry (non-registered users)
+  - Landing/Discover shows a scrollable preview of event cards (title, date, tags, brief highlight). No full access yet.
+  - Users can browse but cannot RSVP or view full details.
+- Tap event card
+  - Trigger registration gate and onboarding flow.
+- Registration
+  - Basic info form.
+  - WeChat account binding.
+- Personality test (10–15 questions)
+  - Assign one primary “functional social role” (8 core roles), plus hexagonal trait chart and insights.
+- Post-onboarding
+  - Show role results with avatar, role description, trait radar, strengths, potential friendship challenges, and ideal friend types.
+  - Return to event detail with full access (RSVP, chat, etc.).
+
+Detailed requirements
+
+A. Discover (pre-registration)
+  - Tap any card → open registration flow.
+  - If user already registered → open event detail.
+
+B. Registration form
+- Fields (required unless noted)
+  - First name
+  - Age (numeric; 16–80)
+  - Gender (Male / Female / Non-binary / Prefer not to say)
+  - Relationship status (Single / In a relationship / Married / Prefer not to say)
+  - Have kids (Yes/No)
+  - Industry (single select, provide options and “Other” free text):
+    - 大厂, 金融, 科技, AI, 跨境电商, 投资人, 消费, 艺术, 政府, 其他
+  - 籍贯 (place of origin) (free text or region picker)
+  - 长期base (current long-term base) (city picker)
+  - Bind WeChat ID (微信号) or use Mini Program openId/unionId; display masked ID once bound
+- UX
+  - Multi-step form (2–3 screens) with progress indicator.
+  - Validation inline; prevent advance on invalid fields.
+  - Consent checkbox for terms/privacy.
+- Data
+  - Store user profile in backend; associate with openId/unionId.
+
+C. Personality test
+- Structure
+  - 10 questions minimum; can extend to 15. Provided item bank below.
+  - Types:
+    - Single-choice (2 points to selected)
+    - “Most-like” and “Second-like” (2 points for Most-like, 1 point for Second-like)
+  - Time: ~3–5 minutes.
+- UI/UX
+  - One question per screen with progress bar (e.g., Q3/12).
+  - Clear labels: “最像我的” and “其次像我的” for dual-choice items; prevent selecting same option twice.
+  - Back/Next navigation; confirm before exiting mid-test.
+- Scoring
+  - Each answer maps to one of the 8 core roles via the mapping table.
+  - Sum scores per role.
+  - Result logic:
+    - Highest score (>5) = Primary role.
+    - Second-highest (3–4) = Secondary role.
+  - Subtype inference based on specific items (see mapping).
+- Output
+  - Assign role + subtype, generate hexagonal trait scores and chart, produce insights text.
+
+D. Roles and content model
+
+Core roles (8)
+- 能量输出型（创造话题）
+  - 火花塞: 话题发起者，脑洞大。
+  - 氛围组: 情绪渲染者，幽默感强。
+- 深度思考型（延续话题）
+  - 故事家: 情感共鸣者，叙事能力强。
+  - 探索者: 知识提供者，领域专家。
+  - 挑战者: 观点提炼者，逻辑思辨者。
+- 社交协调型（维护场域）
+  - 连接者: 关怀者，注意力分配者。
+  - 协调者: 冲突调解者，目标导向者。
+  - 肯定者: 价值发现者，善赞美，提供高情绪价值。
+
+Hexagonal personality traits
+- 亲和力
+- 开放性
+- 责任心
+- 情绪稳定性
+- 外向性
+- 正能量性
+
+Result package per user
+- Primary role + secondary role.
+- Subtype label(s) where applicable.
+- Cartoonish avatar for role (asset set; see Assets section).
+- Hexagonal radar chart (6 traits).
+- Insights:
+  - Strengths
+  - Potential friendship challenges
+  - Ideal friend types (complementary roles)
+
+E. Question bank
+
+Part 1: 基础行为模式（单选，2分）
+1. 聚会伊始…你通常会？
+- A. 率先自我介绍，并抛出开放问题。
+- B. 先安静观察，判断性格与共同点。
+- C. 与邻座小声交谈，从一对一开始。
+- D. 等待别人开启话题，随后积极回应。
+
+2. 当讨论到你知之甚少的话题时更倾向于？
+- A. 提出一系列问题，强烈好奇心。
+- B. 关联熟悉领域进行类比。
+- C. 认真聆听，捕捉观点或故事。
+- D. 开个玩笑，承认不懂，把发言权交给专家。
+
+3. 当有人分享私人感人故事后沉默，你会？
+- A. 分享类似经历以示共鸣。
+- B. 提出深刻问题促进探讨。
+- C. 真诚肯定对方（如“谢谢你愿意分享”）。
+- D. 巧妙引入更轻松的话题调节情绪.
+
+4. 你如何看待社交中的“争论”？
+- A. 有趣，获取新视角的机会。
+- B. 必要但需礼貌与逻辑，最好达成共识。
+- C. 尽量避免，更喜欢和谐氛围。
+- D. 若过于激烈，我会插科打诨平息。
+
+Part 2: 反应偏好（最像=2分，次像=1分）
+5. 听到不同意的观点时更可能：
+- A. 直接但礼貌地指出逻辑漏洞/事实错误。
+- B. 以提问方式引导思考前提。
+- C. 先表理解，再给另一角度。
+- D. 保留意见，除非被询问不主动反驳。
+
+6. 更擅长/享受的贡献方式：
+- A. 提供信息：数据与细节。
+- B. 提供视角：新角度或框架。
+- C. 提供情感：故事与共情。
+- D. 提供动力：赞美与鼓励。
+
+7. 有趣但复杂的话题被提起时你更推动：
+- A. 向下挖掘：为什么与本质，追求深度。
+- B. 向外发散：还有什么相关，追求广度。
+- C. 向内连接：我们如何感受，联系体验。
+- D. 向前推进：所以呢？能做什么？导向行动。
+
+Part 3: 自我认知（单选，2分）
+8. 社交中你最大的焦虑来自于？
+- A. 话题无聊肤浅。
+- B. 场面失控或无休止争吵。
+- C. 自己或他人被忽视。
+- D. 气氛冷清压抑。
+
+9. 你最不可能扮演的角色是？
+- A. 主动制止跑题的人。
+- B. 为大家定规则或主题的人。
+- C. 在争论中坚决维护某一方的人。
+- D. 记下联系方式并事后组织聚会的人。
+
+10. 朋友形容你：
+- A. 博学/深刻
+- B. 有趣/好玩
+- C. 温暖/贴心
+- D. 犀利/敏锐
+
+F. Scoring map (answer → role)
+
+- 火花塞: 1A, 7B, 8D
+  - 子类型
+    - 联想家：思维跳跃，连接万物。
+    - 提问者：以不断提问驱动对话。
+- 探索者: 2A, 6A, 7A, 10A
+  - 子类型
+    - 专家型：垂直领域深耕。
+    - 考证派：重事实数据，追求精确。
+- 故事家: 3A, 5C, 6C, 7C
+  - 子类型
+    - 情感共鸣者：调动与回应情绪。
+    - 经历叙述者：用个人故事赋予生命力。
+- 挑战者: 4A, 5A, 10D
+  - 子类型
+    - 逻辑型：用逻辑与证据挑战观点。
+    - 视角型：提出颠覆性新框架。
+- 连接者: 1B, 1C, 3C, 9C
+  - 子类型
+    - 观察者：默默关注并理解每个人。
+    - 牵线者：主动为他人建立联系。
+- 协调者: 4B, 5B, 9A, 9B
+  - 子类型
+    - 共识推动者：寻求共同点。
+    - 流程维护者：确保不跑题且有产出。
+- 氛围组: 1D, 3D, 4D, 10B
+  - 子类型
+    - 幽默破冰者：笑话与自嘲活跃氛围。
+    - 积极呼应者：大笑、捧场带来能量。
+- 肯定者: 2D, 3C, 6D, 7C
+  - 子类型
+    - 赞美者：发现并说出他人优点。
+    - 鼓励者：为害羞者创造安全空间。
+
+Result rules
+- Primary role: highest score, typically >5.
+- Secondary role: second highest, typically 3–4.
+- Subtype logic: use high-scoring item patterns noted above; if multiple subtypes tie, pick by most recent relevant item or show blended description.
+
+G. Trait radar computation
+- Approach 1 (simple, deterministic):
+  - Map each answer to a trait delta (+1 to +2 per chosen option) using a predefined matrix; normalize to 0–10 per trait.
+  - If not using a trait matrix now, derive traits from roles with default profiles (e.g., 氛围组高外向性与正能量；挑战者高开放性与责任心；探索者高责任心、开放性；故事家高亲和力/外向性；连接者高亲和力；协调者高责任心/情绪稳定性；火花塞高开放性/外向性；肯定者高亲和力/正能量). Provide tunable weights in config.
+- Render a 6-axis radar chart.
+
+H. Result page UX
+- Hero section: role name + cartoon avatar + tagline.
+- Score chips: Primary role score, Secondary role score.
+- Radar chart: 6 traits with labels.
+- Copy blocks:
+  - 你在小团体中的价值
+  - 潜在友谊挑战
+  - 理想朋友类型（列出互补2–3个角色）
+- Actions:
+  - “去看看活动” → navigate to tapped event detail.
+  - “分享我的角色” → generate shareable poster with avatar + radar mini chart + QR.
+  - “完善资料” → edit profile.
+
+I. Event detail (post-onboard)
+- Full description, agenda, participants preview (avatars masked if needed), RSVP button, role-based tips (e.g., “作为协调者，你可以…”), chat group link after RSVP.
+
+J. Technical notes (WeChat Mini Program)
+- Auth
+  - Use wx.login to obtain code → backend exchange for openId/unionId.
+  - WeChat ID binding: optional field; store separately from openId.
+- Data storage
+  - Collections: users, testResponses, roleResults, events.
+  - Version test questions/mapping (e.g., testVersion=1) to allow future updates.
+- State
+  - If user not registered, intercept protected routes (event detail, RSVP) → onboarding.
+- Analytics
+  - Track funnel: impressions → card tap → form start → form complete → test start → test complete → result view → RSVP.
+  - Track item-level responses (anonymized) and drop-off.
+- i18n
+  - CN primary; prepare EN keys for future.
+- Accessibility
+  - Large tap targets, readable contrast, error hints, progress feedback.
+
+K. Content and assets
+- Role avatars
+  - 8 distinct, playful, cartoonish SVG/PNG; light/dark friendly; square 1:1; also circular crop.
+- Share poster template
+  - Title, avatar, role name, mini radar, QR code to Mini Program, background motif per role.
+- Empty states
+  - Discover when no events; result when tie/ambiguous.
+
+L. Edge cases
+- Tie on primary role: display “双栖型” badge and show both in order; still require a primary for analytics via tie-break rule (prefer role with more 2-point answers).
+- Incomplete test: prompt to resume from last question; auto-save after each screen.
+- Changing answers: allow retake after 30 days; keep history with versioning.
+- Privacy: results are private by default; user opts in to share.
+
+M. Acceptance criteria
+- Non-registered users can browse event previews; tapping a card triggers onboarding.
+- Registration stores all required fields and binds to openId.
+- Personality test renders all items with correct selection rules, prevents invalid inputs, and persists progress.
+- Scoring engine maps answers to roles exactly as defined; result displays correct primary/secondary and subtype logic.
+- Radar chart renders six traits with values 0–10.
+- Result page shows avatar, copy, and share.
+- After completion, user is redirected back to the event detail they tapped initially.
+- All flows responsive and performant on low-end devices (<200ms interactions where possible).
