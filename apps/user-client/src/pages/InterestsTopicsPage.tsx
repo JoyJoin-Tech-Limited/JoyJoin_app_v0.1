@@ -247,7 +247,7 @@ export default function InterestsTopicsPage() {
   const similarUsersCount = Math.floor(150 + selectedInterests.length * 30 + (primaryInterests.length * 50));
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen overflow-hidden bg-background flex flex-col">
       <RegistrationProgress 
         currentStage="interests" 
         currentStep={step}
@@ -259,8 +259,8 @@ export default function InterestsTopicsPage() {
       <CelebrationConfetti show={showMajorCelebration} type="major" />
 
       {/* Form content */}
-      <div className="flex-1 p-4 overflow-y-auto">
-        <div className="max-w-2xl mx-auto space-y-6 pb-20">
+      <div className="flex-1 p-4 overflow-y-auto min-h-0">
+        <div className="max-w-2xl mx-auto space-y-6 pb-4">
           <motion.div
             key={step}
             initial={{ opacity: 0, x: 20 }}
@@ -548,7 +548,7 @@ export default function InterestsTopicsPage() {
       </div>
 
       {/* Navigation buttons */}
-      <div className="border-t p-4 bg-background sticky bottom-0">
+      <div className="shrink-0 border-t p-4 bg-background">
         <div className="max-w-2xl mx-auto flex gap-3">
           {step > 1 && (
             <Button
