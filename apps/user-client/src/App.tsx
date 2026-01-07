@@ -8,6 +8,7 @@ import { Suspense, lazy, useEffect } from "react";
 import { preloadXiaoyueImages } from "@/lib/preloadImages";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import LevelUpProvider from "@/components/LevelUpProvider";
+import { logWebVitals } from "@/lib/webVitals";
 
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const RegistrationPage = lazy(() => import("@/pages/RegistrationPage"));
@@ -47,8 +48,14 @@ const AdminLayout = lazy(() => import("@/pages/admin/AdminLayout"));
 const AdminLoginPage = lazy(() => import("@/pages/admin/AdminLoginPage"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const DuolingoOnboardingPage = lazy(() => import("@/pages/DuolingoOnboardingPage"));
+const GuidePage = lazy(() => import("@/pages/GuidePage"));
 
 preloadXiaoyueImages();
+
+// 初始化 Web Vitals 性能监控 (开发环境)
+if (import.meta.env.DEV) {
+  logWebVitals();
+}
 
 function RedirectToOnboarding() {
   const [, setLocation] = useLocation();
@@ -130,6 +137,7 @@ function AuthenticatedRouter() {
     <Switch>
       <Route path="/" component={DiscoverPage} />
       <Route path="/discover" component={DiscoverPage} />
+      <Route path="/guide" component={GuidePage} />
       <Route path="/event-pool/:id/register" component={EventPoolRegistrationPage} />
       <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
       <Route path="/blindbox/payment" component={BlindBoxPaymentPage} />
