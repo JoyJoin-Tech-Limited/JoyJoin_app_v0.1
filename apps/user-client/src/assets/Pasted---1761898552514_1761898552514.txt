@@ -1,0 +1,362 @@
+盲盒活动通知系统设计方案
+
+优化后的底部导航栏
+
+```
+┌─────────────────────────────────────┐
+│                                     │
+│                                     │
+│                                     │
+│                                     │
+│                                     │
+│                                     │
+│                                     │
+│                                     │
+│                                     │
+├─────────────────────────────────────┤
+│ 发现¹   活动³   聊天⁶   我的        │
+└─────────────────────────────────────┘
+```
+
+通知类型与位置分配
+
+导航项 通知类型 具体内容
+发现¹ 新活动上线 新的盲盒活动发布、符合兴趣的活动
+活动³ 活动状态更新 匹配进度、成功匹配、活动提醒、反馈提醒
+聊天⁶ 社交互动 新消息、活动群聊更新
+我的 无通知 个人管理功能
+
+---
+
+🎨 具体实现方案
+
+底部导航栏代码
+
+```css
+.bottom-nav {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 60px;
+  background: white;
+  border-top: 1px solid #E5E7EB;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+.nav-item {
+  position: relative;
+  text-align: center;
+  flex: 1;
+  padding: 8px 0;
+}
+
+/* 发现、活动、聊天的通知徽章 */
+.nav-item:not(:last-child) .notification-badge {
+  position: absolute;
+  top: 2px;
+  right: 20%;
+  background: #EF4444;
+  color: white;
+  border-radius: 8px;
+  min-width: 18px;
+  height: 18px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: gentlePulse 2s infinite;
+}
+
+@keyframes gentlePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+```
+
+导航数据结构
+
+```javascript
+const navData = [
+  { 
+    id: 'discover', 
+    label: '发现', 
+    icon: '🔍', 
+    active: false,
+    notification: 1,  // 新盲盒活动
+    showBadge: true
+  },
+  { 
+    id: 'activities', 
+    label: '活动', 
+    icon: '🎪', 
+    active: true,
+    notification: 3,  // 活动状态更新
+    showBadge: true
+  },
+  { 
+    id: 'chat', 
+    label: '聊天', 
+    icon: '💬', 
+    active: false,
+    notification: 6,  // 新消息
+    showBadge: true
+  },
+  { 
+    id: 'profile', 
+    label: '我的', 
+    icon: '👤', 
+    active: false,
+    notification: 0,
+    showBadge: false
+  }
+];
+```
+
+---
+
+📱 各模块通知内容详解
+
+1. 发现模块通知 (¹) - 新盲盒活动
+
+```
+新活动上线：
+• 符合你兴趣的新盲盒饭局
+• 新主题的社交活动
+• 在你常去区域的新活动
+
+触发时机：
+- 平台发布新的盲盒活动
+- 活动符合用户的兴趣偏好
+- 活动在用户常活动区域
+```
+
+2. 活动模块通知 (³) - 完整生命周期
+
+```
+活动状态更新（完整生命周期）：
+
+匹配阶段：
+• 新伙伴加入匹配池 ✅ +1
+• 匹配进度更新（50% → 75%）
+
+匹配成功：
+• 盲盒匹配完成！查看你的伙伴 ✅ +1
+
+活动前：
+• 活动明日开始，请确认出席 ✅ +1
+• 活动地点和时间提醒
+
+活动后：
+• 请为昨晚的活动提供反馈 ✅ +1
+• 伙伴们已提交反馈，查看详情
+```
+
+3. 聊天模块通知 (⁶)
+
+```
+社交互动：
+• 新个人消息
+• 活动群聊新动态
+• 匹配伙伴的破冰消息
+```
+
+---
+
+🔄 活动通知生命周期管理
+
+通知状态机
+
+```javascript
+class ActivityNotificationManager {
+  // 匹配阶段通知
+  onMatchingProgress(activityId, progress) {
+    if (progress % 25 === 0) { // 每25%进度通知
+      this.addNotification('activities', '匹配进度更新');
+    }
+  }
+  
+  onNewMatch(activityId, userCount) {
+    this.addNotification('activities', `新伙伴加入匹配`);
+  }
+  
+  // 匹配成功通知
+  onMatchSuccess(activityId) {
+    this.addNotification('activities', '盲盒匹配完成！');
+  }
+  
+  // 活动前通知
+  onActivityReminder(activityId, hoursLeft) {
+    this.addNotification('activities', `活动${hoursLeft}小时后开始`);
+  }
+  
+  // 活动后通知
+  onFeedbackReminder(activityId) {
+    this.addNotification('activities', '请提供活动反馈');
+  }
+}
+```
+
+通知自动清理
+
+```javascript
+// 用户查看后清除相关通知
+const clearActivityNotifications = (activityId) => {
+  // 用户进入活动详情页时，清除该活动的所有通知
+  notificationManager.clearByType(`activity_${activityId}`);
+};
+
+// 反馈提交后清除反馈通知
+const onFeedbackSubmitted = (activityId) => {
+  notificationManager.clearByType(`feedback_${activityId}`);
+};
+```
+
+---
+
+🎯 用户行为流程
+
+发现模块流程
+
+```
+发现页显示新盲盒活动 → 用户点击查看 → 通知数字-1
+↓
+用户报名活动 → 活动转移到"活动"模块
+↓
+后续通知在"活动"模块显示
+```
+
+活动模块流程
+
+```
+活动状态变化 → 增加对应通知
+↓
+用户查看活动详情 → 清除该活动相关通知
+↓
+用户完成反馈 → 清除反馈通知
+```
+
+完整的用户旅程
+
+```
+发现¹ → 看到新活动 → 报名
+↓
+活动³ → 匹配进度 → 匹配成功 → 活动提醒 → 参与活动 → 反馈提醒
+↓
+聊天⁶ → 与匹配伙伴交流 → 活动群聊
+```
+
+---
+
+🔧 技术实现优化
+
+通知聚合策略
+
+```javascript
+// 避免过多细碎通知，进行智能聚合
+class SmartNotificationAggregator {
+  aggregateActivityNotifications(notifications) {
+    const aggregated = {};
+    
+    notifications.forEach(notification => {
+      const key = this.getAggregationKey(notification);
+      if (!aggregated[key]) {
+        aggregated[key] = {
+          count: 0,
+          latest: notification,
+          type: notification.type
+        };
+      }
+      aggregated[key].count++;
+    });
+    
+    return this.formatAggregatedNotifications(aggregated);
+  }
+  
+  getAggregationKey(notification) {
+    // 相同活动、相似类型的通知聚合
+    if (notification.type.includes('matching')) {
+      return `matching_${notification.activityId}`;
+    }
+    return notification.id;
+  }
+}
+```
+
+实时通知同步
+
+```javascript
+// WebSocket 实时通知
+const setupNotificationWebSocket = () => {
+  const ws = new WebSocket('/notifications');
+  
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    
+    switch (data.type) {
+      case 'new_activity':
+        notificationManager.updateNotification('discover', +1);
+        break;
+      case 'matching_update':
+        notificationManager.updateNotification('activities', +1);
+        break;
+      case 'new_message':
+        notificationManager.updateNotification('chat', +1);
+        break;
+    }
+  };
+};
+```
+
+---
+
+🎨 用户体验优化
+
+通知优先级管理
+
+```javascript
+const NOTIFICATION_PRIORITY = {
+  HIGH: ['match_success', 'activity_reminder', 'feedback_reminder'],
+  MEDIUM: ['matching_progress', 'new_activity'],
+  LOW: ['system_message']
+};
+
+// 高优先级通知可以触发推送通知
+const shouldSendPushNotification = (notification) => {
+  return NOTIFICATION_PRIORITY.HIGH.includes(notification.type);
+};
+```
+
+个性化通知设置
+
+```
+用户可自定义：
+✓ 接收新活动通知
+✓ 接收匹配进度通知  
+✓ 接收活动提醒
+✓ 接收反馈提醒
+✗ 接收推广活动通知
+```
+
+---
+
+📊 预期效果
+
+用户参与度提升
+
+· 活动发现率：新盲盒活动及时触达目标用户
+· 匹配完成率：进度通知减少用户流失
+· 活动出席率：提醒通知降低爽约率
+· 反馈完成率：及时提醒提高反馈收集
+
+产品指标优化
+
+· 通知点击率：精准的相关性提高点击意愿
+· 用户活跃度：完整的通知闭环促进持续参与
+· 功能使用深度：引导用户完成完整的活动旅程
+
+---

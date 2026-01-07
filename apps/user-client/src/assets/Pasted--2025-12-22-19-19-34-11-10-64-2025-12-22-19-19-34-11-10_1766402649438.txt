@@ -1,0 +1,42 @@
+[2025-12-22 19:19:34] #11 10.64
+[2025-12-22 19:19:34] #11 10.64 You can mark the path "@babel/preset-typescript/package.json" as external to exclude it from the bundle, which will remove this error and leave the unresolved path in the bundle. You can also surround this "require" call with a try/catch block to handle this failure at run-time instead of bundle-time.
+[2025-12-22 19:19:34] #11 10.64
+[2025-12-22 19:19:34] #11 10.70 ✘ [ERROR] Could not resolve "../pkg"
+[2025-12-22 19:19:34] #11 10.70
+[2025-12-22 19:19:34] #11 10.70 node_modules/lightningcss/node/index.js:17:27:
+[2025-12-22 19:19:34] #11 10.70 17 │ module.exports = require(`../pkg`);
+[2025-12-22 19:19:34] #11 10.70 ╵ ~~~~~~~~
+[2025-12-22 19:19:34] #11 10.70
+[2025-12-22 19:19:34] #11 10.70 ▲ [WARNING] The glob pattern require("../lightningcss.*.node") did not match any files [empty-glob]
+[2025-12-22 19:19:34] #11 10.70
+[2025-12-22 19:19:34] #11 10.70 node_modules/lightningcss/node/index.js:22:29:
+[2025-12-22 19:19:34] #11 10.70 22 │ ...dule.exports = require(`../lightningcss.${parts.join('-')}.node`);
+[2025-12-22 19:19:34] #11 10.70 ╵ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[2025-12-22 19:19:34] #11 10.70
+[2025-12-22 19:19:34] #11 10.75 1 warning and 2 errors
+[2025-12-22 19:19:34] #11 ERROR: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
+[2025-12-22 19:19:34] ------
+[2025-12-22 19:19:34] > [builder 6/6] RUN npm run build:
+[2025-12-22 19:19:34] 10.70 17 │ module.exports = require(`../pkg`);
+[2025-12-22 19:19:34] 10.70 ╵ ~~~~~~~~
+[2025-12-22 19:19:34] 10.70
+[2025-12-22 19:19:34] 10.70 ▲ [WARNING] The glob pattern require("../lightningcss.*.node") did not match any files [empty-glob]
+[2025-12-22 19:19:34] 10.70
+[2025-12-22 19:19:34] 10.70 node_modules/lightningcss/node/index.js:22:29:
+[2025-12-22 19:19:34] 10.70 22 │ ...dule.exports = require(`../lightningcss.${parts.join('-')}.node`);
+[2025-12-22 19:19:34] 10.70 ╵ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[2025-12-22 19:19:34] 10.70
+[2025-12-22 19:19:34] 10.75 1 warning and 2 errors
+[2025-12-22 19:19:34] ------
+[2025-12-22 19:19:34] Dockerfile:9
+[2025-12-22 19:19:34] --------------------
+[2025-12-22 19:19:34] 7 |
+[2025-12-22 19:19:34] 8 | COPY . .
+[2025-12-22 19:19:34] 9 | >>> RUN npm run build
+[2025-12-22 19:19:34] 10 |
+[2025-12-22 19:19:34] 11 | FROM node:20-alpine AS runner
+[2025-12-22 19:19:34] --------------------
+[2025-12-22 19:19:34] ERROR: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
+-----------构建joyjoin-test-deploy1-005-----------
+2025-12-22 19:17:36 create_build_image : creating
+2025-12-22 19:19:39 check_build_image : fail

@@ -1,0 +1,169 @@
+契合点总表（基于PRD数据模型）
+
+基础身份与背景维度
+
+年龄与人生阶段
+
+数据源: age_band, seniority, relationship_status, children
+
+契合点 稀有度 生成规则
+同龄人 Common age_band相同
+同为[年龄段] Common age_band相同，动态替换年龄段
+都刚毕业闯荡职场 Common education_level为"Bachelor's"且age_band为"23-27"
+都工作3-5年 Common seniority为"Junior"且age_band为"23-27"
+同为职场中期 Rare seniority为"Mid"或"Senior"
+都处于事业上升期 Rare seniority为"Mid"且industry为高增长行业
+同为单身贵族 Common relationship_status为"Single"
+都处于稳定关系中 Common relationship_status为"In a relationship"或"Married/Partnered"
+都刚开启人生新阶段 Rare relationship_status新近变化
+孩子同龄 Rare children字段相同
+同为新手爸妈 Rare children为"0-5"或"Expecting"
+
+教育背景
+
+数据源: education_level, field_of_study, study_locale, overseas_regions
+
+契合点 稀有度 生成规则
+同学历层次 Common education_level相同
+同为[学历] Common education_level相同，动态替换学历
+同一学术领域 Rare field_of_study相同
+都学[专业] Rare field_of_study相同，动态替换专业
+都有海外留学经历 Rare study_locale为"Overseas"或"Both"
+同在[地区]留学 Epic overseas_regions有交集
+都体验过中西教育 Epic study_locale为"Both"
+
+职业经历
+
+数据源: industry, role_title_short, seniority
+
+契合点 稀有度 生成规则
+同行 Common industry相同
+都在[行业] Common industry相同，动态替换行业
+同岗位类型 Rare role_title_short语义相似
+同职场阶段 Common seniority相同
+都经历过创业 Rare seniority为"Founder"或role_title_short包含创业相关词
+都在大厂打拼 Rare industry为科技且公司规模大
+
+地域文化
+
+数据源: hometown_country, hometown_region_city, hometown_affinity_optin
+
+契合点 稀有度 生成规则
+同乡 Common hometown_region_city相同
+都来自[地区] Common hometown_region_city在同一区域
+都乐于认识同乡 Rare hometown_affinity_optin都为true
+都有多元文化背景 Rare study_locale为"Overseas"且languages_comfort包含多语言
+
+兴趣与话题维度
+
+核心兴趣匹配
+
+数据源: interests_top, interests_ranked_top3
+
+契合点 稀有度 生成规则
+都喜欢[兴趣] Common interests_top有交集
+都热爱[兴趣] Rare interests_ranked_top3有交集
+[兴趣]同好 Common interests_top有交集，使用兴趣名称
+共同排名前三的兴趣 Epic interests_ranked_top3完全相同
+
+话题偏好契合
+
+数据源: topics_happy, topics_avoid
+
+契合点 稀有度 生成规则
+都喜欢聊[话题] Common topics_happy有交集
+都擅长[话题] Rare topics_happy有深度话题交集
+都避免[话题] Common topics_avoid有交集
+聊天风格相近 Rare topics_happy组合模式相似度高
+
+兴趣组合发现
+
+数据源: interests_top组合
+
+契合点 稀有度 生成规则
+都喜欢A和B Common 多个interests_top有交集
+[兴趣]+[兴趣]搭档 Rare 特定兴趣组合，如美食+旅行
+
+社交原型与行为维度
+
+原型分类匹配
+
+数据源: archetype
+
+契合点 稀有度 生成规则
+同为[原型] Common archetype相同
+[原型]与[原型] Rare 特定原型组合
+性格互补搭档 Epic 原型兼容性得分高
+
+Vibe向量契合
+
+数据源: vibe_vector
+
+契合点 稀有度 生成规则
+都能量高涨 Common vibe_vector.energy > 0.7
+都喜欢深度对话 Common vibe_vector.conversation_style > 0.7
+都主动发起话题 Common vibe_vector.initiative > 0.7
+都爱尝试新事物 Common vibe_vector.novelty > 0.7
+都幽默感十足 Common vibe_vector.humor > 0.7
+社交节奏相似 Rare vibe_vector各维度相似度>0.8
+
+讨论偏好
+
+数据源: debate_comfort
+
+契合点 稀有度 生成规则
+都享受思想碰撞 Common debate_comfort ≥ 5
+都偏好和谐交流 Common debate_comfort ≤ 3
+讨论舒适度相近 Rare debate_comfort差值 ≤ 1
+
+语言与文化维度
+
+语言能力匹配
+
+数据源: languages_comfort
+
+契合点 稀有度 生成规则
+都说[语言] Common languages_comfort有交集
+[语言]交流伙伴 Common 特定语言能力匹配
+多语言能力相当 Rare languages_comfort数量和质量相似
+
+文化背景共鸣
+
+数据源: study_locale, hometown_country
+
+契合点 稀有度 生成规则
+都有国际视野 Rare study_locale为"Overseas"且languages_comfort多语言
+中西文化桥梁 Epic study_locale为"Both"且多语言能力
+
+复合型契合点（算法生成）
+
+身份+兴趣组合
+
+契合点 稀有度 生成规则
+都学[专业]且都喜欢[兴趣] Epic field_of_study相同 + interests_top有交集
+都有[经历]且都爱[兴趣] Epic 特定经历 + 兴趣匹配
+同为[身份]的[兴趣]爱好者 Epic 身份特征 + 兴趣匹配
+
+兴趣+原型组合
+
+契合点 稀有度 生成规则
+都喜欢[兴趣]的[原型] Epic interests_top有交集 + archetype相同
+[兴趣]领域的[原型] Epic 特定兴趣 + 原型匹配
+
+话题+行为组合
+
+契合点 稀有度 生成规则
+都喜欢聊[话题]且都[行为特质] Epic topics_happy有交集 + vibe_vector特定维度高
+[话题]与[特质]的完美结合 Epic 话题偏好 + 行为特质组合
+
+多维度交叉
+
+契合点 稀有度 生成规则
+[背景]+[兴趣]+[特质]三重契合 Epic 3个不同维度匹配
+四重维度共鸣 Epic 4个不同维度匹配
+
+稀有度分布统计
+
+· Common (常见): ~60% (基础匹配点，建立基本共鸣)
+· Rare (稀有): ~30% (特定条件匹配，增强连接感)
+· Epic (珍贵): ~10% (多维度精准匹配，创造惊喜时刻)

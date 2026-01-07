@@ -1,0 +1,69 @@
+Product prompt: Local micro-events social network with AI matchmaking
+
+Goal
+- Help people connect with like-minded locals through small, curated events (5–10 attendees) that feel inclusive, safe, and high-quality.
+- Maximize attendee satisfaction and sense of belonging via AI-driven event matchmaking.
+
+Core user journeys
+1) Onboarding and vibe profiling
+- New users complete a concise personality and social-vibe questionnaire (interests, energy level, conversational style, introvert/extrovert spectrum, dietary/drink preferences, budget, schedule, accessibility needs, comfort zones, social goals).
+- Allow optional data import (e.g., calendar availability) and opt-in constraints (travel radius, preferred venues).
+- Produce a private “Vibe Profile” with tags and embeddings used for matching.
+
+2) AI event matchmaking
+- Generate or recommend small-group events (5–10 people) based on:
+  - Shared and complementary interests
+  - Social vibe compatibility (energy balance, conversational styles)
+  - Time/location availability, commute tolerance
+  - Diversity of backgrounds while maintaining psychological safety
+  - Past feedback, NPS, and satisfaction signals
+- Provide transparent reasons for matches (e.g., “Board games + chill vibe + weeknight availability”).
+- Support both auto-assigned slots and user opt-in to shortlists.
+
+3) Event discovery and booking
+- Show a personalized feed of upcoming events (activities, dinners, drinks, workshops).
+- Each event displays: vibe tags, host/guide, venue details, accessibility notes, attendee mix preview, ticket price or “included in subscription”.
+- Users can pay per event or subscribe for access to exclusive events and priority matching.
+- Confirmations include social norms and code of conduct.
+
+4) Event hosting and facilitation
+- Events are organized by the platform with an active guide/host to ensure smooth flow, inclusion, and safety.
+- Hosts receive run-of-show, icebreakers, and contingency plans tailored to attendee vibes.
+- Post-event: structured feedback from attendees and hosts.
+
+5) Feedback loop and continuous learning
+- Collect quick post-event ratings on enjoyment, match quality, vibe fit, willingness to see group again.
+- Update user embeddings and matching weights; avoid repeat mismatches; surface promising re-groupings.
+
+Key features and requirements
+- Matching engine
+  - Inputs: user embeddings from questionnaire + behavior signals (RSVPs, attendance, dwell time, feedback).
+  - Constraints: group size 5–10, time/location, budget, safety rules.
+  - Objectives: maximize predicted satisfaction/NPS, balance novelty with comfort, ensure inclusion.
+  - Explainability: concise, user-readable reasons for matches.
+- Safety and trust
+  - Real identity verification, community guidelines, report/ban pipeline, host escalation protocols.
+  - Venue safety checks and accessibility standards.
+- Monetization
+  - Per-event ticketing + monthly subscription tier for exclusive events, priority matching, and limited “skip/boost” credits.
+- UX tone
+  - Warm, inclusive, low-pressure; emphasizes belonging and psychological safety.
+- Accessibility
+  - Mobile-first, screen-reader friendly, clear language, flexible scheduling, dietary and mobility accommodations.
+- Privacy
+  - Clear consent for data use; private vibe tags; opt-outs for sensitive categories.
+
+Success metrics
+- Event NPS and average satisfaction score
+- Match quality rating and repeat connection rate
+- Attendance rate vs. RSVP; churn and subscription conversion
+- Host-reported group cohesion and incident rate (aim for near-zero)
+- Diversity and inclusion measures without compromising safety
+
+Technical notes for implementation
+- Questionnaire design: mix of Likert scales and forced-choice tradeoffs to reduce bias; keep to 3–5 minutes.
+- Embeddings: transform questionnaire + behavioral data into a vector space; use hybrid scoring (similarity + complementarity + constraints).
+- Group formation: solve as a constrained clustering/assignment problem; run daily batch and on-demand updates.
+- Cold start: default to broad-interest, low-stakes events with strong hosts; progressively specialize as data accumulates.
+- Feedback ingestion: lightweight post-event prompts; weight host feedback higher for group dynamics.
+- Explainability: generate short, human-readable rationales per match.
