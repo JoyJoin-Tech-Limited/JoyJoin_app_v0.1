@@ -15,19 +15,19 @@ import { useAdaptiveAssessment, type AssessmentQuestion, type PreSignupAnswer } 
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
-import xiaoyueNormal from "@/assets/avatar_normal.png";
-import xiaoyueExcited from "@/assets/avatar_excited.png";
-import xiaoyuePointing from "@/assets/avatar_pointing.png";
+import xiaoyueNormal from "@assets/avatar_normal.png";
+import xiaoyueExcited from "@assets/avatar_excited.png";
+import xiaoyuePointing from "@assets/avatar_pointing.png";
 
 // Archetype imports for floating background effect
-import corgiImg from '@/assets/开心柯基_transparent_1.png';
-import foxImg from '@/assets/机智狐_transparent_2.png';
-import bearImg from '@/assets/暖心熊_transparent_3.png';
-import dolphinImg from '@/assets/淡定海豚_transparent_7.png';
-import octopusImg from '@/assets/灵感章鱼_transparent_12.png';
-import owlImg from '@/assets/沉思猫头鹰_transparent_8.png';
-import spiderImg from '@/assets/织网蛛_transparent_4.png';
-import catImg from '@/assets/隐身猫_transparent_10.png';
+import corgiImg from '@assets/开心柯基_transparent_1.png';
+import foxImg from '@assets/机智狐_transparent_2.png';
+import bearImg from '@assets/暖心熊_transparent_3.png';
+import dolphinImg from '@assets/淡定海豚_transparent_7.png';
+import octopusImg from '@assets/灵感章鱼_transparent_12.png';
+import owlImg from '@assets/沉思猫头鹰_transparent_8.png';
+import spiderImg from '@assets/织网蛛_transparent_4.png';
+import catImg from '@assets/隐身猫_transparent_10.png';
 
 // Floating archetypes config - optimized for mobile performance
 // Uses CSS transforms only (GPU-accelerated), positioned around screen edges
