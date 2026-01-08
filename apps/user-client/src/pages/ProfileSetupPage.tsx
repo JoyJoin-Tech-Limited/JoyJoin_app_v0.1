@@ -8,7 +8,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { Clock } from "lucide-react";
+import { Clock, Loader2 } from "lucide-react";
+import { XiaoyueDialog } from "@/components/XiaoyueDialog";
+import { StickyCTA, StickyCTAButton } from "@/components/StickyCTA";
 
 export default function ProfileSetupPage() {
   const [, setLocation] = useLocation();
@@ -53,24 +55,24 @@ export default function ProfileSetupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="flex-1 container mx-auto px-4 py-6 max-w-md">
         <motion.div
-          className="space-y-6"
+          className="space-y-6 flex flex-col items-center"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="text-center space-y-2">
-            <h1 className="text-2xl font-display font-bold">完善资料</h1>
-            <p className="text-sm text-muted-foreground">
-              让大家更好地认识你
-            </p>
-          </div>
+          {/* Xiaoyue mascot */}
+          <XiaoyueDialog
+            mood="excited"
+            message="给自己取个响亮的名字吧~"
+            avatarSize={96}
+          />
 
           {/* 时长预期提示 */}
           <motion.div
-            className="flex items-center gap-2 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-lg px-4 py-3"
+            className="w-full flex items-center gap-2 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-lg px-4 py-3"
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
@@ -81,8 +83,8 @@ export default function ProfileSetupPage() {
             </p>
           </motion.div>
 
-          <Card className="border shadow-sm">
-            <CardContent className="p-6 space-y-6">
+          <Card className="w-full border shadow-sm">
+            <CardContent className="p-6 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="displayName">昵称</Label>
                 <Input
@@ -90,6 +92,7 @@ export default function ProfileSetupPage() {
                   placeholder="输入你的昵称"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
+                  className="h-12 text-lg"
                   data-testid="input-display-name"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -98,24 +101,20 @@ export default function ProfileSetupPage() {
               </div>
             </CardContent>
           </Card>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Button
-              size="lg"
-              className="w-full"
-              onClick={handleSubmit}
-              disabled={setupMutation.isPending}
-              data-testid="button-save-profile"
-            >
-              {setupMutation.isPending ? "保存中..." : "继续"}
-            </Button>
-          </motion.div>
         </motion.div>
       </div>
+
+      <StickyCTA>
+        <StickyCTAButton
+          onClick={handleSubmit}
+          disabled={setupMutation.isPending || !displayName.trim()}
+          isLoading={setupMutation.isPending}
+          loadingText="保存中..."
+          data-testid="button-save-profile"
+        >
+          继续
+        </StickyCTAButton>
+      </StickyCTA>
     </div>
   );
 }
