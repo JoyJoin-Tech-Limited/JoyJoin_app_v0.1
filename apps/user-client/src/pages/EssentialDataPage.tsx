@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { StickyCTA, StickyCTAButton } from "@/components/StickyCTA";
+import { BirthDatePicker } from "@/components/BirthDatePicker";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -258,6 +260,7 @@ export default function EssentialDataPage() {
   const [displayName, setDisplayName] = useState("");
   const [gender, setGender] = useState("");
   const [birthYear, setBirthYear] = useState("");
+  const [birthDate, setBirthDate] = useState<{ year: number; month: number; day: number } | undefined>();
   const [relationshipStatus, setRelationshipStatus] = useState("");
   const [education, setEducation] = useState("");
   const [workIndustry, setWorkIndustry] = useState("");
@@ -334,7 +337,7 @@ export default function EssentialDataPage() {
   const canProceed = () => {
     switch (currentStep) {
       case 0: return displayName.trim().length >= 2;
-      case 1: return gender && birthYear;
+      case 1: return gender && (birthDate?.year || birthYear);
       case 2: return relationshipStatus;
       case 3: return education;
       case 4: return workIndustry;
@@ -369,7 +372,10 @@ export default function EssentialDataPage() {
           hometown,
           currentCity,
         };
-        if (birthYear) {
+        if (birthDate) {
+          // Use full birth date (YYYY-MM-DD)
+          profileData.birthdate = `${birthDate.year}-${String(birthDate.month).padStart(2, '0')}-${String(birthDate.day).padStart(2, '0')}`;
+        } else if (birthYear) {
           profileData.birthdate = `${birthYear}-01-01`;
         }
         saveMutation.mutate(profileData);
@@ -511,19 +517,16 @@ export default function EssentialDataPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-3 text-center">出生年份</label>
-                    <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto p-1">
-                      {BIRTH_YEARS.map(yr => (
-                        <TappableCard
-                          key={yr.value}
-                          selected={birthYear === yr.value}
-                          onClick={() => setBirthYear(yr.value)}
-                          className="p-3 text-center"
-                        >
-                          <span className="text-sm">{yr.value}</span>
-                        </TappableCard>
-                      ))}
-                    </div>
+                    <label className="block text-sm font-medium mb-3 text-center">出生日期</label>
+                    <BirthDatePicker
+                      value={birthDate}
+                      onChange={(date) => {
+                        setBirthDate(date);
+                        setBirthYear(String(date.year));
+                      }}
+                      minYear={1960}
+                      maxYear={2010}
+                    />
                   </div>
                 </div>
               )}
@@ -583,19 +586,16 @@ export default function EssentialDataPage() {
       </div>
 
       {/* Fixed bottom CTA */}
-      <div className="sticky bottom-0 bg-background border-t p-4">
-        <Button
-          className="w-full h-14 rounded-2xl text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
+      <StickyCTA>
+        <StickyCTAButton
           onClick={handleNext}
           disabled={!canProceed() || saveMutation.isPending}
+          isLoading={saveMutation.isPending}
+          loadingText="保存中..."
+          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
           data-testid="button-next"
         >
-          {saveMutation.isPending ? (
-            <>
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              保存中...
-            </>
-          ) : currentStep === TOTAL_STEPS - 1 ? (
+          {currentStep === TOTAL_STEPS - 1 ? (
             <>
               完成
               <Sparkles className="w-5 h-5 ml-2" />
@@ -606,8 +606,8 @@ export default function EssentialDataPage() {
               <ArrowRight className="w-5 h-5 ml-2" />
             </>
           )}
-        </Button>
-      </div>
+        </StickyCTAButton>
+      </StickyCTA>
     </div>
   );
 }
