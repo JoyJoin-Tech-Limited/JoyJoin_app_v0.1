@@ -11,6 +11,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useAdaptiveAssessment, type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
 import CelebrationConfetti from "@/components/CelebrationConfetti";
 import { getOptionFeedback } from "@shared/personality/feedback";
+import { StickyCTA, StickyCTAButton, StickyCTASecondaryButton } from "@/components/StickyCTA";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -219,7 +220,7 @@ function SelectionList({
   questionId: string;
 }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {options.map((option, index) => {
         return (
           <motion.div
@@ -227,23 +228,23 @@ function SelectionList({
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: index * 0.05 }}
-            className="flex flex-col gap-2"
+            className="flex flex-col"
           >
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={() => onSelect(option.value)}
               className={cn(
-                "w-full flex items-center gap-3 px-4 py-4 rounded-2xl border-2 transition-all duration-200 min-h-[64px]",
-                "hover-elevate active-elevate-2 shadow-sm",
+                "w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all duration-200 min-h-[52px]",
+                "shadow-sm",
                 selected === option.value
                   ? "border-primary bg-primary/10"
-                  : "border-border bg-card hover:border-primary/50"
+                  : "border-border bg-card hover:border-primary/50 active:scale-[0.98]"
               )}
               data-testid={`button-option-${option.value}`}
             >
               <div className="flex-1 text-left">
                 <span className={cn(
-                  "text-lg font-medium leading-snug",
+                  "text-base font-medium leading-snug",
                   selected === option.value ? "text-primary" : "text-foreground/90"
                 )}>
                   {option.label}
@@ -253,9 +254,9 @@ function SelectionList({
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0"
+                  className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
+                  <Sparkles className="w-3 h-3 text-primary-foreground" />
                 </motion.div>
               )}
             </motion.button>
@@ -510,10 +511,10 @@ export default function PersonalityTestPageV4() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3 }}
-          className="flex-1 flex flex-col px-4 py-4 overflow-hidden"
+          className="flex-1 flex flex-col px-4 py-2 overflow-hidden"
         >
-          <div className="shrink-0 mb-4">
-            <p className="text-xl text-foreground mb-4 leading-relaxed font-bold">
+          <div className="shrink-0 mb-3">
+            <p className="text-lg text-foreground mb-3 leading-relaxed font-bold">
               {scenarioText}
             </p>
             <XiaoyueMascot 
@@ -523,11 +524,11 @@ export default function PersonalityTestPageV4() {
                 : currentQuestion.questionText
               }
               horizontal
-              className="mb-2"
+              className="mb-1"
             />
           </div>
           
-          <div className="flex-1 flex flex-col justify-center py-2 min-h-0">
+          <div className="flex-1 flex flex-col justify-center py-1 min-h-0">
             <div className="overflow-y-auto -mx-4 px-4">
               <SelectionList
                 options={optionsForList}
@@ -538,43 +539,35 @@ export default function PersonalityTestPageV4() {
             </div>
           </div>
 
-          <div className="shrink-0 py-4 space-y-3">
-            <Button 
-              size="lg"
-              className="w-full h-14 text-lg rounded-2xl"
-              onClick={handleSubmitAnswer}
-              disabled={!selectedOption || isSubmitting || isSkipping}
-              data-testid="button-submit-answer"
-            >
-              {isSubmitting ? (
-                <Loader2 className="h-5 w-5 animate-spin mr-2" />
-              ) : null}
-              继续
-            </Button>
-            
-            {canSkip && (
-              <div className="flex flex-col items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleSkipQuestion}
-                  disabled={isSkipping || isSubmitting}
-                  className="w-full h-14 text-lg rounded-2xl gap-2 border-dashed"
-                  data-testid="button-skip-question"
-                >
-                  {isSkipping ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
+          <StickyCTA className="px-0 -mx-4">
+            <div className="space-y-3">
+              <StickyCTAButton
+                onClick={handleSubmitAnswer}
+                disabled={!selectedOption || isSubmitting || isSkipping}
+                isLoading={isSubmitting}
+                data-testid="button-submit-answer"
+              >
+                继续
+              </StickyCTAButton>
+              
+              {canSkip && (
+                <div className="flex flex-col items-center gap-1">
+                  <StickyCTASecondaryButton
+                    onClick={handleSkipQuestion}
+                    disabled={isSkipping || isSubmitting}
+                    isLoading={isSkipping}
+                    data-testid="button-skip-question"
+                  >
                     <RefreshCw className="h-5 w-5" />
-                  )}
-                  换一道题
-                </Button>
-                <span className="text-xs text-muted-foreground/70">
-                  选项都不合适？还剩{remainingSkips}次机会
-                </span>
-              </div>
-            )}
-          </div>
+                    换一道题
+                  </StickyCTASecondaryButton>
+                  <span className="text-xs text-muted-foreground/70">
+                    选项都不合适？还剩{remainingSkips}次机会
+                  </span>
+                </div>
+              )}
+            </div>
+          </StickyCTA>
         </motion.div>
       </AnimatePresence>
     </div>

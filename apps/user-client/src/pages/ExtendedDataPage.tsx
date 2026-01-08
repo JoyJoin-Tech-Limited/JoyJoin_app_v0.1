@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { StickyCTA, StickyCTAButton, StickyCTASecondaryButton } from "@/components/StickyCTA";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -503,42 +504,41 @@ export default function ExtendedDataPage() {
       </div>
 
       {/* Fixed bottom CTA */}
-      <div className="sticky bottom-0 bg-background border-t p-4 space-y-2">
-        <Button
-          className="w-full h-14 rounded-2xl text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
-          onClick={handleNext}
-          disabled={!canProceed() || saveMutation.isPending}
-          data-testid="button-next"
-        >
-          {saveMutation.isPending ? (
-            <>
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              保存中...
-            </>
-          ) : currentStep === TOTAL_STEPS - 1 ? (
-            <>
-              开始探索
-              <Sparkles className="w-5 h-5 ml-2" />
-            </>
-          ) : (
-            <>
-              继续
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </>
-          )}
-        </Button>
-        <Button
-          variant="ghost"
-          className="w-full text-muted-foreground"
-          onClick={handleSkip}
-          data-testid="button-skip"
-        >
-          暂时跳过，稍后补充
-        </Button>
-        <p className="text-center text-xs text-muted-foreground">
-          没问题，随时可以补充~
-        </p>
-      </div>
+      <StickyCTA>
+        <div className="space-y-2">
+          <StickyCTAButton
+            onClick={handleNext}
+            disabled={!canProceed() || saveMutation.isPending}
+            isLoading={saveMutation.isPending}
+            loadingText="保存中..."
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
+            data-testid="button-next"
+          >
+            {currentStep === TOTAL_STEPS - 1 ? (
+              <>
+                开始探索
+                <Sparkles className="w-5 h-5 ml-2" />
+              </>
+            ) : (
+              <>
+                继续
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </>
+            )}
+          </StickyCTAButton>
+          <Button
+            variant="ghost"
+            className="w-full text-muted-foreground"
+            onClick={handleSkip}
+            data-testid="button-skip"
+          >
+            暂时跳过，稍后补充
+          </Button>
+          <p className="text-center text-xs text-muted-foreground">
+            没问题，随时可以补充~
+          </p>
+        </div>
+      </StickyCTA>
     </div>
   );
 }
