@@ -15,9 +15,10 @@ import { useAdaptiveAssessment, type AssessmentQuestion, type PreSignupAnswer } 
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
-import xiaoyueNormal from "@/assets/avatar_normal.png";
-import xiaoyueExcited from "@/assets/avatar_excited.png";
-import xiaoyuePointing from "@/assets/avatar_pointing.png";
+// Use consistent Xiao Yue Avatar-01.png as primary avatar across all screens
+import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
+import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
+import xiaoyuePointing from "@/assets/Xiao_Yue_Avatar-04.png";
 
 // Archetype imports for floating background effect
 import corgiImg from "@/assets/开心柯基_transparent_1.png";
@@ -448,6 +449,7 @@ export default function DuolingoOnboardingPage() {
   const [birthYear, setBirthYear] = useState<string>("");
   const [showBirthYear, setShowBirthYear] = useState(true);
   const [relationshipStatus, setRelationshipStatus] = useState<string>("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const { data: anchorQuestionsData, isLoading: isLoadingQuestions } = useQuery<{
     questions: V4AnchorQuestion[];
@@ -461,7 +463,13 @@ export default function DuolingoOnboardingPage() {
 
   useEffect(() => {
     const cached = loadCachedProgress();
-    if (cached && cached.currentScreen > 0 && !justAuthenticated) {
+    // Only show resume prompt if:
+    // 1. There's a valid cached progress with screen > 0
+    // 2. User hasn't just authenticated
+    // 3. There are actual cached answers (not just empty cache)
+    const cachedAnswers = getV4CachedAnswers();
+    const hasValidProgress = cached && cached.currentScreen > 0 && cachedAnswers.length > 0;
+    if (hasValidProgress && !justAuthenticated) {
       setShowResumePrompt(true);
     }
   }, [justAuthenticated]);
@@ -960,58 +968,73 @@ export default function DuolingoOnboardingPage() {
               </p>
             </div>
 
-            <div className="shrink-0 p-4 bg-background/95 backdrop-blur-sm border-t">
-              <Button 
-                size="lg"
-                className="w-full h-14 text-lg rounded-2xl"
-                onClick={async () => {
-                  if (phone.length < 8) {
-                    toast({
-                      title: "请输入有效手机号",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  try {
-                    // 1. Login first
-                    await apiRequest("POST", "/api/auth/quick-login", { phone });
-                    
-                    // 2. Wait for auth state to update before proceeding
-                    await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-                    await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
-                    
-                    // 3. Sync pre-signup answers to the assessment session
-                    const cachedAnswers = getV4CachedAnswers();
-                    if (cachedAnswers.length > 0) {
-                      const syncResponse = await apiRequest("POST", "/api/assessment/v4/presignup-sync", {
-                        preSignupAnswers: cachedAnswers,
+            <div className="shrink-0 p-4 bg-background/95 backdrop-blur-sm border-t pb-[calc(1rem+env(safe-area-inset-bottom))]">
+              <div className="max-w-md mx-auto w-full">
+                <Button 
+                  size="lg"
+                  className="w-full h-14 text-lg rounded-2xl"
+                  disabled={isLoggingIn || phone.length < 8}
+                  onClick={async () => {
+                    if (phone.length < 8) {
+                      toast({
+                        title: "请输入有效手机号",
+                        variant: "destructive",
                       });
-                      const syncData = await syncResponse.json();
-                      
-                      // Store the synced session ID for personality test to resume
-                      if (syncData.sessionId) {
-                        localStorage.setItem("joyjoin_synced_session_id", syncData.sessionId);
-                        localStorage.setItem("joyjoin_synced_answer_count", String(syncData.totalCount || cachedAnswers.length));
-                      }
+                      return;
                     }
-                    
-                    // 4. Clear cache and redirect to personality test to continue
-                    clearCachedProgress();
-                    setLocation("/personality-test");
-                  } catch (error) {
-                    console.error("Quick login failed:", error);
-                    toast({
-                      title: "登录失败",
-                      description: "请稍后再试",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-                data-testid="button-phone-login"
-              >
-                继续测试
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
+                    setIsLoggingIn(true);
+                    try {
+                      // 1. Login first
+                      await apiRequest("POST", "/api/auth/quick-login", { phone });
+                      
+                      // 2. Wait for auth state to update before proceeding
+                      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
+                      
+                      // 3. Sync pre-signup answers to the assessment session
+                      const cachedAnswers = getV4CachedAnswers();
+                      if (cachedAnswers.length > 0) {
+                        const syncResponse = await apiRequest("POST", "/api/assessment/v4/presignup-sync", {
+                          preSignupAnswers: cachedAnswers,
+                        });
+                        const syncData = await syncResponse.json();
+                        
+                        // Store the synced session ID for personality test to resume
+                        if (syncData.sessionId) {
+                          localStorage.setItem("joyjoin_synced_session_id", syncData.sessionId);
+                          localStorage.setItem("joyjoin_synced_answer_count", String(syncData.totalCount || cachedAnswers.length));
+                        }
+                      }
+                      
+                      // 4. Clear cache and redirect to personality test to continue
+                      clearCachedProgress();
+                      setLocation("/personality-test");
+                    } catch (error) {
+                      console.error("Quick login failed:", error);
+                      toast({
+                        title: "登录失败",
+                        description: "请稍后再试",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setIsLoggingIn(false);
+                    }
+                  }}
+                  data-testid="button-phone-login"
+                >
+                  {isLoggingIn ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      登录中...
+                    </>
+                  ) : (
+                    <>
+                      继续完成测试
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </motion.div>
         );
