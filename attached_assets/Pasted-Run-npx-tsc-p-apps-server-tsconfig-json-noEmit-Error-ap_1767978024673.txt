@@ -1,0 +1,67 @@
+Run npx tsc -p apps/server/tsconfig.json --noEmit
+Error: apps/server/src/poolMatchingService.ts(578,45): error TS7006: Parameter 'u' implicitly has an 'any' type.
+Error: apps/server/src/poolMatchingService.ts(602,44): error TS7006: Parameter 'u' implicitly has an 'any' type.
+Error: apps/server/src/poolMatchingService.ts(864,49): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(512,52): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+Error: apps/server/src/routes.ts(527,52): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+Error: apps/server/src/routes.ts(556,31): error TS2339: Property 'isAdmin' does not exist on type 'Session & Partial<SessionData>'.
+Error: apps/server/src/routes.ts(561,42): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+Error: apps/server/src/routes.ts(597,13): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "user_id"; tableName: "event_attendance"; dataType: "string"; columnType: "PgVarchar"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; ... 5 more ...; generated: undefined; }, {}, { ...; }>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | SQLWrapper'.
+      Type 'undefined' is not assignable to type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<string | undefined>, right: string | SQLWrapper | undefined): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "user_id"; tableName: "event_attendance"; dataType: "string"; columnType: "PgVarchar"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, { ...; }>' is not assignable to parameter of type 'Aliased<string | undefined>'.
+      Type 'PgColumn<{ name: "user_id"; tableName: "event_attendance"; dataType: "string"; columnType: "PgVarchar"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, { ...; }>' is missing the following properties from type 'Aliased<string | undefined>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "user_id"; tableName: "event_attendance"; dataType: "string"; columnType: "PgVarchar"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, { ...; }>' is not assignable to parameter of type 'never'.
+Error: apps/server/src/routes.ts(610,13): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "user1_id"; tableName: "direct_message_threads"; dataType: "string"; columnType: "PgVarchar"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; ... 5 more ...; generated: undefined; }, {}, { ...; }>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | SQLWrapper'.
+      Type 'undefined' is not assignable to type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<string | undefined>, right: string | SQLWrapper | undefined): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "user1_id"; tableName: "direct_message_threads"; dataType: "string"; columnType: "PgVarchar"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; ... 5 more ...; generated: undefined; }, {}, { ...; }>' is not assignable to parameter of type 'Aliased<string | undefined>'.
+      Type 'PgColumn<{ name: "user1_id"; tableName: "direct_message_threads"; dataType: "string"; columnType: "PgVarchar"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; ... 5 more ...; generated: undefined; }, {}, { ...; }>' is missing the following properties from type 'Aliased<string | undefined>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "user1_id"; tableName: "direct_message_threads"; dataType: "string"; columnType: "PgVarchar"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; ... 5 more ...; generated: undefined; }, {}, { ...; }>' is not assignable to parameter of type 'never'.
+Error: apps/server/src/routes.ts(611,13): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "user2_id"; tableName: "direct_message_threads"; dataType: "string"; columnType: "PgVarchar"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; ... 5 more ...; generated: undefined; }, {}, { ...; }>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | SQLWrapper'.
+      Type 'undefined' is not assignable to type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<string | undefined>, right: string | SQLWrapper | undefined): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "user2_id"; tableName: "direct_message_threads"; dataType: "string"; columnType: "PgVarchar"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; ... 5 more ...; generated: undefined; }, {}, { ...; }>' is not assignable to parameter of type 'Aliased<string | undefined>'.
+      Type 'PgColumn<{ name: "user2_id"; tableName: "direct_message_threads"; dataType: "string"; columnType: "PgVarchar"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; ... 5 more ...; generated: undefined; }, {}, { ...; }>' is missing the following properties from type 'Aliased<string | undefined>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "user2_id"; tableName: "direct_message_threads"; dataType: "string"; columnType: "PgVarchar"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; ... 5 more ...; generated: undefined; }, {}, { ...; }>' is not assignable to parameter of type 'never'.
+Error: apps/server/src/routes.ts(3536,51): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(3554,63): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(3586,49): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(3604,61): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(3904,41): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7441,34): error TS7006: Parameter 'p' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7454,64): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7457,42): error TS7006: Parameter 'p' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7461,33): error TS7006: Parameter 'pool' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7481,20): error TS7006: Parameter 'u' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7482,24): error TS7006: Parameter 'a' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7713,32): error TS7006: Parameter 'reg' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7754,48): error TS7006: Parameter 'inv' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7853,40): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7854,44): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7874,61): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9420,42): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9427,41): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9498,42): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9505,41): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9573,41): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9659,41): error TS7006: Parameter 'p' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9798,44): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9803,43): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(3321,27): error TS7006: Parameter 'banner' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(3483,38): error TS7006: Parameter 'slot' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(3498,51): error TS7006: Parameter 'slot' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(3499,46): error TS7006: Parameter 'b' implicitly has an 'any' type.
+Error: Process completed with exit code 2.

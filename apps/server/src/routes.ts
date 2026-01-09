@@ -586,6 +586,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/profile/stats', isPhoneAuthenticated, async (req: Request, res) => {
     try {
       const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
       
       // Calculate events completed: count completed events the user attended
       const completedEventsResult = await db
