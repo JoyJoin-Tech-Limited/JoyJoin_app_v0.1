@@ -33,6 +33,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { wsService } from "./wsService";
 import type { PoolMatchedData } from "@shared/wsEvents";
 import { chemistryMatrix as CHEMISTRY_MATRIX, ARCHETYPE_ENERGY } from "./archetypeChemistry";
+import type { ArchetypeName } from "./archetypeConfig";
 
 export interface UserWithProfile {
   userId: string;
@@ -128,10 +129,10 @@ function meetsHardConstraints(
  * 考虑主角色（70%）和次要角色的交叉兼容性（各15%，共30%）
  */
 function calculateChemistryScore(user1: UserWithProfile, user2: UserWithProfile): number {
-  const primary1 = (user1.archetype || "暖心熊") as keyof typeof CHEMISTRY_MATRIX;
-  const primary2 = (user2.archetype || "暖心熊") as keyof typeof CHEMISTRY_MATRIX;
-  const secondary1 = (user1.secondaryArchetype || "暖心熊") as keyof typeof CHEMISTRY_MATRIX;
-  const secondary2 = (user2.secondaryArchetype || "暖心熊") as keyof typeof CHEMISTRY_MATRIX;
+  const primary1 = (user1.archetype || "暖心熊") as ArchetypeName;
+  const primary2 = (user2.archetype || "暖心熊") as ArchetypeName;
+  const secondary1 = (user1.secondaryArchetype || "暖心熊") as ArchetypeName;
+  const secondary2 = (user2.secondaryArchetype || "暖心熊") as ArchetypeName;
   
   // 主角色化学反应（70%权重）
   const primaryChemistry = (CHEMISTRY_MATRIX[primary1]?.[primary2] || 50) * 0.70;
@@ -413,10 +414,10 @@ function calculateGroupPairScore(members: UserWithProfile[]): number {
  * 计算小组的多样性分数
  */
 function calculateGroupDiversity(members: UserWithProfile[]): number {
-  const uniqueIndustries = new Set(members.map(m => m.industry).filter(Boolean)).size;
-  const uniqueSeniorities = new Set(members.map(m => m.seniority).filter(Boolean)).size;
-  const uniqueGenders = new Set(members.map(m => m.gender).filter(Boolean)).size;
-  const uniqueArchetypes = new Set(members.map(m => m.archetype).filter(Boolean)).size;
+  const uniqueIndustries = new Set(members.map((m) => m.industry).filter(Boolean)).size;
+  const uniqueSeniorities = new Set(members.map((m) => m.seniority).filter(Boolean)).size;
+  const uniqueGenders = new Set(members.map((m) => m.gender).filter(Boolean)).size;
+  const uniqueArchetypes = new Set(members.map((m) => m.archetype).filter(Boolean)).size;
   
   // 归一化到 0-100
   const maxDiversity = members.length;
@@ -439,8 +440,8 @@ function calculateEnergyBalance(members: UserWithProfile[]): number {
   if (members.length === 0) return 0;
   
   // 1. 获取每个成员的能量值
-  const energyLevels = members.map(m => {
-    const archetype = (m.archetype || "暖心熊") as keyof typeof ARCHETYPE_ENERGY;
+  const energyLevels = members.map((m) => {
+    const archetype = (m.archetype || "暖心熊") as ArchetypeName;
     return ARCHETYPE_ENERGY[archetype] || 50;
   });
   
@@ -535,7 +536,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
   }
   
   // 2. 获取所有报名者 + 用户资料
-  const registrations = await db
+  const registrations = (await db
     .select({
       registrationId: eventPoolRegistrations.id,
       userId: eventPoolRegistrations.userId,
@@ -554,18 +555,25 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       secondaryArchetype: users.secondaryRole,
       interestsTop: users.interestsTop,
       languagesComfort: users.languagesComfort,
+      hometown: users.hometownRegionCity,
+      hometownAffinityOptin: users.hometownAffinityOptin,
+      eventType: sql<string>`${eventPools.type}`,
+      barBudgetRange: eventPoolRegistrations.barBudgetRange,
+      barThemes: eventPoolRegistrations.barThemes,
+      alcoholComfort: eventPoolRegistrations.alcoholComfort,
     })
     .from(eventPoolRegistrations)
     .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
+    .innerJoin(eventPools, eq(eventPoolRegistrations.poolId, eventPools.id))
     .where(
       and(
         eq(eventPoolRegistrations.poolId, poolId),
         eq(eventPoolRegistrations.matchStatus, "pending")
       )
-    );
+    )) as UserWithProfile[];
   
   // 3. 硬约束过滤
-  const eligibleUsers = registrations.filter((reg: UserWithProfile) => 
+  const eligibleUsers = registrations.filter((reg) => 
     meetsHardConstraints(reg, pool)
   );
   
@@ -583,7 +591,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
   
   for (const user of eligibleUsers) {
     // Check if this user was invited (is an invitee)
-    const [inviteUse] = await db
+    const [inviteUse]: any = await db
       .select()
       .from(invitationUses)
       .where(eq(invitationUses.poolRegistrationId, user.registrationId))
@@ -591,7 +599,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     
     if (inviteUse && inviteUse.invitationId) {
       // Get the invitation to find who invited this user
-      const [invitation] = await db
+      const [invitation]: any = await db
         .select()
         .from(invitations)
         .where(eq(invitations.code, inviteUse.invitationId))
@@ -599,7 +607,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       
       if (invitation) {
         // Check if inviter is also in this pool
-        const inviter = eligibleUsers.find(u => u.userId === invitation.inviterId);
+        const inviter = eligibleUsers.find((u) => u.userId === invitation.inviterId);
         if (inviter) {
           invitationPairs.push({
             inviterId: inviter.userId,

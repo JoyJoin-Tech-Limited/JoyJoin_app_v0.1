@@ -477,6 +477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/complete-onboarding', isPhoneAuthenticated, async (req: Request, res) => {
     try {
       const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
       const {
         displayName,
         gender,
@@ -523,6 +524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/complete-personality-test', isPhoneAuthenticated, async (req: Request, res) => {
     try {
       const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
       const updatedUser = await storage.updateUser(userId, {
         hasCompletedPersonalityTest: true,
@@ -558,6 +560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     try {
       const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
       const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
@@ -3488,12 +3491,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
       const { eventId } = req.params;
-
-      if (!userId) {
-        console.error("[BlindBoxCancel] No userId in session");
-        return res.status(401).json({ message: "Unauthorized" });
-      }
 
       console.log("[BlindBoxCancel] incoming cancel request:", {
         userId,
@@ -3534,7 +3533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         console.log("[BlindBoxCancel] response (by registrationId):", {
           userId,
-          cancelledIds: deletedRegistrations.map((r) => r.id),
+          cancelledIds: (deletedRegistrations as any[]).map((r: any) => r.id),
         });
 
         // 对每个被删除的报名，把对应池子的 totalRegistrations - 1
@@ -3584,7 +3583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       console.log("[BlindBoxCancel] response (by poolId):", {
         userId,
-        cancelledIds: deletedRegistrations.map((r) => r.id),
+        cancelledIds: (deletedRegistrations as any[]).map((r: any) => r.id),
       });
 
       // 同样更新对应池子的 totalRegistrations
@@ -3602,7 +3601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.json({
         ok: true,
-        cancelledRegistrationIds: deletedRegistrations.map((r) => r.id),
+        cancelledRegistrationIds: (deletedRegistrations as any[]).map((r: any) => r.id),
       });
     } catch (error) {
       console.error("[BlindBoxCancel] Error canceling blind box event / pool registration:", error);
@@ -3902,7 +3901,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const groupSize = Math.min(maxSize, pendingRegistrations.length);
       const selected = pendingRegistrations.slice(0, groupSize);
 
-      const selectedIds = selected.map((r) => r.id);
+      const selectedIds = (selected as any[]).map((r: any) => r.id);
 
       // 4. 更新报名记录为 matched，并标记桌子 id
       await db
@@ -7439,7 +7438,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         return res.json([]);
       }
 
-      const poolIds = pools.map((p) => p.id);
+      const poolIds = (pools as any[]).map((p: any) => p.id);
 
       // 查出当前用户在这些池子里的报名记录
       const userRegistrations = await db
@@ -7452,10 +7451,10 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
           )
         );
 
-      const registeredPoolIds = new Set(userRegistrations.map((r) => r.poolId));
+      const registeredPoolIds = new Set((userRegistrations as any[]).map((r: any) => r.poolId));
 
       // 过滤掉已经报名过的池子
-      const visiblePools = pools.filter((p) => !registeredPoolIds.has(p.id));
+      const visiblePools = (pools as any[]).filter((p: any) => !registeredPoolIds.has(p.id));
 
       // 获取每个池子的报名人数和前3个报名者的原型
       const poolsWithSocialProof = await Promise.all(
@@ -7478,9 +7477,9 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
               .select({ archetype: users.archetype })
               .from(users)
               .where(inArray(users.id, sampleUserIds));
-            sampleArchetypes = sampleUsers
-              .map(u => u.archetype)
-              .filter((a): a is string => a !== null);
+            sampleArchetypes = (sampleUsers as any[])
+              .map((u: any) => u.archetype)
+              .filter((a: any): a is string => a !== null);
           }
 
           return {
@@ -7711,7 +7710,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
     // 原来的邀请关系 enrichment 逻辑我全部保留，只是包了一层 Promise.all
     const enrichedRegistrations = await Promise.all(
-      registrations.map(async (reg) => {
+      (registrations as any[]).map(async (reg: any) => {
         const [inviteUse] = await db
           .select()
           .from(invitationUses)
@@ -7816,6 +7815,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       });
 
       const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
       const { id } = req.params;
 
       if (!userId) {
@@ -7872,7 +7873,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
       return res.json({
         ok: true,
-        cancelledRegistrationIds: deletedRegistrations.map((r) => r.id),
+        cancelledRegistrationIds: (deletedRegistrations as any[]).map((r: any) => r.id),
       });
     } catch (error) {
       console.error('[MyPoolRegistrationsCancel] error while cancelling registration', error);

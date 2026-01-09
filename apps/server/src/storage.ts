@@ -3318,7 +3318,7 @@ export class DatabaseStorage implements IStorage {
 
     const results = await query;
     
-    return results.filter(banner => {
+    return results.filter((banner: any) => {
       if (city && banner.city && banner.city !== city) return false;
       if (placement && banner.placement !== placement && banner.placement !== 'both') return false;
       if (banner.effectiveFrom && new Date(banner.effectiveFrom) > now) return false;
