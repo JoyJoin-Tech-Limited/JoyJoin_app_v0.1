@@ -1,0 +1,25 @@
+Run npx tsc -p apps/server/tsconfig.json --noEmit
+Error: apps/server/src/poolMatchingService.ts(36,15): error TS2305: Module '"./archetypeConfig"' has no exported member 'ArchetypeName'.
+Error: apps/server/src/poolMatchingService.ts(138,29): error TS7053: Element implicitly has an 'any' type because expression of type 'ArchetypeName' can't be used to index type 'Record<ArchetypeName, Record<ArchetypeName, number>>'.
+Error: apps/server/src/poolMatchingService.ts(141,28): error TS7053: Element implicitly has an 'any' type because expression of type 'ArchetypeName' can't be used to index type 'Record<ArchetypeName, Record<ArchetypeName, number>>'.
+Error: apps/server/src/poolMatchingService.ts(142,28): error TS7053: Element implicitly has an 'any' type because expression of type 'ArchetypeName' can't be used to index type 'Record<ArchetypeName, Record<ArchetypeName, number>>'.
+Error: apps/server/src/poolMatchingService.ts(445,12): error TS7053: Element implicitly has an 'any' type because expression of type 'ArchetypeName' can't be used to index type 'Record<ArchetypeName, number>'.
+Error: apps/server/src/poolMatchingService.ts(560,18): error TS2304: Cannot find name 'sql'.
+Error: apps/server/src/poolMatchingService.ts(560,43): error TS2339: Property 'type' does not exist on type 'PgTableWithColumns<{ name: "event_pools"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "event_pools"; dataType: "string"; columnType: "PgVarchar"; data: string; driverParam: string; notNull: true; ... 7 more ...; generated: undefined; }, {}, { ...; }>; ... 26 more ...; matchedAt: PgColumn<...>...'.
+Error: apps/server/src/poolMatchingService.ts(872,49): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(3554,63): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7754,48): error TS7006: Parameter 'inv' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7855,40): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7856,44): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9422,42): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9429,41): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9500,42): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9507,41): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9575,41): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9661,41): error TS7006: Parameter 'p' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9800,44): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9805,43): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(3483,38): error TS7006: Parameter 'slot' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(3498,51): error TS7006: Parameter 'slot' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(3499,46): error TS7006: Parameter 'b' implicitly has an 'any' type.
+Error: Process completed with exit code 2.

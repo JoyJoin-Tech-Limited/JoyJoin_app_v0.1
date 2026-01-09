@@ -1,0 +1,127 @@
+有区别，而且这次的错误更“结构化”：你从“回调参数隐式 any（TS7006）”升级到了 导出缺失 / 类型索引不成立 / Drizzle SQL 用法不对 这三大类。简单说：你之前是“类型标注不够”，现在是“类型定义/导入/Drizzle 写法本身不对或被你改坏了”。
+
+我按错误分组告诉你：它们分别意味着什么、怎么改最稳。
+
+1) TS2305：archetypeConfig 没导出 ArchetypeName
+
+Module '"./archetypeConfig"' has no exported member 'ArchetypeName'.
+
+这不是类型推断问题，是你 import 的名字在那个文件里根本不存在（或叫别的名字、没 export、路径指错）。
+
+怎么修
+
+去 apps/server/src/archetypeConfig.ts（或对应路径）找：
+
+有没有 export type ArchetypeName = ...
+
+或者实际导出的是 Archetype / ArchetypeKey / ArchetypeId
+
+最常见修法：
+
+如果配置里本来有 archetype 列表，直接生成类型：
+
+export const ARCHETYPES = ["定心大象", "稳如龟", ...] as const;
+export type ArchetypeName = typeof ARCHETYPES[number];
+
+
+或如果你是对象 key：
+
+export const archetypeConfig = { ... } as const;
+export type ArchetypeName = keyof typeof archetypeConfig;
+
+
+然后在 poolMatchingService.ts 里：
+
+import type { ArchetypeName } from "./archetypeConfig";
+
+2) TS7053：ArchetypeName 不能用来 index 一个 Record（看起来很怪）
+
+expression of type 'ArchetypeName' can't be used to index type 'Record<ArchetypeName, ...>'
+
+按道理 Record<ArchetypeName, ...> 是可以被 ArchetypeName 索引的。出现这个报错，几乎只有两种原因：
+
+原因 A（最常见）：你现在的 ArchetypeName 实际上不是 union 字面量类型
+
+比如它变成了：
+
+string（太宽）
+
+enum（也可能触发一些推断问题）
+
+或者你导入失败后变成了 any/unknown 的奇怪状态
+
+✅ 解决方式：确保 ArchetypeName 是 as const 导出来的字面量 union（上面给的写法）。
+
+原因 B：你的矩阵对象并没有 as const satisfies，导致 key 变宽/丢失
+
+推荐最稳写法（TS4.9+）：
+
+export const COMPAT = {
+  "稳如龟": { "稳如龟": 1, "定心大象": 0.8 },
+  "定心大象": { "稳如龟": 0.8, "定心大象": 1 },
+} as const satisfies Record<ArchetypeName, Record<ArchetypeName, number>>;
+
+
+这样 TS 会严格检查 key 完整性，同时又保留字面量 key 类型，索引就不会报 TS7053。
+
+3) TS2304：Cannot find name sql
+
+你在 poolMatchingService.ts(560,18) 用了 sql，但没 import。
+
+这是 Drizzle 的 sql tag（或 SQL helper），要这样导入：
+
+import { sql } from "drizzle-orm";
+
+
+如果你用的是 drizzle-orm/sql（看版本），一般还是 drizzle-orm 就够。
+
+4) TS2339：event_pools.type 不存在
+
+Property 'type' does not exist on PgTableWithColumns ... event_pools ...
+
+这个非常明确：你的 Drizzle table 定义里 event_pools 没有 column 叫 type。
+
+可能原因：
+
+数据库列叫 poolType/pool_type
+
+你在代码里写错了
+
+或者 schema 更新了但 drizzle schema 没同步
+
+✅ 修法：
+
+去你定义表的地方（比如 schema.ts）确认列名
+
+如果 DB 列是 type，但 drizzle 定义没有，那你要加上：
+
+type: varchar("type", { length: ... }).notNull(),
+
+
+如果 DB 列不是 type，那就把代码里 .type 改成真正存在的列（例如 eventPools.poolType）
+
+5) 剩下那些 TS7006（r/inv/m/p/slot/b）
+
+这些还是老朋友：上游数组/对象是 any，导致回调参数变 any。
+
+**但是注意：**你现在优先应该先把上面 4 类“结构性错误”修掉，否则你就算给回调参数全写成 any，核心还是过不了。
+
+你的问题：“any difference?”
+
+✅ 有巨大差别：
+
+上一次主要是 strict 模式下的隐式 any（修法是补类型/补 guard）。
+
+这一次多了 模块导出缺失 + 类型设计不正确 + Drizzle API/Schema 不匹配（修法是改定义/导入/表结构对齐）。
+
+我建议你按这个顺序修（最短路径）
+
+修 TS2305：让 ArchetypeName 正确从 archetypeConfig 导出（用 as const union）
+
+修 TS7053：给 compat matrix 用 as const satisfies Record<...>
+
+修 TS2304：import { sql } from "drizzle-orm"
+
+修 TS2339：对齐 event_pools 的列名（schema or code）
+
+最后再收尾 TS7006（r/m/inv/slot/b）

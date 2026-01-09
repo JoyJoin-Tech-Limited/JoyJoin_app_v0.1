@@ -11,11 +11,8 @@
  * 0-29: 不建议配对，高冲突风险
  */
 
-export type ArchetypeName = 
-  | "开心柯基" | "太阳鸡" | "夸夸豚" | "机智狐"     // 高能量区
-  | "淡定海豚" | "织网蛛" | "暖心熊" | "灵感章鱼"   // 中能量区
-  | "沉思猫头鹰" | "定心大象"                     // 低能量区
-  | "稳如龟" | "隐身猫";                         // 超低能量区
+import type { ArchetypeName } from "./archetypeConfig";
+export { ArchetypeName };
 
 // 社交能量值映射 (0-100)
 export const ARCHETYPE_ENERGY: Record<ArchetypeName, number> = {

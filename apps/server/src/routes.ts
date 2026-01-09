@@ -9,7 +9,101 @@ import { venueMatchingService } from "./venueMatchingService";
 import { calculateUserMatchScore, matchUsersToGroups, validateWeights, DEFAULT_WEIGHTS, type MatchingWeights } from "./userMatchingService";
 import { broadcastEventStatusChanged, broadcastAdminAction } from "./eventBroadcast";
 import { matchEventPool, saveMatchResults } from "./poolMatchingService";
-import { roleTraits, roleInsights } from "./archetypeConfig";
+import { ARCHETYPE_NAMES } from "./archetypeConfig";
+import type { ArchetypeName } from "./archetypeConfig";
+
+type Traits = {
+  affinity: number;
+  openness: number;
+  conscientiousness: number;
+  emotionalStability: number;
+  extraversion: number;
+  positivity: number;
+};
+
+export const roleTraits: Record<ArchetypeName, Traits> = {
+  "开心柯基": { affinity: 8, openness: 8, conscientiousness: 5, emotionalStability: 7, extraversion: 10, positivity: 10 },
+  "太阳鸡": { affinity: 9, openness: 7, conscientiousness: 8, emotionalStability: 9, extraversion: 7, positivity: 9 },
+  "夸夸豚": { affinity: 10, openness: 8, conscientiousness: 7, emotionalStability: 8, extraversion: 9, positivity: 10 },
+  "机智狐": { affinity: 7, openness: 10, conscientiousness: 6, emotionalStability: 8, extraversion: 8, positivity: 8 },
+  "淡定海豚": { affinity: 8, openness: 9, conscientiousness: 9, emotionalStability: 10, extraversion: 6, positivity: 8 },
+  "织网蛛": { affinity: 9, openness: 8, conscientiousness: 8, emotionalStability: 8, extraversion: 7, positivity: 7 },
+  "暖心熊": { affinity: 10, openness: 7, conscientiousness: 8, emotionalStability: 9, extraversion: 6, positivity: 9 },
+  "灵感章鱼": { affinity: 7, openness: 10, conscientiousness: 5, emotionalStability: 8, extraversion: 8, positivity: 8 },
+  "沉思猫头鹰": { affinity: 6, openness: 9, conscientiousness: 10, emotionalStability: 9, extraversion: 5, positivity: 7 },
+  "定心大象": { affinity: 8, openness: 7, conscientiousness: 10, emotionalStability: 10, extraversion: 6, positivity: 7 },
+  "稳如龟": { affinity: 7, openness: 8, conscientiousness: 9, emotionalStability: 9, extraversion: 4, positivity: 6 },
+  "隐身猫": { affinity: 6, openness: 7, conscientiousness: 8, emotionalStability: 9, extraversion: 4, positivity: 7 },
+};
+
+type Insights = {
+  strengths: string;
+  challenges: string;
+  idealFriendTypes: ArchetypeName[];
+};
+
+export const roleInsights: Record<ArchetypeName, Insights> = {
+  "开心柯基": {
+    strengths: "活力四射，擅长快速破冰",
+    challenges: "有时过于热情，可能忽略细节",
+    idealFriendTypes: ["暖心熊", "夸夸豚", "淡定海豚"],
+  },
+  "太阳鸡": {
+    strengths: "稳定温暖，给人安全感",
+    challenges: "可能过于求稳，缺乏冒险精神",
+    idealFriendTypes: ["开心柯基", "定心大象", "淡定海豚"],
+  },
+  "夸夸豚": {
+    strengths: "正向反馈专家，情绪价值满分",
+    challenges: "可能过于迎合，表达过于单一",
+    idealFriendTypes: ["暖心熊", "开心柯基", "织网蛛"],
+  },
+  "机智狐": {
+    strengths: "点子多，擅长发现新奇事物",
+    challenges: "注意力容易分散，缺乏耐心",
+    idealFriendTypes: ["灵感章鱼", "织网蛛", "淡定海豚"],
+  },
+  "淡定海豚": {
+    strengths: "情绪稳定，擅长调节气氛",
+    challenges: "有时显得过于佛系，缺乏主见",
+    idealFriendTypes: ["定心大象", "太阳鸡", "织网蛛"],
+  },
+  "织网蛛": {
+    strengths: "连接者，能发现他人共同点",
+    challenges: "可能过于关注关系网，忽略个人深度",
+    idealFriendTypes: ["机智狐", "淡定海豚", "暖心熊"],
+  },
+  "暖心熊": {
+    strengths: "极佳的倾听者，共情力极强",
+    challenges: "容易吸纳负面情绪，需要空间充电",
+    idealFriendTypes: ["沉思猫头鹰", "夸夸豚", "开心柯基"],
+  },
+  "灵感章鱼": {
+    strengths: "创意无限，思维跳跃广阔",
+    challenges: "想法太多难以落地，可能让人跟不上",
+    idealFriendTypes: ["机智狐", "沉思猫头鹰", "稳如龟"],
+  },
+  "沉思猫头鹰": {
+    strengths: "逻辑严密，提供深度洞察",
+    challenges: "显得过于严肃，不擅长闲聊",
+    idealFriendTypes: ["稳如龟", "暖心熊", "定心大象"],
+  },
+  "定心大象": {
+    strengths: "稳重可靠，是团队的定心丸",
+    challenges: "节奏较慢，对变化反应略显迟钝",
+    idealFriendTypes: ["太阳鸡", "淡定海豚", "沉思猫头鹰"],
+  },
+  "稳如龟": {
+    strengths: "看问题透彻，提供长远见解",
+    challenges: "慢热，融入新群体需要时间",
+    idealFriendTypes: ["沉思猫头鹰", "定心大象", "隐身猫"],
+  },
+  "隐身猫": {
+    strengths: "安静观察者，提供舒适陪伴",
+    challenges: "存在感弱，不擅长主动发起社交",
+    idealFriendTypes: ["稳如龟", "定心大象", "暖心熊"],
+  },
+};
 import { processTestV2, type AnswerV2 } from "./personalityMatchingV2";
 import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
@@ -129,8 +223,8 @@ function calculateTraitScores(primaryRole: string, secondaryRole: string | null)
   positivityScore: number;
 } {
   // Use imported roleTraits from archetypeConfig.ts
-  const primary = roleTraits[primaryRole] || roleTraits["淡定海豚"]; // Default to 淡定海豚
-  const secondary = secondaryRole ? roleTraits[secondaryRole] : null;
+  const primary = roleTraits[primaryRole as ArchetypeName] || roleTraits["淡定海豚"]; // Default to 淡定海豚
+  const secondary = secondaryRole ? roleTraits[secondaryRole as ArchetypeName] : null;
 
   // Blend primary and secondary (70% primary, 30% secondary)
   const blend = (p: number, s: number | null) => {
@@ -154,7 +248,7 @@ function generateInsights(primaryRole: string, secondaryRole: string | null): {
   idealFriendTypes: string[];
 } {
   // Use imported roleInsights from archetypeConfig.ts
-  return roleInsights[primaryRole] || roleInsights["淡定海豚"]; // Default to 淡定海豚
+  return roleInsights[primaryRole as ArchetypeName] || roleInsights["淡定海豚"]; // Default to 淡定海豚
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -3551,7 +3645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         return res.json({
           ok: true,
-          cancelledRegistrationIds: deletedRegistrations.map((r) => r.id),
+          cancelledRegistrationIds: deletedRegistrations.map((r: any) => r.id),
         });
       }
 
@@ -7751,7 +7845,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
             .limit(10);
           
           if (userInvitations.length > 0) {
-            const codes = userInvitations.map((inv) => inv.code);
+            const codes = userInvitations.map((inv: any) => inv.code);
             const [relatedInviteUse] = await db
               .select({
                 inviteeId: invitationUses.inviteeId,
@@ -7852,8 +7946,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
       console.log('[MyPoolRegistrationsCancel] deleted registrations:', {
         count: deletedRegistrations.length,
-        ids: deletedRegistrations.map((r) => r.id),
-        poolIds: deletedRegistrations.map((r) => r.poolId),
+        ids: deletedRegistrations.map((r: any) => r.id),
+        poolIds: deletedRegistrations.map((r: any) => r.poolId),
       });
 
       // 2) 对每个受影响的池子，把 totalRegistrations - 1
@@ -9419,14 +9513,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       });
 
       // Get full user info for group members
-      const memberIds = groupMembers.map(m => m.userId);
+      const memberIds = groupMembers.map((m: any) => m.userId);
       const members = await db.query.users.findMany({
         where: sql`${users.id} = ANY(${memberIds})`,
       });
 
       const { matchExplanationService } = await import('./matchExplanationService');
       
-      const matchMembers = members.map((m) => ({
+      const matchMembers = members.map((m: any) => ({
         userId: m.id,
         displayName: m.displayName || '神秘嘉宾',
         archetype: m.archetype,
@@ -9497,14 +9591,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         where: eq(eventPoolRegistrations.assignedGroupId, groupId),
       });
 
-      const memberIds = groupMembers.map(m => m.userId);
+      const memberIds = groupMembers.map((m: any) => m.userId);
       const members = await db.query.users.findMany({
         where: sql`${users.id} = ANY(${memberIds})`,
       });
 
       const { matchExplanationService } = await import('./matchExplanationService');
       
-      const matchMembers = members.map((m) => ({
+      const matchMembers = members.map((m: any) => ({
         userId: m.id,
         displayName: m.displayName || '神秘嘉宾',
         archetype: m.archetype,
@@ -9572,7 +9666,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
       const { matchExplanationService } = await import('./matchExplanationService');
       
-      const matchMembers = members.map((m) => ({
+      const matchMembers = members.map((m: any) => ({
         userId: m.id,
         displayName: m.displayName || '神秘嘉宾',
         archetype: m.archetype,
@@ -9658,7 +9752,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
       const { generateConversationTopics } = await import('./conversationTopicsService');
       
-      const profiles = participants.map(p => ({
+      const profiles = participants.map((p: any) => ({
         displayName: p.displayName || '嘉宾',
         archetype: p.archetype,
         interests: p.interestsTop || undefined,
@@ -9797,12 +9891,12 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           where: eq(eventPoolRegistrations.assignedGroupId, group.id),
         });
 
-        const memberIds = groupMembers.map(m => m.userId);
+        const memberIds = groupMembers.map((m: any) => m.userId);
         const members = await db.query.users.findMany({
           where: sql`${users.id} = ANY(${memberIds})`,
         });
 
-        const matchMembers = members.map((m) => ({
+        const matchMembers = members.map((m: any) => ({
           userId: m.id,
           displayName: m.displayName || '神秘嘉宾',
           archetype: m.archetype,
