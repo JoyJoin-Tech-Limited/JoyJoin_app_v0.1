@@ -565,8 +565,8 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     );
   
   // 3. 硬约束过滤
-  const eligibleUsers = registrations.filter((reg: any) => 
-    meetsHardConstraints(reg as UserWithProfile, pool)
+  const eligibleUsers = registrations.filter((reg: UserWithProfile) => 
+    meetsHardConstraints(reg, pool)
   );
   
   if (eligibleUsers.length < (pool.minGroupSize || 4)) {

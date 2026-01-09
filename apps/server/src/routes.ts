@@ -73,7 +73,7 @@ function calculateRoleScores(responses: Record<number, any>): Record<string, num
     "隐身猫": 0,
   };
 
-  Object.entries(responses).forEach(([questionId, answer]) => {
+  Object.entries(responses).forEach(([questionId, answer]: [string, any]) => {
     // Determine which mapping to use based on question ID
     const qId = parseInt(questionId);
     const mapping = qId >= 101 ? supplementaryRoleMapping[questionId] : roleMapping[questionId];
@@ -316,7 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupPhoneAuth(app);
 
   // Admin password login endpoint
-  app.post('/api/auth/admin-login', async (req: any, res) => {
+  app.post('/api/auth/admin-login', async (req: Request, res) => {
     try {
       const { phoneNumber, password } = req.body;
 
@@ -378,7 +378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dev-only login endpoint for testing
-  app.post('/api/auth/dev-login', async (req: any, res) => {
+  app.post('/api/auth/dev-login', async (req: Request, res) => {
     if (process.env.NODE_ENV !== 'development') {
       return res.status(403).json({ message: "Dev login is only available in development mode" });
     }
@@ -423,7 +423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Simplified phone login (no SMS verification for MVP)
-  app.post('/api/auth/quick-login', async (req: any, res) => {
+  app.post('/api/auth/quick-login', async (req: Request, res) => {
     try {
       const { phone } = req.body;
       
@@ -474,7 +474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Complete onboarding - sets registration flags and user profile data
-  app.post('/api/auth/complete-onboarding', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/auth/complete-onboarding', isPhoneAuthenticated, async (req: Request, res) => {
     try {
       const userId = req.session.userId;
       const {
@@ -520,7 +520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Complete personality test - sets hasCompletedPersonalityTest flag
-  app.post('/api/auth/complete-personality-test', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/auth/complete-personality-test', isPhoneAuthenticated, async (req: Request, res) => {
     try {
       const userId = req.session.userId;
 
@@ -546,7 +546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Auth routes
-  app.get('/api/auth/user', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', isPhoneAuthenticated, async (req: Request, res) => {
     // 🔧 DEBUG_AUTH logging (Phase 4.2)
     if (process.env.DEBUG_AUTH === "1") {
       console.log("[AUTH/USER]", {
@@ -566,7 +566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/auth/logout', async (req: any, res) => {
+  app.post('/api/auth/logout', async (req: Request, res) => {
     try {
       req.session.destroy((err: any) => {
         if (err) {
@@ -583,7 +583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Profile stats endpoint
-  app.get('/api/profile/stats', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/profile/stats', isPhoneAuthenticated, async (req: Request, res) => {
     try {
       const userId = req.session.userId;
       
