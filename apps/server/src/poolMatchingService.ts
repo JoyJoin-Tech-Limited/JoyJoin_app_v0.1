@@ -557,7 +557,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       languagesComfort: users.languagesComfort,
       hometown: users.hometownRegionCity,
       hometownAffinityOptin: users.hometownAffinityOptin,
-      eventType: sql<string>`${eventPools.type}`,
+      eventType: eventPools.eventType,
       barBudgetRange: eventPoolRegistrations.barBudgetRange,
       barThemes: eventPoolRegistrations.barThemes,
       alcoholComfort: eventPoolRegistrations.alcoholComfort,
@@ -869,7 +869,7 @@ async function processInvitationRewards(poolId: string, groups: MatchGroup[]): P
     .from(eventPoolRegistrations)
     .where(eq(eventPoolRegistrations.poolId, poolId));
   
-  const registrationIds = poolRegistrations.map(r => r.id);
+  const registrationIds = poolRegistrations.map((r: any) => r.id);
   
   if (registrationIds.length === 0) return;
   

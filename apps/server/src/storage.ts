@@ -3480,7 +3480,7 @@ export class DatabaseStorage implements IStorage {
 
       let filteredSlots = slots;
       if (startTime && endTime) {
-        filteredSlots = slots.filter(slot => 
+        filteredSlots = slots.filter((slot: any) => 
           slot.startTime <= startTime && slot.endTime >= endTime
         );
       }
@@ -3495,8 +3495,8 @@ export class DatabaseStorage implements IStorage {
           )
         );
 
-      const availableSlots = filteredSlots.filter(slot => {
-        const slotBookings = bookings.filter(b => b.timeSlotId === slot.id);
+      const availableSlots = filteredSlots.filter((slot: any) => {
+        const slotBookings = bookings.filter((b: any) => b.timeSlotId === slot.id);
         return slotBookings.length < (slot.maxConcurrentEvents || 1);
       });
 
