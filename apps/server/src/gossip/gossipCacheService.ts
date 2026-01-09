@@ -53,7 +53,7 @@ export async function getGossipFromCache(
         lastUsedAt: new Date(),
       })
       .where(eq(gossipCache.id, entry.id))
-      .catch(err => console.error('[GossipCache] Failed to update usage count:', err));
+      .catch((err: Error) => console.error('[GossipCache] Failed to update usage count:', err));
     
     return selectedVariant;
   } catch (error) {

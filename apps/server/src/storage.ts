@@ -60,7 +60,7 @@ export interface IStorage {
   getUserFeedback(userId: string, eventId: string): Promise<EventFeedback | undefined>;
   getEventFeedbacks(eventId: string): Promise<Array<EventFeedback>>;
   createEventFeedback(userId: string, feedback: InsertEventFeedback): Promise<EventFeedback>;
-  updateEventFeedbackDeep(userId: string, eventId: string, deepData: any): Promise<EventFeedback>;
+  updateEventFeedbackDeep(userId: string, eventId: string, deepData: Record<string, any>): Promise<EventFeedback>;
 
   // Direct message operations
   findDirectMessageThread(userId1: string, userId2: string, eventId: string): Promise<DirectMessageThread | undefined>;
@@ -799,7 +799,7 @@ export class DatabaseStorage implements IStorage {
     return feedbacks;
   }
 
-  async updateEventFeedbackDeep(userId: string, eventId: string, deepData: any): Promise<EventFeedback> {
+  async updateEventFeedbackDeep(userId: string, eventId: string, deepData: Record<string, any>): Promise<EventFeedback> {
     const [updatedFeedback] = await db
       .update(eventFeedback)
       .set(deepData)
