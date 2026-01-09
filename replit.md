@@ -33,6 +33,7 @@ The project utilizes a monorepo (`joyjoin-monorepo`) encompassing user client, a
 - **Admin Authorization:** `isAdmin` flag.
 
 ### System Features & Design Decisions
+- **Full-Stack Performance Profiling:** Integrated Request ID (RID) tracking across all API calls with total latency and database operation metrics (count, total ms, max ms) logged to the server console for real-time bottleneck identification.
 - **AI-Driven Event Pool Matching:** A two-stage model combining admin-defined event pools and a 7-dimensional AI algorithm (Chemistry, Interest, Language, Preferences, Hometown, Background, Emotional). Integrates a 12-Archetype Animal Social Vibe System with event-type-specific preference scoring (e.g., 饭局 vs 酒局).
 - **Two-Tier Feedback Architecture:** Collects basic and anonymous deep feedback for continuous algorithm refinement.
 - **Gamified Personality Assessment (V4 Adaptive):** An adaptive 130-question bank (including 6 forced-choice tradeoff questions + 16 targeted differentiation questions Q90-Q97, Q119-Q130) dynamically selecting 8-16 questions based on real-time confidence. Features adaptive engine with 3-level difficulty, real-time archetype predictions. Current accuracy: 44.5% exact match, 69.2% similar match (simulated 10k users). Q127-Q130 added targeting top confusion pairs: 开心柯基↔机智狐, 隐身猫↔淡定海豚, 太阳鸡↔暖心熊.
