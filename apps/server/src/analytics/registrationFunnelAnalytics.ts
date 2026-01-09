@@ -409,7 +409,7 @@ async function getL3ConfidenceTrend(): Promise<L3ConfidenceTrend[]> {
       .orderBy(sql`DATE(${registrationSessions.completedAt})`);
     
     if (dailyStats.length > 0) {
-      return dailyStats.map(stat => ({
+      return dailyStats.map(stat: any => ({
         date: stat.date,
         avgConfidence: stat.avgConfidence || 0,
         sampleSize: stat.sampleSize || 0,
