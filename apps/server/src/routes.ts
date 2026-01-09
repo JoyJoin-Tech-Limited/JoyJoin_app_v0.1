@@ -7458,7 +7458,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
 
       // 获取每个池子的报名人数和前3个报名者的原型
       const poolsWithSocialProof = await Promise.all(
-        visiblePools.map(async (pool) => {
+        visiblePools.map(async (pool: any) => {
           const registrations = await db
             .select({
               id: eventPoolRegistrations.id,
