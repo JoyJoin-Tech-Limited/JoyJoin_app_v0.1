@@ -56,7 +56,7 @@ export class GoldenDialogueService {
         .orderBy(desc(goldenDialogues.successRate))
         .limit(limit);
 
-      return results.map(r => ({
+      return results.map((r: any) => ({
         ...r,
         successRate: parseFloat(r.successRate || '0'),
         usageCount: r.usageCount || 0,
@@ -85,7 +85,7 @@ export class GoldenDialogueService {
         .orderBy(desc(goldenDialogues.successRate))
         .limit(limit);
 
-      return results.map(r => ({
+      return results.map((r: any) => ({
         ...r,
         successRate: parseFloat(r.successRate || '0'),
         usageCount: r.usageCount || 0,
@@ -182,10 +182,10 @@ export class GoldenDialogueService {
       const all = await db.select()
         .from(goldenDialogues);
 
-      const active = all.filter(d => d.isActive);
-      const manual = all.filter(d => d.isManuallyTagged);
+      const active = all.filter((d: GoldenDialogue) => d.isActive);
+      const manual = all.filter((d: GoldenDialogue) => d.isManuallyTagged);
       const avgRate = active.length > 0
-        ? active.reduce((sum, d) => sum + parseFloat(d.successRate || '0'), 0) / active.length
+        ? active.reduce((sum: number, d: GoldenDialogue) => sum + parseFloat(d.successRate || '0'), 0) / active.length
         : 0;
 
       const byCategory: Record<string, number> = {};

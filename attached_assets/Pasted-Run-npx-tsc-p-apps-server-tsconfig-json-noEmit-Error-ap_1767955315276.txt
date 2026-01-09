@@ -1,0 +1,109 @@
+Run npx tsc -p apps/server/tsconfig.json --noEmit
+Error: apps/server/src/analytics/registrationFunnelAnalytics.ts(412,29): error TS7006: Parameter 'stat' implicitly has an 'any' type.
+Error: apps/server/src/dialogueEmbeddingsService.ts(314,45): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/dialogueEmbeddingsService.ts(438,31): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/goldenDialogueService.ts(59,26): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/goldenDialogueService.ts(88,26): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/goldenDialogueService.ts(185,33): error TS7006: Parameter 'd' implicitly has an 'any' type.
+Error: apps/server/src/goldenDialogueService.ts(186,33): error TS7006: Parameter 'd' implicitly has an 'any' type.
+Error: apps/server/src/goldenDialogueService.ts(188,26): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+Error: apps/server/src/goldenDialogueService.ts(188,31): error TS7006: Parameter 'd' implicitly has an 'any' type.
+Error: apps/server/src/gossip/gossipCacheService.ts(56,14): error TS7006: Parameter 'err' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(82,21): error TS7006: Parameter 'f' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(124,52): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(129,13): error TS7006: Parameter 'f' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(130,10): error TS7006: Parameter 'f' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(132,34): error TS7006: Parameter 'a' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(132,37): error TS7006: Parameter 'b' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(137,27): error TS7006: Parameter 'a' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(137,30): error TS7006: Parameter 'b' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(198,13): error TS7006: Parameter 'f' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(199,10): error TS7006: Parameter 'f' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(201,32): error TS7006: Parameter 'a' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(201,35): error TS7006: Parameter 'b' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(205,43): error TS7006: Parameter 'f' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(211,43): error TS7006: Parameter 'f' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(212,46): error TS7006: Parameter 'f' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(213,46): error TS7006: Parameter 'f' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(402,24): error TS7006: Parameter 'u' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(409,24): error TS7006: Parameter 'u' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(419,30): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+Error: apps/server/src/kpiService.ts(419,35): error TS7006: Parameter 'u' implicitly has an 'any' type.
+Error: apps/server/src/poolMatchingService.ts(578,45): error TS7006: Parameter 'u' implicitly has an 'any' type.
+Error: apps/server/src/poolMatchingService.ts(602,44): error TS7006: Parameter 'u' implicitly has an 'any' type.
+Error: apps/server/src/poolMatchingService.ts(864,49): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(1716,25): error TS7006: Parameter 'user' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(2140,50): error TS7006: Parameter 'e' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(2141,52): error TS7006: Parameter 'e' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(2501,51): error TS7006: Parameter 'e' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(3536,51): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(3554,63): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(3586,49): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(3604,61): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(3904,41): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(5154,17): error TS7006: Parameter 'invites' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(5154,28): error TS7031: Binding element 'and' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(5154,33): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(5172,19): error TS7006: Parameter 'invites' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(5172,30): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7137,26): error TS7006: Parameter 'pool' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7139,21): error TS7006: Parameter 'regs' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7139,29): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7145,49): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7146,49): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7317,17): error TS7006: Parameter 'groups' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7317,27): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7318,19): error TS7006: Parameter 'groups' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7318,29): error TS7031: Binding element 'asc' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7359,17): error TS7006: Parameter 'pools' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7359,26): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7441,34): error TS7006: Parameter 'p' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7454,64): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7457,42): error TS7006: Parameter 'p' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7461,33): error TS7006: Parameter 'pool' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7472,63): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7481,20): error TS7006: Parameter 'u' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7482,24): error TS7006: Parameter 'a' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7512,17): error TS7006: Parameter 'pools' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7512,26): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7521,17): error TS7006: Parameter 'regs' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7521,25): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7544,17): error TS7006: Parameter 'pools' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7544,26): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7557,17): error TS7006: Parameter 'regs' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7557,25): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7557,29): error TS7031: Binding element 'and' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7713,32): error TS7006: Parameter 'reg' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7754,48): error TS7006: Parameter 'inv' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7853,40): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7854,44): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7874,61): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7890,17): error TS7006: Parameter 'groups' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7890,27): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7899,17): error TS7006: Parameter 'pools' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7899,26): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7908,17): error TS7006: Parameter 'regs' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7908,25): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(7908,29): error TS7031: Binding element 'and' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9420,42): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9427,41): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9498,42): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9505,41): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9573,41): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9659,41): error TS7006: Parameter 'p' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9798,44): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/routes.ts(9803,43): error TS7006: Parameter 'm' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(687,25): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(727,23): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(742,23): error TS7006: Parameter 'r' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(853,26): error TS7006: Parameter 'thread' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(924,27): error TS7006: Parameter 'message' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(1225,20): error TS7006: Parameter 'row' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(1671,28): error TS7006: Parameter 'row' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(3321,27): error TS7006: Parameter 'banner' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(3483,38): error TS7006: Parameter 'slot' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(3498,51): error TS7006: Parameter 'slot' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(3499,46): error TS7006: Parameter 'b' implicitly has an 'any' type.
+Error: apps/server/src/storage.ts(3557,25): error TS7006: Parameter 'row' implicitly has an 'any' type.
+Error: apps/server/src/triggerPerformanceService.ts(129,27): error TS7006: Parameter 't' implicitly has an 'any' type.
+Error: Process completed with exit code 2.

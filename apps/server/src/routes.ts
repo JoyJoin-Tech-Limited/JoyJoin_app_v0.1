@@ -1713,7 +1713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         '隐身猫': 0,
       };
 
-      allUsers.forEach((user) => {
+      allUsers.forEach((user: any) => {
         if (user.primaryRole && distribution.hasOwnProperty(user.primaryRole)) {
           distribution[user.primaryRole] += 1;
         }
@@ -2137,8 +2137,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if user already has demo events
       const existingEvents = await db.select().from(blindBoxEvents).where(eq(blindBoxEvents.userId, userId));
-      const hasMatchedDemo = existingEvents.some(e => e.status === 'matched' && e.restaurantName?.includes('Sushi'));
-      const hasCompletedDemo = existingEvents.some(e => e.status === 'completed' && e.restaurantName?.includes('Tap House'));
+      const hasMatchedDemo = existingEvents.some((e: any) => e.status === 'matched' && e.restaurantName?.includes('Sushi'));
+      const hasCompletedDemo = existingEvents.some((e: any) => e.status === 'completed' && e.restaurantName?.includes('Tap House'));
       
       if (hasMatchedDemo && hasCompletedDemo) {
         console.log("✅ Demo events already exist for user:", userId);
@@ -2498,7 +2498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(blindBoxEvents)
         .where(eq(blindBoxEvents.userId, userId));
       
-      const hasChristmasPool = existingPools.some(e => 
+      const hasChristmasPool = existingPools.some((e: any) => 
         e.title && e.title.includes("圣诞") && e.status === "pending_match"
       );
       
@@ -4706,7 +4706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Helper to pick an unused reason from variants
       const pickUnusedReason = (variants: string[]): string => {
-        const unused = variants.filter(r => !usedReasons.has(r));
+        const unused = variants.filter((r: any) => !usedReasons.has(r));
         if (unused.length > 0) {
           const picked = unused[Math.floor(Math.random() * unused.length)];
           usedReasons.add(picked);
@@ -5151,7 +5151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if invitation already exists for this user and event
       const existingInvite = await db.query.invitations.findFirst({
-        where: (invites, { and, eq }) => and(
+        where: (invites: any, { and, eq }: any) => and(
           eq(invites.inviterId, userId),
           eq(invites.eventId, eventId)
         )
@@ -5169,7 +5169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let attempts = 0;
       while (attempts < 5) {
         const existing = await db.query.invitations.findFirst({
-          where: (invites, { eq }) => eq(invites.code, code)
+          where: (invites: any, { eq }: any) => eq(invites.code, code)
         });
         if (!existing) break;
         code = generateInviteCode();
@@ -7134,16 +7134,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 继续保留“报名数 / matched / pending”统计逻辑
       const poolsWithStats = await Promise.all(
-        pools.map(async (pool) => {
+        pools.map(async (pool: any) => {
           const registrations = await db.query.eventPoolRegistrations.findMany({
-            where: (regs, { eq }) => eq(regs.poolId, pool.id),
+            where: (regs: any, { eq }: any) => eq(regs.poolId, pool.id),
           });
 
           return {
             ...pool,
             registrationCount: registrations.length,
-            matchedCount: registrations.filter((r) => r.matchStatus === "matched").length,
-            pendingCount: registrations.filter((r) => r.matchStatus === "pending").length,
+            matchedCount: registrations.filter((r: any) => r.matchStatus === "matched").length,
+            pendingCount: registrations.filter((r: any) => r.matchStatus === "pending").length,
           };
         })
       );
@@ -7314,8 +7314,8 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
   app.get("/api/admin/event-pools/:id/groups", requireAdmin, async (req, res) => {
     try {
       const groups = await db.query.eventPoolGroups.findMany({
-        where: (groups, { eq }) => eq(groups.poolId, req.params.id),
-        orderBy: (groups, { asc }) => [asc(groups.groupNumber)],
+        where: (groups: any, { eq }: any) => eq(groups.poolId, req.params.id),
+        orderBy: (groups: any, { asc }: any) => [asc(groups.groupNumber)],
       });
       
       // Get members for each group
@@ -7356,7 +7356,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
       
       // Check if pool exists and is in active status
       const pool = await db.query.eventPools.findFirst({
-        where: (pools, { eq }) => eq(pools.id, poolId)
+        where: (pools: any, { eq }: any) => eq(pools.id, poolId)
       });
       
       if (!pool) {
@@ -7469,7 +7469,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
             .limit(10);
 
           // 获取前3个报名者的原型信息
-          const sampleUserIds = registrations.slice(0, 3).map(r => r.userId);
+          const sampleUserIds = registrations.slice(0, 3).map((r: any) => r.userId);
           let sampleArchetypes: string[] = [];
           
           if (sampleUserIds.length > 0) {
@@ -7509,7 +7509,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
   app.get("/api/event-pools/:id", async (req, res) => {
     try {
       const pool = await db.query.eventPools.findFirst({
-        where: (pools, { eq }) => eq(pools.id, req.params.id),
+        where: (pools: any, { eq }: any) => eq(pools.id, req.params.id),
       });
 
       if (!pool) {
@@ -7518,7 +7518,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
 
       // Get registration count
       const registrations = await db.query.eventPoolRegistrations.findMany({
-        where: (regs, { eq }) => eq(regs.poolId, req.params.id)
+        where: (regs: any, { eq }: any) => eq(regs.poolId, req.params.id)
       });
 
       res.json({
@@ -7541,7 +7541,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
 
       // Check if pool exists and is active
       const pool = await db.query.eventPools.findFirst({
-        where: (pools, { eq }) => eq(pools.id, poolId)
+        where: (pools: any, { eq }: any) => eq(pools.id, poolId)
       });
 
       if (!pool) {
@@ -7554,7 +7554,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
 
       // Check if user already registered
       const existingReg = await db.query.eventPoolRegistrations.findFirst({
-        where: (regs, { eq, and }) => and(
+        where: (regs: any, { eq, and }: any) => and(
           eq(regs.poolId, poolId),
           eq(regs.userId, userId)
         )
@@ -7638,7 +7638,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
       const { scanPoolAndMatch } = await import("./poolRealtimeMatchingService");
       
       // Async trigger (don't block response)
-      scanPoolAndMatch(poolId, "realtime", "user_registration").catch(err => {
+      scanPoolAndMatch(poolId, "realtime", "user_registration").catch((err: any) =>  {
         console.error(`[Realtime Matching] Scan failed after registration:`, err);
         // Error logged, operation continues
       });
@@ -7887,7 +7887,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
       // Get group info
       const group = await db.query.eventPoolGroups.findFirst({
-        where: (groups, { eq }) => eq(groups.id, groupId),
+        where: (groups: any, { eq }: any) => eq(groups.id, groupId),
       });
 
       if (!group) {
@@ -7896,7 +7896,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
       // Get pool info
       const pool = await db.query.eventPools.findFirst({
-        where: (pools, { eq }) => eq(pools.id, group.poolId),
+        where: (pools: any, { eq }: any) => eq(pools.id, group.poolId),
       });
 
       if (!pool) {
@@ -7905,7 +7905,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
       // Check if user is in this group
       const userRegistration = await db.query.eventPoolRegistrations.findFirst({
-        where: (regs, { eq, and }) => and(
+        where: (regs: any, { eq, and }: any) => and(
           eq(regs.assignedGroupId, groupId),
           eq(regs.userId, userId)
         ),
@@ -10633,7 +10633,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         
         // Normalize trait scores (V2 stores 0-1, V1 expects 0-100)
         const traitScores = session.traitScores as Record<string, number> || {};
-        const normalizeScore = (score: number | undefined, fallback: number = 50): number => {
+        const normalizeScore = (score: number | undefined, fallback: number = 50): number =>  {
           if (score === undefined || score === null) return fallback;
           // V2 scores are 0-1, convert to 0-100 percentage
           if (score <= 1) return Math.round(score * 100);

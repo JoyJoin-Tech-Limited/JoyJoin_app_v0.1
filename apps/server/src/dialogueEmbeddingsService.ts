@@ -311,7 +311,7 @@ export class DialogueEmbeddingsService {
         );
 
       // 优先使用成功的完整记录
-      const successfulRecord = records.find(r => r.isSuccessful === true);
+      const successfulRecord = records.find((r: { isSuccessful: boolean | null }) => r.isSuccessful === true);
       const targetRecord = successfulRecord || records[0];
       
       const embeddingData = targetRecord.embedding as InsightEmbeddingData | null;
@@ -435,7 +435,7 @@ export class DialogueEmbeddingsService {
         signature: 0,
       };
 
-      categoryResults.forEach(r => {
+      categoryResults.forEach((r: { category: string | null; count: number }) => {
         if (r.category && r.category in byCategory) {
           byCategory[r.category as InsightCategory] = Number(r.count);
         }

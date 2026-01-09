@@ -79,7 +79,7 @@ export async function calculateNPS(startDate: Date, endDate: Date): Promise<numb
   let promoters = 0;
   let detractors = 0;
 
-  feedbacks.forEach(f => {
+  feedbacks.forEach((f: { atmosphereScore: number | null; wouldAttendAgain: boolean | null; connectionStatus: string | null }) => {
     // 使用综合评分计算 NPS
     // atmosphereScore (1-5) * 2 = 2-10
     const score = (f.atmosphereScore || 3) * 2;
@@ -121,20 +121,20 @@ export async function updateUserEngagement(userId: string): Promise<void> {
   if (!user) return;
 
   // 计算基本指标
-  const totalEventsAttended = registrations.filter(r => r.matchStatus === 'matched').length;
+  const totalEventsAttended = registrations.filter((r: { matchStatus: string | null }) => r.matchStatus === 'matched').length;
   const totalFeedbackGiven = feedbacks.length;
 
   // 计算平均满意度
   const satisfactionScores = feedbacks
-    .filter(f => f.atmosphereScore)
-    .map(f => f.atmosphereScore!);
+    .filter((f: { atmosphereScore: number | null }) => f.atmosphereScore)
+    .map((f: { atmosphereScore: number | null }) => f.atmosphereScore!);
   const avgSatisfactionScore = satisfactionScores.length > 0
-    ? satisfactionScores.reduce((a, b) => a + b, 0) / satisfactionScores.length
+    ? satisfactionScores.reduce((a: number, b: number) => a + b, 0) / satisfactionScores.length
     : null;
 
   // 计算最后活动日期
   const lastEventDate = registrations.length > 0
-    ? registrations.sort((a, b) => 
+    ? registrations.sort((a: { registeredAt: Date | null }, b: { registeredAt: Date | null }) => 
         new Date(b.registeredAt || 0).getTime() - new Date(a.registeredAt || 0).getTime()
       )[0].registeredAt
     : null;
@@ -195,22 +195,22 @@ export async function updateEventSatisfaction(eventId: string, eventType: string
 
   // 计算汇总指标
   const atmosphereScores = feedbacks
-    .filter(f => f.atmosphereScore)
-    .map(f => f.atmosphereScore!);
+    .filter((f: { atmosphereScore: number | null }) => f.atmosphereScore)
+    .map((f: { atmosphereScore: number | null }) => f.atmosphereScore!);
   const avgAtmosphereScore = atmosphereScores.length > 0
-    ? atmosphereScores.reduce((a, b) => a + b, 0) / atmosphereScores.length
+    ? atmosphereScores.reduce((a: number, b: number) => a + b, 0) / atmosphereScores.length
     : null;
 
   // 连接情况统计
-  const hasConnections = feedbacks.filter(f => f.hasNewConnections).length;
+  const hasConnections = feedbacks.filter((f: { hasNewConnections: boolean | null }) => f.hasNewConnections).length;
   const connectionRate = feedbacks.length > 0 
     ? hasConnections / feedbacks.length 
     : 0;
 
   // 场地满意度统计
-  const venueLikeCount = feedbacks.filter(f => f.venueStyleRating === 'like').length;
-  const venueNeutralCount = feedbacks.filter(f => f.venueStyleRating === 'neutral').length;
-  const venueDislikeCount = feedbacks.filter(f => f.venueStyleRating === 'dislike').length;
+  const venueLikeCount = feedbacks.filter((f: { venueStyleRating: string | null }) => f.venueStyleRating === 'like').length;
+  const venueNeutralCount = feedbacks.filter((f: { venueStyleRating: string | null }) => f.venueStyleRating === 'neutral').length;
+  const venueDislikeCount = feedbacks.filter((f: { venueStyleRating: string | null }) => f.venueStyleRating === 'dislike').length;
 
   // 更新或插入汇总记录
   const existing = await db.query.eventSatisfactionSummary.findFirst({
@@ -399,14 +399,14 @@ export async function getChurnAnalysis() {
 
   // 按注册队列分组
   const byRegistrationCohort = new Map<string, number>();
-  churnedUsers.forEach(u => {
+  churnedUsers.forEach((u: { registrationCohort: string | null }) => {
     const cohort = u.registrationCohort || 'unknown';
     byRegistrationCohort.set(cohort, (byRegistrationCohort.get(cohort) || 0) + 1);
   });
 
   // 按注册方式分组
   const byRegistrationMethod = new Map<string, number>();
-  churnedUsers.forEach(u => {
+  churnedUsers.forEach((u: { registrationMethod: string | null }) => {
     const method = u.registrationMethod || 'unknown';
     byRegistrationMethod.set(method, (byRegistrationMethod.get(method) || 0) + 1);
   });
@@ -416,7 +416,7 @@ export async function getChurnAnalysis() {
     byCohort: Object.fromEntries(byRegistrationCohort),
     byMethod: Object.fromEntries(byRegistrationMethod),
     avgEventsBeforeChurn: churnedUsers.length > 0
-      ? churnedUsers.reduce((sum, u) => sum + (u.totalEventsAttended || 0), 0) / churnedUsers.length
+      ? churnedUsers.reduce((sum: number, u: { totalEventsAttended: number | null }) => sum + (u.totalEventsAttended || 0), 0) / churnedUsers.length
       : 0,
   };
 }
@@ -483,18 +483,18 @@ export async function getAssessmentMetrics(startDate: Date, endDate: Date): Prom
     };
   }
 
-  const completed = rows.filter(r => r.status === 'completed');
-  const v1Sessions = completed.filter(r => !r.algorithm_version || r.algorithm_version === 'v1');
-  const v2Sessions = completed.filter(r => r.algorithm_version === 'v2');
+  const completed = rows.filter((r: { status: string | null }) => r.status === 'completed');
+  const v1Sessions = completed.filter((r: { algorithm_version: string | null }) => !r.algorithm_version || r.algorithm_version === 'v1');
+  const v2Sessions = completed.filter((r: { algorithm_version: string | null }) => r.algorithm_version === 'v2');
 
-  const decisiveCount = v2Sessions.filter(r => r.is_decisive === true).length;
+  const decisiveCount = v2Sessions.filter((r: { is_decisive: boolean | null }) => r.is_decisive === true).length;
 
   // Confidence distribution for V2 sessions
   let lowConf = 0, medConf = 0, highConf = 0;
   let totalConfidence = 0;
   let confCount = 0;
 
-  v2Sessions.forEach(r => {
+  v2Sessions.forEach((r: { confidence_score: string | null }) => {
     if (r.confidence_score) {
       const conf = parseFloat(r.confidence_score);
       totalConfidence += conf;
@@ -506,11 +506,11 @@ export async function getAssessmentMetrics(startDate: Date, endDate: Date): Prom
   });
 
   // Average questions
-  const totalQuestions = completed.reduce((sum, r) => sum + (r.answer_count || 0), 0);
+  const totalQuestions = completed.reduce((sum: number, r: { answer_count: number | null }) => sum + (r.answer_count || 0), 0);
 
   // Completion rates (started vs completed)
-  const v1Started = rows.filter(r => !r.algorithm_version || r.algorithm_version === 'v1').length;
-  const v2Started = rows.filter(r => r.algorithm_version === 'v2').length;
+  const v1Started = rows.filter((r: { algorithm_version: string | null }) => !r.algorithm_version || r.algorithm_version === 'v1').length;
+  const v2Started = rows.filter((r: { algorithm_version: string | null }) => r.algorithm_version === 'v2').length;
 
   return {
     totalAssessments: completed.length,

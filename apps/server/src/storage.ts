@@ -684,7 +684,7 @@ export class DatabaseStorage implements IStorage {
 
     // Get participants for each event
     const eventsWithParticipants = await Promise.all(
-      result.map(async (r) => {
+      result.map(async (r: { event: Event; attendanceStatus: string | null; attendeeCount: number }) => {
         const participants = await db
           .select({
             id: users.id,
@@ -724,7 +724,7 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    return result.map(r => r.user);
+    return result.map((r: { user: User }) => r.user);
   }
 
   // Chat operations
@@ -739,7 +739,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(chatMessages.eventId, eventId))
       .orderBy(chatMessages.createdAt);
 
-    return result.map(r => ({
+    return result.map((r: { message: ChatMessage; user: User }) => ({
       ...r.message,
       user: r.user,
     }));
@@ -850,7 +850,7 @@ export class DatabaseStorage implements IStorage {
 
     // Fetch other user data, last message, and source event for each thread
     const threadsWithData = await Promise.all(
-      threads.map(async (thread) => {
+      threads.map(async (thread: DirectMessageThread) => {
         const otherUserId = thread.user1Id === userId ? thread.user2Id : thread.user1Id;
         const otherUser = await this.getUser(otherUserId);
         
@@ -921,7 +921,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(directMessages.createdAt);
 
     const messagesWithUser = await Promise.all(
-      messages.map(async (message) => {
+      messages.map(async (message: DirectMessage) => {
         const sender = await this.getUser(message.senderId);
         return {
           ...message,
@@ -1222,7 +1222,7 @@ export class DatabaseStorage implements IStorage {
       total: 0,
     };
 
-    result.forEach(row => {
+    result.forEach((row: { category: string | null; count: number }) => {
       const count = Number(row.count) || 0;
       if (row.category === 'discover') counts.discover = count;
       if (row.category === 'activities') counts.activities = count;
@@ -1668,7 +1668,7 @@ export class DatabaseStorage implements IStorage {
       ORDER BY count DESC
     `);
     
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       clusterId: row.cluster_id as string,
       districtId: row.district_id as string,
       count: Number(row.count)
@@ -3380,7 +3380,7 @@ export class DatabaseStorage implements IStorage {
       ORDER BY vts.day_of_week NULLS LAST, vts.start_time
     `);
     
-    return (result.rows as any[]).map(row => ({
+    return (result.rows as any[]).map((row: any) => ({
       id: row.id,
       venueId: row.venue_id,
       dayOfWeek: row.day_of_week,
@@ -3417,7 +3417,7 @@ export class DatabaseStorage implements IStorage {
   async batchCreateVenueTimeSlots(venueId: string, slots: Array<Omit<InsertVenueTimeSlot, 'venueId'>>): Promise<VenueTimeSlot[]> {
     if (slots.length === 0) return [];
     
-    const slotsWithVenueId = slots.map(slot => ({
+    const slotsWithVenueId = slots.map((slot: any) => ({
       ...slot,
       venueId,
     }));
@@ -3554,7 +3554,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(icebreakerCheckins.sessionId, sessionId))
       .orderBy(icebreakerCheckins.numberPlate);
     
-    return checkins.map(row => ({
+    return checkins.map((row: any) => ({
       ...row.icebreaker_checkins,
       user: row.users
     }));
