@@ -126,7 +126,7 @@ export class TriggerPerformanceService {
         .from(triggerPerformance)
         .orderBy(desc(triggerPerformance.effectivenessScore));
 
-      return triggers.map(t: any => ({
+      return triggers.map((t: any) => ({
         triggerId: t.triggerId,
         triggerName: t.triggerName,
         currentThreshold: parseFloat(t.currentThreshold || '0.5'),
@@ -147,7 +147,7 @@ export class TriggerPerformanceService {
 
   async getUnderperformingTriggers(threshold: number = 0.3): Promise<TriggerStats[]> {
     const all = await this.getAllTriggerStats();
-    return all.filter(t: any => t.successRate < threshold && t.totalTriggers >= 10);
+    return all.filter((t: any) => t.successRate < threshold && t.totalTriggers >= 10);
   }
 
   invalidateCache(): void {
