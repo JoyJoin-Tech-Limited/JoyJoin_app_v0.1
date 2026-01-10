@@ -12,6 +12,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { StickyCTA, StickyCTAButton } from "@/components/StickyCTA";
 import { BirthDatePicker } from "@/components/BirthDatePicker";
+import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -367,31 +368,9 @@ export default function EssentialDataPage() {
   // Celebration overlay
   if (showCelebration) {
     return (
-      <motion.div 
-        className="fixed inset-0 bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center z-50"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <motion.div 
-          className="text-center text-white"
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 200, damping: 15 }}
-        >
-          <motion.div
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ repeat: Infinity, duration: 1 }}
-          >
-            <Sparkles className="w-20 h-20 mx-auto mb-4" />
-          </motion.div>
-          <h1 className="text-3xl font-bold mb-2">太棒了！</h1>
-          <p className="text-lg opacity-90">正在保存你的资料</p>
-          <div className="mt-4 flex items-center justify-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <span>保存中...</span>
-          </div>
-        </motion.div>
-      </motion.div>
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center z-50">
+        <LoadingLogoSleek loop visible />
+      </div>
     );
   }
 

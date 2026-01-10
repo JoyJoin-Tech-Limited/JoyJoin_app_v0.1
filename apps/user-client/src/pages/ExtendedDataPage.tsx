@@ -10,6 +10,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { StickyCTA, StickyCTAButton, StickyCTASecondaryButton } from "@/components/StickyCTA";
+import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -357,30 +358,9 @@ export default function ExtendedDataPage() {
   // Celebration overlay
   if (showCelebration) {
     return (
-      <motion.div 
-        className="fixed inset-0 bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center z-50"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <motion.div 
-          className="text-center text-white"
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 200, damping: 15 }}
-        >
-          <motion.div
-            animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
-            transition={{ repeat: Infinity, duration: 1.5 }}
-          >
-            <PartyPopper className="w-24 h-24 mx-auto mb-4" />
-          </motion.div>
-          <h1 className="text-3xl font-bold mb-2">欢迎加入悦聚！</h1>
-          <p className="text-lg opacity-90 mb-2">即将开始探索精彩活动...</p>
-          <div className="mt-4 flex items-center justify-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin" />
-          </div>
-        </motion.div>
-      </motion.div>
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center z-50">
+        <LoadingLogoSleek loop visible />
+      </div>
     );
   }
 
