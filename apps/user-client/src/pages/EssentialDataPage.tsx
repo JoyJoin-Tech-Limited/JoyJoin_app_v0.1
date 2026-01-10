@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, Sparkles, Star, ArrowRight, Loader2 } from "lucide-react";
+import { ChevronLeft, Sparkles, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -31,7 +31,6 @@ interface EssentialDataState {
     hometown: string;
     currentCity: string;
   };
-  xpEarned: number;
   timestamp: number;
 }
 
@@ -98,7 +97,6 @@ const STEP_CONFIG = [
     subtitle: "一个有趣的昵称会让人印象深刻",
     mascotMessage: "嘿！先给自己取个响亮的名字吧~",
     mascotMood: "excited" as XiaoyueMood,
-    xp: 10,
     type: "input" as const,
   },
   {
@@ -107,7 +105,6 @@ const STEP_CONFIG = [
     subtitle: "用于个性化体验，不会公开显示",
     mascotMessage: "简单两步，帮你找到更合适的朋友！",
     mascotMood: "pointing" as XiaoyueMood,
-    xp: 15,
     type: "dual" as const,
   },
   {
@@ -116,7 +113,6 @@ const STEP_CONFIG = [
     subtitle: "放心，我们会保护好你的隐私",
     mascotMessage: "这个信息只用于精准匹配哦~",
     mascotMood: "normal" as XiaoyueMood,
-    xp: 10,
     type: "select" as const,
     options: RELATIONSHIP_OPTIONS,
   },
@@ -126,7 +122,6 @@ const STEP_CONFIG = [
     subtitle: "学历不重要，我们只是想了解你",
     mascotMessage: "不管什么学历，都能找到志同道合的人！",
     mascotMood: "pointing" as XiaoyueMood,
-    xp: 10,
     type: "select" as const,
     options: EDUCATION_OPTIONS,
   },
@@ -136,7 +131,6 @@ const STEP_CONFIG = [
     subtitle: "方便找到同行或跨界有趣的人",
     mascotMessage: "可能会遇到同行前辈或者跨界伙伴哦！",
     mascotMood: "excited" as XiaoyueMood,
-    xp: 15,
     type: "select" as const,
     options: INDUSTRY_OPTIONS,
   },
@@ -146,13 +140,11 @@ const STEP_CONFIG = [
     subtitle: "老乡见老乡，两眼泪汪汪",
     mascotMessage: "说不定能遇到老乡呢！加油，最后一步！",
     mascotMood: "excited" as XiaoyueMood,
-    xp: 20,
     type: "dualCity" as const,
   },
 ];
 
 const TOTAL_STEPS = STEP_CONFIG.length;
-const XP_PER_COMPLETION = 80;
 
 function XiaoyueMascot({ 
   mood = "normal", 
@@ -198,26 +190,7 @@ function XiaoyueMascot({
   );
 }
 
-function XPMeter({ current, total, className }: { current: number; total: number; className?: string }) {
-  const percentage = Math.min((current / total) * 100, 100);
-  
-  return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-      <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-        <motion.div 
-          className="h-full bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full"
-          initial={{ width: 0 }}
-          animate={{ width: `${percentage}%` }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        />
-      </div>
-      <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400 min-w-[50px] text-right">
-        {current} 悦点
-      </span>
-    </div>
-  );
-}
+
 
 function TappableCard({ 
   selected, 
@@ -266,7 +239,6 @@ export default function EssentialDataPage() {
   const [workIndustry, setWorkIndustry] = useState("");
   const [hometown, setHometown] = useState("");
   const [currentCity, setCurrentCity] = useState("");
-  const [xpEarned, setXpEarned] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
 
   // Load cached progress
@@ -285,7 +257,6 @@ export default function EssentialDataPage() {
           setWorkIndustry(state.data.workIndustry || "");
           setHometown(state.data.hometown || "");
           setCurrentCity(state.data.currentCity || "");
-          setXpEarned(state.xpEarned || 0);
         }
       } catch {}
     }
@@ -303,11 +274,10 @@ export default function EssentialDataPage() {
     const state: EssentialDataState = {
       currentStep,
       data: { displayName, gender, birthYear, relationshipStatus, education, workIndustry, hometown, currentCity },
-      xpEarned,
       timestamp: Date.now(),
     };
     localStorage.setItem(ESSENTIAL_CACHE_KEY, JSON.stringify(state));
-  }, [currentStep, displayName, gender, birthYear, relationshipStatus, education, workIndustry, hometown, currentCity, xpEarned]);
+  }, [currentStep, displayName, gender, birthYear, relationshipStatus, education, workIndustry, hometown, currentCity]);
 
   useEffect(() => {
     saveProgress();
@@ -348,9 +318,6 @@ export default function EssentialDataPage() {
 
   const handleNext = () => {
     if (!canProceed()) return;
-
-    // Award XP
-    setXpEarned(prev => prev + stepConfig.xp);
 
     // Haptic feedback
     if (navigator.vibrate) {
@@ -418,7 +385,7 @@ export default function EssentialDataPage() {
             <Sparkles className="w-20 h-20 mx-auto mb-4" />
           </motion.div>
           <h1 className="text-3xl font-bold mb-2">太棒了！</h1>
-          <p className="text-lg opacity-90">获得 {xpEarned + stepConfig.xp} 悦点</p>
+          <p className="text-lg opacity-90">正在保存你的资料</p>
           <div className="mt-4 flex items-center justify-center gap-2">
             <Loader2 className="w-5 h-5 animate-spin" />
             <span>保存中...</span>
@@ -451,7 +418,6 @@ export default function EssentialDataPage() {
             <Progress value={progress} className="h-2" />
           </div>
         </div>
-        <XPMeter current={xpEarned} total={XP_PER_COMPLETION} />
       </div>
 
       {/* Main content */}
