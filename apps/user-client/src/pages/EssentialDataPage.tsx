@@ -103,8 +103,8 @@ const STEP_CONFIG = [
   },
   {
     id: "genderBirthday",
-    title: "基本信息",
-    subtitle: "这些会帮助我们更好地匹配",
+    title: "选择出生日期",
+    subtitle: "用于个性化体验，不会公开显示",
     mascotMessage: "简单两步，帮你找到更合适的朋友！",
     mascotMood: "pointing" as XiaoyueMood,
     xp: 15,
@@ -517,7 +517,6 @@ export default function EssentialDataPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-3 text-center">出生日期</label>
                     <BirthDatePicker
                       value={birthDate}
                       onChange={(date) => {
@@ -525,7 +524,7 @@ export default function EssentialDataPage() {
                         setBirthYear(String(date.year));
                       }}
                       minYear={1960}
-                      maxYear={2010}
+                      maxYear={new Date().getFullYear()}
                     />
                   </div>
                 </div>
