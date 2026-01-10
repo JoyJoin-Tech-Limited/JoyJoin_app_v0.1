@@ -522,8 +522,10 @@ export const upsertUserSchema = createInsertSchema(users).pick({
 
 export const updateProfileSchema = createInsertSchema(users).pick({
   displayName: true,
+  birthdate: true,
 }).extend({
   displayName: z.string().min(1, "请输入昵称"),
+  birthdate: z.string().optional(),
 });
 
 // Comprehensive profile update schema for editing profile
