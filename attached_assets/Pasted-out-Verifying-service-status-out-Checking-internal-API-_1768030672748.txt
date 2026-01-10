@@ -1,0 +1,49 @@
+out: 🏥 Verifying service status...
+out:    Checking internal API...
+out: ❌ API Failed
+err: Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/apps/server/dist/vite' imported from /app/apps/server/dist/index.js
+err:     at finalizeResolution (node:internal/modules/esm/resolve:283:11)
+err:     at moduleResolve (node:internal/modules/esm/resolve:952:10)
+err:     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+err:     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+err:     at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+err:     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+err:     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+err:     at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+err:   code: 'ERR_MODULE_NOT_FOUND',
+err:   url: 'file:///app/apps/server/dist/vite'
+err: }
+err: Node.js v20.19.6
+err: node:internal/modules/esm/resolve:283
+err:     throw new ERR_MODULE_NOT_FOUND(
+err:           ^
+err: Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/apps/server/dist/vite' imported from /app/apps/server/dist/index.js
+err:     at finalizeResolution (node:internal/modules/esm/resolve:283:11)
+err:     at moduleResolve (node:internal/modules/esm/resolve:952:10)
+err:     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+err:     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+err:     at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+err:     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+err:     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+err:     at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+err:   code: 'ERR_MODULE_NOT_FOUND',
+err:   url: 'file:///app/apps/server/dist/vite'
+err: }
+err: Node.js v20.19.6
+err: node:internal/modules/esm/resolve:283
+err:     throw new ERR_MODULE_NOT_FOUND(
+err:           ^
+err: Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/apps/server/dist/vite' imported from /app/apps/server/dist/index.js
+err:     at finalizeResolution (node:internal/modules/esm/resolve:283:11)
+err:     at moduleResolve (node:internal/modules/esm/resolve:952:10)
+err:     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+err:     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+err:     at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+err:     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+err:     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+err:     at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+err:   code: 'ERR_MODULE_NOT_FOUND',
+err:   url: 'file:///app/apps/server/dist/vite'
+err: }
+err: Node.js v20.19.6
+2026/01/09 19:41:11 Process exited with status 1
