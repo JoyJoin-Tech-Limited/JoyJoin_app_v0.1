@@ -4,19 +4,25 @@ import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, Sparkles, ArrowRight } from "lucide-react";
+import { ChevronLeft, Sparkles, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
-import { StickyCTA, StickyCTAButton } from "@/components/StickyCTA";
 import { BirthDatePicker } from "@/components/BirthDatePicker";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
 import xiaoyuePointing from "@/assets/Xiao_Yue_Avatar-04.png";
+
+// Preload Xiaoyue avatars immediately
+const XIAOYUE_AVATAR_URLS = [xiaoyueNormal, xiaoyueExcited, xiaoyuePointing];
+XIAOYUE_AVATAR_URLS.forEach((src) => {
+  const img = new Image();
+  img.src = src;
+});
 
 const ESSENTIAL_CACHE_KEY = "joyjoin_essential_data_progress";
 
@@ -529,29 +535,42 @@ export default function EssentialDataPage() {
         </AnimatePresence>
       </div>
 
-      {/* Fixed bottom CTA */}
-      <StickyCTA>
-        <StickyCTAButton
-          onClick={handleNext}
-          disabled={!canProceed() || saveMutation.isPending}
-          isLoading={saveMutation.isPending}
-          loadingText="保存中..."
-          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
-          data-testid="button-next"
-        >
-          {currentStep === TOTAL_STEPS - 1 ? (
-            <>
-              完成
-              <Sparkles className="w-5 h-5 ml-2" />
-            </>
-          ) : (
-            <>
-              继续
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </>
-          )}
-        </StickyCTAButton>
-      </StickyCTA>
+      {/* Spacer for floating button */}
+      <div className="h-24" />
+
+      {/* Floating CTA button */}
+      <motion.div 
+        className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent z-40"
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+      >
+        <div className="max-w-md mx-auto">
+          <Button 
+            className="w-full h-14 rounded-2xl text-lg font-bold shadow-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 transition-all duration-200 border-0"
+            onClick={handleNext}
+            disabled={!canProceed() || saveMutation.isPending}
+            data-testid="button-next"
+          >
+            {saveMutation.isPending ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                保存中...
+              </>
+            ) : currentStep === TOTAL_STEPS - 1 ? (
+              <>
+                完成
+                <Sparkles className="w-5 h-5 ml-2" />
+              </>
+            ) : (
+              <>
+                继续
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </>
+            )}
+          </Button>
+        </div>
+      </motion.div>
     </div>
   );
 }
