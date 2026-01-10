@@ -539,7 +539,7 @@ export default function PersonalityTestPageV4() {
             </div>
           </div>
 
-          <StickyCTA className="px-0 -mx-4">
+          <StickyCTA>
             <div className="space-y-3">
               <StickyCTAButton
                 onClick={handleSubmitAnswer}
