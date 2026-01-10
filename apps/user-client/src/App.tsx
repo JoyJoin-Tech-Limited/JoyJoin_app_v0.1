@@ -49,6 +49,7 @@ import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import NotFound from "@/pages/not-found";
 import LevelUpProvider from "@/components/LevelUpProvider";
 import DuolingoOnboardingPage from "@/pages/DuolingoOnboardingPage";
+import GuidePage from "@/pages/GuidePage";
 import { LoadingScreen } from "@/components/LoadingScreen";
 
 preloadXiaoyueImages();
@@ -133,6 +134,7 @@ function AuthenticatedRouter() {
     <Switch>
       <Route path="/" component={DiscoverPage} />
       <Route path="/discover" component={DiscoverPage} />
+      <Route path="/guide" component={GuidePage} />
       <Route path="/event-pool/:id/register" component={EventPoolRegistrationPage} />
       <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
       <Route path="/blindbox/payment" component={BlindBoxPaymentPage} />
