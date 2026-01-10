@@ -134,6 +134,71 @@ function WheelSelector({
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
           )}
           onScroll={handleScroll}
+          onKeyDown={(event) => {
+            const { key } = event;
+
+            if (key === "ArrowUp" || key === "ArrowDown") {
+              event.preventDefault();
+
+              const currentIndex = values.indexOf(selected);
+              if (currentIndex === -1) {
+                return;
+              }
+
+              const delta = key === "ArrowUp" ? -1 : 1;
+              const nextIndex = Math.min(
+                Math.max(0, currentIndex + delta),
+                values.length - 1
+              );
+
+              const nextValue = values[nextIndex];
+              if (nextValue == null || nextValue === selected) {
+                return;
+              }
+
+              onSelect(nextValue);
+              triggerHaptic();
+
+              const targetScroll =
+                nextIndex * itemHeight -
+                itemHeight * Math.floor(visibleItems / 2);
+
+              if (containerRef.current) {
+                containerRef.current.scrollTo({
+                  top: Math.max(0, targetScroll),
+                  behavior: "smooth",
+                });
+              }
+
+              return;
+            }
+
+            if (key === "ArrowLeft" || key === "ArrowRight") {
+              event.preventDefault();
+
+              if (!containerRef.current) {
+                return;
+              }
+
+              const listboxes = Array.from(
+                document.querySelectorAll<HTMLElement>('[role="listbox"]')
+              );
+              const currentIndex = listboxes.indexOf(containerRef.current);
+
+              if (currentIndex === -1) {
+                return;
+              }
+
+              const nextIndex =
+                key === "ArrowLeft" ? currentIndex - 1 : currentIndex + 1;
+
+              if (nextIndex < 0 || nextIndex >= listboxes.length) {
+                return;
+              }
+
+              listboxes[nextIndex].focus();
+            }
+          }}
           style={{ scrollSnapType: 'y mandatory' }}
         >
           {/* Spacer top */}
