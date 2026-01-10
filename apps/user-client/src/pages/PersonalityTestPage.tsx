@@ -18,6 +18,7 @@ import {
   type LowEnergyCalibrationQuestion 
 } from "@/data/adaptiveCalibrationQuestions";
 import { evaluatePersonality } from "@/lib/cumulativeScoringSystem";
+import { StickyCTA, StickyCTAButton } from "@/components/StickyCTA";
 import CelebrationConfetti from "@/components/CelebrationConfetti";
 import { cn } from "@/lib/utils";
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
@@ -1222,25 +1223,17 @@ function PersonalityTestPageV2() {
           )}
         </div>
 
-        <div className="py-3 mt-auto">
-          <Button
+        <StickyCTA>
+          <StickyCTAButton
             onClick={handleNext}
             disabled={!canProceed() || submitTestMutation.isPending}
-            className="w-full h-14 text-lg rounded-2xl"
-            size="lg"
+            isLoading={submitTestMutation.isPending}
+            loadingText="提交中..."
             data-testid="button-next"
           >
-            {isLastQuestion ? (
-              submitTestMutation.isPending ? (
-                "提交中..."
-              ) : (
-                "完成测试"
-              )
-            ) : (
-              "继续"
-            )}
-          </Button>
-        </div>
+            {isLastQuestion ? "完成测试" : "继续"}
+          </StickyCTAButton>
+        </StickyCTA>
       </div>
     </div>
   );
