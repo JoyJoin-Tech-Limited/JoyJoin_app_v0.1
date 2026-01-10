@@ -14,6 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAdaptiveAssessment, type AssessmentQuestion, type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { StickyCTA, StickyCTAButton } from "@/components/StickyCTA";
 
 // Use consistent Xiao Yue Avatar-01.png as primary avatar across all screens
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
@@ -246,28 +247,6 @@ function OnboardingProgress({
             </span>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * MobileActionBar component for sticky bottom buttons on mobile
- */
-function MobileActionBar({ 
-  children, 
-  className 
-}: { 
-  children: React.ReactNode; 
-  className?: string;
-}) {
-  return (
-    <div className={cn(
-      "sticky bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] transition-all duration-300",
-      className
-    )}>
-      <div className="max-w-md mx-auto w-full">
-        {children}
       </div>
     </div>
   );
@@ -901,17 +880,15 @@ export default function DuolingoOnboardingPage() {
               </div>
             </div>
 
-            <MobileActionBar>
-              <Button 
-                size="lg"
-                className="w-full h-14 text-lg rounded-2xl"
+            <StickyCTA>
+              <StickyCTAButton
                 onClick={handleNext}
                 disabled={!currentAnswer}
                 data-testid="button-continue"
               >
                 继续
-              </Button>
-            </MobileActionBar>
+              </StickyCTAButton>
+            </StickyCTA>
           </motion.div>
         );
 
@@ -968,13 +945,12 @@ export default function DuolingoOnboardingPage() {
               </p>
             </div>
 
-            <div className="shrink-0 p-4 bg-background/95 backdrop-blur-sm border-t pb-[calc(1rem+env(safe-area-inset-bottom))]">
-              <div className="max-w-md mx-auto w-full">
-                <Button 
-                  size="lg"
-                  className="w-full h-14 text-lg rounded-2xl"
-                  disabled={isLoggingIn || phone.length < 8}
-                  onClick={async () => {
+            <StickyCTA>
+              <StickyCTAButton
+                disabled={isLoggingIn || phone.length < 8}
+                isLoading={isLoggingIn}
+                loadingText="登录中..."
+                onClick={async () => {
                     if (phone.length < 8) {
                       toast({
                         title: "请输入有效手机号",
@@ -1022,20 +998,10 @@ export default function DuolingoOnboardingPage() {
                   }}
                   data-testid="button-phone-login"
                 >
-                  {isLoggingIn ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      登录中...
-                    </>
-                  ) : (
-                    <>
-                      继续完成测试
-                      <ArrowRight className="w-5 h-5 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
+                  继续完成测试
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </StickyCTAButton>
+            </StickyCTA>
           </motion.div>
         );
 
