@@ -24,6 +24,7 @@ import { useXiaoyueAnalysis } from "@/hooks/useXiaoyueAnalysis";
 import { getStyleSpectrum } from "@shared/personality/matcherV2";
 import { ArrowRight } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 
 // Pokemon-style reveal animation phases
 type RevealPhase = 'countdown' | 'shake' | 'burst' | 'landing' | 'complete';
@@ -619,10 +620,8 @@ export default function PersonalityTestResultPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="text-lg text-muted-foreground">正在加载您的结果...</div>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center">
+        <LoadingLogoSleek loop visible />
       </div>
     );
   }
