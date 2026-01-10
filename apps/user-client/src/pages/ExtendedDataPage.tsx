@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, Sparkles, Star, ArrowRight, Loader2, PartyPopper } from "lucide-react";
+import { ChevronLeft, Sparkles, ArrowRight, Loader2, PartyPopper } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
@@ -24,7 +24,6 @@ interface ExtendedDataState {
     interests: string[];
     socialPreferences: string[];
   };
-  xpEarned: number;
   timestamp: number;
 }
 
@@ -74,7 +73,6 @@ const STEP_CONFIG = [
     subtitle: "可以多选哦",
     mascotMessage: "告诉我你的目标，我帮你精准匹配！",
     mascotMood: "excited" as XiaoyueMood,
-    xp: 15,
     type: "multiSelect" as const,
     options: INTENT_OPTIONS,
     minSelect: 1,
@@ -86,7 +84,6 @@ const STEP_CONFIG = [
     subtitle: "选择3-5个最感兴趣的",
     mascotMessage: "兴趣相投的人更容易成为好朋友！",
     mascotMood: "pointing" as XiaoyueMood,
-    xp: 20,
     type: "multiSelect" as const,
     options: INTEREST_OPTIONS,
     minSelect: 1,
@@ -98,14 +95,12 @@ const STEP_CONFIG = [
     subtitle: "选择最舒适的社交方式",
     mascotMessage: "最后一步啦！马上就可以开始探索了~",
     mascotMood: "excited" as XiaoyueMood,
-    xp: 15,
     type: "singleSelect" as const,
     options: SOCIAL_PREFERENCE_OPTIONS,
   },
 ];
 
 const TOTAL_STEPS = STEP_CONFIG.length;
-const XP_PER_COMPLETION = 50;
 
 function XiaoyueMascot({ 
   mood = "normal", 
@@ -151,26 +146,7 @@ function XiaoyueMascot({
   );
 }
 
-function XPMeter({ current, total, className }: { current: number; total: number; className?: string }) {
-  const percentage = Math.min((current / total) * 100, 100);
-  
-  return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-      <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-        <motion.div 
-          className="h-full bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full"
-          initial={{ width: 0 }}
-          animate={{ width: `${percentage}%` }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        />
-      </div>
-      <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400 min-w-[50px] text-right">
-        {current} 悦点
-      </span>
-    </div>
-  );
-}
+
 
 function TappableChip({ 
   selected, 
@@ -238,7 +214,6 @@ export default function ExtendedDataPage() {
   const [intent, setIntent] = useState<string[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
   const [socialPreferences, setSocialPreferences] = useState<string[]>([]);
-  const [xpEarned, setXpEarned] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
 
   // Load cached progress
@@ -252,7 +227,6 @@ export default function ExtendedDataPage() {
           setIntent(state.data.intent || []);
           setInterests(state.data.interests || []);
           setSocialPreferences(state.data.socialPreferences || []);
-          setXpEarned(state.xpEarned || 0);
         }
       } catch {}
     }
@@ -263,11 +237,10 @@ export default function ExtendedDataPage() {
     const state: ExtendedDataState = {
       currentStep,
       data: { intent, interests, socialPreferences },
-      xpEarned,
       timestamp: Date.now(),
     };
     localStorage.setItem(EXTENDED_CACHE_KEY, JSON.stringify(state));
-  }, [currentStep, intent, interests, socialPreferences, xpEarned]);
+  }, [currentStep, intent, interests, socialPreferences]);
 
   useEffect(() => {
     saveProgress();
@@ -340,9 +313,6 @@ export default function ExtendedDataPage() {
   const handleNext = () => {
     if (!canProceed()) return;
 
-    // Award XP
-    setXpEarned(prev => prev + stepConfig.xp);
-
     // Haptic feedback
     if (navigator.vibrate) {
       navigator.vibrate(50);
@@ -405,8 +375,7 @@ export default function ExtendedDataPage() {
             <PartyPopper className="w-24 h-24 mx-auto mb-4" />
           </motion.div>
           <h1 className="text-3xl font-bold mb-2">欢迎加入悦聚！</h1>
-          <p className="text-lg opacity-90 mb-2">你已获得 {xpEarned + stepConfig.xp} 悦点</p>
-          <p className="text-sm opacity-75">即将开始探索精彩活动...</p>
+          <p className="text-lg opacity-90 mb-2">即将开始探索精彩活动...</p>
           <div className="mt-4 flex items-center justify-center gap-2">
             <Loader2 className="w-5 h-5 animate-spin" />
           </div>
@@ -438,7 +407,6 @@ export default function ExtendedDataPage() {
             <Progress value={progress} className="h-2" />
           </div>
         </div>
-        <XPMeter current={xpEarned} total={XP_PER_COMPLETION} />
       </div>
 
       {/* Main content */}
