@@ -14,7 +14,7 @@
     "dev:admin": "npm run dev -w @joyjoin/admin-client",
     "dev:server": "npm run dev -w @joyjoin/server",
     "dev:all": "npm run dev",
-    "build": "vite build && esbuild apps/server/src/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --external:./vite --define:process.env.NODE_ENV=\\\"production\\\"",
+    "build": "vite build && esbuild apps/server/src/index.ts --platform=node --packages=external --bundle --format=esm --outdir=apps/server/dist --external:./vite.js --define:process.env.NODE_ENV=\\\"production\\\"",
     "build:user": "npm run build -w @joyjoin/user-client",
     "build:admin": "npm run build -w @joyjoin/admin-client",
     "build:server": "npm run build -w @joyjoin/server",

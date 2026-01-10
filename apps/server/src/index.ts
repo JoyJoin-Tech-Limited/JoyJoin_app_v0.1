@@ -1,6 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic } from "./vite";
 import { perfStorage } from "./perf";
 import { randomUUID } from "crypto";
 
@@ -36,9 +35,26 @@ app.use((req, res, next) => {
   });
 
   if (app.get("env") === "development") {
+    // @ts-ignore
+    const { setupVite } = await import("./vite.js");
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    // In production, we don't import vite.js as it contains dev-only dependencies
+    // and TS types that fail at runtime in pure ESM.
+    // Static file serving is handled by serveStatic which we'll inline or refactor.
+    const path = await import("path");
+    const fs = await import("fs");
+    const express = (await import("express")).default;
+    const distPath = path.resolve(process.cwd(), "dist", "public");
+
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+      app.use("*", (_req, res) => {
+        res.sendFile(path.resolve(distPath, "index.html"));
+      });
+    } else {
+      console.warn("Static build directory not found. Running as pure API server.");
+    }
   }
 
   const port = 5000;

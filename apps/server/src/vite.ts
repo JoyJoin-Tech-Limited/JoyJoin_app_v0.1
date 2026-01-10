@@ -3,20 +3,10 @@ import fs from "fs";
 import path from "path";
 import { type Server } from "http";
 
-export function log(message: string, source = "express") {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-
-  console.log(`${formattedTime} [${source}] ${message}`);
-}
-
 export async function setupVite(app: Express, server: Server) {
+  if (process.env.NODE_ENV === "production") return;
   const vite = await import("vite");
-  const viteConfigModule = await import("../../../vite.config");
+  const viteConfigModule = await import("../../../vite.config.js");
   const viteConfig = viteConfigModule.default;
   const nanoidModule = await import("nanoid");
   const nanoid = nanoidModule.nanoid;

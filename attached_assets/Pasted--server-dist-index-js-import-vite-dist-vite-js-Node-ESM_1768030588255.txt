@@ -1,0 +1,128 @@
+在 server 的运行入口 dist/index.js 里 import './vite'（或类似），但构建产物里根本没有 dist/vite(.js)，所以 Node ESM 直接炸：ERR_MODULE_NOT_FOUND.
+
+重点：这是 build 产物缺文件 / 路径不一致 / ESM 扩展名问题，不是网络、不是服务器性能。
+
+下面我按“命中率最高”的 4 种原因 + 对应修法给你。
+
+1) 最常见：src/vite.ts 没被编译进 dist
+
+比如你在 src/index.ts 里写了：
+
+import "./vite";
+
+
+但 TypeScript build 时：
+
+tsconfig.build.json 的 include 没包含 src/vite.ts
+
+或者 vite.ts 在别的目录（比如 apps/server/vite.ts）不在 include 范围
+
+或者你走的是某个 bundler，只打包 index，不拷贝旁边模块
+
+✅ 检查点（最快）：
+在容器里或构建产物目录里跑：
+
+ls -la apps/server/dist
+# 看有没有 vite.js / vite.mjs / vite/index.js
+
+
+如果没有，就坐实。
+
+✅ 修法：
+
+确保 apps/server/tsconfig.json 或 build 用的 tsconfig 包含它：
+
+{
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}
+
+
+并确认 vite.ts 的路径是在 src/ 下面。
+
+2) ESM 扩展名问题：Node20 不会自动补 .js
+
+你现在的错误路径是：/dist/vite（没有扩展名）。
+
+在 ESM 模式下（"type":"module" 或输出是 ESM），Node 要求 import 必须带扩展名，比如：
+
+import "./vite.js";
+
+
+如果 TS 源码写 import "./vite"，编译到 dist 还是 import "./vite"，Node ESM 就会找不到（除非你用了 bundler 或特殊 resolver）。
+
+✅ 这也是为什么本地 dev 可能能跑（ts-node / vite / tsx 帮你补全），但部署跑 dist 会挂。
+
+✅ 修法（推荐、最稳）：
+把 server 入口里相关 import 改成显式 .js：
+
+// src/index.ts
+import "./vite.js";
+
+
+然后在 tsconfig 里用 NodeNext，让 TS 允许你这么写：
+
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
+  }
+}
+
+
+注意：你在 TS 里写 .js，实际源文件是 .ts，NodeNext 会帮你对齐编译后路径（这是官方推荐套路）。
+
+3) 你把 vite 文件放错地方了（例如在项目根、不是 src）
+
+错误里 Node 在找：
+/app/apps/server/dist/vite
+
+说明 index.js 里 import 的相对路径最终指向 dist 根目录下的 vite。
+如果你的 vite.ts 实际在 src/vite.ts，编译后会变成 dist/vite.js，没问题。
+
+但如果你写的是类似：
+
+import "./vite"; // 期望是 src/vite.ts
+
+
+却实际文件在：
+
+apps/server/vite.ts（不在 src）
+
+或 apps/server/src/vite/index.ts（输出会是 dist/vite/index.js，而不是 dist/vite.js）
+
+✅ 修法：
+
+让 import 路径和输出一致：
+
+如果是目录：import "./vite/index.js"
+
+如果是文件：确保是 src/vite.ts
+
+4) 生产环境不应该 import vite（你把 dev-only 代码带进 production 入口了）
+
+很多项目会在 server 里做：
+
+dev：挂载 Vite 中间件
+
+prod：serve 静态文件
+
+如果你现在无脑 import "./vite"，那生产构建/容器里可能根本不会带 vite 相关文件或依赖。
+
+✅ 推荐做法：按环境动态加载（并且只在 dev 才需要）
+
+if (process.env.NODE_ENV !== "production") {
+  await import("./vite.js");
+}
+
+
+这样 production 就不会去找 dist/vite 了。
+
+你现在最快的“止血方案”（按成功率排序）
+
+在 src/index.ts 把 import "./vite" 改成 import "./vite.js"
+
+配好 tsconfig NodeNext（上面那段）
+
+或者 把 vite 相关逻辑用 if (NODE_ENV !== "production") await import("./vite.js") 包起来（生产直接不加载）
+
+如果 dist 里确实没有该文件：修 tsconfig include / 文件路径，让它被编译出来
