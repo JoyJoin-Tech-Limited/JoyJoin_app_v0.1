@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, Sparkles, ArrowRight, Loader2, PartyPopper } from "lucide-react";
+import { ChevronLeft, Sparkles, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
