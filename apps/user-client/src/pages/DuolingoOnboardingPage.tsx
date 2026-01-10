@@ -999,7 +999,7 @@ export default function DuolingoOnboardingPage() {
                   data-testid="button-phone-login"
                 >
                   继续完成测试
-                  <ArrowRight className="w-5 w-5 ml-2" />
+                  <ArrowRight className="h-5 w-5 ml-2" />
                 </StickyCTAButton>
             </StickyCTA>
           </motion.div>
