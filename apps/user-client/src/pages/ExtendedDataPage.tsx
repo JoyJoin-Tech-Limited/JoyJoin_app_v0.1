@@ -358,7 +358,7 @@ export default function ExtendedDataPage() {
   // Celebration overlay
   if (showCelebration) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center z-50">
+      <div className="fixed inset-0 flex items-center justify-center z-50">
         <LoadingLogoSleek loop visible />
       </div>
     );
