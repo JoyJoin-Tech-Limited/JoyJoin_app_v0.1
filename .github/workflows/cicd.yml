@@ -4,19 +4,38 @@ on:
   push:
     branches: [ main ]
 
+# 避免同一分支并发跑多次（可选，但很常见）
+concurrency:
+  group: joyjoin-prod-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  # Lint jobs 保持不变...
   lint-user:
     name: Type Check User Client
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Debug workspace + lockfile
+        run: |
+          set -e
+          echo "PWD=$(pwd)"
+          echo "WORKSPACE=$GITHUB_WORKSPACE"
+          echo "---- root listing ----"
+          ls -la
+          echo "---- lockfiles (maxdepth=4) ----"
+          find . -maxdepth 4 \( -name "package-lock.json" -o -name "npm-shrinkwrap.json" \) -print
+          test -f package-lock.json || (echo "❌ package-lock.json NOT FOUND at repo root" && exit 1)
+
       - name: Install dependencies
         run: npm ci
+
       - name: Run TSC
         run: npx tsc -p apps/user-client/tsconfig.json --noEmit
 
@@ -25,12 +44,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Debug workspace + lockfile
+        run: |
+          set -e
+          echo "PWD=$(pwd)"
+          echo "WORKSPACE=$GITHUB_WORKSPACE"
+          echo "---- root listing ----"
+          ls -la
+          echo "---- lockfiles (maxdepth=4) ----"
+          find . -maxdepth 4 \( -name "package-lock.json" -o -name "npm-shrinkwrap.json" \) -print
+          test -f package-lock.json || (echo "❌ package-lock.json NOT FOUND at repo root" && exit 1)
+
       - name: Install dependencies
         run: npm ci
+
       - name: Run TSC
         run: npx tsc -p apps/admin-client/tsconfig.json --noEmit
 
@@ -39,12 +73,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Debug workspace + lockfile
+        run: |
+          set -e
+          echo "PWD=$(pwd)"
+          echo "WORKSPACE=$GITHUB_WORKSPACE"
+          echo "---- root listing ----"
+          ls -la
+          echo "---- lockfiles (maxdepth=4) ----"
+          find . -maxdepth 4 \( -name "package-lock.json" -o -name "npm-shrinkwrap.json" \) -print
+          test -f package-lock.json || (echo "❌ package-lock.json NOT FOUND at repo root" && exit 1)
+
       - name: Install dependencies
         run: npm ci
+
       - name: Run TSC
         run: npx tsc -p apps/server/tsconfig.json --noEmit
 
@@ -54,76 +103,88 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Debug workspace + lockfile
+        run: |
+          set -e
+          echo "PWD=$(pwd)"
+          echo "WORKSPACE=$GITHUB_WORKSPACE"
+          echo "---- root listing ----"
+          ls -la
+          echo "---- lockfiles (maxdepth=4) ----"
+          find . -maxdepth 4 \( -name "package-lock.json" -o -name "npm-shrinkwrap.json" \) -print
+          test -f package-lock.json || (echo "❌ package-lock.json NOT FOUND at repo root" && exit 1)
+
       - name: Install dependencies
         run: npm ci
+
       - name: Run Simulation
         run: npx tsx apps/server/src/tests/runSimulation.ts 100
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
   deploy:
-      name: Production Deployment
-      needs: ai-test
-      runs-on: ubuntu-latest
-      steps:
-        - name: SSH Remote Deployment
-          uses: appleboy/ssh-action@v1.0.3
-          with:
-            host: ${{ secrets.SERVER_IP }}
-            username: ${{ secrets.SERVER_USER }}
-            key: ${{ secrets.SSH_PRIVATE_KEY }}
-            command_timeout: 30m 
-            script: |
-              set -e # 任何命令出错立即停止
-              
-              # --- 1. Code Sync ---
-              echo "📥 Syncing code..."
-              cd ~/JoyJoin
-              git fetch --all
-              git reset --hard origin/main
-              
-              # --- 2. Docker Services ---
-              echo "🐳 Restarting containers..."
-              cd deployment
-              
-              # Caddy 安全重启
-              docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans
-              
-              # --- 3. Database Sync ---
-              echo "🔧 Fixing DNS and syncing database..."
-              echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
-              
-              cd ~/JoyJoin
-              # 硬编码 DB 连接
-              export DATABASE_URL="postgresql://neondb_owner:npg_NmTv6SY3fxXW@ep-square-math-ahiz6fm7-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
-              echo "🎯 Target DB: $(echo $DATABASE_URL | sed 's/:[^@]*@/:****@/')"
-              npx drizzle-kit push --config=./drizzle.config.ts
-              
-              # --- 4. Health Checks (关键修改点) ---
-              echo "🏥 Verifying service status..."
-              sleep 15 
-              
-              # 1. 检查内部 API (确保后端逻辑正常)
-              echo "   Checking internal API..."
-              curl -s --retry 5 --retry-delay 5 http://localhost:5000 > /dev/null || (echo "❌ API Failed" && docker logs joyjoin-api --tail 50 && exit 1)
-              
-              # 2. 检查 Caddy 容器状态 (只要容器在跑就行，不再强制 curl 域名)
-              echo "   Checking Caddy Container status..."
-              if [ "$(docker inspect -f '{{.State.Running}}' joyjoin-caddy)" != "true" ]; then
-                  echo "❌ Caddy is NOT running."
-                  docker logs joyjoin-caddy --tail 20
-                  exit 1
-              fi
-              
-              # --- 5. Smart Clean Up ---
-              echo "🧹 Cleaning up OLD Docker images (Safety Mode)..."
-              
-              # 只删除 24 小时之前的镜像，保留最近一次备份方便回滚
-              docker image prune -a --force --filter "until=24h"
-              docker volume prune -f
-              
-              echo "✅ Deployment successful!"
+    name: Production Deployment
+    needs: ai-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH Remote Deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 30m
+          script: |
+            set -e # 任何命令出错立即停止
+
+            # --- 1. Code Sync ---
+            echo "📥 Syncing code..."
+            cd ~/JoyJoin
+            git fetch --all
+            git reset --hard origin/main
+
+            # --- 2. Docker Services ---
+            echo "🐳 Restarting containers..."
+            cd deployment
+
+            # Caddy 安全重启
+            docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans
+
+            # --- 3. Database Sync ---
+            echo "🔧 Fixing DNS and syncing database..."
+            echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
+
+            cd ~/JoyJoin
+            # 硬编码 DB 连接
+            export DATABASE_URL="postgresql://neondb_owner:npg_NmTv6SY3fxXW@ep-square-math-ahiz6fm7-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
+            echo "🎯 Target DB: $(echo $DATABASE_URL | sed 's/:[^@]*@/:****@/')"
+            npx drizzle-kit push --config=./drizzle.config.ts
+
+            # --- 4. Health Checks ---
+            echo "🏥 Verifying service status..."
+            sleep 15
+
+            echo "   Checking internal API..."
+            curl -s --retry 5 --retry-delay 5 http://localhost:5000 > /dev/null || (echo "❌ API Failed" && docker logs joyjoin-api --tail 50 && exit 1)
+
+            echo "   Checking Caddy Container status..."
+            if [ "$(docker inspect -f '{{.State.Running}}' joyjoin-caddy)" != "true" ]; then
+                echo "❌ Caddy is NOT running."
+                docker logs joyjoin-caddy --tail 20
+                exit 1
+            fi
+
+            # --- 5. Smart Clean Up ---
+            echo "🧹 Cleaning up OLD Docker images (Safety Mode)..."
+            docker image prune -a --force --filter "until=24h"
+            docker volume prune -f
+
+            echo "✅ Deployment successful!"
+
