@@ -310,11 +310,17 @@ export function BirthDatePicker({
       });
     }
   }, [daysInMonth, day, toast]);
+
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
   
   // Notify parent of changes
   useEffect(() => {
-    onChange({ year, month, day: Math.min(day, daysInMonth) });
-  }, [year, month, day, daysInMonth, onChange]);
+    onChangeRef.current({ year, month, day: Math.min(day, daysInMonth) });
+  }, [year, month, day, daysInMonth]);
 
   const age = currentYear - year;
 
