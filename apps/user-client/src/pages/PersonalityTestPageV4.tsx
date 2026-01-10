@@ -17,6 +17,13 @@ import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
 import xiaoyuePointing from "@/assets/Xiao_Yue_Avatar-04.png";
 
+// Preload Xiaoyue avatars immediately
+const XIAOYUE_AVATAR_URLS = [xiaoyueNormal, xiaoyueExcited, xiaoyuePointing];
+XIAOYUE_AVATAR_URLS.forEach((src) => {
+  const img = new Image();
+  img.src = src;
+});
+
 const V4_ANSWERS_KEY = "joyjoin_v4_presignup_answers";
 
 type XiaoyueMood = "normal" | "excited" | "pointing";
@@ -152,11 +159,9 @@ function XiaoyueMascot({
           initial={{ opacity: 0, scale: 0.9, x: -10 }}
           animate={{ opacity: 1, scale: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
-          className="relative bg-card border border-border rounded-2xl px-4 py-3 shadow-md flex-1"
+          className="relative bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 rounded-2xl px-4 py-3 shadow-sm border border-purple-100 dark:border-purple-800 flex-1"
         >
-          <div className="absolute top-4 -left-2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-card" />
-          <div className="absolute top-4 -left-[9px] w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-border" />
-          <p className="text-lg leading-relaxed" data-testid="text-xiaoyue-message">
+          <p className="text-base leading-relaxed text-purple-800 dark:text-purple-200 font-medium" data-testid="text-xiaoyue-message">
             {message}
           </p>
         </motion.div>
@@ -165,42 +170,29 @@ function XiaoyueMascot({
   }
 
   return (
-    <div className={cn("flex flex-col items-center gap-4", className)}>
+    <div className={cn("flex flex-col items-center gap-3", className)}>
       <motion.div
-        animate={{ 
-          scale: [1, 1.05, 1],
-        }}
-        transition={{ 
-          scale: {
-            duration: 3,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }
-        }}
+        animate={controls}
         className="relative"
       >
-        <motion.div animate={controls}>
-          <img 
-            src={XIAOYUE_AVATARS.normal} 
-            alt="小悦" 
-            className="w-28 h-28 object-contain drop-shadow-lg"
-            data-testid="img-xiaoyue-avatar"
-          />
-        </motion.div>
+        <img 
+          src={XIAOYUE_AVATARS.normal} 
+          alt="小悦" 
+          className="w-20 h-20 object-contain drop-shadow-lg"
+          data-testid="img-xiaoyue-avatar"
+        />
       </motion.div>
       
       <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.1 }}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.2 }}
         className={cn(
-          "relative bg-card border border-border rounded-2xl px-5 py-3 shadow-md max-w-[280px]",
+          "bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 rounded-2xl px-4 py-3 max-w-[280px] shadow-sm border border-purple-100 dark:border-purple-800",
           !message && "hidden"
         )}
       >
-        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-card" />
-        <div className="absolute -top-[9px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-border" />
-        <p className="text-center text-base leading-relaxed" data-testid="text-xiaoyue-message">
+        <p className="text-sm text-center text-purple-800 dark:text-purple-200 font-medium" data-testid="text-xiaoyue-message">
           {message}
         </p>
       </motion.div>
