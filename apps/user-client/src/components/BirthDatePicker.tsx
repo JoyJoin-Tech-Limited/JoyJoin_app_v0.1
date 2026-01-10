@@ -259,13 +259,6 @@ export function BirthDatePicker({
 
   return (
     <div className={cn("flex flex-col items-center gap-6 py-4", className)}>
-      {/* Helper text */}
-      <div className="text-center">
-        <p className="text-sm text-muted-foreground">
-          用于个性化体验，不会公开显示
-        </p>
-      </div>
-      
       {/* Three-column picker with headers */}
       <div className="flex gap-4 justify-center w-full max-w-sm px-4">
         <WheelSelector
