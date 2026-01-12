@@ -5,7 +5,7 @@ import Autoplay from "embla-carousel-autoplay";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Ticket, Gift } from "lucide-react";
+import { Ticket, Gift, Sparkles } from "lucide-react";
 import type { PromotionBanner } from "@shared/schema";
 
 interface CouponSlide {
@@ -13,6 +13,10 @@ interface CouponSlide {
   discountType: "percentage" | "fixed_amount";
   discountValue: number;
   expiresIn?: string;
+}
+
+interface FallbackSlide {
+  type: "fallback";
 }
 
 interface PromotionBannerCarouselProps {
@@ -82,7 +86,7 @@ export function PromotionBannerCarousel({
     );
   }
 
-  const allSlides: Array<PromotionBanner | CouponSlide> = [];
+  const allSlides: Array<PromotionBanner | CouponSlide | FallbackSlide> = [];
   if (banners && banners.length > 0) {
     banners.forEach((banner, idx) => {
       allSlides.push(banner);
@@ -92,11 +96,12 @@ export function PromotionBannerCarousel({
     });
   } else if (coupon) {
     allSlides.push(coupon);
+  } else {
+    // Add fallback slide when no banners and no coupon
+    allSlides.push({ type: "fallback" });
   }
 
-  if (allSlides.length === 0) {
-    return null;
-  }
+  // Single fallback slide should still render (removed early return for empty allSlides)
 
   const formatDiscount = (type: "percentage" | "fixed_amount", value: number) => {
     if (type === "percentage") {
@@ -110,6 +115,34 @@ export function PromotionBannerCarousel({
       <div className="overflow-hidden rounded-xl mx-4" ref={emblaRef}>
         <div className="flex">
           {allSlides.map((slide, index) => {
+            // Handle fallback slide
+            if ("type" in slide && slide.type === "fallback") {
+              return (
+                <div
+                  key="fallback-slide"
+                  className="flex-[0_0_100%] min-w-0"
+                  data-testid="banner-slide-fallback"
+                >
+                  <div 
+                    className="relative aspect-[2.5/1] rounded-xl overflow-hidden bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400"
+                    role="img"
+                    aria-label="发现你的社交圈 - 开启盲盒社交之旅"
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center px-6">
+                      <div className="text-center text-white">
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          <Sparkles className="w-6 h-6" />
+                          <h3 className="text-xl font-bold">发现你的社交圈</h3>
+                          <Sparkles className="w-6 h-6" />
+                        </div>
+                        <p className="text-sm opacity-90">开启盲盒社交之旅</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             if ("type" in slide && slide.type === "coupon") {
               return (
                 <div
