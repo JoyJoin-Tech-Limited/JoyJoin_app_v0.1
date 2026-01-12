@@ -439,6 +439,12 @@ export default function PersonalityTestPageV4() {
         showExtendedMessage={answeredCount >= 8 && estimatedRemaining >= 3}
       />
 
+      <div className="px-4 pt-1 flex justify-end">
+        <Button variant="ghost" size="sm" className="px-1 text-primary" onClick={() => setLocation('/onboarding/setup')}>
+          编辑基础信息
+        </Button>
+      </div>
+
       <AnimatePresence mode="wait">
         <motion.div
           key={currentQuestion.id}

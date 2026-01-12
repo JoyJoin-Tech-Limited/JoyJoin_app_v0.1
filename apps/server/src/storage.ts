@@ -13,10 +13,11 @@ import {
   type IcebreakerSession, type IcebreakerCheckin, type IcebreakerReadyVote, type IcebreakerActivityLog,
   type InsertIcebreakerSession, type InsertIcebreakerCheckin, type InsertIcebreakerReadyVote, type InsertIcebreakerActivityLog,
   type RegistrationSession,
+  type PreSignupData,
   users, events, eventAttendance, chatMessages, eventFeedback, blindBoxEvents, testResponses, roleResults, notifications,
   directMessageThreads, directMessages, payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs,
   pricingSettings, promotionBanners, eventPools, eventPoolGroups, venueTimeSlots, venueTimeSlotBookings, venues,
-  icebreakerSessions, icebreakerCheckins, icebreakerReadyVotes, icebreakerActivityLogs, registrationSessions,
+  icebreakerSessions, icebreakerCheckins, icebreakerReadyVotes, icebreakerActivityLogs, registrationSessions, preSignupData,
   assessmentSessions, assessmentAnswers
 } from "@shared/schema";
 import { db } from "./db";
@@ -40,6 +41,11 @@ export interface IStorage {
   markPersonalityTestComplete(id: string): Promise<void>;
   updateUserProfile(id: string, profileData: Partial<User>): Promise<User>;
   updateInterestsTopics(id: string, data: InterestsTopics): Promise<User>;
+  
+  // Pre-signup cache
+  savePreSignupData(sessionId: string, data: { metadata?: any; answers?: any }): Promise<PreSignupData>;
+  getPreSignupData(sessionId: string): Promise<PreSignupData | undefined>;
+  clearPreSignupData(sessionId: string): Promise<void>;
   
   // Personality test operations
   saveTestResponses(userId: string, responses: Record<number, any>): Promise<void>;
@@ -357,6 +363,39 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Pre-signup cache
+  async savePreSignupData(sessionId: string, data: { metadata?: any; answers?: any }): Promise<PreSignupData> {
+    const [record] = await db
+      .insert(preSignupData)
+      .values({
+        temporarySessionId: sessionId,
+        metadata: data.metadata ?? {},
+        answers: data.answers ?? null,
+      })
+      .onConflictDoUpdate({
+        target: preSignupData.temporarySessionId,
+        set: {
+          metadata: data.metadata !== undefined ? data.metadata : preSignupData.metadata,
+          answers: data.answers !== undefined ? data.answers : preSignupData.answers,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return record;
+  }
+
+  async getPreSignupData(sessionId: string): Promise<PreSignupData | undefined> {
+    const [record] = await db
+      .select()
+      .from(preSignupData)
+      .where(eq(preSignupData.temporarySessionId, sessionId));
+    return record;
+  }
+
+  async clearPreSignupData(sessionId: string): Promise<void> {
+    await db.delete(preSignupData).where(eq(preSignupData.temporarySessionId, sessionId));
+  }
+
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));

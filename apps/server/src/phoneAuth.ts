@@ -12,6 +12,28 @@ function generateCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+
+export function validateVerificationCode(phoneNumber: string, code: string) {
+  if (!phoneNumber || !code) {
+    return { ok: false, message: 'Phone number and code are required' };
+  }
+  if (code === DEMO_CODE) {
+    return { ok: true, demo: true };
+  }
+  const storedData = verificationCodes.get(phoneNumber);
+  if (!storedData) {
+    return { ok: false, message: '验证码无效或已过期' };
+  }
+  if (storedData.expiresAt < Date.now()) {
+    verificationCodes.delete(phoneNumber);
+    return { ok: false, message: '验证码已过期' };
+  }
+  if (storedData.code !== code) {
+    return { ok: false, message: '验证码错误' };
+  }
+  verificationCodes.delete(phoneNumber);
+  return { ok: true };
+}
 export function setupPhoneAuth(app: Express) {
   const isProduction = process.env.NODE_ENV === 'production';
   const DEBUG_AUTH = process.env.DEBUG_AUTH === "1";
@@ -119,28 +141,9 @@ export function setupPhoneAuth(app: Express) {
         return res.status(400).json({ message: "Phone number and code are required" });
       }
 
-      // 🎯 DEMO MODE: 万能验证码 666666 总是有效
-      if (code === DEMO_CODE) {
-        console.log(`✅ Demo code ${DEMO_CODE} accepted for ${phoneNumber}`);
-      } else {
-        // 验证真实验证码
-        const storedData = verificationCodes.get(phoneNumber);
-        
-        if (!storedData) {
-          return res.status(400).json({ message: "验证码无效或已过期" });
-        }
-
-        if (storedData.expiresAt < Date.now()) {
-          verificationCodes.delete(phoneNumber);
-          return res.status(400).json({ message: "验证码已过期" });
-        }
-
-        if (storedData.code !== code) {
-          return res.status(400).json({ message: "验证码错误" });
-        }
-
-        // 验证成功，删除验证码
-        verificationCodes.delete(phoneNumber);
+      const verification = validateVerificationCode(phoneNumber, code);
+      if (!verification.ok) {
+        return res.status(400).json({ message: verification.message });
       }
 
       // 查找或创建用户
