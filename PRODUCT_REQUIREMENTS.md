@@ -163,11 +163,13 @@ Landing Page → Phone Number Entry → SMS Code Verification → Profile Setup
 
 ### 1.3 Personality Test System ⭐
 
-**File Location:** `client/src/pages/PersonalityTestPage.tsx`, `client/src/pages/PersonalityTestResultPage.tsx`
+> **Note**: The user-client now uses V4 adaptive assessment (`PersonalityTestPageV4.tsx`). V2 has been deprecated.
+
+**File Location:** `apps/user-client/src/pages/PersonalityTestPageV4.tsx`, `apps/user-client/src/pages/PersonalityTestResultPage.tsx`
 
 #### Architecture Overview
 
-**14 Personality Archetypes** (8 Core + 6 Extended):
+**12 Personality Archetypes**:
 
 **Core Archetypes (Mapped in Test):**
 1. 🙌 **火花塞 (Spark Plug)** - Energizer, icebreaker, topic initiator

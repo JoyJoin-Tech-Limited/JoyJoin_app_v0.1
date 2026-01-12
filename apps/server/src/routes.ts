@@ -1612,6 +1612,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /**
+   * @deprecated LEGACY - V2 Personality Test Submit Endpoint
+   * 
+   * This endpoint is preserved only for admin-client backwards compatibility.
+   * The user-client has migrated to V4 adaptive assessment endpoints.
+   * 
+   * TODO: Remove once admin-client is migrated to V4 or no longer needs personality tests.
+   */
   // V2 Personality Test Submit Endpoint (using trait-based matching)
   app.post('/api/personality-test/v2/submit', isPhoneAuthenticated, async (req: any, res) => {
     try {

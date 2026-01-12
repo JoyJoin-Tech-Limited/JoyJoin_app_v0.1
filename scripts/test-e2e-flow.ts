@@ -3,6 +3,10 @@
  * 模拟100个用户走完整个注册流程，验证每个节点的衔接
  * 
  * 流程：新用户登录 → 注册页 → 性格测试 → 发现页
+ * 
+ * NOTE: This script uses the deprecated V2 personality test endpoint.
+ * The user-client has migrated to V4 adaptive assessment.
+ * TODO: Update this script to use V4 assessment flow.
  */
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:5000';
