@@ -186,24 +186,29 @@ export function useAdaptiveAssessment() {
       forceNew?: boolean 
     }) => {
       const response = await apiRequest("POST", "/api/assessment/v4/start", params || {});
-      return response.json() as Promise<StartResponse>;
+      const data = await response.json() as StartResponse;
+      // Pass through the params so onSuccess knows if this was a resume
+      return { ...data, _wasResume: !!params?.sessionId && !params?.forceNew };
     },
     onSuccess: (data) => {
-      setSessionId(data.sessionId);
-      setPhase(data.phase);
-      setCurrentQuestion(data.nextQuestion);
-      setProgress(data.progress);
-      setCurrentMatches(data.currentMatches);
-      setIsComplete(data.isComplete);
+      const { _wasResume, ...responseData } = data as StartResponse & { _wasResume?: boolean };
+      setSessionId(responseData.sessionId);
+      setPhase(responseData.phase);
+      setCurrentQuestion(responseData.nextQuestion);
+      setProgress(responseData.progress);
+      setCurrentMatches(responseData.currentMatches);
+      setIsComplete(responseData.isComplete);
       setIsInitialized(true);
       // Record baseline for relative question counting
-      setBaselineAnswered(data.progress?.answered || 0);
-      // Clear ALL pre-signup cache after successful session creation
-      // This prevents stale answers and session from being reused
-      localStorage.removeItem(PRESIGNUP_ANSWERS_KEY);
-      localStorage.removeItem(PRESIGNUP_SESSION_KEY);
-      // Cache new session
-      cacheSession({ sessionId: data.sessionId, phase: data.phase });
+      setBaselineAnswered(responseData.progress?.answered || 0);
+      // Only clear pre-signup cache when NOT resuming an existing session
+      // When resuming, answers are already in the backend - don't clear local state
+      if (!_wasResume) {
+        localStorage.removeItem(PRESIGNUP_ANSWERS_KEY);
+        localStorage.removeItem(PRESIGNUP_SESSION_KEY);
+      }
+      // Cache current session
+      cacheSession({ sessionId: responseData.sessionId, phase: responseData.phase });
     },
   });
 
