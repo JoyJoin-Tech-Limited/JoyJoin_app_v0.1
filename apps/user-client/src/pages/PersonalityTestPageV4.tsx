@@ -4,12 +4,12 @@ import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Sparkles, Loader2, Gift, Star, PartyPopper, RefreshCw } from "lucide-react";
+import { ChevronLeft, Sparkles, Loader2, Star, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useAdaptiveAssessment, type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
-import CelebrationConfetti from "@/components/CelebrationConfetti";
+import { ArchetypeSlotMachine } from "@/components/slot-machine";
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { StickyCTA, StickyCTAButton, StickyCTASecondaryButton } from "@/components/StickyCTA";
 import { SelectionList } from "@/components/SelectionList";
@@ -291,12 +291,8 @@ export default function PersonalityTestPageV4() {
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/stats'] });
       // Critical: Also invalidate user data so profile page shows updated archetype
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      
-      setTimeout(() => {
-        setLocation('/personality-test/results');
-      }, 2000);
     }
-  }, [isComplete, result, setLocation]);
+  }, [isComplete, result]);
 
   const handleSelectOption = useCallback((value: string | string[]) => {
     const next = Array.isArray(value) ? value[0] : value;
@@ -328,10 +324,10 @@ export default function PersonalityTestPageV4() {
   }, [currentQuestion, canSkip, skipQuestion, toast]);
 
   useEffect(() => {
-    if (isInitialized && isComplete) {
+    if (isInitialized && isComplete && !result) {
       setLocation("/personality-test/results");
     }
-  }, [isInitialized, isComplete, setLocation]);
+  }, [isInitialized, isComplete, result, setLocation]);
 
   if (isLoading && !currentQuestion && !isComplete) {
     return (
@@ -346,21 +342,10 @@ export default function PersonalityTestPageV4() {
 
   if (showBlindBox) {
     return (
-      <div className="h-screen overflow-hidden bg-background flex flex-col items-center justify-center p-6 relative">
-        <CelebrationConfetti show={true} />
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", duration: 0.6 }}
-          className="text-center"
-        >
-          <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-primary/20 to-primary/40 rounded-3xl flex items-center justify-center">
-            <Gift className="w-16 h-16 text-primary" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2">测评完成！</h2>
-          <p className="text-muted-foreground">正在分析你的社交原型...</p>
-        </motion.div>
-      </div>
+      <ArchetypeSlotMachine
+        targetArchetype={result?.primaryArchetype || topArchetype || undefined}
+        onComplete={() => setLocation('/personality-test/results')}
+      />
     );
   }
 
