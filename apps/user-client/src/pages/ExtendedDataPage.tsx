@@ -76,14 +76,36 @@ const SOCIAL_FREQUENCY_OPTIONS = [
   { value: "flexible", label: "随缘参加" },
 ];
 
-const STEP_CONFIG = [
+// Base step config interface
+interface BaseStepConfig {
+  id: string;
+  title: string;
+  subtitle: string;
+  mascotMessage: string;
+  mascotMood: XiaoyueMood;
+  options: { value: string; label: string }[];
+}
+
+interface MultiSelectStepConfig extends BaseStepConfig {
+  type: "multiSelect";
+  minSelect: number;
+  maxSelect: number;
+}
+
+interface SingleSelectStepConfig extends BaseStepConfig {
+  type: "singleSelect";
+}
+
+type StepConfig = MultiSelectStepConfig | SingleSelectStepConfig;
+
+const STEP_CONFIG: StepConfig[] = [
   {
     id: "intent",
     title: "你想通过悦聚收获什么？",
     subtitle: "可以多选哦",
     mascotMessage: "告诉我你的目标，我帮你精准匹配！",
-    mascotMood: "excited" as XiaoyueMood,
-    type: "multiSelect" as const,
+    mascotMood: "excited",
+    type: "multiSelect",
     options: INTENT_OPTIONS,
     minSelect: 1,
     maxSelect: 3,
@@ -93,8 +115,8 @@ const STEP_CONFIG = [
     title: "你有哪些兴趣爱好？",
     subtitle: "选择3-5个最感兴趣的",
     mascotMessage: "兴趣相投的人更容易成为好朋友！",
-    mascotMood: "pointing" as XiaoyueMood,
-    type: "multiSelect" as const,
+    mascotMood: "pointing",
+    type: "multiSelect",
     options: INTEREST_OPTIONS,
     minSelect: 1,
     maxSelect: 5,
@@ -104,8 +126,8 @@ const STEP_CONFIG = [
     title: "你想多久参加一次聚会？",
     subtitle: "我们会根据你的节奏推荐活动",
     mascotMessage: "最后一步啦！按你的节奏来，马上开始探索~",
-    mascotMood: "excited" as XiaoyueMood,
-    type: "singleSelect" as const,
+    mascotMood: "excited",
+    type: "singleSelect",
     options: SOCIAL_FREQUENCY_OPTIONS,
   },
 ];
@@ -305,6 +327,9 @@ export default function ExtendedDataPage() {
       return;
     }
     
+    // Now we know it's a multiSelect config
+    const maxSelect = config.maxSelect;
+    
     // Handle "all" as mutually exclusive for intent step
     if (currentStep === 0) {
       if (value === "all") {
@@ -317,7 +342,6 @@ export default function ExtendedDataPage() {
         if (withoutAll.includes(value)) {
           setCurrentValue(withoutAll.filter(v => v !== value));
         } else {
-          const maxSelect = (config as any).maxSelect || 10;
           if (withoutAll.length < maxSelect) {
             setCurrentValue([...withoutAll, value]);
           }
@@ -329,7 +353,6 @@ export default function ExtendedDataPage() {
     if (current.includes(value)) {
       setCurrentValue(current.filter(v => v !== value));
     } else {
-      const maxSelect = (config as any).maxSelect || 10;
       if (current.length < maxSelect) {
         setCurrentValue([...current, value]);
       }
@@ -338,7 +361,8 @@ export default function ExtendedDataPage() {
 
   const canProceed = () => {
     const current = getCurrentValue();
-    const minSelect = (stepConfig as any).minSelect || 1;
+    const config = stepConfig;
+    const minSelect = config.type === "multiSelect" ? config.minSelect : 1;
     return current.length >= minSelect;
   };
 
@@ -356,8 +380,13 @@ export default function ExtendedDataPage() {
       // Final step - save and navigate
       setShowCelebration(true);
       setTimeout(() => {
+        // Expand "all" to actual intent values (excluding "all" itself)
+        const expandedIntent = intent.includes("all")
+          ? INTENT_OPTIONS.filter(opt => opt.value !== "all").map(opt => opt.value)
+          : intent;
+        
         const profileData = {
-          intent,
+          intent: expandedIntent,
           interests,
           socialFrequency: socialFrequency[0],
           interestGranularityTags: microInterests,
