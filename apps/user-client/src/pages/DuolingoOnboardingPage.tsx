@@ -363,7 +363,6 @@ export default function DuolingoOnboardingPage() {
   const [intents, setIntents] = useState<string[]>([]);
   
   const [birthYear, setBirthYear] = useState<string>("");
-  const [showBirthYear, setShowBirthYear] = useState(true);
   const [relationshipStatus, setRelationshipStatus] = useState<string>("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
@@ -391,6 +390,7 @@ export default function DuolingoOnboardingPage() {
   }, [justAuthenticated]);
 
   useEffect(() => {
+    let isCancelled = false;
     const existingSession = localStorage.getItem(V4_SESSION_KEY);
     const session = existingSession ?? (typeof crypto !== "undefined" && (crypto as any).randomUUID ? (crypto as any).randomUUID() : `${Date.now()}`);
     localStorage.setItem(V4_SESSION_KEY, session);
@@ -398,17 +398,20 @@ export default function DuolingoOnboardingPage() {
     (async () => {
       try {
         const response = await apiRequest("GET", `/api/auth/presignup-cache/${session}`);
+        if (isCancelled) return;
         if (response.ok) {
           const data = await response.json();
+          if (isCancelled) return;
           if (data?.answers?.length) {
-            localStorage.setItem(V4_ANSWERS_KEY, JSON.stringify(data.answers));
+            const answersArray = data.answers as any[];
+            localStorage.setItem(V4_ANSWERS_KEY, JSON.stringify(answersArray));
             const answerMap: Record<string, string> = {};
-            data.answers.forEach((ans: any) => {
+            answersArray.forEach((ans: any) => {
               if (ans?.questionId && ans?.selectedOption) {
                 answerMap[ans.questionId] = ans.selectedOption;
               }
             });
-            if (Object.keys(answerMap).length > 0) {
+            if (!isCancelled && Object.keys(answerMap).length > 0) {
               setAnswers(prev => ({ ...answerMap, ...prev }));
               setCurrentScreen(prev => {
                 const answeredCount = Object.keys(answerMap).length;
@@ -418,9 +421,15 @@ export default function DuolingoOnboardingPage() {
           }
         }
       } catch (error) {
-        console.error('Failed to load cached answers', error);
+        if (!isCancelled) {
+          console.error('Failed to load cached answers', error);
+        }
       }
     })();
+
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -460,7 +469,14 @@ export default function DuolingoOnboardingPage() {
           sessionId: temporarySessionId,
           answers: deduped,
           metadata: { currentScreen: currentScreen + 1 },
-        }).catch(() => {});
+        }).catch((error) => {
+          console.error("Failed to cache presignup answers", error);
+          toast({
+            title: "同步失败",
+            description: "当前网络不稳定，你的答题进度可能无法在多设备间同步。",
+            variant: "destructive",
+          });
+        });
       }
     }
   };
@@ -541,7 +557,6 @@ export default function DuolingoOnboardingPage() {
           intent: intents,
           birthYear: birthYear ? parseInt(birthYear) : undefined,
           relationshipStatus: relationshipStatus || undefined,
-          showBirthYear,
         },
         assessmentAnswers: getV4CachedAnswers(),
         temporarySessionId,
@@ -592,10 +607,10 @@ export default function DuolingoOnboardingPage() {
   };
 
   const handleCompleteOnboarding = (skip: boolean = false) => {
-    if (!phone || verificationCode.length !== 6) {
+    if (!phone || verificationCode.length !== 6 || !/^\d{6}$/.test(verificationCode)) {
       toast({
         title: '请填写验证码',
-        description: '请输入收到的6位验证码完成注册',
+        description: '请输入收到的6位数字验证码完成注册',
         variant: 'destructive',
       });
       return;

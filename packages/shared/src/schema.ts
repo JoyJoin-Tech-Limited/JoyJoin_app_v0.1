@@ -2622,7 +2622,9 @@ export const preSignupData = pgTable("pre_signup_data", {
   answers: jsonb("answers"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_pre_signup_temp_session").on(table.temporarySessionId),
+]);
 
 export const insertPreSignupDataSchema = createInsertSchema(preSignupData).omit({
   id: true,
