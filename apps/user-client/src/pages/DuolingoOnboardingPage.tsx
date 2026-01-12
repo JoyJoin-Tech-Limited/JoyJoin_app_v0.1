@@ -350,6 +350,7 @@ export default function DuolingoOnboardingPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [justAuthenticated, setJustAuthenticated] = useState(false);
+  const [temporarySessionId, setTemporarySessionId] = useState<string>("");
   
   const [phone, setPhone] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
@@ -390,6 +391,39 @@ export default function DuolingoOnboardingPage() {
   }, [justAuthenticated]);
 
   useEffect(() => {
+    const existingSession = localStorage.getItem(V4_SESSION_KEY);
+    const session = existingSession ?? (typeof crypto !== "undefined" && (crypto as any).randomUUID ? (crypto as any).randomUUID() : `${Date.now()}`);
+    localStorage.setItem(V4_SESSION_KEY, session);
+    setTemporarySessionId(session);
+    (async () => {
+      try {
+        const response = await apiRequest("GET", `/api/auth/presignup-cache/${session}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.answers?.length) {
+            localStorage.setItem(V4_ANSWERS_KEY, JSON.stringify(data.answers));
+            const answerMap: Record<string, string> = {};
+            data.answers.forEach((ans: any) => {
+              if (ans?.questionId && ans?.selectedOption) {
+                answerMap[ans.questionId] = ans.selectedOption;
+              }
+            });
+            if (Object.keys(answerMap).length > 0) {
+              setAnswers(prev => ({ ...answerMap, ...prev }));
+              setCurrentScreen(prev => {
+                const answeredCount = Object.keys(answerMap).length;
+                return prev < answeredCount ? Math.min(ONBOARDING_QUESTIONS_COUNT, answeredCount) : prev;
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load cached answers', error);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
     if (currentScreen > 0) {
       saveCachedProgress({ currentScreen, answers });
     }
@@ -419,6 +453,15 @@ export default function DuolingoOnboardingPage() {
     setAnswers(prev => ({ ...prev, [questionId]: value }));
     if (traitScores) {
       saveV4AnswerToCache(questionId, value, traitScores);
+      if (temporarySessionId) {
+        const cachedAnswers = getV4CachedAnswers();
+        const deduped = Array.from(new Map(cachedAnswers.map((a) => [a.questionId, a])).values());
+        apiRequest("POST", "/api/auth/presignup-cache", {
+          sessionId: temporarySessionId,
+          answers: deduped,
+          metadata: { currentScreen: currentScreen + 1 },
+        }).catch(() => {});
+      }
     }
   };
 
@@ -488,34 +531,24 @@ export default function DuolingoOnboardingPage() {
   });
 
   const completeOnboardingMutation = useMutation({
-    mutationFn: async (data: {
-      displayName: string;
-      gender: string;
-      currentCity: string;
-      intent: string[];
-      birthYear?: number;
-      showBirthYear?: boolean;
-      relationshipStatus?: string;
-      preSignupAnswers: Record<number, string | string[]>;
-    }) => {
-      // Step 1: Complete onboarding profile
-      await apiRequest("POST", "/api/auth/complete-onboarding", data);
-      
-      // Step 2: Sync presignup answers to assessment session (wait for completion)
-      const cachedAnswers = getV4CachedAnswers();
-      if (cachedAnswers.length > 0) {
-        const syncResponse = await apiRequest("POST", "/api/assessment/v4/presignup-sync", {
-          answers: cachedAnswers,
-        });
-        // apiRequest already returns parsed JSON, no need to call .json()
-        const syncData = syncResponse as { sessionId?: string; answeredCount?: number };
-        // Store synced sessionId so personality test can use it directly
-        if (syncData.sessionId) {
-          localStorage.setItem("joyjoin_synced_session_id", syncData.sessionId);
-          localStorage.setItem("joyjoin_synced_answer_count", String(syncData.answeredCount || cachedAnswers.length));
-        }
-      }
-      
+    mutationFn: async () => {
+      const payload = {
+        authData: { phoneNumber: phone, code: verificationCode },
+        profileData: {
+          displayName: nickname,
+          gender,
+          currentCity: city,
+          intent: intents,
+          birthYear: birthYear ? parseInt(birthYear) : undefined,
+          relationshipStatus: relationshipStatus || undefined,
+          showBirthYear,
+        },
+        assessmentAnswers: getV4CachedAnswers(),
+        temporarySessionId,
+        metadata: { currentScreen },
+      };
+
+      await apiRequest("POST", "/api/auth/unified-onboarding", payload);
       return { success: true };
     },
     onSuccess: () => {
@@ -559,32 +592,24 @@ export default function DuolingoOnboardingPage() {
   };
 
   const handleCompleteOnboarding = (skip: boolean = false) => {
-    // Build fallback preSignupAnswers for cases where sync might fail
-    const cachedAnswers = getV4CachedAnswers();
-    const dedupedAnswersMap = new Map();
-    cachedAnswers.forEach(ans => dedupedAnswersMap.set(ans.questionId, ans));
-    const uniqueAnswers = Array.from(dedupedAnswersMap.values());
+    if (!phone || verificationCode.length !== 6) {
+      toast({
+        title: '请填写验证码',
+        description: '请输入收到的6位验证码完成注册',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!nickname || !gender || !city || intents.length === 0) {
+      toast({
+        title: '信息不完整',
+        description: '请先完成基础信息填写',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    const preSignupAnswersRecord: Record<number, string | string[]> = {};
-    uniqueAnswers.forEach(ans => {
-      const id = parseInt(ans.questionId.replace('Q', ''));
-      if (!isNaN(id)) {
-        preSignupAnswersRecord[id] = ans.selectedOption;
-      }
-    });
-
-    const data = {
-      displayName: nickname,
-      gender,
-      currentCity: city,
-      intent: intents,
-      preSignupAnswers: preSignupAnswersRecord,
-      ...(birthYear && !skip && { birthYear: parseInt(birthYear) }),
-      ...(!skip && { showBirthYear }),
-      ...(relationshipStatus && !skip && { relationshipStatus }),
-    };
-
-    completeOnboardingMutation.mutate(data);
+    completeOnboardingMutation.mutate();
   };
 
   const getScreenProgress = () => {

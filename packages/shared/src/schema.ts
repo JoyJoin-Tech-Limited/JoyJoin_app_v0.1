@@ -2613,6 +2613,26 @@ export const insertGossipCacheSchema = createInsertSchema(gossipCache).omit({
 export type GossipCache = typeof gossipCache.$inferSelect;
 export type InsertGossipCache = z.infer<typeof insertGossipCacheSchema>;
 
+// ============ Pre-signup data cache ============
+
+export const preSignupData = pgTable("pre_signup_data", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  temporarySessionId: varchar("temporary_session_id").notNull().unique(),
+  metadata: jsonb("metadata"),
+  answers: jsonb("answers"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPreSignupDataSchema = createInsertSchema(preSignupData).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type PreSignupData = typeof preSignupData.$inferSelect;
+export type InsertPreSignupData = z.infer<typeof insertPreSignupDataSchema>;
+
 // ============ V4 Adaptive Personality Assessment ============
 
 export const assessmentSessions = pgTable("assessment_sessions", {
