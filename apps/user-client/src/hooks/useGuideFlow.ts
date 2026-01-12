@@ -1,5 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { User } from "@shared/schema";
 
 const GUIDE_SEEN_KEY = "joyjoin_guide_seen";
 const TOTAL_STEPS = 3;
@@ -9,7 +12,7 @@ export interface GuideFlowState {
   currentStep: number;
   /** 总步骤数 */
   totalSteps: number;
-  /** 是否已看过引导 */
+  /** 是否已看过引导 (server-driven) */
   hasSeenGuide: boolean;
   /** 是否显示引导 */
   showGuide: boolean;
@@ -33,6 +36,9 @@ export interface GuideFlowState {
  * - 步骤 2: 盲盒活动流程介绍
  * - 步骤 3: 小悦 AI 助手引导
  * 
+ * Now uses server-driven state for guide persistence (B2).
+ * Local storage is used as a fallback/hint only.
+ * 
  * @param options.autoShowAfterRegistration - 注册完成后自动显示引导
  */
 export function useGuideFlow(options?: {
@@ -42,10 +48,29 @@ export function useGuideFlow(options?: {
   const [currentStep, setCurrentStep] = useState(0);
   const [showGuide, setShowGuide] = useState(false);
   
-  // 检查是否已看过引导
-  const hasSeenGuide = typeof window !== 'undefined' 
-    ? localStorage.getItem(GUIDE_SEEN_KEY) === 'true'
-    : false;
+  // Server-driven guide state (B2)
+  const { data: user } = useQuery<User & { hasSeenGuide?: boolean }>({
+    queryKey: ["/api/auth/user"],
+    staleTime: Infinity,
+  });
+  
+  // Server-side mark as seen mutation
+  const markSeenMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/guide/mark-seen");
+    },
+    onSuccess: () => {
+      // Also set local storage as a hint
+      localStorage.setItem(GUIDE_SEEN_KEY, 'true');
+      // Invalidate user query to refresh hasSeenGuide
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    },
+  });
+  
+  // Check if guide has been seen - prefer server state, fallback to local storage
+  const hasSeenGuide = user?.hasSeenGuide === true || (
+    typeof window !== 'undefined' && localStorage.getItem(GUIDE_SEEN_KEY) === 'true'
+  );
   
   // 自动显示引导 (如果需要)
   useEffect(() => {
@@ -55,8 +80,11 @@ export function useGuideFlow(options?: {
   }, [options?.autoShowAfterRegistration, hasSeenGuide]);
   
   const markAsSeen = useCallback(() => {
+    // Always set local storage immediately for UX
     localStorage.setItem(GUIDE_SEEN_KEY, 'true');
-  }, []);
+    // Persist to server
+    markSeenMutation.mutate();
+  }, [markSeenMutation]);
   
   const nextStep = useCallback(() => {
     if (currentStep < TOTAL_STEPS - 1) {
@@ -107,6 +135,7 @@ export function useGuideFlow(options?: {
 
 /**
  * 检查是否需要显示引导
+ * Uses local storage as a hint - the actual decision should use server state
  */
 export function shouldShowGuide(): boolean {
   if (typeof window === 'undefined') return false;
