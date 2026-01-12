@@ -16,6 +16,7 @@ import { SelectionList } from "@/components/SelectionList";
 import { ArchetypeSlotMachine } from "@/components/slot-machine";
 import { useAchievementTracker } from "@/hooks/useAchievementTracker";
 import { ArchetypePreview } from "@/components/archetype-preview";
+import { useDynamicAccent } from "@/contexts/DynamicAccentContext";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -79,7 +80,7 @@ function OnboardingProgress({
         <div className="flex-1">
           <Progress 
             value={progress} 
-            className="h-2 transition-all duration-500" 
+            className="h-2 transition-all duration-500 progress-accent-dynamic accent-transition-target" 
           />
           <div className="flex flex-col mt-1.5 gap-0.5">
             <div className="flex justify-between items-center">
@@ -227,6 +228,7 @@ export default function PersonalityTestPageV4() {
   const usedSkipRef = useRef(false);
   
   const { trackQuestionStart, trackAnswer, trackCompletion, trackSkip } = useAchievementTracker();
+  const { setArchetype: setDynamicAccent, reset: resetDynamicAccent } = useDynamicAccent();
   
   const {
     sessionId,
@@ -293,6 +295,18 @@ export default function PersonalityTestPageV4() {
       trackQuestionStart();
     }
   }, [currentQuestion?.id, trackQuestionStart]);
+
+  // Update dynamic accent color based on top archetype
+  useEffect(() => {
+    if (topArchetype && currentMatches[0]) {
+      setDynamicAccent(topArchetype, currentMatches[0].confidence);
+    }
+  }, [topArchetype, currentMatches, setDynamicAccent]);
+
+  // Reset dynamic accent on unmount
+  useEffect(() => {
+    return () => resetDynamicAccent();
+  }, [resetDynamicAccent]);
 
   useEffect(() => {
     if (isComplete && result) {
