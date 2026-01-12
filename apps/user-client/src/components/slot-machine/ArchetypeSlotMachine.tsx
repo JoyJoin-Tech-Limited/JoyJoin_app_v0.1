@@ -35,7 +35,7 @@ export function ArchetypeSlotMachine({ targetArchetype, onComplete }: ArchetypeS
 
   return (
     <div className="h-screen overflow-hidden bg-background flex flex-col items-center justify-center px-6 py-8 relative">
-      <CelebrationConfetti show={phase === "landed"} type="step" />
+      <CelebrationConfetti show={phase === "landed" && !reduceMotion} type="step" />
 
       <div className="absolute top-6 inset-x-0 px-6 text-center space-y-3">
         <motion.div
