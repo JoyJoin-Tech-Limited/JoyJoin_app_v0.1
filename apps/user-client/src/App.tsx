@@ -112,6 +112,8 @@ function AuthenticatedRouter() {
         <Route path="/personality-test" component={PersonalityTestPageV4} />
         <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
         <Route path="/personality-test/results" component={PersonalityTestResultPage} />
+        <Route path="/onboarding/setup" component={EssentialDataPage} />
+        <Route path="/onboarding/extended" component={ExtendedDataPage} />
         <Route path="*" component={RedirectToPersonalityTest} />
       </Switch>
     );
