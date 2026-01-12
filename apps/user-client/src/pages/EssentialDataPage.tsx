@@ -8,9 +8,11 @@ import { ChevronLeft, Sparkles, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { INDUSTRY_OPTIONS } from "@shared/constants";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BirthDatePicker } from "@/components/BirthDatePicker";
+import { SmartIndustryInput } from "@/components/SmartIndustryInput";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
@@ -69,19 +71,7 @@ const EDUCATION_OPTIONS = [
   { value: "phd", label: "博士" },
 ];
 
-const INDUSTRY_OPTIONS = [
-  { value: "tech", label: "互联网/科技" },
-  { value: "finance", label: "金融/投资" },
-  { value: "education", label: "教育/培训" },
-  { value: "media", label: "媒体/创意" },
-  { value: "consulting", label: "咨询/专业服务" },
-  { value: "healthcare", label: "医疗/健康" },
-  { value: "manufacturing", label: "制造/工程" },
-  { value: "retail", label: "零售/消费" },
-  { value: "real_estate", label: "房地产" },
-  { value: "government", label: "政府/公共服务" },
-  { value: "other", label: "其他行业" },
-];
+
 
 const CITY_OPTIONS = [
   { value: "shenzhen", label: "深圳" },
@@ -247,6 +237,7 @@ export default function EssentialDataPage() {
   const [hometown, setHometown] = useState("");
   const [currentCity, setCurrentCity] = useState("");
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showManualIndustry, setShowManualIndustry] = useState(false);
 
   // Load cached progress
   useEffect(() => {
@@ -482,11 +473,11 @@ export default function EssentialDataPage() {
               )}
 
               {/* Step 2-4: Single select */}
-              {(currentStep === 2 || currentStep === 3 || currentStep === 4) && stepConfig.options && (
+              {(currentStep === 2 || currentStep === 3) && stepConfig.options && (
                 <div className="grid grid-cols-2 gap-3">
                   {stepConfig.options.map(opt => {
-                    const value = currentStep === 2 ? relationshipStatus : currentStep === 3 ? education : workIndustry;
-                    const setValue = currentStep === 2 ? setRelationshipStatus : currentStep === 3 ? setEducation : setWorkIndustry;
+                    const value = currentStep === 2 ? relationshipStatus : education;
+                    const setValue = currentStep === 2 ? setRelationshipStatus : setEducation;
                     return (
                       <TappableCard
                         key={opt.value}
@@ -497,6 +488,41 @@ export default function EssentialDataPage() {
                       </TappableCard>
                     );
                   })}
+                </div>
+              )}
+
+              {currentStep === 4 && (
+                <div className="space-y-3">
+                  <SmartIndustryInput
+                    options={INDUSTRY_OPTIONS}
+                    value={workIndustry}
+                    onSelect={(val) => {
+                      setWorkIndustry(val);
+                      setShowManualIndustry(false);
+                    }}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowManualIndustry((prev) => !prev)}
+                    className="text-muted-foreground"
+                    data-testid="button-industry-manual"
+                  >
+                    {showManualIndustry ? "收起手动选择" : "手动选择"}
+                  </Button>
+                  {showManualIndustry && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {INDUSTRY_OPTIONS.map((opt) => (
+                        <TappableCard
+                          key={opt.value}
+                          selected={workIndustry === opt.value}
+                          onClick={() => setWorkIndustry(opt.value)}
+                        >
+                          <span className="font-medium">{opt.label}</span>
+                        </TappableCard>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

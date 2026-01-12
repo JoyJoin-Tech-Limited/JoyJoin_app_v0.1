@@ -2,6 +2,8 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { matchIndustryFromText } from "./inference/industryOntology";
+import { INDUSTRY_OPTIONS } from "@shared/constants";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { paymentService } from "./paymentService";
 import { subscriptionService } from "./subscriptionService";
@@ -9329,9 +9331,116 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
-  // ============ 推断引擎API ============
   
-  // POST /api/inference/test - 测试快速推断（不调用LLM）
+
+
+  const INDUSTRY_MATCHERS: { value: string; keywords: string[] }[] = [
+    { value: "finance", keywords: ["金融", "finance", "bank", "investment"] },
+    { value: "tech", keywords: ["互联网", "科技", "tech", "ai", "it"] },
+    { value: "education", keywords: ["教育", "education", "edu"] },
+    { value: "media", keywords: ["媒体", "内容", "传媒", "creative", "design"] },
+    { value: "consulting", keywords: ["咨询", "consulting", "法律", "legal"] },
+    { value: "healthcare", keywords: ["医疗", "医药", "健康", "health"] },
+    { value: "manufacturing", keywords: ["制造", "工业", "engineering"] },
+    { value: "retail", keywords: ["零售", "消费", "retail"] },
+    { value: "real_estate", keywords: ["地产", "房地产", "real estate", "construction"] },
+    { value: "government", keywords: ["政府", "公共", "gov"] },
+  ];
+
+  const INDUSTRY_OPTIONS_MAP = INDUSTRY_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
+
+  function mapIndustryNameToOption(industryName: string | undefined) {
+    const fallback = INDUSTRY_OPTIONS_MAP.find((o) => o.value === "other") || INDUSTRY_OPTIONS_MAP[INDUSTRY_OPTIONS_MAP.length - 1];
+    if (!industryName) return fallback;
+    const name = industryName.toLowerCase();
+
+    const scored = INDUSTRY_MATCHERS.map((matcher) => {
+      const score = matcher.keywords.reduce((acc, keyword) => acc + (name.includes(keyword.toLowerCase()) ? 1 : 0), 0);
+      return { value: matcher.value, score };
+    }).sort((a, b) => b.score - a.score);
+
+    const matchedValue = scored[0]?.score > 0 ? scored[0].value : "other";
+    return INDUSTRY_OPTIONS_MAP.find((o) => o.value === matchedValue) || fallback;
+  }
+
+// ============ 推断引擎API ============
+
+  // POST /api/inference/parse-industry - semantic industry parsing
+  app.post("/api/inference/parse-industry", isPhoneAuthenticated, async (req, res) => {
+    try {
+      const text = (req.body?.text || '').toString();
+      if (!text.trim()) {
+        return res.status(400).json({ message: "text is required" });
+      }
+
+      const match = matchIndustryFromText(text);
+      const primaryOption = mapIndustryNameToOption(match?.industry);
+      const primaryConfidence = match?.confidence ?? 0.68;
+      const primary = {
+        value: primaryOption.value,
+        label: primaryOption.label,
+        confidence: primaryConfidence,
+      };
+
+      let alternatives: { value: string; label: string; confidence: number }[] = [];
+      if (primaryConfidence >= 0.7) {
+        const primaryWords = primary.label.toLowerCase().split(/[^a-zA-Z\u4e00-\u9fa5]+/).filter(Boolean);
+        const scoredOptions = INDUSTRY_OPTIONS_MAP
+          .filter((o) => o.value !== primary.value)
+          .map((o, index) => {
+            const optionWords = o.label.toLowerCase().split(/[^a-zA-Z\u4e00-\u9fa5]+/).filter(Boolean);
+            const overlap = optionWords.reduce((count, w) => count + (primaryWords.includes(w) ? 1 : 0), 0);
+            return { option: o, overlap, index };
+      const primaryConfidence = match?.confidence ?? 0.68;
+      const primary = {
+        value: primaryOption.value,
+        label: primaryOption.label,
+        confidence: primaryConfidence,
+      };
+
+      // Derive alternatives based on similarity to the primary label and confidence.
+      // If confidence is low, do not return arbitrary alternatives.
+      let alternatives: { value: string; label: string; confidence: number }[] = [];
+
+      if (primary.label && primaryConfidence >= 0.7) {
+        const primaryWords = primary.label
+          .toLowerCase()
+          .split(/[\s\/,&()-]+/)
+          .filter(Boolean);
+
+        const scoredOptions = INDUSTRY_OPTIONS_MAP
+          .filter((o) => o.value !== primary.value)
+          .map((o, index) => {
+            const optionWords = o.label
+              .toLowerCase()
+              .split(/[\s\/,&()-]+/)
+              .filter(Boolean);
+            const overlap = optionWords.reduce((count, w) => {
+              return count + (primaryWords.includes(w) ? 1 : 0);
+            }, 0);
+            return { option: o, overlap, index };
+          })
+          .filter(({ overlap }) => overlap > 0)
+          .sort((a, b) => {
+            if (b.overlap !== a.overlap) return b.overlap - a.overlap;
+            return a.index - b.index;
+          });
+
+        alternatives = scoredOptions
+          .slice(0, 3)
+          .map(({ option }) => ({
+            value: option.value,
+            label: option.label,
+            confidence: Math.max(0, primaryConfidence - 0.05),
+          }));
+      }
+      res.json({ primary, alternatives });
+    } catch (error: any) {
+      console.error("parse-industry error", error);
+      res.status(500).json({ message: "Failed to parse industry" });
+    }
+  });
+// POST /api/inference/test - 测试快速推断（不调用LLM）
   app.post("/api/inference/test", async (req, res) => {
     try {
       const { message } = req.body;

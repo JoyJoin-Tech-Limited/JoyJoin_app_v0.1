@@ -10,6 +10,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
+import { VibeGrid } from "@/components/VibeGrid";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -30,6 +31,7 @@ interface ExtendedDataState {
     intent: string[];
     interests: string[];
     socialPreferences: string[];
+    interestGranularityTags?: string[];
   };
   timestamp: number;
 }
@@ -221,6 +223,7 @@ export default function ExtendedDataPage() {
   const [intent, setIntent] = useState<string[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
   const [socialPreferences, setSocialPreferences] = useState<string[]>([]);
+  const [microInterests, setMicroInterests] = useState<string[]>([]);
   const [showCelebration, setShowCelebration] = useState(false);
 
   // Load cached progress
@@ -243,11 +246,11 @@ export default function ExtendedDataPage() {
   const saveProgress = useCallback(() => {
     const state: ExtendedDataState = {
       currentStep,
-      data: { intent, interests, socialPreferences },
+      data: { intent, interests, socialPreferences, interestGranularityTags: microInterests },
       timestamp: Date.now(),
     };
     localStorage.setItem(EXTENDED_CACHE_KEY, JSON.stringify(state));
-  }, [currentStep, intent, interests, socialPreferences]);
+  }, [currentStep, intent, interests, socialPreferences, microInterests]);
 
   useEffect(() => {
     saveProgress();
@@ -335,6 +338,7 @@ export default function ExtendedDataPage() {
           intent,
           interests,
           socialPreferences: socialPreferences[0],
+          interestGranularityTags: microInterests,
         };
         saveMutation.mutate(profileData);
       }, 2000);
@@ -424,6 +428,34 @@ export default function ExtendedDataPage() {
             </div>
 
             {/* Options */}
+            {currentStep === 1 && (
+              <div className="space-y-4">
+                <VibeGrid
+                  selectedMacros={interests}
+                  onPick={(macro, micro) => {
+                    setInterests((prev) => (prev.includes(macro) ? prev : [...prev, macro]));
+                    setMicroInterests((prev) => (micro && !prev.includes(micro) ? [...prev, micro] : prev));
+                  }}
+                />
+                {microInterests.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {microInterests.map((m) => (
+                      <Button
+                        key={m}
+                        size="sm"
+                        variant="outline"
+                        type="button"
+                        data-testid="chip-micro-interest"
+                        onClick={() => setMicroInterests((prev) => prev.filter((mi) => mi !== m))}
+                      >
+                        {m}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className={cn(
               stepConfig.type === "singleSelect" ? "space-y-3" : "flex flex-wrap gap-2 justify-center"
             )}>

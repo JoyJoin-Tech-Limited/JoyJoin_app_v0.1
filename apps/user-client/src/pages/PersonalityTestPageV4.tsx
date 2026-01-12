@@ -299,15 +299,8 @@ export default function PersonalityTestPageV4() {
   }, [isComplete, result, setLocation]);
 
   const handleSelectOption = useCallback((value: string | string[]) => {
-    if (Array.isArray(value)) {
-      if (value.length === 0) {
-        setSelectedOption(undefined);
-        return;
-      }
-      setSelectedOption(value[0]);
-      return;
-    }
-    setSelectedOption(value);
+    const next = Array.isArray(value) ? value[0] : value;
+    setSelectedOption(next);
   }, []);
 
   const handleSubmitAnswer = useCallback(async () => {
