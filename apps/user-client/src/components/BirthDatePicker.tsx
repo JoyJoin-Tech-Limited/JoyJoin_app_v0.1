@@ -40,19 +40,26 @@ function WheelSelector({
   const lastHapticValueRef = useRef<number>(selected);
   const itemHeight = 44; // 44pt as per spec
   const visibleItems = 5;
+  const containerHeight = 220; // Match h-[220px]
+  
+  // Compute spacer dynamically to center items
+  const spacerHeight = (containerHeight - itemHeight) / 2;
   
   const selectedIndex = values.indexOf(selected);
   
-  // Initial scroll to selected value
+  // Initial scroll to selected value with rAF for layout stability
   useEffect(() => {
     if (containerRef.current && selectedIndex >= 0) {
-      const scrollPosition = selectedIndex * itemHeight - (itemHeight * Math.floor(visibleItems / 2));
-      containerRef.current.scrollTo({
-        top: Math.max(0, scrollPosition),
-        behavior: 'auto'
+      requestAnimationFrame(() => {
+        if (!containerRef.current) return;
+        const scrollPosition = selectedIndex * itemHeight;
+        containerRef.current.scrollTo({
+          top: scrollPosition,
+          behavior: 'auto'
+        });
       });
     }
-  }, []);
+  }, [selectedIndex, itemHeight]);
 
   // Haptic feedback on snap
   const triggerHaptic = useCallback(() => {
@@ -70,12 +77,13 @@ function WheelSelector({
       clearTimeout(scrollTimeoutRef.current);
     }
 
-    // Debounce scroll events
+    // Debounce scroll events (100ms for smooth iOS scroll)
     scrollTimeoutRef.current = setTimeout(() => {
       if (!containerRef.current) return;
       
       const scrollTop = containerRef.current.scrollTop;
-      const centerIndex = Math.round((scrollTop + itemHeight * Math.floor(visibleItems / 2)) / itemHeight);
+      // Calculate which item is in the center based on spacer
+      const centerIndex = Math.round(scrollTop / itemHeight);
       const clampedIndex = Math.min(Math.max(0, centerIndex), values.length - 1);
       const newValue = values[clampedIndex];
       
@@ -89,14 +97,14 @@ function WheelSelector({
         onSelect(newValue);
         
         // Snap to center with smooth animation (120-180ms as per spec)
-        const targetScroll = clampedIndex * itemHeight - (itemHeight * Math.floor(visibleItems / 2));
+        const targetScroll = clampedIndex * itemHeight;
         containerRef.current.scrollTo({
-          top: Math.max(0, targetScroll),
+          top: targetScroll,
           behavior: 'smooth'
         });
       }
-    }, 50); // 50ms debounce
-  }, [values, selected, onSelect, triggerHaptic, itemHeight, visibleItems]);
+    }, 100); // 100ms debounce for iOS
+  }, [values, selected, onSelect, triggerHaptic, itemHeight]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -108,7 +116,7 @@ function WheelSelector({
   }, []);
 
   return (
-    <div className="flex flex-col items-center flex-1">
+    <div className="flex flex-col items-center flex-1 flex-shrink-0 min-w-0">
       {/* Column header */}
       <span className="text-sm font-medium text-foreground mb-3" id={`${id}-label`}>
         {label}
@@ -133,6 +141,10 @@ function WheelSelector({
             "scrollbar-hide scroll-smooth",
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
           )}
+          style={{ 
+            scrollSnapType: 'y mandatory',
+            WebkitOverflowScrolling: 'touch', // Smooth iOS scroll
+          }}
           onScroll={handleScroll}
           onKeyDown={(event) => {
             const { key } = event;
@@ -159,13 +171,11 @@ function WheelSelector({
               onSelect(nextValue);
               triggerHaptic();
 
-              const targetScroll =
-                nextIndex * itemHeight -
-                itemHeight * Math.floor(visibleItems / 2);
+              const targetScroll = nextIndex * itemHeight;
 
               if (containerRef.current) {
                 containerRef.current.scrollTo({
-                  top: Math.max(0, targetScroll),
+                  top: targetScroll,
                   behavior: "smooth",
                 });
               }
@@ -199,10 +209,9 @@ function WheelSelector({
               listboxes[nextIndex].focus();
             }
           }}
-          style={{ scrollSnapType: 'y mandatory' }}
         >
-          {/* Spacer top */}
-          <div style={{ height: itemHeight * Math.floor(visibleItems / 2) }} />
+          {/* Spacer top - centers first item */}
+          <div style={{ height: spacerHeight }} />
           
           {values.map((value) => {
             const isSelected = value === selected;
@@ -228,10 +237,10 @@ function WheelSelector({
                   triggerHaptic();
                   // Scroll to center this item
                   const targetIndex = values.indexOf(value);
-                  const targetScroll = targetIndex * itemHeight - (itemHeight * Math.floor(visibleItems / 2));
+                  const targetScroll = targetIndex * itemHeight;
                   if (containerRef.current) {
                     containerRef.current.scrollTo({
-                      top: Math.max(0, targetScroll),
+                      top: targetScroll,
                       behavior: 'smooth'
                     });
                   }
@@ -242,8 +251,8 @@ function WheelSelector({
             );
           })}
           
-          {/* Spacer bottom */}
-          <div style={{ height: itemHeight * Math.floor(visibleItems / 2) }} />
+          {/* Spacer bottom - centers last item */}
+          <div style={{ height: spacerHeight }} />
         </div>
         
         {/* Bottom gradient mask */}
@@ -325,9 +334,9 @@ export function BirthDatePicker({
   const age = currentYear - year;
 
   return (
-    <div className={cn("flex flex-col items-center gap-6 py-4", className)}>
+    <div className={cn("flex flex-col items-center gap-6 py-4 overflow-x-hidden max-w-full w-full", className)}>
       {/* Three-column picker with headers */}
-      <div className="flex gap-4 justify-center w-full max-w-sm px-4">
+      <div className="flex gap-4 justify-center w-full max-w-sm px-4 overflow-x-hidden">
         <WheelSelector
           values={years}
           selected={year}
