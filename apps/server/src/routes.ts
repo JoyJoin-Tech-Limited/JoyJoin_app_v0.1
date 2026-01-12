@@ -9382,22 +9382,6 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         confidence: primaryConfidence,
       };
 
-      let alternatives: { value: string; label: string; confidence: number }[] = [];
-      if (primaryConfidence >= 0.7) {
-        const primaryWords = primary.label.toLowerCase().split(/[^a-zA-Z\u4e00-\u9fa5]+/).filter(Boolean);
-        const scoredOptions = INDUSTRY_OPTIONS_MAP
-          .filter((o) => o.value !== primary.value)
-          .map((o, index) => {
-            const optionWords = o.label.toLowerCase().split(/[^a-zA-Z\u4e00-\u9fa5]+/).filter(Boolean);
-            const overlap = optionWords.reduce((count, w) => count + (primaryWords.includes(w) ? 1 : 0), 0);
-            return { option: o, overlap, index };
-      const primaryConfidence = match?.confidence ?? 0.68;
-      const primary = {
-        value: primaryOption.value,
-        label: primaryOption.label,
-        confidence: primaryConfidence,
-      };
-
       // Derive alternatives based on similarity to the primary label and confidence.
       // If confidence is low, do not return arbitrary alternatives.
       let alternatives: { value: string; label: string; confidence: number }[] = [];
@@ -9440,7 +9424,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       res.status(500).json({ message: "Failed to parse industry" });
     }
   });
-// POST /api/inference/test - 测试快速推断（不调用LLM）
+
+  // POST /api/inference/test - 测试快速推断（不调用LLM）
   app.post("/api/inference/test", async (req, res) => {
     try {
       const { message } = req.body;
