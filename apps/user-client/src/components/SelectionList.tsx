@@ -1,13 +1,8 @@
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { 
-  getSelectionClasses, 
-  selectionAnimationClasses, 
-  selectionMotionVariants 
-} from "@/hooks/useSelectionAnimation";
+import { Sparkles } from "lucide-react";
 
-interface SelectionOption {
+export interface SelectionOption {
   value: string;
   label: string;
   tag?: string;
@@ -18,35 +13,27 @@ interface SelectionListProps {
   selected: string | string[] | undefined;
   onSelect: (value: string | string[]) => void;
   multiSelect?: boolean;
-  questionId?: string;
-  /** Use compact spacing for smaller screens */
-  compact?: boolean;
-  /** Custom class for the container */
   className?: string;
 }
 
 /**
- * SelectionList - Shared component for selectable options
+ * SelectionList - Unified component for questionnaire options
+ * Optimized for mobile-first interaction with consistent typography and feedback.
  * 
- * Used across onboarding, personality test, setup, and event forms.
- * Provides consistent styling and animation.
+ * Expert UIUX Refinements:
+ * 1. Readability (Typography): Standardized on 18px (text-lg) for option labels
+ * 2. Affordance & Targets: Increased to 68px min-height and 20px (px-5) padding
+ * 3. Visual Hierarchy: Tags moved to separate line below label
+ * 4. Feedback Loops: Added placeholder circle for unselected states
+ * 5. Motion Design: Subtle entry animations (x: -10) with Sparkle rotation
  */
 export function SelectionList({
   options,
   selected,
   onSelect,
   multiSelect = false,
-  questionId,
-  compact = false,
   className,
 }: SelectionListProps) {
-  const isSelected = (value: string) => {
-    if (multiSelect) {
-      return Array.isArray(selected) && selected.includes(value);
-    }
-    return selected === value;
-  };
-
   const handleSelect = (value: string) => {
     if (multiSelect) {
       const currentSelected = Array.isArray(selected) ? selected : [];
@@ -60,50 +47,62 @@ export function SelectionList({
     }
   };
 
+  const isSelected = (value: string) => {
+    if (multiSelect) {
+      return Array.isArray(selected) && selected.includes(value);
+    }
+    return selected === value;
+  };
+
   return (
-    <div className={cn(compact ? "space-y-2" : "space-y-3", className)}>
-      {options.map((option, index) => {
-        const selected = isSelected(option.value);
-        return (
-          <motion.div
-            key={option.value}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
-            className="flex flex-col gap-2"
+    <div className={cn("space-y-3", className)}>
+      {options.map((option, index) => (
+        <motion.div
+          key={option.value}
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: index * 0.05 }}
+        >
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => handleSelect(option.value)}
+            className={cn(
+              "w-full flex items-center gap-4 px-5 py-4 rounded-2xl border-2 transition-all duration-200 min-h-[68px]",
+              "shadow-sm select-none touch-none",
+              isSelected(option.value)
+                ? "border-primary bg-primary/10 ring-1 ring-primary/20"
+                : "border-border bg-card hover:border-primary/40 active:bg-accent/5"
+            )}
+            data-testid={`button-option-${option.value}`}
           >
-            <motion.button
-              whileTap={selectionMotionVariants.tap}
-              onClick={() => handleSelect(option.value)}
-              className={cn(
-                getSelectionClasses(selected),
-                compact && "py-3 min-h-[56px]"
+            <div className="flex-1 text-left">
+              <span className={cn(
+                "text-lg font-semibold leading-snug tracking-tight block",
+                isSelected(option.value) ? "text-primary" : "text-foreground/90"
+              )}>
+                {option.label}
+              </span>
+              {option.tag && (
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground/80 mt-1 font-bold">
+                  {option.tag}
+                </div>
               )}
-              data-testid={`button-option-${option.value}`}
-            >
-              <div className="flex-1 text-left">
-                <span className={selectionAnimationClasses.text(selected)}>
-                  {option.label}
-                </span>
-                {option.tag && (
-                  <span className="text-xs text-muted-foreground ml-2">
-                    {option.tag}
-                  </span>
-                )}
-              </div>
-              {selected && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className={selectionAnimationClasses.indicator}
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
-                </motion.div>
-              )}
-            </motion.button>
-          </motion.div>
-        );
-      })}
+            </div>
+            
+            {isSelected(option.value) ? (
+              <motion.div
+                initial={{ scale: 0, rotate: -45 }}
+                animate={{ scale: 1, rotate: 0 }}
+                className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/30"
+              >
+                <Sparkles className="w-4 h-4 text-primary-foreground" />
+              </motion.div>
+            ) : (
+              <div className="w-7 h-7 rounded-full border-2 border-muted/50 flex-shrink-0" />
+            )}
+          </motion.button>
+        </motion.div>
+      ))}
     </div>
   );
 }
