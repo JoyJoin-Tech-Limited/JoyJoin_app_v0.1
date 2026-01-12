@@ -51,6 +51,8 @@ import LevelUpProvider from "@/components/LevelUpProvider";
 import DuolingoOnboardingPage from "@/pages/DuolingoOnboardingPage";
 import GuidePage from "@/pages/GuidePage";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { AchievementProvider } from "@/contexts/AchievementContext";
+import { AchievementPopup } from "@/components/achievements";
 
 preloadXiaoyueImages();
 
@@ -234,10 +236,13 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <LevelUpProvider>
-          <Toaster />
-          <Suspense fallback={<LoadingScreen />}>
-            <Router />
-          </Suspense>
+          <AchievementProvider>
+            <Toaster />
+            <AchievementPopup />
+            <Suspense fallback={<LoadingScreen />}>
+              <Router />
+            </Suspense>
+          </AchievementProvider>
         </LevelUpProvider>
       </TooltipProvider>
     </QueryClientProvider>
