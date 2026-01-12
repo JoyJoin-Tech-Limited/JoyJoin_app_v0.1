@@ -48,8 +48,9 @@ export function DynamicAccentProvider({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const lastArchetypeRef = useRef<string | null>(null);
   const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountedRef = useRef(true);
 
-  // Update CSS variables when accent changes
+  // Update CSS variables when accent changes - skip if disabled
   useEffect(() => {
     if (!enabled) return;
 
@@ -59,11 +60,14 @@ export function DynamicAccentProvider({
     root.style.setProperty("--accent-dynamic-l", `${currentAccent.l}%`);
   }, [currentAccent, enabled]);
 
-  // Cleanup transition timeout
+  // Track mounted state and cleanup all timeouts on unmount
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
       if (transitionTimeoutRef.current) {
         clearTimeout(transitionTimeoutRef.current);
+        transitionTimeoutRef.current = null;
       }
     };
   }, []);
@@ -91,8 +95,10 @@ export function DynamicAccentProvider({
       clearTimeout(transitionTimeoutRef.current);
     }
     transitionTimeoutRef.current = setTimeout(() => {
-      setIsTransitioning(false);
-      document.body.classList.remove("accent-transitioning");
+      if (isMountedRef.current) {
+        setIsTransitioning(false);
+        document.body.classList.remove("accent-transitioning");
+      }
     }, 400); // Match CSS transition duration
   }, [enabled]);
 
@@ -103,6 +109,7 @@ export function DynamicAccentProvider({
     // Clean up transition state
     if (transitionTimeoutRef.current) {
       clearTimeout(transitionTimeoutRef.current);
+      transitionTimeoutRef.current = null;
     }
     setIsTransitioning(false);
     document.body.classList.remove("accent-transitioning");

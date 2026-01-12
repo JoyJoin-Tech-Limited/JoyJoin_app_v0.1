@@ -18,7 +18,6 @@ interface TrackAnswerParams {
   answeredCount: number;
   totalEstimate: number;
   topConfidence: number;
-  usedSkip: boolean;
   traitScores?: TraitScores;
 }
 
@@ -46,7 +45,6 @@ export function useAchievementTracker(): UseAchievementTrackerReturn {
     answeredCount,
     totalEstimate,
     topConfidence,
-    usedSkip,
   }: TrackAnswerParams) => {
     // First answer achievement
     if (answeredCount === 1 && !hasTrackedFirstAnswer.current) {
@@ -66,11 +64,6 @@ export function useAchievementTracker(): UseAchievementTrackerReturn {
       if (progressPercent >= 0.5 && !isUnlocked("halfway_hero")) {
         unlock("halfway_hero");
       }
-    }
-
-    // Explorer - used skip
-    if (usedSkip && !isUnlocked("explorer")) {
-      unlock("explorer");
     }
 
     // Destined match - confidence > 85%

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -224,7 +224,6 @@ export default function PersonalityTestPageV4() {
   const [selectedOption, setSelectedOption] = useState<string | undefined>();
   const [showMilestone, setShowMilestone] = useState(false);
   const [showBlindBox, setShowBlindBox] = useState(false);
-  const usedSkipRef = useRef(false);
   
   const { trackQuestionStart, trackAnswer, trackCompletion, trackSkip } = useAchievementTracker();
   const { setArchetype: setDynamicAccent, reset: resetDynamicAccent } = useDynamicAccent();
@@ -345,7 +344,6 @@ export default function PersonalityTestPageV4() {
       answeredCount: answeredCount + 1,
       totalEstimate: answeredCount + estimatedRemaining,
       topConfidence: currentMatches[0]?.confidence || 0,
-      usedSkip: usedSkipRef.current,
       traitScores: selectedOpt?.traitScores,
     });
     
@@ -362,7 +360,6 @@ export default function PersonalityTestPageV4() {
     const success = await skipQuestion(currentQuestion.id);
     if (success) {
       setSelectedOption(undefined);
-      usedSkipRef.current = true;
       trackSkip();
       toast({
         description: "已换一道题",
