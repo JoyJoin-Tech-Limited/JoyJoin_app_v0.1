@@ -14,6 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAdaptiveAssessment, type AssessmentQuestion, type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { SelectionList } from "@/components/SelectionList";
 
 // Use consistent Xiao Yue Avatar-01.png as primary avatar across all screens
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
@@ -269,92 +270,6 @@ function MobileActionBar({
       <div className="max-w-md mx-auto w-full">
         {children}
       </div>
-    </div>
-  );
-}
-
-function SelectionList({
-  options,
-  selected,
-  onSelect,
-  multiSelect = false,
-  questionId,
-}: {
-  options: { value: string; label: string; tag?: string }[];
-  selected: string | string[] | undefined;
-  onSelect: (value: string | string[]) => void;
-  multiSelect?: boolean;
-  questionId?: string;
-}) {
-  const handleSelect = (value: string) => {
-    if (multiSelect) {
-      const currentSelected = Array.isArray(selected) ? selected : [];
-      if (currentSelected.includes(value)) {
-        onSelect(currentSelected.filter(v => v !== value));
-      } else {
-        onSelect([...currentSelected, value]);
-      }
-    } else {
-      onSelect(value);
-    }
-  };
-
-  const isSelected = (value: string) => {
-    if (multiSelect) {
-      return Array.isArray(selected) && selected.includes(value);
-    }
-    return selected === value;
-  };
-
-  return (
-    <div className="space-y-3">
-      {options.map((option, index) => {
-        return (
-          <motion.div
-            key={option.value}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
-            className="flex flex-col gap-2"
-          >
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleSelect(option.value)}
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-4 rounded-2xl border-2 transition-all duration-200 min-h-[64px]",
-                "hover-elevate active-elevate-2 shadow-sm",
-                isSelected(option.value)
-                  ? "border-primary bg-primary/10"
-                  : "border-border bg-card hover:border-primary/50"
-              )}
-              data-testid={`button-option-${option.value}`}
-            >
-              <div className="flex-1 text-left">
-                <span className={cn(
-                  "text-lg font-medium leading-snug",
-                  isSelected(option.value) ? "text-primary" : "text-foreground/90"
-                )}>
-                  {option.label}
-                </span>
-                {option.tag && (
-                  <span className="text-xs text-muted-foreground ml-2">
-                    {option.tag}
-                  </span>
-                )}
-              </div>
-              {isSelected(option.value) && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
-                </motion.div>
-              )}
-            </motion.button>
-          </motion.div>
-        );
-      })}
     </div>
   );
 }
@@ -896,7 +811,6 @@ export default function DuolingoOnboardingPage() {
                     const selectedOpt = question.options.find(o => o.value === val);
                     handleAnswer(question.id, val, selectedOpt?.traitScores);
                   }}
-                  questionId={question.id}
                 />
               </div>
             </div>

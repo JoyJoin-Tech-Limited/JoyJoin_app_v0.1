@@ -12,6 +12,7 @@ import { useAdaptiveAssessment, type PreSignupAnswer } from "@/hooks/useAdaptive
 import CelebrationConfetti from "@/components/CelebrationConfetti";
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { StickyCTA, StickyCTAButton, StickyCTASecondaryButton } from "@/components/StickyCTA";
+import { SelectionList } from "@/components/SelectionList";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -196,65 +197,6 @@ function XiaoyueMascot({
           {message}
         </p>
       </motion.div>
-    </div>
-  );
-}
-
-function SelectionList({
-  options,
-  selected,
-  onSelect,
-  questionId,
-}: {
-  options: { value: string; label: string }[];
-  selected: string | undefined;
-  onSelect: (value: string) => void;
-  questionId: string;
-}) {
-  return (
-    <div className="space-y-2">
-      {options.map((option, index) => {
-        return (
-          <motion.div
-            key={option.value}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
-            className="flex flex-col"
-          >
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => onSelect(option.value)}
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all duration-200 min-h-[52px]",
-                "shadow-sm",
-                selected === option.value
-                  ? "border-primary bg-primary/10"
-                  : "border-border bg-card hover:border-primary/50 active:scale-[0.98]"
-              )}
-              data-testid={`button-option-${option.value}`}
-            >
-              <div className="flex-1 text-left">
-                <span className={cn(
-                  "text-base font-medium leading-snug",
-                  selected === option.value ? "text-primary" : "text-foreground/90"
-                )}>
-                  {option.label}
-                </span>
-              </div>
-              {selected === option.value && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0"
-                >
-                  <Sparkles className="w-3 h-3 text-primary-foreground" />
-                </motion.div>
-              )}
-            </motion.button>
-          </motion.div>
-        );
-      })}
     </div>
   );
 }
@@ -526,7 +468,6 @@ export default function PersonalityTestPageV4() {
                 options={optionsForList}
                 selected={selectedOption}
                 onSelect={handleSelectOption}
-                questionId={currentQuestion.id}
               />
             </div>
           </div>
