@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Sparkles } from "lucide-react";
+import { haptics } from "@/lib/haptics";
 
 export interface SelectionOption {
   value: string;
@@ -26,6 +27,8 @@ interface SelectionListProps {
  * 3. Visual Hierarchy: Tags moved to separate line below label
  * 4. Feedback Loops: Added placeholder circle for unselected states
  * 5. Motion Design: Subtle entry animations (x: -10) with Sparkle rotation
+ * 6. Haptic Feedback: Light vibration on selection for tactile response
+ * 7. Accessibility: Keyboard navigation and ARIA attributes
  */
 export function SelectionList({
   options,
@@ -35,6 +38,7 @@ export function SelectionList({
   className,
 }: SelectionListProps) {
   const handleSelect = (value: string) => {
+    haptics.light();
     if (multiSelect) {
       const currentSelected = Array.isArray(selected) ? selected : [];
       if (currentSelected.includes(value)) {
@@ -47,6 +51,13 @@ export function SelectionList({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent, value: string) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleSelect(value);
+    }
+  };
+
   const isSelected = (value: string) => {
     if (multiSelect) {
       return Array.isArray(selected) && selected.includes(value);
@@ -55,7 +66,7 @@ export function SelectionList({
   };
 
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn("space-y-3", className)} role="listbox" aria-multiselectable={multiSelect}>
       {options.map((option, index) => (
         <motion.div
           key={option.value}
@@ -66,9 +77,13 @@ export function SelectionList({
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => handleSelect(option.value)}
+            onKeyDown={(e) => handleKeyDown(e, option.value)}
+            role="option"
+            aria-selected={isSelected(option.value)}
             className={cn(
               "w-full flex items-center gap-4 px-5 py-4 rounded-2xl border-2 transition-all duration-200 min-h-[68px]",
-              "shadow-sm select-none touch-none",
+              "shadow-sm select-none touch-none relative overflow-hidden",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
               isSelected(option.value)
                 ? "border-primary bg-primary/10 ring-1 ring-primary/20"
                 : "border-border bg-card hover:border-primary/40 active:bg-accent/5"
