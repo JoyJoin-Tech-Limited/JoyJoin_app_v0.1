@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 type MacroSeed = { value: string; label: string; x: number; y: number; micro: string[] };
@@ -39,6 +39,7 @@ interface VibeGridProps {
 
 export function VibeGrid({ onPick, selectedMacros }: VibeGridProps) {
   const [tap, setTap] = useState<{ x: number; y: number } | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="space-y-2">
@@ -48,22 +49,30 @@ export function VibeGrid({ onPick, selectedMacros }: VibeGridProps) {
         <div className="absolute left-1/2 top-1 -translate-x-1/2 text-[11px] text-muted-foreground">动感</div>
         <div className="absolute left-1/2 bottom-1 -translate-x-1/2 text-[11px] text-muted-foreground">松弛</div>
 
-        <div className="grid h-full w-full grid-cols-4 grid-rows-4">
-          {[...Array(16)].map((_, idx) => (
-            <button
-              key={idx}
-              className="border-[0.5px] border-muted-foreground/15 active:bg-primary/10"
-              onClick={(e) => {
-                const rect = (e.target as HTMLElement).getBoundingClientRect();
-                const x = (e.clientX - rect.left) / rect.width;
-                const y = (e.clientY - rect.top) / rect.height;
-                const seed = nearestMacro({ x, y });
-                const micro = pickMicro(seed);
-                setTap({ x, y });
-                onPick(seed.value, micro);
-              }}
-            />
-          ))}
+        <div className="grid h-full w-full grid-cols-4 grid-rows-4" ref={gridRef}>
+          {[...Array(16)].map((_, idx) => {
+            const row = Math.floor(idx / 4) + 1;
+            const col = (idx % 4) + 1;
+            return (
+              <button
+                key={idx}
+                type="button"
+                className="border-[0.5px] border-muted-foreground/15 active:bg-primary/10"
+                aria-label={`兴趣格子 第 ${row} 行第 ${col} 列`}
+                onClick={(e) => {
+                  const parent = gridRef.current;
+                  if (!parent) return;
+                  const rect = parent.getBoundingClientRect();
+                  const x = (e.clientX - rect.left) / rect.width;
+                  const y = (e.clientY - rect.top) / rect.height;
+                  const seed = nearestMacro({ x, y });
+                  const micro = pickMicro(seed);
+                  setTap({ x, y });
+                  onPick(seed.value, micro);
+                }}
+              />
+            );
+          })}
         </div>
 
         {tap && (

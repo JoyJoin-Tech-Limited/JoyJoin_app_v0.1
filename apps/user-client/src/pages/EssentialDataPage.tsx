@@ -8,6 +8,7 @@ import { ChevronLeft, Sparkles, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { INDUSTRY_OPTIONS } from "@shared/constants";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BirthDatePicker } from "@/components/BirthDatePicker";
@@ -70,19 +71,7 @@ const EDUCATION_OPTIONS = [
   { value: "phd", label: "博士" },
 ];
 
-const INDUSTRY_OPTIONS = [
-  { value: "tech", label: "互联网/科技" },
-  { value: "finance", label: "金融/投资" },
-  { value: "education", label: "教育/培训" },
-  { value: "media", label: "媒体/创意" },
-  { value: "consulting", label: "咨询/专业服务" },
-  { value: "healthcare", label: "医疗/健康" },
-  { value: "manufacturing", label: "制造/工程" },
-  { value: "retail", label: "零售/消费" },
-  { value: "real_estate", label: "房地产" },
-  { value: "government", label: "政府/公共服务" },
-  { value: "other", label: "其他行业" },
-];
+
 
 const CITY_OPTIONS = [
   { value: "shenzhen", label: "深圳" },

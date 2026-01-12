@@ -434,13 +434,20 @@ export default function ExtendedDataPage() {
                   selectedMacros={interests}
                   onPick={(macro, micro) => {
                     setInterests((prev) => (prev.includes(macro) ? prev : [...prev, macro]));
-                    setMicroInterests((prev) => (prev.includes(micro) ? prev : [...prev, micro]));
+                    setMicroInterests((prev) => (micro && !prev.includes(micro) ? [...prev, micro] : prev));
                   }}
                 />
                 {microInterests.length > 0 && (
                   <div className="flex flex-wrap gap-2 pt-2">
                     {microInterests.map((m) => (
-                      <Button key={m} size="sm" variant="outline" data-testid="chip-micro-interest">
+                      <Button
+                        key={m}
+                        size="sm"
+                        variant="outline"
+                        type="button"
+                        data-testid="chip-micro-interest"
+                        onClick={() => setMicroInterests((prev) => prev.filter((mi) => mi !== m))}
+                      >
                         {m}
                       </Button>
                     ))}

@@ -6,12 +6,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-
-type IndustryOption = { value: string; label: string };
-type Suggestion = { value: string; label: string; confidence?: number };
+import { IndustryOption } from "@shared/constants";
+type Suggestion = { value: IndustryOption["value"]; label: string; confidence?: number };
 
 interface SmartIndustryInputProps {
-  options: IndustryOption[];
+  options: readonly IndustryOption[];
   value: string;
   onSelect: (value: string) => void;
   placeholder?: string;
@@ -34,7 +33,7 @@ export function SmartIndustryInput({
   const [primary, setPrimary] = useState<Suggestion | null>(null);
   const [alts, setAlts] = useState<Suggestion[]>([]);
 
-  const mutation = useMutation({
+  const { mutate: inferIndustry, isPending } = useMutation({
     mutationFn: async (body: { text: string }) => {
       const res = await apiRequest("POST", "/api/inference/parse-industry", body);
       return (await res.json()) as { primary?: Suggestion; alternatives?: Suggestion[] };
@@ -42,9 +41,9 @@ export function SmartIndustryInput({
     onError: () => {
       toast({ description: "识别失败，请稍后再试或手动选择", variant: "destructive" });
     },
-    onSuccess: (data) => {
-      if (data?.primary) setPrimary(data.primary);
-      setAlts(data?.alternatives ?? []);
+    onSuccess: (resp) => {
+      if (resp?.primary) setPrimary(resp.primary);
+      setAlts(resp?.alternatives ?? []);
     },
   });
 
@@ -54,9 +53,9 @@ export function SmartIndustryInput({
       setAlts([]);
       return;
     }
-    const handle = setTimeout(() => mutation.mutate({ text }), debounceMs);
+    const handle = setTimeout(() => inferIndustry({ text }), debounceMs);
     return () => clearTimeout(handle);
-  }, [text, debounceMs, mutation]);
+  }, [text, debounceMs]);
 
   const normalize = useMemo(() => {
     const map = new Map(options.map((o) => [o.value, o.label]));
@@ -66,7 +65,7 @@ export function SmartIndustryInput({
   const primaryNorm = normalize(primary);
   const altsNorm = alts.map(normalize).filter(Boolean) as Suggestion[];
 
-  const confidence = (c?: number) => (c ? ` · 置信度${Math.round(c * 100)}%` : "");
+  const confidence = (c?: number) => (c ? `置信度${Math.round(c * 100)}%` : "");
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -78,7 +77,7 @@ export function SmartIndustryInput({
         inputMode="text"
         data-testid="input-industry-smart"
       />
-      {mutation.isPending && (
+      {isPending && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> 正在为你匹配行业…
         </div>
@@ -93,7 +92,7 @@ export function SmartIndustryInput({
           >
             <Sparkles className="mr-1 h-4 w-4" />
             {primaryNorm.label}
-            {confidence(primaryNorm.confidence)}
+            {primaryNorm.confidence ? (<span className="ml-1 text-xs text-muted-foreground whitespace-nowrap">{confidence(primaryNorm.confidence)}</span>) : null}
           </Button>
         )}
         {altsNorm.map((s) => (
@@ -105,7 +104,7 @@ export function SmartIndustryInput({
             data-testid={`chip-industry-${s.value}`}
           >
             {s.label}
-            {confidence(s.confidence)}
+            {s.confidence ? (<span className="ml-1 text-xs text-muted-foreground whitespace-nowrap">{confidence(s.confidence)}</span>) : null}
           </Button>
         ))}
       </div>
