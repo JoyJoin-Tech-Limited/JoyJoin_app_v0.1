@@ -8,6 +8,7 @@ import { Suspense, useEffect } from "react";
 import { preloadXiaoyueImages } from "@/lib/preloadImages";
 import { AchievementProvider } from "@/contexts/AchievementContext";
 import { AchievementPopup } from "@/components/achievements";
+import { DynamicAccentProvider } from "@/contexts/DynamicAccentContext";
 import LoginPage from "@/pages/LoginPage";
 import RegistrationPage from "@/pages/RegistrationPage";
 // RegistrationMethodPage kept for internal reference only - not imported in user routes
@@ -235,15 +236,17 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AchievementProvider>
-          <LevelUpProvider>
-            <Toaster />
-            <AchievementPopup />
-            <Suspense fallback={<LoadingScreen />}>
-              <Router />
-            </Suspense>
-          </LevelUpProvider>
-        </AchievementProvider>
+        <DynamicAccentProvider enabled={true}>
+          <AchievementProvider>
+            <LevelUpProvider>
+              <Toaster />
+              <AchievementPopup />
+              <Suspense fallback={<LoadingScreen />}>
+                <Router />
+              </Suspense>
+            </LevelUpProvider>
+          </AchievementProvider>
+        </DynamicAccentProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
