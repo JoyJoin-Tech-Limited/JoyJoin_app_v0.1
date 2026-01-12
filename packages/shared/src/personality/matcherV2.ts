@@ -1595,24 +1595,26 @@ export function getStyleSpectrum(
   const xPosition = Math.round((userTraits.X || 50));
   const yPosition = Math.round((userTraits.O || 50));
 
-  // 构建相邻风格（排除主原型）
-  const adjacentStyles = orderedMatches.slice(1, 4).map((m, i) => {
-    // 确保使用百分比分数计算相似度
-    const similarity = Math.round(100 - Math.abs(top.score - m.score));
-    const blendLabels = [
-      "有时候也会像",
-      "某些场合下会变成",
-      "在特定情境中可能是"
-    ];
-    
-    return {
-      archetype: m.archetype,
-      score: m.score,
-      similarity: m.score,
-      blendLabel: blendLabels[i] || "有相似特质的",
-      emoji: ARCHETYPE_EMOJI[m.archetype] || "🎭"
-    };
-  });
+  // 构建相邻风格（排除主原型，只包含分数 >= 70% 的原型）
+  const ADJACENT_SCORE_THRESHOLD = 70;
+  const blendLabels = [
+    "有时候也会像",
+    "某些场合下会变成",
+    "在特定情境中可能是"
+  ];
+  
+  const adjacentStyles = orderedMatches
+    .slice(1, 4)
+    .filter(m => m.score >= ADJACENT_SCORE_THRESHOLD)
+    .map((m, i) => {
+      return {
+        archetype: m.archetype,
+        score: m.score,
+        similarity: m.score,
+        blendLabel: blendLabels[i] || "有相似特质的",
+        emoji: ARCHETYPE_EMOJI[m.archetype] || "🎭"
+      };
+    });
 
   return {
     primary: {

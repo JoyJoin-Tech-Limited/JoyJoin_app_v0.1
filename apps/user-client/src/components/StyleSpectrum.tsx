@@ -186,7 +186,7 @@ export default function StyleSpectrum({
     .sort((a, b) => b.score - a.score);
 
   const traitNarrative = traitScores 
-    ? generateTraitNarrative(primary.archetype, traitScores, adjacentStyles)
+    ? generateTraitNarrative(primary.archetype, traitScores, highScoreAdjacent)
     : null;
 
   const showOrbitalSection = highScoreAdjacent.length > 0;
@@ -261,14 +261,14 @@ export default function StyleSpectrum({
                 </motion.p>
               )}
               
-              {isDecisive && adjacentStyles.length > 0 && (
+              {isDecisive && highScoreAdjacent.length > 0 && (
                 <motion.p 
                   className="text-xs text-muted-foreground/70 mt-2 px-4"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.4 }}
                 >
-                  次要风格：{adjacentStyles.slice(0, 2).map(s => `${s.archetype}(${s.similarity}%)`).join("、")}
+                  次要风格：{highScoreAdjacent.slice(0, 2).map(s => `${s.archetype}(${Math.round(s.score)}%)`).join("、")}
                 </motion.p>
               )}
             </motion.div>
