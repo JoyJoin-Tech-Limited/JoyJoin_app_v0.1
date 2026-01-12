@@ -14,6 +14,7 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BirthDatePicker } from "@/components/BirthDatePicker";
 import { SmartIndustryInput } from "@/components/SmartIndustryInput";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
+import { haptics } from "@/lib/haptics";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -207,11 +208,16 @@ function TappableCard({
       className={cn(
         "w-full p-4 rounded-2xl border-2 text-left transition-all duration-200",
         selected 
-          ? "border-primary bg-primary/10 shadow-md" 
+          ? "border-primary bg-primary/10 shadow-md shadow-primary/10" 
           : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary/50",
         className
       )}
-      whileTap={{ scale: 0.98 }}
+      whileTap={{ scale: 0.97 }}
+      animate={selected ? { 
+        scale: [1, 1.02, 1],
+        transition: { duration: 0.2 },
+      } : { scale: 1 }}
+      layout
       data-testid={`card-option`}
     >
       {children}
@@ -318,9 +324,7 @@ export default function EssentialDataPage() {
     if (!canProceed()) return;
 
     // Haptic feedback
-    if (navigator.vibrate) {
-      navigator.vibrate(50);
-    }
+    haptics.medium();
 
     if (currentStep < TOTAL_STEPS - 1) {
       setCurrentStep(prev => prev + 1);

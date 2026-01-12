@@ -221,6 +221,7 @@ export default function PersonalityTestPageV4() {
   const [selectedOption, setSelectedOption] = useState<string | undefined>();
   const [showMilestone, setShowMilestone] = useState(false);
   const [showBlindBox, setShowBlindBox] = useState(false);
+  const [direction, setDirection] = useState<"forward" | "backward">("forward");
   
   const {
     sessionId,
@@ -306,6 +307,7 @@ export default function PersonalityTestPageV4() {
   const handleSubmitAnswer = useCallback(async () => {
     if (!currentQuestion || !selectedOption) return;
     
+    setDirection("forward");
     const selectedOpt = currentQuestion.options.find(o => o.value === selectedOption);
     await submitAnswer(currentQuestion.id, selectedOption, selectedOpt?.traitScores || {});
     setSelectedOption(undefined);
@@ -445,13 +447,13 @@ export default function PersonalityTestPageV4() {
         </Button>
       </div>
 
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={currentQuestion.id}
-          initial={{ opacity: 0, x: 20 }}
+          initial={{ opacity: 0, x: direction === "forward" ? 60 : -60 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.3 }}
+          exit={{ opacity: 0, x: direction === "forward" ? -60 : 60 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
           className="flex-1 flex flex-col px-4 py-2 overflow-hidden"
         >
           <div className="shrink-0 mb-3">

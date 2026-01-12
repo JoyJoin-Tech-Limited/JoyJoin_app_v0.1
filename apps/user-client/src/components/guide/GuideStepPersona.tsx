@@ -53,13 +53,31 @@ export function GuideStepPersona({
       initial="hidden"
       animate="visible"
     >
-      {/* 原型徽章 */}
+      {/* 原型徽章 with glow effect */}
       <motion.div
         variants={badgeVariants}
-        className="w-32 h-32 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mb-6 shadow-lg"
+        className="relative w-32 h-32 rounded-full flex items-center justify-center mb-6"
       >
-        <div className="w-28 h-28 rounded-full bg-background flex items-center justify-center">
-          <User className="w-16 h-16 text-purple-600" />
+        {/* Outer glow ring */}
+        {!reducedMotion && (
+          <motion.div
+            className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-500/30 to-pink-500/30 blur-xl"
+            animate={{ 
+              scale: [1, 1.1, 1],
+              opacity: [0.5, 0.8, 0.5],
+            }}
+            transition={{ 
+              duration: 3, 
+              repeat: Infinity, 
+              ease: "easeInOut",
+            }}
+          />
+        )}
+        {/* Main badge */}
+        <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/25">
+          <div className="w-28 h-28 rounded-full bg-background flex items-center justify-center">
+            <User className="w-16 h-16 text-purple-600" />
+          </div>
         </div>
       </motion.div>
       
