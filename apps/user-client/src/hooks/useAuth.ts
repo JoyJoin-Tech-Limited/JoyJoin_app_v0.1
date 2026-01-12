@@ -1,8 +1,30 @@
 import { useQuery } from "@tanstack/react-query";
 import type { User } from "@shared/schema";
 
+/**
+ * Navigation step constants for server-driven onboarding flow (B1)
+ * Used by both server and client to ensure consistency
+ */
+export const NextStep = {
+  ONBOARDING: 'onboarding',
+  PERSONALITY_TEST: 'personality-test',
+  ESSENTIAL_DATA: 'essential-data',
+  GUIDE: 'guide',
+  DISCOVER: 'discover',
+} as const;
+
+export type NextStepType = typeof NextStep[keyof typeof NextStep];
+
+// Extended user type with server-driven navigation helpers (B1)
+export interface AuthUser extends User {
+  nextStep?: NextStepType;
+  profileEssentialComplete?: boolean;
+  profileExtendedComplete?: boolean;
+  activeAssessmentSessionId?: string | null;
+}
+
 export function useAuth() {
-  const { data: user, isLoading, isError } = useQuery<User>({
+  const { data: user, isLoading, isError } = useQuery<AuthUser>({
     queryKey: ["/api/auth/user"],
     retry: false,
     staleTime: Infinity,
@@ -16,8 +38,14 @@ export function useAuth() {
     user: isError ? undefined : user,
     isLoading: actualIsLoading,
     isAuthenticated,
+    // Legacy computed fields (prefer server-driven nextStep)
     needsRegistration: user && !user.hasCompletedRegistration,
     needsPersonalityTest: user && user.hasCompletedRegistration && !user.hasCompletedPersonalityTest,
     needsProfileSetup: user && user.hasCompletedRegistration && user.hasCompletedPersonalityTest && (!user.displayName || !user.gender || !user.currentCity),
+    // Server-driven navigation (B1)
+    nextStep: user?.nextStep,
+    profileEssentialComplete: user?.profileEssentialComplete,
+    profileExtendedComplete: user?.profileExtendedComplete,
+    activeAssessmentSessionId: user?.activeAssessmentSessionId,
   };
 }

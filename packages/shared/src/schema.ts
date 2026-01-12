@@ -113,6 +113,7 @@ export const users = pgTable("users", {
   hasCompletedRegistration: boolean("has_completed_registration").default(false),
   hasCompletedInterestsTopics: boolean("has_completed_interests_topics").default(false),
   hasCompletedPersonalityTest: boolean("has_completed_personality_test").default(false),
+  hasSeenGuide: boolean("has_seen_guide").default(false), // Guide page viewed, persisted server-side
   
   // Interests & Topics (Step 2)
   interestsTop: text("interests_top").array(), // 3-7 selected interests

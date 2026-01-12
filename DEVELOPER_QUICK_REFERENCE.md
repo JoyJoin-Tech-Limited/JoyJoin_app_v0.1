@@ -340,6 +340,9 @@ const DISAMBIGUATION_RULES = [
 
 ## V4 Adaptive Personality Assessment
 
+> **Note**: V4 is the current and only supported personality assessment flow for user-client.
+> V2 has been deprecated and removed from user-client. Admin-client retains V2 for legacy purposes only.
+
 ### Overview
 
 The V4 assessment dynamically selects 8-16 questions based on real-time confidence levels.
