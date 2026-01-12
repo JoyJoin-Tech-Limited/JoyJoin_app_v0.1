@@ -5,6 +5,7 @@ import PersonalityRadarChart from "@/components/PersonalityRadarChart";
 import QuizIntro from "@/components/QuizIntro";
 import EditFullProfileDialog from "@/components/EditFullProfileDialog";
 import GamificationCard from "@/components/GamificationCard";
+import { AchievementCollection } from "@/components/achievements";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,11 +15,12 @@ import { motion } from "framer-motion";
 import { getInsightCategoryConfig, INSIGHT_CONFIDENCE_THRESHOLD, INSIGHT_DISPLAY_LIMIT } from "@/lib/insightCategoryConfig";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAchievementTracker } from "@/hooks/useAchievementTracker";
 import { archetypeConfig } from "@/lib/archetypes";
 import { archetypeGradients, archetypeAvatars, archetypeEmojis } from "@/lib/archetypeAvatars";
 import { getArchetypeImage } from "@/lib/archetypeImages";
@@ -50,6 +52,8 @@ export default function ProfilePage() {
   const [socialDnaOpen, setSocialDnaOpen] = useState(true);
   const { toast } = useToast();
   
+  const { trackProfileViewed } = useAchievementTracker();
+  
   const { data: user, isLoading: userLoading } = useQuery<any>({ queryKey: ["/api/auth/user"] });
   const { data: personalityResults } = useQuery<any>({
     queryKey: ["/api/personality-test/results"],
@@ -64,6 +68,10 @@ export default function ProfilePage() {
     queryKey: ["/api/user/gamification"],
     enabled: !!user,
   });
+
+  useEffect(() => {
+    trackProfileViewed();
+  }, [trackProfileViewed]);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -359,6 +367,15 @@ export default function ProfilePage() {
 
         {/* Gamification Card - Level, XP, Coins, Streak */}
         <GamificationCard />
+
+        <Card className="border shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">成就</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <AchievementCollection />
+          </CardContent>
+        </Card>
 
         {/* Social DNA Section - Collapsible */}
         {hasCompletedQuiz && personalityResults && (

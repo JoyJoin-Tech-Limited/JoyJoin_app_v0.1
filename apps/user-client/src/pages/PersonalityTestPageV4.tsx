@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useAdaptiveAssessment, type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
+import { useAchievementTracker } from "@/hooks/useAchievementTracker";
 import CelebrationConfetti from "@/components/CelebrationConfetti";
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { StickyCTA, StickyCTAButton, StickyCTASecondaryButton } from "@/components/StickyCTA";
@@ -222,6 +223,8 @@ export default function PersonalityTestPageV4() {
   const [showMilestone, setShowMilestone] = useState(false);
   const [showBlindBox, setShowBlindBox] = useState(false);
   
+  const { trackTestStart, trackQuestionAnswered, trackTestComplete } = useAchievementTracker();
+  
   const {
     sessionId,
     currentQuestion,
@@ -274,6 +277,25 @@ export default function PersonalityTestPageV4() {
       startAssessment(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (!progress) return;
+    const estimate = Number.isFinite(estimatedRemaining) ? estimatedRemaining : 0;
+    const estimatedTotal = progress.answered + Math.max(estimate || 0, 0);
+    trackTestStart(estimatedTotal || progress.answered);
+  }, [progress, estimatedRemaining, trackTestStart]);
+
+  useEffect(() => {
+    if (answeredCount > 0) {
+      trackQuestionAnswered(answeredCount);
+    }
+  }, [answeredCount, trackQuestionAnswered]);
+
+  useEffect(() => {
+    if (isComplete) {
+      trackTestComplete();
+    }
+  }, [isComplete, trackTestComplete]);
 
   useEffect(() => {
     if (encouragement && answeredCount > 0 && answeredCount % 5 === 0) {
