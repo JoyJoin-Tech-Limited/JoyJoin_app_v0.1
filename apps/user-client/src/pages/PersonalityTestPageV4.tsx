@@ -15,6 +15,7 @@ import { StickyCTA, StickyCTAButton, StickyCTASecondaryButton } from "@/componen
 import { SelectionList } from "@/components/SelectionList";
 import { ArchetypeSlotMachine } from "@/components/slot-machine";
 import { useAchievementTracker } from "@/hooks/useAchievementTracker";
+import { ArchetypePreview } from "@/components/archetype-preview";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -391,23 +392,28 @@ export default function PersonalityTestPageV4() {
           animate={{ opacity: 1, scale: 1 }}
           className="text-center max-w-sm"
         >
-          <XiaoyueMascot 
-            mood="excited"
-            message={encouragement.message}
-          />
+          {/* Archetype Preview with layered images and confidence ring */}
+          {currentMatches.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mb-6"
+            >
+              <ArchetypePreview matches={currentMatches} size="lg" />
+            </motion.div>
+          )}
+          
+          <p className="text-lg font-medium">{encouragement.message}</p>
           
           {topArchetype && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="mt-6 p-4 bg-primary/10 rounded-xl"
+              className="mt-4 p-5 bg-primary/10 rounded-2xl"
             >
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Star className="w-5 h-5 text-primary" />
-                <span className="font-medium">当前最可能原型</span>
-              </div>
-              <p className="text-xl font-bold text-primary">{topArchetype}</p>
+              <p className="text-2xl font-bold text-primary">{topArchetype}</p>
               {currentMatches[0] && (
                 <p className="text-sm text-muted-foreground mt-1">
                   匹配度 {Math.round(currentMatches[0].confidence * 100)}%
