@@ -299,7 +299,15 @@ export default function PersonalityTestPageV4() {
   }, [isComplete, result, setLocation]);
 
   const handleSelectOption = useCallback((value: string | string[]) => {
-    setSelectedOption(Array.isArray(value) ? value[0] : value);
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        setSelectedOption(undefined);
+        return;
+      }
+      setSelectedOption(value[0]);
+      return;
+    }
+    setSelectedOption(value);
   }, []);
 
   const handleSubmitAnswer = useCallback(async () => {
@@ -438,13 +446,11 @@ export default function PersonalityTestPageV4() {
         showExtendedMessage={answeredCount >= 8 && estimatedRemaining >= 3}
       />
 
-      {answeredCount === 0 && (
-        <div className="px-4 pt-1 flex justify-end">
-          <Button variant="ghost" size="sm" className="px-1 text-primary" onClick={() => setLocation('/onboarding/setup')}>
-            编辑基础信息
-          </Button>
-        </div>
-      )}
+      <div className="px-4 pt-1 flex justify-end">
+        <Button variant="ghost" size="sm" className="px-1 text-primary" onClick={() => setLocation('/onboarding/setup')}>
+          编辑基础信息
+        </Button>
+      </div>
 
       <AnimatePresence mode="wait">
         <motion.div

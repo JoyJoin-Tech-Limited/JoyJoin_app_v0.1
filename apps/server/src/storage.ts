@@ -375,8 +375,8 @@ export class DatabaseStorage implements IStorage {
       .onConflictDoUpdate({
         target: preSignupData.temporarySessionId,
         set: {
-          metadata: data.metadata ?? sql`COALESCE(${preSignupData.metadata}, '{}'::jsonb)`,
-          answers: data.answers ?? preSignupData.answers,
+          metadata: data.metadata !== undefined ? data.metadata : preSignupData.metadata,
+          answers: data.answers !== undefined ? data.answers : preSignupData.answers,
           updatedAt: new Date(),
         },
       })

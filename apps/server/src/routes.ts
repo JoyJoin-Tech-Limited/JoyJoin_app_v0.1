@@ -109,7 +109,7 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, assessmentAnswers, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, type User } from "@shared/schema";
 import { db } from "./db";
 import { eq, or, and, desc, inArray, isNotNull, gt, sql } from "drizzle-orm";
 
@@ -612,16 +612,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: verification.message });
       }
 
+      if (!profileData?.displayName || !profileData?.gender || !profileData?.currentCity || !Array.isArray(profileData?.intent) || profileData.intent.length === 0) {
+        return res.status(400).json({ message: 'Missing required profile fields' });
+      }
+
       const cachedRecord = temporarySessionId ? await storage.getPreSignupData(temporarySessionId) : undefined;
       const incomingAnswers = Array.isArray(assessmentAnswers) ? assessmentAnswers : [];
       const mergedAnswers = [...incomingAnswers, ...(Array.isArray(cachedRecord?.answers) ? cachedRecord?.answers : [])];
       const dedupedAnswers = new Map<string, any>();
+
+      const getAnswerTimestamp = (answer: any): number | null => {
+        if (!answer) return null;
+        const timestampFields = [
+          "updatedAt",
+          "updated_at",
+          "timestamp",
+          "answeredAt",
+          "answered_at",
+          "createdAt",
+          "created_at",
+        ];
+        for (const field of timestampFields) {
+          const value = (answer as any)[field];
+          if (!value) continue;
+          const date = typeof value === "number" ? new Date(value) : new Date(String(value));
+          const time = date.getTime();
+          if (!Number.isNaN(time)) return time;
+        }
+        return null;
+      };
+
       for (const ans of mergedAnswers) {
         const key = (ans && (ans.questionId || ans.question_id || ans.id)) ? String(ans.questionId || ans.question_id || ans.id) : null;
-        if (key) {
+        if (!key) continue;
+
+        const existing = dedupedAnswers.get(key);
+        if (!existing) {
+          dedupedAnswers.set(key, ans);
+          continue;
+        }
+
+        const incomingTs = getAnswerTimestamp(ans);
+        const existingTs = getAnswerTimestamp(existing);
+        if (incomingTs === null && existingTs === null) {
+          continue;
+        }
+        if (existingTs === null || (incomingTs !== null && incomingTs > existingTs)) {
           dedupedAnswers.set(key, ans);
         }
       }
+
       const uniqueAnswers = Array.from(dedupedAnswers.values());
 
       let user: User | undefined;
@@ -657,8 +697,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           updates.relationshipStatus = profileData.relationshipStatus;
         }
 
-        await tx.update(users).set(updates).where(eq(users.id, user!.id));
-        user = { ...user!, ...updates };
+        const [updatedUser] = await tx.update(users).set(updates).where(eq(users.id, user!.id)).returning();
+        if (updatedUser) {
+          user = updatedUser;
+        }
 
         if (uniqueAnswers.length > 0) {
           const [session] = await tx.insert(assessmentSessions).values({
@@ -695,7 +737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: 'Failed to create user' });
       }
 
-      if (temporarySessionId && (metadata || cachedRecord?.answers)) {
+      if (temporarySessionId) {
         await storage.clearPreSignupData(temporarySessionId);
       }
 
