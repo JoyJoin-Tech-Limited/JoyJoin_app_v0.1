@@ -31,7 +31,7 @@ export default function ProfileSetupPage() {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const setupMutation = useMutation({
-    mutationFn: async (data: { displayName: string; birthdate?: string }) => {
+    mutationFn: async (data: { displayName: string; birthdate: string }) => {
       return await apiRequest("POST", "/api/profile/setup", data);
     },
     onSuccess: async () => {
