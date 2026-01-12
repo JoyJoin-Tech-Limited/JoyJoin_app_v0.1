@@ -3,14 +3,13 @@
  * Replaces the showBlindBox loading screen with an animated reveal
  */
 
-import { memo, useEffect, useState, useCallback } from "react";
+import { memo, useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PartyPopper, Sparkles } from "lucide-react";
 import { SlotReel } from "./SlotReel";
 import { SlotFrame } from "./SlotFrame";
 import { useSlotMachine } from "./useSlotMachine";
 import { getArchetypeInfo, getArchetypeColorHSL } from "./archetypeData";
-import { cn } from "@/lib/utils";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 interface ArchetypeSlotMachineProps {
@@ -47,11 +46,32 @@ function ArchetypeSlotMachineComponent({
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiParticles, setConfettiParticles] = useState<ConfettiParticle[]>([]);
   const [showResult, setShowResult] = useState(false);
+  
+  // Track timeouts for cleanup
+  const confettiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const completeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountedRef = useRef(true);
 
   const archetypeInfo = getArchetypeInfo(finalArchetype);
   const accentColor = getArchetypeColorHSL(finalArchetype);
 
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (confettiTimeoutRef.current) {
+        clearTimeout(confettiTimeoutRef.current);
+      }
+      if (completeTimeoutRef.current) {
+        clearTimeout(completeTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleLand = useCallback(() => {
+    if (!isMountedRef.current) return;
+    
     setShowResult(true);
     
     if (!prefersReducedMotion) {
@@ -70,15 +90,19 @@ function ArchetypeSlotMachineComponent({
       setShowConfetti(true);
 
       // Clean up confetti after animation
-      setTimeout(() => {
-        setShowConfetti(false);
-        setConfettiParticles([]);
+      confettiTimeoutRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          setShowConfetti(false);
+          setConfettiParticles([]);
+        }
       }, 2500);
     }
 
     // Navigate to results after delay
-    setTimeout(() => {
-      onComplete();
+    completeTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) {
+        onComplete();
+      }
     }, prefersReducedMotion ? 800 : 2000);
   }, [onComplete, prefersReducedMotion]);
 
@@ -98,6 +122,23 @@ function ArchetypeSlotMachineComponent({
 
   return (
     <div className="h-screen overflow-hidden bg-background flex flex-col items-center justify-center p-6 relative">
+      {/* Live region for screen readers to announce slot machine status and result */}
+      <div
+        aria-live="polite"
+        role="status"
+        className="sr-only"
+      >
+        {state !== "landed"
+          ? state === "spinning"
+            ? "正在旋转..."
+            : "即将揭晓..."
+          : showResult
+            ? `结果揭晓：你是${archetypeInfo.name}${
+                confidence ? `，匹配度 ${Math.round(confidence * 100)}%` : ""
+              }`
+            : ""}
+      </div>
+
       {/* Confetti overlay */}
       {showConfetti && !prefersReducedMotion && (
         <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">

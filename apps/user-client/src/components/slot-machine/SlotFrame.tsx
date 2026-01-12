@@ -22,23 +22,15 @@ function SlotFrameComponent({ state, children, accentColor }: SlotFrameProps) {
   const isActive = state === "spinning" || state === "slowing";
   const isLanded = state === "landed";
 
-  // Generate light positions around the frame
-  const lights = useMemo(() => {
-    return Array.from({ length: LIGHT_COUNT }, (_, i) => {
-      const angle = (i / LIGHT_COUNT) * 360;
-      const isTop = angle < 90 || angle > 270;
-      const isRight = angle > 0 && angle < 180;
-      
-      return {
+  // Generate light metadata (id and animation delay)
+  const lights = useMemo(
+    () =>
+      Array.from({ length: LIGHT_COUNT }, (_, i) => ({
         id: i,
-        angle,
         delay: i * 0.05,
-        position: isTop 
-          ? { top: 0, left: `${((angle + 90) % 180) / 180 * 100}%` }
-          : { bottom: 0, left: `${(180 - ((angle + 90) % 180)) / 180 * 100}%` },
-      };
-    });
-  }, []);
+      })),
+    [],
+  );
 
   return (
     <div className="relative">

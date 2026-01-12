@@ -24,7 +24,8 @@ export interface ArchetypeInfo {
   emoji: string;
 }
 
-export const ARCHETYPE_DATA: Record<string, ArchetypeInfo> = {
+/** Canonical archetype definitions */
+const CANONICAL_ARCHETYPES: Record<string, ArchetypeInfo> = {
   "开心柯基": {
     id: "corgi",
     name: "开心柯基",
@@ -35,13 +36,6 @@ export const ARCHETYPE_DATA: Record<string, ArchetypeInfo> = {
   "机智狐狸": {
     id: "fox",
     name: "机智狐狸",
-    image: foxImg,
-    color: [25, 95, 53], // orange
-    emoji: "🦊",
-  },
-  "机智狐": {
-    id: "fox",
-    name: "机智狐",
     image: foxImg,
     color: [25, 95, 53], // orange
     emoji: "🦊",
@@ -118,8 +112,25 @@ export const ARCHETYPE_DATA: Record<string, ArchetypeInfo> = {
   },
 };
 
+/** Archetype name aliases (maps shortened/variant names to canonical names) */
+const ARCHETYPE_ALIASES: Record<string, string> = {
+  "机智狐": "机智狐狸",
+};
+
+/** Combined archetype data with aliases resolved */
+export const ARCHETYPE_DATA: Record<string, ArchetypeInfo> = {
+  ...CANONICAL_ARCHETYPES,
+  // Add alias entries pointing to same info (with corrected name display)
+  ...Object.fromEntries(
+    Object.entries(ARCHETYPE_ALIASES).map(([alias, canonical]) => [
+      alias,
+      { ...CANONICAL_ARCHETYPES[canonical], name: alias },
+    ])
+  ),
+};
+
 /** List of all archetype names for slot machine cycling */
-export const ARCHETYPE_NAMES = Object.keys(ARCHETYPE_DATA);
+export const ARCHETYPE_NAMES = Object.keys(CANONICAL_ARCHETYPES);
 
 /** Get archetype info with fallback */
 export function getArchetypeInfo(name: string): ArchetypeInfo {
