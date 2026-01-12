@@ -30,7 +30,7 @@ interface ExtendedDataState {
   data: {
     intent: string[];
     interests: string[];
-    socialPreferences: string[];
+    socialFrequency: string[];
     interestGranularityTags?: string[];
   };
   timestamp: number;
@@ -45,6 +45,7 @@ const XIAOYUE_AVATARS: Record<XiaoyueMood, string> = {
 };
 
 const INTENT_OPTIONS = [
+  { value: "all", label: "都可以" },
   { value: "friends", label: "交新朋友" },
   { value: "networking", label: "拓展人脉" },
   { value: "discussion", label: "深度交流" },
@@ -68,11 +69,11 @@ const INTEREST_OPTIONS = [
   { value: "investment", label: "理财投资" },
 ];
 
-const SOCIAL_PREFERENCE_OPTIONS = [
-  { value: "small_group", label: "偏好小圈子 (3-5人)" },
-  { value: "medium_group", label: "喜欢中等规模 (6-10人)" },
-  { value: "large_group", label: "享受热闹派对 (10+人)" },
-  { value: "one_on_one", label: "更爱一对一深聊" },
+const SOCIAL_FREQUENCY_OPTIONS = [
+  { value: "weekly", label: "每周都想参加" },
+  { value: "biweekly", label: "每两周一次" },
+  { value: "monthly", label: "每月一次" },
+  { value: "flexible", label: "随缘参加" },
 ];
 
 const STEP_CONFIG = [
@@ -99,13 +100,13 @@ const STEP_CONFIG = [
     maxSelect: 5,
   },
   {
-    id: "socialPreferences",
-    title: "你喜欢怎样的社交场景？",
-    subtitle: "选择最舒适的社交方式",
-    mascotMessage: "最后一步啦！马上就可以开始探索了~",
+    id: "socialFrequency",
+    title: "你想多久参加一次聚会？",
+    subtitle: "我们会根据你的节奏推荐活动",
+    mascotMessage: "最后一步啦！按你的节奏来，马上开始探索~",
     mascotMood: "excited" as XiaoyueMood,
     type: "singleSelect" as const,
-    options: SOCIAL_PREFERENCE_OPTIONS,
+    options: SOCIAL_FREQUENCY_OPTIONS,
   },
 ];
 
@@ -222,7 +223,7 @@ export default function ExtendedDataPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [intent, setIntent] = useState<string[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
-  const [socialPreferences, setSocialPreferences] = useState<string[]>([]);
+  const [socialFrequency, setSocialFrequency] = useState<string[]>([]);
   const [microInterests, setMicroInterests] = useState<string[]>([]);
   const [showCelebration, setShowCelebration] = useState(false);
 
@@ -236,7 +237,7 @@ export default function ExtendedDataPage() {
           setCurrentStep(state.currentStep);
           setIntent(state.data.intent || []);
           setInterests(state.data.interests || []);
-          setSocialPreferences(state.data.socialPreferences || []);
+          setSocialFrequency(state.data.socialFrequency || []);
         }
       } catch {}
     }
@@ -246,11 +247,11 @@ export default function ExtendedDataPage() {
   const saveProgress = useCallback(() => {
     const state: ExtendedDataState = {
       currentStep,
-      data: { intent, interests, socialPreferences, interestGranularityTags: microInterests },
+      data: { intent, interests, socialFrequency, interestGranularityTags: microInterests },
       timestamp: Date.now(),
     };
     localStorage.setItem(EXTENDED_CACHE_KEY, JSON.stringify(state));
-  }, [currentStep, intent, interests, socialPreferences, microInterests]);
+  }, [currentStep, intent, interests, socialFrequency, microInterests]);
 
   useEffect(() => {
     saveProgress();
@@ -282,7 +283,7 @@ export default function ExtendedDataPage() {
     switch (currentStep) {
       case 0: return intent;
       case 1: return interests;
-      case 2: return socialPreferences;
+      case 2: return socialFrequency;
       default: return [];
     }
   };
@@ -291,7 +292,7 @@ export default function ExtendedDataPage() {
     switch (currentStep) {
       case 0: setIntent(value); break;
       case 1: setInterests(value); break;
-      case 2: setSocialPreferences(value); break;
+      case 2: setSocialFrequency(value); break;
     }
   };
 
@@ -302,6 +303,27 @@ export default function ExtendedDataPage() {
     if (config.type === "singleSelect") {
       setCurrentValue([value]);
       return;
+    }
+    
+    // Handle "all" as mutually exclusive for intent step
+    if (currentStep === 0) {
+      if (value === "all") {
+        // Selecting "all" clears other selections and sets only "all"
+        setCurrentValue(["all"]);
+        return;
+      } else {
+        // Selecting any other option removes "all" if present
+        const withoutAll = current.filter(v => v !== "all");
+        if (withoutAll.includes(value)) {
+          setCurrentValue(withoutAll.filter(v => v !== value));
+        } else {
+          const maxSelect = (config as any).maxSelect || 10;
+          if (withoutAll.length < maxSelect) {
+            setCurrentValue([...withoutAll, value]);
+          }
+        }
+        return;
+      }
     }
     
     if (current.includes(value)) {
@@ -337,7 +359,7 @@ export default function ExtendedDataPage() {
         const profileData = {
           intent,
           interests,
-          socialPreferences: socialPreferences[0],
+          socialFrequency: socialFrequency[0],
           interestGranularityTags: microInterests,
         };
         saveMutation.mutate(profileData);
