@@ -844,7 +844,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.session.userId;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
       const user = await storage.getUser(userId);
-      res.json(user);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      
+      // Server-driven navigation state (Scope B1)
+      // Essential profile fields: displayName, gender, currentCity, birthdate
+      const profileEssentialComplete = !!(
+        user.displayName &&
+        user.gender &&
+        user.currentCity
+      );
+      
+      // Extended profile fields: education, industry, hometown
+      const profileExtendedComplete = !!(
+        user.educationLevel &&
+        user.industry &&
+        user.hometownRegionCity
+      );
+      
+      // Get active assessment session if any
+      let activeAssessmentSessionId: string | null = null;
+      try {
+        const sessions = await db
+          .select({ id: assessmentSessions.id })
+          .from(assessmentSessions)
+          .where(
+            and(
+              eq(assessmentSessions.userId, userId),
+              eq(assessmentSessions.phase, 'in_progress')
+            )
+          )
+          .orderBy(desc(assessmentSessions.createdAt))
+          .limit(1);
+        if (sessions.length > 0) {
+          activeAssessmentSessionId = sessions[0].id;
+        }
+      } catch (e) {
+        // Ignore errors - session lookup is optional
+      }
+      
+      // Determine next step in onboarding flow
+      let nextStep: string;
+      if (!user.hasCompletedRegistration) {
+        nextStep = 'onboarding';
+      } else if (!user.hasCompletedPersonalityTest) {
+        nextStep = 'personality-test';
+      } else if (!profileEssentialComplete) {
+        nextStep = 'essential-data';
+      } else if (!user.hasSeenGuide) {
+        nextStep = 'guide';
+      } else {
+        nextStep = 'discover';
+      }
+      
+      res.json({
+        ...user,
+        // Server-driven navigation helpers
+        nextStep,
+        profileEssentialComplete,
+        profileExtendedComplete,
+        activeAssessmentSessionId,
+      });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -864,6 +923,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error during logout:", error);
       res.status(500).json({ message: "Failed to logout" });
+    }
+  });
+
+  // Mark guide as seen (B2: Guide persistence server-side)
+  app.post('/api/guide/mark-seen', isPhoneAuthenticated, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      
+      await db.update(users).set({ hasSeenGuide: true }).where(eq(users.id, userId));
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking guide as seen:", error);
+      res.status(500).json({ message: "Failed to mark guide as seen" });
     }
   });
 
