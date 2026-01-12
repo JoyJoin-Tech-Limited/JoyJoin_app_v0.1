@@ -9391,17 +9391,49 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
             const optionWords = o.label.toLowerCase().split(/[^a-zA-Z\u4e00-\u9fa5]+/).filter(Boolean);
             const overlap = optionWords.reduce((count, w) => count + (primaryWords.includes(w) ? 1 : 0), 0);
             return { option: o, overlap, index };
+      const primaryConfidence = match?.confidence ?? 0.68;
+      const primary = {
+        value: primaryOption.value,
+        label: primaryOption.label,
+        confidence: primaryConfidence,
+      };
+
+      // Derive alternatives based on similarity to the primary label and confidence.
+      // If confidence is low, do not return arbitrary alternatives.
+      let alternatives: { value: string; label: string; confidence: number }[] = [];
+
+      if (primary.label && primaryConfidence >= 0.7) {
+        const primaryWords = primary.label
+          .toLowerCase()
+          .split(/[\s\/,&()-]+/)
+          .filter(Boolean);
+
+        const scoredOptions = INDUSTRY_OPTIONS_MAP
+          .filter((o) => o.value !== primary.value)
+          .map((o, index) => {
+            const optionWords = o.label
+              .toLowerCase()
+              .split(/[\s\/,&()-]+/)
+              .filter(Boolean);
+            const overlap = optionWords.reduce((count, w) => {
+              return count + (primaryWords.includes(w) ? 1 : 0);
+            }, 0);
+            return { option: o, overlap, index };
           })
           .filter(({ overlap }) => overlap > 0)
-          .sort((a, b) => (b.overlap !== a.overlap ? b.overlap - a.overlap : a.index - b.index));
+          .sort((a, b) => {
+            if (b.overlap !== a.overlap) return b.overlap - a.overlap;
+            return a.index - b.index;
+          });
 
-        alternatives = scoredOptions.slice(0, 3).map(({ option }) => ({
-          value: option.value,
-          label: option.label,
-          confidence: Math.max(0, primaryConfidence - 0.05),
-        }));
+        alternatives = scoredOptions
+          .slice(0, 3)
+          .map(({ option }) => ({
+            value: option.value,
+            label: option.label,
+            confidence: Math.max(0, primaryConfidence - 0.05),
+          }));
       }
-
       res.json({ primary, alternatives });
     } catch (error: any) {
       console.error("parse-industry error", error);
