@@ -217,7 +217,6 @@ function TappableCard({
         scale: [1, 1.02, 1],
         transition: { duration: 0.2 },
       } : { scale: 1 }}
-      layout
       data-testid={`card-option`}
     >
       {children}

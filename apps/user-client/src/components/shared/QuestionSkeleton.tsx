@@ -18,16 +18,22 @@ export function QuestionSkeleton() {
   };
 
   return (
-    <div className="flex-1 flex flex-col px-4 py-3">
+    <div 
+      className="flex-1 flex flex-col px-4 py-3"
+      aria-busy="true"
+      aria-label="Loading question"
+      role="status"
+    >
       {/* Scenario skeleton */}
       <motion.div
         className="h-24 bg-muted/50 rounded-2xl mb-4"
         animate={shimmerAnimation}
         transition={shimmerTransition}
+        aria-hidden="true"
       />
 
       {/* Mascot skeleton */}
-      <div className="flex items-start gap-3 mb-6">
+      <div className="flex items-start gap-3 mb-6" aria-hidden="true">
         <motion.div
           className="w-16 h-16 rounded-full bg-muted/50"
           animate={shimmerAnimation}
@@ -41,7 +47,7 @@ export function QuestionSkeleton() {
       </div>
 
       {/* Options skeleton */}
-      <div className="space-y-3">
+      <div className="space-y-3" aria-hidden="true">
         {[0, 1, 2, 3].map((i) => (
           <motion.div
             key={i}
@@ -51,6 +57,9 @@ export function QuestionSkeleton() {
           />
         ))}
       </div>
+      
+      {/* Screen reader only loading text */}
+      <span className="sr-only">Loading question content, please wait...</span>
     </div>
   );
 }
