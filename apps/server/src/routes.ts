@@ -110,7 +110,7 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, type User } from "@shared/schema";
 import { db } from "./db";
 import { eq, or, and, desc, inArray, isNotNull, gt, sql } from "drizzle-orm";
 
@@ -565,6 +565,192 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error during phone login:", error);
       res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  // Cache pre-signup answers by temporary session
+  app.post('/api/auth/presignup-cache', async (req: any, res) => {
+    try {
+      const { sessionId, answers, metadata } = req.body;
+      if (!sessionId) {
+        return res.status(400).json({ message: 'sessionId is required' });
+      }
+      const record = await storage.savePreSignupData(sessionId, { answers, metadata });
+      res.json({ sessionId: record.temporarySessionId, answers: record.answers || [], metadata: record.metadata || null });
+    } catch (error: any) {
+      console.error('[Presignup Cache] Error:', error);
+      res.status(500).json({ message: 'Failed to cache answers' });
+    }
+  });
+
+  app.get('/api/auth/presignup-cache/:sessionId', async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      const record = await storage.getPreSignupData(sessionId);
+      if (!record) {
+        return res.status(404).json({ message: 'No data found' });
+      }
+      res.json({ sessionId: record.temporarySessionId, answers: record.answers || [], metadata: record.metadata || null });
+    } catch (error: any) {
+      console.error('[Presignup Cache] Error:', error);
+      res.status(500).json({ message: 'Failed to fetch cached answers' });
+    }
+  });
+
+  // Unified onboarding - auth + profile + answers in one transaction
+  app.post('/api/auth/unified-onboarding', async (req: any, res) => {
+    try {
+      const { authData, profileData, assessmentAnswers, temporarySessionId, metadata } = req.body;
+      const phoneNumber = authData?.phoneNumber || authData?.phone;
+      const code = authData?.code;
+
+      if (!phoneNumber || !code) {
+        return res.status(400).json({ message: 'Phone number and code are required' });
+      }
+
+      const verification = validateVerificationCode(phoneNumber, code);
+      if (!verification.ok) {
+        return res.status(400).json({ message: verification.message });
+      }
+
+      if (!profileData?.displayName || !profileData?.gender || !profileData?.currentCity || !Array.isArray(profileData?.intent) || profileData.intent.length === 0) {
+        return res.status(400).json({ message: 'Missing required profile fields' });
+      }
+
+      const cachedRecord = temporarySessionId ? await storage.getPreSignupData(temporarySessionId) : undefined;
+      const incomingAnswers = Array.isArray(assessmentAnswers) ? assessmentAnswers : [];
+      const mergedAnswers = [...incomingAnswers, ...(Array.isArray(cachedRecord?.answers) ? cachedRecord?.answers : [])];
+      const dedupedAnswers = new Map<string, any>();
+
+      const getAnswerTimestamp = (answer: any): number | null => {
+        if (!answer) return null;
+        const timestampFields = [
+          "updatedAt",
+          "updated_at",
+          "timestamp",
+          "answeredAt",
+          "answered_at",
+          "createdAt",
+          "created_at",
+        ];
+        for (const field of timestampFields) {
+          const value = (answer as any)[field];
+          if (!value) continue;
+          const date = typeof value === "number" ? new Date(value) : new Date(String(value));
+          const time = date.getTime();
+          if (!Number.isNaN(time)) return time;
+        }
+        return null;
+      };
+
+      for (const ans of mergedAnswers) {
+        const key = (ans && (ans.questionId || ans.question_id || ans.id)) ? String(ans.questionId || ans.question_id || ans.id) : null;
+        if (!key) continue;
+
+        const existing = dedupedAnswers.get(key);
+        if (!existing) {
+          dedupedAnswers.set(key, ans);
+          continue;
+        }
+
+        const incomingTs = getAnswerTimestamp(ans);
+        const existingTs = getAnswerTimestamp(existing);
+        if (incomingTs === null && existingTs === null) {
+          continue;
+        }
+        if (existingTs === null || (incomingTs !== null && incomingTs > existingTs)) {
+          dedupedAnswers.set(key, ans);
+        }
+      }
+
+      const uniqueAnswers = Array.from(dedupedAnswers.values());
+
+      let user: User | undefined;
+      let assessmentSessionId: string | null = null;
+
+      await db.transaction(async (tx: any) => {
+        const existing = await tx.select().from(users).where(eq(users.phoneNumber, phoneNumber));
+        if (existing.length > 0) {
+          user = existing[0];
+        } else {
+          const [created] = await tx.insert(users).values({
+            phoneNumber,
+            email: `${phoneNumber}@joyjoin.app`,
+            firstName: '用户',
+            lastName: phoneNumber.slice(-4),
+          }).returning();
+          user = created;
+        }
+
+        const updates: Partial<User> = {
+          displayName: profileData?.displayName,
+          gender: profileData?.gender,
+          currentCity: profileData?.currentCity,
+          intent: profileData?.intent,
+          hasCompletedRegistration: true,
+          hasCompletedInterestsTopics: true,
+          hasCompletedProfileSetup: true,
+        };
+        if (profileData?.birthYear) {
+          updates.birthdate = `${profileData.birthYear}-01-01`;
+        }
+        if (profileData?.relationshipStatus) {
+          updates.relationshipStatus = profileData.relationshipStatus;
+        }
+
+        const [updatedUser] = await tx.update(users).set(updates).where(eq(users.id, user!.id)).returning();
+        if (updatedUser) {
+          user = updatedUser;
+        }
+
+        if (uniqueAnswers.length > 0) {
+          const [session] = await tx.insert(assessmentSessions).values({
+            userId: user!.id,
+            phase: 'post_signup',
+            preSignupData: uniqueAnswers,
+            currentQuestionIndex: uniqueAnswers.length,
+          }).returning();
+          assessmentSessionId = session?.id || null;
+
+          for (const ans of uniqueAnswers) {
+            if (!assessmentSessionId) break;
+            const questionId = String(ans.questionId || ans.question_id || ans.id);
+            const selectedOption = ans.selectedOption || ans.value || ans.answer || ans.selected_option;
+            await tx.insert(assessmentAnswers).values({
+              sessionId: assessmentSessionId,
+              questionId,
+              questionLevel: (ans.questionLevel || ans.question_level || 1),
+              selectedOption,
+              traitScores: ans.traitScores || ans.trait_scores || {},
+            }).onConflictDoUpdate({
+              target: [assessmentAnswers.sessionId, assessmentAnswers.questionId],
+              set: {
+                selectedOption,
+                traitScores: ans.traitScores || ans.trait_scores || {},
+                answeredAt: new Date(),
+              },
+            });
+          }
+        }
+      });
+
+      if (!user) {
+        return res.status(500).json({ message: 'Failed to create user' });
+      }
+
+      if (temporarySessionId) {
+        await storage.clearPreSignupData(temporarySessionId);
+      }
+
+      req.session.userId = user.id;
+      await new Promise((resolve, reject) => {
+        req.session.save((err: any) => err ? reject(err) : resolve(null));
+      });
+
+      res.json({ message: 'Onboarding completed', user, assessmentSessionId });
+    } catch (error: any) {
+      console.error('[Unified Onboarding] Error:', error);
+      res.status(500).json({ message: 'Failed to complete onboarding' });
     }
   });
 
