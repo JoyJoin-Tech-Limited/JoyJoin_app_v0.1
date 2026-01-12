@@ -264,11 +264,15 @@ function MobileActionBar({
 }) {
   return (
     <div className={cn(
-      "sticky bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] transition-all duration-300",
+      "relative sticky bottom-0 left-0 right-0 z-40 transition-all duration-300",
       className
     )}>
-      <div className="max-w-md mx-auto w-full">
-        {children}
+      {/* Gradient fade overlay above the action bar */}
+      <div className="pointer-events-none absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent" />
+      <div className="bg-background/95 backdrop-blur-sm border-t p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <div className="max-w-md mx-auto w-full">
+          {children}
+        </div>
       </div>
     </div>
   );
