@@ -1,3 +1,11 @@
+/**
+ * @deprecated ADMIN LEGACY - V2 Personality Test Page
+ * 
+ * This V2 personality test is preserved only for admin-client backwards compatibility.
+ * The user-client has migrated to V4 (PersonalityTestPageV4).
+ * 
+ * TODO: Migrate admin-client to V4 or remove this page if admins don't need to take personality tests.
+ */
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";

@@ -106,11 +106,20 @@ const {
 
 ## 状态管理
 
-### 本地缓存
+### 本地缓存 (V4 Only)
 
+**性格测试 V4 缓存键**:
+- `joyjoin_v4_presignup_answers`: 注册前氛围测试答案
+- `joyjoin_v4_assessment_session`: 当前测评会话 ID
+- `joyjoin_synced_session_id`: 已同步到服务器的会话 ID
+- `joyjoin_synced_answer_count`: 已同步的答案数量
+
+**其他缓存键**:
 - `joyjoin_essential_data_progress`: 必填资料进度
 - `joyjoin_extended_data_progress`: 选填资料进度
 - `joyjoin_guide_seen`: 引导页已查看标志
+
+> **注意**: V2 测试已废弃。旧版缓存键 (`joyjoin_personality_test_progress`, `joyjoin_onboarding_answers`) 不再使用。
 
 ### 服务端同步
 

@@ -30,11 +30,11 @@ npm run dev              # Start on http://localhost:5000
 | `server/routes.ts` | All API endpoints | 3,400+ |
 | `shared/schema.ts` | Database schema | 3,000+ |
 | `server/userMatchingService.ts` | Matching algorithm | 500+ |
-| `client/src/pages/PersonalityTestPage.tsx` | 10-question test | 530 |
-| `client/src/pages/admin/AdminDataInsightsPage.tsx` | Analytics dashboard | 800+ |
+| `apps/user-client/src/pages/PersonalityTestPageV4.tsx` | V4 adaptive test | 500+ |
+| `apps/admin-client/src/pages/admin/AdminDataInsightsPage.tsx` | Analytics dashboard | 800+ |
 | `server/paymentService.ts` | WeChat Pay integration | 300 |
 | `server/wsService.ts` | WebSocket real-time sync | 250 |
-| `client/src/lib/archetypes.ts` | 14 archetype configs | 143 |
+| `apps/user-client/src/lib/archetypes.ts` | 12 archetype configs | 200+ |
 | `replit.md` | Project architecture | - |
 | `PRODUCT_REQUIREMENTS.md` | Full PRD | 2,000+ |
 
