@@ -65,6 +65,11 @@ export function useGuideFlow(options?: {
       // Invalidate user query to refresh hasSeenGuide
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
+    onError: (error) => {
+      // Log error but don't block UX - localStorage fallback is already set
+      console.error('[useGuideFlow] Failed to persist guide seen state to server:', error);
+      // Local storage was already set in markAsSeen, so guide won't show again
+    },
   });
   
   // Check if guide has been seen - prefer server state, fallback to local storage
