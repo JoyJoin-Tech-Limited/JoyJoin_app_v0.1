@@ -13,6 +13,7 @@ import CelebrationConfetti from "@/components/CelebrationConfetti";
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { StickyCTA, StickyCTAButton, StickyCTASecondaryButton } from "@/components/StickyCTA";
 import { SelectionList } from "@/components/SelectionList";
+import { ArchetypeSlotMachine } from "@/components/slot-machine";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -344,23 +345,13 @@ export default function PersonalityTestPageV4() {
     );
   }
 
-  if (showBlindBox) {
+  if (showBlindBox && result) {
     return (
-      <div className="h-screen overflow-hidden bg-background flex flex-col items-center justify-center p-6 relative">
-        <CelebrationConfetti show={true} />
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", duration: 0.6 }}
-          className="text-center"
-        >
-          <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-primary/20 to-primary/40 rounded-3xl flex items-center justify-center">
-            <Gift className="w-16 h-16 text-primary" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2">测评完成！</h2>
-          <p className="text-muted-foreground">正在分析你的社交原型...</p>
-        </motion.div>
-      </div>
+      <ArchetypeSlotMachine
+        finalArchetype={result.primaryArchetype || topArchetype || "开心柯基"}
+        confidence={currentMatches[0]?.confidence}
+        onComplete={() => setLocation('/personality-test/results')}
+      />
     );
   }
 
