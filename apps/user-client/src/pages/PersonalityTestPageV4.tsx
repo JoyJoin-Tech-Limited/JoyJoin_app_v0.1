@@ -4,15 +4,18 @@ import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Sparkles, Loader2, Gift, Star, PartyPopper, RefreshCw } from "lucide-react";
+import { ChevronLeft, Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useAdaptiveAssessment, type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
-import CelebrationConfetti from "@/components/CelebrationConfetti";
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { StickyCTA, StickyCTAButton, StickyCTASecondaryButton } from "@/components/StickyCTA";
 import { SelectionList } from "@/components/SelectionList";
+import { ArchetypeSlotMachine } from "@/components/slot-machine";
+import { useAchievementTracker } from "@/hooks/useAchievementTracker";
+import { ArchetypePreview } from "@/components/archetype-preview";
+import { useDynamicAccent } from "@/contexts/DynamicAccentContext";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -76,7 +79,7 @@ function OnboardingProgress({
         <div className="flex-1">
           <Progress 
             value={progress} 
-            className="h-2 transition-all duration-500" 
+            className="h-2 transition-all duration-500 progress-accent-dynamic accent-transition-target" 
           />
           <div className="flex flex-col mt-1.5 gap-0.5">
             <div className="flex justify-between items-center">
@@ -222,6 +225,9 @@ export default function PersonalityTestPageV4() {
   const [showMilestone, setShowMilestone] = useState(false);
   const [showBlindBox, setShowBlindBox] = useState(false);
   
+  const { trackQuestionStart, trackAnswer, trackCompletion, trackSkip } = useAchievementTracker();
+  const { setArchetype: setDynamicAccent, reset: resetDynamicAccent } = useDynamicAccent();
+  
   const {
     sessionId,
     currentQuestion,
@@ -281,10 +287,34 @@ export default function PersonalityTestPageV4() {
     }
   }, [encouragement, answeredCount]);
 
+  // Track question start time for quick_thinker achievement
+  useEffect(() => {
+    if (currentQuestion?.id) {
+      trackQuestionStart();
+    }
+  }, [currentQuestion?.id, trackQuestionStart]);
+
+  // Update dynamic accent color based on top archetype
+  useEffect(() => {
+    if (topArchetype && currentMatches[0]) {
+      setDynamicAccent(topArchetype, currentMatches[0].confidence);
+    }
+  }, [topArchetype, currentMatches, setDynamicAccent]);
+
+  // Reset dynamic accent on unmount
+  useEffect(() => {
+    return () => resetDynamicAccent();
+  }, [resetDynamicAccent]);
+
   useEffect(() => {
     if (isComplete && result) {
       clearV4PreSignupAnswers();
       setShowBlindBox(true);
+      // Track completion achievements
+      trackCompletion({
+        answeredCount,
+        minQuestions: progress?.minQuestions || 8,
+      });
       // Invalidate multiple query keys to ensure result page AND profile page are fresh
       queryClient.invalidateQueries({ queryKey: ['/api/assessment/result'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/results'] });
@@ -308,8 +338,17 @@ export default function PersonalityTestPageV4() {
     
     const selectedOpt = currentQuestion.options.find(o => o.value === selectedOption);
     await submitAnswer(currentQuestion.id, selectedOption, selectedOpt?.traitScores || {});
+    
+    // Track achievement after submitting
+    trackAnswer({
+      answeredCount: answeredCount + 1,
+      totalEstimate: answeredCount + estimatedRemaining,
+      topConfidence: currentMatches[0]?.confidence || 0,
+      traitScores: selectedOpt?.traitScores,
+    });
+    
     setSelectedOption(undefined);
-  }, [currentQuestion, selectedOption, submitAnswer]);
+  }, [currentQuestion, selectedOption, submitAnswer, trackAnswer, answeredCount, estimatedRemaining, currentMatches]);
 
   const handleMilestoneContinue = useCallback(() => {
     setShowMilestone(false);
@@ -321,11 +360,12 @@ export default function PersonalityTestPageV4() {
     const success = await skipQuestion(currentQuestion.id);
     if (success) {
       setSelectedOption(undefined);
+      trackSkip();
       toast({
         description: "已换一道题",
       });
     }
-  }, [currentQuestion, canSkip, skipQuestion, toast]);
+  }, [currentQuestion, canSkip, skipQuestion, toast, trackSkip]);
 
   useEffect(() => {
     if (isInitialized && isComplete) {
@@ -344,23 +384,13 @@ export default function PersonalityTestPageV4() {
     );
   }
 
-  if (showBlindBox) {
+  if (showBlindBox && result) {
     return (
-      <div className="h-screen overflow-hidden bg-background flex flex-col items-center justify-center p-6 relative">
-        <CelebrationConfetti show={true} />
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", duration: 0.6 }}
-          className="text-center"
-        >
-          <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-primary/20 to-primary/40 rounded-3xl flex items-center justify-center">
-            <Gift className="w-16 h-16 text-primary" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2">测评完成！</h2>
-          <p className="text-muted-foreground">正在分析你的社交原型...</p>
-        </motion.div>
-      </div>
+      <ArchetypeSlotMachine
+        finalArchetype={result.primaryArchetype || topArchetype || "开心柯基"}
+        confidence={currentMatches[0]?.confidence}
+        onComplete={() => setLocation('/personality-test/results')}
+      />
     );
   }
 
@@ -372,23 +402,28 @@ export default function PersonalityTestPageV4() {
           animate={{ opacity: 1, scale: 1 }}
           className="text-center max-w-sm"
         >
-          <XiaoyueMascot 
-            mood="excited"
-            message={encouragement.message}
-          />
+          {/* Archetype Preview with layered images and confidence ring */}
+          {currentMatches.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mb-6"
+            >
+              <ArchetypePreview matches={currentMatches} size="lg" />
+            </motion.div>
+          )}
+          
+          <p className="text-lg font-medium">{encouragement.message}</p>
           
           {topArchetype && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="mt-6 p-4 bg-primary/10 rounded-xl"
+              className="mt-4 p-5 bg-primary/10 rounded-2xl"
             >
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Star className="w-5 h-5 text-primary" />
-                <span className="font-medium">当前最可能原型</span>
-              </div>
-              <p className="text-xl font-bold text-primary">{topArchetype}</p>
+              <p className="text-2xl font-bold text-primary">{topArchetype}</p>
               {currentMatches[0] && (
                 <p className="text-sm text-muted-foreground mt-1">
                   匹配度 {Math.round(currentMatches[0].confidence * 100)}%
