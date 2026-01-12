@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { getOptionFeedback } from "@shared/personality/feedback";
 import { StickyCTA, StickyCTAButton, StickyCTASecondaryButton } from "@/components/StickyCTA";
 import { SelectionList } from "@/components/SelectionList";
 import { ArchetypeSlotMachine } from "@/components/slot-machine";
+import { useAchievementTracker } from "@/hooks/useAchievementTracker";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -222,6 +223,9 @@ export default function PersonalityTestPageV4() {
   const [selectedOption, setSelectedOption] = useState<string | undefined>();
   const [showMilestone, setShowMilestone] = useState(false);
   const [showBlindBox, setShowBlindBox] = useState(false);
+  const usedSkipRef = useRef(false);
+  
+  const { trackQuestionStart, trackAnswer, trackCompletion, trackSkip } = useAchievementTracker();
   
   const {
     sessionId,
@@ -282,10 +286,22 @@ export default function PersonalityTestPageV4() {
     }
   }, [encouragement, answeredCount]);
 
+  // Track question start time for quick_thinker achievement
+  useEffect(() => {
+    if (currentQuestion?.id) {
+      trackQuestionStart();
+    }
+  }, [currentQuestion?.id, trackQuestionStart]);
+
   useEffect(() => {
     if (isComplete && result) {
       clearV4PreSignupAnswers();
       setShowBlindBox(true);
+      // Track completion achievements
+      trackCompletion({
+        answeredCount,
+        minQuestions: progress?.minQuestions || 8,
+      });
       // Invalidate multiple query keys to ensure result page AND profile page are fresh
       queryClient.invalidateQueries({ queryKey: ['/api/assessment/result'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/results'] });
@@ -309,8 +325,18 @@ export default function PersonalityTestPageV4() {
     
     const selectedOpt = currentQuestion.options.find(o => o.value === selectedOption);
     await submitAnswer(currentQuestion.id, selectedOption, selectedOpt?.traitScores || {});
+    
+    // Track achievement after submitting
+    trackAnswer({
+      answeredCount: answeredCount + 1,
+      totalEstimate: answeredCount + estimatedRemaining,
+      topConfidence: currentMatches[0]?.confidence || 0,
+      usedSkip: usedSkipRef.current,
+      traitScores: selectedOpt?.traitScores,
+    });
+    
     setSelectedOption(undefined);
-  }, [currentQuestion, selectedOption, submitAnswer]);
+  }, [currentQuestion, selectedOption, submitAnswer, trackAnswer, answeredCount, estimatedRemaining, currentMatches]);
 
   const handleMilestoneContinue = useCallback(() => {
     setShowMilestone(false);
@@ -322,11 +348,13 @@ export default function PersonalityTestPageV4() {
     const success = await skipQuestion(currentQuestion.id);
     if (success) {
       setSelectedOption(undefined);
+      usedSkipRef.current = true;
+      trackSkip();
       toast({
         description: "已换一道题",
       });
     }
-  }, [currentQuestion, canSkip, skipQuestion, toast]);
+  }, [currentQuestion, canSkip, skipQuestion, toast, trackSkip]);
 
   useEffect(() => {
     if (isInitialized && isComplete) {
