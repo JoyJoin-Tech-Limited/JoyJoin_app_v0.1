@@ -142,7 +142,7 @@ export function GuideStepper({
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="w-full"
+            className="w-full will-change-[filter,transform,opacity]"
           >
             {currentStep === 0 && (
               <GuideStepPersona

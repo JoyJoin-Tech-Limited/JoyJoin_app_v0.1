@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { motion, useAnimation } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -52,6 +53,7 @@ const verticalSizeClasses = {
  * 
  * Displays the Xiaoyue mascot with a speech bubble.
  * Supports both horizontal and vertical layouts with consistent styling.
+ * Respects prefers-reduced-motion user preference.
  */
 export function XiaoyueMascot({
   mood = "normal",
@@ -62,14 +64,17 @@ export function XiaoyueMascot({
   bubbleStyle = "gradient",
 }: XiaoyueMascotProps) {
   const controls = useAnimation();
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
+    if (prefersReducedMotion) return;
+    
     controls.start({
       x: horizontal ? [0, -5, 5, -5, 5, 0] : [0],
       y: horizontal ? [0] : [0, -8, 0],
       transition: { duration: horizontal ? 0.4 : 0.5, ease: "easeOut" },
     });
-  }, [message, controls, horizontal]);
+  }, [message, controls, horizontal, prefersReducedMotion]);
 
   const bubbleClasses =
     bubbleStyle === "gradient"
@@ -80,10 +85,10 @@ export function XiaoyueMascot({
     return (
       <div className={cn("flex items-start gap-3", className)}>
         <motion.div
-          animate={{
+          animate={prefersReducedMotion ? {} : {
             scale: [1, 1.05, 1],
           }}
-          transition={{
+          transition={prefersReducedMotion ? {} : {
             scale: {
               duration: 3,
               repeat: Infinity,
@@ -103,9 +108,9 @@ export function XiaoyueMascot({
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, x: -10 }}
+          initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.9, x: -10 }}
           animate={{ opacity: 1, scale: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
+          transition={prefersReducedMotion ? {} : { duration: 0.3, delay: 0.1 }}
           className={cn(
             "relative rounded-2xl px-4 py-3 shadow-sm border flex-1",
             bubbleClasses
@@ -134,9 +139,9 @@ export function XiaoyueMascot({
       </motion.div>
 
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.2 }}
+        transition={prefersReducedMotion ? {} : { delay: 0.2 }}
         className={cn(
           "rounded-2xl px-4 py-3 max-w-[280px] shadow-sm border",
           bubbleClasses,
