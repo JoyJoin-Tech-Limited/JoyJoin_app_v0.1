@@ -43,8 +43,7 @@ export function SelectionList({
         onSelect([...currentSelected, value]);
       }
     } else {
-      // Cast to the expected return type
-      onSelect(value as any);
+      onSelect(value);
     }
   };
 
