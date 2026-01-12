@@ -56,16 +56,26 @@ export function GuideStepper({
   const containerVariants = prefersReducedMotion
     ? { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } }
     : {
-        hidden: { opacity: 0, x: 50 },
+        hidden: { 
+          opacity: 0, 
+          x: 50,
+          filter: "blur(4px)",
+        },
         visible: { 
           opacity: 1, 
           x: 0,
-          transition: { duration: 0.3, ease: "easeOut" }
+          filter: "blur(0px)",
+          transition: { 
+            duration: 0.4, 
+            ease: [0.25, 0.46, 0.45, 0.94],
+            filter: { duration: 0.3 },
+          },
         },
         exit: { 
           opacity: 0, 
           x: -50,
-          transition: { duration: 0.2 }
+          filter: "blur(4px)",
+          transition: { duration: 0.25 },
         },
       };
   
