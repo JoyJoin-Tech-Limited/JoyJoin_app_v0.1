@@ -5,6 +5,47 @@
 /* 品牌标题字体 - 使用站酷庆科黄油体 (ZCOOL QingKe HuangYou) */
 /* 圆润如黄油，温暖亲和，免费商用 (SIL OFL 1.1) */
 
+/* Dynamic accent color variables for personality-based theming */
+:root {
+  --accent-dynamic-h: 280;
+  --accent-dynamic-s: 45%;
+  --accent-dynamic-l: 55%;
+  --accent-dynamic: hsl(var(--accent-dynamic-h) var(--accent-dynamic-s) var(--accent-dynamic-l));
+}
+
+/* Transition class for smooth accent color changes */
+.accent-transitioning .accent-transition-target {
+  transition: background-color 0.4s ease-out, border-color 0.4s ease-out, color 0.4s ease-out;
+}
+
+/* Utility classes for dynamic accent */
+.bg-accent-dynamic {
+  background-color: hsl(var(--accent-dynamic-h) var(--accent-dynamic-s) var(--accent-dynamic-l));
+}
+
+.text-accent-dynamic {
+  color: hsl(var(--accent-dynamic-h) var(--accent-dynamic-s) var(--accent-dynamic-l));
+}
+
+.border-accent-dynamic {
+  border-color: hsl(var(--accent-dynamic-h) var(--accent-dynamic-s) var(--accent-dynamic-l));
+}
+
+.ring-accent-dynamic {
+  --tw-ring-color: hsl(var(--accent-dynamic-h) var(--accent-dynamic-s) var(--accent-dynamic-l));
+}
+
+/* Progress bar with dynamic accent */
+/* NOTE:
+ * This selector intentionally targets the inner "fill" element of our Progress component
+ * via a [data-progress] attribute. If the Progress implementation (e.g. shadcn/ui Progress
+ * or our wrapper around it) changes its internal DOM or stops using [data-progress],
+ * update this selector accordingly.
+ */
+.progress-accent-dynamic [data-progress] {
+  background-color: hsl(var(--accent-dynamic-h) var(--accent-dynamic-s) var(--accent-dynamic-l));
+}
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0,0,0, .10);
