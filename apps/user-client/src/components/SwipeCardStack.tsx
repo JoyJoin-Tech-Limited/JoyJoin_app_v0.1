@@ -19,8 +19,16 @@ interface SwipeCardStackProps {
   onXiaoyueMessageChange?: (message: string) => void;
 }
 
-const SWIPE_THRESHOLD = 100;
+const SWIPE_THRESHOLD_X = 120;
+const SWIPE_THRESHOLD_Y = 80;
 const SWIPE_VELOCITY_THRESHOLD = 500;
+const MIN_DISPLACEMENT_FOR_VELOCITY = 40; // guard tiny flicks
+const DIRECTION_DOMINANCE_THRESHOLD = 0.8; // require 80% bias toward a direction
+
+// Softer spring reset animation constants
+const RESET_SPRING_STIFFNESS = 380;
+const RESET_SPRING_DAMPING = 32;
+const RESET_SPRING_MASS = 0.9;
 
 interface CategoryTracker {
   likeCount: Record<MacroCategory, number>;
@@ -116,36 +124,68 @@ function SwipeCard({
 }) {
   const controls = useAnimation();
   const [dragDirection, setDragDirection] = useState<'left' | 'right' | 'up' | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   const handleDragEnd = useCallback(
     async (_: any, info: PanInfo) => {
+      if (isAnimating) return;
       const { offset, velocity } = info;
       const reactionTime = Date.now() - cardStartTime;
+      const absX = Math.abs(offset.x);
+      const absY = Math.abs(offset.y);
 
-      if (offset.y < -SWIPE_THRESHOLD || velocity.y < -SWIPE_VELOCITY_THRESHOLD) {
+      const hasMinimumDisplacement =
+        (absX > MIN_DISPLACEMENT_FOR_VELOCITY || absY > MIN_DISPLACEMENT_FOR_VELOCITY);
+
+      const dominantX = absX > absY * DIRECTION_DOMINANCE_THRESHOLD;
+      const dominantY = absY > absX * DIRECTION_DOMINANCE_THRESHOLD;
+
+      if (
+        dominantY &&
+        (offset.y < -SWIPE_THRESHOLD_Y || (hasMinimumDisplacement && velocity.y < -SWIPE_VELOCITY_THRESHOLD))
+      ) {
+        setIsAnimating(true);
         await controls.start({ y: -500, opacity: 0, scale: 0.8, transition: { duration: 0.3 } });
         onSwipe('love', reactionTime);
-      } else if (offset.x > SWIPE_THRESHOLD || velocity.x > SWIPE_VELOCITY_THRESHOLD) {
+      } else if (
+        dominantX &&
+        (offset.x > SWIPE_THRESHOLD_X || (hasMinimumDisplacement && velocity.x > SWIPE_VELOCITY_THRESHOLD))
+      ) {
+        setIsAnimating(true);
         await controls.start({ x: 500, opacity: 0, rotate: 20, transition: { duration: 0.3 } });
         onSwipe('like', reactionTime);
-      } else if (offset.x < -SWIPE_THRESHOLD || velocity.x < -SWIPE_VELOCITY_THRESHOLD) {
+      } else if (
+        dominantX &&
+        (offset.x < -SWIPE_THRESHOLD_X || (hasMinimumDisplacement && velocity.x < -SWIPE_VELOCITY_THRESHOLD))
+      ) {
+        setIsAnimating(true);
         await controls.start({ x: -500, opacity: 0, rotate: -20, transition: { duration: 0.3 } });
         onSwipe('skip', reactionTime);
       } else {
-        controls.start({ x: 0, y: 0, rotate: 0, transition: { type: "spring", stiffness: 500, damping: 30 } });
+        // softer reset
+        await controls.start({
+          x: 0,
+          y: 0,
+          rotate: 0,
+          transition: { type: "spring", stiffness: RESET_SPRING_STIFFNESS, damping: RESET_SPRING_DAMPING, mass: RESET_SPRING_MASS },
+        });
       }
       setDragDirection(null);
+      setIsAnimating(false);
     },
-    [controls, onSwipe, cardStartTime]
+    [controls, onSwipe, cardStartTime, isAnimating]
   );
 
   const handleDrag = useCallback((_: any, info: PanInfo) => {
     const { offset } = info;
-    if (offset.y < -50) {
+    const dominantX = Math.abs(offset.x) > Math.abs(offset.y) * DIRECTION_DOMINANCE_THRESHOLD;
+    const dominantY = Math.abs(offset.y) > Math.abs(offset.x) * DIRECTION_DOMINANCE_THRESHOLD;
+
+    if (dominantY && offset.y < -50) {
       setDragDirection('up');
-    } else if (offset.x > 50) {
+    } else if (dominantX && offset.x > 50) {
       setDragDirection('right');
-    } else if (offset.x < -50) {
+    } else if (dominantX && offset.x < -50) {
       setDragDirection('left');
     } else {
       setDragDirection(null);
@@ -158,10 +198,11 @@ function SwipeCard({
         "absolute inset-0 rounded-3xl overflow-hidden shadow-2xl cursor-grab active:cursor-grabbing",
         !isTop && "pointer-events-none"
       )}
-      style={{ touchAction: "none" }}
-      drag={isTop}
+      style={{ touchAction: "none", ...(isAnimating && { pointerEvents: "none" }) }}
+      drag={isTop && !isAnimating}
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-      dragElastic={0.9}
+      dragElastic={0.5}
+      dragMomentum={false}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
       animate={controls}
