@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, ArrowUp } from "lucide-react";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -8,12 +8,15 @@ const STORAGE_KEY = "joyjoin_swipe_guidance_seen";
 export function SwipeGuidanceOverlay() {
   const prefersReducedMotion = useReducedMotion();
   const [visible, setVisible] = useState(false);
+  const [hasDismissed, setHasDismissed] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const seen = localStorage.getItem(STORAGE_KEY);
     if (!seen) {
       setVisible(true);
+    } else {
+      setHasDismissed(true);
     }
   }, []);
 
@@ -22,22 +25,34 @@ export function SwipeGuidanceOverlay() {
       localStorage.setItem(STORAGE_KEY, "1");
     }
     setVisible(false);
+    setHasDismissed(true);
   }, []);
 
   const gesturePulse = prefersReducedMotion
     ? { scale: 1, opacity: 1 }
     : { scale: [1, 1.08, 1], opacity: [0.9, 1, 0.9] };
 
+  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      handleDismiss();
+    }
+  }, [handleDismiss]);
+
   return (
     <>
       <AnimatePresence>
         {visible && (
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="滑动引导"
+            tabIndex={0}
             className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm text-white flex flex-col items-center justify-center px-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleDismiss}
+            onKeyDown={handleKeyDown}
           >
             <motion.div
               initial={{ opacity: 0, y: 12 }}
@@ -96,8 +111,8 @@ export function SwipeGuidanceOverlay() {
         )}
       </AnimatePresence>
 
-      {!visible && (
-        <div className="mb-3 flex items-center justify-center gap-4 text-xs text-muted-foreground">
+      {hasDismissed && !visible && (
+        <div className="mb-3 flex items-center justify-center gap-4 text-xs text-muted-foreground" aria-label="滑动手势提示">
           <span className="flex items-center gap-1"><ArrowLeft className="w-3 h-3" />跳过</span>
           <span className="flex items-center gap-1"><ArrowUp className="w-3 h-3" />超爱</span>
           <span className="flex items-center gap-1"><ArrowRight className="w-3 h-3" />喜欢</span>

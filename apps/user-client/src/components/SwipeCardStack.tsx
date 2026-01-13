@@ -134,6 +134,7 @@ function SwipeCard({
       if (dragRafRef.current) {
         cancelAnimationFrame(dragRafRef.current);
       }
+      lastOffsetRef.current = { x: 0, y: 0 };
     };
   }, []);
 
@@ -219,7 +220,7 @@ function SwipeCard({
       drag={isTop && !isAnimating}
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       dragElastic={0.7}
-      dragMomentum={true}
+      dragMomentum={false}
       dragTransition={{ bounceStiffness: 300, bounceDamping: 20 }}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
@@ -232,7 +233,7 @@ function SwipeCard({
           src={card.imageUrl}
           alt={card.label}
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ aspectRatio: '3/4', filter: 'brightness(0.85)' }}
+          style={{ filter: 'brightness(0.85)' }}
           loading="lazy"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
@@ -301,10 +302,23 @@ export function SwipeCardStack({
 
   useEffect(() => {
     const nextCard = cards[currentIndex + 1];
-    if (typeof window !== 'undefined' && nextCard?.imageUrl) {
-      const img = new Image();
-      img.src = nextCard.imageUrl;
+    if (typeof window === 'undefined' || !nextCard?.imageUrl) return;
+
+    try {
+      // Validate URL (relative allowed)
+      // eslint-disable-next-line no-new
+      new URL(nextCard.imageUrl, window.location.href);
+    } catch (error) {
+      console.warn('Skipping preload of invalid image URL:', nextCard.imageUrl, error);
+      return;
     }
+
+    const img = new Image();
+    img.onload = () => {};
+    img.onerror = (error) => {
+      console.error('Failed to preload image:', nextCard.imageUrl, error);
+    };
+    img.src = nextCard.imageUrl;
   }, [cards, currentIndex]);
 
   const handleSwipe = useCallback(
