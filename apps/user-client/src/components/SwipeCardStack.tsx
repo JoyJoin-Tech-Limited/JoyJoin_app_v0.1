@@ -23,6 +23,7 @@ const SWIPE_THRESHOLD_X = 120;
 const SWIPE_THRESHOLD_Y = 80;
 const SWIPE_VELOCITY_THRESHOLD = 500;
 const MIN_DISPLACEMENT_FOR_VELOCITY = 40; // guard tiny flicks
+const DIRECTION_DOMINANCE_THRESHOLD = 0.8; // require 80% bias toward a direction
 
 // Softer spring reset animation constants
 const RESET_SPRING_STIFFNESS = 380;
@@ -136,8 +137,8 @@ function SwipeCard({
       const hasMinimumDisplacement =
         (absX > MIN_DISPLACEMENT_FOR_VELOCITY || absY > MIN_DISPLACEMENT_FOR_VELOCITY);
 
-      const dominantX = absX > absY * 0.8;
-      const dominantY = absY > absX * 0.8;
+      const dominantX = absX > absY * DIRECTION_DOMINANCE_THRESHOLD;
+      const dominantY = absY > absX * DIRECTION_DOMINANCE_THRESHOLD;
 
       if (
         dominantY &&
@@ -177,8 +178,8 @@ function SwipeCard({
 
   const handleDrag = useCallback((_: any, info: PanInfo) => {
     const { offset } = info;
-    const dominantX = Math.abs(offset.x) > Math.abs(offset.y) * 0.8;
-    const dominantY = Math.abs(offset.y) > Math.abs(offset.x) * 0.8;
+    const dominantX = Math.abs(offset.x) > Math.abs(offset.y) * DIRECTION_DOMINANCE_THRESHOLD;
+    const dominantY = Math.abs(offset.y) > Math.abs(offset.x) * DIRECTION_DOMINANCE_THRESHOLD;
 
     if (dominantY && offset.y < -50) {
       setDragDirection('up');
