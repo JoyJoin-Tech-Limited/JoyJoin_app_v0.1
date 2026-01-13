@@ -25,9 +25,7 @@ import { getStyleSpectrum } from "@shared/personality/matcherV2";
 import { ArrowRight } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
-
-// Pokemon-style reveal animation phases
-type RevealPhase = 'countdown' | 'shake' | 'burst' | 'landing' | 'complete';
+import { ArchetypeSlotMachine } from "@/components/slot-machine";
 
 const staggerContainerVariants = {
   hidden: { opacity: 0 },
@@ -507,9 +505,7 @@ function MatchExplanationSection({ result }: { result: UnifiedAssessmentResult }
 export default function PersonalityTestResultPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [showReveal, setShowReveal] = useState(true);
-  const [revealPhase, setRevealPhase] = useState<RevealPhase>('countdown');
-  const [countdown, setCountdown] = useState(3);
+  const [showSlotMachine, setShowSlotMachine] = useState(true);
   const prefersReducedMotion = useReducedMotion();
 
   const containerVariants = useMemo(
@@ -540,7 +536,7 @@ export default function PersonalityTestResultPage() {
       X: result.extraversionScore / 100,
       P: result.positivityScore / 100,
     } : null,
-    enabled: !!result && !showReveal,
+    enabled: !!result && !showSlotMachine,
   });
 
   const styleSpectrum = useMemo(() => {
@@ -567,38 +563,17 @@ export default function PersonalityTestResultPage() {
     return result.chemistryList.filter(c => c.percentage >= 70);
   }, [result?.chemistryList]);
 
-  // Pokemon-style reveal animation timing
+  // Skip slot machine animation if user prefers reduced motion
   useEffect(() => {
-    if (!result || !showReveal) return;
-    
-    if (prefersReducedMotion) {
-      // Skip animation for reduced motion preference
-      setShowReveal(false);
-      setRevealPhase('complete');
-      return;
+    if (prefersReducedMotion && showSlotMachine) {
+      setShowSlotMachine(false);
     }
+  }, [prefersReducedMotion, showSlotMachine]);
 
-    const timers: NodeJS.Timeout[] = [];
-
-    if (revealPhase === 'countdown') {
-      if (countdown > 0) {
-        timers.push(setTimeout(() => setCountdown(countdown - 1), 800));
-      } else {
-        timers.push(setTimeout(() => setRevealPhase('shake'), 300));
-      }
-    } else if (revealPhase === 'shake') {
-      timers.push(setTimeout(() => setRevealPhase('burst'), 1200));
-    } else if (revealPhase === 'burst') {
-      timers.push(setTimeout(() => setRevealPhase('landing'), 1500));
-    } else if (revealPhase === 'landing') {
-      timers.push(setTimeout(() => {
-        setRevealPhase('complete');
-        setShowReveal(false);
-      }, 2000));
-    }
-
-    return () => timers.forEach(clearTimeout);
-  }, [result, showReveal, revealPhase, countdown, prefersReducedMotion]);
+  // Handle slot machine completion
+  const handleSlotMachineComplete = useCallback(() => {
+    setShowSlotMachine(false);
+  }, []);
 
   // Mark personality test as complete and navigate to profile setup
   const completeTestMutation = useMutation({
@@ -671,339 +646,19 @@ export default function PersonalityTestResultPage() {
 
   const isLegacyV1 = result.algorithmVersion === 'v1' || !result.algorithmVersion;
 
-  // Pokemon-style multi-phase reveal animation
-  const RevealAnimation = () => (
-    <motion.div
-      initial={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.5 }}
-      className="fixed inset-0 bg-background z-50 flex items-center justify-center overflow-hidden"
-    >
-      {/* Background gradient pulse */}
-      <motion.div 
-        className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-5`}
-        animate={{ 
-          opacity: revealPhase === 'burst' ? [0.05, 0.3, 0.1] : 0.05,
-          scale: revealPhase === 'burst' ? [1, 1.2, 1] : 1
-        }}
-        transition={{ duration: 0.8 }}
+  // Show slot machine animation if not yet completed
+  if (showSlotMachine) {
+    return (
+      <ArchetypeSlotMachine
+        finalArchetype={result.primaryRole}
+        confidence={result.isDecisive ? 0.9 : undefined}
+        onComplete={handleSlotMachineComplete}
       />
-
-      {/* Particle effects during burst */}
-      {revealPhase === 'burst' && (
-        <>
-          {[...Array(12)].map((_, i) => (
-            <motion.div
-              key={i}
-              className={`absolute w-3 h-3 rounded-full bg-gradient-to-r ${gradient}`}
-              initial={{ 
-                x: 0, y: 0, scale: 0, opacity: 1 
-              }}
-              animate={{ 
-                x: Math.cos(i * 30 * Math.PI / 180) * 200,
-                y: Math.sin(i * 30 * Math.PI / 180) * 200,
-                scale: [0, 1.5, 0],
-                opacity: [1, 0.8, 0]
-              }}
-              transition={{ duration: 1, ease: "easeOut" }}
-            />
-          ))}
-        </>
-      )}
-
-      <AnimatePresence mode="wait">
-        {/* PHASE 1: Countdown (3-2-1) */}
-        {revealPhase === 'countdown' && (
-          <motion.div
-            key="countdown"
-            className="flex flex-col items-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 0.5 }}
-          >
-            <motion.div
-              key={countdown}
-              initial={{ scale: 0.3, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 2, opacity: 0 }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 300, 
-                damping: 15 
-              }}
-              className="relative"
-            >
-              {/* Glow ring behind number */}
-              <motion.div 
-                className="absolute inset-0 flex items-center justify-center"
-                animate={{ 
-                  scale: [1, 1.3, 1],
-                  opacity: [0.3, 0.6, 0.3]
-                }}
-                transition={{ duration: 0.8, repeat: Infinity }}
-              >
-                <div className={`w-40 h-40 rounded-full bg-gradient-to-r ${gradient} blur-2xl opacity-50`} />
-              </motion.div>
-              
-              {/* Countdown number */}
-              <span className={`relative text-9xl font-black bg-gradient-to-br ${gradient} bg-clip-text text-transparent drop-shadow-2xl`}>
-                {countdown}
-              </span>
-            </motion.div>
-            
-            <motion.p 
-              className="mt-6 text-lg text-muted-foreground"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              即将揭晓你的社交角色...
-            </motion.p>
-          </motion.div>
-        )}
-
-        {/* PHASE 2: Mystery Box Shake */}
-        {revealPhase === 'shake' && (
-          <motion.div
-            key="shake"
-            className="flex flex-col items-center"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.5 }}
-          >
-            {/* Mystery box with shake animation */}
-            <motion.div
-              className="relative"
-              animate={{ 
-                rotate: [-3, 3, -3, 3, -2, 2, -1, 1, 0],
-                scale: [1, 1.02, 1, 1.03, 1, 1.02, 1, 1.01, 1]
-              }}
-              transition={{ 
-                duration: 1,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            >
-              {/* Glow effect */}
-              <motion.div 
-                className={`absolute inset-0 bg-gradient-to-br ${gradient} rounded-3xl blur-xl`}
-                animate={{ 
-                  opacity: [0.3, 0.6, 0.3],
-                  scale: [1, 1.1, 1]
-                }}
-                transition={{ duration: 0.5, repeat: Infinity }}
-              />
-              
-              {/* Mystery box */}
-              <div className={`relative w-36 h-36 rounded-3xl bg-gradient-to-br ${gradient} p-1 shadow-2xl`}>
-                <div className="w-full h-full rounded-3xl bg-background flex items-center justify-center">
-                  <motion.div
-                    animate={{ rotate: [0, 10, -10, 10, 0] }}
-                    transition={{ duration: 0.3, repeat: Infinity }}
-                  >
-                    <Sparkles className="w-16 h-16 text-primary" />
-                  </motion.div>
-                </div>
-              </div>
-            </motion.div>
-            
-            <motion.p 
-              className="mt-8 text-xl font-bold text-primary"
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 0.8, repeat: Infinity }}
-            >
-              正在解锁...
-            </motion.p>
-          </motion.div>
-        )}
-
-        {/* PHASE 3: Burst Reveal */}
-        {revealPhase === 'burst' && (
-          <motion.div
-            key="burst"
-            className="flex flex-col items-center"
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ 
-              type: "spring",
-              stiffness: 200,
-              damping: 12
-            }}
-          >
-            {/* Expanding glow rings */}
-            <div className="relative">
-              {[0, 1, 2].map((i) => (
-                <motion.div
-                  key={i}
-                  className={`absolute inset-0 rounded-full border-4 border-primary/30`}
-                  initial={{ scale: 1, opacity: 0.8 }}
-                  animate={{ scale: 3, opacity: 0 }}
-                  transition={{ 
-                    duration: 1.2,
-                    delay: i * 0.2,
-                    ease: "easeOut"
-                  }}
-                  style={{ 
-                    width: 160, 
-                    height: 160,
-                    left: -20,
-                    top: -20
-                  }}
-                />
-              ))}
-              
-              {/* Avatar burst in */}
-              <motion.div 
-                className={`relative w-32 h-32 rounded-full bg-gradient-to-br ${gradient} p-1 shadow-2xl`}
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ 
-                  type: "spring",
-                  stiffness: 150,
-                  damping: 10,
-                  delay: 0.1
-                }}
-              >
-                {primaryAvatar ? (
-                  <img 
-                    src={primaryAvatar} 
-                    alt={result.primaryRole} 
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full rounded-full bg-background flex items-center justify-center">
-                    <Sparkles className="w-14 h-14 text-primary" />
-                  </div>
-                )}
-              </motion.div>
-            </div>
-
-            <motion.h2 
-              className={`mt-6 text-4xl md:text-5xl font-black bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, type: "spring" }}
-            >
-              {result.primaryRole}
-            </motion.h2>
-          </motion.div>
-        )}
-
-        {/* PHASE 4: Landing with details */}
-        {revealPhase === 'landing' && (
-          <motion.div
-            key="landing"
-            className="flex flex-col items-center text-center px-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            {/* Celebration sparkles */}
-            <motion.div 
-              className="absolute inset-0 pointer-events-none"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              {[...Array(8)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute"
-                  style={{
-                    left: `${20 + Math.random() * 60}%`,
-                    top: `${20 + Math.random() * 60}%`,
-                  }}
-                  animate={{
-                    y: [0, -20, 0],
-                    opacity: [0, 1, 0],
-                    scale: [0.5, 1, 0.5]
-                  }}
-                  transition={{
-                    duration: 1.5,
-                    delay: i * 0.15,
-                    repeat: Infinity,
-                    repeatDelay: 0.5
-                  }}
-                >
-                  <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                </motion.div>
-              ))}
-            </motion.div>
-
-            {/* Avatar with glow */}
-            <motion.div 
-              className="relative"
-              initial={{ scale: 1.2 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 200 }}
-            >
-              <div className={`absolute inset-0 bg-gradient-to-br ${gradient} rounded-full blur-2xl opacity-40 scale-125`} />
-              <div className={`relative w-44 h-44 rounded-full bg-gradient-to-br ${gradient} p-1 shadow-2xl`}>
-                {primaryAvatar ? (
-                  <img 
-                    src={primaryAvatar} 
-                    alt={result.primaryRole} 
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full rounded-full bg-background flex items-center justify-center">
-                    <Sparkles className="w-20 h-20 text-primary" />
-                  </div>
-                )}
-              </div>
-            </motion.div>
-
-            <motion.h2 
-              className={`mt-6 text-5xl font-black bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              {result.primaryRole}
-            </motion.h2>
-            
-            {nickname && (
-              <motion.p 
-                className="mt-2 text-2xl font-semibold text-primary"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-              >
-                {nickname}
-              </motion.p>
-            )}
-            
-            {tagline && (
-              <motion.p 
-                className="mt-2 text-lg text-muted-foreground italic max-w-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-              >
-                {tagline}
-              </motion.p>
-            )}
-
-            <motion.div
-              className="mt-8"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8 }}
-            >
-              <Badge className={`bg-gradient-to-r ${gradient} text-white border-0 px-4 py-1.5 text-sm`}>
-                <Crown className="w-4 h-4 mr-1.5" />
-                你的社交风格已解锁
-              </Badge>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      <AnimatePresence>
-        {showReveal && <RevealAnimation />}
-      </AnimatePresence>
       
       <motion.div
         initial={{ opacity: 0 }}

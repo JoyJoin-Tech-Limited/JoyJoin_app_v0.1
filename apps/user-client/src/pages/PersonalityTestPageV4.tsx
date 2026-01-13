@@ -12,7 +12,6 @@ import { useAdaptiveAssessment, type PreSignupAnswer } from "@/hooks/useAdaptive
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { StickyCTA, StickyCTAButton, StickyCTASecondaryButton } from "@/components/StickyCTA";
 import { SelectionList } from "@/components/SelectionList";
-import { ArchetypeSlotMachine } from "@/components/slot-machine";
 import { useAchievementTracker } from "@/hooks/useAchievementTracker";
 import { ArchetypePreview } from "@/components/archetype-preview";
 import { useDynamicAccent } from "@/contexts/DynamicAccentContext";
@@ -125,7 +124,6 @@ export default function PersonalityTestPageV4() {
   const { toast } = useToast();
   const [selectedOption, setSelectedOption] = useState<string | undefined>();
   const [showMilestone, setShowMilestone] = useState(false);
-  const [showBlindBox, setShowBlindBox] = useState(false);
   
   const { trackQuestionStart, trackAnswer, trackCompletion, trackSkip } = useAchievementTracker();
   const { setArchetype: setDynamicAccent, reset: resetDynamicAccent } = useDynamicAccent();
@@ -211,7 +209,6 @@ export default function PersonalityTestPageV4() {
   useEffect(() => {
     if (isComplete && result) {
       clearV4PreSignupAnswers();
-      setShowBlindBox(true);
       // Track completion achievements
       trackCompletion({
         answeredCount,
@@ -224,11 +221,10 @@ export default function PersonalityTestPageV4() {
       // Critical: Also invalidate user data so profile page shows updated archetype
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       
-      setTimeout(() => {
-        setLocation('/personality-test/results');
-      }, 2000);
+      // Navigate directly to results page - slot machine will show there
+      setLocation('/personality-test/results');
     }
-  }, [isComplete, result, setLocation]);
+  }, [isComplete, result, setLocation, trackCompletion, answeredCount, progress?.minQuestions]);
 
   const handleSelectOption = useCallback((value: string | string[]) => {
     const next = Array.isArray(value) ? value[0] : value;
@@ -283,16 +279,6 @@ export default function PersonalityTestPageV4() {
           <p className="text-muted-foreground">加载测评中...</p>
         </div>
       </div>
-    );
-  }
-
-  if (showBlindBox && result) {
-    return (
-      <ArchetypeSlotMachine
-        finalArchetype={result.primaryArchetype || topArchetype || "开心柯基"}
-        confidence={currentMatches[0]?.confidence}
-        onComplete={() => setLocation('/personality-test/results')}
-      />
     );
   }
 
