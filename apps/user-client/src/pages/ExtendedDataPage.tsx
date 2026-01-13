@@ -20,13 +20,13 @@ import {
 
 const EXTENDED_CACHE_KEY = "joyjoin_extended_data_progress";
 
+type Step = 'swipe' | 'result';
+
 interface ExtendedDataState {
-  currentStep: number;
+  currentStep: Step;
   swipeResults: SwipeResult[];
   timestamp: number;
 }
-
-type Step = 'swipe' | 'result';
 
 export default function ExtendedDataPage() {
   const [, setLocation] = useLocation();
@@ -37,7 +37,7 @@ export default function ExtendedDataPage() {
   const [swipeResults, setSwipeResults] = useState<SwipeResult[]>([]);
   const [xiaoyueMessage, setXiaoyueMessage] = useState("滑动告诉我你喜欢什么吧～");
   const [showCelebration, setShowCelebration] = useState(false);
-  const [cards] = useState(() => getSmartCardSelection(INTEREST_CARDS, 18));
+  const [cards, setCards] = useState(() => getSmartCardSelection(INTEREST_CARDS, 18));
 
   useEffect(() => {
     const cached = localStorage.getItem(EXTENDED_CACHE_KEY);
@@ -47,6 +47,9 @@ export default function ExtendedDataPage() {
         if (Date.now() - state.timestamp < 24 * 60 * 60 * 1000) {
           if (state.swipeResults && state.swipeResults.length > 0) {
             setSwipeResults(state.swipeResults);
+          }
+          // Restore currentStep from cache if it was explicitly saved as 'result'
+          if (state.currentStep === 'result') {
             setCurrentStep('result');
           }
         }
@@ -56,7 +59,7 @@ export default function ExtendedDataPage() {
 
   const saveProgress = useCallback(() => {
     const state: ExtendedDataState = {
-      currentStep: currentStep === 'swipe' ? 0 : 1,
+      currentStep,
       swipeResults,
       timestamp: Date.now(),
     };
@@ -77,6 +80,7 @@ export default function ExtendedDataPage() {
       setLocation("/guide");
     },
     onError: (error: Error) => {
+      setShowCelebration(false);
       toast({
         title: "保存失败",
         description: error.message,
@@ -95,6 +99,27 @@ export default function ExtendedDataPage() {
   }, []);
 
   const handleConfirm = useCallback(() => {
+    // Validate minimum requirements
+    const positiveChoices = swipeResults.filter(r => r.choice === 'like' || r.choice === 'love');
+    
+    if (swipeResults.length === 0) {
+      toast({
+        title: "请先滑动卡片",
+        description: "至少滑动一张卡片才能继续",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (positiveChoices.length === 0) {
+      toast({
+        title: "请选择至少一个兴趣",
+        description: "至少选择一个喜欢的兴趣才能继续",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setShowCelebration(true);
     
     const likedInterests = swipeResults
@@ -111,19 +136,23 @@ export default function ExtendedDataPage() {
         interestsTop: likedInterests.slice(0, 7),
         primaryInterests: lovedInterests,
         interestsDeep: swipeResults.map(r => 
-          `${r.cardId}:${r.choice}:${r.reactionTimeMs}ms`
+          `${r.cardId}:${r.choice}:${r.reactionTimeMs}`
         ),
         hasCompletedInterestsTopics: true,
       };
       saveMutation.mutate(profileData);
     }, 1500);
-  }, [swipeResults, saveMutation]);
+  }, [swipeResults, saveMutation, toast]);
 
   const handleReset = useCallback(() => {
     setSwipeResults([]);
     setCurrentStep('swipe');
     setXiaoyueMessage("滑动告诉我你喜欢什么吧～");
+    setCards(getSmartCardSelection(INTEREST_CARDS, 18));
   }, []);
+
+  const canConfirm = swipeResults.length > 0 && 
+    swipeResults.some(r => r.choice === 'like' || r.choice === 'love');
 
   const handleSkip = () => {
     localStorage.removeItem(EXTENDED_CACHE_KEY);
@@ -227,6 +256,7 @@ export default function ExtendedDataPage() {
                 onConfirm={handleConfirm}
                 onEdit={handleReset}
                 isLoading={saveMutation.isPending}
+                disabled={!canConfirm}
               />
             </motion.div>
           )}
