@@ -40,7 +40,7 @@ function SlotReelComponent({ visibleItems, state, highlightColor, intensity = 0 
         "bg-gradient-to-b from-muted/30 via-muted/50 to-muted/30",
         "transition-all duration-300",
         // Larger size for better visibility
-        "w-64 h-72",
+        "w-80 h-96",
       )}
       style={{
         willChange: isActive ? "transform" : "auto",
@@ -183,9 +183,9 @@ function SlotReelComponent({ visibleItems, state, highlightColor, intensity = 0 
                     "object-contain transition-all",
                     isCenter 
                       ? isLanded 
-                        ? "w-48 h-48 drop-shadow-[0_0_30px_rgba(168,85,247,0.6)]" 
-                        : "w-40 h-40"
-                      : "w-28 h-28 filter grayscale-[50%]",
+                        ? "w-64 h-64 drop-shadow-[0_0_30px_rgba(168,85,247,0.6)]" 
+                        : "w-52 h-52"
+                      : "w-36 h-36 filter grayscale-[50%]",
                   )}
                   loading="eager"
                   onLoad={(e) => {

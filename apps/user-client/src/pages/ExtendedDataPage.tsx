@@ -11,6 +11,7 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import { SwipeCardStack } from "@/components/SwipeCardStack";
+import { SwipeGuidanceOverlay } from "@/components/SwipeGuidanceOverlay";
 import { InterestResultSummary } from "@/components/InterestResultSummary";
 import { 
   INTEREST_CARDS, 
@@ -253,6 +254,8 @@ export default function ExtendedDataPage() {
                   animate
                 />
               </div>
+
+              <SwipeGuidanceOverlay />
 
               <SwipeCardStack
                 cards={cards}
