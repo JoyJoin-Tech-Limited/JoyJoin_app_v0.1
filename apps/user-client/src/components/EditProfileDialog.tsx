@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { INDUSTRY_OPTIONS } from "@shared/constants";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -162,27 +163,7 @@ const overseasRegionOptions = [
   "非洲",
 ];
 
-const industryOptions = [
-  "学生",
-  "大厂",
-  "金融-银行",
-  "金融-证券",
-  "金融-保险",
-  "金融-投行",
-  "金融-PE/VC",
-  "金融-其他",
-  "科技初创",
-  "AI/ML",
-  "跨境电商",
-  "投资",
-  "咨询",
-  "消费品",
-  "艺术/设计",
-  "教育",
-  "医疗",
-  "政府/公共",
-  "其他",
-];
+// Industry options now imported from @shared/constants
 
 const interestOptions = [
   "美食探店",
@@ -429,9 +410,9 @@ export default function EditProfileDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {industryOptions.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
+                          {INDUSTRY_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
                             </SelectItem>
                           ))}
                         </SelectContent>

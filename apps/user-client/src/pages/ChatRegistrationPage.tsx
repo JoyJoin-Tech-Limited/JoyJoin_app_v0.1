@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil, Calendar, CalendarDays, Laptop, Bot, Cpu, Car, Globe, TrendingUp, Megaphone, Palette, Video, Stethoscope, GraduationCap, Scale, Building, Plane, MoreHorizontal, Languages, Banknote, UtensilsCrossed, Landmark, LineChart, Wallet, PiggyBank, ShieldCheck, FileText, HardHat, Hammer, ChevronDown, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Send, Loader2, User, Users, Sparkles, ArrowRight, Smile, Heart, Briefcase, MapPin, Coffee, Music, Gamepad2, Camera, Book, Dumbbell, Sun, Moon, Star, Edit2, Check, X, Zap, Clock, Diamond, RotateCcw, MessageCircle, AlertCircle, Pencil, Calendar, CalendarDays, Laptop, Bot, Cpu, Car, Globe, TrendingUp, Megaphone, Palette, Video, Stethoscope, GraduationCap, Scale, Building, Plane, MoreHorizontal, Languages, Banknote, UtensilsCrossed, Landmark, LineChart, Wallet, PiggyBank, ShieldCheck, FileText, HardHat, Hammer, ChevronDown, ThumbsUp, ThumbsDown, Rocket, Building2 } from "lucide-react";
 import xiaoyueAvatar from "@/assets/Xiao_Yue_Avatar-01.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -140,7 +140,8 @@ const INDUSTRY_ICON_MAP: Record<string, any> = {
   "地产建筑": Building,
   "航空酒店旅游": Plane,
   "生活方式": Coffee,
-  "其他行业": MoreHorizontal,
+  "新兴产业": Rocket,
+  "政府公共服务": Building2,
 };
 
 // 根据行业名称获取对应图标

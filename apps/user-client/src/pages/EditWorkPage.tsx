@@ -25,12 +25,9 @@ const workSchema = z.object({
   workVisibility: z.enum(["hide_all", "show_industry_only"]).optional(),
 });
 
-type WorkForm = z.infer<typeof workSchema>;
+import { INDUSTRY_OPTIONS } from "@shared/constants";
 
-const industryOptions = [
-  "大厂", "金融", "科技初创", "AI/ML", "跨境电商", "投资",
-  "咨询", "消费品", "艺术/设计", "教育", "医疗", "政府/公共", "其他"
-];
+type WorkForm = z.infer<typeof workSchema>;
 
 export default function EditWorkPage() {
   const [, setLocation] = useLocation();
@@ -111,21 +108,21 @@ export default function EditWorkPage() {
         <div className="space-y-2">
           <Label>行业</Label>
           <div className="space-y-3 mt-2">
-            {industryOptions.map((ind) => (
+            {INDUSTRY_OPTIONS.map((ind) => (
               <button
-                key={ind}
+                key={ind.value}
                 type="button"
-                onClick={() => form.setValue("industry", ind)}
+                onClick={() => form.setValue("industry", ind.value)}
                 className={`
                   w-full px-5 py-4 text-left rounded-lg border transition-all text-base
-                  ${form.watch("industry") === ind
+                  ${form.watch("industry") === ind.value
                     ? 'border-primary bg-primary/5 text-primary' 
                     : 'border-border hover-elevate active-elevate-2'
                   }
                 `}
-                data-testid={`button-industry-${ind}`}
+                data-testid={`button-industry-${ind.value}`}
               >
-                {ind}
+                {ind.label}
               </button>
             ))}
           </div>
