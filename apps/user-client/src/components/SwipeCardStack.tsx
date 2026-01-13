@@ -405,22 +405,22 @@ export function SwipeCardStack({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="mb-4">
-        <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
-          <span>
+      <div className="mb-5">
+        <div className="flex items-center justify-between text-base font-medium text-muted-foreground mb-3">
+          <span className="text-foreground">
             {currentIndex < cards.length 
-              ? `${currentIndex + 1} / ${cards.length}`
-              : `完成`
+              ? `第 ${currentIndex + 1} 张 / 共 ${cards.length} 张`
+              : `全部完成！`
             }
           </span>
-          <span>{Math.round(progress)}%</span>
+          <span className="text-primary font-semibold">{Math.round(progress)}%</span>
         </div>
-        <div className="h-2 bg-muted rounded-full overflow-hidden">
+        <div className="h-2.5 bg-muted rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+            className="h-full bg-gradient-to-r from-purple-500 via-purple-400 to-pink-500 rounded-full"
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
           />
         </div>
       </div>
@@ -449,40 +449,45 @@ export function SwipeCardStack({
       </div>
 
       {currentIndex < cards.length && (
-        <div className="flex items-center justify-center gap-6 mt-6">
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => handleButtonSwipe('skip')}
-            className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center shadow-lg"
-            data-testid="button-skip-card"
-          >
-            <X className="w-6 h-6 text-gray-500" />
-          </motion.button>
+        <div className="mt-6 py-4 px-6 mx-auto rounded-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 shadow-2xl shadow-black/10">
+          <div className="flex items-center justify-center gap-5">
+            <motion.button
+              whileTap={{ scale: 0.85 }}
+              whileHover={{ scale: 1.05 }}
+              onClick={() => handleButtonSwipe('skip')}
+              className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center shadow-lg transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
+              data-testid="button-skip-card"
+            >
+              <X className="w-7 h-7 text-gray-500 dark:text-gray-400" strokeWidth={2.5} />
+            </motion.button>
 
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => handleButtonSwipe('love')}
-            className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-lg"
-            data-testid="button-love-card"
-          >
-            <Sparkles className="w-7 h-7 text-white" />
-          </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.08 }}
+              onClick={() => handleButtonSwipe('love')}
+              className="w-[72px] h-[72px] rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 flex items-center justify-center shadow-xl shadow-amber-500/40 ring-4 ring-yellow-300/30"
+              data-testid="button-love-card"
+            >
+              <Sparkles className="w-9 h-9 text-white drop-shadow-md" strokeWidth={2.5} />
+            </motion.button>
 
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => handleButtonSwipe('like')}
-            className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/30 border-2 border-green-400 dark:border-green-600 flex items-center justify-center shadow-lg"
-            data-testid="button-like-card"
-          >
-            <Heart className="w-6 h-6 text-green-500" />
-          </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.85 }}
+              whileHover={{ scale: 1.05 }}
+              onClick={() => handleButtonSwipe('like')}
+              className="w-14 h-14 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 border-2 border-green-300/50 flex items-center justify-center shadow-lg shadow-green-500/30 transition-colors"
+              data-testid="button-like-card"
+            >
+              <Heart className="w-7 h-7 text-white" strokeWidth={2.5} />
+            </motion.button>
+          </div>
         </div>
       )}
 
-      <div className="mt-4 text-center text-sm text-muted-foreground">
-        <span>← 跳过</span>
-        <span className="mx-4">↑ 超爱</span>
-        <span>喜欢 →</span>
+      <div className="mt-3 text-center text-sm font-medium text-muted-foreground">
+        <span className="inline-flex items-center gap-1"><X className="w-3.5 h-3.5" />跳过</span>
+        <span className="mx-5 text-amber-500 dark:text-amber-400 inline-flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" />超爱</span>
+        <span className="text-green-500 dark:text-green-400 inline-flex items-center gap-1"><Heart className="w-3.5 h-3.5" />喜欢</span>
       </div>
     </div>
   );
