@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, Sparkles, ArrowRight, Loader2, Users, Network, MessageCircle, PartyPopper, Heart, Shuffle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -185,7 +184,7 @@ function XiaoyueMascot({
   }, [message, controls]);
 
   return (
-    <div className={cn("flex flex-col items-center gap-3", className)}>
+    <div className={cn("flex flex-col items-center gap-4", className)}>
       <motion.div
         animate={controls}
         className="relative"
@@ -193,16 +192,16 @@ function XiaoyueMascot({
         <img 
           src={XIAOYUE_AVATARS[mood]} 
           alt="小悦" 
-          className="w-20 h-20 object-contain drop-shadow-lg"
+          className="w-24 h-24 object-contain drop-shadow-lg"
         />
       </motion.div>
       <motion.div 
-        className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 rounded-2xl px-4 py-3 max-w-[280px] shadow-sm border border-purple-100 dark:border-purple-800"
+        className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 rounded-2xl px-5 py-4 max-w-[320px] shadow-sm border border-purple-100 dark:border-purple-800"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.2 }}
       >
-        <p className="text-sm text-center text-purple-800 dark:text-purple-200 font-medium">
+        <p className="text-base text-center text-purple-800 dark:text-purple-200 font-semibold leading-relaxed">
           {message}
         </p>
       </motion.div>
@@ -228,7 +227,7 @@ function TappableCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "w-full p-4 rounded-2xl border-2 text-left transition-all duration-200",
+        "w-full p-5 rounded-2xl border-2 text-left transition-all duration-200 min-h-[56px]",
         selected 
           ? "border-primary bg-primary/10 shadow-md shadow-primary/10" 
           : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary/50",
@@ -427,9 +426,9 @@ export default function EssentialDataPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header with progress */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
-        <div className="flex items-center gap-3 mb-3">
+      {/* Header with progress - Duolingo-style segmented dots */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-4">
+        <div className="flex items-center gap-3">
           {currentStep > 0 && (
             <Button 
               variant="ghost" 
@@ -437,15 +436,39 @@ export default function EssentialDataPage() {
               onClick={handleBack}
               data-testid="button-back"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-6 h-6" />
             </Button>
           )}
           <div className="flex-1">
-            <div className="flex items-center justify-between text-sm text-muted-foreground mb-1">
+            <div className="flex items-center justify-between text-base font-medium text-muted-foreground mb-3">
               <span>第 {currentStep + 1} 步 / 共 {TOTAL_STEPS} 步</span>
-              <span>{Math.round(progress)}%</span>
+              <span className="text-primary font-semibold">{Math.round(progress)}%</span>
             </div>
-            <Progress value={progress} className="h-2" />
+            {/* Segmented progress dots - Duolingo style */}
+            <div className="flex items-center gap-1.5">
+              {Array.from({ length: TOTAL_STEPS }).map((_, index) => {
+                const isCompleted = index < currentStep;
+                const isCurrent = index === currentStep;
+                const isUpcoming = index > currentStep;
+                
+                return (
+                  <motion.div
+                    key={index}
+                    className={cn(
+                      "rounded-full transition-all duration-300",
+                      isCompleted && "bg-primary h-2 flex-1",
+                      isCurrent && "bg-primary h-3 flex-[1.5] shadow-md shadow-primary/30",
+                      isUpcoming && "bg-gray-200 dark:bg-gray-700 h-2 flex-1"
+                    )}
+                    initial={false}
+                    animate={isCurrent ? {
+                      scale: [1, 1.05, 1],
+                      transition: { duration: 0.4, repeat: Infinity, repeatDelay: 2 }
+                    } : { scale: 1 }}
+                  />
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -469,11 +492,11 @@ export default function EssentialDataPage() {
             />
 
             {/* Title */}
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-foreground mb-2">
+            <div className="text-center mb-8">
+              <h1 className="text-[28px] leading-tight font-bold text-foreground mb-3">
                 {stepConfig.title}
               </h1>
-              <p className="text-muted-foreground">
+              <p className="text-lg text-muted-foreground">
                 {stepConfig.subtitle}
               </p>
             </div>
@@ -486,7 +509,7 @@ export default function EssentialDataPage() {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="输入你的昵称"
-                  className="h-14 text-lg text-center rounded-2xl"
+                  className="h-16 text-xl text-center rounded-2xl font-medium"
                   maxLength={20}
                   data-testid="input-display-name"
                 />
@@ -494,19 +517,19 @@ export default function EssentialDataPage() {
 
               {/* Step 1: Gender + Birthday */}
               {currentStep === 1 && (
-                <div className="space-y-6">
+                <div className="space-y-8">
                   <div>
-                    <label className="block text-sm font-medium mb-3 text-center">性别</label>
-                    <div className="grid grid-cols-2 gap-3">
+                    <label className="block text-lg font-semibold mb-4 text-center">性别</label>
+                    <div className="grid grid-cols-2 gap-4">
                       {GENDER_OPTIONS.map(opt => (
                         <TappableCard
                           key={opt.value}
                           selected={gender === opt.value}
                           onClick={() => setGender(opt.value)}
                         >
-                          <div className="flex items-center justify-center gap-2">
-                            <span className="text-2xl">{opt.emoji}</span>
-                            <span className="font-medium">{opt.label}</span>
+                          <div className="flex items-center justify-center gap-3">
+                            <span className="text-3xl">{opt.emoji}</span>
+                            <span className="text-lg font-semibold">{opt.label}</span>
                           </div>
                         </TappableCard>
                       ))}
@@ -528,7 +551,7 @@ export default function EssentialDataPage() {
 
               {/* Step 2-4: Single select */}
               {(currentStep === 2 || currentStep === 3) && stepConfig.options && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   {stepConfig.options.map(opt => {
                     const value = currentStep === 2 ? relationshipStatus : education;
                     const setValue = currentStep === 2 ? setRelationshipStatus : setEducation;
@@ -538,7 +561,7 @@ export default function EssentialDataPage() {
                         selected={value === opt.value}
                         onClick={() => setValue(opt.value)}
                       >
-                        <span className="font-medium">{opt.label}</span>
+                        <span className="text-lg font-semibold">{opt.label}</span>
                       </TappableCard>
                     );
                   })}
@@ -546,7 +569,7 @@ export default function EssentialDataPage() {
               )}
 
               {currentStep === 4 && (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <SmartIndustryInput
                     options={INDUSTRY_OPTIONS}
                     value={workIndustry}
@@ -557,22 +580,22 @@ export default function EssentialDataPage() {
                   />
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="default"
                     onClick={() => setShowManualIndustry((prev) => !prev)}
-                    className="text-muted-foreground"
+                    className="text-muted-foreground text-base"
                     data-testid="button-industry-manual"
                   >
                     {showManualIndustry ? "收起手动选择" : "手动选择"}
                   </Button>
                   {showManualIndustry && (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-4">
                       {INDUSTRY_OPTIONS.map((opt) => (
                         <TappableCard
                           key={opt.value}
                           selected={workIndustry === opt.value}
                           onClick={() => setWorkIndustry(opt.value)}
                         >
-                          <span className="font-medium">{opt.label}</span>
+                          <span className="text-lg font-semibold">{opt.label}</span>
                         </TappableCard>
                       ))}
                     </div>
@@ -582,28 +605,28 @@ export default function EssentialDataPage() {
 
               {/* Step 5: Hometown + Current City */}
               {currentStep === 5 && (
-                <div className="space-y-6">
+                <div className="space-y-8">
                   <div>
-                    <label className="block text-sm font-medium mb-3 text-center">家乡</label>
+                    <label className="block text-lg font-semibold mb-4 text-center">家乡</label>
                     <Input
                       value={hometown}
                       onChange={(e) => setHometown(e.target.value)}
                       placeholder="例如：湖南长沙"
-                      className="h-12 text-center rounded-xl"
+                      className="h-14 text-lg text-center rounded-2xl"
                       data-testid="input-hometown"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-3 text-center">常驻城市</label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <label className="block text-lg font-semibold mb-4 text-center">常驻城市</label>
+                    <div className="grid grid-cols-3 gap-3">
                       {CITY_OPTIONS.map(city => (
                         <TappableCard
                           key={city.value}
                           selected={currentCity === city.value}
                           onClick={() => setCurrentCity(city.value)}
-                          className="p-3 text-center"
+                          className="p-4 text-center"
                         >
-                          <span className="text-sm font-medium">{city.label}</span>
+                          <span className="text-base font-semibold">{city.label}</span>
                         </TappableCard>
                       ))}
                     </div>
