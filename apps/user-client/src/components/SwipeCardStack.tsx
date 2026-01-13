@@ -2,7 +2,14 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, useAnimation, PanInfo } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Heart, X, Sparkles } from "lucide-react";
-import { InterestCard, SwipeChoice, SwipeResult } from "@/data/interestCardsData";
+import { 
+  InterestCard, 
+  SwipeChoice, 
+  SwipeResult,
+  MacroCategory,
+  MACRO_CATEGORY_LABELS,
+  INTEREST_CARDS,
+} from "@/data/interestCardsData";
 
 interface SwipeCardStackProps {
   cards: InterestCard[];
@@ -15,16 +22,86 @@ interface SwipeCardStackProps {
 const SWIPE_THRESHOLD = 100;
 const SWIPE_VELOCITY_THRESHOLD = 500;
 
-const XIAOYUE_MESSAGES = {
-  start: "滑动告诉我你喜欢什么吧～",
-  like3: "看来你是个热爱生活的人！",
-  skip3: "没关系，继续找找你的菜～",
-  love: "哇！这个你超喜欢的！",
-  progress33: "继续继续，我在认识你～",
-  progress66: "快了快了！",
-  almost: "最后几张了！",
-  complete: "我大概了解你了！看看结果？",
-};
+interface CategoryTracker {
+  likeCount: Record<MacroCategory, number>;
+  skipCount: Record<MacroCategory, number>;
+  totalLikes: number;
+  totalSkips: number;
+}
+
+function initCategoryTracker(): CategoryTracker {
+  return {
+    likeCount: { food: 0, entertainment: 0, lifestyle: 0, culture: 0, social: 0 },
+    skipCount: { food: 0, entertainment: 0, lifestyle: 0, culture: 0, social: 0 },
+    totalLikes: 0,
+    totalSkips: 0,
+  };
+}
+
+function getSmartXiaoyueMessage(
+  tracker: CategoryTracker,
+  currentCard: InterestCard,
+  choice: SwipeChoice,
+  progress: number,
+  hesitant: boolean,
+  likeStreak: number,
+  skipStreak: number
+): string | null {
+  if (choice === 'love') {
+    return "哇！这个你超喜欢的！";
+  }
+
+  if (hesitant) {
+    return "慢慢想，不着急～";
+  }
+
+  const category = currentCard.macroCategory;
+  const categoryLabel = MACRO_CATEGORY_LABELS[category];
+
+  if (choice === 'like') {
+    const categoryLikes = tracker.likeCount[category];
+    if (categoryLikes === 2) {
+      const insights: Record<MacroCategory, string> = {
+        food: "看来你是个吃货～",
+        entertainment: "你很会玩嘛！",
+        lifestyle: "你热爱生活！",
+        culture: "有点文艺范儿～",
+        social: "你是话题达人！",
+      };
+      return insights[category];
+    }
+  }
+
+  if (choice === 'skip') {
+    if (skipStreak === 3) {
+      return "没关系，继续找找你的菜～";
+    }
+    
+    const categorySkips = tracker.skipCount[category];
+    if (categorySkips === 3) {
+      return `${categoryLabel}不是你的菜？没关系～`;
+    }
+  }
+
+  if (likeStreak === 3) {
+    return "看来你是个热爱生活的人！";
+  }
+
+  const exploredCount = Object.values(tracker.likeCount).filter(v => v > 0).length;
+  if (exploredCount === 4 && tracker.totalLikes >= 6) {
+    return `你已经探索了${exploredCount}个维度！`;
+  }
+
+  if (progress >= 0.9) {
+    return "最后几张了！";
+  } else if (progress >= 0.66) {
+    return "快了快了！";
+  } else if (progress >= 0.33 && tracker.totalLikes >= 3) {
+    return "继续继续，我在认识你～";
+  }
+
+  return null;
+}
 
 function SwipeCard({
   card,
@@ -105,16 +182,6 @@ function SwipeCard({
           <h3 className="text-2xl font-bold text-white mb-2 drop-shadow-lg">
             {card.label}
           </h3>
-          <div className="flex flex-wrap gap-2">
-            {card.microTags.slice(0, 3).map((tag) => (
-              <span
-                key={tag}
-                className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white text-sm"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
         </div>
 
         {dragDirection === 'right' && (
@@ -160,6 +227,7 @@ export function SwipeCardStack({
 }: SwipeCardStackProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<SwipeResult[]>([]);
+  const [categoryTracker, setCategoryTracker] = useState<CategoryTracker>(initCategoryTracker);
   const cardStartTimeRef = useRef(Date.now());
   const likeStreakRef = useRef(0);
   const skipStreakRef = useRef(0);
@@ -169,7 +237,7 @@ export function SwipeCardStack({
   }, [currentIndex]);
 
   useEffect(() => {
-    onXiaoyueMessageChange?.(XIAOYUE_MESSAGES.start);
+    onXiaoyueMessageChange?.("滑动告诉我你喜欢什么吧～");
   }, [onXiaoyueMessageChange]);
 
   const handleSwipe = useCallback(
@@ -185,13 +253,25 @@ export function SwipeCardStack({
       setResults(newResults);
       onSwipe(result);
 
+      const newTracker = { ...categoryTracker };
       if (choice === 'like' || choice === 'love') {
+        newTracker.likeCount = {
+          ...newTracker.likeCount,
+          [card.macroCategory]: newTracker.likeCount[card.macroCategory] + 1,
+        };
+        newTracker.totalLikes++;
         likeStreakRef.current++;
         skipStreakRef.current = 0;
       } else {
+        newTracker.skipCount = {
+          ...newTracker.skipCount,
+          [card.macroCategory]: newTracker.skipCount[card.macroCategory] + 1,
+        };
+        newTracker.totalSkips++;
         skipStreakRef.current++;
         likeStreakRef.current = 0;
       }
+      setCategoryTracker(newTracker);
 
       if (navigator.vibrate) {
         if (choice === 'love') {
@@ -203,31 +283,32 @@ export function SwipeCardStack({
 
       const nextIndex = currentIndex + 1;
       const progress = nextIndex / cards.length;
+      const hesitant = reactionTime > 3000;
 
-      if (choice === 'love') {
-        onXiaoyueMessageChange?.(XIAOYUE_MESSAGES.love);
-      } else if (likeStreakRef.current === 3) {
-        onXiaoyueMessageChange?.(XIAOYUE_MESSAGES.like3);
-      } else if (skipStreakRef.current === 3) {
-        onXiaoyueMessageChange?.(XIAOYUE_MESSAGES.skip3);
-      } else if (progress >= 0.9) {
-        onXiaoyueMessageChange?.(XIAOYUE_MESSAGES.almost);
-      } else if (progress >= 0.66) {
-        onXiaoyueMessageChange?.(XIAOYUE_MESSAGES.progress66);
-      } else if (progress >= 0.33) {
-        onXiaoyueMessageChange?.(XIAOYUE_MESSAGES.progress33);
+      const smartMessage = getSmartXiaoyueMessage(
+        newTracker,
+        card,
+        choice,
+        progress,
+        hesitant,
+        likeStreakRef.current,
+        skipStreakRef.current
+      );
+
+      if (smartMessage) {
+        onXiaoyueMessageChange?.(smartMessage);
       }
 
       if (nextIndex >= cards.length) {
         setTimeout(() => {
-          onXiaoyueMessageChange?.(XIAOYUE_MESSAGES.complete);
+          onXiaoyueMessageChange?.("我大概了解你了！看看结果？");
           onComplete(newResults);
         }, 300);
       } else {
         setCurrentIndex(nextIndex);
       }
     },
-    [cards, currentIndex, results, onSwipe, onComplete, onXiaoyueMessageChange]
+    [cards, currentIndex, results, categoryTracker, onSwipe, onComplete, onXiaoyueMessageChange]
   );
 
   const handleButtonSwipe = useCallback(
