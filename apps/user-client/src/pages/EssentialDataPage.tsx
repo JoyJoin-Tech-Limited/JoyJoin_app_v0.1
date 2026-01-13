@@ -575,31 +575,8 @@ export default function EssentialDataPage() {
                     value={workIndustry}
                     onSelect={(val) => {
                       setWorkIndustry(val);
-                      setShowManualIndustry(false);
                     }}
                   />
-                  <Button
-                    variant="ghost"
-                    size="default"
-                    onClick={() => setShowManualIndustry((prev) => !prev)}
-                    className="text-muted-foreground text-base"
-                    data-testid="button-industry-manual"
-                  >
-                    {showManualIndustry ? "收起手动选择" : "手动选择"}
-                  </Button>
-                  {showManualIndustry && (
-                    <div className="grid grid-cols-2 gap-4">
-                      {INDUSTRY_OPTIONS.map((opt) => (
-                        <TappableCard
-                          key={opt.value}
-                          selected={workIndustry === opt.value}
-                          onClick={() => setWorkIndustry(opt.value)}
-                        >
-                          <span className="text-lg font-semibold">{opt.label}</span>
-                        </TappableCard>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
 
