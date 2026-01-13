@@ -647,7 +647,7 @@ export default function PersonalityTestResultPage() {
   const isLegacyV1 = result.algorithmVersion === 'v1' || !result.algorithmVersion;
 
   // Show slot machine animation if not yet completed
-  if (showSlotMachine && result) {
+  if (showSlotMachine) {
     return (
       <ArchetypeSlotMachine
         finalArchetype={result.primaryRole}
