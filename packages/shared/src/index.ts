@@ -5,6 +5,7 @@ export * from './gamification';
 export * from './icebreakerGames';
 export * from './topicCards';
 export * from './wsEvents';
+export * from './interests';
 export { 
   type Industry,
   type Occupation,
