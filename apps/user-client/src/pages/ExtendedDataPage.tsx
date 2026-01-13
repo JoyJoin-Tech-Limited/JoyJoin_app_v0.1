@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,13 @@ import {
   getSmartCardSelection, 
   SwipeResult 
 } from "@/data/interestCardsData";
+import {
+  TAXONOMY_VERSION,
+  normalizeProfileInterests,
+  isActiveInterestId,
+  type InterestsTelemetry,
+  type InterestTelemetryEvent,
+} from "@shared/interests";
 
 const EXTENDED_CACHE_KEY = "joyjoin_extended_data_progress";
 
@@ -95,29 +102,62 @@ export default function ExtendedDataPage() {
   }, []);
 
   const handleConfirm = useCallback(() => {
+    // Validate minimum requirements
+    const likedResults = swipeResults.filter(r => r.choice === 'like' || r.choice === 'love');
+    const lovedResults = swipeResults.filter(r => r.choice === 'love');
+    
+    if (likedResults.length < 1) {
+      toast({
+        title: "请至少选择1个感兴趣的内容",
+        description: "向右滑动表示喜欢",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setShowCelebration(true);
     
-    const likedInterests = swipeResults
-      .filter(r => r.choice === 'like' || r.choice === 'love')
-      .map(r => r.cardId);
-    
-    const lovedInterests = swipeResults
-      .filter(r => r.choice === 'love')
-      .map(r => r.cardId)
-      .slice(0, 3);
+    // Deduplicate and extract interests
+    const likedInterests = [...new Set(likedResults.map(r => r.cardId))];
+    const lovedInterests = [...new Set(lovedResults.map(r => r.cardId))].slice(0, 3);
+
+    // Normalize using shared validation
+    const normalized = normalizeProfileInterests({
+      interestsTop: likedInterests.slice(0, 7),
+      primaryInterests: lovedInterests,
+    });
+
+    // Log any warnings (for debugging)
+    if (normalized.warnings.length > 0) {
+      console.log('[ExtendedDataPage] Interest normalization warnings:', normalized.warnings);
+    }
+
+    // Build structured telemetry
+    const telemetryEvents: InterestTelemetryEvent[] = swipeResults
+      .filter(r => isActiveInterestId(r.cardId))
+      .slice(0, 200) // Cap at 200 events
+      .map(r => ({
+        interestId: r.cardId,
+        choice: r.choice,
+        reactionTimeMs: Math.min(Math.max(r.reactionTimeMs, 0), 60000), // Clamp to 1 minute
+        timestamp: new Date().toISOString(),
+      }));
+
+    const telemetry: InterestsTelemetry = {
+      version: TAXONOMY_VERSION,
+      events: telemetryEvents,
+    };
 
     setTimeout(() => {
       const profileData = {
-        interestsTop: likedInterests.slice(0, 7),
-        primaryInterests: lovedInterests,
-        interestsDeep: swipeResults.map(r => 
-          `${r.cardId}:${r.choice}:${r.reactionTimeMs}ms`
-        ),
+        interestsTop: normalized.interestsTop,
+        primaryInterests: normalized.primaryInterests,
+        interestsTelemetry: telemetry,
         hasCompletedInterestsTopics: true,
       };
       saveMutation.mutate(profileData);
     }, 1500);
-  }, [swipeResults, saveMutation]);
+  }, [swipeResults, saveMutation, toast]);
 
   const handleReset = useCallback(() => {
     setSwipeResults([]);
