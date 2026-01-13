@@ -4,7 +4,6 @@ on:
   push:
     branches: [ main ]
 
-# 避免同一分支并发跑多次（可选，但很常见）
 concurrency:
   group: joyjoin-prod-${{ github.ref }}
   cancel-in-progress: true
@@ -27,9 +26,7 @@ jobs:
           set -e
           echo "PWD=$(pwd)"
           echo "WORKSPACE=$GITHUB_WORKSPACE"
-          echo "---- root listing ----"
           ls -la
-          echo "---- lockfiles (maxdepth=4) ----"
           find . -maxdepth 4 \( -name "package-lock.json" -o -name "npm-shrinkwrap.json" \) -print
           test -f package-lock.json || (echo "❌ package-lock.json NOT FOUND at repo root" && exit 1)
 
@@ -56,9 +53,7 @@ jobs:
           set -e
           echo "PWD=$(pwd)"
           echo "WORKSPACE=$GITHUB_WORKSPACE"
-          echo "---- root listing ----"
           ls -la
-          echo "---- lockfiles (maxdepth=4) ----"
           find . -maxdepth 4 \( -name "package-lock.json" -o -name "npm-shrinkwrap.json" \) -print
           test -f package-lock.json || (echo "❌ package-lock.json NOT FOUND at repo root" && exit 1)
 
@@ -85,9 +80,7 @@ jobs:
           set -e
           echo "PWD=$(pwd)"
           echo "WORKSPACE=$GITHUB_WORKSPACE"
-          echo "---- root listing ----"
           ls -la
-          echo "---- lockfiles (maxdepth=4) ----"
           find . -maxdepth 4 \( -name "package-lock.json" -o -name "npm-shrinkwrap.json" \) -print
           test -f package-lock.json || (echo "❌ package-lock.json NOT FOUND at repo root" && exit 1)
 
@@ -115,9 +108,7 @@ jobs:
           set -e
           echo "PWD=$(pwd)"
           echo "WORKSPACE=$GITHUB_WORKSPACE"
-          echo "---- root listing ----"
           ls -la
-          echo "---- lockfiles (maxdepth=4) ----"
           find . -maxdepth 4 \( -name "package-lock.json" -o -name "npm-shrinkwrap.json" \) -print
           test -f package-lock.json || (echo "❌ package-lock.json NOT FOUND at repo root" && exit 1)
 
@@ -134,7 +125,7 @@ jobs:
     needs: ai-test
     runs-on: ubuntu-latest
     steps:
-      - name: SSH Remote Deployment
+      - name: SSH Remote Deployment (safe + auto-clean)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -142,49 +133,99 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 30m
           script: |
-            set -e # 任何命令出错立即停止
+            set -euo pipefail
 
-            # --- 1. Code Sync ---
-            echo "📥 Syncing code..."
-            cd ~/JoyJoin
-            git fetch --all
-            git reset --hard origin/main
+            echo "🧭 Server disk status (before):"
+            df -h /
 
-            # --- 2. Docker Services ---
-            echo "🐳 Restarting containers..."
-            cd deployment
+            # -----------------------------
+            # Helpers
+            # -----------------------------
+            soft_cleanup() {
+              echo "🧹 Soft cleanup (keep 7 days)..."
+              # 只清理未使用的缓存/镜像/停止容器/网络（不删正在使用 volume）
+              docker builder prune -af --filter "until=168h" || true
+              docker system prune -af --filter "until=168h" || true
+            }
 
-            # Caddy 安全重启
-            docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans
+            hard_cleanup() {
+              echo "🔥 Hard cleanup (aggressive, no volumes)..."
+              # 彻底清理 builder cache + 未使用资源
+              docker builder prune -af || true
+              docker system prune -af || true
+              # 兜底：清理 stopped containers / dangling images
+              docker container prune -f || true
+              docker image prune -af || true
+            }
 
-            # --- 3. Database Sync ---
-            echo "🔧 Fixing DNS and syncing database..."
-            echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
+            disk_guard() {
+              # 如果根分区使用率 >= 85%，先清理再继续（避免 build 直接写爆）
+              local usep
+              usep=$(df -P / | awk 'NR==2{gsub("%","",$5); print $5}')
+              if [ "${usep}" -ge 85 ]; then
+                echo "⚠️ Disk usage is ${usep}%. Running cleanup before deploy..."
+                soft_cleanup
+              fi
+            }
 
-            cd ~/JoyJoin
-            # 硬编码 DB 连接
-            export DATABASE_URL="postgresql://neondb_owner:npg_NmTv6SY3fxXW@ep-square-math-ahiz6fm7-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
-            echo "🎯 Target DB: $(echo $DATABASE_URL | sed 's/:[^@]*@/:****@/')"
-            npx drizzle-kit push --config=./drizzle.config.ts
+            # build / deploy 主逻辑：失败则 hard_cleanup 并退出（让下一次 push 能成功）
+            run_deploy() {
+              # --- 0. Disk guard ---
+              disk_guard
 
-            # --- 4. Health Checks ---
-            echo "🏥 Verifying service status..."
-            sleep 15
+              # --- 1. Code Sync ---
+              echo "📥 Syncing code..."
+              cd ~/JoyJoin
+              git fetch --all
+              git reset --hard origin/main
 
-            echo "   Checking internal API..."
-            curl -s --retry 5 --retry-delay 5 http://localhost:5000 > /dev/null || (echo "❌ API Failed" && docker logs joyjoin-api --tail 50 && exit 1)
+              # --- 2. Docker Services ---
+              echo "🐳 Restarting containers..."
+              cd ~/JoyJoin/deployment
 
-            echo "   Checking Caddy Container status..."
-            if [ "$(docker inspect -f '{{.State.Running}}' joyjoin-caddy)" != "true" ]; then
+              # 这里用 up --build；失败会被外层 trap 捕获
+              docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans
+
+              # --- 3. Database Sync ---
+              echo "🔧 Syncing database..."
+              echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
+
+              cd ~/JoyJoin
+              export DATABASE_URL='${{ secrets.DATABASE_URL }}'
+              echo "🎯 Target DB: $(echo "$DATABASE_URL" | sed 's/:[^@]*@/:****@/')"
+              npx drizzle-kit push --config=./drizzle.config.ts
+
+              # --- 4. Health Checks ---
+              echo "🏥 Verifying service status..."
+              sleep 15
+
+              echo "   Checking internal API..."
+              curl -s --retry 5 --retry-delay 5 http://localhost:5000 > /dev/null \
+                || (echo "❌ API Failed" && docker logs joyjoin-api --tail 50 && exit 1)
+
+              echo "   Checking Caddy Container status..."
+              if [ "$(docker inspect -f '{{.State.Running}}' joyjoin-caddy 2>/dev/null || echo false)" != "true" ]; then
                 echo "❌ Caddy is NOT running."
-                docker logs joyjoin-caddy --tail 20
+                docker logs joyjoin-caddy --tail 50 || true
                 exit 1
-            fi
+              fi
 
-            # --- 5. Smart Clean Up ---
-            echo "🧹 Cleaning up OLD Docker images (Safety Mode)..."
-            docker image prune -a --force --filter "until=24h"
-            docker volume prune -f
+              # --- 5. Post-deploy soft cleanup ---
+              soft_cleanup
 
-            echo "✅ Deployment successful!"
+              echo "🧭 Server disk status (after):"
+              df -h /
 
+              echo "✅ Deployment successful!"
+            }
+
+            # 如果 deploy 失败：做 hard cleanup（释放空间），并把失败抛出去（让 workflow 红）
+            on_fail() {
+              echo "❌ Deploy failed. Running hard cleanup to prevent cache explosion..."
+              hard_cleanup
+              echo "🧭 Server disk status (after hard cleanup):"
+              df -h /
+            }
+
+            trap on_fail ERR
+            run_deploy
