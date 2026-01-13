@@ -1,0 +1,1085 @@
+# 瀑布流图片兴趣选择功能完整技术方案
+
+## 一、系统架构设计
+
+### 整体架构
+```
+用户端(微信小程序) ←→ 网关/负载均衡 ←→ 微服务集群
+      ↓                       ↓              ↓
+    CDN(图片)           API服务层         AI分析服务
+                                ↓              ↓
+                           业务逻辑层      向量数据库
+                                ↓              ↓
+                           数据存储层      匹配算法
+```
+
+## 二、前端实现方案
+
+### 1. 核心交互组件
+
+#### 图片瀑布流组件
+```javascript
+// components/InterestWaterfall/InterestWaterfall.js
+Component({
+  properties: {
+    images: Array,        // 图片数据
+    totalTime: Number,    // 总时长(秒)
+    autoPlay: Boolean     // 是否自动播放
+  },
+
+  data: {
+    currentIndex: 0,      // 当前图片索引
+    userChoices: [],      // 用户选择记录
+    timer: null,          // 自动播放定时器
+    startTime: null,      // 开始时间
+    progress: 0,          // 进度(0-100)
+    swipeLock: false      // 防连击锁
+  },
+
+  lifetimes: {
+    attached() {
+      this.initWaterfall();
+    },
+    
+    detached() {
+      this.cleanup();
+    }
+  },
+
+  methods: {
+    // 初始化瀑布流
+    initWaterfall() {
+      this.setData({ startTime: Date.now() });
+      
+      if (this.properties.autoPlay) {
+        this.startAutoPlay();
+      }
+    },
+
+    // 启动自动播放
+    startAutoPlay() {
+      const { totalTime, images } = this.properties;
+      const interval = (totalTime * 1000) / images.length;
+      
+      const timer = setInterval(() => {
+        const nextIndex = this.data.currentIndex + 1;
+        
+        if (nextIndex >= images.length) {
+          this.finishSelection();
+          return;
+        }
+        
+        // 记录未响应选择
+        this.recordChoice(this.data.currentIndex, 'no_response', interval);
+        
+        this.setData({
+          currentIndex: nextIndex,
+          progress: ((nextIndex + 1) / images.length) * 100
+        });
+        
+      }, interval);
+      
+      this.setData({ timer });
+    },
+
+    // 处理滑动手势
+    handleSwipe(e) {
+      if (this.data.swipeLock) return;
+      
+      const direction = e.detail.direction;
+      const imageIndex = this.data.currentIndex;
+      const reactionTime = Date.now() - this.data.imageStartTime;
+      
+      // 设置防连击锁
+      this.setData({ swipeLock: true });
+      
+      // 记录选择
+      let choice;
+      switch(direction) {
+        case 'right': choice = 'like'; break;
+        case 'left': choice = 'skip'; break;
+        case 'up': choice = 'love'; break;
+        default: choice = 'unknown';
+      }
+      
+      this.recordChoice(imageIndex, choice, reactionTime);
+      
+      // 动画效果
+      this.animateSwipe(direction, () => {
+        this.switchToNextImage();
+        setTimeout(() => {
+          this.setData({ swipeLock: false });
+        }, 100);
+      });
+    },
+
+    // 记录用户选择
+    recordChoice(imageIndex, choice, reactionTime) {
+      const { images } = this.properties;
+      const imageData = images[imageIndex];
+      
+      const choiceRecord = {
+        imageId: imageData.id,
+        category: imageData.category,
+        subCategory: imageData.subCategory,
+        choice: choice,
+        reactionTime: reactionTime,
+        timestamp: Date.now()
+      };
+      
+      const userChoices = [...this.data.userChoices];
+      userChoices[imageIndex] = choiceRecord;
+      
+      this.setData({ userChoices });
+      
+      // 实时上报选择数据
+      this.reportChoice(choiceRecord);
+    },
+
+    // 切换到下一张图片
+    switchToNextImage() {
+      const nextIndex = this.data.currentIndex + 1;
+      
+      if (nextIndex >= this.properties.images.length) {
+        this.finishSelection();
+        return;
+      }
+      
+      this.setData({
+        currentIndex: nextIndex,
+        imageStartTime: Date.now(),
+        progress: ((nextIndex + 1) / this.properties.images.length) * 100
+      });
+    },
+
+    // 动画效果
+    animateSwipe(direction, callback) {
+      const animation = wx.createAnimation({
+        duration: 300,
+        timingFunction: 'ease-out'
+      });
+      
+      switch(direction) {
+        case 'right':
+          animation.translateX(500).opacity(0).step();
+          break;
+        case 'left':
+          animation.translateX(-500).opacity(0).step();
+          break;
+        case 'up':
+          animation.translateY(-500).scale(0.8).opacity(0).step();
+          break;
+      }
+      
+      this.setData({
+        swipeAnimation: animation.export()
+      });
+      
+      setTimeout(() => {
+        callback && callback();
+      }, 250);
+    },
+
+    // 完成选择
+    finishSelection() {
+      clearInterval(this.data.timer);
+      
+      const totalTime = Date.now() - this.data.startTime;
+      const selectionData = {
+        choices: this.data.userChoices,
+        totalTime: totalTime,
+        imagesSeen: this.data.currentIndex + 1
+      };
+      
+      // 触发完成事件
+      this.triggerEvent('complete', selectionData);
+    },
+
+    // 清理资源
+    cleanup() {
+      clearInterval(this.data.timer);
+    }
+  }
+});
+```
+
+#### 手势识别组件
+```javascript
+// components/SwipeDetector/SwipeDetector.js
+Component({
+  methods: {
+    handleTouchStart(e) {
+      this.startX = e.touches[0].clientX;
+      this.startY = e.touches[0].clientY;
+      this.startTime = Date.now();
+    },
+
+    handleTouchMove(e) {
+      if (!this.startX || !this.startY) return;
+      
+      const currentX = e.touches[0].clientX;
+      const currentY = e.touches[0].clientY;
+      
+      // 计算移动距离
+      const deltaX = currentX - this.startX;
+      const deltaY = currentY - this.startY;
+      
+      // 触发实时反馈
+      this.triggerEvent('swiping', { deltaX, deltaY });
+    },
+
+    handleTouchEnd(e) {
+      if (!this.startX || !this.startY) return;
+      
+      const endX = e.changedTouches[0].clientX;
+      const endY = e.changedTouches[0].clientY;
+      const endTime = Date.now();
+      
+      const deltaX = endX - this.startX;
+      const deltaY = endY - this.startY;
+      const deltaTime = endTime - this.startTime;
+      
+      // 计算移动距离和速度
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      const velocity = distance / deltaTime;
+      
+      // 判断手势方向
+      let direction = null;
+      const minDistance = 50; // 最小滑动距离
+      const minVelocity = 0.3; // 最小速度
+      
+      if (distance > minDistance && velocity > minVelocity) {
+        const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+        
+        if (angle >= -45 && angle <= 45) {
+          direction = 'right'; // 右滑
+        } else if (angle >= 135 || angle <= -135) {
+          direction = 'left'; // 左滑
+        } else if (angle > 45 && angle < 135) {
+          direction = 'up'; // 上滑
+        }
+      }
+      
+      if (direction) {
+        this.triggerEvent('swipe', { direction, velocity, distance });
+      }
+      
+      // 重置
+      this.startX = null;
+      this.startY = null;
+      this.startTime = null;
+    }
+  }
+});
+```
+
+### 2. 页面实现
+
+```javascript
+// pages/interest-selection/interest-selection.js
+Page({
+  data: {
+    images: [],           // 图片列表
+    isLoading: true,      // 加载状态
+    showTutorial: true,   // 显示教程
+    selectionComplete: false
+  },
+
+  onLoad() {
+    this.loadImages();
+    this.initAnalytics();
+  },
+
+  // 加载图片数据
+  async loadImages() {
+    try {
+      // 1. 检查本地缓存
+      const cachedImages = wx.getStorageSync('interest_images');
+      const cacheTime = wx.getStorageSync('interest_images_time');
+      
+      // 2. 如果缓存有效（1天内）且数量足够，使用缓存
+      const isCacheValid = cachedImages && 
+                          cacheTime && 
+                          (Date.now() - cacheTime < 24 * 60 * 60 * 1000) &&
+                          cachedImages.length >= 15;
+      
+      if (isCacheValid) {
+        this.setData({
+          images: this.shuffleArray(cachedImages).slice(0, 18),
+          isLoading: false
+        });
+      } else {
+        // 3. 从服务器加载
+        const response = await wx.request({
+          url: 'https://api.yourdomain.com/v1/images/interests',
+          method: 'GET',
+          header: {
+            'Authorization': `Bearer ${getApp().globalData.token}`
+          }
+        });
+        
+        if (response.data.success) {
+          const images = response.data.images;
+          
+          // 缓存图片数据
+          wx.setStorageSync('interest_images', images);
+          wx.setStorageSync('interest_images_time', Date.now());
+          
+          this.setData({
+            images: this.shuffleArray(images).slice(0, 18),
+            isLoading: false
+          });
+        }
+      }
+      
+      // 4. 预加载图片
+      this.preloadImages();
+      
+    } catch (error) {
+      console.error('加载图片失败:', error);
+      this.showError();
+    }
+  },
+
+  // 预加载图片
+  preloadImages() {
+    const { images } = this.data;
+    
+    images.forEach((image, index) => {
+      const imgTask = wx.createSelectorQuery()
+        .select(`#image-${index}`)
+        .node()
+        .exec((res) => {
+          if (res[0] && res[0].node) {
+            res[0].node.src = image.url;
+          }
+        });
+    });
+  },
+
+  // 开始选择
+  startSelection() {
+    this.setData({ showTutorial: false });
+    
+    // 发送开始事件到组件
+    this.selectComponent('#waterfall').startAutoPlay();
+  },
+
+  // 处理选择完成
+  handleSelectionComplete(e) {
+    const selectionData = e.detail;
+    
+    this.setData({ selectionComplete: true });
+    
+    // 提交数据到后端
+    this.submitSelection(selectionData);
+    
+    // 跳转到结果页面
+    setTimeout(() => {
+      wx.redirectTo({
+        url: '/pages/matching/matching'
+      });
+    }, 1500);
+  },
+
+  // 提交选择数据
+  async submitSelection(data) {
+    try {
+      const response = await wx.request({
+        url: 'https://api.yourdomain.com/v1/selection/submit',
+        method: 'POST',
+        header: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getApp().globalData.token}`
+        },
+        data: {
+          userId: getApp().globalData.userId,
+          selection: data.choices,
+          metadata: {
+            totalTime: data.totalTime,
+            deviceInfo: this.getDeviceInfo(),
+            sessionId: this.sessionId
+          }
+        }
+      });
+      
+      if (response.data.success) {
+        // 存储用户兴趣向量
+        wx.setStorageSync('user_interest_vector', response.data.interestVector);
+      }
+      
+    } catch (error) {
+      console.error('提交数据失败:', error);
+      // 本地存储，下次重试
+      this.queueForRetry(data);
+    }
+  },
+
+  // 工具函数：随机打乱数组
+  shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  },
+
+  // 初始化分析
+  initAnalytics() {
+    this.sessionId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+  },
+
+  // 获取设备信息
+  getDeviceInfo() {
+    const systemInfo = wx.getSystemInfoSync();
+    return {
+      platform: systemInfo.platform,
+      system: systemInfo.system,
+      model: systemInfo.model,
+      screenWidth: systemInfo.screenWidth,
+      screenHeight: systemInfo.screenHeight
+    };
+  }
+});
+```
+
+### 3. WXML模板
+
+```xml
+<!-- pages/interest-selection/interest-selection.wxml -->
+<view class="container">
+  <!-- 加载状态 -->
+  <view wx:if="{{isLoading}}" class="loading-container">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">正在加载兴趣卡片...</text>
+  </view>
+
+  <!-- 教程页面 -->
+  <view wx:if="{{!isLoading && showTutorial}}" class="tutorial-container">
+    <view class="tutorial-content">
+      <view class="tutorial-title">快速兴趣匹配</view>
+      <view class="tutorial-subtitle">15秒快速选择，找到兴趣相投的朋友</view>
+      
+      <view class="gesture-demo">
+        <view class="gesture-item gesture-right">
+          <view class="gesture-icon">→</view>
+          <text class="gesture-text">喜欢</text>
+        </view>
+        <view class="gesture-item gesture-left">
+          <view class="gesture-icon">←</view>
+          <text class="gesture-text">跳过</text>
+        </view>
+        <view class="gesture-item gesture-up">
+          <view class="gesture-icon">↑</view>
+          <text class="gesture-text">超爱</text>
+        </view>
+      </view>
+      
+      <view class="tutorial-tip">
+        <text>根据第一直觉选择，无需思考太多</text>
+        <text>系统会自动为你匹配相似的朋友</text>
+      </view>
+      
+      <button class="start-button" bindtap="startSelection">
+        开始选择 (15秒)
+      </button>
+    </view>
+  </view>
+
+  <!-- 瀑布流选择器 -->
+  <view wx:if="{{!isLoading && !showTutorial && !selectionComplete}}" 
+        class="waterfall-container">
+    
+    <swipe-detector 
+      bind:swipe="handleSwipe"
+      bind:swiping="handleSwiping">
+      
+      <interest-waterfall 
+        id="waterfall"
+        images="{{images}}"
+        totalTime="15"
+        autoPlay="{{true}}"
+        bind:complete="handleSelectionComplete" />
+      
+    </swipe-detector>
+
+    <!-- 操作提示 -->
+    <view class="action-hints">
+      <view class="hint-item {{currentAction === 'right' ? 'active' : ''}}">
+        <text>喜欢</text>
+      </view>
+      <view class="hint-item {{currentAction === 'left' ? 'active' : ''}}">
+        <text>跳过</text>
+      </view>
+      <view class="hint-item {{currentAction === 'up' ? 'active' : ''}}">
+        <text>超爱</text>
+      </view>
+    </view>
+
+    <!-- 进度条 -->
+    <view class="progress-container">
+      <view class="progress-bar">
+        <view class="progress-fill" style="width: {{progress}}%"></view>
+      </view>
+      <text class="progress-text">{{currentIndex + 1}} / {{images.length}}</text>
+    </view>
+  </view>
+
+  <!-- 完成页面 -->
+  <view wx:if="{{selectionComplete}}" class="complete-container">
+    <view class="complete-icon">🎉</view>
+    <view class="complete-title">选择完成！</view>
+    <view class="complete-subtitle">正在为你匹配兴趣相投的朋友...</view>
+  </view>
+</view>
+```
+
+### 4. WXSS样式
+
+```css
+/* pages/interest-selection/interest-selection.wxss */
+.container {
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  overflow: hidden;
+}
+
+/* 加载状态 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.loading-spinner {
+  width: 60rpx;
+  height: 60rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 40rpx;
+  color: white;
+  font-size: 28rpx;
+}
+
+/* 教程页面 */
+.tutorial-container {
+  padding: 80rpx 40rpx;
+  color: white;
+}
+
+.tutorial-title {
+  font-size: 48rpx;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 20rpx;
+}
+
+.tutorial-subtitle {
+  font-size: 28rpx;
+  text-align: center;
+  opacity: 0.9;
+  margin-bottom: 80rpx;
+}
+
+.gesture-demo {
+  display: flex;
+  justify-content: space-around;
+  margin: 80rpx 0;
+}
+
+.gesture-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gesture-icon {
+  width: 120rpx;
+  height: 120rpx;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  margin-bottom: 20rpx;
+  transition: all 0.3s;
+}
+
+.gesture-right .gesture-icon {
+  border: 4rpx solid #4CAF50;
+  color: #4CAF50;
+}
+
+.gesture-left .gesture-icon {
+  border: 4rpx solid #F44336;
+  color: #F44336;
+}
+
+.gesture-up .gesture-icon {
+  border: 4rpx solid #FF9800;
+  color: #FF9800;
+}
+
+.gesture-text {
+  font-size: 24rpx;
+}
+
+.tutorial-tip {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20rpx;
+  padding: 40rpx;
+  margin: 60rpx 0;
+}
+
+.tutorial-tip text {
+  display: block;
+  font-size: 24rpx;
+  margin-bottom: 10rpx;
+  opacity: 0.8;
+}
+
+.start-button {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  border: none;
+  border-radius: 50rpx;
+  padding: 30rpx 60rpx;
+  font-size: 32rpx;
+  font-weight: bold;
+  margin-top: 40rpx;
+}
+
+/* 瀑布流容器 */
+.waterfall-container {
+  position: relative;
+  height: 100%;
+}
+
+/* 图片卡片 */
+.image-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600rpx;
+  height: 800rpx;
+  border-radius: 40rpx;
+  overflow: hidden;
+  box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.3);
+}
+
+.image-card image {
+  width: 100%;
+  height: 100%;
+}
+
+/* 操作提示 */
+.action-hints {
+  position: absolute;
+  bottom: 200rpx;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+  padding: 0 80rpx;
+}
+
+.hint-item {
+  padding: 20rpx 40rpx;
+  border-radius: 30rpx;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 24rpx;
+  transition: all 0.3s;
+}
+
+.hint-item.active {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+  transform: scale(1.1);
+}
+
+/* 进度条 */
+.progress-container {
+  position: absolute;
+  bottom: 100rpx;
+  left: 0;
+  right: 0;
+  padding: 0 80rpx;
+}
+
+.progress-bar {
+  height: 8rpx;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4rpx;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  transition: width 0.3s;
+}
+
+.progress-text {
+  display: block;
+  text-align: center;
+  color: white;
+  font-size: 24rpx;
+  margin-top: 20rpx;
+  opacity: 0.8;
+}
+
+/* 完成页面 */
+.complete-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: white;
+}
+
+.complete-icon {
+  font-size: 120rpx;
+  margin-bottom: 40rpx;
+  animation: bounce 1s infinite alternate;
+}
+
+@keyframes bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-20rpx); }
+}
+
+.complete-title {
+  font-size: 48rpx;
+  font-weight: bold;
+  margin-bottom: 20rpx;
+}
+
+.complete-subtitle {
+  font-size: 28rpx;
+  opacity: 0.9;
+}
+```
+
+## 三、后端API设计
+
+### 1. 图片管理服务
+
+```javascript
+// 获取图片列表
+GET /api/v1/images/interests
+Response:
+{
+  "success": true,
+  "images": [
+    {
+      "id": "img_001",
+      "url": "https://cdn.yourdomain.com/images/movie_cinema_2.png",
+      "category": "movie",
+      "subCategory": "cinema",
+      "tags": ["social", "group", "entertainment"],
+      "metadata": {
+        "socialCount": 2,
+        "location": "indoor",
+        "energy": "moderate",
+        "props": ["popcorn", "3d-glasses"]
+      },
+      "embedding": [0.12, -0.45, 0.78, ...] // 预计算的向量
+    }
+  ]
+}
+
+// 提交选择数据
+POST /api/v1/selection/submit
+Request:
+{
+  "userId": "user_123",
+  "selection": [
+    {
+      "imageId": "img_001",
+      "category": "movie",
+      "choice": "like",
+      "reactionTime": 320,
+      "timestamp": 1640995200000
+    }
+  ],
+  "metadata": {
+    "totalTime": 14500,
+    "deviceInfo": {...}
+  }
+}
+Response:
+{
+  "success": true,
+  "interestVector": [0.34, -0.21, 0.78, ...],
+  "matchCount": 3,
+  "nextStep": "matching"
+}
+```
+
+### 2. 兴趣分析服务
+
+```javascript
+// 计算兴趣向量
+async function calculateInterestVector(choices) {
+  // 1. 加载图片的预计算embedding
+  const imageVectors = await loadImageVectors(choices.map(c => c.imageId));
+  
+  // 2. 根据选择类型加权
+  const weights = {
+    'love': 3.0,
+    'like': 2.0,
+    'skip': -1.0,
+    'no_response': 0.0
+  };
+  
+  // 3. 计算加权平均向量
+  let weightedSum = new Array(EMBEDDING_SIZE).fill(0);
+  let totalWeight = 0;
+  
+  choices.forEach((choice, index) => {
+    const weight = weights[choice.choice] || 1.0;
+    const vector = imageVectors[index];
+    
+    // 根据反应时间调整权重（快速反应权重更高）
+    const reactionFactor = Math.exp(-choice.reactionTime / 1000);
+    const adjustedWeight = weight * reactionFactor;
+    
+    vector.forEach((value, i) => {
+      weightedSum[i] += value * adjustedWeight;
+    });
+    
+    totalWeight += adjustedWeight;
+  });
+  
+  // 4. 归一化
+  const interestVector = weightedSum.map(value => value / totalWeight);
+  
+  // 5. 添加时间衰减和多样性因素
+  return enhanceVector(interestVector, choices);
+}
+```
+
+## 四、数据库设计
+
+### 1. 图片元数据表
+```sql
+CREATE TABLE interest_images (
+  id VARCHAR(64) PRIMARY KEY,
+  url VARCHAR(512) NOT NULL,
+  category VARCHAR(32) NOT NULL,
+  sub_category VARCHAR(32),
+  social_count INT DEFAULT 1,
+  location ENUM('indoor', 'outdoor', 'both'),
+  energy_level ENUM('low', 'medium', 'high'),
+  props JSON, -- 存储图片中的道具
+  tags JSON, -- 标签数组
+  embedding_vector BLOB, -- 预计算的向量
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_category (category),
+  INDEX idx_tags ((CAST(tags AS CHAR(255)))),
+  INDEX idx_social_count (social_count)
+);
+```
+
+### 2. 用户选择记录表
+```sql
+CREATE TABLE user_selections (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id VARCHAR(64) NOT NULL,
+  session_id VARCHAR(64) NOT NULL,
+  image_id VARCHAR(64) NOT NULL,
+  choice ENUM('love', 'like', 'skip', 'no_response') NOT NULL,
+  reaction_time INT, -- 毫秒
+  timestamp BIGINT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user_session (user_id, session_id),
+  INDEX idx_image_choice (image_id, choice),
+  FOREIGN KEY (image_id) REFERENCES interest_images(id)
+);
+```
+
+### 3. 用户兴趣向量表
+```sql
+CREATE TABLE user_interest_vectors (
+  user_id VARCHAR(64) PRIMARY KEY,
+  interest_vector BLOB NOT NULL, -- 压缩后的向量
+  last_updated TIMESTAMP NOT NULL,
+  confidence_score FLOAT DEFAULT 0.0,
+  version INT DEFAULT 1,
+  metadata JSON,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+```
+
+## 五、AI分析与匹配
+
+### 1. 实时兴趣分析
+```python
+# interest_analyzer.py
+class InterestAnalyzer:
+    def __init__(self):
+        self.embedding_model = load_embedding_model()
+        self.classifier = load_interest_classifier()
+    
+    def analyze_selection(self, choices):
+        # 1. 提取反应模式
+        reaction_pattern = self.extract_reaction_pattern(choices)
+        
+        # 2. 计算类别偏好
+        category_preferences = self.calculate_category_scores(choices)
+        
+        # 3. 推断社交偏好
+        social_preferences = self.infer_social_preferences(choices)
+        
+        # 4. 生成综合兴趣向量
+        interest_vector = self.generate_interest_vector(
+            reaction_pattern,
+            category_preferences,
+            social_preferences
+        )
+        
+        # 5. 计算置信度
+        confidence = self.calculate_confidence(choices)
+        
+        return {
+            'interest_vector': interest_vector,
+            'category_scores': category_preferences,
+            'social_pattern': social_preferences,
+            'confidence': confidence
+        }
+```
+
+### 2. 匹配算法
+```python
+# matcher.py
+class GroupMatcher:
+    def match_groups(self, user_vectors, group_size=4):
+        # 1. 计算用户相似度矩阵
+        similarity_matrix = self.calculate_similarity_matrix(user_vectors)
+        
+        # 2. 使用聚类算法分组
+        groups = self.cluster_users(user_vectors, group_size)
+        
+        # 3. 优化每组内的多样性
+        optimized_groups = []
+        for group in groups:
+            optimized = self.optimize_group_dynamics(group, similarity_matrix)
+            optimized_groups.append(optimized)
+        
+        # 4. 计算每组匹配分数
+        group_scores = self.calculate_group_scores(optimized_groups)
+        
+        return {
+            'groups': optimized_groups,
+            'scores': group_scores,
+            'average_similarity': np.mean(similarity_matrix)
+        }
+```
+
+## 六、部署与优化
+
+### 1. 性能优化
+- **图片CDN加速**：使用云存储+CDN分发图片
+- **懒加载**：只预加载前3张图片
+- **向量计算缓存**：缓存常用的向量计算结果
+- **数据库索引优化**：为频繁查询的字段建立索引
+
+### 2. 监控与日志
+```javascript
+// 前端监控
+class SelectionMonitor {
+  static logEvent(eventName, data) {
+    // 记录用户行为
+    const event = {
+      event: eventName,
+      timestamp: Date.now(),
+      sessionId: this.sessionId,
+      ...data
+    };
+    
+    // 发送到分析平台
+    wx.request({
+      url: 'https://analytics.yourdomain.com/v1/event',
+      method: 'POST',
+      data: event,
+      fail: () => {
+        // 本地存储，稍后重试
+        this.queueEvent(event);
+      }
+    });
+  }
+}
+```
+
+### 3. A/B测试框架
+```javascript
+// A/B测试配置
+const experiments = {
+  'image_order': {
+    variants: ['random', 'popular_first', 'diversity_first'],
+    weights: [0.33, 0.33, 0.34]
+  },
+  'swipe_animation': {
+    variants: ['standard', 'enhanced', 'minimal'],
+    weights: [0.5, 0.3, 0.2]
+  }
+};
+```
+
+## 七、安全与隐私
+
+### 1. 数据保护
+- 用户选择数据匿名化处理
+- 加密存储敏感信息
+- GDPR/CCPA合规设计
+
+### 2. 防作弊机制
+- 检测异常反应模式
+- 防止机器人自动化
+- 频率限制和验证码
+
+## 八、扩展功能
+
+### 1. 动态图片更新
+```javascript
+// 根据用户反馈动态调整图片库
+function updateImagePool(feedback) {
+  // 移除表现差的图片
+  // 添加新的测试图片
+  // 调整图片展示频率
+}
+```
+
+### 2. 个性化推荐
+```javascript
+// 基于用户历史推荐相似兴趣
+function recommendSimilarInterests(userId) {
+  // 查找有相似兴趣向量的用户
+  // 推荐他们喜欢但当前用户未接触的兴趣
+}
+```
+
+这个完整方案提供了从UI设计到后端实现的所有细节，你可以根据实际需求调整。关键点包括：
+1. 流畅的用户体验和直观的交互
+2. 高效的数据收集和分析
+3. 智能的匹配算法
+4. 可扩展的系统架构
+
+需要我进一步详细说明某个部分吗？
