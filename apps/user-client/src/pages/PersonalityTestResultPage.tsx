@@ -26,6 +26,8 @@ import { ArrowRight } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 import { ArchetypeSlotMachine } from "@/components/slot-machine";
+import { UnlockOverlay } from "@/components/UnlockOverlay";
+import { getArchetypeColorHSL } from "@/components/slot-machine/archetypeData";
 
 const staggerContainerVariants = {
   hidden: { opacity: 0 },
@@ -502,10 +504,12 @@ function MatchExplanationSection({ result }: { result: UnifiedAssessmentResult }
   );
 }
 
+type AnimationPhase = 'slot' | 'unlock' | 'results';
+
 export default function PersonalityTestResultPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [showSlotMachine, setShowSlotMachine] = useState(true);
+  const [animationPhase, setAnimationPhase] = useState<AnimationPhase>('slot');
   const prefersReducedMotion = useReducedMotion();
 
   const containerVariants = useMemo(
@@ -536,7 +540,7 @@ export default function PersonalityTestResultPage() {
       X: result.extraversionScore / 100,
       P: result.positivityScore / 100,
     } : null,
-    enabled: !!result && !showSlotMachine,
+    enabled: !!result && animationPhase === 'results',
   });
 
   const styleSpectrum = useMemo(() => {
@@ -565,14 +569,19 @@ export default function PersonalityTestResultPage() {
 
   // Skip slot machine animation if user prefers reduced motion
   useEffect(() => {
-    if (prefersReducedMotion && showSlotMachine) {
-      setShowSlotMachine(false);
+    if (prefersReducedMotion && animationPhase === 'slot') {
+      setAnimationPhase('results');
     }
-  }, [prefersReducedMotion, showSlotMachine]);
+  }, [prefersReducedMotion, animationPhase]);
 
   // Handle slot machine completion
   const handleSlotMachineComplete = useCallback(() => {
-    setShowSlotMachine(false);
+    setAnimationPhase('unlock');
+  }, []);
+
+  // Handle unlock overlay completion
+  const handleUnlockComplete = useCallback(() => {
+    setAnimationPhase('results');
   }, []);
 
   // Mark personality test as complete and navigate to profile setup
@@ -646,19 +655,47 @@ export default function PersonalityTestResultPage() {
 
   const isLegacyV1 = result.algorithmVersion === 'v1' || !result.algorithmVersion;
 
-  // Show slot machine animation if not yet completed
-  if (showSlotMachine) {
-    return (
-      <ArchetypeSlotMachine
-        finalArchetype={result.primaryRole}
-        confidence={result.isDecisive ? 0.9 : undefined}
-        onComplete={handleSlotMachineComplete}
-      />
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-background">
+    <AnimatePresence mode="wait">
+      {animationPhase === 'slot' && (
+        <motion.div
+          key="slot"
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <ArchetypeSlotMachine
+            finalArchetype={result.primaryRole}
+            confidence={result.isDecisive ? 0.9 : undefined}
+            onComplete={handleSlotMachineComplete}
+          />
+        </motion.div>
+      )}
+      
+      {animationPhase === 'unlock' && (
+        <motion.div
+          key="unlock"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <UnlockOverlay
+            archetype={result.primaryRole}
+            accentColor={getArchetypeColorHSL(result.primaryRole)}
+            onComplete={handleUnlockComplete}
+          />
+        </motion.div>
+      )}
+      
+      {animationPhase === 'results' && (
+        <motion.div
+          key="results"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          className="min-h-screen bg-background"
+        >
       
       <motion.div
         initial={{ opacity: 0 }}
@@ -898,6 +935,8 @@ export default function PersonalityTestResultPage() {
           </p>
         </div>
       </motion.div>
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
