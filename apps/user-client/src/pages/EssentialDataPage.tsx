@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, Sparkles, ArrowRight, Loader2 } from "lucide-react";
+import { ChevronLeft, Sparkles, ArrowRight, Loader2, Users, Network, MessageCircle, PartyPopper, Heart, Shuffle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -65,14 +65,17 @@ const RELATIONSHIP_OPTIONS = [
   { value: "prefer_not_say", label: "不想说" },
 ];
 
+// Main intent options with icons and descriptions
 const INTENT_OPTIONS = [
-  { value: "friends", label: "交新朋友" },
-  { value: "networking", label: "拓展人脉" },
-  { value: "discussion", label: "深度交流" },
-  { value: "fun", label: "轻松娱乐" },
-  { value: "romance", label: "浪漫邂逅" },
-  { value: "flexible", label: "随缘" },
+  { value: "friends", label: "交新朋友", subtitle: "认识有趣的人", icon: Users },
+  { value: "networking", label: "拓展人脉", subtitle: "扩大社交圈", icon: Network },
+  { value: "discussion", label: "深度交流", subtitle: "走心的对话", icon: MessageCircle },
+  { value: "fun", label: "轻松娱乐", subtitle: "开心就好", icon: PartyPopper },
+  { value: "romance", label: "浪漫邂逅", subtitle: "遇见心动", icon: Heart },
 ];
+
+// Special "flexible" option - mutually exclusive with others
+const FLEXIBLE_OPTION = { value: "flexible", label: "随缘", subtitle: "交给小悦推荐", icon: Shuffle };
 
 const EDUCATION_OPTIONS = [
   { value: "high_school", label: "高中及以下" },
@@ -153,7 +156,7 @@ const STEP_CONFIG = [
   {
     id: "intent",
     title: "你想通过悦聚收获什么？",
-    subtitle: "可以多选哦（最多6个）",
+    subtitle: "可以多选哦（最多5个）",
     mascotMessage: "告诉我你的目标，我帮你精准匹配！最后一步啦！",
     mascotMood: "excited" as XiaoyueMood,
     type: "multiSelect" as const,
@@ -343,14 +346,29 @@ export default function EssentialDataPage() {
 
   const toggleIntent = (value: string) => {
     setIntent(prev => {
-      if (prev.includes(value)) {
-        return prev.filter(v => v !== value);
-      } else if (prev.length < 6) {
-        return [...prev, value];
+      // Handle "flexible" (随缘) - mutually exclusive with other options
+      if (value === "flexible") {
+        if (prev.includes("flexible")) {
+          return []; // Deselect flexible
+        } else {
+          return ["flexible"]; // Select only flexible, clear others
+        }
       }
-      return prev;
+      
+      // Handle normal options - if selecting a normal option, remove "flexible"
+      const withoutFlexible = prev.filter(v => v !== "flexible");
+      
+      if (withoutFlexible.includes(value)) {
+        return withoutFlexible.filter(v => v !== value);
+      } else if (withoutFlexible.length < 5) {
+        return [...withoutFlexible, value];
+      }
+      return withoutFlexible;
     });
   };
+
+  // Check if "flexible" is selected
+  const isFlexibleSelected = intent.includes("flexible");
 
   const handleNext = () => {
     if (!canProceed()) return;
@@ -593,26 +611,192 @@ export default function EssentialDataPage() {
                 </div>
               )}
 
-              {/* Step 6: Intent (multiSelect) */}
+              {/* Step 6: Intent (multiSelect) - Duolingo Style */}
               {currentStep === 6 && (
-                <div className="flex flex-wrap gap-3 justify-center">
-                  {INTENT_OPTIONS.map(opt => (
-                    <motion.button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => toggleIntent(opt.value)}
+                <div className="space-y-6">
+                  {/* Main intent options - 2 column grid with icons */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {INTENT_OPTIONS.map((opt, index) => {
+                      const Icon = opt.icon;
+                      const isSelected = intent.includes(opt.value);
+                      const isDisabled = isFlexibleSelected;
+                      
+                      return (
+                        <motion.button
+                          key={opt.value}
+                          type="button"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ 
+                            delay: index * 0.05,
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 24
+                          }}
+                          onClick={() => {
+                            haptics.light();
+                            toggleIntent(opt.value);
+                          }}
+                          disabled={isDisabled}
+                          className={cn(
+                            "relative flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all duration-200",
+                            isSelected
+                              ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
+                              : isDisabled
+                                ? "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 opacity-50"
+                                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary/50 hover:shadow-md"
+                          )}
+                          whileTap={{ scale: 0.95 }}
+                          data-testid={`card-intent-${opt.value}`}
+                        >
+                          {/* Selection checkmark */}
+                          {isSelected && (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="absolute top-2 right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center"
+                            >
+                              <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </motion.div>
+                          )}
+                          
+                          {/* Icon */}
+                          <motion.div
+                            animate={isSelected ? { 
+                              scale: [1, 1.15, 1],
+                              rotate: [0, -5, 5, 0]
+                            } : { scale: 1 }}
+                            transition={{ duration: 0.3 }}
+                            className={cn(
+                              "w-10 h-10 rounded-xl flex items-center justify-center",
+                              isSelected 
+                                ? "bg-primary text-primary-foreground" 
+                                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                            )}
+                          >
+                            <Icon className="w-5 h-5" />
+                          </motion.div>
+                          
+                          {/* Text */}
+                          <div className="text-center">
+                            <p className={cn(
+                              "font-semibold text-sm",
+                              isSelected ? "text-primary" : "text-foreground"
+                            )}>
+                              {opt.label}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {opt.subtitle}
+                            </p>
+                          </div>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Divider with "或者" */}
+                  <div className="relative flex items-center justify-center py-2">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-dashed border-gray-300 dark:border-gray-600" />
+                    </div>
+                    <span className="relative bg-background px-4 text-sm text-muted-foreground">
+                      或者
+                    </span>
+                  </div>
+                  
+                  {/* Flexible option - special styling */}
+                  <motion.button
+                    type="button"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ 
+                      delay: 0.3,
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 24
+                    }}
+                    onClick={() => {
+                      haptics.medium();
+                      toggleIntent("flexible");
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-dashed transition-all duration-200",
+                      isFlexibleSelected
+                        ? "border-purple-500 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 shadow-lg"
+                        : "border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/30 hover:border-purple-400 hover:bg-purple-50/50 dark:hover:bg-purple-950/20"
+                    )}
+                    whileTap={{ scale: 0.98 }}
+                    data-testid="card-intent-flexible"
+                  >
+                    {/* Dice icon with animation */}
+                    <motion.div
+                      animate={isFlexibleSelected ? { 
+                        rotate: [0, 360],
+                        scale: [1, 1.1, 1]
+                      } : { rotate: 0 }}
+                      transition={{ 
+                        rotate: { duration: 0.5 },
+                        scale: { duration: 0.3 }
+                      }}
                       className={cn(
-                        "px-4 py-3 rounded-full border-2 text-sm font-medium transition-all duration-200",
-                        intent.includes(opt.value)
-                          ? "border-primary bg-primary text-primary-foreground shadow-md"
-                          : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary/50"
+                        "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
+                        isFlexibleSelected 
+                          ? "bg-gradient-to-br from-purple-500 to-pink-500 text-white" 
+                          : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
                       )}
-                      whileTap={{ scale: 0.95 }}
-                      data-testid={`chip-intent-${opt.value}`}
                     >
-                      {opt.label}
-                    </motion.button>
-                  ))}
+                      <Shuffle className="w-6 h-6" />
+                    </motion.div>
+                    
+                    {/* Text */}
+                    <div className="flex-1 text-left">
+                      <p className={cn(
+                        "font-bold text-base",
+                        isFlexibleSelected ? "text-purple-700 dark:text-purple-300" : "text-foreground"
+                      )}>
+                        {FLEXIBLE_OPTION.label}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {FLEXIBLE_OPTION.subtitle}
+                      </p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">
+                        (我都感兴趣，帮我安排)
+                      </p>
+                    </div>
+                    
+                    {/* Toggle indicator */}
+                    <div className={cn(
+                      "w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
+                      isFlexibleSelected 
+                        ? "border-purple-500 bg-purple-500" 
+                        : "border-gray-300 dark:border-gray-600"
+                    )}>
+                      {isFlexibleSelected && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                        >
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </motion.div>
+                      )}
+                    </div>
+                  </motion.button>
+                  
+                  {/* Selection count indicator */}
+                  {!isFlexibleSelected && intent.length > 0 && (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-center text-sm text-muted-foreground"
+                    >
+                      已选择 <span className="font-semibold text-primary">{intent.length}</span> 个目标
+                    </motion.p>
+                  )}
                 </div>
               )}
             </div>
