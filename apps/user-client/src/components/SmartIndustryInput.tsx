@@ -19,6 +19,9 @@ interface SmartIndustryInputProps {
   className?: string;
 }
 
+// Minimum text length before showing AI classification option
+const MIN_TEXT_LENGTH_FOR_AI_CLASSIFICATION = 3;
+
 export function SmartIndustryInput({
   options,
   value,
@@ -44,6 +47,40 @@ export function SmartIndustryInput({
     onSuccess: (resp) => {
       if (resp?.primary) setPrimary(resp.primary);
       setAlts(resp?.alternatives ?? []);
+    },
+  });
+
+  const { mutate: classifyWithAI, isPending: isAiClassifying } = useMutation({
+    mutationFn: async (body: { description: string }) => {
+      const res = await apiRequest("POST", "/api/inference/classify-industry", body);
+      return (await res.json()) as { 
+        industry: string; 
+        confidence: number; 
+        reasoning: string; 
+        source: string;
+      };
+    },
+    onError: () => {
+      toast({ 
+        description: "分类失败，请手动选择最接近的行业", 
+        variant: "destructive" 
+      });
+    },
+    onSuccess: (result) => {
+      const industry = options.find(o => o.value === result.industry);
+      
+      if (result.confidence > 0.6 && industry) {
+        onSelect(result.industry);
+        toast({ 
+          description: `已将"${text}"归类为"${industry.label}"${result.reasoning ? `：${result.reasoning}` : ''}` 
+        });
+      } else if (industry) {
+        onSelect(result.industry);
+        toast({ 
+          description: `暂时归类为"${industry.label}"，我们会继续优化分类`,
+          variant: "default"
+        });
+      }
     },
   });
 
@@ -129,6 +166,32 @@ export function SmartIndustryInput({
           </Button>
         ))}
       </div>
+      
+      {/* AI Classification Fallback */}
+      {!primaryNorm && !isPending && !isAiClassifying && text.trim().length > MIN_TEXT_LENGTH_FOR_AI_CLASSIFICATION && (
+        <div className="p-4 border border-dashed rounded-lg bg-amber-50 dark:bg-amber-950/20">
+          <p className="text-sm font-medium text-amber-900 dark:text-amber-100 mb-2">
+            🤔 没找到合适的行业？
+          </p>
+          <p className="text-xs text-amber-700 dark:text-amber-300 mb-3">
+            告诉我们你的具体工作，我们会智能分类
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => classifyWithAI({ description: text })}
+            className="w-full"
+          >
+            让AI帮我分类
+          </Button>
+        </div>
+      )}
+      
+      {isAiClassifying && (
+        <div className="flex items-center gap-2 text-base text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" /> AI正在分析你的行业…
+        </div>
+      )}
     </div>
   );
 }

@@ -67,7 +67,8 @@ export const INDUSTRIES: Industry[] = [
   { id: "realestate", label: "地产建筑", icon: "🏗️", priority: 14 },
   { id: "hospitality", label: "航空酒店旅游", icon: "✈️", priority: 15 },
   { id: "lifestyle", label: "生活方式", icon: "☕", priority: 16 },
-  { id: "other", label: "其他行业", icon: "🔧", priority: 17 },
+  { id: "emerging", label: "新兴产业", icon: "🚀", priority: 17 },
+  { id: "government", label: "政府公共服务", icon: "🏛️", priority: 18 },
 ];
 
 // 130+ 职业数据

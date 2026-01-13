@@ -9560,6 +9560,184 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  // POST /api/inference/classify-industry - AI-powered industry classification with fallback
+  // Used when user input doesn't match any predefined industry options
+  app.post("/api/inference/classify-industry", isPhoneAuthenticated, async (req, res) => {
+    try {
+      const { description } = req.body;
+      
+      if (!description || typeof description !== 'string' || description.trim().length < 2) {
+        return res.status(400).json({ error: "请提供行业描述" });
+      }
+
+      const userId = req.session?.userId;
+      const { INDUSTRIES } = await import("@shared/occupations");
+      
+      // Step 1: Try local fuzzy matching first (fast, no API cost)
+      const localMatch = matchIndustryFromText(description);
+      if (localMatch && localMatch.confidence > 0.8) {
+        // Map the matched industry name to one of the 18 INDUSTRIES
+        // matchIndustryFromText returns names from INDUSTRY_ONTOLOGY (e.g., "金融", "科技/互联网")
+        // We need to map these to INDUSTRIES labels (e.g., "金融投资", "科技互联网")
+        const industryMappings: Record<string, string> = {
+          '金融': 'finance',
+          '科技/互联网': 'tech',
+          '科技': 'tech',
+          '互联网': 'tech',
+          '咨询': 'consulting',
+          '法律': 'legal',
+          '医疗/生物': 'medical',
+          '医疗': 'medical',
+          '教育': 'education',
+          '地产': 'realestate',
+          '快消/零售': 'retail',
+          '传媒/广告': 'media',
+          '制造业': 'hardware',
+          '文化娱乐': 'creative',
+          '生活服务': 'lifestyle',
+        };
+        
+        // Try to find industry by mapped ID or by matching labels
+        let industry = INDUSTRIES.find(i => {
+          const mappedId = industryMappings[localMatch.industry];
+          if (mappedId && i.id === mappedId) return true;
+          
+          // Also try direct label matching
+          return i.label.includes(localMatch.industry) || 
+                 localMatch.industry.includes(i.label);
+        });
+        
+        if (industry) {
+          // Log local classification
+          await storage.createIndustryAiLog({
+            userId,
+            rawInput: description,
+            aiClassified: industry.id,
+            confidence: localMatch.confidence.toString(),
+            reasoning: `基于关键词匹配：${localMatch.matchedKeywords.join('、')}`,
+            source: "local"
+          });
+          
+          return res.json({
+            industry: industry.id,
+            confidence: localMatch.confidence,
+            reasoning: "基于关键词匹配",
+            source: "local"
+          });
+        }
+      }
+
+      // Step 2: Use AI classification (DeepSeek) with timeout
+      const industryLabels = INDUSTRIES.map(i => i.label).join('、');
+      
+      // Create OpenAI client for DeepSeek
+      const OpenAI = (await import("openai")).default;
+      const deepseekClient = new OpenAI({
+        apiKey: process.env.DEEPSEEK_API_KEY,
+        baseURL: 'https://api.deepseek.com',
+      });
+      
+      const aiPromise = deepseekClient.chat.completions.create({
+        model: "deepseek-chat",
+        messages: [{
+          role: "system",
+          content: `你是一个行业分类专家。将用户的职业描述映射到以下18个行业之一：
+
+${industryLabels}
+
+用户描述："${description}"
+
+返回JSON格式，必须包含以下字段：
+{
+  "industry": "最匹配的行业名称（必须从上述18个中选择）",
+  "confidence": 0.0-1.0之间的数字,
+  "reasoning": "为什么归类到这个行业的简短解释（1句话）"
+}
+
+必须使用简体中文回复。`
+        }],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+        max_tokens: 200
+      });
+
+      // Set 5 second timeout for AI classification
+      let timeoutId: NodeJS.Timeout | undefined;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error("AI classification timeout")), 5000);
+      });
+
+      try {
+        const response = await Promise.race([aiPromise, timeoutPromise]);
+        if (timeoutId) clearTimeout(timeoutId); // Clear timeout to prevent memory leak
+        
+        let aiResult;
+        try {
+          aiResult = JSON.parse(response.choices[0].message.content || "{}");
+        } catch (parseError) {
+          console.error("Failed to parse AI response JSON:", parseError);
+          throw new Error("AI返回的JSON格式无效");
+        }
+        
+        // Convert industry label to ID
+        const industry = INDUSTRIES.find(i => i.label === aiResult.industry);
+        
+        if (!industry) {
+          throw new Error("AI返回的行业无法识别");
+        }
+
+        // Log AI classification
+        await storage.createIndustryAiLog({
+          userId,
+          rawInput: description,
+          aiClassified: industry.id,
+          confidence: aiResult.confidence?.toString() || "0.60",
+          reasoning: aiResult.reasoning || "AI分类",
+          source: "ai"
+        });
+
+        return res.json({
+          industry: industry.id,
+          confidence: aiResult.confidence || 0.60,
+          reasoning: aiResult.reasoning || "AI分类",
+          source: "ai"
+        });
+
+      } catch (aiError) {
+        if (timeoutId) clearTimeout(timeoutId); // Ensure cleanup on error (only if timeout was set)
+        console.error("AI分类失败:", aiError);
+        
+        // Step 3: Fallback to "emerging" industry
+        const emergingIndustry = INDUSTRIES.find(i => i.id === "emerging");
+        
+        if (emergingIndustry) {
+          // Log fallback classification
+          await storage.createIndustryAiLog({
+            userId,
+            rawInput: description,
+            aiClassified: "emerging",
+            confidence: "0.50",
+            reasoning: "AI分类失败，暂时归类为新兴产业",
+            source: "fallback"
+          });
+
+          return res.json({
+            industry: "emerging",
+            confidence: 0.5,
+            reasoning: "暂时归类为新兴产业",
+            source: "fallback"
+          });
+        }
+        
+        throw new Error("Fallback industry not found");
+      }
+
+    } catch (error) {
+      console.error("行业分类失败:", error);
+      res.status(500).json({ error: "分类失败，请手动选择最接近的行业" });
+    }
+  });
+
   // POST /api/inference/test - 测试快速推断（不调用LLM）
   app.post("/api/inference/test", async (req, res) => {
     try {
