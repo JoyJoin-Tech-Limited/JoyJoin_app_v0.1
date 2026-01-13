@@ -99,27 +99,6 @@ export default function ExtendedDataPage() {
   }, []);
 
   const handleConfirm = useCallback(() => {
-    // Validate minimum requirements
-    const positiveChoices = swipeResults.filter(r => r.choice === 'like' || r.choice === 'love');
-    
-    if (swipeResults.length === 0) {
-      toast({
-        title: "请先滑动卡片",
-        description: "至少滑动一张卡片才能继续",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (positiveChoices.length === 0) {
-      toast({
-        title: "请选择至少一个兴趣",
-        description: "至少选择一个喜欢的兴趣才能继续",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     setShowCelebration(true);
     
     const likedInterests = swipeResults
@@ -142,7 +121,7 @@ export default function ExtendedDataPage() {
       };
       saveMutation.mutate(profileData);
     }, 1500);
-  }, [swipeResults, saveMutation, toast]);
+  }, [swipeResults, saveMutation]);
 
   const handleReset = useCallback(() => {
     setSwipeResults([]);
