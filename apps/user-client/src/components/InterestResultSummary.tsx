@@ -23,6 +23,7 @@ interface InterestResultSummaryProps {
   onConfirm: () => void;
   onEdit?: () => void;
   isLoading?: boolean;
+  disabled?: boolean;
 }
 
 interface CategoryStats {
@@ -137,6 +138,7 @@ export function InterestResultSummary({
   onConfirm,
   onEdit,
   isLoading = false,
+  disabled = false,
 }: InterestResultSummaryProps) {
   const { 
     lovedCards, 
@@ -290,7 +292,7 @@ export function InterestResultSummary({
       >
         <Button
           onClick={onConfirm}
-          disabled={isLoading}
+          disabled={isLoading || disabled}
           className="w-full h-14 rounded-2xl text-lg font-bold shadow-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 transition-all duration-200 border-0"
           data-testid="button-confirm-interests"
         >
