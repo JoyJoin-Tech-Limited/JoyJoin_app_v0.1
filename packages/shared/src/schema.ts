@@ -123,7 +123,8 @@ export const users = pgTable("users", {
   topicsHappy: text("topics_happy").array(), // Deprecated: Topics user enjoys discussing - moving to simpler model
   topicsAvoid: text("topics_avoid").array(), // Deprecated: Topics to avoid - use topicAvoidances
   topicAvoidances: text("topic_avoidances").array(), // 饭局酒局不自在话题: politics, dating_pressure, workplace_gossip, money_finance, or empty for "都OK"
-  interestsDeep: text("interests_deep").array(), // 深度兴趣（AI对话收集的更详细兴趣描述）
+  interestsDeep: text("interests_deep").array(), // 深度兴趣（AI对话收集的更详细兴趣描述，语义描述，不含遥测数据）
+  interestsTelemetry: jsonb("interests_telemetry"), // 兴趣滑动遥测数据 { version: string, events: [{interestId, choice, reactionTimeMs, timestamp}] }
   
   // Registration fields - Social & Venue Preferences (collected via AI chat)
   socialStyle: varchar("social_style"), // 社交风格: 外向活泼, 内敛沉稳, 看情况
@@ -559,6 +560,7 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   interestsTop: true,
   primaryInterests: true,
   interestsDeep: true,
+  interestsTelemetry: true,
   topicsHappy: true,
   topicsAvoid: true,
   topicAvoidances: true,
