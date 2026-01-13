@@ -136,7 +136,6 @@ jobs:
             set -euo pipefail
 
             # ====== HARD-CODED DATABASE_URL (as requested) ======
-            # 注意：不要 echo 全量，避免写进 action log
             export DATABASE_URL="postgresql://neondb_owner:npg_NmTv6SY3fxXW@ep-square-math-ahiz6fm7-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
 
             soft_cleanup() {
@@ -163,6 +162,7 @@ jobs:
             on_fail() {
               echo "❌ Deploy failed. Running hard cleanup to prevent builder cache explosion..."
               hard_cleanup
+              echo "🧭 Disk after hard cleanup:"
               df -h /
             }
             trap on_fail ERR
@@ -183,10 +183,9 @@ jobs:
             cd ~/JoyJoin/deployment
             docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans
 
-            # --- 3) DB Sync (IMPORTANT: use the SAME DATABASE_URL as API) ---
+            # --- 3) DB Sync (same DATABASE_URL as API) ---
             echo "🗄️ Syncing database schema..."
             cd ~/JoyJoin
-            # 强制同一条连接串，避免“假 push”
             npx drizzle-kit push --config=./drizzle.config.ts
 
             # --- 4) Health checks ---
@@ -194,7 +193,7 @@ jobs:
             sleep 10
 
             echo "   Checking internal API..."
-            curl -s --retry 5 --retry-delay 3 http://localhost:5000/api/health > /dev/null \
+            curl -s --retry 5 --retry-delay 3 http://127.0.0.1:5000/api/health > /dev/null \
               || (echo "❌ API Failed" && docker logs joyjoin-api --tail 120 && exit 1)
 
             echo "   Checking Caddy..."
@@ -204,21 +203,10 @@ jobs:
               exit 1
             fi
 
-            # --- 5) Post-deploy cleanup (prevents builder cache from filling disk) ---
+            # --- 5) Post-deploy cleanup ---
             soft_cleanup
 
             echo "🧭 Disk after:"
             df -h /
             echo "✅ Deployment successful!"
 
-
-            # 如果 deploy 失败：做 hard cleanup（释放空间），并把失败抛出去（让 workflow 红）
-            on_fail() {
-              echo "❌ Deploy failed. Running hard cleanup to prevent cache explosion..."
-              hard_cleanup
-              echo "🧭 Server disk status (after hard cleanup):"
-              df -h /
-            }
-
-            trap on_fail ERR
-            run_deploy
