@@ -207,7 +207,7 @@ export default function ExtendedDataPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-4">
         <div className="flex items-center gap-3">
           <Button 
             variant="ghost" 
@@ -215,12 +215,17 @@ export default function ExtendedDataPage() {
             onClick={handleBack}
             data-testid="button-back"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-6 h-6" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-lg font-semibold">
+            <h1 className="text-xl font-bold">
               {currentStep === 'swipe' ? '发现你的兴趣' : '你的兴趣画像'}
             </h1>
+            {currentStep === 'swipe' && (
+              <p className="text-sm text-muted-foreground mt-0.5">
+                滑动告诉小悦你喜欢什么
+              </p>
+            )}
           </div>
           {currentStep === 'result' && (
             <Button
