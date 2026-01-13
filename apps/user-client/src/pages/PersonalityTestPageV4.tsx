@@ -124,7 +124,6 @@ export default function PersonalityTestPageV4() {
   const [selectedOption, setSelectedOption] = useState<string | undefined>();
   const [showMilestone, setShowMilestone] = useState(false);
   
-  const { trackQuestionStart, trackAnswer, trackCompletion, trackSkip } = useAchievementTracker();
   const { setArchetype: setDynamicAccent, reset: resetDynamicAccent } = useDynamicAccent();
   
   const {
