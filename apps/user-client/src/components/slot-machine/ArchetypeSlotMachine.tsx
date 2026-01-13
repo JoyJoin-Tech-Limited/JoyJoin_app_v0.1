@@ -40,7 +40,8 @@ const CELEBRATION_COLORS = [
   "#06b6d4", // cyan
 ];
 
-const MAX_PARTICLES = 60;
+const GOLD_STAR_COLOR = "#facc15";
+const MAX_PARTICLES = 90;
 const MAX_SPIN_MS = 4000;
 
 function ArchetypeSlotMachineComponent({ 
@@ -63,6 +64,12 @@ function ArchetypeSlotMachineComponent({
 
   const archetypeInfo = getArchetypeInfo(finalArchetype);
   const accentColor = getArchetypeColorHSL(finalArchetype);
+  const accentWithAlpha = useCallback((alpha: number) => {
+    if (accentColor.startsWith("hsl(")) {
+      return accentColor.replace("hsl(", "hsla(").replace(")", `, ${alpha})`);
+    }
+    return accentColor;
+  }, [accentColor]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -81,21 +88,26 @@ function ArchetypeSlotMachineComponent({
     const newParticles: Particle[] = [];
     
     for (let i = 0; i < MAX_PARTICLES; i++) {
-      const type = i < 30 ? 'confetti' : i < 45 ? 'star' : 'spark';
+      const rand = Math.random();
+      const type = rand < 0.5 ? 'star' : rand < 0.85 ? 'confetti' : 'spark';
+      const palette = type === 'star'
+        ? [GOLD_STAR_COLOR, GOLD_STAR_COLOR, accentColor]
+        : [...CELEBRATION_COLORS, accentColor];
+      const color = palette[Math.floor(Math.random() * palette.length)] || GOLD_STAR_COLOR;
       newParticles.push({
         id: i,
         x: 50 + (Math.random() - 0.5) * 20, // Center with spread
         y: 40 + (Math.random() - 0.5) * 10,
-        color: CELEBRATION_COLORS[Math.floor(Math.random() * CELEBRATION_COLORS.length)],
-        size: type === 'spark' ? 4 : type === 'star' ? 12 : 8,
+        color,
+        size: type === 'spark' ? 4 : type === 'star' ? 14 : 8,
         angle: (i / MAX_PARTICLES) * 360 + Math.random() * 30,
-        speed: 150 + Math.random() * 200,
+        speed: 180 + Math.random() * 220,
         type,
       });
     }
     
     return newParticles;
-  }, []);
+  }, [accentColor]);
 
   // Handle phase changes
   const handlePhaseChange = useCallback((phase: SlotMachineState) => {
@@ -129,18 +141,12 @@ function ArchetypeSlotMachineComponent({
     }
     
     setShowResult(true);
+    setShowHeroCard(true);
     
     if (!prefersReducedMotion) {
       // Particle explosion
       setParticles(createParticleExplosion());
       setShowParticles(true);
-      
-      // Show hero card after brief celebration
-      heroTimeoutRef.current = setTimeout(() => {
-        if (isMountedRef.current) {
-          setShowHeroCard(true);
-        }
-      }, 600);
       
       // Clean up particles
       particleTimeoutRef.current = setTimeout(() => {
@@ -148,9 +154,7 @@ function ArchetypeSlotMachineComponent({
           setShowParticles(false);
           setParticles([]);
         }
-      }, 3000);
-    } else {
-      setShowHeroCard(true);
+      }, 2400);
     }
 
     // Navigate to results
@@ -158,7 +162,7 @@ function ArchetypeSlotMachineComponent({
       if (isMountedRef.current) {
         onComplete();
       }
-    }, prefersReducedMotion ? 1000 : 3000);
+    }, prefersReducedMotion ? 900 : 1500);
   }, [onComplete, prefersReducedMotion, createParticleExplosion]);
 
   const { state, visibleItems, start, progress, intensity } = useSlotMachine({
@@ -166,6 +170,17 @@ function ArchetypeSlotMachineComponent({
     onLand: handleLand,
     onPhaseChange: handlePhaseChange,
   });
+
+  useEffect(() => {
+    if (progress >= 100) {
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current);
+        safetyTimeoutRef.current = null;
+      }
+      setShowResult(true);
+      setShowHeroCard(true);
+    }
+  }, [progress]);
 
   useEffect(() => {
     safetyTimeoutRef.current = setTimeout(() => {
@@ -203,6 +218,18 @@ function ArchetypeSlotMachineComponent({
               }`
             : ""}
       </div>
+
+      {/* Accent tint overlay on reveal */}
+      <motion.div
+        className="fixed inset-0 pointer-events-none z-30"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: showResult ? 0.35 : 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        style={{
+          background: `radial-gradient(circle at 50% 40%, ${accentWithAlpha(0.25)} 0%, transparent 45%), linear-gradient(180deg, ${accentWithAlpha(0.12)} 0%, transparent 60%)`,
+          mixBlendMode: "screen",
+        }}
+      />
 
       {/* Particle explosion overlay */}
       {showParticles && !prefersReducedMotion && (
@@ -275,16 +302,19 @@ function ArchetypeSlotMachineComponent({
       {/* Radial burst on landing */}
       {showResult && !prefersReducedMotion && (
         <motion.div
-          initial={{ scale: 0, opacity: 0.8 }}
-          animate={{ scale: 4, opacity: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          initial={{ scale: 0.6, opacity: 0.9 }}
+          animate={{ scale: [0.6, 1.8, 3], opacity: [0.9, 0.5, 0] }}
+          transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
           className="fixed inset-0 pointer-events-none z-40 flex items-center justify-center"
         >
-          <div 
-            className="w-32 h-32 rounded-full"
+          <motion.div
+            className="w-40 h-40 rounded-full blur-3xl"
             style={{
-              background: `radial-gradient(circle, ${accentColor}80 0%, transparent 70%)`,
+              background: `radial-gradient(circle, ${accentWithAlpha(0.9)} 0%, transparent 70%)`,
+              boxShadow: `0 0 60px ${accentColor}`
             }}
+            animate={{ scale: [1, 1.6, 2.2], opacity: [0.7, 0.35, 0] }}
+            transition={{ duration: 1.1, ease: "easeOut" }}
           />
         </motion.div>
       )}
@@ -373,11 +403,11 @@ function ArchetypeSlotMachineComponent({
       <AnimatePresence>
         {showHeroCard && (
           <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
+            initial={{ opacity: 0, y: 30, scale: 0.85 }}
+            animate={{ opacity: 1, y: 0, scale: [0.85, 1.2, 1] }}
             exit={{ opacity: 0 }}
             transition={{ 
-              duration: 0.5, 
+              duration: 0.6, 
               ease: [0.34, 1.56, 0.64, 1], // Bouncy
             }}
             className="mt-8 text-center relative"
@@ -392,7 +422,7 @@ function ArchetypeSlotMachineComponent({
                 transition={{ duration: 2, repeat: Infinity }}
                 className="absolute inset-0 blur-2xl -z-10"
                 style={{
-                  background: `radial-gradient(circle, ${accentColor}40 0%, transparent 70%)`,
+                  background: `radial-gradient(circle, ${accentWithAlpha(0.4)} 0%, transparent 70%)`,
                 }}
               />
             )}
@@ -404,18 +434,36 @@ function ArchetypeSlotMachineComponent({
             </div>
             
             {/* Large archetype name with gradient */}
-            <motion.p 
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.4, ease: "backOut" }}
-              className="text-4xl font-bold mb-3"
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.45, ease: "easeOut" }}
+              className="text-4xl font-bold mb-3 flex items-center justify-center gap-2"
               style={{ 
                 color: accentColor,
-                textShadow: `0 0 30px ${accentColor}50`,
+                textShadow: `0 0 30px ${accentWithAlpha(0.5)}`,
               }}
             >
-              {archetypeInfo.emoji} {archetypeInfo.name}
-            </motion.p>
+              <motion.span
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.15, type: "spring", stiffness: 260, damping: 18 }}
+              >
+                {archetypeInfo.emoji}
+              </motion.span>
+              <div className="flex">
+                {archetypeInfo.name.split("").map((char, idx) => (
+                  <motion.span
+                    key={`${char}-${idx}`}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 + idx * 0.05, duration: 0.3, ease: "easeOut" }}
+                  >
+                    {char}
+                  </motion.span>
+                ))}
+              </div>
+            </motion.div>
             
             {/* Confidence badge */}
             {confidence && (

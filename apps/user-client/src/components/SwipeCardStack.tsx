@@ -26,9 +26,10 @@ const MIN_DISPLACEMENT_FOR_VELOCITY = 40; // guard tiny flicks
 const DIRECTION_DOMINANCE_THRESHOLD = 0.8; // require 80% bias toward a direction
 
 // Softer spring reset animation constants
-const RESET_SPRING_STIFFNESS = 380;
-const RESET_SPRING_DAMPING = 32;
-const RESET_SPRING_MASS = 0.9;
+const RESET_SPRING_STIFFNESS = 300;
+const RESET_SPRING_DAMPING = 25;
+const RESET_SPRING_MASS = 0.8;
+const RESET_SPRING_VELOCITY = 0;
 
 interface CategoryTracker {
   likeCount: Record<MacroCategory, number>;
@@ -125,6 +126,16 @@ function SwipeCard({
   const controls = useAnimation();
   const [dragDirection, setDragDirection] = useState<'left' | 'right' | 'up' | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const dragRafRef = useRef<number | null>(null);
+  const lastOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  useEffect(() => {
+    return () => {
+      if (dragRafRef.current) {
+        cancelAnimationFrame(dragRafRef.current);
+      }
+    };
+  }, []);
 
   const handleDragEnd = useCallback(
     async (_: any, info: PanInfo) => {
@@ -167,7 +178,7 @@ function SwipeCard({
           x: 0,
           y: 0,
           rotate: 0,
-          transition: { type: "spring", stiffness: RESET_SPRING_STIFFNESS, damping: RESET_SPRING_DAMPING, mass: RESET_SPRING_MASS },
+          transition: { type: "spring", stiffness: RESET_SPRING_STIFFNESS, damping: RESET_SPRING_DAMPING, mass: RESET_SPRING_MASS, velocity: RESET_SPRING_VELOCITY },
         });
       }
       setDragDirection(null);
@@ -177,19 +188,25 @@ function SwipeCard({
   );
 
   const handleDrag = useCallback((_: any, info: PanInfo) => {
-    const { offset } = info;
-    const dominantX = Math.abs(offset.x) > Math.abs(offset.y) * DIRECTION_DOMINANCE_THRESHOLD;
-    const dominantY = Math.abs(offset.y) > Math.abs(offset.x) * DIRECTION_DOMINANCE_THRESHOLD;
+    lastOffsetRef.current = info.offset;
+    if (dragRafRef.current) return;
 
-    if (dominantY && offset.y < -50) {
-      setDragDirection('up');
-    } else if (dominantX && offset.x > 50) {
-      setDragDirection('right');
-    } else if (dominantX && offset.x < -50) {
-      setDragDirection('left');
-    } else {
-      setDragDirection(null);
-    }
+    dragRafRef.current = requestAnimationFrame(() => {
+      const offset = lastOffsetRef.current;
+      const dominantX = Math.abs(offset.x) > Math.abs(offset.y) * DIRECTION_DOMINANCE_THRESHOLD;
+      const dominantY = Math.abs(offset.y) > Math.abs(offset.x) * DIRECTION_DOMINANCE_THRESHOLD;
+
+      if (dominantY && offset.y < -50) {
+        setDragDirection('up');
+      } else if (dominantX && offset.x > 50) {
+        setDragDirection('right');
+      } else if (dominantX && offset.x < -50) {
+        setDragDirection('left');
+      } else {
+        setDragDirection(null);
+      }
+      dragRafRef.current = null;
+    });
   }, []);
 
   return (
@@ -198,11 +215,12 @@ function SwipeCard({
         "absolute inset-0 rounded-3xl overflow-hidden shadow-2xl cursor-grab active:cursor-grabbing",
         !isTop && "pointer-events-none"
       )}
-      style={{ touchAction: "none", ...(isAnimating && { pointerEvents: "none" }) }}
+      style={{ touchAction: "none", transform: "translateZ(0)", willChange: "transform", backfaceVisibility: "hidden", ...(isAnimating && { pointerEvents: "none" }) }}
       drag={isTop && !isAnimating}
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-      dragElastic={0.5}
-      dragMomentum={false}
+      dragElastic={0.7}
+      dragMomentum={true}
+      dragTransition={{ bounceStiffness: 300, bounceDamping: 20 }}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
       animate={controls}
@@ -210,12 +228,12 @@ function SwipeCard({
       whileDrag={{ cursor: "grabbing" }}
     >
       <div className="relative w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ 
-            backgroundImage: `url(${card.imageUrl})`,
-            filter: 'brightness(0.85)'
-          }}
+        <img
+          src={card.imageUrl}
+          alt={card.label}
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ aspectRatio: '3/4', filter: 'brightness(0.85)' }}
+          loading="lazy"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
         
@@ -280,6 +298,14 @@ export function SwipeCardStack({
   useEffect(() => {
     onXiaoyueMessageChange?.("滑动告诉我你喜欢什么吧～");
   }, [onXiaoyueMessageChange]);
+
+  useEffect(() => {
+    const nextCard = cards[currentIndex + 1];
+    if (typeof window !== 'undefined' && nextCard?.imageUrl) {
+      const img = new Image();
+      img.src = nextCard.imageUrl;
+    }
+  }, [cards, currentIndex]);
 
   const handleSwipe = useCallback(
     (choice: SwipeChoice, reactionTime: number) => {
@@ -385,25 +411,27 @@ export function SwipeCardStack({
         </div>
       </div>
 
-      <div className="relative flex-1 min-h-[400px]">
-        {visibleCards.length > 0 ? (
-          visibleCards.map((card, idx) => (
-            <SwipeCard
-              key={card.id}
-              card={card}
-              isTop={idx === 0}
-              onSwipe={handleSwipe}
-              cardStartTime={cardStartTimeRef.current}
-            />
-          )).reverse()
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center text-muted-foreground">
-              <Sparkles className="w-12 h-12 mx-auto mb-4 text-primary" />
-              <p className="text-lg font-medium">全部完成！</p>
+      <div className="relative flex-1 min-h-[400px] flex items-center justify-center">
+        <div className="relative aspect-[3/4] w-full max-w-[300px]">
+          {visibleCards.length > 0 ? (
+            visibleCards.map((card, idx) => (
+              <SwipeCard
+                key={card.id}
+                card={card}
+                isTop={idx === 0}
+                onSwipe={handleSwipe}
+                cardStartTime={cardStartTimeRef.current}
+              />
+            )).reverse()
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center text-muted-foreground">
+                <Sparkles className="w-12 h-12 mx-auto mb-4 text-primary" />
+                <p className="text-lg font-medium">全部完成！</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {currentIndex < cards.length && (
