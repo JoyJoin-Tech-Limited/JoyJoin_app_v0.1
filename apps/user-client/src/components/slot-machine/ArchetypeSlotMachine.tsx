@@ -41,6 +41,7 @@ const CELEBRATION_COLORS = [
 ];
 
 const MAX_PARTICLES = 60;
+const MAX_SPIN_MS = 4000;
 
 function ArchetypeSlotMachineComponent({ 
   finalArchetype, 
@@ -57,6 +58,7 @@ function ArchetypeSlotMachineComponent({
   const particleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const completeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heroTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
 
   const archetypeInfo = getArchetypeInfo(finalArchetype);
@@ -70,6 +72,7 @@ function ArchetypeSlotMachineComponent({
       if (particleTimeoutRef.current) clearTimeout(particleTimeoutRef.current);
       if (completeTimeoutRef.current) clearTimeout(completeTimeoutRef.current);
       if (heroTimeoutRef.current) clearTimeout(heroTimeoutRef.current);
+      if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
     };
   }, []);
 
@@ -120,6 +123,10 @@ function ArchetypeSlotMachineComponent({
   // Handle landing
   const handleLand = useCallback(() => {
     if (!isMountedRef.current) return;
+    if (safetyTimeoutRef.current) {
+      clearTimeout(safetyTimeoutRef.current);
+      safetyTimeoutRef.current = null;
+    }
     
     setShowResult(true);
     
@@ -159,6 +166,21 @@ function ArchetypeSlotMachineComponent({
     onLand: handleLand,
     onPhaseChange: handlePhaseChange,
   });
+
+  useEffect(() => {
+    safetyTimeoutRef.current = setTimeout(() => {
+      if (!isMountedRef.current) return;
+      setShowResult(true);
+      onComplete();
+    }, MAX_SPIN_MS);
+
+    return () => {
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current);
+        safetyTimeoutRef.current = null;
+      }
+    };
+  }, [onComplete]);
 
   // Auto-start with dramatic pause
   useEffect(() => {
