@@ -655,36 +655,47 @@ export default function PersonalityTestResultPage() {
 
   const isLegacyV1 = result.algorithmVersion === 'v1' || !result.algorithmVersion;
 
-  // Show animations based on phase
-  if (animationPhase === 'slot') {
-    return (
-      <ArchetypeSlotMachine
-        finalArchetype={result.primaryRole}
-        confidence={result.isDecisive ? 0.9 : undefined}
-        onComplete={handleSlotMachineComplete}
-      />
-    );
-  }
-
-  if (animationPhase === 'unlock') {
-    return (
-      <UnlockOverlay
-        archetype={result.primaryRole}
-        accentColor={getArchetypeColorHSL(result.primaryRole)}
-        onComplete={handleUnlockComplete}
-      />
-    );
-  }
-
-  // animationPhase === 'results' - show main results page
   return (
-    <motion.div
-      key="results"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
-      className="min-h-screen bg-background"
-    >
+    <AnimatePresence mode="wait">
+      {animationPhase === 'slot' && (
+        <motion.div
+          key="slot"
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <ArchetypeSlotMachine
+            finalArchetype={result.primaryRole}
+            confidence={result.isDecisive ? 0.9 : undefined}
+            onComplete={handleSlotMachineComplete}
+          />
+        </motion.div>
+      )}
+      
+      {animationPhase === 'unlock' && (
+        <motion.div
+          key="unlock"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <UnlockOverlay
+            archetype={result.primaryRole}
+            accentColor={getArchetypeColorHSL(result.primaryRole)}
+            onComplete={handleUnlockComplete}
+          />
+        </motion.div>
+      )}
+      
+      {animationPhase === 'results' && (
+        <motion.div
+          key="results"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          className="min-h-screen bg-background"
+        >
       
       <motion.div
         initial={{ opacity: 0 }}
@@ -924,6 +935,8 @@ export default function PersonalityTestResultPage() {
           </p>
         </div>
       </motion.div>
-    </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
