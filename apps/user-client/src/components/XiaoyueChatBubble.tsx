@@ -22,6 +22,7 @@ interface XiaoyueChatBubbleProps {
   loadingText?: string;
   className?: string;
   animate?: boolean;
+  horizontal?: boolean;
 }
 
 /**
@@ -140,8 +141,71 @@ export function XiaoyueChatBubble({
   loadingText = "小悦正在分析你的特质...",
   className,
   animate = true,
+  horizontal = false,
 }: XiaoyueChatBubbleProps) {
   const avatarImage = POSE_IMAGES[pose];
+
+  if (horizontal) {
+    return (
+      <div className={cn("flex items-start gap-3", className)} data-testid="xiaoyue-chat-bubble">
+        <motion.div
+          initial={animate ? { scale: 0.8, opacity: 0 } : undefined}
+          animate={animate ? { 
+            scale: 1, 
+            opacity: 1,
+          } : undefined}
+          transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
+          className="relative shrink-0"
+        >
+          <div className="w-16 h-16 relative">
+            <motion.div
+              animate={{ 
+                boxShadow: [
+                  "0 0 0 0 rgba(139, 92, 246, 0.4)",
+                  "0 0 0 12px rgba(139, 92, 246, 0)",
+                ]
+              }}
+              transition={{ 
+                duration: 1.5, 
+                repeat: Infinity, 
+                ease: "easeOut" 
+              }}
+              className="absolute inset-0 rounded-full"
+            />
+            <img
+              src={avatarImage}
+              alt="小悦"
+              className="w-full h-full object-contain drop-shadow-lg"
+              data-testid="img-xiaoyue-avatar-large"
+            />
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={animate ? { opacity: 0, scale: 0.9, x: -10 } : undefined}
+          animate={animate ? { opacity: 1, scale: 1, x: 0 } : undefined}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className={cn(
+            "relative rounded-2xl px-4 py-3 flex-1",
+            "bg-primary/10 dark:bg-primary/20",
+            "border-2 border-primary/20 dark:border-primary/30",
+            "shadow-lg shadow-primary/5"
+          )}
+        >
+          {isLoading ? (
+            <div className="flex items-center justify-center gap-3 py-2">
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+              <span className="text-muted-foreground text-sm">{loadingText}</span>
+            </div>
+          ) : (
+            <p className="text-base leading-relaxed text-foreground/90 font-medium" data-testid="text-xiaoyue-message">
+              {content}
+            </p>
+          )}
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div 
