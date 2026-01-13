@@ -103,13 +103,17 @@ export default function ExtendedDataPage() {
     
     const lovedInterests = swipeResults
       .filter(r => r.choice === 'love')
-      .map(r => r.cardId);
+      .map(r => r.cardId)
+      .slice(0, 3);
 
     setTimeout(() => {
       const profileData = {
-        interests: likedInterests,
-        lovedInterests: lovedInterests,
-        interestSwipeData: JSON.stringify(swipeResults),
+        interestsTop: likedInterests.slice(0, 7),
+        primaryInterests: lovedInterests,
+        interestsDeep: swipeResults.map(r => 
+          `${r.cardId}:${r.choice}:${r.reactionTimeMs}ms`
+        ),
+        hasCompletedInterestsTopics: true,
       };
       saveMutation.mutate(profileData);
     }, 1500);
