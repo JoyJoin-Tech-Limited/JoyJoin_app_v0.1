@@ -11,34 +11,13 @@ import { SlotFrame } from "./SlotFrame";
 import { useSlotMachine, type SlotMachineState } from "./useSlotMachine";
 import { getArchetypeInfo, getArchetypeColorHSL } from "./archetypeData";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { CELEBRATION_COLORS, accentWithAlpha, type Particle } from "./particleUtils";
 
 interface ArchetypeSlotMachineProps {
   finalArchetype: string;
   confidence?: number;
   onComplete: () => void;
 }
-
-interface Particle {
-  id: number;
-  x: number;
-  y: number;
-  color: string;
-  size: number;
-  angle: number;
-  speed: number;
-  type: 'confetti' | 'star' | 'spark';
-}
-
-const CELEBRATION_COLORS = [
-  "#a855f7", // purple
-  "#ec4899", // pink  
-  "#f97316", // orange
-  "#22c55e", // green
-  "#3b82f6", // blue
-  "#facc15", // yellow
-  "#f43f5e", // rose
-  "#06b6d4", // cyan
-];
 
 const GOLD_STAR_COLOR = "#facc15";
 const MAX_PARTICLES = 60;
@@ -64,12 +43,6 @@ function ArchetypeSlotMachineComponent({
 
   const archetypeInfo = getArchetypeInfo(finalArchetype);
   const accentColor = getArchetypeColorHSL(finalArchetype);
-  const accentWithAlpha = useCallback((alpha: number) => {
-    if (accentColor.startsWith("hsl(")) {
-      return accentColor.replace("hsl(", "hsla(").replace(")", `, ${alpha})`);
-    }
-    return accentColor;
-  }, [accentColor]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -157,12 +130,12 @@ function ArchetypeSlotMachineComponent({
       }, 2400);
     }
 
-    // Navigate to results
+    // Navigate to results - increased dwell time from 1.5s to 2s
     completeTimeoutRef.current = setTimeout(() => {
       if (isMountedRef.current) {
         onComplete();
       }
-    }, prefersReducedMotion ? 900 : 1500);
+    }, prefersReducedMotion ? 900 : 2000);
   }, [onComplete, prefersReducedMotion, createParticleExplosion]);
 
   const { state, visibleItems, start, progress, intensity } = useSlotMachine({
@@ -215,7 +188,7 @@ function ArchetypeSlotMachineComponent({
         animate={{ opacity: showResult ? 0.35 : 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
         style={{
-          background: `radial-gradient(circle at 50% 40%, ${accentWithAlpha(0.25)} 0%, transparent 45%), linear-gradient(180deg, ${accentWithAlpha(0.12)} 0%, transparent 60%)`,
+          background: `radial-gradient(circle at 50% 40%, ${accentWithAlpha(accentColor, 0.25)} 0%, transparent 45%), linear-gradient(180deg, ${accentWithAlpha(accentColor, 0.12)} 0%, transparent 60%)`,
           mixBlendMode: "screen",
         }}
       />
@@ -299,7 +272,7 @@ function ArchetypeSlotMachineComponent({
           <motion.div
             className="w-40 h-40 rounded-full blur-3xl"
             style={{
-              background: `radial-gradient(circle, ${accentWithAlpha(0.9)} 0%, transparent 70%)`,
+              background: `radial-gradient(circle, ${accentWithAlpha(accentColor, 0.9)} 0%, transparent 70%)`,
               boxShadow: `0 0 60px ${accentColor}`
             }}
             animate={{ scale: [1, 1.6, 2.2], opacity: [0.7, 0.35, 0] }}
@@ -411,7 +384,7 @@ function ArchetypeSlotMachineComponent({
                 transition={{ duration: 2, repeat: Infinity }}
                 className="absolute inset-0 blur-2xl -z-10"
                 style={{
-                  background: `radial-gradient(circle, ${accentWithAlpha(0.4)} 0%, transparent 70%)`,
+                  background: `radial-gradient(circle, ${accentWithAlpha(accentColor, 0.4)} 0%, transparent 70%)`,
                 }}
               />
             )}
@@ -430,7 +403,7 @@ function ArchetypeSlotMachineComponent({
               className="text-4xl font-bold mb-3 flex items-center justify-center gap-2"
               style={{ 
                 color: accentColor,
-                textShadow: `0 0 30px ${accentWithAlpha(0.5)}`,
+                textShadow: `0 0 30px ${accentWithAlpha(accentColor, 0.5)}`,
               }}
             >
               <motion.span
