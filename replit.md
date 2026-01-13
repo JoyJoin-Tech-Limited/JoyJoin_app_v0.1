@@ -61,6 +61,7 @@ The project utilizes a monorepo (`joyjoin-monorepo`) encompassing user client, a
 - **JoyRadar Pulse Indicator:** Real-time seat availability visualization with animated pulse effect on event cards.
 - **JoyOrbit Orbital Visualization:** Full-screen immersive group member display with drag-to-rotate gesture interaction.
 - **AI Conversation Topics (DeepSeek):** Rate-limited, auth-gated endpoint for generating personalized icebreaker topics based on participant profiles, with participant validation to prevent data exfiltration.
+- **Smart Interest Card System (Tinder-Style Swipe):** 42-card interest collection with RIASEC psychological metadata (R:6, I:7, A:8, S:11, E:6, C:4). Features: (1) Smart selection algorithm with RIASEC quota enforcement (16-18 cards per session) and category balance guarantees (≥2 cards per macro category), (2) Multi-signal scoring combining choice weights (love +3, like +1, skip -0.5) and reaction time multipliers (fast <1s ×1.2, hesitant >3s ×0.7), (3) Real-time Xiaoyue insights with category tracking and context-aware feedback, (4) Core interest identification (≥3 likes in category) and confidence score calculation (coverage + volume + engagement). Macro categories: food, entertainment, lifestyle, culture, social.
 
 ## External Dependencies
 
