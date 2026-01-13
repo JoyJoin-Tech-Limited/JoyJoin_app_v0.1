@@ -364,11 +364,12 @@ export default function PersonalityTestPageV4() {
           </div>
           
           <div className="flex-1 flex flex-col justify-center py-1 min-h-0">
-            <div className="overflow-y-auto -mx-4 px-4">
+            <div className="max-h-[70vh] overflow-y-auto pb-20 md:pb-10 -mx-4 px-4">
               <SelectionList
                 options={optionsForList}
                 selected={selectedOption}
                 onSelect={handleSelectOption}
+                className="grid grid-cols-1 gap-3 sm:grid-cols-2 !space-y-0"
               />
             </div>
           </div>

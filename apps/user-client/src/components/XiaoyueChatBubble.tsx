@@ -15,6 +15,8 @@ const POSE_IMAGES: Record<XiaoyuePose, string> = {
   pointing: xiaoyuePointing,
 };
 
+const bubbleSurfaceClasses = "relative rounded-2xl bg-primary/10 dark:bg-primary/20 border-2 border-primary/20 dark:border-primary/30 shadow-lg shadow-primary/5";
+
 interface XiaoyueChatBubbleProps {
   content: string;
   pose?: XiaoyuePose;
@@ -186,10 +188,8 @@ export function XiaoyueChatBubble({
           animate={animate ? { opacity: 1, scale: 1, x: 0 } : undefined}
           transition={{ duration: 0.3, delay: 0.1 }}
           className={cn(
-            "relative rounded-2xl px-4 py-3 flex-1",
-            "bg-primary/10 dark:bg-primary/20",
-            "border-2 border-primary/20 dark:border-primary/30",
-            "shadow-lg shadow-primary/5"
+            "px-4 py-3 flex-1",
+            bubbleSurfaceClasses
           )}
         >
           {isLoading ? (
@@ -252,10 +252,8 @@ export function XiaoyueChatBubble({
         
         <div 
           className={cn(
-            "relative rounded-2xl p-6",
-            "bg-primary/10 dark:bg-primary/20",
-            "border-2 border-primary/20 dark:border-primary/30",
-            "shadow-lg shadow-primary/5"
+            "p-6",
+            bubbleSurfaceClasses
           )}
         >
           {isLoading ? (
