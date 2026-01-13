@@ -178,10 +178,10 @@ export function useSlotMachine({
       } else {
         // Decide: go to nearMiss or land directly
         // 70% chance of near miss for extra drama
-        if (Math.random() < 0.7) {
+        if (Math.random() < 0.7 && targetIndex >= 0) {
           startNearMiss();
         } else {
-          setCurrentIndex(targetIndex);
+          setCurrentIndex(targetIndex >= 0 ? targetIndex : 0);
           setProgress(100);
           setIntensity(1);
           updateState("landed");
@@ -230,7 +230,7 @@ export function useSlotMachine({
     
     // Reduced motion: skip to result
     if (prefersReducedMotion) {
-      setCurrentIndex(targetIndex);
+      setCurrentIndex(targetIndex >= 0 ? targetIndex : 0);
       updateState("landed");
       setProgress(100);
       setIntensity(1);

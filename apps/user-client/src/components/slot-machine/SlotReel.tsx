@@ -40,7 +40,7 @@ function SlotReelComponent({ visibleItems, state, highlightColor, intensity = 0 
         "bg-gradient-to-b from-muted/30 via-muted/50 to-muted/30",
         "transition-all duration-300",
         // Larger size for better visibility
-        "w-44 h-52",
+        "w-64 h-72",
       )}
       style={{
         willChange: isActive ? "transform" : "auto",
@@ -54,9 +54,9 @@ function SlotReelComponent({ visibleItems, state, highlightColor, intensity = 0 
             opacity: 1, 
             scale: 1,
             boxShadow: [
-              `0 0 0 4px ${highlightColor || 'hsl(var(--primary))'}`,
-              `0 0 0 8px ${highlightColor || 'hsl(var(--primary))'}40`,
-              `0 0 0 4px ${highlightColor || 'hsl(var(--primary))'}`,
+              `0 0 0 6px ${highlightColor || 'hsl(var(--primary))'}`,
+              `0 0 0 12px ${highlightColor || 'hsl(var(--primary))'}40`,
+              `0 0 0 6px ${highlightColor || 'hsl(var(--primary))'}`,
             ],
           }}
           transition={{
@@ -183,11 +183,17 @@ function SlotReelComponent({ visibleItems, state, highlightColor, intensity = 0 
                     "object-contain transition-all",
                     isCenter 
                       ? isLanded 
-                        ? "w-32 h-32 drop-shadow-[0_0_20px_rgba(168,85,247,0.5)]" 
-                        : "w-28 h-28"
-                      : "w-20 h-20 filter grayscale-[50%]",
+                        ? "w-48 h-48 drop-shadow-[0_0_30px_rgba(168,85,247,0.6)]" 
+                        : "w-40 h-40"
+                      : "w-28 h-28 filter grayscale-[50%]",
                   )}
                   loading="eager"
+                  onLoad={(e) => {
+                    console.log(`Image loaded: ${info.name}`, e.currentTarget.src);
+                  }}
+                  onError={(e) => {
+                    console.error(`Image failed to load: ${info.name}`, e.currentTarget.src);
+                  }}
                 />
                 
                 {/* Show name on landing */}
