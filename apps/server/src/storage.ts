@@ -18,7 +18,7 @@ import {
   directMessageThreads, directMessages, payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs,
   pricingSettings, promotionBanners, eventPools, eventPoolGroups, venueTimeSlots, venueTimeSlotBookings, venues,
   icebreakerSessions, icebreakerCheckins, icebreakerReadyVotes, icebreakerActivityLogs, registrationSessions, preSignupData,
-  assessmentSessions, assessmentAnswers
+  assessmentSessions, assessmentAnswers, industryAiLogs
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
@@ -3981,6 +3981,46 @@ export class DatabaseStorage implements IStorage {
       .from(assessmentAnswers)
       .where(eq(assessmentAnswers.sessionId, sessionId))
       .orderBy(assessmentAnswers.answeredAt);
+  }
+
+  // ============ Industry AI Classification Logs ============
+  
+  async createIndustryAiLog(data: {
+    userId?: string | null;
+    rawInput: string;
+    aiClassified: string;
+    confidence?: string;
+    reasoning?: string;
+    source?: string;
+  }): Promise<any> {
+    const [log] = await db
+      .insert(industryAiLogs)
+      .values({
+        userId: data.userId,
+        rawInput: data.rawInput,
+        aiClassified: data.aiClassified,
+        confidence: data.confidence,
+        reasoning: data.reasoning,
+        source: data.source || "ai",
+      })
+      .returning();
+    return log;
+  }
+
+  async getIndustryAiLogs(userId?: string): Promise<any[]> {
+    if (userId) {
+      return db
+        .select()
+        .from(industryAiLogs)
+        .where(eq(industryAiLogs.userId, userId))
+        .orderBy(desc(industryAiLogs.createdAt))
+        .limit(100);
+    }
+    return db
+      .select()
+      .from(industryAiLogs)
+      .orderBy(desc(industryAiLogs.createdAt))
+      .limit(100);
   }
 }
 

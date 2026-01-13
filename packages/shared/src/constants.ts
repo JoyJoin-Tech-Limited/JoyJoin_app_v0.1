@@ -120,18 +120,13 @@ export const LANGUAGES_COMFORT_OPTIONS = [
 export type LanguagesComfort = typeof LANGUAGES_COMFORT_OPTIONS[number];
 
 
-// Industry options (shared for onboarding)
-export const INDUSTRY_OPTIONS = [
-  { value: "tech", label: "互联网/科技" },
-  { value: "finance", label: "金融/投资" },
-  { value: "education", label: "教育/培训" },
-  { value: "media", label: "媒体/创意" },
-  { value: "consulting", label: "咨询/专业服务" },
-  { value: "healthcare", label: "医疗/健康" },
-  { value: "manufacturing", label: "制造/工程" },
-  { value: "retail", label: "零售/消费" },
-  { value: "real_estate", label: "房地产" },
-  { value: "government", label: "政府/公共服务" },
-  { value: "other", label: "其他行业" },
-] as const;
+// Industry options (shared for onboarding) - 18 complete industries from occupations.ts
+// Removed "其他行业" to eliminate data black hole
+import { INDUSTRIES } from "./occupations";
+
+export const INDUSTRY_OPTIONS = INDUSTRIES.map(industry => ({
+  value: industry.id,
+  label: industry.label,
+}));
+
 export type IndustryOption = typeof INDUSTRY_OPTIONS[number];

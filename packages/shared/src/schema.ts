@@ -2616,6 +2616,37 @@ export const insertGossipCacheSchema = createInsertSchema(gossipCache).omit({
 export type GossipCache = typeof gossipCache.$inferSelect;
 export type InsertGossipCache = z.infer<typeof insertGossipCacheSchema>;
 
+// ============ Industry AI Classification Logs ============
+
+// Industry AI Logs table - Record all AI-powered industry classifications
+export const industryAiLogs = pgTable("industry_ai_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // User info (optional - can be null for pre-signup classifications)
+  userId: varchar("user_id").references(() => users.id),
+  
+  // Input and output
+  rawInput: text("raw_input").notNull(), // User's description
+  aiClassified: varchar("ai_classified", { length: 100 }).notNull(), // Classified industry ID
+  confidence: numeric("confidence", { precision: 3, scale: 2 }), // 0.00-1.00
+  reasoning: text("reasoning"), // AI's explanation
+  
+  // Source info
+  source: varchar("source").notNull().default("ai"), // "local" | "ai" | "fallback"
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schema for industry AI logs
+export const insertIndustryAiLogSchema = createInsertSchema(industryAiLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for industry AI logs
+export type IndustryAiLog = typeof industryAiLogs.$inferSelect;
+export type InsertIndustryAiLog = z.infer<typeof insertIndustryAiLogSchema>;
+
 // ============ Pre-signup data cache ============
 
 export const preSignupData = pgTable("pre_signup_data", {
