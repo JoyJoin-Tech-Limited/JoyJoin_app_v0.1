@@ -60,6 +60,7 @@ export function useSlotMachine({
   const hasLandedRef = useRef(false);
   const slowingStartedRef = useRef(false);
   const spinTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onLandRef = useRef(onLand);
 
   // Find target index
   const finalIndex = ARCHETYPE_NAMES.indexOf(finalArchetype);
@@ -117,6 +118,19 @@ export function useSlotMachine({
     onPhaseChange?.(newState);
   }, [onPhaseChange]);
 
+  const updateProgress = useCallback((value: number) => {
+    const clamped = Math.min(Math.max(value, 0), 100);
+    setProgress(clamped);
+    if (clamped >= 100 && !hasLandedRef.current) {
+      hasLandedRef.current = true;
+      onLandRef.current?.();
+    }
+  }, []);
+
+  useEffect(() => {
+    onLandRef.current = onLand;
+  }, [onLand]);
+
   // Phase 4: Near miss - overshoot target, then snap back
   const startNearMiss = useCallback(() => {
     updateState("nearMiss");
@@ -126,7 +140,7 @@ export function useSlotMachine({
     // Overshoot by 1-2 positions
     const overshoot = (targetIndex + 1) % ARCHETYPE_NAMES.length;
     setCurrentIndex(overshoot);
-    setProgress(92);
+    updateProgress(92);
     
     // Pause for suspense
     timeoutRef.current = setTimeout(() => {
@@ -134,7 +148,7 @@ export function useSlotMachine({
       
       // Snap back to target
       setCurrentIndex(targetIndex);
-      setProgress(100);
+      updateProgress(100);
       updateState("landed");
       triggerHaptic(HAPTIC_PATTERNS.land);
       
@@ -162,7 +176,7 @@ export function useSlotMachine({
       
       slowStepRef.current++;
       const stepProgress = slowStepRef.current / slowStepCount;
-      setProgress(60 + stepProgress * 30);
+      updateProgress(60 + stepProgress * 30);
       setIntensity(0.5 + stepProgress * 0.3);
       
       // Light haptic on each tick during slowdown
@@ -195,7 +209,7 @@ export function useSlotMachine({
           startNearMiss();
         } else {
           setCurrentIndex(targetIndex >= 0 ? targetIndex : 0);
-          setProgress(100);
+          updateProgress(100);
           setIntensity(1);
           updateState("landed");
           triggerHaptic(HAPTIC_PATTERNS.land);
@@ -230,7 +244,7 @@ export function useSlotMachine({
       
       const elapsed = Date.now() - startTimeRef.current;
       const spinProgress = Math.min(1, elapsed / spinDuration);
-      setProgress(10 + spinProgress * 50);
+      updateProgress(10 + spinProgress * 50);
       
       // Intensity ramps up during spin
       setIntensity(0.3 + spinProgress * 0.4);
@@ -258,7 +272,7 @@ export function useSlotMachine({
     if (prefersReducedMotion) {
       setCurrentIndex(targetIndex >= 0 ? targetIndex : 0);
       updateState("landed");
-      setProgress(100);
+      updateProgress(100);
       setIntensity(1);
       triggerHaptic(HAPTIC_PATTERNS.land);
       timeoutRef.current = setTimeout(() => {
@@ -272,7 +286,7 @@ export function useSlotMachine({
     
     // Anticipation phase
     updateState("anticipation");
-    setProgress(0);
+    updateProgress(0);
     setIntensity(0.1);
     triggerHaptic(HAPTIC_PATTERNS.anticipation);
     
@@ -285,7 +299,7 @@ export function useSlotMachine({
       if (!isMountedRef.current) return;
       
       anticipationStep++;
-      setProgress(anticipationStep * 1.5);
+      updateProgress(anticipationStep * 1.5);
       setIntensity(0.1 + anticipationStep * 0.025);
       
       if (anticipationStep * anticipationInterval >= anticipationDuration) {
