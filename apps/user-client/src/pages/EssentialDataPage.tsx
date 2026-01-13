@@ -40,6 +40,7 @@ interface EssentialDataState {
     workIndustry: string;
     hometown: string;
     currentCity: string;
+    intent: string[];
   };
   timestamp: number;
 }
@@ -62,6 +63,15 @@ const RELATIONSHIP_OPTIONS = [
   { value: "dating", label: "恋爱中" },
   { value: "married", label: "已婚" },
   { value: "prefer_not_say", label: "不想说" },
+];
+
+const INTENT_OPTIONS = [
+  { value: "friends", label: "交新朋友" },
+  { value: "networking", label: "拓展人脉" },
+  { value: "discussion", label: "深度交流" },
+  { value: "fun", label: "轻松娱乐" },
+  { value: "romance", label: "浪漫邂逅" },
+  { value: "flexible", label: "随缘" },
 ];
 
 const EDUCATION_OPTIONS = [
@@ -136,9 +146,18 @@ const STEP_CONFIG = [
     id: "location",
     title: "你的家乡和常驻城市？",
     subtitle: "老乡见老乡，两眼泪汪汪",
-    mascotMessage: "说不定能遇到老乡呢！加油，最后一步！",
+    mascotMessage: "说不定能遇到老乡呢！",
     mascotMood: "excited" as XiaoyueMood,
     type: "dualCity" as const,
+  },
+  {
+    id: "intent",
+    title: "你想通过悦聚收获什么？",
+    subtitle: "可以多选哦（最多6个）",
+    mascotMessage: "告诉我你的目标，我帮你精准匹配！最后一步啦！",
+    mascotMood: "excited" as XiaoyueMood,
+    type: "multiSelect" as const,
+    options: INTENT_OPTIONS,
   },
 ];
 
@@ -241,6 +260,7 @@ export default function EssentialDataPage() {
   const [workIndustry, setWorkIndustry] = useState("");
   const [hometown, setHometown] = useState("");
   const [currentCity, setCurrentCity] = useState("");
+  const [intent, setIntent] = useState<string[]>([]);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showManualIndustry, setShowManualIndustry] = useState(false);
 
@@ -260,6 +280,7 @@ export default function EssentialDataPage() {
           setWorkIndustry(state.data.workIndustry || "");
           setHometown(state.data.hometown || "");
           setCurrentCity(state.data.currentCity || "");
+          setIntent(state.data.intent || []);
         }
       } catch {}
     }
@@ -276,11 +297,11 @@ export default function EssentialDataPage() {
   const saveProgress = useCallback(() => {
     const state: EssentialDataState = {
       currentStep,
-      data: { displayName, gender, birthYear, relationshipStatus, education, workIndustry, hometown, currentCity },
+      data: { displayName, gender, birthYear, relationshipStatus, education, workIndustry, hometown, currentCity, intent },
       timestamp: Date.now(),
     };
     localStorage.setItem(ESSENTIAL_CACHE_KEY, JSON.stringify(state));
-  }, [currentStep, displayName, gender, birthYear, relationshipStatus, education, workIndustry, hometown, currentCity]);
+  }, [currentStep, displayName, gender, birthYear, relationshipStatus, education, workIndustry, hometown, currentCity, intent]);
 
   useEffect(() => {
     saveProgress();
@@ -315,8 +336,20 @@ export default function EssentialDataPage() {
       case 3: return education;
       case 4: return workIndustry;
       case 5: return hometown && currentCity;
+      case 6: return intent.length >= 1;
       default: return false;
     }
+  };
+
+  const toggleIntent = (value: string) => {
+    setIntent(prev => {
+      if (prev.includes(value)) {
+        return prev.filter(v => v !== value);
+      } else if (prev.length < 6) {
+        return [...prev, value];
+      }
+      return prev;
+    });
   };
 
   const handleNext = () => {
@@ -339,9 +372,9 @@ export default function EssentialDataPage() {
           workIndustry,
           hometown,
           currentCity,
+          intent,
         };
         if (birthDate) {
-          // Use full birth date (YYYY-MM-DD)
           profileData.birthdate = `${birthDate.year}-${String(birthDate.month).padStart(2, '0')}-${String(birthDate.day).padStart(2, '0')}`;
         } else if (birthYear) {
           profileData.birthdate = `${birthYear}-01-01`;
@@ -557,6 +590,29 @@ export default function EssentialDataPage() {
                       ))}
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Step 6: Intent (multiSelect) */}
+              {currentStep === 6 && (
+                <div className="flex flex-wrap gap-3 justify-center">
+                  {INTENT_OPTIONS.map(opt => (
+                    <motion.button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => toggleIntent(opt.value)}
+                      className={cn(
+                        "px-4 py-3 rounded-full border-2 text-sm font-medium transition-all duration-200",
+                        intent.includes(opt.value)
+                          ? "border-primary bg-primary text-primary-foreground shadow-md"
+                          : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary/50"
+                      )}
+                      whileTap={{ scale: 0.95 }}
+                      data-testid={`chip-intent-${opt.value}`}
+                    >
+                      {opt.label}
+                    </motion.button>
+                  ))}
                 </div>
               )}
             </div>
