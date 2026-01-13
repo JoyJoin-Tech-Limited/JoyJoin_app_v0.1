@@ -40,6 +40,13 @@ const CANONICAL_ARCHETYPES: Record<string, ArchetypeInfo> = {
     color: [25, 95, 53], // orange
     emoji: "🦊",
   },
+  "机智狐": {
+    id: "fox",
+    name: "机智狐狸",
+    image: foxImg,
+    color: [25, 95, 53], // orange
+    emoji: "🦊",
+  },
   "暖心熊": {
     id: "bear",
     name: "暖心熊",
