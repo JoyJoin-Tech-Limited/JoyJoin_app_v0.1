@@ -425,8 +425,39 @@ export function matchIndustryFromText(text: string): IndustryMatch | null {
       }
     }
     
+    // 检查行业别名 (新增)
+    for (const alias of industry.aliases) {
+      if (lowerText.includes(alias.toLowerCase())) {
+        matchedKeywords.push(alias);
+        
+        if (!bestMatch || matchedKeywords.length > bestMatch.matchedKeywords.length) {
+          bestMatch = {
+            industry: industry.name,
+            confidence: 0.90 + (matchedKeywords.length * 0.02),
+            matchedKeywords: [...matchedKeywords]
+          };
+        }
+      }
+    }
+    
     // 检查细分领域
     for (const segment of industry.segments) {
+      // 检查细分领域别名 (新增)
+      for (const alias of segment.aliases) {
+        if (lowerText.includes(alias.toLowerCase())) {
+          matchedKeywords.push(alias);
+          
+          if (!bestMatch || matchedKeywords.length > bestMatch.matchedKeywords.length) {
+            bestMatch = {
+              industry: industry.name,
+              industrySegment: segment.name,
+              confidence: 0.92 + (matchedKeywords.length * 0.02),
+              matchedKeywords: [...matchedKeywords]
+            };
+          }
+        }
+      }
+      
       for (const keyword of segment.keywords) {
         if (lowerText.includes(keyword.toLowerCase())) {
           matchedKeywords.push(keyword);
