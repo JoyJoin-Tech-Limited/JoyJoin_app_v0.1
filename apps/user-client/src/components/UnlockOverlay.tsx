@@ -8,31 +8,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Star, Sparkles } from "lucide-react";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { getArchetypeInfo } from "./slot-machine/archetypeData";
+import { CELEBRATION_COLORS, accentWithAlpha, type Particle } from "./slot-machine/particleUtils";
 
 interface UnlockOverlayProps {
   archetype: string;
   accentColor: string;
   onComplete: () => void;
 }
-
-interface Particle {
-  id: number;
-  x: number;
-  y: number;
-  color: string;
-  size: number;
-  angle: number;
-  speed: number;
-}
-
-const CELEBRATION_COLORS = [
-  "#a855f7", // purple
-  "#ec4899", // pink  
-  "#f97316", // orange
-  "#22c55e", // green
-  "#3b82f6", // blue
-  "#facc15", // yellow
-];
 
 const TOTAL_DURATION = 2500; // 2.5 seconds total
 
@@ -45,13 +27,6 @@ export function UnlockOverlay({ archetype, accentColor, onComplete }: UnlockOver
   const isMountedRef = useRef(true);
 
   const archetypeInfo = getArchetypeInfo(archetype);
-
-  const accentWithAlpha = useCallback((alpha: number) => {
-    if (accentColor.startsWith("hsl(")) {
-      return accentColor.replace("hsl(", "hsla(").replace(")", `, ${alpha})`);
-    }
-    return accentColor;
-  }, [accentColor]);
 
   // Generate particle burst
   const createParticleBurst = useCallback(() => {
@@ -123,7 +98,7 @@ export function UnlockOverlay({ archetype, accentColor, onComplete }: UnlockOver
           <div
             className="w-60 h-60 rounded-full blur-3xl"
             style={{
-              background: `radial-gradient(circle, ${accentWithAlpha(0.8)} 0%, transparent 70%)`,
+              background: `radial-gradient(circle, ${accentWithAlpha(accentColor, 0.8)} 0%, transparent 70%)`,
               boxShadow: `0 0 100px ${accentColor}`,
             }}
           />
@@ -210,7 +185,7 @@ export function UnlockOverlay({ archetype, accentColor, onComplete }: UnlockOver
               }}
               className="absolute inset-0 rounded-full blur-xl"
               style={{
-                background: `radial-gradient(circle, ${accentWithAlpha(0.6)} 0%, transparent 70%)`,
+                background: `radial-gradient(circle, ${accentWithAlpha(accentColor, 0.6)} 0%, transparent 70%)`,
               }}
             />
           )}
@@ -219,8 +194,8 @@ export function UnlockOverlay({ archetype, accentColor, onComplete }: UnlockOver
           <div 
             className="w-40 h-40 rounded-full p-1 relative"
             style={{
-              background: `linear-gradient(135deg, ${accentColor}, ${accentWithAlpha(0.6)})`,
-              boxShadow: `0 0 40px ${accentWithAlpha(0.5)}`,
+              background: `linear-gradient(135deg, ${accentColor}, ${accentWithAlpha(accentColor, 0.6)})`,
+              boxShadow: `0 0 40px ${accentWithAlpha(accentColor, 0.5)}`,
             }}
           >
             <img
@@ -246,7 +221,7 @@ export function UnlockOverlay({ archetype, accentColor, onComplete }: UnlockOver
               <div 
                 className="w-full h-full rounded-full"
                 style={{
-                  background: `conic-gradient(from 0deg, transparent 0%, ${accentWithAlpha(0.4)} 10%, transparent 20%, transparent 100%)`,
+                  background: `conic-gradient(from 0deg, transparent 0%, ${accentWithAlpha(accentColor, 0.4)} 10%, transparent 20%, transparent 100%)`,
                 }}
               />
             </motion.div>
@@ -270,7 +245,7 @@ export function UnlockOverlay({ archetype, accentColor, onComplete }: UnlockOver
                   className="text-xl font-bold"
                   style={{ 
                     color: accentColor,
-                    textShadow: `0 0 20px ${accentWithAlpha(0.5)}`,
+                    textShadow: `0 0 20px ${accentWithAlpha(accentColor, 0.5)}`,
                   }}
                 >
                   你的独特社交DNA已解锁！
