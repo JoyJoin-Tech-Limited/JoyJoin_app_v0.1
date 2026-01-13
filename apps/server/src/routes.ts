@@ -112,6 +112,7 @@ import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abus
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, type User } from "@shared/schema";
+import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION } from "@shared/interests";
 import { db } from "./db";
 import { eq, or, and, desc, inArray, isNotNull, gt, sql } from "drizzle-orm";
 
@@ -2130,7 +2131,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: result.error });
       }
 
-      const user = await storage.updateInterestsTopics(userId, result.data);
+      // Validate and normalize interest fields
+      const normalized = normalizeProfileInterests({
+        interestsTop: result.data.interestsTop,
+        primaryInterests: result.data.primaryInterests,
+        topicAvoidances: result.data.topicAvoidances,
+      });
+
+      // Log warnings for observability
+      if (normalized.warnings.length > 0) {
+        console.log(`[InterestsTopics] Normalization warnings for user ${userId}:`, normalized.warnings);
+      }
+
+      const normalizedData = {
+        ...result.data,
+        interestsTop: normalized.interestsTop,
+        primaryInterests: normalized.primaryInterests,
+        topicAvoidances: normalized.topicAvoidances,
+      };
+
+      const user = await storage.updateInterestsTopics(userId, normalizedData);
       
       res.json(user);
     } catch (error) {
@@ -2167,7 +2187,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: result.error });
       }
 
-      const user = await storage.updateFullProfile(userId, result.data);
+      const profileData: Record<string, any> = { ...result.data };
+
+      // Validate and normalize interest fields if present
+      if (profileData.interestsTop || profileData.primaryInterests || profileData.topicAvoidances) {
+        const normalized = normalizeProfileInterests({
+          interestsTop: profileData.interestsTop ?? undefined,
+          primaryInterests: profileData.primaryInterests ?? undefined,
+          topicAvoidances: profileData.topicAvoidances ?? undefined,
+        });
+
+        // Log warnings for observability
+        if (normalized.warnings.length > 0) {
+          console.log(`[Profile] Interest normalization warnings for user ${userId}:`, normalized.warnings);
+        }
+
+        profileData.interestsTop = normalized.interestsTop.length > 0 ? normalized.interestsTop : undefined;
+        profileData.primaryInterests = normalized.primaryInterests.length > 0 ? normalized.primaryInterests : undefined;
+        profileData.topicAvoidances = normalized.topicAvoidances.length > 0 ? normalized.topicAvoidances : undefined;
+      }
+
+      // Validate telemetry if present
+      if (profileData.interestsTelemetry) {
+        const telemetryResult = validateTelemetry(profileData.interestsTelemetry);
+        if (!telemetryResult.valid) {
+          console.log(`[Profile] Invalid telemetry for user ${userId}:`, telemetryResult.errors);
+          // Log and truncate oversized/invalid telemetry rather than reject
+          profileData.interestsTelemetry = telemetryResult.data ?? undefined;
+        } else {
+          profileData.interestsTelemetry = telemetryResult.data;
+        }
+      }
+
+      const user = await storage.updateFullProfile(userId, profileData);
       
       // Set hasCompletedRegistration if profile is being set with essential data
       if (user && (req.body.displayName || req.body.gender || req.body.currentCity)) {

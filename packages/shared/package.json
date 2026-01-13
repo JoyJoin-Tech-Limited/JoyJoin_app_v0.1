@@ -16,7 +16,8 @@
     "./icebreakerGames": "./src/icebreakerGames.ts",
     "./occupations": "./src/occupations.ts",
     "./topicCards": "./src/topicCards.ts",
-    "./atmospherePrediction": "./src/atmospherePrediction.ts"
+    "./atmospherePrediction": "./src/atmospherePrediction.ts",
+    "./interests": "./src/interests.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.39.1",
