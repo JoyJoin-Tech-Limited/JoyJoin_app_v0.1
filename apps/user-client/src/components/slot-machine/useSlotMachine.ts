@@ -60,6 +60,7 @@ export function useSlotMachine({
   const hasLandedRef = useRef(false);
   const slowingStartedRef = useRef(false);
   const spinTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onLandRef = useRef(onLand);
 
   // Find target index
   const finalIndex = ARCHETYPE_NAMES.indexOf(finalArchetype);
@@ -122,8 +123,12 @@ export function useSlotMachine({
     setProgress(clamped);
     if (clamped >= 100 && !hasLandedRef.current) {
       hasLandedRef.current = true;
-      onLand?.();
+      onLandRef.current?.();
     }
+  }, []);
+
+  useEffect(() => {
+    onLandRef.current = onLand;
   }, [onLand]);
 
   // Phase 4: Near miss - overshoot target, then snap back

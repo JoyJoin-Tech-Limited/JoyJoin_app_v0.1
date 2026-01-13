@@ -41,7 +41,7 @@ const CELEBRATION_COLORS = [
 ];
 
 const GOLD_STAR_COLOR = "#facc15";
-const MAX_PARTICLES = 90;
+const MAX_PARTICLES = 60;
 const MAX_SPIN_MS = 4000;
 
 function ArchetypeSlotMachineComponent({ 
@@ -170,17 +170,6 @@ function ArchetypeSlotMachineComponent({
     onLand: handleLand,
     onPhaseChange: handlePhaseChange,
   });
-
-  useEffect(() => {
-    if (progress >= 100) {
-      if (safetyTimeoutRef.current) {
-        clearTimeout(safetyTimeoutRef.current);
-        safetyTimeoutRef.current = null;
-      }
-      setShowResult(true);
-      setShowHeroCard(true);
-    }
-  }, [progress]);
 
   useEffect(() => {
     safetyTimeoutRef.current = setTimeout(() => {
@@ -454,7 +443,7 @@ function ArchetypeSlotMachineComponent({
               <div className="flex">
                 {archetypeInfo.name.split("").map((char, idx) => (
                   <motion.span
-                    key={`${char}-${idx}`}
+                    key={idx}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 + idx * 0.05, duration: 0.3, ease: "easeOut" }}
