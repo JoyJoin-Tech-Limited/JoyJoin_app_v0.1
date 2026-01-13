@@ -63,6 +63,8 @@ export function XiaoyueMascot({
   size = "md",
   bubbleStyle = "gradient",
 }: XiaoyueMascotProps) {
+  // Force mood to normal as per user request
+  const displayMood = "normal";
   const controls = useAnimation();
   const prefersReducedMotion = useReducedMotion();
 
@@ -99,7 +101,7 @@ export function XiaoyueMascot({
         >
           <motion.div animate={controls}>
             <img
-              src={XIAOYUE_AVATARS[mood]}
+              src={XIAOYUE_AVATARS[displayMood]}
               alt="小悦"
               className={cn("object-contain drop-shadow-lg", sizeClasses[size])}
               data-testid="img-xiaoyue-avatar"
@@ -131,7 +133,7 @@ export function XiaoyueMascot({
     <div className={cn("flex flex-col items-center gap-3", className)}>
       <motion.div animate={controls} className="relative">
         <img
-          src={XIAOYUE_AVATARS[mood]}
+          src={XIAOYUE_AVATARS[displayMood]}
           alt="小悦"
           className={cn("object-contain drop-shadow-lg", verticalSizeClasses[size])}
           data-testid="img-xiaoyue-avatar"

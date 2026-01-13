@@ -362,12 +362,6 @@ export default function PersonalityTestPageV4() {
         showExtendedMessage={answeredCount >= 8 && estimatedRemaining >= 3}
       />
 
-      <div className="px-4 pt-1 flex justify-end">
-        <Button variant="ghost" size="sm" className="px-1 text-primary" onClick={() => setLocation('/onboarding/setup')}>
-          编辑基础信息
-        </Button>
-      </div>
-
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={currentQuestion.id}
@@ -375,14 +369,14 @@ export default function PersonalityTestPageV4() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -60 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="flex-1 flex flex-col px-4 py-2 overflow-hidden"
+          className="flex-1 flex flex-col px-4 pt-4 pb-2 overflow-hidden"
         >
           <div className="shrink-0 mb-3">
             <p className="text-lg text-foreground mb-3 leading-relaxed font-bold">
               {scenarioText}
             </p>
             <XiaoyueChatBubble 
-              pose={selectedOption ? "casual" : "thinking"}
+              pose="thinking"
               content={selectedOption 
                 ? getOptionFeedback(currentQuestion.id, selectedOption) || "记下了，很有意思的选择！" 
                 : currentQuestion.questionText
