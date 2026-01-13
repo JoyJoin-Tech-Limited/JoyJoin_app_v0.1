@@ -24,6 +24,11 @@ const SWIPE_THRESHOLD_Y = 80;
 const SWIPE_VELOCITY_THRESHOLD = 500;
 const MIN_DISPLACEMENT_FOR_VELOCITY = 40; // guard tiny flicks
 
+// Softer spring reset animation constants
+const RESET_SPRING_STIFFNESS = 380;
+const RESET_SPRING_DAMPING = 32;
+const RESET_SPRING_MASS = 0.9;
+
 interface CategoryTracker {
   likeCount: Record<MacroCategory, number>;
   skipCount: Record<MacroCategory, number>;
@@ -161,7 +166,7 @@ function SwipeCard({
           x: 0,
           y: 0,
           rotate: 0,
-          transition: { type: "spring", stiffness: 380, damping: 32, mass: 0.9 },
+          transition: { type: "spring", stiffness: RESET_SPRING_STIFFNESS, damping: RESET_SPRING_DAMPING, mass: RESET_SPRING_MASS },
         });
       }
       setDragDirection(null);
