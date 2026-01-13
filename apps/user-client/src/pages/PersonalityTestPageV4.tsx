@@ -16,7 +16,7 @@ import { ArchetypeSlotMachine } from "@/components/slot-machine";
 import { useAchievementTracker } from "@/hooks/useAchievementTracker";
 import { ArchetypePreview } from "@/components/archetype-preview";
 import { useDynamicAccent } from "@/contexts/DynamicAccentContext";
-import { XiaoyueChatBubble, type XiaoyuePose } from "@/components/XiaoyueChatBubble";
+import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
