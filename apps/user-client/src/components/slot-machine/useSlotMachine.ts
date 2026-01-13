@@ -57,6 +57,9 @@ export function useSlotMachine({
   const slowStepRef = useRef(0);
   const startTimeRef = useRef(0);
   const isMountedRef = useRef(true);
+  const hasLandedRef = useRef(false);
+  const slowingStartedRef = useRef(false);
+  const spinTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Find target index
   const finalIndex = ARCHETYPE_NAMES.indexOf(finalArchetype);
@@ -83,10 +86,15 @@ export function useSlotMachine({
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
+    if (spinTimeoutRef.current) {
+      clearTimeout(spinTimeoutRef.current);
+      spinTimeoutRef.current = null;
+    }
     if (frameRef.current) {
       cancelAnimationFrame(frameRef.current);
       frameRef.current = null;
     }
+    slowingStartedRef.current = false;
   }, []);
 
   useEffect(() => {
@@ -131,23 +139,29 @@ export function useSlotMachine({
       triggerHaptic(HAPTIC_PATTERNS.land);
       
       // Fire callback immediately so celebration effects start right away
-      onLand?.();
+      if (!hasLandedRef.current) {
+        hasLandedRef.current = true;
+        onLand?.();
+      }
     }, 400);
   }, [targetIndex, updateState, triggerHaptic, onLand]);
 
   // Phase 3: Dramatic slowdown
   const startSlowing = useCallback(() => {
+    if (slowingStartedRef.current || hasLandedRef.current) return;
+    slowingStartedRef.current = true;
     updateState("slowing");
     slowStepRef.current = 0;
     
     const totalSlowSteps = 12;
+    const slowStepCount = Math.max(1, totalSlowSteps);
     let idx = currentIndex;
     
     const slowDown = () => {
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current || hasLandedRef.current) return;
       
       slowStepRef.current++;
-      const stepProgress = slowStepRef.current / totalSlowSteps;
+      const stepProgress = slowStepRef.current / slowStepCount;
       setProgress(60 + stepProgress * 30);
       setIntensity(0.5 + stepProgress * 0.3);
       
@@ -156,10 +170,10 @@ export function useSlotMachine({
         triggerHaptic(HAPTIC_PATTERNS.slowing);
       }
       
-      if (slowStepRef.current < totalSlowSteps) {
+      if (slowStepRef.current < slowStepCount) {
         const len = ARCHETYPE_NAMES.length;
         const distToTarget = (targetIndex - idx + len) % len;
-        const stepsRemaining = totalSlowSteps - slowStepRef.current;
+        const stepsRemaining = slowStepCount - slowStepRef.current;
         
         // Move towards target
         if (distToTarget > stepsRemaining + 1) {
@@ -171,9 +185,8 @@ export function useSlotMachine({
         
         setCurrentIndex(idx);
         
-        // Exponential slowdown curve
         const baseDelay = 80;
-        const delay = baseDelay + Math.pow(slowStepRef.current, 2) * 12;
+        const delay = baseDelay + slowStepRef.current * 50;
         timeoutRef.current = setTimeout(slowDown, delay);
       } else {
         // Decide: go to nearMiss or land directly
@@ -188,7 +201,10 @@ export function useSlotMachine({
           triggerHaptic(HAPTIC_PATTERNS.land);
           
           // Fire callback immediately so celebration effects start right away
-          onLand?.();
+          if (!hasLandedRef.current) {
+            hasLandedRef.current = true;
+            onLand?.();
+          }
         }
       }
     };
@@ -201,6 +217,8 @@ export function useSlotMachine({
     updateState("spinning");
     triggerHaptic(HAPTIC_PATTERNS.spinStart);
     startTimeRef.current = Date.now();
+    hasLandedRef.current = false;
+    slowingStartedRef.current = false;
     
     const spinDuration = 2000; // 2 seconds of fast spin
     const spinInterval = 50; // Very fast
@@ -217,16 +235,24 @@ export function useSlotMachine({
       // Intensity ramps up during spin
       setIntensity(0.3 + spinProgress * 0.4);
       
-      if (elapsed >= spinDuration) {
+      if (elapsed >= spinDuration && !slowingStartedRef.current) {
         cleanup();
         startSlowing();
       }
     }, spinInterval);
+
+    spinTimeoutRef.current = setTimeout(() => {
+      if (!isMountedRef.current || slowingStartedRef.current) return;
+      cleanup();
+      startSlowing();
+    }, spinDuration + 200);
   }, [cleanup, updateState, triggerHaptic, startSlowing]);
 
   // Phase 1: Anticipation build-up
   const start = useCallback(() => {
     cleanup();
+    hasLandedRef.current = false;
+    slowingStartedRef.current = false;
     
     // Reduced motion: skip to result
     if (prefersReducedMotion) {
@@ -236,7 +262,10 @@ export function useSlotMachine({
       setIntensity(1);
       triggerHaptic(HAPTIC_PATTERNS.land);
       timeoutRef.current = setTimeout(() => {
-        onLand?.();
+        if (!hasLandedRef.current) {
+          hasLandedRef.current = true;
+          onLand?.();
+        }
       }, 800);
       return;
     }
