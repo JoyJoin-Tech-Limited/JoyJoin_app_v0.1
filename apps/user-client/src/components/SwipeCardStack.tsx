@@ -455,8 +455,9 @@ export function SwipeCardStack({
               whileTap={{ scale: 0.85 }}
               whileHover={{ scale: 1.05 }}
               onClick={() => handleButtonSwipe('skip')}
-              className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center shadow-lg transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
+              className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center shadow-lg transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
               data-testid="button-skip-card"
+              aria-label="跳过此兴趣卡片"
             >
               <X className="w-7 h-7 text-gray-500 dark:text-gray-400" strokeWidth={2.5} />
             </motion.button>
@@ -465,8 +466,9 @@ export function SwipeCardStack({
               whileTap={{ scale: 0.9 }}
               whileHover={{ scale: 1.08 }}
               onClick={() => handleButtonSwipe('love')}
-              className="w-[72px] h-[72px] rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 flex items-center justify-center shadow-xl shadow-amber-500/40 ring-4 ring-yellow-300/30"
+              className="w-[72px] h-[72px] rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 flex items-center justify-center shadow-xl shadow-amber-500/40 ring-4 ring-yellow-300/30 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
               data-testid="button-love-card"
+              aria-label="超爱此兴趣卡片"
             >
               <Sparkles className="w-9 h-9 text-white drop-shadow-md" strokeWidth={2.5} />
             </motion.button>
@@ -475,8 +477,9 @@ export function SwipeCardStack({
               whileTap={{ scale: 0.85 }}
               whileHover={{ scale: 1.05 }}
               onClick={() => handleButtonSwipe('like')}
-              className="w-14 h-14 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 border-2 border-green-300/50 flex items-center justify-center shadow-lg shadow-green-500/30 transition-colors"
+              className="w-14 h-14 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 border-2 border-green-300/50 flex items-center justify-center shadow-lg shadow-green-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
               data-testid="button-like-card"
+              aria-label="喜欢此兴趣卡片"
             >
               <Heart className="w-7 h-7 text-white" strokeWidth={2.5} />
             </motion.button>
