@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
-import { motion, AnimatePresence, useAnimation } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { ArchetypeSlotMachine } from "@/components/slot-machine";
 import { useAchievementTracker } from "@/hooks/useAchievementTracker";
 import { ArchetypePreview } from "@/components/archetype-preview";
 import { useDynamicAccent } from "@/contexts/DynamicAccentContext";
+import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -29,14 +30,6 @@ XIAOYUE_AVATAR_URLS.forEach((src) => {
 });
 
 const V4_ANSWERS_KEY = "joyjoin_v4_presignup_answers";
-
-type XiaoyueMood = "normal" | "excited" | "pointing";
-
-const XIAOYUE_AVATARS: Record<XiaoyueMood, string> = {
-  normal: xiaoyueNormal,
-  excited: xiaoyueExcited,
-  pointing: xiaoyuePointing,
-};
 
 function stripEmoji(text: string): string {
   return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '')
@@ -109,97 +102,6 @@ function OnboardingProgress({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function XiaoyueMascot({ 
-  mood = "normal", 
-  message,
-  className,
-  horizontal = false,
-}: { 
-  mood?: XiaoyueMood; 
-  message: string;
-  className?: string;
-  horizontal?: boolean;
-}) {
-  const controls = useAnimation();
-
-  useEffect(() => {
-    controls.start({
-      x: [0, -5, 5, -5, 5, 0],
-      transition: { duration: 0.4 }
-    });
-  }, [message, controls]);
-
-  if (horizontal) {
-    return (
-      <div className={cn("flex items-start gap-3", className)}>
-        <motion.div
-          animate={{ 
-            scale: [1, 1.05, 1],
-          }}
-          transition={{ 
-            scale: {
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }
-          }}
-          className="relative shrink-0"
-        >
-          <motion.div animate={controls}>
-            <img 
-              src={XIAOYUE_AVATARS.normal} 
-              alt="小悦" 
-              className="w-16 h-16 object-contain drop-shadow-lg"
-              data-testid="img-xiaoyue-avatar"
-            />
-          </motion.div>
-        </motion.div>
-        
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, x: -10 }}
-          animate={{ opacity: 1, scale: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          className="relative bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 rounded-2xl px-4 py-3 shadow-sm border border-purple-100 dark:border-purple-800 flex-1"
-        >
-          <p className="text-base leading-relaxed text-purple-800 dark:text-purple-200 font-medium" data-testid="text-xiaoyue-message">
-            {message}
-          </p>
-        </motion.div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={cn("flex flex-col items-center gap-3", className)}>
-      <motion.div
-        animate={controls}
-        className="relative"
-      >
-        <img 
-          src={XIAOYUE_AVATARS.normal} 
-          alt="小悦" 
-          className="w-20 h-20 object-contain drop-shadow-lg"
-          data-testid="img-xiaoyue-avatar"
-        />
-      </motion.div>
-      
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.2 }}
-        className={cn(
-          "bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 rounded-2xl px-4 py-3 max-w-[280px] shadow-sm border border-purple-100 dark:border-purple-800",
-          !message && "hidden"
-        )}
-      >
-        <p className="text-sm text-center text-purple-800 dark:text-purple-200 font-medium" data-testid="text-xiaoyue-message">
-          {message}
-        </p>
-      </motion.div>
     </div>
   );
 }
@@ -493,9 +395,9 @@ export default function PersonalityTestPageV4() {
             <p className="text-lg text-foreground mb-3 leading-relaxed font-bold">
               {scenarioText}
             </p>
-            <XiaoyueMascot 
-              mood={selectedOption ? "excited" : "normal"}
-              message={selectedOption 
+            <XiaoyueChatBubble 
+              pose={selectedOption ? "casual" : "thinking"}
+              content={selectedOption 
                 ? getOptionFeedback(currentQuestion.id, selectedOption) || "记下了，很有意思的选择！" 
                 : currentQuestion.questionText
               }
