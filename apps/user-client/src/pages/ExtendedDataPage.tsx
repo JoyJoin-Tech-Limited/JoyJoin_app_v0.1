@@ -44,14 +44,18 @@ const XIAOYUE_AVATARS: Record<XiaoyueMood, string> = {
   pointing: xiaoyuePointing,
 };
 
-const INTENT_OPTIONS = [
-  { value: "all", label: "都可以" },
+const INTENT_OPTIONS_REGULAR = [
   { value: "friends", label: "交新朋友" },
   { value: "networking", label: "拓展人脉" },
   { value: "discussion", label: "深度交流" },
   { value: "casual", label: "轻松娱乐" },
   { value: "dating", label: "浪漫邂逅" },
   { value: "learning", label: "学习成长" },
+];
+
+const INTENT_OPTIONS = [
+  { value: "all", label: "都可以" },
+  ...INTENT_OPTIONS_REGULAR,
 ];
 
 const INTEREST_OPTIONS = [
@@ -108,7 +112,7 @@ const STEP_CONFIG: StepConfig[] = [
     type: "multiSelect",
     options: INTENT_OPTIONS,
     minSelect: 1,
-    maxSelect: 3,
+    maxSelect: 6,
   },
   {
     id: "interests",
@@ -184,10 +188,16 @@ function TappableChip({
   selected, 
   onClick, 
   children,
+  animateIn,
+  animationDelay = 0,
+  isSpecial,
 }: { 
   selected: boolean; 
   onClick: () => void; 
   children: React.ReactNode;
+  animateIn?: boolean;
+  animationDelay?: number;
+  isSpecial?: boolean;
 }) {
   return (
     <motion.button
@@ -195,11 +205,20 @@ function TappableChip({
       onClick={onClick}
       className={cn(
         "px-4 py-3 rounded-full border-2 text-sm font-medium transition-all duration-200",
-        selected 
-          ? "border-primary bg-primary text-primary-foreground shadow-md" 
-          : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary/50"
+        isSpecial
+          ? selected
+            ? "border-purple-500 bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
+            : "border-purple-300 dark:border-purple-700 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 hover:border-purple-400"
+          : selected 
+            ? "border-primary bg-primary text-primary-foreground shadow-md" 
+            : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary/50"
       )}
       whileTap={{ scale: 0.95 }}
+      animate={animateIn ? { 
+        scale: [1, 1.1, 1],
+        boxShadow: ["0 0 0 0 rgba(168, 85, 247, 0)", "0 0 20px 4px rgba(168, 85, 247, 0.4)", "0 0 0 0 rgba(168, 85, 247, 0)"]
+      } : {}}
+      transition={animateIn ? { delay: animationDelay, duration: 0.3 } : {}}
       data-testid={`chip-option`}
     >
       {children}
@@ -248,6 +267,8 @@ export default function ExtendedDataPage() {
   const [socialFrequency, setSocialFrequency] = useState<string[]>([]);
   const [microInterests, setMicroInterests] = useState<string[]>([]);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [cascadeAnimating, setCascadeAnimating] = useState(false);
+  const [showAllSelectedToast, setShowAllSelectedToast] = useState(false);
 
   // Load cached progress
   useEffect(() => {
@@ -330,20 +351,45 @@ export default function ExtendedDataPage() {
     // Now we know it's a multiSelect config
     const maxSelect = config.maxSelect;
     
-    // Handle "all" as mutually exclusive for intent step
+    // Handle "all" special behavior for intent step
     if (currentStep === 0) {
       if (value === "all") {
-        // Selecting "all" clears other selections and sets only "all"
-        setCurrentValue(["all"]);
+        // Check if all options are currently selected
+        const allSelected = INTENT_OPTIONS_REGULAR.every(opt => current.includes(opt.value));
+        
+        if (allSelected) {
+          // Deselecting "all" clears everything
+          setCurrentValue([]);
+        } else {
+          // Selecting "all" triggers cascade animation and selects all regular options
+          setCascadeAnimating(true);
+          setShowAllSelectedToast(true);
+          // Haptic feedback
+          if (navigator.vibrate) {
+            navigator.vibrate(30);
+          }
+          // Select all regular options with cascade effect
+          setCurrentValue(INTENT_OPTIONS_REGULAR.map(opt => opt.value));
+          
+          // Clear animation and toast after cascade completes
+          setTimeout(() => {
+            setCascadeAnimating(false);
+          }, 150 * INTENT_OPTIONS_REGULAR.length + 300);
+          
+          setTimeout(() => {
+            setShowAllSelectedToast(false);
+          }, 2500);
+        }
         return;
       } else {
-        // Selecting any other option removes "all" if present
-        const withoutAll = current.filter(v => v !== "all");
-        if (withoutAll.includes(value)) {
-          setCurrentValue(withoutAll.filter(v => v !== value));
+        // Selecting/deselecting individual option
+        if (current.includes(value)) {
+          // Deselecting - remove from list
+          setCurrentValue(current.filter(v => v !== value));
         } else {
-          if (withoutAll.length < maxSelect) {
-            setCurrentValue([...withoutAll, value]);
+          // Selecting - add to list (up to max)
+          if (current.length < maxSelect) {
+            setCurrentValue([...current, value]);
           }
         }
         return;
@@ -358,6 +404,10 @@ export default function ExtendedDataPage() {
       }
     }
   };
+  
+  // Check if all regular intent options are selected (for "都可以" visual state)
+  const isAllIntentsSelected = currentStep === 0 && 
+    INTENT_OPTIONS_REGULAR.every(opt => intent.includes(opt.value));
 
   const canProceed = () => {
     const current = getCurrentValue();
@@ -507,35 +557,89 @@ export default function ExtendedDataPage() {
               </div>
             )}
 
-            <div className={cn(
-              stepConfig.type === "singleSelect" ? "space-y-3" : "flex flex-wrap gap-2 justify-center"
-            )}>
-              {stepConfig.options.map(opt => {
-                const isSelected = getCurrentValue().includes(opt.value);
+            {/* Intent step: Special layout with "都可以" on top */}
+            {currentStep === 0 && (
+              <div className="space-y-4">
+                {/* "都可以" special button */}
+                <div className="flex justify-center">
+                  <TappableChip
+                    selected={isAllIntentsSelected}
+                    onClick={() => toggleOption("all")}
+                    isSpecial
+                  >
+                    <span className="flex items-center gap-1">
+                      <Sparkles className="w-4 h-4" />
+                      都可以
+                    </span>
+                  </TappableChip>
+                </div>
                 
-                if (stepConfig.type === "singleSelect") {
+                {/* Toast for all selected */}
+                <AnimatePresence>
+                  {showAllSelectedToast && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="text-center text-sm text-purple-600 dark:text-purple-400 font-medium"
+                    >
+                      已帮你选上全部六项 ✓
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                
+                {/* Regular options */}
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {INTENT_OPTIONS_REGULAR.map((opt, index) => {
+                    const isSelected = intent.includes(opt.value);
+                    return (
+                      <TappableChip
+                        key={opt.value}
+                        selected={isSelected}
+                        onClick={() => toggleOption(opt.value)}
+                        animateIn={cascadeAnimating}
+                        animationDelay={index * 0.12}
+                      >
+                        {opt.label}
+                      </TappableChip>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Other steps: Default layout */}
+            {currentStep !== 0 && (
+              <div className={cn(
+                stepConfig.type === "singleSelect" ? "space-y-3" : "flex flex-wrap gap-2 justify-center"
+              )}>
+                {stepConfig.options.map(opt => {
+                  const isSelected = getCurrentValue().includes(opt.value);
+                  
+                  if (stepConfig.type === "singleSelect") {
+                    return (
+                      <TappableCard
+                        key={opt.value}
+                        selected={isSelected}
+                        onClick={() => toggleOption(opt.value)}
+                      >
+                        <span className="font-medium">{opt.label}</span>
+                      </TappableCard>
+                    );
+                  }
+                  
                   return (
-                    <TappableCard
+                    <TappableChip
                       key={opt.value}
                       selected={isSelected}
                       onClick={() => toggleOption(opt.value)}
                     >
-                      <span className="font-medium">{opt.label}</span>
-                    </TappableCard>
+                      {opt.label}
+                    </TappableChip>
                   );
-                }
-                
-                return (
-                  <TappableChip
-                    key={opt.value}
-                    selected={isSelected}
-                    onClick={() => toggleOption(opt.value)}
-                  >
-                    {opt.label}
-                  </TappableChip>
-                );
-              })}
-            </div>
+                })}
+              </div>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>

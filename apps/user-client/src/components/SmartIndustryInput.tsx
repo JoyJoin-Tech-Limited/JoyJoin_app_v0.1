@@ -55,7 +55,7 @@ export function SmartIndustryInput({
     }
     const handle = setTimeout(() => inferIndustry({ text }), debounceMs);
     return () => clearTimeout(handle);
-  }, [text, debounceMs]);
+  }, [text, debounceMs, inferIndustry]);
 
   const normalize = useMemo(() => {
     const map = new Map(options.map((o) => [o.value, o.label]));
