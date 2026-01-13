@@ -221,11 +221,6 @@ export default function ExtendedDataPage() {
             <h1 className="text-xl font-bold">
               {currentStep === 'swipe' ? '发现你的兴趣' : '你的兴趣画像'}
             </h1>
-            {currentStep === 'swipe' && (
-              <p className="text-sm text-muted-foreground mt-0.5">
-                滑动告诉小悦你喜欢什么
-              </p>
-            )}
           </div>
           {currentStep === 'result' && (
             <Button

@@ -137,13 +137,15 @@ function WheelSelector({
           aria-activedescendant={`${id}-${selected}`}
           tabIndex={0}
           className={cn(
-            "relative h-[220px] overflow-y-auto snap-y snap-mandatory",
+            "relative h-[220px] overflow-y-auto overflow-x-hidden snap-y snap-mandatory",
             "scrollbar-hide scroll-smooth",
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
           )}
           style={{ 
             scrollSnapType: 'y mandatory',
-            WebkitOverflowScrolling: 'touch', // Smooth iOS scroll
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-y',
+            overscrollBehaviorX: 'none',
           }}
           onScroll={handleScroll}
           onKeyDown={(event) => {

@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, Sparkles, ArrowRight, Loader2, Users, Network, MessageCircle, PartyPopper, Heart, Shuffle } from "lucide-react";
+import { ChevronLeft, Sparkles, ArrowRight, Loader2, Users, Network, MessageCircle, PartyPopper, Heart, Shuffle, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -14,6 +14,12 @@ import { BirthDatePicker } from "@/components/BirthDatePicker";
 import { SmartIndustryInput } from "@/components/SmartIndustryInput";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 import { haptics } from "@/lib/haptics";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -257,6 +263,7 @@ export default function EssentialDataPage() {
   const [gender, setGender] = useState("");
   const [birthYear, setBirthYear] = useState("");
   const [birthDate, setBirthDate] = useState<{ year: number; month: number; day: number } | undefined>();
+  const [birthDateSheetOpen, setBirthDateSheetOpen] = useState(false);
   const [relationshipStatus, setRelationshipStatus] = useState("");
   const [education, setEducation] = useState("");
   const [workIndustry, setWorkIndustry] = useState("");
@@ -536,16 +543,57 @@ export default function EssentialDataPage() {
                     </div>
                   </div>
                   <div>
-                    <BirthDatePicker
-                      value={birthDate}
-                      onChange={(date) => {
-                        setBirthDate(date);
-                        setBirthYear(String(date.year));
-                      }}
-                      minYear={1960}
-                      maxYear={new Date().getFullYear()}
-                    />
+                    <label className="block text-lg font-semibold mb-4 text-center">出生日期</label>
+                    <button
+                      type="button"
+                      onClick={() => setBirthDateSheetOpen(true)}
+                      className={cn(
+                        "w-full p-5 rounded-2xl border-2 transition-all flex items-center justify-center gap-3",
+                        birthDate
+                          ? "border-primary bg-primary/5 text-foreground"
+                          : "border-dashed border-muted-foreground/30 text-muted-foreground hover:border-primary/50 hover:bg-muted/50"
+                      )}
+                      data-testid="button-set-birthdate"
+                    >
+                      <Calendar className="w-5 h-5" />
+                      {birthDate ? (
+                        <span className="text-lg font-semibold">
+                          {birthDate.year}年{birthDate.month}月{birthDate.day}日
+                          <span className="text-muted-foreground font-normal ml-2">
+                            ({new Date().getFullYear() - birthDate.year}岁)
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-lg">点击设置出生日期</span>
+                      )}
+                    </button>
                   </div>
+
+                  <Sheet open={birthDateSheetOpen} onOpenChange={setBirthDateSheetOpen}>
+                    <SheetContent side="bottom" className="rounded-t-3xl pb-8">
+                      <SheetHeader className="mb-4">
+                        <SheetTitle className="text-center text-xl">选择出生日期</SheetTitle>
+                      </SheetHeader>
+                      <BirthDatePicker
+                        value={birthDate}
+                        onChange={(date) => {
+                          setBirthDate(date);
+                          setBirthYear(String(date.year));
+                        }}
+                        minYear={1960}
+                        maxYear={new Date().getFullYear()}
+                      />
+                      <div className="mt-6 px-4">
+                        <Button
+                          className="w-full h-12 text-lg rounded-xl"
+                          onClick={() => setBirthDateSheetOpen(false)}
+                          data-testid="button-confirm-birthdate"
+                        >
+                          确认
+                        </Button>
+                      </div>
+                    </SheetContent>
+                  </Sheet>
                 </div>
               )}
 

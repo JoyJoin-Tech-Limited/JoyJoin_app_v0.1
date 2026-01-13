@@ -449,49 +449,43 @@ export function SwipeCardStack({
       </div>
 
       {currentIndex < cards.length && (
-        <div className="mt-6 py-4 px-6 mx-auto rounded-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 shadow-2xl shadow-black/10">
-          <div className="flex items-center justify-center gap-5">
+        <div className="mt-6 flex justify-center">
+          <div className="flex items-center gap-4 px-6 py-3 rounded-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/60 max-w-[320px]">
             <motion.button
-              whileTap={{ scale: 0.85 }}
+              whileTap={{ scale: 0.9 }}
               whileHover={{ scale: 1.05 }}
               onClick={() => handleButtonSwipe('skip')}
-              className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center shadow-lg transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+              className="w-12 h-12 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex items-center justify-center transition-colors"
               data-testid="button-skip-card"
               aria-label="跳过此兴趣卡片"
             >
-              <X className="w-7 h-7 text-gray-500 dark:text-gray-400" strokeWidth={2.5} />
+              <X className="w-6 h-6 text-gray-400 dark:text-gray-500" strokeWidth={2} />
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              whileHover={{ scale: 1.05 }}
+              onClick={() => handleButtonSwipe('love')}
+              className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center shadow-lg shadow-purple-500/25"
+              data-testid="button-love-card"
+              aria-label="超爱此兴趣卡片"
+            >
+              <Sparkles className="w-7 h-7 text-white" strokeWidth={2} />
             </motion.button>
 
             <motion.button
               whileTap={{ scale: 0.9 }}
-              whileHover={{ scale: 1.08 }}
-              onClick={() => handleButtonSwipe('love')}
-              className="w-[72px] h-[72px] rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 flex items-center justify-center shadow-xl shadow-amber-500/40 ring-4 ring-yellow-300/30 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
-              data-testid="button-love-card"
-              aria-label="超爱此兴趣卡片"
-            >
-              <Sparkles className="w-9 h-9 text-white drop-shadow-md" strokeWidth={2.5} />
-            </motion.button>
-
-            <motion.button
-              whileTap={{ scale: 0.85 }}
               whileHover={{ scale: 1.05 }}
               onClick={() => handleButtonSwipe('like')}
-              className="w-14 h-14 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 border-2 border-green-300/50 flex items-center justify-center shadow-lg shadow-green-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              className="w-12 h-12 rounded-full bg-white dark:bg-gray-800 border border-pink-200 dark:border-pink-800 flex items-center justify-center transition-colors"
               data-testid="button-like-card"
               aria-label="喜欢此兴趣卡片"
             >
-              <Heart className="w-7 h-7 text-white" strokeWidth={2.5} />
+              <Heart className="w-6 h-6 text-pink-500 dark:text-pink-400" strokeWidth={2} />
             </motion.button>
           </div>
         </div>
       )}
-
-      <div className="mt-3 text-center text-sm font-medium text-muted-foreground">
-        <span className="inline-flex items-center gap-1"><X className="w-3.5 h-3.5" />跳过</span>
-        <span className="mx-5 text-amber-500 dark:text-amber-400 inline-flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" />超爱</span>
-        <span className="text-green-500 dark:text-green-400 inline-flex items-center gap-1"><Heart className="w-3.5 h-3.5" />喜欢</span>
-      </div>
     </div>
   );
 }
