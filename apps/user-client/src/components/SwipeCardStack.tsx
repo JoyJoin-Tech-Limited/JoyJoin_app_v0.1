@@ -128,7 +128,7 @@ function SwipeCard({
       const absX = Math.abs(offset.x);
       const absY = Math.abs(offset.y);
 
-      const allowVelocity =
+      const hasMinimumDisplacement =
         (absX > MIN_DISPLACEMENT_FOR_VELOCITY || absY > MIN_DISPLACEMENT_FOR_VELOCITY);
 
       const dominantX = absX > absY * 0.8;
@@ -136,21 +136,21 @@ function SwipeCard({
 
       if (
         dominantY &&
-        (offset.y < -SWIPE_THRESHOLD_Y || (allowVelocity && velocity.y < -SWIPE_VELOCITY_THRESHOLD))
+        (offset.y < -SWIPE_THRESHOLD_Y || (hasMinimumDisplacement && velocity.y < -SWIPE_VELOCITY_THRESHOLD))
       ) {
         setIsAnimating(true);
         await controls.start({ y: -500, opacity: 0, scale: 0.8, transition: { duration: 0.3 } });
         onSwipe('love', reactionTime);
       } else if (
         dominantX &&
-        (offset.x > SWIPE_THRESHOLD_X || (allowVelocity && velocity.x > SWIPE_VELOCITY_THRESHOLD))
+        (offset.x > SWIPE_THRESHOLD_X || (hasMinimumDisplacement && velocity.x > SWIPE_VELOCITY_THRESHOLD))
       ) {
         setIsAnimating(true);
         await controls.start({ x: 500, opacity: 0, rotate: 20, transition: { duration: 0.3 } });
         onSwipe('like', reactionTime);
       } else if (
         dominantX &&
-        (offset.x < -SWIPE_THRESHOLD_X || (allowVelocity && velocity.x < -SWIPE_VELOCITY_THRESHOLD))
+        (offset.x < -SWIPE_THRESHOLD_X || (hasMinimumDisplacement && velocity.x < -SWIPE_VELOCITY_THRESHOLD))
       ) {
         setIsAnimating(true);
         await controls.start({ x: -500, opacity: 0, rotate: -20, transition: { duration: 0.3 } });
@@ -192,7 +192,7 @@ function SwipeCard({
         "absolute inset-0 rounded-3xl overflow-hidden shadow-2xl cursor-grab active:cursor-grabbing",
         !isTop && "pointer-events-none"
       )}
-      style={{ touchAction: "none", pointerEvents: isAnimating ? "none" : undefined }}
+      style={{ touchAction: "none", ...(isAnimating && { pointerEvents: "none" }) }}
       drag={isTop && !isAnimating}
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       dragElastic={0.5}
