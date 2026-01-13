@@ -19,6 +19,9 @@ interface SmartIndustryInputProps {
   className?: string;
 }
 
+// Minimum text length before showing AI classification option
+const MIN_TEXT_LENGTH_FOR_AI_CLASSIFICATION = 3;
+
 export function SmartIndustryInput({
   options,
   value,
@@ -165,7 +168,7 @@ export function SmartIndustryInput({
       </div>
       
       {/* AI Classification Fallback */}
-      {!primaryNorm && !isPending && !isAiClassifying && text.trim().length > 3 && (
+      {!primaryNorm && !isPending && !isAiClassifying && text.trim().length > MIN_TEXT_LENGTH_FOR_AI_CLASSIFICATION && (
         <div className="p-4 border border-dashed rounded-lg bg-amber-50 dark:bg-amber-950/20">
           <p className="text-sm font-medium text-amber-900 dark:text-amber-100 mb-2">
             🤔 没找到合适的行业？

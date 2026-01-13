@@ -9576,11 +9576,36 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       // Step 1: Try local fuzzy matching first (fast, no API cost)
       const localMatch = matchIndustryFromText(description);
       if (localMatch && localMatch.confidence > 0.8) {
-        // Find the industry ID from the matched name
-        const industry = INDUSTRIES.find(i => 
-          i.label.includes(localMatch.industry) || 
-          localMatch.industry.includes(i.label)
-        );
+        // Map the matched industry name to one of the 18 INDUSTRIES
+        // matchIndustryFromText returns names from INDUSTRY_ONTOLOGY (e.g., "金融", "科技/互联网")
+        // We need to map these to INDUSTRIES labels (e.g., "金融投资", "科技互联网")
+        const industryMappings: Record<string, string> = {
+          '金融': 'finance',
+          '科技/互联网': 'tech',
+          '科技': 'tech',
+          '互联网': 'tech',
+          '咨询': 'consulting',
+          '法律': 'legal',
+          '医疗/生物': 'medical',
+          '医疗': 'medical',
+          '教育': 'education',
+          '地产': 'realestate',
+          '快消/零售': 'retail',
+          '传媒/广告': 'media',
+          '制造业': 'hardware',
+          '文化娱乐': 'creative',
+          '生活服务': 'lifestyle',
+        };
+        
+        // Try to find industry by mapped ID or by matching labels
+        let industry = INDUSTRIES.find(i => {
+          const mappedId = industryMappings[localMatch.industry];
+          if (mappedId && i.id === mappedId) return true;
+          
+          // Also try direct label matching
+          return i.label.includes(localMatch.industry) || 
+                 localMatch.industry.includes(i.label);
+        });
         
         if (industry) {
           // Log local classification
@@ -9637,13 +9662,22 @@ ${industryLabels}
       });
 
       // Set 5 second timeout for AI classification
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error("AI classification timeout")), 5000)
-      );
+      let timeoutId: NodeJS.Timeout | undefined;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error("AI classification timeout")), 5000);
+      });
 
       try {
         const response = await Promise.race([aiPromise, timeoutPromise]);
-        const aiResult = JSON.parse(response.choices[0].message.content || "{}");
+        if (timeoutId) clearTimeout(timeoutId); // Clear timeout to prevent memory leak
+        
+        let aiResult;
+        try {
+          aiResult = JSON.parse(response.choices[0].message.content || "{}");
+        } catch (parseError) {
+          console.error("Failed to parse AI response JSON:", parseError);
+          throw new Error("AI返回的JSON格式无效");
+        }
         
         // Convert industry label to ID
         const industry = INDUSTRIES.find(i => i.label === aiResult.industry);
@@ -9670,6 +9704,7 @@ ${industryLabels}
         });
 
       } catch (aiError) {
+        if (timeoutId) clearTimeout(timeoutId); // Ensure cleanup on error (only if timeout was set)
         console.error("AI分类失败:", aiError);
         
         // Step 3: Fallback to "emerging" industry
