@@ -12,7 +12,6 @@ import { useAdaptiveAssessment, type PreSignupAnswer } from "@/hooks/useAdaptive
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { StickyCTA, StickyCTAButton, StickyCTASecondaryButton } from "@/components/StickyCTA";
 import { SelectionList } from "@/components/SelectionList";
-import { useAchievementTracker } from "@/hooks/useAchievementTracker";
 import { ArchetypePreview } from "@/components/archetype-preview";
 import { useDynamicAccent } from "@/contexts/DynamicAccentContext";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
@@ -187,13 +186,6 @@ export default function PersonalityTestPageV4() {
     }
   }, [encouragement, answeredCount]);
 
-  // Track question start time for quick_thinker achievement
-  useEffect(() => {
-    if (currentQuestion?.id) {
-      trackQuestionStart();
-    }
-  }, [currentQuestion?.id, trackQuestionStart]);
-
   // Update dynamic accent color based on top archetype
   useEffect(() => {
     if (topArchetype && currentMatches[0]) {
@@ -209,11 +201,6 @@ export default function PersonalityTestPageV4() {
   useEffect(() => {
     if (isComplete && result) {
       clearV4PreSignupAnswers();
-      // Track completion achievements
-      trackCompletion({
-        answeredCount,
-        minQuestions: progress?.minQuestions || 8,
-      });
       // Invalidate multiple query keys to ensure result page AND profile page are fresh
       queryClient.invalidateQueries({ queryKey: ['/api/assessment/result'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/results'] });
@@ -224,7 +211,7 @@ export default function PersonalityTestPageV4() {
       // Navigate directly to results page - slot machine will show there
       setLocation('/personality-test/results');
     }
-  }, [isComplete, result, setLocation, trackCompletion, answeredCount, progress?.minQuestions]);
+  }, [isComplete, result, setLocation, answeredCount, progress?.minQuestions]);
 
   const handleSelectOption = useCallback((value: string | string[]) => {
     const next = Array.isArray(value) ? value[0] : value;
@@ -237,16 +224,8 @@ export default function PersonalityTestPageV4() {
     const selectedOpt = currentQuestion.options.find(o => o.value === selectedOption);
     await submitAnswer(currentQuestion.id, selectedOption, selectedOpt?.traitScores || {});
     
-    // Track achievement after submitting
-    trackAnswer({
-      answeredCount: answeredCount + 1,
-      totalEstimate: answeredCount + estimatedRemaining,
-      topConfidence: currentMatches[0]?.confidence || 0,
-      traitScores: selectedOpt?.traitScores,
-    });
-    
     setSelectedOption(undefined);
-  }, [currentQuestion, selectedOption, submitAnswer, trackAnswer, answeredCount, estimatedRemaining, currentMatches]);
+  }, [currentQuestion, selectedOption, submitAnswer, answeredCount, estimatedRemaining, currentMatches]);
 
   const handleMilestoneContinue = useCallback(() => {
     setShowMilestone(false);
@@ -258,12 +237,11 @@ export default function PersonalityTestPageV4() {
     const success = await skipQuestion(currentQuestion.id);
     if (success) {
       setSelectedOption(undefined);
-      trackSkip();
       toast({
         description: "已换一道题",
       });
     }
-  }, [currentQuestion, canSkip, skipQuestion, toast, trackSkip]);
+  }, [currentQuestion, canSkip, skipQuestion, toast]);
 
   useEffect(() => {
     if (isInitialized && isComplete) {
