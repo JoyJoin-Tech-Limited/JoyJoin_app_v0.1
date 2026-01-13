@@ -68,43 +68,64 @@ export function SmartIndustryInput({
   const confidence = (c?: number) => (c ? `置信度${Math.round(c * 100)}%` : "");
 
   return (
-    <div className={cn("space-y-2", className)}>
-      <div className="text-sm text-muted-foreground">{mascotPrompt}</div>
+    <div className={cn("space-y-3", className)}>
+      <div className="text-base text-muted-foreground font-medium">{mascotPrompt}</div>
       <Input
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={placeholder}
         inputMode="text"
+        className="h-14 text-lg rounded-2xl"
         data-testid="input-industry-smart"
       />
       {isPending && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> 正在为你匹配行业…
+        <div className="flex items-center gap-2 text-base text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" /> 正在为你匹配行业…
         </div>
       )}
       <div className="flex flex-wrap gap-2">
         {primaryNorm && (
           <Button
-            size="sm"
+            size="lg"
             variant={value === primaryNorm.value ? "default" : "outline"}
             onClick={() => onSelect(primaryNorm.value)}
+            className="text-base font-semibold"
             data-testid="chip-industry-primary"
           >
-            <Sparkles className="mr-1 h-4 w-4" />
+            <Sparkles className="mr-1.5 h-5 w-5" />
             {primaryNorm.label}
-            {primaryNorm.confidence ? (<span className="ml-1 text-xs text-muted-foreground whitespace-nowrap">{confidence(primaryNorm.confidence)}</span>) : null}
+            {primaryNorm.confidence ? (
+              <span className={cn(
+                "ml-2 text-sm font-medium whitespace-nowrap px-2 py-0.5 rounded-full",
+                value === primaryNorm.value 
+                  ? "bg-white/20 text-white" 
+                  : "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
+              )}>
+                {confidence(primaryNorm.confidence)}
+              </span>
+            ) : null}
           </Button>
         )}
         {altsNorm.map((s) => (
           <Button
             key={s.value}
-            size="sm"
+            size="default"
             variant={value === s.value ? "default" : "secondary"}
             onClick={() => onSelect(s.value)}
+            className="text-base"
             data-testid={`chip-industry-${s.value}`}
           >
             {s.label}
-            {s.confidence ? (<span className="ml-1 text-xs text-muted-foreground whitespace-nowrap">{confidence(s.confidence)}</span>) : null}
+            {s.confidence ? (
+              <span className={cn(
+                "ml-2 text-sm font-medium whitespace-nowrap px-2 py-0.5 rounded-full",
+                value === s.value 
+                  ? "bg-white/20 text-white" 
+                  : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+              )}>
+                {confidence(s.confidence)}
+              </span>
+            ) : null}
           </Button>
         ))}
       </div>
