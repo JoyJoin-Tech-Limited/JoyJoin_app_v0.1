@@ -234,7 +234,7 @@ export function useSlotMachine({
     hasLandedRef.current = false;
     slowingStartedRef.current = false;
     
-    const spinDuration = 2000; // 2 seconds of fast spin
+    const spinDuration = 2500; // 2.5 seconds of fast spin (increased from 2s)
     const spinInterval = 50; // Very fast
     
     intervalRef.current = setInterval(() => {

@@ -157,12 +157,12 @@ function ArchetypeSlotMachineComponent({
       }, 2400);
     }
 
-    // Navigate to results
+    // Navigate to results - increased dwell time from 1.5s to 2s
     completeTimeoutRef.current = setTimeout(() => {
       if (isMountedRef.current) {
         onComplete();
       }
-    }, prefersReducedMotion ? 900 : 1500);
+    }, prefersReducedMotion ? 900 : 2000);
   }, [onComplete, prefersReducedMotion, createParticleExplosion]);
 
   const { state, visibleItems, start, progress, intensity } = useSlotMachine({
