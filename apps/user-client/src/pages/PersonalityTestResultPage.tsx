@@ -21,7 +21,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useXiaoyueAnalysis } from "@/hooks/useXiaoyueAnalysis";
-import { getStyleSpectrum } from "@shared/personality/matcherV2";
+import { getStyleSpectrum, getAllArchetypeScores } from "@shared/personality/matcherV2";
 import { ArrowRight } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
@@ -561,6 +561,25 @@ export default function PersonalityTestResultPage() {
     }
   }, [result]);
 
+  const allArchetypeScores = useMemo(() => {
+    if (!result) return [];
+    try {
+      const traits = {
+        A: result.affinityScore,
+        O: result.opennessScore,
+        C: result.conscientiousnessScore,
+        E: result.emotionalStabilityScore,
+        X: result.extraversionScore,
+        P: result.positivityScore,
+      };
+      return getAllArchetypeScores(traits);
+    } catch {
+      return [];
+    }
+  }, [result]);
+
+  const [showDebugScores, setShowDebugScores] = useState(false);
+
   // Cache filtered chemistry list (only show ≥70% compatibility)
   const highCompatibilityPartners = useMemo(() => {
     if (!result?.chemistryList) return [];
@@ -761,6 +780,72 @@ export default function PersonalityTestResultPage() {
                 } : undefined;
               })()}
             />
+          </motion.div>
+        )}
+
+        {/* Debug: All 12 Archetype Scores */}
+        {allArchetypeScores.length > 0 && (
+          <motion.div variants={itemVariants}>
+            <Collapsible open={showDebugScores} onOpenChange={setShowDebugScores}>
+              <Card className="border-dashed border-muted-foreground/30">
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors py-3">
+                    <CardTitle className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span className="flex items-center gap-2">
+                        <Eye className="w-4 h-4" />
+                        调试: 全部12个原型分数
+                      </span>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${showDebugScores ? 'rotate-180' : ''}`} />
+                    </CardTitle>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    <div className="space-y-2">
+                      {allArchetypeScores.map((item, index) => {
+                        const isPrimary = index === 0;
+                        const isHighScore = item.score >= 70;
+                        return (
+                          <div
+                            key={item.archetype}
+                            className={`flex items-center justify-between p-2 rounded-lg ${
+                              isPrimary 
+                                ? 'bg-primary/10 border border-primary/30' 
+                                : isHighScore 
+                                  ? 'bg-muted/50' 
+                                  : 'bg-muted/20'
+                            }`}
+                            data-testid={`debug-archetype-score-${index}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg w-6 text-center">{item.emoji}</span>
+                              <span className={`font-medium ${isPrimary ? 'text-primary' : ''}`}>
+                                {item.archetype}
+                                {isPrimary && <Badge variant="outline" className="ml-2 text-xs">主类型</Badge>}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                                <div 
+                                  className={`h-full rounded-full ${isPrimary ? 'bg-primary' : isHighScore ? 'bg-primary/60' : 'bg-muted-foreground/40'}`}
+                                  style={{ width: `${item.score}%` }}
+                                />
+                              </div>
+                              <span className={`font-mono text-sm w-12 text-right ${isPrimary ? 'text-primary font-bold' : ''}`}>
+                                {item.score}%
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-3">
+                      排名依据实际计算分数，主类型为最高分原型。
+                    </p>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
           </motion.div>
         )}
 
