@@ -7,6 +7,7 @@ export function SwipeParticles({ show }: { show: boolean }) {
       const angle = (i / 12) * Math.PI * 2;
       const distance = 100 + Math.random() * 50;
       return {
+        id: `particle-${i}`,
         x: Math.cos(angle) * distance,
         y: Math.sin(angle) * distance,
       };
@@ -19,7 +20,7 @@ export function SwipeParticles({ show }: { show: boolean }) {
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
       {particles.map((particle, i) => (
         <motion.div
-          key={i}
+          key={particle.id}
           className="absolute top-1/2 left-1/2 w-2 h-2 rounded-full bg-gradient-to-br from-pink-400 to-rose-500"
           initial={{ 
             x: 0, 

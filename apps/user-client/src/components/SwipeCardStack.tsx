@@ -137,6 +137,7 @@ function SwipeCard({
   const [dragProgress, setDragProgress] = useState(0);
   const dragRafRef = useRef<number | null>(null);
   const lastOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const particleTimeoutRef = useRef<number | null>(null);
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-20, 20]);
 
@@ -144,6 +145,9 @@ function SwipeCard({
     return () => {
       if (dragRafRef.current) {
         cancelAnimationFrame(dragRafRef.current);
+      }
+      if (particleTimeoutRef.current) {
+        clearTimeout(particleTimeoutRef.current);
       }
       lastOffsetRef.current = { x: 0, y: 0 };
     };
@@ -169,7 +173,7 @@ function SwipeCard({
       ) {
         setIsAnimating(true);
         setShowParticles(true);
-        setTimeout(() => setShowParticles(false), 1000);
+        particleTimeoutRef.current = window.setTimeout(() => setShowParticles(false), 1000);
         await controls.start({ y: -500, opacity: 0, scale: 0.8, transition: { duration: 0.3 } });
         onSwipe('love', reactionTime);
       } else if (
@@ -322,7 +326,7 @@ function SwipeCard({
             <div className="
               relative px-5 py-3 rounded-2xl
               bg-gradient-to-br from-emerald-400 to-emerald-600
-              border-3 border-white
+              border-[3px] border-white
               shadow-[0_0_30px_rgba(16,185,129,0.4)]
               backdrop-blur-sm
             ">
@@ -380,7 +384,7 @@ function SwipeCard({
             <div className="
               relative px-6 py-3 rounded-2xl
               bg-gradient-to-br from-pink-500 to-rose-600
-              border-3 border-white
+              border-[3px] border-white
               shadow-[0_0_40px_rgba(236,72,153,0.5)]
               flex items-center gap-2
             ">
