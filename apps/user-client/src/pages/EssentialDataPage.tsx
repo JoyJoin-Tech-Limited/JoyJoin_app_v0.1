@@ -46,7 +46,7 @@ interface EssentialDataState {
     // Three-tier industry classification
     industryCategory?: string;
     industryCategoryLabel?: string;
-    industrySegment?: string;
+    industrySegmentNew?: string; // FIXED: renamed from industrySegment to match schema
     industrySegmentLabel?: string;
     industryNiche?: string;
     industryNicheLabel?: string;
@@ -280,7 +280,7 @@ export default function EssentialDataPage() {
   // Three-tier industry classification state
   const [industryCategory, setIndustryCategory] = useState("");
   const [industryCategoryLabel, setIndustryCategoryLabel] = useState("");
-  const [industrySegment, setIndustrySegment] = useState("");
+  const [industrySegmentNew, setIndustrySegmentNew] = useState(""); // FIXED: renamed to match schema
   const [industrySegmentLabel, setIndustrySegmentLabel] = useState("");
   const [industryNiche, setIndustryNiche] = useState("");
   const [industryNicheLabel, setIndustryNicheLabel] = useState("");
@@ -309,7 +309,7 @@ export default function EssentialDataPage() {
           setWorkIndustry(state.data.workIndustry || "");
           setIndustryCategory(state.data.industryCategory || "");
           setIndustryCategoryLabel(state.data.industryCategoryLabel || "");
-          setIndustrySegment(state.data.industrySegment || "");
+          setIndustrySegmentNew(state.data.industrySegmentNew || ""); // FIXED: use correct field name
           setIndustrySegmentLabel(state.data.industrySegmentLabel || "");
           setIndustryNiche(state.data.industryNiche || "");
           setIndustryNicheLabel(state.data.industryNicheLabel || "");
@@ -336,14 +336,14 @@ export default function EssentialDataPage() {
     const state: EssentialDataState = {
       currentStep,
       data: { displayName, gender, birthYear, relationshipStatus, education, workIndustry, 
-              industryCategory, industryCategoryLabel, industrySegment, industrySegmentLabel,
+              industryCategory, industryCategoryLabel, industrySegmentNew, industrySegmentLabel,
               industryNiche, industryNicheLabel, industryRawInput, industrySource, industryConfidence,
               hometown, currentCity, intent },
       timestamp: Date.now(),
     };
     localStorage.setItem(ESSENTIAL_CACHE_KEY, JSON.stringify(state));
   }, [currentStep, displayName, gender, birthYear, relationshipStatus, education, workIndustry,
-      industryCategory, industryCategoryLabel, industrySegment, industrySegmentLabel,
+      industryCategory, industryCategoryLabel, industrySegmentNew, industrySegmentLabel,
       industryNiche, industryNicheLabel, industryRawInput, industrySource, industryConfidence,
       hometown, currentCity, intent]);
 
@@ -378,7 +378,7 @@ export default function EssentialDataPage() {
       case 1: return gender && (birthDate?.year || birthYear);
       case 2: return relationshipStatus;
       case 3: return education;
-      case 4: return industryCategory && industrySegment; // New three-tier check
+      case 4: return industryCategory && industrySegmentNew; // FIXED: use correct field name
       case 5: return hometown && currentCity;
       case 6: return intent.length >= 1;
       default: return false;
@@ -435,7 +435,7 @@ export default function EssentialDataPage() {
           // Three-tier industry classification
           industryCategory,
           industryCategoryLabel,
-          industrySegment,
+          industrySegmentNew, // FIXED: use correct field name
           industrySegmentLabel,
           industryNiche,
           industryNicheLabel,
@@ -668,7 +668,7 @@ export default function EssentialDataPage() {
                       // Update all three-tier classification fields
                       setIndustryCategory(selection.category.id);
                       setIndustryCategoryLabel(selection.category.label);
-                      setIndustrySegment(selection.segment.id);
+                      setIndustrySegmentNew(selection.segment.id); // FIXED: use correct field name
                       setIndustrySegmentLabel(selection.segment.label);
                       setIndustryNiche(selection.niche?.id || "");
                       setIndustryNicheLabel(selection.niche?.label || "");
