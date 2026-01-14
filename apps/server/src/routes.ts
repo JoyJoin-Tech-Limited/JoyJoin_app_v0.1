@@ -2184,6 +2184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = updateFullProfileSchema.safeParse(req.body);
       
       if (!result.success) {
+        console.error(`[Profile PATCH] Validation failed for user ${userId}:`, JSON.stringify(result.error.issues, null, 2));
         return res.status(400).json({ error: result.error });
       }
 
