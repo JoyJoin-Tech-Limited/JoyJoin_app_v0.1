@@ -10,6 +10,7 @@ export function SwipeGuidanceOverlay() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const seen = localStorage.getItem(STORAGE_KEY);
+    // For testing: if you want to see it again, manually clear localStorage
     if (!seen) {
       setVisible(true);
     }
