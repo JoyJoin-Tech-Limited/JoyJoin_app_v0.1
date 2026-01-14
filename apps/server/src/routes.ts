@@ -9653,6 +9653,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         niche,
         nicheLabel,
         rawInput,
+        normalizedInput,
         source,
         confidence,
       } = req.body;
@@ -9675,6 +9676,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           industryNicheLabel: nicheLabel || null,
           industry: fullPath, // 更新legacy字段以向后兼容
           industryRawInput: rawInput,
+          industryNormalized: normalizedInput || rawInput, // Use normalized or fallback to raw
           industrySource: source,
           industryConfidence: confidence?.toString(),
           industryClassifiedAt: new Date(),

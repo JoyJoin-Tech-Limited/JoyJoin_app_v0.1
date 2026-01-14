@@ -35,3 +35,4 @@ export {
 export * from './atmospherePrediction';
 export * from './districts';
 export * from './personality';
+export * from './types/industry';
