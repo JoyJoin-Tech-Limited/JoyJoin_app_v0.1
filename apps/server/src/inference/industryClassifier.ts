@@ -67,7 +67,8 @@ function matchViaSeed(userInput: string): IndustryClassificationResult | null {
 
 /**
  * Tier 2: Taxonomy直接匹配 - 直接扫描INDUSTRY_TAXONOMY的keywords/synonyms
- * 优先级: niche > segment > category (越具体越优先)
+ * 优先级: 完全匹配label > 部分keyword匹配
+ * 匹配类型优先级: exact_segment_label (0.95) > niche_label (0.93) > niche_synonym (0.90) > segment_label_partial (0.85) > niche_keyword (0.80)
  */
 function matchViaTaxonomy(userInput: string): IndustryClassificationResult | null {
   const startTime = Date.now();
@@ -83,100 +84,94 @@ function matchViaTaxonomy(userInput: string): IndustryClassificationResult | nul
     confidence: number;
     matchType: "niche" | "segment" | "category";
     matchedTerm: string;
+    matchPriority: number; // Higher = better match
   }
   
-  let bestMatch: TaxonomyMatch | null = null;
-  
-  // Priority order: niche (most specific) > segment > category
-  const priorityScore = { niche: 3, segment: 2, category: 1 };
+  const allMatches: TaxonomyMatch[] = [];
   
   for (const category of INDUSTRY_TAXONOMY) {
     for (const segment of category.segments) {
-      // Check niche level first (most specific)
+      // HIGHEST PRIORITY: Exact segment label match (e.g., "投资银行" matches segment "投资银行")
+      if (lowerInput === segment.label.toLowerCase() || 
+          lowerInput.includes(segment.label.toLowerCase())) {
+        const isExact = lowerInput === segment.label.toLowerCase();
+        allMatches.push({
+          categoryId: category.id,
+          categoryLabel: category.label,
+          segmentId: segment.id,
+          segmentLabel: segment.label,
+          confidence: isExact ? 0.98 : 0.95,
+          matchType: "segment",
+          matchedTerm: segment.label,
+          matchPriority: isExact ? 100 : 90, // Exact segment match is highest priority
+        });
+      }
+      
+      // Check niche level
       for (const niche of segment.niches) {
-        // Check exact label match
-        if (lowerInput.includes(niche.label.toLowerCase())) {
-          const match: TaxonomyMatch = {
+        // Niche exact label match
+        if (lowerInput === niche.label.toLowerCase() || 
+            lowerInput.includes(niche.label.toLowerCase())) {
+          const isExact = lowerInput === niche.label.toLowerCase();
+          allMatches.push({
             categoryId: category.id,
             categoryLabel: category.label,
             segmentId: segment.id,
             segmentLabel: segment.label,
             nicheId: niche.id,
             nicheLabel: niche.label,
-            confidence: 0.95,
+            confidence: isExact ? 0.98 : 0.93,
             matchType: "niche",
             matchedTerm: niche.label,
-          };
-          if (!bestMatch || priorityScore[match.matchType] > priorityScore[bestMatch.matchType] || 
-              (match.matchType === bestMatch.matchType && match.confidence > bestMatch.confidence)) {
-            bestMatch = match;
-          }
+            matchPriority: isExact ? 95 : 85, // Niche label match
+          });
         }
         
-        // Check synonyms
+        // Check synonyms (medium-high priority)
         for (const synonym of niche.synonyms) {
-          if (lowerInput.includes(synonym.toLowerCase())) {
-            const match: TaxonomyMatch = {
+          if (lowerInput === synonym.toLowerCase() || 
+              lowerInput.includes(synonym.toLowerCase())) {
+            const isExact = lowerInput === synonym.toLowerCase();
+            allMatches.push({
               categoryId: category.id,
               categoryLabel: category.label,
               segmentId: segment.id,
               segmentLabel: segment.label,
               nicheId: niche.id,
               nicheLabel: niche.label,
-              confidence: 0.92,
+              confidence: isExact ? 0.95 : 0.90,
               matchType: "niche",
               matchedTerm: synonym,
-            };
-            if (!bestMatch || priorityScore[match.matchType] > priorityScore[bestMatch.matchType]) {
-              bestMatch = match;
-            }
+              matchPriority: isExact ? 88 : 75, // Synonym match
+            });
           }
         }
         
-        // Check keywords
+        // Check keywords (lower priority - only partial match)
         for (const keyword of niche.keywords) {
           if (lowerInput.includes(keyword.toLowerCase())) {
-            const match: TaxonomyMatch = {
+            allMatches.push({
               categoryId: category.id,
               categoryLabel: category.label,
               segmentId: segment.id,
               segmentLabel: segment.label,
               nicheId: niche.id,
               nicheLabel: niche.label,
-              confidence: 0.88,
+              confidence: 0.80,
               matchType: "niche",
               matchedTerm: keyword,
-            };
-            if (!bestMatch || priorityScore[match.matchType] > priorityScore[bestMatch.matchType]) {
-              bestMatch = match;
-            }
+              matchPriority: 50, // Keyword match is lower priority
+            });
           }
-        }
-      }
-      
-      // Check segment level (label match)
-      if (lowerInput.includes(segment.label.toLowerCase())) {
-        const match: TaxonomyMatch = {
-          categoryId: category.id,
-          categoryLabel: category.label,
-          segmentId: segment.id,
-          segmentLabel: segment.label,
-          confidence: 0.85,
-          matchType: "segment",
-          matchedTerm: segment.label,
-        };
-        if (!bestMatch || priorityScore[match.matchType] > priorityScore[bestMatch.matchType]) {
-          bestMatch = match;
         }
       }
     }
     
     // Check category level (lowest priority)
     if (lowerInput.includes(category.label.toLowerCase())) {
-      // For category-only match, pick first segment as default
       const firstSegment = category.segments[0];
-      if (firstSegment && !bestMatch) {
-        bestMatch = {
+      if (firstSegment) {
+        allMatches.push({
           categoryId: category.id,
           categoryLabel: category.label,
           segmentId: firstSegment.id,
@@ -184,19 +179,24 @@ function matchViaTaxonomy(userInput: string): IndustryClassificationResult | nul
           confidence: 0.65,
           matchType: "category",
           matchedTerm: category.label,
-        };
+          matchPriority: 30, // Category match is lowest priority
+        });
       }
     }
   }
   
-  if (!bestMatch) return null;
+  if (allMatches.length === 0) return null;
+  
+  // Sort by priority (highest first) and pick the best match
+  allMatches.sort((a, b) => b.matchPriority - a.matchPriority);
+  const match = allMatches[0];
   
   return {
-    category: { id: bestMatch.categoryId, label: bestMatch.categoryLabel },
-    segment: { id: bestMatch.segmentId, label: bestMatch.segmentLabel },
-    niche: bestMatch.nicheId ? { id: bestMatch.nicheId, label: bestMatch.nicheLabel! } : undefined,
-    confidence: bestMatch.confidence,
-    reasoning: `基于"${bestMatch.matchedTerm}"的${bestMatch.matchType === "niche" ? "精准赛道" : bestMatch.matchType === "segment" ? "细分领域" : "大类"}匹配`,
+    category: { id: match.categoryId, label: match.categoryLabel },
+    segment: { id: match.segmentId, label: match.segmentLabel },
+    niche: match.nicheId ? { id: match.nicheId, label: match.nicheLabel! } : undefined,
+    confidence: match.confidence,
+    reasoning: `基于"${match.matchedTerm}"的${match.matchType === "niche" ? "精准赛道" : match.matchType === "segment" ? "细分领域" : "大类"}匹配`,
     source: "ontology",
     processingTimeMs: Date.now() - startTime,
     rawInput: userInput,

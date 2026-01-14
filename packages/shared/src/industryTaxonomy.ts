@@ -53,7 +53,7 @@ export const INDUSTRY_TAXONOMY: IndustryCategory[] = [
         id: "pe_vc",
         label: "PE/VC",
         niches: [
-          { id: "private_equity", label: "私募股权", synonyms: ["PE", "股权投资"], keywords: ["PE", "股权", "投资"] },
+          { id: "private_equity", label: "私募股权", synonyms: ["PE", "股权投资", "一级市场"], keywords: ["PE", "股权", "私募", "LP", "GP"] },
           { id: "venture_capital", label: "风险投资", synonyms: ["VC", "创投"], keywords: ["VC", "风投", "创业"] },
         ]
       },
