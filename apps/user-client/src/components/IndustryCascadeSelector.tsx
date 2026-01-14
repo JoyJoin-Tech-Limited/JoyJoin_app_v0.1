@@ -243,9 +243,22 @@ export function IndustryCascadeSelector({
                   
                   {/* Pattern overlay */}
                   <div className="absolute inset-0 opacity-10">
-                    <div className="absolute inset-0" style={{
-                      backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,.05) 10px, rgba(0,0,0,.05) 20px)"
-                    }} />
+                    {/* Light mode pattern */}
+                    <div
+                      className="absolute inset-0 dark:hidden"
+                      style={{
+                        backgroundImage:
+                          "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,.05) 10px, rgba(0,0,0,.05) 20px)",
+                      }}
+                    />
+                    {/* Dark mode pattern */}
+                    <div
+                      className="absolute inset-0 hidden dark:block"
+                      style={{
+                        backgroundImage:
+                          "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,.08) 10px, rgba(255,255,255,.08) 20px)",
+                      }}
+                    />
                   </div>
                   
                   {/* Content */}
