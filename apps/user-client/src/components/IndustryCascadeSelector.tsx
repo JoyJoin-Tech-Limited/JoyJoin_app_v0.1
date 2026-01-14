@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { getCategoryGradient } from "@/lib/industryThemes";
 import { INDUSTRY_TAXONOMY, type IndustryCategory, type IndustrySegment, type IndustryNiche } from "@shared/industryTaxonomy";
 
@@ -39,6 +40,7 @@ export function IndustryCascadeSelector({
   onBack,
   className,
 }: IndustryCascadeSelectorProps) {
+  const prefersReducedMotion = useReducedMotion();
   const [currentStep, setCurrentStep] = useState<Step>("category");
   const [selectedCategory, setSelectedCategory] = useState<IndustryCategory | null>(null);
   const [selectedSegment, setSelectedSegment] = useState<IndustrySegment | null>(null);
@@ -353,9 +355,9 @@ export function IndustryCascadeSelector({
               {filteredNiches.map((niche, index) => (
                 <motion.button
                   key={niche.id}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ 
+                  initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.8 }}
+                  animate={prefersReducedMotion ? false : { opacity: 1, scale: 1 }}
+                  transition={prefersReducedMotion ? undefined : { 
                     delay: index * 0.03,
                     type: "spring",
                     stiffness: 300,
@@ -363,8 +365,8 @@ export function IndustryCascadeSelector({
                   }}
                   onClick={() => handleNicheSelect(niche)}
                   className="px-4 py-2 rounded-full border-2 border-purple-200 dark:border-purple-800 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-all text-sm font-medium"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={prefersReducedMotion ? undefined : { scale: 1.05 }}
+                  whileTap={prefersReducedMotion ? undefined : { scale: 0.95 }}
                 >
                   {niche.label}
                 </motion.button>
