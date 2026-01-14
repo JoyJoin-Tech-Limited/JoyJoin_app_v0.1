@@ -36,7 +36,7 @@ describe('Industry Classifier with Normalization', () => {
     
     expect(result.source).toBe('fallback');
     expect(result.normalizedInput).toBe('');
-    expect(result.confidence).toBeLessThan(50);
+    expect(result.confidence).toBeLessThan(0.5);
   });
   
   it('should handle edge cases gracefully', async () => {
