@@ -10,12 +10,15 @@
  */
 
 import { useState, useMemo } from "react";
-import { ChevronRight, Search, ChevronLeft } from "lucide-react";
+import { motion } from "framer-motion";
+import { ChevronRight, Search, ChevronLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { getCategoryGradient } from "@/lib/industryThemes";
 import { INDUSTRY_TAXONOMY, type IndustryCategory, type IndustrySegment, type IndustryNiche } from "@shared/industryTaxonomy";
 
 interface SelectedIndustry {
@@ -37,6 +40,7 @@ export function IndustryCascadeSelector({
   onBack,
   className,
 }: IndustryCascadeSelectorProps) {
+  const prefersReducedMotion = useReducedMotion();
   const [currentStep, setCurrentStep] = useState<Step>("category");
   const [selectedCategory, setSelectedCategory] = useState<IndustryCategory | null>(null);
   const [selectedSegment, setSelectedSegment] = useState<IndustrySegment | null>(null);
@@ -138,6 +142,31 @@ export function IndustryCascadeSelector({
 
   return (
     <div className={cn("space-y-4", className)}>
+      {/* Instagram Stories-style Progress Indicator */}
+      <div className="flex gap-1.5">
+        {["category", "segment", "niche"].map((step, index) => {
+          const isActive = 
+            (step === "category" && currentStep === "category") ||
+            (step === "segment" && (currentStep === "segment" || currentStep === "niche")) ||
+            (step === "niche" && currentStep === "niche");
+          const isCompleted = 
+            (step === "category" && (currentStep === "segment" || currentStep === "niche")) ||
+            (step === "segment" && currentStep === "niche");
+          
+          return (
+            <div
+              key={step}
+              className={cn(
+                "h-1 rounded-full flex-1 transition-all duration-300",
+                isActive && "bg-gradient-to-r from-purple-500 to-pink-500",
+                isCompleted && "bg-primary",
+                !isActive && !isCompleted && "bg-gray-200 dark:bg-gray-700"
+              )}
+            />
+          );
+        })}
+      </div>
+
       {/* 面包屑导航 */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <span className={cn("font-medium", currentStep === "category" && "text-foreground")}>
@@ -196,65 +225,154 @@ export function IndustryCascadeSelector({
       {/* 选项列表 */}
       <ScrollArea className="h-[400px] rounded-lg border">
         <div className="p-4 space-y-2">
-          {/* 第一步：选择大类 */}
-          {currentStep === "category" &&
-            filteredCategories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => handleCategorySelect(category)}
-                className="w-full flex items-center justify-between p-4 rounded-lg border hover:border-primary hover:bg-primary/5 transition-colors text-left"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{category.icon}</span>
-                  <div>
-                    <div className="font-medium">{category.label}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {category.segments.length} 个细分领域
+          {/* 第一步：选择大类 - Pinterest style grid */}
+          {currentStep === "category" && (
+            <div className="grid grid-cols-2 gap-3">
+              {filteredCategories.map((category, index) => (
+                <motion.button
+                  key={category.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  onClick={() => handleCategorySelect(category)}
+                  className="relative aspect-square rounded-2xl overflow-hidden border-2 border-transparent hover:border-primary hover:shadow-lg transition-all group"
+                >
+                  {/* Gradient background with pattern overlay */}
+                  <div className={cn(
+                    "absolute inset-0 bg-gradient-to-br opacity-90 group-hover:opacity-100 transition-opacity",
+                    getCategoryGradient(category.id)
+                  )} />
+                  
+                  {/* Pattern overlay */}
+                  <div className="absolute inset-0 opacity-10">
+                    {/* Light mode pattern */}
+                    <div
+                      className="absolute inset-0 dark:hidden"
+                      style={{
+                        backgroundImage:
+                          "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,.05) 10px, rgba(0,0,0,.05) 20px)",
+                      }}
+                    />
+                    {/* Dark mode pattern */}
+                    <div
+                      className="absolute inset-0 hidden dark:block"
+                      style={{
+                        backgroundImage:
+                          "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,.08) 10px, rgba(255,255,255,.08) 20px)",
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="relative h-full flex flex-col items-center justify-center p-4 text-center">
+                    {/* Emoji with floating animation */}
+                    <motion.span
+                      className="text-4xl mb-2"
+                      animate={{
+                        y: [0, -5, 0],
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                    >
+                      {category.icon}
+                    </motion.span>
+                    
+                    <span className="font-black text-sm text-white drop-shadow-md">
+                      {category.label}
+                    </span>
+                    
+                    <span className="text-xs text-white/80 mt-1">
+                      {category.segments.length} 个细分
+                    </span>
+                    
+                    {/* Hot badge for priority 1 */}
+                    {category.priority === 1 && (
+                      <Badge className="absolute top-2 right-2 bg-red-500 text-white border-0">
+                        🔥 热门
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {/* Shine effect on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                </motion.button>
+              ))}
+            </div>
+          )}
+
+          {/* 第二步：选择细分 - Vertical list with animations */}
+          {currentStep === "segment" && (
+            <div className="space-y-2">
+              {filteredSegments.map((segment, index) => (
+                <motion.button
+                  key={segment.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  onClick={() => handleSegmentSelect(segment)}
+                  className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-transparent hover:border-primary hover:bg-primary/5 transition-all text-left group"
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Category emoji in gradient circle */}
+                    {selectedCategory && (
+                      <div className={cn(
+                        "w-14 h-14 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0",
+                        getCategoryGradient(selectedCategory.id)
+                      )}>
+                        <span className="text-2xl">{selectedCategory.icon}</span>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <div className="text-lg font-bold">{segment.label}</div>
+                      {segment.niches.length > 0 && (
+                        <div className="text-sm text-muted-foreground">
+                          {segment.niches.length} 个具体赛道
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </button>
-            ))}
+                  
+                  {/* Animated arrow */}
+                  <motion.div
+                    className="text-muted-foreground"
+                    animate={{ x: [0, 5, 0] }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </motion.div>
+                </motion.button>
+              ))}
+            </div>
+          )}
 
-          {/* 第二步：选择细分 */}
-          {currentStep === "segment" &&
-            filteredSegments.map((segment) => (
-              <button
-                key={segment.id}
-                onClick={() => handleSegmentSelect(segment)}
-                className="w-full flex items-center justify-between p-4 rounded-lg border hover:border-primary hover:bg-primary/5 transition-colors text-left"
-              >
-                <div>
-                  <div className="font-medium">{segment.label}</div>
-                  {segment.niches.length > 0 && (
-                    <div className="text-sm text-muted-foreground">
-                      {segment.niches.length} 个具体赛道
-                    </div>
-                  )}
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </button>
-            ))}
-
-          {/* 第三步：选择赛道 */}
-          {currentStep === "niche" &&
-            filteredNiches.map((niche) => (
-              <button
-                key={niche.id}
-                onClick={() => handleNicheSelect(niche)}
-                className="w-full flex items-center justify-between p-4 rounded-lg border hover:border-primary hover:bg-primary/5 transition-colors text-left"
-              >
-                <div>
-                  <div className="font-medium">{niche.label}</div>
-                  {niche.synonyms.length > 0 && (
-                    <div className="text-sm text-muted-foreground">
-                      {niche.synonyms.slice(0, 3).join("、")}
-                    </div>
-                  )}
-                </div>
-              </button>
-            ))}
+          {/* 第三步：选择赛道 - Rounded-full chips */}
+          {currentStep === "niche" && (
+            <div className="flex flex-wrap gap-2">
+              {filteredNiches.map((niche, index) => (
+                <motion.button
+                  key={niche.id}
+                  initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.8 }}
+                  animate={prefersReducedMotion ? false : { opacity: 1, scale: 1 }}
+                  transition={prefersReducedMotion ? undefined : { 
+                    delay: index * 0.03,
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 20
+                  }}
+                  onClick={() => handleNicheSelect(niche)}
+                  className="px-4 py-2 rounded-full border-2 border-purple-200 dark:border-purple-800 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-all text-sm font-medium"
+                  whileHover={prefersReducedMotion ? undefined : { scale: 1.05 }}
+                  whileTap={prefersReducedMotion ? undefined : { scale: 0.95 }}
+                >
+                  {niche.label}
+                </motion.button>
+              ))}
+            </div>
+          )}
 
           {/* 空状态 */}
           {((currentStep === "category" && filteredCategories.length === 0) ||
@@ -294,14 +412,14 @@ export function IndustryCascadeSelector({
         )}
 
         {/* 在赛道选择步骤，允许跳过 */}
-        {currentStep === "niche" && (
+        {currentStep === "niche" && selectedSegment && (
           <Button
             onClick={handleSkipNiche}
             variant="secondary"
             size="lg"
             className="flex-1"
           >
-            跳过，不选择具体赛道
+            跳过，就选 {selectedSegment.label}
           </Button>
         )}
       </div>

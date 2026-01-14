@@ -3,6 +3,8 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ChevronLeft, Sparkles, ArrowRight, Loader2, Users, Network, MessageCircle, PartyPopper, Heart, Shuffle, Calendar, Star, Check, AlertCircle } from "lucide-react";
 import { SegmentedProgress } from "@/components/ui/progress-segmented";
 import { ChevronLeft, Sparkles, ArrowRight, Loader2, Users, Network, MessageCircle, PartyPopper, Heart, Shuffle, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -99,6 +101,14 @@ const EDUCATION_OPTIONS = [
   { value: "bachelor", label: "本科" },
   { value: "master", label: "硕士" },
   { value: "phd", label: "博士" },
+];
+
+// Display name suggestions with gradients
+const DISPLAY_NAME_SUGGESTIONS = [
+  { text: "深夜漫游者", gradient: "from-purple-100 to-pink-100" },
+  { text: "咖啡爱好者", gradient: "from-blue-100 to-cyan-100" },
+  { text: "城市探险家", gradient: "from-orange-100 to-red-100" },
+  { text: "周末放空者", gradient: "from-green-100 to-emerald-100" },
 ];
 
 
@@ -479,7 +489,7 @@ export default function EssentialDataPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header with progress - Duolingo-style segmented dots */}
+      {/* Header with Match Potential Bar */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-4">
         <div className="flex items-center gap-3">
           {currentStep > 0 && (
@@ -539,14 +549,102 @@ export default function EssentialDataPage() {
             <div className="space-y-4">
               {/* Step 0: Display Name */}
               {currentStep === 0 && (
-                <Input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="输入你的昵称"
-                  className="h-16 text-xl text-center rounded-2xl font-medium"
-                  maxLength={20}
-                  data-testid="input-display-name"
-                />
+                <div className="space-y-4">
+                  {/* Input with character counter */}
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Input
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        placeholder="输入你的昵称"
+                        className={cn(
+                          "h-20 text-xl text-center rounded-2xl font-medium transition-all",
+                          displayName.length >= 2 && "border-green-500 bg-green-50/50 dark:bg-green-950/20"
+                        )}
+                        maxLength={20}
+                        data-testid="input-display-name"
+                      />
+                    </div>
+                    
+                    {/* Character counter with progress bar */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>字符数</span>
+                        <span className={cn(
+                          "font-medium",
+                          displayName.length >= 2 && "text-green-600 dark:text-green-400"
+                        )}>
+                          {displayName.length}/20
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                        <motion.div
+                          className={cn(
+                            "h-full rounded-full transition-colors",
+                            displayName.length >= 2
+                              ? "bg-gradient-to-r from-green-400 to-emerald-500"
+                              : "bg-gradient-to-r from-gray-300 to-gray-400"
+                          )}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${(displayName.length / 20) * 100}%` }}
+                          transition={{ duration: 0.2 }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Real-time validation feedback */}
+                    {displayName && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center gap-2"
+                      >
+                        {displayName.length < 2 ? (
+                          <>
+                            <AlertCircle className="w-4 h-4 text-orange-500" />
+                            <span className="text-sm text-orange-600 dark:text-orange-400">
+                              至少需要2个字符
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-4 h-4 text-green-500" />
+                            <span className="text-sm text-green-600 dark:text-green-400">
+                              很棒的名字！✨
+                            </span>
+                          </>
+                        )}
+                      </motion.div>
+                    )}
+                  </div>
+                  
+                  {/* Quick suggestions */}
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-3">或者选择一个建议：</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {DISPLAY_NAME_SUGGESTIONS.map((suggestion, index) => (
+                        <motion.button
+                          key={suggestion.text}
+                          type="button"
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: index * 0.05 }}
+                          onClick={() => setDisplayName(suggestion.text)}
+                          className={cn(
+                            "p-3 rounded-xl border-2 border-transparent transition-all",
+                            "bg-gradient-to-br text-sm font-medium",
+                            suggestion.gradient,
+                            "hover:border-primary hover:shadow-md",
+                            "text-gray-700 dark:text-gray-800"
+                          )}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          {suggestion.text}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* Step 1: Gender + Birthday */}
@@ -555,17 +653,69 @@ export default function EssentialDataPage() {
                   <div>
                     <label className="block text-lg font-semibold mb-4 text-center">性别</label>
                     <div className="grid grid-cols-2 gap-4">
-                      {GENDER_OPTIONS.map(opt => (
-                        <TappableCard
+                      {GENDER_OPTIONS.map((opt, index) => (
+                        <motion.button
                           key={opt.value}
-                          selected={gender === opt.value}
-                          onClick={() => setGender(opt.value)}
+                          type="button"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          onClick={() => {
+                            haptics.light();
+                            setGender(opt.value);
+                          }}
+                          className={cn(
+                            "relative p-6 rounded-2xl border-2 transition-all duration-200 overflow-hidden",
+                            gender === opt.value
+                              ? "border-primary shadow-lg shadow-primary/20"
+                              : "border-gray-200 dark:border-gray-700 hover:border-primary/50"
+                          )}
+                          whileTap={{ scale: 0.97 }}
+                          data-testid={`card-gender-${opt.value}`}
                         >
-                          <div className="flex items-center justify-center gap-3">
-                            <span className="text-3xl">{opt.emoji}</span>
-                            <span className="text-lg font-semibold">{opt.label}</span>
+                          {/* Background gradient when selected */}
+                          {gender === opt.value && (
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30"
+                            />
+                          )}
+                          
+                          {/* Content */}
+                          <div className="relative flex flex-col items-center gap-3">
+                            {/* Emoji with animation */}
+                            <motion.span
+                              className="text-5xl"
+                              animate={gender === opt.value ? {
+                                scale: [1, 1.2, 1],
+                                rotate: [0, -10, 10, 0]
+                              } : { scale: 1, rotate: 0 }}
+                              transition={{ duration: 0.4 }}
+                            >
+                              {opt.emoji}
+                            </motion.span>
+                            
+                            <span className={cn(
+                              "text-lg font-semibold",
+                              gender === opt.value && "text-primary"
+                            )}>
+                              {opt.label}
+                            </span>
+                            
+                            {/* Selection checkmark */}
+                            {gender === opt.value && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                                className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center"
+                              >
+                                <Check className="w-4 h-4 text-primary-foreground" />
+                              </motion.div>
+                            )}
                           </div>
-                        </TappableCard>
+                        </motion.button>
                       ))}
                     </div>
                   </div>
@@ -880,13 +1030,24 @@ export default function EssentialDataPage() {
                   
                   {/* Selection count indicator */}
                   {!isFlexibleSelected && intent.length > 0 && (
-                    <motion.p
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-center text-sm text-muted-foreground"
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-center space-y-2"
                     >
-                      已选择 <span className="font-semibold text-primary">{intent.length}</span> 个目标
-                    </motion.p>
+                      <p className="text-sm text-muted-foreground">
+                        已选择 <span className="font-semibold text-primary">{intent.length}</span> 个目标
+                      </p>
+                      {intent.length >= 3 && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="text-sm font-medium text-green-600 dark:text-green-400"
+                        >
+                          🎉 太棒了！已选够3个，匹配会更精准哦
+                        </motion.p>
+                      )}
+                    </motion.div>
                   )}
                 </div>
               )}
