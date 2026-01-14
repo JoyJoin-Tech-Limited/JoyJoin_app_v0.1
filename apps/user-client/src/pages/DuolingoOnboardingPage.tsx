@@ -261,7 +261,7 @@ function OnboardingProgress({
               />
               <div className="flex justify-between mt-1">
                 <span className="text-xs text-muted-foreground font-medium">
-                  第{Math.floor(current)}题 / 约{displayRange || "12-16"}题
+                  第{Math.floor(current)}题 / 约{displayRange || "8-16"}题
                 </span>
                 <span className="text-xs font-bold text-primary">
                   {Math.round(progress)}%
