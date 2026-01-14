@@ -4,6 +4,7 @@ import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { SegmentedProgress } from "@/components/ui/progress-segmented";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, Sparkles, PartyPopper, ArrowRight, Mail, Eye, EyeOff, Loader2 } from "lucide-react";
 import { SiWechat } from "react-icons/si";
@@ -234,18 +235,40 @@ function OnboardingProgress({
           </Button>
         )}
         <div className="flex-1">
-          <Progress 
-            value={progress} 
-            className="h-2 transition-all duration-500" 
-          />
-          <div className="flex justify-between mt-1">
-            <span className="text-xs text-muted-foreground font-medium">
-              第{Math.floor(current)}题 / 约{displayRange || "12-16"}题
-            </span>
-            <span className="text-xs font-bold text-primary">
-              {Math.round(progress)}%
-            </span>
-          </div>
+          {/* For anchor questions (screens 1-8), show segmented progress */}
+          {current >= 1 && current <= 8 ? (
+            <>
+              <SegmentedProgress 
+                current={current - 1}
+                total={8}
+                variant="duolingo"
+                className="mb-2"
+              />
+              <div className="flex justify-between mt-1">
+                <span className="text-xs text-muted-foreground font-medium">
+                  第{Math.floor(current)}题 / 约{displayRange || "8-16"}题
+                </span>
+                <span className="text-xs font-bold text-primary">
+                  {Math.round(progress)}%
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <Progress 
+                value={progress} 
+                className="h-2 transition-all duration-500" 
+              />
+              <div className="flex justify-between mt-1">
+                <span className="text-xs text-muted-foreground font-medium">
+                  第{Math.floor(current)}题 / 约{displayRange || "12-16"}题
+                </span>
+                <span className="text-xs font-bold text-primary">
+                  {Math.round(progress)}%
+                </span>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
