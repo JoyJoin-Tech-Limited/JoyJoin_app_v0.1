@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, useAnimation, PanInfo } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Heart, X, Sparkles } from "lucide-react";
+import { SwipeParticles } from "./SwipeParticles";
 import { 
   InterestCard, 
   SwipeChoice, 
@@ -112,27 +113,39 @@ function getSmartXiaoyueMessage(
   return null;
 }
 
+interface SwipeCardProps {
+  card: InterestCard;
+  isTop: boolean;
+  onSwipe: (choice: SwipeChoice, reactionTime: number) => void;
+  cardStartTime: number;
+  stackIndex?: number;
+  totalVisible?: number;
+}
+
 function SwipeCard({
   card,
   isTop,
   onSwipe,
   cardStartTime,
-}: {
-  card: InterestCard;
-  isTop: boolean;
-  onSwipe: (choice: SwipeChoice, reactionTime: number) => void;
-  cardStartTime: number;
-}) {
+  stackIndex = 0,
+  totalVisible = 1,
+}: SwipeCardProps) {
   const controls = useAnimation();
   const [dragDirection, setDragDirection] = useState<'left' | 'right' | 'up' | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [showParticles, setShowParticles] = useState(false);
+  const [dragProgress, setDragProgress] = useState(0);
   const dragRafRef = useRef<number | null>(null);
   const lastOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const particleTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
       if (dragRafRef.current) {
         cancelAnimationFrame(dragRafRef.current);
+      }
+      if (particleTimeoutRef.current) {
+        clearTimeout(particleTimeoutRef.current);
       }
       lastOffsetRef.current = { x: 0, y: 0 };
     };
@@ -157,6 +170,8 @@ function SwipeCard({
         (offset.y < -SWIPE_THRESHOLD_Y || (hasMinimumDisplacement && velocity.y < -SWIPE_VELOCITY_THRESHOLD))
       ) {
         setIsAnimating(true);
+        setShowParticles(true);
+        particleTimeoutRef.current = window.setTimeout(() => setShowParticles(false), 1000);
         await controls.start({ y: -500, opacity: 0, scale: 0.8, transition: { duration: 0.3 } });
         onSwipe('love', reactionTime);
       } else if (
@@ -183,6 +198,7 @@ function SwipeCard({
         });
       }
       setDragDirection(null);
+      setDragProgress(0);
       setIsAnimating(false);
     },
     [controls, onSwipe, cardStartTime, isAnimating]
@@ -190,6 +206,19 @@ function SwipeCard({
 
   const handleDrag = useCallback((_: any, info: PanInfo) => {
     lastOffsetRef.current = info.offset;
+    
+    // Calculate progress based on swipe distance (0 to 1)
+    const absX = Math.abs(info.offset.x);
+    const absY = Math.abs(info.offset.y);
+    const maxDistance = 150; // threshold for full opacity
+    
+    const progress = Math.min(
+      Math.max(absX, absY) / maxDistance,
+      1
+    );
+    
+    setDragProgress(progress);
+    
     if (dragRafRef.current) return;
 
     dragRafRef.current = requestAnimationFrame(() => {
@@ -216,19 +245,49 @@ function SwipeCard({
         "absolute inset-0 rounded-3xl overflow-hidden shadow-2xl cursor-grab active:cursor-grabbing",
         !isTop && "pointer-events-none"
       )}
-      style={{ touchAction: "none", transform: "translateZ(0)", willChange: "transform", backfaceVisibility: "hidden", ...(isAnimating && { pointerEvents: "none" }) }}
+      style={{ 
+        touchAction: "none", 
+        transform: "translateZ(0)", 
+        willChange: "transform", 
+        backfaceVisibility: "hidden",
+        ...(isAnimating && { pointerEvents: "none" }) 
+      }}
       drag={isTop && !isAnimating}
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-      dragElastic={0.7}
-      dragMomentum={false}
-      dragTransition={{ bounceStiffness: 300, bounceDamping: 20 }}
+      dragElastic={0.9}
+      dragMomentum={true}
+      dragTransition={{ 
+        bounceStiffness: 400, 
+        bounceDamping: 25
+      }}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
       animate={controls}
-      initial={isTop ? { scale: 1 } : { scale: 0.95, y: 10 }}
+      initial={isTop ? { 
+        scale: 1, 
+        y: 0,
+        opacity: 1,
+        rotateX: 0
+      } : { 
+        scale: 0.92, 
+        y: 20 * stackIndex,
+        opacity: 0.8,
+        rotateX: 5
+      }}
+      transition={{ 
+        type: "spring", 
+        stiffness: 260, 
+        damping: 20 
+      }}
       whileDrag={{ cursor: "grabbing" }}
     >
-      <div className="relative w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
+      <SwipeParticles show={showParticles} />
+      <div className={cn(
+        "relative w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800",
+        dragDirection === 'right' && "shadow-[0_0_50px_rgba(16,185,129,0.3)]",
+        dragDirection === 'left' && "shadow-[0_0_50px_rgba(107,114,128,0.2)]",
+        dragDirection === 'up' && "shadow-[0_0_50px_rgba(236,72,153,0.3)]"
+      )}>
         <img
           src={card.imageUrl}
           alt={card.label}
@@ -246,32 +305,86 @@ function SwipeCard({
 
         {dragDirection === 'right' && (
           <motion.div
+            className="absolute top-8 left-8 pointer-events-none"
+            style={{
+              rotate: -12,
+              opacity: dragProgress,
+              scale: 0.8 + (dragProgress * 0.2),
+            }}
             initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="absolute top-6 left-6 px-4 py-2 rounded-xl bg-green-500 text-white font-bold text-xl rotate-[-15deg] border-4 border-white shadow-lg"
+            animate={{ opacity: dragProgress, scale: 0.8 + (dragProgress * 0.2) }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
-            喜欢
+            <div className="
+              relative px-5 py-3 rounded-2xl
+              bg-gradient-to-br from-emerald-400 to-emerald-600
+              border-[3px] border-white
+              shadow-[0_0_30px_rgba(16,185,129,0.4)]
+              backdrop-blur-sm
+            ">
+              <Heart 
+                className="w-10 h-10 text-white fill-white stroke-white" 
+                strokeWidth={2.5}
+              />
+            </div>
           </motion.div>
         )}
 
         {dragDirection === 'left' && (
           <motion.div
+            className="absolute top-8 right-8 pointer-events-none"
+            style={{
+              rotate: 12,
+              opacity: dragProgress,
+              scale: 0.8 + (dragProgress * 0.2),
+            }}
             initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="absolute top-6 right-6 px-4 py-2 rounded-xl bg-gray-500 text-white font-bold text-xl rotate-[15deg] border-4 border-white shadow-lg"
+            animate={{ opacity: dragProgress, scale: 0.8 + (dragProgress * 0.2) }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
-            跳过
+            <div className="
+              relative px-5 py-3 rounded-2xl
+              bg-white/20
+              backdrop-blur-xl
+              border-2 border-white/40
+              shadow-[0_8px_32px_rgba(0,0,0,0.12)]
+            ">
+              <X 
+                className="w-10 h-10 text-white stroke-white" 
+                strokeWidth={2.5}
+              />
+            </div>
           </motion.div>
         )}
 
         {dragDirection === 'up' && (
           <motion.div
+            className="absolute top-12 left-1/2 -translate-x-1/2 pointer-events-none"
+            style={{
+              opacity: dragProgress,
+              scale: 0.8 + (dragProgress * 0.2),
+              y: -10 * dragProgress,
+            }}
             initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="absolute top-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl bg-pink-500 text-white font-bold text-xl border-4 border-white shadow-lg flex items-center gap-2"
+            animate={{ 
+              opacity: dragProgress, 
+              scale: 0.8 + (dragProgress * 0.2),
+              y: -10 * dragProgress
+            }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
-            <Sparkles className="w-5 h-5" />
-            超爱
+            <div className="
+              relative px-6 py-3 rounded-2xl
+              bg-gradient-to-br from-pink-500 to-rose-600
+              border-[3px] border-white
+              shadow-[0_0_40px_rgba(236,72,153,0.5)]
+              flex items-center gap-2
+            ">
+              <Sparkles className="w-6 h-6 text-white fill-white" strokeWidth={2} />
+              <span className="text-white font-bold text-xl tracking-wide drop-shadow-lg">
+                超爱
+              </span>
+            </div>
           </motion.div>
         )}
       </div>
@@ -356,9 +469,14 @@ export function SwipeCardStack({
 
       if (navigator.vibrate) {
         if (choice === 'love') {
-          navigator.vibrate([30, 50, 30]);
+          // Celebration pattern
+          navigator.vibrate([30, 50, 30, 50, 60]);
         } else if (choice === 'like') {
-          navigator.vibrate(20);
+          // Satisfying medium pulse
+          navigator.vibrate([15, 10, 25]);
+        } else if (choice === 'skip') {
+          // Subtle single pulse
+          navigator.vibrate(10);
         }
       }
 
@@ -426,7 +544,7 @@ export function SwipeCardStack({
       </div>
 
       <div className="relative flex-1 min-h-[400px] flex items-center justify-center">
-        <div className="relative aspect-[3/4] w-full max-w-[300px]">
+        <div className="relative aspect-[3/4] w-full max-w-[300px]" style={{ perspective: "1000px" }}>
           {visibleCards.length > 0 ? (
             visibleCards.map((card, idx) => (
               <SwipeCard
@@ -435,6 +553,8 @@ export function SwipeCardStack({
                 isTop={idx === 0}
                 onSwipe={handleSwipe}
                 cardStartTime={cardStartTimeRef.current}
+                stackIndex={idx}
+                totalVisible={visibleCards.length}
               />
             )).reverse()
           ) : (
@@ -450,38 +570,38 @@ export function SwipeCardStack({
 
       {currentIndex < cards.length && (
         <div className="mt-6 flex justify-center">
-          <div className="flex items-center gap-4 px-6 py-3 rounded-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/60 max-w-[320px]">
+          <div className="flex items-center gap-6 px-8 py-4 rounded-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200/80 dark:border-gray-700/80 shadow-2xl max-w-[340px]">
             <motion.button
-              whileTap={{ scale: 0.9 }}
-              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.85 }}
+              whileHover={{ scale: 1.1 }}
               onClick={() => handleButtonSwipe('skip')}
-              className="w-12 h-12 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex items-center justify-center transition-colors"
+              className="w-14 h-14 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center shadow-lg transition-all hover:shadow-xl"
               data-testid="button-skip-card"
               aria-label="跳过此兴趣卡片"
             >
-              <X className="w-6 h-6 text-gray-400 dark:text-gray-500" strokeWidth={2} />
+              <X className="w-7 h-7 text-gray-500 dark:text-gray-400" strokeWidth={2.5} />
             </motion.button>
 
             <motion.button
-              whileTap={{ scale: 0.92 }}
-              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.88 }}
+              whileHover={{ scale: 1.08 }}
               onClick={() => handleButtonSwipe('love')}
-              className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center shadow-lg shadow-purple-500/25"
+              className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-[0_8px_30px_rgba(236,72,153,0.4)] hover:shadow-[0_8px_40px_rgba(236,72,153,0.6)] transition-all"
               data-testid="button-love-card"
               aria-label="超爱此兴趣卡片"
             >
-              <Sparkles className="w-7 h-7 text-white" strokeWidth={2} />
+              <Sparkles className="w-8 h-8 text-white fill-white" strokeWidth={2.5} />
             </motion.button>
 
             <motion.button
-              whileTap={{ scale: 0.9 }}
-              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.85 }}
+              whileHover={{ scale: 1.1 }}
               onClick={() => handleButtonSwipe('like')}
-              className="w-12 h-12 rounded-full bg-white dark:bg-gray-800 border border-pink-200 dark:border-pink-800 flex items-center justify-center transition-colors"
+              className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 border-2 border-emerald-300 dark:border-emerald-700 flex items-center justify-center shadow-lg hover:shadow-xl transition-all"
               data-testid="button-like-card"
               aria-label="喜欢此兴趣卡片"
             >
-              <Heart className="w-6 h-6 text-pink-500 dark:text-pink-400" strokeWidth={2} />
+              <Heart className="w-7 h-7 text-white fill-white" strokeWidth={2.5} />
             </motion.button>
           </div>
         </div>

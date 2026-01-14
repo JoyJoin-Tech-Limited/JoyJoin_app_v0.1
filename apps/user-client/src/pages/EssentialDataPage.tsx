@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, Sparkles, ArrowRight, Loader2, Users, Network, MessageCircle, PartyPopper, Heart, Shuffle, Calendar, Star, Check, AlertCircle } from "lucide-react";
+import { SegmentedProgress } from "@/components/ui/progress-segmented";
+import { ChevronLeft, Sparkles, ArrowRight, Loader2, Users, Network, MessageCircle, PartyPopper, Heart, Shuffle, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -501,55 +503,16 @@ export default function EssentialDataPage() {
             </Button>
           )}
           <div className="flex-1">
-            {/* Match Potential Meter */}
-            <div className="mb-2">
-              <div className="relative h-8 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                {/* Gradient fill */}
-                <motion.div
-                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                />
-                
-                {/* Milestone stars */}
-                {[25, 50, 75, 100].map((milestone) => {
-                  const isReached = progress >= milestone;
-                  return (
-                    <motion.div
-                      key={milestone}
-                      className="absolute top-1/2"
-                      style={{ left: `${milestone}%`, transform: "translate(-50%, -50%)" }}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: isReached ? 1 : 0.7 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                    >
-                      <Star
-                        className={cn(
-                          "w-6 h-6",
-                          isReached 
-                            ? "fill-yellow-400 text-yellow-400" 
-                            : "fill-gray-300 dark:fill-gray-600 text-gray-300 dark:text-gray-600"
-                        )}
-                      />
-                    </motion.div>
-                  );
-                })}
-              </div>
-              
-              {/* Encouragement message */}
-              <motion.p
-                key={currentStep}
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-sm text-center mt-2 font-medium text-primary"
-              >
-                {progress < 30 && "继续填写，解锁更多精准匹配！"}
-                {progress >= 30 && progress < 70 && "太棒了！你的档案越来越有魅力了 ✨"}
-                {progress >= 70 && progress < 100 && "快完成了！马上就能遇见有趣的人 🎉"}
-                {progress >= 100 && "完美档案！准备好开始你的社交之旅吧 🚀"}
-              </motion.p>
+            <div className="flex items-center justify-between text-base font-medium text-muted-foreground mb-3">
+              <span>第 {currentStep + 1} 步 / 共 {TOTAL_STEPS} 步</span>
+              <span className="text-primary font-semibold">{Math.round(progress)}%</span>
             </div>
+            {/* Segmented progress - Duolingo style */}
+            <SegmentedProgress 
+              current={currentStep}
+              total={TOTAL_STEPS}
+              variant="duolingo"
+            />
           </div>
         </div>
       </div>

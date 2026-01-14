@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { calculateAge } from "@shared/utils";
 
 interface BirthDatePickerProps {
   value?: { year: number; month: number; day: number };
@@ -333,7 +334,7 @@ export function BirthDatePicker({
     onChangeRef.current({ year, month, day: Math.min(day, daysInMonth) });
   }, [year, month, day, daysInMonth]);
 
-  const age = currentYear - year;
+  const age = calculateAge(new Date(year, month - 1, day));
 
   return (
     <div className={cn("flex flex-col items-center gap-6 py-4 overflow-x-hidden max-w-full w-full", className)}>
