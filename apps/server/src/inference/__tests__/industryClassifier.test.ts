@@ -46,4 +46,30 @@ describe('Industry Classifier with Normalization', () => {
     expect(result).toBeDefined();
     expect(result.normalizedInput).toBeDefined();
   }, 10000);
+  
+  it('should normalize input with typos and informal language', async () => {
+    const result = await classifyIndustry('快递小哥');
+    
+    expect(result.rawInput).toBe('快递小哥');
+    expect(result.normalizedInput).toBeDefined();
+    // Normalized version should be more formal
+    expect(result.normalizedInput.length).toBeGreaterThan(0);
+  }, 10000);
+  
+  it('should handle whitespace in input', async () => {
+    const result = await classifyIndustry('  医疗AI  ');
+    
+    expect(result.rawInput).toBe('医疗AI');
+    expect(result.normalizedInput).toBeDefined();
+  }, 10000);
+  
+  it('should preserve normalized input even when classification falls back', async () => {
+    const unknownInput = 'xyz123abc456';
+    const result = await classifyIndustry(unknownInput);
+    
+    // Even if classification falls back, both raw and normalized should exist
+    expect(result.rawInput).toBe(unknownInput);
+    expect(result.normalizedInput).toBeDefined();
+    expect(typeof result.normalizedInput).toBe('string');
+  }, 10000);
 });
