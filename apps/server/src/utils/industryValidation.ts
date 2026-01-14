@@ -92,10 +92,52 @@ export function validateUserIndustryData(data: any): UserIndustryData {
   };
 }
 
-// Sanitize user input to prevent XSS
+/**
+ * Decode HTML entities to prevent bypass attacks
+ * Handles common entities like &lt; &#60; &amp; etc.
+ */
+function decodeHTMLEntities(text: string): string {
+  // Decode named entities
+  const namedEntities: Record<string, string> = {
+    '&lt;': '<',
+    '&gt;': '>',
+    '&amp;': '&',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&apos;': "'",
+  };
+  
+  let decoded = text;
+  
+  // Replace named entities
+  Object.entries(namedEntities).forEach(([entity, char]) => {
+    decoded = decoded.replace(new RegExp(entity, 'gi'), char);
+  });
+  
+  // Decode numeric entities (&#60; &#x3C; etc.)
+  decoded = decoded.replace(/&#(\d+);/g, (_, code) => 
+    String.fromCharCode(parseInt(code, 10))
+  );
+  decoded = decoded.replace(/&#x([0-9a-f]+);/gi, (_, code) => 
+    String.fromCharCode(parseInt(code, 16))
+  );
+  
+  return decoded;
+}
+
+/**
+ * Sanitize user input to prevent XSS attacks
+ * Decodes HTML entities first to prevent bypass, then removes dangerous characters
+ */
 export function sanitizeIndustryInput(input: string): string {
   return input
     .trim()
+    // First decode any HTML entities to prevent bypass attacks
+    .replace(/&[a-z]+;|&#\d+;|&#x[0-9a-f]+;/gi, (match) => {
+      const decoded = decodeHTMLEntities(match);
+      // If decoded contains dangerous chars, remove the entire entity
+      return /[<>{}[\]\\]/.test(decoded) ? '' : decoded;
+    })
     .replace(/[<>{}[\]\\]/g, '')  // Remove potential XSS characters
     .replace(/\s+/g, ' ')          // Normalize whitespace
     .slice(0, 200);                // Max length
