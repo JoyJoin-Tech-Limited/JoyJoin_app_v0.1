@@ -216,7 +216,8 @@ export const users = pgTable("users", {
   
   // 三层分类元数据
   industryRawInput: text("industry_raw_input"),                             // 用户原始输入
-  industrySource: varchar("industry_source", { length: 20 }),               // "seed" | "ontology" | "ai" | "manual"
+  industryNormalized: text("industry_normalized"),                          // AI清理后的标准化输入
+  industrySource: varchar("industry_source", { length: 20 }),               // "seed" | "ontology" | "ai" | "manual" | "fallback"
   industryConfidence: numeric("industry_confidence", { precision: 3, scale: 2 }), // 0.00-1.00
   industryClassifiedAt: timestamp("industry_classified_at"),                // 分类时间
   industryLastVerifiedAt: timestamp("industry_last_verified_at"),           // 最后验证时间
