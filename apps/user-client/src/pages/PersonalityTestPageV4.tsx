@@ -56,7 +56,7 @@ function OnboardingProgress({
   showExtendedMessage?: boolean;
   milestoneReached?: boolean;
 }) {
-  const { accentColor } = useDynamicAccent();
+  const { currentAccent } = useDynamicAccent();
   
   return (
     <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3 safe-top">
@@ -78,7 +78,7 @@ function OnboardingProgress({
             context="assessment"
             remaining={remaining}
             milestoneReached={milestoneReached}
-            accentColor={accentColor ? `hsl(${accentColor.h}, ${accentColor.s}%, ${accentColor.l}%)` : undefined}
+            accentColor={currentAccent ? `hsl(${currentAccent.h}, ${currentAccent.s}%, ${currentAccent.l}%)` : undefined}
             showEncouragement={showExtendedMessage}
             className="mb-1.5"
           />
@@ -134,7 +134,7 @@ export default function PersonalityTestPageV4() {
   const [selectedOption, setSelectedOption] = useState<string | undefined>();
   const [showMilestone, setShowMilestone] = useState(false);
   
-  const { setArchetype: setDynamicAccent, reset: resetDynamicAccent, currentAccent } = useDynamicAccent();
+  const { setArchetype: setDynamicAccent, reset: resetDynamicAccent } = useDynamicAccent();
   const { milestoneReached, detectMilestone } = useUnifiedProgress();
   
   const {
