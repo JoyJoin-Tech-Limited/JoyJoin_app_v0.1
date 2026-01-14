@@ -455,7 +455,7 @@ export default function EssentialDataPage() {
           industryRawInput,
           industryNormalized, // NEW - AI-cleaned version
           industrySource,
-          industryConfidence,
+          industryConfidence: industryConfidence ? String(industryConfidence) : "0",
         };
         if (birthDate) {
           profileData.birthdate = `${birthDate.year}-${String(birthDate.month).padStart(2, '0')}-${String(birthDate.day).padStart(2, '0')}`;

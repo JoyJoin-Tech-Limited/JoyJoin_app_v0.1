@@ -2220,6 +2220,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      if (profileData.industryConfidence !== undefined) {
+        profileData.industryConfidence = String(profileData.industryConfidence);
+      }
+
       const user = await storage.updateFullProfile(userId, profileData);
       
       // Set hasCompletedRegistration if profile is being set with essential data
