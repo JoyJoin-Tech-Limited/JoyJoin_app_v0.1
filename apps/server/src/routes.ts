@@ -111,7 +111,7 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, type User } from "@shared/schema";
 import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION } from "@shared/interests";
 import { db } from "./db";
 import { eq, or, and, desc, inArray, isNotNull, gt, sql } from "drizzle-orm";
@@ -9576,6 +9576,116 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     } catch (error: any) {
       console.error("Inference test error:", error);
       res.status(500).json({ message: "Inference test failed", error: error.message });
+    }
+  });
+  
+  // POST /api/inference/classify-industry - 三层行业智能分类
+  app.post("/api/inference/classify-industry", isPhoneAuthenticated, async (req, res) => {
+    try {
+      const { description } = req.body;
+      
+      if (!description || typeof description !== 'string') {
+        return res.status(400).json({ error: "Description is required" });
+      }
+      
+      const { classifyIndustry } = await import("./inference/industryClassifier");
+      const result = await classifyIndustry(description);
+      
+      // 记录AI分类日志
+      if (result.source === "ai" && req.session?.userId) {
+        try {
+          await db.insert(industryAiLogs).values({
+            userId: req.session.userId,
+            rawInput: description,
+            aiCategory: result.category.id,
+            aiSegment: result.segment.id,
+            aiNiche: result.niche?.id,
+            aiConfidence: result.confidence.toString(),
+            aiReasoning: result.reasoning,
+            processingTimeMs: result.processingTimeMs,
+            modelVersion: "v1",
+          });
+          
+          // 如果置信度高，添加到seed候选库
+          if (result.confidence >= 0.85) {
+            await db.insert(industrySeedCandidates).values({
+              rawInput: description,
+              frequency: 1,
+              aiCategory: result.category.id,
+              aiSegment: result.segment.id,
+              aiNiche: result.niche?.id,
+              avgConfidence: result.confidence.toString(),
+              status: "pending",
+            }).onConflictDoUpdate({
+              target: industrySeedCandidates.rawInput,
+              set: {
+                frequency: sql`${industrySeedCandidates.frequency} + 1`,
+                avgConfidence: sql`(${industrySeedCandidates.avgConfidence}::numeric * ${industrySeedCandidates.frequency} + ${result.confidence}) / (${industrySeedCandidates.frequency} + 1)`,
+                updatedAt: new Date(),
+              },
+            });
+          }
+        } catch (logError) {
+          console.error("Failed to log AI classification:", logError);
+          // 不影响主流程
+        }
+      }
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("Industry classification error:", error);
+      res.status(500).json({ error: "Classification failed", message: error.message });
+    }
+  });
+  
+  // POST /api/profile/update-industry - 更新用户三层行业分类
+  app.post("/api/profile/update-industry", isPhoneAuthenticated, async (req, res) => {
+    try {
+      if (!req.session?.userId) {
+        return res.status(401).json({ error: "未登录" });
+      }
+      
+      const {
+        category,
+        categoryLabel,
+        segment,
+        segmentLabel,
+        niche,
+        nicheLabel,
+        rawInput,
+        source,
+        confidence,
+      } = req.body;
+      
+      if (!category || !segment) {
+        return res.status(400).json({ error: "Category and segment are required" });
+      }
+      
+      // 构建完整路径用于显示
+      const pathParts = [categoryLabel, segmentLabel, nicheLabel].filter(Boolean);
+      const fullPath = pathParts.join(" > ");
+      
+      await db.update(users)
+        .set({
+          industryCategory: category,
+          industryCategoryLabel: categoryLabel,
+          industrySegmentNew: segment,
+          industrySegmentLabel: segmentLabel,
+          industryNiche: niche || null,
+          industryNicheLabel: nicheLabel || null,
+          industry: fullPath, // 更新legacy字段以向后兼容
+          industryRawInput: rawInput,
+          industrySource: source,
+          industryConfidence: confidence?.toString(),
+          industryClassifiedAt: new Date(),
+          industryLastVerifiedAt: new Date(),
+        })
+        .where(eq(users.id, req.session.userId));
+      
+      res.json({ success: true, industry: fullPath });
+    } catch (error: any) {
+      console.error("Update industry error:", error);
+      res.status(500).json({ error: "Update failed", message: error.message });
     }
   });
   
