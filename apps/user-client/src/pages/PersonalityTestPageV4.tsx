@@ -135,7 +135,7 @@ export default function PersonalityTestPageV4() {
   const [showMilestone, setShowMilestone] = useState(false);
   
   const { setArchetype: setDynamicAccent, reset: resetDynamicAccent } = useDynamicAccent();
-  const { milestoneReached, detectMilestone } = useUnifiedProgress();
+  const { milestoneReached, detectMilestone, getUnifiedProgress } = useUnifiedProgress();
   
   const {
     sessionId,
@@ -176,10 +176,10 @@ export default function PersonalityTestPageV4() {
 
   const progressPercentage = useMemo(() => {
     if (!progress) return 0;
-    const total = progress.answered + estimatedRemaining;
-    if (total <= 0) return 100;
-    return Math.min(100, Math.round((progress.answered / total) * 100));
-  }, [progress, estimatedRemaining]);
+    // Use unified progress calculation that accounts for the full onboarding journey
+    // This ensures progress flows smoothly from anchor questions (50%) through assessment (100%)
+    return Math.min(100, Math.round(getUnifiedProgress('assessment', progress.answered, estimatedRemaining)));
+  }, [progress, estimatedRemaining, getUnifiedProgress]);
   
   // Detect milestone crossings
   useEffect(() => {

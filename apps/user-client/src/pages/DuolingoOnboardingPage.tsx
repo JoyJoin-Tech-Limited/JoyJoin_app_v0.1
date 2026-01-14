@@ -945,7 +945,7 @@ export default function DuolingoOnboardingPage() {
               </div>
 
               <p className="mt-6 text-sm text-muted-foreground text-center">
-                还需约8-12题即可揭晓结果
+                还需约8-16题即可揭晓结果
               </p>
             </div>
 
