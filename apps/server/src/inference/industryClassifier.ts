@@ -28,13 +28,12 @@ export interface IndustryClassificationResult {
   reasoning?: string;
   source: "seed" | "ontology" | "ai" | "fallback";
   processingTimeMs: number;
-  rawInput: string;           // NEW - original user input
-  normalizedInput: string;    // NEW - AI-cleaned version
+  rawInput: string;           // original user input
+  normalizedInput: string;    // AI-cleaned version
 }
 
 /**
  * Tier 1: Seed库精确匹配
- * 目标响应时间: <10ms
  */
 function matchViaSeed(userInput: string): IndustryClassificationResult | null {
   const startTime = Date.now();
@@ -62,13 +61,13 @@ function matchViaSeed(userInput: string): IndustryClassificationResult | null {
     confidence: seedMatch.confidence,
     source: "seed",
     processingTimeMs: Date.now() - startTime,
+    rawInput: userInput,
+    normalizedInput: userInput,
   };
 }
 
 /**
  * Tier 2: Ontology模糊匹配
- * 目标响应时间: <100ms
- * 使用现有的 industryOntology.ts 进行模糊匹配
  */
 function matchViaOntology(userInput: string): IndustryClassificationResult | null {
   const startTime = Date.now();
@@ -78,8 +77,6 @@ function matchViaOntology(userInput: string): IndustryClassificationResult | nul
     
     if (!match || !match.industry) return null;
     
-    // 尝试从匹配结果映射到三层分类
-    // industryOntology返回的是旧的行业名称，需要映射到新的三层体系
     const mappedResult = mapOldIndustryToThreeTier(match.industry, match.confidence || 0.7);
     
     if (!mappedResult) return null;
@@ -88,6 +85,8 @@ function matchViaOntology(userInput: string): IndustryClassificationResult | nul
       ...mappedResult,
       source: "ontology",
       processingTimeMs: Date.now() - startTime,
+      rawInput: userInput,
+      normalizedInput: userInput,
     };
   } catch (error) {
     console.error("Ontology matching error:", error);
@@ -97,10 +96,8 @@ function matchViaOntology(userInput: string): IndustryClassificationResult | nul
 
 /**
  * 将旧行业分类映射到新的三层体系
- * 这是一个临时解决方案，直到我们完全迁移到新系统
  */
-function mapOldIndustryToThreeTier(oldIndustry: string, confidence: number): IndustryClassificationResult | null {
-  // 简单映射规则 - 可以根据需要扩展
+function mapOldIndustryToThreeTier(oldIndustry: string, confidence: number): Omit<IndustryClassificationResult, "source" | "processingTimeMs" | "rawInput" | "normalizedInput"> | null {
   const mappings: Record<string, { category: string; segment: string; niche?: string }> = {
     "金融": { category: "finance", segment: "commercial_banking" },
     "科技": { category: "tech", segment: "software_dev" },
@@ -124,23 +121,18 @@ function mapOldIndustryToThreeTier(oldIndustry: string, confidence: number): Ind
     category: { id: category.id, label: category.label },
     segment: { id: segment.id, label: segment.label },
     niche: undefined,
-    confidence: confidence * 0.8, // 降低置信度因为是映射结果
+    confidence: confidence * 0.8,
     reasoning: `基于关键词"${oldIndustry}"的模糊匹配`,
-    source: "ontology",
-    processingTimeMs: 0,
   };
 }
 
 /**
  * Tier 3: AI深度分析
- * 目标响应时间: <1000ms
- * 使用DeepSeek进行智能推理
  */
 async function matchViaAI(userInput: string): Promise<IndustryClassificationResult | null> {
   const startTime = Date.now();
   
   try {
-    // 动态导入以避免循环依赖
     const { default: OpenAI } = await import("openai");
     
     const apiKey = process.env.OPENAI_API_KEY;
@@ -154,7 +146,6 @@ async function matchViaAI(userInput: string): Promise<IndustryClassificationResu
       baseURL: "https://api.deepseek.com",
     });
     
-    // 构建可选分类列表
     const categoryList = INDUSTRY_TAXONOMY.map(cat => `${cat.id} (${cat.label})`).join(", ");
     
     const prompt = `你是行业分类专家。将用户职业描述映射到三层分类体系。
@@ -166,29 +157,24 @@ ${categoryList}
 
 分析用户输入，返回最匹配的行业分类。必须返回JSON格式：
 {
-  "category": "大类ID（例如：tech, finance）",
+  "category": "大类ID",
   "categoryLabel": "大类中文名称",
-  "segment": "细分ID（例如：ai_ml, commercial_banking）",
+  "segment": "细分ID",
   "segmentLabel": "细分中文名称",
-  "niche": "具体赛道ID（可选）",
+  "niche": "赛道ID（可选）",
   "nicheLabel": "赛道中文名称（可选）",
   "confidence": 0.0-1.0,
-  "reasoning": "分类理由（一句话，简体中文）"
+  "reasoning": "分类理由"
 }
 
-注意：
-1. 所有label必须使用简体中文
-2. confidence应该反映匹配的确定性
-3. 如果输入模糊，confidence应该较低
-4. reasoning要简洁明了`;
+注意：所有label必须使用简体中文，confidence反映确定性。`;
     
-    const response = await openai.chat.completions.create({
+    const response = await (openai.chat.completions.create as any)({
       model: "deepseek-chat",
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
       temperature: 0.3,
       max_tokens: 500,
-      timeout: 5000,
     });
     
     const content = response.choices[0]?.message?.content;
@@ -196,14 +182,10 @@ ${categoryList}
     
     const aiResult = JSON.parse(content);
     
-    // 验证AI返回的分类是否存在于taxonomy中
     const category = findCategoryById(aiResult.category);
     const segment = category ? findSegmentById(aiResult.category, aiResult.segment) : null;
     
-    if (!category || !segment) {
-      console.error("AI returned invalid category/segment:", aiResult);
-      return null;
-    }
+    if (!category || !segment) return null;
     
     let niche = undefined;
     if (aiResult.niche) {
@@ -221,6 +203,8 @@ ${categoryList}
       reasoning: aiResult.reasoning,
       source: "ai",
       processingTimeMs: Date.now() - startTime,
+      rawInput: userInput,
+      normalizedInput: userInput,
     };
   } catch (error) {
     console.error("AI classification error:", error);
@@ -229,100 +213,46 @@ ${categoryList}
 }
 
 /**
- * Normalize user input using AI to clean and standardize text
- * Example: "我做医疗ai的" → "医疗AI研发"
- * 
- * @param rawText - Original user input
- * @returns Cleaned and standardized text
+ * Normalize user input using AI
  */
 async function normalizeUserInput(rawText: string): Promise<string> {
   const startTime = Date.now();
   
   try {
     const { default: OpenAI } = await import("openai");
-    
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      console.warn("[Normalization] OPENAI_API_KEY not configured, returning raw input");
-      return rawText;
-    }
+    if (!apiKey) return rawText;
     
     const openai = new OpenAI({
       apiKey,
       baseURL: "https://api.deepseek.com",
     });
     
-    const prompt = `你是职业文本标准化专家。将用户输入的职业描述清理并标准化为专业表述。
-
-规则:
-1. 修正拼写错误和非正式用语
-2. 统一行业术语（如 "ai" → "AI"）
-3. 保持简洁（最多20个字）
-4. 只返回清理后的文本，不要JSON格式
-
-示例:
-输入: "我做医疗ai的"
-输出: 医疗AI研发
-
-输入: "银行柜员"
-输出: 银行柜员
-
-输入: "快递小哥"
-输出: 快递配送
-
-现在处理:
+    const prompt = `将用户输入的职业描述清理并标准化为专业表述（最多20个字）。只返回结果。
 输入: "${rawText}"
 输出: `;
     
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-    }, 3000); // 3 second timeout
+    const response = await openai.chat.completions.create({
+      model: "deepseek-chat",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.1,
+      max_tokens: 50,
+    });
     
-    try {
-      const response = await openai.chat.completions.create(
-        {
-          model: "deepseek-chat",
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.1,
-          max_tokens: 50,
-        },
-        { signal: controller.signal },
-      );
-      
-      const normalized = response.choices[0]?.message?.content?.trim();
-      
-      if (!normalized || normalized.length === 0) {
-        console.warn("[Normalization] AI returned empty, using raw input");
-        return rawText;
-      }
-      
-      const processingTime = Date.now() - startTime;
-      console.log(`[Normalization] "${rawText}" → "${normalized}" (${processingTime}ms)`);
-      
-      return normalized;
-    } catch (error) {
-      console.error("[Normalization] Failed, using raw input:", error);
-      return rawText;
-    } finally {
-      clearTimeout(timeoutId);
-    }
+    const normalized = response.choices[0]?.message?.content?.trim();
+    return normalized || rawText;
+  } catch (error) {
+    return rawText;
+  }
 }
 
 /**
- * 主分类函数：混合三层推断
- * 
- * 流程:
- * 1. Tier 1: Seed精确匹配 (最快)
- * 2. Tier 2: Ontology模糊匹配 (中速)
- * 3. Tier 3: AI深度分析 (最慢但最智能)
+ * 主分类函数
  */
 export async function classifyIndustry(
   userInput: string
 ): Promise<IndustryClassificationResult> {
   const startTime = Date.now();
-  
-  // 清理输入
   const cleanInput = userInput.trim();
   
   if (!cleanInput) {
@@ -330,7 +260,7 @@ export async function classifyIndustry(
       category: { id: "tech", label: "科技互联网" },
       segment: { id: "software_dev", label: "软件开发" },
       confidence: 0.3,
-      reasoning: "输入为空，使用默认分类",
+      reasoning: "输入为空",
       source: "fallback",
       processingTimeMs: Date.now() - startTime,
       rawInput: cleanInput,
@@ -338,74 +268,37 @@ export async function classifyIndustry(
     };
   }
   
-  // Tier 1: Seed精确匹配
   const seedResult = matchViaSeed(cleanInput);
   if (seedResult && seedResult.confidence >= 0.9) {
     const normalizedInput = await normalizeUserInput(cleanInput);
-    return { 
-      ...seedResult, 
-      rawInput: cleanInput, 
-      normalizedInput,
-      processingTimeMs: Date.now() - startTime,
-    };
+    return { ...seedResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
-  // Tier 2: Ontology模糊匹配
   const ontologyResult = matchViaOntology(cleanInput);
   if (ontologyResult && ontologyResult.confidence >= 0.8) {
     const normalizedInput = await normalizeUserInput(cleanInput);
-    return { 
-      ...ontologyResult, 
-      rawInput: cleanInput, 
-      normalizedInput,
-      processingTimeMs: Date.now() - startTime,
-    };
+    return { ...ontologyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
-  // Tier 3: AI深度分析
   try {
     const aiResult = await matchViaAI(cleanInput);
     if (aiResult) {
       const normalizedInput = await normalizeUserInput(cleanInput);
-      return { 
-        ...aiResult, 
-        rawInput: cleanInput, 
-        normalizedInput,
-      };
+      return { ...aiResult, normalizedInput };
     }
-  } catch (error) {
-    console.error("AI matching failed, falling back:", error);
-  }
+  } catch (error) {}
   
-  // 降级策略：返回低置信度的结果或默认值
-  if (ontologyResult) {
-    const normalizedInput = await normalizeUserInput(cleanInput);
-    return {
-      ...ontologyResult,
-      rawInput: cleanInput,
-      normalizedInput,
-      processingTimeMs: Date.now() - startTime,
-    };
-  }
-  
-  if (seedResult) {
-    const normalizedInput = await normalizeUserInput(cleanInput);
-    return {
-      ...seedResult,
-      rawInput: cleanInput,
-      normalizedInput,
-      processingTimeMs: Date.now() - startTime,
-    };
-  }
-  
-  // 最终降级：返回默认分类
   const normalizedInput = await normalizeUserInput(cleanInput);
-  return {
+  const base = ontologyResult || seedResult || {
     category: { id: "tech", label: "科技互联网" },
     segment: { id: "software_dev", label: "软件开发" },
     confidence: 0.3,
-    reasoning: "无法准确分类，建议手动选择",
-    source: "fallback",
+    reasoning: "无法准确分类",
+  };
+
+  return {
+    ...base,
+    source: (base as any).source || "fallback",
     processingTimeMs: Date.now() - startTime,
     rawInput: cleanInput,
     normalizedInput,
