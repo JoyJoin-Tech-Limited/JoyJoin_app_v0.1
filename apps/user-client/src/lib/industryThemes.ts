@@ -16,7 +16,7 @@ export const INDUSTRY_GRADIENTS = {
   media: "from-violet-400 to-purple-400",
   energy: "from-amber-400 to-orange-400",
   agriculture: "from-lime-400 to-green-400",
-  construction: "from-stone-400 to-gray-400",
+  construction: "from-gray-400 to-slate-400",
   legal: "from-slate-400 to-zinc-400",
   consulting: "from-teal-400 to-cyan-400",
 } as const;

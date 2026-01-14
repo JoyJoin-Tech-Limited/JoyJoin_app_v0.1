@@ -115,7 +115,14 @@ export function getCityLabel(city: string): string {
  */
 export function calculateAge(birthdate: string): number | null {
   if (!birthdate) return null;
+  
   const birth = new Date(birthdate);
+  
+  // Validate the date
+  if (isNaN(birth.getTime())) {
+    return null;
+  }
+  
   const today = new Date();
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();

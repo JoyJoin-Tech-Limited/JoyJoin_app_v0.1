@@ -50,6 +50,8 @@ const JOB_SUGGESTIONS = [
   { text: "教育培训", emoji: "📚", gradient: "from-indigo-400 to-violet-400" },
 ];
 
+const MAX_JOB_DESCRIPTION_LENGTH = 50;
+
 interface Particle {
   id: number;
   x: number;
@@ -188,7 +190,7 @@ export function SmartIndustryClassifier({
             inputMode="text"
             className="h-14 text-lg rounded-2xl pr-12"
             disabled={isConfirmed}
-            maxLength={50}
+            maxLength={MAX_JOB_DESCRIPTION_LENGTH}
             data-testid="input-industry-smart"
           />
         </div>
@@ -217,7 +219,7 @@ export function SmartIndustryClassifier({
       {text && (
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>职业描述</span>
-          <span>{text.length}/50</span>
+          <span>{text.length}/{MAX_JOB_DESCRIPTION_LENGTH}</span>
         </div>
       )}
 
