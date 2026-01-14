@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SegmentedProgress } from "@/components/ui/progress-segmented";
 import { ChevronLeft, Sparkles, ArrowRight, Loader2, Users, Network, MessageCircle, PartyPopper, Heart, Shuffle, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -451,31 +452,12 @@ export default function EssentialDataPage() {
               <span>第 {currentStep + 1} 步 / 共 {TOTAL_STEPS} 步</span>
               <span className="text-primary font-semibold">{Math.round(progress)}%</span>
             </div>
-            {/* Segmented progress dots - Duolingo style */}
-            <div className="flex items-center gap-1.5">
-              {Array.from({ length: TOTAL_STEPS }).map((_, index) => {
-                const isCompleted = index < currentStep;
-                const isCurrent = index === currentStep;
-                const isUpcoming = index > currentStep;
-                
-                return (
-                  <motion.div
-                    key={index}
-                    className={cn(
-                      "rounded-full transition-all duration-300",
-                      isCompleted && "bg-primary h-2 flex-1",
-                      isCurrent && "bg-primary h-3 flex-[1.5] shadow-md shadow-primary/30",
-                      isUpcoming && "bg-gray-200 dark:bg-gray-700 h-2 flex-1"
-                    )}
-                    initial={false}
-                    animate={isCurrent ? {
-                      scale: [1, 1.05, 1],
-                      transition: { duration: 0.4, repeat: Infinity, repeatDelay: 2 }
-                    } : { scale: 1 }}
-                  />
-                );
-              })}
-            </div>
+            {/* Segmented progress - Duolingo style */}
+            <SegmentedProgress 
+              current={currentStep}
+              total={TOTAL_STEPS}
+              variant="duolingo"
+            />
           </div>
         </div>
       </div>

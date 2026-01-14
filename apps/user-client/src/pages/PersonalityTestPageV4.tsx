@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { AdaptiveProgress } from "@/components/ui/progress-adaptive";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ import { SelectionList } from "@/components/SelectionList";
 import { ArchetypePreview } from "@/components/archetype-preview";
 import { useDynamicAccent } from "@/contexts/DynamicAccentContext";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
+import { useUnifiedProgress } from "@/hooks/useUnifiedProgress";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -44,6 +45,7 @@ function OnboardingProgress({
   onBack,
   showBack = true,
   showExtendedMessage = false,
+  milestoneReached = false,
 }: { 
   current: number; 
   total: number | string;
@@ -52,7 +54,10 @@ function OnboardingProgress({
   onBack?: () => void;
   showBack?: boolean;
   showExtendedMessage?: boolean;
+  milestoneReached?: boolean;
 }) {
+  const { accentColor } = useDynamicAccent();
+  
   return (
     <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3 safe-top">
       <div className="flex items-center gap-3">
@@ -68,11 +73,16 @@ function OnboardingProgress({
           </Button>
         )}
         <div className="flex-1">
-          <Progress 
-            value={progress} 
-            className="h-2 transition-all duration-500 progress-accent-dynamic accent-transition-target" 
+          <AdaptiveProgress 
+            value={progress}
+            context="assessment"
+            remaining={remaining}
+            milestoneReached={milestoneReached}
+            accentColor={accentColor ? `hsl(${accentColor.h}, ${accentColor.s}%, ${accentColor.l}%)` : undefined}
+            showEncouragement={showExtendedMessage}
+            className="mb-1.5"
           />
-          <div className="flex flex-col mt-1.5 gap-0.5">
+          <div className="flex flex-col gap-0.5">
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground font-medium" data-testid="text-progress-indicator">
                 {remaining !== undefined && remaining > 0 ? (
@@ -124,7 +134,8 @@ export default function PersonalityTestPageV4() {
   const [selectedOption, setSelectedOption] = useState<string | undefined>();
   const [showMilestone, setShowMilestone] = useState(false);
   
-  const { setArchetype: setDynamicAccent, reset: resetDynamicAccent } = useDynamicAccent();
+  const { setArchetype: setDynamicAccent, reset: resetDynamicAccent, currentAccent } = useDynamicAccent();
+  const { milestoneReached, detectMilestone } = useUnifiedProgress();
   
   const {
     sessionId,
@@ -169,6 +180,13 @@ export default function PersonalityTestPageV4() {
     if (total <= 0) return 100;
     return Math.min(100, Math.round((progress.answered / total) * 100));
   }, [progress, estimatedRemaining]);
+  
+  // Detect milestone crossings
+  useEffect(() => {
+    if (progressPercentage > 0) {
+      detectMilestone(progressPercentage);
+    }
+  }, [progressPercentage, detectMilestone]);
 
   useEffect(() => {
     const preSignupAnswers = loadV4PreSignupAnswers();
@@ -337,6 +355,7 @@ export default function PersonalityTestPageV4() {
         onBack={() => setLocation('/profile')}
         showBack={true}
         showExtendedMessage={answeredCount >= 8 && estimatedRemaining >= 3}
+        milestoneReached={milestoneReached}
       />
 
       <AnimatePresence mode="wait" initial={false}>
