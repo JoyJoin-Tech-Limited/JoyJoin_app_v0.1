@@ -33,7 +33,6 @@ interface ClassificationResult {
 
 interface SmartIndustryClassifierProps {
   onClassified: (result: ClassificationResult & { rawInput: string }) => void;
-  onManualSelect?: () => void;
   placeholder?: string;
   mascotPrompt?: string;
   debounceMs?: number;
@@ -64,7 +63,6 @@ interface Particle {
 
 export function SmartIndustryClassifier({
   onClassified,
-  onManualSelect,
   placeholder = "例：我做医疗AI / 银行柜员 / 快递员",
   mascotPrompt = "🎯 告诉小悦你的职业，让AI帮你精准匹配",
   debounceMs = 800,
@@ -271,25 +269,20 @@ export function SmartIndustryClassifier({
         </div>
       )}
 
-      {/* 分类结果展示 - Instagram Story style */}
+      {/* Enhanced AI Interpretation Display */}
       {result && !isConfirmed && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="relative space-y-3 p-5 rounded-2xl overflow-hidden"
-          style={{
-            border: "2px solid transparent",
-            backgroundImage: "linear-gradient(white, white), linear-gradient(to right, #a855f7, #ec4899, #f97316)",
-            backgroundOrigin: "border-box",
-            backgroundClip: "padding-box, border-box",
-          }}
+          className="space-y-4 p-5 border-2 border-purple-200 rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50"
         >
-          {/* 结果标题 */}
-          <div className="flex items-start justify-between gap-2">
+          {/* Header with badges */}
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary shrink-0" />
-              <span className="font-semibold text-base">识别结果</span>
+              <Sparkles className="h-5 w-5 text-purple-500" />
+              <span className="font-semibold">小悦的理解</span>
             </div>
+            {/* Confidence + Source badges */}
             <div className="flex items-center gap-1.5 flex-wrap justify-end">
               <Badge variant="outline" className={cn("text-xs", getConfidenceColor(result.confidence))}>
                 {getConfidenceBadgeText(result.confidence)}
@@ -300,93 +293,69 @@ export function SmartIndustryClassifier({
             </div>
           </div>
 
-          {/* 三层分类路径 - Three-tier display with icons */}
-          <div className="space-y-3">
-            {/* Category */}
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center shrink-0">
-                <Briefcase className="w-6 h-6 text-white" />
+          {/* Hierarchical Industry Display - NEW */}
+          <div className="space-y-3 bg-white/50 rounded-xl p-4 border border-purple-200">
+            {/* L1: Category */}
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                <span className="text-xl">🏢</span>
               </div>
-              <div>
-                <div className="text-xs text-muted-foreground">行业大类</div>
-                <div className="text-lg font-bold">{result.category.label}</div>
-              </div>
-            </div>
-            
-            {/* Segment */}
-            <div className="flex items-center gap-3 ml-2">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center shrink-0">
-                <Building2 className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">细分领域</div>
-                <div className="text-base font-semibold">{result.segment.label}</div>
+              <div className="flex-1 space-y-2">
+                <div className="text-sm text-muted-foreground">行业大类</div>
+                <div className="text-lg font-bold text-purple-600">{result.category.label}</div>
               </div>
             </div>
-            
-            {/* Niche (if available) */}
+
+            {/* L2: Segment (with connecting line) */}
+            <div className="flex items-start gap-3 pl-8 relative">
+              <div className="absolute left-5 -top-2 w-0.5 h-6 bg-purple-200 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <div className="text-sm text-muted-foreground">细分领域</div>
+                <div className="text-base font-semibold text-purple-600">{result.segment.label}</div>
+              </div>
+            </div>
+
+            {/* L3: Niche (if exists) */}
             {result.niche && (
-              <div className="flex items-center gap-3 ml-4">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-400 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">具体赛道</div>
-                  <div className="text-sm font-medium">{result.niche.label}</div>
+              <div className="flex items-start gap-3 pl-12 relative">
+                <div className="absolute left-5 -top-2 w-0.5 h-6 bg-pink-200 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <div className="text-sm text-muted-foreground">具体赛道</div>
+                  <div className="text-base font-semibold text-pink-600">{result.niche.label}</div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* AI推理说明 */}
+          {/* AI Reasoning */}
           {result.reasoning && (
-            <div className="text-sm text-muted-foreground italic bg-muted/50 p-3 rounded-lg">
-              💡 {result.reasoning}
+            <div className="flex items-start gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
+              <div className="shrink-0 mt-0.5">💡</div>
+              <p className="text-sm text-purple-900 italic">{result.reasoning}</p>
             </div>
           )}
-          
-          {/* Processing time as fun fact */}
-          <div className="text-xs text-muted-foreground text-center">
-            ⚡ 仅用 {result.processingTimeMs}ms 完成分析
-          </div>
 
-          {/* 操作按钮 */}
-          <div className="flex gap-2 pt-2">
-            <Button
-              onClick={handleConfirm}
-              size="lg"
-              className="flex-1 gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 shadow-xl"
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            <Button 
+              onClick={handleConfirm} 
+              size="lg" 
+              className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600"
               data-testid="btn-confirm-classification"
             >
-              <CheckCircle2 className="h-4 w-4" />
-              就是这个！
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              准确，就是这个
             </Button>
-            <Button
-              onClick={handleRetry}
-              size="lg"
+            <Button 
+              onClick={handleRetry} 
+              size="lg" 
               variant="outline"
-              className="gap-2"
               data-testid="btn-retry-classification"
             >
-              <RotateCcw className="h-4 w-4" />
-              重新试试
+              <RotateCcw className="h-4 w-4 mr-2" />
+              重新输入
             </Button>
           </div>
-
-          {/* 低置信度提示 */}
-          {result.confidence < 0.7 && onManualSelect && (
-            <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-              <p className="text-sm text-center text-yellow-800 dark:text-yellow-200">
-                识别不太确定？
-                <button
-                  onClick={onManualSelect}
-                  className="text-primary hover:underline ml-1 font-medium"
-                >
-                  试试手动选择
-                </button>
-              </p>
-            </div>
-          )}
         </motion.div>
       )}
 

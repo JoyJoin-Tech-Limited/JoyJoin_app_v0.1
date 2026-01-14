@@ -53,6 +53,7 @@ import NotFound from "@/pages/not-found";
 import LevelUpProvider from "@/components/LevelUpProvider";
 import DuolingoOnboardingPage from "@/pages/DuolingoOnboardingPage";
 import GuidePage from "@/pages/GuidePage";
+import FinalProfileReviewPage from "@/pages/FinalProfileReviewPage";
 import { LoadingScreen } from "@/components/LoadingScreen";
 
 preloadXiaoyueImages();
@@ -130,6 +131,7 @@ function AuthenticatedRouter() {
         <Route path="/personality-test/results" component={PersonalityTestResultPage} />
         <Route path="/onboarding/setup" component={EssentialDataPage} />
         <Route path="/onboarding/extended" component={ExtendedDataPage} />
+        <Route path="/onboarding/review" component={FinalProfileReviewPage} />
         <Route path="*" component={RedirectToSetup} />
       </Switch>
     );
@@ -164,6 +166,7 @@ function AuthenticatedRouter() {
       <Route path="/profile/edit/interests" component={EditInterestsPage} />
       <Route path="/profile/edit/social" component={EditSocialPage} />
       <Route path="/onboarding/extended" component={ExtendedDataPage} />
+      <Route path="/onboarding/review" component={FinalProfileReviewPage} />
       <Route path="/registration/chat" component={ChatRegistrationPage} />
       <Route path="/event/:id" component={EventDetailPage} />
       <Route path="/invite" component={InvitePage} />
