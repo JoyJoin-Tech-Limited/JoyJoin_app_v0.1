@@ -64,7 +64,7 @@ export const AdaptiveProgress = React.forwardRef<
   // Determine accent color - use CSS variable or prop
   const progressColor = accentColor 
     ? accentColor 
-    : 'hsl(var(--accent-dynamic-h, var(--primary-h)) var(--accent-dynamic-s, var(--primary-s)) var(--accent-dynamic-l, var(--primary-l)))';
+    : 'hsl(280, 45%, 55%)'; // Default purple matching --primary
   
   // Calculate glow intensity based on progress
   const glowSize = displayValue < 25 ? 12 : displayValue < 75 ? 16 : 24;
@@ -107,7 +107,7 @@ export const AdaptiveProgress = React.forwardRef<
           }}
           style={{
             background: `linear-gradient(to right, ${progressColor}, ${progressColor})`,
-            boxShadow: `0 0 ${glowSize}px rgba(var(--primary-rgb, 139, 92, 246), 0.4)`,
+            boxShadow: `0 0 ${glowSize}px rgba(139, 92, 246, 0.4)`,
           }}
         >
           {/* Inner shimmer on progress bar */}
