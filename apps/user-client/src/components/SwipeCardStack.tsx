@@ -188,6 +188,7 @@ function SwipeCard({
         onSwipe('skip', reactionTime);
       } else {
         // softer reset
+        x.set(0); // Reset x MotionValue for rotation
         await controls.start({
           x: 0,
           y: 0,
@@ -199,11 +200,14 @@ function SwipeCard({
       setDragProgress(0);
       setIsAnimating(false);
     },
-    [controls, onSwipe, cardStartTime, isAnimating]
+    [controls, onSwipe, cardStartTime, isAnimating, x]
   );
 
   const handleDrag = useCallback((_: any, info: PanInfo) => {
     lastOffsetRef.current = info.offset;
+    
+    // Update x MotionValue for rotation sync
+    x.set(info.offset.x);
     
     // Calculate progress based on swipe distance (0 to 1)
     const absX = Math.abs(info.offset.x);
@@ -235,7 +239,7 @@ function SwipeCard({
       }
       dragRafRef.current = null;
     });
-  }, []);
+  }, [x]);
 
   return (
     <motion.div
