@@ -10,6 +10,7 @@ import {
   boolean,
   date,
   numeric,
+  serial,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -204,6 +205,21 @@ export const users = pgTable("users", {
   structuredOccupation: varchar("structured_occupation"), // 规范化职位：投资经理/产品经理等（区别于legacy的roleTitleShort）
   // 智能洞察存储（JSONB灵活schema）
   insightLedger: jsonb("insight_ledger"), // SmartInsight[] - 带provenance/confidence的动态事实存储
+  
+  // ============ 三层行业分类系统 (Three-Tier Industry Classification) ============
+  industryCategory: varchar("industry_category", { length: 50 }),           // Layer 1: "tech"
+  industryCategoryLabel: varchar("industry_category_label", { length: 100 }), // "科技互联网"
+  industrySegmentNew: varchar("industry_segment_new", { length: 100 }),     // Layer 2: "ai_ml" (renamed to avoid conflict)
+  industrySegmentLabel: varchar("industry_segment_label", { length: 150 }), // "AI/机器学习"
+  industryNiche: varchar("industry_niche", { length: 150 }),                // Layer 3: "medical_ai"
+  industryNicheLabel: varchar("industry_niche_label", { length: 200 }),     // "医疗AI"
+  
+  // 三层分类元数据
+  industryRawInput: text("industry_raw_input"),                             // 用户原始输入
+  industrySource: varchar("industry_source", { length: 20 }),               // "seed" | "ontology" | "ai" | "manual"
+  industryConfidence: numeric("industry_confidence", { precision: 3, scale: 2 }), // 0.00-1.00
+  industryClassifiedAt: timestamp("industry_classified_at"),                // 分类时间
+  industryLastVerifiedAt: timestamp("industry_last_verified_at"),           // 最后验证时间
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -548,6 +564,18 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   industry: true,
   industrySegment: true,  // 智能信息收集：细分领域
   structuredOccupation: true,  // 智能信息收集：规范化职位
+  // Three-tier industry classification
+  industryCategory: true,
+  industryCategoryLabel: true,
+  industrySegmentNew: true,
+  industrySegmentLabel: true,
+  industryNiche: true,
+  industryNicheLabel: true,
+  industryRawInput: true,
+  industrySource: true,
+  industryConfidence: true,
+  industryClassifiedAt: true,
+  industryLastVerifiedAt: true,
   occupationId: true,
   workMode: true,
   roleTitleShort: true,
@@ -2699,3 +2727,71 @@ export type InsertAssessmentSession = z.infer<typeof insertAssessmentSessionSche
 
 export type AssessmentAnswer = typeof assessmentAnswers.$inferSelect;
 export type InsertAssessmentAnswer = z.infer<typeof insertAssessmentAnswerSchema>;
+
+// ============ 三层行业分类系统表 (Three-Tier Industry Classification Tables) ============
+
+// AI分类日志表 - 记录所有AI推断的行业分类
+export const industryAiLogs = pgTable("industry_ai_logs", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }),
+  
+  rawInput: text("raw_input").notNull(),
+  
+  aiCategory: varchar("ai_category", { length: 50 }),
+  aiSegment: varchar("ai_segment", { length: 100 }),
+  aiNiche: varchar("ai_niche", { length: 150 }),
+  aiConfidence: numeric("ai_confidence", { precision: 3, scale: 2 }),
+  aiReasoning: text("ai_reasoning"),
+  
+  userAccepted: boolean("user_accepted"),
+  userCorrectedCategory: varchar("user_corrected_category", { length: 50 }),
+  userCorrectedSegment: varchar("user_corrected_segment", { length: 100 }),
+  userCorrectedNiche: varchar("user_corrected_niche", { length: 150 }),
+  
+  processingTimeMs: integer("processing_time_ms"),
+  modelVersion: varchar("model_version", { length: 50 }),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_ai_logs_user_id").on(table.userId),
+  index("idx_ai_logs_created_at").on(table.createdAt),
+]);
+
+// Seed库候选表 - 用于自动扩展精确匹配库
+export const industrySeedCandidates = pgTable("industry_seed_candidates", {
+  id: serial("id").primaryKey(),
+  rawInput: text("raw_input").notNull().unique(),
+  
+  frequency: integer("frequency").default(1),
+  aiCategory: varchar("ai_category", { length: 50 }),
+  aiSegment: varchar("ai_segment", { length: 100 }),
+  aiNiche: varchar("ai_niche", { length: 150 }),
+  avgConfidence: numeric("avg_confidence", { precision: 3, scale: 2 }),
+  
+  status: varchar("status", { length: 20 }).default("pending"),           // "pending" | "approved" | "rejected"
+  reviewedBy: varchar("reviewed_by", { length: 255 }),
+  reviewedAt: timestamp("reviewed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_seed_candidates_status").on(table.status),
+  index("idx_seed_candidates_frequency").on(table.frequency),
+]);
+
+export const insertIndustryAiLogSchema = createInsertSchema(industryAiLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertIndustrySeedCandidateSchema = createInsertSchema(industrySeedCandidates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type IndustryAiLog = typeof industryAiLogs.$inferSelect;
+export type InsertIndustryAiLog = z.infer<typeof insertIndustryAiLogSchema>;
+
+export type IndustrySeedCandidate = typeof industrySeedCandidates.$inferSelect;
+export type InsertIndustrySeedCandidate = z.infer<typeof insertIndustrySeedCandidateSchema>;

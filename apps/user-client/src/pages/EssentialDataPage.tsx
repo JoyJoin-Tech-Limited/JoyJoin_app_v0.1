@@ -11,7 +11,7 @@ import { INDUSTRY_OPTIONS } from "@shared/constants";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BirthDatePicker } from "@/components/BirthDatePicker";
-import { SmartIndustryInput } from "@/components/SmartIndustryInput";
+import { IndustrySelector } from "@/components/IndustrySelector";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 import { haptics } from "@/lib/haptics";
 import {
@@ -43,6 +43,16 @@ interface EssentialDataState {
     relationshipStatus: string;
     education: string;
     workIndustry: string;
+    // Three-tier industry classification
+    industryCategory?: string;
+    industryCategoryLabel?: string;
+    industrySegmentNew?: string; // FIXED: renamed from industrySegment to match schema
+    industrySegmentLabel?: string;
+    industryNiche?: string;
+    industryNicheLabel?: string;
+    industryRawInput?: string;
+    industrySource?: string;
+    industryConfidence?: number;
     hometown: string;
     currentCity: string;
     intent: string[];
@@ -267,6 +277,16 @@ export default function EssentialDataPage() {
   const [relationshipStatus, setRelationshipStatus] = useState("");
   const [education, setEducation] = useState("");
   const [workIndustry, setWorkIndustry] = useState("");
+  // Three-tier industry classification state
+  const [industryCategory, setIndustryCategory] = useState("");
+  const [industryCategoryLabel, setIndustryCategoryLabel] = useState("");
+  const [industrySegmentNew, setIndustrySegmentNew] = useState(""); // FIXED: renamed to match schema
+  const [industrySegmentLabel, setIndustrySegmentLabel] = useState("");
+  const [industryNiche, setIndustryNiche] = useState("");
+  const [industryNicheLabel, setIndustryNicheLabel] = useState("");
+  const [industryRawInput, setIndustryRawInput] = useState("");
+  const [industrySource, setIndustrySource] = useState("");
+  const [industryConfidence, setIndustryConfidence] = useState<number>();
   const [hometown, setHometown] = useState("");
   const [currentCity, setCurrentCity] = useState("");
   const [intent, setIntent] = useState<string[]>([]);
@@ -287,6 +307,15 @@ export default function EssentialDataPage() {
           setRelationshipStatus(state.data.relationshipStatus || "");
           setEducation(state.data.education || "");
           setWorkIndustry(state.data.workIndustry || "");
+          setIndustryCategory(state.data.industryCategory || "");
+          setIndustryCategoryLabel(state.data.industryCategoryLabel || "");
+          setIndustrySegmentNew(state.data.industrySegmentNew || ""); // FIXED: use correct field name
+          setIndustrySegmentLabel(state.data.industrySegmentLabel || "");
+          setIndustryNiche(state.data.industryNiche || "");
+          setIndustryNicheLabel(state.data.industryNicheLabel || "");
+          setIndustryRawInput(state.data.industryRawInput || "");
+          setIndustrySource(state.data.industrySource || "");
+          setIndustryConfidence(state.data.industryConfidence);
           setHometown(state.data.hometown || "");
           setCurrentCity(state.data.currentCity || "");
           setIntent(state.data.intent || []);
@@ -306,11 +335,17 @@ export default function EssentialDataPage() {
   const saveProgress = useCallback(() => {
     const state: EssentialDataState = {
       currentStep,
-      data: { displayName, gender, birthYear, relationshipStatus, education, workIndustry, hometown, currentCity, intent },
+      data: { displayName, gender, birthYear, relationshipStatus, education, workIndustry, 
+              industryCategory, industryCategoryLabel, industrySegmentNew, industrySegmentLabel,
+              industryNiche, industryNicheLabel, industryRawInput, industrySource, industryConfidence,
+              hometown, currentCity, intent },
       timestamp: Date.now(),
     };
     localStorage.setItem(ESSENTIAL_CACHE_KEY, JSON.stringify(state));
-  }, [currentStep, displayName, gender, birthYear, relationshipStatus, education, workIndustry, hometown, currentCity, intent]);
+  }, [currentStep, displayName, gender, birthYear, relationshipStatus, education, workIndustry,
+      industryCategory, industryCategoryLabel, industrySegmentNew, industrySegmentLabel,
+      industryNiche, industryNicheLabel, industryRawInput, industrySource, industryConfidence,
+      hometown, currentCity, intent]);
 
   useEffect(() => {
     saveProgress();
@@ -343,7 +378,7 @@ export default function EssentialDataPage() {
       case 1: return gender && (birthDate?.year || birthYear);
       case 2: return relationshipStatus;
       case 3: return education;
-      case 4: return workIndustry;
+      case 4: return industryCategory && industrySegmentNew; // FIXED: use correct field name
       case 5: return hometown && currentCity;
       case 6: return intent.length >= 1;
       default: return false;
@@ -397,6 +432,16 @@ export default function EssentialDataPage() {
           hometown,
           currentCity,
           intent,
+          // Three-tier industry classification
+          industryCategory,
+          industryCategoryLabel,
+          industrySegmentNew, // FIXED: use correct field name
+          industrySegmentLabel,
+          industryNiche,
+          industryNicheLabel,
+          industryRawInput,
+          industrySource,
+          industryConfidence,
         };
         if (birthDate) {
           profileData.birthdate = `${birthDate.year}-${String(birthDate.month).padStart(2, '0')}-${String(birthDate.day).padStart(2, '0')}`;
@@ -618,12 +663,28 @@ export default function EssentialDataPage() {
 
               {currentStep === 4 && (
                 <div className="space-y-4">
-                  <SmartIndustryInput
-                    options={INDUSTRY_OPTIONS}
-                    value={workIndustry}
-                    onSelect={(val) => {
-                      setWorkIndustry(val);
+                  <IndustrySelector
+                    onSelect={(selection) => {
+                      // Update all three-tier classification fields
+                      setIndustryCategory(selection.category.id);
+                      setIndustryCategoryLabel(selection.category.label);
+                      setIndustrySegmentNew(selection.segment.id); // FIXED: use correct field name
+                      setIndustrySegmentLabel(selection.segment.label);
+                      setIndustryNiche(selection.niche?.id || "");
+                      setIndustryNicheLabel(selection.niche?.label || "");
+                      setIndustryRawInput(selection.rawInput || "");
+                      setIndustrySource(selection.source || "manual");
+                      setIndustryConfidence(selection.confidence);
+                      
+                      // Also update legacy workIndustry field for backward compatibility
+                      const pathParts = [
+                        selection.category.label,
+                        selection.segment.label,
+                        selection.niche?.label
+                      ].filter(Boolean);
+                      setWorkIndustry(pathParts.join(" > "));
                     }}
+                    defaultTab="smart"
                   />
                 </div>
               )}
