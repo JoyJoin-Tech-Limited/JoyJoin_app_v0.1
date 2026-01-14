@@ -3,7 +3,6 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { matchIndustryFromText } from "./inference/industryOntology";
-import { classifyIndustry } from "./inference/industryClassifier";
 import { INDUSTRY_OPTIONS } from "@shared/constants";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { paymentService } from "./paymentService";
@@ -517,47 +516,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error during dev login:", error);
       res.status(500).json({ message: "Dev login failed" });
-    }
-  });
-
-  // MARK: - Industry Inference API
-
-  /**
-   * POST /api/inference/classify-industry
-   * Uses the 3-tier classification engine (Seed -> Ontology -> AI)
-   * to categorize raw user input into L1/L2/L3 hierarchical structure.
-   */
-  app.post('/api/inference/classify-industry', async (req, res) => {
-    try {
-      const { text } = req.body;
-      
-      if (!text || typeof text !== 'string') {
-        return res.status(400).json({ 
-          success: false, 
-          error: "Missing required 'text' field" 
-        });
-      }
-
-      // Check for authentication if required (optional based on UX)
-      // if (!req.session.userId) { ... }
-
-      const result = await classifyIndustry(text);
-      
-      // Log for analytics/tuning
-      if (result.confidence < 0.6) {
-        console.log(`[INDUSTRY-CLASSIFIER] Low confidence (${result.confidence}) for: "${text}"`);
-      }
-
-      res.json({
-        success: true,
-        ...result
-      });
-    } catch (error) {
-      console.error("Industry classification error:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: "行业分类服务暂时不可用" 
-      });
     }
   });
 
