@@ -1067,13 +1067,24 @@ export default function EssentialDataPage() {
                   
                   {/* Selection count indicator */}
                   {!isFlexibleSelected && intent.length > 0 && (
-                    <motion.p
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-center text-sm text-muted-foreground"
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-center space-y-2"
                     >
-                      已选择 <span className="font-semibold text-primary">{intent.length}</span> 个目标
-                    </motion.p>
+                      <p className="text-sm text-muted-foreground">
+                        已选择 <span className="font-semibold text-primary">{intent.length}</span> 个目标
+                      </p>
+                      {intent.length >= 3 && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="text-sm font-medium text-green-600 dark:text-green-400"
+                        >
+                          🎉 太棒了！已选够3个，匹配会更精准哦
+                        </motion.p>
+                      )}
+                    </motion.div>
                   )}
                 </div>
               )}
