@@ -36,7 +36,16 @@ export function GuideStepPersona({
   const copy = guideCopy.step1;
   
   // Fetch user data
-  const { data: user } = useQuery<any>({ queryKey: ["/api/auth/user"] });
+  const { data: user } = useQuery<any>({
+    queryKey: ["/api/auth/user"],
+    queryFn: async () => {
+      const response = await fetch("/api/auth/user");
+      if (!response.ok) {
+        throw new Error("Failed to fetch user");
+      }
+      return response.json();
+    },
+  });
   
   const containerVariants = reducedMotion
     ? { hidden: { opacity: 0 }, visible: { opacity: 1 } }
