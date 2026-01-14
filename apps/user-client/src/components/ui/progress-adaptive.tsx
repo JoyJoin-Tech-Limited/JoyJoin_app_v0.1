@@ -111,7 +111,7 @@ export const AdaptiveProgress = React.forwardRef<
           }}
           style={{
             background: `linear-gradient(to right, ${progressColor}, ${progressColor})`,
-            boxShadow: `0 0 ${glowSize}px rgba(139, 92, 246, 0.4)`,
+            boxShadow: `0 0 ${glowSize}px hsl(280 45% 55% / 0.4)`,
           }}
         >
           {/* Inner shimmer on progress bar */}
