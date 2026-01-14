@@ -564,6 +564,18 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   industry: true,
   industrySegment: true,  // 智能信息收集：细分领域
   structuredOccupation: true,  // 智能信息收集：规范化职位
+  // Three-tier industry classification
+  industryCategory: true,
+  industryCategoryLabel: true,
+  industrySegmentNew: true,
+  industrySegmentLabel: true,
+  industryNiche: true,
+  industryNicheLabel: true,
+  industryRawInput: true,
+  industrySource: true,
+  industryConfidence: true,
+  industryClassifiedAt: true,
+  industryLastVerifiedAt: true,
   occupationId: true,
   workMode: true,
   roleTitleShort: true,
