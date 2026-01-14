@@ -12,6 +12,7 @@ import {
   getIntentIcon,
   getCityLabel,
   calculateAge,
+  type UserProfile,
 } from "@/lib/profileHelpers";
 
 interface GuideStepPersonaProps {
@@ -36,7 +37,7 @@ export function GuideStepPersona({
   const copy = guideCopy.step1;
   
   // Fetch user data
-  const { data: user } = useQuery<any>({
+  const { data: user } = useQuery<UserProfile>({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
       const response = await fetch("/api/auth/user");

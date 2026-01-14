@@ -3,13 +3,15 @@
  * Utilities for profile completeness calculation and label getters
  */
 
-interface UserProfile {
+export interface UserProfile {
   displayName?: string;
   gender?: string;
   birthdate?: string;
   relationshipStatus?: string;
   education?: string;
   industryCategory?: string;
+  industryCategoryLabel?: string;
+  industrySegmentLabel?: string;
   hometown?: string;
   currentCity?: string;
   intent?: string[];
@@ -124,6 +126,12 @@ export function calculateAge(birthdate: string): number | null {
   }
   
   const today = new Date();
+  
+  // Check if birthdate is in the future
+  if (birth > today) {
+    return null;
+  }
+  
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {

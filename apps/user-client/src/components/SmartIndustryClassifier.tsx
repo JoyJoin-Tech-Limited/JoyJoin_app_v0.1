@@ -76,6 +76,7 @@ export function SmartIndustryClassifier({
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [particles, setParticles] = useState<Particle[]>([]);
+  const [celebrationTimeoutId, setCelebrationTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
   const { mutate: classifyIndustry, isPending } = useMutation({
     mutationFn: async (description: string) => {
@@ -122,14 +123,25 @@ export function SmartIndustryClassifier({
     setParticles(newParticles);
     setShowConfetti(true);
     
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       setShowConfetti(false);
       onClassified({
         ...result,
         rawInput: text,
       });
     }, 1000);
+    
+    setCelebrationTimeoutId(timeoutId);
   };
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (celebrationTimeoutId) {
+        clearTimeout(celebrationTimeoutId);
+      }
+    };
+  }, [celebrationTimeoutId]);
 
   const handleRetry = () => {
     setResult(null);
@@ -266,7 +278,6 @@ export function SmartIndustryClassifier({
           animate={{ opacity: 1, scale: 1 }}
           className="relative space-y-3 p-5 rounded-2xl overflow-hidden"
           style={{
-            background: "linear-gradient(to bottom right, rgba(168, 85, 247, 0.1), rgba(236, 72, 153, 0.1))",
             border: "2px solid transparent",
             backgroundImage: "linear-gradient(white, white), linear-gradient(to right, #a855f7, #ec4899, #f97316)",
             backgroundOrigin: "border-box",
