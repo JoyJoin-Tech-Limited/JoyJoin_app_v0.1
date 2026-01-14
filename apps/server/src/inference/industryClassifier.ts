@@ -3,12 +3,11 @@
  * 
  * 三层架构:
  * - Tier 1: Seed库精确匹配 (0-5ms) - 最快，最准确
- * - Tier 2: Ontology模糊匹配 (5-50ms) - 基于规则和同义词
+ * - Tier 2: Taxonomy直接匹配 (5-20ms) - 基于INDUSTRY_TAXONOMY的keywords/synonyms
  * - Tier 3: AI深度分析 (200-800ms) - DeepSeek推理
  */
 
 import { matchSeed, type SeedMatch } from "./industrySeedMap";
-import { matchIndustryFromText } from "./industryOntology";
 import { INDUSTRY_TAXONOMY, findCategoryById, findSegmentById, findNicheById } from "@shared/industryTaxonomy";
 
 export interface IndustryClassificationResult {
@@ -67,67 +66,146 @@ function matchViaSeed(userInput: string): IndustryClassificationResult | null {
 }
 
 /**
- * Tier 2: Ontology模糊匹配
+ * Tier 2: Taxonomy直接匹配 - 直接扫描INDUSTRY_TAXONOMY的keywords/synonyms
+ * 优先级: niche > segment > category (越具体越优先)
  */
-function matchViaOntology(userInput: string): IndustryClassificationResult | null {
+function matchViaTaxonomy(userInput: string): IndustryClassificationResult | null {
   const startTime = Date.now();
+  const lowerInput = userInput.toLowerCase();
   
-  try {
-    const match = matchIndustryFromText(userInput);
-    
-    if (!match || !match.industry) return null;
-    
-    const mappedResult = mapOldIndustryToThreeTier(match.industry, match.confidence || 0.7);
-    
-    if (!mappedResult) return null;
-    
-    return {
-      ...mappedResult,
-      source: "ontology",
-      processingTimeMs: Date.now() - startTime,
-      rawInput: userInput,
-      normalizedInput: userInput,
-    };
-  } catch (error) {
-    console.error("Ontology matching error:", error);
-    return null;
+  interface TaxonomyMatch {
+    categoryId: string;
+    categoryLabel: string;
+    segmentId: string;
+    segmentLabel: string;
+    nicheId?: string;
+    nicheLabel?: string;
+    confidence: number;
+    matchType: "niche" | "segment" | "category";
+    matchedTerm: string;
   }
-}
-
-/**
- * 将旧行业分类映射到新的三层体系
- */
-function mapOldIndustryToThreeTier(oldIndustry: string, confidence: number): Omit<IndustryClassificationResult, "source" | "processingTimeMs" | "rawInput" | "normalizedInput"> | null {
-  const mappings: Record<string, { category: string; segment: string; niche?: string }> = {
-    "金融": { category: "finance", segment: "commercial_banking" },
-    "科技": { category: "tech", segment: "software_dev" },
-    "互联网": { category: "tech", segment: "software_dev" },
-    "医疗": { category: "healthcare", segment: "medical_services" },
-    "教育": { category: "education", segment: "k12" },
-    "制造": { category: "manufacturing", segment: "consumer_electronics" },
-    "零售": { category: "consumer_retail", segment: "retail" },
-    "房地产": { category: "real_estate", segment: "real_estate_sales" },
-  };
   
-  const mapping = mappings[oldIndustry];
-  if (!mapping) return null;
+  let bestMatch: TaxonomyMatch | null = null;
   
-  const category = findCategoryById(mapping.category);
-  const segment = findSegmentById(mapping.category, mapping.segment);
+  // Priority order: niche (most specific) > segment > category
+  const priorityScore = { niche: 3, segment: 2, category: 1 };
   
-  if (!category || !segment) return null;
+  for (const category of INDUSTRY_TAXONOMY) {
+    for (const segment of category.segments) {
+      // Check niche level first (most specific)
+      for (const niche of segment.niches) {
+        // Check exact label match
+        if (lowerInput.includes(niche.label.toLowerCase())) {
+          const match: TaxonomyMatch = {
+            categoryId: category.id,
+            categoryLabel: category.label,
+            segmentId: segment.id,
+            segmentLabel: segment.label,
+            nicheId: niche.id,
+            nicheLabel: niche.label,
+            confidence: 0.95,
+            matchType: "niche",
+            matchedTerm: niche.label,
+          };
+          if (!bestMatch || priorityScore[match.matchType] > priorityScore[bestMatch.matchType] || 
+              (match.matchType === bestMatch.matchType && match.confidence > bestMatch.confidence)) {
+            bestMatch = match;
+          }
+        }
+        
+        // Check synonyms
+        for (const synonym of niche.synonyms) {
+          if (lowerInput.includes(synonym.toLowerCase())) {
+            const match: TaxonomyMatch = {
+              categoryId: category.id,
+              categoryLabel: category.label,
+              segmentId: segment.id,
+              segmentLabel: segment.label,
+              nicheId: niche.id,
+              nicheLabel: niche.label,
+              confidence: 0.92,
+              matchType: "niche",
+              matchedTerm: synonym,
+            };
+            if (!bestMatch || priorityScore[match.matchType] > priorityScore[bestMatch.matchType]) {
+              bestMatch = match;
+            }
+          }
+        }
+        
+        // Check keywords
+        for (const keyword of niche.keywords) {
+          if (lowerInput.includes(keyword.toLowerCase())) {
+            const match: TaxonomyMatch = {
+              categoryId: category.id,
+              categoryLabel: category.label,
+              segmentId: segment.id,
+              segmentLabel: segment.label,
+              nicheId: niche.id,
+              nicheLabel: niche.label,
+              confidence: 0.88,
+              matchType: "niche",
+              matchedTerm: keyword,
+            };
+            if (!bestMatch || priorityScore[match.matchType] > priorityScore[bestMatch.matchType]) {
+              bestMatch = match;
+            }
+          }
+        }
+      }
+      
+      // Check segment level (label match)
+      if (lowerInput.includes(segment.label.toLowerCase())) {
+        const match: TaxonomyMatch = {
+          categoryId: category.id,
+          categoryLabel: category.label,
+          segmentId: segment.id,
+          segmentLabel: segment.label,
+          confidence: 0.85,
+          matchType: "segment",
+          matchedTerm: segment.label,
+        };
+        if (!bestMatch || priorityScore[match.matchType] > priorityScore[bestMatch.matchType]) {
+          bestMatch = match;
+        }
+      }
+    }
+    
+    // Check category level (lowest priority)
+    if (lowerInput.includes(category.label.toLowerCase())) {
+      // For category-only match, pick first segment as default
+      const firstSegment = category.segments[0];
+      if (firstSegment && !bestMatch) {
+        bestMatch = {
+          categoryId: category.id,
+          categoryLabel: category.label,
+          segmentId: firstSegment.id,
+          segmentLabel: firstSegment.label,
+          confidence: 0.65,
+          matchType: "category",
+          matchedTerm: category.label,
+        };
+      }
+    }
+  }
+  
+  if (!bestMatch) return null;
   
   return {
-    category: { id: category.id, label: category.label },
-    segment: { id: segment.id, label: segment.label },
-    niche: undefined,
-    confidence: confidence * 0.8,
-    reasoning: `基于关键词"${oldIndustry}"的模糊匹配`,
+    category: { id: bestMatch.categoryId, label: bestMatch.categoryLabel },
+    segment: { id: bestMatch.segmentId, label: bestMatch.segmentLabel },
+    niche: bestMatch.nicheId ? { id: bestMatch.nicheId, label: bestMatch.nicheLabel! } : undefined,
+    confidence: bestMatch.confidence,
+    reasoning: `基于"${bestMatch.matchedTerm}"的${bestMatch.matchType === "niche" ? "精准赛道" : bestMatch.matchType === "segment" ? "细分领域" : "大类"}匹配`,
+    source: "ontology",
+    processingTimeMs: Date.now() - startTime,
+    rawInput: userInput,
+    normalizedInput: userInput,
   };
 }
 
 /**
- * Tier 3: AI深度分析
+ * Tier 3: AI深度分析 (DeepSeek)
  */
 async function matchViaAI(userInput: string): Promise<IndustryClassificationResult | null> {
   const startTime = Date.now();
@@ -135,9 +213,9 @@ async function matchViaAI(userInput: string): Promise<IndustryClassificationResu
   try {
     const { default: OpenAI } = await import("openai");
     
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) {
-      console.error("OPENAI_API_KEY not configured");
+      console.error("DEEPSEEK_API_KEY not configured");
       return null;
     }
     
@@ -220,7 +298,7 @@ async function normalizeUserInput(rawText: string): Promise<string> {
   
   try {
     const { default: OpenAI } = await import("openai");
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) return rawText;
     
     const openai = new OpenAI({
@@ -268,28 +346,34 @@ export async function classifyIndustry(
     };
   }
   
+  // Tier 1: Seed库精确匹配
   const seedResult = matchViaSeed(cleanInput);
   if (seedResult && seedResult.confidence >= 0.9) {
     const normalizedInput = await normalizeUserInput(cleanInput);
     return { ...seedResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
-  const ontologyResult = matchViaOntology(cleanInput);
-  if (ontologyResult && ontologyResult.confidence >= 0.8) {
+  // Tier 2: Taxonomy直接匹配 (replaces old ontology matching)
+  const taxonomyResult = matchViaTaxonomy(cleanInput);
+  if (taxonomyResult && taxonomyResult.confidence >= 0.8) {
     const normalizedInput = await normalizeUserInput(cleanInput);
-    return { ...ontologyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
+    return { ...taxonomyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
+  // Tier 3: AI深度分析 (DeepSeek fallback)
   try {
     const aiResult = await matchViaAI(cleanInput);
     if (aiResult) {
       const normalizedInput = await normalizeUserInput(cleanInput);
       return { ...aiResult, normalizedInput };
     }
-  } catch (error) {}
+  } catch (error) {
+    console.error("AI classification fallback error:", error);
+  }
   
+  // Fallback: return best available result or default
   const normalizedInput = await normalizeUserInput(cleanInput);
-  const base = ontologyResult || seedResult || {
+  const base = taxonomyResult || seedResult || {
     category: { id: "tech", label: "科技互联网" },
     segment: { id: "software_dev", label: "软件开发" },
     confidence: 0.3,
