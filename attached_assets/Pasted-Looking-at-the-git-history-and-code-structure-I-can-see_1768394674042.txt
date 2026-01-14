@@ -1,0 +1,54 @@
+Looking at the git history and code structure, I can see what happened: 
+
+## Why wasn't this implemented?
+
+The timeline shows:
+1. **The infrastructure was built** - `industryClassifier.ts`, `industrySeedMap.ts`, `industryOntology.ts`, and `INDUSTRY_TAXONOMY` all exist
+2. **The frontend was updated** - `SmartIndustryClassifier.tsx` was created to use the new API
+3. **But the API route was never added** - The `/api/inference/classify-industry` endpoint is missing from `routes.ts`
+
+This is a classic case of **incomplete feature integration** - the hard work was done (the 3-tier classification engine), but the final step of wiring it up to the server was missed.
+
+## What do we have after adding this endpoint?
+
+Yes!  Once we add the missing endpoint, you'll have a **complete L1→L2→L3 hierarchical classifier** that works like this:
+
+### User Flow:
+```
+User types: "投资银行"
+        ↓
+Frontend:  SmartIndustryClassifier. tsx
+        ↓
+API: POST /api/inference/classify-industry
+        ↓
+Backend: 3-Tier Classification Engine
+```
+
+### 3-Tier Classification Process: 
+
+**Tier 1: Seed Map (0-10ms)** - Exact/fuzzy matching
+- Checks `industrySeedMap.ts` for direct matches
+- Example: "投行" → `{ category: "finance", segment: "investment_banking" }`
+
+**Tier 2: Ontology (10-100ms)** - Rule-based inference  
+- Uses `industryOntology.ts` with synonyms & keywords
+- Example: "并购" → Finance → Investment Banking → M&A
+
+**Tier 3: AI (200-800ms)** - DeepSeek reasoning
+- Fallback for ambiguous inputs
+- Example: "我做医疗AI的" → Tech → AI/ML → Healthcare AI
+
+### Output Structure (L1→L2→L3):
+```json
+{
+  "category": { "id": "finance", "label": "金融服务" },        // L1
+  "segment": { "id": "investment_banking", "label": "投资银行" }, // L2
+  "niche": { "id": "ma_advisory", "label": "并购顾问" },       // L3 (optional)
+  "confidence": 0.95,
+  "source": "seed",
+  "rawInput": "投资银行",
+  "normalizedInput": "投资银行"
+}
+```
+
+**Shall I create a PR to add the missing endpoint and complete this feature?** This will make your smart industry selection fully functional. 

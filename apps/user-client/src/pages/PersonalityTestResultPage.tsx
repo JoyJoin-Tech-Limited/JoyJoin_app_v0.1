@@ -783,8 +783,8 @@ export default function PersonalityTestResultPage() {
           </motion.div>
         )}
 
-        {/* Debug: All 12 Archetype Scores */}
-        {allArchetypeScores.length > 0 && (
+        {/* Debug: All 12 Archetype Scores - Only show in development mode */}
+        {import.meta.env.DEV && allArchetypeScores.length > 0 && (
           <motion.div variants={itemVariants}>
             <Collapsible open={showDebugScores} onOpenChange={setShowDebugScores}>
               <Card className="border-dashed border-muted-foreground/30">
