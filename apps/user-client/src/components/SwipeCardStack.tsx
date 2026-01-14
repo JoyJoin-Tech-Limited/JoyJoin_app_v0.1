@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { motion, useAnimation, PanInfo, useMotionValue, useTransform } from "framer-motion";
+import { motion, useAnimation, PanInfo } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Heart, X, Sparkles } from "lucide-react";
 import { SwipeParticles } from "./SwipeParticles";
@@ -138,8 +138,6 @@ function SwipeCard({
   const dragRafRef = useRef<number | null>(null);
   const lastOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const particleTimeoutRef = useRef<number | null>(null);
-  const x = useMotionValue(0);
-  const rotate = useTransform(x, [-200, 200], [-20, 20]);
 
   useEffect(() => {
     return () => {
@@ -192,7 +190,6 @@ function SwipeCard({
         onSwipe('skip', reactionTime);
       } else {
         // softer reset
-        x.set(0); // Reset x MotionValue for rotation
         await controls.start({
           x: 0,
           y: 0,
@@ -204,14 +201,11 @@ function SwipeCard({
       setDragProgress(0);
       setIsAnimating(false);
     },
-    [controls, onSwipe, cardStartTime, isAnimating, x]
+    [controls, onSwipe, cardStartTime, isAnimating]
   );
 
   const handleDrag = useCallback((_: any, info: PanInfo) => {
     lastOffsetRef.current = info.offset;
-    
-    // Update x MotionValue for rotation sync
-    x.set(info.offset.x);
     
     // Calculate progress based on swipe distance (0 to 1)
     const absX = Math.abs(info.offset.x);
@@ -243,7 +237,7 @@ function SwipeCard({
       }
       dragRafRef.current = null;
     });
-  }, [x]);
+  }, []);
 
   return (
     <motion.div
@@ -255,9 +249,7 @@ function SwipeCard({
         touchAction: "none", 
         transform: "translateZ(0)", 
         willChange: "transform", 
-        backfaceVisibility: "hidden", 
-        rotate,
-        x,
+        backfaceVisibility: "hidden",
         ...(isAnimating && { pointerEvents: "none" }) 
       }}
       drag={isTop && !isAnimating}
@@ -266,9 +258,7 @@ function SwipeCard({
       dragMomentum={true}
       dragTransition={{ 
         bounceStiffness: 400, 
-        bounceDamping: 25,
-        power: 0.4,
-        timeConstant: 300
+        bounceDamping: 25
       }}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
@@ -294,7 +284,9 @@ function SwipeCard({
       <SwipeParticles show={showParticles} />
       <div className={cn(
         "relative w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800",
-        dragDirection && "shadow-[0_0_50px_rgba(236,72,153,0.3)]"
+        dragDirection === 'right' && "shadow-[0_0_50px_rgba(16,185,129,0.3)]",
+        dragDirection === 'left' && "shadow-[0_0_50px_rgba(107,114,128,0.2)]",
+        dragDirection === 'up' && "shadow-[0_0_50px_rgba(236,72,153,0.3)]"
       )}>
         <img
           src={card.imageUrl}
@@ -353,7 +345,7 @@ function SwipeCard({
             <div className="
               relative px-5 py-3 rounded-2xl
               bg-white/20
-              backdrop-filter backdrop-blur-xl
+              backdrop-blur-xl
               border-2 border-white/40
               shadow-[0_8px_32px_rgba(0,0,0,0.12)]
             ">
