@@ -274,30 +274,39 @@ async function normalizeUserInput(rawText: string): Promise<string> {
 输入: "${rawText}"
 输出: `;
     
-    const response = await openai.chat.completions.create({
-      model: "deepseek-chat",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.1,
-      max_tokens: 50,
-      timeout: 3000, // 3 second timeout
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 3000); // 3 second timeout
     
-    const normalized = response.choices[0]?.message?.content?.trim();
-    
-    if (!normalized || normalized.length === 0) {
-      console.warn("[Normalization] AI returned empty, using raw input");
+    try {
+      const response = await openai.chat.completions.create(
+        {
+          model: "deepseek-chat",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.1,
+          max_tokens: 50,
+        },
+        { signal: controller.signal },
+      );
+      
+      const normalized = response.choices[0]?.message?.content?.trim();
+      
+      if (!normalized || normalized.length === 0) {
+        console.warn("[Normalization] AI returned empty, using raw input");
+        return rawText;
+      }
+      
+      const processingTime = Date.now() - startTime;
+      console.log(`[Normalization] "${rawText}" → "${normalized}" (${processingTime}ms)`);
+      
+      return normalized;
+    } catch (error) {
+      console.error("[Normalization] Failed, using raw input:", error);
       return rawText;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    
-    const processingTime = Date.now() - startTime;
-    console.log(`[Normalization] "${rawText}" → "${normalized}" (${processingTime}ms)`);
-    
-    return normalized;
-    
-  } catch (error) {
-    console.error("[Normalization] Failed, using raw input:", error);
-    return rawText;
-  }
 }
 
 /**
