@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, Sparkles, ArrowRight, Loader2, Users, Network, MessageCircle, PartyPopper, Heart, Shuffle, Calendar, Star, Check, AlertCircle } from "lucide-react";
 import { SegmentedProgress } from "@/components/ui/progress-segmented";
-import { ChevronLeft, Sparkles, ArrowRight, Loader2, Users, Network, MessageCircle, PartyPopper, Heart, Shuffle, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
