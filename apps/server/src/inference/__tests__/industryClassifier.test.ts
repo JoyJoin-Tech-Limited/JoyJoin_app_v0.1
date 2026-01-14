@@ -12,7 +12,7 @@ describe('Industry Classifier with Normalization', () => {
     const result = await classifyIndustry('我做医疗ai的');
     
     expect(result.rawInput).toBe('我做医疗ai的');
-    expect(result.normalizedInput).toMatch(/医疗.*AI/i);
+    expect(result.normalizedInput).toContain('医疗AI');
     expect(result.category.id).toBe('tech');
     expect(result.confidence).toBeGreaterThan(0);
   }, 10000); // 10s timeout for API call
