@@ -808,7 +808,7 @@ export default function EssentialDataPage() {
                       setIndustryNiche(selection.niche?.id || "");
                       setIndustryNicheLabel(selection.niche?.label || "");
                       setIndustryRawInput(selection.rawInput || "");
-                      setIndustryNormalized(selection.normalizedInput || selection.rawInput || ""); // NEW
+                      setIndustryNormalized(selection.rawInput || "");
                       setIndustrySource(selection.source || "manual");
                       setIndustryConfidence(selection.confidence);
                       
@@ -820,7 +820,6 @@ export default function EssentialDataPage() {
                       ].filter(Boolean);
                       setWorkIndustry(pathParts.join(" > "));
                     }}
-                    defaultTab="smart"
                   />
                 </div>
               )}
