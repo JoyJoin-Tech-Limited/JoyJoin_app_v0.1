@@ -145,7 +145,7 @@ export const SegmentedProgress = React.forwardRef<
             } : { scale: 1 }}
             style={
               isCurrent
-                ? { boxShadow: '0 2px 8px rgba(var(--primary-rgb, 139, 92, 246), 0.3)' }
+                ? { boxShadow: '0 2px 8px rgba(139, 92, 246, 0.3)' }
                 : undefined
             }
           />
