@@ -518,7 +518,7 @@ export default function EssentialDataPage() {
                   return (
                     <motion.div
                       key={milestone}
-                      className="absolute top-1/2 -translate-y-1/2"
+                      className="absolute top-1/2"
                       style={{ left: `${milestone}%`, transform: "translate(-50%, -50%)" }}
                       initial={{ scale: 0 }}
                       animate={{ scale: isReached ? 1 : 0.7 }}
