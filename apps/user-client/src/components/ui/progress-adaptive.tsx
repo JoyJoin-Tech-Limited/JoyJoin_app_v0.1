@@ -60,7 +60,14 @@ export const AdaptiveProgress = React.forwardRef<
   const prefersReducedMotion = useReducedMotion();
   
   // Apply Endowed Progress Effect - never show 0%
-  const displayValue = Math.max(10, Math.min(100, value));
+  // Allow context to influence the minimum displayed progress
+  const endowedMinByContext: Record<NonNullable<AdaptiveProgressProps["context"]>, number> = {
+    onboarding: 15,
+    assessment: 5,
+    default: 10, // preserve existing behavior for the default case
+  };
+  const endowedMin = endowedMinByContext[context] ?? endowedMinByContext.default;
+  const displayValue = Math.max(endowedMin, Math.min(100, value));
   
   // Goal Gradient Effect - faster animation near completion
   const animationDuration = displayValue >= 90 ? 0.3 : 0.6;
