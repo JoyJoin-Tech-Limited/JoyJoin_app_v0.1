@@ -33,10 +33,11 @@ export function useUnifiedProgress(options: UnifiedProgressOptions = {}) {
   const detectMilestone = useCallback((progress: number) => {
     const roundedProgress = Math.round(progress);
     
-    // Find the milestone we're at or just passed
+    // Find the milestone we just reached or passed
+    // We want to trigger when: progress >= milestone AND progress < milestone + threshold
     const currentMilestone = MILESTONES.find(m => 
-      Math.abs(roundedProgress - m) < MILESTONE_THRESHOLD && 
-      roundedProgress >= m
+      roundedProgress >= m && 
+      roundedProgress < m + MILESTONE_THRESHOLD
     );
     
     // Only trigger if we haven't already triggered for this milestone
