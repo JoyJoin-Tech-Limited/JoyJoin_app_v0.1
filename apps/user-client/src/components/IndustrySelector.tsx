@@ -15,7 +15,7 @@ interface IndustrySelection {
   segment: { id: string; label: string };
   niche?: { id: string; label: string };
   rawInput?: string;
-  source?: "seed" | "ontology" | "ai" | "manual";
+  source?: "seed" | "ontology" | "ai" | "fallback" | "manual";
   confidence?: number;
 }
 

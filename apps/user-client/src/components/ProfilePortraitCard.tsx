@@ -215,10 +215,14 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
               <div className="relative">
                 <div
                   onClick={() => setLocation("/personality-test/results")}
-                  className="cursor-pointer ring-4 ring-offset-2 rounded-full transition-transform hover:scale-105"
-                  style={{ 
-                    ringColor: archetypeData?.color ? archetypeData.color.replace('text-', '').replace('dark:text-', '') : '#9333ea'
-                  }}
+                  className="cursor-pointer rounded-full transition-transform hover:scale-105"
+                  style={archetypeData?.color ? {
+                    borderWidth: '4px',
+                    borderColor: archetypeData.color.includes('purple') ? '#9333ea' : 
+                                 archetypeData.color.includes('pink') ? '#ec4899' : '#9333ea',
+                    borderStyle: 'solid',
+                    padding: '2px',
+                  } : undefined}
                 >
                   <Avatar className="w-24 h-24">
                     <AvatarFallback className="text-4xl bg-gradient-to-br from-purple-100 to-pink-100">
