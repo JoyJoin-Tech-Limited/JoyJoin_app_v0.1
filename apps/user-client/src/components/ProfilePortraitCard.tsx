@@ -21,6 +21,8 @@ import {
   Users,
   TrendingUp,
   ChevronRight,
+  Heart,
+  Target,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,8 +31,44 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
+import { getArchetypeAvatar } from "@/lib/archetypeAdapter";
 import { INTEREST_CARDS, MACRO_CATEGORY_LABELS, MACRO_CATEGORY_COLORS } from "@/data/interestCardsData";
 import { cn } from "@/lib/utils";
+
+// City name conversion helper
+const getCityDisplayName = (city: string | undefined): string => {
+  if (!city) return "";
+  const cityMap: Record<string, string> = {
+    "hongkong": "香港",
+    "hong kong": "香港",
+    "shenzhen": "深圳",
+    "sz": "深圳",
+  };
+  const lowerCity = city.toLowerCase();
+  return cityMap[lowerCity] || city;
+};
+
+// Relationship status labels
+const RELATIONSHIP_LABELS: Record<string, string> = {
+  "single": "单身",
+  "in_relationship": "恋爱中",
+  "married": "已婚",
+  "divorced": "离异",
+  "widowed": "丧偶",
+  "complicated": "复杂",
+  "开放": "开放",
+  "保密": "保密",
+};
+
+// Intent labels
+const INTENT_LABELS: Record<string, string> = {
+  "make_friends": "交朋友",
+  "dating": "脱单约会",
+  "expand_network": "拓展人脉",
+  "find_partner": "寻找合伙人",
+  "casual_chat": "随便聊聊",
+  "flexible": "随缘",
+};
 
 interface ProfilePortraitCardProps {
   className?: string;
@@ -49,9 +87,22 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
     queryKey: ["/api/assessment/result"],
   });
 
-  // Get archetype config
+  // Get archetype config and avatar
   const archetype = user?.archetype || user?.primaryRole;
   const archetypeData = archetype ? archetypeConfig[archetype] : null;
+  const archetypeAvatarUrl = archetype ? getArchetypeAvatar(archetype) : "";
+  
+  // Get display values for relationship status and intent
+  const relationshipDisplay = user?.relationshipStatus 
+    ? (RELATIONSHIP_LABELS[user.relationshipStatus] || user.relationshipStatus)
+    : null;
+  
+  const intentDisplay = useMemo(() => {
+    if (!user?.intent || !Array.isArray(user.intent) || user.intent.length === 0) {
+      return null;
+    }
+    return user.intent.map((i: string) => INTENT_LABELS[i] || i).slice(0, 3);
+  }, [user?.intent]);
 
   // Calculate age from birthdate or use age field
   const calculateAge = () => {
@@ -211,27 +262,34 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
         <Card className="bg-gradient-to-br from-white to-gray-50 border-purple-100 shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
-              {/* Avatar with archetype badge */}
+              {/* Avatar with archetype badge - using transparent PNG */}
               <div className="relative">
                 <div
                   onClick={() => setLocation("/personality-test/results")}
-                  className="cursor-pointer rounded-full transition-transform hover:scale-105"
+                  className="cursor-pointer rounded-full transition-transform hover:scale-105 bg-gradient-to-br from-purple-100 to-pink-100 p-1"
                   style={archetypeData?.color ? {
-                    borderWidth: '4px',
+                    borderWidth: '3px',
                     borderColor: archetypeData.color.includes('purple') ? '#9333ea' : 
                                  archetypeData.color.includes('pink') ? '#ec4899' : '#9333ea',
                     borderStyle: 'solid',
-                    padding: '2px',
                   } : undefined}
                 >
-                  <Avatar className="w-24 h-24">
-                    <AvatarFallback className="text-4xl bg-gradient-to-br from-purple-100 to-pink-100">
-                      {archetypeData?.icon || "✨"}
-                    </AvatarFallback>
+                  <Avatar className="w-24 h-24 bg-transparent">
+                    {archetypeAvatarUrl ? (
+                      <AvatarImage 
+                        src={archetypeAvatarUrl} 
+                        alt={archetype || "头像"} 
+                        className="object-contain p-1"
+                      />
+                    ) : (
+                      <AvatarFallback className="text-4xl bg-gradient-to-br from-purple-100 to-pink-100">
+                        {archetypeData?.icon || "✨"}
+                      </AvatarFallback>
+                    )}
                   </Avatar>
                 </div>
                 {archetype && (
-                  <Badge className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-xs bg-gradient-to-r from-purple-600 to-pink-600 border-0">
+                  <Badge className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-xs bg-gradient-to-r from-purple-600 to-pink-600 border-0 whitespace-nowrap">
                     {archetype}
                   </Badge>
                 )}
@@ -246,11 +304,37 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
                   {age && <span className="text-muted-foreground">{age}岁</span>}
                 </div>
 
-                {/* Location */}
+                {/* Location - with Chinese conversion */}
                 {user?.currentCity && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <MapPin className="w-4 h-4" />
-                    <span>{user.currentCity}</span>
+                    <span>{getCityDisplayName(user.currentCity)}</span>
+                  </div>
+                )}
+
+                {/* Relationship Status */}
+                {relationshipDisplay && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Heart className="w-4 h-4 text-pink-500" />
+                    <span>{relationshipDisplay}</span>
+                  </div>
+                )}
+
+                {/* Social Intent */}
+                {intentDisplay && intentDisplay.length > 0 && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Target className="w-4 h-4 text-purple-500 shrink-0" />
+                    <div className="flex flex-wrap gap-1">
+                      {intentDisplay.map((intent: string, idx: number) => (
+                        <Badge 
+                          key={idx} 
+                          variant="secondary" 
+                          className="text-xs bg-purple-100 text-purple-700 border-0"
+                        >
+                          {intent}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 )}
 
