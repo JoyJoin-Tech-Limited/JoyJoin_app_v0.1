@@ -23,7 +23,11 @@ export interface AdaptiveProgressProps {
   value: number;
   /** Context of the progress (affects starting point) */
   context?: 'onboarding' | 'assessment' | 'default';
-  /** Remaining questions count */
+  /**
+   * Remaining questions count, used primarily for accessibility
+   * (e.g. ARIA labels). The parent is responsible for any visual
+   * display of the remaining count.
+   */
   remaining?: number;
   /** Trigger particle burst at milestone */
   milestoneReached?: boolean;
