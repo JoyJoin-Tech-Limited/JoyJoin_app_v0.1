@@ -16,7 +16,7 @@ import {
   Shield, Quote, MapPin, CheckCircle2, ArrowRight,
   Flower2, Target, Sun, Play, Volume2, VolumeX
 } from "lucide-react";
-import joyJoinLogo from "@assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi_1765650184831.png";
+import joyJoinLogo from "@assets/box_logo_archetypes.png";
 import xiaoyueFoxAvatar from "@assets/generated_images/fox_mascot_purple_eyes_accessories.png";
 import { SiWechat } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
