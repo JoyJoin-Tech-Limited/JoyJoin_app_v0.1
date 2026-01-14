@@ -85,7 +85,15 @@ export default function ExtendedDataPage() {
     onSuccess: async () => {
       localStorage.removeItem(EXTENDED_CACHE_KEY);
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setLocation("/guide");
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Redirect to profile review instead of guide
+      setLocation("/onboarding/review");
+      
+      toast({
+        title: "兴趣保存成功！",
+        description: "正在生成你的专属画像...",
+      });
     },
     onError: (error: Error) => {
       setShowCelebration(false);
