@@ -89,8 +89,14 @@ export function useUnifiedProgress(options: UnifiedProgressOptions = {}) {
       // Calculate progress for remaining questions
       // answeredCount includes the 8 anchor questions
       const additionalAnswered = Math.max(0, answeredCount - 8);
-      const totalRemaining = Math.max(1, estimatedRemaining);
-      const assessmentProgress = Math.min(additionalAnswered / totalRemaining, 1.0);
+      const totalAdditionalQuestions = additionalAnswered + estimatedRemaining;
+      
+      // Avoid division by zero
+      if (totalAdditionalQuestions === 0) {
+        return baseProgress * 100;
+      }
+      
+      const assessmentProgress = Math.min(additionalAnswered / totalAdditionalQuestions, 1.0);
       
       return (baseProgress + assessmentProgress * ASSESSMENT_WEIGHT) * 100;
     }
