@@ -12,7 +12,8 @@
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Sparkles, CheckCircle2, RotateCcw, Briefcase, Building2, Stethoscope, Palette, Package, GraduationCap, Zap } from "lucide-react";
+import { Sparkles, CheckCircle2, RotateCcw, Briefcase, Building2, Zap } from "lucide-react";
+import { SpiralWaveAnimation } from "./SpiralWaveAnimation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -208,22 +209,10 @@ export function SmartIndustryClassifier({
           />
         </div>
         {isPending && (
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-1">
-            <motion.div
-              className="w-2 h-2 bg-primary rounded-full"
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-            />
-            <motion.div
-              className="w-2 h-2 bg-primary rounded-full"
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
-            />
-            <motion.div
-              className="w-2 h-2 bg-primary rounded-full"
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
-            />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <div className="w-8 h-8 transform scale-[0.15] origin-center">
+              <SpiralWaveAnimation />
+            </div>
           </div>
         )}
       </div>
@@ -236,8 +225,31 @@ export function SmartIndustryClassifier({
         </div>
       )}
 
+      {/* Analyzing overlay with Spiral Wave */}
+      <AnimatePresence>
+        {isPending && text && !result && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col items-center justify-center py-8 space-y-4"
+          >
+            <div className="w-32 h-32 transform scale-50 origin-center">
+              <SpiralWaveAnimation />
+            </div>
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-sm text-muted-foreground font-medium"
+            >
+              小悦正在分析您的职业描述...
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Quick suggestions when empty */}
-      {!text && !result && (
+      {!text && !result && !isPending && (
         <div>
           <p className="text-sm text-muted-foreground mb-3">快速选择示例：</p>
           <div className="grid grid-cols-2 gap-2">
@@ -296,37 +308,76 @@ export function SmartIndustryClassifier({
             </div>
           </div>
 
-          {/* Hierarchical Industry Display - NEW */}
-          <div className="space-y-3 bg-white/50 rounded-xl p-4 border border-purple-200">
-            {/* L1: Category */}
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                <span className="text-xl">🏢</span>
+          {/* Hierarchical Industry Display - Duolingo-style Tree */}
+          <div className="space-y-0 bg-white/60 rounded-xl p-4 border border-purple-200 dark:bg-gray-900/50">
+            {/* L1: Category - Root Level */}
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="flex items-center gap-3"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg">
+                <Building2 className="w-6 h-6 text-white" />
               </div>
-              <div className="flex-1 space-y-2">
-                <div className="text-sm text-muted-foreground">行业大类</div>
-                <div className="text-lg font-bold text-purple-600">{result.category.label}</div>
+              <div className="flex-1">
+                <div className="text-xs font-medium text-purple-400 uppercase tracking-wide">
+                  Level 1 · 行业大类
+                </div>
+                <div className="text-xl font-bold text-purple-700 dark:text-purple-300">
+                  {result.category.label}
+                </div>
               </div>
-            </div>
+            </motion.div>
 
-            {/* L2: Segment (with connecting line) */}
-            <div className="flex items-start gap-3 pl-8 relative">
-              <div className="absolute left-5 -top-2 w-0.5 h-6 bg-purple-200 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <div className="text-sm text-muted-foreground">细分领域</div>
-                <div className="text-base font-semibold text-purple-600">{result.segment.label}</div>
+            {/* Connecting Line L1→L2 */}
+            <div className="ml-6 h-4 w-0.5 bg-gradient-to-b from-purple-400 to-purple-300" />
+
+            {/* L2: Segment - Sub Level */}
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex items-center gap-3 ml-4"
+            >
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center shadow-md">
+                <Briefcase className="w-5 h-5 text-white" />
               </div>
-            </div>
+              <div className="flex-1">
+                <div className="text-xs font-medium text-purple-400/80 uppercase tracking-wide">
+                  Level 2 · 细分领域
+                </div>
+                <div className="text-lg font-semibold text-purple-600 dark:text-purple-400">
+                  {result.segment.label}
+                </div>
+              </div>
+            </motion.div>
 
             {/* L3: Niche (if exists) */}
             {result.niche && (
-              <div className="flex items-start gap-3 pl-12 relative">
-                <div className="absolute left-5 -top-2 w-0.5 h-6 bg-pink-200 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <div className="text-sm text-muted-foreground">具体赛道</div>
-                  <div className="text-base font-semibold text-pink-600">{result.niche.label}</div>
-                </div>
-              </div>
+              <>
+                {/* Connecting Line L2→L3 */}
+                <div className="ml-9 h-4 w-0.5 bg-gradient-to-b from-purple-300 to-pink-400" />
+
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="flex items-center gap-3 ml-8"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-400 to-pink-500 flex items-center justify-center shadow">
+                    <Zap className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs font-medium text-pink-400/80 uppercase tracking-wide">
+                      Level 3 · 具体赛道
+                    </div>
+                    <div className="text-base font-semibold text-pink-600 dark:text-pink-400">
+                      {result.niche.label}
+                    </div>
+                  </div>
+                </motion.div>
+              </>
             )}
           </div>
 
