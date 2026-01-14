@@ -29,10 +29,12 @@ interface ClassificationResult {
   reasoning?: string;
   source: "seed" | "ontology" | "ai" | "fallback";
   processingTimeMs: number;
+  normalizedInput: string; // NEW
 }
 
 interface SmartIndustryClassifierProps {
-  onClassified: (result: ClassificationResult & { rawInput: string }) => void;
+  onClassified: (result: ClassificationResult & { rawInput: string; normalizedInput: string }) => void;
+  onManualSelect?: () => void;
   placeholder?: string;
   mascotPrompt?: string;
   debounceMs?: number;
@@ -126,6 +128,7 @@ export function SmartIndustryClassifier({
       onClassified({
         ...result,
         rawInput: text,
+        normalizedInput: result.normalizedInput, // NEW - AI-cleaned version
       });
     }, 1000);
     

@@ -54,6 +54,7 @@ interface EssentialDataState {
     industryNiche?: string;
     industryNicheLabel?: string;
     industryRawInput?: string;
+    industryNormalized?: string; // NEW - AI-cleaned version
     industrySource?: string;
     industryConfidence?: number;
     hometown: string;
@@ -296,6 +297,7 @@ export default function EssentialDataPage() {
   const [industryNiche, setIndustryNiche] = useState("");
   const [industryNicheLabel, setIndustryNicheLabel] = useState("");
   const [industryRawInput, setIndustryRawInput] = useState("");
+  const [industryNormalized, setIndustryNormalized] = useState(""); // NEW - AI-cleaned version
   const [industrySource, setIndustrySource] = useState("");
   const [industryConfidence, setIndustryConfidence] = useState<number>();
   const [hometown, setHometown] = useState("");
@@ -325,6 +327,7 @@ export default function EssentialDataPage() {
           setIndustryNiche(state.data.industryNiche || "");
           setIndustryNicheLabel(state.data.industryNicheLabel || "");
           setIndustryRawInput(state.data.industryRawInput || "");
+          setIndustryNormalized(state.data.industryNormalized || ""); // NEW
           setIndustrySource(state.data.industrySource || "");
           setIndustryConfidence(state.data.industryConfidence);
           setHometown(state.data.hometown || "");
@@ -348,14 +351,14 @@ export default function EssentialDataPage() {
       currentStep,
       data: { displayName, gender, birthYear, relationshipStatus, education, workIndustry, 
               industryCategory, industryCategoryLabel, industrySegmentNew, industrySegmentLabel,
-              industryNiche, industryNicheLabel, industryRawInput, industrySource, industryConfidence,
+              industryNiche, industryNicheLabel, industryRawInput, industryNormalized, industrySource, industryConfidence,
               hometown, currentCity, intent },
       timestamp: Date.now(),
     };
     localStorage.setItem(ESSENTIAL_CACHE_KEY, JSON.stringify(state));
   }, [currentStep, displayName, gender, birthYear, relationshipStatus, education, workIndustry,
       industryCategory, industryCategoryLabel, industrySegmentNew, industrySegmentLabel,
-      industryNiche, industryNicheLabel, industryRawInput, industrySource, industryConfidence,
+      industryNiche, industryNicheLabel, industryRawInput, industryNormalized, industrySource, industryConfidence,
       hometown, currentCity, intent]);
 
   useEffect(() => {
@@ -451,6 +454,7 @@ export default function EssentialDataPage() {
           industryNiche,
           industryNicheLabel,
           industryRawInput,
+          industryNormalized, // NEW - AI-cleaned version
           industrySource,
           industryConfidence,
         };
@@ -805,6 +809,7 @@ export default function EssentialDataPage() {
                       setIndustryNiche(selection.niche?.id || "");
                       setIndustryNicheLabel(selection.niche?.label || "");
                       setIndustryRawInput(selection.rawInput || "");
+                      setIndustryNormalized(selection.normalizedInput || selection.rawInput || ""); // NEW
                       setIndustrySource(selection.source || "manual");
                       setIndustryConfidence(selection.confidence);
                       
