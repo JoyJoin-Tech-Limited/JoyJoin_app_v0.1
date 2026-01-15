@@ -219,7 +219,7 @@ export default function ExtendedDataPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3">
           <Button 
             variant="ghost" 
@@ -230,16 +230,9 @@ export default function ExtendedDataPage() {
             <ChevronLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2">
-              <h1 className="text-lg font-medium truncate">
-                {currentStep === 'swipe' ? '发现你的兴趣' : '你的兴趣画像'}
-              </h1>
-              {currentStep === 'swipe' && (
-                <span className="text-sm text-muted-foreground whitespace-nowrap">
-                  {currentCardIndex + 1}/{cards.length}
-                </span>
-              )}
-            </div>
+            <h1 className="text-lg font-medium truncate">
+              {currentStep === 'swipe' ? '发现你的兴趣' : '你的兴趣画像'}
+            </h1>
           </div>
           {currentStep === 'result' && (
             <Button
@@ -253,17 +246,22 @@ export default function ExtendedDataPage() {
           )}
         </div>
         {currentStep === 'swipe' && (
-          <div className="mt-2">
+          <div className="mt-3 px-1">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                {currentCardIndex + 1} / {cards.length}
+              </span>
+            </div>
             <AdaptiveProgress 
               value={(currentCardIndex / cards.length) * 100}
               context="onboarding"
-              className="h-1.5"
+              className="h-2.5"
             />
           </div>
         )}
       </div>
 
-      <div className="flex-1 px-4 py-6 overflow-y-auto">
+      <div className="flex-1 px-4 py-8 overflow-y-auto">
         <AnimatePresence mode="wait">
           {currentStep === 'swipe' && (
             <motion.div
@@ -274,7 +272,7 @@ export default function ExtendedDataPage() {
               exit="exit"
               className="max-w-md mx-auto h-full"
             >
-              <div className="mb-4">
+              <div className="mb-6">
                 <XiaoyueChatBubble
                   content={xiaoyueMessage}
                   pose="casual"
