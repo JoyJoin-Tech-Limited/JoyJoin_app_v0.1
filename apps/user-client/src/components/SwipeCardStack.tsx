@@ -278,7 +278,7 @@ const SwipeCard = forwardRef<SwipeCardRef, SwipeCardProps>(({
   return (
     <motion.div
       className={cn(
-        "absolute inset-0 rounded-3xl overflow-hidden shadow-2xl cursor-grab active:cursor-grabbing",
+        "absolute inset-0 rounded-2xl overflow-hidden shadow-2xl cursor-grab active:cursor-grabbing",
         !isTop && "pointer-events-none"
       )}
       style={{ 
@@ -331,7 +331,7 @@ const SwipeCard = forwardRef<SwipeCardRef, SwipeCardProps>(({
           style={{ filter: 'brightness(0.85)' }}
           loading="lazy"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
         
         <div className="absolute bottom-0 left-0 right-0 p-6">
           <h3 className="text-2xl font-bold text-white mb-2 drop-shadow-lg">
@@ -587,7 +587,7 @@ export const SwipeCardStack = forwardRef<SwipeCardStackRef, SwipeCardStackProps>
   return (
     <div className="flex flex-col h-full">
       <div className="relative flex-1 min-h-[380px] flex items-center justify-center">
-        <div className="relative aspect-[3/4] w-full max-w-[300px]" style={{ perspective: "1000px" }}>
+        <div className="relative aspect-[3/4] w-full max-w-[340px]" style={{ perspective: "1000px" }}>
           {visibleCards.length > 0 ? (
             visibleCards.map((card, idx) => (
               <SwipeCard
@@ -613,8 +613,9 @@ export const SwipeCardStack = forwardRef<SwipeCardStackRef, SwipeCardStackProps>
       </div>
 
       {currentIndex < cards.length && (
-        <div className="mt-4 flex justify-center">
-          <div className="flex items-center gap-4">
+        <div className="mt-6 relative pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background via-background to-transparent pointer-events-none" />
+          <div className="relative flex justify-center items-center gap-5 pb-4">
             <Button
               variant="secondary"
               size="icon"
@@ -622,8 +623,9 @@ export const SwipeCardStack = forwardRef<SwipeCardStackRef, SwipeCardStackProps>
               disabled={isButtonAnimating}
               data-testid="button-skip-card"
               aria-label="跳过此兴趣卡片"
+              className="w-16 h-16 rounded-full shadow-lg hover:shadow-xl transition-shadow border-2"
             >
-              <X className="w-5 h-5" strokeWidth={2} />
+              <X className="w-7 h-7" strokeWidth={2.5} />
             </Button>
 
             <Button
@@ -633,20 +635,33 @@ export const SwipeCardStack = forwardRef<SwipeCardStackRef, SwipeCardStackProps>
               disabled={isButtonAnimating}
               data-testid="button-love-card"
               aria-label="超爱此兴趣卡片"
+              className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 border-0 shadow-xl hover:shadow-2xl transition-all relative overflow-hidden"
             >
-              <Sparkles className="w-5 h-5" strokeWidth={2} />
+              <motion.div
+                className="absolute inset-0 bg-white/20"
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.3, 0.1, 0.3],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+              <Sparkles className="w-8 h-8 relative z-10" strokeWidth={2.5} />
             </Button>
 
             <Button
               variant="secondary"
               size="icon"
-              className="bg-emerald-500 dark:bg-emerald-600 text-white border-emerald-600 dark:border-emerald-500"
               onClick={() => handleButtonSwipe('like')}
               disabled={isButtonAnimating}
               data-testid="button-like-card"
               aria-label="喜欢此兴趣卡片"
+              className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 hover:from-emerald-500 hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl transition-shadow"
             >
-              <Heart className="w-5 h-5" strokeWidth={2} />
+              <Heart className="w-7 h-7 fill-current" strokeWidth={2.5} />
             </Button>
           </div>
         </div>
