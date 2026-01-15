@@ -111,10 +111,11 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, type User } from "@shared/schema";
 import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION } from "@shared/interests";
 import { db } from "./db";
 import { eq, or, and, desc, inArray, isNotNull, gt, sql } from "drizzle-orm";
+import { z } from "zod";
 
 // 12个社交氛围原型题目映射表（与前端personalityQuestions.ts保持一致）
 const roleMapping: Record<string, Record<string, string>> = {
@@ -2158,6 +2159,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update interests and topics" });
     }
   });
+
+  // Validation schemas for carousel-based interest selection
+  const interestSelectionSchema = z.object({
+    topicId: z.string(),
+    emoji: z.string(),
+    label: z.string(),
+    fullName: z.string(),
+    category: z.string(),
+    categoryId: z.string(),
+    level: z.number().int().min(1).max(3),
+    heat: z.number().int().min(3).max(25),
+  });
+
+  const topPrioritySchema = z.object({
+    topicId: z.string(),
+    label: z.string(),
+    heat: z.literal(25), // Level 3 only has heat value of 25
+  });
+
+  const userInterestsDataSchema = z.object({
+    totalHeat: z.number().int().min(0),
+    totalSelections: z.number().int().min(3),
+    categoryHeat: z.record(z.string(), z.number().int().min(0)),
+    selections: z.array(interestSelectionSchema).min(3),
+    topPriorities: z.array(topPrioritySchema).optional(),
+  });
+
+  // New carousel-based interest selection endpoint with full validation and transaction
+  app.post('/api/user/interests', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { interests } = req.body;
+
+      // Validate interests is a proper object (not array, not null)
+      if (typeof interests !== 'object' || Array.isArray(interests) || interests === null) {
+        return res.status(400).json({ error: "Invalid interests data - must be an object" });
+      }
+
+      // Validate using Zod schema
+      const validationResult = userInterestsDataSchema.safeParse(interests);
+      if (!validationResult.success) {
+        console.error("[InterestsAPI] Validation failed:", validationResult.error.issues);
+        return res.status(400).json({ 
+          error: "Invalid interests data structure",
+          details: process.env.NODE_ENV === 'development' ? validationResult.error.issues : undefined
+        });
+      }
+
+      const { totalHeat, totalSelections, categoryHeat, selections, topPriorities } = validationResult.data;
+
+      // Additional business logic validation
+      if (totalSelections < 3) {
+        return res.status(400).json({ error: "Minimum 3 selections required" });
+      }
+
+      // Use transaction to ensure atomicity - both operations succeed or both fail
+      const result = await db.transaction(async (tx) => {
+        // Check if user already has interests
+        const existing = await tx
+          .select()
+          .from(userInterests)
+          .where(eq(userInterests.userId, userId))
+          .limit(1);
+
+        let interestRecord;
+
+        if (existing.length > 0) {
+          // Update existing record
+          const [updated] = await tx
+            .update(userInterests)
+            .set({
+              totalHeat,
+              totalSelections,
+              categoryHeat,
+              selections,
+              topPriorities: topPriorities || null,
+              updatedAt: new Date(),
+            })
+            .where(eq(userInterests.userId, userId))
+            .returning();
+          interestRecord = updated;
+        } else {
+          // Create new record
+          const [created] = await tx
+            .insert(userInterests)
+            .values({
+              userId,
+              totalHeat,
+              totalSelections,
+              categoryHeat,
+              selections,
+              topPriorities: topPriorities || null,
+            })
+            .returning();
+          interestRecord = created;
+        }
+
+        // Update user's completion flag in same transaction
+        await tx
+          .update(users)
+          .set({ hasCompletedInterestsCarousel: true })
+          .where(eq(users.id, userId));
+
+        return interestRecord;
+      });
+
+      res.json({
+        success: true,
+        message: "兴趣已保存",
+        data: {
+          interestId: result.id,
+          userId: result.userId,
+          totalHeat: result.totalHeat,
+        },
+      });
+    } catch (error) {
+      console.error("Error saving user interests:", error);
+      const errorMessage = process.env.NODE_ENV === 'development' && error instanceof Error 
+        ? error.message 
+        : "Failed to save interests";
+      res.status(500).json({ message: errorMessage });
+    }
+  });
+
+  app.get('/api/user/interests', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+
+      const result = await db
+        .select()
+        .from(userInterests)
+        .where(eq(userInterests.userId, userId))
+        .limit(1);
+
+      if (result.length === 0) {
+        return res.status(404).json({ error: "No interests found" });
+      }
+
+      res.json(result[0]);
+    } catch (error) {
+      console.error("Error fetching user interests:", error);
+      res.status(500).json({ message: "Failed to fetch interests" });
+    }
+  });
+
+  app.get('/api/user/interests/summary', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+
+      const result = await db
+        .select({
+          totalHeat: userInterests.totalHeat,
+          topPriorities: userInterests.topPriorities,
+          categoryHeat: userInterests.categoryHeat,
+        })
+        .from(userInterests)
+        .where(eq(userInterests.userId, userId))
+        .limit(1);
+
+      if (result.length === 0) {
+        return res.status(404).json({ error: "No interests found" });
+      }
+
+      res.json(result[0]);
+    } catch (error) {
+      console.error("Error fetching interest summary:", error);
+      res.status(500).json({ message: "Failed to fetch interest summary" });
+    }
+  });
+
 
   app.post('/api/profile/personality', isPhoneAuthenticated, async (req: any, res) => {
     try {
