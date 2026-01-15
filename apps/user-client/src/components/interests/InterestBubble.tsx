@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { HEAT_LEVELS, type HeatLevel, type InterestTopic } from "@/data/interestCarouselData";
+import { HEAT_LEVELS, type HeatLevel, type InterestTopic, isValidHeatLevel } from "@/data/interestCarouselData";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 interface InterestBubbleProps {
@@ -69,12 +69,12 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
     const nextLevel = (currentLevel + 1) % 4;
     
     // Type guard to ensure nextLevel is a valid HeatLevel
-    if (nextLevel !== 0 && nextLevel !== 1 && nextLevel !== 2 && nextLevel !== 3) {
+    if (!isValidHeatLevel(nextLevel)) {
       console.error(`Invalid heat level calculated: ${nextLevel}`);
       return;
     }
     
-    triggerHaptic(nextLevel as HeatLevel);
+    triggerHaptic(nextLevel);
     onTap();
   };
 

@@ -14,6 +14,7 @@ import {
   type HeatLevel,
   type InterestTopic,
   getTopicById,
+  isValidHeatLevel,
 } from "@/data/interestCarouselData";
 
 interface InterestSelection {
@@ -169,7 +170,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
       const nextLevel = (currentLevel + 1) % 4;
       
       // Type guard to ensure nextLevel is a valid HeatLevel
-      if (nextLevel !== 0 && nextLevel !== 1 && nextLevel !== 2 && nextLevel !== 3) {
+      if (!isValidHeatLevel(nextLevel)) {
         console.error(`Invalid heat level calculated: ${nextLevel}`);
         return prev;
       }
@@ -186,7 +187,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         }
       }
       
-      return { ...prev, [topicId]: nextLevel as HeatLevel };
+      return { ...prev, [topicId]: nextLevel };
     });
   }, [toast]);
 
