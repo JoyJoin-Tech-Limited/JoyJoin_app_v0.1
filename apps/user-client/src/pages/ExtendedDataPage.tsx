@@ -1,96 +1,42 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Sparkles, RotateCcw } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ChevronLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
-import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
-import { SwipeCardStack, SwipeCardStackRef } from "@/components/SwipeCardStack";
-import { SwipeGuidanceOverlay } from "@/components/SwipeGuidanceOverlay";
-import { InterestResultSummary } from "@/components/InterestResultSummary";
-import { AdaptiveProgress } from "@/components/ui/progress-adaptive";
-import { 
-  INTEREST_CARDS, 
-  getSmartCardSelection, 
-  SwipeResult 
-} from "@/data/interestCardsData";
-import {
-  TAXONOMY_VERSION,
-  normalizeProfileInterests,
-  isActiveInterestId,
-  type InterestsTelemetry,
-  type InterestTelemetryEvent,
-} from "@shared/interests";
+import { InterestCarousel, type InterestCarouselData } from "@/components/interests/InterestCarousel";
 
-const EXTENDED_CACHE_KEY = "joyjoin_extended_data_progress";
-
-type Step = 'swipe' | 'result';
-
-interface ExtendedDataState {
-  currentStep: Step;
-  swipeResults: SwipeResult[];
-  timestamp: number;
-}
+type WizardStep = 1 | 2;
 
 export default function ExtendedDataPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
-  const swipeStackRef = useRef<SwipeCardStackRef>(null);
 
-  const [currentStep, setCurrentStep] = useState<Step>('swipe');
-  const [swipeResults, setSwipeResults] = useState<SwipeResult[]>([]);
-  const [xiaoyueMessage, setXiaoyueMessage] = useState("滑动告诉我你喜欢什么吧～");
+  const [wizardStep, setWizardStep] = useState<WizardStep>(1);
+  const [interestData, setInterestData] = useState<InterestCarouselData | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
-  const [cards, setCards] = useState(() => getSmartCardSelection(INTEREST_CARDS, 18));
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
-
-  useEffect(() => {
-    const cached = localStorage.getItem(EXTENDED_CACHE_KEY);
-    if (cached) {
-      try {
-        const state: ExtendedDataState = JSON.parse(cached);
-        if (Date.now() - state.timestamp < 24 * 60 * 60 * 1000) {
-          if (state.swipeResults && state.swipeResults.length > 0) {
-            setSwipeResults(state.swipeResults);
-          }
-          // Restore currentStep from cache if it was explicitly saved as 'result'
-          if (state.currentStep === 'result') {
-            setCurrentStep('result');
-          }
-        }
-      } catch {}
-    }
-  }, []);
-
-  const saveProgress = useCallback(() => {
-    const state: ExtendedDataState = {
-      currentStep,
-      swipeResults,
-      timestamp: Date.now(),
-    };
-    localStorage.setItem(EXTENDED_CACHE_KEY, JSON.stringify(state));
-  }, [currentStep, swipeResults]);
-
-  useEffect(() => {
-    saveProgress();
-  }, [saveProgress]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("PATCH", "/api/profile", data);
+      // First save interests to the new endpoint
+      await apiRequest("POST", "/api/user/interests", { interests: data });
+      
+      // Then update profile to mark completion
+      return await apiRequest("PATCH", "/api/profile", {
+        hasCompletedInterestsCarousel: true,
+      });
     },
     onSuccess: async () => {
-      localStorage.removeItem(EXTENDED_CACHE_KEY);
+      setShowCelebration(false);
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       
-      // Redirect to profile review instead of guide
+      // Redirect to profile review
       setLocation("/onboarding/review");
       
       toast({
@@ -108,98 +54,24 @@ export default function ExtendedDataPage() {
     },
   });
 
-  const handleSwipe = useCallback((result: SwipeResult) => {
-    setSwipeResults(prev => [...prev, result]);
-  }, []);
-
-  const handleSwipeComplete = useCallback((results: SwipeResult[]) => {
-    setSwipeResults(results);
-    setCurrentStep('result');
-  }, []);
-
-  const handleConfirm = useCallback(() => {
-    // Validate minimum requirements
-    const likedResults = swipeResults.filter(r => r.choice === 'like' || r.choice === 'love');
-    const lovedResults = swipeResults.filter(r => r.choice === 'love');
-    
-    if (likedResults.length < 1) {
-      toast({
-        title: "请至少选择1个感兴趣的内容",
-        description: "向右滑动表示喜欢",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+  const handleInterestComplete = useCallback((data: InterestCarouselData) => {
+    setInterestData(data);
     setShowCelebration(true);
     
-    // Deduplicate and extract interests
-    const likedInterests = [...new Set(likedResults.map(r => r.cardId))];
-    const lovedInterests = [...new Set(lovedResults.map(r => r.cardId))].slice(0, 3);
-
-    // Normalize using shared validation
-    const normalized = normalizeProfileInterests({
-      interestsTop: likedInterests.slice(0, 7),
-      primaryInterests: lovedInterests,
-    });
-
-    // Log any warnings (for debugging)
-    if (normalized.warnings.length > 0) {
-      console.log('[ExtendedDataPage] Interest normalization warnings:', normalized.warnings);
-    }
-
-    // Build structured telemetry
-    const telemetryEvents: InterestTelemetryEvent[] = swipeResults
-      .filter(r => isActiveInterestId(r.cardId))
-      .slice(0, 200) // Cap at 200 events
-      .map(r => ({
-        interestId: r.cardId,
-        choice: r.choice,
-        reactionTimeMs: Math.min(Math.max(r.reactionTimeMs, 0), 60000), // Clamp to 1 minute
-        timestamp: new Date().toISOString(),
-      }));
-
-    const telemetry: InterestsTelemetry = {
-      version: TAXONOMY_VERSION,
-      events: telemetryEvents,
-    };
-
+    // For now, go directly to save since Step 2 (social preferences) 
+    // would be optional or collected elsewhere
     setTimeout(() => {
-      const profileData = {
-        interestsTop: likedInterests.slice(0, 7),
-        primaryInterests: lovedInterests,
-        interestsDeep: swipeResults.map(r => 
-          `${r.cardId}:${r.choice}:${r.reactionTimeMs}`
-        ),
-        hasCompletedInterestsTopics: true,
-      };
-      saveMutation.mutate(profileData);
+      saveMutation.mutate(data);
     }, 1500);
-  }, [swipeResults, saveMutation, toast]);
+  }, [saveMutation]);
 
-  const handleReset = useCallback(() => {
-    setSwipeResults([]);
-    setCurrentStep('swipe');
-    setXiaoyueMessage("滑动告诉我你喜欢什么吧～");
-    setCards(getSmartCardSelection(INTEREST_CARDS, 18));
-    setCurrentCardIndex(0);
-  }, []);
-
-  const canConfirm = swipeResults.length > 0 && 
-    swipeResults.some(r => r.choice === 'like' || r.choice === 'love');
-
-  const handleSkip = () => {
-    localStorage.removeItem(EXTENDED_CACHE_KEY);
-    setLocation("/guide");
-  };
-
-  const handleBack = () => {
-    if (currentStep === 'result') {
-      setCurrentStep('swipe');
+  const handleBack = useCallback(() => {
+    if (wizardStep === 2) {
+      setWizardStep(1);
     } else {
-      setLocation("/onboarding/essential");
+      setLocation("/onboarding/setup");
     }
-  };
+  }, [wizardStep, setLocation]);
 
   const containerVariants = prefersReducedMotion 
     ? { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } }
@@ -218,122 +90,68 @@ export default function ExtendedDataPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={handleBack}
-            data-testid="button-back"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2">
-              <h1 className="text-lg font-medium truncate">
-                {currentStep === 'swipe' ? '发现你的兴趣' : '你的兴趣画像'}
-              </h1>
-              {currentStep === 'swipe' && (
-                <span className="text-sm text-muted-foreground whitespace-nowrap">
-                  {currentCardIndex + 1}/{cards.length}
-                </span>
-              )}
-            </div>
-          </div>
-          {currentStep === 'result' && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleReset}
-              data-testid="button-reset"
-            >
-              <RotateCcw className="w-5 h-5" />
-            </Button>
-          )}
-        </div>
-        {currentStep === 'swipe' && (
-          <div className="mt-2">
-            <AdaptiveProgress 
-              value={(currentCardIndex / cards.length) * 100}
-              context="onboarding"
-              className="h-1.5"
-            />
-          </div>
-        )}
-      </div>
-
-      <div className="flex-1 px-4 py-6 overflow-y-auto">
-        <AnimatePresence mode="wait">
-          {currentStep === 'swipe' && (
-            <motion.div
-              key="swipe"
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="max-w-md mx-auto h-full"
-            >
-              <div className="mb-4">
-                <XiaoyueChatBubble
-                  content={xiaoyueMessage}
-                  pose="casual"
-                  horizontal
-                  animate
-                />
-              </div>
-
-              <SwipeGuidanceOverlay />
-
-              <SwipeCardStack
-                ref={swipeStackRef}
-                cards={cards}
-                onSwipe={handleSwipe}
-                onComplete={handleSwipeComplete}
-                onXiaoyueMessageChange={setXiaoyueMessage}
-                onProgressChange={(idx) => setCurrentCardIndex(idx)}
-              />
-            </motion.div>
-          )}
-
-          {currentStep === 'result' && (
-            <motion.div
-              key="result"
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="max-w-md mx-auto"
-            >
-              <InterestResultSummary
-                results={swipeResults}
-                onConfirm={handleConfirm}
-                onEdit={handleReset}
-                isLoading={saveMutation.isPending}
-                disabled={!canConfirm}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {currentStep === 'swipe' && (
-        <motion.div 
-          className="p-4 bg-gradient-to-t from-background via-background to-transparent"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
+    <AnimatePresence mode="wait">
+      {wizardStep === 1 && (
+        <motion.div
+          key="step1"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
         >
-          <Button
-            variant="ghost"
-            className="w-full text-muted-foreground"
-            onClick={handleSkip}
-            data-testid="button-skip"
-          >
-            暂时跳过，稍后补充
-          </Button>
+          <InterestCarousel
+            onComplete={handleInterestComplete}
+            onBack={handleBack}
+          />
         </motion.div>
       )}
-    </div>
+
+      {wizardStep === 2 && (
+        <motion.div
+          key="step2"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          className="min-h-screen bg-background flex flex-col"
+        >
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={handleBack}>
+                <ChevronLeft className="w-5 h-5" />
+              </Button>
+              <h1 className="text-lg font-medium">社交偏好</h1>
+            </div>
+          </div>
+
+          <div className="flex-1 px-4 py-6">
+            <div className="max-w-md mx-auto">
+              <p className="text-center text-muted-foreground">
+                社交偏好设置（可选）
+              </p>
+              {/* This step can be expanded later with social preference fields */}
+            </div>
+          </div>
+
+          <div className="shrink-0 border-t p-4 bg-background">
+            <Button
+              onClick={() => {
+                if (interestData) {
+                  setShowCelebration(true);
+                  setTimeout(() => {
+                    saveMutation.mutate(interestData);
+                  }, 1500);
+                }
+              }}
+              className="w-full"
+              disabled={saveMutation.isPending}
+              size="lg"
+            >
+              {saveMutation.isPending ? "保存中..." : "完成"}
+            </Button>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
