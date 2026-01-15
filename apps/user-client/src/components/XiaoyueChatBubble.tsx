@@ -15,7 +15,7 @@ const POSE_IMAGES: Record<XiaoyuePose, string> = {
   pointing: xiaoyuePointing,
 };
 
-const bubbleSurfaceClasses = "relative rounded-2xl bg-primary/10 dark:bg-primary/20 border-2 border-primary/20 dark:border-primary/30 shadow-lg shadow-primary/5";
+const bubbleSurfaceClasses = "relative rounded-2xl bg-gradient-to-br from-primary/8 via-primary/12 to-primary/8 dark:from-primary/15 dark:via-primary/25 dark:to-primary/15 border-2 border-primary/25 dark:border-primary/35 shadow-lg shadow-primary/10";
 
 interface XiaoyueChatBubbleProps {
   content: string;
@@ -159,12 +159,12 @@ export function XiaoyueChatBubble({
           transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
           className="relative shrink-0"
         >
-          <div className="w-16 h-16 relative">
+          <div className="w-12 h-12 relative">
             <motion.div
               animate={{ 
                 boxShadow: [
-                  "0 0 0 0 rgba(139, 92, 246, 0.4)",
-                  "0 0 0 12px rgba(139, 92, 246, 0)",
+                  "0 0 0 0 rgba(139, 92, 246, 0.3)",
+                  "0 0 0 8px rgba(139, 92, 246, 0)",
                 ]
               }}
               transition={{ 
