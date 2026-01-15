@@ -26,12 +26,16 @@ function SlotReelComponent({ visibleItems, state, highlightColor, intensity = 0 
   const isLanded = state === "landed";
   const isAnticipation = state === "anticipation";
 
-  // Calculate blur based on spin speed
-  const getBlurAmount = () => {
-    if (isSpinning) return 3;
-    if (isSlowing) return 1;
-    return 0;
+  // Mobile-optimized: use grayscale + opacity instead of blur (better performance)
+  const getMysteryStyle = () => {
+    if (isAnticipation) return { grayscale: 100, opacity: 0.3, scale: 0.85 };
+    if (isSpinning) return { grayscale: 80, opacity: 0.5, scale: 0.9 };
+    if (isSlowing) return { grayscale: 40, opacity: 0.7, scale: 0.95 };
+    if (isLanded) return { grayscale: 0, opacity: 1, scale: 1 };
+    return { grayscale: 100, opacity: 0.2, scale: 0.8 }; // idle - maximum mystery
   };
+  
+  const mysteryStyle = getMysteryStyle();
 
   return (
     <div 
@@ -114,13 +118,15 @@ function SlotReelComponent({ visibleItems, state, highlightColor, intensity = 0 
         </div>
       )}
 
-      {/* Reel items */}
+      {/* Reel items - mobile optimized with grayscale/opacity instead of blur */}
       <AnimatePresence mode="popLayout">
         <div 
           className="flex flex-col items-center justify-center h-full gap-1 py-3"
           style={{
-            filter: prefersReducedMotion ? 'none' : `blur(${getBlurAmount()}px)`,
-            transition: 'filter 0.2s ease-out',
+            filter: prefersReducedMotion ? 'none' : `grayscale(${mysteryStyle.grayscale}%)`,
+            opacity: prefersReducedMotion ? 1 : mysteryStyle.opacity,
+            transform: prefersReducedMotion ? 'none' : `scale(${mysteryStyle.scale})`,
+            transition: 'filter 0.3s ease-out, opacity 0.3s ease-out, transform 0.3s ease-out',
           }}
         >
           {visibleItems.map((name, idx) => {
