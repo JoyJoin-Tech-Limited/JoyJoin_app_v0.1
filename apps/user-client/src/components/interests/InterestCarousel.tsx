@@ -162,18 +162,25 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   // Update Xiaoyue message based on selection count
   useEffect(() => {
     let newMessage = XIAOYUE_MESSAGES[0];
+    let shouldShow = false;
+    
     if (totalSelections >= 10) {
       newMessage = XIAOYUE_MESSAGES[10];
+      shouldShow = totalSelections === 10; // Only show once at exactly 10
     } else if (totalSelections >= 7) {
       newMessage = XIAOYUE_MESSAGES[7];
+      shouldShow = totalSelections >= 7 && totalSelections < 10; // Show for range 7-9
     } else if (totalSelections >= 3) {
       newMessage = XIAOYUE_MESSAGES[3];
+      shouldShow = totalSelections >= 3 && totalSelections < 7; // Show for range 3-6
+    } else {
+      shouldShow = totalSelections === 0; // Only show at start
     }
     
     setXiaoyueMessage(newMessage);
     
-    // Show Xiaoyue at specific milestones (0, 3, 7, 10)
-    if ([0, 3, 7, 10].includes(totalSelections)) {
+    // Show Xiaoyue at milestone ranges with debouncing
+    if (shouldShow) {
       setShowXiaoyue(true);
       // Auto-hide after 3 seconds
       const timer = setTimeout(() => setShowXiaoyue(false), 3000);
@@ -292,7 +299,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
       <AnimatePresence>
         {showFirstTimeGuide && (
           <motion.div 
-            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -439,7 +446,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
       <AnimatePresence>
         {showXiaoyue && (
           <motion.div
-            className="fixed bottom-24 right-4 z-40 max-w-[280px]"
+            className="fixed bottom-24 right-4 z-30 max-w-[280px]"
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
@@ -464,14 +471,14 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
       </AnimatePresence>
 
       {/* Continue button - Duolingo style */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-background via-background to-transparent pt-6 pb-safe">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-background via-background to-transparent pt-6 pb-[env(safe-area-inset-bottom,1rem)]">
         <div className="px-4 pb-4">
           <Button
             onClick={handleContinue}
             disabled={!canContinue}
             className={cn(
               "w-full h-14 text-lg font-bold rounded-2xl shadow-lg",
-              "border-none transition-all duration-200",
+              "!border-0 transition-all duration-200",
               "disabled:opacity-50 disabled:cursor-not-allowed",
               canContinue 
                 ? "bg-primary text-primary-foreground hover:brightness-95" 
