@@ -20,8 +20,8 @@ interface ArchetypeSlotMachineProps {
 }
 
 const GOLD_STAR_COLOR = "#facc15";
-const MAX_PARTICLES = 60;
-const MAX_SPIN_MS = 4000;
+const MAX_PARTICLES = 40; // Reduced for mobile/WeChat mini program performance
+const MAX_SPIN_MS = 5500; // Extended to match new ~5s flow
 
 function ArchetypeSlotMachineComponent({ 
   finalArchetype, 
@@ -56,25 +56,25 @@ function ArchetypeSlotMachineComponent({
     };
   }, []);
 
-  // Generate explosion particles
+  // Generate explosion particles - mobile optimized with simpler shapes
   const createParticleExplosion = useCallback(() => {
     const newParticles: Particle[] = [];
+    // Use archetype color palette for cohesive look
+    const archetypePalette = [accentColor, GOLD_STAR_COLOR, "#f472b6"];
     
     for (let i = 0; i < MAX_PARTICLES; i++) {
       const rand = Math.random();
-      const type = rand < 0.5 ? 'star' : rand < 0.85 ? 'confetti' : 'spark';
-      const palette = type === 'star'
-        ? [GOLD_STAR_COLOR, GOLD_STAR_COLOR, accentColor]
-        : [...CELEBRATION_COLORS, accentColor];
-      const color = palette[Math.floor(Math.random() * palette.length)] || GOLD_STAR_COLOR;
+      // Simplified: mostly confetti circles for mobile performance
+      const type = rand < 0.3 ? 'star' : 'confetti';
+      const color = archetypePalette[Math.floor(Math.random() * archetypePalette.length)] || accentColor;
       newParticles.push({
         id: i,
-        x: 50 + (Math.random() - 0.5) * 20, // Center with spread
-        y: 40 + (Math.random() - 0.5) * 10,
+        x: 50 + (Math.random() - 0.5) * 15, // Tighter center spread
+        y: 40 + (Math.random() - 0.5) * 8,
         color,
-        size: type === 'spark' ? 4 : type === 'star' ? 14 : 8,
-        angle: (i / MAX_PARTICLES) * 360 + Math.random() * 30,
-        speed: 180 + Math.random() * 220,
+        size: type === 'star' ? 10 : 6, // Slightly smaller for mobile
+        angle: (i / MAX_PARTICLES) * 360 + Math.random() * 25,
+        speed: 140 + Math.random() * 160, // Reduced speed for mobile
         type,
       });
     }

@@ -167,7 +167,7 @@ export function useSlotMachine({
     updateState("slowing");
     slowStepRef.current = 0;
     
-    const totalSlowSteps = 12;
+    const totalSlowSteps = 10; // Slightly fewer steps for snappier mobile experience
     const slowStepCount = Math.max(1, totalSlowSteps);
     let idx = currentIndex;
     
@@ -234,8 +234,8 @@ export function useSlotMachine({
     hasLandedRef.current = false;
     slowingStartedRef.current = false;
     
-    const spinDuration = 2300; // 2.3 seconds of fast spin (adjusted for 6s total)
-    const spinInterval = 50; // Very fast
+    const spinDuration = 2800; // 2.8 seconds of spin (mobile-optimized for ~5s total)
+    const spinInterval = 80; // More deliberate, readable pacing for mobile
     
     intervalRef.current = setInterval(() => {
       if (!isMountedRef.current) return;
@@ -292,7 +292,7 @@ export function useSlotMachine({
     
     // Brief anticipation build
     let anticipationStep = 0;
-    const anticipationDuration = 800;
+    const anticipationDuration = 900; // Slightly longer build-up for mobile
     const anticipationInterval = 100;
     
     intervalRef.current = setInterval(() => {
