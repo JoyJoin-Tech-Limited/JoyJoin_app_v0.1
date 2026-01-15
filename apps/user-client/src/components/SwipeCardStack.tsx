@@ -613,7 +613,7 @@ export const SwipeCardStack = forwardRef<SwipeCardStackRef, SwipeCardStackProps>
       </div>
 
       {currentIndex < cards.length && (
-        <div className="mt-6 relative">
+        <div className="mt-6 relative pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background via-background to-transparent pointer-events-none" />
           <div className="relative flex justify-center items-center gap-5 pb-4">
             <Button

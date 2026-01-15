@@ -317,7 +317,7 @@ export default function ExtendedDataPage() {
 
       {currentStep === 'swipe' && (
         <motion.div 
-          className="p-4 bg-gradient-to-t from-background via-background to-transparent"
+          className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-background via-background to-transparent"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
