@@ -321,7 +321,7 @@ describe('Interest Carousel - Business Logic Constraints', () => {
   });
 
   it('should validate categoryId matches valid categories', () => {
-    const validCategories = ['career', 'philosophy', 'lifestyle', 'culture', 'city'];
+    const validCategories = ['career', 'philosophy', 'lifestyle', 'culture', 'city', 'tech'];
     
     for (const selection of validInterestData.selections) {
       expect(validCategories).toContain(selection.categoryId);
@@ -339,8 +339,8 @@ describe('Interest Carousel - Business Logic Constraints', () => {
 });
 
 describe('Interest Carousel - Edge Cases', () => {
-  it('should handle maximum realistic selection count (50 topics)', () => {
-    const maxSelections = Array.from({ length: 50 }, (_, i) => ({
+  it('should handle maximum realistic selection count (60 topics)', () => {
+    const maxSelections = Array.from({ length: 60 }, (_, i) => ({
       topicId: `topic_${i}`,
       emoji: '🎯',
       label: `Topic ${i}`,
@@ -352,9 +352,9 @@ describe('Interest Carousel - Edge Cases', () => {
     }));
 
     const data = {
-      totalHeat: 150,
-      totalSelections: 50,
-      categoryHeat: { career: 150 },
+      totalHeat: 180,
+      totalSelections: 60,
+      categoryHeat: { career: 180 },
       selections: maxSelections,
     };
 
