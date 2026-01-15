@@ -228,6 +228,8 @@ export const users = pgTable("users", {
 });
 
 // User Interests table - Carousel-based interest selection with heat tracking
+// NOTE: This table uses PostgreSQL-specific gen_random_uuid() function
+// The project is PostgreSQL-only (Neon database) so this is acceptable
 export const userInterests = pgTable("user_interests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),

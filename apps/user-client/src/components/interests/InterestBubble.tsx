@@ -57,15 +57,17 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
   const styles = getHeatStyles();
 
   // Haptic feedback simulation (if available)
-  const triggerHaptic = () => {
+  const triggerHaptic = (nextLevel: HeatLevel) => {
     if (typeof window !== "undefined" && "vibrate" in navigator) {
       const patterns = { 0: 0, 1: 10, 2: 20, 3: 30 };
-      navigator.vibrate(patterns[level] || 0);
+      navigator.vibrate(patterns[nextLevel] || 0);
     }
   };
 
   const handleTap = () => {
-    triggerHaptic();
+    const currentLevel = level;
+    const nextLevel = ((currentLevel + 1) % 4) as HeatLevel;
+    triggerHaptic(nextLevel);
     onTap();
   };
 

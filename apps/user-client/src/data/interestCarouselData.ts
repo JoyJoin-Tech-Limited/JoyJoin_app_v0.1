@@ -6,10 +6,17 @@
 
 export const HEAT_LEVELS = {
   0: { heat: 0, label: "未选择", color: "gray" },
-  1: { heat: 3, label: "有点感兴趣", color: "purple" },
-  2: { heat: 10, label: "很感兴趣", color: "pink" },
-  3: { heat: 25, label: "超级热爱", color: "orange" },
+  1: { heat: 3, label: "有点感兴趣", color: "purple" },    // Low interest - minimal heat
+  2: { heat: 10, label: "很感兴趣", color: "pink" },        // Medium interest - 3x multiplier
+  3: { heat: 25, label: "超级热爱", color: "orange" },      // High interest - 2.5x multiplier (total 8.3x from base)
 } as const;
+
+// Heat progression rationale:
+// - Level 1 (3 heat): Base value for showing interest
+// - Level 2 (10 heat): Stronger signal (3.3x), indicates deliberate selection
+// - Level 3 (25 heat): Maximum passion (2.5x from L2), reserved for top priorities
+// This creates a meaningful differentiation where a few level-3 selections
+// can outweigh many level-1 selections in matching algorithms
 
 export type HeatLevel = 0 | 1 | 2 | 3;
 
