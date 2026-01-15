@@ -1,5 +1,11 @@
 /**
- * SlotReel - ENHANCED with blur effects and dramatic landing
+ * SlotReel - ENHANCED with blur effects, dramatic landing, and smooth reveal
+ * 
+ * IMPROVEMENTS (2026-01-15):
+ * - Smoother scale transitions on landing with spring physics
+ * - Bouncy name reveal for Pokémon-style effect
+ * - Enhanced motion.img for fluid archetype reveal
+ * 
  * Larger display with motion blur during spin and celebratory landing
  */
 
@@ -161,7 +167,7 @@ function SlotReelComponent({ visibleItems, state, highlightColor, intensity = 0 
                   willChange: isActive ? "transform, opacity" : "auto",
                 }}
               >
-                {/* Glow behind center item on landing */}
+                {/* Glow behind center item on landing - ENHANCED with smooth reveal */}
                 {isCenter && isLanded && !prefersReducedMotion && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.5 }}
@@ -182,7 +188,7 @@ function SlotReelComponent({ visibleItems, state, highlightColor, intensity = 0 
                   />
                 )}
                 
-                <img
+                <motion.img
                   src={info.image}
                   alt={info.name}
                   className={cn(
@@ -194,6 +200,15 @@ function SlotReelComponent({ visibleItems, state, highlightColor, intensity = 0 
                       : "w-36 h-36 filter grayscale-[50%]",
                   )}
                   loading="eager"
+                  // ENHANCED: Smoother scaling on landing for Pokémon-style reveal
+                  animate={isCenter && isLanded ? {
+                    scale: [1, 1.15, 1.1],
+                  } : {}}
+                  transition={isCenter && isLanded ? {
+                    duration: 0.6,
+                    ease: [0.34, 1.56, 0.64, 1], // Bouncy easing
+                    times: [0, 0.6, 1],
+                  } : {}}
                   onLoad={(e) => {
                     console.log(`Image loaded: ${info.name}`, e.currentTarget.src);
                   }}
@@ -202,12 +217,18 @@ function SlotReelComponent({ visibleItems, state, highlightColor, intensity = 0 
                   }}
                 />
                 
-                {/* Show name on landing */}
+                {/* Show name on landing - ENHANCED with bounce-in effect */}
                 {isCenter && isLanded && (
                   <motion.span
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2, duration: 0.3 }}
+                    initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ 
+                      delay: 0.2, 
+                      duration: 0.4,
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 20
+                    }}
                     className="mt-1 text-sm font-semibold"
                     style={{ color: highlightColor }}
                   >
