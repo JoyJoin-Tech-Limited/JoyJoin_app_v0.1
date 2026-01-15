@@ -1,13 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import { CategoryPage } from "./CategoryPage";
-import { InterestProgress } from "./InterestProgress";
 import {
   INTEREST_CATEGORIES,
   HEAT_LEVELS,
@@ -64,6 +63,7 @@ const XIAOYUE_MESSAGES = {
 // localStorage keys
 const STORAGE_KEY = "joyjoin_interests_carousel_progress";
 const CYCLE_EXPLANATION_KEY = "joyjoin_seen_cycle_explanation";
+const HEAT_GUIDE_KEY = "joyjoin_seen_heat_guide";
 
 // localStorage expiry (7 days in milliseconds)
 const STORAGE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
@@ -81,6 +81,16 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const [selections, setSelections] = useState<Record<string, HeatLevel>>({});
   const [xiaoyueMessage, setXiaoyueMessage] = useState(XIAOYUE_MESSAGES[0]);
+  const [showFirstTimeGuide, setShowFirstTimeGuide] = useState(false);
+  const [showXiaoyue, setShowXiaoyue] = useState(true);
+
+  // Check for first-time guide on mount
+  useEffect(() => {
+    const hasSeenGuide = localStorage.getItem(HEAT_GUIDE_KEY);
+    if (!hasSeenGuide) {
+      setShowFirstTimeGuide(true);
+    }
+  }, []);
 
   // Load from localStorage on mount with expiry check
   useEffect(() => {
@@ -151,14 +161,30 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
 
   // Update Xiaoyue message based on selection count
   useEffect(() => {
+    let newMessage = XIAOYUE_MESSAGES[0];
+    let shouldShow = false;
+    
     if (totalSelections >= 10) {
-      setXiaoyueMessage(XIAOYUE_MESSAGES[10]);
+      newMessage = XIAOYUE_MESSAGES[10];
+      shouldShow = totalSelections === 10; // Only show once at exactly 10
     } else if (totalSelections >= 7) {
-      setXiaoyueMessage(XIAOYUE_MESSAGES[7]);
+      newMessage = XIAOYUE_MESSAGES[7];
+      shouldShow = totalSelections >= 7 && totalSelections < 10; // Show for range 7-9
     } else if (totalSelections >= 3) {
-      setXiaoyueMessage(XIAOYUE_MESSAGES[3]);
+      newMessage = XIAOYUE_MESSAGES[3];
+      shouldShow = totalSelections >= 3 && totalSelections < 7; // Show for range 3-6
     } else {
-      setXiaoyueMessage(XIAOYUE_MESSAGES[0]);
+      shouldShow = totalSelections === 0; // Only show at start
+    }
+    
+    setXiaoyueMessage(newMessage);
+    
+    // Show Xiaoyue at milestone ranges with debouncing
+    if (shouldShow) {
+      setShowXiaoyue(true);
+      // Auto-hide after 3 seconds
+      const timer = setTimeout(() => setShowXiaoyue(false), 3000);
+      return () => clearTimeout(timer);
     }
   }, [totalSelections]);
 
@@ -206,6 +232,13 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
     },
     [currentCategoryIndex]
   );
+
+  // Handle "next category" skip button
+  const handleSkipCategory = useCallback(() => {
+    if (currentCategoryIndex < INTEREST_CATEGORIES.length - 1) {
+      setCurrentCategoryIndex((prev) => prev + 1);
+    }
+  }, [currentCategoryIndex]);
 
   // Handle continue button
   const handleContinue = useCallback(() => {
@@ -262,58 +295,108 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* First-time guide tooltip */}
+      <AnimatePresence>
+        {showFirstTimeGuide && (
+          <motion.div 
+            className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div 
+              className="bg-background rounded-2xl p-6 max-w-sm"
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+            >
+              <h3 className="font-bold text-lg mb-3">💡 如何选择</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-purple-400 rounded-full"/>
+                  <span>点一下 = 有兴趣</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-pink-500 rounded-full"/>
+                  <span>点两下 = 很喜欢</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-orange-500 rounded-full"/>
+                  <span>点三下 = 很热爱</span>
+                </div>
+              </div>
+              <Button 
+                onClick={() => {
+                  setShowFirstTimeGuide(false);
+                  localStorage.setItem(HEAT_GUIDE_KEY, 'true');
+                }} 
+                className="w-full mt-4"
+              >
+                知道了
+              </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
-        <div className="flex items-center gap-3">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b">
+        <div className="flex items-center gap-3 px-4 py-2">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ChevronLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-lg font-medium">兴趣选择</h1>
+            <h1 className="text-base font-medium">兴趣选择</h1>
+          </div>
+          {/* Mini heat counter badge */}
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col items-center">
+              <motion.div
+                key={totalHeat}
+                className="text-lg font-bold text-orange-600"
+                initial={prefersReducedMotion ? {} : { scale: 1.2, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              >
+                {totalHeat}
+              </motion.div>
+              <div className="text-[10px] text-muted-foreground">热度</div>
+            </div>
+            <div className="flex flex-col items-center">
+              <motion.div
+                key={totalSelections}
+                className="text-lg font-bold text-purple-600"
+                initial={prefersReducedMotion ? {} : { scale: 1.2, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              >
+                {totalSelections}
+              </motion.div>
+              <div className="text-[10px] text-muted-foreground">已选</div>
+            </div>
           </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="mt-3">
-          <InterestProgress
-            totalHeat={totalHeat}
-            totalSelections={totalSelections}
-          />
-        </div>
-
-        {/* Category dots */}
-        <div className="flex justify-center gap-2 mt-3">
-          {INTEREST_CATEGORIES.map((category, index) => (
-            <button
-              key={category.id}
-              onClick={() => setCurrentCategoryIndex(index)}
-              className="touch-manipulation"
-            >
-              <motion.div
+        {/* Scrollable category tabs */}
+        <div className="overflow-x-auto scrollbar-hide px-4 pb-2">
+          <div className="flex gap-2 min-w-min">
+            {INTEREST_CATEGORIES.map((category, index) => (
+              <button
+                key={category.id}
+                onClick={() => setCurrentCategoryIndex(index)}
                 className={cn(
-                  "rounded-full transition-all",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full whitespace-nowrap text-sm transition-all touch-manipulation",
                   index === currentCategoryIndex
-                    ? "bg-primary h-2"
-                    : "bg-gray-300 h-2"
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "bg-muted/50 text-muted-foreground"
                 )}
-                animate={{
-                  width: index === currentCategoryIndex ? 48 : 8,
-                }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-              />
-            </button>
-          ))}
+              >
+                <span>{category.emoji}</span>
+                <span className="font-medium">{category.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
-
-      {/* Xiaoyue guidance */}
-      <div className="px-4 py-4">
-        <XiaoyueChatBubble
-          content={xiaoyueMessage.content}
-          pose={xiaoyueMessage.pose}
-          horizontal
-          animate
-        />
       </div>
 
       {/* Carousel */}
@@ -322,14 +405,17 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
           className="flex h-full"
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.2}
+          dragElastic={0.1}
           onDragEnd={handleDragEnd}
           animate={{ x: -currentCategoryIndex * 100 + "%" }}
           transition={
             prefersReducedMotion
               ? { duration: 0 }
-              : { type: "spring", stiffness: 300, damping: 30 }
+              : { type: "spring", stiffness: 400, damping: 35, mass: 0.8 }
           }
+          style={{ 
+            touchAction: 'pan-x' as const,
+          }}
         >
           {INTEREST_CATEGORIES.map((category) => (
             <div key={category.id} className="min-w-full h-full">
@@ -343,16 +429,65 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         </motion.div>
       </div>
 
-      {/* Continue button */}
-      <div className="shrink-0 border-t p-4 bg-background">
-        <Button
-          onClick={handleContinue}
-          className="w-full"
-          disabled={!canContinue}
-          size="lg"
-        >
-          继续 ({totalSelections}/3+)
-        </Button>
+      {/* Skip to next category button */}
+      {currentCategoryIndex < INTEREST_CATEGORIES.length - 1 && (
+        <div className="px-4 pb-2 text-center">
+          <button
+            onClick={handleSkipCategory}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1 group touch-manipulation"
+          >
+            <span>不感兴趣，下一类</span>
+            <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          </button>
+        </div>
+      )}
+
+      {/* Xiaoyue floating bubble (bottom-right) */}
+      <AnimatePresence>
+        {showXiaoyue && (
+          <motion.div
+            className="fixed bottom-24 right-4 z-30 max-w-[280px]"
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          >
+            <div className="relative">
+              <XiaoyueChatBubble
+                content={xiaoyueMessage.content}
+                pose={xiaoyueMessage.pose}
+                horizontal={false}
+                animate
+              />
+              <button
+                onClick={() => setShowXiaoyue(false)}
+                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Continue button - Duolingo style */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-background via-background to-transparent pt-6 pb-[env(safe-area-inset-bottom,1rem)]">
+        <div className="px-4 pb-4">
+          <Button
+            onClick={handleContinue}
+            disabled={!canContinue}
+            className={cn(
+              "w-full h-14 text-lg font-bold rounded-2xl shadow-lg",
+              "!border-0 transition-all duration-200",
+              "disabled:opacity-50 disabled:cursor-not-allowed",
+              canContinue 
+                ? "bg-primary text-primary-foreground hover:brightness-95" 
+                : "bg-muted"
+            )}
+          >
+            继续 {totalSelections >= 3 && `(${totalSelections} 个兴趣)`}
+          </Button>
+        </div>
       </div>
     </div>
   );
