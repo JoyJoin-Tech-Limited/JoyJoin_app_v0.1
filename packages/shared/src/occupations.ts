@@ -78,7 +78,7 @@ export const INDUSTRIES: Industry[] = [
 // 130+ 职业数据
 export const OCCUPATIONS: Occupation[] = [
   // ========== 科技互联网 (tech) ==========
-  { id: "software_engineer", displayName: "软件工程师", industryId: "tech", synonyms: ["程序员", "码农", "开发工程师", "研发工程师", "coder", "developer", "大厂", "互联网", "字节", "字节跳动", "ByteDance", "腾讯", "Tencent", "阿里", "阿里巴巴", "Alibaba", "百度", "Baidu", "美团", "Meituan", "京东", "JD", "拼多多", "PDD", "快手", "Kuaishou", "网易", "NetEase", "华为", "Huawei", "小米", "Xiaomi", "OPPO", "vivo", "荣耀", "Honor", "深信服", "迈瑞", "大疆", "DJI", "比亚迪", "BYD", "中兴", "ZTE", "TCL", "传音", "Transsion", "BAT", "TMD", "打工人", "社畜", "微软", "Microsoft", "谷歌", "Google", "亚马逊", "Amazon", "苹果", "Apple", "Meta", "Facebook"], keywords: ["编程", "代码", "开发", "大厂", "互联网"], hot: true, seedMappings: { category: "tech", segment: "software_dev", niche: "backend" } },
+  { id: "software_engineer", displayName: "软件工程师", industryId: "tech", synonyms: ["程序员", "码农", "开发工程师", "研发工程师", "coder", "developer", "software engineer", "大厂", "互联网", "字节", "字节跳动", "ByteDance", "腾讯", "Tencent", "阿里", "阿里巴巴", "Alibaba", "百度", "Baidu", "美团", "Meituan", "京东", "JD", "拼多多", "PDD", "快手", "Kuaishou", "网易", "NetEase", "华为", "Huawei", "小米", "Xiaomi", "OPPO", "vivo", "荣耀", "Honor", "深信服", "迈瑞", "大疆", "DJI", "比亚迪", "BYD", "中兴", "ZTE", "TCL", "传音", "Transsion", "BAT", "TMD", "打工人", "社畜", "微软", "Microsoft", "谷歌", "Google", "亚马逊", "Amazon", "苹果", "Apple", "Meta", "Facebook"], keywords: ["编程", "代码", "开发", "大厂", "互联网"], hot: true, seedMappings: { category: "tech", segment: "software_dev", niche: "backend" } },
   { id: "frontend_engineer", displayName: "前端工程师", industryId: "tech", synonyms: ["前端开发", "web开发", "H5开发", "React开发", "Vue开发", "大厂", "互联网"], keywords: ["网页", "界面", "前端"], hot: true, seedMappings: { category: "tech", segment: "software_dev", niche: "frontend" } },
   { id: "backend_engineer", displayName: "后端工程师", industryId: "tech", synonyms: ["后端开发", "服务端开发", "Java开发", "Python开发", "Go开发", "大厂", "互联网"], keywords: ["服务器", "接口", "后端"], hot: false, seedMappings: { category: "tech", segment: "software_dev", niche: "backend" } },
   { id: "fullstack_engineer", displayName: "全栈工程师", industryId: "tech", synonyms: ["全栈开发", "Full Stack", "前后端开发", "大厂"], keywords: ["全栈", "开发"], hot: true, seedMappings: { category: "tech", segment: "software_dev", niche: "fullstack" } },
@@ -193,8 +193,8 @@ export const OCCUPATIONS: Occupation[] = [
   { id: "podcast_host", displayName: "播客主理人", industryId: "media", synonyms: ["播客", "主播", "电台主持", "音频创作"], keywords: ["播客", "音频"], hot: false },
   
   // ========== 医疗健康 (medical) ==========
-  { id: "doctor", displayName: "医生", industryId: "medical", synonyms: ["医师", "主治医师", "专科医生", "全科医生", "大夫", "医护", "临床医生"], keywords: ["医生", "诊疗", "大夫", "看病"], hot: true },
-  { id: "nurse", displayName: "护士", industryId: "medical", synonyms: ["护理", "护理师", "ICU护士", "手术室护士", "护理人员", "白衣天使"], keywords: ["护士", "护理"], hot: true },
+  { id: "doctor", displayName: "医生", industryId: "medical", synonyms: ["医师", "主治医师", "专科医生", "全科医生", "大夫", "医护", "临床医生"], keywords: ["医生", "诊疗", "大夫", "看病"], hot: true, seedMappings: { category: "healthcare", segment: "medical_services", niche: "doctor" } },
+  { id: "nurse", displayName: "护士", industryId: "medical", synonyms: ["护理", "护理师", "ICU护士", "手术室护士", "护理人员", "白衣天使"], keywords: ["护士", "护理"], hot: true, seedMappings: { category: "healthcare", segment: "medical_services", niche: "nurse" } },
   { id: "pharmacist", displayName: "药剂师", industryId: "medical", synonyms: ["药师", "临床药师", "药房", "配药师"], keywords: ["药剂", "药房"], hot: false },
   { id: "therapist", displayName: "心理咨询师", industryId: "medical", synonyms: ["心理治疗师", "心理医生", "咨询师", "心理辅导", "心理咨询"], keywords: ["心理", "咨询", "情绪"], hot: true },
   { id: "nutritionist", displayName: "营养师", industryId: "medical", synonyms: ["营养咨询", "健康管理师", "饮食顾问", "营养顾问"], keywords: ["营养", "健康", "饮食"], hot: false },
@@ -204,7 +204,7 @@ export const OCCUPATIONS: Occupation[] = [
   { id: "pharma", displayName: "医药代表", industryId: "medical", synonyms: ["药代", "医药销售", "临床推广", "医药公司"], keywords: ["医药", "销售"], hot: false },
   
   // ========== 教育培训 (education) ==========
-  { id: "teacher", displayName: "教师", industryId: "education", synonyms: ["老师", "教员", "班主任", "学科老师", "中小学老师"], keywords: ["教学", "学校"], hot: true },
+  { id: "teacher", displayName: "教师", industryId: "education", synonyms: ["老师", "教员", "班主任", "学科老师", "中小学老师"], keywords: ["教学", "学校"], hot: true, seedMappings: { category: "education", segment: "k12", niche: "teacher" } },
   { id: "trainer", displayName: "培训讲师", industryId: "education", synonyms: ["企业培训", "讲师", "内训师", "培训师", "职业讲师", "企业教练"], keywords: ["培训", "讲课", "授课"], hot: true },
   { id: "tutor", displayName: "课外辅导", industryId: "education", synonyms: ["家教", "补习老师", "一对一", "课后辅导"], keywords: ["辅导", "家教"], hot: false },
   { id: "education_consultant", displayName: "教育顾问", industryId: "education", synonyms: ["留学顾问", "升学顾问", "课程顾问", "留学中介"], keywords: ["咨询", "升学", "留学"], hot: true },
@@ -241,7 +241,7 @@ export const OCCUPATIONS: Occupation[] = [
   { id: "barista", displayName: "咖啡师", industryId: "lifestyle", synonyms: ["咖啡", "咖啡店员", "手冲咖啡", "咖啡调配师"], keywords: ["咖啡", "饮品"], hot: true },
   { id: "bartender", displayName: "调酒师", industryId: "lifestyle", synonyms: ["酒保", "鸡尾酒", "酒吧", "Mixologist"], keywords: ["调酒", "酒吧"], hot: true },
   { id: "tea_master", displayName: "茶艺师", industryId: "lifestyle", synonyms: ["茶艺", "茶道", "品茶师", "茶馆"], keywords: ["茶艺", "茶道"], hot: false },
-  { id: "chef", displayName: "厨师", industryId: "lifestyle", synonyms: ["主厨", "西餐厨师", "中餐厨师", "日料师傅"], keywords: ["烹饪", "美食"], hot: true },
+  { id: "chef", displayName: "厨师", industryId: "lifestyle", synonyms: ["主厨", "西餐厨师", "中餐厨师", "日料师傅"], keywords: ["烹饪", "美食"], hot: true, seedMappings: { category: "consumer_retail", segment: "food_service", niche: "chef" } },
   { id: "pastry_chef", displayName: "甜点师", industryId: "lifestyle", synonyms: ["烘焙师", "蛋糕师", "西点师", "面包师"], keywords: ["甜点", "烘焙"], hot: true },
   { id: "sommelier", displayName: "侍酒师", industryId: "lifestyle", synonyms: ["品酒师", "葡萄酒顾问", "红酒鉴赏"], keywords: ["红酒", "葡萄酒"], hot: false },
   { id: "beautician", displayName: "美容师", industryId: "lifestyle", synonyms: ["美容顾问", "皮肤管理", "美容美体", "美容院"], keywords: ["美容", "护肤"], hot: true },
