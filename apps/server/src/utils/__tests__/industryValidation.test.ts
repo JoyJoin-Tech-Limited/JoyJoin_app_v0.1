@@ -126,7 +126,7 @@ describe('industryValidation', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(IndustryValidationError);
         expect((error as IndustryValidationError).field).toBe('segment');
-        expect(error.message).toContain('segment');
+        expect((error as IndustryValidationError).message).toContain('segment');
       }
     });
   });
