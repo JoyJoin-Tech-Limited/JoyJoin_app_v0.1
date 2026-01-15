@@ -407,9 +407,8 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
               : { type: "spring", stiffness: 400, damping: 35, mass: 0.8 }
           }
           style={{ 
-            touchAction: 'pan-x',
-            WebkitOverflowScrolling: 'touch'
-          } as any}
+            touchAction: 'pan-x' as const,
+          }}
         >
           {INTEREST_CATEGORIES.map((category) => (
             <div key={category.id} className="min-w-full h-full">
