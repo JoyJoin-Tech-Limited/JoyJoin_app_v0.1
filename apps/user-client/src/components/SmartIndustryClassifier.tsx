@@ -78,6 +78,7 @@ export function SmartIndustryClassifier({
   const [showConfetti, setShowConfetti] = useState(false);
   const [particles, setParticles] = useState<Particle[]>([]);
   const [celebrationTimeoutId, setCelebrationTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [isComposing, setIsComposing] = useState(false); // IME composition state
 
   const { mutate: classifyIndustry, isPending } = useMutation({
     mutationFn: async (description: string) => {
@@ -97,15 +98,27 @@ export function SmartIndustryClassifier({
     },
   });
 
+  // IME composition event handlers
+  const handleCompositionStart = () => {
+    setIsComposing(true);
+  };
+
+  const handleCompositionEnd = () => {
+    setIsComposing(false);
+  };
+
   useEffect(() => {
-    if (!text?.trim()) {
-      setResult(null);
-      setIsConfirmed(false);
+    if (!text?.trim() || isComposing) {
+      // Don't trigger classification during IME composition
+      if (!text?.trim()) {
+        setResult(null);
+        setIsConfirmed(false);
+      }
       return;
     }
     const handle = setTimeout(() => classifyIndustry(text.trim()), debounceMs);
     return () => clearTimeout(handle);
-  }, [text, debounceMs, classifyIndustry]);
+  }, [text, isComposing, debounceMs, classifyIndustry]);
 
   const handleConfirm = () => {
     if (!result) return;
@@ -200,6 +213,8 @@ export function SmartIndustryClassifier({
           <Input
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
             placeholder={placeholder}
             inputMode="text"
             className="h-14 text-lg rounded-2xl pr-12"
