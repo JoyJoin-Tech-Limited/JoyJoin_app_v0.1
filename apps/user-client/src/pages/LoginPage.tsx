@@ -472,8 +472,7 @@ export default function LoginPage() {
 
       {/* P1-1: FAQ Quick Entry - 社恐安心提示 */}
       <div className="px-4 pb-4" data-testid="section-faq-quick">
-        <a 
-          href="#faq-section"
+        <a href="#faq-section"
           className="block max-w-lg mx-auto"
           onClick={(e) => {
             e.preventDefault();
