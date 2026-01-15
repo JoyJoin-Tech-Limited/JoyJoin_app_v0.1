@@ -115,6 +115,7 @@ export const users = pgTable("users", {
   hasCompletedInterestsTopics: boolean("has_completed_interests_topics").default(false),
   hasCompletedPersonalityTest: boolean("has_completed_personality_test").default(false),
   hasSeenGuide: boolean("has_seen_guide").default(false), // Guide page viewed, persisted server-side
+  hasCompletedInterestsCarousel: boolean("has_completed_interests_carousel").default(false), // New carousel-based interest selection
   
   // Interests & Topics (Step 2)
   interestsTop: text("interests_top").array(), // 3-7 selected interests
@@ -225,6 +226,33 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// User Interests table - Carousel-based interest selection with heat tracking
+export const userInterests = pgTable("user_interests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Aggregated metrics
+  totalHeat: integer("total_heat").notNull().default(0), // Sum of all heat values
+  totalSelections: integer("total_selections").notNull().default(0), // Count of selected topics
+  
+  // Category-level heat distribution
+  categoryHeat: jsonb("category_heat").notNull().default('{}'), 
+  // { "career": 35, "philosophy": 28, "lifestyle": 32, "culture": 18, "city": 14 }
+  
+  // Individual topic selections with metadata
+  selections: jsonb("selections").notNull().default('[]'),
+  // [{ topicId, emoji, label, fullName, category, categoryId, level, heat }]
+  
+  // Top priorities (level 3 items only)
+  topPriorities: jsonb("top_priorities"),
+  // [{ topicId, label, heat }]
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_user_interests_user_id").on(table.userId),
+]);
 
 // Events table
 export const events = pgTable("events", {
