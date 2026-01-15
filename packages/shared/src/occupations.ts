@@ -162,7 +162,7 @@ export const OCCUPATIONS: Occupation[] = [
   
   // ========== 创意设计 (creative) ==========
   { id: "graphic_designer", displayName: "平面设计师", industryId: "creative", synonyms: ["视觉设计", "美工", "设计师", "品牌设计"], keywords: ["设计", "视觉"], hot: true },
-  { id: "illustrator", displayName: "插画师", industryId: "creative", synonyms: ["插画", "原画师", "画师", "绘画", "概念设计师"], keywords: ["插画", "绘画"], hot: true },
+  { id: "illustrator", displayName: "插画师", industryId: "creative", synonyms: ["插画", "原画师", "画师", "绘画", "概念设计师"], keywords: ["插画", "绘画"], hot: true, seedMappings: { category: "media_creative", segment: "marketing" } },
   { id: "3d_artist", displayName: "3D设计师", industryId: "creative", synonyms: ["三维设计", "3D建模", "C4D设计师", "Blender"], keywords: ["3D", "建模"], hot: true },
   { id: "game_designer", displayName: "游戏设计师", industryId: "creative", synonyms: ["游戏策划", "关卡设计", "数值策划", "游戏开发"], keywords: ["游戏", "策划"], hot: true },
   { id: "game_artist", displayName: "游戏美术", industryId: "creative", synonyms: ["游戏原画", "游戏UI", "角色设计", "场景设计"], keywords: ["游戏", "美术"], hot: false },

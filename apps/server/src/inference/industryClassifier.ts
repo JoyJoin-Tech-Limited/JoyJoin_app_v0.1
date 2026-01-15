@@ -12,6 +12,8 @@ import { matchSeed, type SeedMatch } from "./industrySeedMap";
 import { fuzzyMatch } from "./fuzzyMatcher";
 import { INDUSTRY_TAXONOMY, findCategoryById, findSegmentById, findNicheById } from "@shared/industryTaxonomy";
 import { OCCUPATIONS } from "@shared/occupations";
+import { ensureReasoning } from "./reasoningGenerator";
+import { inferNicheFromContext } from "./nicheInferenceEngine";
 
 export interface IndustryClassificationResult {
   category: {
@@ -56,7 +58,7 @@ function matchViaSeed(userInput: string): IndustryClassificationResult | null {
     }
   }
   
-  return {
+  const result: IndustryClassificationResult = {
     category: { id: category.id, label: category.label },
     segment: { id: segment.id, label: segment.label },
     niche,
@@ -66,6 +68,17 @@ function matchViaSeed(userInput: string): IndustryClassificationResult | null {
     rawInput: userInput,
     normalizedInput: userInput,
   };
+  
+  // Apply niche inference if no niche found
+  if (!result.niche) {
+    const inferredNiche = inferNicheFromContext(userInput, category.id, segment.id);
+    if (inferredNiche && inferredNiche.confidence >= 0.85) {
+      result.niche = { id: inferredNiche.id, label: inferredNiche.label };
+    }
+  }
+  
+  // Ensure reasoning is always present
+  return ensureReasoning(result, userInput);
 }
 
 /**
@@ -194,7 +207,7 @@ function matchViaTaxonomy(userInput: string): IndustryClassificationResult | nul
   allMatches.sort((a, b) => b.matchPriority - a.matchPriority);
   const match = allMatches[0];
   
-  return {
+  const result: IndustryClassificationResult = {
     category: { id: match.categoryId, label: match.categoryLabel },
     segment: { id: match.segmentId, label: match.segmentLabel },
     niche: match.nicheId ? { id: match.nicheId, label: match.nicheLabel! } : undefined,
@@ -205,6 +218,17 @@ function matchViaTaxonomy(userInput: string): IndustryClassificationResult | nul
     rawInput: userInput,
     normalizedInput: userInput,
   };
+  
+  // Apply niche inference if no niche found
+  if (!result.niche) {
+    const inferredNiche = inferNicheFromContext(userInput, match.categoryId, match.segmentId);
+    if (inferredNiche && inferredNiche.confidence >= 0.85) {
+      result.niche = { id: inferredNiche.id, label: inferredNiche.label };
+    }
+  }
+  
+  // Ensure reasoning is always present
+  return ensureReasoning(result, userInput);
 }
 
 /**
@@ -276,7 +300,15 @@ ${categoryList}
       }
     }
     
-    return {
+    // Apply niche inference if no niche found
+    if (!niche) {
+      const inferredNiche = inferNicheFromContext(userInput, category.id, segment.id);
+      if (inferredNiche && inferredNiche.confidence >= 0.80) {
+        niche = { id: inferredNiche.id, label: inferredNiche.label };
+      }
+    }
+    
+    const result: IndustryClassificationResult = {
       category: { id: category.id, label: aiResult.categoryLabel || category.label },
       segment: { id: segment.id, label: aiResult.segmentLabel || segment.label },
       niche,
@@ -287,6 +319,9 @@ ${categoryList}
       rawInput: userInput,
       normalizedInput: userInput,
     };
+    
+    // Ensure reasoning is always present
+    return ensureReasoning(result, userInput);
   } catch (error) {
     console.error("AI classification error:", error);
     return null;
@@ -357,7 +392,7 @@ function intelligentFallback(userInput: string, startTime: number): IndustryClas
       const segment = category ? findSegmentById(best.seedMappings.category, best.seedMappings.segment) : null;
       
       if (category && segment) {
-        return {
+        const result: IndustryClassificationResult = {
           category: { id: category.id, label: category.label },
           segment: { id: segment.id, label: segment.label },
           confidence: Math.min(0.5, top3[0].score / 50),
@@ -367,6 +402,9 @@ function intelligentFallback(userInput: string, startTime: number): IndustryClas
           rawInput: userInput,
           normalizedInput: userInput,
         };
+        
+        // Ensure reasoning is always present
+        return ensureReasoning(result, userInput);
       }
     }
   }
@@ -376,7 +414,7 @@ function intelligentFallback(userInput: string, startTime: number): IndustryClas
   const otherCategory = INDUSTRY_TAXONOMY.find(c => c.id === "other" || c.id.includes("other")) || INDUSTRY_TAXONOMY[INDUSTRY_TAXONOMY.length - 1];
   const otherSegment = otherCategory.segments[0];
   
-  return {
+  const result: IndustryClassificationResult = {
     category: { id: otherCategory.id, label: otherCategory.label },
     segment: { id: otherSegment.id, label: otherSegment.label },
     confidence: 0.1,
@@ -386,6 +424,9 @@ function intelligentFallback(userInput: string, startTime: number): IndustryClas
     rawInput: userInput,
     normalizedInput: userInput,
   };
+  
+  // Ensure reasoning is always present
+  return ensureReasoning(result, userInput);
 }
 
 /**
