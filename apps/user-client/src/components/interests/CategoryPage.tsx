@@ -17,7 +17,7 @@ export function CategoryPage({ category, selections, onTopicTap }: CategoryPageP
       </div>
 
       {/* 2x5 grid layout */}
-      <div className="grid grid-cols-2 gap-3 flex-1 content-start">
+      <div className="grid grid-cols-2 gap-2.5 flex-1 content-start">
         {category.topics.map((topic) => (
           <InterestBubble
             key={topic.id}
