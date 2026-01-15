@@ -2175,7 +2175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const topPrioritySchema = z.object({
     topicId: z.string(),
     label: z.string(),
-    heat: z.number().int().min(25).max(25), // Level 3 only
+    heat: z.literal(25), // Level 3 only has heat value of 25
   });
 
   const userInterestsDataSchema = z.object({

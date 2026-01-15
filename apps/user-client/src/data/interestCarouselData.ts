@@ -20,6 +20,13 @@ export const HEAT_LEVELS = {
 
 export type HeatLevel = 0 | 1 | 2 | 3;
 
+/**
+ * Type guard to validate if a number is a valid HeatLevel
+ */
+export function isValidHeatLevel(value: number): value is HeatLevel {
+  return value === 0 || value === 1 || value === 2 || value === 3;
+}
+
 export interface InterestTopic {
   id: string;
   emoji: string;
