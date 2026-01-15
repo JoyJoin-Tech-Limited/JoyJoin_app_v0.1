@@ -136,13 +136,27 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   }, [totalSelections]);
 
   // Handle topic tap - cycle through levels 0 → 1 → 2 → 3 → 0
+  // Show toast on first level 3 → 0 cycle to explain behavior
   const handleTopicTap = useCallback((topicId: string) => {
     setSelections((prev) => {
       const currentLevel = prev[topicId] || 0;
       const nextLevel = ((currentLevel + 1) % 4) as HeatLevel;
+      
+      // Show explanation when cycling from max (3) back to unselected (0)
+      if (currentLevel === 3 && nextLevel === 0) {
+        const hasSeenCycleExplanation = localStorage.getItem('joyjoin_seen_cycle_explanation');
+        if (!hasSeenCycleExplanation) {
+          toast({
+            title: "提示",
+            description: "再次点击可以取消选择哦",
+          });
+          localStorage.setItem('joyjoin_seen_cycle_explanation', 'true');
+        }
+      }
+      
       return { ...prev, [topicId]: nextLevel };
     });
-  }, []);
+  }, [toast]);
 
   // Handle horizontal swipe
   const handleDragEnd = useCallback(

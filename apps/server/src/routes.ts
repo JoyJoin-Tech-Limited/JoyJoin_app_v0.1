@@ -2165,15 +2165,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.session.userId;
       const { interests } = req.body;
 
-      if (!interests || typeof interests !== 'object') {
-        return res.status(400).json({ error: "Invalid interests data" });
+      // Validate interests is a proper object (not array, not null)
+      if (typeof interests !== 'object' || Array.isArray(interests) || interests === null) {
+        return res.status(400).json({ error: "Invalid interests data - must be an object" });
       }
 
       const { totalHeat, totalSelections, categoryHeat, selections, topPriorities } = interests;
 
-      // Validate required fields
-      if (typeof totalHeat !== 'number' || typeof totalSelections !== 'number') {
-        return res.status(400).json({ error: "Invalid heat or selection count" });
+      // Validate required fields are non-negative integers
+      if (!Number.isInteger(totalHeat) || totalHeat < 0 || 
+          !Number.isInteger(totalSelections) || totalSelections < 0) {
+        return res.status(400).json({ error: "Invalid heat or selection count - must be non-negative integers" });
       }
 
       if (totalSelections < 3) {
