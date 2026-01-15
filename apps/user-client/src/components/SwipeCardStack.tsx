@@ -1,7 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useImperativeHandle, forwardRef } from "react";
 import { motion, useAnimation, PanInfo } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Heart, X, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { SwipeParticles } from "./SwipeParticles";
 import { 
   InterestCard, 
@@ -12,12 +13,18 @@ import {
   INTEREST_CARDS,
 } from "@/data/interestCardsData";
 
+export interface SwipeCardStackRef {
+  triggerSwipe: (choice: SwipeChoice) => Promise<void>;
+}
+
 interface SwipeCardStackProps {
   cards: InterestCard[];
   onSwipe: (result: SwipeResult) => void;
   onComplete: (results: SwipeResult[]) => void;
   xiaoyueMessage?: string;
   onXiaoyueMessageChange?: (message: string) => void;
+  onProgressChange?: (currentIndex: number, total: number) => void;
+  hideProgress?: boolean;
 }
 
 const SWIPE_THRESHOLD_X = 120;
@@ -113,6 +120,10 @@ function getSmartXiaoyueMessage(
   return null;
 }
 
+export interface SwipeCardRef {
+  triggerSwipeAnimation: (choice: SwipeChoice) => Promise<void>;
+}
+
 interface SwipeCardProps {
   card: InterestCard;
   isTop: boolean;
@@ -122,14 +133,14 @@ interface SwipeCardProps {
   totalVisible?: number;
 }
 
-function SwipeCard({
+const SwipeCard = forwardRef<SwipeCardRef, SwipeCardProps>(({
   card,
   isTop,
   onSwipe,
   cardStartTime,
   stackIndex = 0,
   totalVisible = 1,
-}: SwipeCardProps) {
+}, cardRef) => {
   const controls = useAnimation();
   const [dragDirection, setDragDirection] = useState<'left' | 'right' | 'up' | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -238,6 +249,31 @@ function SwipeCard({
       dragRafRef.current = null;
     });
   }, []);
+
+  const triggerSwipeAnimation = useCallback(async (choice: SwipeChoice) => {
+    if (isAnimating) return;
+    setIsAnimating(true);
+    
+    if (choice === 'love') {
+      setDragDirection('up');
+      setShowParticles(true);
+      particleTimeoutRef.current = window.setTimeout(() => setShowParticles(false), 1000);
+      await controls.start({ y: -500, opacity: 0, scale: 0.8, transition: { duration: 0.25 } });
+    } else if (choice === 'like') {
+      setDragDirection('right');
+      await controls.start({ x: 500, opacity: 0, rotate: 15, transition: { duration: 0.25 } });
+    } else {
+      setDragDirection('left');
+      await controls.start({ x: -500, opacity: 0, rotate: -15, transition: { duration: 0.25 } });
+    }
+    
+    setDragDirection(null);
+    setIsAnimating(false);
+  }, [controls, isAnimating]);
+
+  useImperativeHandle(cardRef, () => ({
+    triggerSwipeAnimation,
+  }), [triggerSwipeAnimation]);
 
   return (
     <motion.div
@@ -390,24 +426,42 @@ function SwipeCard({
       </div>
     </motion.div>
   );
-}
+});
 
-export function SwipeCardStack({
+SwipeCard.displayName = "SwipeCard";
+
+export const SwipeCardStack = forwardRef<SwipeCardStackRef, SwipeCardStackProps>(({
   cards,
   onSwipe,
   onComplete,
   onXiaoyueMessageChange,
-}: SwipeCardStackProps) {
+  onProgressChange,
+  hideProgress = false,
+}, ref) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<SwipeResult[]>([]);
   const [categoryTracker, setCategoryTracker] = useState<CategoryTracker>(initCategoryTracker);
+  const [isButtonAnimating, setIsButtonAnimating] = useState(false);
   const cardStartTimeRef = useRef(Date.now());
   const likeStreakRef = useRef(0);
   const skipStreakRef = useRef(0);
+  const topCardRef = useRef<SwipeCardRef>(null);
 
   useEffect(() => {
     cardStartTimeRef.current = Date.now();
   }, [currentIndex]);
+
+  useEffect(() => {
+    setCurrentIndex(0);
+    setResults([]);
+    setCategoryTracker(initCategoryTracker);
+    likeStreakRef.current = 0;
+    skipStreakRef.current = 0;
+  }, [cards]);
+
+  useEffect(() => {
+    onProgressChange?.(currentIndex, cards.length);
+  }, [currentIndex, cards.length, onProgressChange]);
 
   useEffect(() => {
     onXiaoyueMessageChange?.("滑动告诉我你喜欢什么吧～");
@@ -511,44 +565,34 @@ export function SwipeCardStack({
   );
 
   const handleButtonSwipe = useCallback(
-    (choice: SwipeChoice) => {
+    async (choice: SwipeChoice) => {
+      if (isButtonAnimating) return;
+      setIsButtonAnimating(true);
       const reactionTime = Date.now() - cardStartTimeRef.current;
+      if (topCardRef.current) {
+        await topCardRef.current.triggerSwipeAnimation(choice);
+      }
       handleSwipe(choice, reactionTime);
+      setIsButtonAnimating(false);
     },
-    [handleSwipe]
+    [handleSwipe, isButtonAnimating]
   );
 
-  const progress = (currentIndex / cards.length) * 100;
+  useImperativeHandle(ref, () => ({
+    triggerSwipe: handleButtonSwipe,
+  }), [handleButtonSwipe]);
+
   const visibleCards = cards.slice(currentIndex, currentIndex + 2);
 
   return (
     <div className="flex flex-col h-full">
-      <div className="mb-5">
-        <div className="flex items-center justify-between text-base font-medium text-muted-foreground mb-3">
-          <span className="text-foreground">
-            {currentIndex < cards.length 
-              ? `第 ${currentIndex + 1} 张 / 共 ${cards.length} 张`
-              : `全部完成！`
-            }
-          </span>
-          <span className="text-primary font-semibold">{Math.round(progress)}%</span>
-        </div>
-        <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-gradient-to-r from-purple-500 via-purple-400 to-pink-500 rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-          />
-        </div>
-      </div>
-
-      <div className="relative flex-1 min-h-[400px] flex items-center justify-center">
+      <div className="relative flex-1 min-h-[380px] flex items-center justify-center">
         <div className="relative aspect-[3/4] w-full max-w-[300px]" style={{ perspective: "1000px" }}>
           {visibleCards.length > 0 ? (
             visibleCards.map((card, idx) => (
               <SwipeCard
                 key={card.id}
+                ref={idx === 0 ? topCardRef : undefined}
                 card={card}
                 isTop={idx === 0}
                 onSwipe={handleSwipe}
@@ -569,45 +613,48 @@ export function SwipeCardStack({
       </div>
 
       {currentIndex < cards.length && (
-        <div className="mt-6 flex justify-center">
-          <div className="flex items-center gap-6 px-8 py-4 rounded-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200/80 dark:border-gray-700/80 shadow-2xl max-w-[340px]">
-            <motion.button
-              whileTap={{ scale: 0.85 }}
-              whileHover={{ scale: 1.1 }}
+        <div className="mt-4 flex justify-center">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="secondary"
+              size="icon"
               onClick={() => handleButtonSwipe('skip')}
-              className="w-14 h-14 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center shadow-lg transition-all hover:shadow-xl"
+              disabled={isButtonAnimating}
               data-testid="button-skip-card"
               aria-label="跳过此兴趣卡片"
             >
-              <X className="w-7 h-7 text-gray-500 dark:text-gray-400" strokeWidth={2.5} />
-            </motion.button>
+              <X className="w-5 h-5" strokeWidth={2} />
+            </Button>
 
-            <motion.button
-              whileTap={{ scale: 0.88 }}
-              whileHover={{ scale: 1.08 }}
+            <Button
+              variant="default"
+              size="icon"
               onClick={() => handleButtonSwipe('love')}
-              className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-[0_8px_30px_rgba(236,72,153,0.4)] hover:shadow-[0_8px_40px_rgba(236,72,153,0.6)] transition-all"
+              disabled={isButtonAnimating}
               data-testid="button-love-card"
               aria-label="超爱此兴趣卡片"
             >
-              <Sparkles className="w-8 h-8 text-white fill-white" strokeWidth={2.5} />
-            </motion.button>
+              <Sparkles className="w-5 h-5" strokeWidth={2} />
+            </Button>
 
-            <motion.button
-              whileTap={{ scale: 0.85 }}
-              whileHover={{ scale: 1.1 }}
+            <Button
+              variant="secondary"
+              size="icon"
+              className="bg-emerald-500 dark:bg-emerald-600 text-white border-emerald-600 dark:border-emerald-500"
               onClick={() => handleButtonSwipe('like')}
-              className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 border-2 border-emerald-300 dark:border-emerald-700 flex items-center justify-center shadow-lg hover:shadow-xl transition-all"
+              disabled={isButtonAnimating}
               data-testid="button-like-card"
               aria-label="喜欢此兴趣卡片"
             >
-              <Heart className="w-7 h-7 text-white fill-white" strokeWidth={2.5} />
-            </motion.button>
+              <Heart className="w-5 h-5" strokeWidth={2} />
+            </Button>
           </div>
         </div>
       )}
     </div>
   );
-}
+});
+
+SwipeCardStack.displayName = "SwipeCardStack";
 
 export default SwipeCardStack;

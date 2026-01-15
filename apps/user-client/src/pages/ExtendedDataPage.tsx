@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,10 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
-import { SwipeCardStack } from "@/components/SwipeCardStack";
+import { SwipeCardStack, SwipeCardStackRef } from "@/components/SwipeCardStack";
 import { SwipeGuidanceOverlay } from "@/components/SwipeGuidanceOverlay";
 import { InterestResultSummary } from "@/components/InterestResultSummary";
+import { AdaptiveProgress } from "@/components/ui/progress-adaptive";
 import { 
   INTEREST_CARDS, 
   getSmartCardSelection, 
@@ -40,12 +41,14 @@ export default function ExtendedDataPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
+  const swipeStackRef = useRef<SwipeCardStackRef>(null);
 
   const [currentStep, setCurrentStep] = useState<Step>('swipe');
   const [swipeResults, setSwipeResults] = useState<SwipeResult[]>([]);
   const [xiaoyueMessage, setXiaoyueMessage] = useState("滑动告诉我你喜欢什么吧～");
   const [showCelebration, setShowCelebration] = useState(false);
   const [cards, setCards] = useState(() => getSmartCardSelection(INTEREST_CARDS, 18));
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
 
   useEffect(() => {
     const cached = localStorage.getItem(EXTENDED_CACHE_KEY);
@@ -179,6 +182,7 @@ export default function ExtendedDataPage() {
     setCurrentStep('swipe');
     setXiaoyueMessage("滑动告诉我你喜欢什么吧～");
     setCards(getSmartCardSelection(INTEREST_CARDS, 18));
+    setCurrentCardIndex(0);
   }, []);
 
   const canConfirm = swipeResults.length > 0 && 
@@ -215,7 +219,7 @@ export default function ExtendedDataPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-4">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
         <div className="flex items-center gap-3">
           <Button 
             variant="ghost" 
@@ -223,12 +227,19 @@ export default function ExtendedDataPage() {
             onClick={handleBack}
             data-testid="button-back"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ChevronLeft className="w-5 h-5" />
           </Button>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold">
-              {currentStep === 'swipe' ? '发现你的兴趣' : '你的兴趣画像'}
-            </h1>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-2">
+              <h1 className="text-lg font-medium truncate">
+                {currentStep === 'swipe' ? '发现你的兴趣' : '你的兴趣画像'}
+              </h1>
+              {currentStep === 'swipe' && (
+                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                  {currentCardIndex + 1}/{cards.length}
+                </span>
+              )}
+            </div>
           </div>
           {currentStep === 'result' && (
             <Button
@@ -241,6 +252,15 @@ export default function ExtendedDataPage() {
             </Button>
           )}
         </div>
+        {currentStep === 'swipe' && (
+          <div className="mt-2">
+            <AdaptiveProgress 
+              value={(currentCardIndex / cards.length) * 100}
+              context="onboarding"
+              className="h-1.5"
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex-1 px-4 py-6 overflow-y-auto">
@@ -266,10 +286,12 @@ export default function ExtendedDataPage() {
               <SwipeGuidanceOverlay />
 
               <SwipeCardStack
+                ref={swipeStackRef}
                 cards={cards}
                 onSwipe={handleSwipe}
                 onComplete={handleSwipeComplete}
                 onXiaoyueMessageChange={setXiaoyueMessage}
+                onProgressChange={(idx) => setCurrentCardIndex(idx)}
               />
             </motion.div>
           )}
