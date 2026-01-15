@@ -15,6 +15,16 @@ import { OCCUPATIONS } from "@shared/occupations";
 import { ensureReasoning } from "./reasoningGenerator";
 import { inferNicheFromContext } from "./nicheInferenceEngine";
 
+// Confidence thresholds for classification tiers
+const CONFIDENCE_THRESHOLDS = {
+  FUZZY_HIGH: 0.85,      // High confidence fuzzy match (use immediately)
+  FUZZY_DECENT: 0.70,    // Decent fuzzy match (use if seed fails)
+  SEED_MIN: 0.90,        // Minimum seed match confidence
+  TAXONOMY_MIN: 0.80,    // Minimum taxonomy match confidence
+  NICHE_INFERENCE_SEED: 0.85,    // Niche inference for seed/taxonomy
+  NICHE_INFERENCE_AI: 0.80,      // Niche inference for AI results
+};
+
 export interface IndustryClassificationResult {
   category: {
     id: string;
@@ -72,7 +82,7 @@ function matchViaSeed(userInput: string): IndustryClassificationResult | null {
   // Apply niche inference if no niche found
   if (!result.niche) {
     const inferredNiche = inferNicheFromContext(userInput, category.id, segment.id);
-    if (inferredNiche && inferredNiche.confidence >= 0.85) {
+    if (inferredNiche && inferredNiche.confidence >= CONFIDENCE_THRESHOLDS.NICHE_INFERENCE_SEED) {
       result.niche = { id: inferredNiche.id, label: inferredNiche.label };
     }
   }
@@ -222,7 +232,7 @@ function matchViaTaxonomy(userInput: string): IndustryClassificationResult | nul
   // Apply niche inference if no niche found
   if (!result.niche) {
     const inferredNiche = inferNicheFromContext(userInput, match.categoryId, match.segmentId);
-    if (inferredNiche && inferredNiche.confidence >= 0.85) {
+    if (inferredNiche && inferredNiche.confidence >= CONFIDENCE_THRESHOLDS.NICHE_INFERENCE_SEED) {
       result.niche = { id: inferredNiche.id, label: inferredNiche.label };
     }
   }
@@ -303,7 +313,7 @@ ${categoryList}
     // Apply niche inference if no niche found
     if (!niche) {
       const inferredNiche = inferNicheFromContext(userInput, category.id, segment.id);
-      if (inferredNiche && inferredNiche.confidence >= 0.80) {
+      if (inferredNiche && inferredNiche.confidence >= CONFIDENCE_THRESHOLDS.NICHE_INFERENCE_AI) {
         niche = { id: inferredNiche.id, label: inferredNiche.label };
       }
     }
@@ -444,27 +454,27 @@ export async function classifyIndustry(
   
   // Tier 0: Fuzzy matching for typos and variations
   const fuzzyResult = fuzzyMatch(cleanInput);
-  if (fuzzyResult && fuzzyResult.confidence >= 0.85) {
+  if (fuzzyResult && fuzzyResult.confidence >= CONFIDENCE_THRESHOLDS.FUZZY_HIGH) {
     const normalizedInput = await normalizeUserInput(cleanInput);
     return { ...fuzzyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
   // Tier 1: Seed库精确匹配
   const seedResult = matchViaSeed(cleanInput);
-  if (seedResult && seedResult.confidence >= 0.9) {
+  if (seedResult && seedResult.confidence >= CONFIDENCE_THRESHOLDS.SEED_MIN) {
     const normalizedInput = await normalizeUserInput(cleanInput);
     return { ...seedResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
   // If fuzzy match has decent confidence, use it
-  if (fuzzyResult && fuzzyResult.confidence >= 0.7) {
+  if (fuzzyResult && fuzzyResult.confidence >= CONFIDENCE_THRESHOLDS.FUZZY_DECENT) {
     const normalizedInput = await normalizeUserInput(cleanInput);
     return { ...fuzzyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
   // Tier 2: Taxonomy直接匹配
   const taxonomyResult = matchViaTaxonomy(cleanInput);
-  if (taxonomyResult && taxonomyResult.confidence >= 0.8) {
+  if (taxonomyResult && taxonomyResult.confidence >= CONFIDENCE_THRESHOLDS.TAXONOMY_MIN) {
     const normalizedInput = await normalizeUserInput(cleanInput);
     return { ...taxonomyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }

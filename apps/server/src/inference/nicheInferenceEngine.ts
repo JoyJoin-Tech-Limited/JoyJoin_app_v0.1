@@ -5,11 +5,30 @@
  * in user input, particularly for finance and tech sectors.
  */
 
-interface NicheInference {
-  id: string;
-  label: string;
-  confidence: number;
-}
+// Regex patterns for niche inference (compiled once for performance)
+const FINANCE_IB_PATTERNS = {
+  MA: /并购|m&a|merger|acquisition|一级并购|兼并|收购|重组/i,
+  IPO: /ipo|上市|承销|首次公开|发行|股权承销|ecm|保荐/i,
+  PRIMARY_MARKET: /一级市场|primary/i,
+};
+
+const FINANCE_PE_VC_PATTERNS = {
+  PE: /私募|pe\b|股权投资|一级市场|lp|gp/i,
+  VC: /风投|vc\b|创投|早期投资|天使/i,
+};
+
+const TECH_SOFTWARE_PATTERNS = {
+  FRONTEND: /前端|frontend|react|vue|angular|web开发|h5/i,
+  BACKEND: /后端|backend|java|python|go\b|node|服务端|api/i,
+  FULLSTACK: /全栈|fullstack|full stack|前后端/i,
+};
+
+const TECH_AI_PATTERNS = {
+  LLM: /大模型|llm|gpt|大语言模型|语言模型/i,
+  MEDICAL_AI: /医疗ai|ai医疗|医学影像|healthcare ai/i,
+  CV: /cv\b|计算机视觉|图像识别|视觉|computer vision/i,
+  NLP: /nlp|自然语言|文本分析|语言处理/i,
+};
 
 /**
  * Infer niche from contextual keywords in user input
@@ -49,7 +68,7 @@ export function inferNicheFromContext(
  */
 function inferFinanceInvestmentBankingNiche(input: string): NicheInference | null {
   // M&A (Mergers & Acquisitions) detection
-  if (/并购|m&a|merger|acquisition|一级并购|兼并|收购|重组/i.test(input)) {
+  if (FINANCE_IB_PATTERNS.MA.test(input)) {
     return {
       id: 'ma_advisory',
       label: '并购顾问',
@@ -58,7 +77,7 @@ function inferFinanceInvestmentBankingNiche(input: string): NicheInference | nul
   }
   
   // IPO/ECM detection
-  if (/ipo|上市|承销|首次公开|发行|股权承销|ecm|保荐/i.test(input)) {
+  if (FINANCE_IB_PATTERNS.IPO.test(input)) {
     return {
       id: 'ipo_ecm',
       label: 'IPO/股权承销',
@@ -67,7 +86,7 @@ function inferFinanceInvestmentBankingNiche(input: string): NicheInference | nul
   }
   
   // Primary market general (lower confidence)
-  if (/一级市场|primary/i.test(input)) {
+  if (FINANCE_IB_PATTERNS.PRIMARY_MARKET.test(input)) {
     return {
       id: 'ma_advisory',
       label: '并购顾问',
@@ -83,7 +102,7 @@ function inferFinanceInvestmentBankingNiche(input: string): NicheInference | nul
  */
 function inferFinancePEVCNiche(input: string): NicheInference | null {
   // Private Equity detection
-  if (/私募|pe\b|股权投资|一级市场|lp|gp/i.test(input)) {
+  if (FINANCE_PE_VC_PATTERNS.PE.test(input)) {
     return {
       id: 'private_equity',
       label: '私募股权',
@@ -92,7 +111,7 @@ function inferFinancePEVCNiche(input: string): NicheInference | null {
   }
   
   // Venture Capital detection
-  if (/风投|vc\b|创投|早期投资|天使/i.test(input)) {
+  if (FINANCE_PE_VC_PATTERNS.VC.test(input)) {
     return {
       id: 'venture_capital',
       label: '风险投资',
@@ -108,7 +127,7 @@ function inferFinancePEVCNiche(input: string): NicheInference | null {
  */
 function inferTechSoftwareDevNiche(input: string): NicheInference | null {
   // Frontend detection
-  if (/前端|frontend|react|vue|angular|web开发|h5/i.test(input)) {
+  if (TECH_SOFTWARE_PATTERNS.FRONTEND.test(input)) {
     return {
       id: 'frontend',
       label: '前端工程师',
@@ -117,7 +136,7 @@ function inferTechSoftwareDevNiche(input: string): NicheInference | null {
   }
   
   // Backend detection
-  if (/后端|backend|java|python|go\b|node|服务端|api/i.test(input)) {
+  if (TECH_SOFTWARE_PATTERNS.BACKEND.test(input)) {
     return {
       id: 'backend',
       label: '后端工程师',
@@ -126,7 +145,7 @@ function inferTechSoftwareDevNiche(input: string): NicheInference | null {
   }
   
   // Fullstack detection
-  if (/全栈|fullstack|full stack|前后端/i.test(input)) {
+  if (TECH_SOFTWARE_PATTERNS.FULLSTACK.test(input)) {
     return {
       id: 'fullstack',
       label: '全栈工程师',
@@ -142,7 +161,7 @@ function inferTechSoftwareDevNiche(input: string): NicheInference | null {
  */
 function inferTechAIMLNiche(input: string): NicheInference | null {
   // LLM/Large Language Model detection
-  if (/大模型|llm|gpt|大语言模型|语言模型/i.test(input)) {
+  if (TECH_AI_PATTERNS.LLM.test(input)) {
     return {
       id: 'llm_research',
       label: '大模型研发',
@@ -151,7 +170,7 @@ function inferTechAIMLNiche(input: string): NicheInference | null {
   }
   
   // Medical AI detection
-  if (/医疗ai|ai医疗|医学影像|healthcare ai/i.test(input)) {
+  if (TECH_AI_PATTERNS.MEDICAL_AI.test(input)) {
     return {
       id: 'medical_ai',
       label: '医疗AI',
@@ -160,7 +179,7 @@ function inferTechAIMLNiche(input: string): NicheInference | null {
   }
   
   // Computer Vision detection
-  if (/cv\b|计算机视觉|图像识别|视觉|computer vision/i.test(input)) {
+  if (TECH_AI_PATTERNS.CV.test(input)) {
     return {
       id: 'cv',
       label: '计算机视觉',
@@ -169,7 +188,7 @@ function inferTechAIMLNiche(input: string): NicheInference | null {
   }
   
   // NLP detection
-  if (/nlp|自然语言|文本分析|语言处理/i.test(input)) {
+  if (TECH_AI_PATTERNS.NLP.test(input)) {
     return {
       id: 'nlp',
       label: '自然语言处理',

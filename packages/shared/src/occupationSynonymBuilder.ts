@@ -65,7 +65,9 @@ function generateCommonVariations(displayName: string): string[] {
  * Based on common user inputs that should map to existing occupations
  */
 export const MISSING_CHINESE_TERMS: Record<string, string[]> = {
-  // Illustrator - 插画师 (this was a reported bug)
+  // Illustrator - 插画师 (Issue: https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1/issues/XXX)
+  // This was identified during industry classification testing where "插画师" was incorrectly 
+  // mapped to sports instead of creative/design
   'illustrator': ['插画师'],
   
   // Dancer - 舞蹈演员
