@@ -60,7 +60,18 @@ const XIAOYUE_MESSAGES = {
   },
 };
 
+// localStorage keys
 const STORAGE_KEY = "joyjoin_interests_carousel_progress";
+const CYCLE_EXPLANATION_KEY = "joyjoin_seen_cycle_explanation";
+
+// localStorage expiry (7 days in milliseconds)
+const STORAGE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+
+interface StoredProgress {
+  selections: Record<string, HeatLevel>;
+  currentCategoryIndex: number;
+  timestamp: number;
+}
 
 export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) {
   const { toast } = useToast();
@@ -70,12 +81,23 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   const [selections, setSelections] = useState<Record<string, HeatLevel>>({});
   const [xiaoyueMessage, setXiaoyueMessage] = useState(XIAOYUE_MESSAGES[0]);
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount with expiry check
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        const data = JSON.parse(saved);
+        const data: StoredProgress = JSON.parse(saved);
+        
+        // Check if data has expired (7 days)
+        const isExpired = data.timestamp && (Date.now() - data.timestamp > STORAGE_EXPIRY_MS);
+        
+        if (isExpired) {
+          // Clear expired data
+          localStorage.removeItem(STORAGE_KEY);
+          console.log('[InterestCarousel] Cleared expired localStorage data');
+          return;
+        }
+        
         if (data.selections && typeof data.selections === "object") {
           setSelections(data.selections);
         }
@@ -84,16 +106,20 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         }
       } catch (e) {
         console.error("Failed to load saved progress:", e);
+        // Clear corrupted data
+        localStorage.removeItem(STORAGE_KEY);
       }
     }
   }, []);
 
-  // Save to localStorage on changes
+  // Save to localStorage on changes with timestamp
   useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ selections, currentCategoryIndex })
-    );
+    const data: StoredProgress = {
+      selections,
+      currentCategoryIndex,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [selections, currentCategoryIndex]);
 
   // Calculate metrics
@@ -140,21 +166,27 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   const handleTopicTap = useCallback((topicId: string) => {
     setSelections((prev) => {
       const currentLevel = prev[topicId] || 0;
-      const nextLevel = ((currentLevel + 1) % 4) as HeatLevel;
+      const nextLevel = (currentLevel + 1) % 4;
+      
+      // Type guard to ensure nextLevel is a valid HeatLevel
+      if (nextLevel !== 0 && nextLevel !== 1 && nextLevel !== 2 && nextLevel !== 3) {
+        console.error(`Invalid heat level calculated: ${nextLevel}`);
+        return prev;
+      }
       
       // Show explanation when cycling from max (3) back to unselected (0)
       if (currentLevel === 3 && nextLevel === 0) {
-        const hasSeenCycleExplanation = localStorage.getItem('joyjoin_seen_cycle_explanation');
+        const hasSeenCycleExplanation = localStorage.getItem(CYCLE_EXPLANATION_KEY);
         if (!hasSeenCycleExplanation) {
           toast({
             title: "提示",
             description: "再次点击可以取消选择哦",
           });
-          localStorage.setItem('joyjoin_seen_cycle_explanation', 'true');
+          localStorage.setItem(CYCLE_EXPLANATION_KEY, 'true');
         }
       }
       
-      return { ...prev, [topicId]: nextLevel };
+      return { ...prev, [topicId]: nextLevel as HeatLevel };
     });
   }, [toast]);
 

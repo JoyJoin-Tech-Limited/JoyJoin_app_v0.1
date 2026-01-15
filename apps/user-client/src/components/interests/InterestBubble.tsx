@@ -66,8 +66,15 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
 
   const handleTap = () => {
     const currentLevel = level;
-    const nextLevel = ((currentLevel + 1) % 4) as HeatLevel;
-    triggerHaptic(nextLevel);
+    const nextLevel = (currentLevel + 1) % 4;
+    
+    // Type guard to ensure nextLevel is a valid HeatLevel
+    if (nextLevel !== 0 && nextLevel !== 1 && nextLevel !== 2 && nextLevel !== 3) {
+      console.error(`Invalid heat level calculated: ${nextLevel}`);
+      return;
+    }
+    
+    triggerHaptic(nextLevel as HeatLevel);
     onTap();
   };
 
