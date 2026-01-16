@@ -252,8 +252,8 @@ export function useSlotMachine({
     hasLandedRef.current = false;
     slowingStartedRef.current = false;
     
-    const spinDuration = 2800; // 2.8 seconds of spin (mobile-optimized for ~5s total)
-    const spinInterval = 80; // More deliberate, readable pacing for mobile
+    const spinDuration = 3600; // 3.6 seconds of spin (increased from 2.8s for better visibility)
+    const spinInterval = 120; // Slower for readability (increased from 80ms)
     
     intervalRef.current = setInterval(() => {
       if (!isMountedRef.current) return;
