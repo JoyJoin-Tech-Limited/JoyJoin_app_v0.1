@@ -14,6 +14,7 @@ import { INDUSTRY_TAXONOMY, findCategoryById, findSegmentById, findNicheById } f
 import { OCCUPATIONS } from "@shared/occupations";
 import { ensureReasoning } from "./reasoningGenerator";
 import { inferNicheFromContext } from "./nicheInferenceEngine";
+import { applySemanticFallback } from "@shared/semanticFallback";
 
 // Confidence thresholds for classification tiers
 const CONFIDENCE_THRESHOLDS = {
@@ -377,6 +378,32 @@ async function normalizeUserInput(rawText: string): Promise<string> {
  * Returns "other" category with low confidence and suggestions
  */
 function intelligentFallback(userInput: string, startTime: number): IndustryClassificationResult {
+  // Try semantic fallback first for edge cases (farmer, student, 富二代, etc.)
+  const semanticMatch = applySemanticFallback(userInput);
+  if (semanticMatch) {
+    const category = findCategoryById(semanticMatch.category);
+    const segment = category ? findSegmentById(semanticMatch.category, semanticMatch.segment) : null;
+    
+    if (category && segment) {
+      const result: IndustryClassificationResult = {
+        category: { id: category.id, label: category.label },
+        segment: { id: segment.id, label: segment.label },
+        niche: semanticMatch.niche ? findNicheById(semanticMatch.category, semanticMatch.segment, semanticMatch.niche) 
+          ? { id: semanticMatch.niche, label: findNicheById(semanticMatch.category, semanticMatch.segment, semanticMatch.niche)!.label }
+          : undefined : undefined,
+        confidence: semanticMatch.confidence,
+        source: "fallback",
+        reasoning: semanticMatch.reasoning,
+        processingTimeMs: Date.now() - startTime,
+        rawInput: userInput,
+        normalizedInput: userInput,
+      };
+      
+      return ensureReasoning(result, userInput);
+    }
+  }
+  
+  // Original fallback logic for occupation keyword matching
   const input = userInput.toLowerCase();
   const candidates: { occ: typeof OCCUPATIONS[0]; score: number }[] = [];
   
