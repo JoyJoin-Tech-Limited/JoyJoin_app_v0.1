@@ -40,7 +40,7 @@ export interface InterestCarouselData {
   topPriorities: Array<{ topicId: string; label: string; heat: number }>;
 }
 
-const XIAOYUE_MESSAGES = {
+const XIAOYUE_MESSAGES: Record<number, { content: string }> = {
   0: {
     content: "选择你感兴趣的话题吧！点一下表示有兴趣，再点更热烈 🔥",
   },
