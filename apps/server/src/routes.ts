@@ -11537,6 +11537,103 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  // ============ Share Card Data Endpoint ============
+  app.get('/api/personality-test/share-card-data', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.session?.userId;
+      
+      // Get user data for rankings
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Get assessment result
+      const session = await storage.getLatestCompletedAssessmentSessionByUser(userId);
+      let archetype: string;
+      let traitScores: Record<string, number>;
+
+      if (session) {
+        const finalResult = session.finalResult as any;
+        archetype = session.primaryArchetype || finalResult?.primaryArchetype || finalResult?.archetype;
+        traitScores = session.traitScores as Record<string, number> || {};
+      } else {
+        // Fallback to legacy role_results
+        const legacyResult = await storage.getRoleResult(userId);
+        if (!legacyResult) {
+          return res.status(404).json({ message: 'No assessment result found' });
+        }
+        archetype = legacyResult.primaryRole;
+        traitScores = {
+          A: legacyResult.affinityScore / 100,
+          O: legacyResult.opennessScore / 100,
+          C: legacyResult.conscientiousnessScore / 100,
+          E: legacyResult.emotionalStabilityScore / 100,
+          X: legacyResult.extraversionScore / 100,
+          P: legacyResult.positivityScore / 100,
+        };
+      }
+
+      // Calculate user rankings
+      const totalUserRank = await storage.calculateUserRank(user.createdAt);
+      const archetypeRank = await storage.calculateArchetypeRank(userId, archetype);
+
+      // Get archetype primary color
+      const archetypePrimaryColors: Record<string, string> = {
+        "机智狐": "#FF6B6B",
+        "开心柯基": "#FFD93D",
+        "暖心熊": "#FFA07A",
+        "织网蛛": "#9B59B6",
+        "夸夸豚": "#FF69B4",
+        "太阳鸡": "#FFA500",
+        "淡定海豚": "#4FC3F7",
+        "沉思猫头鹰": "#8B4789",
+        "稳如龟": "#2E7D32",
+        "隐身猫": "#757575",
+        "定心大象": "#5C6BC0",
+        "灵感章鱼": "#AB47BC"
+      };
+
+      // Get default gradients for each archetype
+      const archetypeGradients: Record<string, string> = {
+        '开心柯基': 'from-yellow-500 via-orange-500 to-red-500',
+        '太阳鸡': 'from-amber-500 via-yellow-500 to-orange-500',
+        '夸夸豚': 'from-cyan-500 via-blue-500 to-indigo-500',
+        '机智狐': 'from-orange-500 via-red-500 to-pink-500',
+        '淡定海豚': 'from-blue-500 via-indigo-500 to-purple-500',
+        '织网蛛': 'from-purple-500 via-pink-500 to-fuchsia-500',
+        '暖心熊': 'from-rose-500 via-pink-500 to-red-500',
+        '灵感章鱼': 'from-violet-500 via-purple-500 to-indigo-500',
+        '沉思猫头鹰': 'from-slate-500 via-gray-500 to-zinc-500',
+        '定心大象': 'from-gray-500 via-slate-500 to-stone-500',
+        '稳如龟': 'from-green-500 via-emerald-500 to-teal-500',
+        '隐身猫': 'from-indigo-500 via-purple-500 to-violet-500',
+      };
+
+      res.json({
+        archetype,
+        gradient: archetypeGradients[archetype] || 'from-gray-500 to-gray-600',
+        primaryColor: archetypePrimaryColors[archetype] || '#9CA3AF',
+        illustrationUrl: `/assets/${archetype}_transparent.png`, // Placeholder - frontend will use actual imported images
+        rankings: {
+          totalUserRank,
+          archetypeRank,
+        },
+        traitScores: {
+          A: traitScores.A || 0.5,
+          O: traitScores.O || 0.5,
+          C: traitScores.C || 0.5,
+          E: traitScores.E || 0.5,
+          X: traitScores.X || 0.5,
+          P: traitScores.P || 0.5,
+        }
+      });
+    } catch (error: any) {
+      console.error('[Share Card Data] Error:', error);
+      res.status(500).json({ message: 'Failed to get share card data', error: error.message });
+    }
+  });
+
   // ============ Xiaoyue AI Analysis Endpoint ============
   app.post('/api/xiaoyue/analysis', async (req: any, res) => {
     try {
