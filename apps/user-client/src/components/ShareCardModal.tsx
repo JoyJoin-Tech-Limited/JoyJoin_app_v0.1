@@ -3,7 +3,7 @@
  * Modal for selecting color variants and sharing personality test result cards
  */
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -62,6 +62,13 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  // Reset selected variant when modal opens
+  useEffect(() => {
+    if (open) {
+      setSelectedVariantIndex(0);
+    }
+  }, [open]);
+
   // Fetch share card data
   const { data: shareCardData, isLoading } = useQuery<ShareCardData>({
     queryKey: ['/api/personality-test/share-card-data'],
@@ -73,9 +80,24 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
   const selectedVariant = variants[selectedVariantIndex] || variants[0];
   const illustrationUrl = archetypeAvatars[archetype] || "";
 
+  // Safety check for variants
+  if (variants.length === 0 && shareCardData) {
+    console.error(`No variants found for archetype: ${archetype}`);
+  }
+
   // Generate image from card
   const generateImage = useCallback(async (): Promise<string | null> => {
     if (!cardRef.current) return null;
+
+    // Check browser support
+    if (typeof window === 'undefined' || !window.HTMLCanvasElement) {
+      toast({
+        title: "不支持的浏览器",
+        description: "当前浏览器不支持图片生成功能",
+        variant: "destructive",
+      });
+      return null;
+    }
 
     try {
       setIsGenerating(true);
@@ -177,7 +199,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
     });
   }, [generateImage, archetype, toast]);
 
-  if (isLoading || !shareCardData) {
+  if (isLoading || !shareCardData || !selectedVariant) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">

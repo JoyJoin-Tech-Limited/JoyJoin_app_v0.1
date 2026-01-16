@@ -11574,6 +11574,16 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         };
       }
 
+      // Validate archetype exists
+      if (!archetype) {
+        return res.status(400).json({ message: 'No archetype found in assessment result' });
+      }
+
+      // Check for user createdAt
+      if (!user.createdAt) {
+        return res.status(400).json({ message: 'User account missing creation date' });
+      }
+
       // Calculate user rankings
       const totalUserRank = await storage.calculateUserRank(user.createdAt);
       const archetypeRank = await storage.calculateArchetypeRank(userId, archetype);
@@ -11620,12 +11630,12 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           archetypeRank,
         },
         traitScores: {
-          A: traitScores.A || 0.5,
-          O: traitScores.O || 0.5,
-          C: traitScores.C || 0.5,
-          E: traitScores.E || 0.5,
-          X: traitScores.X || 0.5,
-          P: traitScores.P || 0.5,
+          A: typeof traitScores.A === 'number' ? traitScores.A : 0.5,
+          O: typeof traitScores.O === 'number' ? traitScores.O : 0.5,
+          C: typeof traitScores.C === 'number' ? traitScores.C : 0.5,
+          E: typeof traitScores.E === 'number' ? traitScores.E : 0.5,
+          X: typeof traitScores.X === 'number' ? traitScores.X : 0.5,
+          P: typeof traitScores.P === 'number' ? traitScores.P : 0.5,
         }
       });
     } catch (error: any) {
