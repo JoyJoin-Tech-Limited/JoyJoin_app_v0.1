@@ -22,11 +22,95 @@ export interface CompanyProfile {
 }
 
 // 标准职位映射
+// IMPORTANT: Pattern order matters! More specific patterns should come first.
+// Finance/Investment patterns MUST be before generic tech patterns to prevent misclassification.
 const OCCUPATION_PATTERNS: Array<{
   patterns: RegExp[];
   occupation: string;
   category: string;
+  priority?: number; // Higher priority = checked first in scoring system
 }> = [
+  // ===== HIGH PRIORITY: Finance/Investment (MUST come first) =====
+  // This prevents "投资" from being misclassified as tech roles
+  {
+    patterns: [
+      /投资/i,
+      /投行/i,
+      /基金/i,
+      /pe(?![a-z])/i,
+      /vc(?![a-z])/i,
+      /券商/i,
+      /证券/i,
+      /金融/i,
+      /量化/i,
+      /私募/i,
+      /风投/i,
+      /资管/i,
+      /做投资的/i,
+      /搞金融的/i,
+      /做金融的/i,
+      /金融一枚/i,
+      /分析师/i,
+      /交易员/i,
+      /banker/i,
+    ],
+    occupation: '金融从业者',
+    category: '金融',
+    priority: 100
+  },
+  // 咨询
+  {
+    patterns: [
+      /咨询/i,
+      /做咨询的/i,
+      /咨询一枚/i,
+      /consultant/i,
+      /四大/i,
+      /mbb/i,
+      /麦肯锡/i,
+      /bcg/i,
+      /贝恩/i,
+      /德勤/i,
+      /普华/i,
+      /安永/i,
+      /毕马威/i,
+    ],
+    occupation: '咨询顾问',
+    category: '咨询',
+    priority: 90
+  },
+  // 法律
+  {
+    patterns: [
+      /律师/i,
+      /做律师的/i,
+      /律师一枚/i,
+      /法务/i,
+      /做法律的/i,
+      /搞法律的/i,
+      /律所/i,
+      /legal/i,
+    ],
+    occupation: '律师/法务',
+    category: '法律',
+    priority: 90
+  },
+  // 医疗
+  {
+    patterns: [
+      /医生/i,
+      /做医生的/i,
+      /医生一枚/i,
+      /护士/i,
+      /医疗/i,
+      /做医疗的/i,
+      /医药/i,
+      /doctor/i,
+    ],
+    occupation: '医疗从业者',
+    category: '医疗',
+    priority: 90
+  },
   // 产品
   {
     patterns: [
@@ -40,9 +124,79 @@ const OCCUPATION_PATTERNS: Array<{
       /写prd的/i,
     ],
     occupation: '产品经理',
-    category: '产品'
+    category: '产品',
+    priority: 80
   },
-  // 技术/开发
+  // 设计
+  {
+    patterns: [
+      /设计师/i,
+      /做设计的/i,
+      /设计一枚/i,
+      /ui(?:\/ux)?/i,
+      /ux/i,
+      /美工/i,
+      /视觉设计/i,
+      /交互设计/i,
+      /搞设计的/i,
+      /画图的/i,
+      /做ui的/i,
+    ],
+    occupation: '设计师',
+    category: '设计',
+    priority: 80
+  },
+  // 运营
+  {
+    patterns: [
+      /运营/i,
+      /做运营的/i,
+      /运营一枚/i,
+      /搞运营的/i,
+      /内容运营/i,
+      /用户运营/i,
+      /活动运营/i,
+      /社群运营/i,
+      /新媒体运营/i,
+    ],
+    occupation: '运营',
+    category: '运营',
+    priority: 70
+  },
+  // 市场/营销
+  {
+    patterns: [
+      /市场/i,
+      /做市场的/i,
+      /市场一枚/i,
+      /营销/i,
+      /marketing/i,
+      /品牌/i,
+      /公关/i,
+      /pr(?![a-z])/i,
+      /广告/i,
+    ],
+    occupation: '市场营销',
+    category: '市场',
+    priority: 70
+  },
+  // 销售
+  {
+    patterns: [
+      /销售/i,
+      /做销售的/i,
+      /销售一枚/i,
+      /bd(?![a-z])/i,
+      /商务拓展/i,
+      /商务/i,
+      /客户经理/i,
+      /卖东西的/i,
+    ],
+    occupation: '销售',
+    category: '销售',
+    priority: 70
+  },
+  // 技术/开发 - MOVED AFTER FINANCE to prevent misclassification
   {
     patterns: [
       /程序员/i,
@@ -64,145 +218,8 @@ const OCCUPATION_PATTERNS: Array<{
       /tech(?:nical)?/i,
     ],
     occupation: '软件工程师',
-    category: '技术'
-  },
-  // 设计
-  {
-    patterns: [
-      /设计师/i,
-      /做设计的/i,
-      /设计一枚/i,
-      /ui(?:\/ux)?/i,
-      /ux/i,
-      /美工/i,
-      /视觉设计/i,
-      /交互设计/i,
-      /搞设计的/i,
-      /画图的/i,
-      /做ui的/i,
-    ],
-    occupation: '设计师',
-    category: '设计'
-  },
-  // 运营
-  {
-    patterns: [
-      /运营/i,
-      /做运营的/i,
-      /运营一枚/i,
-      /搞运营的/i,
-      /内容运营/i,
-      /用户运营/i,
-      /活动运营/i,
-      /社群运营/i,
-      /新媒体运营/i,
-    ],
-    occupation: '运营',
-    category: '运营'
-  },
-  // 市场/营销
-  {
-    patterns: [
-      /市场/i,
-      /做市场的/i,
-      /市场一枚/i,
-      /营销/i,
-      /marketing/i,
-      /品牌/i,
-      /公关/i,
-      /pr(?![a-z])/i,
-      /广告/i,
-    ],
-    occupation: '市场营销',
-    category: '市场'
-  },
-  // 销售
-  {
-    patterns: [
-      /销售/i,
-      /做销售的/i,
-      /销售一枚/i,
-      /bd(?![a-z])/i,
-      /商务拓展/i,
-      /商务/i,
-      /客户经理/i,
-      /卖东西的/i,
-    ],
-    occupation: '销售',
-    category: '销售'
-  },
-  // 金融
-  {
-    patterns: [
-      /搞金融的/i,
-      /做金融的/i,
-      /金融一枚/i,
-      /投资/i,
-      /投行/i,
-      /基金/i,
-      /券商/i,
-      /证券/i,
-      /量化/i,
-      /分析师/i,
-      /交易员/i,
-      /pe(?![a-z])/i,
-      /vc(?![a-z])/i,
-      /私募/i,
-      /风投/i,
-      /banker/i,
-    ],
-    occupation: '金融从业者',
-    category: '金融'
-  },
-  // 咨询
-  {
-    patterns: [
-      /咨询/i,
-      /做咨询的/i,
-      /咨询一枚/i,
-      /consultant/i,
-      /四大/i,
-      /mbb/i,
-      /麦肯锡/i,
-      /bcg/i,
-      /贝恩/i,
-      /德勤/i,
-      /普华/i,
-      /安永/i,
-      /毕马威/i,
-    ],
-    occupation: '咨询顾问',
-    category: '咨询'
-  },
-  // 法律
-  {
-    patterns: [
-      /律师/i,
-      /做律师的/i,
-      /律师一枚/i,
-      /法务/i,
-      /做法律的/i,
-      /搞法律的/i,
-      /律所/i,
-      /legal/i,
-    ],
-    occupation: '律师/法务',
-    category: '法律'
-  },
-  // 医疗
-  {
-    patterns: [
-      /医生/i,
-      /做医生的/i,
-      /医生一枚/i,
-      /护士/i,
-      /医疗/i,
-      /做医疗的/i,
-      /医药/i,
-      /doctor/i,
-    ],
-    occupation: '医疗从业者',
-    category: '医疗'
+    category: '技术',
+    priority: 60
   },
   // 教育
   {
@@ -217,7 +234,8 @@ const OCCUPATION_PATTERNS: Array<{
       /讲师/i,
     ],
     occupation: '教育工作者',
-    category: '教育'
+    category: '教育',
+    priority: 80
   },
   // HR
   {
@@ -231,7 +249,8 @@ const OCCUPATION_PATTERNS: Array<{
       /hrbp/i,
     ],
     occupation: 'HR',
-    category: '人力资源'
+    category: '人力资源',
+    priority: 70
   },
   // 财务
   {
@@ -245,7 +264,8 @@ const OCCUPATION_PATTERNS: Array<{
       /出纳/i,
     ],
     occupation: '财务',
-    category: '财务'
+    category: '财务',
+    priority: 70
   },
   // 行政
   {
@@ -258,7 +278,8 @@ const OCCUPATION_PATTERNS: Array<{
       /秘书/i,
     ],
     occupation: '行政',
-    category: '行政'
+    category: '行政',
+    priority: 60
   },
   // 创业者/老板
   {
@@ -273,7 +294,8 @@ const OCCUPATION_PATTERNS: Array<{
       /自己开/i,
     ],
     occupation: '创业者',
-    category: '创业'
+    category: '创业',
+    priority: 80
   },
   // 自由职业
   {
@@ -288,7 +310,8 @@ const OCCUPATION_PATTERNS: Array<{
       /直播/i,
     ],
     occupation: '自由职业者',
-    category: '自由职业'
+    category: '自由职业',
+    priority: 70
   },
 ];
 
@@ -433,23 +456,114 @@ const COMPANY_PROFILES: CompanyProfile[] = [
 ];
 
 /**
- * 从文本中匹配职位
+ * Calculate match specificity score
+ * Higher scores indicate more specific/confident matches
+ */
+function calculateMatchScore(
+  matchedText: string, 
+  fullText: string, 
+  pattern: typeof OCCUPATION_PATTERNS[0]
+): number {
+  let score = 0;
+  
+  // Base priority from pattern configuration
+  score += (pattern.priority || 50);
+  
+  // Exact match gets highest bonus
+  if (matchedText.trim() === fullText.trim()) {
+    score += 100;
+  }
+  
+  // Longer matches are more specific
+  score += matchedText.length * 10;
+  
+  // Match length relative to input text (higher = more specific)
+  const coverage = matchedText.length / fullText.length;
+  score += coverage * 50;
+  
+  // Specific high-priority keywords get bonus
+  const highPriorityKeywords = [
+    '投资', '投行', 'PE', 'VC', '基金', '证券', '券商',
+    '产品经理', '设计师', '咨询', '律师', '医生'
+  ];
+  const lowerMatched = matchedText.toLowerCase();
+  const hasHighPriorityKeyword = highPriorityKeywords.some(kw => 
+    matchedText.includes(kw) || lowerMatched === kw.toLowerCase()
+  );
+  if (hasHighPriorityKeyword) {
+    score += 50;
+  }
+  
+  return score;
+}
+
+/**
+ * 从文本中匹配职位 (with specificity scoring)
  */
 export function matchOccupation(text: string): OccupationMatch | null {
+  if (!text || text.trim().length === 0) {
+    return null;
+  }
+
+  const trimmedText = text.trim();
+  const matches: Array<OccupationMatch & { score: number }> = [];
+  
+  // Collect all matching patterns with scores
   for (const pattern of OCCUPATION_PATTERNS) {
     for (const regex of pattern.patterns) {
-      const match = text.match(regex);
+      const match = trimmedText.match(regex);
       if (match) {
-        return {
+        // Calculate specificity score
+        const score = calculateMatchScore(match[0], trimmedText, pattern);
+        matches.push({
           occupation: pattern.occupation,
           category: pattern.category,
           confidence: 0.85,
-          evidence: match[0]
-        };
+          evidence: match[0],
+          score
+        });
+        
+        // Debug logging
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[OccupationMatcher] Pattern matched:', {
+            input: trimmedText,
+            matched: match[0],
+            occupation: pattern.occupation,
+            category: pattern.category,
+            score,
+            priority: pattern.priority || 50
+          });
+        }
       }
     }
   }
-  return null;
+  
+  // Return highest scoring match
+  if (matches.length === 0) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[OccupationMatcher] No match found for:', trimmedText);
+    }
+    return null;
+  }
+  
+  // Sort by score (highest first) and return best match
+  matches.sort((a, b) => b.score - a.score);
+  const bestMatch = matches[0];
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[OccupationMatcher] Best match selected:', {
+      input: trimmedText,
+      result: bestMatch.occupation,
+      category: bestMatch.category,
+      evidence: bestMatch.evidence,
+      score: bestMatch.score,
+      totalMatches: matches.length
+    });
+  }
+  
+  // Return without the score property
+  const { score, ...result } = bestMatch;
+  return result;
 }
 
 /**
