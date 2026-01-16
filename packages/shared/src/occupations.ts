@@ -380,6 +380,44 @@ export const OCCUPATIONS: Occupation[] = [
   { id: "customer_success", displayName: "客户成功经理", industryId: "tech", synonyms: ["客户成功", "Customer Success", "CSM"], keywords: ["客户", "成功"], hot: false, seedMappings: { category: "tech", segment: "product" } },
   { id: "brand_planning", displayName: "品牌策划", industryId: "marketing", synonyms: ["品牌", "Brand Planning"], keywords: ["品牌", "策划"], hot: false, seedMappings: { category: "media_creative", segment: "marketing" } },
   { id: "pr_specialist", displayName: "公关专员", industryId: "marketing", synonyms: ["公关", "PR", "Public Relations"], keywords: ["公关", "PR"], hot: false, seedMappings: { category: "media_creative", segment: "pr" } },
+  
+  // 互联网运营相关 (新增)
+  { id: "internet_ops", displayName: "互联网运营", industryId: "tech", synonyms: ["互联网运营", "运营专员", "APP运营", "平台运营"], keywords: ["互联网", "运营"], hot: true, seedMappings: { category: "tech", segment: "product" } },
+  { id: "content_ops", displayName: "内容运营", industryId: "tech", synonyms: ["内容运营", "内容策划", "内容编辑运营"], keywords: ["内容", "运营"], hot: true, seedMappings: { category: "tech", segment: "product" } },
+  { id: "user_ops", displayName: "用户运营", industryId: "tech", synonyms: ["用户运营", "会员运营", "用户增长"], keywords: ["用户", "运营"], hot: true, seedMappings: { category: "tech", segment: "product" } },
+  
+  // 跨境电商新增细分
+  { id: "crossborder_sourcing", displayName: "跨境选品", industryId: "ecommerce", synonyms: ["跨境选品", "产品选品", "选品分析师"], keywords: ["选品", "跨境"], hot: false, seedMappings: { category: "consumer_retail", segment: "ecommerce" } },
+  { id: "crossborder_logistics", displayName: "跨境物流", industryId: "ecommerce", synonyms: ["跨境物流专员", "国际物流", "海外仓管理"], keywords: ["跨境物流", "国际物流"], hot: false, seedMappings: { category: "consumer_retail", segment: "ecommerce" } },
+  
+  // 投资人相关 (新增)
+  { id: "angel_investor", displayName: "天使投资人", industryId: "finance", synonyms: ["天使投资", "Angel Investor", "个人投资者", "投资人"], keywords: ["天使投资", "投资人"], hot: true, seedMappings: { category: "finance", segment: "pe_vc" } },
+  { id: "fa_advisor", displayName: "FA财务顾问", industryId: "finance", synonyms: ["FA", "财务顾问", "融资顾问", "Financial Advisor", "融资FA"], keywords: ["FA", "融资顾问"], hot: false, seedMappings: { category: "finance", segment: "investment_banking" } },
+  { id: "family_office", displayName: "家族办公室", industryId: "finance", synonyms: ["家办", "家族办公室", "Family Office", "财富管理"], keywords: ["家族办公室", "家办"], hot: false, seedMappings: { category: "finance", segment: "wealth_management" } },
+  
+  // 餐饮行业新增细分
+  { id: "restaurant_manager", displayName: "餐厅经理", industryId: "lifestyle", synonyms: ["餐厅经理", "餐饮店长", "餐厅店长", "餐饮主管"], keywords: ["餐厅", "经理"], hot: true, seedMappings: { category: "consumer_retail", segment: "food_service" } },
+  { id: "pastry_baker", displayName: "烘焙师", industryId: "lifestyle", synonyms: ["烘焙师", "面包师", "糕点师", "蛋糕师傅"], keywords: ["烘焙", "面包"], hot: true, seedMappings: { category: "consumer_retail", segment: "food_service" } },
+  { id: "mixologist", displayName: "调酒师", industryId: "lifestyle", synonyms: ["调酒师", "酒保", "Bartender", "鸡尾酒师"], keywords: ["调酒", "酒吧"], hot: false, seedMappings: { category: "consumer_retail", segment: "food_service" } },
+  { id: "coffee_barista", displayName: "咖啡师", industryId: "lifestyle", synonyms: ["咖啡师", "Barista", "咖啡调配师", "手冲咖啡师"], keywords: ["咖啡", "咖啡师"], hot: true, seedMappings: { category: "consumer_retail", segment: "food_service" } },
+  { id: "tea_specialist", displayName: "茶艺师", industryId: "lifestyle", synonyms: ["茶艺师", "茶道师", "品茶师", "茶艺顾问"], keywords: ["茶艺", "茶道"], hot: false, seedMappings: { category: "consumer_retail", segment: "food_service" } },
+  { id: "wine_sommelier", displayName: "品酒师", industryId: "lifestyle", synonyms: ["品酒师", "侍酒师", "Sommelier", "葡萄酒顾问"], keywords: ["品酒", "葡萄酒"], hot: false, seedMappings: { category: "consumer_retail", segment: "food_service" } },
+  
+  // 艺术家相关 (新增冷门艺术职业)
+  { id: "painter", displayName: "画家", industryId: "creative", synonyms: ["画家", "艺术家", "绘画艺术家", "油画家", "国画家"], keywords: ["画家", "绘画", "艺术"], hot: false, seedMappings: { category: "culture_sports", segment: "performing_arts", niche: "artist" } },
+  { id: "sculptor", displayName: "雕塑家", industryId: "creative", synonyms: ["雕塑家", "雕刻家", "雕塑艺术家"], keywords: ["雕塑", "雕刻", "艺术"], hot: false, seedMappings: { category: "culture_sports", segment: "performing_arts", niche: "artist" } },
+  { id: "calligrapher", displayName: "书法家", industryId: "creative", synonyms: ["书法家", "书法艺术家", "书法师"], keywords: ["书法", "艺术"], hot: false, seedMappings: { category: "culture_sports", segment: "performing_arts", niche: "artist" } },
+  { id: "ceramicist", displayName: "陶艺师", industryId: "creative", synonyms: ["陶艺师", "陶艺家", "陶瓷艺术家", "制陶师"], keywords: ["陶艺", "陶瓷"], hot: false, seedMappings: { category: "culture_sports", segment: "performing_arts", niche: "artist" } },
+  { id: "poet_writer", displayName: "诗人作家", industryId: "media", synonyms: ["诗人", "作家", "文学家", "小说家", "散文家"], keywords: ["诗人", "作家", "文学"], hot: false, seedMappings: { category: "media_creative", segment: "journalism" } },
+  { id: "composer", displayName: "作曲家", industryId: "creative", synonyms: ["作曲家", "作曲", "音乐创作者", "编曲家"], keywords: ["作曲", "音乐创作"], hot: false, seedMappings: { category: "culture_sports", segment: "performing_arts", niche: "musician" } },
+  { id: "conductor", displayName: "指挥家", industryId: "creative", synonyms: ["指挥家", "乐队指挥", "交响乐指挥"], keywords: ["指挥", "乐队"], hot: false, seedMappings: { category: "culture_sports", segment: "performing_arts", niche: "musician" } },
+  { id: "opera_singer", displayName: "歌剧演员", industryId: "creative", synonyms: ["歌剧演员", "歌剧家", "声乐家", "歌唱家"], keywords: ["歌剧", "声乐"], hot: false, seedMappings: { category: "culture_sports", segment: "performing_arts", niche: "musician" } },
+  { id: "theater_director", displayName: "戏剧导演", industryId: "creative", synonyms: ["戏剧导演", "话剧导演", "舞台导演"], keywords: ["戏剧", "导演"], hot: false, seedMappings: { category: "culture_sports", segment: "performing_arts", niche: "actor" } },
+  { id: "film_director", displayName: "电影导演", industryId: "media", synonyms: ["电影导演", "导演", "影视导演", "纪录片导演"], keywords: ["导演", "电影"], hot: false, seedMappings: { category: "media_creative", segment: "video_production" } },
+  { id: "screenwriter", displayName: "编剧", industryId: "media", synonyms: ["编剧", "剧本作家", "影视编剧", "电影编剧"], keywords: ["编剧", "剧本"], hot: false, seedMappings: { category: "media_creative", segment: "journalism" } },
+  { id: "curator", displayName: "策展人", industryId: "creative", synonyms: ["策展人", "艺术策展", "展览策划"], keywords: ["策展", "展览"], hot: false, seedMappings: { category: "culture_sports", segment: "performing_arts" } },
+  { id: "art_critic", displayName: "艺术评论家", industryId: "creative", synonyms: ["艺术评论家", "艺评人", "美术评论家"], keywords: ["艺术评论", "评论家"], hot: false, seedMappings: { category: "culture_sports", segment: "performing_arts" } },
+  { id: "performance_artist", displayName: "行为艺术家", industryId: "creative", synonyms: ["行为艺术家", "装置艺术家", "概念艺术家"], keywords: ["行为艺术", "当代艺术"], hot: false, seedMappings: { category: "culture_sports", segment: "performing_arts", niche: "artist" } },
 ];
 
 // ========== 拼音首字母映射 ==========
