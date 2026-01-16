@@ -230,7 +230,7 @@ describe('Comprehensive Occupation Coverage Test', () => {
       for (const input of inputs) {
         const result = await classifyIndustry(input);
         expect(result.reasoning).toBeTruthy();
-        expect(result.reasoning.length).toBeGreaterThan(0);
+        expect(result.reasoning?.length).toBeGreaterThan(0);
       }
     });
   });
