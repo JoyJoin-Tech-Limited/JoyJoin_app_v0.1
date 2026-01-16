@@ -9,8 +9,6 @@
  * - Non-traditional occupations
  */
 
-import type { IndustryClassificationResult } from '../apps/server/src/inference/industryClassifier';
-
 export interface SemanticRule {
   patterns: RegExp[];
   classification: {

@@ -64,7 +64,7 @@ export const GENERATED_SEED_MAP = generateSeedMap();
 // Get stats about the generated seed map
 export function getSeedMapStats() {
   const map = GENERATED_SEED_MAP;
-  const occupationsWithMappings = OCCUPATIONS.filter(o => o.seedMappings).length;
+  const occupationsWithMappings = OCCUPATIONS.filter((o: typeof OCCUPATIONS[0]) => o.seedMappings).length;
   
   return {
     totalEntries: map.size,
