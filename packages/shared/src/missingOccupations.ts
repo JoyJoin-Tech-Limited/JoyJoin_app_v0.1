@@ -61,7 +61,7 @@ export const MISSING_OCCUPATIONS: Occupation[] = [
     synonyms: ["审判员", "法院法官", "Judge"], 
     keywords: ["法官", "审判", "法院"], 
     hot: false,
-    seedMappings: { category: "government" }
+    seedMappings: { category: "government_public", segment: "civil_service" }
   },
   { 
     id: "prosecutor", 
@@ -70,7 +70,7 @@ export const MISSING_OCCUPATIONS: Occupation[] = [
     synonyms: ["检察员", "公诉人", "Prosecutor"], 
     keywords: ["检察", "公诉", "检察官"], 
     hot: false,
-    seedMappings: { category: "government" }
+    seedMappings: { category: "government_public", segment: "civil_service" }
   },
   { 
     id: "notary", 
@@ -171,7 +171,7 @@ export const MISSING_OCCUPATIONS: Occupation[] = [
     synonyms: ["展览策划", "Curator", "艺术策展"], 
     keywords: ["策展", "展览"], 
     hot: false,
-    seedMappings: { category: "media_creative" }
+    seedMappings: { category: "media_creative", segment: "marketing" }
   },
   
   // ========== Manufacturing & Engineering ==========
@@ -209,7 +209,7 @@ export const MISSING_OCCUPATIONS: Occupation[] = [
     synonyms: ["生产工艺", "Process Engineer", "制造工艺"], 
     keywords: ["工艺", "生产"], 
     hot: false,
-    seedMappings: { category: "manufacturing" }
+    seedMappings: { category: "manufacturing", segment: "consumer_electronics" }
   },
   { 
     id: "industrial_designer", 
@@ -218,7 +218,7 @@ export const MISSING_OCCUPATIONS: Occupation[] = [
     synonyms: ["产品设计", "Industrial Designer"], 
     keywords: ["工业设计", "产品设计"], 
     hot: false,
-    seedMappings: { category: "manufacturing" }
+    seedMappings: { category: "manufacturing", segment: "consumer_electronics" }
   },
   { 
     id: "architect", 
@@ -265,7 +265,7 @@ export const MISSING_OCCUPATIONS: Occupation[] = [
     synonyms: ["营养顾问", "Nutritionist", "膳食顾问"], 
     keywords: ["营养", "膳食"], 
     hot: false,
-    seedMappings: { category: "healthcare" }
+    seedMappings: { category: "healthcare", segment: "medical_services" }
   },
   { 
     id: "medical_device_engineer", 
@@ -274,7 +274,7 @@ export const MISSING_OCCUPATIONS: Occupation[] = [
     synonyms: ["医疗设备工程师", "Medical Device Engineer"], 
     keywords: ["医疗器械", "医疗设备"], 
     hot: false,
-    seedMappings: { category: "healthcare" }
+    seedMappings: { category: "healthcare", segment: "medical_services" }
   },
   { 
     id: "genetic_counselor", 
@@ -283,7 +283,7 @@ export const MISSING_OCCUPATIONS: Occupation[] = [
     synonyms: ["基因顾问", "Genetic Counselor"], 
     keywords: ["基因", "检测"], 
     hot: false,
-    seedMappings: { category: "healthcare" }
+    seedMappings: { category: "healthcare", segment: "medical_services" }
   },
   
   // ========== Education (Additional) ==========
@@ -294,7 +294,7 @@ export const MISSING_OCCUPATIONS: Occupation[] = [
     synonyms: ["大学教师", "高校教师", "University Lecturer", "Lecturer"], 
     keywords: ["大学", "教师", "讲师"], 
     hot: false,
-    seedMappings: { category: "education" }
+    seedMappings: { category: "education", segment: "k12" }
   },
   { 
     id: "vocational_trainer", 
@@ -312,7 +312,7 @@ export const MISSING_OCCUPATIONS: Occupation[] = [
     synonyms: ["教育产品经理", "课程研发", "Education Product"], 
     keywords: ["教育产品", "课程"], 
     hot: false,
-    seedMappings: { category: "education" }
+    seedMappings: { category: "education", segment: "k12" }
   },
   { 
     id: "researcher", 
@@ -321,7 +321,7 @@ export const MISSING_OCCUPATIONS: Occupation[] = [
     synonyms: ["研究员", "科研人员", "Researcher", "Scientist"], 
     keywords: ["研究", "科研"], 
     hot: false,
-    seedMappings: { category: "education" }
+    seedMappings: { category: "education", segment: "k12" }
   },
   
   // ========== Finance (Additional) ==========
@@ -359,7 +359,7 @@ export const MISSING_OCCUPATIONS: Occupation[] = [
     synonyms: ["理财规划师", "Financial Planner", "CFP"], 
     keywords: ["理财", "规划"], 
     hot: false,
-    seedMappings: { category: "finance" }
+    seedMappings: { category: "finance", segment: "commercial_banking" }
   },
   
   // ========== Services & Management ==========
@@ -442,7 +442,7 @@ export const MISSING_OCCUPATIONS: Occupation[] = [
     synonyms: ["社区服务", "Community Worker", "社工"], 
     keywords: ["社区", "服务"], 
     hot: false,
-    seedMappings: { category: "government" }
+    seedMappings: { category: "government_public", segment: "civil_service" }
   },
   
   // ========== Emerging Occupations ==========
@@ -453,7 +453,7 @@ export const MISSING_OCCUPATIONS: Occupation[] = [
     synonyms: ["无人机操作员", "Drone Operator", "航拍飞手"], 
     keywords: ["无人机", "航拍"], 
     hot: false,
-    seedMappings: { category: "tech" }
+    seedMappings: { category: "tech", segment: "product" }
   },
   { 
     id: "digital_manager", 
@@ -507,7 +507,7 @@ export const MISSING_OCCUPATIONS: Occupation[] = [
     synonyms: ["养老评估", "Elderly Assessor"], 
     keywords: ["养老", "评估"], 
     hot: false,
-    seedMappings: { category: "healthcare" }
+    seedMappings: { category: "healthcare", segment: "medical_services" }
   },
   { 
     id: "online_learning_service", 
