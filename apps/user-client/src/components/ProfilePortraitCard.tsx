@@ -502,7 +502,7 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
                             cat.config.gradient
                           )}
                           initial={{ width: 0 }}
-                          animate={{ width: `${Math.min(100, (cat.heat / interestInsights.totalHeat) * 100)}%` }}
+                          animate={{ width: `${Math.min(100, interestInsights.totalHeat > 0 ? (cat.heat / interestInsights.totalHeat) * 100 : 0)}%` }}
                           transition={{ duration: 1, delay: i * 0.1 + 0.2, ease: "easeOut" }}
                         />
                       </motion.div>
