@@ -966,16 +966,19 @@ export default function PersonalityTestResultPage() {
           <div className="relative group">
             {/* Glowing background blur effect */}
             <div 
-              className={`absolute inset-0 bg-gradient-to-r ${gradient} rounded-2xl blur-md opacity-50 group-hover:opacity-70 transition-opacity duration-300`}
-              style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}
+              className={`absolute inset-0 bg-gradient-to-r ${gradient} rounded-2xl blur-md opacity-50 group-hover:opacity-70 transition-opacity duration-300 animate-pulse`}
             />
             
             {/* Main button */}
             <Button 
               className={`relative w-full h-16 rounded-2xl text-lg font-bold shadow-xl bg-gradient-to-r ${gradient} hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 border-2 border-white/30`}
               onClick={() => {
-                // Optional: Add haptic feedback for mobile
-                if (navigator.vibrate) navigator.vibrate(50);
+                // Add haptic feedback for mobile (wrapped in try-catch for safety)
+                try {
+                  if (navigator.vibrate) navigator.vibrate(50);
+                } catch (e) {
+                  // Silently fail if vibrate API throws an error
+                }
                 setShareModalOpen(true);
               }} 
               data-testid="button-share"
