@@ -20,6 +20,26 @@ interface ShareCardModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Type for share card data from API
+interface ShareCardData {
+  archetype: string;
+  gradient: string;
+  primaryColor: string;
+  illustrationUrl: string;
+  rankings: {
+    totalUserRank: number;
+    archetypeRank: number;
+  };
+  traitScores: {
+    A: number;
+    O: number;
+    C: number;
+    E: number;
+    X: number;
+    P: number;
+  };
+}
+
 // English name mapping for archetypes
 const archetypeEnglishNames: Record<string, string> = {
   "机智狐": "Clever Fox",
@@ -43,7 +63,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
   const { toast } = useToast();
 
   // Fetch share card data
-  const { data: shareCardData, isLoading } = useQuery({
+  const { data: shareCardData, isLoading } = useQuery<ShareCardData>({
     queryKey: ['/api/personality-test/share-card-data'],
     enabled: open,
   });
