@@ -54,8 +54,6 @@ const INTEREST_CATEGORIES: Record<string, { name: string; emoji: string }> = {
   // 娱乐休闲类
   games_video: { name: "游戏娱乐", emoji: "🎮" },
   games_board: { name: "游戏娱乐", emoji: "🎮" },
-  movies: { name: "影视", emoji: "🎬" },
-  tv_shows: { name: "影视", emoji: "🎬" },
   
   // 学习成长类
   reading_books: { name: "学习成长", emoji: "📚" },
@@ -206,6 +204,16 @@ function generateVibePattern(selectedOptions: InterestOption[]): VibeCategory[] 
         existing.count++;
       } else {
         categoryMap.set(category.name, { count: 1, emoji: category.emoji });
+      }
+    } else {
+      // Fallback for unmapped interests - use the interest's own emoji or a default
+      const fallbackCategory = "其他兴趣";
+      const fallbackEmoji = opt.emoji || "✨";
+      const existing = categoryMap.get(fallbackCategory);
+      if (existing) {
+        existing.count++;
+      } else {
+        categoryMap.set(fallbackCategory, { count: 1, emoji: fallbackEmoji });
       }
     }
   });
