@@ -95,9 +95,9 @@ function generateTestCases(): TestCase[] {
   const rng = new SeededRandom(42); // Deterministic seed
   
   // Category 1: Standard Occupations (40,000 tests)
-  const occupationsWithMappings = OCCUPATIONS.filter(occ => occ.seedMappings);
+  const occupationsWithMappings = OCCUPATIONS.filter((occ: typeof OCCUPATIONS[0]) => occ.seedMappings);
   for (let i = 0; i < 40000; i++) {
-    const occ = rng.choice(occupationsWithMappings);
+    const occ: typeof OCCUPATIONS[0] = rng.choice(occupationsWithMappings);
     const synonymIndex = rng.nextInt(Math.max(1, occ.synonyms.length + 1));
     const input = synonymIndex === 0 ? occ.displayName : occ.synonyms[synonymIndex - 1] || occ.displayName;
     
@@ -113,7 +113,7 @@ function generateTestCases(): TestCase[] {
   
   // Category 2: Typos & Fuzzy Matching (20,000 tests)
   for (let i = 0; i < 20000; i++) {
-    const occ = rng.choice(occupationsWithMappings);
+    const occ: typeof OCCUPATIONS[0] = rng.choice(occupationsWithMappings);
     const baseInput = rng.next() < 0.5 ? occ.displayName : rng.choice(occ.synonyms);
     const typos = generateTypos(baseInput, rng);
     if (typos.length > 0) {

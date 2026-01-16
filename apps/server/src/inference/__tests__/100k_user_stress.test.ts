@@ -156,13 +156,13 @@ function generateJobVariations(): string[] {
   const occupations = OCCUPATIONS;
   
   // Add all display names
-  occupations.forEach(occ => {
+  occupations.forEach((occ: typeof OCCUPATIONS[0]) => {
     variations.add(occ.displayName);
   });
   
   // Add all synonyms
-  occupations.forEach(occ => {
-    occ.synonyms.forEach(syn => {
+  occupations.forEach((occ: typeof OCCUPATIONS[0]) => {
+    occ.synonyms.forEach((syn: string) => {
       if (syn.length >= 2) { // Filter out very short synonyms
         variations.add(syn);
       }
@@ -173,7 +173,7 @@ function generateJobVariations(): string[] {
   const commonPrefixes = ['资深', '高级', '初级', '实习'];
   const commonSuffixes = ['师', '员', '专员', '经理', '主管'];
   
-  occupations.slice(0, 50).forEach(occ => {
+  occupations.slice(0, 50).forEach((occ: typeof OCCUPATIONS[0]) => {
     commonPrefixes.forEach(prefix => {
       variations.add(prefix + occ.displayName);
     });
@@ -188,7 +188,7 @@ function generateJobVariations(): string[] {
   
   // Add common typos for top occupations
   const topOccupations = occupations.slice(0, 30);
-  topOccupations.forEach(occ => {
+  topOccupations.forEach((occ: typeof OCCUPATIONS[0]) => {
     const typos = generateCommonTypos(occ.displayName);
     typos.forEach(typo => variations.add(typo));
   });
