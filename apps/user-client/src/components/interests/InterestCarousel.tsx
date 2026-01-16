@@ -40,23 +40,19 @@ export interface InterestCarouselData {
   topPriorities: Array<{ topicId: string; label: string; heat: number }>;
 }
 
-const XIAOYUE_MESSAGES = {
+const XIAOYUE_MESSAGES: Record<number, { content: string }> = {
   0: {
     content: "选择你感兴趣的话题吧！点一下表示有兴趣，再点更热烈 🔥",
-    pose: "pointing" as const,
   },
   3: {
     content:
       "太棒了！已经可以开始匹配了 ✓\n不过...多选2-4个会让我更准确地找到志同道合的朋友哦 😊",
-    pose: "casual" as const,
   },
   7: {
     content: "完美！这样的选择能帮你找到最合拍的桌友 🎯",
-    pose: "casual" as const,
   },
   10: {
     content: "哇！你的兴趣好广泛 ✨ 这会让盲盒局更精彩！",
-    pose: "casual" as const,
   },
 };
 
@@ -455,7 +451,6 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
             <div className="relative">
               <XiaoyueChatBubble
                 content={xiaoyueMessage.content}
-                pose={xiaoyueMessage.pose}
                 horizontal={false}
                 animate
               />
