@@ -1,11 +1,11 @@
 /**
- * ProfilePortraitCard - Comprehensive profile portrait after interest swiping
+ * ProfilePortraitCard - Comprehensive profile portrait after interest selection
  * 
  * Displays:
  * - Basic info with avatar, archetype, profile completion
  * - Industry L1→L2→L3 hierarchy
  * - Personality traits with radar chart
- * - Interest map with category distribution and behavioral insights
+ * - Interest map with heat-based category distribution and top priorities
  * - CTA to discover page
  */
 
@@ -23,6 +23,7 @@ import {
   ChevronRight,
   Heart,
   Target,
+  Flame,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,8 +33,23 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
 import { getArchetypeAvatar } from "@/lib/archetypeAdapter";
-import { INTEREST_CARDS, MACRO_CATEGORY_LABELS, MACRO_CATEGORY_COLORS } from "@/data/interestCardsData";
 import { cn } from "@/lib/utils";
+
+// Category configuration with visual styling
+const CATEGORY_CONFIG: Record<string, { label: string; emoji: string; gradient: string }> = {
+  career: { label: "职场野心", emoji: "💼", gradient: "from-blue-500 to-indigo-600" },
+  philosophy: { label: "深度思想", emoji: "🧠", gradient: "from-purple-500 to-violet-600" },
+  lifestyle: { label: "生活方式", emoji: "🍜", gradient: "from-green-500 to-emerald-600" },
+  culture: { label: "文化娱乐", emoji: "🎬", gradient: "from-pink-500 to-rose-600" },
+  city: { label: "城市探索", emoji: "🏙️", gradient: "from-orange-500 to-amber-600" },
+  tech: { label: "前沿科技", emoji: "🚀", gradient: "from-cyan-500 to-blue-600" },
+};
+
+const HEAT_LEVEL_COLORS: Record<number, string> = {
+  1: "bg-purple-100 text-purple-700 border-purple-300",
+  2: "bg-pink-100 text-pink-700 border-pink-300",
+  3: "bg-orange-100 text-orange-700 border-orange-300 shadow-orange-200 shadow-md",
+};
 
 // City name conversion helper
 const getCityDisplayName = (city: string | undefined): string => {
@@ -85,6 +101,12 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
   // Fetch personality assessment
   const { data: assessment } = useQuery<any>({ 
     queryKey: ["/api/assessment/result"],
+  });
+
+  // Fetch interest carousel data
+  const { data: interestsData } = useQuery<any>({ 
+    queryKey: ["/api/user/interests"],
+    enabled: !!user?.hasCompletedInterestsCarousel,
   });
 
   // Get archetype config and avatar
@@ -139,65 +161,56 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
     return Math.round((completed / total) * 100);
   }, [user]);
 
-  // Process interest swipe results
+  // Process interest carousel heat data
   const interestInsights = useMemo(() => {
-    if (!user?.interestsDeep || !Array.isArray(user.interestsDeep)) {
+    if (!interestsData?.selections || !Array.isArray(interestsData.selections)) {
       return null;
     }
 
-    // Parse interest swipe results from interestsDeep
-    // Format: "cardId:choice:reactionTimeMs"
-    const swipeResults = user.interestsDeep
-      .map((entry: string) => {
-        const [cardId, choice, speedStr] = entry.split(':');
-        return {
-          cardId,
-          choice,
-          swipeSpeed: parseInt(speedStr) || 0,
-        };
-      })
-      .filter((r: any) => r.cardId && r.choice);
+    const { totalHeat, totalSelections, categoryHeat, selections, topPriorities } = interestsData;
 
-    const lovedCards = swipeResults.filter((r: any) => r.choice === 'love');
-    const likedCards = swipeResults.filter((r: any) => r.choice === 'like');
-    const allLikedCards = [...lovedCards, ...likedCards];
+    // Calculate average heat per selection for behavioral insights
+    const avgHeat = totalSelections > 0 ? totalHeat / totalSelections : 0;
 
-    // Calculate average swipe speed for loved items
-    const avgLovedSpeed = lovedCards.length > 0
-      ? lovedCards.reduce((sum: number, r: any) => sum + r.swipeSpeed, 0) / lovedCards.length
-      : null;
+    // Generate behavioral insight message
+    let behavioralInsight = "";
+    if (avgHeat >= 20) {
+      behavioralInsight = "你对兴趣的投入度很高！每个选择都经过深思熟虑。";
+    } else if (avgHeat >= 10) {
+      behavioralInsight = "你对喜欢的事物有明确的偏好，选择果断而清晰。";
+    } else {
+      behavioralInsight = "你保持开放的态度，愿意尝试各种有趣的事物。";
+    }
 
-    // Category distribution
-    const categoryMap = new Map<string, number>();
-    allLikedCards.forEach((result: any) => {
-      const card = INTEREST_CARDS.find(c => c.id === result.cardId);
-      if (card) {
-        const count = categoryMap.get(card.macroCategory) || 0;
-        categoryMap.set(card.macroCategory, count + 1);
-      }
-    });
-
-    const categoryDist = Array.from(categoryMap.entries())
-      .map(([category, count]) => ({
-        category,
-        count,
-        percentage: Math.round((count / allLikedCards.length) * 100),
+    // Sort categories by total heat (descending) and take top 4
+    const categoryDistribution = Object.entries(categoryHeat as Record<string, number>)
+      .map(([categoryId, heat]) => ({
+        categoryId,
+        heat: heat as number,
+        config: CATEGORY_CONFIG[categoryId] || { 
+          label: categoryId, 
+          emoji: "📌", 
+          gradient: "from-gray-500 to-gray-600" 
+        },
       }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 3);
+      .sort((a, b) => b.heat - a.heat)
+      .slice(0, 4);
 
-    // Get loved card details
-    const lovedCardDetails = lovedCards
-      .slice(0, 8)
-      .map((r: any) => INTEREST_CARDS.find(c => c.id === r.cardId))
-      .filter(Boolean);
+    // Get top priority items (level 3 items)
+    const topPriorityItems = selections
+      .filter((s: any) => s.level === 3)
+      .slice(0, 6);
 
     return {
-      avgLovedSpeed,
-      categoryDist,
-      lovedCards: lovedCardDetails,
+      totalHeat,
+      totalSelections,
+      avgHeat,
+      behavioralInsight,
+      categoryDistribution,
+      topPriorityItems,
+      topCategories: categoryDistribution.slice(0, 2).map(c => c.config.label),
     };
-  }, [user?.interestsDeep]);
+  }, [interestsData]);
 
   // Top 2 traits
   const topTraits = useMemo(() => {
@@ -445,36 +458,37 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
         <motion.div variants={itemVariants}>
           <Card>
             <CardHeader>
-              <CardTitle>🗺️ 兴趣地图</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <span>🗺️ 兴趣地图</span>
+                <div className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
+                  <Flame className="w-4 h-4 text-orange-500" />
+                  <span>{interestInsights.totalHeat} 总热度</span>
+                </div>
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Behavioral insight */}
-              {interestInsights.avgLovedSpeed && interestInsights.avgLovedSpeed < 2000 && (
-                <div className="p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
-                  <div className="flex items-start gap-3">
-                    <TrendingUp className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
-                    <p className="text-sm text-purple-900">
-                      你对喜欢的内容平均只需{" "}
-                      <span className="font-bold">
-                        {(interestInsights.avgLovedSpeed / 1000).toFixed(1)}秒
-                      </span>{" "}
-                      就能决定，比85%的用户更果断！这说明你对自己的喜好很清楚。
-                    </p>
-                  </div>
+              {/* Behavioral insight banner */}
+              <div className="p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
+                <div className="flex items-start gap-3">
+                  <TrendingUp className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <p className="text-sm text-purple-900">
+                    {interestInsights.behavioralInsight}
+                  </p>
                 </div>
-              )}
+              </div>
 
-              {/* Category distribution bars */}
-              {interestInsights.categoryDist.length > 0 && (
+              {/* Category heat distribution */}
+              {interestInsights.categoryDistribution.length > 0 && (
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-muted-foreground">兴趣分布</h4>
-                  {interestInsights.categoryDist.map((cat, i) => (
-                    <div key={cat.category} className="space-y-2">
+                  {interestInsights.categoryDistribution.map((cat, i) => (
+                    <div key={cat.categoryId} className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">
-                          {MACRO_CATEGORY_LABELS[cat.category as keyof typeof MACRO_CATEGORY_LABELS]}
-                        </span>
-                        <span className="text-muted-foreground">{cat.percentage}%</span>
+                        <div className="flex items-center gap-2">
+                          <span>{cat.config.emoji}</span>
+                          <span className="font-medium">{cat.config.label}</span>
+                        </div>
+                        <span className="text-muted-foreground">{cat.heat} 热度</span>
                       </div>
                       <motion.div
                         className="h-3 bg-gray-100 rounded-full overflow-hidden"
@@ -485,10 +499,10 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
                         <motion.div
                           className={cn(
                             "h-full bg-gradient-to-r rounded-full",
-                            MACRO_CATEGORY_COLORS[cat.category as keyof typeof MACRO_CATEGORY_COLORS]
+                            cat.config.gradient
                           )}
                           initial={{ width: 0 }}
-                          animate={{ width: `${cat.percentage}%` }}
+                          animate={{ width: `${Math.min(100, interestInsights.totalHeat > 0 ? (cat.heat / interestInsights.totalHeat) * 100 : 0)}%` }}
                           transition={{ duration: 1, delay: i * 0.1 + 0.2, ease: "easeOut" }}
                         />
                       </motion.div>
@@ -497,19 +511,32 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
                 </div>
               )}
 
-              {/* Loved items grid */}
-              {interestInsights.lovedCards.length > 0 && (
+              {/* Top priority interests (level 3) */}
+              {interestInsights.topPriorityItems.length > 0 && (
                 <div className="space-y-3">
-                  <h4 className="text-sm font-semibold text-muted-foreground">我的挚爱</h4>
-                  <div className="grid grid-cols-4 gap-3">
-                    {interestInsights.lovedCards.map((card: any) => (
+                  <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                    <Flame className="w-4 h-4 text-orange-500" />
+                    我的优先级
+                  </h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    {interestInsights.topPriorityItems.map((item: any) => (
                       <motion.div
-                        key={card.id}
-                        className="aspect-square bg-white border-2 border-purple-200 rounded-lg p-2 flex flex-col items-center justify-center gap-1 hover:scale-105 transition-transform"
+                        key={item.topicId}
+                        className={cn(
+                          "aspect-square border-2 rounded-lg p-2 flex flex-col items-center justify-center gap-1 relative",
+                          HEAT_LEVEL_COLORS[item.level] || HEAT_LEVEL_COLORS[3]
+                        )}
                         whileHover={{ scale: 1.05 }}
+                        transition={{ duration: 0.2 }}
                       >
-                        <div className="text-2xl">{card.label.slice(0, 2)}</div>
-                        <div className="text-xs text-center line-clamp-1">{card.label}</div>
+                        {/* Flame badge for level 3 */}
+                        <div className="absolute top-1 right-1">
+                          <Flame className="w-3 h-3 text-orange-600" />
+                        </div>
+                        <div className="text-2xl">{item.emoji}</div>
+                        <div className="text-xs text-center line-clamp-2 font-medium">
+                          {item.label}
+                        </div>
                       </motion.div>
                     ))}
                   </div>
@@ -521,8 +548,10 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
                 <div className="flex items-start gap-3">
                   <Users className="w-5 h-5 text-pink-600 shrink-0 mt-0.5" />
                   <p className="text-sm text-gray-700">
-                    和你兴趣最像的人通常喜欢去{" "}
-                    <span className="font-semibold">日料店、咖啡馆、艺术展</span>
+                    和你兴趣最像的人通常关注{" "}
+                    <span className="font-semibold">
+                      {interestInsights.topCategories.join("、")}
+                    </span>
                     ，期待在盲盒活动中遇见你！
                   </p>
                 </div>
