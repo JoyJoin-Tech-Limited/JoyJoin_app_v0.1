@@ -40,6 +40,15 @@ interface ShareCardData {
   };
 }
 
+// Expression options for archetype customization
+const expressionOptions = [
+  { id: "default", label: "默认", emoji: "😊" },
+  { id: "starry", label: "星星眼", emoji: "🤩" },
+  { id: "hearts", label: "爱心眼", emoji: "😍" },
+  { id: "shy", label: "害羞可爱", emoji: "😳" },
+  { id: "shocked", label: "震惊可爱", emoji: "😲" },
+];
+
 // English name mapping for archetypes
 const archetypeEnglishNames: Record<string, string> = {
   "机智狐": "Clever Fox",
@@ -58,14 +67,18 @@ const archetypeEnglishNames: Record<string, string> = {
 
 export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
+  const [selectedExpression, setSelectedExpression] = useState("default");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(true);
   const cardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Reset selected variant when modal opens
+  // Reset selected variant and expression when modal opens
   useEffect(() => {
     if (open) {
       setSelectedVariantIndex(0);
+      setSelectedExpression("default");
+      setIsPreviewMode(true);
     }
   }, [open]);
 
@@ -102,8 +115,11 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
     try {
       setIsGenerating(true);
       
-      // Wait a bit for animations to settle
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Disable preview mode (animation) before capturing
+      setIsPreviewMode(false);
+      
+      // Wait for animation to stop and re-render
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       const canvas = await html2canvas(cardRef.current, {
         scale: 3, // High-res export
@@ -111,6 +127,9 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
         logging: false,
         useCORS: true,
       });
+
+      // Re-enable preview mode
+      setIsPreviewMode(true);
 
       return canvas.toDataURL('image/png');
     } catch (error) {
@@ -120,6 +139,8 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
         description: "无法生成分享卡片，请重试",
         variant: "destructive",
       });
+      // Re-enable preview mode on error
+      setIsPreviewMode(true);
       return null;
     } finally {
       setIsGenerating(false);
@@ -223,6 +244,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
 
           {/* Variant selector grid */}
           <div>
+            <p className="text-sm font-semibold text-gray-700 mb-2">配色风格</p>
             <div className="grid grid-cols-5 gap-2 mb-3">
               {variants.map((variant, index) => (
                 <motion.button
@@ -269,11 +291,47 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
             )}
           </div>
 
+          {/* Expression selector */}
+          <div>
+            <p className="text-sm font-semibold text-gray-700 mb-2">表情选择</p>
+            <div className="flex gap-2 justify-center flex-wrap">
+              {expressionOptions.map((expr) => (
+                <motion.button
+                  key={expr.id}
+                  onClick={() => setSelectedExpression(expr.id)}
+                  className={`
+                    px-4 py-2 rounded-full text-sm font-medium transition-all
+                    ${selectedExpression === expr.id 
+                      ? 'bg-primary text-primary-foreground ring-2 ring-primary/50 scale-105' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
+                  `}
+                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.05 }}
+                >
+                  <span className="mr-1">{expr.emoji}</span>
+                  {expr.label}
+                  {selectedExpression === expr.id && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="ml-1 inline-block"
+                    >
+                      ✓
+                    </motion.span>
+                  )}
+                </motion.button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 text-center mt-2">
+              表情功能即将上线，敬请期待 🎨
+            </p>
+          </div>
+
           {/* Card preview */}
           <div className="flex justify-center">
             <AnimatePresence mode="wait">
               <motion.div
-                key={selectedVariantIndex}
+                key={`${selectedVariantIndex}-${selectedExpression}`}
                 initial={{ opacity: 0, scale: 0.9, rotateY: -10 }}
                 animate={{ opacity: 1, scale: 1, rotateY: 0 }}
                 exit={{ opacity: 0, scale: 0.9, rotateY: 10 }}
@@ -287,6 +345,8 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                   illustrationUrl={illustrationUrl}
                   rankings={shareCardData.rankings}
                   traitScores={shareCardData.traitScores}
+                  expression={selectedExpression}
+                  isPreview={isPreviewMode}
                 />
               </motion.div>
             </AnimatePresence>

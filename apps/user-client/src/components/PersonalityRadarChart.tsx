@@ -7,6 +7,7 @@ interface PersonalityRadarChartProps {
   emotionalStabilityScore?: number;
   extraversionScore?: number;
   positivityScore?: number;
+  primaryColor?: string; // Optional custom color for the radar chart
 }
 
 const traitDescriptions: Record<string, string> = {
@@ -25,6 +26,7 @@ export default function PersonalityRadarChart({
   emotionalStabilityScore,
   extraversionScore,
   positivityScore,
+  primaryColor,
 }: PersonalityRadarChartProps) {
   const normalizeScore = (score: number | undefined, fallback: number): number => {
     if (score === undefined || score === null) return fallback;
@@ -76,6 +78,10 @@ export default function PersonalityRadarChart({
     return { x, y, trait, angle, index };
   });
 
+  // Use custom primary color if provided, otherwise fall back to CSS variable
+  const strokeColor = primaryColor || "hsl(var(--primary))";
+  const fillGradientId = primaryColor ? "customRadarGradient" : "userRadarGradient";
+
   return (
     <div className="flex flex-col items-center justify-center w-full py-4">
       <svg width="100%" height="auto" viewBox="-10 -10 320 320" className="max-w-[320px]">
@@ -84,6 +90,12 @@ export default function PersonalityRadarChart({
             <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
             <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.05" />
           </radialGradient>
+          {primaryColor && (
+            <radialGradient id="customRadarGradient" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor={primaryColor} stopOpacity="0.2" />
+              <stop offset="100%" stopColor={primaryColor} stopOpacity="0.05" />
+            </radialGradient>
+          )}
         </defs>
 
         <polygon
@@ -135,8 +147,8 @@ export default function PersonalityRadarChart({
 
         <polygon
           points={userPolygonPoints}
-          fill="url(#userRadarGradient)"
-          stroke="hsl(var(--primary))"
+          fill={`url(#${fillGradientId})`}
+          stroke={strokeColor}
           strokeWidth="2"
         />
 
@@ -146,7 +158,7 @@ export default function PersonalityRadarChart({
             cx={point.x}
             cy={point.y}
             r="5"
-            fill="hsl(var(--primary))"
+            fill={strokeColor}
           />
         ))}
 
