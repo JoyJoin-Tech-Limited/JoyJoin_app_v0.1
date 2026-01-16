@@ -31,7 +31,7 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
           emojiOpacity: 1,
           textColor: "text-purple-700",
           shadow: "0 2px 8px rgba(192, 132, 252, 0.3)",
-          scale: 1.03,
+          scale: 1.02,
         };
       case 2:
         return {
@@ -40,7 +40,7 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
           emojiOpacity: 1,
           textColor: "text-pink-600",
           shadow: "0 3px 12px rgba(236, 72, 153, 0.4)",
-          scale: 1.05,
+          scale: 1.04,
         };
       case 3:
         return {
@@ -49,7 +49,7 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
           emojiOpacity: 1,
           textColor: "text-white font-bold",
           shadow: "0 4px 16px rgba(236, 72, 153, 0.5), 0 2px 8px rgba(251, 146, 60, 0.3)",
-          scale: 1.08,
+          scale: 1.06,
         };
     }
   };

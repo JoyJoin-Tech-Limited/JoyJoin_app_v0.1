@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Check, Star, Info, Flame, Sparkles, Ban } from "lucide-react";
+import { Check, Star, Info, Flame, Sparkles, Ban, AlertCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { motion, AnimatePresence } from "framer-motion";
 import RegistrationProgress from "@/components/RegistrationProgress";
@@ -96,6 +96,7 @@ export default function InterestsTopicsPage() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [showMajorCelebration, setShowMajorCelebration] = useState(false);
   const [showMoreInterests, setShowMoreInterests] = useState(false);
+  const [inlineError, setInlineError] = useState<string | null>(null);
 
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [primaryInterests, setPrimaryInterests] = useState<string[]>([]);
@@ -154,15 +155,16 @@ export default function InterestsTopicsPage() {
       if (primaryInterests.includes(interestId)) {
         setPrimaryInterests(primaryInterests.filter(id => id !== interestId));
       }
+      // Clear any errors
+      setInlineError(null);
     } else {
       if (selectedInterests.length >= 7) {
-        toast({
-          title: "最多选择7个兴趣",
-          variant: "destructive",
-        });
+        setInlineError("最多选择7个兴趣");
+        setTimeout(() => setInlineError(null), 3000);
         return;
       }
       setSelectedInterests([...selectedInterests, interestId]);
+      setInlineError(null);
     }
   };
 
@@ -171,30 +173,30 @@ export default function InterestsTopicsPage() {
     
     if (primaryInterests.includes(interestId)) {
       setPrimaryInterests(primaryInterests.filter(id => id !== interestId));
+      setInlineError(null);
     } else {
       if (primaryInterests.length >= 3) {
-        toast({
-          title: "最多标记3个主要兴趣",
-          variant: "destructive",
-        });
+        setInlineError("最多标记3个主要兴趣");
+        setTimeout(() => setInlineError(null), 3000);
         return;
       }
       setPrimaryInterests([...primaryInterests, interestId]);
+      setInlineError(null);
     }
   };
 
   const toggleTopicAvoidance = (topicId: string) => {
     if (topicAvoidances.includes(topicId)) {
       setTopicAvoidances(topicAvoidances.filter(id => id !== topicId));
+      setInlineError(null);
     } else {
       if (topicAvoidances.length >= 4) {
-        toast({
-          title: "最多选择4个",
-          variant: "destructive",
-        });
+        setInlineError("最多选择4个话题");
+        setTimeout(() => setInlineError(null), 3000);
         return;
       }
       setTopicAvoidances([...topicAvoidances, topicId]);
+      setInlineError(null);
     }
   };
 
@@ -202,19 +204,16 @@ export default function InterestsTopicsPage() {
     if (step === 1) {
       // Validate interests step
       if (selectedInterests.length < 3) {
-        toast({
-          title: "请至少选择3个兴趣",
-          variant: "destructive",
-        });
+        setInlineError("请至少选择3个兴趣");
+        setTimeout(() => setInlineError(null), 3000);
         return;
       }
       if (primaryInterests.length < 1) {
-        toast({
-          title: "请点击星标标记1-3个主要兴趣",
-          variant: "destructive",
-        });
+        setInlineError("请点击星标标记1-3个主要兴趣");
+        setTimeout(() => setInlineError(null), 3000);
         return;
       }
+      setInlineError(null);
       setShowCelebration(true);
       setTimeout(() => setStep(2), 400);
     } else {
@@ -562,29 +561,48 @@ export default function InterestsTopicsPage() {
 
       {/* Navigation buttons */}
       <div className="shrink-0 border-t p-4 bg-background">
-        <div className="max-w-2xl mx-auto flex gap-3">
-          {step > 1 && (
-            <Button
-              variant="outline"
-              onClick={handleBack}
-              className="flex-1"
-              data-testid="button-back"
-            >
-              上一步
-            </Button>
-          )}
-          <Button
-            onClick={handleNext}
-            className="flex-1"
-            disabled={saveMutation.isPending}
-            data-testid="button-next"
-          >
-            {step === totalSteps ? (
-              saveMutation.isPending ? "保存中..." : "完成"
-            ) : (
-              "下一步"
+        <div className="max-w-2xl mx-auto">
+          {/* Inline error message */}
+          <AnimatePresence>
+            {inlineError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mb-3"
+              >
+                <div className="flex items-center gap-2 bg-destructive/10 border border-destructive/30 rounded-lg px-4 py-3">
+                  <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+                  <span className="text-sm text-destructive font-medium">{inlineError}</span>
+                </div>
+              </motion.div>
             )}
-          </Button>
+          </AnimatePresence>
+          
+          <div className="flex gap-3">
+            {step > 1 && (
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                className="flex-1"
+                data-testid="button-back"
+              >
+                上一步
+              </Button>
+            )}
+            <Button
+              onClick={handleNext}
+              className="flex-1"
+              disabled={saveMutation.isPending}
+              data-testid="button-next"
+            >
+              {step === totalSteps ? (
+                saveMutation.isPending ? "保存中..." : "完成"
+              ) : (
+                "下一步"
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
