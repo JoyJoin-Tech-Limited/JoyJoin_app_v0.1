@@ -86,6 +86,10 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   src={illustrationUrl}
                   alt={archetype}
                   className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // Fallback to placeholder on error
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
                 />
               </div>
             </div>
@@ -125,30 +129,23 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             {/* Six trait bars */}
             <div className="bg-white/95 rounded-2xl p-4 mb-4 space-y-2 flex-1">
               {Object.entries(traitScores).map(([key, score], index) => (
-                <motion.div
-                  key={key}
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: "100%", opacity: 1 }}
-                  transition={{ duration: 1, delay: index * 0.2, ease: "easeOut" }}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-gray-700 w-14 flex-shrink-0">
-                      {traitLabels[key]}
-                    </span>
-                    <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.round(score * 100)}%` }}
-                        transition={{ duration: 1, delay: index * 0.2, ease: "easeOut" }}
-                        className="h-full rounded-full"
-                        style={{ backgroundColor: variant.primaryColor }}
-                      />
-                    </div>
-                    <span className="text-xs font-bold text-gray-600 w-8 text-right">
-                      {Math.round(score * 100)}
-                    </span>
+                <div key={key} className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-gray-700 w-14 flex-shrink-0">
+                    {traitLabels[key]}
+                  </span>
+                  <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.round(score * 100)}%` }}
+                      transition={{ duration: 1, delay: index * 0.2, ease: "easeOut" }}
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: variant.primaryColor }}
+                    />
                   </div>
-                </motion.div>
+                  <span className="text-xs font-bold text-gray-600 w-8 text-right">
+                    {Math.round(score * 100)}
+                  </span>
+                </div>
               ))}
             </div>
 
