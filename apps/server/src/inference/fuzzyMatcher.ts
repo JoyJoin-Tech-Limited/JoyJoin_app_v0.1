@@ -37,7 +37,7 @@ export function fuzzyMatch(userInput: string): IndustryClassificationResult | nu
     
     // Exact match (highest priority)
     if (displayName === input) {
-      return createResult(occ, 1.0, 'exact', '精确匹配', userInput, startTime);
+      return createResult(occ, 1.0, 'fuzzy', '精确匹配', userInput, startTime);
     }
     
     // Levenshtein distance for typos (very high priority)
@@ -60,7 +60,7 @@ export function fuzzyMatch(userInput: string): IndustryClassificationResult | nu
       const synLower = syn.toLowerCase();
       
       if (synLower === input) {
-        return createResult(occ, 0.98, 'exact', `精确匹配同义词"${syn}"`, userInput, startTime);
+        return createResult(occ, 0.98, 'fuzzy', `精确匹配同义词"${syn}"`, userInput, startTime);
       }
       
       if (synLower.includes(input) || input.includes(synLower)) {
@@ -126,7 +126,7 @@ export function fuzzyMatch(userInput: string): IndustryClassificationResult | nu
 function createResult(
   occ: typeof OCCUPATIONS[0],
   confidence: number,
-  source: 'exact' | 'fuzzy',
+  source: IndustryClassificationResult['source'],
   reasoning: string,
   userInput: string,
   startTime: number
