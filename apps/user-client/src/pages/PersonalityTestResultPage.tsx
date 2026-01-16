@@ -8,6 +8,7 @@ import PersonalityRadarChart from "@/components/PersonalityRadarChart";
 import { XiaoyueInsightCard } from "@/components/XiaoyueInsightCard";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import StyleSpectrum from "@/components/StyleSpectrum";
+import { ShareCardModal } from "@/components/ShareCardModal";
 import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -510,6 +511,7 @@ export default function PersonalityTestResultPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [animationPhase, setAnimationPhase] = useState<AnimationPhase>('slot');
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   const containerVariants = useMemo(
@@ -960,8 +962,8 @@ export default function PersonalityTestResultPage() {
         </motion.div>
 
         <motion.div variants={itemVariants} className="flex flex-col gap-3 py-6">
-          <Button variant="outline" className="w-full" onClick={handleShare} data-testid="button-share">
-            <Share2 className="w-5 h-5 mr-2" />分享我的社交角色
+          <Button variant="outline" className="w-full" onClick={() => setShareModalOpen(true)} data-testid="button-share">
+            <Share2 className="w-5 h-5 mr-2" />分享我的性格卡片
           </Button>
           {isLegacyV1 ? (
             <div className="space-y-2 p-4 bg-primary/5 rounded-xl border border-primary/10">
@@ -1022,6 +1024,9 @@ export default function PersonalityTestResultPage() {
       </motion.div>
         </motion.div>
       )}
+      
+      {/* Share Card Modal */}
+      <ShareCardModal open={shareModalOpen} onOpenChange={setShareModalOpen} />
     </AnimatePresence>
   );
 }
