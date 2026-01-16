@@ -456,6 +456,15 @@ const COMPANY_PROFILES: CompanyProfile[] = [
 ];
 
 /**
+ * Debug logging utility for development mode
+ */
+function debugLog(message: string, data?: any): void {
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[OccupationMatcher] ${message}`, data || '');
+  }
+}
+
+/**
  * Calculate match specificity score
  * Higher scores indicate more specific/confident matches
  */
@@ -481,14 +490,14 @@ function calculateMatchScore(
   const coverage = matchedText.length / fullText.length;
   score += coverage * 50;
   
-  // Specific high-priority keywords get bonus
+  // Specific high-priority keywords get bonus (optimize by converting to lowercase once)
   const highPriorityKeywords = [
-    '投资', '投行', 'PE', 'VC', '基金', '证券', '券商',
+    '投资', '投行', 'pe', 'vc', '基金', '证券', '券商',
     '产品经理', '设计师', '咨询', '律师', '医生'
   ];
   const lowerMatched = matchedText.toLowerCase();
   const hasHighPriorityKeyword = highPriorityKeywords.some(kw => 
-    matchedText.includes(kw) || lowerMatched === kw.toLowerCase()
+    matchedText.includes(kw) || lowerMatched.includes(kw.toLowerCase())
   );
   if (hasHighPriorityKeyword) {
     score += 50;
@@ -524,25 +533,21 @@ export function matchOccupation(text: string): OccupationMatch | null {
         });
         
         // Debug logging
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[OccupationMatcher] Pattern matched:', {
-            input: trimmedText,
-            matched: match[0],
-            occupation: pattern.occupation,
-            category: pattern.category,
-            score,
-            priority: pattern.priority || 50
-          });
-        }
+        debugLog('Pattern matched:', {
+          input: trimmedText,
+          matched: match[0],
+          occupation: pattern.occupation,
+          category: pattern.category,
+          score,
+          priority: pattern.priority || 50
+        });
       }
     }
   }
   
   // Return highest scoring match
   if (matches.length === 0) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[OccupationMatcher] No match found for:', trimmedText);
-    }
+    debugLog('No match found for:', trimmedText);
     return null;
   }
   
@@ -550,16 +555,14 @@ export function matchOccupation(text: string): OccupationMatch | null {
   matches.sort((a, b) => b.score - a.score);
   const bestMatch = matches[0];
   
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[OccupationMatcher] Best match selected:', {
-      input: trimmedText,
-      result: bestMatch.occupation,
-      category: bestMatch.category,
-      evidence: bestMatch.evidence,
-      score: bestMatch.score,
-      totalMatches: matches.length
-    });
-  }
+  debugLog('Best match selected:', {
+    input: trimmedText,
+    result: bestMatch.occupation,
+    category: bestMatch.category,
+    evidence: bestMatch.evidence,
+    score: bestMatch.score,
+    totalMatches: matches.length
+  });
   
   // Return without the score property
   const { score, ...result } = bestMatch;
