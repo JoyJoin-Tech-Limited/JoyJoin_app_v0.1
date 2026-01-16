@@ -27,8 +27,8 @@ describe('Common Chinese Occupations Classification', () => {
     ];
 
     teacherTests.forEach(({ input, expected }) => {
-      it(`should classify "${input}" as ${expected}`, () => {
-        const result = classifyIndustry(input);
+      it(`should classify "${input}" as ${expected}`, async () => {
+        const result = await classifyIndustry(input);
         expect(result.category.id).toBe(expected);
         expect(result.reasoning).toBeTruthy();
       });
@@ -49,8 +49,8 @@ describe('Common Chinese Occupations Classification', () => {
 
     govTests.forEach(({ input, expected }) => {
       if (!expected) return;
-      it(`should classify "${input}" as ${expected}`, () => {
-        const result = classifyIndustry(input);
+      it(`should classify "${input}" as ${expected}`, async () => {
+        const result = await classifyIndustry(input);
         expect(result.category.id).toBe(expected);
       });
     });
@@ -67,8 +67,8 @@ describe('Common Chinese Occupations Classification', () => {
     ];
 
     financeTests.forEach(({ input, expected }) => {
-      it(`should classify "${input}" as ${expected}`, () => {
-        const result = classifyIndustry(input);
+      it(`should classify "${input}" as ${expected}`, async () => {
+        const result = await classifyIndustry(input);
         expect(result.category.id).toBe(expected);
       });
     });
@@ -95,10 +95,10 @@ describe('Common Chinese Occupations Classification', () => {
     ];
 
     serviceTests.forEach(({ input, nonFallback }) => {
-      it(`should classify "${input}" with proper categorization`, () => {
-        const result = classifyIndustry(input);
+      it(`should classify "${input}" with proper categorization`, async () => {
+        const result = await classifyIndustry(input);
         if (nonFallback) {
-          expect(['exact', 'fuzzy', 'ontology', 'semantic']).toContain(result.source);
+          expect(['seed', 'fuzzy', 'ontology', 'ai']).toContain(result.source);
         }
         expect(result.reasoning).toBeTruthy();
       });
@@ -106,7 +106,7 @@ describe('Common Chinese Occupations Classification', () => {
   });
 
   describe('Overall Coverage Check', () => {
-    it('should have high success rate for common occupations', () => {
+    it('should have high success rate for common occupations', async () => {
       const commonOccupations = [
         '公务员', '老师', '小学教师', '中学教师', '高中教师', '大学教授',
         '银行职员', '会计', '出纳', '文员', '司机', '工人', '保安', 
@@ -118,9 +118,9 @@ describe('Common Chinese Occupations Classification', () => {
       let successCount = 0;
       const results: Array<{ input: string; category: string; source: string }> = [];
 
-      commonOccupations.forEach(input => {
-        const result = classifyIndustry(input);
-        const isNonFallback = ['exact', 'fuzzy', 'ontology', 'semantic'].includes(result.source);
+      for (const input of commonOccupations) {
+        const result = await classifyIndustry(input);
+        const isNonFallback = ['seed', 'fuzzy', 'ontology', 'ai'].includes(result.source);
         if (isNonFallback) successCount++;
         
         results.push({
@@ -128,7 +128,7 @@ describe('Common Chinese Occupations Classification', () => {
           category: result.category.label,
           source: result.source
         });
-      });
+      }
 
       const successRate = (successCount / commonOccupations.length) * 100;
       
@@ -136,7 +136,7 @@ describe('Common Chinese Occupations Classification', () => {
       console.log(`Success Rate: ${successRate.toFixed(1)}% (${successCount}/${commonOccupations.length})`);
       console.log('\nDetailed Results:');
       results.forEach(({ input, category, source }) => {
-        const emoji = ['exact', 'fuzzy', 'ontology', 'semantic'].includes(source) ? '✅' : '⚠️';
+        const emoji = ['seed', 'fuzzy', 'ontology', 'ai'].includes(source) ? '✅' : '⚠️';
         console.log(`${emoji} ${input.padEnd(12)} → ${category.padEnd(15)} (${source})`);
       });
 
