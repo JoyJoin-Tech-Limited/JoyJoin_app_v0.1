@@ -179,7 +179,7 @@ describe('100 Chinese Occupation Descriptions', () => {
             input: test.input,
             expected: `${test.expectedCategory}${test.expectedSegment ? '/' + test.expectedSegment : ''}${test.expectedNiche ? '/' + test.expectedNiche : ''}`,
             actual: `${result.category.id}/${result.segment.id}${result.niche ? '/' + result.niche.id : ''}`,
-            reasoning: result.reasoning,
+            reasoning: result.reasoning ?? "",
           });
           
           console.log(`❌ ${i + 1}. "${test.input}" → ${result.category.label} (expected: ${test.expectedCategory})`);
