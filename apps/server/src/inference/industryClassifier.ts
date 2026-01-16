@@ -12,6 +12,19 @@ import { matchSeed, type SeedMatch } from "./industrySeedMap";
 import { fuzzyMatch } from "./fuzzyMatcher";
 import { INDUSTRY_TAXONOMY, findCategoryById, findSegmentById, findNicheById } from "@shared/industryTaxonomy";
 import { OCCUPATIONS } from "@shared/occupations";
+import { ensureReasoning } from "./reasoningGenerator";
+import { inferNicheFromContext } from "./nicheInferenceEngine";
+import { applySemanticFallback } from "@shared/semanticFallback";
+
+// Confidence thresholds for classification tiers
+const CONFIDENCE_THRESHOLDS = {
+  FUZZY_HIGH: 0.85,      // High confidence fuzzy match (use immediately)
+  FUZZY_DECENT: 0.70,    // Decent fuzzy match (use if seed fails)
+  SEED_MIN: 0.90,        // Minimum seed match confidence
+  TAXONOMY_MIN: 0.80,    // Minimum taxonomy match confidence
+  NICHE_INFERENCE_SEED: 0.85,    // Niche inference for seed/taxonomy
+  NICHE_INFERENCE_AI: 0.80,      // Niche inference for AI results
+};
 
 export interface IndustryClassificationResult {
   category: {
@@ -56,7 +69,7 @@ function matchViaSeed(userInput: string): IndustryClassificationResult | null {
     }
   }
   
-  return {
+  const result: IndustryClassificationResult = {
     category: { id: category.id, label: category.label },
     segment: { id: segment.id, label: segment.label },
     niche,
@@ -66,6 +79,17 @@ function matchViaSeed(userInput: string): IndustryClassificationResult | null {
     rawInput: userInput,
     normalizedInput: userInput,
   };
+  
+  // Apply niche inference if no niche found
+  if (!result.niche) {
+    const inferredNiche = inferNicheFromContext(userInput, category.id, segment.id);
+    if (inferredNiche && inferredNiche.confidence >= CONFIDENCE_THRESHOLDS.NICHE_INFERENCE_SEED) {
+      result.niche = { id: inferredNiche.id, label: inferredNiche.label };
+    }
+  }
+  
+  // Ensure reasoning is always present
+  return ensureReasoning(result, userInput);
 }
 
 /**
@@ -194,7 +218,7 @@ function matchViaTaxonomy(userInput: string): IndustryClassificationResult | nul
   allMatches.sort((a, b) => b.matchPriority - a.matchPriority);
   const match = allMatches[0];
   
-  return {
+  const result: IndustryClassificationResult = {
     category: { id: match.categoryId, label: match.categoryLabel },
     segment: { id: match.segmentId, label: match.segmentLabel },
     niche: match.nicheId ? { id: match.nicheId, label: match.nicheLabel! } : undefined,
@@ -205,6 +229,17 @@ function matchViaTaxonomy(userInput: string): IndustryClassificationResult | nul
     rawInput: userInput,
     normalizedInput: userInput,
   };
+  
+  // Apply niche inference if no niche found
+  if (!result.niche) {
+    const inferredNiche = inferNicheFromContext(userInput, match.categoryId, match.segmentId);
+    if (inferredNiche && inferredNiche.confidence >= CONFIDENCE_THRESHOLDS.NICHE_INFERENCE_SEED) {
+      result.niche = { id: inferredNiche.id, label: inferredNiche.label };
+    }
+  }
+  
+  // Ensure reasoning is always present
+  return ensureReasoning(result, userInput);
 }
 
 /**
@@ -276,7 +311,15 @@ ${categoryList}
       }
     }
     
-    return {
+    // Apply niche inference if no niche found
+    if (!niche) {
+      const inferredNiche = inferNicheFromContext(userInput, category.id, segment.id);
+      if (inferredNiche && inferredNiche.confidence >= CONFIDENCE_THRESHOLDS.NICHE_INFERENCE_AI) {
+        niche = { id: inferredNiche.id, label: inferredNiche.label };
+      }
+    }
+    
+    const result: IndustryClassificationResult = {
       category: { id: category.id, label: aiResult.categoryLabel || category.label },
       segment: { id: segment.id, label: aiResult.segmentLabel || segment.label },
       niche,
@@ -287,6 +330,9 @@ ${categoryList}
       rawInput: userInput,
       normalizedInput: userInput,
     };
+    
+    // Ensure reasoning is always present
+    return ensureReasoning(result, userInput);
   } catch (error) {
     console.error("AI classification error:", error);
     return null;
@@ -332,6 +378,32 @@ async function normalizeUserInput(rawText: string): Promise<string> {
  * Returns "other" category with low confidence and suggestions
  */
 function intelligentFallback(userInput: string, startTime: number): IndustryClassificationResult {
+  // Try semantic fallback first for edge cases (farmer, student, 富二代, etc.)
+  const semanticMatch = applySemanticFallback(userInput);
+  if (semanticMatch) {
+    const category = findCategoryById(semanticMatch.category);
+    const segment = category ? findSegmentById(semanticMatch.category, semanticMatch.segment) : null;
+    
+    if (category && segment) {
+      const result: IndustryClassificationResult = {
+        category: { id: category.id, label: category.label },
+        segment: { id: segment.id, label: segment.label },
+        niche: semanticMatch.niche ? findNicheById(semanticMatch.category, semanticMatch.segment, semanticMatch.niche) 
+          ? { id: semanticMatch.niche, label: findNicheById(semanticMatch.category, semanticMatch.segment, semanticMatch.niche)!.label }
+          : undefined : undefined,
+        confidence: semanticMatch.confidence,
+        source: "fallback",
+        reasoning: semanticMatch.reasoning,
+        processingTimeMs: Date.now() - startTime,
+        rawInput: userInput,
+        normalizedInput: userInput,
+      };
+      
+      return ensureReasoning(result, userInput);
+    }
+  }
+  
+  // Original fallback logic for occupation keyword matching
   const input = userInput.toLowerCase();
   const candidates: { occ: typeof OCCUPATIONS[0]; score: number }[] = [];
   
@@ -357,7 +429,7 @@ function intelligentFallback(userInput: string, startTime: number): IndustryClas
       const segment = category ? findSegmentById(best.seedMappings.category, best.seedMappings.segment) : null;
       
       if (category && segment) {
-        return {
+        const result: IndustryClassificationResult = {
           category: { id: category.id, label: category.label },
           segment: { id: segment.id, label: segment.label },
           confidence: Math.min(0.5, top3[0].score / 50),
@@ -367,6 +439,9 @@ function intelligentFallback(userInput: string, startTime: number): IndustryClas
           rawInput: userInput,
           normalizedInput: userInput,
         };
+        
+        // Ensure reasoning is always present
+        return ensureReasoning(result, userInput);
       }
     }
   }
@@ -376,7 +451,7 @@ function intelligentFallback(userInput: string, startTime: number): IndustryClas
   const otherCategory = INDUSTRY_TAXONOMY.find(c => c.id === "other" || c.id.includes("other")) || INDUSTRY_TAXONOMY[INDUSTRY_TAXONOMY.length - 1];
   const otherSegment = otherCategory.segments[0];
   
-  return {
+  const result: IndustryClassificationResult = {
     category: { id: otherCategory.id, label: otherCategory.label },
     segment: { id: otherSegment.id, label: otherSegment.label },
     confidence: 0.1,
@@ -386,6 +461,9 @@ function intelligentFallback(userInput: string, startTime: number): IndustryClas
     rawInput: userInput,
     normalizedInput: userInput,
   };
+  
+  // Ensure reasoning is always present
+  return ensureReasoning(result, userInput);
 }
 
 /**
@@ -403,27 +481,27 @@ export async function classifyIndustry(
   
   // Tier 0: Fuzzy matching for typos and variations
   const fuzzyResult = fuzzyMatch(cleanInput);
-  if (fuzzyResult && fuzzyResult.confidence >= 0.85) {
+  if (fuzzyResult && fuzzyResult.confidence >= CONFIDENCE_THRESHOLDS.FUZZY_HIGH) {
     const normalizedInput = await normalizeUserInput(cleanInput);
     return { ...fuzzyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
   // Tier 1: Seed库精确匹配
   const seedResult = matchViaSeed(cleanInput);
-  if (seedResult && seedResult.confidence >= 0.9) {
+  if (seedResult && seedResult.confidence >= CONFIDENCE_THRESHOLDS.SEED_MIN) {
     const normalizedInput = await normalizeUserInput(cleanInput);
     return { ...seedResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
   // If fuzzy match has decent confidence, use it
-  if (fuzzyResult && fuzzyResult.confidence >= 0.7) {
+  if (fuzzyResult && fuzzyResult.confidence >= CONFIDENCE_THRESHOLDS.FUZZY_DECENT) {
     const normalizedInput = await normalizeUserInput(cleanInput);
     return { ...fuzzyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
   // Tier 2: Taxonomy直接匹配
   const taxonomyResult = matchViaTaxonomy(cleanInput);
-  if (taxonomyResult && taxonomyResult.confidence >= 0.8) {
+  if (taxonomyResult && taxonomyResult.confidence >= CONFIDENCE_THRESHOLDS.TAXONOMY_MIN) {
     const normalizedInput = await normalizeUserInput(cleanInput);
     return { ...taxonomyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
