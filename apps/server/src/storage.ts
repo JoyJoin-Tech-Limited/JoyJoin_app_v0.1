@@ -360,6 +360,10 @@ export interface IStorage {
     traitScores: any;
   }): Promise<any>;
   getAssessmentAnswers(sessionId: string): Promise<any[]>;
+  
+  // Share Card Rankings
+  calculateUserRank(userCreatedAt: Date): Promise<number>;
+  calculateArchetypeRank(userId: string, archetype: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3981,6 +3985,31 @@ export class DatabaseStorage implements IStorage {
       .from(assessmentAnswers)
       .where(eq(assessmentAnswers.sessionId, sessionId))
       .orderBy(assessmentAnswers.answeredAt);
+  }
+
+  // Share Card Rankings
+  async calculateUserRank(userCreatedAt: Date): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(sql`${users.createdAt} < ${userCreatedAt}`);
+    return (result?.count || 0) + 1;
+  }
+
+  async calculateArchetypeRank(userId: string, archetype: string): Promise<number> {
+    const user = await this.getUser(userId);
+    if (!user?.createdAt) {
+      return 1;
+    }
+    
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(and(
+        eq(users.archetype, archetype),
+        sql`${users.createdAt} < ${user.createdAt}`
+      ));
+    return (result?.count || 0) + 1;
   }
 }
 
