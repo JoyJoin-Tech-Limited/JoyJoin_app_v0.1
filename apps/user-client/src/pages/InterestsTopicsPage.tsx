@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -97,6 +97,7 @@ export default function InterestsTopicsPage() {
   const [showMajorCelebration, setShowMajorCelebration] = useState(false);
   const [showMoreInterests, setShowMoreInterests] = useState(false);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [primaryInterests, setPrimaryInterests] = useState<string[]>([]);
@@ -109,6 +110,28 @@ export default function InterestsTopicsPage() {
       return () => clearTimeout(timer);
     }
   }, [step, showCelebration]);
+
+  // Cleanup error timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Helper function to set inline error with auto-dismiss
+  const showInlineError = useCallback((message: string, duration = 3000) => {
+    // Clear any existing timeout
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
+    }
+    setInlineError(message);
+    errorTimeoutRef.current = setTimeout(() => {
+      setInlineError(null);
+      errorTimeoutRef.current = null;
+    }, duration);
+  }, []);
 
   const form = useForm<InterestsTopics>({
     resolver: zodResolver(interestsTopicsSchema),
@@ -157,14 +180,21 @@ export default function InterestsTopicsPage() {
       }
       // Clear any errors
       setInlineError(null);
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
     } else {
       if (selectedInterests.length >= 7) {
-        setInlineError("最多选择7个兴趣");
-        setTimeout(() => setInlineError(null), 3000);
+        showInlineError("最多选择7个兴趣");
         return;
       }
       setSelectedInterests([...selectedInterests, interestId]);
       setInlineError(null);
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
     }
   };
 
@@ -174,14 +204,21 @@ export default function InterestsTopicsPage() {
     if (primaryInterests.includes(interestId)) {
       setPrimaryInterests(primaryInterests.filter(id => id !== interestId));
       setInlineError(null);
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
     } else {
       if (primaryInterests.length >= 3) {
-        setInlineError("最多标记3个主要兴趣");
-        setTimeout(() => setInlineError(null), 3000);
+        showInlineError("最多标记3个主要兴趣");
         return;
       }
       setPrimaryInterests([...primaryInterests, interestId]);
       setInlineError(null);
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
     }
   };
 
@@ -189,14 +226,21 @@ export default function InterestsTopicsPage() {
     if (topicAvoidances.includes(topicId)) {
       setTopicAvoidances(topicAvoidances.filter(id => id !== topicId));
       setInlineError(null);
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
     } else {
       if (topicAvoidances.length >= 4) {
-        setInlineError("最多选择4个话题");
-        setTimeout(() => setInlineError(null), 3000);
+        showInlineError("最多选择4个话题");
         return;
       }
       setTopicAvoidances([...topicAvoidances, topicId]);
       setInlineError(null);
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
     }
   };
 
@@ -204,16 +248,18 @@ export default function InterestsTopicsPage() {
     if (step === 1) {
       // Validate interests step
       if (selectedInterests.length < 3) {
-        setInlineError("请至少选择3个兴趣");
-        setTimeout(() => setInlineError(null), 3000);
+        showInlineError("请至少选择3个兴趣");
         return;
       }
       if (primaryInterests.length < 1) {
-        setInlineError("请点击星标标记1-3个主要兴趣");
-        setTimeout(() => setInlineError(null), 3000);
+        showInlineError("请点击星标标记1-3个主要兴趣");
         return;
       }
       setInlineError(null);
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
       setShowCelebration(true);
       setTimeout(() => setStep(2), 400);
     } else {

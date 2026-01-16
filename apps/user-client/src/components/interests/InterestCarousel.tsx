@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
@@ -78,6 +78,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   const [showFirstTimeGuide, setShowFirstTimeGuide] = useState(false);
   const [showXiaoyue, setShowXiaoyue] = useState(true);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check for first-time guide on mount
   useEffect(() => {
@@ -127,6 +128,28 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [selections, currentCategoryIndex]);
+
+  // Cleanup error timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Helper function to set inline error with auto-dismiss
+  const showInlineError = useCallback((message: string, duration = 3000) => {
+    // Clear any existing timeout
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
+    }
+    setInlineError(message);
+    errorTimeoutRef.current = setTimeout(() => {
+      setInlineError(null);
+      errorTimeoutRef.current = null;
+    }, duration);
+  }, []);
 
   // Calculate metrics
   const calculateMetrics = useCallback(() => {
@@ -200,15 +223,14 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
       if (currentLevel === 3 && nextLevel === 0) {
         const hasSeenCycleExplanation = localStorage.getItem(CYCLE_EXPLANATION_KEY);
         if (!hasSeenCycleExplanation) {
-          setInlineError("再次点击可以取消选择哦");
-          setTimeout(() => setInlineError(null), 2000);
+          showInlineError("再次点击可以取消选择哦", 2000);
           localStorage.setItem(CYCLE_EXPLANATION_KEY, 'true');
         }
       }
       
       return { ...prev, [topicId]: nextLevel };
     });
-  }, []);
+  }, [showInlineError]);
 
   // Handle horizontal swipe
   const handleDragEnd = useCallback(
@@ -236,8 +258,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   // Handle continue button
   const handleContinue = useCallback(() => {
     if (totalSelections < 3) {
-      setInlineError("请至少选择3个兴趣");
-      setTimeout(() => setInlineError(null), 3000);
+      showInlineError("请至少选择3个兴趣");
       return;
     }
 
@@ -279,7 +300,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
     localStorage.removeItem(STORAGE_KEY);
 
     onComplete(data);
-  }, [selections, totalHeat, totalSelections, categoryHeat, onComplete]);
+  }, [selections, totalHeat, totalSelections, categoryHeat, onComplete, showInlineError]);
 
   const currentCategory = INTEREST_CATEGORIES[currentCategoryIndex];
   const canContinue = totalSelections >= 3;
