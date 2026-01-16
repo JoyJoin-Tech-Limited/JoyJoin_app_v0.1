@@ -134,14 +134,12 @@ export const OCCUPATIONS: Occupation[] = [
   
   // ========== 金融投资 (finance) ==========
   { id: "finance_analyst", displayName: "金融分析师", industryId: "finance", synonyms: ["投资分析师", "研究员", "行研", "金融分析", "股票分析", "行业研究员"], keywords: ["分析", "研究", "金融"], hot: true, seedMappings: { category: "finance", segment: "investment_banking" } },
-  { id: "banker", displayName: "银行职员", industryId: "finance", synonyms: ["银行经理", "客户经理", "理财经理", "柜员", "银行家", "银行从业"], keywords: ["银行", "理财"], hot: true, seedMappings: { category: "finance", segment: "commercial_banking" } },
   { id: "investment_banker", displayName: "投行(IBD)", industryId: "finance", synonyms: ["IBD", "投行", "投资银行", "投资银行家", "中金", "中金公司", "CICC", "中信证券", "华泰证券", "国泰君安", "海通证券", "招商证券", "广发证券", "高盛", "Goldman", "GS", "摩根士丹利", "Morgan Stanley", "MS", "摩根大通", "JP Morgan", "JPM", "瑞银", "UBS", "瑞信", "Credit Suisse", "花旗", "Citi", "美银", "BofA", "巴克莱", "Barclays", "德银", "Deutsche Bank"], keywords: ["投行", "IPO", "投资银行"], hot: true, seedMappings: { category: "finance", segment: "investment_banking" } },
   { id: "cvc_strategic", displayName: "战投/CVC", industryId: "finance", synonyms: ["战投", "战略投资", "企业投资", "CVC", "Corporate VC", "并购", "M&A", "腾讯投资", "字节战投", "阿里战投", "美团战投", "百度战投", "京东战投", "快手战投", "小米战投", "滴滴战投", "网易战投", "B站战投", "拼多多战投", "华为投资"], keywords: ["战投", "并购", "战略投资", "CVC"], hot: true, seedMappings: { category: "finance", segment: "pe_vc" } },
   { id: "pe_vc", displayName: "PE/VC投资", industryId: "finance", synonyms: ["投资经理", "风投", "私募", "基金经理", "红杉", "Sequoia", "高瓴", "Hillhouse", "IDG", "经纬", "真格", "源码资本", "GGV", "光速", "Lightspeed", "启明创投", "北极光", "晨兴", "五源资本", "今日资本", "软银", "Softbank", "老虎环球", "Tiger Global", "DST", "Coatue", "博裕", "KKR", "黑石", "Blackstone", "凯雷", "Carlyle", "TPG", "华平", "Warburg Pincus", "鼎晖", "弘毅", "淡马锡", "Temasek", "GIC"], keywords: ["投资", "基金", "风险投资", "PE", "VC"], hot: true, seedMappings: { category: "finance", segment: "pe_vc" } },
   { id: "securities", displayName: "证券从业", industryId: "finance", synonyms: ["券商", "股票分析师", "交易员", "经纪人", "证券公司"], keywords: ["证券", "股票"], hot: false, seedMappings: { category: "finance", segment: "commercial_banking" } },
   { id: "insurance", displayName: "保险从业", industryId: "finance", synonyms: ["保险经纪", "保险顾问", "精算师", "保险代理"], keywords: ["保险", "精算"], hot: false, seedMappings: { category: "finance", segment: "insurance" } },
   { id: "fund_manager", displayName: "基金经理", industryId: "finance", synonyms: ["资产管理", "投资总监", "Portfolio Manager", "公募基金", "私募基金"], keywords: ["基金", "资产"], hot: false, seedMappings: { category: "finance", segment: "pe_vc" } },
-  { id: "accountant", displayName: "会计师", industryId: "finance", synonyms: ["会计", "审计师", "CPA", "财务", "四大", "德勤", "普华永道", "安永", "毕马威", "PWC", "EY", "KPMG", "Deloitte", "Big4"], keywords: ["会计", "审计", "财务", "四大"], hot: true, seedMappings: { category: "professional_services", segment: "consulting" } },
   { id: "cfo", displayName: "财务负责人", industryId: "finance", synonyms: ["CFO", "财务总监", "财务经理", "财务VP"], keywords: ["财务", "管理"], hot: false, seedMappings: { category: "finance", segment: "commercial_banking" } },
   
   // ========== 咨询服务 (consulting) ==========
@@ -205,6 +203,11 @@ export const OCCUPATIONS: Occupation[] = [
   
   // ========== 教育培训 (education) ==========
   { id: "teacher", displayName: "教师", industryId: "education", synonyms: ["老师", "教员", "班主任", "学科老师", "中小学老师"], keywords: ["教学", "学校"], hot: true, seedMappings: { category: "education", segment: "k12", niche: "teacher" } },
+  { id: "kindergarten_teacher", displayName: "幼儿园教师", industryId: "education", synonyms: ["幼师", "幼教", "学前教育老师", "幼儿老师", "幼儿园老师"], keywords: ["幼儿园", "学前"], hot: true, seedMappings: { category: "education", segment: "k12", niche: "teacher" } },
+  { id: "primary_teacher", displayName: "小学教师", industryId: "education", synonyms: ["小学老师", "小学教员", "语文老师", "数学老师", "英语老师"], keywords: ["小学", "教学"], hot: true, seedMappings: { category: "education", segment: "k12", niche: "teacher" } },
+  { id: "middle_school_teacher", displayName: "中学教师", industryId: "education", synonyms: ["中学老师", "初中老师", "初中教师", "初中教员"], keywords: ["中学", "初中"], hot: true, seedMappings: { category: "education", segment: "k12", niche: "teacher" } },
+  { id: "high_school_teacher", displayName: "高中教师", industryId: "education", synonyms: ["高中老师", "高中教员", "高中班主任"], keywords: ["高中", "教学"], hot: true, seedMappings: { category: "education", segment: "k12", niche: "teacher" } },
+  { id: "vocational_teacher", displayName: "职业学校教师", industryId: "education", synonyms: ["职业教师", "职校老师", "技校老师", "职高老师", "中专老师"], keywords: ["职校", "技校"], hot: false, seedMappings: { category: "education", segment: "vocational" } },
   { id: "trainer", displayName: "培训讲师", industryId: "education", synonyms: ["企业培训", "讲师", "内训师", "培训师", "职业讲师", "企业教练"], keywords: ["培训", "讲课", "授课"], hot: true },
   { id: "tutor", displayName: "课外辅导", industryId: "education", synonyms: ["家教", "补习老师", "一对一", "课后辅导"], keywords: ["辅导", "家教"], hot: false },
   { id: "education_consultant", displayName: "教育顾问", industryId: "education", synonyms: ["留学顾问", "升学顾问", "课程顾问", "留学中介"], keywords: ["咨询", "升学", "留学"], hot: true },
@@ -259,7 +262,8 @@ export const OCCUPATIONS: Occupation[] = [
   // ========== 其他行业 (other) ==========
   { id: "entrepreneur", displayName: "创业者", industryId: "other", synonyms: ["创业", "老板", "企业主", "自己做生意", "CEO", "创始人", "合伙人", "开公司"], keywords: ["创业", "老板", "自己干"], hot: true },
   { id: "freelancer", displayName: "自由职业者", industryId: "other", synonyms: ["自由职业", "独立工作者", "Freelance", "接私活", "斜杠青年", "自由工作"], keywords: ["自由", "独立", "灵活"], hot: true },
-  { id: "civil_servant", displayName: "公务员", industryId: "other", synonyms: ["政府", "事业单位", "国企员工", "体制内", "国企", "央企", "公职"], keywords: ["公务员", "政府", "体制"], hot: true },
+  { id: "civil_servant", displayName: "公务员", industryId: "other", synonyms: ["政府", "事业单位员工", "体制内", "公职", "公务人员"], keywords: ["公务员", "政府", "体制"], hot: true, seedMappings: { category: "government" } },
+  { id: "state_owned_enterprise", displayName: "国企员工", industryId: "other", synonyms: ["国企", "央企", "央企员工", "国有企业", "国企职工", "央企职工"], keywords: ["国企", "央企", "国有企业"], hot: true },
   { id: "foreign_company", displayName: "外企员工", industryId: "other", synonyms: ["外企", "外资", "500强", "世界500强", "跨国公司", "MNC"], keywords: ["外企", "外资", "500强"], hot: true },
   { id: "social_worker", displayName: "社工", industryId: "other", synonyms: ["社会工作者", "NGO", "公益", "志愿者", "慈善"], keywords: ["社工", "公益"], hot: false },
   { id: "military", displayName: "军人", industryId: "other", synonyms: ["现役军人", "退伍军人", "部队", "武警"], keywords: ["军人", "部队"], hot: false },
@@ -274,6 +278,24 @@ export const OCCUPATIONS: Occupation[] = [
   { id: "gap_year", displayName: "Gap中", industryId: "other", synonyms: ["待业", "求职中", "Career Break", "休息中", "找工作", "离职"], keywords: ["Gap", "待业", "求职"], hot: false },
   { id: "homemaker", displayName: "全职家庭", industryId: "other", synonyms: ["全职妈妈", "全职爸爸", "家庭主妇", "家庭主夫", "带娃"], keywords: ["家庭", "全职"], hot: false },
   { id: "retired", displayName: "退休人士", industryId: "other", synonyms: ["退休", "提前退休", "FIRE", "财务自由"], keywords: ["退休", "FIRE"], hot: false },
+  
+  // ========== 基础服务岗位（蓝领/服务业） ==========
+  { id: "bank_teller", displayName: "银行职员", industryId: "finance", synonyms: ["银行员工", "柜员", "银行柜员", "银行工作人员", "储蓄员"], keywords: ["银行", "柜员"], hot: true, seedMappings: { category: "finance", segment: "banking" } },
+  { id: "accountant", displayName: "会计", industryId: "finance", synonyms: ["会计员", "财务会计", "成本会计", "税务会计"], keywords: ["会计", "财务"], hot: true, seedMappings: { category: "finance", segment: "accounting" } },
+  { id: "cashier_finance", displayName: "出纳", industryId: "finance", synonyms: ["出纳员", "财务出纳", "资金管理"], keywords: ["出纳", "现金"], hot: false, seedMappings: { category: "finance", segment: "accounting" } },
+  { id: "office_clerk", displayName: "文员", industryId: "other", synonyms: ["办公室文员", "行政文员", "前台文员", "文职人员"], keywords: ["文员", "办公"], hot: true },
+  { id: "professional_driver", displayName: "司机", industryId: "other", synonyms: ["驾驶员", "货车司机", "客车司机", "专职司机", "货运司机"], keywords: ["司机", "驾驶"], hot: true },
+  { id: "factory_worker", displayName: "工人", industryId: "other", synonyms: ["工厂工人", "车间工人", "生产工人", "普工", "操作工"], keywords: ["工人", "工厂"], hot: true },
+  { id: "security_guard", displayName: "保安", industryId: "other", synonyms: ["保安员", "安保人员", "门卫", "安全员"], keywords: ["保安", "安保"], hot: true },
+  { id: "cleaner", displayName: "清洁工", industryId: "other", synonyms: ["保洁员", "清洁员", "环卫工", "保洁"], keywords: ["清洁", "保洁"], hot: false },
+  { id: "waiter", displayName: "服务员", industryId: "other", synonyms: ["餐厅服务员", "酒店服务员", "前台服务员", "店员"], keywords: ["服务", "服务员"], hot: true },
+  { id: "cashier", displayName: "收银员", industryId: "other", synonyms: ["收银", "超市收银员", "商场收银"], keywords: ["收银", "收费"], hot: true },
+  { id: "courier", displayName: "快递员", industryId: "other", synonyms: ["快递", "快递小哥", "配送员", "派件员"], keywords: ["快递", "配送"], hot: true },
+  { id: "food_delivery", displayName: "外卖员", industryId: "other", synonyms: ["外卖", "外卖小哥", "外卖骑手", "美团骑手", "饿了么骑手"], keywords: ["外卖", "送餐"], hot: true },
+  { id: "electrician", displayName: "电工", industryId: "other", synonyms: ["电气工", "维修电工", "电力工", "电气技师"], keywords: ["电工", "电气"], hot: false },
+  { id: "plumber", displayName: "水电工", industryId: "other", synonyms: ["水暖工", "管道工", "水电维修"], keywords: ["水电", "管道"], hot: false },
+  { id: "repairman", displayName: "修理工", industryId: "other", synonyms: ["维修工", "机修工", "技工", "维修师傅"], keywords: ["修理", "维修"], hot: false },
+  { id: "renovation_worker", displayName: "装修工", industryId: "realestate", synonyms: ["装修师傅", "装修工人", "木工", "瓦工", "油漆工"], keywords: ["装修", "施工"], hot: false },
   
   // ========== 新增职业（扩展覆盖率） ==========
   // Tech (Additional)
