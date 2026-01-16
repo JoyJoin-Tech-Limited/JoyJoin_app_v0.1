@@ -456,6 +456,15 @@ const COMPANY_PROFILES: CompanyProfile[] = [
 ];
 
 /**
+ * High-priority keywords that indicate specific, important occupations
+ * These get bonus scoring to ensure correct classification
+ */
+const HIGH_PRIORITY_KEYWORDS = [
+  '投资', '投行', 'pe', 'vc', '基金', '证券', '券商',
+  '产品经理', '设计师', '咨询', '律师', '医生'
+];
+
+/**
  * Debug logging utility for development mode
  */
 function debugLog(message: string, data?: any): void {
@@ -490,14 +499,10 @@ function calculateMatchScore(
   const coverage = matchedText.length / fullText.length;
   score += coverage * 50;
   
-  // Specific high-priority keywords get bonus (optimize by converting to lowercase once)
-  const highPriorityKeywords = [
-    '投资', '投行', 'pe', 'vc', '基金', '证券', '券商',
-    '产品经理', '设计师', '咨询', '律师', '医生'
-  ];
+  // Specific high-priority keywords get bonus
   const lowerMatched = matchedText.toLowerCase();
-  const hasHighPriorityKeyword = highPriorityKeywords.some(kw => 
-    matchedText.includes(kw) || lowerMatched.includes(kw.toLowerCase())
+  const hasHighPriorityKeyword = HIGH_PRIORITY_KEYWORDS.some(kw => 
+    lowerMatched.includes(kw)
   );
   if (hasHighPriorityKeyword) {
     score += 50;
