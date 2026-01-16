@@ -112,9 +112,11 @@ import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abus
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, type User } from "@shared/schema";
+import * as schema from "@shared/schema";
 import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION } from "@shared/interests";
 import { db } from "./db";
 import { eq, or, and, desc, inArray, isNotNull, gt, sql } from "drizzle-orm";
+import type { NeonDatabase } from "drizzle-orm/neon-serverless";
 import { z } from "zod";
 
 // 12个社交氛围原型题目映射表（与前端personalityQuestions.ts保持一致）
@@ -2215,7 +2217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Use transaction to ensure atomicity - both operations succeed or both fail
-      const result = await db.transaction(async (tx) => {
+      const result = await db.transaction(async (tx: NeonDatabase<typeof schema>) => {
         // Check if user already has interests
         const existing = await tx
           .select()
