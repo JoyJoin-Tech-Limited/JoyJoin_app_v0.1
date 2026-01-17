@@ -1,9 +1,8 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import { CategoryPage } from "./CategoryPage";
@@ -71,7 +70,6 @@ interface StoredProgress {
 }
 
 export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) {
-  const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
 
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
@@ -79,6 +77,8 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   const [xiaoyueMessage, setXiaoyueMessage] = useState(XIAOYUE_MESSAGES[0]);
   const [showFirstTimeGuide, setShowFirstTimeGuide] = useState(false);
   const [showXiaoyue, setShowXiaoyue] = useState(true);
+  const [inlineError, setInlineError] = useState<string | null>(null);
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check for first-time guide on mount
   useEffect(() => {
@@ -128,6 +128,28 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [selections, currentCategoryIndex]);
+
+  // Cleanup error timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Helper function to set inline error with auto-dismiss
+  const showInlineError = useCallback((message: string, duration = 3000) => {
+    // Clear any existing timeout
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
+    }
+    setInlineError(message);
+    errorTimeoutRef.current = setTimeout(() => {
+      setInlineError(null);
+      errorTimeoutRef.current = null;
+    }, duration);
+  }, []);
 
   // Calculate metrics
   const calculateMetrics = useCallback(() => {
@@ -185,7 +207,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   }, [totalSelections]);
 
   // Handle topic tap - cycle through levels 0 → 1 → 2 → 3 → 0
-  // Show toast on first level 3 → 0 cycle to explain behavior
+  // Show inline message on first level 3 → 0 cycle to explain behavior
   const handleTopicTap = useCallback((topicId: string) => {
     setSelections((prev) => {
       const currentLevel = prev[topicId] || 0;
@@ -201,17 +223,14 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
       if (currentLevel === 3 && nextLevel === 0) {
         const hasSeenCycleExplanation = localStorage.getItem(CYCLE_EXPLANATION_KEY);
         if (!hasSeenCycleExplanation) {
-          toast({
-            title: "提示",
-            description: "再次点击可以取消选择哦",
-          });
+          showInlineError("再次点击可以取消选择哦", 2000);
           localStorage.setItem(CYCLE_EXPLANATION_KEY, 'true');
         }
       }
       
       return { ...prev, [topicId]: nextLevel };
     });
-  }, [toast]);
+  }, [showInlineError]);
 
   // Handle horizontal swipe
   const handleDragEnd = useCallback(
@@ -239,10 +258,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   // Handle continue button
   const handleContinue = useCallback(() => {
     if (totalSelections < 3) {
-      toast({
-        title: "请至少选择3个兴趣",
-        variant: "destructive",
-      });
+      showInlineError("请至少选择3个兴趣");
       return;
     }
 
@@ -284,7 +300,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
     localStorage.removeItem(STORAGE_KEY);
 
     onComplete(data);
-  }, [selections, totalHeat, totalSelections, categoryHeat, onComplete, toast]);
+  }, [selections, totalHeat, totalSelections, categoryHeat, onComplete, showInlineError]);
 
   const currentCategory = INTEREST_CATEGORIES[currentCategoryIndex];
   const canContinue = totalSelections >= 3;
@@ -397,6 +413,36 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
 
       {/* Carousel */}
       <div className="flex-1 overflow-hidden relative">
+        {/* Swipe navigation indicators */}
+        <AnimatePresence>
+          {currentCategoryIndex > 0 && (
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 0.6, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-20 pointer-events-none"
+            >
+              <div className="flex flex-col items-center bg-black/20 dark:bg-white/20 backdrop-blur-sm rounded-full p-2">
+                <ChevronLeft className="w-6 h-6 text-white dark:text-black" />
+                <span className="text-xs text-white dark:text-black">滑动</span>
+              </div>
+            </motion.div>
+          )}
+          {currentCategoryIndex < INTEREST_CATEGORIES.length - 1 && (
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 0.6, x: 0 }}
+              exit={{ opacity: 0, x: 10 }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-20 pointer-events-none"
+            >
+              <div className="flex flex-col items-center bg-black/20 dark:bg-white/20 backdrop-blur-sm rounded-full p-2">
+                <ChevronRight className="w-6 h-6 text-white dark:text-black" />
+                <span className="text-xs text-white dark:text-black">滑动</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
         <motion.div
           className="flex h-full"
           drag="x"
@@ -467,6 +513,23 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
 
       {/* Continue button - Duolingo style */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-background via-background to-transparent pt-6 pb-[env(safe-area-inset-bottom,1rem)]">
+        {/* Inline error message */}
+        <AnimatePresence>
+          {inlineError && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="px-4 mb-3"
+            >
+              <div className="flex items-center gap-2 bg-destructive/10 border border-destructive/30 rounded-lg px-4 py-3">
+                <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+                <span className="text-sm text-destructive font-medium">{inlineError}</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
         <div className="px-4 pb-4">
           <Button
             onClick={handleContinue}
@@ -474,10 +537,10 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
             className={cn(
               "w-full h-14 text-lg font-bold rounded-2xl shadow-lg",
               "!border-0 transition-all duration-200",
-              "disabled:opacity-50 disabled:cursor-not-allowed",
+              "disabled:cursor-not-allowed",
               canContinue 
                 ? "bg-primary text-primary-foreground hover:brightness-95" 
-                : "bg-muted"
+                : "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
             )}
           >
             继续 {totalSelections >= 3 && `(${totalSelections} 个兴趣)`}
