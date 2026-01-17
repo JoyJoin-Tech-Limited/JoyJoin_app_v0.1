@@ -812,9 +812,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.session.userId;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
+      // Only set hasCompletedPersonalityTest to true
+      // Do NOT set hasCompletedProfileSetup yet - that happens in /onboarding/setup
       const updatedUser = await storage.updateUser(userId, {
         hasCompletedPersonalityTest: true,
-        hasCompletedProfileSetup: true,
         hasCompletedRegistration: true,
         hasCompletedInterestsTopics: true, 
       });

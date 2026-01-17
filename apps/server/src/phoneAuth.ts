@@ -562,15 +562,52 @@ async function createDemoDataForUser(userId: string) {
 }
 
 // Process referral conversion when a new user registers via referral link
+// Note: This function is designed to be non-blocking. Registration should succeed
+// even if referral tracking fails. Any data inconsistencies in referral stats
+// should be detected and reconciled through periodic audit jobs.
 async function processReferralConversion(newUserId: string, referralCode: string) {
+  const startTime = Date.now();
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  // Production logging configuration
+  const LOG_ID_TRUNCATE_LENGTH = 8;
+  const LOG_CODE_TRUNCATE_LENGTH = 3;
+  const LOG_STACK_LINES_PRODUCTION = 2;
+  
+  // Helper to sanitize IDs for logging (truncate in production)
+  const sanitizeId = (id: string) => {
+    if (!id || typeof id !== 'string') return '[invalid]';
+    return isProduction && id.length > LOG_ID_TRUNCATE_LENGTH 
+      ? `${id.slice(0, LOG_ID_TRUNCATE_LENGTH)}...` 
+      : id;
+  };
+  
+  const sanitizeCode = (code: string) => {
+    if (!code || typeof code !== 'string') return '[invalid]';
+    return isProduction && code.length > LOG_CODE_TRUNCATE_LENGTH 
+      ? `${code.slice(0, LOG_CODE_TRUNCATE_LENGTH)}***` 
+      : code;
+  };
+  
   try {
+    // Input validation
+    if (!newUserId || typeof newUserId !== 'string') {
+      console.error('❌ [REFERRAL] Invalid newUserId provided');
+      return;
+    }
+    
+    if (!referralCode || typeof referralCode !== 'string') {
+      console.error('❌ [REFERRAL] Invalid referralCode provided');
+      return;
+    }
+    
     const { db } = await import("./db");
     const { referralCodes, referralConversions } = await import("@shared/schema");
     const { eq, sql } = await import("drizzle-orm");
     
-    console.log(`🎁 Processing referral conversion for new user ${newUserId} with code ${referralCode}`);
+    console.log(`🎁 [REFERRAL] Processing conversion for user ${sanitizeId(newUserId)} with code ${sanitizeCode(referralCode)}`);
     
-    // Find the referral code
+    // Find the referral code with additional validation
     const [referral] = await db
       .select()
       .from(referralCodes)
@@ -578,11 +615,19 @@ async function processReferralConversion(newUserId: string, referralCode: string
       .limit(1);
     
     if (!referral) {
-      console.warn(`⚠️ Referral code not found: ${referralCode}`);
+      console.warn(`⚠️ [REFERRAL] Code not found: ${sanitizeCode(referralCode)}`);
       return;
     }
     
-    // Check if this user has already been counted for this referral code
+    console.log(`✓ [REFERRAL] Found referral code ID ${sanitizeId(referral.id)} for user ${sanitizeId(referral.userId)}`);
+    
+    // Prevent self-referral
+    if (referral.userId === newUserId) {
+      console.warn(`⚠️ [REFERRAL] Self-referral attempt blocked: user ${sanitizeId(newUserId)}`);
+      return;
+    }
+    
+    // Check if this user has already been counted for ANY referral code
     const [existingConversion] = await db
       .select()
       .from(referralConversions)
@@ -590,25 +635,70 @@ async function processReferralConversion(newUserId: string, referralCode: string
       .limit(1);
     
     if (existingConversion) {
-      console.log(`ℹ️ User ${newUserId} already has a referral conversion record`);
+      console.log(`ℹ️ [REFERRAL] User ${sanitizeId(newUserId)} already has conversion record (ID: ${sanitizeId(existingConversion.id)})`);
       return;
     }
     
-    // Create the referral conversion record
-    await db.insert(referralConversions).values({
-      referralCodeId: referral.id,
-      invitedUserId: newUserId,
-      inviterRewardIssued: false,
-      inviteeRewardIssued: false,
+    // Create the referral conversion record with error handling
+    let conversionRecord;
+    try {
+      [conversionRecord] = await db.insert(referralConversions).values({
+        referralCodeId: referral.id,
+        invitedUserId: newUserId,
+        inviterRewardIssued: false,
+        inviteeRewardIssued: false,
+      }).returning();
+      
+      console.log(`✓ [REFERRAL] Conversion record created with ID ${sanitizeId(conversionRecord.id)}`);
+    } catch (insertError: any) {
+      console.error('❌ [REFERRAL] Failed to insert conversion record:', {
+        error: insertError.message,
+        code: insertError.code,
+        referralCodeId: sanitizeId(referral.id),
+        invitedUserId: sanitizeId(newUserId),
+      });
+      throw insertError;
+    }
+    
+    // Update the referral code statistics with error handling
+    // Note: If this fails, the conversion record still exists but stats are inconsistent.
+    // Reconciliation: Run periodic audit job to recalculate totalConversions from actual
+    // conversion records. See docs/referral-audit.md for implementation details.
+    try {
+      const [updatedReferral] = await db.update(referralCodes)
+        .set({ totalConversions: sql`${referralCodes.totalConversions} + 1` })
+        .where(eq(referralCodes.id, referral.id))
+        .returning();
+      
+      const newCount = updatedReferral?.totalConversions ?? 'unknown';
+      console.log(`✓ [REFERRAL] Updated conversion count to ${newCount} for code ${sanitizeCode(referralCode)}`);
+    } catch (updateError: any) {
+      console.error('❌ [REFERRAL] Failed to update referral code statistics:', {
+        error: updateError.message,
+        code: updateError.code,
+        referralId: sanitizeId(referral.id),
+        referralCode: sanitizeCode(referralCode),
+      });
+      // Note: Conversion record was created, so we don't throw here
+      // This allows the registration to continue even if stats update fails
+      // Stats inconsistency will be detected and fixed by audit job
+    }
+    
+    const duration = Date.now() - startTime;
+    console.log(`✅ [REFERRAL] Conversion completed successfully in ${duration}ms: ${sanitizeCode(referralCode)} -> ${sanitizeId(newUserId)}`);
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    
+    // Sanitize stack trace for production: show only first N lines (error + location)
+    const sanitizedStack = error.stack 
+      ? (isProduction ? error.stack.split('\n').slice(0, LOG_STACK_LINES_PRODUCTION).join('\n') : error.stack)
+      : 'No stack trace available';
+    
+    console.error('❌ [REFERRAL] Critical error processing conversion:', {
+      error: error.message,
+      stack: sanitizedStack,
+      duration: `${duration}ms`,
     });
-    
-    // Update the referral code statistics
-    await db.update(referralCodes)
-      .set({ totalConversions: sql`${referralCodes.totalConversions} + 1` })
-      .where(eq(referralCodes.id, referral.id));
-    
-    console.log(`✅ Referral conversion recorded: ${referralCode} -> ${newUserId}`);
-  } catch (error) {
-    console.error('❌ Failed to process referral conversion:', error);
+    // Don't throw - we want registration to succeed even if referral tracking fails
   }
 }
