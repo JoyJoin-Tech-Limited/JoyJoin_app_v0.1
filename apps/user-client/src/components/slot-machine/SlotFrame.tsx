@@ -49,11 +49,11 @@ function SlotFrameComponent({ state, children, accentColor, intensity = 0 }: Slo
     return lights;
   }, []);
 
-  // Chase animation timing based on state
+  // Chase animation timing based on state - FASTER during spin for more dynamic feel
   const getChaseDuration = () => {
     if (isAnticipation) return 2;
-    if (state === "spinning") return 0.4;
-    if (state === "slowing") return 0.8;
+    if (state === "spinning") return 0.3; // Faster chase (was 0.4)
+    if (state === "slowing") return 0.6; // Speed up slowdown chase too (was 0.8)
     return 1.5;
   };
 
