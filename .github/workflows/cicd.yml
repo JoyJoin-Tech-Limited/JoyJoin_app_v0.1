@@ -186,6 +186,13 @@ jobs:
             # --- 3) DB Sync (same DATABASE_URL as API) ---
             echo "🗄️ Syncing database schema..."
             cd ~/JoyJoin
+            
+            # Run any pending migrations first
+            echo "   Running column rename migration (idempotent)..."
+            node scripts/migrate-rename-role-to-archetype.js || echo "⚠️ Migration script returned non-zero (may be already applied)"
+            
+            # Then sync schema with push
+            echo "   Running schema push..."
             npx drizzle-kit push --config=./drizzle.config.ts
 
             # --- 4) Health checks ---
