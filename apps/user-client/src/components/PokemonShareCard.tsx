@@ -28,11 +28,12 @@ interface PokemonShareCardProps {
     P: number;
   };
   expression?: string; // Optional expression variant
+  nickname?: string; // Optional user nickname
   isPreview?: boolean; // Whether this is preview mode (show animation) or download mode
 }
 
 export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps>(
-  ({ archetype, archetypeEnglish, variant, illustrationUrl, rankings, traitScores, expression, isPreview = true }, ref) => {
+  ({ archetype, archetypeEnglish, variant, illustrationUrl, rankings, traitScores, expression, nickname, isPreview = true }, ref) => {
     // Get archetype tagline from config
     const archetypeInfo = archetypeConfig[archetype];
     const tagline = archetypeInfo?.tagline || "";
@@ -43,7 +44,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
-        className="relative w-full max-w-[360px] mx-auto"
+        className="relative w-full max-w-[420px] mx-auto"
         style={{ aspectRatio: '2/3' }}
       >
         {/* Card container with dual-layer border - gradient applied to border */}
@@ -99,12 +100,25 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
           
           {/* Content - white/light background as default */}
           <div className="relative h-full bg-white/98 rounded-[20px] p-6 flex flex-col overflow-hidden">
-            {/* Header badge */}
+            {/* Header badge with long logo */}
             <div className="text-center mb-3">
-              <div className="inline-block px-4 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full shadow-md">
-                <p className="text-xs font-black tracking-wider text-gray-800">
-                  悦聚 JOYJOIN 性格图鉴
-                </p>
+              <div className="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full shadow-md">
+                <img 
+                  src="/src/assets/joyjoin-logo-full.png" 
+                  alt="悦聚 JoyJoin" 
+                  className="h-5 w-auto object-contain"
+                  onError={(e) => {
+                    // Fallback to text if image fails to load
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    const parent = (e.target as HTMLImageElement).parentElement;
+                    if (parent) {
+                      const fallbackText = document.createElement('p');
+                      fallbackText.className = 'text-xs font-black tracking-wider text-gray-800';
+                      fallbackText.textContent = '悦聚 JOYJOIN 性格图鉴';
+                      parent.appendChild(fallbackText);
+                    }
+                  }}
+                />
               </div>
             </div>
 
@@ -137,11 +151,21 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               {archetypeEnglish}
             </p>
 
-            {/* Archetype tagline - positioned description */}
+            {/* User nickname (if provided) */}
+            {nickname && (
+              <p className="text-base font-bold text-center mb-2 px-4 text-gray-800">
+                「{nickname}」
+              </p>
+            )}
+
+            {/* Archetype tagline - positioned description with improved readability */}
             {tagline && (
               <p 
                 className="text-sm font-medium text-center mb-3 px-4"
-                style={{ color: variant.primaryColor }}
+                style={{ 
+                  color: variant.primaryColor,
+                  textShadow: '0 1px 3px rgba(255, 255, 255, 0.8), 0 2px 6px rgba(0, 0, 0, 0.15)'
+                }}
               >
                 {tagline}
               </p>
