@@ -42,7 +42,7 @@ interface User {
   gender?: string;
   dateOfBirth?: string;
   birthdate?: string;
-  primaryRole?: string;
+  primaryArchetype?: string;
   archetype?: string;
   currentCity?: string;
   interestsTop?: string[];
@@ -432,10 +432,10 @@ export default function AdminUsersPage() {
                     <Badge variant="outline">{userDetails.archetype}</Badge>
                   </div>
                 )}
-                {userDetails.primaryRole && (
+                {userDetails.primaryArchetype && (
                   <div>
                     <p className="text-sm text-muted-foreground">社交角色</p>
-                    <Badge variant="outline">{userDetails.primaryRole}</Badge>
+                    <Badge variant="outline">{userDetails.primaryArchetype}</Badge>
                   </div>
                 )}
                 <div>

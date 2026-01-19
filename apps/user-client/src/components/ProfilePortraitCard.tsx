@@ -110,7 +110,7 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
   });
 
   // Get archetype config and avatar
-  const archetype = user?.archetype || user?.primaryRole;
+  const archetype = user?.archetype || user?.primaryArchetype;
   const archetypeData = archetype ? archetypeConfig[archetype] : null;
   const archetypeAvatarUrl = archetype ? getArchetypeAvatar(archetype) : "";
   

@@ -129,7 +129,7 @@ export default function ProfilePage() {
   };
 
   const getArchetypeAvatar = () => {
-    const archetype = user?.primaryRole || "连接者";
+    const archetype = user?.primaryArchetype || "连接者";
     const config = archetypeConfig[archetype] || archetypeConfig["连接者"];
     return {
       icon: config.icon,
@@ -139,7 +139,7 @@ export default function ProfilePage() {
   };
 
   const getArchetypeDetails = () => {
-    const archetype = personalityResults?.primaryRole || user?.primaryRole;
+    const archetype = personalityResults?.primaryArchetype || user?.primaryArchetype;
     if (!archetype) return null;
     
     const config = archetypeConfig[archetype];
@@ -372,7 +372,7 @@ export default function ProfilePage() {
                       你的社交DNA
                     </CardTitle>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">{personalityResults.primaryRole}</span>
+                      <span className="text-sm text-muted-foreground">{personalityResults.primaryArchetype}</span>
                       <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${socialDnaOpen ? 'rotate-180' : ''}`} />
                     </div>
                   </div>
@@ -383,10 +383,10 @@ export default function ProfilePage() {
                 <CardContent className="pt-0 space-y-4">
                   {/* Social Role Summary */}
                   <SocialRoleCard
-                    primaryRole={personalityResults.primaryRole}
-                    secondaryRole={personalityResults.secondaryRole}
-                    primaryRoleScore={personalityResults.primaryRoleScore}
-                    secondaryRoleScore={personalityResults.secondaryRoleScore}
+                    primaryArchetype={personalityResults.primaryArchetype}
+                    secondaryArchetype={personalityResults.secondaryArchetype}
+                    primaryArchetypeScore={personalityResults.primaryArchetypeScore}
+                    secondaryArchetypeScore={personalityResults.secondaryArchetypeScore}
                   />
 
                   {/* Radar Chart */}
@@ -428,7 +428,7 @@ export default function ProfilePage() {
                       )}
 
                       {archetypeDetails.styleQuote && (
-                        <div className={`relative bg-gradient-to-br ${archetypeGradients[personalityResults.primaryRole] || 'from-purple-500 to-pink-500'} bg-opacity-10 rounded-lg p-4 border-l-4 border-primary/50`}>
+                        <div className={`relative bg-gradient-to-br ${archetypeGradients[personalityResults.primaryArchetype] || 'from-purple-500 to-pink-500'} bg-opacity-10 rounded-lg p-4 border-l-4 border-primary/50`}>
                           <Quote className="w-5 h-5 text-primary/40 absolute top-2 left-2" />
                           <p className="text-sm font-medium italic text-foreground pl-7" data-testid="text-style-quote">
                             {archetypeDetails.styleQuote}
@@ -457,12 +457,12 @@ export default function ProfilePage() {
                       最佳搭档
                     </h4>
                     <p className="text-xs text-muted-foreground">
-                      作为<span className="font-semibold text-foreground">{personalityResults.primaryRole}</span>，你在活动中最有化学反应的角色：
+                      作为<span className="font-semibold text-foreground">{personalityResults.primaryArchetype}</span>，你在活动中最有化学反应的角色：
                     </p>
                     <div className="space-y-3">
                       {getMatchesWithDescriptions(
-                        personalityResults.primaryRole, 
-                        getTopCompatibleArchetypes(personalityResults.primaryRole, 5).filter(m => m.score >= 70)
+                        personalityResults.primaryArchetype, 
+                        getTopCompatibleArchetypes(personalityResults.primaryArchetype, 5).filter(m => m.score >= 70)
                       ).slice(0, 3).map((match) => (
                         <div key={match.archetype} className="p-3 rounded-lg bg-muted/30 space-y-2">
                           <div className="flex items-center justify-between">
