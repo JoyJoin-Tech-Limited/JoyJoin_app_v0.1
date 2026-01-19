@@ -13,7 +13,7 @@ import LoginPage from "@/pages/LoginPage";
 import RegistrationPage from "@/pages/RegistrationPage";
 // RegistrationMethodPage kept for internal reference only - not imported in user routes
 import ChatRegistrationPage from "@/pages/ChatRegistrationPage";
-import InterestsTopicsPage from "@/pages/InterestsTopicsPage";
+// InterestsTopicsPage and EditInterestsPage moved to _backup_modules/interests-topics-legacy/ (2026-01-19)
 import PersonalityTestPageV4 from "@/pages/PersonalityTestPageV4";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
 import ProfileSetupPage from "@/pages/ProfileSetupPage";
@@ -31,7 +31,6 @@ import EditEducationPage from "@/pages/EditEducationPage";
 import EditWorkPage from "@/pages/EditWorkPage";
 import EditPersonalPage from "@/pages/EditPersonalPage";
 import EditIntentPage from "@/pages/EditIntentPage";
-import EditInterestsPage from "@/pages/EditInterestsPage";
 import EditSocialPage from "@/pages/EditSocialPage";
 import EventDetailPage from "@/pages/EventDetailPage";
 import BlindBoxPaymentPage from "@/pages/BlindBoxPaymentPage";
@@ -163,7 +162,7 @@ function AuthenticatedRouter() {
       <Route path="/profile/edit/work" component={EditWorkPage} />
       <Route path="/profile/edit/personal" component={EditPersonalPage} />
       <Route path="/profile/edit/intent" component={EditIntentPage} />
-      <Route path="/profile/edit/interests" component={EditInterestsPage} />
+      {/* Route /profile/edit/interests removed - moved to backup (2026-01-19) */}
       <Route path="/profile/edit/social" component={EditSocialPage} />
       <Route path="/onboarding/extended" component={ExtendedDataPage} />
       <Route path="/onboarding/review" component={FinalProfileReviewPage} />

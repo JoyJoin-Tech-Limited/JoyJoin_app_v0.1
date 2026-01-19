@@ -1,3 +1,23 @@
+/**
+ * ⚠️ LEGACY DATA FILE - STILL IN USE
+ * 
+ * This file contains the legacy 20-interest system data and helper functions.
+ * While the InterestsTopicsPage has been moved to backup, this data file is
+ * STILL NEEDED by active components for displaying existing user interests:
+ * 
+ * Used by:
+ * - UserConnectionCard.tsx (getInterestLabel, getTopicLabel)
+ * - ChatRegistrationPage.tsx (INTERESTS_OPTIONS, getInterestIcon)
+ * - EditProfilePage.tsx (getInterestLabel, getTopicLabel)
+ * 
+ * The new Interest Carousel system (60 topics) is in:
+ * - apps/user-client/src/data/interestCarouselData.ts
+ * - apps/user-client/src/components/interests/InterestCarousel.tsx
+ * 
+ * DO NOT DELETE this file until all user data has been migrated to the new
+ * interest system and all components have been updated to use the new data.
+ */
+
 import { 
   Heart, MessageCircle, AlertCircle, type LucideIcon,
   UtensilsCrossed, Plane, Footprints, Wine, Music, Camera, Dumbbell,

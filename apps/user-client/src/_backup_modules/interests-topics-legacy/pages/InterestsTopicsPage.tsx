@@ -1,3 +1,17 @@
+/**
+ * ⚠️ LEGACY FILE - MOVED TO BACKUP
+ * 
+ * Original Location: apps/user-client/src/pages/InterestsTopicsPage.tsx
+ * Moved On: 2026-01-19
+ * Reason: Replaced by Interest Carousel (ExtendedDataPage)
+ * 
+ * This is the legacy 20-interest selection system with topic avoidances.
+ * It has been replaced by the new Interest Carousel with 60 topics.
+ * See: apps/user-client/src/components/interests/InterestCarousel.tsx
+ * 
+ * See README.md in this folder for restoration instructions.
+ */
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import { motion, AnimatePresence } from "framer-motion";
 import RegistrationProgress from "@/components/RegistrationProgress";
 import CelebrationConfetti from "@/components/CelebrationConfetti";
-import InterestMapping from "@/components/InterestMapping";
+import InterestMapping from "../components/InterestMapping";
 
 // Interest categories with emojis - displayed in two tiers (hot first, then more)
 // Heat values based on platform big data (基于平台大数据)
