@@ -108,10 +108,10 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               </div>
             </div>
 
-            {/* Archetype illustration with glow - 5x larger (260px) */}
+            {/* Archetype illustration with glow - 5x larger (260px), responsive */}
             <div className="flex justify-center mb-2">
               <div
-                className="relative w-[260px] h-[260px] rounded-full flex items-center justify-center"
+                className="relative w-[260px] h-[260px] max-w-[72vw] max-h-[72vw] rounded-full flex items-center justify-center"
                 style={{
                   boxShadow: `0 0 60px ${variant.primaryColor}70, 0 0 100px ${variant.primaryColor}40`,
                   background: `radial-gradient(circle, ${variant.primaryColor}15, transparent 70%)`,
@@ -172,7 +172,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             </div>
 
             {/* Hexagonal radar chart replacing progress bars */}
-            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl px-2 py-1 mb-3 flex-1 flex items-center justify-center border border-gray-100">
+            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl px-2 py-1 mb-3 flex items-center justify-center border border-gray-100 min-h-[180px]">
               <PersonalityRadarChart 
                 affinityScore={traitScores.A}
                 opennessScore={traitScores.O}
