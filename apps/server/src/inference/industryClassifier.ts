@@ -45,6 +45,17 @@ export interface IndustryClassificationResult {
   processingTimeMs: number;
   rawInput: string;           // original user input
   normalizedInput: string;    // AI-cleaned version
+  
+  // 🆕 Candidate list (returned when confidence < 0.7)
+  candidates?: Array<{
+    category: { id: string; label: string };
+    segment: { id: string; label: string };
+    niche?: { id: string; label: string };
+    confidence: number;
+    reasoning: string;
+    occupationId?: string;
+    occupationName?: string;
+  }>;
 }
 
 /**
@@ -374,6 +385,151 @@ async function normalizeUserInput(rawText: string): Promise<string> {
 }
 
 /**
+ * 🆕 Generate candidate list for user confirmation
+ */
+function generateCandidates(
+  userInput: string,
+  primaryResult?: IndustryClassificationResult
+): Array<{
+  category: { id: string; label: string };
+  segment: { id: string; label: string };
+  niche?: { id: string; label: string };
+  confidence: number;
+  reasoning: string;
+  occupationId?: string;
+  occupationName?: string;
+}> {
+  const input = userInput.toLowerCase().trim();
+  const candidates: Array<any> = [];
+  
+  // Search through all occupations for keyword/synonym matches
+  for (const occ of OCCUPATIONS) {
+    if (!occ.seedMappings) continue;
+    
+    let score = 0;
+    let matchedTerms: string[] = [];
+    
+    // Check displayName
+    if (occ.displayName.toLowerCase().includes(input) || 
+        input.includes(occ.displayName.toLowerCase())) {
+      score += 50;
+      matchedTerms.push(occ.displayName);
+    }
+    
+    // Check synonyms
+    for (const syn of occ.synonyms) {
+      if (syn.toLowerCase().includes(input) || 
+          input.includes(syn.toLowerCase())) {
+        score += 40;
+        matchedTerms.push(syn);
+        break; // Only count first match
+      }
+    }
+    
+    // Check keywords
+    for (const keyword of occ.keywords) {
+      if (input.includes(keyword.toLowerCase()) || 
+          keyword.toLowerCase().includes(input)) {
+        score += 30;
+        matchedTerms.push(keyword);
+        break;
+      }
+    }
+    
+    if (score > 20) {
+      const category = findCategoryById(occ.seedMappings.category);
+      const segment = category ? findSegmentById(occ.seedMappings.category, occ.seedMappings.segment) : null;
+      
+      if (category && segment) {
+        let niche = undefined;
+        if (occ.seedMappings.niche) {
+          const nicheFound = findNicheById(occ.seedMappings.category, occ.seedMappings.segment, occ.seedMappings.niche);
+          if (nicheFound) {
+            niche = { id: occ.seedMappings.niche, label: nicheFound.label };
+          }
+        }
+        
+        candidates.push({
+          category: { id: category.id, label: category.label },
+          segment: { id: segment.id, label: segment.label },
+          niche,
+          confidence: Math.min(0.85, score / 100),
+          reasoning: `匹配到：${matchedTerms.slice(0, 3).join('、')}`,
+          occupationId: occ.id,
+          occupationName: occ.displayName,
+        });
+      }
+    }
+  }
+  
+  // Deduplicate by category-segment-niche combo
+  const uniqueCandidates = Array.from(
+    new Map(candidates.map(c => [
+      `${c.category.id}-${c.segment.id}-${c.niche?.id || 'none'}`, 
+      c
+    ])).values()
+  );
+  
+  uniqueCandidates.sort((a, b) => b.confidence - a.confidence);
+  
+  // Return top 5, excluding primary result
+  return uniqueCandidates
+    .filter(c => {
+      if (!primaryResult) return true;
+      return !(
+        c.category.id === primaryResult.category.id &&
+        c.segment.id === primaryResult.segment.id &&
+        c.niche?.id === primaryResult.niche?.id
+      );
+    })
+    .slice(0, 5);
+}
+
+/**
+ * 🆕 Generate AI semantic description (lightweight)
+ */
+async function generateSemanticDescription(userInput: string): Promise<string> {
+  const { default: OpenAI } = await import("openai");
+  
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    throw new Error("DEEPSEEK_API_KEY not configured");
+  }
+  
+  const openai = new OpenAI({
+    apiKey,
+    baseURL: "https://api.deepseek.com",
+  });
+  
+  const prompt = `用一句话描述这个职业或身份的核心特征（不超过20字）：
+
+用户输入："${userInput}"
+
+要求：
+- 如果能识别出职业，简述其工作内容
+- 如果是身份描述（如"富二代"），描述其社会角色
+- 如果完全无法理解，输出"未知职业类型"
+- 不要分类，只描述
+
+示例：
+输入："投资" → 输出："从事投资相关工作"
+输入："做AI的" → 输出："人工智能相关从业者"
+输入："富二代" → 输出："家族企业继承人或财富二代"
+
+输出（仅一句话）：`;
+  
+  const response = await openai.chat.completions.create({
+    model: "deepseek-chat",
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.3,
+    max_tokens: 50,
+  });
+  
+  const description = response.choices[0]?.message?.content?.trim() || userInput;
+  return description;
+}
+
+/**
  * Intelligent fallback - no hardcoding to software_dev
  * Returns "other" category with low confidence and suggestions
  */
@@ -446,24 +602,44 @@ function intelligentFallback(userInput: string, startTime: number): IndustryClas
     }
   }
   
-  // True unknown - return "other" category with very low confidence
-  // Find the "other" or first available category
-  const otherCategory = INDUSTRY_TAXONOMY.find(c => c.id === "other" || c.id.includes("other")) || INDUSTRY_TAXONOMY[INDUSTRY_TAXONOMY.length - 1];
-  const otherSegment = otherCategory.segments[0];
+  // 🆕 Don't guess randomly - generate AI semantic description
+  console.log(`[Fallback] Unable to classify "${userInput}", generating AI semantic description...`);
   
-  const result: IndustryClassificationResult = {
-    category: { id: otherCategory.id, label: otherCategory.label },
-    segment: { id: otherSegment.id, label: otherSegment.label },
-    confidence: 0.1,
-    source: "fallback",
-    reasoning: "无法识别，建议手动选择",
-    processingTimeMs: Date.now() - startTime,
-    rawInput: userInput,
-    normalizedInput: userInput,
-  };
-  
-  // Ensure reasoning is always present
-  return ensureReasoning(result, userInput);
+  try {
+    const aiDescription = await generateSemanticDescription(userInput);
+    
+    // Return "unclassified" state with AI description
+    const unknownCategory = INDUSTRY_TAXONOMY.find(c => c.id === "other") || INDUSTRY_TAXONOMY[0];
+    const unknownSegment = unknownCategory.segments[0];
+    
+    return {
+      category: { id: unknownCategory.id, label: unknownCategory.label },
+      segment: { id: unknownSegment.id, label: unknownSegment.label },
+      confidence: 0.3,  // Low confidence = uncertain
+      source: "fallback",
+      reasoning: `无法精确分类。AI理解：${aiDescription}`,
+      processingTimeMs: Date.now() - startTime,
+      rawInput: userInput,
+      normalizedInput: aiDescription,  // 🆕 AI semantic description
+    };
+  } catch (error) {
+    console.error('[Fallback] AI description generation failed:', error);
+    
+    // AI failed too, return basic unclassified state
+    const unknownCategory = INDUSTRY_TAXONOMY.find(c => c.id === "other") || INDUSTRY_TAXONOMY[0];
+    const unknownSegment = unknownCategory.segments[0];
+    
+    return {
+      category: { id: unknownCategory.id, label: unknownCategory.label },
+      segment: { id: unknownSegment.id, label: unknownSegment.label },
+      confidence: 0.1,
+      source: "fallback",
+      reasoning: `无法识别职业类型，已保存原始输入"${userInput}"`,
+      processingTimeMs: Date.now() - startTime,
+      rawInput: userInput,
+      normalizedInput: userInput,
+    };
+  }
 }
 
 /**
@@ -507,31 +683,44 @@ export async function classifyIndustry(
   }
   
   // Tier 3: AI深度分析
+  let aiResult: IndustryClassificationResult | null = null;
   try {
-    const aiResult = await matchViaAI(cleanInput);
-    if (aiResult) {
-      const normalizedInput = await normalizeUserInput(cleanInput);
-      return { ...aiResult, normalizedInput };
-    }
+    aiResult = await matchViaAI(cleanInput);
   } catch (error) {
-    console.error("AI classification fallback error:", error);
+    console.error("AI classification error:", error);
   }
   
-  // Final fallback: return best available result or intelligent fallback
-  const normalizedInput = await normalizeUserInput(cleanInput);
-  const base = taxonomyResult || fuzzyResult || seedResult;
+  // 🆕 Decision point: Should we ask user to confirm?
+  const bestResult = aiResult || taxonomyResult || fuzzyResult || seedResult;
   
-  if (base) {
+  if (bestResult && bestResult.confidence < 0.7) {
+    // Low confidence, generate candidate list
+    const candidates = generateCandidates(cleanInput, bestResult);
+    const normalizedInput = await normalizeUserInput(cleanInput);
+    
     return {
-      ...base,
-      source: (base as any).source || "fallback",
-      processingTimeMs: Date.now() - startTime,
-      rawInput: cleanInput,
+      ...bestResult,
       normalizedInput,
+      processingTimeMs: Date.now() - startTime,
+      candidates, // 🆕 Return candidates for user selection
     };
   }
   
-  // Truly unknown input - use intelligent fallback
-  const fallbackResult = intelligentFallback(cleanInput, startTime);
-  return { ...fallbackResult, normalizedInput };
+  if (bestResult) {
+    const normalizedInput = await normalizeUserInput(cleanInput);
+    return {
+      ...bestResult,
+      normalizedInput,
+      processingTimeMs: Date.now() - startTime,
+    };
+  }
+  
+  // Final fallback
+  const fallbackResult = await intelligentFallback(cleanInput, startTime);
+  const candidates = generateCandidates(cleanInput);
+  
+  return {
+    ...fallbackResult,
+    candidates, // Even in fallback, provide candidates
+  };
 }
