@@ -41,6 +41,25 @@ echo "📤 Step 3: Deploying..."
 cd ~/JoyJoin
 export DATABASE_URL="postgresql://neondb_owner:npg_NmTv6SY3fxXW@ep-square-math-ahiz6fm7-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
 echo "  🎯 Target: $(echo $DATABASE_URL | sed 's/:[^@]*@/:****@/')"
+
+# Run any pending migrations first (idempotent)
+echo "  🔄 Running column rename migration (idempotent)..."
+if node scripts/migrate-rename-role-to-archetype.js; then
+  echo "  ✅ Migration completed successfully"
+else
+  EXIT_CODE=$?
+  echo "  ⚠️ Migration script returned exit code $EXIT_CODE"
+  # If exit code is 1, migration may already be applied (idempotent)
+  # For other errors, we should fail
+  if [ $EXIT_CODE -ne 1 ]; then
+    echo "  ❌ Unexpected migration error, failing deployment"
+    exit $EXIT_CODE
+  fi
+  echo "  ⚠️ Migration may already be applied, continuing..."
+fi
+
+# Then sync schema with push
+echo "  📤 Running schema push..."
 npx drizzle-kit push --config=./drizzle.config.ts
 
 
