@@ -1,4 +1,4 @@
-import logoImage from "@/assets/joyjoin-logo.png";
+import logoImage from "@/assets/box_logo_archetypes.png";
 
 interface JoyJoinLogoProps {
   size?: "sm" | "md" | "lg";
