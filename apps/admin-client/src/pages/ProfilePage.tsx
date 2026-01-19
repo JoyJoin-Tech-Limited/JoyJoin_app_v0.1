@@ -361,10 +361,10 @@ export default function ProfilePage() {
                 <CardContent className="pt-0 space-y-4">
                   {/* Social Role Summary */}
                   <SocialRoleCard
-                    primaryRole={personalityResults.primaryArchetype}
-                    secondaryRole={personalityResults.secondaryArchetype}
-                    primaryRoleScore={personalityResults.primaryArchetypeScore}
-                    secondaryRoleScore={personalityResults.secondaryArchetypeScore}
+                    primaryArchetype={personalityResults.primaryArchetype}
+                    secondaryArchetype={personalityResults.secondaryArchetype}
+                    primaryArchetypeScore={personalityResults.primaryArchetypeScore}
+                    secondaryArchetypeScore={personalityResults.secondaryArchetypeScore}
                   />
 
                   {/* Radar Chart */}
