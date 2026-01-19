@@ -189,7 +189,7 @@ function calculateIntentScore(user1: Partial<User>, user2: Partial<User>): numbe
 function getUserAge(user: Partial<User>): number | null {
   if (!user.birthdate) return null;
   
-  const birthDate = new Date(user.birthdate);
+  const birthDate = new Date(user.birthdate + 'T00:00:00');
   const today = new Date();
   let age = today.getFullYear() - birthDate.getFullYear();
   const monthDiff = today.getMonth() - birthDate.getMonth();

@@ -97,7 +97,7 @@ export default function AdminUsersPage() {
   const calculateAge = (dateOfBirth?: string) => {
     if (!dateOfBirth) return null;
     const today = new Date();
-    const birthDate = new Date(dateOfBirth);
+    const birthDate = new Date(dateOfBirth + 'T00:00:00');
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {

@@ -10535,7 +10535,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       let ageRange: string | undefined;
       
       if (targetUser.birthdate && targetUser.ageVisibility !== 'hide_all') {
-        const birthDate = new Date(targetUser.birthdate);
+        const birthDate = new Date(targetUser.birthdate + 'T00:00:00');
         const today = new Date();
         const exactAge = today.getFullYear() - birthDate.getFullYear();
         const m = today.getMonth() - birthDate.getMonth();
