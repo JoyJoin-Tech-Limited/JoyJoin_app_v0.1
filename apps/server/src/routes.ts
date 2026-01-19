@@ -200,7 +200,7 @@ function calculateRoleScores(responses: Record<number, any>): Record<string, num
   return scores;
 }
 
-function determineSubtype(primaryRole: string, responses: Record<number, any>): string {
+function determineSubtype(primaryArchetype: string, responses: Record<number, any>): string {
   // 12个原型的功能昵称（直接使用核心定位）
   const nicknames: Record<string, string> = {
     "开心柯基": "摇尾点火官",
@@ -217,10 +217,10 @@ function determineSubtype(primaryRole: string, responses: Record<number, any>): 
     "隐身猫": "安静伴伴猫",
   };
 
-  return nicknames[primaryRole] || "";
+  return nicknames[primaryArchetype] || "";
 }
 
-function calculateTraitScores(primaryRole: string, secondaryRole: string | null): {
+function calculateTraitScores(primaryArchetype: string, secondaryArchetype: string | null): {
   affinityScore: number;
   opennessScore: number;
   conscientiousnessScore: number;
@@ -229,8 +229,8 @@ function calculateTraitScores(primaryRole: string, secondaryRole: string | null)
   positivityScore: number;
 } {
   // Use imported roleTraits from archetypeConfig.ts
-  const primary = roleTraits[primaryRole as ArchetypeName] || roleTraits["淡定海豚"]; // Default to 淡定海豚
-  const secondary = secondaryRole ? roleTraits[secondaryRole as ArchetypeName] : null;
+  const primary = roleTraits[primaryArchetype as ArchetypeName] || roleTraits["淡定海豚"]; // Default to 淡定海豚
+  const secondary = secondaryArchetype ? roleTraits[secondaryArchetype as ArchetypeName] : null;
 
   // Blend primary and secondary (70% primary, 30% secondary)
   const blend = (p: number, s: number | null) => {
@@ -248,13 +248,13 @@ function calculateTraitScores(primaryRole: string, secondaryRole: string | null)
   };
 }
 
-function generateInsights(primaryRole: string, secondaryRole: string | null): {
+function generateInsights(primaryArchetype: string, secondaryArchetype: string | null): {
   strengths: string;
   challenges: string;
   idealFriendTypes: string[];
 } {
   // Use imported roleInsights from archetypeConfig.ts
-  return roleInsights[primaryRole as ArchetypeName] || roleInsights["淡定海豚"]; // Default to 淡定海豚
+  return roleInsights[primaryArchetype as ArchetypeName] || roleInsights["淡定海豚"]; // Default to 淡定海豚
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1607,20 +1607,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else {
         // Scores are clear enough, return final result
-        const primaryRole = top1[0];
-        const rawSecondaryRole = top2[0];
-        const secondaryRole = top2[1] >= 70 ? rawSecondaryRole : null;
-        const roleSubtype = determineSubtype(primaryRole, responses);
-        const traitScores = calculateTraitScores(primaryRole, secondaryRole);
-        const insights = generateInsights(primaryRole, secondaryRole);
+        const primaryArchetype = top1[0];
+        const rawSecondaryArchetype = top2[0];
+        const secondaryArchetype = top2[1] >= 70 ? rawSecondaryArchetype : null;
+        const roleSubtype = determineSubtype(primaryArchetype, responses);
+        const traitScores = calculateTraitScores(primaryArchetype, secondaryArchetype);
+        const insights = generateInsights(primaryArchetype, secondaryArchetype);
 
         res.json({
           needsSupplementary: false,
           result: {
-            primaryRole,
-            primaryRoleScore: top1[1],
-            secondaryRole,
-            secondaryRoleScore: secondaryRole ? top2[1] : 0,
+            primaryArchetype,
+            primaryArchetypeScore: top1[1],
+            secondaryArchetype,
+            secondaryArchetypeScore: secondaryArchetype ? top2[1] : 0,
             roleSubtype,
             ...traitScores,
             ...insights,
@@ -1649,30 +1649,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return roleA.localeCompare(roleB);  // Stable sort by name when scores equal
         });
 
-      const primaryRole = sortedRoles[0][0];
-      const primaryRoleScore = sortedRoles[0][1];
-      const rawSecondaryRole = sortedRoles[1]?.[0] || null;
-      const secondaryRoleScoreRaw = sortedRoles[1]?.[1] || 0;
-      const secondaryRole = secondaryRoleScoreRaw >= 70 ? rawSecondaryRole : null;
-      const secondaryRoleScore = secondaryRole ? secondaryRoleScoreRaw : 0;
+      const primaryArchetype = sortedRoles[0][0];
+      const primaryArchetypeScore = sortedRoles[0][1];
+      const rawSecondaryArchetype = sortedRoles[1]?.[0] || null;
+      const secondaryArchetypeScoreRaw = sortedRoles[1]?.[1] || 0;
+      const secondaryArchetype = secondaryArchetypeScoreRaw >= 70 ? rawSecondaryArchetype : null;
+      const secondaryArchetypeScore = secondaryArchetype ? secondaryArchetypeScoreRaw : 0;
 
       // Determine subtype (simplified - based on highest scoring items)
-      const roleSubtype = determineSubtype(primaryRole, responses);
+      const roleSubtype = determineSubtype(primaryArchetype, responses);
 
       // Calculate six-dimensional trait scores
-      const traitScores = calculateTraitScores(primaryRole, secondaryRole);
+      const traitScores = calculateTraitScores(primaryArchetype, secondaryArchetype);
 
       // Generate insights
-      const insights = generateInsights(primaryRole, secondaryRole);
+      const insights = generateInsights(primaryArchetype, secondaryArchetype);
 
       // Save responses and result
       await storage.saveTestResponses(userId, responses);
       const roleResult = await storage.saveRoleResult(userId, {
         userId,
-        primaryRole,
-        primaryRoleScore,
-        secondaryRole,
-        secondaryRoleScore,
+        primaryArchetype,
+        primaryArchetypeScore,
+        secondaryArchetype,
+        secondaryArchetypeScore,
         roleSubtype,
         roleScores,
         ...traitScores,
@@ -1707,20 +1707,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process V2 test using Euclidean distance matching
       const matchResult = processTestV2(responses);
 
-      const primaryRole = matchResult.primaryRole;
-      const rawSecondaryRole = matchResult.secondaryRole;
-      const secondaryRole = matchResult.secondaryMatchScore >= 70 ? rawSecondaryRole : null;
-      const roleSubtype = determineSubtype(primaryRole, responses);
-      const insights = generateInsights(primaryRole, secondaryRole);
+      const primaryArchetype = matchResult.primaryArchetype;
+      const rawSecondaryArchetype = matchResult.secondaryArchetype;
+      const secondaryArchetype = matchResult.secondaryMatchScore >= 70 ? rawSecondaryArchetype : null;
+      const roleSubtype = determineSubtype(primaryArchetype, responses);
+      const insights = generateInsights(primaryArchetype, secondaryArchetype);
 
       // Save responses and result
       await storage.saveTestResponses(userId, responses);
       const roleResult = await storage.saveRoleResult(userId, {
         userId,
-        primaryRole,
-        primaryRoleScore: matchResult.primaryMatchScore,
-        secondaryRole,
-        secondaryRoleScore: secondaryRole ? matchResult.secondaryMatchScore : 0,
+        primaryArchetype,
+        primaryArchetypeScore: matchResult.primaryMatchScore,
+        secondaryArchetype,
+        secondaryArchetypeScore: secondaryArchetype ? matchResult.secondaryMatchScore : 0,
         roleSubtype,
         roleScores: {}, // V2 uses trait vectors instead
         affinityScore: matchResult.userTraits.A,
@@ -2048,7 +2048,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/personality/role-distribution', isPhoneAuthenticated, async (req: any, res) => {
     try {
       // Get all users with personality results
-      const allUsers = await db.select({ primaryRole: users.primaryRole }).from(users).where(isNotNull(users.primaryRole));
+      const allUsers = await db.select({ primaryArchetype: users.primaryArchetype }).from(users).where(isNotNull(users.primaryArchetype));
       
       if (allUsers.length === 0) {
         // Return default distribution if no users yet
@@ -2086,8 +2086,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       allUsers.forEach((user: any) => {
-        if (user.primaryRole && distribution.hasOwnProperty(user.primaryRole)) {
-          distribution[user.primaryRole] += 1;
+        if (user.primaryArchetype && distribution.hasOwnProperty(user.primaryArchetype)) {
+          distribution[user.primaryArchetype] += 1;
         }
       });
 
@@ -6465,8 +6465,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Personality distribution (archetypes)
       const personalityDistribution = allUsers.reduce((acc: Record<string, number>, user: any) => {
-        if (user.primaryRole) {
-          acc[user.primaryRole] = (acc[user.primaryRole] || 0) + 1;
+        if (user.primaryArchetype) {
+          acc[user.primaryArchetype] = (acc[user.primaryArchetype] || 0) + 1;
         }
         return acc;
       }, {});
@@ -10229,7 +10229,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         userId: m.id,
         displayName: m.displayName || '神秘嘉宾',
         archetype: m.archetype,
-        secondaryArchetype: m.secondaryRole,
+        secondaryArchetype: m.secondaryArchetype,
         interestsTop: m.interestsTop,
         industry: m.industry,
         hometown: m.hometownRegionCity,
@@ -10307,7 +10307,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         userId: m.id,
         displayName: m.displayName || '神秘嘉宾',
         archetype: m.archetype,
-        secondaryArchetype: m.secondaryRole,
+        secondaryArchetype: m.secondaryArchetype,
         interestsTop: m.interestsTop,
         industry: m.industry,
         hometown: m.hometownRegionCity,
@@ -10375,7 +10375,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         userId: m.id,
         displayName: m.displayName || '神秘嘉宾',
         archetype: m.archetype,
-        secondaryArchetype: m.secondaryRole,
+        secondaryArchetype: m.secondaryArchetype,
         interestsTop: m.interestsTop,
         industry: m.industry,
         hometown: m.hometownRegionCity,
@@ -10516,7 +10516,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           id: true,
           displayName: true,
           archetype: true,
-          secondaryRole: true,
+          secondaryArchetype: true,
           industry: true,
           interestsTop: true,
           socialStyle: true,
@@ -10555,7 +10555,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           userId: targetUser.id,
           displayName: targetUser.displayName || '神秘嘉宾',
           archetype: targetUser.archetype,
-          secondaryArchetype: targetUser.secondaryRole,
+          secondaryArchetype: targetUser.secondaryArchetype,
           industry: targetUser.workVisibility !== 'hide_all' ? targetUser.industry : undefined,
           ageRange: ageRange,
           interests: targetUser.interestsTop || [],
@@ -10605,7 +10605,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           userId: m.id,
           displayName: m.displayName || '神秘嘉宾',
           archetype: m.archetype,
-          secondaryArchetype: m.secondaryRole,
+          secondaryArchetype: m.secondaryArchetype,
           interestsTop: m.interestsTop,
           industry: m.industry,
           hometown: m.hometownRegionCity,
@@ -10954,10 +10954,10 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         
         // Sync V4 result to role_results table (overwrite any previous results)
         if (session.userId) {
-          const primaryRole = finalResult.primaryArchetype;
-          const secondaryRole = finalResult.secondaryArchetype || null;
-          const roleSubtype = determineSubtype(primaryRole, {});
-          const insights = generateInsights(primaryRole, secondaryRole);
+          const primaryArchetype = finalResult.primaryArchetype;
+          const secondaryArchetype = finalResult.secondaryArchetype || null;
+          const roleSubtype = determineSubtype(primaryArchetype, {});
+          const insights = generateInsights(primaryArchetype, secondaryArchetype);
           
           // Use actual archetype match scores from engineState
           const primaryMatchScore = engineState.currentMatches[0]?.score || 80;
@@ -10965,10 +10965,10 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           
           await storage.saveRoleResult(session.userId, {
             userId: session.userId,
-            primaryRole,
-            primaryRoleScore: Math.round(primaryMatchScore),
-            secondaryRole,
-            secondaryRoleScore: secondaryRole ? Math.round(secondaryMatchScore) : 0,
+            primaryArchetype,
+            primaryArchetypeScore: Math.round(primaryMatchScore),
+            secondaryArchetype,
+            secondaryArchetypeScore: secondaryArchetype ? Math.round(secondaryMatchScore) : 0,
             roleSubtype,
             roleScores: {},
             affinityScore: finalResult.traitScores?.A || 50,
@@ -10987,7 +10987,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           // Log algorithm version and match details for A/B testing
           const algorithmVersion = finalResult.algorithmVersion || 'v1.0';
           const isDecisive = finalResult.isDecisive ?? true;
-          console.log(`[Assessment V4] Algorithm: ${algorithmVersion} | Result: ${primaryRole} (score: ${primaryMatchScore}) | Decisive: ${isDecisive} | User: ${session.userId}`);
+          console.log(`[Assessment V4] Algorithm: ${algorithmVersion} | Result: ${primaryArchetype} (score: ${primaryMatchScore}) | Decisive: ${isDecisive} | User: ${session.userId}`);
         }
         
         res.json({
@@ -11458,9 +11458,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         // Build normalized response
         const response = {
           algorithmVersion: session.algorithmVersion || 'v1',
-          primaryRole: primaryArchetype,  // V1 compatible field name
+          primaryArchetype: primaryArchetype,  // V1 compatible field name
           primaryArchetype: primaryArchetype,
-          secondaryRole: finalResult?.secondaryArchetype,
+          secondaryArchetype: finalResult?.secondaryArchetype,
           ...normalizedTraits,
           totalQuestions,
           chemistryList: chemistryList.map(c => ({
@@ -11480,14 +11480,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       // Fallback to legacy role_results table
       const legacyResult = await storage.getRoleResult(userId);
       if (legacyResult) {
-        const chemistryList = getChemistryForArchetype(legacyResult.primaryRole);
-        const prototype = archetypePrototypes[legacyResult.primaryRole];
+        const chemistryList = getChemistryForArchetype(legacyResult.primaryArchetype);
+        const prototype = archetypePrototypes[legacyResult.primaryArchetype];
         
         return res.json({
           algorithmVersion: 'v1',
-          primaryRole: legacyResult.primaryRole,
-          primaryArchetype: legacyResult.primaryRole,
-          secondaryRole: legacyResult.secondaryRole,
+          primaryArchetype: legacyResult.primaryArchetype,
+          primaryArchetype: legacyResult.primaryArchetype,
+          secondaryArchetype: legacyResult.secondaryArchetype,
           affinityScore: legacyResult.affinityScore,
           opennessScore: legacyResult.opennessScore,
           conscientiousnessScore: legacyResult.conscientiousnessScore,
@@ -11565,7 +11565,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         if (!legacyResult) {
           return res.status(404).json({ message: 'No assessment result found' });
         }
-        archetype = legacyResult.primaryRole;
+        archetype = legacyResult.primaryArchetype;
         traitScores = {
           A: legacyResult.affinityScore / 100,
           O: legacyResult.opennessScore / 100,

@@ -54,10 +54,10 @@ export interface AnswerV2 {
 }
 
 export interface MatchResult {
-  primaryRole: string;
+  primaryArchetype: string;
   primaryDistance: number;
   primaryMatchScore: number;
-  secondaryRole: string;
+  secondaryArchetype: string;
   secondaryDistance: number;
   secondaryMatchScore: number;
   userTraits: UserTraitVector;
@@ -418,10 +418,10 @@ export function matchToArchetypesHybrid(userTraits: UserTraitVector, alpha: numb
   );
 
   return {
-    primaryRole: primary.archetype,
+    primaryArchetype: primary.archetype,
     primaryDistance: Math.round(primary.distance * 100) / 100,
     primaryMatchScore: primary.score,
-    secondaryRole: secondary.archetype,
+    secondaryArchetype: secondary.archetype,
     secondaryDistance: Math.round(secondary.distance * 100) / 100,
     secondaryMatchScore: secondary.score,
     userTraits,
@@ -447,12 +447,12 @@ function getTopUserTraits(traits: UserTraitVector): TraitKey[] {
  */
 function calculateDualConsistencyBonus(
   userTraits: UserTraitVector,
-  primaryRole: string,
-  secondaryRole: string
+  primaryArchetype: string,
+  secondaryArchetype: string
 ): number {
   const userTop = getTopUserTraits(userTraits);
-  const primaryTraits = archetypeCoreTraits[primaryRole] || [];
-  const secondaryTraits = archetypeCoreTraits[secondaryRole] || [];
+  const primaryTraits = archetypeCoreTraits[primaryArchetype] || [];
+  const secondaryTraits = archetypeCoreTraits[secondaryArchetype] || [];
   
   const combinedTraits = Array.from(new Set([...primaryTraits, ...secondaryTraits]));
   const covered = userTop.filter(t => combinedTraits.includes(t)).length;
@@ -485,10 +485,10 @@ export function matchToArchetypes(userTraits: UserTraitVector): MatchResult {
   );
 
   return {
-    primaryRole: primary.archetype,
+    primaryArchetype: primary.archetype,
     primaryDistance: Math.round(primary.distance * 100) / 100,
     primaryMatchScore: distanceToMatchScore(primary.distance),
-    secondaryRole: secondary.archetype,
+    secondaryArchetype: secondary.archetype,
     secondaryDistance: Math.round(secondary.distance * 100) / 100,
     secondaryMatchScore: distanceToMatchScore(secondary.distance),
     userTraits,
