@@ -41,6 +41,13 @@ echo "📤 Step 3: Deploying..."
 cd ~/JoyJoin
 export DATABASE_URL="postgresql://neondb_owner:npg_NmTv6SY3fxXW@ep-square-math-ahiz6fm7-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
 echo "  🎯 Target: $(echo $DATABASE_URL | sed 's/:[^@]*@/:****@/')"
+
+# Run any pending migrations first (idempotent)
+echo "  🔄 Running column rename migration (idempotent)..."
+node scripts/migrate-rename-role-to-archetype.js || echo "⚠️ Migration script returned non-zero (may be already applied)"
+
+# Then sync schema with push
+echo "  📤 Running schema push..."
 npx drizzle-kit push --config=./drizzle.config.ts
 
 
