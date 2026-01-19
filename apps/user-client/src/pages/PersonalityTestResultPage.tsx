@@ -9,7 +9,7 @@ import { XiaoyueInsightCard } from "@/components/XiaoyueInsightCard";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import StyleSpectrum from "@/components/StyleSpectrum";
 import { ShareCardModal } from "@/components/ShareCardModal";
-import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
+import { Sparkles, Users, TrendingUp, Heart, Quote, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   archetypeAvatars, 
@@ -674,8 +674,6 @@ export default function PersonalityTestResultPage() {
     completeTestMutation.mutate();
   };
 
-  const isLegacyV1 = result.algorithmVersion === 'v1' || !result.algorithmVersion;
-
   return (
     <AnimatePresence mode="wait">
       {animationPhase === 'slot' && (
@@ -966,7 +964,8 @@ export default function PersonalityTestResultPage() {
           <div className="relative group">
             {/* Glowing background blur effect */}
             <div 
-              className={`absolute inset-0 bg-gradient-to-r ${gradient} rounded-2xl blur-md opacity-50 group-hover:opacity-70 transition-opacity duration-300 animate-pulse`}
+              className={`absolute inset-0 bg-gradient-to-r ${gradient} rounded-2xl blur-md opacity-50 group-hover:opacity-70 transition-opacity duration-300`}
+              aria-hidden="true"
             />
             
             {/* Main button */}
@@ -982,11 +981,12 @@ export default function PersonalityTestResultPage() {
                 setShareModalOpen(true);
               }} 
               data-testid="button-share"
+              aria-label={`领取你的${result.primaryRole}性格卡片`}
             >
               <div className="flex items-center justify-center gap-3 w-full">
-                <Sparkles className="w-6 h-6 animate-pulse" />
+                <Sparkles className="w-6 h-6 animate-pulse" aria-hidden="true" />
                 <span>领取你的{result.primaryRole}卡片</span>
-                <Badge variant="secondary" className="ml-2 bg-white/20 backdrop-blur-sm border-white/40 text-xs">
+                <Badge variant="secondary" className="ml-2 bg-white/20 backdrop-blur-sm border-white/40 text-xs" aria-label="限定版">
                   ✨ 限定
                 </Badge>
               </div>
