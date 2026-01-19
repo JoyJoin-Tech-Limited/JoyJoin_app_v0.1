@@ -129,7 +129,7 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
   // Calculate age from birthdate or use age field
   const calculateAge = () => {
     if (user?.birthdate) {
-      const birthDate = new Date(user.birthdate);
+      const birthDate = new Date(user.birthdate + 'T00:00:00');
       const today = new Date();
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
