@@ -118,7 +118,7 @@ export function getCityLabel(city: string): string {
 export function calculateAge(birthdate: string): number | null {
   if (!birthdate) return null;
   
-  const birth = new Date(birthdate);
+  const birth = new Date(birthdate + 'T00:00:00');
   
   // Validate the date
   if (isNaN(birth.getTime())) {

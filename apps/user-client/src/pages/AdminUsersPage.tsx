@@ -25,7 +25,7 @@ interface User {
   phoneNumber: string;
   gender?: string;
   dateOfBirth?: string;
-  primaryRole?: string;
+  primaryArchetype?: string;
   isAdmin: boolean;
   isBanned: boolean;
   hasCompletedRegistration: boolean;
@@ -97,7 +97,7 @@ export default function AdminUsersPage() {
   const calculateAge = (dateOfBirth?: string) => {
     if (!dateOfBirth) return null;
     const today = new Date();
-    const birthDate = new Date(dateOfBirth);
+    const birthDate = new Date(dateOfBirth + 'T00:00:00');
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
@@ -229,10 +229,10 @@ export default function AdminUsersPage() {
                     <span className="font-medium">{calculateAge(user.dateOfBirth)}岁</span>
                   </div>
                 )}
-                {user.primaryRole && (
+                {user.primaryArchetype && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">社交角色</span>
-                    <Badge variant="outline">{user.primaryRole}</Badge>
+                    <Badge variant="outline">{user.primaryArchetype}</Badge>
                   </div>
                 )}
                 <div className="flex justify-between pt-2 border-t">
@@ -291,10 +291,10 @@ export default function AdminUsersPage() {
                     <p className="font-medium">{calculateAge(userDetails.dateOfBirth)}岁</p>
                   </div>
                 )}
-                {userDetails.primaryRole && (
+                {userDetails.primaryArchetype && (
                   <div>
                     <p className="text-sm text-muted-foreground">社交角色</p>
-                    <Badge variant="outline">{userDetails.primaryRole}</Badge>
+                    <Badge variant="outline">{userDetails.primaryArchetype}</Badge>
                   </div>
                 )}
                 <div>

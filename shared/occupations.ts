@@ -29,6 +29,11 @@ export interface Occupation {
   synonyms: string[];      // 同义词，用于搜索匹配
   keywords: string[];      // 关键词，用于模糊匹配
   hot: boolean;            // 是否热门，用于快捷选择
+  seedMappings?: {         // 行业分类映射（用于自动生成seed map）
+    category: string;
+    segment: string;
+    niche?: string;
+  };
 }
 
 // 工作身份/模式
@@ -73,21 +78,21 @@ export const INDUSTRIES: Industry[] = [
 // 130+ 职业数据
 export const OCCUPATIONS: Occupation[] = [
   // ========== 科技互联网 (tech) ==========
-  { id: "software_engineer", displayName: "软件工程师", industryId: "tech", synonyms: ["程序员", "码农", "开发工程师", "研发工程师", "coder", "developer", "大厂", "互联网", "字节", "字节跳动", "ByteDance", "腾讯", "Tencent", "阿里", "阿里巴巴", "Alibaba", "百度", "Baidu", "美团", "Meituan", "京东", "JD", "拼多多", "PDD", "快手", "Kuaishou", "网易", "NetEase", "华为", "Huawei", "小米", "Xiaomi", "OPPO", "vivo", "荣耀", "Honor", "深信服", "迈瑞", "大疆", "DJI", "比亚迪", "BYD", "中兴", "ZTE", "TCL", "传音", "Transsion", "BAT", "TMD", "打工人", "社畜", "微软", "Microsoft", "谷歌", "Google", "亚马逊", "Amazon", "苹果", "Apple", "Meta", "Facebook"], keywords: ["编程", "代码", "开发", "大厂", "互联网"], hot: true },
-  { id: "frontend_engineer", displayName: "前端工程师", industryId: "tech", synonyms: ["前端开发", "web开发", "H5开发", "React开发", "Vue开发", "大厂", "互联网"], keywords: ["网页", "界面", "前端"], hot: true },
-  { id: "backend_engineer", displayName: "后端工程师", industryId: "tech", synonyms: ["后端开发", "服务端开发", "Java开发", "Python开发", "Go开发", "大厂", "互联网"], keywords: ["服务器", "接口", "后端"], hot: false },
-  { id: "fullstack_engineer", displayName: "全栈工程师", industryId: "tech", synonyms: ["全栈开发", "Full Stack", "前后端开发", "大厂"], keywords: ["全栈", "开发"], hot: true },
-  { id: "mobile_engineer", displayName: "移动端工程师", industryId: "tech", synonyms: ["iOS开发", "Android开发", "App开发", "客户端开发", "Flutter开发", "大厂"], keywords: ["手机", "App", "移动端"], hot: false },
-  { id: "blockchain_engineer", displayName: "区块链工程师", industryId: "tech", synonyms: ["Web3开发", "智能合约", "Solidity", "链上开发"], keywords: ["区块链", "Web3"], hot: true },
-  { id: "web3_product", displayName: "Web3产品经理", industryId: "tech", synonyms: ["Crypto PM", "区块链产品", "DeFi产品", "NFT产品"], keywords: ["Web3", "Crypto"], hot: false },
-  { id: "crypto_trader", displayName: "加密货币交易员", industryId: "tech", synonyms: ["币圈", "数字货币", "量化交易", "加密货币"], keywords: ["加密", "交易"], hot: false },
-  { id: "product_manager", displayName: "产品经理", industryId: "tech", synonyms: ["PM", "产品", "产品狗", "产品负责人", "大厂产品", "互联网产品"], keywords: ["需求", "功能", "产品"], hot: true },
-  { id: "ui_designer", displayName: "UI设计师", industryId: "tech", synonyms: ["界面设计师", "视觉设计师", "UI/UX", "大厂设计"], keywords: ["界面", "视觉", "UI"], hot: true },
-  { id: "ux_designer", displayName: "UX设计师", industryId: "tech", synonyms: ["用户体验设计师", "交互设计师", "体验设计"], keywords: ["交互", "体验", "UX"], hot: false },
-  { id: "qa_engineer", displayName: "测试工程师", industryId: "tech", synonyms: ["QA", "质量工程师", "测试", "测试开发"], keywords: ["测试", "质量"], hot: false },
-  { id: "devops_engineer", displayName: "运维工程师", industryId: "tech", synonyms: ["DevOps", "SRE", "系统运维", "云架构师", "运维开发"], keywords: ["服务器", "部署", "运维"], hot: false },
-  { id: "security_engineer", displayName: "安全工程师", industryId: "tech", synonyms: ["网络安全", "信息安全", "渗透测试", "白帽子"], keywords: ["安全", "渗透"], hot: false },
-  { id: "tech_lead", displayName: "技术负责人", industryId: "tech", synonyms: ["技术总监", "CTO", "架构师", "Tech Lead", "技术VP"], keywords: ["架构", "技术管理"], hot: false },
+  { id: "software_engineer", displayName: "软件工程师", industryId: "tech", synonyms: ["程序员", "码农", "开发工程师", "研发工程师", "coder", "developer", "大厂", "互联网", "字节", "字节跳动", "ByteDance", "腾讯", "Tencent", "阿里", "阿里巴巴", "Alibaba", "百度", "Baidu", "美团", "Meituan", "京东", "JD", "拼多多", "PDD", "快手", "Kuaishou", "网易", "NetEase", "华为", "Huawei", "小米", "Xiaomi", "OPPO", "vivo", "荣耀", "Honor", "深信服", "迈瑞", "大疆", "DJI", "比亚迪", "BYD", "中兴", "ZTE", "TCL", "传音", "Transsion", "BAT", "TMD", "打工人", "社畜", "微软", "Microsoft", "谷歌", "Google", "亚马逊", "Amazon", "苹果", "Apple", "Meta", "Facebook"], keywords: ["编程", "代码", "开发", "大厂", "互联网"], hot: true, seedMappings: { category: "tech", segment: "software_dev", niche: "backend" } },
+  { id: "frontend_engineer", displayName: "前端工程师", industryId: "tech", synonyms: ["前端开发", "web开发", "H5开发", "React开发", "Vue开发", "大厂", "互联网"], keywords: ["网页", "界面", "前端"], hot: true, seedMappings: { category: "tech", segment: "software_dev", niche: "frontend" } },
+  { id: "backend_engineer", displayName: "后端工程师", industryId: "tech", synonyms: ["后端开发", "服务端开发", "Java开发", "Python开发", "Go开发", "大厂", "互联网"], keywords: ["服务器", "接口", "后端"], hot: false, seedMappings: { category: "tech", segment: "software_dev", niche: "backend" } },
+  { id: "fullstack_engineer", displayName: "全栈工程师", industryId: "tech", synonyms: ["全栈开发", "Full Stack", "前后端开发", "大厂"], keywords: ["全栈", "开发"], hot: true, seedMappings: { category: "tech", segment: "software_dev", niche: "fullstack" } },
+  { id: "mobile_engineer", displayName: "移动端工程师", industryId: "tech", synonyms: ["iOS开发", "Android开发", "App开发", "客户端开发", "Flutter开发", "大厂"], keywords: ["手机", "App", "移动端"], hot: false, seedMappings: { category: "tech", segment: "software_dev" } },
+  { id: "blockchain_engineer", displayName: "区块链工程师", industryId: "tech", synonyms: ["Web3开发", "智能合约", "Solidity", "链上开发"], keywords: ["区块链", "Web3"], hot: true, seedMappings: { category: "tech", segment: "software_dev" } },
+  { id: "web3_product", displayName: "Web3产品经理", industryId: "tech", synonyms: ["Crypto PM", "区块链产品", "DeFi产品", "NFT产品"], keywords: ["Web3", "Crypto"], hot: false, seedMappings: { category: "tech", segment: "product", niche: "product_manager" } },
+  { id: "crypto_trader", displayName: "加密货币交易员", industryId: "tech", synonyms: ["币圈", "数字货币", "量化交易", "加密货币"], keywords: ["加密", "交易"], hot: false, seedMappings: { category: "finance", segment: "pe_vc" } },
+  { id: "product_manager", displayName: "产品经理", industryId: "tech", synonyms: ["PM", "产品", "产品狗", "产品负责人", "大厂产品", "互联网产品"], keywords: ["需求", "功能", "产品"], hot: true, seedMappings: { category: "tech", segment: "product", niche: "product_manager" } },
+  { id: "ui_designer", displayName: "UI设计师", industryId: "tech", synonyms: ["界面设计师", "视觉设计师", "UI/UX", "大厂设计"], keywords: ["界面", "视觉", "UI"], hot: true, seedMappings: { category: "tech", segment: "design", niche: "ui_designer" } },
+  { id: "ux_designer", displayName: "UX设计师", industryId: "tech", synonyms: ["用户体验设计师", "交互设计师", "体验设计"], keywords: ["交互", "体验", "UX"], hot: false, seedMappings: { category: "tech", segment: "design", niche: "ux_designer" } },
+  { id: "qa_engineer", displayName: "测试工程师", industryId: "tech", synonyms: ["QA", "质量工程师", "测试", "测试开发"], keywords: ["测试", "质量"], hot: false, seedMappings: { category: "tech", segment: "software_dev" } },
+  { id: "devops_engineer", displayName: "运维工程师", industryId: "tech", synonyms: ["DevOps", "SRE", "系统运维", "云架构师", "运维开发"], keywords: ["服务器", "部署", "运维"], hot: false, seedMappings: { category: "tech", segment: "software_dev" } },
+  { id: "security_engineer", displayName: "安全工程师", industryId: "tech", synonyms: ["网络安全", "信息安全", "渗透测试", "白帽子"], keywords: ["安全", "渗透"], hot: false, seedMappings: { category: "tech", segment: "software_dev" } },
+  { id: "tech_lead", displayName: "技术负责人", industryId: "tech", synonyms: ["技术总监", "CTO", "架构师", "Tech Lead", "技术VP"], keywords: ["架构", "技术管理"], hot: false, seedMappings: { category: "tech", segment: "software_dev" } },
   
   // ========== AI/大数据 (ai) ==========
   { id: "data_analyst", displayName: "数据分析师", industryId: "ai", synonyms: ["数据分析", "BI分析师", "业务分析师"], keywords: ["数据", "分析", "报表"], hot: true },
@@ -128,16 +133,16 @@ export const OCCUPATIONS: Occupation[] = [
   { id: "ecom_manager", displayName: "电商负责人", industryId: "ecommerce", synonyms: ["电商总监", "运营总监", "电商经理", "店长"], keywords: ["管理", "电商"], hot: false },
   
   // ========== 金融投资 (finance) ==========
-  { id: "finance_analyst", displayName: "金融分析师", industryId: "finance", synonyms: ["投资分析师", "研究员", "行研", "金融分析", "股票分析", "行业研究员"], keywords: ["分析", "研究", "金融"], hot: true },
-  { id: "banker", displayName: "银行职员", industryId: "finance", synonyms: ["银行经理", "客户经理", "理财经理", "柜员", "银行家", "银行从业"], keywords: ["银行", "理财"], hot: true },
-  { id: "investment_banker", displayName: "投行(IBD)", industryId: "finance", synonyms: ["IBD", "投行", "投资银行", "投资银行家", "中金", "中金公司", "CICC", "中信证券", "华泰证券", "国泰君安", "海通证券", "招商证券", "广发证券", "高盛", "Goldman", "GS", "摩根士丹利", "Morgan Stanley", "MS", "摩根大通", "JP Morgan", "JPM", "瑞银", "UBS", "瑞信", "Credit Suisse", "花旗", "Citi", "美银", "BofA", "巴克莱", "Barclays", "德银", "Deutsche Bank"], keywords: ["投行", "IPO", "投资银行"], hot: true },
-  { id: "cvc_strategic", displayName: "战投/CVC", industryId: "finance", synonyms: ["战投", "战略投资", "企业投资", "CVC", "Corporate VC", "并购", "M&A", "腾讯投资", "字节战投", "阿里战投", "美团战投", "百度战投", "京东战投", "快手战投", "小米战投", "滴滴战投", "网易战投", "B站战投", "拼多多战投", "华为投资"], keywords: ["战投", "并购", "战略投资", "CVC"], hot: true },
-  { id: "pe_vc", displayName: "PE/VC投资", industryId: "finance", synonyms: ["投资经理", "风投", "私募", "基金经理", "红杉", "Sequoia", "高瓴", "Hillhouse", "IDG", "经纬", "真格", "源码资本", "GGV", "光速", "Lightspeed", "启明创投", "北极光", "晨兴", "五源资本", "今日资本", "软银", "Softbank", "老虎环球", "Tiger Global", "DST", "Coatue", "博裕", "KKR", "黑石", "Blackstone", "凯雷", "Carlyle", "TPG", "华平", "Warburg Pincus", "鼎晖", "弘毅", "淡马锡", "Temasek", "GIC"], keywords: ["投资", "基金", "风险投资", "PE", "VC"], hot: true },
-  { id: "securities", displayName: "证券从业", industryId: "finance", synonyms: ["券商", "股票分析师", "交易员", "经纪人", "证券公司"], keywords: ["证券", "股票"], hot: false },
-  { id: "insurance", displayName: "保险从业", industryId: "finance", synonyms: ["保险经纪", "保险顾问", "精算师", "保险代理"], keywords: ["保险", "精算"], hot: false },
-  { id: "fund_manager", displayName: "基金经理", industryId: "finance", synonyms: ["资产管理", "投资总监", "Portfolio Manager", "公募基金", "私募基金"], keywords: ["基金", "资产"], hot: false },
-  { id: "accountant", displayName: "会计师", industryId: "finance", synonyms: ["会计", "审计师", "CPA", "财务", "四大", "德勤", "普华永道", "安永", "毕马威", "PWC", "EY", "KPMG", "Deloitte", "Big4"], keywords: ["会计", "审计", "财务", "四大"], hot: true },
-  { id: "cfo", displayName: "财务负责人", industryId: "finance", synonyms: ["CFO", "财务总监", "财务经理", "财务VP"], keywords: ["财务", "管理"], hot: false },
+  { id: "finance_analyst", displayName: "金融分析师", industryId: "finance", synonyms: ["投资分析师", "研究员", "行研", "金融分析", "股票分析", "行业研究员"], keywords: ["分析", "研究", "金融"], hot: true, seedMappings: { category: "finance", segment: "investment_banking" } },
+  { id: "banker", displayName: "银行职员", industryId: "finance", synonyms: ["银行经理", "客户经理", "理财经理", "柜员", "银行家", "银行从业"], keywords: ["银行", "理财"], hot: true, seedMappings: { category: "finance", segment: "commercial_banking" } },
+  { id: "investment_banker", displayName: "投行(IBD)", industryId: "finance", synonyms: ["IBD", "投行", "投资银行", "投资银行家", "中金", "中金公司", "CICC", "中信证券", "华泰证券", "国泰君安", "海通证券", "招商证券", "广发证券", "高盛", "Goldman", "GS", "摩根士丹利", "Morgan Stanley", "MS", "摩根大通", "JP Morgan", "JPM", "瑞银", "UBS", "瑞信", "Credit Suisse", "花旗", "Citi", "美银", "BofA", "巴克莱", "Barclays", "德银", "Deutsche Bank"], keywords: ["投行", "IPO", "投资银行"], hot: true, seedMappings: { category: "finance", segment: "investment_banking" } },
+  { id: "cvc_strategic", displayName: "战投/CVC", industryId: "finance", synonyms: ["战投", "战略投资", "企业投资", "CVC", "Corporate VC", "并购", "M&A", "腾讯投资", "字节战投", "阿里战投", "美团战投", "百度战投", "京东战投", "快手战投", "小米战投", "滴滴战投", "网易战投", "B站战投", "拼多多战投", "华为投资"], keywords: ["战投", "并购", "战略投资", "CVC"], hot: true, seedMappings: { category: "finance", segment: "pe_vc" } },
+  { id: "pe_vc", displayName: "PE/VC投资", industryId: "finance", synonyms: ["投资经理", "风投", "私募", "基金经理", "红杉", "Sequoia", "高瓴", "Hillhouse", "IDG", "经纬", "真格", "源码资本", "GGV", "光速", "Lightspeed", "启明创投", "北极光", "晨兴", "五源资本", "今日资本", "软银", "Softbank", "老虎环球", "Tiger Global", "DST", "Coatue", "博裕", "KKR", "黑石", "Blackstone", "凯雷", "Carlyle", "TPG", "华平", "Warburg Pincus", "鼎晖", "弘毅", "淡马锡", "Temasek", "GIC"], keywords: ["投资", "基金", "风险投资", "PE", "VC"], hot: true, seedMappings: { category: "finance", segment: "pe_vc" } },
+  { id: "securities", displayName: "证券从业", industryId: "finance", synonyms: ["券商", "股票分析师", "交易员", "经纪人", "证券公司"], keywords: ["证券", "股票"], hot: false, seedMappings: { category: "finance", segment: "commercial_banking" } },
+  { id: "insurance", displayName: "保险从业", industryId: "finance", synonyms: ["保险经纪", "保险顾问", "精算师", "保险代理"], keywords: ["保险", "精算"], hot: false, seedMappings: { category: "finance", segment: "insurance" } },
+  { id: "fund_manager", displayName: "基金经理", industryId: "finance", synonyms: ["资产管理", "投资总监", "Portfolio Manager", "公募基金", "私募基金"], keywords: ["基金", "资产"], hot: false, seedMappings: { category: "finance", segment: "pe_vc" } },
+  { id: "accountant", displayName: "会计师", industryId: "finance", synonyms: ["会计", "审计师", "CPA", "财务", "四大", "德勤", "普华永道", "安永", "毕马威", "PWC", "EY", "KPMG", "Deloitte", "Big4"], keywords: ["会计", "审计", "财务", "四大"], hot: true, seedMappings: { category: "professional_services", segment: "consulting" } },
+  { id: "cfo", displayName: "财务负责人", industryId: "finance", synonyms: ["CFO", "财务总监", "财务经理", "财务VP"], keywords: ["财务", "管理"], hot: false, seedMappings: { category: "finance", segment: "commercial_banking" } },
   
   // ========== 咨询服务 (consulting) ==========
   { id: "management_consultant", displayName: "管理咨询顾问", industryId: "consulting", synonyms: ["战略咨询", "MBB", "咨询师", "顾问", "麦肯锡", "McKinsey", "BCG", "Boston Consulting", "波士顿咨询", "贝恩", "Bain", "罗兰贝格", "Roland Berger", "奥纬", "Oliver Wyman", "科尔尼", "AT Kearney", "Monitor", "LEK", "Parthenon", "Strategy&"], keywords: ["咨询", "战略", "MBB"], hot: true },
@@ -172,10 +177,10 @@ export const OCCUPATIONS: Occupation[] = [
   { id: "fashion_designer", displayName: "服装设计师", industryId: "creative", synonyms: ["时装设计", "服饰设计", "时尚设计", "打版师"], keywords: ["服装", "时尚"], hot: false },
   { id: "model", displayName: "模特", industryId: "creative", synonyms: ["平面模特", "商业模特", "试衣模特", "淘宝模特", "T台模特"], keywords: ["模特", "拍摄"], hot: true },
   { id: "makeup_artist", displayName: "化妆师", industryId: "creative", synonyms: ["彩妆师", "美妆师", "新娘跟妆", "影视化妆"], keywords: ["化妆", "造型"], hot: false },
-  { id: "dancer", displayName: "舞蹈演员", industryId: "creative", synonyms: ["舞者", "编舞", "舞蹈老师", "街舞", "芭蕾"], keywords: ["舞蹈", "表演"], hot: false },
-  { id: "actor", displayName: "演员", industryId: "creative", synonyms: ["表演", "艺人", "配音演员", "话剧演员", "群演"], keywords: ["演员", "表演"], hot: false },
-  { id: "host", displayName: "主持人", industryId: "creative", synonyms: ["司仪", "婚礼主持", "活动主持", "电台主持"], keywords: ["主持", "主播"], hot: false },
-  { id: "musician", displayName: "音乐人", industryId: "creative", synonyms: ["歌手", "乐手", "音乐制作人", "编曲师", "词曲作者"], keywords: ["音乐", "唱歌"], hot: false },
+  { id: "dancer", displayName: "舞蹈演员", industryId: "creative", synonyms: ["舞者", "编舞", "舞蹈老师", "街舞", "芭蕾"], keywords: ["舞蹈", "表演"], hot: false, seedMappings: { category: "culture_sports", segment: "performing_arts", niche: "dancer" } },
+  { id: "actor", displayName: "演员", industryId: "creative", synonyms: ["表演", "艺人", "配音演员", "话剧演员", "群演"], keywords: ["演员", "表演"], hot: false, seedMappings: { category: "culture_sports", segment: "performing_arts", niche: "actor" } },
+  { id: "host", displayName: "主持人", industryId: "creative", synonyms: ["司仪", "婚礼主持", "活动主持", "电台主持"], keywords: ["主持", "主播"], hot: false, seedMappings: { category: "culture_sports", segment: "performing_arts", niche: "actor" } },
+  { id: "musician", displayName: "音乐人", industryId: "creative", synonyms: ["歌手", "乐手", "音乐制作人", "编曲师", "词曲作者"], keywords: ["音乐", "唱歌"], hot: false, seedMappings: { category: "culture_sports", segment: "performing_arts", niche: "musician" } },
   { id: "sound_engineer", displayName: "音效师", industryId: "creative", synonyms: ["录音师", "混音师", "音频工程师", "声音设计"], keywords: ["音效", "录音"], hot: false },
   
   // ========== 传媒内容 (media) ==========
@@ -223,12 +228,12 @@ export const OCCUPATIONS: Occupation[] = [
   { id: "landscape_designer", displayName: "景观设计师", industryId: "realestate", synonyms: ["园林设计", "景观规划"], keywords: ["景观", "园林"], hot: false },
   
   // ========== 航空酒店旅游 (hospitality) ==========
-  { id: "flight_attendant", displayName: "空乘人员", industryId: "hospitality", synonyms: ["空姐", "空少", "乘务员", "cabin crew"], keywords: ["飞机", "航空"], hot: true },
-  { id: "pilot", displayName: "飞行员", industryId: "hospitality", synonyms: ["机长", "副驾驶", "民航飞行员"], keywords: ["飞行", "航空"], hot: false },
-  { id: "ground_staff", displayName: "地勤人员", industryId: "hospitality", synonyms: ["地勤", "机场服务", "值机"], keywords: ["机场", "服务"], hot: false },
-  { id: "hotel_manager", displayName: "酒店管理", industryId: "hospitality", synonyms: ["酒店经理", "前台经理", "客房经理"], keywords: ["酒店", "管理"], hot: true },
-  { id: "tour_guide", displayName: "导游领队", industryId: "hospitality", synonyms: ["导游", "领队", "旅游顾问"], keywords: ["旅游", "导游"], hot: false },
-  { id: "travel_planner", displayName: "旅行策划", industryId: "hospitality", synonyms: ["旅行定制", "行程规划", "旅游产品"], keywords: ["旅行", "策划"], hot: false },
+  { id: "flight_attendant", displayName: "空乘人员", industryId: "hospitality", synonyms: ["空姐", "空少", "乘务员", "cabin crew"], keywords: ["飞机", "航空"], hot: true, seedMappings: { category: "life_services", segment: "aviation", niche: "flight_attendant" } },
+  { id: "pilot", displayName: "飞行员", industryId: "hospitality", synonyms: ["机长", "副驾驶", "民航飞行员"], keywords: ["飞行", "航空"], hot: false, seedMappings: { category: "life_services", segment: "aviation", niche: "pilot" } },
+  { id: "ground_staff", displayName: "地勤人员", industryId: "hospitality", synonyms: ["地勤", "机场服务", "值机"], keywords: ["机场", "服务"], hot: false, seedMappings: { category: "life_services", segment: "aviation", niche: "ground_staff" } },
+  { id: "hotel_manager", displayName: "酒店管理", industryId: "hospitality", synonyms: ["酒店经理", "前台经理", "客房经理"], keywords: ["酒店", "管理"], hot: true, seedMappings: { category: "life_services", segment: "hospitality", niche: "hotel" } },
+  { id: "tour_guide", displayName: "导游领队", industryId: "hospitality", synonyms: ["导游", "领队", "旅游顾问"], keywords: ["旅游", "导游"], hot: false, seedMappings: { category: "life_services", segment: "hospitality", niche: "hotel" } },
+  { id: "travel_planner", displayName: "旅行策划", industryId: "hospitality", synonyms: ["旅行定制", "行程规划", "旅游产品"], keywords: ["旅行", "策划"], hot: false, seedMappings: { category: "life_services", segment: "hospitality", niche: "hotel" } },
   
   // ========== 生活方式 (lifestyle) ==========
   { id: "fitness_coach", displayName: "健身教练", industryId: "lifestyle", synonyms: ["私教", "健身私教", "普拉提教练", "CrossFit教练"], keywords: ["健身", "运动"], hot: true },

@@ -60,12 +60,12 @@ export interface GroupMatch {
  * 计算两个用户之间的性格兼容性分数
  */
 function calculatePersonalityScore(user1: Partial<User>, user2: Partial<User>): number {
-  if (!user1.primaryRole || !user2.primaryRole) return 50;
+  if (!user1.primaryArchetype || !user2.primaryArchetype) return 50;
   
   try {
     const chemistry = getChemistryScore(
-      user1.primaryRole as ArchetypeName,
-      user2.primaryRole as ArchetypeName
+      user1.primaryArchetype as ArchetypeName,
+      user2.primaryArchetype as ArchetypeName
     );
     return chemistry;
   } catch {
@@ -189,7 +189,7 @@ function calculateIntentScore(user1: Partial<User>, user2: Partial<User>): numbe
 function getUserAge(user: Partial<User>): number | null {
   if (!user.birthdate) return null;
   
-  const birthDate = new Date(user.birthdate);
+  const birthDate = new Date(user.birthdate + 'T00:00:00');
   const today = new Date();
   let age = today.getFullYear() - birthDate.getFullYear();
   const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -632,7 +632,7 @@ export function matchUsersToGroups(
     
     // 计算组的评分指标
     const archetypes = group
-      .map(u => u.primaryRole)
+      .map(u => u.primaryArchetype)
       .filter(Boolean) as ArchetypeName[];
     
     const avgChemistryScore = calculateGroupChemistry(archetypes);
@@ -706,7 +706,7 @@ function generateGroupExplanation(
   const parts: string[] = [];
   
   // 性格原型分布
-  const archetypes = users.map(u => u.primaryRole).filter(Boolean);
+  const archetypes = users.map(u => u.primaryArchetype).filter(Boolean);
   const archetypeCount = new Map<string, number>();
   archetypes.forEach(a => {
     archetypeCount.set(a!, (archetypeCount.get(a!) || 0) + 1);

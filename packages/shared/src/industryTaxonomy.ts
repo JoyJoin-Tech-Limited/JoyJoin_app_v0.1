@@ -290,6 +290,15 @@ export const INDUSTRY_TAXONOMY: IndustryCategory[] = [
           { id: "hotel", label: "酒店服务", synonyms: ["酒店"], keywords: ["酒店", "服务"] },
         ]
       },
+      {
+        id: "aviation",
+        label: "航空服务",
+        niches: [
+          { id: "pilot", label: "飞行员", synonyms: ["机长", "副驾驶", "民航飞行员"], keywords: ["飞行", "驾驶", "航空"] },
+          { id: "flight_attendant", label: "空乘人员", synonyms: ["空姐", "空少", "乘务员", "cabin crew"], keywords: ["空乘", "客舱", "飞机"] },
+          { id: "ground_staff", label: "地勤人员", synonyms: ["地勤", "机场服务", "值机"], keywords: ["地勤", "机场", "服务"] },
+        ]
+      },
     ]
   },
   {
@@ -333,6 +342,15 @@ export const INDUSTRY_TAXONOMY: IndustryCategory[] = [
         label: "体育",
         niches: [
           { id: "athlete", label: "运动员", synonyms: ["职业运动员"], keywords: ["运动员", "体育"] },
+        ]
+      },
+      {
+        id: "performing_arts",
+        label: "表演艺术",
+        niches: [
+          { id: "dancer", label: "舞蹈演员", synonyms: ["舞者", "舞蹈员", "芭蕾舞演员", "现代舞", "街舞dancer"], keywords: ["舞蹈", "跳舞", "表演"] },
+          { id: "actor", label: "演员", synonyms: ["表演者", "艺人", "配音演员", "话剧演员"], keywords: ["表演", "演戏", "演员"] },
+          { id: "musician", label: "音乐家", synonyms: ["乐手", "歌手", "音乐制作人", "编曲师"], keywords: ["音乐", "演奏", "唱歌"] },
         ]
       },
     ]

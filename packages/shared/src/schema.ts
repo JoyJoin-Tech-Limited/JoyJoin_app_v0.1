@@ -115,6 +115,7 @@ export const users = pgTable("users", {
   hasCompletedInterestsTopics: boolean("has_completed_interests_topics").default(false),
   hasCompletedPersonalityTest: boolean("has_completed_personality_test").default(false),
   hasSeenGuide: boolean("has_seen_guide").default(false), // Guide page viewed, persisted server-side
+  hasCompletedInterestsCarousel: boolean("has_completed_interests_carousel").default(false), // New carousel-based interest selection
   
   // Interests & Topics (Step 2)
   interestsTop: text("interests_top").array(), // 3-7 selected interests
@@ -152,8 +153,8 @@ export const users = pgTable("users", {
   energyLevel: integer("energy_level"),
   
   // Social role (from personality test - now mapped to archetype)
-  primaryRole: varchar("primary_role"), // 12 archetypes (animal-based social vibe system)
-  secondaryRole: varchar("secondary_role"), // Second highest archetype (used in algorithm, hidden from UI)
+  primaryArchetype: varchar("primary_archetype"), // 12 archetypes (animal-based social vibe system)
+  secondaryArchetype: varchar("secondary_archetype"), // Second highest archetype (used in algorithm, hidden from UI)
   roleSubtype: varchar("role_subtype"),
   
   // Gamification - Legacy counters
@@ -225,6 +226,35 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// User Interests table - Carousel-based interest selection with heat tracking
+// NOTE: This table uses PostgreSQL-specific gen_random_uuid() function
+// The project is PostgreSQL-only (Neon database) so this is acceptable
+export const userInterests = pgTable("user_interests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Aggregated metrics
+  totalHeat: integer("total_heat").notNull().default(0), // Sum of all heat values
+  totalSelections: integer("total_selections").notNull().default(0), // Count of selected topics
+  
+  // Category-level heat distribution
+  categoryHeat: jsonb("category_heat").notNull().default('{}'), 
+  // { "career": 35, "philosophy": 28, "lifestyle": 32, "culture": 18, "city": 14 }
+  
+  // Individual topic selections with metadata
+  selections: jsonb("selections").notNull().default('[]'),
+  // [{ topicId, emoji, label, fullName, category, categoryId, level, heat }]
+  
+  // Top priorities (level 3 items only)
+  topPriorities: jsonb("top_priorities"),
+  // [{ topicId, label, heat }]
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_user_interests_user_id").on(table.userId),
+]);
 
 // Events table
 export const events = pgTable("events", {
@@ -794,10 +824,10 @@ export const roleResults = pgTable("role_results", {
   userId: varchar("user_id").notNull().references(() => users.id),
   
   // Role scores (12 archetypes)
-  primaryRole: varchar("primary_role").notNull(), // Highest scoring archetype
-  primaryRoleScore: integer("primary_role_score").notNull(),
-  secondaryRole: varchar("secondary_role"), // Second highest archetype (used in algorithm, hidden from UI)
-  secondaryRoleScore: integer("secondary_role_score"),
+  primaryArchetype: varchar("primary_archetype").notNull(), // Highest scoring archetype
+  primaryArchetypeScore: integer("primary_archetype_score").notNull(),
+  secondaryArchetype: varchar("secondary_archetype"), // Second highest archetype (used in algorithm, hidden from UI)
+  secondaryArchetypeScore: integer("secondary_archetype_score"),
   roleSubtype: varchar("role_subtype"), // Subtype based on answer patterns
   
   // Role score breakdown

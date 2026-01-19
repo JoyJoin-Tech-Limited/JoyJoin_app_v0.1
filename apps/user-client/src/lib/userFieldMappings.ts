@@ -95,7 +95,7 @@ export function formatAge(age: number | null | undefined): string {
 export function calculateAge(birthdate: string | null | undefined): number {
   if (!birthdate) return 0;
   const today = new Date();
-  const birth = new Date(birthdate);
+  const birth = new Date(birthdate + 'T00:00:00');
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {

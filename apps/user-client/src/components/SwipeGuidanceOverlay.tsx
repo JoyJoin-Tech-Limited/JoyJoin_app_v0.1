@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, ArrowUp } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUp, Heart, X, Sparkles } from "lucide-react";
 
 const STORAGE_KEY = "joyjoin_swipe_guidance_seen";
 
@@ -37,7 +37,7 @@ export function SwipeGuidanceOverlay() {
           aria-modal="true"
           aria-label="滑动引导"
           tabIndex={0}
-          className="fixed inset-0 z-50 bg-gradient-to-b from-[#6930C3] to-[#3B0B8D] text-white flex flex-col items-center justify-center px-6"
+          className="fixed inset-0 z-50 bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-700 text-white flex flex-col items-center justify-center px-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -49,57 +49,72 @@ export function SwipeGuidanceOverlay() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1 }}
-            className="text-center mb-8"
+            className="text-center mb-12"
           >
-            <p className="text-base text-white/80 mb-2">首次进入，试试滑动吧</p>
-            <h1 className="text-2xl font-bold">
+            <p className="text-sm text-white/70 mb-3 font-medium">首次进入，试试滑动吧</p>
+            <h1 className="text-3xl font-bold tracking-tight">
               左滑跳过 · 右滑喜欢 · 上滑超爱
             </h1>
           </motion.div>
 
-          <div className="grid grid-cols-3 gap-4 w-full max-w-sm">
+          <div className="grid grid-cols-3 gap-3 w-full max-w-md px-2">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              className="flex flex-col items-center gap-3 rounded-2xl bg-white/10 p-4"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="flex flex-col items-center gap-4 rounded-2xl bg-white/15 backdrop-blur-md p-5 border border-white/20"
             >
-              <div className="w-14 h-14 rounded-full bg-gray-600/50 flex items-center justify-center">
-                <ArrowLeft className="w-7 h-7" strokeWidth={2} />
-              </div>
+              <motion.div 
+                className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-400/40 to-gray-500/40 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-lg"
+                animate={{ x: [-3, 3, -3] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <ArrowLeft className="w-8 h-8" strokeWidth={2.5} />
+              </motion.div>
               <div className="text-center">
-                <p className="text-base font-semibold">左滑 · 跳过</p>
-                <span className="text-xs text-white/60">不感兴趣就滑走</span>
+                <p className="text-base font-bold mb-1">跳过</p>
+                <span className="text-xs text-white/70">不感兴趣</span>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="flex flex-col items-center gap-4 rounded-2xl bg-white/15 backdrop-blur-md p-5 border border-white/20"
+            >
+              <motion.div 
+                className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400/80 to-green-500/80 flex items-center justify-center border-2 border-white/40 shadow-lg"
+                animate={{ x: [3, -3, 3] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Heart className="w-8 h-8 fill-white" strokeWidth={2.5} />
+              </motion.div>
+              <div className="text-center">
+                <p className="text-base font-bold mb-1">喜欢</p>
+                <span className="text-xs text-white/70">收藏心动</span>
               </div>
             </motion.div>
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.3 }}
-              className="flex flex-col items-center gap-3 rounded-2xl bg-white/10 p-4"
+              transition={{ duration: 0.4, delay: 0.4 }}
+              className="flex flex-col items-center gap-4 rounded-2xl bg-gradient-to-br from-pink-400/30 to-rose-500/30 backdrop-blur-md p-5 border-2 border-pink-300/40 shadow-xl"
             >
-              <div className="w-14 h-14 rounded-full bg-green-500/80 flex items-center justify-center">
-                <ArrowRight className="w-7 h-7" strokeWidth={2} />
-              </div>
+              <motion.div 
+                className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center border-2 border-white/50 shadow-lg"
+                animate={{ 
+                  y: [-4, 4, -4],
+                  scale: [1, 1.05, 1],
+                }}
+                transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Sparkles className="w-8 h-8 fill-white" strokeWidth={2.5} />
+              </motion.div>
               <div className="text-center">
-                <p className="text-base font-semibold">右滑 · 喜欢</p>
-                <span className="text-xs text-white/60">收藏心动选项</span>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.4 }}
-              className="flex flex-col items-center gap-3 rounded-2xl bg-white/10 p-4"
-            >
-              <div className="w-14 h-14 rounded-full bg-purple-400/80 flex items-center justify-center">
-                <ArrowUp className="w-7 h-7" strokeWidth={2} />
-              </div>
-              <div className="text-center">
-                <p className="text-base font-semibold">上滑 · 超爱</p>
-                <span className="text-xs text-white/60">重点标记灵感</span>
+                <p className="text-base font-bold mb-1">超爱</p>
+                <span className="text-xs text-white/70">重点标记</span>
               </div>
             </motion.div>
           </div>
@@ -107,14 +122,15 @@ export function SwipeGuidanceOverlay() {
           <motion.button
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.5 }}
-            className="mt-10 px-8 py-3 rounded-full bg-white text-purple-700 font-bold text-base"
+            transition={{ duration: 0.4, delay: 0.6 }}
+            className="mt-12 px-10 py-3.5 rounded-full bg-white text-purple-700 font-bold text-base shadow-xl hover:shadow-2xl transition-shadow flex items-center gap-2"
             whileTap={{ scale: 0.96 }}
             data-testid="button-start-swiping"
           >
-            [点击开始]
+            <span>开始探索</span>
+            <Sparkles className="w-4 h-4" />
           </motion.button>
-          <p className="mt-3 text-sm text-white/50">点击任意处关闭提示</p>
+          <p className="mt-4 text-sm text-white/60 font-medium">点击任意处开始</p>
         </motion.div>
       )}
     </AnimatePresence>

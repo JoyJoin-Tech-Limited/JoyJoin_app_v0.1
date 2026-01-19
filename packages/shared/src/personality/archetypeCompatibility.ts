@@ -203,16 +203,16 @@ export const compatibilityMatrix: Record<string, Record<string, number>> = {
   },
 };
 
-export function getArchetypeCompatibility(primaryRole: string, targetRole: string): number {
-  return compatibilityMatrix[primaryRole]?.[targetRole] ?? 50;
+export function getArchetypeCompatibility(primaryArchetype: string, targetArchetype: string): number {
+  return compatibilityMatrix[primaryArchetype]?.[targetArchetype] ?? 50;
 }
 
-export function getTopCompatibleArchetypes(primaryRole: string, limit: number = 5) {
-  const compatibility = compatibilityMatrix[primaryRole];
+export function getTopCompatibleArchetypes(primaryArchetype: string, limit: number = 5) {
+  const compatibility = compatibilityMatrix[primaryArchetype];
   if (!compatibility) return [];
 
   return ALL_ARCHETYPES
-    .filter((arch) => arch !== primaryRole)
+    .filter((arch) => arch !== primaryArchetype)
     .map((arch) => ({
       archetype: arch,
       score: compatibility[arch],
