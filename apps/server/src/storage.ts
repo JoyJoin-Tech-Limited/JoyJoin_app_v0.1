@@ -360,6 +360,10 @@ export interface IStorage {
     traitScores: any;
   }): Promise<any>;
   getAssessmentAnswers(sessionId: string): Promise<any[]>;
+  
+  // Share Card Rankings
+  calculateUserRank(userCreatedAt: Date): Promise<number>;
+  calculateArchetypeRank(userId: string, archetype: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -649,8 +653,8 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(users)
       .set({
-        primaryRole: result.primaryRole,
-        secondaryRole: result.secondaryRole,
+        primaryArchetype: result.primaryArchetype,
+        secondaryArchetype: result.secondaryArchetype,
         roleSubtype: result.roleSubtype,
         updatedAt: new Date(),
       })
@@ -682,19 +686,19 @@ export class DatabaseStorage implements IStorage {
   async getPersonalityDistribution(): Promise<Record<string, number>> {
     const results = await db
       .select({
-        primaryRole: users.primaryRole,
+        primaryArchetype: users.primaryArchetype,
         count: sql<number>`count(*)`,
       })
       .from(users)
-      .where(sql`${users.primaryRole} IS NOT NULL`)
-      .groupBy(users.primaryRole);
+      .where(sql`${users.primaryArchetype} IS NOT NULL`)
+      .groupBy(users.primaryArchetype);
 
     const distribution: Record<string, number> = {};
     let total = 0;
     
     for (const row of results) {
-      if (row.primaryRole) {
-        distribution[row.primaryRole] = Number(row.count);
+      if (row.primaryArchetype) {
+        distribution[row.primaryArchetype] = Number(row.count);
         total += Number(row.count);
       }
     }
@@ -3981,6 +3985,31 @@ export class DatabaseStorage implements IStorage {
       .from(assessmentAnswers)
       .where(eq(assessmentAnswers.sessionId, sessionId))
       .orderBy(assessmentAnswers.answeredAt);
+  }
+
+  // Share Card Rankings
+  async calculateUserRank(userCreatedAt: Date): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(sql`${users.createdAt} < ${userCreatedAt}`);
+    return (result?.count || 0) + 1;
+  }
+
+  async calculateArchetypeRank(userId: string, archetype: string): Promise<number> {
+    const user = await this.getUser(userId);
+    if (!user?.createdAt) {
+      return 1;
+    }
+    
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(and(
+        eq(users.archetype, archetype),
+        sql`${users.createdAt} < ${user.createdAt}`
+      ));
+    return (result?.count || 0) + 1;
   }
 }
 

@@ -42,7 +42,7 @@ interface User {
   gender?: string;
   dateOfBirth?: string;
   birthdate?: string;
-  primaryRole?: string;
+  primaryArchetype?: string;
   archetype?: string;
   currentCity?: string;
   interestsTop?: string[];
@@ -157,7 +157,7 @@ export default function AdminUsersPage() {
   const calculateAge = (dateOfBirth?: string) => {
     if (!dateOfBirth) return null;
     const today = new Date();
-    const birthDate = new Date(dateOfBirth);
+    const birthDate = new Date(dateOfBirth + 'T00:00:00');
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
@@ -432,10 +432,10 @@ export default function AdminUsersPage() {
                     <Badge variant="outline">{userDetails.archetype}</Badge>
                   </div>
                 )}
-                {userDetails.primaryRole && (
+                {userDetails.primaryArchetype && (
                   <div>
                     <p className="text-sm text-muted-foreground">社交角色</p>
-                    <Badge variant="outline">{userDetails.primaryRole}</Badge>
+                    <Badge variant="outline">{userDetails.primaryArchetype}</Badge>
                   </div>
                 )}
                 <div>

@@ -1,14 +1,30 @@
 /**
  * 混合智能行业分类引擎 (Hybrid Industry Classification Engine)
  * 
- * 三层架构:
+ * 四层架构:
+ * - Tier 0: Fuzzy匹配 (10-30ms) - 处理拼写错误和变体
  * - Tier 1: Seed库精确匹配 (0-5ms) - 最快，最准确
  * - Tier 2: Taxonomy直接匹配 (5-20ms) - 基于INDUSTRY_TAXONOMY的keywords/synonyms
  * - Tier 3: AI深度分析 (200-800ms) - DeepSeek推理
  */
 
 import { matchSeed, type SeedMatch } from "./industrySeedMap";
+import { fuzzyMatch } from "./fuzzyMatcher";
 import { INDUSTRY_TAXONOMY, findCategoryById, findSegmentById, findNicheById } from "@shared/industryTaxonomy";
+import { OCCUPATIONS } from "@shared/occupations";
+import { ensureReasoning } from "./reasoningGenerator";
+import { inferNicheFromContext } from "./nicheInferenceEngine";
+import { applySemanticFallback } from "@shared/semanticFallback";
+
+// Confidence thresholds for classification tiers
+const CONFIDENCE_THRESHOLDS = {
+  FUZZY_HIGH: 0.85,      // High confidence fuzzy match (use immediately)
+  FUZZY_DECENT: 0.70,    // Decent fuzzy match (use if seed fails)
+  SEED_MIN: 0.90,        // Minimum seed match confidence
+  TAXONOMY_MIN: 0.80,    // Minimum taxonomy match confidence
+  NICHE_INFERENCE_SEED: 0.85,    // Niche inference for seed/taxonomy
+  NICHE_INFERENCE_AI: 0.80,      // Niche inference for AI results
+};
 
 export interface IndustryClassificationResult {
   category: {
@@ -25,7 +41,7 @@ export interface IndustryClassificationResult {
   };
   confidence: number;
   reasoning?: string;
-  source: "seed" | "ontology" | "ai" | "fallback";
+  source: "seed" | "ontology" | "ai" | "fallback" | "fuzzy";
   processingTimeMs: number;
   rawInput: string;           // original user input
   normalizedInput: string;    // AI-cleaned version
@@ -53,7 +69,7 @@ function matchViaSeed(userInput: string): IndustryClassificationResult | null {
     }
   }
   
-  return {
+  const result: IndustryClassificationResult = {
     category: { id: category.id, label: category.label },
     segment: { id: segment.id, label: segment.label },
     niche,
@@ -63,6 +79,17 @@ function matchViaSeed(userInput: string): IndustryClassificationResult | null {
     rawInput: userInput,
     normalizedInput: userInput,
   };
+  
+  // Apply niche inference if no niche found
+  if (!result.niche) {
+    const inferredNiche = inferNicheFromContext(userInput, category.id, segment.id);
+    if (inferredNiche && inferredNiche.confidence >= CONFIDENCE_THRESHOLDS.NICHE_INFERENCE_SEED) {
+      result.niche = { id: inferredNiche.id, label: inferredNiche.label };
+    }
+  }
+  
+  // Ensure reasoning is always present
+  return ensureReasoning(result, userInput);
 }
 
 /**
@@ -191,7 +218,7 @@ function matchViaTaxonomy(userInput: string): IndustryClassificationResult | nul
   allMatches.sort((a, b) => b.matchPriority - a.matchPriority);
   const match = allMatches[0];
   
-  return {
+  const result: IndustryClassificationResult = {
     category: { id: match.categoryId, label: match.categoryLabel },
     segment: { id: match.segmentId, label: match.segmentLabel },
     niche: match.nicheId ? { id: match.nicheId, label: match.nicheLabel! } : undefined,
@@ -202,6 +229,17 @@ function matchViaTaxonomy(userInput: string): IndustryClassificationResult | nul
     rawInput: userInput,
     normalizedInput: userInput,
   };
+  
+  // Apply niche inference if no niche found
+  if (!result.niche) {
+    const inferredNiche = inferNicheFromContext(userInput, match.categoryId, match.segmentId);
+    if (inferredNiche && inferredNiche.confidence >= CONFIDENCE_THRESHOLDS.NICHE_INFERENCE_SEED) {
+      result.niche = { id: inferredNiche.id, label: inferredNiche.label };
+    }
+  }
+  
+  // Ensure reasoning is always present
+  return ensureReasoning(result, userInput);
 }
 
 /**
@@ -273,7 +311,15 @@ ${categoryList}
       }
     }
     
-    return {
+    // Apply niche inference if no niche found
+    if (!niche) {
+      const inferredNiche = inferNicheFromContext(userInput, category.id, segment.id);
+      if (inferredNiche && inferredNiche.confidence >= CONFIDENCE_THRESHOLDS.NICHE_INFERENCE_AI) {
+        niche = { id: inferredNiche.id, label: inferredNiche.label };
+      }
+    }
+    
+    const result: IndustryClassificationResult = {
       category: { id: category.id, label: aiResult.categoryLabel || category.label },
       segment: { id: segment.id, label: aiResult.segmentLabel || segment.label },
       niche,
@@ -284,6 +330,9 @@ ${categoryList}
       rawInput: userInput,
       normalizedInput: userInput,
     };
+    
+    // Ensure reasoning is always present
+    return ensureReasoning(result, userInput);
   } catch (error) {
     console.error("AI classification error:", error);
     return null;
@@ -325,6 +374,99 @@ async function normalizeUserInput(rawText: string): Promise<string> {
 }
 
 /**
+ * Intelligent fallback - no hardcoding to software_dev
+ * Returns "other" category with low confidence and suggestions
+ */
+function intelligentFallback(userInput: string, startTime: number): IndustryClassificationResult {
+  // Try semantic fallback first for edge cases (farmer, student, 富二代, etc.)
+  const semanticMatch = applySemanticFallback(userInput);
+  if (semanticMatch) {
+    const category = findCategoryById(semanticMatch.category);
+    const segment = category ? findSegmentById(semanticMatch.category, semanticMatch.segment) : null;
+    
+    if (category && segment) {
+      const result: IndustryClassificationResult = {
+        category: { id: category.id, label: category.label },
+        segment: { id: segment.id, label: segment.label },
+        niche: semanticMatch.niche ? findNicheById(semanticMatch.category, semanticMatch.segment, semanticMatch.niche) 
+          ? { id: semanticMatch.niche, label: findNicheById(semanticMatch.category, semanticMatch.segment, semanticMatch.niche)!.label }
+          : undefined : undefined,
+        confidence: semanticMatch.confidence,
+        source: "fallback",
+        reasoning: semanticMatch.reasoning,
+        processingTimeMs: Date.now() - startTime,
+        rawInput: userInput,
+        normalizedInput: userInput,
+      };
+      
+      return ensureReasoning(result, userInput);
+    }
+  }
+  
+  // Original fallback logic for occupation keyword matching
+  const input = userInput.toLowerCase();
+  const candidates: { occ: typeof OCCUPATIONS[0]; score: number }[] = [];
+  
+  // Try to find ANY partial match based on keywords
+  for (const occ of OCCUPATIONS) {
+    let score = 0;
+    for (const keyword of occ.keywords) {
+      if (input.includes(keyword.toLowerCase())) score += 10;
+    }
+    if (score > 0) candidates.push({ occ, score });
+  }
+  
+  candidates.sort((a, b) => b.score - a.score);
+  
+  // If we found some keyword matches, suggest the top 3
+  if (candidates.length > 0) {
+    const top3 = candidates.slice(0, 3);
+    const best = top3[0].occ;
+    
+    // Try to use the best match's category if it has seed mappings
+    if (best.seedMappings) {
+      const category = findCategoryById(best.seedMappings.category);
+      const segment = category ? findSegmentById(best.seedMappings.category, best.seedMappings.segment) : null;
+      
+      if (category && segment) {
+        const result: IndustryClassificationResult = {
+          category: { id: category.id, label: category.label },
+          segment: { id: segment.id, label: segment.label },
+          confidence: Math.min(0.5, top3[0].score / 50),
+          source: "fallback",
+          reasoning: `推测可能是"${best.displayName}"相关领域，建议确认`,
+          processingTimeMs: Date.now() - startTime,
+          rawInput: userInput,
+          normalizedInput: userInput,
+        };
+        
+        // Ensure reasoning is always present
+        return ensureReasoning(result, userInput);
+      }
+    }
+  }
+  
+  // True unknown - return "other" category with very low confidence
+  // Find the "other" or first available category
+  const otherCategory = INDUSTRY_TAXONOMY.find(c => c.id === "other" || c.id.includes("other")) || INDUSTRY_TAXONOMY[INDUSTRY_TAXONOMY.length - 1];
+  const otherSegment = otherCategory.segments[0];
+  
+  const result: IndustryClassificationResult = {
+    category: { id: otherCategory.id, label: otherCategory.label },
+    segment: { id: otherSegment.id, label: otherSegment.label },
+    confidence: 0.1,
+    source: "fallback",
+    reasoning: "无法识别，建议手动选择",
+    processingTimeMs: Date.now() - startTime,
+    rawInput: userInput,
+    normalizedInput: userInput,
+  };
+  
+  // Ensure reasoning is always present
+  return ensureReasoning(result, userInput);
+}
+
+/**
  * 主分类函数
  */
 export async function classifyIndustry(
@@ -334,33 +476,37 @@ export async function classifyIndustry(
   const cleanInput = userInput.trim();
   
   if (!cleanInput) {
-    return {
-      category: { id: "tech", label: "科技互联网" },
-      segment: { id: "software_dev", label: "软件开发" },
-      confidence: 0.3,
-      reasoning: "输入为空",
-      source: "fallback",
-      processingTimeMs: Date.now() - startTime,
-      rawInput: cleanInput,
-      normalizedInput: cleanInput,
-    };
+    return intelligentFallback(cleanInput, startTime);
+  }
+  
+  // Tier 0: Fuzzy matching for typos and variations
+  const fuzzyResult = fuzzyMatch(cleanInput);
+  if (fuzzyResult && fuzzyResult.confidence >= CONFIDENCE_THRESHOLDS.FUZZY_HIGH) {
+    const normalizedInput = await normalizeUserInput(cleanInput);
+    return { ...fuzzyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
   // Tier 1: Seed库精确匹配
   const seedResult = matchViaSeed(cleanInput);
-  if (seedResult && seedResult.confidence >= 0.9) {
+  if (seedResult && seedResult.confidence >= CONFIDENCE_THRESHOLDS.SEED_MIN) {
     const normalizedInput = await normalizeUserInput(cleanInput);
     return { ...seedResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
-  // Tier 2: Taxonomy直接匹配 (replaces old ontology matching)
+  // If fuzzy match has decent confidence, use it
+  if (fuzzyResult && fuzzyResult.confidence >= CONFIDENCE_THRESHOLDS.FUZZY_DECENT) {
+    const normalizedInput = await normalizeUserInput(cleanInput);
+    return { ...fuzzyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
+  }
+  
+  // Tier 2: Taxonomy直接匹配
   const taxonomyResult = matchViaTaxonomy(cleanInput);
-  if (taxonomyResult && taxonomyResult.confidence >= 0.8) {
+  if (taxonomyResult && taxonomyResult.confidence >= CONFIDENCE_THRESHOLDS.TAXONOMY_MIN) {
     const normalizedInput = await normalizeUserInput(cleanInput);
     return { ...taxonomyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
-  // Tier 3: AI深度分析 (DeepSeek fallback)
+  // Tier 3: AI深度分析
   try {
     const aiResult = await matchViaAI(cleanInput);
     if (aiResult) {
@@ -371,20 +517,21 @@ export async function classifyIndustry(
     console.error("AI classification fallback error:", error);
   }
   
-  // Fallback: return best available result or default
+  // Final fallback: return best available result or intelligent fallback
   const normalizedInput = await normalizeUserInput(cleanInput);
-  const base = taxonomyResult || seedResult || {
-    category: { id: "tech", label: "科技互联网" },
-    segment: { id: "software_dev", label: "软件开发" },
-    confidence: 0.3,
-    reasoning: "无法准确分类",
-  };
-
-  return {
-    ...base,
-    source: (base as any).source || "fallback",
-    processingTimeMs: Date.now() - startTime,
-    rawInput: cleanInput,
-    normalizedInput,
-  };
+  const base = taxonomyResult || fuzzyResult || seedResult;
+  
+  if (base) {
+    return {
+      ...base,
+      source: (base as any).source || "fallback",
+      processingTimeMs: Date.now() - startTime,
+      rawInput: cleanInput,
+      normalizedInput,
+    };
+  }
+  
+  // Truly unknown input - use intelligent fallback
+  const fallbackResult = intelligentFallback(cleanInput, startTime);
+  return { ...fallbackResult, normalizedInput };
 }

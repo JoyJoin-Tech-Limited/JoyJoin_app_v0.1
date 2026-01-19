@@ -251,11 +251,11 @@ function calculateRoleScores(responses):
 - Dual questions: 4 × (2+1) = 12 points
 - **Total: 24 points distributed**
 
-**Step 2: Determine Primary & Secondary Roles**
+**Step 2: Determine Primary & Secondary Archetypes**
 ```
 sorted_scores = sort(scores, descending)
-primaryRole = scores[0]
-secondaryRole = scores[1]
+primaryArchetype = scores[0]
+secondaryArchetype = scores[1]
 ```
 
 **Step 3: Calculate 6-Dimensional Trait Scores**
@@ -292,7 +292,7 @@ subtypes = {
   "探索者": ["专家型", "考证派"],
   ...
 }
-roleSubtype = subtypes[primaryRole][0] // Simplified: always first
+roleSubtype = subtypes[primaryArchetype][0] // Simplified: always first
 ```
 
 #### UI/UX Features
@@ -2969,7 +2969,7 @@ export function useWebSocket() {
 ```typescript
 function calculateUserMatchScore(user1, user2, weights) {
   // 1. Personality Compatibility (40% default)
-  const personalityScore = chemistryMatrix[user1.primaryRole][user2.primaryRole];
+  const personalityScore = chemistryMatrix[user1.primaryArchetype][user2.primaryArchetype];
   
   // 2. Interest Overlap (25% default)
   const sharedInterests = intersection(user1.interests, user2.interests);
@@ -3095,7 +3095,7 @@ const chemistryMatrix = {
 // Pair Compatibility Score (配对兼容性) - 100%
 function calculatePairScore(user1, user2, reg1, reg2) {
   // 1. Chemistry (37.5%) - Personality archetype compatibility
-  const chemistry = CHEMISTRY_MATRIX[user1.primaryRole][user2.primaryRole];
+  const chemistry = CHEMISTRY_MATRIX[user1.primaryArchetype][user2.primaryArchetype];
   
   // 2. Interest Overlap (31.25%) - Shared topics
   const sharedInterests = intersection(user1.interests, user2.interests);
@@ -3120,19 +3120,19 @@ function calculateGroupDiversity(group) {
   // Diversity metrics (only counted ONCE at group level)
   const uniqueIndustries = new Set(group.map(u => u.industry)).size;
   const uniqueEducation = new Set(group.map(u => u.educationLevel)).size;
-  const uniqueRoles = new Set(group.map(u => u.primaryRole)).size;
+  const uniqueArchetypes = new Set(group.map(u => u.primaryArchetype)).size;
   
   const industryDiversity = (uniqueIndustries / group.length) * 100;
   const educationDiversity = (uniqueEducation / group.length) * 100;
-  const roleDiversity = (uniqueRoles / group.length) * 100;
+  const archetypeDiversity = (uniqueArchetypes / group.length) * 100;
   
-  return (industryDiversity + educationDiversity + roleDiversity) / 3;
+  return (industryDiversity + educationDiversity + archetypeDiversity) / 3;
 }
 
 // Energy Balance Score (能量平衡度) - NEW in v1.1
 function calculateEnergyBalance(group) {
   // Map each archetype to energy level (0-100 scale)
-  const energyLevels = group.map(u => ARCHETYPE_ENERGY[u.primaryRole]);
+  const energyLevels = group.map(u => ARCHETYPE_ENERGY[u.primaryArchetype]);
   const avgEnergy = mean(energyLevels);
   const stdDev = standardDeviation(energyLevels);
   
@@ -3228,7 +3228,7 @@ const ARCHETYPE_ENERGY = {
 
 ```typescript
 function calculateEnergyBalance(group) {
-  const energyLevels = group.map(user => ARCHETYPE_ENERGY[user.primaryRole]);
+  const energyLevels = group.map(user => ARCHETYPE_ENERGY[user.primaryArchetype]);
   const avgEnergy = mean(energyLevels);
   const stdDev = standardDeviation(energyLevels);
   

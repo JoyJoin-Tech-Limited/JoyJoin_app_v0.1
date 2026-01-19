@@ -8,7 +8,8 @@ import PersonalityRadarChart from "@/components/PersonalityRadarChart";
 import { XiaoyueInsightCard } from "@/components/XiaoyueInsightCard";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import StyleSpectrum from "@/components/StyleSpectrum";
-import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
+import { ShareCardModal } from "@/components/ShareCardModal";
+import { Sparkles, Users, TrendingUp, Heart, Quote, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   archetypeAvatars, 
@@ -213,9 +214,8 @@ function getFallbackAnalysis(archetype: string): string {
 
 interface UnifiedAssessmentResult {
   algorithmVersion: string;
-  primaryRole: string;
   primaryArchetype: string;
-  secondaryRole?: string;
+  secondaryArchetype?: string;
   affinityScore: number;
   opennessScore: number;
   conscientiousnessScore: number;
@@ -415,7 +415,7 @@ function MatchExplanationSection({ result }: { result: UnifiedAssessmentResult }
   const [isOpen, setIsOpen] = useState(false);
   
   const generateMatchExplanation = () => {
-    const archetype = result.primaryRole;
+    const archetype = result.primaryArchetype;
     const config = getArchetypeNarrative(archetype);
     
     if (result.isDecisive) {
@@ -510,6 +510,7 @@ export default function PersonalityTestResultPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [animationPhase, setAnimationPhase] = useState<AnimationPhase>('slot');
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   const containerVariants = useMemo(
@@ -531,7 +532,7 @@ export default function PersonalityTestResultPage() {
   });
 
   const xiaoyueAnalysis = useXiaoyueAnalysis({
-    archetype: result?.primaryRole || null,
+    archetype: result?.primaryArchetype || null,
     traitScores: result ? {
       A: result.affinityScore / 100,
       O: result.opennessScore / 100,
@@ -555,7 +556,7 @@ export default function PersonalityTestResultPage() {
         P: result.positivityScore,
       };
       // Pass primaryRole to ensure StyleSpectrum matches backend result
-      return getStyleSpectrum(traits, undefined, result.primaryRole);
+      return getStyleSpectrum(traits, undefined, result.primaryArchetype);
     } catch {
       return null;
     }
@@ -629,7 +630,7 @@ export default function PersonalityTestResultPage() {
     );
   }
 
-  if (!result || !result.primaryRole) {
+  if (!result || !result.primaryArchetype) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
@@ -646,18 +647,18 @@ export default function PersonalityTestResultPage() {
     );
   }
 
-  const gradient = getArchetypeGradient(result.primaryRole) || 'from-purple-500 to-pink-500';
-  const primaryAvatar = archetypeAvatars[result.primaryRole];
-  const primaryRoleConfig = getArchetypeNarrative(result.primaryRole);
-  const nickname = primaryRoleConfig?.nickname || '';
-  const tagline = primaryRoleConfig?.tagline || '';
-  const epicDescription = primaryRoleConfig?.epicDescription || '';
-  const styleQuote = primaryRoleConfig?.styleQuote || '';
+  const gradient = getArchetypeGradient(result.primaryArchetype) || 'from-purple-500 to-pink-500';
+  const primaryAvatar = archetypeAvatars[result.primaryArchetype];
+  const primaryArchetypeConfig = getArchetypeNarrative(result.primaryArchetype);
+  const nickname = primaryArchetypeConfig?.nickname || '';
+  const tagline = primaryArchetypeConfig?.tagline || '';
+  const epicDescription = primaryArchetypeConfig?.epicDescription || '';
+  const styleQuote = primaryArchetypeConfig?.styleQuote || '';
 
   const handleShare = async () => {
     const shareData = {
-      title: `我的社交角色是${result.primaryRole}！`,
-      text: `刚完成了JoyJoin性格测评，发现我是${result.primaryRole}！快来测测你的社交特质吧~`,
+      title: `我的社交角色是${result.primaryArchetype}！`,
+      text: `刚完成了JoyJoin性格测评，发现我是${result.primaryArchetype}！快来测测你的社交特质吧~`,
       url: window.location.origin + '/personality-test',
     };
     if (navigator.share) {
@@ -672,8 +673,6 @@ export default function PersonalityTestResultPage() {
     completeTestMutation.mutate();
   };
 
-  const isLegacyV1 = result.algorithmVersion === 'v1' || !result.algorithmVersion;
-
   return (
     <AnimatePresence mode="wait">
       {animationPhase === 'slot' && (
@@ -684,7 +683,7 @@ export default function PersonalityTestResultPage() {
           transition={{ duration: 0.4 }}
         >
           <ArchetypeSlotMachine
-            finalArchetype={result.primaryRole}
+            finalArchetype={result.primaryArchetype}
             confidence={result.isDecisive ? 0.9 : undefined}
             onComplete={handleSlotMachineComplete}
           />
@@ -700,8 +699,8 @@ export default function PersonalityTestResultPage() {
           transition={{ duration: 0.4 }}
         >
           <UnlockOverlay
-            archetype={result.primaryRole}
-            accentColor={getArchetypeColorHSL(result.primaryRole)}
+            archetype={result.primaryArchetype}
+            accentColor={getArchetypeColorHSL(result.primaryArchetype)}
             onComplete={handleUnlockComplete}
           />
         </motion.div>
@@ -727,14 +726,14 @@ export default function PersonalityTestResultPage() {
           <div className="flex justify-center">
             <div className={`w-44 h-44 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center shadow-2xl p-1`}>
               {primaryAvatar ? (
-                <img src={primaryAvatar} alt={result.primaryRole} className="w-full h-full rounded-full object-cover" />
+                <img src={primaryAvatar} alt={result.primaryArchetype} className="w-full h-full rounded-full object-cover" />
               ) : (
                 <Sparkles className="w-16 h-16 text-primary" />
               )}
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold" data-testid="text-primary-archetype">{result.primaryRole}</h1>
+            <h1 className="text-4xl font-bold" data-testid="text-primary-archetype">{result.primaryArchetype}</h1>
             {nickname && <p className="text-xl font-medium text-primary">{nickname}</p>}
             {tagline && <p className="text-base text-muted-foreground italic">{tagline}</p>}
           </div>
@@ -769,11 +768,11 @@ export default function PersonalityTestResultPage() {
                 X: result.extraversionScore,
                 P: result.positivityScore,
               }}
-              uniqueTraits={archetypeUniqueTraits[result.primaryRole]}
+              uniqueTraits={archetypeUniqueTraits[result.primaryArchetype]}
               epicDescription={epicDescription}
               styleQuote={styleQuote}
               counterIntuitiveInsight={(() => {
-                const insight = getArchetypeInsights(result.primaryRole);
+                const insight = getArchetypeInsights(result.primaryArchetype);
                 return insight ? {
                   text: insight.counterIntuitive,
                   rarityPercentage: insight.rarityPercentage
@@ -852,7 +851,7 @@ export default function PersonalityTestResultPage() {
         {/* 2. 小悦分析 */}
         <motion.div variants={itemVariants}>
           <XiaoyueChatBubble
-            content={xiaoyueAnalysis.analysis || getFallbackAnalysis(result.primaryRole)}
+            content={xiaoyueAnalysis.analysis || getFallbackAnalysis(result.primaryArchetype)}
             pose={xiaoyueAnalysis.hasAnalysis ? "casual" : "thinking"}
             isLoading={xiaoyueAnalysis.isLoading}
             loadingText="小悦正在分析你的特质..."
@@ -893,7 +892,7 @@ export default function PersonalityTestResultPage() {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      {getCompatibilityDescription(result.primaryRole, chemistry.role)}
+                      {getCompatibilityDescription(result.primaryArchetype, chemistry.role)}
                     </p>
                   </div>
                 ))}
@@ -956,33 +955,42 @@ export default function PersonalityTestResultPage() {
         {/* Note: AdjacentArchetypesOrbit has been merged into StyleSpectrum */}
 
         <motion.div variants={itemVariants}>
-          <MatchFeedbackSection archetype={result.primaryRole} />
+          <MatchFeedbackSection archetype={result.primaryArchetype} />
         </motion.div>
 
-        <motion.div variants={itemVariants} className="flex flex-col gap-3 py-6">
-          <Button variant="outline" className="w-full" onClick={handleShare} data-testid="button-share">
-            <Share2 className="w-5 h-5 mr-2" />分享我的社交角色
-          </Button>
-          {isLegacyV1 ? (
-            <div className="space-y-2 p-4 bg-primary/5 rounded-xl border border-primary/10">
-              <p className="text-xs text-center text-muted-foreground">
-                我们升级了测试算法，新版本更精准。
-              </p>
-              <Button 
-                variant="outline" 
-                className="w-full bg-background hover:bg-primary/5" 
-                onClick={() => setLocation('/personality-test')} 
-                data-testid="button-upgrade-retest"
-              >
-                <Zap className="w-4 h-4 mr-2 text-primary" />
-                体验新版算法重新测试
-              </Button>
-            </div>
-          ) : (
-            <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => setLocation('/personality-test')} data-testid="button-retest">
-              重新测试
+        <motion.div variants={itemVariants} className="py-6">
+          {/* Gamified Share Button - Card Collection Style */}
+          <div className="relative group">
+            {/* Glowing background blur effect */}
+            <div 
+              className={`absolute inset-0 bg-gradient-to-r ${gradient} rounded-2xl blur-md opacity-50 group-hover:opacity-70 transition-opacity duration-300`}
+              aria-hidden="true"
+            />
+            
+            {/* Main button */}
+            <Button 
+              className={`relative w-full h-16 rounded-2xl text-lg font-bold shadow-xl bg-gradient-to-r ${gradient} hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 border-2 border-white/30`}
+              onClick={() => {
+                // Add haptic feedback for mobile (wrapped in try-catch for safety)
+                try {
+                  if (navigator.vibrate) navigator.vibrate(50);
+                } catch (e) {
+                  // Silently fail if vibrate API throws an error
+                }
+                setShareModalOpen(true);
+              }} 
+              data-testid="button-share"
+              aria-label={`领取你的${result.primaryArchetype}性格卡片`}
+            >
+              <div className="flex items-center justify-center gap-3 w-full">
+                <Sparkles className="w-6 h-6 animate-pulse" aria-hidden="true" />
+                <span>领取你的{result.primaryArchetype}卡片</span>
+                <Badge variant="secondary" className="ml-2 bg-white/20 backdrop-blur-sm border-white/40 text-xs" aria-label="限定版">
+                  ✨ 限定
+                </Badge>
+              </div>
             </Button>
-          )}
+          </div>
         </motion.div>
 
         {/* Spacer for floating button */}
@@ -1022,6 +1030,9 @@ export default function PersonalityTestResultPage() {
       </motion.div>
         </motion.div>
       )}
+      
+      {/* Share Card Modal */}
+      <ShareCardModal open={shareModalOpen} onOpenChange={setShareModalOpen} />
     </AnimatePresence>
   );
 }

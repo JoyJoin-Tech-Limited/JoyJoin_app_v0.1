@@ -189,12 +189,16 @@ export default function PersonalityTestPageV4() {
   }, [progressPercentage, detectMilestone]);
 
   useEffect(() => {
+    // Check for synced session from onboarding (takes priority)
+    const syncedSessionId = localStorage.getItem("joyjoin_synced_session_id");
+    
+    // Also check for pre-signup answers (legacy/direct access path)
     const preSignupAnswers = loadV4PreSignupAnswers();
-    if (preSignupAnswers.length > 0) {
-      startAssessment(true);
-    } else {
-      startAssessment(false);
-    }
+    
+    // Always resume if we have either synced session or pre-signup answers
+    const shouldResume = !!syncedSessionId || preSignupAnswers.length > 0;
+    
+    startAssessment(shouldResume);
   }, []);
 
   useEffect(() => {

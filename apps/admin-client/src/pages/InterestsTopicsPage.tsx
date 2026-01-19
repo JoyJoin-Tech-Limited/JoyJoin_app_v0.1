@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { motion, AnimatePresence } from "framer-motion";
 import RegistrationProgress from "@/components/RegistrationProgress";
 import CelebrationConfetti from "@/components/CelebrationConfetti";
+import InterestMapping from "@/components/InterestMapping";
 
 // Interest categories with emojis - displayed in two tiers (hot first, then more)
 // Heat values based on platform big data (基于平台大数据)
@@ -469,6 +470,18 @@ export default function InterestsTopicsPage() {
                 >
                   ✨ 平台上有 <span className="font-semibold text-primary">{similarUsersCount}</span> 人和你兴趣相似
                 </motion.div>
+              )}
+
+              {/* Interest Mapping Visualization */}
+              {selectedInterests.length >= 3 && primaryInterests.length >= 1 && (
+                <>
+                  <Separator className="my-4" />
+                  <InterestMapping
+                    selectedInterests={selectedInterests}
+                    primaryInterests={primaryInterests}
+                    allInterestsOptions={INTERESTS_OPTIONS}
+                  />
+                </>
               )}
             </div>
           )}

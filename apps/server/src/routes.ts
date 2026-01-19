@@ -111,10 +111,13 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, type User } from "@shared/schema";
+import * as schema from "@shared/schema";
 import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION } from "@shared/interests";
 import { db } from "./db";
 import { eq, or, and, desc, inArray, isNotNull, gt, sql } from "drizzle-orm";
+import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import { z } from "zod";
 
 // 12个社交氛围原型题目映射表（与前端personalityQuestions.ts保持一致）
 const roleMapping: Record<string, Record<string, string>> = {
@@ -197,7 +200,7 @@ function calculateRoleScores(responses: Record<number, any>): Record<string, num
   return scores;
 }
 
-function determineSubtype(primaryRole: string, responses: Record<number, any>): string {
+function determineSubtype(primaryArchetype: string, responses: Record<number, any>): string {
   // 12个原型的功能昵称（直接使用核心定位）
   const nicknames: Record<string, string> = {
     "开心柯基": "摇尾点火官",
@@ -214,10 +217,10 @@ function determineSubtype(primaryRole: string, responses: Record<number, any>): 
     "隐身猫": "安静伴伴猫",
   };
 
-  return nicknames[primaryRole] || "";
+  return nicknames[primaryArchetype] || "";
 }
 
-function calculateTraitScores(primaryRole: string, secondaryRole: string | null): {
+function calculateTraitScores(primaryArchetype: string, secondaryArchetype: string | null): {
   affinityScore: number;
   opennessScore: number;
   conscientiousnessScore: number;
@@ -226,8 +229,8 @@ function calculateTraitScores(primaryRole: string, secondaryRole: string | null)
   positivityScore: number;
 } {
   // Use imported roleTraits from archetypeConfig.ts
-  const primary = roleTraits[primaryRole as ArchetypeName] || roleTraits["淡定海豚"]; // Default to 淡定海豚
-  const secondary = secondaryRole ? roleTraits[secondaryRole as ArchetypeName] : null;
+  const primary = roleTraits[primaryArchetype as ArchetypeName] || roleTraits["淡定海豚"]; // Default to 淡定海豚
+  const secondary = secondaryArchetype ? roleTraits[secondaryArchetype as ArchetypeName] : null;
 
   // Blend primary and secondary (70% primary, 30% secondary)
   const blend = (p: number, s: number | null) => {
@@ -245,13 +248,13 @@ function calculateTraitScores(primaryRole: string, secondaryRole: string | null)
   };
 }
 
-function generateInsights(primaryRole: string, secondaryRole: string | null): {
+function generateInsights(primaryArchetype: string, secondaryArchetype: string | null): {
   strengths: string;
   challenges: string;
   idealFriendTypes: string[];
 } {
   // Use imported roleInsights from archetypeConfig.ts
-  return roleInsights[primaryRole as ArchetypeName] || roleInsights["淡定海豚"]; // Default to 淡定海豚
+  return roleInsights[primaryArchetype as ArchetypeName] || roleInsights["淡定海豚"]; // Default to 淡定海豚
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1604,20 +1607,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else {
         // Scores are clear enough, return final result
-        const primaryRole = top1[0];
-        const rawSecondaryRole = top2[0];
-        const secondaryRole = top2[1] >= 70 ? rawSecondaryRole : null;
-        const roleSubtype = determineSubtype(primaryRole, responses);
-        const traitScores = calculateTraitScores(primaryRole, secondaryRole);
-        const insights = generateInsights(primaryRole, secondaryRole);
+        const primaryArchetype = top1[0];
+        const rawSecondaryArchetype = top2[0];
+        const secondaryArchetype = top2[1] >= 70 ? rawSecondaryArchetype : null;
+        const roleSubtype = determineSubtype(primaryArchetype, responses);
+        const traitScores = calculateTraitScores(primaryArchetype, secondaryArchetype);
+        const insights = generateInsights(primaryArchetype, secondaryArchetype);
 
         res.json({
           needsSupplementary: false,
           result: {
-            primaryRole,
-            primaryRoleScore: top1[1],
-            secondaryRole,
-            secondaryRoleScore: secondaryRole ? top2[1] : 0,
+            primaryArchetype,
+            primaryArchetypeScore: top1[1],
+            secondaryArchetype,
+            secondaryArchetypeScore: secondaryArchetype ? top2[1] : 0,
             roleSubtype,
             ...traitScores,
             ...insights,
@@ -1646,30 +1649,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return roleA.localeCompare(roleB);  // Stable sort by name when scores equal
         });
 
-      const primaryRole = sortedRoles[0][0];
-      const primaryRoleScore = sortedRoles[0][1];
-      const rawSecondaryRole = sortedRoles[1]?.[0] || null;
-      const secondaryRoleScoreRaw = sortedRoles[1]?.[1] || 0;
-      const secondaryRole = secondaryRoleScoreRaw >= 70 ? rawSecondaryRole : null;
-      const secondaryRoleScore = secondaryRole ? secondaryRoleScoreRaw : 0;
+      const primaryArchetype = sortedRoles[0][0];
+      const primaryArchetypeScore = sortedRoles[0][1];
+      const rawSecondaryArchetype = sortedRoles[1]?.[0] || null;
+      const secondaryArchetypeScoreRaw = sortedRoles[1]?.[1] || 0;
+      const secondaryArchetype = secondaryArchetypeScoreRaw >= 70 ? rawSecondaryArchetype : null;
+      const secondaryArchetypeScore = secondaryArchetype ? secondaryArchetypeScoreRaw : 0;
 
       // Determine subtype (simplified - based on highest scoring items)
-      const roleSubtype = determineSubtype(primaryRole, responses);
+      const roleSubtype = determineSubtype(primaryArchetype, responses);
 
       // Calculate six-dimensional trait scores
-      const traitScores = calculateTraitScores(primaryRole, secondaryRole);
+      const traitScores = calculateTraitScores(primaryArchetype, secondaryArchetype);
 
       // Generate insights
-      const insights = generateInsights(primaryRole, secondaryRole);
+      const insights = generateInsights(primaryArchetype, secondaryArchetype);
 
       // Save responses and result
       await storage.saveTestResponses(userId, responses);
       const roleResult = await storage.saveRoleResult(userId, {
         userId,
-        primaryRole,
-        primaryRoleScore,
-        secondaryRole,
-        secondaryRoleScore,
+        primaryArchetype,
+        primaryArchetypeScore,
+        secondaryArchetype,
+        secondaryArchetypeScore,
         roleSubtype,
         roleScores,
         ...traitScores,
@@ -1704,20 +1707,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process V2 test using Euclidean distance matching
       const matchResult = processTestV2(responses);
 
-      const primaryRole = matchResult.primaryRole;
-      const rawSecondaryRole = matchResult.secondaryRole;
-      const secondaryRole = matchResult.secondaryMatchScore >= 70 ? rawSecondaryRole : null;
-      const roleSubtype = determineSubtype(primaryRole, responses);
-      const insights = generateInsights(primaryRole, secondaryRole);
+      const primaryArchetype = matchResult.primaryArchetype;
+      const rawSecondaryArchetype = matchResult.secondaryArchetype;
+      const secondaryArchetype = matchResult.secondaryMatchScore >= 70 ? rawSecondaryArchetype : null;
+      const roleSubtype = determineSubtype(primaryArchetype, responses);
+      const insights = generateInsights(primaryArchetype, secondaryArchetype);
 
       // Save responses and result
       await storage.saveTestResponses(userId, responses);
       const roleResult = await storage.saveRoleResult(userId, {
         userId,
-        primaryRole,
-        primaryRoleScore: matchResult.primaryMatchScore,
-        secondaryRole,
-        secondaryRoleScore: secondaryRole ? matchResult.secondaryMatchScore : 0,
+        primaryArchetype,
+        primaryArchetypeScore: matchResult.primaryMatchScore,
+        secondaryArchetype,
+        secondaryArchetypeScore: secondaryArchetype ? matchResult.secondaryMatchScore : 0,
         roleSubtype,
         roleScores: {}, // V2 uses trait vectors instead
         affinityScore: matchResult.userTraits.A,
@@ -2045,7 +2048,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/personality/role-distribution', isPhoneAuthenticated, async (req: any, res) => {
     try {
       // Get all users with personality results
-      const allUsers = await db.select({ primaryRole: users.primaryRole }).from(users).where(isNotNull(users.primaryRole));
+      const allUsers = await db.select({ primaryArchetype: users.primaryArchetype }).from(users).where(isNotNull(users.primaryArchetype));
       
       if (allUsers.length === 0) {
         // Return default distribution if no users yet
@@ -2083,8 +2086,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       allUsers.forEach((user: any) => {
-        if (user.primaryRole && distribution.hasOwnProperty(user.primaryRole)) {
-          distribution[user.primaryRole] += 1;
+        if (user.primaryArchetype && distribution.hasOwnProperty(user.primaryArchetype)) {
+          distribution[user.primaryArchetype] += 1;
         }
       });
 
@@ -2158,6 +2161,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update interests and topics" });
     }
   });
+
+  // Validation schemas for carousel-based interest selection
+  const interestSelectionSchema = z.object({
+    topicId: z.string(),
+    emoji: z.string(),
+    label: z.string(),
+    fullName: z.string(),
+    category: z.string(),
+    categoryId: z.string(),
+    level: z.number().int().min(1).max(3),
+    heat: z.number().int().min(3).max(25),
+  });
+
+  const topPrioritySchema = z.object({
+    topicId: z.string(),
+    label: z.string(),
+    heat: z.literal(25), // Level 3 only has heat value of 25
+  });
+
+  const userInterestsDataSchema = z.object({
+    totalHeat: z.number().int().min(0),
+    totalSelections: z.number().int().min(3),
+    categoryHeat: z.record(z.string(), z.number().int().min(0)),
+    selections: z.array(interestSelectionSchema).min(3),
+    topPriorities: z.array(topPrioritySchema).optional(),
+  });
+
+  // New carousel-based interest selection endpoint with full validation and transaction
+  app.post('/api/user/interests', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { interests } = req.body;
+
+      // Validate interests is a proper object (not array, not null)
+      if (typeof interests !== 'object' || Array.isArray(interests) || interests === null) {
+        return res.status(400).json({ error: "Invalid interests data - must be an object" });
+      }
+
+      // Validate using Zod schema
+      const validationResult = userInterestsDataSchema.safeParse(interests);
+      if (!validationResult.success) {
+        console.error("[InterestsAPI] Validation failed:", validationResult.error.issues);
+        return res.status(400).json({ 
+          error: "Invalid interests data structure",
+          details: process.env.NODE_ENV === 'development' ? validationResult.error.issues : undefined
+        });
+      }
+
+      const { totalHeat, totalSelections, categoryHeat, selections, topPriorities } = validationResult.data;
+
+      // Additional business logic validation
+      if (totalSelections < 3) {
+        return res.status(400).json({ error: "Minimum 3 selections required" });
+      }
+
+      // Use transaction to ensure atomicity - both operations succeed or both fail
+      const result = await db.transaction(async (tx: NeonDatabase<typeof schema>) => {
+        // Check if user already has interests
+        const existing = await tx
+          .select()
+          .from(userInterests)
+          .where(eq(userInterests.userId, userId))
+          .limit(1);
+
+        let interestRecord;
+
+        if (existing.length > 0) {
+          // Update existing record
+          const [updated] = await tx
+            .update(userInterests)
+            .set({
+              totalHeat,
+              totalSelections,
+              categoryHeat,
+              selections,
+              topPriorities: topPriorities || null,
+              updatedAt: new Date(),
+            })
+            .where(eq(userInterests.userId, userId))
+            .returning();
+          interestRecord = updated;
+        } else {
+          // Create new record
+          const [created] = await tx
+            .insert(userInterests)
+            .values({
+              userId,
+              totalHeat,
+              totalSelections,
+              categoryHeat,
+              selections,
+              topPriorities: topPriorities || null,
+            })
+            .returning();
+          interestRecord = created;
+        }
+
+        // Update user's completion flag in same transaction
+        await tx
+          .update(users)
+          .set({ hasCompletedInterestsCarousel: true })
+          .where(eq(users.id, userId));
+
+        return interestRecord;
+      });
+
+      res.json({
+        success: true,
+        message: "兴趣已保存",
+        data: {
+          interestId: result.id,
+          userId: result.userId,
+          totalHeat: result.totalHeat,
+        },
+      });
+    } catch (error) {
+      console.error("Error saving user interests:", error);
+      const errorMessage = process.env.NODE_ENV === 'development' && error instanceof Error 
+        ? error.message 
+        : "Failed to save interests";
+      res.status(500).json({ message: errorMessage });
+    }
+  });
+
+  app.get('/api/user/interests', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+
+      const result = await db
+        .select()
+        .from(userInterests)
+        .where(eq(userInterests.userId, userId))
+        .limit(1);
+
+      if (result.length === 0) {
+        return res.status(404).json({ error: "No interests found" });
+      }
+
+      res.json(result[0]);
+    } catch (error) {
+      console.error("Error fetching user interests:", error);
+      res.status(500).json({ message: "Failed to fetch interests" });
+    }
+  });
+
+  app.get('/api/user/interests/summary', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+
+      const result = await db
+        .select({
+          totalHeat: userInterests.totalHeat,
+          topPriorities: userInterests.topPriorities,
+          categoryHeat: userInterests.categoryHeat,
+        })
+        .from(userInterests)
+        .where(eq(userInterests.userId, userId))
+        .limit(1);
+
+      if (result.length === 0) {
+        return res.status(404).json({ error: "No interests found" });
+      }
+
+      res.json(result[0]);
+    } catch (error) {
+      console.error("Error fetching interest summary:", error);
+      res.status(500).json({ message: "Failed to fetch interest summary" });
+    }
+  });
+
 
   app.post('/api/profile/personality', isPhoneAuthenticated, async (req: any, res) => {
     try {
@@ -6292,8 +6465,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Personality distribution (archetypes)
       const personalityDistribution = allUsers.reduce((acc: Record<string, number>, user: any) => {
-        if (user.primaryRole) {
-          acc[user.primaryRole] = (acc[user.primaryRole] || 0) + 1;
+        if (user.primaryArchetype) {
+          acc[user.primaryArchetype] = (acc[user.primaryArchetype] || 0) + 1;
         }
         return acc;
       }, {});
@@ -10056,7 +10229,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         userId: m.id,
         displayName: m.displayName || '神秘嘉宾',
         archetype: m.archetype,
-        secondaryArchetype: m.secondaryRole,
+        secondaryArchetype: m.secondaryArchetype,
         interestsTop: m.interestsTop,
         industry: m.industry,
         hometown: m.hometownRegionCity,
@@ -10134,7 +10307,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         userId: m.id,
         displayName: m.displayName || '神秘嘉宾',
         archetype: m.archetype,
-        secondaryArchetype: m.secondaryRole,
+        secondaryArchetype: m.secondaryArchetype,
         interestsTop: m.interestsTop,
         industry: m.industry,
         hometown: m.hometownRegionCity,
@@ -10202,7 +10375,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         userId: m.id,
         displayName: m.displayName || '神秘嘉宾',
         archetype: m.archetype,
-        secondaryArchetype: m.secondaryRole,
+        secondaryArchetype: m.secondaryArchetype,
         interestsTop: m.interestsTop,
         industry: m.industry,
         hometown: m.hometownRegionCity,
@@ -10343,7 +10516,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           id: true,
           displayName: true,
           archetype: true,
-          secondaryRole: true,
+          secondaryArchetype: true,
           industry: true,
           interestsTop: true,
           socialStyle: true,
@@ -10362,7 +10535,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       let ageRange: string | undefined;
       
       if (targetUser.birthdate && targetUser.ageVisibility !== 'hide_all') {
-        const birthDate = new Date(targetUser.birthdate);
+        const birthDate = new Date(targetUser.birthdate + 'T00:00:00');
         const today = new Date();
         const exactAge = today.getFullYear() - birthDate.getFullYear();
         const m = today.getMonth() - birthDate.getMonth();
@@ -10382,7 +10555,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           userId: targetUser.id,
           displayName: targetUser.displayName || '神秘嘉宾',
           archetype: targetUser.archetype,
-          secondaryArchetype: targetUser.secondaryRole,
+          secondaryArchetype: targetUser.secondaryArchetype,
           industry: targetUser.workVisibility !== 'hide_all' ? targetUser.industry : undefined,
           ageRange: ageRange,
           interests: targetUser.interestsTop || [],
@@ -10432,7 +10605,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           userId: m.id,
           displayName: m.displayName || '神秘嘉宾',
           archetype: m.archetype,
-          secondaryArchetype: m.secondaryRole,
+          secondaryArchetype: m.secondaryArchetype,
           interestsTop: m.interestsTop,
           industry: m.industry,
           hometown: m.hometownRegionCity,
@@ -10781,10 +10954,10 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         
         // Sync V4 result to role_results table (overwrite any previous results)
         if (session.userId) {
-          const primaryRole = finalResult.primaryArchetype;
-          const secondaryRole = finalResult.secondaryArchetype || null;
-          const roleSubtype = determineSubtype(primaryRole, {});
-          const insights = generateInsights(primaryRole, secondaryRole);
+          const primaryArchetype = finalResult.primaryArchetype;
+          const secondaryArchetype = finalResult.secondaryArchetype || null;
+          const roleSubtype = determineSubtype(primaryArchetype, {});
+          const insights = generateInsights(primaryArchetype, secondaryArchetype);
           
           // Use actual archetype match scores from engineState
           const primaryMatchScore = engineState.currentMatches[0]?.score || 80;
@@ -10792,10 +10965,10 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           
           await storage.saveRoleResult(session.userId, {
             userId: session.userId,
-            primaryRole,
-            primaryRoleScore: Math.round(primaryMatchScore),
-            secondaryRole,
-            secondaryRoleScore: secondaryRole ? Math.round(secondaryMatchScore) : 0,
+            primaryArchetype,
+            primaryArchetypeScore: Math.round(primaryMatchScore),
+            secondaryArchetype,
+            secondaryArchetypeScore: secondaryArchetype ? Math.round(secondaryMatchScore) : 0,
             roleSubtype,
             roleScores: {},
             affinityScore: finalResult.traitScores?.A || 50,
@@ -10814,7 +10987,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           // Log algorithm version and match details for A/B testing
           const algorithmVersion = finalResult.algorithmVersion || 'v1.0';
           const isDecisive = finalResult.isDecisive ?? true;
-          console.log(`[Assessment V4] Algorithm: ${algorithmVersion} | Result: ${primaryRole} (score: ${primaryMatchScore}) | Decisive: ${isDecisive} | User: ${session.userId}`);
+          console.log(`[Assessment V4] Algorithm: ${algorithmVersion} | Result: ${primaryArchetype} (score: ${primaryMatchScore}) | Decisive: ${isDecisive} | User: ${session.userId}`);
         }
         
         res.json({
@@ -11285,9 +11458,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         // Build normalized response
         const response = {
           algorithmVersion: session.algorithmVersion || 'v1',
-          primaryRole: primaryArchetype,  // V1 compatible field name
           primaryArchetype: primaryArchetype,
-          secondaryRole: finalResult?.secondaryArchetype,
+          secondaryArchetype: finalResult?.secondaryArchetype,
           ...normalizedTraits,
           totalQuestions,
           chemistryList: chemistryList.map(c => ({
@@ -11307,14 +11479,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       // Fallback to legacy role_results table
       const legacyResult = await storage.getRoleResult(userId);
       if (legacyResult) {
-        const chemistryList = getChemistryForArchetype(legacyResult.primaryRole);
-        const prototype = archetypePrototypes[legacyResult.primaryRole];
+        const chemistryList = getChemistryForArchetype(legacyResult.primaryArchetype);
+        const prototype = archetypePrototypes[legacyResult.primaryArchetype];
         
         return res.json({
           algorithmVersion: 'v1',
-          primaryRole: legacyResult.primaryRole,
-          primaryArchetype: legacyResult.primaryRole,
-          secondaryRole: legacyResult.secondaryRole,
+          primaryArchetype: legacyResult.primaryArchetype,
+          secondaryArchetype: legacyResult.secondaryArchetype,
           affinityScore: legacyResult.affinityScore,
           opennessScore: legacyResult.opennessScore,
           conscientiousnessScore: legacyResult.conscientiousnessScore,
@@ -11363,6 +11534,113 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     } catch (error: any) {
       console.error('[Assessment Feedback] Error:', error);
       res.status(500).json({ message: 'Failed to record feedback', error: error.message });
+    }
+  });
+
+  // ============ Share Card Data Endpoint ============
+  app.get('/api/personality-test/share-card-data', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id || req.session?.userId;
+      
+      // Get user data for rankings
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Get assessment result
+      const session = await storage.getLatestCompletedAssessmentSessionByUser(userId);
+      let archetype: string;
+      let traitScores: Record<string, number>;
+
+      if (session) {
+        const finalResult = session.finalResult as any;
+        archetype = session.primaryArchetype || finalResult?.primaryArchetype || finalResult?.archetype;
+        traitScores = session.traitScores as Record<string, number> || {};
+      } else {
+        // Fallback to legacy role_results
+        const legacyResult = await storage.getRoleResult(userId);
+        if (!legacyResult) {
+          return res.status(404).json({ message: 'No assessment result found' });
+        }
+        archetype = legacyResult.primaryArchetype;
+        traitScores = {
+          A: legacyResult.affinityScore / 100,
+          O: legacyResult.opennessScore / 100,
+          C: legacyResult.conscientiousnessScore / 100,
+          E: legacyResult.emotionalStabilityScore / 100,
+          X: legacyResult.extraversionScore / 100,
+          P: legacyResult.positivityScore / 100,
+        };
+      }
+
+      // Validate archetype exists
+      if (!archetype) {
+        return res.status(400).json({ message: 'No archetype found in assessment result' });
+      }
+
+      // Check for user createdAt
+      if (!user.createdAt) {
+        return res.status(400).json({ message: 'User account missing creation date' });
+      }
+
+      // Calculate user rankings
+      const totalUserRank = await storage.calculateUserRank(user.createdAt);
+      const archetypeRank = await storage.calculateArchetypeRank(userId, archetype);
+
+      // Get archetype primary color
+      const archetypePrimaryColors: Record<string, string> = {
+        "机智狐": "#FF6B6B",
+        "开心柯基": "#FFD93D",
+        "暖心熊": "#FFA07A",
+        "织网蛛": "#9B59B6",
+        "夸夸豚": "#FF69B4",
+        "太阳鸡": "#FFA500",
+        "淡定海豚": "#4FC3F7",
+        "沉思猫头鹰": "#8B4789",
+        "稳如龟": "#2E7D32",
+        "隐身猫": "#757575",
+        "定心大象": "#5C6BC0",
+        "灵感章鱼": "#AB47BC"
+      };
+
+      // Get default gradients for each archetype
+      const archetypeGradients: Record<string, string> = {
+        '开心柯基': 'from-yellow-500 via-orange-500 to-red-500',
+        '太阳鸡': 'from-amber-500 via-yellow-500 to-orange-500',
+        '夸夸豚': 'from-cyan-500 via-blue-500 to-indigo-500',
+        '机智狐': 'from-orange-500 via-red-500 to-pink-500',
+        '淡定海豚': 'from-blue-500 via-indigo-500 to-purple-500',
+        '织网蛛': 'from-purple-500 via-pink-500 to-fuchsia-500',
+        '暖心熊': 'from-rose-500 via-pink-500 to-red-500',
+        '灵感章鱼': 'from-violet-500 via-purple-500 to-indigo-500',
+        '沉思猫头鹰': 'from-slate-500 via-gray-500 to-zinc-500',
+        '定心大象': 'from-gray-500 via-slate-500 to-stone-500',
+        '稳如龟': 'from-green-500 via-emerald-500 to-teal-500',
+        '隐身猫': 'from-indigo-500 via-purple-500 to-violet-500',
+      };
+
+      res.json({
+        archetype,
+        gradient: archetypeGradients[archetype] || 'from-gray-500 to-gray-600',
+        primaryColor: archetypePrimaryColors[archetype] || '#9CA3AF',
+        illustrationUrl: `/assets/${archetype}_transparent.png`, // Placeholder - frontend will use actual imported images
+        rankings: {
+          totalUserRank,
+          archetypeRank,
+        },
+        traitScores: {
+          A: typeof traitScores.A === 'number' ? traitScores.A : 0.5,
+          O: typeof traitScores.O === 'number' ? traitScores.O : 0.5,
+          C: typeof traitScores.C === 'number' ? traitScores.C : 0.5,
+          E: typeof traitScores.E === 'number' ? traitScores.E : 0.5,
+          X: typeof traitScores.X === 'number' ? traitScores.X : 0.5,
+          P: typeof traitScores.P === 'number' ? traitScores.P : 0.5,
+        }
+      });
+    } catch (error: any) {
+      console.error('[Share Card Data] Error:', error);
+      res.status(500).json({ message: 'Failed to get share card data', error: error.message });
     }
   });
 

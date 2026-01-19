@@ -162,7 +162,7 @@ export default function EditBasicInfoPage() {
         <div className="space-y-2">
           <Label htmlFor="birthdate">生日</Label>
           <DatePicker
-            value={form.watch("birthdate") && form.watch("birthdate") !== "" ? new Date(form.watch("birthdate")!) : undefined}
+            value={form.watch("birthdate") && form.watch("birthdate") !== "" ? new Date(form.watch("birthdate")! + 'T00:00:00') : undefined}
             onChange={(date) => {
               if (date) {
                 form.setValue("birthdate", date.toISOString().split('T')[0]);

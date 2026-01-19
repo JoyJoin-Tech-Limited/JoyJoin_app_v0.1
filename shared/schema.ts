@@ -150,8 +150,8 @@ export const users = pgTable("users", {
   energyLevel: integer("energy_level"),
   
   // Social role (from personality test - now mapped to archetype)
-  primaryRole: varchar("primary_role"), // 12 archetypes (animal-based social vibe system)
-  secondaryRole: varchar("secondary_role"), // Second highest archetype (used in algorithm, hidden from UI)
+  primaryArchetype: varchar("primary_archetype"), // 12 archetypes (animal-based social vibe system)
+  secondaryArchetype: varchar("secondary_archetype"), // Second highest archetype (used in algorithm, hidden from UI)
   roleSubtype: varchar("role_subtype"),
   
   // Gamification - Legacy counters
@@ -760,10 +760,10 @@ export const roleResults = pgTable("role_results", {
   userId: varchar("user_id").notNull().references(() => users.id),
   
   // Role scores (12 archetypes)
-  primaryRole: varchar("primary_role").notNull(), // Highest scoring archetype
-  primaryRoleScore: integer("primary_role_score").notNull(),
-  secondaryRole: varchar("secondary_role"), // Second highest archetype (used in algorithm, hidden from UI)
-  secondaryRoleScore: integer("secondary_role_score"),
+  primaryArchetype: varchar("primary_archetype").notNull(), // Highest scoring archetype
+  primaryArchetypeScore: integer("primary_archetype_score").notNull(),
+  secondaryArchetype: varchar("secondary_archetype"), // Second highest archetype (used in algorithm, hidden from UI)
+  secondaryArchetypeScore: integer("secondary_archetype_score"),
   roleSubtype: varchar("role_subtype"), // Subtype based on answer patterns
   
   // Role score breakdown
