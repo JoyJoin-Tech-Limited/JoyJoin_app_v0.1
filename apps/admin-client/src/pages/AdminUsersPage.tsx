@@ -25,7 +25,7 @@ interface User {
   phoneNumber: string;
   gender?: string;
   dateOfBirth?: string;
-  primaryRole?: string;
+  primaryArchetype?: string;
   isAdmin: boolean;
   isBanned: boolean;
   hasCompletedRegistration: boolean;

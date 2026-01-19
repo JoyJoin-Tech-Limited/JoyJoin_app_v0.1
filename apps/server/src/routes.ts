@@ -11458,7 +11458,6 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         // Build normalized response
         const response = {
           algorithmVersion: session.algorithmVersion || 'v1',
-          primaryArchetype: primaryArchetype,  // V1 compatible field name
           primaryArchetype: primaryArchetype,
           secondaryArchetype: finalResult?.secondaryArchetype,
           ...normalizedTraits,
@@ -11485,7 +11484,6 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         
         return res.json({
           algorithmVersion: 'v1',
-          primaryArchetype: legacyResult.primaryArchetype,
           primaryArchetype: legacyResult.primaryArchetype,
           secondaryArchetype: legacyResult.secondaryArchetype,
           affinityScore: legacyResult.affinityScore,
