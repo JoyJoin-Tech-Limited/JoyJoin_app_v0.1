@@ -35,6 +35,27 @@ export function generateSeedMap(): Map<string, SeedMatch> {
         confidence: 0.95
       });
     }
+    
+    // 🆕 Add high-value keywords (confidence 0.80)
+    for (const keyword of occ.keywords) {
+      // Only add meaningful, specific keywords
+      if (keyword.length < 2) continue;
+      
+      // Exclude overly generic terms
+      const genericTerms = ['工程师', '经理', '师', '员', '人', '工作', 
+                           'engineer', 'manager', '大厂', '互联网'];
+      if (genericTerms.some(term => keyword === term)) continue;
+      
+      // Avoid conflicts: only add if not exists
+      if (!seedMap.has(keyword)) {
+        seedMap.set(keyword, {
+          category: occ.seedMappings.category,
+          segment: occ.seedMappings.segment,
+          niche: occ.seedMappings.niche,
+          confidence: 0.80
+        });
+      }
+    }
   }
   
   return seedMap;
