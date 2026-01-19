@@ -158,7 +158,7 @@ export function SmartIndustryClassifier({
   const handleConfirm = () => {
     if (!result) return;
     
-    // Use selected candidate if available
+    // Use selected candidate if available, otherwise use main result
     const finalResult = selectedCandidate || result;
     
     setIsConfirmed(true);
@@ -178,11 +178,22 @@ export function SmartIndustryClassifier({
     
     const timeoutId = setTimeout(() => {
       setShowConfetti(false);
-      onClassified({
-        ...finalResult,
+      
+      // Construct complete result with all required properties
+      const completeResult: ClassificationResult & { rawInput: string; normalizedInput: string } = {
+        category: finalResult.category,
+        segment: finalResult.segment,
+        niche: finalResult.niche,
+        confidence: finalResult.confidence,
+        reasoning: finalResult.reasoning,
+        source: 'source' in finalResult ? finalResult.source : result.source,
+        processingTimeMs: 'processingTimeMs' in finalResult ? finalResult.processingTimeMs : result.processingTimeMs,
+        normalizedInput: 'normalizedInput' in finalResult ? finalResult.normalizedInput : result.normalizedInput,
         rawInput: text,
-        normalizedInput: finalResult.normalizedInput || result.normalizedInput,
-      });
+        candidates: 'candidates' in finalResult ? finalResult.candidates : result.candidates,
+      };
+      
+      onClassified(completeResult);
     }, 1000);
     
     setCelebrationTimeoutId(timeoutId);

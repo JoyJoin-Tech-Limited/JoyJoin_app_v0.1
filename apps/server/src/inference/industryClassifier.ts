@@ -533,7 +533,7 @@ async function generateSemanticDescription(userInput: string): Promise<string> {
  * Intelligent fallback - no hardcoding to software_dev
  * Returns "other" category with low confidence and suggestions
  */
-function intelligentFallback(userInput: string, startTime: number): IndustryClassificationResult {
+async function intelligentFallback(userInput: string, startTime: number): Promise<IndustryClassificationResult> {
   // Try semantic fallback first for edge cases (farmer, student, 富二代, etc.)
   const semanticMatch = applySemanticFallback(userInput);
   if (semanticMatch) {
@@ -652,7 +652,7 @@ export async function classifyIndustry(
   const cleanInput = userInput.trim();
   
   if (!cleanInput) {
-    return intelligentFallback(cleanInput, startTime);
+    return await intelligentFallback(cleanInput, startTime);
   }
   
   // Tier 0: Fuzzy matching for typos and variations
