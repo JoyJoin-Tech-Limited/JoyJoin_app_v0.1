@@ -9,7 +9,7 @@ import { XiaoyueInsightCard } from "@/components/XiaoyueInsightCard";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import StyleSpectrum from "@/components/StyleSpectrum";
 import { ShareCardModal } from "@/components/ShareCardModal";
-import { Sparkles, Users, TrendingUp, Heart, Share2, Quote, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
+import { Sparkles, Users, TrendingUp, Heart, Quote, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   archetypeAvatars, 
@@ -674,8 +674,6 @@ export default function PersonalityTestResultPage() {
     completeTestMutation.mutate();
   };
 
-  const isLegacyV1 = result.algorithmVersion === 'v1' || !result.algorithmVersion;
-
   return (
     <AnimatePresence mode="wait">
       {animationPhase === 'slot' && (
@@ -961,30 +959,39 @@ export default function PersonalityTestResultPage() {
           <MatchFeedbackSection archetype={result.primaryRole} />
         </motion.div>
 
-        <motion.div variants={itemVariants} className="flex flex-col gap-3 py-6">
-          <Button variant="outline" className="w-full" onClick={() => setShareModalOpen(true)} data-testid="button-share">
-            <Share2 className="w-5 h-5 mr-2" />分享我的性格卡片
-          </Button>
-          {isLegacyV1 ? (
-            <div className="space-y-2 p-4 bg-primary/5 rounded-xl border border-primary/10">
-              <p className="text-xs text-center text-muted-foreground">
-                我们升级了测试算法，新版本更精准。
-              </p>
-              <Button 
-                variant="outline" 
-                className="w-full bg-background hover:bg-primary/5" 
-                onClick={() => setLocation('/personality-test')} 
-                data-testid="button-upgrade-retest"
-              >
-                <Zap className="w-4 h-4 mr-2 text-primary" />
-                体验新版算法重新测试
-              </Button>
-            </div>
-          ) : (
-            <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => setLocation('/personality-test')} data-testid="button-retest">
-              重新测试
+        <motion.div variants={itemVariants} className="py-6">
+          {/* Gamified Share Button - Card Collection Style */}
+          <div className="relative group">
+            {/* Glowing background blur effect */}
+            <div 
+              className={`absolute inset-0 bg-gradient-to-r ${gradient} rounded-2xl blur-md opacity-50 group-hover:opacity-70 transition-opacity duration-300`}
+              aria-hidden="true"
+            />
+            
+            {/* Main button */}
+            <Button 
+              className={`relative w-full h-16 rounded-2xl text-lg font-bold shadow-xl bg-gradient-to-r ${gradient} hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 border-2 border-white/30`}
+              onClick={() => {
+                // Add haptic feedback for mobile (wrapped in try-catch for safety)
+                try {
+                  if (navigator.vibrate) navigator.vibrate(50);
+                } catch (e) {
+                  // Silently fail if vibrate API throws an error
+                }
+                setShareModalOpen(true);
+              }} 
+              data-testid="button-share"
+              aria-label={`领取你的${result.primaryRole}性格卡片`}
+            >
+              <div className="flex items-center justify-center gap-3 w-full">
+                <Sparkles className="w-6 h-6 animate-pulse" aria-hidden="true" />
+                <span>领取你的{result.primaryRole}卡片</span>
+                <Badge variant="secondary" className="ml-2 bg-white/20 backdrop-blur-sm border-white/40 text-xs" aria-label="限定版">
+                  ✨ 限定
+                </Badge>
+              </div>
             </Button>
-          )}
+          </div>
         </motion.div>
 
         {/* Spacer for floating button */}
