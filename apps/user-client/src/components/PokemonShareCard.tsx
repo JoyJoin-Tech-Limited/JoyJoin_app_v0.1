@@ -9,6 +9,7 @@ import { forwardRef } from "react";
 import type { ShareCardVariant } from "@/lib/archetypeShareVariants";
 import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
+import logoFull from "@/assets/joyjoin-logo-full.png";
 
 interface PokemonShareCardProps {
   archetype: string;
@@ -104,7 +105,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             <div className="text-center mb-3">
               <div className="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full shadow-md">
                 <img 
-                  src="/src/assets/joyjoin-logo-full.png" 
+                  src={logoFull} 
                   alt="悦聚 JoyJoin" 
                   className="h-5 w-auto object-contain"
                   onError={(e) => {
