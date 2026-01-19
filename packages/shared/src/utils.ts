@@ -40,7 +40,7 @@ export function getAgeRange(age: number): string {
 export function getGenerationLabel(birthdate: string | Date | null | undefined): string | null {
   if (!birthdate) return null;
   
-  const birth = typeof birthdate === 'string' ? new Date(birthdate) : birthdate;
+  const birth = typeof birthdate === 'string' ? new Date(birthdate + 'T00:00:00') : birthdate;
   const birthYear = birth.getFullYear();
   
   // Generation labels based on birth year
