@@ -1,6 +1,6 @@
 /**
  * Interest Categories & Topics for Carousel-based Interest Selection
- * 6 categories × 10 topics each = 60 total topics
+ * 6 categories with optimized topics = 56 total topics (10+8+10+9+10+9)
  * Each topic has 3 heat levels (1, 2, 3) with associated heat values (3, 10, 25)
  */
 
@@ -49,16 +49,16 @@ export const INTEREST_CATEGORIES: InterestCategory[] = [
     name: "职场野心",
     emoji: "💼",
     topics: [
-      { id: "career_startup", emoji: "🚀", label: "创业", fullName: "创业", category: "职场野心", categoryId: "career" },
-      { id: "career_side_hustle", emoji: "📈", label: "搞副业", fullName: "搞副业", category: "职场野心", categoryId: "career" },
+      { id: "career_startup", emoji: "🚀", label: "创业（做自己的事）", fullName: "创业（做自己的事）", category: "职场野心", categoryId: "career" },
+      { id: "career_side_hustle", emoji: "📈", label: "副业探索", fullName: "副业探索", category: "职场野心", categoryId: "career" },
       { id: "career_investment", emoji: "💹", label: "投资理财", fullName: "投资理财", category: "职场野心", categoryId: "career" },
-      { id: "career_business", emoji: "💡", label: "聊商业", fullName: "聊商业", category: "职场野心", categoryId: "career" },
-      { id: "career_promotion", emoji: "🎯", label: "职场进阶", fullName: "职场进阶", category: "职场野心", categoryId: "career" },
-      { id: "career_wealth", emoji: "💰", label: "财富自由", fullName: "财富自由", category: "职场野心", categoryId: "career" },
-      { id: "career_ai", emoji: "🤖", label: "AI探索", fullName: "AI探索", category: "职场野心", categoryId: "career" },
-      { id: "career_web3", emoji: "⛓️", label: "Web3", fullName: "Web3", category: "职场野心", categoryId: "career" },
-      { id: "career_branding", emoji: "🌟", label: "做IP", fullName: "做IP", category: "职场野心", categoryId: "career" },
-      { id: "career_management", emoji: "📊", label: "带团队", fullName: "带团队", category: "职场野心", categoryId: "career" },
+      { id: "career_business", emoji: "💡", label: "商业思维", fullName: "商业思维", category: "职场野心", categoryId: "career" },
+      { id: "career_promotion", emoji: "🎯", label: "职业成长", fullName: "职业成长", category: "职场野心", categoryId: "career" },
+      { id: "career_networking", emoji: "🤝", label: "人脉与合作", fullName: "人脉与合作", category: "职场野心", categoryId: "career" },
+      { id: "career_data", emoji: "📊", label: "用数据看世界", fullName: "用数据看世界", category: "职场野心", categoryId: "career" },
+      { id: "career_product_design", emoji: "🧩", label: "产品 & 设计交流", fullName: "产品 & 设计交流", category: "职场野心", categoryId: "career" },
+      { id: "career_tech", emoji: "💻", label: "技术交流", fullName: "技术交流", category: "职场野心", categoryId: "career" },
+      { id: "career_global", emoji: "🌐", label: "国际视野", fullName: "国际视野", category: "职场野心", categoryId: "career" },
     ],
   },
   {
@@ -66,16 +66,14 @@ export const INTEREST_CATEGORIES: InterestCategory[] = [
     name: "深度思想",
     emoji: "🧠",
     topics: [
-      { id: "philosophy_meaning", emoji: "🌟", label: "聊人生", fullName: "聊人生", category: "深度思想", categoryId: "philosophy" },
-      { id: "philosophy_anxiety", emoji: "💭", label: "聊焦虑", fullName: "聊焦虑", category: "深度思想", categoryId: "philosophy" },
+      { id: "philosophy_meaning", emoji: "🌟", label: "聊人生（真实经历）", fullName: "聊人生（真实经历）", category: "深度思想", categoryId: "philosophy" },
+      { id: "philosophy_anxiety", emoji: "💭", label: "聊焦虑与情绪", fullName: "聊焦虑与情绪", category: "深度思想", categoryId: "philosophy" },
       { id: "philosophy_cognition", emoji: "🔍", label: "认知升级", fullName: "认知升级", category: "深度思想", categoryId: "philosophy" },
       { id: "philosophy_growth", emoji: "🧘", label: "自我成长", fullName: "自我成长", category: "深度思想", categoryId: "philosophy" },
-      { id: "philosophy_relationships", emoji: "💔", label: "人际关系", fullName: "人际关系", category: "深度思想", categoryId: "philosophy" },
-      { id: "philosophy_psychology", emoji: "🧬", label: "心理学", fullName: "心理学", category: "深度思想", categoryId: "philosophy" },
-      { id: "philosophy_social_issues", emoji: "⚖️", label: "社会议题", fullName: "社会议题", category: "深度思想", categoryId: "philosophy" },
-      { id: "philosophy_philosophy", emoji: "🎭", label: "哲学", fullName: "哲学", category: "深度思想", categoryId: "philosophy" },
-      { id: "philosophy_minimalism", emoji: "🍃", label: "极简主义", fullName: "极简主义", category: "深度思想", categoryId: "philosophy" },
-      { id: "philosophy_meditation", emoji: "📿", label: "冥想正念", fullName: "冥想正念", category: "深度思想", categoryId: "philosophy" },
+      { id: "philosophy_relationships", emoji: "💔", label: "人际与亲密关系", fullName: "人际与亲密关系", category: "深度思想", categoryId: "philosophy" },
+      { id: "philosophy_social_issues", emoji: "⚖️", label: "社会与价值观", fullName: "社会与价值观", category: "深度思想", categoryId: "philosophy" },
+      { id: "philosophy_minimalism", emoji: "🍃", label: "极简生活", fullName: "极简生活", category: "深度思想", categoryId: "philosophy" },
+      { id: "philosophy_meditation", emoji: "📿", label: "冥想与正念", fullName: "冥想与正念", category: "深度思想", categoryId: "philosophy" },
     ],
   },
   {
@@ -100,16 +98,15 @@ export const INTEREST_CATEGORIES: InterestCategory[] = [
     name: "文化娱乐",
     emoji: "🎬",
     topics: [
-      { id: "culture_movies", emoji: "🎬", label: "电影", fullName: "电影", category: "文化娱乐", categoryId: "culture" },
-      { id: "culture_tv", emoji: "📺", label: "追剧", fullName: "追剧", category: "文化娱乐", categoryId: "culture" },
+      { id: "culture_movies", emoji: "🎬", label: "影视内容", fullName: "影视内容", category: "文化娱乐", categoryId: "culture" },
       { id: "culture_music", emoji: "🎵", label: "音乐", fullName: "音乐", category: "文化娱乐", categoryId: "culture" },
-      { id: "culture_books", emoji: "📚", label: "读书", fullName: "读书", category: "文化娱乐", categoryId: "culture" },
+      { id: "culture_books", emoji: "📚", label: "阅读", fullName: "阅读", category: "文化娱乐", categoryId: "culture" },
       { id: "culture_podcast", emoji: "🎧", label: "播客", fullName: "播客", category: "文化娱乐", categoryId: "culture" },
       { id: "culture_games", emoji: "🎮", label: "玩游戏", fullName: "玩游戏", category: "文化娱乐", categoryId: "culture" },
       { id: "culture_script_kill", emoji: "🎲", label: "剧本杀", fullName: "剧本杀", category: "文化娱乐", categoryId: "culture" },
       { id: "culture_memes", emoji: "😂", label: "玩梗", fullName: "玩梗", category: "文化娱乐", categoryId: "culture" },
       { id: "culture_standup", emoji: "🎤", label: "脱口秀", fullName: "脱口秀", category: "文化娱乐", categoryId: "culture" },
-      { id: "culture_live", emoji: "🎸", label: "看Live", fullName: "看Live", category: "文化娱乐", categoryId: "culture" },
+      { id: "culture_live", emoji: "🎸", label: "看 Live", fullName: "看 Live", category: "文化娱乐", categoryId: "culture" },
     ],
   },
   {
@@ -134,12 +131,11 @@ export const INTEREST_CATEGORIES: InterestCategory[] = [
     name: "前沿科技",
     emoji: "🚀",
     topics: [
-      { id: "tech_ai", emoji: "🤖", label: "AI应用", fullName: "AI应用", category: "前沿科技", categoryId: "tech" },
+      { id: "tech_ai", emoji: "🤖", label: "AI 应用", fullName: "AI 应用", category: "前沿科技", categoryId: "tech" },
       { id: "tech_blockchain", emoji: "⛓️", label: "区块链", fullName: "区块链", category: "前沿科技", categoryId: "tech" },
-      { id: "tech_crypto", emoji: "💎", label: "加密货币", fullName: "加密货币", category: "前沿科技", categoryId: "tech" },
-      { id: "tech_vr_ar", emoji: "🥽", label: "VR/AR", fullName: "VR/AR", category: "前沿科技", categoryId: "tech" },
+      { id: "tech_vr_ar", emoji: "🥽", label: "VR / AR", fullName: "VR / AR", category: "前沿科技", categoryId: "tech" },
       { id: "tech_robotics", emoji: "🦾", label: "机器人", fullName: "机器人", category: "前沿科技", categoryId: "tech" },
-      { id: "tech_space", emoji: "🛸", label: "太空探索", fullName: "太空探索", category: "前沿科技", categoryId: "tech" },
+      { id: "tech_space", emoji: "🔭", label: "太空探索", fullName: "太空探索", category: "前沿科技", categoryId: "tech" },
       { id: "tech_biotech", emoji: "🧬", label: "生物科技", fullName: "生物科技", category: "前沿科技", categoryId: "tech" },
       { id: "tech_ev", emoji: "⚡", label: "电动车", fullName: "电动车", category: "前沿科技", categoryId: "tech" },
       { id: "tech_smart_home", emoji: "🏠", label: "智能家居", fullName: "智能家居", category: "前沿科技", categoryId: "tech" },
