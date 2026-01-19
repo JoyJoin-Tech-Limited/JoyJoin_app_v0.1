@@ -239,7 +239,8 @@ export default function EditProfilePage() {
           id: "interests",
           title: "兴趣偏好",
           icon: <Star className="h-4 w-4" />,
-          path: "/profile/edit/interests",
+          // path removed - EditInterestsPage moved to backup (2026-01-19)
+          // Users can re-take interest carousel in onboarding/extended if needed
           fields: [
             { 
               label: "主要兴趣", 

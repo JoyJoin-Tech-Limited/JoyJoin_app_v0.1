@@ -1,6 +1,15 @@
 /**
+ * ⚠️ LEGACY FILE - MOVED TO BACKUP
+ * 
+ * Original Location: apps/user-client/src/components/InterestMapping.tsx
+ * Moved On: 2026-01-19
+ * Reason: Visualization component for legacy 20-interest system
+ * 
  * InterestMapping Component
  * Duolingo-inspired interest visualization with insights and animations
+ * Used by: InterestsTopicsPage (legacy)
+ * 
+ * See README.md in this folder for restoration instructions.
  */
 
 import { useMemo } from "react";
