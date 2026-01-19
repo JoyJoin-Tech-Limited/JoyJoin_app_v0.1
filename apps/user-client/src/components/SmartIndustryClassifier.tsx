@@ -33,15 +33,17 @@ interface ClassificationResult {
   normalizedInput: string;
   
   // 🆕 Candidate list
-  candidates?: Array<{
-    category: { id: string; label: string };
-    segment: { id: string; label: string };
-    niche?: { id: string; label: string };
-    confidence: number;
-    reasoning: string;
-    occupationId?: string;
-    occupationName?: string;
-  }>;
+  candidates?: CandidateOption[];
+}
+
+interface CandidateOption {
+  category: { id: string; label: string };
+  segment: { id: string; label: string };
+  niche?: { id: string; label: string };
+  confidence: number;
+  reasoning: string;
+  occupationId?: string;
+  occupationName?: string;
 }
 
 interface SmartIndustryClassifierProps {
@@ -91,7 +93,7 @@ export function SmartIndustryClassifier({
   const [celebrationTimeoutId, setCelebrationTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [isComposing, setIsComposing] = useState(false); // IME composition state
   const [showCandidateSelection, setShowCandidateSelection] = useState(false);
-  const [selectedCandidate, setSelectedCandidate] = useState<any | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<CandidateOption | null>(null);
 
   const { mutate: classifyIndustry, isPending } = useMutation({
     mutationFn: async (description: string) => {
@@ -108,6 +110,7 @@ export function SmartIndustryClassifier({
     onSuccess: (data) => {
       setResult(data);
       setIsConfirmed(false);
+      setSelectedCandidate(null); // Reset selected candidate on new classification
       
       // 🆕 Show candidate selection if low confidence
       if (data.candidates && data.candidates.length > 0 && data.confidence < 0.7) {
@@ -133,6 +136,8 @@ export function SmartIndustryClassifier({
       if (!text?.trim()) {
         setResult(null);
         setIsConfirmed(false);
+        setShowCandidateSelection(false);
+        setSelectedCandidate(null);
       }
       return;
     }
@@ -140,7 +145,7 @@ export function SmartIndustryClassifier({
     return () => clearTimeout(handle);
   }, [text, isComposing, debounceMs, classifyIndustry]);
 
-  const handleCandidateSelect = (candidate: any) => {
+  const handleCandidateSelect = (candidate: CandidateOption) => {
     setSelectedCandidate(candidate);
     setShowCandidateSelection(false);
   };
@@ -196,6 +201,8 @@ export function SmartIndustryClassifier({
     setResult(null);
     setIsConfirmed(false);
     setText("");
+    setShowCandidateSelection(false);
+    setSelectedCandidate(null);
   };
 
   const getConfidenceColor = (confidence: number) => {
