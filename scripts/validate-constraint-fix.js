@@ -123,6 +123,9 @@ if (existsSync(schemaPath)) {
   
   if (schemaContent.includes('unique("assessment_answer_session_question_unique")')) {
     console.log('   ✅ Schema properly defines unique constraint');
+  } else {
+    console.log('   ❌ Schema does NOT properly define unique constraint');
+    hasErrors = true;
   }
 } else {
   console.log('\n❌ Schema file NOT found');

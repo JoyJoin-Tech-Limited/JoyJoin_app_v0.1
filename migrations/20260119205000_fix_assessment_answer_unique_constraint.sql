@@ -3,6 +3,8 @@
 
 -- Step 1: Remove duplicate assessment answers, keeping only the most recent one per (session_id, question_id)
 -- Using a CTE to identify duplicates and delete older ones
+-- Ordering: answered_at DESC NULLS LAST ensures we keep the most recently answered question
+-- If answered_at is null (shouldn't happen in practice), we fall back to id DESC to keep the most recent insert
 WITH ranked_answers AS (
   SELECT 
     id,

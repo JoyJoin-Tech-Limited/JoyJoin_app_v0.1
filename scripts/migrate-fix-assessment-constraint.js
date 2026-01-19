@@ -70,7 +70,9 @@ async function runMigration() {
       console.log(`   ⚠️  Found ${duplicatesCheck.rows.length} sets of duplicate answers`);
       console.log('   Sample duplicates:');
       duplicatesCheck.rows.slice(0, 3).forEach(row => {
-        console.log(`      Session: ${row.session_id.substring(0, 8)}... Question: ${row.question_id} (${row.duplicate_count} duplicates)`);
+        const sessionPreview = row.session_id ? row.session_id.substring(0, 8) : 'null';
+        const questionPreview = row.question_id || 'null';
+        console.log(`      Session: ${sessionPreview}... Question: ${questionPreview} (${row.duplicate_count} duplicates)`);
       });
     } else {
       console.log('   ✅ No duplicate answers found');
