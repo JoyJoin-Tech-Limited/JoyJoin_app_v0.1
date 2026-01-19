@@ -7,6 +7,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { PokemonShareCard } from "./PokemonShareCard";
@@ -42,7 +43,6 @@ interface ShareCardData {
 
 // Expression options for archetype customization
 const expressionOptions = [
-  { id: "default", label: "默认", emoji: "😊" },
   { id: "starry", label: "星星眼", emoji: "🤩" },
   { id: "hearts", label: "爱心眼", emoji: "😍" },
   { id: "shy", label: "害羞可爱", emoji: "😳" },
@@ -67,18 +67,20 @@ const archetypeEnglishNames: Record<string, string> = {
 
 export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
-  const [selectedExpression, setSelectedExpression] = useState("default");
+  const [selectedExpression, setSelectedExpression] = useState("starry");
+  const [nickname, setNickname] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(true);
   const cardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Reset selected variant and expression when modal opens
+  // Reset selected variant and expression when modal opens (but keep nickname)
   useEffect(() => {
     if (open) {
       setSelectedVariantIndex(0);
-      setSelectedExpression("default");
+      setSelectedExpression("starry");
       setIsPreviewMode(true);
+      // Don't reset nickname - let user keep their previous input
     }
   }, [open]);
 
@@ -238,14 +240,32 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
         <div className="space-y-6">
           {/* Title */}
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900">分享你的性格卡片</h2>
-            <p className="text-sm text-gray-600 mt-1">选择你喜欢的配色风格</p>
+            <h2 className="text-2xl font-bold text-gray-900">分享你的专属氛围原型卡片</h2>
+          </div>
+
+          {/* Nickname input */}
+          <div>
+            <label htmlFor="nickname" className="block text-sm font-semibold text-gray-700 mb-2">
+              你的昵称（可选）
+            </label>
+            <Input
+              id="nickname"
+              type="text"
+              placeholder="输入你的昵称，让卡片更个性化"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              maxLength={20}
+              className="text-center text-lg font-medium"
+            />
+            <p className="text-xs text-gray-500 text-center mt-1">
+              昵称将显示在你的性格卡片上
+            </p>
           </div>
 
           {/* Variant selector grid */}
           <div>
             <p className="text-sm font-semibold text-gray-700 mb-2">配色风格</p>
-            <div className="grid grid-cols-5 gap-2 mb-3">
+            <div className="grid grid-cols-4 gap-2 mb-3">
               {variants.map((variant, index) => (
                 <motion.button
                   key={variant.name}
@@ -294,30 +314,51 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
           {/* Expression selector */}
           <div>
             <p className="text-sm font-semibold text-gray-700 mb-2">表情选择</p>
-            <div className="flex gap-2 justify-center flex-wrap">
+            <div className="grid grid-cols-2 gap-3">
               {expressionOptions.map((expr) => (
                 <motion.button
                   key={expr.id}
                   onClick={() => setSelectedExpression(expr.id)}
                   className={`
-                    px-4 py-2 rounded-full text-sm font-medium transition-all
+                    relative px-5 py-4 rounded-2xl text-base font-bold transition-all
                     ${selectedExpression === expr.id 
-                      ? 'bg-primary text-primary-foreground ring-2 ring-primary/50 scale-105' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
+                      ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-lg scale-105 ring-4 ring-green-400/30' 
+                      : 'bg-white text-gray-700 border-4 border-gray-200 hover:border-green-300 shadow-md'}
                   `}
                   whileTap={{ scale: 0.95 }}
-                  whileHover={{ scale: 1.05 }}
+                  whileHover={{ scale: selectedExpression === expr.id ? 1.05 : 1.02, y: -2 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
                 >
-                  <span className="mr-1">{expr.emoji}</span>
-                  {expr.label}
-                  {selectedExpression === expr.id && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="ml-1 inline-block"
+                  {/* Duolingo-style shadow effect */}
+                  <div className={`absolute inset-0 rounded-2xl -z-10 ${
+                    selectedExpression === expr.id 
+                      ? 'bg-green-600 translate-y-1' 
+                      : 'bg-gray-300 translate-y-1'
+                  }`} />
+                  
+                  <div className="flex flex-col items-center gap-1">
+                    <motion.span 
+                      className="text-3xl"
+                      key={selectedExpression === expr.id ? 'selected' : 'unselected'}
+                      animate={selectedExpression === expr.id ? { 
+                        rotate: [0, -10, 10, -10, 0],
+                        scale: [1, 1.1, 1.1, 1.1, 1]
+                      } : {}}
+                      transition={{ duration: 0.5 }}
                     >
-                      ✓
+                      {expr.emoji}
                     </motion.span>
+                    <span className="text-sm">{expr.label}</span>
+                  </div>
+                  
+                  {selectedExpression === expr.id && (
+                    <motion.div
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      className="absolute -top-2 -right-2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md"
+                    >
+                      <span className="text-green-500 text-lg">✓</span>
+                    </motion.div>
                   )}
                 </motion.button>
               ))}
@@ -346,6 +387,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                   rankings={shareCardData.rankings}
                   traitScores={shareCardData.traitScores}
                   expression={selectedExpression}
+                  nickname={nickname}
                   isPreview={isPreviewMode}
                 />
               </motion.div>
@@ -357,41 +399,53 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
             <Button
               onClick={handleDownload}
               disabled={isGenerating}
-              variant="outline"
-              className="py-6 rounded-2xl font-bold"
+              className="relative py-6 rounded-2xl font-bold bg-gradient-to-br from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg overflow-hidden group border-0"
             >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  生成中...
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4 mr-2" />
-                  下载图片
-                </>
-              )}
+              {/* Duolingo-style shadow - positioned behind button */}
+              <div className="absolute inset-0 rounded-2xl bg-blue-700 translate-y-1 -z-10" />
+              
+              {/* Shimmer effect on hover */}
+              <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+              
+              <span className="relative z-10">
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                    生成中...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2 inline" />
+                    下载图片
+                  </>
+                )}
+              </span>
             </Button>
             
             <Button
               onClick={handleShare}
               disabled={isGenerating}
-              className="py-6 rounded-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 relative overflow-hidden group"
+              className="relative py-6 rounded-2xl font-bold bg-gradient-to-br from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg overflow-hidden group border-0"
             >
+              {/* Duolingo-style shadow - positioned behind button */}
+              <div className="absolute inset-0 rounded-2xl bg-purple-700 translate-y-1 -z-10" />
+              
               {/* Shimmer effect on hover */}
               <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
               
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  生成中...
-                </>
-              ) : (
-                <>
-                  <Share2 className="w-4 h-4 mr-2" />
-                  分享卡片
-                </>
-              )}
+              <span className="relative z-10">
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                    生成中...
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-4 h-4 mr-2 inline" />
+                    分享卡片
+                  </>
+                )}
+              </span>
             </Button>
           </div>
         </div>
