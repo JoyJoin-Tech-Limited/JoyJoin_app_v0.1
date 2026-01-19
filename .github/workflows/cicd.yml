@@ -211,13 +211,9 @@ jobs:
               echo "   ✅ Assessment constraint migration completed successfully"
             else
               EXIT_CODE=$?
-              echo "   ⚠️ Assessment constraint migration returned exit code $EXIT_CODE"
-              if [ $EXIT_CODE -eq 1 ]; then
-                echo "   ⚠️ Migration may already be applied, continuing..."
-              else
-                echo "   ❌ Unexpected error, failing deployment"
-                exit $EXIT_CODE
-              fi
+              echo "   ❌ Assessment constraint migration failed with exit code $EXIT_CODE"
+              echo "   This is a critical error - the migration must succeed before deployment"
+              exit $EXIT_CODE
             fi
             
             # Then sync schema with push
