@@ -74,12 +74,13 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Reset selected variant and expression when modal opens
+  // Reset selected variant and expression when modal opens (but keep nickname)
   useEffect(() => {
     if (open) {
       setSelectedVariantIndex(0);
       setSelectedExpression("starry");
       setIsPreviewMode(true);
+      // Don't reset nickname - let user keep their previous input
     }
   }, [open]);
 
@@ -338,6 +339,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                   <div className="flex flex-col items-center gap-1">
                     <motion.span 
                       className="text-3xl"
+                      key={selectedExpression === expr.id ? 'selected' : 'unselected'}
                       animate={selectedExpression === expr.id ? { 
                         rotate: [0, -10, 10, -10, 0],
                         scale: [1, 1.1, 1.1, 1.1, 1]
@@ -397,49 +399,53 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
             <Button
               onClick={handleDownload}
               disabled={isGenerating}
-              className="py-6 rounded-2xl font-bold bg-gradient-to-br from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg relative overflow-hidden group border-0"
+              className="relative py-6 rounded-2xl font-bold bg-gradient-to-br from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg overflow-hidden group border-0"
             >
+              {/* Duolingo-style shadow - positioned behind button */}
+              <div className="absolute inset-0 rounded-2xl bg-blue-700 translate-y-1 -z-10" />
+              
               {/* Shimmer effect on hover */}
               <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
               
-              {/* Duolingo-style shadow */}
-              <div className="absolute inset-0 rounded-2xl bg-blue-700 -z-10 translate-y-1" />
-              
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  生成中...
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4 mr-2" />
-                  下载图片
-                </>
-              )}
+              <span className="relative z-10">
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                    生成中...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2 inline" />
+                    下载图片
+                  </>
+                )}
+              </span>
             </Button>
             
             <Button
               onClick={handleShare}
               disabled={isGenerating}
-              className="py-6 rounded-2xl font-bold bg-gradient-to-br from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg relative overflow-hidden group border-0"
+              className="relative py-6 rounded-2xl font-bold bg-gradient-to-br from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg overflow-hidden group border-0"
             >
+              {/* Duolingo-style shadow - positioned behind button */}
+              <div className="absolute inset-0 rounded-2xl bg-purple-700 translate-y-1 -z-10" />
+              
               {/* Shimmer effect on hover */}
               <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
               
-              {/* Duolingo-style shadow */}
-              <div className="absolute inset-0 rounded-2xl bg-purple-700 -z-10 translate-y-1" />
-              
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  生成中...
-                </>
-              ) : (
-                <>
-                  <Share2 className="w-4 h-4 mr-2" />
-                  分享卡片
-                </>
-              )}
+              <span className="relative z-10">
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                    生成中...
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-4 h-4 mr-2 inline" />
+                    分享卡片
+                  </>
+                )}
+              </span>
             </Button>
           </div>
         </div>
