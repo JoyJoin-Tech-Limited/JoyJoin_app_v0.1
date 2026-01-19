@@ -1,8 +1,13 @@
 /**
- * LEGACY COMPONENT - Preserved for potential rollback
- * Replaced by: InterestCarousel component
- * Date: 2026-01-15
- * DO NOT DELETE - May be needed for A/B testing
+ * ⚠️ LEGACY FILE - MOVED TO BACKUP (Version 2)
+ * 
+ * Original Location: apps/user-client/src/pages/InterestsTopicsPage.legacy.tsx
+ * Moved On: 2026-01-19
+ * Previous Backup Date: 2026-01-15
+ * Reason: Replaced by Interest Carousel component
+ * 
+ * This is an earlier backup version of the legacy interest selection system.
+ * See README.md in this folder for more information.
  */
 
 import { useState, useEffect } from "react";

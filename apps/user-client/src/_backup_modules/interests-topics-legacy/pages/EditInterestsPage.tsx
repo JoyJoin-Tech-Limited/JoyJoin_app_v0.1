@@ -1,3 +1,19 @@
+/**
+ * ⚠️ LEGACY FILE - MOVED TO BACKUP
+ * 
+ * Original Location: apps/user-client/src/pages/EditInterestsPage.tsx
+ * Original Route: /profile/edit/interests
+ * Moved On: 2026-01-19
+ * Reason: Uses legacy 20-interest system, replaced by Interest Carousel
+ * 
+ * This page allowed users to edit their interest selections using the old
+ * 20-interest + topic avoidance system. The new system uses the Interest
+ * Carousel with 60 topics and doesn't have a separate edit page (users
+ * can re-take the carousel in onboarding).
+ * 
+ * See README.md in this folder for restoration instructions.
+ */
+
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -9,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { ChevronLeft, Ban, Heart } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { INTERESTS_OPTIONS, TOPICS_GROUPS, getAllTopics } from "@/data/interestsTopicsData";
+import { INTERESTS_OPTIONS, TOPICS_GROUPS, getAllTopics } from "../../../data/interestsTopicsData";
 import { getUserPrimaryInterests, getUserTopicAvoidances } from "@/lib/userFieldMappings";
 
 const interestsSchema = z.object({
