@@ -56,7 +56,7 @@ interface Section {
   id: string;
   title: string;
   icon: ReactNode;
-  path: string;
+  path?: string;  // Optional - if not provided, section is read-only
   fields: Field[];
   hint?: string;
 }
@@ -519,8 +519,8 @@ export default function EditProfilePage() {
                     return (
                       <div 
                         key={section.id}
-                        className="flex items-center justify-between px-4 py-3.5 cursor-pointer hover-elevate active-elevate-2"
-                        onClick={() => setLocation(section.path)}
+                        className={`flex items-center justify-between px-4 py-3.5 ${section.path ? 'cursor-pointer hover-elevate active-elevate-2' : 'opacity-75'}`}
+                        onClick={() => section.path && setLocation(section.path)}
                         data-testid={`row-${section.id}`}
                       >
                         <div className="flex items-center gap-3">
