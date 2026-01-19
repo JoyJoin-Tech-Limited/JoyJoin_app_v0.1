@@ -167,7 +167,12 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
       return null;
     }
 
-    const { totalHeat, totalSelections, categoryHeat, selections, topPriorities } = interestsData;
+    const { totalHeat, totalSelections, categoryHeat, selections } = interestsData;
+
+    // Validate required data
+    if (!categoryHeat || typeof categoryHeat !== 'object') {
+      return null;
+    }
 
     // Calculate average heat per selection for behavioral insights
     const avgHeat = totalSelections > 0 ? totalHeat / totalSelections : 0;
@@ -184,6 +189,7 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
 
     // Sort categories by total heat (descending) and take top 4
     const categoryDistribution = Object.entries(categoryHeat as Record<string, number>)
+      .filter(([, heat]) => typeof heat === 'number' && heat > 0)
       .map(([categoryId, heat]) => ({
         categoryId,
         heat: heat as number,
@@ -201,14 +207,19 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
       .filter((s: any) => s.level === 3)
       .slice(0, 6);
 
+    // Get top categories for compatibility teaser
+    const topCategories = categoryDistribution.length > 0 
+      ? categoryDistribution.slice(0, 2).map(c => c.config.label)
+      : ["兴趣爱好", "生活方式"];
+
     return {
-      totalHeat,
-      totalSelections,
+      totalHeat: totalHeat || 0,
+      totalSelections: totalSelections || 0,
       avgHeat,
       behavioralInsight,
       categoryDistribution,
       topPriorityItems,
-      topCategories: categoryDistribution.slice(0, 2).map(c => c.config.label),
+      topCategories,
     };
   }, [interestsData]);
 
