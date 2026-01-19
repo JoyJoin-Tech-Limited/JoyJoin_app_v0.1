@@ -130,23 +130,23 @@ export default function PersonalityTestResultPage() {
     ],
   };
 
-  const myChemistry = chemistryMap[result.primaryRole] || [];
-  const myPercentage = stats?.[result.primaryRole] || 0;
-  const gradient = archetypeGradients[result.primaryRole] || 'from-purple-500 to-pink-500';
-  const secondaryGradient = result.secondaryRole ? archetypeGradients[result.secondaryRole] || 'from-blue-500 to-purple-500' : '';
-  const primaryAvatar = archetypeAvatars[result.primaryRole];
-  const secondaryAvatar = result.secondaryRole ? archetypeAvatars[result.secondaryRole] : undefined;
-  const primaryRoleConfig = archetypeConfig[result.primaryRole];
-  const nickname = primaryRoleConfig?.nickname || '';
-  const tagline = primaryRoleConfig?.tagline || '';
-  const epicDescription = primaryRoleConfig?.epicDescription || '';
-  const styleQuote = primaryRoleConfig?.styleQuote || '';
-  const coreContributions = primaryRoleConfig?.coreContributions || '';
+  const myChemistry = chemistryMap[result.primaryArchetype] || [];
+  const myPercentage = stats?.[result.primaryArchetype] || 0;
+  const gradient = archetypeGradients[result.primaryArchetype] || 'from-purple-500 to-pink-500';
+  const secondaryGradient = result.secondaryArchetype ? archetypeGradients[result.secondaryArchetype] || 'from-blue-500 to-purple-500' : '';
+  const primaryAvatar = archetypeAvatars[result.primaryArchetype];
+  const secondaryAvatar = result.secondaryArchetype ? archetypeAvatars[result.secondaryArchetype] : undefined;
+  const primaryArchetypeConfig = archetypeConfig[result.primaryArchetype];
+  const nickname = primaryArchetypeConfig?.nickname || '';
+  const tagline = primaryArchetypeConfig?.tagline || '';
+  const epicDescription = primaryArchetypeConfig?.epicDescription || '';
+  const styleQuote = primaryArchetypeConfig?.styleQuote || '';
+  const coreContributions = primaryArchetypeConfig?.coreContributions || '';
 
   const handleShare = async () => {
     const shareData = {
-      title: `我的社交角色是${result.primaryRole}！`,
-      text: `刚完成了JoyJoin性格测评，发现我是${result.primaryRole}！快来测测你的社交特质吧~ ✨`,
+      title: `我的社交角色是${result.primaryArchetype}！`,
+      text: `刚完成了JoyJoin性格测评，发现我是${result.primaryArchetype}！快来测测你的社交特质吧~ ✨`,
       url: window.location.origin + '/personality-test',
     };
 
@@ -215,7 +215,7 @@ export default function PersonalityTestResultPage() {
               {primaryAvatar ? (
                 <img
                   src={primaryAvatar}
-                  alt={result.primaryRole}
+                  alt={result.primaryArchetype}
                   className="w-28 h-28 md:w-36 md:h-36 rounded-full object-cover shadow-lg"
                 />
               ) : (
@@ -259,7 +259,7 @@ export default function PersonalityTestResultPage() {
               transition={{ delay: 0.2, duration: 0.3 }}
               className={`text-4xl font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}
             >
-              {result.primaryRole}
+              {result.primaryArchetype}
             </motion.h2>
             
             <motion.p
@@ -314,7 +314,7 @@ export default function PersonalityTestResultPage() {
               {primaryAvatar ? (
                 <img
                   src={primaryAvatar}
-                  alt={result.primaryRole}
+                  alt={result.primaryArchetype}
                   className="w-24 h-24 md:w-40 md:h-40 rounded-full object-cover"
                   data-testid="text-role-avatar"
                 />
@@ -333,7 +333,7 @@ export default function PersonalityTestResultPage() {
           >
             <div className="space-y-2 md:space-y-3">
               <h1 className="text-4xl md:text-5xl font-bold text-center" data-testid="text-primary-role">
-                {result.primaryRole}
+                {result.primaryArchetype}
               </h1>
               {nickname && (
                 <p className="text-xl md:text-2xl font-medium text-primary text-center" data-testid="text-nickname">
@@ -507,7 +507,7 @@ export default function PersonalityTestResultPage() {
                     {myPercentage}%
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    在港深使用JoyJoin的用户中，<span className="font-semibold text-foreground">{myPercentage}%</span> 的人也是<span className="font-semibold text-foreground">{result.primaryRole}</span>
+                    在港深使用JoyJoin的用户中，<span className="font-semibold text-foreground">{myPercentage}%</span> 的人也是<span className="font-semibold text-foreground">{result.primaryArchetype}</span>
                   </p>
                 </div>
                 <div className="space-y-2 pt-2 border-t">
@@ -562,7 +562,7 @@ export default function PersonalityTestResultPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  作为<span className="font-semibold text-foreground">{result.primaryRole}</span>，你在活动中与这些角色最有化学反应：
+                  作为<span className="font-semibold text-foreground">{result.primaryArchetype}</span>，你在活动中与这些角色最有化学反应：
                 </p>
                 <div className="space-y-3">
                   {myChemistry.map((match, index) => (
