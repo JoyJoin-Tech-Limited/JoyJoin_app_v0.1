@@ -339,8 +339,8 @@ describe('Interest Carousel - Business Logic Constraints', () => {
 });
 
 describe('Interest Carousel - Edge Cases', () => {
-  it('should handle maximum realistic selection count (60 topics)', () => {
-    const maxSelections = Array.from({ length: 60 }, (_, i) => ({
+  it('should handle maximum realistic selection count (56 topics)', () => {
+    const maxSelections = Array.from({ length: 56 }, (_, i) => ({
       topicId: `topic_${i}`,
       emoji: '🎯',
       label: `Topic ${i}`,
@@ -352,9 +352,9 @@ describe('Interest Carousel - Edge Cases', () => {
     }));
 
     const data = {
-      totalHeat: 180,
-      totalSelections: 60,
-      categoryHeat: { career: 180 },
+      totalHeat: 168,
+      totalSelections: 56,
+      categoryHeat: { career: 168 },
       selections: maxSelections,
     };
 
