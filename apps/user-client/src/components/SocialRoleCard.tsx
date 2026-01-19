@@ -6,10 +6,10 @@ import { getArchetypeImage } from "@/lib/archetypeImages";
 import type { LucideIcon } from "lucide-react";
 
 interface SocialRoleCardProps {
-  primaryRole: string;
-  secondaryRole?: string;
-  primaryRoleScore: number;
-  secondaryRoleScore?: number;
+  primaryArchetype: string;
+  secondaryArchetype?: string;
+  primaryArchetypeScore: number;
+  secondaryArchetypeScore?: number;
 }
 
 const roleConfig: Record<string, { IconComponent: LucideIcon; color: string; bgGradient: string }> = {
@@ -76,17 +76,17 @@ const roleConfig: Record<string, { IconComponent: LucideIcon; color: string; bgG
 };
 
 export default function SocialRoleCard({ 
-  primaryRole, 
-  secondaryRole,
-  primaryRoleScore,
-  secondaryRoleScore
+  primaryArchetype, 
+  secondaryArchetype,
+  primaryArchetypeScore,
+  secondaryArchetypeScore
 }: SocialRoleCardProps) {
-  const primaryConfig = roleConfig[primaryRole] || roleConfig['暖心熊'];
-  const secondaryConfig = secondaryRole ? roleConfig[secondaryRole] : null;
-  const primaryArchetype = archetypeConfig[primaryRole];
-  const secondaryArchetype = secondaryRole ? archetypeConfig[secondaryRole] : null;
-  const nickname = primaryArchetype?.nickname || '';
-  const tagline = primaryArchetype?.tagline || '';
+  const primaryConfig = roleConfig[primaryArchetype] || roleConfig['暖心熊'];
+  const secondaryConfig = secondaryArchetype ? roleConfig[secondaryArchetype] : null;
+  const primaryArchetypeConfig = archetypeConfig[primaryArchetype];
+  const secondaryArchetypeConfig = secondaryArchetype ? archetypeConfig[secondaryArchetype] : null;
+  const nickname = primaryArchetypeConfig?.nickname || '';
+  const tagline = primaryArchetypeConfig?.tagline || '';
 
   return (
     <Card className={`border-2 shadow-lg overflow-hidden ${primaryConfig.bgGradient}`}>
@@ -106,10 +106,10 @@ export default function SocialRoleCard({
           {/* Avatar */}
           <div className="relative flex-shrink-0">
             <div className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${primaryConfig.color} flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-300 overflow-hidden`} data-testid="text-primary-role-emoji">
-              {getArchetypeImage(primaryRole) ? (
+              {getArchetypeImage(primaryArchetype) ? (
                 <img 
-                  src={getArchetypeImage(primaryRole)!} 
-                  alt={primaryRole}
+                  src={getArchetypeImage(primaryArchetype)!} 
+                  alt={primaryArchetype}
                   className="w-full h-full object-contain"
                 />
               ) : (
@@ -118,7 +118,7 @@ export default function SocialRoleCard({
             </div>
             {/* Score Badge */}
             <div className="absolute -bottom-2 -right-2 bg-background border-2 border-primary rounded-full px-2 py-0.5 shadow-md">
-              <span className="text-xs font-bold text-primary">{primaryRoleScore}分</span>
+              <span className="text-xs font-bold text-primary">{primaryArchetypeScore}分</span>
             </div>
           </div>
 
@@ -126,7 +126,7 @@ export default function SocialRoleCard({
           <div className="flex-1 space-y-1.5">
             <div>
               <h2 className="text-2xl font-bold mb-1" data-testid="text-primary-role-name">
-                {primaryRole}
+                {primaryArchetype}
               </h2>
               {nickname && (
                 <p className="text-base font-medium text-primary mb-1" data-testid="text-nickname">
@@ -143,13 +143,13 @@ export default function SocialRoleCard({
         </div>
 
         {/* V4 双角色组合展示 - 副角色标签 */}
-        {secondaryRole && secondaryConfig && (
+        {secondaryArchetype && secondaryConfig && (
           <div className="mb-4 flex items-center gap-2">
             <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/60 border border-border/50 backdrop-blur-sm`}>
-              {getArchetypeImage(secondaryRole) ? (
+              {getArchetypeImage(secondaryArchetype) ? (
                 <img 
-                  src={getArchetypeImage(secondaryRole)!} 
-                  alt={secondaryRole}
+                  src={getArchetypeImage(secondaryArchetype)!} 
+                  alt={secondaryArchetype}
                   className="h-5 w-5 rounded-full object-contain"
                 />
               ) : (
@@ -157,11 +157,11 @@ export default function SocialRoleCard({
               )}
               <span className="text-sm text-muted-foreground">带点</span>
               <span className="text-sm font-medium text-foreground" data-testid="text-secondary-role">
-                {secondaryRole}
+                {secondaryArchetype}
               </span>
-              {secondaryArchetype?.nickname && (
+              {secondaryArchetypeConfig?.nickname && (
                 <span className="text-xs text-muted-foreground hidden sm:inline">
-                  · {secondaryArchetype.nickname}
+                  · {secondaryArchetypeConfig.nickname}
                 </span>
               )}
             </div>
@@ -172,9 +172,9 @@ export default function SocialRoleCard({
         <div className={`p-3 rounded-lg bg-gradient-to-r ${primaryConfig.color} bg-opacity-10`}>
           <p className="text-xs text-center font-medium flex items-center justify-center gap-1">
             <Sparkles className="h-3 w-3" />
-            {secondaryRole 
-              ? `${primaryRole}的活力 × ${secondaryRole}的特质，让你在小聚中独具魅力`
-              : `${primaryRole}们最擅长在小聚中带来独特的社交价值`
+            {secondaryArchetype 
+              ? `${primaryArchetype}的活力 × ${secondaryArchetype}的特质，让你在小聚中独具魅力`
+              : `${primaryArchetype}们最擅长在小聚中带来独特的社交价值`
             }
           </p>
         </div>
