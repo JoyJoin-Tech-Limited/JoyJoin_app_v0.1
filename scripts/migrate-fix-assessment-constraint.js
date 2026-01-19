@@ -106,8 +106,8 @@ async function runMigration() {
       console.error('   - Constraint already exists (which is OK)');
       console.error('\n   Full error:', sqlError);
       
-      // If constraint already exists, that's OK
-      if (sqlError.message.includes('already exists')) {
+      // Check PostgreSQL error code for constraint already exists (42P07)
+      if (sqlError.code === '42P07') {
         console.log('\n✅ Constraint already exists - this is expected on re-run');
       } else {
         throw sqlError;

@@ -121,8 +121,8 @@ if (existsSync(schemaPath)) {
     hasErrors = true;
   }
   
-  if (schemaContent.includes('onConflictDoUpdate') || schemaContent.match(/assessmentAnswers.*unique/)) {
-    console.log('   ✅ Schema appears to use constraint-based operations');
+  if (schemaContent.includes('unique("assessment_answer_session_question_unique")')) {
+    console.log('   ✅ Schema properly defines unique constraint');
   }
 } else {
   console.log('\n❌ Schema file NOT found');
@@ -135,8 +135,13 @@ if (existsSync(storagePath)) {
   console.log('\n✅ Storage file exists');
   
   const storageContent = readFileSync(storagePath, 'utf-8');
-  const onConflictPattern = /onConflictDoUpdate.*target.*assessmentAnswers\.sessionId.*assessmentAnswers\.questionId/s;
-  if (onConflictPattern.test(storageContent)) {
+  // Check for key elements of onConflictDoUpdate usage
+  const hasOnConflict = storageContent.includes('onConflictDoUpdate');
+  const hasTarget = storageContent.includes('target:');
+  const hasSessionIdRef = storageContent.includes('assessmentAnswers.sessionId');
+  const hasQuestionIdRef = storageContent.includes('assessmentAnswers.questionId');
+  
+  if (hasOnConflict && hasTarget && hasSessionIdRef && hasQuestionIdRef) {
     console.log('   ✅ Storage uses onConflictDoUpdate with correct target');
   } else {
     console.log('   ❌ Storage onConflictDoUpdate may not match constraint');
