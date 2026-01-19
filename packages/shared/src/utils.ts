@@ -4,7 +4,7 @@
  * @returns Age in years
  */
 export function calculateAge(birthdate: string | Date): number {
-  const birth = typeof birthdate === 'string' ? new Date(birthdate) : birthdate;
+  const birth = typeof birthdate === 'string' ? new Date(birthdate + 'T00:00:00') : birthdate;
   const today = new Date();
   
   let age = today.getFullYear() - birth.getFullYear();
