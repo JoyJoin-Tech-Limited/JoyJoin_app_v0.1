@@ -189,7 +189,21 @@ jobs:
             
             # Run any pending migrations first
             echo "   Running column rename migration (idempotent)..."
-            node scripts/migrate-rename-role-to-archetype.js || echo "⚠️ Migration script returned non-zero (may be already applied)"
+            if node scripts/migrate-rename-role-to-archetype.js; then
+              echo "   ✅ Migration completed successfully"
+            else
+              EXIT_CODE=$?
+              echo "   ⚠️ Migration script returned exit code $EXIT_CODE"
+              # Exit codes: 0=success, 1=error that should fail deployment
+              # For now, treat all non-zero as warnings since migration is idempotent
+              # and may already be applied
+              if [ $EXIT_CODE -eq 1 ]; then
+                echo "   ⚠️ Migration may already be applied, continuing..."
+              else
+                echo "   ❌ Unexpected error, failing deployment"
+                exit $EXIT_CODE
+              fi
+            fi
             
             # Then sync schema with push
             echo "   Running schema push..."

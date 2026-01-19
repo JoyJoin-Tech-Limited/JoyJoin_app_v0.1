@@ -44,7 +44,19 @@ echo "  🎯 Target: $(echo $DATABASE_URL | sed 's/:[^@]*@/:****@/')"
 
 # Run any pending migrations first (idempotent)
 echo "  🔄 Running column rename migration (idempotent)..."
-node scripts/migrate-rename-role-to-archetype.js || echo "⚠️ Migration script returned non-zero (may be already applied)"
+if node scripts/migrate-rename-role-to-archetype.js; then
+  echo "  ✅ Migration completed successfully"
+else
+  EXIT_CODE=$?
+  echo "  ⚠️ Migration script returned exit code $EXIT_CODE"
+  # If exit code is 1, migration may already be applied (idempotent)
+  # For other errors, we should fail
+  if [ $EXIT_CODE -ne 1 ]; then
+    echo "  ❌ Unexpected migration error, failing deployment"
+    exit $EXIT_CODE
+  fi
+  echo "  ⚠️ Migration may already be applied, continuing..."
+fi
 
 # Then sync schema with push
 echo "  📤 Running schema push..."
