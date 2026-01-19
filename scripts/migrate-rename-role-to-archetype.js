@@ -41,16 +41,35 @@ async function runMigration() {
 
     console.log('\n📝 Reading migration file...');
     const migrationPath = join(__dirname, '..', 'migrations', '20260119000000_rename_role_to_archetype.sql');
-    const migrationSQL = readFileSync(migrationPath, 'utf-8');
-    console.log('✅ Migration file loaded');
+    
+    // Check if migration file exists
+    let migrationSQL;
+    try {
+      migrationSQL = readFileSync(migrationPath, 'utf-8');
+      console.log('✅ Migration file loaded');
+    } catch (err) {
+      console.error('❌ Failed to read migration file:', migrationPath);
+      console.error('   Error:', err.message);
+      throw err;
+    }
 
     console.log('\n🚀 Executing migration...');
     console.log('   This will rename columns from *_role to *_archetype');
     console.log('   Migration is idempotent - safe to run multiple times\n');
 
-    await client.query(migrationSQL);
+    try {
+      await client.query(migrationSQL);
+      console.log('✅ Migration SQL executed successfully!');
+    } catch (sqlError) {
+      console.error('❌ Failed to execute migration SQL:', sqlError.message);
+      console.error('   This could be due to:');
+      console.error('   - Column already renamed (check database)');
+      console.error('   - Permission issues');
+      console.error('   - Database connection problems');
+      console.error('\n   Full error:', sqlError);
+      throw sqlError;
+    }
 
-    console.log('✅ Migration executed successfully!');
     console.log('\n📊 Verifying column names...');
 
     // Verify users table
