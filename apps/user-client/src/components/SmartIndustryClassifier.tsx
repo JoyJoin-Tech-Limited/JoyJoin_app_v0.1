@@ -12,7 +12,7 @@
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, CheckCircle2, RotateCcw, Briefcase, Building2, Zap } from "lucide-react";
+import { Sparkles, CheckCircle2, RotateCcw, Briefcase, Building2, Zap, HelpCircle, ChevronRight, AlertCircle, X } from "lucide-react";
 import { SpiralWaveAnimation } from "./SpiralWaveAnimation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -28,9 +28,20 @@ interface ClassificationResult {
   niche?: { id: string; label: string };
   confidence: number;
   reasoning?: string;
-  source: "seed" | "ontology" | "ai" | "fallback";
+  source: "seed" | "ontology" | "ai" | "fallback" | "fuzzy";
   processingTimeMs: number;
-  normalizedInput: string; // NEW
+  normalizedInput: string;
+  
+  // 🆕 Candidate list
+  candidates?: Array<{
+    category: { id: string; label: string };
+    segment: { id: string; label: string };
+    niche?: { id: string; label: string };
+    confidence: number;
+    reasoning: string;
+    occupationId?: string;
+    occupationName?: string;
+  }>;
 }
 
 interface SmartIndustryClassifierProps {
@@ -79,6 +90,8 @@ export function SmartIndustryClassifier({
   const [particles, setParticles] = useState<Particle[]>([]);
   const [celebrationTimeoutId, setCelebrationTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [isComposing, setIsComposing] = useState(false); // IME composition state
+  const [showCandidateSelection, setShowCandidateSelection] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState<any | null>(null);
 
   const { mutate: classifyIndustry, isPending } = useMutation({
     mutationFn: async (description: string) => {
@@ -95,6 +108,13 @@ export function SmartIndustryClassifier({
     onSuccess: (data) => {
       setResult(data);
       setIsConfirmed(false);
+      
+      // 🆕 Show candidate selection if low confidence
+      if (data.candidates && data.candidates.length > 0 && data.confidence < 0.7) {
+        setShowCandidateSelection(true);
+      } else {
+        setShowCandidateSelection(false);
+      }
     },
   });
 
@@ -120,8 +140,22 @@ export function SmartIndustryClassifier({
     return () => clearTimeout(handle);
   }, [text, isComposing, debounceMs, classifyIndustry]);
 
+  const handleCandidateSelect = (candidate: any) => {
+    setSelectedCandidate(candidate);
+    setShowCandidateSelection(false);
+  };
+
+  const handleNoneMatch = () => {
+    setShowCandidateSelection(false);
+    setSelectedCandidate(null);
+  };
+
   const handleConfirm = () => {
     if (!result) return;
+    
+    // Use selected candidate if available
+    const finalResult = selectedCandidate || result;
+    
     setIsConfirmed(true);
     
     // Generate confetti
@@ -140,9 +174,9 @@ export function SmartIndustryClassifier({
     const timeoutId = setTimeout(() => {
       setShowConfetti(false);
       onClassified({
-        ...result,
+        ...finalResult,
         rawInput: text,
-        normalizedInput: result.normalizedInput, // NEW - AI-cleaned version
+        normalizedInput: finalResult.normalizedInput || result.normalizedInput,
       });
     }, 1000);
     
@@ -299,13 +333,231 @@ export function SmartIndustryClassifier({
         </div>
       )}
 
+      {/* 🆕 Duolingo-Style Candidate Selection */}
+      <AnimatePresence>
+        {result && showCandidateSelection && result.candidates && result.candidates.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="space-y-5 p-6 border-2 border-blue-300 rounded-3xl bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 shadow-xl"
+          >
+            {/* Owl mascot header (Duolingo style) */}
+            <div className="flex items-start gap-4">
+              <motion.div 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                className="relative"
+              >
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg">
+                  <span className="text-3xl">🦉</span>
+                </div>
+                {/* Speech bubble */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="absolute -right-2 top-0 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md"
+                >
+                  <HelpCircle className="h-4 w-4 text-blue-600" />
+                </motion.div>
+              </motion.div>
+              
+              <div className="flex-1">
+                <motion.h3 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-2xl font-bold text-gray-900"
+                >
+                  你说的 "<span className="text-blue-600">{text}</span>" 是指...?
+                </motion.h3>
+                <motion.p 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="text-gray-600 mt-2"
+                >
+                  选择最准确的职业分类
+                </motion.p>
+              </div>
+            </div>
+
+            {/* Candidate cards (Duolingo style) */}
+            <div className="space-y-3">
+              {result.candidates.map((candidate, index) => (
+                <motion.button
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 + index * 0.06 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleCandidateSelect(candidate)}
+                  className={cn(
+                    "w-full p-5 rounded-2xl border-3 text-left transition-all relative overflow-hidden group",
+                    "bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50",
+                    "border-gray-200 hover:border-blue-400 hover:shadow-lg"
+                  )}
+                >
+                  {/* Hover glow effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-indigo-400/0 to-purple-400/0 group-hover:from-blue-400/10 group-hover:via-indigo-400/10 group-hover:to-purple-400/10 transition-all duration-300" />
+                  
+                  <div className="relative flex items-start gap-4">
+                    {/* Icon with bounce animation */}
+                    <motion.div 
+                      whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                      transition={{ duration: 0.5 }}
+                      className="shrink-0"
+                    >
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
+                        <Briefcase className="h-7 w-7 text-white" />
+                      </div>
+                    </motion.div>
+                    
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      {/* Title */}
+                      <div className="font-bold text-lg text-gray-900 mb-1 flex items-center gap-2 flex-wrap">
+                        {candidate.occupationName || candidate.segment.label}
+                        <Badge 
+                          variant="secondary" 
+                          className="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5"
+                        >
+                          {candidate.category.label}
+                        </Badge>
+                      </div>
+                      
+                      {/* Breadcrumb */}
+                      <div className="text-sm text-gray-500 mb-2 flex items-center gap-1 flex-wrap">
+                        <span>{candidate.category.label}</span>
+                        <ChevronRight className="h-3 w-3" />
+                        <span>{candidate.segment.label}</span>
+                        {candidate.niche && (
+                          <>
+                            <ChevronRight className="h-3 w-3" />
+                            <span>{candidate.niche.label}</span>
+                          </>
+                        )}
+                      </div>
+                      
+                      {/* Match reason */}
+                      {candidate.reasoning && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <Sparkles className="h-4 w-4 text-amber-500" />
+                          <span className="text-xs text-gray-600 font-medium">
+                            {candidate.reasoning}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Confidence badge */}
+                    <div className="shrink-0">
+                      <div className={cn(
+                        "px-3 py-1.5 rounded-full font-bold text-sm shadow-sm",
+                        candidate.confidence >= 0.8 
+                          ? "bg-green-100 text-green-700" 
+                          : "bg-blue-100 text-blue-700"
+                      )}>
+                        {Math.round(candidate.confidence * 100)}%
+                      </div>
+                    </div>
+                  </div>
+                </motion.button>
+              ))}
+              
+              {/* "None of these" option (Duolingo style) */}
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 + result.candidates.length * 0.06 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleNoneMatch}
+                className="w-full p-5 rounded-2xl border-3 border-dashed border-gray-300 text-left transition-all bg-white hover:bg-gray-50 hover:border-gray-400 flex items-center gap-4 group"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-gray-100 group-hover:bg-gray-200 flex items-center justify-center transition-colors">
+                  <X className="h-7 w-7 text-gray-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-bold text-gray-700 group-hover:text-gray-900 transition-colors">
+                    都不太对
+                  </div>
+                  <div className="text-sm text-gray-500 mt-0.5">
+                    使用小悦的智能推测
+                  </div>
+                </div>
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Enhanced AI Interpretation Display */}
-      {result && !isConfirmed && (
+      {result && !isConfirmed && !showCandidateSelection && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="space-y-4 p-5 border-2 border-purple-200 rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50"
+          className={cn(
+            "space-y-4 p-5 border-2 rounded-2xl",
+            selectedCandidate 
+              ? "border-green-300 bg-gradient-to-br from-green-50 to-emerald-50" 
+              : result.confidence < 0.5
+                ? "border-orange-200 bg-gradient-to-br from-orange-50 to-yellow-50"
+                : "border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50"
+          )}
         >
+          {/* Selected candidate banner (Duolingo style) */}
+          {selectedCandidate && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-start gap-3 p-4 bg-white rounded-xl border-2 border-green-300 shadow-sm"
+            >
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-green-900">
+                  已选择：{selectedCandidate.occupationName}
+                </p>
+                <p className="text-sm text-green-700 mt-1">
+                  {selectedCandidate.category.label} → {selectedCandidate.segment.label}
+                  {selectedCandidate.niche && ` → ${selectedCandidate.niche.label}`}
+                </p>
+              </div>
+            </motion.div>
+          )}
+          
+          {/* Low confidence warning (Duolingo style) */}
+          {!selectedCandidate && result.confidence < 0.5 && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-start gap-3 p-4 bg-orange-50 rounded-xl border-2 border-orange-200"
+            >
+              <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                <AlertCircle className="h-6 w-6 text-orange-600" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-orange-900">
+                  小悦不太确定分类
+                </p>
+                <p className="text-sm text-orange-700 mt-1">
+                  {result.reasoning}
+                </p>
+                <div className="mt-3 p-3 bg-white rounded-lg border border-orange-200">
+                  <p className="text-xs text-orange-800">
+                    <strong>💡 提示：</strong>确认后会保存你的原始输入 "<strong>{text}</strong>"，
+                    系统将继续学习以提高准确度
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {/* Header with badges */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -409,20 +661,25 @@ export function SmartIndustryClassifier({
             <Button 
               onClick={handleConfirm} 
               size="lg" 
-              className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600"
+              className={cn(
+                "flex-1 font-bold text-lg py-6 rounded-2xl shadow-lg transition-all",
+                selectedCandidate
+                  ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                  : "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+              )}
               data-testid="btn-confirm-classification"
             >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              准确，就是这个
+              <CheckCircle2 className="h-5 w-5 mr-2" />
+              {selectedCandidate ? "确认选择" : "准确，继续"}
             </Button>
             <Button 
               onClick={handleRetry} 
               size="lg" 
               variant="outline"
+              className="px-6 py-6 rounded-2xl border-2 font-bold hover:bg-gray-50"
               data-testid="btn-retry-classification"
             >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              重新输入
+              <RotateCcw className="h-5 w-5" />
             </Button>
           </div>
         </motion.div>
