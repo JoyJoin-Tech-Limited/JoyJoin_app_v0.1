@@ -56,7 +56,7 @@ export const INTEREST_CATEGORIES: InterestCategory[] = [
       { id: "career_promotion", emoji: "🎯", label: "职业成长", fullName: "职业成长", category: "职场野心", categoryId: "career" },
       { id: "career_networking", emoji: "🤝", label: "人脉与合作", fullName: "人脉与合作", category: "职场野心", categoryId: "career" },
       { id: "career_data", emoji: "📊", label: "用数据看世界", fullName: "用数据看世界", category: "职场野心", categoryId: "career" },
-      { id: "career_product_design", emoji: "🧩", label: "产品 & 设计交流", fullName: "产品 & 设计交流", category: "职场野心", categoryId: "career" },
+      { id: "career_product_design", emoji: "🧩", label: "产品与设计交流", fullName: "产品与设计交流", category: "职场野心", categoryId: "career" },
       { id: "career_tech", emoji: "💻", label: "技术交流", fullName: "技术交流", category: "职场野心", categoryId: "career" },
       { id: "career_global", emoji: "🌐", label: "国际视野", fullName: "国际视野", category: "职场野心", categoryId: "career" },
     ],
