@@ -716,13 +716,11 @@ export async function classifyIndustry(
   }
   
   // Final fallback
-  const normalizedInput = await normalizeUserInput(cleanInput);
   const fallbackResult = await intelligentFallback(cleanInput, startTime);
   const candidates = generateCandidates(cleanInput);
   
   return {
     ...fallbackResult,
-    normalizedInput,
     candidates, // Even in fallback, provide candidates
   };
 }
