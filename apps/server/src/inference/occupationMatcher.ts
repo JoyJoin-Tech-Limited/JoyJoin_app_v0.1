@@ -53,7 +53,7 @@ const OCCUPATION_PATTERNS: Array<{
       /金融分析师/i,
       /投资分析师/i,
       /行业分析师/i,
-      /研究员/i,
+      /金融研究员/i,
       /交易员/i,
       /banker/i,
     ],
@@ -61,10 +61,11 @@ const OCCUPATION_PATTERNS: Array<{
     category: '金融',
     priority: 100
   },
-  // 咨询
+  // 咨询 (consulting - but not industry-specific consulting which should match industry first)
   {
     patterns: [
-      /咨询/i,
+      /管理咨询/i,
+      /战略咨询/i,
       /做咨询的/i,
       /咨询一枚/i,
       /consultant/i,
@@ -77,10 +78,21 @@ const OCCUPATION_PATTERNS: Array<{
       /普华/i,
       /安永/i,
       /毕马威/i,
+      /咨询顾问/i,
+      /咨询师/i,
     ],
     occupation: '咨询顾问',
     category: '咨询',
     priority: 90
+  },
+  // 通用咨询 (generic consulting - lower priority to allow industry-specific to match first)
+  {
+    patterns: [
+      /咨询/i,
+    ],
+    occupation: '咨询顾问',
+    category: '咨询',
+    priority: 50  // Lower priority than industry-specific patterns
   },
   // 法律
   {
@@ -93,6 +105,7 @@ const OCCUPATION_PATTERNS: Array<{
       /搞法律的/i,
       /律所/i,
       /legal/i,
+      /法律咨询/i,
     ],
     occupation: '律师/法务',
     category: '法律',
@@ -109,6 +122,7 @@ const OCCUPATION_PATTERNS: Array<{
       /做医疗的/i,
       /医药/i,
       /doctor/i,
+      /医疗咨询/i,
     ],
     occupation: '医疗从业者',
     category: '医疗',
@@ -228,6 +242,13 @@ const OCCUPATION_PATTERNS: Array<{
       /机器学习/i,
       /ai/i,
       /人工智能/i,
+      /大数据/i,
+      /云计算/i,
+      /区块链/i,
+      /devops/i,
+      /运维/i,
+      /测试/i,
+      /qa/i,
     ],
     occupation: '软件工程师',
     category: '技术',
@@ -244,6 +265,7 @@ const OCCUPATION_PATTERNS: Array<{
       /做教育的/i,
       /培训/i,
       /讲师/i,
+      /教育咨询/i,
     ],
     occupation: '教育工作者',
     category: '教育',
@@ -274,6 +296,7 @@ const OCCUPATION_PATTERNS: Array<{
       /审计/i,
       /cfo/i,
       /出纳/i,
+      /财务咨询/i,
     ],
     occupation: '财务',
     category: '财务',

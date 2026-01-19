@@ -114,8 +114,8 @@ describe('occupationMatcher - Edge Cases and Refinements', () => {
       expect(result?.category).toBe('金融');
     });
 
-    it('should classify "研究员" as finance', () => {
-      const result = matchOccupation('研究员');
+    it('should classify "金融研究员" as finance (specific finance researcher)', () => {
+      const result = matchOccupation('金融研究员');
       expect(result?.category).toBe('金融');
     });
   });
