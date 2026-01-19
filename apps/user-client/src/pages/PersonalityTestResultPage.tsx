@@ -216,7 +216,7 @@ interface UnifiedAssessmentResult {
   algorithmVersion: string;
   primaryRole: string;
   primaryArchetype: string;
-  secondaryRole?: string;
+  secondaryArchetype?: string;
   affinityScore: number;
   opennessScore: number;
   conscientiousnessScore: number;

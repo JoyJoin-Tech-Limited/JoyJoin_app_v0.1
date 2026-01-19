@@ -114,7 +114,7 @@ export default function BlindBoxEventDetailPage() {
     }
     
     // Verify all required data exists for animation
-    const hasRequiredUserData = user?.primaryRole && user?.displayName;
+    const hasRequiredUserData = user?.primaryArchetype && user?.displayName;
     const hasParticipants = animationStatus.participants && animationStatus.participants.length > 0;
     const hasEventMetadata = animationStatus.eventTitle;
     
@@ -126,7 +126,7 @@ export default function BlindBoxEventDetailPage() {
     } else {
       // Skip animation if any required data is missing - mark as viewed to prevent future attempts
       console.warn("Skipping animation: required data incomplete", { 
-        hasArchetype: !!user?.primaryRole, 
+        hasArchetype: !!user?.primaryArchetype, 
         hasDisplayName: !!user?.displayName,
         hasParticipants: !!hasParticipants,
         hasEventMetadata: !!hasEventMetadata,
@@ -140,7 +140,7 @@ export default function BlindBoxEventDetailPage() {
         }
       })();
     }
-  }, [isUserLoading, animationDecisionMade, animationStatus, event?.status, user?.primaryRole, user?.displayName]);
+  }, [isUserLoading, animationDecisionMade, animationStatus, event?.status, user?.primaryArchetype, user?.displayName]);
 
   const handleAnimationComplete = async () => {
     // Mark animation as viewed before closing
@@ -393,7 +393,7 @@ export default function BlindBoxEventDetailPage() {
           eventId={eventId}
           eventTitle={animationStatus?.eventTitle || event?.eventType || "活动"}
           eventType={animationStatus?.eventType || "饭局"}
-          userArchetype={user.primaryRole || "开心柯基"}
+          userArchetype={user.primaryArchetype || "开心柯基"}
           userName={user.displayName || "用户"}
           participants={animationStatus?.participants || []}
           onComplete={handleAnimationComplete}

@@ -167,7 +167,7 @@ async function testUserFlow(userIndex: number): Promise<TestResult> {
     
     const testData = await testRes.json();
     result.steps.personalityTest.success = true;
-    result.steps.personalityTest.archetype = testData.primaryRole || testData.archetype;
+    result.steps.personalityTest.archetype = testData.primaryArchetype || testData.archetype;
     
     // Step 4: Final Check - Verify user status
     const userRes = await fetch(`${BASE_URL}/api/auth/user`, {
