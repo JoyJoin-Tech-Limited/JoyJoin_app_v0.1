@@ -5,7 +5,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
-import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import { CategoryPage } from "./CategoryPage";
 import {
   INTEREST_CATEGORIES,
@@ -40,22 +39,6 @@ export interface InterestCarouselData {
   topPriorities: Array<{ topicId: string; label: string; heat: number }>;
 }
 
-const XIAOYUE_MESSAGES: Record<number, { content: string }> = {
-  0: {
-    content: "选择你感兴趣的话题吧！点一下表示有兴趣，再点更热烈 🔥",
-  },
-  3: {
-    content:
-      "太棒了！已经可以开始匹配了 ✓\n不过...多选2-4个会让我更准确地找到志同道合的朋友哦 😊",
-  },
-  7: {
-    content: "完美！这样的选择能帮你找到最合拍的桌友 🎯",
-  },
-  10: {
-    content: "哇！你的兴趣好广泛 ✨ 这会让盲盒局更精彩！",
-  },
-};
-
 // localStorage keys
 const STORAGE_KEY = "joyjoin_interests_carousel_progress";
 const CYCLE_EXPLANATION_KEY = "joyjoin_seen_cycle_explanation";
@@ -76,9 +59,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
 
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const [selections, setSelections] = useState<Record<string, HeatLevel>>({});
-  const [xiaoyueMessage, setXiaoyueMessage] = useState(XIAOYUE_MESSAGES[0]);
   const [showFirstTimeGuide, setShowFirstTimeGuide] = useState(false);
-  const [showXiaoyue, setShowXiaoyue] = useState(true);
 
   // Check for first-time guide on mount
   useEffect(() => {
@@ -154,35 +135,6 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   }, [selections]);
 
   const { totalSelections, totalHeat, categoryHeat } = calculateMetrics();
-
-  // Update Xiaoyue message based on selection count
-  useEffect(() => {
-    let newMessage = XIAOYUE_MESSAGES[0];
-    let shouldShow = false;
-    
-    if (totalSelections >= 10) {
-      newMessage = XIAOYUE_MESSAGES[10];
-      shouldShow = totalSelections === 10; // Only show once at exactly 10
-    } else if (totalSelections >= 7) {
-      newMessage = XIAOYUE_MESSAGES[7];
-      shouldShow = totalSelections >= 7 && totalSelections < 10; // Show for range 7-9
-    } else if (totalSelections >= 3) {
-      newMessage = XIAOYUE_MESSAGES[3];
-      shouldShow = totalSelections >= 3 && totalSelections < 7; // Show for range 3-6
-    } else {
-      shouldShow = totalSelections === 0; // Only show at start
-    }
-    
-    setXiaoyueMessage(newMessage);
-    
-    // Show Xiaoyue at milestone ranges with debouncing
-    if (shouldShow) {
-      setShowXiaoyue(true);
-      // Auto-hide after 3 seconds
-      const timer = setTimeout(() => setShowXiaoyue(false), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [totalSelections]);
 
   // Handle topic tap - cycle through levels 0 → 1 → 2 → 3 → 0
   // Show toast on first level 3 → 0 cycle to explain behavior
@@ -437,33 +389,6 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
           </button>
         </div>
       )}
-
-      {/* Xiaoyue floating bubble (bottom-right) */}
-      <AnimatePresence>
-        {showXiaoyue && (
-          <motion.div
-            className="fixed bottom-24 right-4 z-30 max-w-[280px]"
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          >
-            <div className="relative">
-              <XiaoyueChatBubble
-                content={xiaoyueMessage.content}
-                horizontal={false}
-                animate
-              />
-              <button
-                onClick={() => setShowXiaoyue(false)}
-                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Continue button - Duolingo style */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-background via-background to-transparent pt-6 pb-[env(safe-area-inset-bottom,1rem)]">
