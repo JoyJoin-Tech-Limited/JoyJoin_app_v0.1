@@ -552,7 +552,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       seniority: users.seniority,
       educationLevel: users.educationLevel,
       archetype: users.archetype,
-      secondaryArchetype: users.secondaryRole,
+      secondaryArchetype: users.secondaryArchetype,
       interestsTop: users.interestsTop,
       languagesComfort: users.languagesComfort,
       hometown: users.hometownRegionCity,

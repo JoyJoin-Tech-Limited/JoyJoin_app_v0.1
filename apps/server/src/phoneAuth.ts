@@ -279,10 +279,10 @@ async function createDemoDataForUser(userId: string) {
     // 2. 创建演示性格测试结果
     await db.insert(roleResults).values({
       userId,
-      primaryRole: '连接者',
-      primaryRoleScore: 18,
-      secondaryRole: '探索者',
-      secondaryRoleScore: 15,
+      primaryArchetype: '连接者',
+      primaryArchetypeScore: 18,
+      secondaryArchetype: '探索者',
+      secondaryArchetypeScore: 15,
       roleSubtype: 'balanced',
       roleScores: {
         '连接者': 18,
@@ -309,8 +309,8 @@ async function createDemoDataForUser(userId: string) {
     // 3. 更新用户的 archetype 字段
     await db.update(users)
       .set({
-        primaryRole: '连接者',
-        secondaryRole: '探索者',
+        primaryArchetype: '连接者',
+        secondaryArchetype: '探索者',
         archetype: '连接者',
       })
       .where(eq(users.id, userId));

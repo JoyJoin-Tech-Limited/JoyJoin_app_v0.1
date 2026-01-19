@@ -653,8 +653,8 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(users)
       .set({
-        primaryRole: result.primaryRole,
-        secondaryRole: result.secondaryRole,
+        primaryArchetype: result.primaryArchetype,
+        secondaryArchetype: result.secondaryArchetype,
         roleSubtype: result.roleSubtype,
         updatedAt: new Date(),
       })
@@ -686,19 +686,19 @@ export class DatabaseStorage implements IStorage {
   async getPersonalityDistribution(): Promise<Record<string, number>> {
     const results = await db
       .select({
-        primaryRole: users.primaryRole,
+        primaryArchetype: users.primaryArchetype,
         count: sql<number>`count(*)`,
       })
       .from(users)
-      .where(sql`${users.primaryRole} IS NOT NULL`)
-      .groupBy(users.primaryRole);
+      .where(sql`${users.primaryArchetype} IS NOT NULL`)
+      .groupBy(users.primaryArchetype);
 
     const distribution: Record<string, number> = {};
     let total = 0;
     
     for (const row of results) {
-      if (row.primaryRole) {
-        distribution[row.primaryRole] = Number(row.count);
+      if (row.primaryArchetype) {
+        distribution[row.primaryArchetype] = Number(row.count);
         total += Number(row.count);
       }
     }
