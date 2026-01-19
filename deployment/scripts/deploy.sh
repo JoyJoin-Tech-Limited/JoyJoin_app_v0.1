@@ -58,6 +58,22 @@ else
   echo "  ⚠️ Migration may already be applied, continuing..."
 fi
 
+# Run assessment constraint fix migration
+echo "  🔄 Running assessment answer constraint fix migration (idempotent)..."
+if node scripts/migrate-fix-assessment-constraint.js; then
+  echo "  ✅ Assessment constraint migration completed successfully"
+else
+  EXIT_CODE=$?
+  echo "  ⚠️ Assessment constraint migration returned exit code $EXIT_CODE"
+  # If exit code is 1, migration may already be applied (idempotent)
+  # For other errors, we should fail
+  if [ $EXIT_CODE -ne 1 ]; then
+    echo "  ❌ Unexpected migration error, failing deployment"
+    exit $EXIT_CODE
+  fi
+  echo "  ⚠️ Migration may already be applied, continuing..."
+fi
+
 # Then sync schema with push
 echo "  📤 Running schema push..."
 npx drizzle-kit push --config=./drizzle.config.ts
