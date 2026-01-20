@@ -103,13 +103,7 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
         border: styles.border,
         boxShadow: styles.shadow,
       }}
-      animate={
-        prefersReducedMotion
-          ? { scale: styles.emojiScale }
-          : {
-              scale: styles.emojiScale,
-            }
-      }
+      animate={{ scale: styles.emojiScale }}
       whileTap={prefersReducedMotion ? {} : { scale: styles.emojiScale * 0.95 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
     >

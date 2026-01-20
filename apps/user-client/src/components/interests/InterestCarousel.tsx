@@ -220,7 +220,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
               <motion.span 
                 key={totalHeat}
                 className="font-bold text-orange-600"
-                initial={{ scale: 1.2, opacity: 0 }}
+                initial={prefersReducedMotion ? {} : { scale: 1.2, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
               >
                 {totalHeat}
@@ -231,7 +231,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
               <motion.span 
                 key={totalSelections}
                 className="font-bold text-purple-600"
-                initial={{ scale: 1.2, opacity: 0 }}
+                initial={prefersReducedMotion ? {} : { scale: 1.2, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
               >
                 {totalSelections}
