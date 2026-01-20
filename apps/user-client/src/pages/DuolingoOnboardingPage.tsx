@@ -16,6 +16,7 @@ import { useAdaptiveAssessment, type AssessmentQuestion, type PreSignupAnswer } 
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { SelectionList } from "@/components/SelectionList";
+import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 
 // Use consistent Xiao Yue Avatar-01.png as primary avatar across all screens
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
@@ -593,20 +594,30 @@ export default function DuolingoOnboardingPage() {
       await apiRequest("POST", "/api/auth/unified-onboarding", payload);
       return { success: true };
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // Clear onboarding progress cache (but NOT the synced session markers - those are consumed by personality test)
       clearCachedProgress();
       // Clear the presignup answers cache since they've been synced
       localStorage.removeItem(V4_ANSWERS_KEY);
       
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Show loading state immediately to prevent flash
+      setIsLoggingIn(true);
+      
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Wait for minimum loading time to prevent flash back to previous screen
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
       toast({
         title: "欢迎加入悦聚",
         description: "开始探索精彩活动吧",
       });
+      
       setLocation("/personality-test");
     },
     onError: (error: Error) => {
+      // Reset loading state on error to allow user to retry
+      setIsLoggingIn(false);
       toast({
         title: "注册失败",
         description: error.message,
@@ -1077,6 +1088,15 @@ export default function DuolingoOnboardingPage() {
             </Button>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Show full-screen loading state during login/navigation
+  if (isLoggingIn) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center z-50 bg-background">
+        <LoadingLogoSleek loop visible />
       </div>
     );
   }

@@ -12,7 +12,7 @@ import { DynamicAccentProvider } from "@/contexts/DynamicAccentContext";
 import LoginPage from "@/pages/LoginPage";
 import RegistrationPage from "@/pages/RegistrationPage";
 // RegistrationMethodPage kept for internal reference only - not imported in user routes
-import ChatRegistrationPage from "@/pages/ChatRegistrationPage";
+// ChatRegistrationPage moved to _backup_modules/chat-registration-legacy/ (2026-01-20) - no longer routed
 // InterestsTopicsPage and EditInterestsPage moved to _backup_modules/interests-topics-legacy/ (2026-01-19)
 import PersonalityTestPageV4 from "@/pages/PersonalityTestPageV4";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
@@ -99,11 +99,11 @@ function AuthenticatedRouter() {
         <Route path="/personality-test" component={PersonalityTestPageV4} />
         <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
         <Route path="/personality-test/results" component={PersonalityTestResultPage} />
-        {/* 保留旧版注册供内部测试使用 */}
-        <Route path="/chat-registration" component={ChatRegistrationPage} />
-        <Route path="/registration" component={ChatRegistrationPage} />
-        <Route path="/registration/chat" component={ChatRegistrationPage} />
-        <Route path="/registration/form" component={RegistrationPage} />
+        {/* 旧版聊天注册已移至 _backup_modules/chat-registration-legacy/ (2026-01-20) */}
+        {/* <Route path="/chat-registration" component={ChatRegistrationPage} /> */}
+        {/* <Route path="/registration" component={ChatRegistrationPage} /> */}
+        {/* <Route path="/registration/chat" component={ChatRegistrationPage} /> */}
+        {/* <Route path="/registration/form" component={RegistrationPage} /> */}
         <Route path="*" component={RedirectToOnboarding} />
       </Switch>
     );
