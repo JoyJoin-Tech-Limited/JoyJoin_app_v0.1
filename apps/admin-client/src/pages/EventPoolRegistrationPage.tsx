@@ -49,7 +49,7 @@ const decorStyleOptions = ["轻奢现代风", "绿植花园风", "复古工业�
 const registrationSchema = z.object({
   budgetRange: z.array(z.string()).min(1, "请至少选择一个预算范围"),
   preferredLanguages: z.array(z.string()).min(1, "请至少选择一种语言"),
-  socialGoals: z.array(z.string()).min(1, "请至少选择一个社交目标"),
+  eventIntent: z.array(z.string()).min(1, "请至少选择一个社交目标"),
   cuisinePreferences: z.array(z.string()).optional(),
   dietaryRestrictions: z.array(z.string()).optional(),
   tasteIntensity: z.enum(["light", "medium", "strong"]),
@@ -83,7 +83,7 @@ export default function EventPoolRegistrationPage() {
     defaultValues: {
       budgetRange: [],
       preferredLanguages: [],
-      socialGoals: [],
+      eventIntent: [],
       cuisinePreferences: [],
       dietaryRestrictions: [],
       tasteIntensity: "medium",
@@ -333,7 +333,7 @@ export default function EventPoolRegistrationPage() {
                 {/* Social Goals */}
                 <FormField
                   control={form.control}
-                  name="socialGoals"
+                  name="eventIntent"
                   render={() => (
                     <FormItem>
                       <FormLabel>社交目标 *</FormLabel>
@@ -343,7 +343,7 @@ export default function EventPoolRegistrationPage() {
                           <FormField
                             key={option}
                             control={form.control}
-                            name="socialGoals"
+                            name="eventIntent"
                             render={({ field }) => (
                               <FormItem className="flex items-center gap-2 space-y-0">
                                 <FormControl>

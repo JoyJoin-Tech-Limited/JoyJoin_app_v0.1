@@ -112,7 +112,7 @@ interface PoolRegistration {
   userId: string;
   budgetRange: string | null;
   preferredLanguages: string[] | null;
-  socialGoals: string[] | null;
+  eventIntent: string[] | null;
   cuisinePreferences: string[] | null;
   dietaryRestrictions: string[] | null;
   tasteIntensity: string[] | null;
