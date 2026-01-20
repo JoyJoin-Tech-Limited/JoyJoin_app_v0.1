@@ -10,7 +10,7 @@ import type { ShareCardVariant } from "@/lib/archetypeShareVariants";
 import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
 import logoFull from "@/assets/joyjoin-logo-full.png";
-import { getCardImagePath } from "@/lib/archetypeCardImages";
+import { getCardImagePath, hasCardImage } from "@/lib/archetypeCardImages";
 
 interface PokemonShareCardProps {
   archetype: string;
@@ -44,8 +44,10 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
     // Track if the image failed to load (use emoji overlay as fallback)
     const [imageLoadError, setImageLoadError] = useState(false);
 
-    // Get the actual personality test result card image path
-    const cardImagePath = expression ? getCardImagePath(archetype, expression) : "";
+    // Get the actual personality test result card image path (only if it exists)
+    const cardImagePath = (expression && hasCardImage(archetype, expression)) 
+      ? getCardImagePath(archetype, expression) 
+      : "";
     
     // Use card image if available and expression is provided, otherwise fallback to illustrationUrl
     const finalImageUrl = cardImagePath || illustrationUrl;
@@ -149,12 +151,14 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   alt={archetype}
                   className="w-full h-full object-contain drop-shadow-2xl"
                   onError={(e) => {
+                    const imgElement = e.target as HTMLImageElement;
                     // Fallback to illustration image on error
-                    if (cardImagePath && (e.target as HTMLImageElement).src !== illustrationUrl) {
+                    // Check if we're currently showing a card image (contains the path signature)
+                    if (cardImagePath && imgElement.src.includes('personality test result card')) {
                       console.warn(`Card image failed to load: ${cardImagePath}, falling back to illustration image`);
-                      (e.target as HTMLImageElement).src = illustrationUrl;
+                      imgElement.src = illustrationUrl;
                     } else {
-                      (e.target as HTMLImageElement).style.display = 'none';
+                      imgElement.style.display = 'none';
                       setImageLoadError(true);
                     }
                   }}

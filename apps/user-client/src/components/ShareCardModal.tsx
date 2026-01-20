@@ -412,7 +412,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
           </div>
 
           {/* Card preview - moved before nickname input */}
-          <div className="flex justify-center -mx-2 sm:mx-0">
+          <div className="flex justify-center px-2 sm:px-0">
             <AnimatePresence mode="wait">
               <motion.div
                 key={`${selectedVariantIndex}-${selectedExpression}`}
