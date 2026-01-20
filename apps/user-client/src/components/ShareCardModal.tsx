@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { PokemonShareCard } from "./PokemonShareCard";
 import { getArchetypeVariants, type ShareCardVariant } from "@/lib/archetypeShareVariants";
-import { archetypeAvatars, getArchetypeAvatar } from "@/lib/archetypeAdapter";
+import { archetypeAvatars, getArchetypeAvatar, hasExpressionAsset } from "@/lib/archetypeAdapter";
 import { Share2, Download, Loader2, Check } from "lucide-react";
 import html2canvas from "html2canvas";
 
@@ -97,6 +97,8 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
   const selectedVariant = variants[selectedVariantIndex] || variants[0];
   // Use getArchetypeAvatar with expression support, fallback to archetypeAvatars for base
   const illustrationUrl = getArchetypeAvatar(archetype, selectedExpression) || archetypeAvatars[archetype] || "";
+  // Check if we have a dedicated expression asset (to determine if emoji overlay is needed)
+  const hasExpressionVariant = hasExpressionAsset(archetype, selectedExpression);
 
   // Safety check for variants
   if (variants.length === 0 && shareCardData) {
@@ -204,9 +206,22 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
           return dataUrl;
         } catch (retryError) {
           console.error('Retry failed:', retryError);
+          
+          // Retry failed: show error toast and clean up state explicitly
+          toast({
+            title: "生成失败",
+            description: "无法生成分享卡片，请重试",
+            variant: "destructive",
+          });
+          
+          setIsPreviewMode(true);
+          setIsRetrying(false);
+          setGenerationProgress(0);
+          return null;
         }
       }
       
+      // This should not be reached if retry succeeded
       toast({
         title: "生成失败",
         description: "无法生成分享卡片，请重试",
@@ -220,7 +235,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
     } finally {
       setIsGenerating(false);
     }
-  }, [toast, isRetrying]);
+  }, [toast]);
 
   // Handle share
   const handleShare = useCallback(async () => {
@@ -291,7 +306,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
       const blob = await response.blob();
       
       // Track download method for analytics
-      let downloadMethod = 'unknown';
+      let downloadMethod: string;
 
       // Try native share API first (mobile preferred)
       if (navigator.share && navigator.canShare) {
@@ -339,8 +354,8 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
       link.click();
       document.body.removeChild(link);
       
-      // Clean up blob URL after download
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 100);
+      // Clean up blob URL after download with a safer delay
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 
       // Analytics tracking
       if (window.gtag) {
@@ -417,6 +432,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                   expression={selectedExpression}
                   nickname={nickname}
                   isPreview={isPreviewMode}
+                  hasExpressionAsset={hasExpressionVariant}
                 />
               </motion.div>
             </AnimatePresence>

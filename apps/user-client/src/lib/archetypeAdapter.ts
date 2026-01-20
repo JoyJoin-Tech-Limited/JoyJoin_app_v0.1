@@ -59,6 +59,19 @@ export function getArchetypeAvatar(archetypeName: string, expression?: string): 
 }
 
 /**
+ * Check if an expression-specific asset exists for an archetype
+ */
+export function hasExpressionAsset(archetypeName: string, expression?: string): boolean {
+  if (!expression) return false;
+  
+  const record = archetypeRegistry[archetypeName];
+  if (!record) return false;
+  
+  const expressionKey = `${record.assetKey}_${expression}`;
+  return !!assetKeyToPng[expressionKey];
+}
+
+/**
  * Get all avatars as a Record<archetypeName, pngUrl>
  * For backward compatibility with existing code using archetypeAvatars
  * 
