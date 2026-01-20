@@ -33,15 +33,37 @@ interface PokemonShareCardProps {
   isPreview?: boolean; // Whether this is preview mode (show animation) or download mode
 }
 
+// Expression variant styles (CSS filters to simulate different moods)
+const expressionStyles: Record<string, React.CSSProperties> = {
+  starry: { 
+    filter: 'brightness(1.15) saturate(1.3) contrast(1.05)',
+  },
+  hearts: { 
+    filter: 'hue-rotate(5deg) saturate(1.25) brightness(1.1)',
+  },
+  shy: { 
+    filter: 'brightness(1.05) saturate(0.95) sepia(0.15)',
+  },
+  shocked: { 
+    filter: 'brightness(1.2) contrast(1.1) saturate(1.15)',
+  },
+};
+
 export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps>(
   ({ archetype, archetypeEnglish, variant, illustrationUrl, rankings, traitScores, expression, nickname, isPreview = true }, ref) => {
     // Get archetype tagline from config
     const archetypeInfo = archetypeConfig[archetype];
     const tagline = archetypeInfo?.tagline || "";
 
+    // Get expression style if valid expression is provided
+    const illustrationStyle = expression && expressionStyles[expression] 
+      ? expressionStyles[expression] 
+      : {};
+
     return (
       <motion.div
         ref={ref}
+        data-card-root
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
@@ -102,7 +124,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
           {/* Content - white/light background as default */}
           <div className="relative h-full bg-white/98 rounded-[20px] p-6 flex flex-col overflow-hidden">
             {/* Header badge with long logo */}
-            <div className="text-center mb-3">
+            <div className="text-center mb-2">
               <div className="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full shadow-md">
                 <img 
                   src={logoFull} 
@@ -123,10 +145,10 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               </div>
             </div>
 
-            {/* Archetype illustration with glow - 5x larger (260px), responsive */}
-            <div className="flex justify-center mb-2">
+            {/* Archetype illustration with glow - reduced to 180px, responsive */}
+            <div className="flex justify-center mb-1">
               <div
-                className="relative w-[260px] h-[260px] max-w-[72vw] max-h-[72vw] rounded-full flex items-center justify-center"
+                className="relative w-[180px] h-[180px] max-w-[50vw] max-h-[50vw] rounded-full flex items-center justify-center"
                 style={{
                   boxShadow: `0 0 60px ${variant.primaryColor}70, 0 0 100px ${variant.primaryColor}40`,
                   background: `radial-gradient(circle, ${variant.primaryColor}15, transparent 70%)`,
@@ -136,6 +158,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   src={illustrationUrl}
                   alt={archetype}
                   className="w-full h-full object-contain drop-shadow-2xl"
+                  style={illustrationStyle}
                   onError={(e) => {
                     // Fallback to placeholder on error
                     (e.target as HTMLImageElement).style.display = 'none';
@@ -145,10 +168,10 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             </div>
 
             {/* Archetype name */}
-            <h1 className="text-4xl font-black text-center mb-1 tracking-tight text-gray-900">
+            <h1 className="text-4xl font-black text-center mb-0.5 tracking-tight text-gray-900">
               {archetype}
             </h1>
-            <p className="text-sm font-semibold text-center tracking-widest uppercase text-gray-600 mb-2">
+            <p className="text-sm font-semibold text-center tracking-widest uppercase text-gray-600 mb-1">
               {archetypeEnglish}
             </p>
 
@@ -161,10 +184,10 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
 
             {/* Archetype tagline - positioned description with improved readability */}
             {tagline && (
-              <div className="flex justify-center mb-3 px-4">
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-white/40">
+              <div className="flex justify-center mb-2 px-3">
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg px-2.5 py-1 border border-white/40">
                   <p 
-                    className="text-sm font-medium text-center"
+                    className="text-xs font-medium text-center"
                     style={{ 
                       color: variant.primaryColor,
                     }}
@@ -176,7 +199,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             )}
 
             {/* Stats section (Pokemon HP style) */}
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100">
+            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 mb-2 shadow-sm border border-gray-100">
               <div className="flex items-center justify-between">
                 {/* Left: Archetype rank */}
                 <div className="flex items-baseline gap-2">
@@ -200,10 +223,10 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             </div>
 
             {/* Pokemon-style 2-column Skills Section */}
-            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-3 mb-3 border border-gray-100">
+            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-2.5 mb-2 border border-gray-100">
               <div className="flex gap-3">
-                {/* Left: Compact Radar Chart (35% width) */}
-                <div className="w-[35%] flex items-center justify-center">
+                {/* Left: Compact Radar Chart (45% width) */}
+                <div className="w-[45%] flex items-center justify-center">
                   <PersonalityRadarChart 
                     affinityScore={traitScores.A}
                     opennessScore={traitScores.O}
@@ -216,8 +239,8 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   />
                 </div>
                 
-                {/* Right: Pokemon Skills Info (65% width) */}
-                <div className="w-[65%] flex flex-col justify-center space-y-2">
+                {/* Right: Pokemon Skills Info (55% width) */}
+                <div className="w-[55%] flex flex-col justify-center space-y-2">
                   {/* Energy Bar - Pokemon HP style */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
