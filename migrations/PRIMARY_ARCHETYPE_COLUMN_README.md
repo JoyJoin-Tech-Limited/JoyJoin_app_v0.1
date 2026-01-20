@@ -29,8 +29,26 @@ This migration adds the missing columns to the `users` table:
 ## SQL
 
 ```sql
-ALTER TABLE users ADD COLUMN primary_archetype VARCHAR(50);
-ALTER TABLE users ADD COLUMN secondary_archetype VARCHAR(50);
+-- Idempotent version (actual migration implementation)
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'primary_archetype'
+  ) THEN
+    ALTER TABLE users ADD COLUMN primary_archetype VARCHAR(50);
+  END IF;
+END $$;
+
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'secondary_archetype'
+  ) THEN
+    ALTER TABLE users ADD COLUMN secondary_archetype VARCHAR(50);
+  END IF;
+END $$;
 ```
 
 ## How to Apply
