@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -55,6 +55,8 @@ interface StoredProgress {
 export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) {
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   const [selections, setSelections] = useState<Record<string, HeatLevel>>({});
 
@@ -96,6 +98,21 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [selections]);
 
+  // Track scroll position to show/hide scroll-to-top button
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      // Show button after scrolling ~400px (roughly 2 categories)
+      const shouldShow = scrollContainer.scrollTop > 400;
+      setShowScrollTop(shouldShow);
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Calculate metrics
   const calculateMetrics = useCallback(() => {
     const selectedTopics = Object.entries(selections).filter(
@@ -121,6 +138,16 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   }, [selections]);
 
   const { totalSelections, totalHeat, categoryHeat } = calculateMetrics();
+
+  // Scroll to top handler
+  const handleScrollToTop = useCallback(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: 0,
+        behavior: prefersReducedMotion ? 'auto' : 'smooth'
+      });
+    }
+  }, [prefersReducedMotion]);
 
   // Handle topic tap - cycle through levels 0 → 1 → 2 → 3 → 0
   // Show toast on first level 3 → 0 cycle to explain behavior
@@ -255,8 +282,15 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         </div>
       </div>
 
-      {/* Scrollable content - NO CAROUSEL */}
-      <div className="flex-1 overflow-y-auto pb-24">
+      {/* Scrollable content - NO CAROUSEL - with performance optimizations */}
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto pb-24"
+        style={{ 
+          willChange: 'scroll-position',
+          WebkitOverflowScrolling: 'touch' as any
+        }}
+      >
         {INTEREST_CATEGORIES.map((category) => (
           <CategoryPage
             key={category.id}
@@ -266,6 +300,23 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
           />
         ))}
       </div>
+
+      {/* Scroll to top button - appears after 2+ categories */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button
+            initial={prefersReducedMotion ? {} : { opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={prefersReducedMotion ? {} : { opacity: 0, scale: 0.8 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            onClick={handleScrollToTop}
+            className="fixed bottom-24 right-4 z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center touch-manipulation"
+            aria-label="Scroll to top"
+          >
+            <ArrowUp className="w-5 h-5" />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* Sticky continue button - slightly more compact */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-background via-background to-transparent pt-6 pb-[env(safe-area-inset-bottom,1rem)]">
