@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useId } from "react";
 
 interface PersonalityRadarChartProps {
   affinityScore?: number;
@@ -30,6 +30,7 @@ export default function PersonalityRadarChart({
   primaryColor,
   compactMode = false,
 }: PersonalityRadarChartProps) {
+  const uniqueId = useId();
   const normalizeScore = (score: number | undefined, fallback: number): number => {
     if (score === undefined || score === null) return fallback;
     if (score <= 1) return Math.round(score * 100);
@@ -84,7 +85,7 @@ export default function PersonalityRadarChart({
 
   // Use custom primary color if provided, otherwise fall back to CSS variable
   const strokeColor = primaryColor || "hsl(var(--primary))";
-  const fillGradientId = primaryColor ? "customRadarGradient" : "userRadarGradient";
+  const fillGradientId = primaryColor ? `customRadarGradient-${uniqueId}` : `userRadarGradient-${uniqueId}`;
 
   // Calculate viewBox and dimensions based on compact mode
   const viewBoxSize = compactMode ? 140 : 320;
@@ -93,7 +94,7 @@ export default function PersonalityRadarChart({
   const fontSize = compactMode ? 5 : 11; // Proportional font size
 
   return (
-    <div className="flex flex-col items-center justify-center w-full py-4">
+    <div className={`flex flex-col items-center justify-center w-full ${compactMode ? 'py-1' : 'py-4'}`}>
       <svg 
         width="100%" 
         height="auto" 
@@ -101,12 +102,12 @@ export default function PersonalityRadarChart({
         style={{ maxWidth: `${maxWidth}px` }}
       >
         <defs>
-          <radialGradient id="userRadarGradient" cx="50%" cy="50%" r="50%">
+          <radialGradient id={`userRadarGradient-${uniqueId}`} cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
             <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.05" />
           </radialGradient>
           {primaryColor && (
-            <radialGradient id="customRadarGradient" cx="50%" cy="50%" r="50%">
+            <radialGradient id={`customRadarGradient-${uniqueId}`} cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor={primaryColor} stopOpacity="0.2" />
               <stop offset="100%" stopColor={primaryColor} stopOpacity="0.05" />
             </radialGradient>
