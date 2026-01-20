@@ -35,26 +35,6 @@ interface PokemonShareCardProps {
   hasExpressionAsset?: boolean; // Whether a dedicated expression asset exists
 }
 
-// Expression variant styles (CSS filters to simulate different moods)
-const expressionStyles: Record<string, React.CSSProperties> = {
-  starry: { 
-    filter: 'brightness(1.2) saturate(1.4) contrast(1.1)',
-    transition: 'filter 0.3s ease-in-out',
-  },
-  hearts: { 
-    filter: 'hue-rotate(8deg) saturate(1.35) brightness(1.15)',
-    transition: 'filter 0.3s ease-in-out',
-  },
-  shy: { 
-    filter: 'brightness(1.05) saturate(0.85) sepia(0.2) contrast(0.95)',
-    transition: 'filter 0.3s ease-in-out',
-  },
-  shocked: { 
-    filter: 'brightness(1.25) contrast(1.15) saturate(1.2)',
-    transition: 'filter 0.3s ease-in-out',
-  },
-};
-
 export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps>(
   ({ archetype, archetypeEnglish, variant, illustrationUrl, rankings, traitScores, expression, nickname, isPreview = true, hasExpressionAsset = false }, ref) => {
     // Get archetype tagline from config
@@ -69,11 +49,6 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
     
     // Use card image if available and expression is provided, otherwise fallback to illustrationUrl
     const finalImageUrl = cardImagePath || illustrationUrl;
-
-    // Get expression style if valid expression is provided
-    const illustrationStyle = expression && expressionStyles[expression] 
-      ? expressionStyles[expression] 
-      : {};
 
     return (
       <motion.div
@@ -174,9 +149,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   alt={archetype}
                   className="w-full h-full object-contain drop-shadow-2xl"
                   onError={(e) => {
-                    // Fallback to transparent PNG on error
+                    // Fallback to illustration image on error
                     if (cardImagePath && (e.target as HTMLImageElement).src !== illustrationUrl) {
-                      console.warn(`Card image failed to load: ${cardImagePath}, falling back to transparent PNG`);
+                      console.warn(`Card image failed to load: ${cardImagePath}, falling back to illustration image`);
                       (e.target as HTMLImageElement).src = illustrationUrl;
                     } else {
                       (e.target as HTMLImageElement).style.display = 'none';
