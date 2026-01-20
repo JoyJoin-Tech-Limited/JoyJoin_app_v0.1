@@ -8,6 +8,7 @@ interface PersonalityRadarChartProps {
   extraversionScore?: number;
   positivityScore?: number;
   primaryColor?: string; // Optional custom color for the radar chart
+  compactMode?: boolean; // When true, renders at 140px diameter instead of 320px
 }
 
 const traitDescriptions: Record<string, string> = {
@@ -27,6 +28,7 @@ export default function PersonalityRadarChart({
   extraversionScore,
   positivityScore,
   primaryColor,
+  compactMode = false,
 }: PersonalityRadarChartProps) {
   const normalizeScore = (score: number | undefined, fallback: number): number => {
     if (score === undefined || score === null) return fallback;
@@ -46,9 +48,11 @@ export default function PersonalityRadarChart({
     { name: '正能量性', key: 'positivity', score: normalizeScore(positivityScore, defaultScore), maxScore: 100 },
   ], [affinityScore, opennessScore, conscientiousnessScore, emotionalStabilityScore, extraversionScore, positivityScore]);
 
-  const centerX = 150;
-  const centerY = 150;
-  const maxRadius = 100;
+  // Scale dimensions based on compact mode
+  const scale = compactMode ? 0.4375 : 1; // 140/320 = 0.4375
+  const centerX = 150 * scale;
+  const centerY = 150 * scale;
+  const maxRadius = 100 * scale;
   
   const calculatePoints = (traits: Array<{ name: string; score: number; maxScore: number }>) => {
     return traits.map((trait, index) => {
@@ -72,7 +76,7 @@ export default function PersonalityRadarChart({
 
   const labelPoints = userTraits.map((trait, index) => {
     const angle = (Math.PI * 2 * index) / userTraits.length - Math.PI / 2;
-    const labelRadius = maxRadius + 35;
+    const labelRadius = maxRadius + (35 * scale);
     const x = centerX + Math.cos(angle) * labelRadius;
     const y = centerY + Math.sin(angle) * labelRadius;
     return { x, y, trait, angle, index };
@@ -82,9 +86,14 @@ export default function PersonalityRadarChart({
   const strokeColor = primaryColor || "hsl(var(--primary))";
   const fillGradientId = primaryColor ? "customRadarGradient" : "userRadarGradient";
 
+  // Calculate viewBox and dimensions based on compact mode
+  const viewBoxSize = compactMode ? 140 : 320;
+  const viewBoxPadding = compactMode ? -5 : -10;
+  const maxWidth = compactMode ? 140 : 320;
+
   return (
     <div className="flex flex-col items-center justify-center w-full py-4">
-      <svg width="100%" height="auto" viewBox="-10 -10 320 320" className="max-w-[320px]">
+      <svg width="100%" height="auto" viewBox={`${viewBoxPadding} ${viewBoxPadding} ${viewBoxSize} ${viewBoxSize}`} className={`max-w-[${maxWidth}px]`}>
         <defs>
           <radialGradient id="userRadarGradient" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
@@ -102,8 +111,8 @@ export default function PersonalityRadarChart({
           points={maxPolygonPoints}
           fill="none"
           stroke="hsl(var(--muted-foreground))"
-          strokeWidth="1"
-          strokeDasharray="4,4"
+          strokeWidth={1 * scale}
+          strokeDasharray={`${4 * scale},${4 * scale}`}
           opacity="0.5"
         />
 
@@ -121,7 +130,7 @@ export default function PersonalityRadarChart({
               points={scaledPoints}
               fill="none"
               stroke="hsl(var(--border))"
-              strokeWidth="1"
+              strokeWidth={1 * (compactMode ? 0.4375 : 1)}
               opacity="0.7"
             />
           );
@@ -139,7 +148,7 @@ export default function PersonalityRadarChart({
               x2={x}
               y2={y}
               stroke="hsl(var(--border))"
-              strokeWidth="1"
+              strokeWidth={1 * scale}
               opacity="0.7"
             />
           );
@@ -149,7 +158,7 @@ export default function PersonalityRadarChart({
           points={userPolygonPoints}
           fill={`url(#${fillGradientId})`}
           stroke={strokeColor}
-          strokeWidth="2"
+          strokeWidth={2 * scale}
         />
 
         {userPoints.map((point, index) => (
@@ -157,7 +166,7 @@ export default function PersonalityRadarChart({
             key={index}
             cx={point.x}
             cy={point.y}
-            r="5"
+            r={5 * scale}
             fill={strokeColor}
           />
         ))}
@@ -187,7 +196,7 @@ export default function PersonalityRadarChart({
                 y={label.y}
                 textAnchor={textAnchor}
                 dy={dy}
-                className="text-[11px] font-medium fill-foreground"
+                className={compactMode ? "text-[5px] font-medium fill-foreground" : "text-[11px] font-medium fill-foreground"}
                 style={{ userSelect: 'none' }}
               >
                 {label.trait.name}
