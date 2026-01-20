@@ -159,9 +159,9 @@ export default function SocialRoleCard({
               <span className="text-sm font-medium text-foreground" data-testid="text-secondary-role">
                 {secondaryArchetype}
               </span>
-              {secondaryArchetype?.nickname && (
+              {secondaryArchetypeConfig?.nickname && (
                 <span className="text-xs text-muted-foreground hidden sm:inline">
-                  · {secondaryArchetype.nickname}
+                  · {secondaryArchetypeConfig.nickname}
                 </span>
               )}
             </div>

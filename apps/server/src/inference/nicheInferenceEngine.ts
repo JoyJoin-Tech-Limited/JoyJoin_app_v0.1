@@ -5,6 +5,13 @@
  * in user input, particularly for finance and tech sectors.
  */
 
+// Type definition for niche inference result
+export interface NicheInference {
+  id: string;
+  label: string;
+  confidence: number;
+}
+
 // Regex patterns for niche inference (compiled once for performance)
 const FINANCE_IB_PATTERNS = {
   MA: /并购|m&a|merger|acquisition|一级并购|兼并|收购|重组/i,

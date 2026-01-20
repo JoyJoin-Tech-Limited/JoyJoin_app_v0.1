@@ -42,7 +42,6 @@ export interface InterestCarouselData {
 // localStorage keys
 const STORAGE_KEY = "joyjoin_interests_carousel_progress";
 const CYCLE_EXPLANATION_KEY = "joyjoin_seen_cycle_explanation";
-const HEAT_GUIDE_KEY = "joyjoin_seen_heat_guide";
 
 // localStorage expiry (7 days in milliseconds)
 const STORAGE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
@@ -59,15 +58,8 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
 
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const [selections, setSelections] = useState<Record<string, HeatLevel>>({});
-  const [showFirstTimeGuide, setShowFirstTimeGuide] = useState(false);
-
-  // Check for first-time guide on mount
-  useEffect(() => {
-    const hasSeenGuide = localStorage.getItem(HEAT_GUIDE_KEY);
-    if (!hasSeenGuide) {
-      setShowFirstTimeGuide(true);
-    }
-  }, []);
+  const [xiaoyueMessage, setXiaoyueMessage] = useState(XIAOYUE_MESSAGES[0]);
+  const [showXiaoyue, setShowXiaoyue] = useState(true);
 
   // Load from localStorage on mount with expiry check
   useEffect(() => {
@@ -243,50 +235,6 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* First-time guide tooltip */}
-      <AnimatePresence>
-        {showFirstTimeGuide && (
-          <motion.div 
-            className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div 
-              className="bg-background rounded-2xl p-6 max-w-sm"
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-            >
-              <h3 className="font-bold text-lg mb-3">💡 如何选择</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-purple-400 rounded-full"/>
-                  <span>点一下 = 有兴趣</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-pink-500 rounded-full"/>
-                  <span>点两下 = 很喜欢</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-orange-500 rounded-full"/>
-                  <span>点三下 = 很热爱</span>
-                </div>
-              </div>
-              <Button 
-                onClick={() => {
-                  setShowFirstTimeGuide(false);
-                  localStorage.setItem(HEAT_GUIDE_KEY, 'true');
-                }} 
-                className="w-full mt-4"
-              >
-                知道了
-              </Button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b">
         <div className="flex items-center gap-3 px-4 py-2">
@@ -323,6 +271,16 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
               <div className="text-[10px] text-muted-foreground">已选</div>
             </div>
           </div>
+        </div>
+
+        {/* Persistent Xiaoyue guidance section */}
+        <div className="bg-gradient-to-br from-primary/5 to-primary/10 px-4 py-3 border-b border-primary/10">
+          <XiaoyueChatBubble
+            content="选择你的兴趣，找到同频的人！\n\n👆 左右滑动切换分类\n💜 点击表示感兴趣（紫色）\n💗 再点更喜欢（粉色）\n🧡 三击超热爱（橙色）"
+            horizontal={true}
+            pose="pointing"
+            animate={false}
+          />
         </div>
 
         {/* Scrollable category tabs */}
