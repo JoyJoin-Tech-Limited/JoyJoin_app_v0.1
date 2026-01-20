@@ -124,7 +124,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const canvas = await html2canvas(cardRef.current, {
-        scale: 3, // High-res export
+        scale: 2, // Reduced from 3 for better performance
         backgroundColor: null,
         logging: false,
         useCORS: true,
@@ -241,6 +241,32 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
           {/* Title */}
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900">分享你的专属氛围原型卡片</h2>
+          </div>
+
+          {/* Card preview - moved before nickname input */}
+          <div className="flex justify-center">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`${selectedVariantIndex}-${selectedExpression}`}
+                initial={{ opacity: 0, scale: 0.9, rotateY: -10 }}
+                animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                exit={{ opacity: 0, scale: 0.9, rotateY: 10 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              >
+                <PokemonShareCard
+                  ref={cardRef}
+                  archetype={archetype}
+                  archetypeEnglish={archetypeEnglishNames[archetype] || archetype}
+                  variant={selectedVariant}
+                  illustrationUrl={illustrationUrl}
+                  rankings={shareCardData.rankings}
+                  traitScores={shareCardData.traitScores}
+                  expression={selectedExpression}
+                  nickname={nickname}
+                  isPreview={isPreviewMode}
+                />
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           {/* Nickname input */}
@@ -363,35 +389,6 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                 </motion.button>
               ))}
             </div>
-            <p className="text-xs text-gray-500 text-center mt-2">
-              表情功能即将上线，敬请期待 🎨
-            </p>
-          </div>
-
-          {/* Card preview */}
-          <div className="flex justify-center">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`${selectedVariantIndex}-${selectedExpression}`}
-                initial={{ opacity: 0, scale: 0.9, rotateY: -10 }}
-                animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-                exit={{ opacity: 0, scale: 0.9, rotateY: 10 }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              >
-                <PokemonShareCard
-                  ref={cardRef}
-                  archetype={archetype}
-                  archetypeEnglish={archetypeEnglishNames[archetype] || archetype}
-                  variant={selectedVariant}
-                  illustrationUrl={illustrationUrl}
-                  rankings={shareCardData.rankings}
-                  traitScores={shareCardData.traitScores}
-                  expression={selectedExpression}
-                  nickname={nickname}
-                  isPreview={isPreviewMode}
-                />
-              </motion.div>
-            </AnimatePresence>
           </div>
 
           {/* Action buttons */}

@@ -107,7 +107,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                 <img 
                   src={logoFull} 
                   alt="悦聚 JoyJoin" 
-                  className="h-5 w-auto object-contain"
+                  className="h-10 w-auto object-contain"
                   onError={(e) => {
                     // Fallback to text if image fails to load
                     (e.target as HTMLImageElement).style.display = 'none';
@@ -161,15 +161,18 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
 
             {/* Archetype tagline - positioned description with improved readability */}
             {tagline && (
-              <p 
-                className="text-sm font-medium text-center mb-3 px-4"
-                style={{ 
-                  color: variant.primaryColor,
-                  textShadow: '0 1px 3px rgba(255, 255, 255, 0.8), 0 2px 6px rgba(0, 0, 0, 0.15)'
-                }}
-              >
-                {tagline}
-              </p>
+              <div className="flex justify-center mb-3 px-4">
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-white/40">
+                  <p 
+                    className="text-sm font-medium text-center"
+                    style={{ 
+                      color: variant.primaryColor,
+                    }}
+                  >
+                    {tagline}
+                  </p>
+                </div>
+              </div>
             )}
 
             {/* Stats section (Pokemon HP style) */}
@@ -196,17 +199,52 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               </div>
             </div>
 
-            {/* Hexagonal radar chart replacing progress bars */}
-            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl px-2 py-1 mb-3 flex items-center justify-center border border-gray-100 min-h-[180px]">
-              <PersonalityRadarChart 
-                affinityScore={traitScores.A}
-                opennessScore={traitScores.O}
-                conscientiousnessScore={traitScores.C}
-                emotionalStabilityScore={traitScores.E}
-                extraversionScore={traitScores.X}
-                positivityScore={traitScores.P}
-                primaryColor={variant.primaryColor}
-              />
+            {/* Pokemon-style 2-column Skills Section */}
+            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-3 mb-3 border border-gray-100">
+              <div className="flex gap-3">
+                {/* Left: Compact Radar Chart (35% width) */}
+                <div className="w-[35%] flex items-center justify-center">
+                  <PersonalityRadarChart 
+                    affinityScore={traitScores.A}
+                    opennessScore={traitScores.O}
+                    conscientiousnessScore={traitScores.C}
+                    emotionalStabilityScore={traitScores.E}
+                    extraversionScore={traitScores.X}
+                    positivityScore={traitScores.P}
+                    primaryColor={variant.primaryColor}
+                    compactMode={true}
+                  />
+                </div>
+                
+                {/* Right: Pokemon Skills Info (65% width) */}
+                <div className="w-[65%] flex flex-col justify-center space-y-2">
+                  {/* Energy Bar - Pokemon HP style */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold text-gray-700">⚡ 社交能量</span>
+                      <span className="text-[10px] font-black text-orange-600">{archetypeInfo?.energyLevel}</span>
+                    </div>
+                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-yellow-400 to-orange-500"
+                        style={{ width: `${archetypeInfo?.energyLevel || 50}%` }}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Core Skill Box */}
+                  <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-2 border border-purple-200">
+                    <div className="text-[10px] font-bold text-purple-700 mb-0.5">🎯 核心技能</div>
+                    <div className="text-[10px] leading-tight text-gray-800">{archetypeInfo?.coreContributions}</div>
+                  </div>
+                  
+                  {/* Social Role Box */}
+                  <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-lg p-2 border border-pink-200">
+                    <div className="text-[10px] font-bold text-pink-700 mb-0.5">💫 社交定位</div>
+                    <div className="text-[10px] leading-tight text-gray-800">"{archetypeInfo?.nickname}"</div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Bottom sparkle decoration - fixed overflow */}
