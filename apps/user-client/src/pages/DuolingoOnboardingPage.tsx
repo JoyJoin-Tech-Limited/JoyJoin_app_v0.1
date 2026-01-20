@@ -616,6 +616,8 @@ export default function DuolingoOnboardingPage() {
       setLocation("/personality-test");
     },
     onError: (error: Error) => {
+      // Reset loading state on error to allow user to retry
+      setIsLoggingIn(false);
       toast({
         title: "注册失败",
         description: error.message,
