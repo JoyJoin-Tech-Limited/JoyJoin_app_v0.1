@@ -13,7 +13,7 @@ BEGIN
     ALTER TABLE users ADD COLUMN primary_archetype VARCHAR(50);
     
     -- Add comment to document the column
-    COMMENT ON COLUMN users.primary_archetype IS '12 archetypes from personality assessment (animal-based social vibe system)';
+    COMMENT ON COLUMN users.primary_archetype IS '12 archetypes (animal-based social vibe system)';
   END IF;
 END $$;
 
