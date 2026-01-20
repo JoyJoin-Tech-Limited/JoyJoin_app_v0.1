@@ -287,16 +287,28 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
           </div>
         </div>
 
-        {/* Compact guidance pills */}
+        {/* Compact guidance pills - improved clarity on color meanings */}
         <div className="px-4 py-2 bg-primary/5 border-t">
-          <div className="flex items-center gap-2 justify-center flex-wrap text-[11px] text-muted-foreground">
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-background/70">
-              <span>💜💗🧡</span>
-              <span>点击升级</span>
+          <div className="flex items-center gap-2 justify-center flex-wrap text-xs text-muted-foreground">
+            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-background/70">
+              <span className="text-gray-400">⚪</span>
+              <span className="text-gray-600">未选</span>
             </div>
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-background/70">
+            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-background/70">
+              <span>💜</span>
+              <span>感兴趣</span>
+            </div>
+            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-background/70">
+              <span>💗</span>
+              <span>很喜欢</span>
+            </div>
+            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-background/70">
+              <span>🧡</span>
+              <span>超热爱</span>
+            </div>
+            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-background/70 border border-primary/20">
               <span>✓</span>
-              <span>至少选3个</span>
+              <span className="font-medium">至少选3个</span>
             </div>
           </div>
         </div>

@@ -870,6 +870,8 @@ export class PrototypeMatcher {
         );
         if (finalMultiplier < 1.0) {
           result.details.finalScore *= finalMultiplier;
+          // Clamp to 0-100 range after each modification
+          result.details.finalScore = Math.max(0, Math.min(100, result.details.finalScore));
         }
       }
     }
@@ -880,6 +882,8 @@ export class PrototypeMatcher {
       if (thresholdRule) {
         const multiplier = thresholdRule(userTraits);
         result.details.finalScore *= multiplier;
+        // Clamp to 0-100 range after each modification
+        result.details.finalScore = Math.max(0, Math.min(100, result.details.finalScore));
       }
     }
     
@@ -889,6 +893,8 @@ export class PrototypeMatcher {
       if (vetoRule) {
         const multiplier = vetoRule(userTraits);
         result.details.finalScore *= multiplier;
+        // Clamp to 0-100 range after each modification
+        result.details.finalScore = Math.max(0, Math.min(100, result.details.finalScore));
       }
     }
     
@@ -899,6 +905,8 @@ export class PrototypeMatcher {
         const gateMultiplier = gate.gate(userTraits);
         if (gateMultiplier < 1.0) {
           rivalResult.details.finalScore *= gateMultiplier;
+          // Clamp to 0-100 range after each modification
+          rivalResult.details.finalScore = Math.max(0, Math.min(100, rivalResult.details.finalScore));
         }
       }
     }
@@ -990,8 +998,12 @@ export class PrototypeMatcher {
     
     if (totalBonus > 0) {
       sunnyChicken.details.finalScore += totalBonus;
+      // Clamp to 0-100 range
+      sunnyChicken.details.finalScore = Math.max(0, Math.min(100, sunnyChicken.details.finalScore));
     } else {
       dolphin.details.finalScore -= totalBonus;
+      // Clamp to 0-100 range
+      dolphin.details.finalScore = Math.max(0, Math.min(100, dolphin.details.finalScore));
     }
     
     // Re-sort after adjustment
@@ -1023,8 +1035,12 @@ export class PrototypeMatcher {
     
     if (totalBonus > 0) {
       owl.details.finalScore += totalBonus;
+      // Clamp to 0-100 range
+      owl.details.finalScore = Math.max(0, Math.min(100, owl.details.finalScore));
     } else {
       turtle.details.finalScore -= totalBonus;
+      // Clamp to 0-100 range
+      turtle.details.finalScore = Math.max(0, Math.min(100, turtle.details.finalScore));
     }
     
     results.sort((a, b) => b.details.finalScore - a.details.finalScore);
@@ -1055,8 +1071,12 @@ export class PrototypeMatcher {
     
     if (totalBonus > 0) {
       bear.details.finalScore += totalBonus;
+      // Clamp to 0-100 range
+      bear.details.finalScore = Math.max(0, Math.min(100, bear.details.finalScore));
     } else {
       dolphin.details.finalScore -= totalBonus;
+      // Clamp to 0-100 range
+      dolphin.details.finalScore = Math.max(0, Math.min(100, dolphin.details.finalScore));
     }
     
     results.sort((a, b) => b.details.finalScore - a.details.finalScore);

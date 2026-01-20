@@ -531,7 +531,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
             )}
           </div>
 
-          {/* Expression selector */}
+          {/* Expression selector - simplified minimal design */}
           <div>
             <p className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">表情选择</p>
             <div className="grid grid-cols-2 gap-2 sm:gap-3">
@@ -540,44 +540,26 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                   key={expr.id}
                   onClick={() => setSelectedExpression(expr.id)}
                   className={`
-                    relative px-3 sm:px-5 py-3 sm:py-4 rounded-2xl text-sm sm:text-base font-bold transition-all
+                    relative px-4 sm:px-5 py-3 sm:py-4 rounded-xl text-sm sm:text-base font-medium transition-all
                     ${selectedExpression === expr.id 
-                      ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-lg scale-105 ring-4 ring-green-400/30' 
-                      : 'bg-white text-gray-700 border-4 border-gray-200 hover:border-green-300 shadow-md'}
+                      ? 'bg-primary text-white shadow-md scale-[1.02]' 
+                      : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-primary/30 shadow-sm'}
                   `}
-                  whileTap={{ scale: 0.95 }}
-                  whileHover={{ scale: selectedExpression === expr.id ? 1.05 : 1.02, y: -2 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                  whileTap={{ scale: 0.96 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
                 >
-                  {/* Duolingo-style shadow effect */}
-                  <div className={`absolute inset-0 rounded-2xl -z-10 ${
-                    selectedExpression === expr.id 
-                      ? 'bg-green-600 translate-y-1' 
-                      : 'bg-gray-300 translate-y-1'
-                  }`} />
-                  
-                  <div className="flex flex-col items-center gap-0.5 sm:gap-1">
-                    <motion.span 
-                      className="text-2xl sm:text-3xl"
-                      key={selectedExpression === expr.id ? 'selected' : 'unselected'}
-                      animate={selectedExpression === expr.id ? { 
-                        rotate: [0, -10, 10, -10, 0],
-                        scale: [1, 1.1, 1.1, 1.1, 1]
-                      } : {}}
-                      transition={{ duration: 0.5 }}
-                    >
-                      {expr.emoji}
-                    </motion.span>
+                  <div className="flex flex-col items-center gap-1 sm:gap-1.5">
+                    <span className="text-2xl sm:text-3xl">{expr.emoji}</span>
                     <span className="text-xs sm:text-sm">{expr.label}</span>
                   </div>
                   
                   {selectedExpression === expr.id && (
                     <motion.div
-                      initial={{ scale: 0, rotate: -180 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      className="absolute -top-2 -right-2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md"
                     >
-                      <span className="text-green-500 text-lg">✓</span>
+                      <span className="text-primary text-sm">✓</span>
                     </motion.div>
                   )}
                 </motion.button>
