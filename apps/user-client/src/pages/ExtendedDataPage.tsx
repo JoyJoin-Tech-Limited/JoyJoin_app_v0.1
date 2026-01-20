@@ -18,17 +18,21 @@ export default function ExtendedDataPage() {
       return await apiRequest("POST", "/api/user/interests", { interests: data });
     },
     onSuccess: async () => {
-      setShowCelebration(false);
+      // Keep showing celebration during navigation to prevent flash
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
-      
-      // Redirect to profile review
-      setLocation("/onboarding/review");
       
       toast({
         title: "兴趣保存成功！",
         description: "正在生成你的专属画像...",
       });
+      
+      // Wait a bit more before navigation to ensure smooth transition
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Navigate while still showing loading
+      setLocation("/onboarding/review");
+      // Don't set showCelebration to false - let the new page handle the transition
     },
     onError: (error: Error) => {
       setShowCelebration(false);
