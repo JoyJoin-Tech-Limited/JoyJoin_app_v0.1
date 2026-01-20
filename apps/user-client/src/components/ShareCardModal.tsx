@@ -404,15 +404,15 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[95vh] overflow-y-auto p-6">
-        <div className="space-y-6">
+      <DialogContent className="max-w-lg max-h-[95vh] overflow-y-auto p-4 sm:p-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Title */}
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900">分享你的专属氛围原型卡片</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">分享你的专属氛围原型卡片</h2>
           </div>
 
           {/* Card preview - moved before nickname input */}
-          <div className="flex justify-center">
+          <div className="flex justify-center px-2 sm:px-0">
             <AnimatePresence mode="wait">
               <motion.div
                 key={`${selectedVariantIndex}-${selectedExpression}`}
@@ -420,6 +420,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                 animate={{ opacity: 1, scale: 1, rotateY: 0 }}
                 exit={{ opacity: 0, scale: 0.9, rotateY: 10 }}
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                className="w-full max-w-[90vw] sm:max-w-full"
               >
                 <PokemonShareCard
                   ref={cardRef}
@@ -483,8 +484,8 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
 
           {/* Variant selector grid */}
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-2">配色风格</p>
-            <div className="grid grid-cols-4 gap-2 mb-3">
+            <p className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">配色风格</p>
+            <div className="grid grid-cols-4 gap-1.5 sm:gap-2 mb-2 sm:mb-3">
               {variants.map((variant, index) => (
                 <motion.button
                   key={variant.name}
@@ -508,8 +509,8 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                     </motion.div>
                   )}
                   {/* Variant name tooltip */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5">
-                    <p className="text-[9px] text-white text-center truncate">
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-0.5 sm:px-1 py-0.5">
+                    <p className="text-[8px] sm:text-[9px] text-white text-center truncate">
                       {variant.name}
                     </p>
                   </div>
@@ -532,14 +533,14 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
 
           {/* Expression selector */}
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-2">表情选择</p>
-            <div className="grid grid-cols-2 gap-3">
+            <p className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">表情选择</p>
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               {expressionOptions.map((expr) => (
                 <motion.button
                   key={expr.id}
                   onClick={() => setSelectedExpression(expr.id)}
                   className={`
-                    relative px-5 py-4 rounded-2xl text-base font-bold transition-all
+                    relative px-3 sm:px-5 py-3 sm:py-4 rounded-2xl text-sm sm:text-base font-bold transition-all
                     ${selectedExpression === expr.id 
                       ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-lg scale-105 ring-4 ring-green-400/30' 
                       : 'bg-white text-gray-700 border-4 border-gray-200 hover:border-green-300 shadow-md'}
@@ -555,9 +556,9 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                       : 'bg-gray-300 translate-y-1'
                   }`} />
                   
-                  <div className="flex flex-col items-center gap-1">
+                  <div className="flex flex-col items-center gap-0.5 sm:gap-1">
                     <motion.span 
-                      className="text-3xl"
+                      className="text-2xl sm:text-3xl"
                       key={selectedExpression === expr.id ? 'selected' : 'unselected'}
                       animate={selectedExpression === expr.id ? { 
                         rotate: [0, -10, 10, -10, 0],
@@ -567,7 +568,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                     >
                       {expr.emoji}
                     </motion.span>
-                    <span className="text-sm">{expr.label}</span>
+                    <span className="text-xs sm:text-sm">{expr.label}</span>
                   </div>
                   
                   {selectedExpression === expr.id && (
