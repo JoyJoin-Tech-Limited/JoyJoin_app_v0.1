@@ -1,11 +1,10 @@
-import { useState, useCallback, useEffect } from "react";
-import { motion, AnimatePresence, PanInfo } from "framer-motion";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
-import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import { CategoryPage } from "./CategoryPage";
 import {
   INTEREST_CATEGORIES,
@@ -56,8 +55,11 @@ interface StoredProgress {
 export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) {
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout>();
 
-  const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const [selections, setSelections] = useState<Record<string, HeatLevel>>({});
 
   // Load from localStorage on mount with expiry check
@@ -80,9 +82,6 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         if (data.selections && typeof data.selections === "object") {
           setSelections(data.selections);
         }
-        if (typeof data.currentCategoryIndex === "number") {
-          setCurrentCategoryIndex(data.currentCategoryIndex);
-        }
       } catch (e) {
         console.error("Failed to load saved progress:", e);
         // Clear corrupted data
@@ -95,11 +94,44 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   useEffect(() => {
     const data: StoredProgress = {
       selections,
-      currentCategoryIndex,
+      currentCategoryIndex: 0, // Not used anymore but keeping for backward compatibility
       timestamp: Date.now(),
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [selections, currentCategoryIndex]);
+  }, [selections]);
+
+  // Track scroll position to show/hide scroll-to-top button
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      // Show button after scrolling ~400px (roughly 2 categories)
+      const shouldShow = scrollContainer.scrollTop > 400;
+      setShowScrollTop(shouldShow);
+      
+      // Optimize: Set isScrolling state to apply willChange only during scroll
+      setIsScrolling(true);
+      
+      // Clear existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      // Remove willChange after scroll stops
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsScrolling(false);
+      }, 150);
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      scrollContainer.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Calculate metrics
   const calculateMetrics = useCallback(() => {
@@ -126,6 +158,16 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   }, [selections]);
 
   const { totalSelections, totalHeat, categoryHeat } = calculateMetrics();
+
+  // Scroll to top handler
+  const handleScrollToTop = useCallback(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: 0,
+        behavior: prefersReducedMotion ? 'auto' : 'smooth'
+      });
+    }
+  }, [prefersReducedMotion]);
 
   // Handle topic tap - cycle through levels 0 → 1 → 2 → 3 → 0
   // Show toast on first level 3 → 0 cycle to explain behavior
@@ -155,29 +197,6 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
       return { ...prev, [topicId]: nextLevel };
     });
   }, [toast]);
-
-  // Handle horizontal swipe
-  const handleDragEnd = useCallback(
-    (_e: any, info: PanInfo) => {
-      const swipeThreshold = 50;
-      if (info.offset.x > swipeThreshold && currentCategoryIndex > 0) {
-        setCurrentCategoryIndex((prev) => prev - 1);
-      } else if (
-        info.offset.x < -swipeThreshold &&
-        currentCategoryIndex < INTEREST_CATEGORIES.length - 1
-      ) {
-        setCurrentCategoryIndex((prev) => prev + 1);
-      }
-    },
-    [currentCategoryIndex]
-  );
-
-  // Handle "next category" skip button
-  const handleSkipCategory = useCallback(() => {
-    if (currentCategoryIndex < INTEREST_CATEGORIES.length - 1) {
-      setCurrentCategoryIndex((prev) => prev + 1);
-    }
-  }, [currentCategoryIndex]);
 
   // Handle continue button
   const handleContinue = useCallback(() => {
@@ -229,140 +248,117 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
     onComplete(data);
   }, [selections, totalHeat, totalSelections, categoryHeat, onComplete, toast]);
 
-  const currentCategory = INTEREST_CATEGORIES[currentCategoryIndex];
   const canContinue = totalSelections >= 3;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b">
-        <div className="flex items-center gap-3 px-4 py-2">
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b">
+        <div className="flex items-center gap-3 px-4 py-2.5">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ChevronLeft className="w-5 h-5" />
           </Button>
-          <div className="flex-1">
-            <h1 className="text-base font-medium">兴趣选择</h1>
-          </div>
-          {/* Mini heat counter badge */}
-          <div className="flex items-center gap-2">
-            <div className="flex flex-col items-center">
-              <motion.div
+          <h1 className="text-base font-medium flex-1">选择兴趣</h1>
+          
+          {/* Compact counters */}
+          <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-1">
+              <span className="text-lg">🔥</span>
+              <motion.span 
                 key={totalHeat}
-                className="text-lg font-bold text-orange-600"
+                className="font-bold text-orange-600"
                 initial={prefersReducedMotion ? {} : { scale: 1.2, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
               >
                 {totalHeat}
-              </motion.div>
-              <div className="text-[10px] text-muted-foreground">热度</div>
+              </motion.span>
             </div>
-            <div className="flex flex-col items-center">
-              <motion.div
+            <div className="flex items-center gap-1">
+              <span className="text-lg">✓</span>
+              <motion.span 
                 key={totalSelections}
-                className="text-lg font-bold text-purple-600"
+                className="font-bold text-purple-600"
                 initial={prefersReducedMotion ? {} : { scale: 1.2, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
               >
                 {totalSelections}
-              </motion.div>
-              <div className="text-[10px] text-muted-foreground">已选</div>
+              </motion.span>
             </div>
           </div>
         </div>
 
-        {/* Persistent Xiaoyue guidance section */}
-        <div className="bg-gradient-to-br from-primary/5 to-primary/10 px-4 py-3 border-b border-primary/10">
-          <XiaoyueChatBubble
-            content="选择你的兴趣，找到同频的人！\n\n👆 左右滑动切换分类\n💜 点击表示感兴趣（紫色）\n💗 再点更喜欢（粉色）\n🧡 三击超热爱（橙色）"
-            horizontal={true}
-            pose="pointing"
-            animate={false}
+        {/* Compact guidance pills */}
+        <div className="px-4 py-2 bg-primary/5 border-t">
+          <div className="flex items-center gap-2 justify-center flex-wrap text-[11px] text-muted-foreground">
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-background/70">
+              <span>💜💗🧡</span>
+              <span>点击升级</span>
+            </div>
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-background/70">
+              <span>✓</span>
+              <span>至少选3个</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Scrollable content - NO CAROUSEL - with performance optimizations */}
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto pb-24"
+        style={{ 
+          willChange: isScrolling ? 'scroll-position' : 'auto',
+          WebkitOverflowScrolling: 'touch' as any
+        }}
+      >
+        {INTEREST_CATEGORIES.map((category) => (
+          <CategoryPage
+            key={category.id}
+            category={category}
+            selections={selections}
+            onTopicTap={handleTopicTap}
           />
-        </div>
-
-        {/* Scrollable category tabs */}
-        <div className="overflow-x-auto scrollbar-hide px-4 pb-2">
-          <div className="flex gap-2 min-w-min">
-            {INTEREST_CATEGORIES.map((category, index) => (
-              <button
-                key={category.id}
-                onClick={() => setCurrentCategoryIndex(index)}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full whitespace-nowrap text-sm transition-all touch-manipulation",
-                  index === currentCategoryIndex
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "bg-muted/50 text-muted-foreground"
-                )}
-              >
-                <span>{category.emoji}</span>
-                <span className="font-medium">{category.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Carousel */}
-      <div className="flex-1 overflow-hidden relative">
-        <motion.div
-          className="flex h-full"
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.1}
-          onDragEnd={handleDragEnd}
-          animate={{ x: -currentCategoryIndex * 100 + "%" }}
-          transition={
-            prefersReducedMotion
-              ? { duration: 0 }
-              : { type: "spring", stiffness: 400, damping: 35, mass: 0.8 }
-          }
-          style={{ 
-            touchAction: 'pan-x' as const,
-          }}
-        >
-          {INTEREST_CATEGORIES.map((category) => (
-            <div key={category.id} className="min-w-full h-full">
-              <CategoryPage
-                category={category}
-                selections={selections}
-                onTopicTap={handleTopicTap}
-              />
-            </div>
-          ))}
-        </motion.div>
-      </div>
-
-      {/* Skip to next category button */}
-      {currentCategoryIndex < INTEREST_CATEGORIES.length - 1 && (
-        <div className="px-4 pb-2 text-center">
-          <button
-            onClick={handleSkipCategory}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1 group touch-manipulation"
+      {/* Scroll to top button - appears after 2+ categories */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button
+            initial={prefersReducedMotion ? {} : { opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={prefersReducedMotion ? {} : { opacity: 0, scale: 0.8 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            onClick={handleScrollToTop}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleScrollToTop();
+              }
+            }}
+            className="fixed bottom-24 right-4 z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center touch-manipulation"
+            aria-label="Scroll to top"
+            tabIndex={0}
           >
-            <span>不感兴趣，下一类</span>
-            <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-          </button>
-        </div>
-      )}
+            <ArrowUp className="w-5 h-5" />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
-      {/* Continue button - Duolingo style */}
+      {/* Sticky continue button - slightly more compact */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-background via-background to-transparent pt-6 pb-[env(safe-area-inset-bottom,1rem)]">
         <div className="px-4 pb-4">
           <Button
             onClick={handleContinue}
-            disabled={!canContinue}
+            disabled={totalSelections < 3}
             className={cn(
-              "w-full h-14 text-lg font-bold rounded-2xl shadow-lg",
-              "!border-0 transition-all duration-200",
-              "disabled:opacity-50 disabled:cursor-not-allowed",
-              canContinue 
-                ? "bg-primary text-primary-foreground hover:brightness-95" 
-                : "bg-muted"
+              "w-full h-12 text-base font-bold rounded-xl shadow-lg transition-all",
+              totalSelections >= 3
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
             )}
           >
-            继续 {totalSelections >= 3 && `(${totalSelections} 个兴趣)`}
+            继续 {totalSelections >= 3 && `(${totalSelections}个)`}
           </Button>
         </div>
       </div>
