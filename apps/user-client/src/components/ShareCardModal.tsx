@@ -120,20 +120,40 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
       // Disable preview mode (animation) before capturing
       setIsPreviewMode(false);
       
-      // Wait for animation to stop and re-render
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Show progress feedback
+      toast({
+        title: "正在生成图片...",
+        description: "请稍候，确保最佳质量",
+      });
+      
+      // Wait longer for everything to settle and ensure fonts are loaded
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Ensure fonts are loaded
+      await document.fonts.ready;
 
       const canvas = await html2canvas(cardRef.current, {
-        scale: 2, // Reduced from 3 for better performance
+        scale: 3, // Higher quality
         backgroundColor: null,
         logging: false,
         useCORS: true,
+        allowTaint: true,
+        foreignObjectRendering: false, // Better SVG support
+        imageTimeout: 15000, // Wait for images
+        onclone: (clonedDoc) => {
+          // Force all animations to complete state
+          const clonedElement = clonedDoc.querySelector('[data-card-root]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.animation = 'none';
+            (clonedElement as HTMLElement).style.transition = 'none';
+          }
+        }
       });
 
       // Re-enable preview mode
       setIsPreviewMode(true);
 
-      return canvas.toDataURL('image/png');
+      return canvas.toDataURL('image/png', 1.0); // Max quality
     } catch (error) {
       console.error('Failed to generate image:', error);
       toast({
@@ -211,15 +231,55 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
     if (!imageDataUrl) return;
 
     const filename = `悦聚-${archetype}-性格卡.png`;
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href = imageDataUrl;
-    link.click();
+    
+    try {
+      // Convert data URL to blob
+      const response = await fetch(imageDataUrl);
+      const blob = await response.blob();
+      
+      // Try native share API first (mobile)
+      if (navigator.share && navigator.canShare) {
+        const file = new File([blob], filename, { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file] });
+            toast({
+              title: "分享成功！",
+              description: "图片已保存",
+            });
+            return;
+          } catch (err) {
+            // User cancelled share, fall back to download
+            console.log('Share cancelled, falling back to download');
+          }
+        }
+      }
+      
+      // Fallback: create object URL and download
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = objectUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
 
-    toast({
-      title: "下载成功！",
-      description: "图片已保存到本地",
-    });
+      toast({
+        title: "下载成功！",
+        description: "图片已保存到本地",
+      });
+    } catch (error) {
+      console.error('Download failed:', error);
+      
+      // Provide more specific error message
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      toast({
+        title: "下载失败",
+        description: `${errorMessage}。请尝试截图保存或使用分享功能`,
+        variant: "destructive",
+      });
+    }
   }, [generateImage, archetype, toast]);
 
   if (isLoading || !shareCardData || !selectedVariant) {
