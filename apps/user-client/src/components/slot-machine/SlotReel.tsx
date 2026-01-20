@@ -32,11 +32,11 @@ function SlotReelComponent({ visibleItems, state, highlightColor, intensity = 0 
   const isLanded = state === "landed";
   const isAnticipation = state === "anticipation";
 
-  // Mobile-optimized: use grayscale + opacity instead of blur (better performance)
+  // Enhanced visibility: use grayscale + opacity with improved values for better spin visibility
   const getMysteryStyle = () => {
     if (isAnticipation) return { grayscale: 100, opacity: 0.3, scale: 0.85 };
-    if (isSpinning) return { grayscale: 80, opacity: 0.5, scale: 0.9 };
-    if (isSlowing) return { grayscale: 40, opacity: 0.7, scale: 0.95 };
+    if (isSpinning) return { grayscale: 60, opacity: 0.65, scale: 0.92 }; // Less grayscale, more visible
+    if (isSlowing) return { grayscale: 30, opacity: 0.8, scale: 0.96 }; // Even clearer during slowdown
     if (isLanded) return { grayscale: 0, opacity: 1, scale: 1 };
     return { grayscale: 100, opacity: 0.2, scale: 0.8 }; // idle - maximum mystery
   };
@@ -156,7 +156,7 @@ function SlotReelComponent({ visibleItems, state, highlightColor, intensity = 0 
                 }}
                 exit={{ y: 50, opacity: 0 }}
                 transition={{ 
-                  duration: isSpinning ? 0.04 : isSlowing ? 0.1 : 0.4,
+                  duration: isSpinning ? 0.12 : isSlowing ? 0.2 : 0.4, // Increased from 0.04 for smoother visibility
                   ease: isLanded ? [0.34, 1.56, 0.64, 1] : "linear", // Bouncy on land
                 }}
                 className={cn(

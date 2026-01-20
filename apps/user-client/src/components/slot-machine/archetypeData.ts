@@ -24,7 +24,10 @@ export interface ArchetypeInfo {
   emoji: string;
 }
 
-/** Canonical archetype definitions */
+/**
+ * Canonical archetype definitions
+ * Order matches backend ARCHETYPE_NAMES from apps/server/src/archetypeConfig.ts
+ */
 const CANONICAL_ARCHETYPES: Record<string, ArchetypeInfo> = {
   "开心柯基": {
     id: "corgi",
@@ -33,33 +36,12 @@ const CANONICAL_ARCHETYPES: Record<string, ArchetypeInfo> = {
     color: [43, 96, 56], // amber
     emoji: "🐕",
   },
-  "机智狐狸": {
-    id: "fox",
-    name: "机智狐狸",
-    image: foxImg,
-    color: [25, 95, 53], // orange
-    emoji: "🦊",
-  },
-  "机智狐": {
-    id: "fox",
-    name: "机智狐狸",
-    image: foxImg,
-    color: [25, 95, 53], // orange
-    emoji: "🦊",
-  },
-  "暖心熊": {
-    id: "bear",
-    name: "暖心熊",
-    image: bearImg,
-    color: [24, 80, 50], // warm brown
-    emoji: "🐻",
-  },
-  "织网蛛": {
-    id: "spider",
-    name: "织网蛛",
-    image: spiderImg,
-    color: [220, 50, 45], // blue-gray
-    emoji: "🕷️",
+  "太阳鸡": {
+    id: "chicken",
+    name: "太阳鸡",
+    image: chickenImg,
+    color: [50, 90, 55], // yellow
+    emoji: "🐔",
   },
   "夸夸豚": {
     id: "pig",
@@ -68,12 +50,12 @@ const CANONICAL_ARCHETYPES: Record<string, ArchetypeInfo> = {
     color: [340, 75, 65], // pink
     emoji: "🐷",
   },
-  "太阳鸡": {
-    id: "chicken",
-    name: "太阳鸡",
-    image: chickenImg,
-    color: [50, 90, 55], // yellow
-    emoji: "🐔",
+  "机智狐": {
+    id: "fox",
+    name: "机智狐",
+    image: foxImg,
+    color: [25, 95, 53], // orange
+    emoji: "🦊",
   },
   "淡定海豚": {
     id: "dolphin",
@@ -82,12 +64,40 @@ const CANONICAL_ARCHETYPES: Record<string, ArchetypeInfo> = {
     color: [187, 85, 53], // cyan
     emoji: "🐬",
   },
+  "织网蛛": {
+    id: "spider",
+    name: "织网蛛",
+    image: spiderImg,
+    color: [220, 50, 45], // blue-gray
+    emoji: "🕷️",
+  },
+  "暖心熊": {
+    id: "bear",
+    name: "暖心熊",
+    image: bearImg,
+    color: [24, 80, 50], // warm brown
+    emoji: "🐻",
+  },
+  "灵感章鱼": {
+    id: "octopus",
+    name: "灵感章鱼",
+    image: octopusImg,
+    color: [271, 91, 65], // purple
+    emoji: "🐙",
+  },
   "沉思猫头鹰": {
     id: "owl",
     name: "沉思猫头鹰",
     image: owlImg,
     color: [260, 50, 50], // deep purple
     emoji: "🦉",
+  },
+  "定心大象": {
+    id: "elephant",
+    name: "定心大象",
+    image: elephantImg,
+    color: [200, 30, 55], // gray-blue
+    emoji: "🐘",
   },
   "稳如龟": {
     id: "turtle",
@@ -103,25 +113,11 @@ const CANONICAL_ARCHETYPES: Record<string, ArchetypeInfo> = {
     color: [280, 40, 55], // muted purple
     emoji: "🐱",
   },
-  "定心大象": {
-    id: "elephant",
-    name: "定心大象",
-    image: elephantImg,
-    color: [200, 30, 55], // gray-blue
-    emoji: "🐘",
-  },
-  "灵感章鱼": {
-    id: "octopus",
-    name: "灵感章鱼",
-    image: octopusImg,
-    color: [271, 91, 65], // purple
-    emoji: "🐙",
-  },
 };
 
 /** Archetype name aliases (maps shortened/variant names to canonical names) */
 const ARCHETYPE_ALIASES: Record<string, string> = {
-  "机智狐": "机智狐狸",
+  // No aliases needed - all names match backend canonical names
 };
 
 /** Combined archetype data with aliases resolved */
