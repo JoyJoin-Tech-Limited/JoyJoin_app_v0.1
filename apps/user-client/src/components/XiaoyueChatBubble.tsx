@@ -198,7 +198,7 @@ export function XiaoyueChatBubble({
               <span className="text-muted-foreground text-sm">{loadingText}</span>
             </div>
           ) : (
-            <p className="text-base leading-relaxed text-foreground/90 font-medium" data-testid="text-xiaoyue-message">
+            <p className="text-base leading-relaxed text-foreground/90 font-medium whitespace-pre-wrap" data-testid="text-xiaoyue-message">
               {content}
             </p>
           )}
