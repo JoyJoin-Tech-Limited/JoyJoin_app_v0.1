@@ -129,8 +129,9 @@ export default function ProfilePage() {
   };
 
   const getArchetypeAvatar = () => {
-    const archetype = user?.primaryArchetype || "连接者";
-    const config = archetypeConfig[archetype] || archetypeConfig["连接者"];
+    const archetype = user?.primaryArchetype || user?.archetype || "开心柯基";
+    const defaultConfig = archetypeConfig["开心柯基"];
+    const config = archetypeConfig[archetype] || defaultConfig;
     return {
       icon: config.icon,
       bgColor: config.bgColor,
