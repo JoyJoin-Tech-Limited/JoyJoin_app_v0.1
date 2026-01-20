@@ -74,14 +74,22 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
           />
           <div className="absolute inset-[12px] rounded-2xl border-[8px] border-yellow-500/60 pointer-events-none shadow-[inset_0_1px_4px_rgba(0,0,0,0.15)]" />
           
-          {/* Enhanced holographic overlay - Pokemon card style */}
-          <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/30 via-transparent to-purple-200/20 pointer-events-none" />
-          <div className="absolute inset-0 rounded-3xl bg-gradient-to-tl from-pink-200/20 via-transparent to-blue-200/20 pointer-events-none" />
+          {/* Enhanced holographic overlay - Pokemon card style - only in preview */}
+          {isPreview && (
+            <>
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/30 via-transparent to-purple-200/20 pointer-events-none" />
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-tl from-pink-200/20 via-transparent to-blue-200/20 pointer-events-none" />
+            </>
+          )}
           
-          {/* Enhanced corner shine effects (Pokemon card style) */}
-          <div className="absolute top-6 right-6 w-20 h-20 bg-white/40 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute top-8 right-8 w-12 h-12 bg-yellow-200/50 rounded-full blur-xl pointer-events-none" />
-          <div className="absolute bottom-6 left-6 w-16 h-16 bg-white/30 rounded-full blur-xl pointer-events-none" />
+          {/* Enhanced corner shine effects (Pokemon card style) - only in preview mode */}
+          {isPreview && (
+            <>
+              <div className="absolute top-6 right-6 w-20 h-20 bg-white/40 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute top-8 right-8 w-12 h-12 bg-yellow-200/50 rounded-full blur-xl pointer-events-none" />
+              <div className="absolute bottom-6 left-6 w-16 h-16 bg-white/30 rounded-full blur-xl pointer-events-none" />
+            </>
+          )}
           
           {/* Holographic reflection animation - only in preview mode */}
           {isPreview && (

@@ -281,6 +281,18 @@ export default function PersonalityTestPageV4() {
     );
   }
 
+  // Don't render anything if complete - redirect happens in useEffect
+  if (isComplete) {
+    return (
+      <div className="h-screen overflow-hidden bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">正在生成结果...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (showMilestone && encouragement) {
     return (
       <div className="h-screen overflow-hidden bg-background flex flex-col items-center justify-center p-6">
