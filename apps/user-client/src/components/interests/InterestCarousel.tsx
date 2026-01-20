@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import { CategoryPage } from "./CategoryPage";
 import {
   INTEREST_CATEGORIES,
@@ -58,8 +59,6 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
 
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const [selections, setSelections] = useState<Record<string, HeatLevel>>({});
-  const [xiaoyueMessage, setXiaoyueMessage] = useState(XIAOYUE_MESSAGES[0]);
-  const [showXiaoyue, setShowXiaoyue] = useState(true);
 
   // Load from localStorage on mount with expiry check
   useEffect(() => {
