@@ -372,7 +372,7 @@ export default function PersonalityTestPageV4() {
           className="flex-1 flex flex-col px-4 pt-4 pb-2 overflow-hidden"
         >
           <div className="shrink-0 mb-3">
-            <p className="text-lg text-foreground mb-3 leading-relaxed font-bold">
+            <p className="text-base text-foreground mb-2 leading-relaxed font-semibold">
               {scenarioText}
             </p>
             <XiaoyueChatBubble 

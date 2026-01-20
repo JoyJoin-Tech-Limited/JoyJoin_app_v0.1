@@ -81,7 +81,7 @@ export function SelectionList({
             role="option"
             aria-selected={isSelected(option.value)}
             className={cn(
-              "w-full flex items-center gap-4 px-5 py-4 rounded-2xl border-2 transition-all duration-200 min-h-[68px]",
+              "w-full flex items-center gap-4 px-4 py-4 rounded-xl border-2 transition-all duration-200 min-h-[56px]",
               "shadow-sm select-none touch-none relative overflow-hidden",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
               isSelected(option.value)

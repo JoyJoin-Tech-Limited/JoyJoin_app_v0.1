@@ -17,6 +17,7 @@ import { IndustrySelector } from "@/components/IndustrySelector";
 import { OccupationSelector } from "@/components/OccupationSelector";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 import { haptics } from "@/lib/haptics";
+import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import {
   Sheet,
   SheetContent,
@@ -196,52 +197,6 @@ const STEP_CONFIG = [
 
 const TOTAL_STEPS = STEP_CONFIG.length;
 
-function XiaoyueMascot({ 
-  mood = "normal", 
-  message,
-  className,
-}: { 
-  mood?: XiaoyueMood; 
-  message: string; 
-  className?: string;
-}) {
-  const controls = useAnimation();
-
-  useEffect(() => {
-    controls.start({
-      y: [0, -8, 0],
-      transition: { duration: 0.5, ease: "easeOut" }
-    });
-  }, [message, controls]);
-
-  return (
-    <div className={cn("flex flex-col items-center gap-4", className)}>
-      <motion.div
-        animate={controls}
-        className="relative"
-      >
-        <img 
-          src={XIAOYUE_AVATARS[mood]} 
-          alt="小悦" 
-          className="w-24 h-24 object-contain drop-shadow-lg"
-        />
-      </motion.div>
-      <motion.div 
-        className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 rounded-2xl px-5 py-4 max-w-[320px] shadow-sm border border-purple-100 dark:border-purple-800"
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.2 }}
-      >
-        <p className="text-base text-center text-purple-800 dark:text-purple-200 font-semibold leading-relaxed">
-          {message}
-        </p>
-      </motion.div>
-    </div>
-  );
-}
-
-
-
 function TappableCard({ 
   selected, 
   onClick, 
@@ -258,7 +213,7 @@ function TappableCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "w-full p-5 rounded-2xl border-2 text-left transition-all duration-200 min-h-[56px]",
+        "w-full p-4 rounded-xl border-2 text-left transition-all duration-200 min-h-[48px]",
         selected 
           ? "border-primary bg-primary/10 shadow-md shadow-primary/10" 
           : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary/50",
@@ -506,7 +461,7 @@ export default function EssentialDataPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header with Match Potential Bar */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-4">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
         <div className="flex items-center gap-3">
           {currentStep > 0 && (
             <Button 
@@ -519,7 +474,7 @@ export default function EssentialDataPage() {
             </Button>
           )}
           <div className="flex-1">
-            <div className="flex items-center justify-between text-base font-medium text-muted-foreground mb-3">
+            <div className="flex items-center justify-between text-sm font-medium text-muted-foreground mb-2">
               <span>第 {currentStep + 1} 步 / 共 {TOTAL_STEPS} 步</span>
               <span className="text-primary font-semibold">{Math.round(progress)}%</span>
             </div>
@@ -528,13 +483,14 @@ export default function EssentialDataPage() {
               current={currentStep}
               total={TOTAL_STEPS}
               variant="duolingo"
+              className="h-1.5"
             />
           </div>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="flex-1 px-4 py-6 overflow-y-auto">
+      <div className="flex-1 px-4 py-4 overflow-y-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
@@ -542,21 +498,21 @@ export default function EssentialDataPage() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="max-w-md mx-auto"
+            className="max-w-md mx-auto space-y-4"
           >
-            {/* Mascot */}
-            <XiaoyueMascot 
-              mood={stepConfig.mascotMood}
-              message={stepConfig.mascotMessage}
-              className="mb-6"
+            {/* Horizontal Mascot Layout */}
+            <XiaoyueChatBubble
+              pose={stepConfig.mascotMood === "excited" ? "casual" : stepConfig.mascotMood === "pointing" ? "pointing" : "thinking"}
+              content={stepConfig.mascotMessage}
+              horizontal
             />
 
             {/* Title */}
-            <div className="text-center mb-8">
-              <h1 className="text-[28px] leading-tight font-bold text-foreground mb-3">
+            <div className="text-center">
+              <h1 className="text-2xl leading-tight font-bold text-foreground mb-2">
                 {stepConfig.title}
               </h1>
-              <p className="text-lg text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {stepConfig.subtitle}
               </p>
             </div>
@@ -574,7 +530,7 @@ export default function EssentialDataPage() {
                         onChange={(e) => setDisplayName(e.target.value)}
                         placeholder="输入你的昵称"
                         className={cn(
-                          "h-20 text-xl text-center rounded-2xl font-medium transition-all",
+                          "h-12 text-lg text-center rounded-xl font-medium transition-all",
                           displayName.length >= 2 && "border-green-500 bg-green-50/50 dark:bg-green-950/20"
                         )}
                         maxLength={20}
@@ -582,30 +538,15 @@ export default function EssentialDataPage() {
                       />
                     </div>
                     
-                    {/* Character counter with progress bar */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>字符数</span>
-                        <span className={cn(
-                          "font-medium",
-                          displayName.length >= 2 && "text-green-600 dark:text-green-400"
-                        )}>
-                          {displayName.length}/20
-                        </span>
-                      </div>
-                      <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                        <motion.div
-                          className={cn(
-                            "h-full rounded-full transition-colors",
-                            displayName.length >= 2
-                              ? "bg-gradient-to-r from-green-400 to-emerald-500"
-                              : "bg-gradient-to-r from-gray-300 to-gray-400"
-                          )}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${(displayName.length / 20) * 100}%` }}
-                          transition={{ duration: 0.2 }}
-                        />
-                      </div>
+                    {/* Character counter - text only, no progress bar */}
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>字符数</span>
+                      <span className={cn(
+                        "font-medium",
+                        displayName.length >= 2 && "text-green-600 dark:text-green-400"
+                      )}>
+                        {displayName.length}/20
+                      </span>
                     </div>
                     
                     {/* Real-time validation feedback */}
@@ -647,8 +588,8 @@ export default function EssentialDataPage() {
                           transition={{ delay: index * 0.05 }}
                           onClick={() => setDisplayName(suggestion.text)}
                           className={cn(
-                            "p-3 rounded-xl border-2 border-transparent transition-all",
-                            "bg-gradient-to-br text-sm font-medium",
+                            "p-2 rounded-xl border-2 border-transparent transition-all",
+                            "bg-gradient-to-br text-xs font-medium",
                             suggestion.gradient,
                             "hover:border-primary hover:shadow-md",
                             "text-gray-700 dark:text-gray-800"
@@ -665,10 +606,10 @@ export default function EssentialDataPage() {
 
               {/* Step 1: Gender + Birthday */}
               {currentStep === 1 && (
-                <div className="space-y-8">
+                <div className="space-y-6">
                   <div>
-                    <label className="block text-lg font-semibold mb-4 text-center">性别</label>
-                    <div className="grid grid-cols-2 gap-4">
+                    <label className="block text-base font-semibold mb-3 text-center">性别</label>
+                    <div className="grid grid-cols-2 gap-3">
                       {GENDER_OPTIONS.map((opt, index) => (
                         <motion.button
                           key={opt.value}
@@ -681,7 +622,7 @@ export default function EssentialDataPage() {
                             setGender(opt.value);
                           }}
                           className={cn(
-                            "relative p-6 rounded-2xl border-2 transition-all duration-200 overflow-hidden",
+                            "relative p-4 rounded-xl border-2 transition-all duration-200 overflow-hidden",
                             gender === opt.value
                               ? "border-primary shadow-lg shadow-primary/20"
                               : "border-gray-200 dark:border-gray-700 hover:border-primary/50"
@@ -699,10 +640,10 @@ export default function EssentialDataPage() {
                           )}
                           
                           {/* Content */}
-                          <div className="relative flex flex-col items-center gap-3">
+                          <div className="relative flex flex-col items-center gap-2">
                             {/* Emoji with animation */}
                             <motion.span
-                              className="text-5xl"
+                              className="text-4xl"
                               animate={gender === opt.value ? {
                                 scale: [1, 1.2, 1],
                                 rotate: [0, -10, 10, 0]
@@ -713,7 +654,7 @@ export default function EssentialDataPage() {
                             </motion.span>
                             
                             <span className={cn(
-                              "text-lg font-semibold",
+                              "text-base font-semibold",
                               gender === opt.value && "text-primary"
                             )}>
                               {opt.label}
@@ -736,12 +677,12 @@ export default function EssentialDataPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-lg font-semibold mb-4 text-center">出生日期</label>
+                    <label className="block text-base font-semibold mb-3 text-center">出生日期</label>
                     <button
                       type="button"
                       onClick={() => setBirthDateSheetOpen(true)}
                       className={cn(
-                        "w-full p-5 rounded-2xl border-2 transition-all flex items-center justify-center gap-3",
+                        "w-full p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-3",
                         birthDate
                           ? "border-primary bg-primary/5 text-foreground"
                           : "border-dashed border-muted-foreground/30 text-muted-foreground hover:border-primary/50 hover:bg-muted/50"
@@ -750,14 +691,14 @@ export default function EssentialDataPage() {
                     >
                       <Calendar className="w-5 h-5" />
                       {birthDate ? (
-                        <span className="text-lg font-semibold">
+                        <span className="text-base font-semibold">
                           {birthDate.year}年{birthDate.month}月{birthDate.day}日
                           <span className="text-muted-foreground font-normal ml-2">
                             ({new Date().getFullYear() - birthDate.year}岁)
                           </span>
                         </span>
                       ) : (
-                        <span className="text-lg">点击设置出生日期</span>
+                        <span className="text-base">点击设置出生日期</span>
                       )}
                     </button>
                   </div>
@@ -778,7 +719,7 @@ export default function EssentialDataPage() {
                       />
                       <div className="mt-6 px-4">
                         <Button
-                          className="w-full h-12 text-lg rounded-xl"
+                          className="w-full h-12 text-base rounded-xl"
                           onClick={() => setBirthDateSheetOpen(false)}
                           data-testid="button-confirm-birthdate"
                         >
@@ -792,7 +733,7 @@ export default function EssentialDataPage() {
 
               {/* Step 2-4: Single select */}
               {(currentStep === 2 || currentStep === 3) && stepConfig.options && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   {stepConfig.options.map(opt => {
                     const value = currentStep === 2 ? relationshipStatus : education;
                     const setValue = currentStep === 2 ? setRelationshipStatus : setEducation;
@@ -801,8 +742,9 @@ export default function EssentialDataPage() {
                         key={opt.value}
                         selected={value === opt.value}
                         onClick={() => setValue(opt.value)}
+                        className="p-4"
                       >
-                        <span className="text-lg font-semibold">{opt.label}</span>
+                        <span className="text-base font-semibold">{opt.label}</span>
                       </TappableCard>
                     );
                   })}
@@ -810,10 +752,10 @@ export default function EssentialDataPage() {
               )}
 
               {currentStep === 4 && (
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {/* OccupationSelector - NEW */}
                   <div>
-                    <label className="block text-lg font-semibold mb-4 text-center">职业信息</label>
+                    <label className="block text-base font-semibold mb-3 text-center">职业信息</label>
                     <OccupationSelector
                       selectedOccupationId={occupationId}
                       selectedWorkMode={workMode as WorkMode | null}
@@ -831,7 +773,7 @@ export default function EssentialDataPage() {
                   
                   {/* IndustrySelector - Keep for detailed industry classification */}
                   <div>
-                    <label className="block text-lg font-semibold mb-4 text-center">详细行业分类（可选）</label>
+                    <label className="block text-base font-semibold mb-3 text-center">详细行业分类（可选）</label>
                     <IndustrySelector
                       onSelect={(selection) => {
                         // Update all three-tier classification fields
@@ -861,28 +803,28 @@ export default function EssentialDataPage() {
 
               {/* Step 5: Hometown + Current City */}
               {currentStep === 5 && (
-                <div className="space-y-8">
+                <div className="space-y-6">
                   <div>
-                    <label className="block text-lg font-semibold mb-4 text-center">家乡</label>
+                    <label className="block text-base font-semibold mb-3 text-center">家乡</label>
                     <Input
                       value={hometown}
                       onChange={(e) => setHometown(e.target.value)}
                       placeholder="例如：湖南长沙"
-                      className="h-14 text-lg text-center rounded-2xl"
+                      className="h-12 text-base text-center rounded-xl"
                       data-testid="input-hometown"
                     />
                   </div>
                   <div>
-                    <label className="block text-lg font-semibold mb-4 text-center">常驻城市</label>
+                    <label className="block text-base font-semibold mb-3 text-center">常驻城市</label>
                     <div className="grid grid-cols-3 gap-3">
                       {CITY_OPTIONS.map(city => (
                         <TappableCard
                           key={city.value}
                           selected={currentCity === city.value}
                           onClick={() => setCurrentCity(city.value)}
-                          className="p-4 text-center"
+                          className="p-3 text-center"
                         >
-                          <span className="text-base font-semibold">{city.label}</span>
+                          <span className="text-sm font-semibold">{city.label}</span>
                         </TappableCard>
                       ))}
                     </div>
@@ -892,7 +834,7 @@ export default function EssentialDataPage() {
 
               {/* Step 6: Intent (multiSelect) - Duolingo Style */}
               {currentStep === 6 && (
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {/* Main intent options - 2 column grid with icons */}
                   <div className="grid grid-cols-2 gap-3">
                     {INTENT_OPTIONS.map((opt, index) => {
@@ -918,7 +860,7 @@ export default function EssentialDataPage() {
                           }}
                           disabled={isDisabled}
                           className={cn(
-                            "relative flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all duration-200",
+                            "relative flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-200",
                             isSelected
                               ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
                               : isDisabled
@@ -949,7 +891,7 @@ export default function EssentialDataPage() {
                             } : { scale: 1 }}
                             transition={{ duration: 0.3 }}
                             className={cn(
-                              "w-10 h-10 rounded-xl flex items-center justify-center",
+                              "w-8 h-8 rounded-xl flex items-center justify-center",
                               isSelected 
                                 ? "bg-primary text-primary-foreground" 
                                 : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
@@ -1001,7 +943,7 @@ export default function EssentialDataPage() {
                       toggleIntent("flexible");
                     }}
                     className={cn(
-                      "w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-dashed transition-all duration-200",
+                      "w-full flex items-center gap-4 p-3 rounded-xl border-2 border-dashed transition-all duration-200",
                       isFlexibleSelected
                         ? "border-purple-500 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 shadow-lg"
                         : "border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/30 hover:border-purple-400 hover:bg-purple-50/50 dark:hover:bg-purple-950/20"
@@ -1020,27 +962,27 @@ export default function EssentialDataPage() {
                         scale: { duration: 0.3 }
                       }}
                       className={cn(
-                        "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
+                        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
                         isFlexibleSelected 
                           ? "bg-gradient-to-br from-purple-500 to-pink-500 text-white" 
                           : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
                       )}
                     >
-                      <Shuffle className="w-6 h-6" />
+                      <Shuffle className="w-5 h-5" />
                     </motion.div>
                     
                     {/* Text */}
                     <div className="flex-1 text-left">
                       <p className={cn(
-                        "font-bold text-base",
+                        "font-bold text-sm",
                         isFlexibleSelected ? "text-purple-700 dark:text-purple-300" : "text-foreground"
                       )}>
                         {FLEXIBLE_OPTION.label}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {FLEXIBLE_OPTION.subtitle}
                       </p>
-                      <p className="text-xs text-muted-foreground/70 mt-1">
+                      <p className="text-xs text-muted-foreground/70 mt-0.5">
                         (我都感兴趣，帮我安排)
                       </p>
                     </div>
@@ -1106,7 +1048,7 @@ export default function EssentialDataPage() {
       >
         <div className="max-w-md mx-auto">
           <Button 
-            className="w-full h-14 rounded-2xl text-lg font-bold shadow-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 transition-all duration-200 border-0"
+            className="w-full h-12 rounded-xl text-base font-bold shadow-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 transition-all duration-200 border-0"
             onClick={handleNext}
             disabled={!canProceed() || saveMutation.isPending}
             data-testid="button-next"
