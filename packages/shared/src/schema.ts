@@ -119,13 +119,11 @@ export const users = pgTable("users", {
   hasCompletedInterestsCarousel: boolean("has_completed_interests_carousel").default(false), // New carousel-based interest selection
   
   // Interests & Topics (Step 2)
-  interestsTop: text("interests_top").array(), // 3-7 selected interests
+  // ❌ REMOVED: Legacy interest fields - now managed by user_interests table
+  // - interestsTop, primaryInterests, topicAvoidances, topicsHappy, topicsAvoid
+  // ✅ Use user_interests table for all interest data (Interest Carousel system)
   interestFavorite: text("interest_favorite"), // Deprecated: Single favorite interest - use primaryInterests
-  primaryInterests: text("primary_interests").array(), // 1-3 starred main interests for matching priority
   interestsRankedTop3: text("interests_ranked_top3").array(), // Deprecated: Top 3 ranked interests
-  topicsHappy: text("topics_happy").array(), // Deprecated: Topics user enjoys discussing - moving to simpler model
-  topicsAvoid: text("topics_avoid").array(), // Deprecated: Topics to avoid - use topicAvoidances
-  topicAvoidances: text("topic_avoidances").array(), // 饭局酒局不自在话题: politics, dating_pressure, workplace_gossip, money_finance, or empty for "都OK"
   interestsDeep: text("interests_deep").array(), // 深度兴趣（AI对话收集的更详细兴趣描述，语义描述，不含遥测数据）
   interestsTelemetry: jsonb("interests_telemetry"), // 兴趣滑动遥测数据 { version: string, events: [{interestId, choice, reactionTimeMs, timestamp}] }
   
@@ -346,7 +344,7 @@ export const eventPoolRegistrations = pgTable("event_pool_registrations", {
   // 用户临时偏好（软约束 - 仅用于本次活动）
   budgetRange: text("budget_range").array(), // 饭局预算范围，多选：["150以下", "150-200", "200-300", "300-500"]
   preferredLanguages: text("preferred_languages").array(), // 首选语言：["普通话", "粤语", "英语"]
-  socialGoals: text("social_goals").array(), // 社交目的：["交朋友", "扩展人脉", "放松心情", "行业交流", "flexible"]
+  eventIntent: text("event_intent").array(), // 本次活动社交目的：["交朋友", "扩展人脉", "放松心情", "行业交流", "flexible"]
   cuisinePreferences: text("cuisine_preferences").array(), // 饮食偏好：["中餐", "川菜", "粤菜", "日料", "西餐"]
   dietaryRestrictions: text("dietary_restrictions").array(), // 忌口：["素食", "不吃辣", "清真"]
   tasteIntensity: text("taste_intensity").array(), // 口味强度：["爱吃辣", "不辣/清淡为主"]

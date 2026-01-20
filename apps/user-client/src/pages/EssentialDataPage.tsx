@@ -72,8 +72,8 @@ const XIAOYUE_AVATARS: Record<XiaoyueMood, string> = {
 };
 
 const GENDER_OPTIONS = [
-  { value: "Woman", label: "女生", emoji: "👩" },
-  { value: "Man", label: "男生", emoji: "👨" },
+  { value: "女性", label: "女生", emoji: "👩" },
+  { value: "男性", label: "男生", emoji: "👨" },
 ];
 
 const RELATIONSHIP_OPTIONS = [
