@@ -91,7 +91,7 @@ export default function PersonalityRadarChart({
   const viewBoxSize = compactMode ? 140 : 320;
   const viewBoxPadding = compactMode ? -5 : -10;
   const maxWidth = compactMode ? 140 : 320;
-  const fontSize = compactMode ? 6 : 11; // Increased from 5 to 6 for better readability at 45% width
+  const fontSize = compactMode ? 6 : 11; // Increased from 5.5 to 6 for better readability at 45% width
 
   return (
     <div className={`flex flex-col items-center justify-center w-full ${compactMode ? 'py-1' : 'py-4'}`}>

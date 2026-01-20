@@ -5,7 +5,7 @@
  */
 
 import { motion } from "framer-motion";
-import { forwardRef } from "react";
+import { forwardRef, useState } from "react";
 import type { ShareCardVariant } from "@/lib/archetypeShareVariants";
 import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
@@ -31,6 +31,7 @@ interface PokemonShareCardProps {
   expression?: string; // Optional expression variant
   nickname?: string; // Optional user nickname
   isPreview?: boolean; // Whether this is preview mode (show animation) or download mode
+  hasExpressionAsset?: boolean; // Whether a dedicated expression asset exists
 }
 
 // Expression variant styles (CSS filters to simulate different moods)
@@ -54,10 +55,13 @@ const expressionStyles: Record<string, React.CSSProperties> = {
 };
 
 export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps>(
-  ({ archetype, archetypeEnglish, variant, illustrationUrl, rankings, traitScores, expression, nickname, isPreview = true }, ref) => {
+  ({ archetype, archetypeEnglish, variant, illustrationUrl, rankings, traitScores, expression, nickname, isPreview = true, hasExpressionAsset = false }, ref) => {
     // Get archetype tagline from config
     const archetypeInfo = archetypeConfig[archetype];
     const tagline = archetypeInfo?.tagline || "";
+    
+    // Track if the image failed to load (use emoji overlay as fallback)
+    const [imageLoadError, setImageLoadError] = useState(false);
 
     // Get expression style if valid expression is provided
     const illustrationStyle = expression && expressionStyles[expression] 
@@ -166,10 +170,11 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   onError={(e) => {
                     // Fallback to placeholder on error
                     (e.target as HTMLImageElement).style.display = 'none';
+                    setImageLoadError(true);
                   }}
                 />
-                {/* Expression overlay - CSS fallback if expression assets don't exist */}
-                {expression && (
+                {/* Expression overlay - only show if no dedicated expression asset exists */}
+                {expression && !hasExpressionAsset && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     {expression === 'starry' && <span className="text-6xl opacity-70 drop-shadow-lg">⭐</span>}
                     {expression === 'hearts' && <span className="text-6xl opacity-70 drop-shadow-lg">❤️</span>}
