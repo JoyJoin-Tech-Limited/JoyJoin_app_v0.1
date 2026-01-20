@@ -73,7 +73,6 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
         className="relative w-full max-w-[420px] max-h-[85vh] mx-auto"
         style={{ aspectRatio: '9/16' }}
-        data-card-root
       >
         {/* Card container with dual-layer border - gradient applied to border */}
         <div
@@ -172,10 +171,10 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                 {/* Expression overlay - CSS fallback if expression assets don't exist */}
                 {expression && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    {expression === 'starry' && <span className="text-6xl">⭐</span>}
-                    {expression === 'hearts' && <span className="text-6xl">❤️</span>}
-                    {expression === 'shy' && <span className="text-6xl">😳</span>}
-                    {expression === 'shocked' && <span className="text-6xl">😲</span>}
+                    {expression === 'starry' && <span className="text-6xl opacity-70 drop-shadow-lg">⭐</span>}
+                    {expression === 'hearts' && <span className="text-6xl opacity-70 drop-shadow-lg">❤️</span>}
+                    {expression === 'shy' && <span className="text-6xl opacity-70 drop-shadow-lg">😳</span>}
+                    {expression === 'shocked' && <span className="text-6xl opacity-70 drop-shadow-lg">😲</span>}
                   </div>
                 )}
               </div>
