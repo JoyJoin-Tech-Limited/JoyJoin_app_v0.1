@@ -8,6 +8,13 @@
       "when": 1767421434400,
       "tag": "0000_hesitant_molly_hayes",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1768780800000,
+      "tag": "20260119000000_rename_role_to_archetype",
+      "breakpoints": true
     }
   ]
 }

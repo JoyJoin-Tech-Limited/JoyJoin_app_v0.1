@@ -975,15 +975,39 @@ export default function DuolingoOnboardingPage() {
                       // 3. Sync pre-signup answers to the assessment session
                       const cachedAnswers = getV4CachedAnswers();
                       if (cachedAnswers.length > 0) {
-                        const syncResponse = await apiRequest("POST", "/api/assessment/v4/presignup-sync", {
-                          preSignupAnswers: cachedAnswers,
-                        });
-                        const syncData = await syncResponse.json();
+                        // Retry logic to handle session propagation delay
+                        let syncSuccess = false;
+                        let lastError: any = null;
                         
-                        // Store the synced session ID for personality test to resume
-                        if (syncData.sessionId) {
-                          localStorage.setItem("joyjoin_synced_session_id", syncData.sessionId);
-                          localStorage.setItem("joyjoin_synced_answer_count", String(syncData.totalCount || cachedAnswers.length));
+                        for (let attempt = 0; attempt < 3; attempt++) {
+                          try {
+                            // Small delay before retry to allow session to propagate
+                            if (attempt > 0) {
+                              await new Promise(resolve => setTimeout(resolve, 500));
+                            }
+                            
+                            const syncResponse = await apiRequest("POST", "/api/assessment/v4/presignup-sync", {
+                              preSignupAnswers: cachedAnswers,
+                            });
+                            const syncData = await syncResponse.json();
+                            
+                            // Store the synced session ID for personality test to resume
+                            if (syncData.sessionId) {
+                              localStorage.setItem("joyjoin_synced_session_id", syncData.sessionId);
+                              localStorage.setItem("joyjoin_synced_answer_count", String(syncData.totalCount || syncData.syncedCount || cachedAnswers.length));
+                              syncSuccess = true;
+                              break;
+                            }
+                          } catch (err) {
+                            lastError = err;
+                            console.warn(`[Presignup Sync] Attempt ${attempt + 1} failed:`, err);
+                          }
+                        }
+                        
+                        // If sync failed after all retries, log but don't block navigation
+                        // The personality test page will handle loading from localStorage cache
+                        if (!syncSuccess) {
+                          console.error("[Presignup Sync] Failed after 3 attempts:", lastError);
                         }
                       }
                       
