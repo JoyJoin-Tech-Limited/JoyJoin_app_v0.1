@@ -36,16 +36,20 @@ interface PokemonShareCardProps {
 // Expression variant styles (CSS filters to simulate different moods)
 const expressionStyles: Record<string, React.CSSProperties> = {
   starry: { 
-    filter: 'brightness(1.15) saturate(1.3) contrast(1.05)',
+    filter: 'brightness(1.2) saturate(1.4) contrast(1.1)',
+    transition: 'filter 0.3s ease-in-out',
   },
   hearts: { 
-    filter: 'hue-rotate(5deg) saturate(1.25) brightness(1.1)',
+    filter: 'hue-rotate(8deg) saturate(1.35) brightness(1.15)',
+    transition: 'filter 0.3s ease-in-out',
   },
   shy: { 
-    filter: 'brightness(1.05) saturate(0.95) sepia(0.15)',
+    filter: 'brightness(1.05) saturate(0.85) sepia(0.2) contrast(0.95)',
+    transition: 'filter 0.3s ease-in-out',
   },
   shocked: { 
-    filter: 'brightness(1.2) contrast(1.1) saturate(1.15)',
+    filter: 'brightness(1.25) contrast(1.15) saturate(1.2)',
+    transition: 'filter 0.3s ease-in-out',
   },
 };
 
