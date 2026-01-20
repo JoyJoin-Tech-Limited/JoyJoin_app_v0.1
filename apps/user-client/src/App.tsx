@@ -100,11 +100,6 @@ function AuthenticatedRouter() {
         <Route path="/personality-test" component={PersonalityTestPageV4} />
         <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
         <Route path="/personality-test/results" component={PersonalityTestResultPage} />
-        {/* 旧版聊天注册已移至 _backup_modules/chat-registration-legacy/ (2026-01-20) */}
-        {/* <Route path="/chat-registration" component={ChatRegistrationPage} /> */}
-        {/* <Route path="/registration" component={ChatRegistrationPage} /> */}
-        {/* <Route path="/registration/chat" component={ChatRegistrationPage} /> */}
-        {/* <Route path="/registration/form" component={RegistrationPage} /> */}
         <Route path="*" component={RedirectToOnboarding} />
       </Switch>
     );
@@ -154,7 +149,6 @@ function AuthenticatedRouter() {
       <Route path="/chats" component={ChatsPage} />
       <Route path="/chats/:eventId" component={EventChatDetailPage} />
       <Route path="/direct-chat/:threadId" component={DirectChatPage} />
-      {/* <Route path="/chat-registration" component={ChatRegistrationPage} /> */}
       <Route path="/profile" component={ProfilePage} />
       <Route path="/rewards" component={RewardsPage} />
       <Route path="/profile/edit" component={EditProfilePage} />
@@ -167,7 +161,6 @@ function AuthenticatedRouter() {
       <Route path="/profile/edit/social" component={EditSocialPage} />
       <Route path="/onboarding/extended" component={ExtendedDataPage} />
       <Route path="/onboarding/review" component={FinalProfileReviewPage} />
-      {/* <Route path="/registration/chat" component={ChatRegistrationPage} /> */}
       <Route path="/event/:id" component={EventDetailPage} />
       <Route path="/invite" component={InvitePage} />
       <Route path="/personality-test" component={PersonalityTestPageV4} />
@@ -220,12 +213,10 @@ function Router() {
       <Switch>
         {/* 新版 Duolingo-style Onboarding 流程 */}
         <Route path="/onboarding" component={DuolingoOnboardingPage} />
-        {/* AI对话注册（小悦）为唯一用户入口 */}
-        <Route path="/registration" component={ChatRegistrationPage} />
-        <Route path="/registration/chat" component={ChatRegistrationPage} />
-        <Route path="/register" component={ChatRegistrationPage} />
-        {/* 保留表单注册供内部测试使用 - DISABLED (RegistrationPage removed) */}
-        {/* <Route path="/registration/form" component={RegistrationPage} /> */}
+        {/* Registration routes redirect to Duolingo-style onboarding */}
+        <Route path="/registration" component={DuolingoOnboardingPage} />
+        <Route path="/registration/chat" component={DuolingoOnboardingPage} />
+        <Route path="/register" component={DuolingoOnboardingPage} />
         {/* All other routes show login page */}
         <Route path="*" component={LoginPage} />
       </Switch>
