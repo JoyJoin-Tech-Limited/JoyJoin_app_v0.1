@@ -120,6 +120,12 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
       // Disable preview mode (animation) before capturing
       setIsPreviewMode(false);
       
+      // Show progress feedback
+      toast({
+        title: "正在生成图片...",
+        description: "请稍候，确保最佳质量",
+      });
+      
       // Wait longer for everything to settle and ensure fonts are loaded
       await new Promise(resolve => setTimeout(resolve, 1000));
       
@@ -265,9 +271,12 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
       });
     } catch (error) {
       console.error('Download failed:', error);
+      
+      // Provide more specific error message
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
       toast({
         title: "下载失败",
-        description: "请尝试截图保存",
+        description: `${errorMessage}。请尝试截图保存或使用分享功能`,
         variant: "destructive",
       });
     }
