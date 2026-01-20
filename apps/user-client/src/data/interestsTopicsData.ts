@@ -21,3 +21,8 @@ export function getTopicLabel(id: string): string {
   const topic = getTopicById(id);
   return topic?.label || id;
 }
+
+// Stub for legacy backup modules that reference getInterestIcon
+export function getInterestIcon(_id: string): string {
+  return "";
+}
