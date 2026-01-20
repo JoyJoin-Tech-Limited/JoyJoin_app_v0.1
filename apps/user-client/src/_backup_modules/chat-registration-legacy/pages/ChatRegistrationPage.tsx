@@ -655,7 +655,7 @@ const quickReplyConfigs: QuickReplyConfig[] = [
   },
   {
     keywords: ["兴趣", "爱好", "喜欢做", "平时做", "业余"],
-    options: INTERESTS_OPTIONS.slice(0, 12).map(opt => ({ text: opt.label, icon: getInterestIcon(opt.id) })),
+    options: INTERESTS_OPTIONS.slice(0, 12).map((opt: any) => ({ text: opt.label, icon: getInterestIcon(opt.id) })),
     multiSelect: true,
     priority: 8
   },
@@ -740,7 +740,7 @@ const patternBasedConfigs: PatternBasedQuickReplyConfig[] = [
     requiredAny: ["兴趣", "爱好", "平时喜欢"],
     exclude: ["哪个最常做", "最喜欢哪个"],
     // 全量展示所有22个兴趣选项，每个使用专属图标
-    options: INTERESTS_OPTIONS.map(opt => ({ text: opt.label, icon: getInterestIcon(opt.id) })),
+    options: INTERESTS_OPTIONS.map((opt: any) => ({ text: opt.label, icon: getInterestIcon(opt.id) })),
     priority: 92,
     multiSelect: true,
     enforcePredefined: true,

@@ -6,6 +6,26 @@
 
 import { getTopicById, INTEREST_CATEGORIES } from "./interestCarouselData";
 
+// Type definitions for legacy compatibility
+export interface InterestOption {
+  id: string;
+  label: string;
+}
+
+export interface TopicGroup {
+  id: string;
+  label: string;
+  topics: Array<{ id: string; label: string }>;
+}
+
+// Empty arrays for legacy backup modules compatibility
+export const INTERESTS_OPTIONS: InterestOption[] = [];
+export const TOPICS_GROUPS: TopicGroup[] = [];
+
+export function getAllTopics(): Array<{ id: string; label: string }> {
+  return [];
+}
+
 /**
  * Get interest category label by ID
  */
