@@ -56,6 +56,24 @@ async function runMigration() {
     // Check current state before migration
     console.log('\n🔍 Checking current state...');
     
+    // First, check if the table exists
+    const tableExists = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'assessment_answers'
+      ) as exists
+    `);
+    
+    if (!tableExists.rows[0].exists) {
+      console.log('   ℹ️  Table "assessment_answers" does not exist yet');
+      console.log('   ✅ Migration skipped - table will be created by schema push');
+      console.log('   This is expected for new databases or before drizzle-kit push runs\n');
+      return; // Exit successfully without doing anything
+    }
+    
+    console.log('   ✅ Table "assessment_answers" exists');
+    
     // Count duplicates
     const duplicatesCheck = await client.query(`
       SELECT session_id, question_id, COUNT(*) as duplicate_count
