@@ -23,6 +23,7 @@ import {
   events,
   eventAttendance,
   users, 
+  userInterests,
   matchingConfig,
   invitationUses,
   invitations,
@@ -47,7 +48,7 @@ export interface UserWithProfile {
   educationLevel: string | null;
   archetype: string | null;
   secondaryArchetype: string | null;
-  interestsTop: string[] | null;
+  // ❌ REMOVED: interestsTop - now use getUserInterests() to fetch from user_interests table
   languagesComfort: string[] | null;
   hometown: string | null;  // 家乡（用于同乡亲和力）
   hometownAffinityOptin: boolean;  // 是否启用同乡匹配加分
@@ -56,7 +57,7 @@ export interface UserWithProfile {
   budgetRange: string[] | null;  // 饭局预算
   barBudgetRange: string[] | null;  // 酒局预算（每杯）
   preferredLanguages: string[] | null;
-  socialGoals: string[] | null;
+  eventIntent: string[] | null;  // ✅ RENAMED from socialGoals - 本次活动社交目的
   cuisinePreferences: string[] | null;
   dietaryRestrictions: string[] | null;
   tasteIntensity: string[] | null;
@@ -145,8 +146,84 @@ function calculateChemistryScore(user1: UserWithProfile, user2: UserWithProfile)
 }
 
 /**
- * 计算兴趣重叠度 (0-100)
+ * 获取用户兴趣 (统一从 user_interests 表)
+ * @returns { topics: string[], heatMap: Record<string, number> }
+ */
+async function getUserInterests(userId: string): Promise<{
+  topics: string[];
+  heatMap: Record<string, number>;
+}> {
+  const result = await db
+    .select()
+    .from(userInterests)
+    .where(eq(userInterests.userId, userId))
+    .limit(1);
+  
+  if (result.length === 0) {
+    return { topics: [], heatMap: {} };
+  }
+  
+  const selections = result[0].selections as any[];
+  
+  return {
+    topics: selections.map((s: any) => s.topicId),
+    heatMap: Object.fromEntries(
+      selections.map((s: any) => [s.topicId, s.heat])
+    )
+  };
+}
+
+/**
+ * 计算兴趣重叠度 (升级版 - 支持 Heat Level 加权)
+ * 优先使用 user_interests 表，回退到 legacy interestsTop
+ */
+async function calculateInterestScoreAsync(
+  user1Id: string, 
+  user2Id: string
+): Promise<number> {
+  const interests1 = await getUserInterests(user1Id);
+  const interests2 = await getUserInterests(user2Id);
+  
+  if (interests1.topics.length === 0 && interests2.topics.length === 0) {
+    return 70; // 默认中等分数
+  }
+  if (interests1.topics.length === 0 || interests2.topics.length === 0) {
+    return 30; // 一方缺失数据
+  }
+  
+  // 基础重叠 (Jaccard)
+  const commonTopics = interests1.topics.filter(t => 
+    interests2.topics.includes(t)
+  );
+  const union = new Set([...interests1.topics, ...interests2.topics]);
+  const jaccardRatio = commonTopics.length / union.size;
+  const baseScore = Math.round(jaccardRatio * 85 + 15);
+  
+  // Heat Level 加权匹配
+  let heatBonus = 0;
+  for (const topic of commonTopics) {
+    const heat1 = interests1.heatMap[topic] || 0;
+    const heat2 = interests2.heatMap[topic] || 0;
+    
+    if (heat1 === 25 && heat2 === 25) {
+      heatBonus += 15; // 双方都是 level 3
+    } else if (heat1 === 10 && heat2 === 10) {
+      heatBonus += 8;  // 双方都是 level 2
+    } else if ((heat1 === 25 && heat2 === 10) || (heat1 === 10 && heat2 === 25)) {
+      heatBonus += 10; // 一方 level 3, 一方 level 2
+    } else if (heat1 > 0 && heat2 > 0) {
+      heatBonus += 3;  // 其他情况
+    }
+  }
+  
+  heatBonus = Math.min(heatBonus, 20);
+  return Math.min(100, baseScore + heatBonus);
+}
+
+/**
+ * 计算兴趣重叠度 (0-100) - Legacy同步版本
  * 使用Jaccard系数：交集 / 并集
+ * @deprecated 保留用于向后兼容，新代码应使用 calculateInterestScoreAsync
  */
 function calculateInterestScore(user1: UserWithProfile, user2: UserWithProfile): number {
   const interests1 = user1.interestsTop || [];
@@ -246,8 +323,8 @@ function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile
   }
   
   // 社交目的兼容性（两种活动都使用）
-  const goals1 = user1.socialGoals || [];
-  const goals2 = user2.socialGoals || [];
+  const goals1 = user1.eventIntent || [];
+  const goals2 = user2.eventIntent || [];
   if (goals1.length > 0 && goals2.length > 0) {
     const goalsOverlap = goals1.filter(g => goals2.includes(g)).length;
     score += (goalsOverlap / Math.max(goals1.length, goals2.length)) * 100;
@@ -542,7 +619,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       userId: eventPoolRegistrations.userId,
       budgetRange: eventPoolRegistrations.budgetRange,
       preferredLanguages: eventPoolRegistrations.preferredLanguages,
-      socialGoals: eventPoolRegistrations.socialGoals,
+      eventIntent: eventPoolRegistrations.eventIntent,
       cuisinePreferences: eventPoolRegistrations.cuisinePreferences,
       dietaryRestrictions: eventPoolRegistrations.dietaryRestrictions,
       tasteIntensity: eventPoolRegistrations.tasteIntensity,
@@ -553,7 +630,6 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       educationLevel: users.educationLevel,
       archetype: users.archetype,
       secondaryArchetype: users.secondaryArchetype,
-      interestsTop: users.interestsTop,
       languagesComfort: users.languagesComfort,
       hometown: users.hometownRegionCity,
       hometownAffinityOptin: users.hometownAffinityOptin,
