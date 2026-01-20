@@ -60,11 +60,10 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
         className="relative w-full max-w-[420px] mx-auto"
-        style={{ aspectRatio: '9/16', maxHeight: '80vh' }}
       >
         {/* Card container with dual-layer border - gradient applied to border */}
         <div
-          className={`relative h-full bg-gradient-to-br ${variant.gradient} rounded-3xl p-2 shadow-2xl`}
+          className={`relative bg-gradient-to-br ${variant.gradient} rounded-3xl p-2 shadow-2xl`}
           style={{ boxShadow: `0 25px 70px ${variant.primaryColor}50` }}
         >
           {/* Enhanced dual-layer golden border - adjusted for 9:16 */}
@@ -114,7 +113,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
           )}
           
           {/* Content - white/light background as default */}
-          <div className="relative h-full bg-white/98 rounded-[20px] p-4 sm:p-5 flex flex-col overflow-hidden">
+          <div className="relative bg-white/98 rounded-[20px] p-4 sm:p-5 flex flex-col">
             {/* Header badge with long logo */}
             <div className="text-center mb-1.5 sm:mb-2">
               <div className="inline-flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full shadow-md">
