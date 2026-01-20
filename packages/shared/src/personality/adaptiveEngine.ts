@@ -740,7 +740,7 @@ export function getFinalResult(state: EngineState, userSecondaryData?: UserSecon
   if (!useV2) {
     // Legacy V1 matcher fallback - deprecated but kept for backward compatibility
     // Only used if explicitly set to false in config
-    console.warn('[adaptiveEngine] Using legacy V1 matcher - V2 is now the standard algorithm');
+    console.warn('[adaptiveEngine] Using deprecated V1 matcher - please migrate to V2 matcher for improved accuracy');
     const matches = findBestMatchingArchetypes(normalizedTraits, 2);
     
     return {
