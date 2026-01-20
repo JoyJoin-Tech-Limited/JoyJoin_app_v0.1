@@ -33,15 +33,41 @@ interface PokemonShareCardProps {
   isPreview?: boolean; // Whether this is preview mode (show animation) or download mode
 }
 
+// Expression variant styles (CSS filters to simulate different moods)
+const expressionStyles: Record<string, React.CSSProperties> = {
+  starry: { 
+    filter: 'brightness(1.2) saturate(1.4) contrast(1.1)',
+    transition: 'filter 0.3s ease-in-out',
+  },
+  hearts: { 
+    filter: 'hue-rotate(8deg) saturate(1.35) brightness(1.15)',
+    transition: 'filter 0.3s ease-in-out',
+  },
+  shy: { 
+    filter: 'brightness(1.05) saturate(0.85) sepia(0.2) contrast(0.95)',
+    transition: 'filter 0.3s ease-in-out',
+  },
+  shocked: { 
+    filter: 'brightness(1.25) contrast(1.15) saturate(1.2)',
+    transition: 'filter 0.3s ease-in-out',
+  },
+};
+
 export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps>(
   ({ archetype, archetypeEnglish, variant, illustrationUrl, rankings, traitScores, expression, nickname, isPreview = true }, ref) => {
     // Get archetype tagline from config
     const archetypeInfo = archetypeConfig[archetype];
     const tagline = archetypeInfo?.tagline || "";
 
+    // Get expression style if valid expression is provided
+    const illustrationStyle = expression && expressionStyles[expression] 
+      ? expressionStyles[expression] 
+      : {};
+
     return (
       <motion.div
         ref={ref}
+        data-card-root
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
@@ -137,6 +163,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   src={illustrationUrl}
                   alt={archetype}
                   className="w-full h-full object-contain drop-shadow-2xl"
+                  style={illustrationStyle}
                   onError={(e) => {
                     // Fallback to placeholder on error
                     (e.target as HTMLImageElement).style.display = 'none';
