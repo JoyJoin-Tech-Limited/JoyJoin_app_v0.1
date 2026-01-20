@@ -34,7 +34,7 @@ interface PoolRegistration {
   poolStatus: string;
   budgetRange: string[];
   preferredLanguages: string[];
-  socialGoals: string[];
+  eventIntent: string[];
   invitationRole?: "inviter" | "invitee" | null;
   relatedUserName?: string | null;
 }

@@ -260,8 +260,8 @@ export default function JoinBlindBoxSheet({
         selectedTasteIntensity,
         selectedCuisines,
 
-        // 参与意图：同时写入 socialGoals 和 intent，方便后端与其它模块复用
-        socialGoals: selectedIntent,
+        // 参与意图：同时写入 eventIntent 和 intent，方便后端与其它模块复用
+        eventIntent: selectedIntent,
         intent: selectedIntent,
 
         // 组队邀请相关

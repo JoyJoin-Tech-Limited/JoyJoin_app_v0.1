@@ -135,3 +135,19 @@ export const INDUSTRY_OPTIONS = [
   { value: "other", label: "其他行业" },
 ] as const;
 export type IndustryOption = typeof INDUSTRY_OPTIONS[number];
+
+// Intent/Social Goals options
+export const INTENT_OPTIONS = [
+  { value: "friends", label: "交新朋友", subtitle: "认识有趣的人" },
+  { value: "networking", label: "拓展人脉", subtitle: "扩大社交圈" },
+  { value: "discussion", label: "深度交流", subtitle: "走心的对话" },
+  { value: "fun", label: "轻松娱乐", subtitle: "开心就好" },
+  { value: "romance", label: "浪漫邂逅", subtitle: "遇见心动" },
+] as const;
+
+export const INTENT_FLEXIBLE_OPTION = {
+  value: "flexible",
+  label: "随缘",
+  subtitle: "交给小悦推荐",
+  description: "我都感兴趣，帮我安排"
+} as const;
