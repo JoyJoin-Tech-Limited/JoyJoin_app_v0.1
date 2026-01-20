@@ -121,7 +121,7 @@ export const DEFAULT_ASSESSMENT_CONFIG: AssessmentConfig = {
     dimensionCoverageThreshold: 0.75,
     maxExtraQuestions: 1,
   },
-  useV2Matcher: false,
+  useV2Matcher: true, // V2 matcher is now the standard algorithm
 };
 
 export const V2_ASSESSMENT_CONFIG: AssessmentConfig = {
