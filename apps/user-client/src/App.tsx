@@ -10,7 +10,7 @@ import { AchievementProvider } from "@/contexts/AchievementContext";
 import { AchievementPopup } from "@/components/achievements";
 import { DynamicAccentProvider } from "@/contexts/DynamicAccentContext";
 import LoginPage from "@/pages/LoginPage";
-// RegistrationPage removed - use ChatRegistrationPage or EventPoolRegistrationPage instead
+// RegistrationPage removed - using ChatRegistrationPage instead
 // import RegistrationPage from "@/pages/RegistrationPage";
 // RegistrationMethodPage kept for internal reference only - not imported in user routes
 // ChatRegistrationPage moved to _backup_modules/chat-registration-legacy/ (2026-01-20) - no longer routed
@@ -220,11 +220,11 @@ function Router() {
       <Switch>
         {/* 新版 Duolingo-style Onboarding 流程 */}
         <Route path="/onboarding" component={DuolingoOnboardingPage} />
-        {/* AI对话注册（小悦）为唯一用户入口 - ChatRegistrationPage moved to backup (2026-01-20) */}
-        {/* <Route path="/registration" component={ChatRegistrationPage} /> */}
-        {/* <Route path="/registration/chat" component={ChatRegistrationPage} /> */}
-        {/* <Route path="/register" component={ChatRegistrationPage} /> */}
-        {/* 保留表单注册供内部测试使用 - RegistrationPage removed, commented out */}
+        {/* AI对话注册（小悦）为唯一用户入口 */}
+        <Route path="/registration" component={ChatRegistrationPage} />
+        <Route path="/registration/chat" component={ChatRegistrationPage} />
+        <Route path="/register" component={ChatRegistrationPage} />
+        {/* 保留表单注册供内部测试使用 - DISABLED (RegistrationPage removed) */}
         {/* <Route path="/registration/form" component={RegistrationPage} /> */}
         {/* All other routes show login page */}
         <Route path="*" component={LoginPage} />
