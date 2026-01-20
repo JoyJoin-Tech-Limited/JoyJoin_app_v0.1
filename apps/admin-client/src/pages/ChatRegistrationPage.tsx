@@ -54,7 +54,7 @@ interface EnrichmentContext {
 }
 
 // 计算缺失字段（enrichment模式专用）
-// 注意：排除报名偏好字段（budgetRange/preferredLanguages/cuisinePreferences/dietaryRestrictions/decorStylePreferences/socialGoals）
+// 注意：排除报名偏好字段（budgetRange/preferredLanguages/cuisinePreferences/dietaryRestrictions/decorStylePreferences/eventIntent）
 // 这些字段在EventPoolRegistrationPage收集，enrichment只关注匹配核心信息
 function calculateMissingFields(user: UserType | null | undefined): { missingFields: string[]; existingProfile: EnrichmentContext['existingProfile'] } {
   if (!user) return { missingFields: [], existingProfile: {} };

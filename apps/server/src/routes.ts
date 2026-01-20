@@ -3037,7 +3037,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           preferredLanguages: [],
           tasteIntensity: [],
           cuisinePreferences: [],
-          socialGoals: [],
+          eventIntent: [],
           dietaryRestrictions: [],
           matchStatus: "pending",
         });
@@ -3312,7 +3312,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         selectedLanguages,
         selectedTasteIntensity,
         selectedCuisines,
-        socialGoals,
+        eventIntent,
         dietaryRestrictions,
         poolId,
         // 兼容旧版字段
@@ -3334,7 +3334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         selectedLanguages,
         selectedTasteIntensity,
         selectedCuisines,
-        socialGoals,
+        eventIntent,
         dietaryRestrictions,
         poolId,
         acceptNearby,
@@ -3427,7 +3427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         preferredLanguages: Array.isArray(selectedLanguages) ? selectedLanguages : [],
         tasteIntensity: Array.isArray(selectedTasteIntensity) ? selectedTasteIntensity : [],
         cuisinePreferences: Array.isArray(selectedCuisines) ? selectedCuisines : [],
-        socialGoals: Array.isArray(socialGoals) ? socialGoals : [],
+        eventIntent: Array.isArray(eventIntent) ? eventIntent : [],
         dietaryRestrictions: Array.isArray(dietaryRestrictions) ? dietaryRestrictions : [],
       };
 
@@ -3495,7 +3495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //       selectedLanguages,
   //       selectedTasteIntensity,
   //       selectedCuisines,
-  //       socialGoals,
+  //       eventIntent,
   //       dietaryRestrictions,
   //       poolId,
   //       // 兼容旧版字段
@@ -3517,7 +3517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //       selectedLanguages,
   //       selectedTasteIntensity,
   //       selectedCuisines,
-  //       socialGoals,
+  //       eventIntent,
   //       dietaryRestrictions,
   //       poolId,
   //       acceptNearby,
@@ -3589,7 +3589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //       preferredLanguages: Array.isArray(selectedLanguages) ? selectedLanguages : [],
   //       tasteIntensity: Array.isArray(selectedTasteIntensity) ? selectedTasteIntensity : [],
   //       cuisinePreferences: Array.isArray(selectedCuisines) ? selectedCuisines : [],
-  //       socialGoals: Array.isArray(socialGoals) ? socialGoals : [],
+  //       eventIntent: Array.isArray(eventIntent) ? eventIntent : [],
   //       dietaryRestrictions: Array.isArray(dietaryRestrictions) ? dietaryRestrictions : [],
   //     };
 
@@ -3657,7 +3657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //       selectedLanguages,
   //       selectedTasteIntensity,
   //       selectedCuisines,
-  //       socialGoals,
+  //       eventIntent,
   //       dietaryRestrictions,
   //       // 兼容旧版字段
   //       area,
@@ -3678,7 +3678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //       selectedLanguages,
   //       selectedTasteIntensity,
   //       selectedCuisines,
-  //       socialGoals,
+  //       eventIntent,
   //       dietaryRestrictions,
   //       acceptNearby,
   //       inviteFriends,
@@ -3785,7 +3785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //       preferredLanguages: Array.isArray(selectedLanguages) ? selectedLanguages : [],
   //       tasteIntensity: Array.isArray(selectedTasteIntensity) ? selectedTasteIntensity : [],
   //       cuisinePreferences: Array.isArray(selectedCuisines) ? selectedCuisines : [],
-  //       socialGoals: Array.isArray(socialGoals) ? socialGoals : [],
+  //       eventIntent: Array.isArray(eventIntent) ? eventIntent : [],
   //       dietaryRestrictions: Array.isArray(dietaryRestrictions) ? dietaryRestrictions : [],
   //     };
 
@@ -3853,7 +3853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //       selectedLanguages,
   //       selectedTasteIntensity,
   //       selectedCuisines,
-  //       socialGoals,
+  //       eventIntent,
   //       dietaryRestrictions,
   //       // 兼容旧版字段
   //       area,
@@ -3874,7 +3874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //       selectedLanguages,
   //       selectedTasteIntensity,
   //       selectedCuisines,
-  //       socialGoals,
+  //       eventIntent,
   //       dietaryRestrictions,
   //       acceptNearby,
   //       inviteFriends,
@@ -3985,7 +3985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //       preferredLanguages: Array.isArray(selectedLanguages) ? selectedLanguages : [],
   //       tasteIntensity: Array.isArray(selectedTasteIntensity) ? selectedTasteIntensity : [],
   //       cuisinePreferences: Array.isArray(selectedCuisines) ? selectedCuisines : [],
-  //       socialGoals: Array.isArray(socialGoals) ? socialGoals : [],
+  //       eventIntent: Array.isArray(eventIntent) ? eventIntent : [],
   //       dietaryRestrictions: Array.isArray(dietaryRestrictions) ? dietaryRestrictions : [],
   //     };
 
@@ -7874,7 +7874,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
           userId: eventPoolRegistrations.userId,
           budgetRange: eventPoolRegistrations.budgetRange,
           preferredLanguages: eventPoolRegistrations.preferredLanguages,
-          socialGoals: eventPoolRegistrations.socialGoals,
+          eventIntent: eventPoolRegistrations.eventIntent,
           cuisinePreferences: eventPoolRegistrations.cuisinePreferences,
           dietaryRestrictions: eventPoolRegistrations.dietaryRestrictions,
           tasteIntensity: eventPoolRegistrations.tasteIntensity,
@@ -8200,7 +8200,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         userId,
         budgetRange: req.body.budgetRange || [],
         preferredLanguages: req.body.preferredLanguages || [],
-        socialGoals: req.body.socialGoals || [],
+        eventIntent: req.body.eventIntent || [],
         cuisinePreferences: req.body.cuisinePreferences || [],
         dietaryRestrictions: req.body.dietaryRestrictions || [],
         tasteIntensity: req.body.tasteIntensity || 'medium',
@@ -8282,7 +8282,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         poolId: eventPoolRegistrations.poolId,
         budgetRange: eventPoolRegistrations.budgetRange,
         preferredLanguages: eventPoolRegistrations.preferredLanguages,
-        socialGoals: eventPoolRegistrations.socialGoals,
+        eventIntent: eventPoolRegistrations.eventIntent,
         matchStatus: eventPoolRegistrations.matchStatus,
         assignedGroupId: eventPoolRegistrations.assignedGroupId,
         matchScore: eventPoolRegistrations.matchScore,
@@ -8536,7 +8536,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           fieldOfStudy: users.fieldOfStudy,
           languagesComfort: users.languagesComfort,
           // Event-specific preferences from registration
-          intent: eventPoolRegistrations.socialGoals,
+          intent: eventPoolRegistrations.eventIntent,
         })
         .from(eventPoolRegistrations)
         .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
