@@ -10,8 +10,11 @@ import EnergyRing from "./EnergyRing";
 import MysteryBadge from "./MysteryBadge";
 import type { AttendeeData } from "@/lib/attendeeAnalytics";
 import { calculateMatchQuality } from "@/lib/attendeeAnalytics";
-import { getInterestLabel, getTopicLabel } from "@/data/interestsTopicsData";
+import { getInterestLabel } from "@shared/interests";
 import { getArchetypeImage } from "@/lib/archetypeImages";
+
+// Topic label helper (topics are free-form strings, so we just return them as-is)
+const getTopicLabel = (topic: string) => topic;
 
 interface ConnectionTag {
   icon: string;

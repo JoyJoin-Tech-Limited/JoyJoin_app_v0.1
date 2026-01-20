@@ -224,21 +224,27 @@ async function calculateInterestScoreAsync(
  * 计算兴趣重叠度 (0-100) - Legacy同步版本
  * 使用Jaccard系数：交集 / 并集
  * @deprecated 保留用于向后兼容，新代码应使用 calculateInterestScoreAsync
+ * Note: interestsTop field removed - returning default score
  */
 function calculateInterestScore(user1: UserWithProfile, user2: UserWithProfile): number {
+  // interestsTop field was removed - return default middle score
+  return 70; // Default middle score since interests are now managed separately
+  
+  /* Legacy code (commented out since interestsTop was removed):
   const interests1 = user1.interestsTop || [];
   const interests2 = user2.interestsTop || [];
   
   if (interests1.length === 0 && interests2.length === 0) return 70; // 都没有兴趣记录，默认中等分数
   if (interests1.length === 0 || interests2.length === 0) return 30; // 一方没有记录，低分
   
-  const overlap = interests1.filter(i => interests2.includes(i)).length;
+  const overlap = interests1.filter((i: string) => interests2.includes(i)).length;
   const union = new Set([...interests1, ...interests2]).size;
   
   // Jaccard系数：(交集大小 / 并集大小) * 85 + 15
   // 无重叠=15分，完全重叠=100分
   const jaccardRatio = overlap / union;
   return Math.round(jaccardRatio * 85 + 15);
+  */
 }
 
 /**

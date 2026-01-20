@@ -40,8 +40,11 @@ import {
   getSocialStyleDisplay,
 } from "@/lib/userFieldMappings";
 import { getOccupationDisplayLabel, getIndustryDisplayLabel, WORK_MODE_TO_LABEL, INDUSTRY_ID_TO_LABEL, type WorkMode } from "@shared/occupations";
-import { getInterestLabel, getTopicLabel } from "@/data/interestsTopicsData";
+import { getInterestLabel } from "@shared/interests";
 import { calculateProfileCompletion } from "@/lib/profileCompletion";
+
+// Topic label helper (topics are free-form strings, so we just return them as-is)
+const getTopicLabel = (topic: string) => topic;
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import xiaoyueAvatar from "@/assets/Xiao_Yue_Avatar-04.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";

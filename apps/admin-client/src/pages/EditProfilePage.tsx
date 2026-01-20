@@ -21,7 +21,10 @@ import {
   getSocialStyleDisplay,
 } from "@/lib/userFieldMappings";
 import { getOccupationDisplayLabel, getIndustryDisplayLabel, WORK_MODE_TO_LABEL, INDUSTRY_ID_TO_LABEL, type WorkMode } from "@shared/occupations";
-import { getInterestLabel, getTopicLabel } from "@/data/interestsTopicsData";
+import { getInterestLabel } from "@shared/interests";
+
+// Topic label helper (topics are free-form strings, so we just return them as-is)
+const getTopicLabel = (topic: string) => topic;
 
 interface Field {
   label: string;
