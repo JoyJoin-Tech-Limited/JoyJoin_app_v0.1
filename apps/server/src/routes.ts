@@ -2125,6 +2125,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ❌ DEPRECATED: Legacy interests-topics endpoint
+  // Use /api/user/interests (Interest Carousel) instead
+  /*
   app.post('/api/user/interests-topics', isPhoneAuthenticated, async (req: any, res) => {
     try {
       const userId = req.session.userId;
@@ -2161,6 +2164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update interests and topics" });
     }
   });
+  */
 
   // Validation schemas for carousel-based interest selection
   const interestSelectionSchema = z.object({
