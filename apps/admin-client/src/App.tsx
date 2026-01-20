@@ -8,7 +8,7 @@ import { useEffect } from "react";
 import LoginPage from "@/pages/LoginPage";
 import RegistrationPage from "@/pages/RegistrationPage";
 // RegistrationMethodPage kept for internal reference only - not imported in user routes
-import ChatRegistrationPage from "@/pages/ChatRegistrationPage";
+// ChatRegistrationPage moved to _backup_modules/chat-registration-legacy/ (2026-01-20) - no longer routed
 import InterestsTopicsPage from "@/pages/InterestsTopicsPage";
 import PersonalityTestPage from "@/pages/PersonalityTestPage";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
@@ -90,9 +90,9 @@ function AuthenticatedRouter() {
   if (needsRegistration) {
     return (
       <Switch>
-        {/* AI对话注册（小悦）为唯一用户入口 */}
-        <Route path="/registration" component={ChatRegistrationPage} />
-        <Route path="/registration/chat" component={ChatRegistrationPage} />
+        {/* ChatRegistrationPage moved to _backup_modules (2026-01-20) - routes disabled */}
+        {/* <Route path="/registration" component={ChatRegistrationPage} /> */}
+        {/* <Route path="/registration/chat" component={ChatRegistrationPage} /> */}
         {/* 保留表单注册供内部测试使用 */}
         <Route path="/registration/form" component={RegistrationPage} />
         <Route path="*" component={RedirectToRegistration} />
@@ -154,7 +154,8 @@ function AuthenticatedRouter() {
       <Route path="/profile/edit/intent" component={EditIntentPage} />
       <Route path="/profile/edit/interests" component={EditInterestsPage} />
       <Route path="/profile/edit/social" component={EditSocialPage} />
-      <Route path="/registration/chat" component={ChatRegistrationPage} />
+      {/* ChatRegistrationPage route disabled (2026-01-20) */}
+      {/* <Route path="/registration/chat" component={ChatRegistrationPage} /> */}
       <Route path="/event/:id" component={EventDetailPage} />
       <Route path="/invite" component={InvitePage} />
       <Route path="/personality-test" component={PersonalityTestPage} />
@@ -211,10 +212,10 @@ function Router() {
   if (!isAuthenticated) {
     return (
       <Switch>
-        {/* AI对话注册（小悦）为唯一用户入口 */}
-        <Route path="/registration" component={ChatRegistrationPage} />
-        <Route path="/registration/chat" component={ChatRegistrationPage} />
-        <Route path="/register" component={ChatRegistrationPage} />
+        {/* ChatRegistrationPage moved to _backup_modules (2026-01-20) - routes disabled */}
+        {/* <Route path="/registration" component={ChatRegistrationPage} /> */}
+        {/* <Route path="/registration/chat" component={ChatRegistrationPage} /> */}
+        {/* <Route path="/register" component={ChatRegistrationPage} /> */}
         {/* 保留表单注册供内部测试使用 */}
         <Route path="/registration/form" component={RegistrationPage} />
         {/* All other routes show login page */}
