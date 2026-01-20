@@ -422,9 +422,9 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
               exit={{ opacity: 0, x: -10 }}
               className="absolute left-2 top-1/2 -translate-y-1/2 z-20 pointer-events-none"
             >
-              <div className="flex flex-col items-center bg-black/20 dark:bg-white/20 backdrop-blur-sm rounded-full p-2">
-                <ChevronLeft className="w-6 h-6 text-white dark:text-black" />
-                <span className="text-xs text-white dark:text-black">滑动</span>
+              <div className="flex flex-col items-center bg-black/40 backdrop-blur-sm rounded-full p-2">
+                <ChevronLeft className="w-6 h-6 text-white" />
+                <span className="text-xs text-white">滑动</span>
               </div>
             </motion.div>
           )}
@@ -435,9 +435,9 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
               exit={{ opacity: 0, x: 10 }}
               className="absolute right-2 top-1/2 -translate-y-1/2 z-20 pointer-events-none"
             >
-              <div className="flex flex-col items-center bg-black/20 dark:bg-white/20 backdrop-blur-sm rounded-full p-2">
-                <ChevronRight className="w-6 h-6 text-white dark:text-black" />
-                <span className="text-xs text-white dark:text-black">滑动</span>
+              <div className="flex flex-col items-center bg-black/40 backdrop-blur-sm rounded-full p-2">
+                <ChevronRight className="w-6 h-6 text-white" />
+                <span className="text-xs text-white">滑动</span>
               </div>
             </motion.div>
           )}
@@ -540,7 +540,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
               "disabled:cursor-not-allowed",
               canContinue 
                 ? "bg-primary text-primary-foreground hover:brightness-95" 
-                : "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                : "bg-gray-400 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
             )}
           >
             继续 {totalSelections >= 3 && `(${totalSelections} 个兴趣)`}

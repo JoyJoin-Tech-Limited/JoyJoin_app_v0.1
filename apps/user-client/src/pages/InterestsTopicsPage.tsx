@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Check, Star, Info, Flame, Sparkles, Ban, AlertCircle } from "lucide-react";
+import { Check, Star, Info, Flame, Ban, AlertCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { motion, AnimatePresence } from "framer-motion";
 import RegistrationProgress from "@/components/RegistrationProgress";
@@ -133,6 +133,15 @@ export default function InterestsTopicsPage() {
     }, duration);
   }, []);
 
+  // Helper function to clear inline error
+  const clearInlineError = useCallback(() => {
+    setInlineError(null);
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
+      errorTimeoutRef.current = null;
+    }
+  }, []);
+
   const form = useForm<InterestsTopics>({
     resolver: zodResolver(interestsTopicsSchema),
     defaultValues: {
@@ -179,22 +188,14 @@ export default function InterestsTopicsPage() {
         setPrimaryInterests(primaryInterests.filter(id => id !== interestId));
       }
       // Clear any errors
-      setInlineError(null);
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-        errorTimeoutRef.current = null;
-      }
+      clearInlineError();
     } else {
       if (selectedInterests.length >= 7) {
         showInlineError("最多选择7个兴趣");
         return;
       }
       setSelectedInterests([...selectedInterests, interestId]);
-      setInlineError(null);
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-        errorTimeoutRef.current = null;
-      }
+      clearInlineError();
     }
   };
 
@@ -203,44 +204,28 @@ export default function InterestsTopicsPage() {
     
     if (primaryInterests.includes(interestId)) {
       setPrimaryInterests(primaryInterests.filter(id => id !== interestId));
-      setInlineError(null);
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-        errorTimeoutRef.current = null;
-      }
+      clearInlineError();
     } else {
       if (primaryInterests.length >= 3) {
         showInlineError("最多标记3个主要兴趣");
         return;
       }
       setPrimaryInterests([...primaryInterests, interestId]);
-      setInlineError(null);
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-        errorTimeoutRef.current = null;
-      }
+      clearInlineError();
     }
   };
 
   const toggleTopicAvoidance = (topicId: string) => {
     if (topicAvoidances.includes(topicId)) {
       setTopicAvoidances(topicAvoidances.filter(id => id !== topicId));
-      setInlineError(null);
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-        errorTimeoutRef.current = null;
-      }
+      clearInlineError();
     } else {
       if (topicAvoidances.length >= 4) {
         showInlineError("最多选择4个话题");
         return;
       }
       setTopicAvoidances([...topicAvoidances, topicId]);
-      setInlineError(null);
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-        errorTimeoutRef.current = null;
-      }
+      clearInlineError();
     }
   };
 
@@ -255,11 +240,7 @@ export default function InterestsTopicsPage() {
         showInlineError("请点击星标标记1-3个主要兴趣");
         return;
       }
-      setInlineError(null);
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-        errorTimeoutRef.current = null;
-      }
+      clearInlineError();
       setShowCelebration(true);
       setTimeout(() => setStep(2), 400);
     } else {
