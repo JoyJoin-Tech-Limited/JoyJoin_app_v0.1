@@ -53,6 +53,33 @@ async function runMigration() {
       throw err;
     }
 
+    // Check if required tables exist
+    console.log('\n🔍 Checking if required tables exist...');
+    const usersTableExists = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'users'
+      ) as exists
+    `);
+    
+    const roleResultsTableExists = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'role_results'
+      ) as exists
+    `);
+    
+    if (!usersTableExists.rows[0].exists || !roleResultsTableExists.rows[0].exists) {
+      console.log('   ℹ️  Required tables do not exist yet');
+      console.log('   ✅ Migration skipped - tables will be created by schema push');
+      console.log('   This is expected for new databases or before drizzle-kit push runs\n');
+      return; // Exit successfully without doing anything
+    }
+    
+    console.log('   ✅ Required tables exist');
+
     console.log('\n🚀 Executing migration...');
     console.log('   This will rename columns from *_role to *_archetype');
     console.log('   Migration is idempotent - safe to run multiple times\n');
