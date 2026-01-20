@@ -615,13 +615,10 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   hometownRegionCity: true,
   languagesComfort: true,
   intent: true,
-  interestsTop: true,
-  primaryInterests: true,
+  // Removed: interestsTop, primaryInterests, topicsHappy, topicsAvoid, topicAvoidances
+  // These fields were removed from users table - now managed by user_interests table
   interestsDeep: true,
   interestsTelemetry: true,
-  topicsHappy: true,
-  topicsAvoid: true,
-  topicAvoidances: true,
   cuisinePreference: true,
   socialStyle: true,
   icebreakerRole: true,
