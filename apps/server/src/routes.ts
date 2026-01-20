@@ -11228,6 +11228,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     try {
       const userId = req.session?.userId;
       if (!userId) {
+        console.warn('[Presignup Sync] No userId in session - session may not be ready yet');
         return res.status(401).json({ message: 'Unauthorized - must be logged in' });
       }
 
