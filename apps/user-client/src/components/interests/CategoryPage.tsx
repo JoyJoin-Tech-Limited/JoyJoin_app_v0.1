@@ -9,15 +9,22 @@ interface CategoryPageProps {
 
 export function CategoryPage({ category, selections, onTopicTap }: CategoryPageProps) {
   return (
-    <div className="w-full h-full flex flex-col px-4 py-6">
-      {/* Category header */}
-      <div className="text-center mb-6">
-        <div className="text-4xl mb-2">{category.emoji}</div>
-        <h2 className="text-xl font-bold">{category.name}</h2>
+    <div className="w-full">
+      {/* Sticky category header - positioned below main header */}
+      <div className="sticky top-[88px] bg-background/95 backdrop-blur-sm z-10 px-3 py-2 border-b">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">{category.emoji}</span>
+          <h3 className="text-sm font-bold">{category.name}</h3>
+          <span className="ml-auto text-xs text-muted-foreground">
+            {Object.keys(selections).filter(id => 
+              category.topics.some(t => t.id === id) && selections[id] > 0
+            ).length}/{category.topics.length}
+          </span>
+        </div>
       </div>
 
-      {/* 2x5 grid layout */}
-      <div className="grid grid-cols-2 gap-2.5 flex-1 content-start">
+      {/* 4-column grid layout */}
+      <div className="grid grid-cols-4 gap-1.5 px-2 py-3">
         {category.topics.map((topic) => (
           <InterestBubble
             key={topic.id}
