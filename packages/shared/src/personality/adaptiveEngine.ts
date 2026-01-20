@@ -20,47 +20,8 @@ import { prototypeMatcher, findBestMatchingArchetypesV2, ExplainableMatchResult,
 import { applyZScoreCapping, calculateSdiIndex, applySdiCorrection } from './traitCorrection';
 
 // Feature flag - can be overridden via config.useV2Matcher
-// Default false to ensure opt-in behavior - V2 only enabled when explicitly set in config
-export const ENABLE_MATCHER_V2_DEFAULT = false;
-
-// A/B test cohort percentage (0-100) for V2 matcher rollout
-// Set to 0 for disabled, 100 for full rollout
-export const V2_MATCHER_AB_PERCENTAGE = 50;
-
-/**
- * Deterministic cohort assignment using user ID hash
- * Same user always gets same cohort assignment for consistent experience
- * @param userId - User ID (number or string)
- * @param rolloutPercentage - Percentage of users assigned to V2 (0-100)
- * @returns true if user should use V2 matcher
- */
-export function shouldUseV2Matcher(
-  userId: number | string,
-  rolloutPercentage: number = V2_MATCHER_AB_PERCENTAGE
-): boolean {
-  if (rolloutPercentage <= 0) return false;
-  if (rolloutPercentage >= 100) return true;
-
-  // Simple hash function for deterministic assignment
-  const idStr = String(userId);
-  let hash = 0;
-  for (let i = 0; i < idStr.length; i++) {
-    const char = idStr.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  
-  // Map hash to 0-99 range and compare against rollout percentage
-  const bucket = Math.abs(hash) % 100;
-  return bucket < rolloutPercentage;
-}
-
-/**
- * Get cohort label for analytics/logging
- */
-export function getCohortLabel(userId: number | string): 'v1' | 'v2' {
-  return shouldUseV2Matcher(userId) ? 'v2' : 'v1';
-}
+// Default true - V2 matcher is now the standard algorithm for consistency
+export const ENABLE_MATCHER_V2_DEFAULT = true;
 
 const ALL_TRAITS: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
 
@@ -773,10 +734,14 @@ export function getFinalResult(state: EngineState, userSecondaryData?: UserSecon
   // }
   void sdiIndex; // Suppress unused variable warning
   
+  // V2 matcher is now the standard algorithm
   const useV2 = state.config.useV2Matcher ?? ENABLE_MATCHER_V2_DEFAULT;
-  if (useV2) {
-    const matches = prototypeMatcher.findBestMatches(normalizedTraits, userSecondaryData, 3);
-    const decisiveCheck = prototypeMatcher.isDecisiveMatch(matches);
+  
+  if (!useV2) {
+    // Legacy V1 matcher fallback - deprecated but kept for backward compatibility
+    // Only used if explicitly set to false in config
+    console.warn('[adaptiveEngine] Using deprecated V1 matcher - please migrate to V2 matcher for improved accuracy');
+    const matches = findBestMatchingArchetypes(normalizedTraits, 2);
     
     return {
       primaryArchetype: matches[0]?.archetype || '开心柯基',
@@ -784,14 +749,13 @@ export function getFinalResult(state: EngineState, userSecondaryData?: UserSecon
       traitScores: normalizedTraits,
       confidences,
       validityScore: calculateValidityScore(state),
-      algorithmVersion: prototypeMatcher.getAlgorithmVersion(),
-      matchDetails: matches[0],
-      isDecisive: decisiveCheck.decisive,
-      decisiveReason: decisiveCheck.reason,
+      algorithmVersion: 'v1.0-legacy',
     };
   }
   
-  const matches = findBestMatchingArchetypes(normalizedTraits, 2);
+  // Standard V2 matcher path
+  const matches = prototypeMatcher.findBestMatches(normalizedTraits, userSecondaryData, 3);
+  const decisiveCheck = prototypeMatcher.isDecisiveMatch(matches);
   
   return {
     primaryArchetype: matches[0]?.archetype || '开心柯基',
@@ -799,7 +763,10 @@ export function getFinalResult(state: EngineState, userSecondaryData?: UserSecon
     traitScores: normalizedTraits,
     confidences,
     validityScore: calculateValidityScore(state),
-    algorithmVersion: 'v1.0',
+    algorithmVersion: prototypeMatcher.getAlgorithmVersion(),
+    matchDetails: matches[0],
+    isDecisive: decisiveCheck.decisive,
+    decisiveReason: decisiveCheck.reason,
   };
 }
 

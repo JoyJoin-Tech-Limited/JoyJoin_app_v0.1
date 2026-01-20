@@ -1561,37 +1561,33 @@ const ARCHETYPE_TAGLINE: Record<string, string> = {
  * 获取风格谱系结果 - 用于趣味化呈现
  * @param userTraits 用户特质分数
  * @param userSecondaryData 用户二级数据（可选）
- * @param overridePrimaryArchetype 覆盖主原型（可选，仅在分数接近时使用以保持一致性）
+ * @param savedPrimaryArchetype 数据库保存的主原型（推荐传入以保持一致性和性能）
  */
 export function getStyleSpectrum(
   userTraits: Record<TraitKey, number>,
   userSecondaryData?: UserSecondaryData,
-  overridePrimaryArchetype?: string
+  savedPrimaryArchetype?: string
 ): StyleSpectrumResult {
   const matches = prototypeMatcher.findBestMatches(userTraits, userSecondaryData, 4);
   
-  // FIX: Only use override if its score is within 5 points of the top match
-  // This prevents showing a lower-scoring archetype as primary
+  // 优先使用数据库保存的原型，确保与测评时的结果一致
+  // Use saved archetype from database to ensure consistency with assessment result
   let orderedMatches = [...matches];
-  if (overridePrimaryArchetype && matches.length > 0) {
-    const topScore = matches[0].score;
-    const overrideIndex = matches.findIndex(m => m.archetype === overridePrimaryArchetype);
+  if (savedPrimaryArchetype && matches.length > 0) {
+    const overrideIndex = matches.findIndex(m => m.archetype === savedPrimaryArchetype);
     
-    if (overrideIndex > 0) {
-      const overrideMatch = matches[overrideIndex];
-      // Only use override if it's within 5 points of top score
-      if (topScore - overrideMatch.score <= 5) {
-        orderedMatches = [overrideMatch, ...matches.filter((_, i) => i !== overrideIndex)];
-      }
-      // Otherwise, keep the natural order (highest score first)
-    } else if (overrideIndex === -1) {
-      // Override archetype not in top 4, check if it should even be primary
+    if (overrideIndex >= 0) {
+      // Found saved archetype in top 4, move it to first position
+      const savedMatch = matches[overrideIndex];
+      orderedMatches = [savedMatch, ...matches.filter((_, i) => i !== overrideIndex)];
+    } else {
+      // Saved archetype not in top 4, fetch it from all 12
       const allMatches = prototypeMatcher.findBestMatches(userTraits, userSecondaryData, 12);
-      const found = allMatches.find(m => m.archetype === overridePrimaryArchetype);
-      if (found && topScore - found.score <= 5) {
+      const found = allMatches.find(m => m.archetype === savedPrimaryArchetype);
+      if (found) {
         orderedMatches = [found, ...matches.slice(0, 3)];
       }
-      // Otherwise, keep the natural order
+      // Otherwise, keep the natural order (fallback for legacy data)
     }
   }
   
