@@ -417,9 +417,9 @@ function calculateDiversityScore(user1: UserWithProfile, user2: UserWithProfile)
  * 
  * 注意：diversity在小组层面单独计算，不在配对层面重复计算
  */
-function calculatePairScore(user1: UserWithProfile, user2: UserWithProfile): number {
+async function calculatePairScore(user1: UserWithProfile, user2: UserWithProfile): Promise<number> {
   const chemistry = calculateChemistryScore(user1, user2);
-  const interest = calculateInterestScore(user1, user2);
+  const interest = await calculateInterestScoreAsync(user1.userId, user2.userId);
   const language = calculateLanguageScore(user1, user2);
   const preference = calculatePreferenceScore(user1, user2);
   const hometown = calculateHometownAffinityScore(user1, user2);
@@ -471,7 +471,7 @@ function calculatePairScore(user1: UserWithProfile, user2: UserWithProfile): num
  * 计算小组内所有成员的平均配对兼容性分数
  * 包含：chemistry + interest + preference + language（不含diversity）
  */
-function calculateGroupPairScore(members: UserWithProfile[]): number {
+async function calculateGroupPairScore(members: UserWithProfile[]): Promise<number> {
   if (members.length < 2) return 0;
   
   let totalScore = 0;
@@ -479,7 +479,7 @@ function calculateGroupPairScore(members: UserWithProfile[]): number {
   
   for (let i = 0; i < members.length; i++) {
     for (let j = i + 1; j < members.length; j++) {
-      totalScore += calculatePairScore(members[i], members[j]);
+      totalScore += await calculatePairScore(members[i], members[j]);
       pairCount++;
     }
   }
@@ -704,7 +704,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
   const pairScores: { user1: UserWithProfile; user2: UserWithProfile; score: number; isInvited: boolean }[] = [];
   for (let i = 0; i < eligibleUsers.length; i++) {
     for (let j = i + 1; j < eligibleUsers.length; j++) {
-      let score = calculatePairScore(
+      let score = await calculatePairScore(
         eligibleUsers[i] as UserWithProfile, 
         eligibleUsers[j] as UserWithProfile
       );
@@ -754,7 +754,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
         // 计算候选人与当前小组成员的平均分数
         let totalScore = 0;
         for (const member of groupMembers) {
-          totalScore += calculatePairScore(candidate, member);
+          totalScore += await calculatePairScore(candidate, member);
         }
         const avgScore = totalScore / groupMembers.length;
         
@@ -774,7 +774,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     
     // 只保留达到最小人数的小组
     if (groupMembers.length >= minGroupSize) {
-      const avgPairScore = calculateGroupPairScore(groupMembers);
+      const avgPairScore = await calculateGroupPairScore(groupMembers);
       const diversity = calculateGroupDiversity(groupMembers);
       const energyBalance = calculateEnergyBalance(groupMembers);
       const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (energyBalance * 0.15));
