@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { ChevronLeft, Ban, Heart } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { INTERESTS_OPTIONS, TOPICS_GROUPS, getAllTopics } from "../../../data/interestsTopicsData";
+import { INTERESTS_OPTIONS, TOPICS_GROUPS, getAllTopics, type InterestOption, type TopicGroup } from "../../../data/interestsTopicsData";
 import { getUserPrimaryInterests, getUserTopicAvoidances } from "@/lib/userFieldMappings";
 
 const interestsSchema = z.object({
@@ -136,7 +136,7 @@ export default function EditInterestsPage() {
           </div>
           <p className="text-sm text-muted-foreground">选择1-3个最感兴趣的活动类型，用于活动匹配</p>
           <div className="flex flex-wrap gap-3">
-            {INTERESTS_OPTIONS.map((interest) => (
+            {INTERESTS_OPTIONS.map((interest: InterestOption) => (
               <Badge
                 key={interest.id}
                 variant={selectedPrimaryInterests.includes(interest.id) ? "default" : "outline"}
@@ -164,11 +164,11 @@ export default function EditInterestsPage() {
             选择聚会中想避免的话题，匹配时会尽量避开
           </p>
           
-          {Object.entries(TOPICS_GROUPS).map(([groupKey, group]) => (
+          {Object.entries(TOPICS_GROUPS).map(([groupKey, group]: [string, TopicGroup]) => (
             <div key={groupKey} className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">{group.name}</p>
+              <p className="text-sm font-medium text-muted-foreground">{group.label}</p>
               <div className="flex flex-wrap gap-2">
-                {group.topics.map((topic) => (
+                {group.topics.map((topic: { id: string; label: string }) => (
                   <Badge
                     key={topic.id}
                     variant={selectedTopicAvoidances.includes(topic.id) ? "destructive" : "outline"}
