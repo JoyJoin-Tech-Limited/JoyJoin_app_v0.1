@@ -20,8 +20,8 @@ import { prototypeMatcher, findBestMatchingArchetypesV2, ExplainableMatchResult,
 import { applyZScoreCapping, calculateSdiIndex, applySdiCorrection } from './traitCorrection';
 
 // Feature flag - can be overridden via config.useV2Matcher
-// Default false to ensure opt-in behavior - V2 only enabled when explicitly set in config
-export const ENABLE_MATCHER_V2_DEFAULT = false;
+// Default true - V2 matcher is now the standard algorithm for consistency
+export const ENABLE_MATCHER_V2_DEFAULT = true;
 
 // A/B test cohort percentage (0-100) for V2 matcher rollout
 // Set to 0 for disabled, 100 for full rollout
