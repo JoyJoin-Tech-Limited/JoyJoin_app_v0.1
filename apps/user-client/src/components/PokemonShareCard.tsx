@@ -45,21 +45,22 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
-        className="relative w-full max-w-[420px] mx-auto"
-        style={{ aspectRatio: '2/3' }}
+        className="relative w-full max-w-[420px] max-h-[85vh] mx-auto"
+        style={{ aspectRatio: '9/16' }}
+        data-card-root
       >
         {/* Card container with dual-layer border - gradient applied to border */}
         <div
           className={`relative h-full bg-gradient-to-br ${variant.gradient} rounded-3xl p-2 shadow-2xl`}
           style={{ boxShadow: `0 25px 70px ${variant.primaryColor}50` }}
         >
-          {/* Enhanced dual-layer golden border with more depth */}
-          <div className="absolute inset-0 rounded-3xl border-[14px] border-yellow-400/90 pointer-events-none shadow-[inset_0_2px_8px_rgba(0,0,0,0.2)]" 
+          {/* Enhanced dual-layer golden border - adjusted for 9:16 */}
+          <div className="absolute inset-0 rounded-3xl border-[12px] border-yellow-400/90 pointer-events-none shadow-[inset_0_2px_8px_rgba(0,0,0,0.2)]" 
                style={{ 
                  background: `linear-gradient(135deg, rgba(250,204,21,0.3) 0%, transparent 50%, rgba(250,204,21,0.2) 100%)`,
                }}
           />
-          <div className="absolute inset-[14px] rounded-2xl border-[10px] border-yellow-500/60 pointer-events-none shadow-[inset_0_1px_4px_rgba(0,0,0,0.15)]" />
+          <div className="absolute inset-[12px] rounded-2xl border-[8px] border-yellow-500/60 pointer-events-none shadow-[inset_0_1px_4px_rgba(0,0,0,0.15)]" />
           
           {/* Enhanced holographic overlay - Pokemon card style */}
           <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/30 via-transparent to-purple-200/20 pointer-events-none" />
@@ -100,9 +101,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
           )}
           
           {/* Content - white/light background as default */}
-          <div className="relative h-full bg-white/98 rounded-[20px] p-6 flex flex-col overflow-hidden">
+          <div className="relative h-full bg-white/98 rounded-[20px] p-5 flex flex-col overflow-hidden">
             {/* Header badge with long logo */}
-            <div className="text-center mb-3">
+            <div className="text-center mb-2">
               <div className="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full shadow-md">
                 <img 
                   src={logoFull} 
@@ -123,12 +124,12 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               </div>
             </div>
 
-            {/* Archetype illustration with glow - 5x larger (260px), responsive */}
-            <div className="flex justify-center mb-2">
+            {/* Archetype illustration with glow - reduced to 180px */}
+            <div className="flex justify-center mb-1.5">
               <div
-                className="relative w-[260px] h-[260px] max-w-[72vw] max-h-[72vw] rounded-full flex items-center justify-center"
+                className="relative w-[180px] h-[180px] max-w-[50vw] max-h-[50vw] rounded-full flex items-center justify-center"
                 style={{
-                  boxShadow: `0 0 60px ${variant.primaryColor}70, 0 0 100px ${variant.primaryColor}40`,
+                  boxShadow: `0 0 50px ${variant.primaryColor}70, 0 0 90px ${variant.primaryColor}40`,
                   background: `radial-gradient(circle, ${variant.primaryColor}15, transparent 70%)`,
                 }}
               >
@@ -141,30 +142,39 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
+                {/* Expression overlay - CSS fallback if expression assets don't exist */}
+                {expression && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    {expression === 'starry' && <span className="text-6xl">⭐</span>}
+                    {expression === 'hearts' && <span className="text-6xl">❤️</span>}
+                    {expression === 'shy' && <span className="text-6xl">😳</span>}
+                    {expression === 'shocked' && <span className="text-6xl">😲</span>}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Archetype name */}
-            <h1 className="text-4xl font-black text-center mb-1 tracking-tight text-gray-900">
+            <h1 className="text-4xl font-black text-center mb-0.5 tracking-tight text-gray-900">
               {archetype}
             </h1>
-            <p className="text-sm font-semibold text-center tracking-widest uppercase text-gray-600 mb-2">
+            <p className="text-sm font-semibold text-center tracking-widest uppercase text-gray-600 mb-1.5">
               {archetypeEnglish}
             </p>
 
             {/* User nickname (if provided) */}
             {nickname && (
-              <p className="text-base font-bold text-center mb-2 px-4 text-gray-800">
+              <p className="text-base font-bold text-center mb-1.5 px-4 text-gray-800">
                 「{nickname}」
               </p>
             )}
 
             {/* Archetype tagline - positioned description with improved readability */}
             {tagline && (
-              <div className="flex justify-center mb-3 px-4">
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-white/40">
+              <div className="flex justify-center mb-2 px-3">
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg px-2.5 py-1 border border-white/40">
                   <p 
-                    className="text-sm font-medium text-center"
+                    className="text-xs font-medium text-center"
                     style={{ 
                       color: variant.primaryColor,
                     }}
@@ -176,7 +186,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             )}
 
             {/* Stats section (Pokemon HP style) */}
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100">
+            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 mb-2 shadow-sm border border-gray-100">
               <div className="flex items-center justify-between">
                 {/* Left: Archetype rank */}
                 <div className="flex items-baseline gap-2">
@@ -200,10 +210,10 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             </div>
 
             {/* Pokemon-style 2-column Skills Section */}
-            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-3 mb-3 border border-gray-100">
+            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-2.5 mb-2 border border-gray-100">
               <div className="flex gap-3">
-                {/* Left: Compact Radar Chart (35% width) */}
-                <div className="w-[35%] flex items-center justify-center">
+                {/* Left: Radar Chart (45% width for better readability) */}
+                <div className="w-[45%] flex items-center justify-center">
                   <PersonalityRadarChart 
                     affinityScore={traitScores.A}
                     opennessScore={traitScores.O}
@@ -216,8 +226,8 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   />
                 </div>
                 
-                {/* Right: Pokemon Skills Info (65% width) */}
-                <div className="w-[65%] flex flex-col justify-center space-y-2">
+                {/* Right: Pokemon Skills Info (55% width) */}
+                <div className="w-[55%] flex flex-col justify-center space-y-2">
                   {/* Energy Bar - Pokemon HP style */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
