@@ -47,7 +47,8 @@ export function getCardImagePath(archetype: string, expression: string): string 
     return "";
   }
   
-  return `/src/assets/personality test result card/${traditionalName} ${emotionSuffix}.png`;
+  // Use public folder path for Vite compatibility
+  return `/personality test result card/${traditionalName} ${emotionSuffix}.png`;
 }
 
 /**
@@ -63,11 +64,12 @@ export function getArchetypeCardImages(archetype: string): Record<string, string
     return {};
   }
   
+  // Use public folder path for Vite compatibility
   return {
-    starry: `/src/assets/personality test result card/${traditionalName} starry eyes.png`,
-    hearts: `/src/assets/personality test result card/${traditionalName} hearts.png`,
-    shy: `/src/assets/personality test result card/${traditionalName} shy cute.png`,
-    shocked: `/src/assets/personality test result card/${traditionalName} shocked cute.png`,
+    starry: `/personality test result card/${traditionalName} starry eyes.png`,
+    hearts: `/personality test result card/${traditionalName} hearts.png`,
+    shy: `/personality test result card/${traditionalName} shy cute.png`,
+    shocked: `/personality test result card/${traditionalName} shocked cute.png`,
   };
 }
 
