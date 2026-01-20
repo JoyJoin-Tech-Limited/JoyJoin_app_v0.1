@@ -94,8 +94,8 @@ function AuthenticatedRouter() {
         {/* ChatRegistrationPage moved to _backup_modules (2026-01-20) - routes disabled */}
         {/* <Route path="/registration" component={ChatRegistrationPage} /> */}
         {/* <Route path="/registration/chat" component={ChatRegistrationPage} /> */}
-        {/* 保留表单注册供内部测试使用 */}
-        <Route path="/registration/form" component={RegistrationPage} />
+        {/* 保留表单注册供内部测试使用 - RegistrationPage removed (2026-01-20) */}
+        {/* <Route path="/registration/form" component={RegistrationPage} /> */}
         <Route path="*" component={RedirectToRegistration} />
       </Switch>
     );
