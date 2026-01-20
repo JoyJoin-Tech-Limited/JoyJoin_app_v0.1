@@ -36,3 +36,8 @@ export function getTopicLabel(id: string): string {
   // Topics are free-form strings, return as-is
   return id;
 }
+
+// Stub for legacy backup modules that reference getInterestIcon
+export function getInterestIcon(_id: string): string {
+  return "";
+}
