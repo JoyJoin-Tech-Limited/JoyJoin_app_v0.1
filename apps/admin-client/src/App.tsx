@@ -6,7 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import LoginPage from "@/pages/LoginPage";
-import RegistrationPage from "@/pages/RegistrationPage";
+// RegistrationPage removed - use ChatRegistrationPage or EventPoolRegistrationPage instead
+// import RegistrationPage from "@/pages/RegistrationPage";
 // RegistrationMethodPage kept for internal reference only - not imported in user routes
 // ChatRegistrationPage moved to _backup_modules/chat-registration-legacy/ (2026-01-20) - no longer routed
 import InterestsTopicsPage from "@/pages/InterestsTopicsPage";
@@ -216,8 +217,8 @@ function Router() {
         {/* <Route path="/registration" component={ChatRegistrationPage} /> */}
         {/* <Route path="/registration/chat" component={ChatRegistrationPage} /> */}
         {/* <Route path="/register" component={ChatRegistrationPage} /> */}
-        {/* 保留表单注册供内部测试使用 */}
-        <Route path="/registration/form" component={RegistrationPage} />
+        {/* 保留表单注册供内部测试使用 - RegistrationPage removed, commented out */}
+        {/* <Route path="/registration/form" component={RegistrationPage} /> */}
         {/* All other routes show login page */}
         <Route path="*" component={LoginPage} />
       </Switch>

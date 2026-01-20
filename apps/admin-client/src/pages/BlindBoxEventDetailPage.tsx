@@ -555,7 +555,7 @@ export default function BlindBoxEventDetailPage() {
                 industryVisible?: boolean;
               }>}
               matchExplanation={event.matchExplanation || undefined}
-              userInterests={(user?.interestsTop as string[] | undefined) || ["film_entertainment", "travel_exploration"]}
+              userInterests={["film_entertainment", "travel_exploration"]} // Default interests (interestsTop field removed)
               userEducationLevel={user?.educationLevel || "Master's"}
               userIndustry={user?.industry || "科技"}
               userAge={user?.birthdate ? calculateAge(user.birthdate) : undefined}
