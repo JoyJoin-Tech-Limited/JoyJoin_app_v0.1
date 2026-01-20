@@ -151,14 +151,9 @@ function calculateInterestsScore(user1: Partial<User>, user2: Partial<User>): nu
   // 基础分数：20分基础 + 最多50分匹配分 = 20-70分区间
   let score = Math.round(20 + matchRatio * 50);
   
-  // 主要兴趣匹配加分：如果双方的primaryInterests有交集，额外加分
-  // 最多加15分（3个主要兴趣 x 5分）
-  const primary1 = user1.primaryInterests || [];
-  const primary2 = user2.primaryInterests || [];
-  const commonPrimary = primary1.filter(i => primary2.includes(i));
-  if (commonPrimary.length > 0) {
-    score += Math.min(commonPrimary.length * 5, 15);
-  }
+  // ❌ REMOVED: Primary interests bonus - primaryInterests field removed from schema (2026-01-19)
+  // The field was moved to user_interests table as part of Interest Carousel system
+  // This bonus logic is no longer applicable with the new data model
   
   // 话题排斥惩罚：双向检测
   // 最多扣25分，确保惩罚有效果
@@ -473,13 +468,8 @@ export function calculateUserMatchScore(
       matchPoints.push(`共同兴趣：${common.slice(0, 2).join('、')}`);
     }
     
-    // 主要兴趣加分说明
-    const primary1 = user1.primaryInterests || [];
-    const primary2 = user2.primaryInterests || [];
-    const commonPrimary = primary1.filter(i => primary2.includes(i));
-    if (commonPrimary.length > 0) {
-      matchPoints.push(`核心兴趣一致：${commonPrimary.join('、')}`);
-    }
+    // ❌ REMOVED: Primary interests bonus - primaryInterests field removed from schema (2026-01-19)
+    // The field was moved to user_interests table as part of Interest Carousel system
   }
   
   if (intentScore >= 75) {
