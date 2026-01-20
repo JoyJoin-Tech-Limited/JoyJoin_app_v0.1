@@ -10,8 +10,8 @@ interface CategoryPageProps {
 export function CategoryPage({ category, selections, onTopicTap }: CategoryPageProps) {
   return (
     <div className="w-full">
-      {/* Sticky category header */}
-      <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 px-3 py-2 border-b">
+      {/* Sticky category header - positioned below main header */}
+      <div className="sticky top-[88px] bg-background/95 backdrop-blur-sm z-10 px-3 py-2 border-b">
         <div className="flex items-center gap-2">
           <span className="text-2xl">{category.emoji}</span>
           <h3 className="text-sm font-bold">{category.name}</h3>

@@ -57,6 +57,8 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   const prefersReducedMotion = useReducedMotion();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout>();
 
   const [selections, setSelections] = useState<Record<string, HeatLevel>>({});
 
@@ -107,10 +109,28 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
       // Show button after scrolling ~400px (roughly 2 categories)
       const shouldShow = scrollContainer.scrollTop > 400;
       setShowScrollTop(shouldShow);
+      
+      // Optimize: Set isScrolling state to apply willChange only during scroll
+      setIsScrolling(true);
+      
+      // Clear existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      // Remove willChange after scroll stops
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsScrolling(false);
+      }, 150);
     };
 
     scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+    return () => {
+      scrollContainer.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Calculate metrics
@@ -269,7 +289,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
 
         {/* Compact guidance pills */}
         <div className="px-4 py-2 bg-primary/5 border-t">
-          <div className="flex items-center gap-2 justify-center flex-wrap text-[10px] text-muted-foreground">
+          <div className="flex items-center gap-2 justify-center flex-wrap text-[11px] text-muted-foreground">
             <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-background/70">
               <span>💜💗🧡</span>
               <span>点击升级</span>
@@ -287,7 +307,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto pb-24"
         style={{ 
-          willChange: 'scroll-position',
+          willChange: isScrolling ? 'scroll-position' : 'auto',
           WebkitOverflowScrolling: 'touch' as any
         }}
       >
@@ -310,8 +330,15 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
             exit={prefersReducedMotion ? {} : { opacity: 0, scale: 0.8 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
             onClick={handleScrollToTop}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleScrollToTop();
+              }
+            }}
             className="fixed bottom-24 right-4 z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center touch-manipulation"
             aria-label="Scroll to top"
+            tabIndex={0}
           >
             <ArrowUp className="w-5 h-5" />
           </motion.button>
