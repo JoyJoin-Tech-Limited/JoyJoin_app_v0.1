@@ -53,7 +53,7 @@ export function useOnboardingProgress(): OnboardingProgress {
     const hasCompletedRegistration = user?.hasCompletedRegistration ?? false;
     const hasCompletedPersonalityTest = user?.hasCompletedPersonalityTest ?? false;
     const hasCompletedEssentialData = !!(user?.displayName && user?.gender && user?.currentCity);
-    const hasCompletedExtendedData = !!(user?.intent || user?.interestsTop?.length);
+    const hasCompletedExtendedData = !!(user?.intent || user?.hasCompletedInterestsCarousel);
     
     // 检查引导是否已看过 (从 localStorage)
     const hasSeenGuide = typeof window !== 'undefined' 

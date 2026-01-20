@@ -76,34 +76,49 @@ function calculatePersonalityScore(user1: Partial<User>, user2: Partial<User>): 
 /**
  * 获取用户的有效兴趣列表（合并新旧字段，去重）
  * 新字段primaryInterests优先显示，但保留旧字段interestsTop的数据
+ * Note: interestsTop and primaryInterests fields removed - returning empty array
  */
 function getUserInterests(user: Partial<User>): string[] {
+  // Fields removed - interests now managed by user_interests table
+  return [];
+  /* Legacy code (commented out since fields were removed):
   const primary = user.primaryInterests || [];
   const legacy = user.interestsTop || [];
   // 合并去重，保持primary在前
-  const combined = [...primary, ...legacy.filter(i => !primary.includes(i))];
+  const combined = [...primary, ...legacy.filter((i: string) => !primary.includes(i))];
   return combined;
+  */
 }
 
 /**
  * 获取用户的话题排斥列表（合并新旧字段，去重）
+ * Note: topicAvoidances and topicsAvoid fields removed - returning empty array
  */
 function getUserTopicAvoidances(user: Partial<User>): string[] {
+  // Fields removed - returning empty array
+  return [];
+  /* Legacy code (commented out since fields were removed):
   const newAvoid = user.topicAvoidances || [];
   const legacyAvoid = user.topicsAvoid || [];
-  const combined = [...newAvoid, ...legacyAvoid.filter(i => !newAvoid.includes(i))];
+  const combined = [...newAvoid, ...legacyAvoid.filter((i: string) => !newAvoid.includes(i))];
   return combined;
+  */
 }
 
 /**
  * 获取用户喜欢聊的话题（合并新旧字段）
+ * Note: topicsHappy and primaryInterests fields removed - returning empty array
  */
 function getUserHappyTopics(user: Partial<User>): string[] {
+  // Fields removed - returning empty array
+  return [];
+  /* Legacy code (commented out since fields were removed):
   const legacy = user.topicsHappy || [];
   // 新系统中primaryInterests也代表用户喜欢聊的方向
   const primary = user.primaryInterests || [];
-  const combined = [...legacy, ...primary.filter(i => !legacy.includes(i))];
+  const combined = [...legacy, ...primary.filter((i: string) => !legacy.includes(i))];
   return combined;
+  */
 }
 
 /**
@@ -733,8 +748,8 @@ function generateGroupExplanation(
     parts.push('背景多元化，能带来不同视角');
   }
   
-  // 兴趣共鸣
-  const interests = users.flatMap(u => u.interestsTop || []);
+  // 兴趣共鸣 (interestsTop field removed - using empty array)
+  const interests: string[] = []; // users.flatMap(u => u.interestsTop || []);
   const interestCount = new Map<string, number>();
   interests.forEach(i => {
     interestCount.set(i, (interestCount.get(i) || 0) + 1);

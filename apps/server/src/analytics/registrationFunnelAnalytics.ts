@@ -259,7 +259,7 @@ async function getFunnelStages(): Promise<FunnelStage[]> {
   const [l2EngagedResult] = await db
     .select({ count: count() })
     .from(users)
-    .where(sql`${users.interestsTop} IS NOT NULL AND array_length(${users.interestsTop}, 1) > 0`);
+    .where(sql`${users.hasCompletedInterestsCarousel} = true`);
   const l2Engaged = l2EngagedResult?.count || 0;
 
   // 阶段4: L3推断（完成对话，有推断数据）
