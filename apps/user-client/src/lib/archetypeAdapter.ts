@@ -37,19 +37,47 @@ const assetKeyToPng: Record<string, string> = {
 };
 
 /**
- * Get PNG avatar URL for an archetype name
+ * Get PNG avatar URL for an archetype name with optional expression variant
  */
-export function getArchetypeAvatar(archetypeName: string): string {
+export function getArchetypeAvatar(archetypeName: string, expression?: string): string {
   const record = archetypeRegistry[archetypeName];
   if (record) {
-    return assetKeyToPng[record.assetKey] || '';
+    const baseAsset = assetKeyToPng[record.assetKey] || '';
+    
+    // Try expression-specific asset first if expression is provided
+    if (expression) {
+      const expressionKey = `${record.assetKey}_${expression}`;
+      const expressionAsset = assetKeyToPng[expressionKey];
+      if (expressionAsset) {
+        return expressionAsset;
+      }
+    }
+    
+    return baseAsset;
   }
   return '';
 }
 
 /**
+ * Check if an expression-specific asset exists for an archetype
+ */
+export function hasExpressionAsset(archetypeName: string, expression?: string): boolean {
+  if (!expression) return false;
+  
+  const record = archetypeRegistry[archetypeName];
+  if (!record) return false;
+  
+  const expressionKey = `${record.assetKey}_${expression}`;
+  return !!assetKeyToPng[expressionKey];
+}
+
+/**
  * Get all avatars as a Record<archetypeName, pngUrl>
  * For backward compatibility with existing code using archetypeAvatars
+ * 
+ * Note: Expression variants should be accessed via getArchetypeAvatar(name, expression)
+ * If expression-specific assets exist in the future, add them to assetKeyToPng like:
+ * 'corgi_starry': corgiStarryImg, 'corgi_hearts': corgiHeartsImg, etc.
  */
 export const archetypeAvatars: Record<string, string> = Object.fromEntries(
   Object.keys(archetypeRegistry).map(name => [name, getArchetypeAvatar(name)])

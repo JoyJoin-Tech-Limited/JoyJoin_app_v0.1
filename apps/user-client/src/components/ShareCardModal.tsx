@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { PokemonShareCard } from "./PokemonShareCard";
 import { getArchetypeVariants, type ShareCardVariant } from "@/lib/archetypeShareVariants";
-import { archetypeAvatars } from "@/lib/archetypeAdapter";
+import { archetypeAvatars, getArchetypeAvatar, hasExpressionAsset } from "@/lib/archetypeAdapter";
 import { Share2, Download, Loader2, Check } from "lucide-react";
 import html2canvas from "html2canvas";
 
@@ -71,6 +71,8 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
   const [nickname, setNickname] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(true);
+  const [generationProgress, setGenerationProgress] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -93,7 +95,10 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
   const archetype = shareCardData?.archetype || "";
   const variants = getArchetypeVariants(archetype);
   const selectedVariant = variants[selectedVariantIndex] || variants[0];
-  const illustrationUrl = archetypeAvatars[archetype] || "";
+  // Use getArchetypeAvatar with expression support, fallback to archetypeAvatars for base
+  const illustrationUrl = getArchetypeAvatar(archetype, selectedExpression) || archetypeAvatars[archetype] || "";
+  // Check if we have a dedicated expression asset (to determine if emoji overlay is needed)
+  const hasExpressionVariant = hasExpressionAsset(archetype, selectedExpression);
 
   // Safety check for variants
   if (variants.length === 0 && shareCardData) {
@@ -116,53 +121,116 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
 
     try {
       setIsGenerating(true);
+      setGenerationProgress(0);
       
-      // Disable preview mode (animation) before capturing
+      // Step 1: Disable animations (20%)
       setIsPreviewMode(false);
+      setGenerationProgress(20);
+      await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Show progress feedback
-      toast({
-        title: "正在生成图片...",
-        description: "请稍候，确保最佳质量",
-      });
-      
-      // Wait longer for everything to settle and ensure fonts are loaded
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Ensure fonts are loaded
+      // Step 2: Wait for fonts to load (40%)
+      setGenerationProgress(40);
       await document.fonts.ready;
-
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Step 3: Capture with high quality settings (60%)
+      setGenerationProgress(60);
       const canvas = await html2canvas(cardRef.current, {
-        scale: 3, // Higher quality
+        scale: 3, // High resolution
         backgroundColor: null,
         logging: false,
         useCORS: true,
         allowTaint: true,
-        foreignObjectRendering: false, // Better SVG support
-        imageTimeout: 15000, // Wait for images
+        foreignObjectRendering: false, // Better SVG support for radar chart
+        imageTimeout: 15000,
         onclone: (clonedDoc) => {
-          // Force all animations to complete state
-          const clonedElement = clonedDoc.querySelector('[data-card-root]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.animation = 'none';
-            (clonedElement as HTMLElement).style.transition = 'none';
+          // Force disable all animations in cloned document
+          const cardElement = clonedDoc.querySelector('[data-card-root]');
+          if (cardElement) {
+            (cardElement as HTMLElement).style.animation = 'none';
+            (cardElement as HTMLElement).style.transition = 'none';
+            
+            // Also disable framer-motion animations
+            const motionElements = clonedDoc.querySelectorAll('[data-framer-motion]');
+            motionElements.forEach(el => {
+              (el as HTMLElement).style.animation = 'none';
+              (el as HTMLElement).style.transition = 'none';
+            });
           }
         }
       });
+      
+      // Step 4: Convert to data URL (80%)
+      setGenerationProgress(80);
+      const dataUrl = canvas.toDataURL('image/png', 1.0); // Max quality
+      
+      // Step 5: Complete (100%)
+      setGenerationProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       // Re-enable preview mode
       setIsPreviewMode(true);
+      setGenerationProgress(0);
 
-      return canvas.toDataURL('image/png', 1.0); // Max quality
+      return dataUrl;
+      
     } catch (error) {
       console.error('Failed to generate image:', error);
+      
+      // Auto-retry once with lower quality
+      if (!isRetrying) {
+        console.log('Retrying with fallback settings...');
+        setIsRetrying(true);
+        
+        try {
+          setGenerationProgress(50);
+          const canvas = await html2canvas(cardRef.current, {
+            scale: 2, // Lower quality fallback
+            backgroundColor: null,
+            logging: false,
+            useCORS: true,
+          });
+          
+          setGenerationProgress(100);
+          const dataUrl = canvas.toDataURL('image/png', 0.9);
+          
+          setIsPreviewMode(true);
+          setIsRetrying(false);
+          setGenerationProgress(0);
+          
+          toast({
+            title: "生成成功",
+            description: "使用了兼容模式生成图片",
+          });
+          
+          return dataUrl;
+        } catch (retryError) {
+          console.error('Retry failed:', retryError);
+          
+          // Retry failed: show error toast and clean up state explicitly
+          toast({
+            title: "生成失败",
+            description: "无法生成分享卡片，请重试",
+            variant: "destructive",
+          });
+          
+          setIsPreviewMode(true);
+          setIsRetrying(false);
+          setGenerationProgress(0);
+          return null;
+        }
+      }
+      
+      // This should not be reached if retry succeeded
       toast({
         title: "生成失败",
         description: "无法生成分享卡片，请重试",
         variant: "destructive",
       });
-      // Re-enable preview mode on error
+      
       setIsPreviewMode(true);
+      setIsRetrying(false);
+      setGenerationProgress(0);
       return null;
     } finally {
       setIsGenerating(false);
@@ -231,31 +299,53 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
     if (!imageDataUrl) return;
 
     const filename = `悦聚-${archetype}-性格卡.png`;
-    
+
     try {
       // Convert data URL to blob
       const response = await fetch(imageDataUrl);
       const blob = await response.blob();
       
-      // Try native share API first (mobile)
+      // Track download method for analytics
+      let downloadMethod: string;
+
+      // Try native share API first (mobile preferred)
       if (navigator.share && navigator.canShare) {
         const file = new File([blob], filename, { type: 'image/png' });
+        
         if (navigator.canShare({ files: [file] })) {
           try {
-            await navigator.share({ files: [file] });
+            await navigator.share({
+              files: [file],
+              title: `我是${archetype}！`,
+              text: `我在悦聚完成了性格测试，发现自己是${archetype}！`
+            });
+            
+            downloadMethod = 'native_share';
+            
+            // Analytics tracking
+            if (window.gtag) {
+              window.gtag('event', 'share_card_download', {
+                method: downloadMethod,
+                archetype: archetype,
+                expression: selectedExpression,
+                variant: selectedVariant.name
+              });
+            }
+            
             toast({
               title: "分享成功！",
-              description: "图片已保存",
+              description: "性格卡已分享"
             });
             return;
-          } catch (err) {
-            // User cancelled share, fall back to download
-            console.log('Share cancelled, falling back to download');
+          } catch (shareError) {
+            // User cancelled share, fall through to download
+            console.log('Share cancelled:', shareError);
           }
         }
       }
-      
-      // Fallback: create object URL and download
+
+      // Fallback: Blob URL download
+      downloadMethod = 'blob_download';
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.download = filename;
@@ -263,24 +353,42 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(objectUrl);
+      
+      // Clean up blob URL after download with a safer delay
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+
+      // Analytics tracking
+      if (window.gtag) {
+        window.gtag('event', 'share_card_download', {
+          method: downloadMethod,
+          archetype: archetype,
+          expression: selectedExpression,
+          variant: selectedVariant.name
+        });
+      }
 
       toast({
         title: "下载成功！",
-        description: "图片已保存到本地",
+        description: "图片已保存到本地"
       });
+      
     } catch (error) {
       console.error('Download failed:', error);
       
-      // Provide more specific error message
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      // Analytics - track failures
+      if (window.gtag) {
+        window.gtag('event', 'share_card_download_error', {
+          error: (error as Error).message
+        });
+      }
+      
       toast({
         title: "下载失败",
-        description: `${errorMessage}。请尝试截图保存或使用分享功能`,
-        variant: "destructive",
+        description: "请稍后重试",
+        variant: "destructive"
       });
     }
-  }, [generateImage, archetype, toast]);
+  }, [generateImage, archetype, selectedExpression, selectedVariant, toast]);
 
   if (isLoading || !shareCardData || !selectedVariant) {
     return (
@@ -296,7 +404,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-6">
+      <DialogContent className="max-w-lg max-h-[95vh] overflow-y-auto p-6">
         <div className="space-y-6">
           {/* Title */}
           <div className="text-center">
@@ -324,10 +432,35 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                   expression={selectedExpression}
                   nickname={nickname}
                   isPreview={isPreviewMode}
+                  hasExpressionAsset={hasExpressionVariant}
                 />
               </motion.div>
             </AnimatePresence>
           </div>
+
+          {/* Progress bar during generation */}
+          {isGenerating && generationProgress > 0 && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mb-4"
+            >
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm text-gray-600">
+                  <span>生成高质量图片中...</span>
+                  <span className="font-bold">{generationProgress}%</span>
+                </div>
+                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${generationProgress}%` }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           {/* Nickname input */}
           <div>
