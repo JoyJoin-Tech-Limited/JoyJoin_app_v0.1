@@ -5,7 +5,7 @@
  */
 
 import { motion } from "framer-motion";
-import { forwardRef } from "react";
+import { forwardRef, useState } from "react";
 import type { ShareCardVariant } from "@/lib/archetypeShareVariants";
 import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
@@ -31,6 +31,7 @@ interface PokemonShareCardProps {
   expression?: string; // Optional expression variant
   nickname?: string; // Optional user nickname
   isPreview?: boolean; // Whether this is preview mode (show animation) or download mode
+  hasExpressionAsset?: boolean; // Whether a dedicated expression asset exists
 }
 
 // Expression variant styles (CSS filters to simulate different moods)
@@ -54,10 +55,13 @@ const expressionStyles: Record<string, React.CSSProperties> = {
 };
 
 export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps>(
-  ({ archetype, archetypeEnglish, variant, illustrationUrl, rankings, traitScores, expression, nickname, isPreview = true }, ref) => {
+  ({ archetype, archetypeEnglish, variant, illustrationUrl, rankings, traitScores, expression, nickname, isPreview = true, hasExpressionAsset = false }, ref) => {
     // Get archetype tagline from config
     const archetypeInfo = archetypeConfig[archetype];
     const tagline = archetypeInfo?.tagline || "";
+    
+    // Track if the image failed to load (use emoji overlay as fallback)
+    const [imageLoadError, setImageLoadError] = useState(false);
 
     // Get expression style if valid expression is provided
     const illustrationStyle = expression && expressionStyles[expression] 
@@ -71,21 +75,21 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
-        className="relative w-full max-w-[420px] mx-auto"
-        style={{ aspectRatio: '2/3' }}
+        className="relative w-full max-w-[420px] max-h-[85vh] mx-auto"
+        style={{ aspectRatio: '9/16' }}
       >
         {/* Card container with dual-layer border - gradient applied to border */}
         <div
           className={`relative h-full bg-gradient-to-br ${variant.gradient} rounded-3xl p-2 shadow-2xl`}
           style={{ boxShadow: `0 25px 70px ${variant.primaryColor}50` }}
         >
-          {/* Enhanced dual-layer golden border with more depth */}
-          <div className="absolute inset-0 rounded-3xl border-[14px] border-yellow-400/90 pointer-events-none shadow-[inset_0_2px_8px_rgba(0,0,0,0.2)]" 
+          {/* Enhanced dual-layer golden border - adjusted for 9:16 */}
+          <div className="absolute inset-0 rounded-3xl border-[12px] border-yellow-400/90 pointer-events-none shadow-[inset_0_2px_8px_rgba(0,0,0,0.2)]" 
                style={{ 
                  background: `linear-gradient(135deg, rgba(250,204,21,0.3) 0%, transparent 50%, rgba(250,204,21,0.2) 100%)`,
                }}
           />
-          <div className="absolute inset-[14px] rounded-2xl border-[10px] border-yellow-500/60 pointer-events-none shadow-[inset_0_1px_4px_rgba(0,0,0,0.15)]" />
+          <div className="absolute inset-[12px] rounded-2xl border-[8px] border-yellow-500/60 pointer-events-none shadow-[inset_0_1px_4px_rgba(0,0,0,0.15)]" />
           
           {/* Enhanced holographic overlay - Pokemon card style */}
           <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/30 via-transparent to-purple-200/20 pointer-events-none" />
@@ -126,7 +130,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
           )}
           
           {/* Content - white/light background as default */}
-          <div className="relative h-full bg-white/98 rounded-[20px] p-6 flex flex-col overflow-hidden">
+          <div className="relative h-full bg-white/98 rounded-[20px] p-5 flex flex-col overflow-hidden">
             {/* Header badge with long logo */}
             <div className="text-center mb-2">
               <div className="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full shadow-md">
@@ -149,12 +153,12 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               </div>
             </div>
 
-            {/* Archetype illustration with glow - reduced to 180px, responsive */}
-            <div className="flex justify-center mb-1">
+            {/* Archetype illustration with glow - reduced to 180px */}
+            <div className="flex justify-center mb-1.5">
               <div
                 className="relative w-[180px] h-[180px] max-w-[50vw] max-h-[50vw] rounded-full flex items-center justify-center"
                 style={{
-                  boxShadow: `0 0 60px ${variant.primaryColor}70, 0 0 100px ${variant.primaryColor}40`,
+                  boxShadow: `0 0 50px ${variant.primaryColor}70, 0 0 90px ${variant.primaryColor}40`,
                   background: `radial-gradient(circle, ${variant.primaryColor}15, transparent 70%)`,
                 }}
               >
@@ -166,8 +170,18 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   onError={(e) => {
                     // Fallback to placeholder on error
                     (e.target as HTMLImageElement).style.display = 'none';
+                    setImageLoadError(true);
                   }}
                 />
+                {/* Expression overlay - only show if no dedicated expression asset exists */}
+                {expression && !hasExpressionAsset && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    {expression === 'starry' && <span className="text-6xl opacity-70 drop-shadow-lg">⭐</span>}
+                    {expression === 'hearts' && <span className="text-6xl opacity-70 drop-shadow-lg">❤️</span>}
+                    {expression === 'shy' && <span className="text-6xl opacity-70 drop-shadow-lg">😳</span>}
+                    {expression === 'shocked' && <span className="text-6xl opacity-70 drop-shadow-lg">😲</span>}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -175,13 +189,13 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             <h1 className="text-4xl font-black text-center mb-0.5 tracking-tight text-gray-900">
               {archetype}
             </h1>
-            <p className="text-sm font-semibold text-center tracking-widest uppercase text-gray-600 mb-1">
+            <p className="text-sm font-semibold text-center tracking-widest uppercase text-gray-600 mb-1.5">
               {archetypeEnglish}
             </p>
 
             {/* User nickname (if provided) */}
             {nickname && (
-              <p className="text-base font-bold text-center mb-2 px-4 text-gray-800">
+              <p className="text-base font-bold text-center mb-1.5 px-4 text-gray-800">
                 「{nickname}」
               </p>
             )}
@@ -229,7 +243,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             {/* Pokemon-style 2-column Skills Section */}
             <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-2.5 mb-2 border border-gray-100">
               <div className="flex gap-3">
-                {/* Left: Compact Radar Chart (45% width) */}
+                {/* Left: Radar Chart (45% width for better readability) */}
                 <div className="w-[45%] flex items-center justify-center">
                   <PersonalityRadarChart 
                     affinityScore={traitScores.A}
