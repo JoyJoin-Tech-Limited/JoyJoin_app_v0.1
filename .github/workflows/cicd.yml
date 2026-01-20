@@ -136,7 +136,7 @@ jobs:
             set -euo pipefail
 
             # ====== HARD-CODED DATABASE_URL (as requested) ======
-            export DATABASE_URL="postgresql://neondb_owner:npg_NmTv6SY3fxXW@ep-square-math-ahiz6fm7-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
+            export DATABASE_URL="postgresql://neondb_owner:npg_3C9FJhvfrBVE@ep-broad-firefly-a1zh1g6z-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
             soft_cleanup() {
               echo "🧹 Soft cleanup (keep 7 days)..."
