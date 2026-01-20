@@ -1197,15 +1197,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         registrationData.birthdate = `${extractedInfo.birthYear}-01-01`;
       }
       
-      // Set interests if provided
-      if (extractedInfo.interestsTop && extractedInfo.interestsTop.length > 0) {
-        registrationData.interestsTop = extractedInfo.interestsTop;
-      }
+      // ❌ REMOVED: Legacy interests fields no longer exist in schema
+      // These are now managed by user_interests table via Interest Carousel
+      // if (extractedInfo.interestsTop && extractedInfo.interestsTop.length > 0) {
+      //   registrationData.interestsTop = extractedInfo.interestsTop;
+      // }
+      // if (extractedInfo.primaryInterests && extractedInfo.primaryInterests.length > 0) {
+      //   registrationData.primaryInterests = extractedInfo.primaryInterests;
+      // }
       
       // Map new fields from AI chat extraction
-      if (extractedInfo.primaryInterests && extractedInfo.primaryInterests.length > 0) {
-        registrationData.primaryInterests = extractedInfo.primaryInterests;
-      }
       if (extractedInfo.intent && extractedInfo.intent.length > 0) {
         registrationData.intent = extractedInfo.intent;
       }
@@ -1251,9 +1252,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (extractedInfo.fieldOfStudy) {
         registrationData.fieldOfStudy = extractedInfo.fieldOfStudy;
       }
-      if (extractedInfo.topicAvoidances && extractedInfo.topicAvoidances.length > 0) {
-        registrationData.topicAvoidances = extractedInfo.topicAvoidances;
-      }
+      // ❌ REMOVED: topicAvoidances field no longer exists in schema
+      // if (extractedInfo.topicAvoidances && extractedInfo.topicAvoidances.length > 0) {
+      //   registrationData.topicAvoidances = extractedInfo.topicAvoidances;
+      // }
       if (extractedInfo.languagesComfort && extractedInfo.languagesComfort.length > 0) {
         registrationData.languagesComfort = extractedInfo.languagesComfort;
       }
@@ -1511,8 +1513,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // If registered via chat, check for depth indicators
         if (result.data.registrationMethod === 'chat') {
           // Use presence of optional fields as proxy for conversation depth
-          const hasDeepFields = result.data.topicAvoidances || result.data.cuisinePreference || result.data.favoriteRestaurant;
-          const hasExpressFields = !result.data.primaryInterests && !result.data.intent;
+          // Note: topicAvoidances removed from schema, using other deep fields
+          const hasDeepFields = result.data.cuisinePreference || result.data.favoriteRestaurant;
+          const hasExpressFields = !result.data.intent;
           
           if (hasExpressFields) {
             registrationMode = 'registration_express';
@@ -2367,23 +2370,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const profileData: Record<string, any> = { ...result.data };
 
-      // Validate and normalize interest fields if present
-      if (profileData.interestsTop || profileData.primaryInterests || profileData.topicAvoidances) {
-        const normalized = normalizeProfileInterests({
-          interestsTop: profileData.interestsTop ?? undefined,
-          primaryInterests: profileData.primaryInterests ?? undefined,
-          topicAvoidances: profileData.topicAvoidances ?? undefined,
-        });
-
-        // Log warnings for observability
-        if (normalized.warnings.length > 0) {
-          console.log(`[Profile] Interest normalization warnings for user ${userId}:`, normalized.warnings);
-        }
-
-        profileData.interestsTop = normalized.interestsTop.length > 0 ? normalized.interestsTop : undefined;
-        profileData.primaryInterests = normalized.primaryInterests.length > 0 ? normalized.primaryInterests : undefined;
-        profileData.topicAvoidances = normalized.topicAvoidances.length > 0 ? normalized.topicAvoidances : undefined;
-      }
+      // ❌ REMOVED: Interest fields validation - these fields no longer exist
+      // Legacy interests are now managed by user_interests table
+      // if (profileData.interestsTop || profileData.primaryInterests || profileData.topicAvoidances) {
+      //   const normalized = normalizeProfileInterests({
+      //     interestsTop: profileData.interestsTop ?? undefined,
+      //     primaryInterests: profileData.primaryInterests ?? undefined,
+      //     topicAvoidances: profileData.topicAvoidances ?? undefined,
+      //   });
+      //   // Log warnings for observability
+      //   if (normalized.warnings.length > 0) {
+      //     console.log(`[Profile] Interest normalization warnings for user ${userId}:`, normalized.warnings);
+      //   }
+      //   profileData.interestsTop = normalized.interestsTop.length > 0 ? normalized.interestsTop : undefined;
+      //   profileData.primaryInterests = normalized.primaryInterests.length > 0 ? normalized.primaryInterests : undefined;
+      //   profileData.topicAvoidances = normalized.topicAvoidances.length > 0 ? normalized.topicAvoidances : undefined;
+      // }
 
       // Validate telemetry if present
       if (profileData.interestsTelemetry) {
