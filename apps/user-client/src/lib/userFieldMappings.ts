@@ -68,7 +68,7 @@ export const intentMap: Record<string, string> = {
   "discussion": "深度讨论",
   "fun": "娱乐放松",
   "romance": "浪漫社交",
-  "flexible": "灵活开放·都可以",
+  "flexible": "随缘",
 };
 
 // Intent options with descriptions for selection UI
@@ -78,7 +78,7 @@ export const intentOptions = [
   { value: "discussion", label: "深度讨论", description: "交流想法，深入探讨话题" },
   { value: "fun", label: "娱乐放松", description: "轻松愉快，享受社交时光" },
   { value: "romance", label: "浪漫社交", description: "认识潜在的恋爱对象" },
-  { value: "flexible", label: "灵活开放·都可以", description: "对所有活动类型保持开放" },
+  { value: "flexible", label: "随缘", description: "对所有活动类型保持开放" },
 ] as const;
 
 /**

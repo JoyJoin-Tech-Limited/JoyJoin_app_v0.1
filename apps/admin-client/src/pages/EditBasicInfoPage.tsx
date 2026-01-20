@@ -23,7 +23,7 @@ const languageOptions = ["普通话", "英语", "粤语", "法语", "日语", "�
 
 const basicInfoSchema = z.object({
   displayName: z.string().min(1, "请输入昵称"),
-  gender: z.enum(["Woman", "Man"]).optional(),
+  gender: z.enum(["女性", "男性"]).optional(),
   birthdate: z.string().optional(),
   languagesComfort: z.array(z.string()).optional(),
 });
@@ -136,13 +136,13 @@ export default function EditBasicInfoPage() {
           <Label>性别</Label>
           <div className="space-y-3 mt-2">
             {[
-              { value: "Woman", label: "女性" },
-              { value: "Man", label: "男性" },
+              { value: "女性", label: "女性" },
+              { value: "男性", label: "男性" },
             ].map((option) => (
               <button
                 key={option.value}
                 type="button"
-                onClick={() => form.setValue("gender", option.value as "Woman" | "Man")}
+                onClick={() => form.setValue("gender", option.value as "女性" | "男性")}
                 className={`
                   w-full px-5 py-4 text-left rounded-lg border transition-all
                   ${form.watch("gender") === option.value

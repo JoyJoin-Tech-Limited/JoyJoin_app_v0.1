@@ -9,11 +9,12 @@ import { SegmentedProgress } from "@/components/ui/progress-segmented";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { INDUSTRY_OPTIONS } from "@shared/constants";
+import { INDUSTRY_OPTIONS, type WorkMode } from "@shared/constants";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BirthDatePicker } from "@/components/BirthDatePicker";
 import { IndustrySelector } from "@/components/IndustrySelector";
+import { OccupationSelector } from "@/components/OccupationSelector";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 import { haptics } from "@/lib/haptics";
 import {
@@ -56,6 +57,9 @@ interface EssentialDataState {
     industryNormalized?: string; // NEW - AI-cleaned version
     industrySource?: string;
     industryConfidence?: number;
+    // Occupation fields
+    occupationId?: string;
+    workMode?: string;
     hometown: string;
     currentCity: string;
     intent: string[];
@@ -72,8 +76,8 @@ const XIAOYUE_AVATARS: Record<XiaoyueMood, string> = {
 };
 
 const GENDER_OPTIONS = [
-  { value: "Woman", label: "女生", emoji: "👩" },
-  { value: "Man", label: "男生", emoji: "👨" },
+  { value: "女性", label: "女生", emoji: "👩" },
+  { value: "男性", label: "男生", emoji: "👨" },
 ];
 
 const RELATIONSHIP_OPTIONS = [
@@ -299,6 +303,8 @@ export default function EssentialDataPage() {
   const [industryNormalized, setIndustryNormalized] = useState(""); // NEW - AI-cleaned version
   const [industrySource, setIndustrySource] = useState("");
   const [industryConfidence, setIndustryConfidence] = useState<number>();
+  const [occupationId, setOccupationId] = useState("");
+  const [workMode, setWorkMode] = useState<WorkMode | "">("");
   const [hometown, setHometown] = useState("");
   const [currentCity, setCurrentCity] = useState("");
   const [intent, setIntent] = useState<string[]>([]);
@@ -329,6 +335,8 @@ export default function EssentialDataPage() {
           setIndustryNormalized(state.data.industryNormalized || ""); // NEW
           setIndustrySource(state.data.industrySource || "");
           setIndustryConfidence(state.data.industryConfidence);
+          setOccupationId(state.data.occupationId || "");
+          setWorkMode((state.data.workMode as WorkMode) || "");
           setHometown(state.data.hometown || "");
           setCurrentCity(state.data.currentCity || "");
           setIntent(state.data.intent || []);
@@ -351,6 +359,7 @@ export default function EssentialDataPage() {
       data: { displayName, gender, birthYear, relationshipStatus, education, workIndustry, 
               industryCategory, industryCategoryLabel, industrySegmentNew, industrySegmentLabel,
               industryNiche, industryNicheLabel, industryRawInput, industryNormalized, industrySource, industryConfidence,
+              occupationId, workMode,
               hometown, currentCity, intent },
       timestamp: Date.now(),
     };
@@ -358,6 +367,7 @@ export default function EssentialDataPage() {
   }, [currentStep, displayName, gender, birthYear, relationshipStatus, education, workIndustry,
       industryCategory, industryCategoryLabel, industrySegmentNew, industrySegmentLabel,
       industryNiche, industryNicheLabel, industryRawInput, industryNormalized, industrySource, industryConfidence,
+      occupationId, workMode,
       hometown, currentCity, intent]);
 
   useEffect(() => {
@@ -456,6 +466,9 @@ export default function EssentialDataPage() {
           industryNormalized, // NEW - AI-cleaned version
           industrySource,
           industryConfidence: industryConfidence ? String(industryConfidence) : "0",
+          // Occupation fields
+          occupationId,
+          workMode,
         };
         if (birthDate) {
           profileData.birthdate = `${birthDate.year}-${String(birthDate.month).padStart(2, '0')}-${String(birthDate.day).padStart(2, '0')}`;
@@ -797,30 +810,52 @@ export default function EssentialDataPage() {
               )}
 
               {currentStep === 4 && (
-                <div className="space-y-4">
-                  <IndustrySelector
-                    onSelect={(selection) => {
-                      // Update all three-tier classification fields
-                      setIndustryCategory(selection.category.id);
-                      setIndustryCategoryLabel(selection.category.label);
-                      setIndustrySegmentNew(selection.segment.id); // FIXED: use correct field name
-                      setIndustrySegmentLabel(selection.segment.label);
-                      setIndustryNiche(selection.niche?.id || "");
-                      setIndustryNicheLabel(selection.niche?.label || "");
-                      setIndustryRawInput(selection.rawInput || "");
-                      setIndustryNormalized(selection.rawInput || "");
-                      setIndustrySource(selection.source || "manual");
-                      setIndustryConfidence(selection.confidence);
-                      
-                      // Also update legacy workIndustry field for backward compatibility
-                      const pathParts = [
-                        selection.category.label,
-                        selection.segment.label,
-                        selection.niche?.label
-                      ].filter(Boolean);
-                      setWorkIndustry(pathParts.join(" > "));
-                    }}
-                  />
+                <div className="space-y-6">
+                  {/* OccupationSelector - NEW */}
+                  <div>
+                    <label className="block text-lg font-semibold mb-4 text-center">职业信息</label>
+                    <OccupationSelector
+                      selectedOccupationId={occupationId}
+                      selectedWorkMode={workMode as WorkMode | null}
+                      socialIntent={intent[0] || "flexible"}
+                      onOccupationChange={(id, industryId) => {
+                        setOccupationId(id);
+                        // Auto-fill industry from occupation
+                        if (industryId) {
+                          setIndustryCategory(industryId);
+                        }
+                      }}
+                      onWorkModeChange={(mode) => setWorkMode(mode)}
+                    />
+                  </div>
+                  
+                  {/* IndustrySelector - Keep for detailed industry classification */}
+                  <div>
+                    <label className="block text-lg font-semibold mb-4 text-center">详细行业分类（可选）</label>
+                    <IndustrySelector
+                      onSelect={(selection) => {
+                        // Update all three-tier classification fields
+                        setIndustryCategory(selection.category.id);
+                        setIndustryCategoryLabel(selection.category.label);
+                        setIndustrySegmentNew(selection.segment.id); // FIXED: use correct field name
+                        setIndustrySegmentLabel(selection.segment.label);
+                        setIndustryNiche(selection.niche?.id || "");
+                        setIndustryNicheLabel(selection.niche?.label || "");
+                        setIndustryRawInput(selection.rawInput || "");
+                        setIndustryNormalized(selection.rawInput || "");
+                        setIndustrySource(selection.source || "manual");
+                        setIndustryConfidence(selection.confidence);
+                        
+                        // Also update legacy workIndustry field for backward compatibility
+                        const pathParts = [
+                          selection.category.label,
+                          selection.segment.label,
+                          selection.niche?.label
+                        ].filter(Boolean);
+                        setWorkIndustry(pathParts.join(" > "));
+                      }}
+                    />
+                  </div>
                 </div>
               )}
 

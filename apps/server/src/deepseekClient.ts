@@ -1668,7 +1668,7 @@ const ENRICHMENT_SYSTEM_ADDITION = `
 - 饮食偏好（cuisinePreferences）
 - 饮食限制（dietaryRestrictions）
 - 装修风格偏好（decorStylePreferences）
-- 社交目标（socialGoals）
+- 社交目标（eventIntent）
 
 **对话风格（Nick Wilde式）**：
 1. 俏皮调侃但不油腻：
