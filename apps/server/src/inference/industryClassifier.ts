@@ -59,6 +59,23 @@ export interface IndustryClassificationResult {
 }
 
 /**
+ * 🆕 Context for industry classification
+ */
+export interface IndustryClassificationContext {
+  occupationId?: string;        // Use seedMappings from this occupation
+  lockedCategoryId?: string;    // Restrict AI search to this category
+  source?: 'occupation_selector' | 'manual_input';
+}
+
+/**
+ * 🆕 Request with context support
+ */
+export interface IndustryClassificationRequest {
+  description: string;
+  context?: IndustryClassificationContext;
+}
+
+/**
  * Tier 1: Seed库精确匹配
  */
 function matchViaSeed(userInput: string): IndustryClassificationResult | null {
@@ -640,6 +657,208 @@ async function intelligentFallback(userInput: string, startTime: number): Promis
       normalizedInput: userInput,
     };
   }
+}
+
+/**
+ * 🆕 Tier 3b: AI with locked category (context-aware)
+ * AI inference constrained to a specific category
+ */
+async function matchViaAIWithLockedCategory(
+  userInput: string,
+  lockedCategoryId: string
+): Promise<IndustryClassificationResult | null> {
+  const startTime = Date.now();
+  
+  try {
+    const { default: OpenAI } = await import("openai");
+    
+    const apiKey = process.env.DEEPSEEK_API_KEY;
+    if (!apiKey) {
+      console.error("DEEPSEEK_API_KEY not configured");
+      return null;
+    }
+    
+    const openai = new OpenAI({
+      apiKey,
+      baseURL: "https://api.deepseek.com",
+    });
+    
+    const lockedCategory = findCategoryById(lockedCategoryId);
+    if (!lockedCategory) {
+      console.error(`Locked category ${lockedCategoryId} not found`);
+      return null;
+    }
+    
+    // Build available segments/niches within locked category
+    const availableOptions = lockedCategory.segments.map(seg => {
+      const nichesList = seg.niches.map(n => `${n.id} (${n.label})`).join(", ");
+      return `- ${seg.id} (${seg.label})${nichesList ? ` - 赛道: ${nichesList}` : ''}`;
+    }).join("\n");
+    
+    const prompt = `你是行业分类专家。用户已选择"${lockedCategory.label}"大类，现在需要选择细分领域和赛道。
+
+用户输入："${userInput}"
+
+可选细分领域和赛道（仅限以下选项）：
+${availableOptions}
+
+分析用户输入，返回最匹配的细分领域。必须返回JSON格式：
+{
+  "segment": "细分ID",
+  "segmentLabel": "细分中文名称",
+  "niche": "赛道ID（可选）",
+  "nicheLabel": "赛道中文名称（可选）",
+  "confidence": 0.0-1.0,
+  "reasoning": "分类理由"
+}
+
+注意：
+1. segment和niche的ID必须从上面的列表中选择
+2. 所有label使用简体中文
+3. confidence反映确定性，locked category场景下应+0.1`;
+    
+    const response = await (openai.chat.completions.create as any)({
+      model: "deepseek-chat",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      temperature: 0.3,
+      max_tokens: 500,
+    });
+    
+    const content = response.choices[0]?.message?.content;
+    if (!content) return null;
+    
+    const aiResult = JSON.parse(content);
+    
+    const segment = findSegmentById(lockedCategory.id, aiResult.segment);
+    
+    if (!segment) return null;
+    
+    let niche = undefined;
+    if (aiResult.niche) {
+      const nicheFound = findNicheById(lockedCategory.id, aiResult.segment, aiResult.niche);
+      if (nicheFound) {
+        niche = { id: aiResult.niche, label: aiResult.nicheLabel || nicheFound.label };
+      }
+    }
+    
+    // Apply niche inference if no niche found
+    if (!niche) {
+      const inferredNiche = inferNicheFromContext(userInput, lockedCategory.id, segment.id);
+      if (inferredNiche && inferredNiche.confidence >= CONFIDENCE_THRESHOLDS.NICHE_INFERENCE_AI) {
+        niche = { id: inferredNiche.id, label: inferredNiche.label };
+      }
+    }
+    
+    const result: IndustryClassificationResult = {
+      category: { id: lockedCategory.id, label: lockedCategory.label },
+      segment: { id: segment.id, label: aiResult.segmentLabel || segment.label },
+      niche,
+      confidence: Math.min(1.0, Math.max(0.0, (aiResult.confidence || 0.7) + 0.1)), // +0.1 for locked category
+      reasoning: aiResult.reasoning,
+      source: "ai",
+      processingTimeMs: Date.now() - startTime,
+      rawInput: userInput,
+      normalizedInput: userInput,
+    };
+    
+    // Ensure reasoning is always present
+    return ensureReasoning(result, userInput);
+  } catch (error) {
+    console.error("AI classification with locked category error:", error);
+    return null;
+  }
+}
+
+/**
+ * 🆕 Context-aware industry classification
+ * Main entry point with occupationId and lockedCategoryId support
+ */
+export async function classifyIndustryWithContext(
+  request: IndustryClassificationRequest
+): Promise<IndustryClassificationResult> {
+  const { description, context } = request;
+  const startTime = Date.now();
+  
+  // Import cache functions
+  const { generateCacheKey, getCachedClassification, setCachedClassification } = 
+    await import("./cache");
+  
+  // Check cache first
+  const cacheKey = generateCacheKey(description, context);
+  const cachedResult = getCachedClassification(cacheKey);
+  if (cachedResult) {
+    console.log(`[Cache HIT] ${cacheKey}`);
+    return {
+      ...cachedResult,
+      processingTimeMs: Date.now() - startTime,
+    } as IndustryClassificationResult;
+  }
+  
+  console.log(`[Cache MISS] ${cacheKey}`);
+  
+  // Strategy 1: If occupationId provided, use seedMappings
+  if (context?.occupationId) {
+    const occupation = OCCUPATIONS.find(o => o.id === context.occupationId);
+    if (occupation?.seedMappings) {
+      const category = findCategoryById(occupation.seedMappings.category);
+      const segment = category ? findSegmentById(occupation.seedMappings.category, occupation.seedMappings.segment) : null;
+      
+      if (category && segment) {
+        let niche = undefined;
+        if (occupation.seedMappings.niche) {
+          const nicheFound = findNicheById(occupation.seedMappings.category, occupation.seedMappings.segment, occupation.seedMappings.niche);
+          if (nicheFound) {
+            niche = { id: occupation.seedMappings.niche, label: nicheFound.label };
+          }
+        }
+        
+        const result: IndustryClassificationResult = {
+          category: { id: category.id, label: category.label },
+          segment: { id: segment.id, label: segment.label },
+          niche,
+          confidence: 0.95,
+          source: "seed",
+          reasoning: `基于职业"${occupation.displayName}"的自动映射`,
+          processingTimeMs: Date.now() - startTime,
+          rawInput: description,
+          normalizedInput: description,
+        };
+        
+        // Cache result
+        setCachedClassification(cacheKey, result);
+        
+        return ensureReasoning(result, description);
+      }
+    }
+  }
+  
+  // Strategy 2: If lockedCategoryId provided, use AI with locked category
+  if (context?.lockedCategoryId) {
+    const aiResult = await matchViaAIWithLockedCategory(description, context.lockedCategoryId);
+    if (aiResult) {
+      // Cache result
+      setCachedClassification(cacheKey, aiResult);
+      return aiResult;
+    }
+  }
+  
+  // Strategy 3: Use standard classification
+  const result = await classifyIndustry(description);
+  
+  // Cache result
+  setCachedClassification(cacheKey, result);
+  
+  return result;
+}
+
+/**
+ * 🆕 Unified entry point (backward compatible)
+ */
+export async function classifyIndustryUnified(
+  request: IndustryClassificationRequest
+): Promise<IndustryClassificationResult> {
+  return classifyIndustryWithContext(request);
 }
 
 /**
