@@ -23,7 +23,7 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
           emojiOpacity: 0.5,
           emojiScale: 1,
           textColor: "text-gray-600",
-          textSize: "text-[11px]",
+          textSize: "text-xs",
           fontWeight: "",
           shadow: "none",
         };
@@ -35,7 +35,7 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
           emojiOpacity: 1,
           emojiScale: 1.05,
           textColor: "text-purple-700",
-          textSize: "text-[11px]",
+          textSize: "text-xs",
           fontWeight: "font-medium",
           shadow: "0 2px 6px rgba(167, 139, 250, 0.2)",
         };
@@ -47,7 +47,7 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
           emojiOpacity: 1,
           emojiScale: 1.08,
           textColor: "text-pink-600",
-          textSize: "text-[11px]",
+          textSize: "text-xs",
           fontWeight: "font-semibold",
           shadow: "0 3px 10px rgba(236, 72, 153, 0.25)",
         };
@@ -59,7 +59,7 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
           emojiOpacity: 1,
           emojiScale: 1.12,
           textColor: "text-orange-700",
-          textSize: "text-[11px]",
+          textSize: "text-xs",
           fontWeight: "font-bold",
           shadow: "0 4px 14px rgba(251, 146, 60, 0.3)",
         };
@@ -114,9 +114,9 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
         </div>
       )}
 
-      {/* Emoji - smaller */}
+      {/* Emoji - larger for better visibility */}
       <motion.div
-        className="text-xl leading-none"
+        className="text-2xl sm:text-3xl leading-none"
         style={{ opacity: styles.emojiOpacity }}
         animate={
           level === 3 && !prefersReducedMotion
@@ -138,7 +138,7 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
         {topic.emoji}
       </motion.div>
 
-      {/* Label - compact with controlled text size */}
+      {/* Label - increased font size for better readability */}
       <div className={cn(styles.textSize, styles.fontWeight, styles.textColor, "text-center leading-tight px-0.5")}>
         {topic.label}
       </div>
