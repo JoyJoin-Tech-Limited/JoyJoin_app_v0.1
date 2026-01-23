@@ -355,9 +355,11 @@ export default function EssentialDataPage() {
   const progress = ((currentStep + 1) / TOTAL_STEPS) * 100;
 
   const canProceed = () => {
+    const MIN_LANGUAGES_REQUIRED = 1; // Minimum language selections required
+    
     switch (currentStep) {
       case 0: return displayName.trim().length >= 2;
-      case 1: return gender && (birthDate?.year || birthYear) && languagesComfort.length >= 1; // NEW - Require at least 1 language
+      case 1: return gender && (birthDate?.year || birthYear) && languagesComfort.length >= MIN_LANGUAGES_REQUIRED;
       case 2: return relationshipStatus;
       case 3: return education;
       case 4: return industryCategory && industrySegmentNew; // FIXED: use correct field name
