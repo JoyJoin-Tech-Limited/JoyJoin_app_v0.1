@@ -83,7 +83,6 @@ export default function EditProfilePage() {
             { label: "昵称", value: user.displayName },
             { label: "性别", value: user.gender ? getGenderDisplay(user.gender) : null },
             { label: "年龄", value: ageDisplay },
-            { label: "常用语言", value: user.languagesComfort?.join(", ") },
           ],
         },
       ],

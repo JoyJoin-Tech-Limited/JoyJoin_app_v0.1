@@ -95,7 +95,7 @@ export const users = pgTable("users", {
   hometownRegionCity: varchar("hometown_region_city"),
   hometownAffinityOptin: boolean("hometown_affinity_optin").default(true),
   currentCity: varchar("current_city"), // 现居城市: 香港, 深圳, 广州, 其他
-  languagesComfort: text("languages_comfort").array(), // 普通话, 粤语, 英语等中文语言
+  languagesComfort: text("languages_comfort").array(), // DEPRECATED - Not collected in onboarding, low matching value
   
   // Registration fields - Deprecated/Legacy
   placeOfOrigin: varchar("place_of_origin"), // Deprecated in favor of hometown fields
@@ -128,8 +128,8 @@ export const users = pgTable("users", {
   interestsTelemetry: jsonb("interests_telemetry"), // 兴趣滑动遥测数据 { version: string, events: [{interestId, choice, reactionTimeMs, timestamp}] }
   
   // Registration fields - Social & Venue Preferences (collected via AI chat)
-  socialStyle: varchar("social_style"), // 社交风格: 外向活泼, 内敛沉稳, 看情况
-  icebreakerRole: varchar("icebreaker_role"), // 破冰角色: leader(气氛组), supporter(捧场王), observer(观察者), flexible(看情况)
+  socialStyle: varchar("social_style"), // DEPRECATED - Not used in matching algorithm
+  icebreakerRole: varchar("icebreaker_role"), // DEPRECATED - Not used in matching algorithm
   venueStylePreference: varchar("venue_style_preference"), // 场地偏好: 安静咖啡馆, 热闹酒吧, 户外活动, etc.
   cuisinePreference: text("cuisine_preference").array(), // 菜系偏好: 粤菜, 日料, 西餐, etc.
   favoriteRestaurant: varchar("favorite_restaurant"), // 宝藏餐厅推荐
@@ -894,7 +894,7 @@ export const registerUserSchema = z.object({
   hometownRegionCity: z.string().min(1, "请选择家乡"),
   hometownAffinityOptin: z.boolean().optional().default(true), // 同乡亲和力
   currentCity: z.string().min(1, "请选择现居城市"),
-  languagesComfort: z.array(z.string()).min(1, "请至少选择一种语言"),
+  languagesComfort: z.array(z.string()).optional(), // DEPRECATED - Not collected in onboarding
   
   // Privacy controls
   educationVisibility: z.enum(["hide_all", "show_level_only", "show_level_and_field"]).optional().default("hide_all"),

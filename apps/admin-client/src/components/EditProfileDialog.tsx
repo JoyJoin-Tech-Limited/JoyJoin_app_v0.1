@@ -36,7 +36,6 @@ const basicSchema = z.object({
   displayName: z.string().min(1, "请输入昵称"),
   gender: z.string().optional(),
   birthdate: z.string().optional(),
-  languagesComfort: z.array(z.string()).optional(),
 });
 
 const educationSchema = z.object({
@@ -88,7 +87,6 @@ const getDefaultValues = (section: SectionType, user: any) => {
         displayName: user?.displayName || "",
         gender: user?.gender || "",
         birthdate: user?.birthdate ? new Date(user.birthdate).toISOString().split('T')[0] : "",
-        languagesComfort: user?.languagesComfort || [],
       };
     case "education":
       return {
@@ -127,28 +125,6 @@ const sectionTitles: Record<SectionType, string> = {
   personal: "编辑个人背景",
   interests: "编辑兴趣偏好",
 };
-
-const languageOptions = [
-  "普通话",
-  "粤语",
-  "英语",
-  "四川话",
-  "东北话",
-  "河南话",
-  "山东话",
-  "湖北话",
-  "湖南话",
-  "闽南话",
-  "上海话",
-  "客家话",
-  "潮汕话",
-  "温州话",
-  "日语",
-  "韩语",
-  "法语",
-  "德语",
-  "西班牙语",
-];
 
 const overseasRegionOptions = [
   "北美",
@@ -308,23 +284,6 @@ export default function EditProfileDialog({
                     </FormItem>
                   )}
                 />
-
-                <div>
-                  <Label className="mb-2 block">常用语言</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {languageOptions.map((lang) => (
-                      <Badge
-                        key={lang}
-                        variant={(form.watch("languagesComfort") || []).includes(lang) ? "default" : "outline"}
-                        className="cursor-pointer"
-                        onClick={() => toggleArrayItem("languagesComfort", lang)}
-                        data-testid={`badge-language-${lang}`}
-                      >
-                        {lang}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
               </>
             )}
 
