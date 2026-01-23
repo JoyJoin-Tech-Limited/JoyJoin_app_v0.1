@@ -20,9 +20,9 @@ import {
 
 const educationSchema = z.object({
   educationLevel: z.enum(["Bachelor's", "Master's", "PhD", "Some college/Associate", "Trade/Vocational"]).optional(),
-  fieldOfStudy: z.string().optional(),
-  studyLocale: z.enum(["Local", "Overseas", "Both"]).optional(),
-  overseasRegions: z.array(z.string()).optional(),
+  // ❌ DEPRECATED: fieldOfStudy - hidden from UI but kept in DB for backward compatibility
+  // ❌ DEPRECATED: studyLocale - hidden from UI but kept in DB for backward compatibility
+  // ❌ DEPRECATED: overseasRegions - hidden from UI but kept in DB for backward compatibility
 });
 
 type EducationForm = z.infer<typeof educationSchema>;
@@ -42,9 +42,7 @@ export default function EditEducationPage() {
     resolver: zodResolver(educationSchema),
     defaultValues: {
       educationLevel: user?.educationLevel || undefined,
-      fieldOfStudy: user?.fieldOfStudy || "",
-      studyLocale: user?.studyLocale || undefined,
-      overseasRegions: user?.overseasRegions || [],
+      // ❌ DEPRECATED: fieldOfStudy, studyLocale, overseasRegions - removed from UI
     },
   });
 
@@ -66,22 +64,10 @@ export default function EditEducationPage() {
   });
 
   const onSubmit = (data: EducationForm) => {
-    // Clean up empty strings - send undefined instead of empty string for optional fields
-    const cleanedData = {
-      ...data,
-      fieldOfStudy: data.fieldOfStudy && data.fieldOfStudy.trim() !== '' ? data.fieldOfStudy : undefined,
-    };
-    updateMutation.mutate(cleanedData);
+    updateMutation.mutate(data);
   };
 
-  const toggleRegion = (region: string) => {
-    const current = form.watch("overseasRegions") || [];
-    if (current.includes(region)) {
-      form.setValue("overseasRegions", current.filter(r => r !== region));
-    } else {
-      form.setValue("overseasRegions", [...current, region]);
-    }
-  };
+  // ❌ DEPRECATED: toggleRegion helper removed - overseasRegions no longer in UI
 
   if (isLoading || !user) {
     return (
@@ -94,9 +80,7 @@ export default function EditEducationPage() {
     );
   }
 
-  const studyLocale = form.watch("studyLocale");
-  const selectedRegions = form.watch("overseasRegions") || [];
-  const showOverseasRegions = studyLocale === "Overseas" || studyLocale === "Both";
+  // ❌ DEPRECATED: studyLocale and overseasRegions logic removed from UI
 
   return (
     <div className="min-h-screen bg-background">
@@ -148,73 +132,11 @@ export default function EditEducationPage() {
           </div>
         </div>
 
-        {/* Field of Study */}
-        <div className="space-y-2">
-          <Label htmlFor="fieldOfStudy">专业领域</Label>
-          <Input
-            id="fieldOfStudy"
-            placeholder="例如：计算机科学、金融等"
-            {...form.register("fieldOfStudy")}
-            data-testid="input-fieldOfStudy"
-          />
-        </div>
+        {/* ❌ DEPRECATED: Field of Study - removed from UI */}
 
-        {/* Study Locale */}
-        <div className="space-y-2">
-          <Label>学习地点</Label>
-          <div className="space-y-3 mt-2">
-            {[
-              { value: "Local", label: "本地" },
-              { value: "Overseas", label: "海外" },
-              { value: "Both", label: "都有" },
-            ].map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => form.setValue("studyLocale", option.value as any)}
-                className={`
-                  w-full px-5 py-4 text-left rounded-lg border transition-all text-base
-                  ${form.watch("studyLocale") === option.value
-                    ? 'border-primary bg-primary/5 text-primary' 
-                    : 'border-border hover-elevate active-elevate-2'
-                  }
-                `}
-                data-testid={`button-study-locale-${option.value}`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* ❌ DEPRECATED: Study Locale - removed from UI */}
 
-        {/* Overseas Regions */}
-        {showOverseasRegions && (
-          <div className="space-y-3">
-            <Label>海外地区</Label>
-            <p className="text-xs text-muted-foreground">
-              选择你在海外学习的地区
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {overseasRegionOptions.map((region) => (
-                <button
-                  key={region}
-                  type="button"
-                  onClick={() => toggleRegion(region)}
-                  className={`
-                    px-5 py-4 rounded-lg border transition-all text-left text-base
-                    ${selectedRegions.includes(region)
-                      ? 'border-primary bg-primary/5 text-primary' 
-                      : 'border-border hover-elevate active-elevate-2'
-                    }
-                  `}
-                  data-testid={`button-region-${region}`}
-                >
-                  {region}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* ❌ DEPRECATED: Overseas Regions - removed from UI */}
 
         {/* Save Button */}
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">

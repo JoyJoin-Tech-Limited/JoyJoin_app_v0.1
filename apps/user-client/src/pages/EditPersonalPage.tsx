@@ -9,9 +9,9 @@ import { RELATIONSHIP_STATUS_OPTIONS, CHILDREN_OPTIONS } from "@shared/constants
 
 type PersonalData = {
   relationshipStatus?: string;
-  children?: string;
-  hasPets?: boolean;
-  hasSiblings?: boolean;
+  // ❌ DEPRECATED: children - hidden from UI but kept in DB for backward compatibility
+  // ❌ DEPRECATED: hasPets - hidden from UI but kept in DB for backward compatibility
+  // ❌ DEPRECATED: hasSiblings - hidden from UI but kept in DB for backward compatibility
   currentCity?: string;
 };
 
@@ -43,9 +43,7 @@ export default function EditPersonalPage() {
   const { data: user, isLoading } = useQuery<any>({ queryKey: ["/api/auth/user"] });
   
   const [relationshipStatus, setRelationshipStatus] = useState<string | undefined>(user?.relationshipStatus);
-  const [children, setChildren] = useState<string | undefined>(user?.children);
-  const [hasPets, setHasPets] = useState<boolean | undefined>(user?.hasPets);
-  const [hasSiblings, setHasSiblings] = useState<boolean | undefined>(user?.hasSiblings);
+  // ❌ DEPRECATED: children, hasPets, hasSiblings - removed from UI
   const [currentCity, setCurrentCity] = useState<string | undefined>(user?.currentCity);
 
   const updateMutation = useMutation({
@@ -68,9 +66,6 @@ export default function EditPersonalPage() {
   const handleSave = () => {
     updateMutation.mutate({
       relationshipStatus,
-      children,
-      hasPets,
-      hasSiblings,
       currentCity,
     });
   };
@@ -128,86 +123,11 @@ export default function EditPersonalPage() {
           </div>
         </div>
 
-        {/* Children Status */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">孩子状况</h2>
-          <div className="space-y-3">
-            {childrenOptions.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => setChildren(option.value)}
-                className={`
-                  w-full px-5 py-4 text-left rounded-lg border transition-all
-                  ${children === option.value
-                    ? 'border-primary bg-primary/5 text-primary'
-                    : 'border-border hover-elevate active-elevate-2'
-                  }
-                `}
-                data-testid={`button-children-${option.value}`}
-              >
-                <span className="text-base">{option.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* ❌ DEPRECATED: Children Status - removed from UI */}
 
-        {/* Has Pets */}
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold">有毛孩子吗</h2>
-            <p className="text-sm text-muted-foreground">帮你找到同为铲屎官的朋友</p>
-          </div>
-          <div className="flex gap-3">
-            {[
-              { value: true, label: "有" },
-              { value: false, label: "没有" },
-            ].map((option) => (
-              <button
-                key={String(option.value)}
-                onClick={() => setHasPets(option.value)}
-                className={`
-                  flex-1 py-4 px-4 rounded-lg border text-center transition-all
-                  ${hasPets === option.value
-                    ? 'border-primary bg-primary/5 text-primary'
-                    : 'border-border hover-elevate active-elevate-2'
-                  }
-                `}
-                data-testid={`button-pets-${option.value}`}
-              >
-                <span className="text-base">{option.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* ❌ DEPRECATED: Has Pets - removed from UI */}
 
-        {/* Has Siblings */}
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold">有亲兄弟姐妹吗</h2>
-            <p className="text-sm text-muted-foreground">独生子女的默契懂的都懂</p>
-          </div>
-          <div className="flex gap-3">
-            {[
-              { value: true, label: "有" },
-              { value: false, label: "独生子女" },
-            ].map((option) => (
-              <button
-                key={String(option.value)}
-                onClick={() => setHasSiblings(option.value)}
-                className={`
-                  flex-1 py-4 px-4 rounded-lg border text-center transition-all
-                  ${hasSiblings === option.value
-                    ? 'border-primary bg-primary/5 text-primary'
-                    : 'border-border hover-elevate active-elevate-2'
-                  }
-                `}
-                data-testid={`button-siblings-${option.value}`}
-              >
-                <span className="text-base">{option.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* ❌ DEPRECATED: Has Siblings - removed from UI */}
 
         {/* Current City */}
         <div className="space-y-4">

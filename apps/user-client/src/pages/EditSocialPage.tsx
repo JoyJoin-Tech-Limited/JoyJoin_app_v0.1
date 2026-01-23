@@ -10,9 +10,13 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, Users } from "lucide-react";
 import { useEffect } from "react";
 
+// ❌ DEPRECATED: EditSocialPage - All fields removed from UI
+// This page is kept for routing compatibility but shows no editable fields
+// Fields (icebreakerRole, socialStyle) are kept in DB for backward compatibility
+
 const socialSchema = z.object({
-  icebreakerRole: z.string().optional(),
-  socialStyle: z.string().optional(),
+  // ❌ DEPRECATED: icebreakerRole - hidden from UI but kept in DB for backward compatibility
+  // ❌ DEPRECATED: socialStyle - hidden from UI but kept in DB for backward compatibility
 });
 
 type SocialForm = z.infer<typeof socialSchema>;
@@ -42,17 +46,11 @@ export default function EditSocialPage() {
   const form = useForm<SocialForm>({
     resolver: zodResolver(socialSchema),
     defaultValues: {
-      icebreakerRole: undefined,
-      socialStyle: undefined,
+      // ❌ DEPRECATED: All fields removed from UI
     },
   });
 
-  useEffect(() => {
-    if (user) {
-      form.setValue("icebreakerRole", user.icebreakerRole || undefined);
-      form.setValue("socialStyle", user.socialStyle || undefined);
-    }
-  }, [user, form]);
+  // ❌ DEPRECATED: useEffect removed - no fields to populate
 
   const updateMutation = useMutation({
     mutationFn: async (data: SocialForm) => {
@@ -60,6 +58,7 @@ export default function EditSocialPage() {
     },
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
+      // Redirect back since there are no fields to edit
       setLocation("/profile/edit");
     },
     onError: (error: Error) => {
@@ -72,7 +71,8 @@ export default function EditSocialPage() {
   });
 
   const onSubmit = (data: SocialForm) => {
-    updateMutation.mutate(data);
+    // ❌ DEPRECATED: No fields to submit, just redirect back
+    setLocation("/profile/edit");
   };
 
   if (isLoading || !user) {
@@ -103,78 +103,30 @@ export default function EditSocialPage() {
       </div>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-6 max-w-2xl mx-auto pb-24">
-        <div className="space-y-3">
-          <Label className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            破冰角色
-          </Label>
-          <p className="text-xs text-muted-foreground">
-            在社交场合，你通常扮演什么角色？
-          </p>
-          <div className="space-y-2 mt-2">
-            {icebreakerRoleOptions.map((option) => {
-              const isSelected = form.watch("icebreakerRole") === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => form.setValue("icebreakerRole", isSelected ? undefined : option.value)}
-                  className={`w-full text-left p-4 rounded-lg border transition-all ${
-                    isSelected
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover-elevate"
-                  }`}
-                  data-testid={`option-icebreaker-${option.value}`}
-                >
-                  <div className="font-medium text-sm">{option.label}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{option.description}</div>
-                </button>
-              );
-            })}
+        {/* ❌ DEPRECATED: All social preference fields removed from UI */}
+        
+        <div className="text-center py-12 space-y-4">
+          <Users className="h-16 w-16 mx-auto text-muted-foreground/50" />
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold text-muted-foreground">社交风格设置已迁移</h2>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              社交偏好设置已整合到其他设置页面中，请返回查看其他可编辑选项。
+            </p>
           </div>
-        </div>
-
-        <div className="space-y-3">
-          <Label className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            社交风格
-          </Label>
-          <p className="text-xs text-muted-foreground">
-            你的社交能量类型是？
-          </p>
-          <div className="space-y-2 mt-2">
-            {socialStyleOptions.map((option) => {
-              const isSelected = form.watch("socialStyle") === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => form.setValue("socialStyle", isSelected ? undefined : option.value)}
-                  className={`w-full text-left p-4 rounded-lg border transition-all ${
-                    isSelected
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover-elevate"
-                  }`}
-                  data-testid={`option-style-${option.value}`}
-                >
-                  <div className="font-medium text-sm">{option.label}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{option.description}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
           <Button 
-            type="submit" 
-            className="w-full max-w-2xl mx-auto block"
-            disabled={updateMutation.isPending}
-            data-testid="button-save"
+            type="button"
+            onClick={() => setLocation("/profile/edit")}
+            variant="outline"
+            className="mt-4"
           >
-            {updateMutation.isPending ? "保存中..." : "保存"}
+            返回资料编辑
           </Button>
         </div>
+
+        {/* ❌ DEPRECATED: Icebreaker Role section removed */}
+        {/* ❌ DEPRECATED: Social Style section removed */}
+
+        {/* Save button removed - no fields to save */}
       </form>
     </div>
   );
