@@ -181,44 +181,6 @@ export function formatArray(arr: string[] | null | undefined): string {
 }
 
 /**
- * Icebreaker role display mapping
- */
-const icebreakerRoleMap: Record<string, string> = {
-  "starter": "话题发起者",
-  "listener": "倾听者",
-  "responder": "积极回应者",
-  "observer": "安静观察者",
-  "connector": "连接者",
-};
-
-/**
- * Social style display mapping
- */
-const socialStyleMap: Record<string, string> = {
-  "extrovert": "外向型",
-  "introvert": "内向型",
-  "ambivert": "中间型",
-  "energetic": "活力型",
-  "calm": "沉稳型",
-};
-
-/**
- * Get icebreaker role display text
- */
-export function getIcebreakerRoleDisplay(role: string | null | undefined): string {
-  if (!role) return "";
-  return icebreakerRoleMap[role] || role;
-}
-
-/**
- * Get social style display text
- */
-export function getSocialStyleDisplay(style: string | null | undefined): string {
-  if (!style) return "";
-  return socialStyleMap[style] || style;
-}
-
-/**
  * 12个社交氛围原型映射
  */
 export const archetypeMap: Record<string, string> = {
