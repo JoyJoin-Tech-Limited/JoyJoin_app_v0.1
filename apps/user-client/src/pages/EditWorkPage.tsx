@@ -20,8 +20,6 @@ import {
 const workSchema = z.object({
   industry: z.string().optional(),
   roleTitleShort: z.string().optional(),
-  companyName: z.string().optional(),
-  seniority: z.enum(["Intern", "Junior", "Mid", "Senior", "Founder", "Executive"]).optional(),
   workVisibility: z.enum(["hide_all", "show_industry_only"]).optional(),
 });
 
@@ -43,8 +41,6 @@ export default function EditWorkPage() {
     defaultValues: {
       industry: user?.industry || "",
       roleTitleShort: user?.roleTitleShort || "",
-      companyName: user?.companyName || "",
-      seniority: user?.seniority || undefined,
       workVisibility: user?.workVisibility || "show_industry_only",
     },
   });
@@ -72,7 +68,6 @@ export default function EditWorkPage() {
       ...data,
       industry: data.industry && data.industry.trim() !== '' ? data.industry : undefined,
       roleTitleShort: data.roleTitleShort && data.roleTitleShort.trim() !== '' ? data.roleTitleShort : undefined,
-      companyName: data.companyName && data.companyName.trim() !== '' ? data.companyName : undefined,
     };
     updateMutation.mutate(cleanedData);
   };
@@ -140,51 +135,6 @@ export default function EditWorkPage() {
             {...form.register("roleTitleShort")}
             data-testid="input-roleTitleShort"
           />
-        </div>
-
-        {/* Company Name */}
-        <div className="space-y-2">
-          <Label htmlFor="companyName">公司名称</Label>
-          <Input
-            id="companyName"
-            placeholder="例如：腾讯、字节跳动等（可选）"
-            {...form.register("companyName")}
-            data-testid="input-companyName"
-          />
-          <p className="text-xs text-muted-foreground">
-            用于职场社交匹配，仅匹配时可见
-          </p>
-        </div>
-
-        {/* Seniority */}
-        <div className="space-y-2">
-          <Label>资历</Label>
-          <div className="space-y-3 mt-2">
-            {[
-              { value: "Intern", label: "实习生" },
-              { value: "Junior", label: "初级" },
-              { value: "Mid", label: "中级" },
-              { value: "Senior", label: "高级" },
-              { value: "Founder", label: "创始人" },
-              { value: "Executive", label: "高管" },
-            ].map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => form.setValue("seniority", option.value as any)}
-                className={`
-                  w-full px-5 py-4 text-left rounded-lg border transition-all text-base
-                  ${form.watch("seniority") === option.value
-                    ? 'border-primary bg-primary/5 text-primary' 
-                    : 'border-border hover-elevate active-elevate-2'
-                  }
-                `}
-                data-testid={`button-seniority-${option.value}`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Work Visibility */}
