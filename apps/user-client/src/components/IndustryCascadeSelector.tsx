@@ -54,6 +54,11 @@ export function IndustryCascadeSelector({
 }: IndustryCascadeSelectorProps) {
   const prefersReducedMotion = useReducedMotion();
   
+  // Validate that initialCategory is provided when hideCategory is true
+  if (hideCategory && !initialCategory) {
+    console.error("IndustryCascadeSelector: initialCategory must be provided when hideCategory is true");
+  }
+  
   // Initialize state based on props
   const [currentStep, setCurrentStep] = useState<Step>(() => {
     if (startFromSegment || hideCategory) return "segment";

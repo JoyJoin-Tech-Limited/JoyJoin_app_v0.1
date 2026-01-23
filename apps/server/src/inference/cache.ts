@@ -33,10 +33,15 @@ export function generateCacheKey(
   }
 ): string {
   const cleanDesc = description.trim().toLowerCase();
-  const contextStr = context 
-    ? `${context.occupationId || ''}:${context.lockedCategoryId || ''}`
-    : '';
-  return `${cleanDesc}:${contextStr}`;
+  
+  const keyPayload = {
+    description: cleanDesc,
+    occupationId: context?.occupationId ?? null,
+    lockedCategoryId: context?.lockedCategoryId ?? null,
+    source: context?.source ?? null,
+  };
+
+  return JSON.stringify(keyPayload);
 }
 
 /**

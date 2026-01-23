@@ -23,7 +23,6 @@ import {
   Loader2,
   Sparkles,
   Edit,
-  AlertCircle
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,7 +33,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import {
-  OCCUPATIONS,
   INDUSTRIES,
   searchOccupations,
   getOccupationById,
@@ -52,6 +50,34 @@ import {
 import { getIndustryPathLabels } from "@shared/industryTaxonomy";
 import { IndustryCascadeSelector } from "./IndustryCascadeSelector";
 import { cn } from "@/lib/utils";
+
+// Type definitions for API responses
+interface IndustryClassificationContext {
+  occupationId?: string;
+  lockedCategoryId?: string;
+  source?: 'occupation_selector' | 'manual_input';
+}
+
+interface IndustryClassificationResult {
+  category: {
+    id: string;
+    label: string;
+  };
+  segment: {
+    id: string;
+    label: string;
+  };
+  niche?: {
+    id: string;
+    label: string;
+  };
+  confidence: number;
+  reasoning?: string;
+  source: "seed" | "ontology" | "ai" | "fallback" | "fuzzy";
+  processingTimeMs: number;
+  rawInput: string;
+  normalizedInput: string;
+}
 
 function HighlightText({ text, query }: { text: string; query: string }) {
   if (!query.trim()) {
@@ -154,32 +180,68 @@ export function EnhancedOccupationSelector({
 
   // AI classification mutation
   const classifyMutation = useMutation({
-    mutationFn: async (data: { description: string; context?: any }) => {
+    mutationFn: async (data: { description: string; context?: IndustryClassificationContext }) => {
       const response = await apiRequest('/api/inference/classify-industry', 'POST', data);
-      return await response.json();
+      return await response.json() as IndustryClassificationResult;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: IndustryClassificationResult) => {
+      // Validate response structure
+      const category = data?.category;
+      const segment = data?.segment;
+      const niche = data?.niche;
+
+      const hasValidCategory =
+        category &&
+        typeof category.id === "string" &&
+        typeof category.label === "string";
+      const hasValidSegment =
+        segment &&
+        typeof segment.id === "string" &&
+        typeof segment.label === "string";
+      const hasValidNiche =
+        !niche ||
+        (typeof niche.id === "string" && typeof niche.label === "string");
+
+      if (!hasValidCategory || !hasValidSegment || !hasValidNiche) {
+        setAiInferenceStatus("error");
+        toast({
+          title: "AI 分类结果异常",
+          description: "AI 返回的行业数据不完整，请手动选择行业分类",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setAiInferenceStatus('success');
-      setAiConfidence(data.confidence);
-      setAiReasoning(data.reasoning || "");
+      setAiConfidence(
+        typeof data.confidence === "number" && Number.isFinite(data.confidence)
+          ? data.confidence
+          : 0
+      );
+      setAiReasoning(typeof data.reasoning === "string" ? data.reasoning : "");
       
-      // Update industry
+      // Update industry with validated data
       onIndustryChange(
-        data.category.id,
-        data.segment.id,
-        data.niche?.id,
+        category.id,
+        segment.id,
+        niche?.id,
         {
-          category: data.category.label,
-          segment: data.segment.label,
-          niche: data.niche?.label,
+          category: category.label,
+          segment: segment.label,
+          niche: niche?.label,
         }
       );
     },
-    onError: () => {
+    onError: (error: unknown) => {
       setAiInferenceStatus('error');
+      console.error("AI industry classification failed", error);
+      let description = "请手动选择行业分类";
+      if (error && typeof error === "object" && "message" in error && typeof (error as any).message === "string") {
+        description = `请手动选择行业分类。错误信息：${(error as any).message}`;
+      }
       toast({
         title: "AI 分类失败",
-        description: "请手动选择行业分类",
+        description,
         variant: "destructive",
       });
     },
@@ -200,7 +262,7 @@ export function EnhancedOccupationSelector({
         });
       }
     }
-  }, [selectedOccupationId]);
+  }, [selectedOccupationId, industryCategory, classifyMutation]);
 
   const handleOccupationSelect = useCallback((occupation: Occupation) => {
     onOccupationChange(occupation.id, occupation.industryId);
@@ -363,21 +425,33 @@ export function EnhancedOccupationSelector({
               </div>
               
               <div className="flex flex-wrap gap-1.5">
-                {industryCategory && (
-                  <Badge variant="default" className="bg-primary/20 text-primary border-primary/30">
-                    {getIndustryPathLabels(industryCategory).category}
-                  </Badge>
-                )}
-                {industrySegment && (
-                  <Badge variant="secondary">
-                    {getIndustryPathLabels(industryCategory, industrySegment).segment}
-                  </Badge>
-                )}
-                {industryNiche && (
-                  <Badge variant="outline">
-                    {getIndustryPathLabels(industryCategory, industrySegment, industryNiche).niche}
-                  </Badge>
-                )}
+                {industryCategory && (() => {
+                  const { category, segment, niche } = getIndustryPathLabels(
+                    industryCategory,
+                    industrySegment,
+                    industryNiche
+                  );
+
+                  return (
+                    <>
+                      {category && (
+                        <Badge variant="default" className="bg-primary/20 text-primary border-primary/30">
+                          {category}
+                        </Badge>
+                      )}
+                      {industrySegment && segment && (
+                        <Badge variant="secondary">
+                          {segment}
+                        </Badge>
+                      )}
+                      {industryNiche && niche && (
+                        <Badge variant="outline">
+                          {niche}
+                        </Badge>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
               
               {aiReasoning && (
