@@ -27,7 +27,6 @@ import {
   formatAge,
   getEducationDisplay,
   getStudyLocaleDisplay,
-  getSeniorityDisplay,
   getRelationshipDisplay,
   getChildrenDisplay,
   formatArray,
@@ -282,11 +281,6 @@ export default function ProfilePage() {
                     {user.occupation && (
                       <span className="px-2.5 py-1 text-xs bg-violet-500/10 text-violet-600 dark:text-violet-400 rounded-full">
                         {user.structuredOccupation || user.occupation}
-                      </span>
-                    )}
-                    {user.seniority && (
-                      <span className="px-2.5 py-1 text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full">
-                        {getSeniorityDisplay(user.seniority)}
                       </span>
                     )}
                   </div>
