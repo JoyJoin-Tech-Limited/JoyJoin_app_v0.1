@@ -292,6 +292,8 @@ function calculateLanguageScore(user1: UserWithProfile, user2: UserWithProfile):
  * ✅ UPDATED: Removed budget (now L1 hard constraint) and food preferences (deprecated)
  * Only score: eventIntent overlap + barThemes/alcoholComfort for 酒局
  */
+const DEFAULT_PREFERENCE_SCORE = 70; // Default compatibility when no preference data available
+
 function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile): number {
   let score = 0;
   let factors = 0;
@@ -332,7 +334,7 @@ function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile
     factors++;
   }
   
-  return factors > 0 ? Math.round(score / factors) : 70; // 默认中等兼容 (increased from 60)
+  return factors > 0 ? Math.round(score / factors) : DEFAULT_PREFERENCE_SCORE;
 }
 
 /**
