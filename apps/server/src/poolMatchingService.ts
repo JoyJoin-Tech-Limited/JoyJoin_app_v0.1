@@ -44,7 +44,6 @@ export interface UserWithProfile {
   gender: string | null;
   age: number | null;
   industry: string | null;
-  seniority: string | null;
   educationLevel: string | null;
   archetype: string | null;
   secondaryArchetype: string | null;
@@ -385,25 +384,20 @@ function calculateHometownAffinityScore(user1: UserWithProfile, user2: UserWithP
 }
 
 /**
- * 计算背景多样性分数 (0-100)
- * 不同行业、职级 = 更高分（鼓励多样性）
+ * Calculate background diversity score (0-100)
+ * Different industry, gender = higher score (encourages diversity)
  */
 function calculateDiversityScore(user1: UserWithProfile, user2: UserWithProfile): number {
   let diversityPoints = 0;
   
-  // 不同行业 +50
+  // Different industry +50
   if (user1.industry && user2.industry && user1.industry !== user2.industry) {
     diversityPoints += 50;
   }
   
-  // 不同职级 +30
-  if (user1.seniority && user2.seniority && user1.seniority !== user2.seniority) {
-    diversityPoints += 30;
-  }
-  
-  // 不同性别 +20
+  // Different gender +50 (INCREASED from +20 to compensate for seniority removal)
   if (user1.gender && user2.gender && user1.gender !== user2.gender) {
-    diversityPoints += 20;
+    diversityPoints += 50;
   }
   
   return Math.min(diversityPoints, 100);
@@ -632,7 +626,6 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       gender: users.gender,
       age: users.age,
       industry: users.industry,
-      seniority: users.seniority,
       educationLevel: users.educationLevel,
       archetype: users.archetype,
       secondaryArchetype: users.secondaryArchetype,
