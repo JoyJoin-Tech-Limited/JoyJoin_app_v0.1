@@ -71,7 +71,7 @@ export const appRoutes = {
   profileEditPersonal: '/profile/edit/personal',
   profileEditIntent: '/profile/edit/intent',
   profileEditInterests: '/profile/edit/interests',
-  profileEditSocial: '/profile/edit/social',
+  // profileEditSocial removed - unused fields (2026-01-23)
   
   // 邀请
   invite: '/invite',
