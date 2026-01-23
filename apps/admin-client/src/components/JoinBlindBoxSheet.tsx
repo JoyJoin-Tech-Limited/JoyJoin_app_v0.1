@@ -83,12 +83,6 @@ export default function JoinBlindBoxSheet({
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [teammateStatus, setTeammateStatus] = useState<'waiting' | 'joined' | null>(null);
 
-  // 用户偏好 - 语言和口味
-  const [preferencesOpen, setPreferencesOpen] = useState(false);
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-  const [selectedTasteIntensity, setSelectedTasteIntensity] = useState<string[]>([]);
-  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
-  
   // 参与意图 - Event-specific intent (multi-select)
   const [selectedIntent, setSelectedIntent] = useState<string[]>([]);
 
@@ -99,45 +93,8 @@ export default function JoinBlindBoxSheet({
     { value: "300-500", label: "300-500" },
   ];
 
-  const languageOptions = [
-    { value: "中文（国语）", label: "中文（国语）" },
-    { value: "中文（粤语）", label: "中文（粤语）" },
-    { value: "英语", label: "英语" },
-  ];
-
-  const tasteIntensityOptions = [
-    { value: "爱吃辣", label: "爱吃辣" },
-    { value: "不辣/清淡为主", label: "不辣/清淡为主" },
-  ];
-
-  const cuisineOptions = [
-    { value: "中餐", label: "中餐" },
-    { value: "川菜", label: "川菜" },
-    { value: "粤菜", label: "粤菜" },
-    { value: "火锅", label: "火锅" },
-    { value: "烧烤", label: "烧烤" },
-    { value: "西餐", label: "西餐" },
-    { value: "日料", label: "日料" },
-  ];
-
   const toggleBudget = (value: string) => {
     setBudgetPreference(prev => 
-      prev.includes(value) 
-        ? prev.filter(v => v !== value)
-        : [...prev, value]
-    );
-  };
-
-  const toggleLanguage = (value: string) => {
-    setSelectedLanguages(prev => 
-      prev.includes(value) 
-        ? prev.filter(v => v !== value)
-        : [...prev, value]
-    );
-  };
-
-  const toggleTasteIntensity = (value: string) => {
-    setSelectedTasteIntensity(prev => 
       prev.includes(value) 
         ? prev.filter(v => v !== value)
         : [...prev, value]
@@ -164,20 +121,6 @@ export default function JoinBlindBoxSheet({
         setSelectedIntent([...newIntents, intentValue]);
       }
     }
-  };
-
-  const toggleCuisine = (value: string) => {
-    setSelectedCuisines(prev => 
-      prev.includes(value) 
-        ? prev.filter(v => v !== value)
-        : [...prev, value]
-    );
-  };
-
-  const clearAllPreferences = () => {
-    setSelectedLanguages([]);
-    setSelectedTasteIntensity([]);
-    setSelectedCuisines([]);
   };
 
   const saveBudgetMutation = useMutation({
@@ -223,16 +166,10 @@ export default function JoinBlindBoxSheet({
       // 用户本次报名的主预算档（取所选中的第一个）
       const primaryBudgetTier = budgetPreference[0] || "";
 
-      // 保存城市信息和用户偏好到localStorage用于后续页面
+      // 保存城市信息到localStorage用于后续页面
+      // 语言现在从用户资料的 languagesComfort 拉取，不再在报名时收集
+      // 口味偏好（tasteIntensity, cuisines）已废弃
       localStorage.setItem("blindbox_city", city);
-      localStorage.setItem(
-        "blindbox_preferences",
-        JSON.stringify({
-          languages: selectedLanguages,
-          tasteIntensity: selectedTasteIntensity,
-          cuisines: selectedCuisines,
-        })
-      );
 
       // 保存盲盒事件数据到localStorage，用于支付页调用 /api/blind-box-events
       const blindboxEventPayload = {
@@ -256,9 +193,8 @@ export default function JoinBlindBoxSheet({
         // 偏好信息
         selectedDistricts,
         acceptNearby: selectedDistricts.length > 1,
-        selectedLanguages,
-        selectedTasteIntensity,
-        selectedCuisines,
+        // 语言现在从用户资料的 languagesComfort 拉取
+        // 口味偏好（tasteIntensity, cuisines）已废弃
 
         // 参与意图：同时写入 eventIntent 和 intent，方便后端与其它模块复用
         eventIntent: selectedIntent,
@@ -385,12 +321,12 @@ export default function JoinBlindBoxSheet({
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { value: "flexible", label: "灵活开放·都可以", icon: "✨" },
+                    { value: "flexible", label: "随缘", icon: "✨" },
+                    { value: "friends", label: "交新朋友", icon: "👋" },
                     { value: "networking", label: "拓展人脉", icon: "💼" },
-                    { value: "friends", label: "交朋友", icon: "👋" },
-                    { value: "discussion", label: "深度讨论", icon: "💬" },
-                    { value: "fun", label: "娱乐放松", icon: "🎉" },
-                    { value: "romance", label: "浪漫社交", icon: "💕" },
+                    { value: "discussion", label: "深度交流", icon: "💬" },
+                    { value: "fun", label: "轻松娱乐", icon: "🎉" },
+                    { value: "romance", label: "浪漫邂逅", icon: "💕" },
                   ].map((option) => {
                     const isSelected = selectedIntent.includes(option.value);
                     const isFlexible = option.value === "flexible";
@@ -430,98 +366,7 @@ export default function JoinBlindBoxSheet({
                 )}
               </div>
 
-              {/* C. 我的偏好 */}
-              <div>
-                <div className="mb-3">
-                  <h3 className="text-base font-semibold mb-1">我的偏好（可多选）</h3>
-                  <p className="text-xs text-muted-foreground">帮助AI更精准匹配餐厅和同伴</p>
-                </div>
-                
-                <div className="space-y-4">
-                  {/* 语言偏好 */}
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">语言</h4>
-                    <div className="grid grid-cols-3 gap-2">
-                      {languageOptions.map((option) => (
-                        <button
-                          key={option.value}
-                          onClick={() => toggleLanguage(option.value)}
-                          className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
-                            selectedLanguages.includes(option.value)
-                              ? 'border-primary bg-primary/5 font-medium'
-                              : 'border-muted bg-muted/30'
-                          }`}
-                          data-testid={`button-language-${option.value}`}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* 口味偏好 */}
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">口味偏好（用于匹配餐厅）</h4>
-                    
-                    {/* 口味强度 */}
-                    <div className="mb-3">
-                      <p className="text-xs text-muted-foreground mb-2">口味强度</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {tasteIntensityOptions.map((option) => (
-                          <button
-                            key={option.value}
-                            onClick={() => toggleTasteIntensity(option.value)}
-                            className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
-                              selectedTasteIntensity.includes(option.value)
-                                ? 'border-primary bg-primary/5 font-medium'
-                                : 'border-muted bg-muted/30'
-                            }`}
-                            data-testid={`button-taste-${option.value}`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* 主流菜系 */}
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-2">主流菜系</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {cuisineOptions.map((option) => (
-                          <button
-                            key={option.value}
-                            onClick={() => toggleCuisine(option.value)}
-                            className={`px-3 py-2 rounded-lg border-2 text-sm transition-all hover-elevate ${
-                              selectedCuisines.includes(option.value)
-                                ? 'border-primary bg-primary/5 font-medium'
-                                : 'border-muted bg-muted/30'
-                            }`}
-                            data-testid={`button-cuisine-${option.value}`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 一键清空 - 放在最后，样式弱化 */}
-                  {(selectedLanguages.length > 0 || selectedTasteIntensity.length > 0 || selectedCuisines.length > 0) && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={clearAllPreferences}
-                      className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-                      data-testid="button-clear-preferences"
-                    >
-                      一键清空所有偏好
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-            {/* D. 选择商圈 - 多选提升成功率 */}
+            {/* C. 选择商圈 - 多选提升成功率 */}
             <div className="mb-6">
               <div className="mb-3">
                 <h3 className="text-base font-semibold mb-1">选择商圈</h3>
@@ -841,34 +686,7 @@ export default function JoinBlindBoxSheet({
             </div>
           </div>
 
-          {/* 3. 我的偏好 */}
-          {(selectedLanguages.length > 0 || selectedTasteIntensity.length > 0 || selectedCuisines.length > 0) && (
-            <div className="space-y-3 pb-4 border-b">
-              <h3 className="text-sm font-semibold">我的偏好</h3>
-              <div className="space-y-2 text-sm">
-                {selectedLanguages.length > 0 && (
-                  <div>
-                    <span className="text-muted-foreground">语言：</span>
-                    <span className="font-medium ml-2">{selectedLanguages.join(' · ')}</span>
-                  </div>
-                )}
-                {selectedTasteIntensity.length > 0 && (
-                  <div>
-                    <span className="text-muted-foreground">口味强度：</span>
-                    <span className="font-medium ml-2">{selectedTasteIntensity.join(' · ')}</span>
-                  </div>
-                )}
-                {selectedCuisines.length > 0 && (
-                  <div>
-                    <span className="text-muted-foreground">菜系：</span>
-                    <span className="font-medium ml-2">{selectedCuisines.join(' · ')}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 4. 已选商圈 */}
+          {/* 3. 已选商圈 */}
           {selectedDistricts.length > 0 && (
             <div className="space-y-3">
               <div>

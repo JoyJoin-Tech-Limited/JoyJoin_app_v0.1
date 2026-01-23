@@ -116,9 +116,7 @@ export default function JoinBlindBoxSheet({
       setSelectedAlcoholComfort([]);
       setBarBudgetPreference([]);
     } else if (eventData.eventType === "酒局") {
-      // 切换到酒局时，清空饭局偏好
-      setSelectedTasteIntensity([]);
-      setSelectedCuisines([]);
+      // 切换到酒局时，清空饭局偏好（口味偏好已废弃，无需清空）
       setBudgetPreference([]);
     }
   }, [eventData.eventType]);
@@ -153,11 +151,8 @@ export default function JoinBlindBoxSheet({
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [teammateStatus, setTeammateStatus] = useState<'waiting' | 'joined' | null>(null);
 
-  // 用户偏好 - 语言和口味
+  // 用户偏好 - 酒局偏好（语言现在从用户资料的 languagesComfort 拉取）
   const [preferencesOpen, setPreferencesOpen] = useState(false);
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-  const [selectedTasteIntensity, setSelectedTasteIntensity] = useState<string[]>([]);
-  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   
   // 酒局偏好 - 酒吧主题和饮酒程度
   const [selectedBarThemes, setSelectedBarThemes] = useState<string[]>([]);
@@ -181,27 +176,6 @@ export default function JoinBlindBoxSheet({
     { value: "80-150", label: "¥80-150/杯" },
   ];
 
-  const languageOptions = [
-    { value: "中文（国语）", label: "中文（国语）" },
-    { value: "中文（粤语）", label: "中文（粤语）" },
-    { value: "英语", label: "英语" },
-  ];
-
-  const tasteIntensityOptions = [
-    { value: "爱吃辣", label: "爱吃辣" },
-    { value: "不辣/清淡为主", label: "不辣/清淡为主" },
-  ];
-
-  const cuisineOptions = [
-    { value: "中餐", label: "中餐" },
-    { value: "川菜", label: "川菜" },
-    { value: "粤菜", label: "粤菜" },
-    { value: "火锅", label: "火锅" },
-    { value: "烧烤", label: "烧烤" },
-    { value: "西餐", label: "西餐" },
-    { value: "日料", label: "日料" },
-  ];
-
   // 酒局偏好选项
   const barThemeOptions = [
     { value: "精酿", label: "精酿" },
@@ -217,22 +191,6 @@ export default function JoinBlindBoxSheet({
 
   const toggleBudget = (value: string) => {
     setBudgetPreference(prev => 
-      prev.includes(value) 
-        ? prev.filter(v => v !== value)
-        : [...prev, value]
-    );
-  };
-
-  const toggleLanguage = (value: string) => {
-    setSelectedLanguages(prev => 
-      prev.includes(value) 
-        ? prev.filter(v => v !== value)
-        : [...prev, value]
-    );
-  };
-
-  const toggleTasteIntensity = (value: string) => {
-    setSelectedTasteIntensity(prev => 
       prev.includes(value) 
         ? prev.filter(v => v !== value)
         : [...prev, value]
@@ -287,14 +245,6 @@ export default function JoinBlindBoxSheet({
     }
   };
 
-  const toggleCuisine = (value: string) => {
-    setSelectedCuisines(prev => 
-      prev.includes(value) 
-        ? prev.filter(v => v !== value)
-        : [...prev, value]
-    );
-  };
-
   const toggleBarTheme = (value: string) => {
     setSelectedBarThemes(prev => 
       prev.includes(value) 
@@ -313,9 +263,7 @@ export default function JoinBlindBoxSheet({
   };
 
   const clearAllPreferences = () => {
-    setSelectedLanguages([]);
-    setSelectedTasteIntensity([]);
-    setSelectedCuisines([]);
+    // 只清除酒局偏好 - 语言现在从用户资料拉取，口味偏好已废弃
     setSelectedBarThemes([]);
     setSelectedAlcoholComfort([]);
   };
@@ -376,9 +324,8 @@ export default function JoinBlindBoxSheet({
     localStorage.setItem(
       "blindbox_preferences",
       JSON.stringify({
-        languages: selectedLanguages,
-        tasteIntensity: selectedTasteIntensity,
-        cuisines: selectedCuisines,
+        // 语言现在从用户资料的 languagesComfort 拉取，不再在报名时收集
+        // 口味偏好（tasteIntensity, cuisines）已废弃
         barThemes: selectedBarThemes,
         alcoholComfort: selectedAlcoholComfort,
       })
@@ -409,9 +356,8 @@ export default function JoinBlindBoxSheet({
       // 偏好信息
       selectedDistricts,
       acceptNearby: selectedDistricts.length > 1,
-      selectedLanguages,
-      selectedTasteIntensity,
-      selectedCuisines,
+      // 语言现在从用户资料的 languagesComfort 拉取
+      // 口味偏好（tasteIntensity, cuisines）已废弃
       barThemes: selectedBarThemes,
       alcoholComfort: selectedAlcoholComfort,
 
@@ -755,7 +701,7 @@ export default function JoinBlindBoxSheet({
                       <Shuffle className="h-4 w-4" />
                     </div>
                     <div>
-                      <div className="font-medium text-sm">灵活开放</div>
+                      <div className="font-medium text-sm">随缘</div>
                       <div className="text-xs text-muted-foreground">
                         {isFlexibleMode ? '已交给AI智能匹配' : '让AI为你匹配最合适的同伴'}
                       </div>
@@ -779,11 +725,11 @@ export default function JoinBlindBoxSheet({
                     >
                       <div className="grid grid-cols-2 gap-2 w-full">
                         {[
+                          { value: "friends", label: "交新朋友", Icon: HandHeart },
                           { value: "networking", label: "拓展人脉", Icon: Briefcase },
-                          { value: "friends", label: "交朋友", Icon: HandHeart },
-                          { value: "discussion", label: "深度讨论", Icon: MessageCircle },
-                          { value: "fun", label: "娱乐放松", Icon: PartyPopper },
-                          { value: "romance", label: "浪漫社交", Icon: Heart },
+                          { value: "discussion", label: "深度交流", Icon: MessageCircle },
+                          { value: "fun", label: "轻松娱乐", Icon: PartyPopper },
+                          { value: "romance", label: "浪漫邂逅", Icon: Heart },
                         ].map((option) => {
                           const isSelected = selectedIntent.includes(option.value);
 
@@ -816,154 +762,73 @@ export default function JoinBlindBoxSheet({
                 )}
               </div>
 
-              {/* C. 我的偏好 */}
-              <div>
-                <div className="mb-3">
-                  <h3 className="text-base font-semibold mb-1">我的偏好（可多选）</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {eventData.eventType === "酒局" 
-                      ? "帮助AI更精准匹配酒吧和同伴" 
-                      : "帮助AI更精准匹配餐厅和同伴"}
-                  </p>
-                </div>
-                
-                <div className="space-y-4">
-                  {/* 语言偏好 - 两种活动类型共用 */}
-                  <MultiSelectGroup
-                    label="语言"
-                    hint="多选可提升42%匹配率"
-                    selectedCount={selectedLanguages.length}
-                    showCounter={true}
-                  >
-                    <div className="grid grid-cols-3 gap-2 w-full">
-                      {languageOptions.map((option) => (
-                        <MultiSelectButton
-                          key={option.value}
-                          selected={selectedLanguages.includes(option.value)}
-                          onClick={() => toggleLanguage(option.value)}
-                          className="w-full justify-center text-xs whitespace-nowrap px-2"
-                          data-testid={`button-language-${option.value}`}
-                        >
-                          {option.label}
-                        </MultiSelectButton>
-                      ))}
-                    </div>
-                  </MultiSelectGroup>
+              {/* C. 我的偏好 - 仅酒局显示酒吧偏好 */}
+              {eventData.eventType === "酒局" && (
+                <div>
+                  <div className="mb-3">
+                    <h3 className="text-base font-semibold mb-1">酒吧偏好（可多选）</h3>
+                    <p className="text-xs text-muted-foreground">帮助AI更精准匹配酒吧和同伴</p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {/* 酒吧主题 - 多选 */}
+                    <MultiSelectGroup
+                      label="酒吧类型"
+                      hint="多选可提升42%匹配率"
+                      selectedCount={selectedBarThemes.length}
+                      showCounter={true}
+                    >
+                      <div className="grid grid-cols-3 gap-2 w-full">
+                        {barThemeOptions.map((option) => (
+                          <MultiSelectButton
+                            key={option.value}
+                            selected={selectedBarThemes.includes(option.value)}
+                            onClick={() => toggleBarTheme(option.value)}
+                            className="w-full justify-center text-xs whitespace-nowrap px-2"
+                            data-testid={`button-bar-theme-${option.value}`}
+                          >
+                            {option.label}
+                          </MultiSelectButton>
+                        ))}
+                      </div>
+                    </MultiSelectGroup>
 
-                  {/* 饭局偏好 - 仅饭局显示 */}
-                  {eventData.eventType === "饭局" && (
-                    <div className="space-y-4">
-                      <h3 className="text-base font-semibold mb-3">口味偏好（用于匹配餐厅）</h3>
-                    
-                      {/* 口味强度 */}
-                      <MultiSelectGroup
-                        label="口味强度"
-                        selectedCount={selectedTasteIntensity.length}
-                        showCounter={true}
-                      >
-                        <div className="grid grid-cols-2 gap-2 w-full">
-                          {tasteIntensityOptions.map((option) => (
-                            <MultiSelectButton
-                              key={option.value}
-                              selected={selectedTasteIntensity.includes(option.value)}
-                              onClick={() => toggleTasteIntensity(option.value)}
-                              className="w-full justify-center"
-                              data-testid={`button-taste-${option.value}`}
-                            >
-                              {option.label}
-                            </MultiSelectButton>
-                          ))}
-                        </div>
-                      </MultiSelectGroup>
-
-                      {/* 主流菜系 */}
-                      <MultiSelectGroup
-                        label="主流菜系"
-                        hint="多选可提升42%匹配率"
-                        selectedCount={selectedCuisines.length}
-                        showCounter={true}
-                      >
-                        <div className="flex flex-wrap gap-2">
-                          {cuisineOptions.map((option) => (
-                            <MultiSelectButton
-                              key={option.value}
-                              selected={selectedCuisines.includes(option.value)}
-                              onClick={() => toggleCuisine(option.value)}
-                              className="min-w-[4.5rem] justify-center"
-                              data-testid={`button-cuisine-${option.value}`}
-                            >
-                              {option.label}
-                            </MultiSelectButton>
-                          ))}
-                        </div>
-                      </MultiSelectGroup>
-                    </div>
-                  )}
-
-                  {/* 酒局偏好 - 仅酒局显示 */}
-                  {eventData.eventType === "酒局" && (
-                    <div className="space-y-4">
-                      <h3 className="text-base font-semibold mb-3">酒吧偏好（用于匹配场地）</h3>
-                      
-                      {/* 酒吧主题 - 多选 */}
-                      <MultiSelectGroup
-                        label="酒吧类型"
-                        hint="多选可提升42%匹配率"
-                        selectedCount={selectedBarThemes.length}
-                        showCounter={true}
-                      >
-                        <div className="grid grid-cols-3 gap-2 w-full">
-                          {barThemeOptions.map((option) => (
-                            <MultiSelectButton
-                              key={option.value}
-                              selected={selectedBarThemes.includes(option.value)}
-                              onClick={() => toggleBarTheme(option.value)}
-                              className="w-full justify-center text-xs whitespace-nowrap px-2"
-                              data-testid={`button-bar-theme-${option.value}`}
-                            >
-                              {option.label}
-                            </MultiSelectButton>
-                          ))}
-                        </div>
-                      </MultiSelectGroup>
-
-                      {/* 饮酒程度 - 单选 */}
-                      <div>
-                        <div className="mb-3">
-                          <h4 className="text-sm font-semibold">饮酒程度</h4>
-                          <p className="text-xs text-muted-foreground mt-0.5">请选一个</p>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 w-full">
-                          {alcoholComfortOptions.map((option) => (
-                            <SingleSelectButton
-                              key={option.value}
-                              selected={selectedAlcoholComfort.includes(option.value)}
-                              onClick={() => toggleAlcoholComfort(option.value)}
-                              className="w-full justify-center text-xs whitespace-nowrap px-2"
-                              data-testid={`button-alcohol-${option.value}`}
-                            >
-                              {option.label}
-                            </SingleSelectButton>
-                          ))}
-                        </div>
+                    {/* 饮酒程度 - 单选 */}
+                    <div>
+                      <div className="mb-3">
+                        <h4 className="text-sm font-semibold">饮酒程度</h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">请选一个</p>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 w-full">
+                        {alcoholComfortOptions.map((option) => (
+                          <SingleSelectButton
+                            key={option.value}
+                            selected={selectedAlcoholComfort.includes(option.value)}
+                            onClick={() => toggleAlcoholComfort(option.value)}
+                            className="w-full justify-center text-xs whitespace-nowrap px-2"
+                            data-testid={`button-alcohol-${option.value}`}
+                          >
+                            {option.label}
+                          </SingleSelectButton>
+                        ))}
                       </div>
                     </div>
-                  )}
 
-                  {/* 一键清空 - 放在最后，样式弱化 */}
-                  {(selectedLanguages.length > 0 || selectedTasteIntensity.length > 0 || selectedCuisines.length > 0 || selectedBarThemes.length > 0 || selectedAlcoholComfort.length > 0) && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={clearAllPreferences}
-                      className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-                      data-testid="button-clear-preferences"
-                    >
-                      一键清空所有偏好
-                    </Button>
-                  )}
+                    {/* 一键清空 - 放在最后，样式弱化 */}
+                    {(selectedBarThemes.length > 0 || selectedAlcoholComfort.length > 0) && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={clearAllPreferences}
+                        className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                        data-testid="button-clear-preferences"
+                      >
+                        一键清空所有偏好
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* 分隔线 */}
@@ -1181,31 +1046,11 @@ export default function JoinBlindBoxSheet({
             </div>
           </div>
 
-          {/* 3. 我的偏好 */}
-          {(selectedLanguages.length > 0 || selectedTasteIntensity.length > 0 || selectedCuisines.length > 0 || selectedBarThemes.length > 0 || selectedAlcoholComfort.length > 0) && (
+          {/* 3. 我的偏好 - 仅酒局显示 */}
+          {(selectedBarThemes.length > 0 || selectedAlcoholComfort.length > 0) && (
             <div className="space-y-3 pb-4 border-b">
-              <h3 className="text-sm font-semibold">我的偏好</h3>
+              <h3 className="text-sm font-semibold">酒吧偏好</h3>
               <div className="space-y-2 text-sm">
-                {selectedLanguages.length > 0 && (
-                  <div>
-                    <span className="text-muted-foreground">语言：</span>
-                    <span className="font-medium ml-2">{selectedLanguages.join(' · ')}</span>
-                  </div>
-                )}
-                {/* 饭局偏好 */}
-                {selectedTasteIntensity.length > 0 && (
-                  <div>
-                    <span className="text-muted-foreground">口味强度：</span>
-                    <span className="font-medium ml-2">{selectedTasteIntensity.join(' · ')}</span>
-                  </div>
-                )}
-                {selectedCuisines.length > 0 && (
-                  <div>
-                    <span className="text-muted-foreground">菜系：</span>
-                    <span className="font-medium ml-2">{selectedCuisines.join(' · ')}</span>
-                  </div>
-                )}
-                {/* 酒局偏好 */}
                 {selectedBarThemes.length > 0 && (
                   <div>
                     <span className="text-muted-foreground">酒吧主题：</span>
