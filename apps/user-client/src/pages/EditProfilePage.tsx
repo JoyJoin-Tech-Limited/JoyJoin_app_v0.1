@@ -36,8 +36,6 @@ import {
   getIntentDisplay,
   getUserPrimaryInterests,
   getUserTopicAvoidances,
-  getIcebreakerRoleDisplay,
-  getSocialStyleDisplay,
 } from "@/lib/userFieldMappings";
 import { getOccupationDisplayLabel, getIndustryDisplayLabel, WORK_MODE_TO_LABEL, INDUSTRY_ID_TO_LABEL, type WorkMode } from "@shared/occupations";
 import { getInterestLabel } from "@shared/interests";
@@ -272,16 +270,6 @@ export default function EditProfilePage() {
             { label: "默认活动意图", value: user.intent ? getIntentDisplay(user.intent) : null },
           ],
           hint: "影响活动匹配，加入活动时可调整",
-        },
-        {
-          id: "social-style",
-          title: "社交风格",
-          icon: <Users className="h-4 w-4" />,
-          path: "/profile/edit/social",
-          fields: [
-            { label: "破冰角色", value: user.icebreakerRole ? getIcebreakerRoleDisplay(user.icebreakerRole) : null },
-            { label: "社交风格", value: user.socialStyle ? getSocialStyleDisplay(user.socialStyle) : null },
-          ],
         },
       ],
     },
