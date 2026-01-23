@@ -40,20 +40,23 @@ interface EventPool {
 }
 
 const budgetOptions = ["150以下", "150-200", "200-300", "300-500"];
-const languageOptions = ["粤语", "普通话", "英语"];
-const socialGoalOptions = ["认识新朋友", "拓展人脉", "轻松聊天", "深度交流", "兴趣探索"];
-const cuisineOptions = ["粤菜", "川菜", "日料", "西餐", "火锅", "烧烤", "其他"];
-const dietaryOptions = ["无限制", "素食", "清真", "海鲜过敏", "其他过敏"];
-const decorStyleOptions = ["轻奢现代风", "绿植花园风", "复古工业风", "温馨日式风", "都可以"];
+// ❌ REMOVED: languageOptions - now using user profile languagesComfort
+// Intent labels aligned with onboarding
+const eventIntentOptions = [
+  { value: "friends", label: "交新朋友" },
+  { value: "networking", label: "拓展人脉" },
+  { value: "discussion", label: "深度交流" },
+  { value: "fun", label: "轻松娱乐" },
+  { value: "romance", label: "浪漫邂逅" },
+  { value: "flexible", label: "随缘" },
+];
+// ❌ REMOVED: cuisineOptions, dietaryOptions, decorStyleOptions (simplified data model)
 
 const registrationSchema = z.object({
   budgetRange: z.array(z.string()).min(1, "请至少选择一个预算范围"),
-  preferredLanguages: z.array(z.string()).min(1, "请至少选择一种语言"),
+  // ❌ REMOVED: preferredLanguages - using user profile languagesComfort instead
   eventIntent: z.array(z.string()).min(1, "请至少选择一个社交目标"),
-  cuisinePreferences: z.array(z.string()).optional(),
-  dietaryRestrictions: z.array(z.string()).optional(),
-  tasteIntensity: z.enum(["light", "medium", "strong"]),
-  decorStylePreferences: z.array(z.string()).optional(),
+  // ❌ REMOVED: cuisinePreferences, dietaryRestrictions, tasteIntensity, decorStylePreferences
 });
 
 type RegistrationFormData = z.infer<typeof registrationSchema>;
@@ -82,12 +85,9 @@ export default function EventPoolRegistrationPage() {
     resolver: zodResolver(registrationSchema),
     defaultValues: {
       budgetRange: [],
-      preferredLanguages: [],
+      // ❌ REMOVED: preferredLanguages (using user profile)
       eventIntent: [],
-      cuisinePreferences: [],
-      dietaryRestrictions: [],
-      tasteIntensity: "medium",
-      decorStylePreferences: [],
+      // ❌ REMOVED: cuisinePreferences, dietaryRestrictions, tasteIntensity, decorStylePreferences
     },
   });
 
@@ -292,45 +292,7 @@ export default function EventPoolRegistrationPage() {
                   )}
                 />
 
-                {/* Preferred Languages */}
-                <FormField
-                  control={form.control}
-                  name="preferredLanguages"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>语言偏好 *</FormLabel>
-                      <FormDescription>可多选</FormDescription>
-                      <div className="space-y-2">
-                        {languageOptions.map((option) => (
-                          <FormField
-                            key={option}
-                            control={form.control}
-                            name="preferredLanguages"
-                            render={({ field }) => (
-                              <FormItem className="flex items-center gap-2 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(option)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...field.value, option])
-                                        : field.onChange(field.value?.filter((v) => v !== option));
-                                    }}
-                                    data-testid={`checkbox-language-${option}`}
-                                  />
-                                </FormControl>
-                                <Label className="font-normal cursor-pointer">{option}</Label>
-                              </FormItem>
-                            )}
-                          />
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Social Goals */}
+                {/* Event Intent - aligned labels with onboarding */}
                 <FormField
                   control={form.control}
                   name="eventIntent"
@@ -339,177 +301,25 @@ export default function EventPoolRegistrationPage() {
                       <FormLabel>社交目标 *</FormLabel>
                       <FormDescription>可多选</FormDescription>
                       <div className="space-y-2">
-                        {socialGoalOptions.map((option) => (
+                        {eventIntentOptions.map((option) => (
                           <FormField
-                            key={option}
+                            key={option.value}
                             control={form.control}
                             name="eventIntent"
                             render={({ field }) => (
                               <FormItem className="flex items-center gap-2 space-y-0">
                                 <FormControl>
                                   <Checkbox
-                                    checked={field.value?.includes(option)}
+                                    checked={field.value?.includes(option.value)}
                                     onCheckedChange={(checked) => {
                                       return checked
-                                        ? field.onChange([...field.value, option])
-                                        : field.onChange(field.value?.filter((v) => v !== option));
+                                        ? field.onChange([...field.value, option.value])
+                                        : field.onChange(field.value?.filter((v) => v !== option.value));
                                     }}
-                                    data-testid={`checkbox-goal-${option}`}
+                                    data-testid={`checkbox-goal-${option.value}`}
                                   />
                                 </FormControl>
-                                <Label className="font-normal cursor-pointer">{option}</Label>
-                              </FormItem>
-                            )}
-                          />
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Cuisine Preferences */}
-                <FormField
-                  control={form.control}
-                  name="cuisinePreferences"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>饮食偏好</FormLabel>
-                      <FormDescription>可多选（可选）</FormDescription>
-                      <div className="space-y-2">
-                        {cuisineOptions.map((option) => (
-                          <FormField
-                            key={option}
-                            control={form.control}
-                            name="cuisinePreferences"
-                            render={({ field }) => (
-                              <FormItem className="flex items-center gap-2 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(option)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...(field.value || []), option])
-                                        : field.onChange(field.value?.filter((v) => v !== option));
-                                    }}
-                                    data-testid={`checkbox-cuisine-${option}`}
-                                  />
-                                </FormControl>
-                                <Label className="font-normal cursor-pointer">{option}</Label>
-                              </FormItem>
-                            )}
-                          />
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Dietary Restrictions */}
-                <FormField
-                  control={form.control}
-                  name="dietaryRestrictions"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>饮食限制</FormLabel>
-                      <FormDescription>可多选（可选）</FormDescription>
-                      <div className="space-y-2">
-                        {dietaryOptions.map((option) => (
-                          <FormField
-                            key={option}
-                            control={form.control}
-                            name="dietaryRestrictions"
-                            render={({ field }) => (
-                              <FormItem className="flex items-center gap-2 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(option)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...(field.value || []), option])
-                                        : field.onChange(field.value?.filter((v) => v !== option));
-                                    }}
-                                    data-testid={`checkbox-dietary-${option}`}
-                                  />
-                                </FormControl>
-                                <Label className="font-normal cursor-pointer">{option}</Label>
-                              </FormItem>
-                            )}
-                          />
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Taste Intensity */}
-                <FormField
-                  control={form.control}
-                  name="tasteIntensity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>口味偏好</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="space-y-2"
-                        >
-                          <FormItem className="flex items-center gap-2 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="light" data-testid="radio-taste-light" />
-                            </FormControl>
-                            <Label className="font-normal cursor-pointer">清淡</Label>
-                          </FormItem>
-                          <FormItem className="flex items-center gap-2 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="medium" data-testid="radio-taste-medium" />
-                            </FormControl>
-                            <Label className="font-normal cursor-pointer">适中</Label>
-                          </FormItem>
-                          <FormItem className="flex items-center gap-2 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="strong" data-testid="radio-taste-strong" />
-                            </FormControl>
-                            <Label className="font-normal cursor-pointer">重口味</Label>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Decor Style Preferences */}
-                <FormField
-                  control={form.control}
-                  name="decorStylePreferences"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>🏠 场地风格偏好</FormLabel>
-                      <FormDescription>可多选（可选）</FormDescription>
-                      <div className="space-y-2">
-                        {decorStyleOptions.map((option) => (
-                          <FormField
-                            key={option}
-                            control={form.control}
-                            name="decorStylePreferences"
-                            render={({ field }) => (
-                              <FormItem className="flex items-center gap-2 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(option)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...(field.value || []), option])
-                                        : field.onChange(field.value?.filter((v) => v !== option));
-                                    }}
-                                    data-testid={`checkbox-decor-${option}`}
-                                  />
-                                </FormControl>
-                                <Label className="font-normal cursor-pointer">{option}</Label>
+                                <Label className="font-normal cursor-pointer">{option.label}</Label>
                               </FormItem>
                             )}
                           />
