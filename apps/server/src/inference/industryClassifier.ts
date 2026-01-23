@@ -728,7 +728,13 @@ ${availableOptions}
     const content = response.choices[0]?.message?.content;
     if (!content) return null;
     
-    const aiResult = JSON.parse(content);
+    let aiResult: any;
+    try {
+      aiResult = JSON.parse(content);
+    } catch (parseError) {
+      console.error("Failed to parse AI industry classification JSON:", parseError);
+      return null;
+    }
     
     const segment = findSegmentById(lockedCategory.id, aiResult.segment);
     
