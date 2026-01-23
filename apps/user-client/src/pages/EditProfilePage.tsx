@@ -30,7 +30,6 @@ import {
   formatAge,
   getEducationDisplay,
   getStudyLocaleDisplay,
-  getSeniorityDisplay,
   getRelationshipDisplay,
   getChildrenDisplay,
   getIntentDisplay,
