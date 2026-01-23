@@ -62,10 +62,10 @@ export const users = pgTable("users", {
   
   // Registration fields - Background
   relationshipStatus: varchar("relationship_status"), // 单身, 恋爱中, 已婚/伴侣, 离异, 丧偶, 不透露
-  children: varchar("children"), // 无孩子, 期待中, 0-5岁, 6-12岁, 13-18岁, 成年, 不透露
-  hasPets: boolean("has_pets"), // 是否有毛孩子
-  petTypes: text("pet_types").array(), // 宠物类型: 猫, 狗, 兔子, 仓鼠, etc.
-  hasSiblings: boolean("has_siblings"), // 是否有亲兄弟姐妹 (false = 独生子女)
+  children: varchar("children"), // DEPRECATED: Not collected in onboarding, removed from profile edit
+  hasPets: boolean("has_pets"), // DEPRECATED: Not collected in onboarding, removed from profile edit
+  petTypes: text("pet_types").array(), // DEPRECATED: Not collected in onboarding, removed from profile edit
+  hasSiblings: boolean("has_siblings"), // DEPRECATED: Not collected in onboarding, removed from profile edit
   hasKids: boolean("has_kids"), // Deprecated in favor of children
   
   // Registration fields - Life Stage & Age Preferences
@@ -74,9 +74,9 @@ export const users = pgTable("users", {
   
   // Registration fields - Education
   educationLevel: varchar("education_level"), // 高中及以下, 大专, 本科, 硕士, 博士, 职业培训
-  studyLocale: varchar("study_locale"), // 本地, 海外, 都有
-  overseasRegions: text("overseas_regions").array(), // NA, Europe, East Asia, SE Asia, etc.
-  fieldOfStudy: varchar("field_of_study"), // Business, Engineering, CS, Arts/Design, etc.
+  studyLocale: varchar("study_locale"), // DEPRECATED: Not collected in onboarding, removed from profile edit
+  overseasRegions: text("overseas_regions").array(), // DEPRECATED: Not collected in onboarding, removed from profile edit
+  fieldOfStudy: varchar("field_of_study"), // DEPRECATED: Not collected in onboarding, removed from profile edit
   educationVisibility: varchar("education_visibility").default("hide_all"), // hide_all, show_level_only, show_level_and_field
   
   // Registration fields - Work (New standardized occupation system)
@@ -86,8 +86,8 @@ export const users = pgTable("users", {
   // Legacy work fields (kept for backward compatibility)
   industry: varchar("industry"), // 学生, 大厂, 金融等中文行业 - now auto-derived from occupationId
   roleTitleShort: varchar("role_title_short"), // Optional short text - deprecated, use occupationId
-  seniority: varchar("seniority"), // 实习生, 初级, 中级, 高级, 资深, 创始人, 高管 - deprecated, use workMode
-  companyName: varchar("company_name"), // 公司名称（可选，用于职场社交匹配）
+  seniority: varchar("seniority"), // DEPRECATED: was used in matching but never collected - removed from edit & matching
+  companyName: varchar("company_name"), // DEPRECATED: Not collected in onboarding, removed from profile edit
   workVisibility: varchar("work_visibility").default("show_industry_only"), // hide_all, show_industry_only
   
   // Registration fields - Culture & Language
