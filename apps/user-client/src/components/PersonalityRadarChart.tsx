@@ -9,6 +9,7 @@ interface PersonalityRadarChartProps {
   positivityScore?: number;
   primaryColor?: string; // Optional custom color for the radar chart
   compactMode?: boolean; // When true, renders at 140px diameter instead of 320px
+  variant?: 'default' | 'compact'; // Variant mode for layout optimization
 }
 
 const traitDescriptions: Record<string, string> = {
@@ -20,6 +21,16 @@ const traitDescriptions: Record<string, string> = {
   '正能量性': '乐观积极的态度，传递热情和正面能量的能力',
 };
 
+// Compact label mapping for share cards (short, intuitive Chinese terms)
+const compactLabels: Record<string, string> = {
+  'affinity': '亲和',
+  'openness': '开放',
+  'conscientiousness': '尽责',
+  'emotionalStability': '稳定',
+  'extraversion': '外向',
+  'positivity': '积极',
+};
+
 export default function PersonalityRadarChart({
   affinityScore,
   opennessScore,
@@ -29,6 +40,7 @@ export default function PersonalityRadarChart({
   positivityScore,
   primaryColor,
   compactMode = false,
+  variant = 'default',
 }: PersonalityRadarChartProps) {
   const uniqueId = useId();
   const normalizeScore = (score: number | undefined, fallback: number): number => {
@@ -77,7 +89,10 @@ export default function PersonalityRadarChart({
 
   const labelPoints = userTraits.map((trait, index) => {
     const angle = (Math.PI * 2 * index) / userTraits.length - Math.PI / 2;
-    const labelRadius = maxRadius + (35 * compactScale);
+    // In compact variant, reduce label distance from chart and increase font size
+    const labelRadius = variant === 'compact' 
+      ? maxRadius + (20 * compactScale) // Closer labels in compact mode
+      : maxRadius + (35 * compactScale);
     const x = centerX + Math.cos(angle) * labelRadius;
     const y = centerY + Math.sin(angle) * labelRadius;
     return { x, y, trait, angle, index };
@@ -87,11 +102,14 @@ export default function PersonalityRadarChart({
   const strokeColor = primaryColor || "hsl(var(--primary))";
   const fillGradientId = primaryColor ? `customRadarGradient-${uniqueId}` : `userRadarGradient-${uniqueId}`;
 
-  // Calculate viewBox and dimensions based on compact mode
+  // Calculate viewBox and dimensions based on compact mode and variant
   const viewBoxSize = compactMode ? 140 : 320;
   const viewBoxPadding = compactMode ? -5 : -10;
   const maxWidth = compactMode ? 140 : 320;
-  const fontSize = compactMode ? 6 : 11; // Increased from 5.5 to 6 for better readability at 45% width
+  // Increase font size significantly in compact variant for better readability in share cards
+  const fontSize = variant === 'compact' 
+    ? (compactMode ? 10 : 13) // Larger labels for compact variant
+    : (compactMode ? 6 : 11); // Original size for default variant
 
   return (
     <div className={`flex flex-col items-center justify-center w-full ${compactMode ? 'py-1' : 'py-4'}`}>
@@ -184,17 +202,65 @@ export default function PersonalityRadarChart({
           
           const angle = label.angle;
           
-          if (angle > -Math.PI/3 && angle < Math.PI/3) {
-            textAnchor = "start";
-          } else if (angle > Math.PI*2/3 || angle < -Math.PI*2/3) {
-            textAnchor = "end";
+          // Quadrant-aware alignment for compact variant to reduce overlap
+          if (variant === 'compact') {
+            // More precise quadrant-based alignment
+            const angleDeg = (angle * 180 / Math.PI + 360) % 360;
+            
+            // Right side (text starts after point)
+            if (angleDeg > 315 || angleDeg < 45) {
+              textAnchor = "start";
+              dy = "0.35em";
+            }
+            // Bottom right
+            else if (angleDeg >= 45 && angleDeg < 90) {
+              textAnchor = "start";
+              dy = "-0.2em";
+            }
+            // Bottom
+            else if (angleDeg >= 90 && angleDeg < 135) {
+              textAnchor = "middle";
+              dy = "-0.5em";
+            }
+            // Bottom left
+            else if (angleDeg >= 135 && angleDeg < 180) {
+              textAnchor = "end";
+              dy = "-0.2em";
+            }
+            // Left side (text ends before point)
+            else if (angleDeg >= 180 && angleDeg < 225) {
+              textAnchor = "end";
+              dy = "0.35em";
+            }
+            // Top left
+            else if (angleDeg >= 225 && angleDeg < 270) {
+              textAnchor = "end";
+              dy = "0.8em";
+            }
+            // Top
+            else if (angleDeg >= 270 && angleDeg < 315) {
+              textAnchor = "middle";
+              dy = "1em";
+            }
+          } else {
+            // Original default alignment logic
+            if (angle > -Math.PI/3 && angle < Math.PI/3) {
+              textAnchor = "start";
+            } else if (angle > Math.PI*2/3 || angle < -Math.PI*2/3) {
+              textAnchor = "end";
+            }
+            
+            if (angle < -Math.PI * 0.6 || angle > Math.PI * 0.6) {
+              dy = "1em";
+            } else if (angle > -Math.PI * 0.4 && angle < Math.PI * 0.4) {
+              dy = "-0.3em";
+            }
           }
-          
-          if (angle < -Math.PI * 0.6 || angle > Math.PI * 0.6) {
-            dy = "1em";
-          } else if (angle > -Math.PI * 0.4 && angle < Math.PI * 0.4) {
-            dy = "-0.3em";
-          }
+
+          // Get label text based on variant
+          const labelText = variant === 'compact' 
+            ? compactLabels[label.trait.key] || label.trait.name
+            : label.trait.name;
 
           return (
             <g key={index} className="cursor-help">
@@ -207,7 +273,7 @@ export default function PersonalityRadarChart({
                 className="font-medium fill-foreground"
                 style={{ userSelect: 'none' }}
               >
-                {label.trait.name}
+                {labelText}
                 <title>{traitDescriptions[label.trait.name]}</title>
               </text>
             </g>
