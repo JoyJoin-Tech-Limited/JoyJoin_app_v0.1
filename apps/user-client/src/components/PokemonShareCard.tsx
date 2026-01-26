@@ -11,6 +11,7 @@ import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
 import logoFull from "@/assets/joyjoin-logo-full.png";
 import { getCardImagePath, hasCardImage } from "@/lib/archetypeCardImages";
+import { getArchetypeIndex, formatTypeNo } from "@/lib/archetypeCanonical";
 
 interface PokemonShareCardProps {
   archetype: string;
@@ -204,25 +205,26 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               </div>
             )}
 
-            {/* Stats section (Pokemon HP style) */}
+            {/* Stats section - KPI tags */}
             <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-3 sm:p-4 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between">
-                {/* Left: Archetype rank */}
-                <div className="flex items-baseline gap-1.5 sm:gap-2">
-                  <span
-                    className="text-4xl sm:text-5xl font-black bg-gradient-to-br from-red-500 to-pink-500 bg-clip-text text-transparent"
-                  >
-                    No.{rankings.archetypeRank}
-                  </span>
-                  <span className="text-[10px] sm:text-xs font-bold text-gray-700">
-                    /{archetype}
+              <div className="flex items-center justify-center gap-3 sm:gap-4">
+                {/* #TYPE tag - archetype type number */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs sm:text-sm font-bold text-gray-500">#TYPE</span>
+                  <span className="px-2 sm:px-2.5 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-md">
+                    <span className="text-xs sm:text-sm font-black text-white">
+                      {formatTypeNo(getArchetypeIndex(archetype) || 1)}
+                    </span>
                   </span>
                 </div>
                 
-                {/* Right: Total user badge */}
-                <div className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full shadow-md">
-                  <span className="text-[10px] sm:text-xs font-black text-white">
-                    #{rankings.totalUserRank}
+                {/* #ARCH tag - archetype-specific rank */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs sm:text-sm font-bold text-gray-500">#ARCH</span>
+                  <span className="px-2 sm:px-2.5 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full shadow-md">
+                    <span className="text-xs sm:text-sm font-black text-white">
+                      #{rankings.archetypeRank}
+                    </span>
                   </span>
                 </div>
               </div>
