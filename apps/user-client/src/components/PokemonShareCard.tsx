@@ -177,17 +177,17 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     {tagline}
                   </p>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* Stats section - KPI tags */}
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-3 sm:p-4 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+            {/* Stats section - KPI tags - Horizontal row with gradient separators */}
+            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl px-4 py-3 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between gap-2">
                 {/* #TYPE tag - archetype type number */}
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] sm:text-xs font-bold text-gray-500">#TYPE</span>
-                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-md">
-                    <span className="text-[10px] sm:text-xs font-black text-white">
+                <div className="flex-1 flex flex-col items-center gap-1">
+                  <span className="text-xs sm:text-sm font-bold text-gray-500">#TYPE</span>
+                  <span className="px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-md">
+                    <span className="text-xs sm:text-sm font-black text-white">
                       {(() => {
                         const archetypeIndex = getArchetypeIndex(archetype);
                         // Default to 1 if not found (should not happen in normal operation)
@@ -197,21 +197,27 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   </span>
                 </div>
                 
+                {/* Gradient separator */}
+                <div className="w-px h-8 bg-gradient-to-b from-transparent via-gray-400 to-transparent" />
+                
                 {/* #ARCH tag - archetype-specific rank */}
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] sm:text-xs font-bold text-gray-500">#ARCH</span>
-                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full shadow-md">
-                    <span className="text-[10px] sm:text-xs font-black text-white">
+                <div className="flex-1 flex flex-col items-center gap-1">
+                  <span className="text-xs sm:text-sm font-bold text-gray-500">#ARCH</span>
+                  <span className="px-2 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full shadow-md">
+                    <span className="text-xs sm:text-sm font-black text-white">
                       #{rankings.archetypeRank}
                     </span>
                   </span>
                 </div>
                 
+                {/* Gradient separator */}
+                <div className="w-px h-8 bg-gradient-to-b from-transparent via-gray-400 to-transparent" />
+                
                 {/* #ALL tag - global rank */}
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] sm:text-xs font-bold text-gray-500">#ALL</span>
-                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full shadow-md">
-                    <span className="text-[10px] sm:text-xs font-black text-white">
+                <div className="flex-1 flex flex-col items-center gap-1">
+                  <span className="text-xs sm:text-sm font-bold text-gray-500">#ALL</span>
+                  <span className="px-2 py-1 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full shadow-md">
+                    <span className="text-xs sm:text-sm font-black text-white">
                       #{rankings.totalUserRank}
                     </span>
                   </span>
@@ -220,7 +226,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             </div>
 
             {/* Pokemon-style 2-column Skills Section */}
-            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-2 sm:p-2.5 mb-1.5 sm:mb-2 border border-gray-100">
+            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl px-4 py-2.5 mb-1.5 sm:mb-2 border border-gray-100">
               <div className="flex gap-2 sm:gap-3">
                 {/* Left: Radar Chart (45% width for better readability) */}
                 <div className="w-[45%] flex items-center justify-center">
@@ -238,12 +244,12 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                 </div>
                 
                 {/* Right: Pokemon Skills Info (55% width) */}
-                <div className="w-[55%] flex flex-col justify-center space-y-1.5 sm:space-y-2">
+                <div className="w-[55%] flex flex-col justify-center space-y-3">
                   {/* Energy Bar - Pokemon HP style */}
                   <div>
-                    <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-                      <span className="text-[9px] sm:text-[10px] font-bold text-gray-700">⚡ 社交能量</span>
-                      <span className="text-[9px] sm:text-[10px] font-black text-orange-600">{archetypeInfo?.energyLevel}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs sm:text-sm font-bold text-gray-700">⚡ 社交能量</span>
+                      <span className="text-xs sm:text-sm font-black text-orange-600">{archetypeInfo?.energyLevel}</span>
                     </div>
                     <div className="h-1.5 sm:h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div 
@@ -252,60 +258,48 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                       />
                     </div>
                   </div>
-                </div>
 
-                {/* ARCH ranking */}
-                <div className="bg-gradient-to-br from-blue-50 to-white rounded-lg p-2 border border-blue-100 text-center">
-                  <div className="text-[9px] font-semibold text-blue-600 mb-0.5">#ARCH</div>
-                  <div className="text-lg font-black text-blue-700">
-                    {rankings.archetypeRank}
+                  {/* Core Contributions */}
+                  <div>
+                    <div className="text-xs sm:text-sm font-bold text-gray-700 mb-1">💎 核心技能</div>
+                    <p className="text-[11px] sm:text-xs text-gray-600 leading-relaxed">
+                      {archetypeInfo?.coreContributions}
+                    </p>
+                  </div>
+
+                  {/* Social Positioning */}
+                  <div>
+                    <div className="text-xs sm:text-sm font-bold text-gray-700 mb-1">🎯 社交定位</div>
+                    <p className="text-[11px] sm:text-xs text-gray-600 leading-relaxed">
+                      {archetypeInfo?.description}
+                    </p>
                   </div>
                 </div>
-
-                {/* ALL ranking */}
-                <div className="bg-gradient-to-br from-purple-50 to-white rounded-lg p-2 border border-purple-100 text-center">
-                  <div className="text-[9px] font-semibold text-purple-600 mb-0.5">#ALL</div>
-                  <div className="text-lg font-black text-purple-700">
-                    {rankings.totalUserRank}
-                  </div>
-                </div>
-              </div>
-
-              {/* Vertical divider */}
-              <div className="w-px bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
-
-              {/* Right column: Radar chart */}
-              <div className="flex-1 flex items-center justify-center">
-                <PersonalityRadarChart 
-                  affinityScore={traitScores.A}
-                  opennessScore={traitScores.O}
-                  conscientiousnessScore={traitScores.C}
-                  emotionalStabilityScore={traitScores.E}
-                  extraversionScore={traitScores.X}
-                  positivityScore={traitScores.P}
-                  primaryColor={variant.primaryColor}
-                  compactMode={true}
-                />
               </div>
             </div>
 
             {/* SECTION 3: FOOTER - full-width bar with logo and date */}
-            <div className="flex-none px-4 py-3 border-t border-gray-200 bg-gray-50/50">
+            <div className="flex-none px-4 py-3.5 border-t border-gray-200/60 bg-gradient-to-r from-gray-50 via-white to-gray-50/50 backdrop-blur-sm">
               <div className="flex items-center justify-between">
                 {/* Left: JoyJoin logo */}
                 <img 
                   src={logoFull} 
                   alt="悦聚 JoyJoin" 
-                  className="h-6 w-auto object-contain"
+                  className="h-5 w-auto object-contain opacity-90"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
 
-                {/* Right: Date */}
-                <span className="text-[10px] font-semibold text-gray-600">
-                  {formattedDate}
-                </span>
+                {/* Right: Stylish gradient date UI */}
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 shadow-lg">
+                  <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className="text-[10px] font-black text-white tracking-wider">
+                    {formattedDate}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
