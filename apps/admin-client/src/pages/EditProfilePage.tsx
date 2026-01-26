@@ -11,7 +11,6 @@ import {
   formatAge,
   getEducationDisplay,
   getStudyLocaleDisplay,
-  getSeniorityDisplay,
   getRelationshipDisplay,
   getChildrenDisplay,
   getIntentDisplay,
@@ -98,9 +97,6 @@ export default function EditProfilePage() {
           path: "/profile/edit/personal",
           fields: [
             { label: "关系状态", value: user.relationshipStatus ? getRelationshipDisplay(user.relationshipStatus) : null },
-            { label: "孩子状况", value: user.children ? getChildrenDisplay(user.children) : null },
-            { label: "毛孩子", value: user.hasPets === true ? (user.petTypes?.length > 0 ? user.petTypes.join(", ") : "有") : user.hasPets === false ? "没有" : null },
-            { label: "兄弟姐妹", value: user.hasSiblings === true ? "有" : user.hasSiblings === false ? "独生子女" : null },
           ],
           hint: "仅自己可见",
         },
@@ -127,11 +123,6 @@ export default function EditProfilePage() {
           path: "/profile/edit/education",
           fields: [
             { label: "教育水平", value: user.educationLevel ? getEducationDisplay(user.educationLevel) : null },
-            { label: "专业领域", value: user.fieldOfStudy },
-            { label: "学习地点", value: user.studyLocale ? getStudyLocaleDisplay(user.studyLocale) : null },
-            ...(user.studyLocale === "Overseas" || user.studyLocale === "Both"
-              ? [{ label: "海外地区", value: user.overseasRegions?.join(", ") }]
-              : []),
           ],
         },
         {
@@ -143,8 +134,6 @@ export default function EditProfilePage() {
             { label: "职业", value: getOccupationDisplayLabel(user.occupationId, user.workMode, { showWorkMode: true }) || (user.industry ? INDUSTRY_ID_TO_LABEL[user.industry] || user.industry : null) },
             { label: "行业", value: getIndustryDisplayLabel(user.occupationId) || (user.industry ? INDUSTRY_ID_TO_LABEL[user.industry] || user.industry : null) },
             { label: "工作身份", value: user.workMode ? WORK_MODE_TO_LABEL[user.workMode as WorkMode] : null },
-            { label: "公司", value: user.companyName || null },
-            { label: "资历", value: user.seniority ? getSeniorityDisplay(user.seniority) : null },
           ],
         },
       ],
