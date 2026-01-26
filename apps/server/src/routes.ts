@@ -9766,14 +9766,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // POST /api/inference/classify-industry - 三层行业智能分类
   app.post("/api/inference/classify-industry", isPhoneAuthenticated, async (req, res) => {
     try {
-      const { description } = req.body;
+      const { description, context } = req.body;
       
       if (!description || typeof description !== 'string') {
         return res.status(400).json({ error: "Description is required" });
       }
       
-      const { classifyIndustry } = await import("./inference/industryClassifier");
-      const result = await classifyIndustry(description);
+      const { classifyIndustryUnified } = await import("./inference/industryClassifier");
+      const result = await classifyIndustryUnified({ description, context });
       
       // 记录AI分类日志
       if (result.source === "ai" && req.session?.userId) {
