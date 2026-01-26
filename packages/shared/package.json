@@ -17,7 +17,9 @@
     "./occupations": "./src/occupations.ts",
     "./topicCards": "./src/topicCards.ts",
     "./atmospherePrediction": "./src/atmospherePrediction.ts",
-    "./interests": "./src/interests.ts"
+    "./interests": "./src/interests.ts",
+    "./personality": "./src/personality/index.ts",
+    "./personality/archetypeNames": "./src/personality/archetypeNames.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.39.1",
