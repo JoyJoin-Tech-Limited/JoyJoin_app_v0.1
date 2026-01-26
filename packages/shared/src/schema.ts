@@ -303,7 +303,7 @@ export const eventPools = pgTable("event_pools", {
   // 活动限制（硬约束 - 关联用户表字段）
   genderRestriction: varchar("gender_restriction"), // null=不限 | 女性 | 男性
   industryRestrictions: text("industry_restrictions").array(), // 行业限制列表（空=不限）
-  seniorityRestrictions: text("seniority_restrictions").array(), // 职级限制
+  seniorityRestrictions: text("seniority_restrictions").array(), // DEPRECATED - seniority field no longer collected from users
   educationLevelRestrictions: text("education_level_restrictions").array(), // 学历限制
   ageRangeMin: integer("age_range_min"), // 最小年龄
   ageRangeMax: integer("age_range_max"), // 最大年龄

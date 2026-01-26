@@ -99,12 +99,13 @@ function meetsHardConstraints(
     }
   }
   
-  // 职级限制
-  if (pool.seniorityRestrictions && pool.seniorityRestrictions.length > 0) {
-    if (!user.seniority || !pool.seniorityRestrictions.includes(user.seniority)) {
-      return false;
-    }
-  }
+  // Seniority restrictions (DEPRECATED - field no longer collected from users)
+  // Skip this check since seniority is not collected during onboarding
+  // if (pool.seniorityRestrictions && pool.seniorityRestrictions.length > 0) {
+  //   if (!user.seniority || !pool.seniorityRestrictions.includes(user.seniority)) {
+  //     return false;
+  //   }
+  // }
   
   // 学历限制
   if (pool.educationLevelRestrictions && pool.educationLevelRestrictions.length > 0) {
@@ -385,19 +386,24 @@ function calculateHometownAffinityScore(user1: UserWithProfile, user2: UserWithP
 
 /**
  * Calculate background diversity score (0-100)
- * Different industry, gender = higher score (encourages diversity)
+ * Different industry, education, gender = higher score (encourages diversity)
  */
 function calculateDiversityScore(user1: UserWithProfile, user2: UserWithProfile): number {
   let diversityPoints = 0;
   
-  // Different industry +50
+  // Different industry +40 (primary diversity dimension)
   if (user1.industry && user2.industry && user1.industry !== user2.industry) {
-    diversityPoints += 50;
+    diversityPoints += 40;
   }
   
-  // Different gender +50 (INCREASED from +20 to compensate for seniority removal)
+  // Different education level +30 (replaces seniority, maintains 3-tier scoring)
+  if (user1.educationLevel && user2.educationLevel && user1.educationLevel !== user2.educationLevel) {
+    diversityPoints += 30;
+  }
+  
+  // Different gender +30 (balanced weight)
   if (user1.gender && user2.gender && user1.gender !== user2.gender) {
-    diversityPoints += 50;
+    diversityPoints += 30;
   }
   
   return Math.min(diversityPoints, 100);
@@ -488,21 +494,21 @@ async function calculateGroupPairScore(members: UserWithProfile[]): Promise<numb
 }
 
 /**
- * 计算小组的多样性分数
+ * Calculate group diversity score
+ * Evaluates diversity across industries, genders, and archetypes
  */
 function calculateGroupDiversity(members: UserWithProfile[]): number {
   const uniqueIndustries = new Set(members.map((m) => m.industry).filter(Boolean)).size;
-  const uniqueSeniorities = new Set(members.map((m) => m.seniority).filter(Boolean)).size;
   const uniqueGenders = new Set(members.map((m) => m.gender).filter(Boolean)).size;
   const uniqueArchetypes = new Set(members.map((m) => m.archetype).filter(Boolean)).size;
   
-  // 归一化到 0-100
+  // Normalize to 0-100
+  // Weights redistributed after removing seniority: industry 33%, gender 33%, archetype 34%
   const maxDiversity = members.length;
   const diversityScore = 
-    (uniqueIndustries / maxDiversity) * 25 +
-    (uniqueSeniorities / maxDiversity) * 25 +
-    (uniqueGenders / maxDiversity) * 25 +
-    (uniqueArchetypes / maxDiversity) * 25;
+    (uniqueIndustries / maxDiversity) * 33 +
+    (uniqueGenders / maxDiversity) * 33 +
+    (uniqueArchetypes / maxDiversity) * 34;
   
   return Math.round(diversityScore * 100);
 }
