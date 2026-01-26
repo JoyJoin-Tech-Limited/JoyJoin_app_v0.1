@@ -448,7 +448,7 @@ async function calculatePairScore(user1: UserWithProfile, user2: UserWithProfile
     language: 0.15,     // 语言沟通 15% (unchanged)
     preference: 0.15,   // 活动偏好 15% (eventIntent + barThemes/alcoholComfort)
     hometown: 0,        // 同乡亲和力 0%
-    background: 0.05,   // 背景评估 5% (unchanged)
+    background: 0,      // 背景评估 0% (removed when hometown disabled, -5%)
     // ❌ REMOVED: emotional
   };
   
