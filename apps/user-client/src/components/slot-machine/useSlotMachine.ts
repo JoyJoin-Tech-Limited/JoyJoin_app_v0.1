@@ -1,17 +1,18 @@
 /**
- * Slot machine state machine hook - ENHANCED VERSION with GUARANTEED PRECISION LANDING
+ * Slot machine state machine hook - DETERMINISTIC VERSION with GUARANTEED PRECISION LANDING
  * States: idle → anticipation → spinning → slowing → nearMiss → landed
  * 
- * KEY IMPROVEMENTS (2026-01-15):
+ * KEY IMPROVEMENTS (2026-01-26):
  * - GUARANTEED precise landing on finalArchetype (100% accuracy)
- * - Smart pathfinding algorithm ensures smooth deceleration to exact target
+ * - Deterministic pre-calculated position array eliminates race conditions
+ * - No timing dependencies - works regardless of spinning phase position
  * - Near-miss is optional dramatic effect that ALWAYS snaps back to correct archetype
- * - No probabilistic landing issues - deterministic target hitting
+ * - No probabilistic landing issues - fully deterministic target hitting
  * 
  * Multi-phase pacing for maximum dramatic impact:
  * 1. anticipation: Build tension with brief delay
  * 2. spinning: Fast, blur-speed rotation
- * 3. slowing: Dramatic deceleration with suspense
+ * 3. slowing: Dramatic deceleration with pre-calculated positions
  * 4. nearMiss: Tease past the target once for extra tension (OPTIONAL)
  * 5. landed: Victory moment with celebration
  */
@@ -168,71 +169,58 @@ export function useSlotMachine({
   }, [targetIndex, updateState, triggerHaptic, onLand, updateProgress]);
 
   // Phase 3: Dramatic slowdown
-  // ENHANCED: Guaranteed smooth deceleration to exact target position
+  // DETERMINISTIC: Pre-calculated position array for 100% accuracy
   const startSlowing = useCallback(() => {
     if (slowingStartedRef.current || hasLandedRef.current) return;
     slowingStartedRef.current = true;
     updateState("slowing");
     slowStepRef.current = 0;
     
-    const totalSlowSteps = 10; // Slightly fewer steps for snappier mobile experience
-    const slowStepCount = Math.max(1, totalSlowSteps);
-    let idx = currentIndex;
+    const len = ARCHETYPE_NAMES.length;
+    const totalSlowSteps = 10;
+    
+    // Calculate exact positions we need to hit to reach target
+    const positions: number[] = [];
+    for (let i = 0; i < totalSlowSteps; i++) {
+      const pos = (targetIndex - (totalSlowSteps - i) + len) % len;
+      positions.push(pos);
+    }
     
     const slowDown = () => {
       if (!isMountedRef.current || hasLandedRef.current) return;
       
-      slowStepRef.current++;
-      const stepProgress = slowStepRef.current / slowStepCount;
-      updateProgress(60 + stepProgress * 30);
-      setIntensity(0.5 + stepProgress * 0.3);
+      const step = slowStepRef.current;
       
-      // Light haptic on each tick during slowdown
-      if (slowStepRef.current % 3 === 0) {
-        triggerHaptic(HAPTIC_PATTERNS.slowing);
-      }
-      
-      if (slowStepRef.current < slowStepCount) {
-        const len = ARCHETYPE_NAMES.length;
-        const distToTarget = (targetIndex - idx + len) % len;
-        const stepsRemaining = slowStepCount - slowStepRef.current;
+      if (step < totalSlowSteps) {
+        // Use pre-calculated position - guaranteed precision
+        setCurrentIndex(positions[step]);
         
-        // CRITICAL: Smart pathfinding to guarantee arrival at target
-        // Calculate optimal jump size to reach target naturally
-        if (distToTarget > stepsRemaining + 1) {
-          // We're far from target - make larger jumps to close the gap
-          const jump = Math.max(1, Math.floor(distToTarget / stepsRemaining));
-          idx = (idx + jump) % len;
-        } else if (distToTarget > 1) {
-          // Close to target - move one step at a time
-          idx = (idx + 1) % len;
+        const stepProgress = (step + 1) / totalSlowSteps;
+        updateProgress(60 + stepProgress * 30);
+        setIntensity(0.5 + stepProgress * 0.3);
+        
+        if ((step + 1) % 3 === 0) {
+          triggerHaptic(HAPTIC_PATTERNS.slowing);
         }
-        // When distToTarget === 1, we're at the position before target
-        // When distToTarget === 0, we've arrived at target
         
-        setCurrentIndex(idx);
-        
+        slowStepRef.current++;
         const baseDelay = 80;
-        const delay = baseDelay + slowStepRef.current * 50;
+        const delay = baseDelay + step * 50;
         timeoutRef.current = setTimeout(slowDown, delay);
       } else {
-        // FINAL STEP: Decide near-miss or direct landing
-        // Both paths GUARANTEE landing on targetIndex
+        // Reached end of slowing - now decide near-miss or direct land
         const shouldNearMiss = Math.random() < 0.7 && targetIndex >= 0;
         
         if (shouldNearMiss) {
-          // Near-miss path - will GUARANTEE landing on targetIndex after overshoot
           startNearMiss();
         } else {
-          // Direct landing path - GUARANTEE precision on targetIndex
-          const finalIndex = targetIndex >= 0 ? targetIndex : 0;
-          setCurrentIndex(finalIndex);
+          // Direct land on target
+          setCurrentIndex(targetIndex);
           updateProgress(100);
           setIntensity(1);
           updateState("landed");
           triggerHaptic(HAPTIC_PATTERNS.land);
           
-          // Fire callback immediately so celebration effects start right away
           if (!hasLandedRef.current) {
             hasLandedRef.current = true;
             onLand?.();
@@ -242,7 +230,7 @@ export function useSlotMachine({
     };
     
     slowDown();
-  }, [currentIndex, targetIndex, updateState, triggerHaptic, startNearMiss, onLand, updateProgress]);
+  }, [targetIndex, updateState, triggerHaptic, startNearMiss, onLand, updateProgress]);
 
   // Phase 2: Fast spinning
   const startSpinning = useCallback(() => {
