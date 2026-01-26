@@ -258,6 +258,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     positivityScore={traitScores.P}
                     primaryColor={variant.primaryColor}
                     compactMode={true}
+                    variant="compact"
                   />
                 </div>
                 
