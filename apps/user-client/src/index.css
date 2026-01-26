@@ -448,6 +448,17 @@
     animation: fadeInUp 0.4s ease-out forwards;
   }
 
+  /* Shimmer animation for Pokemon card */
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 3s infinite;
+  }
+
   /* Progress bar fill animation */
   @keyframes progressFill {
     from {
