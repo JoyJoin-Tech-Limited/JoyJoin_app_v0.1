@@ -19,13 +19,11 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 
-const languageOptions = ["普通话", "英语", "粤语", "法语", "日语", "韩语", "西班牙语", "德语"];
 
 const basicInfoSchema = z.object({
   displayName: z.string().min(1, "请输入昵称"),
   gender: z.enum(["女性", "男性"]).optional(),
   birthdate: z.string().optional(),
-  languagesComfort: z.array(z.string()).optional(),
 });
 
 type BasicInfoForm = z.infer<typeof basicInfoSchema>;
@@ -42,7 +40,6 @@ export default function EditBasicInfoPage() {
       displayName: user?.displayName || "",
       gender: user?.gender || undefined,
       birthdate: user?.birthdate ? new Date(user.birthdate).toISOString().split('T')[0] : "",
-      languagesComfort: user?.languagesComfort || [],
     },
   });
 
@@ -76,15 +73,6 @@ export default function EditBasicInfoPage() {
     updateMutation.mutate(cleanedData);
   };
 
-  const toggleLanguage = (lang: string) => {
-    const current = form.watch("languagesComfort") || [];
-    if (current.includes(lang)) {
-      form.setValue("languagesComfort", current.filter(l => l !== lang));
-    } else {
-      form.setValue("languagesComfort", [...current, lang]);
-    }
-  };
-
   if (isLoading || !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -95,8 +83,6 @@ export default function EditBasicInfoPage() {
       </div>
     );
   }
-
-  const selectedLanguages = form.watch("languagesComfort") || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -174,24 +160,6 @@ export default function EditBasicInfoPage() {
             placeholder="选择出生日期"
             data-testid="input-birthdate"
           />
-        </div>
-
-        {/* Languages */}
-        <div className="space-y-3">
-          <Label>常用语言</Label>
-          <div className="flex flex-wrap gap-3">
-            {languageOptions.map((lang) => (
-              <Badge
-                key={lang}
-                variant={selectedLanguages.includes(lang) ? "default" : "outline"}
-                className="cursor-pointer px-4 py-2 text-base"
-                onClick={() => toggleLanguage(lang)}
-                data-testid={`badge-language-${lang}`}
-              >
-                {lang}
-              </Badge>
-            ))}
-          </div>
         </div>
 
         {/* Save Button */}
