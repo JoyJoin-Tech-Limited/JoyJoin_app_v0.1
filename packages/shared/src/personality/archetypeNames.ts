@@ -64,9 +64,6 @@ export function getArchetypeIndex(archetype: string): number | null {
  * formatTypeNo(4) // returns "04/12"
  */
 export function formatTypeNo(index: number): string {
-  if (index < 1 || index > ARCHETYPE_COUNT) {
-    return `${String(index).padStart(2, '0')}/${ARCHETYPE_COUNT}`;
-  }
   return `${String(index).padStart(2, '0')}/${ARCHETYPE_COUNT}`;
 }
 
@@ -77,8 +74,9 @@ export function formatTypeNo(index: number): string {
  * @example
  * getArchetypeTypeNo("开心柯基") // returns "01/12"
  * getArchetypeTypeNo("机智狐") // returns "04/12"
+ * getArchetypeTypeNo("不存在") // returns "00/12"
  */
 export function getArchetypeTypeNo(archetype: string): string {
   const index = getArchetypeIndex(archetype);
-  return formatTypeNo(index || 0);
+  return index !== null ? formatTypeNo(index) : '00/12';
 }
