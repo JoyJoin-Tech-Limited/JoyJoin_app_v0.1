@@ -78,5 +78,5 @@ export function formatTypeNo(index: number): string {
  */
 export function getArchetypeTypeNo(archetype: string): string {
   const index = getArchetypeIndex(archetype);
-  return index !== null ? formatTypeNo(index) : '00/12';
+  return index !== null ? formatTypeNo(index) : formatTypeNo(0);
 }
