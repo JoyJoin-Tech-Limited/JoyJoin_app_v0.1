@@ -260,7 +260,7 @@ export default function ProfilePage() {
         })()}
 
         {/* Career & Insights Card - 职业信息和小悦洞察 */}
-        {!userLoading && user && (user.industry || user.occupation || user.companyName || (user.insightLedger && Array.isArray(user.insightLedger) && user.insightLedger.length > 0)) && (
+        {!userLoading && user && (user.industry || user.occupation || (user.insightLedger && Array.isArray(user.insightLedger) && user.insightLedger.length > 0)) && (
           <Card className="border shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -270,7 +270,7 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* 职业基本信息 */}
-              {(user.industry || user.occupation || user.companyName) && (
+              {(user.industry || user.occupation) && (
                 <div className="space-y-2">
                   <div className="flex flex-wrap gap-2">
                     {user.industry && (
@@ -284,12 +284,6 @@ export default function ProfilePage() {
                       </span>
                     )}
                   </div>
-                  {user.companyName && (
-                    <p className="text-sm text-muted-foreground">
-                      {user.companyType && <span className="font-medium">{user.companyType} · </span>}
-                      {user.companyName}
-                    </p>
-                  )}
                 </div>
               )}
 
