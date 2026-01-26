@@ -29,7 +29,9 @@ export const ARCHETYPE_CANONICAL_ORDER = [
  * @returns The 1-based index (1-12), or null if not found
  */
 export function getArchetypeIndex(archetype: string): number | null {
-  const index = ARCHETYPE_CANONICAL_ORDER.indexOf(archetype as any);
+  const index = ARCHETYPE_CANONICAL_ORDER.indexOf(
+    archetype as typeof ARCHETYPE_CANONICAL_ORDER[number]
+  );
   return index === -1 ? null : index + 1; // Convert to 1-based
 }
 
