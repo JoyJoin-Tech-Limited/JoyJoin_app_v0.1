@@ -11,7 +11,8 @@ export interface ArchetypeHSL {
 
 /**
  * Canonical archetype color definitions
- * Order matches backend ARCHETYPE_NAMES from apps/server/src/archetypeConfig.ts
+ * Order is imported from shared module (@shared/personality/archetypeNames)
+ * to ensure consistency with backend and prevent drift
  */
 const CANONICAL_COLORS: Record<string, ArchetypeHSL> = {
   "开心柯基": { h: 43, s: 96, l: 56 },   // amber

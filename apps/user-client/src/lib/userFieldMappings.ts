@@ -43,15 +43,6 @@ export const studyLocaleMap: Record<string, string> = {
   "Prefer not to say": "不便透露",
 };
 
-export const seniorityMap: Record<string, string> = {
-  "Intern": "实习生",
-  "Junior": "初级",
-  "Mid": "中级",
-  "Senior": "高级",
-  "Founder": "创始人",
-  "Executive": "高管",
-};
-
 export const childrenMap: Record<string, string> = {
   "No kids": "无孩子",
   "Expecting": "期待中",
@@ -142,14 +133,6 @@ export function getRelationshipDisplay(relationshipStatus: string | null | undef
 export function getStudyLocaleDisplay(studyLocale: string | null | undefined): string {
   if (!studyLocale) return "";
   return studyLocaleMap[studyLocale] || studyLocale;
-}
-
-/**
- * Get seniority display text
- */
-export function getSeniorityDisplay(seniority: string | null | undefined): string {
-  if (!seniority) return "";
-  return seniorityMap[seniority] || seniority;
 }
 
 /**
