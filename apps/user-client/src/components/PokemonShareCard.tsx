@@ -183,15 +183,13 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             {/* Stats section - KPI tags - Horizontal row with gradient separators */}
             <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl px-4 py-3 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
               <div className="flex items-center justify-between gap-2">
-                {/* #TYPE tag - archetype type number */}
+                {/* Archetype number/name tag */}
                 <div className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-xs sm:text-sm font-bold text-gray-500">#TYPE</span>
                   <span className="px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-md">
                     <span className="text-xs sm:text-sm font-black text-white">
                       {(() => {
                         const archetypeIndex = getArchetypeIndex(archetype);
-                        // Default to 1 if not found (should not happen in normal operation)
-                        return formatTypeNo(archetypeIndex ?? 1);
+                        return `#${formatTypeNo(archetypeIndex ?? 1)}/${archetype}`;
                       })()}
                     </span>
                   </span>
@@ -200,9 +198,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                 {/* Gradient separator */}
                 <div className="w-px h-8 bg-gradient-to-b from-transparent via-gray-400 to-transparent" />
                 
-                {/* #ARCH tag - archetype-specific rank */}
+                {/* Archetype user count - with distinctive styling */}
                 <div className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-xs sm:text-sm font-bold text-gray-500">#ARCH</span>
+                  <span className="text-[10px] sm:text-xs font-semibold text-gray-500">原型人数</span>
                   <span className="px-2 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full shadow-md">
                     <span className="text-xs sm:text-sm font-black text-white">
                       #{rankings.archetypeRank}
@@ -213,9 +211,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                 {/* Gradient separator */}
                 <div className="w-px h-8 bg-gradient-to-b from-transparent via-gray-400 to-transparent" />
                 
-                {/* #ALL tag - global rank */}
+                {/* Total user rank */}
                 <div className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-xs sm:text-sm font-bold text-gray-500">#ALL</span>
+                  <span className="text-[10px] sm:text-xs font-semibold text-gray-500">总用户数</span>
                   <span className="px-2 py-1 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full shadow-md">
                     <span className="text-xs sm:text-sm font-black text-white">
                       #{rankings.totalUserRank}
