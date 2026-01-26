@@ -29,14 +29,9 @@ const fullProfileSchema = z.object({
   birthdate: z.string().optional(),
   languagesComfort: z.array(z.string()).optional(),
   educationLevel: z.string().optional(),
-  fieldOfStudy: z.string().optional(),
-  studyLocale: z.string().optional(),
-  overseasRegions: z.array(z.string()).optional(),
   industry: z.string().optional(),
   roleTitleShort: z.string().optional(),
-  seniority: z.string().optional(),
   relationshipStatus: z.string().optional(),
-  children: z.string().optional(),
   interestsTop: z.array(z.string()).optional(),
 });
 
@@ -125,14 +120,9 @@ export default function EditFullProfileDialog({
       birthdate: user?.birthdate ? new Date(user.birthdate).toISOString().split('T')[0] : "",
       languagesComfort: user?.languagesComfort || [],
       educationLevel: user?.educationLevel || "",
-      fieldOfStudy: user?.fieldOfStudy || "",
-      studyLocale: user?.studyLocale || "",
-      overseasRegions: user?.overseasRegions || [],
       industry: user?.industry || "",
       roleTitleShort: user?.roleTitleShort || "",
-      seniority: user?.seniority || "",
       relationshipStatus: user?.relationshipStatus || "",
-      children: user?.children || "",
       interestsTop: user?.interestsTop || [],
     },
   });
@@ -276,62 +266,6 @@ export default function EditFullProfileDialog({
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="fieldOfStudy"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>专业领域</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="例如：计算机科学" data-testid="input-field-of-study" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="studyLocale"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>学习地点</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-study-locale">
-                          <SelectValue placeholder="选择学习地点" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Local">本地</SelectItem>
-                        <SelectItem value="Overseas">海外</SelectItem>
-                        <SelectItem value="Both">都有</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {(form.watch("studyLocale") === "Overseas" || form.watch("studyLocale") === "Both") && (
-                <div>
-                  <Label className="mb-2 block">海外地区</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {overseasRegionOptions.map((region) => (
-                      <Badge
-                        key={region}
-                        variant={((form.watch("overseasRegions") as string[] | undefined) || []).includes(region) ? "default" : "outline"}
-                        className="cursor-pointer"
-                        onClick={() => toggleArrayItem("overseasRegions", region)}
-                        data-testid={`badge-region-${region}`}
-                      >
-                        {region}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             <Separator />
@@ -429,32 +363,6 @@ export default function EditFullProfileDialog({
                         <SelectItem value="In a relationship">恋爱中</SelectItem>
                         <SelectItem value="Married/Partnered">已婚/已结伴</SelectItem>
                         <SelectItem value="It's complicated">复杂</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="children"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>孩子状况</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-children">
-                          <SelectValue placeholder="选择孩子状况" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="No kids">无孩子</SelectItem>
-                        <SelectItem value="Expecting">期待中</SelectItem>
-                        <SelectItem value="0-5">0-5岁</SelectItem>
-                        <SelectItem value="6-12">6-12岁</SelectItem>
-                        <SelectItem value="13-18">13-18岁</SelectItem>
-                        <SelectItem value="Adult">成年</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
