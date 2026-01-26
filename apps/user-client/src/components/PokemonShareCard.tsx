@@ -11,6 +11,7 @@ import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
 import logoFull from "@/assets/joyjoin-logo-full.png";
 import { getCardImagePath, hasCardImage } from "@/lib/archetypeCardImages";
+import { getArchetypeIndex, formatTypeNo } from "@/lib/archetypeCanonical";
 
 interface PokemonShareCardProps {
   archetype: string;
@@ -176,18 +177,80 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     {tagline}
                   </p>
                 </div>
-              )}
+              </div>
+            )}
+
+            {/* Stats section - KPI tags */}
+            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-3 sm:p-4 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+                {/* #TYPE tag - archetype type number */}
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] sm:text-xs font-bold text-gray-500">#TYPE</span>
+                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-md">
+                    <span className="text-[10px] sm:text-xs font-black text-white">
+                      {(() => {
+                        const archetypeIndex = getArchetypeIndex(archetype);
+                        // Default to 1 if not found (should not happen in normal operation)
+                        return formatTypeNo(archetypeIndex ?? 1);
+                      })()}
+                    </span>
+                  </span>
+                </div>
+                
+                {/* #ARCH tag - archetype-specific rank */}
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] sm:text-xs font-bold text-gray-500">#ARCH</span>
+                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full shadow-md">
+                    <span className="text-[10px] sm:text-xs font-black text-white">
+                      #{rankings.archetypeRank}
+                    </span>
+                  </span>
+                </div>
+                
+                {/* #ALL tag - global rank */}
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] sm:text-xs font-bold text-gray-500">#ALL</span>
+                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full shadow-md">
+                    <span className="text-[10px] sm:text-xs font-black text-white">
+                      #{rankings.totalUserRank}
+                    </span>
+                  </span>
+                </div>
+              </div>
             </div>
 
-            {/* SECTION 2: MIDDLE - two-column split with vertical divider */}
-            <div className="flex-1 px-4 py-3 flex gap-3 min-h-0">
-              {/* Left column: KPI stack */}
-              <div className="flex-1 flex flex-col justify-center space-y-2">
-                {/* TYPE ranking */}
-                <div className="bg-gradient-to-br from-gray-50 to-white rounded-lg p-2 border border-gray-100 text-center">
-                  <div className="text-[9px] font-semibold text-gray-500 mb-0.5">#TYPE</div>
-                  <div className="text-lg font-black text-gray-900">
-                    {rankings.archetypeRank}/12
+            {/* Pokemon-style 2-column Skills Section */}
+            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-2 sm:p-2.5 mb-1.5 sm:mb-2 border border-gray-100">
+              <div className="flex gap-2 sm:gap-3">
+                {/* Left: Radar Chart (45% width for better readability) */}
+                <div className="w-[45%] flex items-center justify-center">
+                  <PersonalityRadarChart 
+                    affinityScore={traitScores.A}
+                    opennessScore={traitScores.O}
+                    conscientiousnessScore={traitScores.C}
+                    emotionalStabilityScore={traitScores.E}
+                    extraversionScore={traitScores.X}
+                    positivityScore={traitScores.P}
+                    primaryColor={variant.primaryColor}
+                    compactMode={true}
+                    variant="compact"
+                  />
+                </div>
+                
+                {/* Right: Pokemon Skills Info (55% width) */}
+                <div className="w-[55%] flex flex-col justify-center space-y-1.5 sm:space-y-2">
+                  {/* Energy Bar - Pokemon HP style */}
+                  <div>
+                    <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                      <span className="text-[9px] sm:text-[10px] font-bold text-gray-700">⚡ 社交能量</span>
+                      <span className="text-[9px] sm:text-[10px] font-black text-orange-600">{archetypeInfo?.energyLevel}</span>
+                    </div>
+                    <div className="h-1.5 sm:h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-yellow-400 to-orange-500"
+                        style={{ width: `${archetypeInfo?.energyLevel || 50}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
 
