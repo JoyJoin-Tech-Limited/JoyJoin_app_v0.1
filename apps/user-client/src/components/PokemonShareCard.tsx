@@ -207,12 +207,12 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
 
             {/* Stats section - KPI tags */}
             <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-3 sm:p-4 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-center gap-3 sm:gap-4">
+              <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
                 {/* #TYPE tag - archetype type number */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs sm:text-sm font-bold text-gray-500">#TYPE</span>
-                  <span className="px-2 sm:px-2.5 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-md">
-                    <span className="text-xs sm:text-sm font-black text-white">
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] sm:text-xs font-bold text-gray-500">#TYPE</span>
+                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-md">
+                    <span className="text-[10px] sm:text-xs font-black text-white">
                       {(() => {
                         const archetypeIndex = getArchetypeIndex(archetype);
                         // Default to 1 if not found (should not happen in normal operation)
@@ -223,11 +223,21 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                 </div>
                 
                 {/* #ARCH tag - archetype-specific rank */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs sm:text-sm font-bold text-gray-500">#ARCH</span>
-                  <span className="px-2 sm:px-2.5 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full shadow-md">
-                    <span className="text-xs sm:text-sm font-black text-white">
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] sm:text-xs font-bold text-gray-500">#ARCH</span>
+                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full shadow-md">
+                    <span className="text-[10px] sm:text-xs font-black text-white">
                       #{rankings.archetypeRank}
+                    </span>
+                  </span>
+                </div>
+                
+                {/* #ALL tag - global rank */}
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] sm:text-xs font-bold text-gray-500">#ALL</span>
+                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full shadow-md">
+                    <span className="text-[10px] sm:text-xs font-black text-white">
+                      #{rankings.totalUserRank}
                     </span>
                   </span>
                 </div>
