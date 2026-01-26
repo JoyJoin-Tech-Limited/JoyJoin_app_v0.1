@@ -182,7 +182,7 @@ export function useSlotMachine({
     // Calculate exact positions we need to hit to reach target
     const positions: number[] = [];
     for (let i = 0; i < totalSlowSteps; i++) {
-      const pos = (targetIndex - (totalSlowSteps - i) + len) % len;
+      const pos = (targetIndex - (totalSlowSteps - 1 - i) + len) % len;
       positions.push(pos);
     }
     
