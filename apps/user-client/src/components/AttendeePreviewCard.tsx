@@ -255,19 +255,16 @@ export default function AttendeePreviewCard({
                 </div>
               )}
 
-              {(educationDisplay || attendee.fieldOfStudy) && (
+              {educationDisplay && (
                 <div className="flex items-start gap-1.5 text-foreground">
                   <GraduationCap className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
                   <div className="flex flex-col gap-0.5">
-                    {educationDisplay && <span>{educationDisplay}</span>}
-                    {attendee.fieldOfStudy && (
-                      <span className="text-xs text-muted-foreground">{attendee.fieldOfStudy}</span>
-                    )}
+                    <span>{educationDisplay}</span>
                   </div>
                 </div>
               )}
 
-              {(attendee.occupationId || attendee.industry || attendee.seniority) && (
+              {(attendee.occupationId || attendee.industry) && (
                 <div className="flex items-start gap-1.5 text-foreground">
                   <Briefcase className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
                   <div className="flex flex-col gap-0.5">
@@ -277,17 +274,7 @@ export default function AttendeePreviewCard({
                         <span className="text-xs text-muted-foreground">{getIndustryDisplayLabel(attendee.occupationId)}</span>
                       </>
                     ) : (
-                      <>
-                        {attendee.industry && <span>{INDUSTRY_ID_TO_LABEL[attendee.industry] || attendee.industry}</span>}
-                        {attendee.seniority && (
-                          <span className="text-xs text-muted-foreground">
-                            {attendee.seniority === "Junior" ? "初级" : 
-                             attendee.seniority === "Mid" ? "中级" : 
-                             attendee.seniority === "Senior" ? "高级" :
-                             attendee.seniority === "Founder" ? "创始人" : attendee.seniority}
-                          </span>
-                        )}
-                      </>
+                      attendee.industry && <span>{INDUSTRY_ID_TO_LABEL[attendee.industry] || attendee.industry}</span>
                     )}
                   </div>
                 </div>
