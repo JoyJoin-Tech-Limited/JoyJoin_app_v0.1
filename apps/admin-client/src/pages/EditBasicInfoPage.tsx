@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 
-
 const basicInfoSchema = z.object({
   displayName: z.string().min(1, "请输入昵称"),
   gender: z.enum(["女性", "男性"]).optional(),

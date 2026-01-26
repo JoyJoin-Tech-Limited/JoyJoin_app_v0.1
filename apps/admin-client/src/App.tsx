@@ -153,7 +153,7 @@ function AuthenticatedRouter() {
       <Route path="/profile/edit/personal" component={EditPersonalPage} />
       <Route path="/profile/edit/intent" component={EditIntentPage} />
       <Route path="/profile/edit/interests" component={EditInterestsPage} />
-      {/* Route /profile/edit/social removed - social preferences not used in matching (2026-01-23) */}
+      {/* Route /profile/edit/social removed - unused fields (2026-01-23) */}
       {/* ChatRegistrationPage route disabled (2026-01-20) */}
       {/* <Route path="/registration/chat" component={ChatRegistrationPage} /> */}
       <Route path="/event/:id" component={EventDetailPage} />
