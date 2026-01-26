@@ -213,7 +213,11 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   <span className="text-xs sm:text-sm font-bold text-gray-500">#TYPE</span>
                   <span className="px-2 sm:px-2.5 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-md">
                     <span className="text-xs sm:text-sm font-black text-white">
-                      {formatTypeNo(getArchetypeIndex(archetype) || 1)}
+                      {(() => {
+                        const archetypeIndex = getArchetypeIndex(archetype);
+                        // Default to 1 if not found (should not happen in normal operation)
+                        return formatTypeNo(archetypeIndex ?? 1);
+                      })()}
                     </span>
                   </span>
                 </div>
