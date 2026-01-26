@@ -2,6 +2,7 @@
  * Archetype image & color registry for slot machine and preview components
  */
 
+import { ARCHETYPE_CANONICAL_ORDER } from "@shared/personality/archetypeNames";
 import corgiImg from "@/assets/开心柯基_transparent_1.png";
 import foxImg from "@/assets/机智狐_transparent_2.png";
 import bearImg from "@/assets/暖心熊_transparent_3.png";
@@ -26,7 +27,8 @@ export interface ArchetypeInfo {
 
 /**
  * Canonical archetype definitions
- * Order matches backend ARCHETYPE_NAMES from apps/server/src/archetypeConfig.ts
+ * Order is imported from shared module (@shared/personality/archetypeNames)
+ * to ensure consistency with backend and prevent drift
  */
 const CANONICAL_ARCHETYPES: Record<string, ArchetypeInfo> = {
   "开心柯基": {
@@ -132,8 +134,8 @@ export const ARCHETYPE_DATA: Record<string, ArchetypeInfo> = {
   ),
 };
 
-/** List of all archetype names for slot machine cycling */
-export const ARCHETYPE_NAMES = Object.keys(CANONICAL_ARCHETYPES);
+/** List of all archetype names for slot machine cycling - derived from shared canonical order */
+export const ARCHETYPE_NAMES = [...ARCHETYPE_CANONICAL_ORDER];
 
 /** Get archetype info with fallback */
 export function getArchetypeInfo(name: string): ArchetypeInfo {
