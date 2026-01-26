@@ -157,7 +157,7 @@ function AuthenticatedRouter() {
       <Route path="/profile/edit/personal" component={EditPersonalPage} />
       <Route path="/profile/edit/intent" component={EditIntentPage} />
       {/* Route /profile/edit/interests removed - moved to backup (2026-01-19) */}
-      {/* Route /profile/edit/social removed - social preferences not used in matching (2026-01-23) */}
+      {/* Route /profile/edit/social removed - unused fields (2026-01-23) */}
       <Route path="/onboarding/extended" component={ExtendedDataPage} />
       <Route path="/onboarding/review" component={FinalProfileReviewPage} />
       <Route path="/event/:id" component={EventDetailPage} />
