@@ -503,7 +503,8 @@ function calculateGroupDiversity(members: UserWithProfile[]): number {
   const uniqueArchetypes = new Set(members.map((m) => m.archetype).filter(Boolean)).size;
   
   // Normalize to 0-100
-  // Weights redistributed after removing seniority: industry 33%, gender 33%, archetype 34%
+  // Weights redistributed after removing seniority
+  // Each dimension contributes: industry 33 points, gender 33 points, archetype 34 points (total 100)
   const maxDiversity = members.length;
   const diversityScore = 
     (uniqueIndustries / maxDiversity) * 33 +
