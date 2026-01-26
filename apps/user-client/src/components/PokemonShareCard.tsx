@@ -11,7 +11,6 @@ import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
 import logoFull from "@/assets/joyjoin-logo-full.png";
 import { getCardImagePath, hasCardImage } from "@/lib/archetypeCardImages";
-import { getArchetypeIndex, formatTypeNo } from "@/lib/archetypeCanonical";
 
 interface PokemonShareCardProps {
   archetype: string;
