@@ -142,6 +142,7 @@ export const users = pgTable("users", {
   // Personality data (Step 3 - Vibe Vector)
   vibeVector: jsonb("vibe_vector"), // {energy, conversation_style, initiative, novelty, humor} scored 0-1
   archetype: varchar("archetype"), // 12个社交氛围原型: 开心柯基, 太阳鸡, 夸夸豚, 机智狐, 淡定海豚, 织网蛛, 暖心熊, 灵感章鱼, 沉思猫头鹰, 定心大象, 稳如龟, 隐身猫
+  debateComfort: integer("debate_comfort"), // DEPRECATED: 1-7 scale - not collected in onboarding, kept for legacy data
   needsPersonalityRetake: boolean("needs_personality_retake").default(false), // 是否需要重新测评（系统升级后）
   
   // Legacy personality data (deprecated)
