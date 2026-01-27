@@ -584,11 +584,11 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
               workMode: user?.workMode,
             }}
             hobbies={
-              interestsData?.selections
-                ? (interestsData.selections as any[])
-                    .sort((a: any, b: any) => b.heat - a.heat)
+              interestsData?.selections && Array.isArray(interestsData.selections)
+                ? (interestsData.selections as Array<{ topicId?: string; label: string; heat: number; emoji?: string }>)
+                    .sort((a, b) => b.heat - a.heat)
                     .slice(0, 3)
-                    .map((s: any) => ({ name: s.label, heat: s.heat }))
+                    .map((s) => ({ name: s.label, heat: s.heat }))
                 : undefined
             }
           />
