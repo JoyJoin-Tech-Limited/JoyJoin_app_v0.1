@@ -182,15 +182,17 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             {/* Stats Section - 2 Column Layout with Prominent Archetype Rank */}
             <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl px-4 py-3 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
               <div className="grid grid-cols-[1.8fr_1fr] gap-3">
-                {/* LEFT: HERO TAG - 原型人数 (Archetype Rank) */}
+                {/* LEFT: HERO TAG - 原型排名 (Archetype Rank) */}
                 <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-[2px] shadow-lg">
-                  {/* Animated shimmer effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer" />
+                  {/* Animated shimmer effect - only in preview mode */}
+                  {isPreview && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer" />
+                  )}
                   
                   <div className="relative bg-gradient-to-br from-indigo-50 to-purple-50 rounded-[10px] px-3 py-2.5 h-full flex flex-col justify-center">
                     {/* Label */}
                     <div className="text-[10px] font-medium text-indigo-600/70 mb-0.5 tracking-wide uppercase">
-                      原型人数
+                      原型排名
                     </div>
                     
                     {/* Hero Content - Rank + Archetype */}
@@ -217,11 +219,11 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   </div>
                 </div>
 
-                {/* RIGHT: Secondary Tag - 总用户数 (Total User Rank) */}
+                {/* RIGHT: Secondary Tag - 总榜排名 (Global Rank) */}
                 <div className="rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 px-3 py-2.5 flex flex-col justify-center border border-gray-200/50 shadow-sm">
                   {/* Label */}
                   <div className="text-[10px] font-medium text-gray-500 mb-0.5 tracking-wide uppercase">
-                    总用户数
+                    总榜排名
                   </div>
                   
                   {/* Rank Number */}
