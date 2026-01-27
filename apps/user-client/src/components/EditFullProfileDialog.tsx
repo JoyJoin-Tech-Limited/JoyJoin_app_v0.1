@@ -31,6 +31,7 @@ const fullProfileSchema = z.object({
   educationLevel: z.string().optional(),
   industry: z.string().optional(),
   roleTitleShort: z.string().optional(),
+  seniority: z.string().optional(),
   relationshipStatus: z.string().optional(),
   interestsTop: z.array(z.string()).optional(),
 });
@@ -122,6 +123,7 @@ export default function EditFullProfileDialog({
       educationLevel: user?.educationLevel || "",
       industry: user?.industry || "",
       roleTitleShort: user?.roleTitleShort || "",
+      seniority: user?.seniority || "",
       relationshipStatus: user?.relationshipStatus || "",
       interestsTop: user?.interestsTop || [],
     },

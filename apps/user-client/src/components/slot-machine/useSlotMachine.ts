@@ -70,7 +70,7 @@ export function useSlotMachine({
   const onLandRef = useRef(onLand);
 
   // Find target index
-  const finalIndex = ARCHETYPE_NAMES.indexOf(finalArchetype);
+  const finalIndex = ARCHETYPE_NAMES.indexOf(finalArchetype as typeof ARCHETYPE_NAMES[number]);
   const targetIndex = finalIndex >= 0 ? finalIndex : 0;
 
   // Get 3 visible items centered on current
