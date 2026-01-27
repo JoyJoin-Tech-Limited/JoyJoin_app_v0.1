@@ -45,8 +45,8 @@ interface ShareCardData {
 const expressionOptions = [
   { id: "starry", label: "星星眼", emoji: "🤩" },
   { id: "hearts", label: "爱心眼", emoji: "😍" },
-  { id: "shy", label: "害羞可爱", emoji: "😳" },
-  { id: "shocked", label: "震惊可爱", emoji: "😲" },
+  { id: "shy", label: "害羞", emoji: "😳" },
+  { id: "shocked", label: "震惊", emoji: "😲" },
 ];
 
 // English name mapping for archetypes

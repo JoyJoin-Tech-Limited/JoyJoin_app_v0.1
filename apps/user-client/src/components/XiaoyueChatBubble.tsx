@@ -3,9 +3,9 @@ import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-import xiaoyueThinking from "@/assets/Xiao_Yue_Avatar-01.png";
-import xiaoyueCasual from "@/assets/Xiao_Yue_Avatar-03.png";
-import xiaoyuePointing from "@/assets/Xiao_Yue_Avatar-04.png";
+import xiaoyueThinking from "@/assets/xiaoyue_thinking.png";
+import xiaoyueCasual from "@/assets/xiaoyue_default.png.png";
+import xiaoyuePointing from "@/assets/xiaoyue_idea.png.png";
 
 export type XiaoyuePose = "thinking" | "casual" | "pointing";
 
