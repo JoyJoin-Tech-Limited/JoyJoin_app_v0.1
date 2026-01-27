@@ -11,7 +11,6 @@ import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
 import logoFull from "@/assets/joyjoin-logo-full.png";
 import { getCardImagePath, hasCardImage } from "@/lib/archetypeCardImages";
-import { getArchetypeIndex, formatTypeNo } from "@/lib/archetypeCanonical";
 
 interface PokemonShareCardProps {
   archetype: string;
@@ -69,7 +68,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
       >
         {/* Card container with dual-layer border - gradient applied to border */}
         <div
-          className={`relative bg-gradient-to-br ${variant.gradient} rounded-3xl p-2 shadow-2xl h-full`}
+          className={`relative bg-gradient-to-br ${variant.gradient} rounded-3xl p-3 shadow-2xl h-full`}
           style={{ boxShadow: `0 25px 70px ${variant.primaryColor}50` }}
         >
           {/* Enhanced dual-layer golden border - adjusted for 9:16 */}
@@ -180,47 +179,66 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               )}
             </div>
 
-            {/* Stats section - KPI tags */}
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-3 sm:p-4 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
-                {/* #TYPE tag - archetype type number */}
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] sm:text-xs font-bold text-gray-500">#TYPE</span>
-                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-md">
-                    <span className="text-[10px] sm:text-xs font-black text-white">
-                      {(() => {
-                        const archetypeIndex = getArchetypeIndex(archetype);
-                        // Default to 1 if not found (should not happen in normal operation)
-                        return formatTypeNo(archetypeIndex ?? 1);
-                      })()}
-                    </span>
-                  </span>
+            {/* Stats Section - 2 Column Layout with Prominent Archetype Rank */}
+            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl px-4 py-3 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
+              <div className="grid grid-cols-[1.8fr_1fr] gap-3">
+                {/* LEFT: HERO TAG - 原型排名 (Archetype Rank) */}
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-[2px] shadow-lg">
+                  {/* Animated shimmer effect - only in preview mode */}
+                  {isPreview && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer" />
+                  )}
+                  
+                  <div className="relative bg-gradient-to-br from-indigo-50 to-purple-50 rounded-[10px] px-3 py-2.5 h-full flex flex-col justify-center">
+                    {/* Label */}
+                    <div className="text-[10px] font-medium text-indigo-600/70 mb-0.5 tracking-wide uppercase">
+                      原型排名
+                    </div>
+                    
+                    {/* Hero Content - Rank + Archetype */}
+                    <div className="flex items-baseline gap-1.5">
+                      {/* Rank Number */}
+                      <div className="flex items-baseline">
+                        <span className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+                          No.
+                        </span>
+                        <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 tracking-tight">
+                          {rankings.archetypeRank}
+                        </span>
+                      </div>
+                      
+                      {/* Archetype Name */}
+                      <span className="text-base font-bold text-indigo-700 truncate">
+                        {archetype}
+                      </span>
+                    </div>
+                    
+                    {/* Decorative accent */}
+                    <div className="absolute top-1 right-1 w-6 h-6 bg-gradient-to-br from-yellow-300 to-amber-400 rounded-full opacity-20 blur-sm" />
+                    <div className="absolute bottom-1 left-1 w-4 h-4 bg-gradient-to-br from-pink-300 to-purple-400 rounded-full opacity-20 blur-sm" />
+                  </div>
                 </div>
-                
-                {/* #ARCH tag - archetype-specific rank */}
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] sm:text-xs font-bold text-gray-500">#ARCH</span>
-                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full shadow-md">
-                    <span className="text-[10px] sm:text-xs font-black text-white">
-                      #{rankings.archetypeRank}
+
+                {/* RIGHT: Secondary Tag - 总榜排名 (Global Rank) */}
+                <div className="rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 px-3 py-2.5 flex flex-col justify-center border border-gray-200/50 shadow-sm">
+                  {/* Label */}
+                  <div className="text-[10px] font-medium text-gray-500 mb-0.5 tracking-wide uppercase">
+                    总榜排名
+                  </div>
+                  
+                  {/* Rank Number */}
+                  <div className="flex items-baseline gap-0.5">
+                    <span className="text-sm font-semibold text-gray-400">#</span>
+                    <span className="text-xl font-bold text-gray-700">
+                      {rankings.totalUserRank}
                     </span>
-                  </span>
-                </div>
-                
-                {/* #ALL tag - global rank */}
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] sm:text-xs font-bold text-gray-500">#ALL</span>
-                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full shadow-md">
-                    <span className="text-[10px] sm:text-xs font-black text-white">
-                      #{rankings.totalUserRank}
-                    </span>
-                  </span>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Pokemon-style 2-column Skills Section */}
-            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-2 sm:p-2.5 mb-1.5 sm:mb-2 border border-gray-100">
+            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl px-4 py-2.5 mb-1.5 sm:mb-2 border border-gray-100">
               <div className="flex gap-2 sm:gap-3">
                 {/* Left: Radar Chart (45% width for better readability) */}
                 <div className="w-[45%] flex items-center justify-center">
@@ -238,12 +256,12 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                 </div>
                 
                 {/* Right: Pokemon Skills Info (55% width) */}
-                <div className="w-[55%] flex flex-col justify-center space-y-1.5 sm:space-y-2">
+                <div className="w-[55%] flex flex-col justify-center space-y-3">
                   {/* Energy Bar - Pokemon HP style */}
                   <div>
-                    <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-                      <span className="text-[9px] sm:text-[10px] font-bold text-gray-700">⚡ 社交能量</span>
-                      <span className="text-[9px] sm:text-[10px] font-black text-orange-600">{archetypeInfo?.energyLevel}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs sm:text-sm font-bold text-gray-700">⚡ 社交能量</span>
+                      <span className="text-xs sm:text-sm font-black text-orange-600">{archetypeInfo?.energyLevel}</span>
                     </div>
                     <div className="h-1.5 sm:h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div 
@@ -252,60 +270,45 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                       />
                     </div>
                   </div>
-                </div>
 
-                {/* ARCH ranking */}
-                <div className="bg-gradient-to-br from-blue-50 to-white rounded-lg p-2 border border-blue-100 text-center">
-                  <div className="text-[9px] font-semibold text-blue-600 mb-0.5">#ARCH</div>
-                  <div className="text-lg font-black text-blue-700">
-                    {rankings.archetypeRank}
+                  {/* Core Contributions */}
+                  <div>
+                    <div className="text-xs sm:text-sm font-bold text-gray-700 mb-1">💎 核心技能</div>
+                    <p className="text-[11px] sm:text-xs text-gray-600 leading-relaxed">
+                      {archetypeInfo?.coreContributions}
+                    </p>
+                  </div>
+
+                  {/* Social Positioning */}
+                  <div>
+                    <div className="text-xs sm:text-sm font-bold text-gray-700 mb-1">🎯 社交定位</div>
+                    <p className="text-[11px] sm:text-xs text-gray-600 leading-relaxed">
+                      {archetypeInfo?.description}
+                    </p>
                   </div>
                 </div>
-
-                {/* ALL ranking */}
-                <div className="bg-gradient-to-br from-purple-50 to-white rounded-lg p-2 border border-purple-100 text-center">
-                  <div className="text-[9px] font-semibold text-purple-600 mb-0.5">#ALL</div>
-                  <div className="text-lg font-black text-purple-700">
-                    {rankings.totalUserRank}
-                  </div>
-                </div>
-              </div>
-
-              {/* Vertical divider */}
-              <div className="w-px bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
-
-              {/* Right column: Radar chart */}
-              <div className="flex-1 flex items-center justify-center">
-                <PersonalityRadarChart 
-                  affinityScore={traitScores.A}
-                  opennessScore={traitScores.O}
-                  conscientiousnessScore={traitScores.C}
-                  emotionalStabilityScore={traitScores.E}
-                  extraversionScore={traitScores.X}
-                  positivityScore={traitScores.P}
-                  primaryColor={variant.primaryColor}
-                  compactMode={true}
-                />
               </div>
             </div>
 
             {/* SECTION 3: FOOTER - full-width bar with logo and date */}
-            <div className="flex-none px-4 py-3 border-t border-gray-200 bg-gray-50/50">
+            <div className="flex-none px-4 py-3.5 border-t border-gray-200/60 bg-gradient-to-r from-gray-50 via-white to-gray-50/50 backdrop-blur-sm">
               <div className="flex items-center justify-between">
                 {/* Left: JoyJoin logo */}
                 <img 
                   src={logoFull} 
                   alt="悦聚 JoyJoin" 
-                  className="h-6 w-auto object-contain"
+                  className="h-5 w-auto object-contain opacity-90"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
 
-                {/* Right: Date */}
-                <span className="text-[10px] font-semibold text-gray-600">
-                  {formattedDate}
-                </span>
+                {/* Right: Minimalist date UI */}
+                <div className="px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 shadow-lg">
+                  <span className="text-[10px] font-black text-white tracking-wider">
+                    {formattedDate}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
