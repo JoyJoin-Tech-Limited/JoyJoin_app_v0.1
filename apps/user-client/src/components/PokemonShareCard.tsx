@@ -68,7 +68,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
       >
         {/* Card container with dual-layer border - gradient applied to border */}
         <div
-          className={`relative bg-gradient-to-br ${variant.gradient} rounded-3xl p-2 shadow-2xl h-full`}
+          className={`relative bg-gradient-to-br ${variant.gradient} rounded-3xl p-3 shadow-2xl h-full`}
           style={{ boxShadow: `0 25px 70px ${variant.primaryColor}50` }}
         >
           {/* Enhanced dual-layer golden border - adjusted for 9:16 */}
@@ -180,7 +180,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             </div>
 
             {/* Stats Section - 2 Column Layout with Prominent Archetype Rank */}
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl px-3 py-3 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
+            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl px-4 py-3 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
               <div className="grid grid-cols-[1.8fr_1fr] gap-3">
                 {/* LEFT: HERO TAG - 原型人数 (Archetype Rank) */}
                 <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-[2px] shadow-lg">
@@ -301,11 +301,8 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   }}
                 />
 
-                {/* Right: Stylish gradient date UI */}
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 shadow-lg">
-                  <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+                {/* Right: Minimalist date UI */}
+                <div className="px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 shadow-lg">
                   <span className="text-[10px] font-black text-white tracking-wider">
                     {formattedDate}
                   </span>
