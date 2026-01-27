@@ -5,7 +5,7 @@
  */
 
 import { motion } from "framer-motion";
-import { forwardRef, useState } from "react";
+import { forwardRef, useState, useEffect } from "react";
 import type { ShareCardVariant } from "@/lib/archetypeShareVariants";
 import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
@@ -55,6 +55,11 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
     
     // Use card image if available and expression is provided, otherwise fallback to illustrationUrl
     const finalImageUrl = cardImagePath || illustrationUrl;
+
+    // Reset imageLoaded state when finalImageUrl changes
+    useEffect(() => {
+      setImageLoaded(false);
+    }, [finalImageUrl]);
 
     // Format date - use provided shareDate or default to current date
     const formattedDate = shareDate || new Date().toISOString().split('T')[0];
