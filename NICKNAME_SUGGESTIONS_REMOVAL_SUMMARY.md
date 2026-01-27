@@ -10,10 +10,10 @@ Remove the generic nickname suggestion buttons from the Essential Data onboardin
 ### Changes Summary
 | Metric | Value |
 |--------|-------|
-| **Files Changed** | 1 file |
-| **Lines Removed** | ~37 lines |
-| **Lines Added** | ~9 lines |
-| **Net Reduction** | ~28 lines |
+| **Files Changed (code)** | 1 file |
+| **Lines Removed (code)** | ~37 lines |
+| **Lines Added (code)** | ~9 lines |
+| **Net Reduction (code)** | ~28 lines |
 | **Build Status** | ✅ PASSED |
 | **TypeScript Check** | ✅ PASSED |
 
