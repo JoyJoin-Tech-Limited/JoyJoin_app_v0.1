@@ -465,9 +465,9 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
           )}
 
           {/* Sticky Glassmorphic Customization Panel */}
-          <div className="sticky bottom-0 left-0 right-0 z-10 backdrop-blur-xl bg-white/85 border-t border-gray-200/50 rounded-t-2xl shadow-2xl px-4 pb-4 pt-3 -mx-4 sm:-mx-6 mt-4">
+          <div className="sticky bottom-0 left-0 right-0 z-10 backdrop-blur-xl bg-white/85 border-t border-gray-200/50 rounded-t-2xl shadow-2xl px-4 pb-4 pt-3 mt-4">
             {/* Drag handle indicator */}
-            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3" />
+            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3" aria-hidden="true" />
             
             {/* Customization title */}
             <h3 className="text-sm font-bold text-gray-900 mb-3 text-center">
