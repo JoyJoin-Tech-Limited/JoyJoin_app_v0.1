@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import PersonalityRadarChart from "./PersonalityRadarChart";
+import { SocialTagSelectionCard } from "./SocialTagSelectionCard";
 import { archetypeConfig } from "@/lib/archetypes";
 import { getArchetypeAvatar } from "@/lib/archetypeAdapter";
 import { cn } from "@/lib/utils";
@@ -569,6 +570,28 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
               </div>
             </CardContent>
           </Card>
+        </motion.div>
+      )}
+
+      {/* 3.5. Social Tag Selection Card */}
+      {archetype && (
+        <motion.div variants={itemVariants}>
+          <SocialTagSelectionCard
+            archetype={archetype}
+            profession={{
+              industry: user?.industryCategory,
+              occupationId: user?.occupationId,
+              workMode: user?.workMode,
+            }}
+            hobbies={
+              interestsData?.selections
+                ? (interestsData.selections as any[])
+                    .sort((a: any, b: any) => b.heat - a.heat)
+                    .slice(0, 3)
+                    .map((s: any) => ({ name: s.label, heat: s.heat }))
+                : undefined
+            }
+          />
         </motion.div>
       )}
 
