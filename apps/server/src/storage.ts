@@ -14,11 +14,12 @@ import {
   type InsertIcebreakerSession, type InsertIcebreakerCheckin, type InsertIcebreakerReadyVote, type InsertIcebreakerActivityLog,
   type RegistrationSession,
   type PreSignupData,
+  type UserSocialTagGeneration,
   users, events, eventAttendance, chatMessages, eventFeedback, blindBoxEvents, testResponses, roleResults, notifications,
   directMessageThreads, directMessages, payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs,
   pricingSettings, promotionBanners, eventPools, eventPoolGroups, venueTimeSlots, venueTimeSlotBookings, venues,
   icebreakerSessions, icebreakerCheckins, icebreakerReadyVotes, icebreakerActivityLogs, registrationSessions, preSignupData,
-  assessmentSessions, assessmentAnswers
+  assessmentSessions, assessmentAnswers, userSocialTagGenerations
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
@@ -52,6 +53,20 @@ export interface IStorage {
   saveRoleResult(userId: string, result: InsertRoleResult): Promise<RoleResult>;
   getRoleResult(userId: string): Promise<RoleResult | undefined>;
   getPersonalityDistribution(): Promise<Record<string, number>>;
+  
+  // Social tag operations
+  getUserGeneratedTags(userId: string): Promise<UserSocialTagGeneration | undefined>;
+  saveGeneratedTags(userId: string, data: {
+    tags: any[];
+    generatedAt: Date;
+    version: string;
+    context: any;
+  }): Promise<void>;
+  recordTagSelection(userId: string, data: {
+    selectedIndex: number;
+    selectedTag: string;
+    selectedAt: Date;
+  }): Promise<void>;
   
   // Event operations
   getUserJoinedEvents(userId: string): Promise<Array<Event & { attendanceStatus: string; attendeeCount: number; participants: Array<{ id: string; displayName: string | null; archetype: string | null }> }>>;
@@ -710,6 +725,76 @@ export class DatabaseStorage implements IStorage {
     }
 
     return percentages;
+  }
+
+  // Social tag operations
+  async getUserGeneratedTags(userId: string): Promise<UserSocialTagGeneration | undefined> {
+    const [result] = await db
+      .select()
+      .from(userSocialTagGenerations)
+      .where(eq(userSocialTagGenerations.userId, userId))
+      .limit(1);
+    
+    return result;
+  }
+
+  async saveGeneratedTags(userId: string, data: {
+    tags: any[];
+    generatedAt: Date;
+    version: string;
+    context: any;
+  }): Promise<void> {
+    // Use INSERT ... ON CONFLICT to upsert (replace existing if present)
+    await db
+      .insert(userSocialTagGenerations)
+      .values({
+        userId,
+        tags: data.tags,
+        generatedAt: data.generatedAt,
+        generationVersion: data.version,
+        generationContext: data.context,
+      })
+      .onConflictDoUpdate({
+        target: [userSocialTagGenerations.userId], // Use column array for unique constraint
+        set: {
+          tags: data.tags,
+          generatedAt: data.generatedAt,
+          generationVersion: data.version,
+          generationContext: data.context,
+          // Clear selection when regenerating
+          selectedIndex: null,
+          selectedTag: null,
+          selectedAt: null,
+        },
+      });
+  }
+
+  async recordTagSelection(userId: string, data: {
+    selectedIndex: number;
+    selectedTag: string;
+    selectedAt: Date;
+  }): Promise<void> {
+    // Wrap both updates in a transaction to ensure atomicity
+    await db.transaction(async (tx) => {
+      // Update the user's selected tag
+      await tx
+        .update(users)
+        .set({
+          socialTag: data.selectedTag,
+          socialTagSelectedAt: data.selectedAt,
+        })
+        .where(eq(users.id, userId));
+
+      // Update the generation record with selection info
+      await tx
+        .update(userSocialTagGenerations)
+        .set({
+          selectedIndex: data.selectedIndex,
+          selectedTag: data.selectedTag,
+          selectedAt: data.selectedAt,
+        })
+        .where(eq(userSocialTagGenerations.userId, userId));
+    });
   }
 
   // Event operations

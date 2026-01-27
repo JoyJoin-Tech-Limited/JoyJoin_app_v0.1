@@ -222,6 +222,10 @@ export const users = pgTable("users", {
   industryClassifiedAt: timestamp("industry_classified_at"),                // 分类时间
   industryLastVerifiedAt: timestamp("industry_last_verified_at"),           // 最后验证时间
   
+  // ============ Social Tag System (社交人格印象标签系统) ============
+  socialTag: text("social_tag"), // Selected social tag: "数据拓荒人·巷口密探"
+  socialTagSelectedAt: timestamp("social_tag_selected_at"), // When tag was selected
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -253,6 +257,33 @@ export const userInterests = pgTable("user_interests", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("idx_user_interests_user_id").on(table.userId),
+]);
+
+// User Social Tag Generations table - Tag generation history and selections
+export const userSocialTagGenerations = pgTable("user_social_tag_generations", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Generated tags stored as JSONB array
+  // [{ descriptor, archetypeNickname, fullTag, reasoning }, ...]
+  tags: jsonb("tags").notNull(),
+  
+  // Metadata
+  generationVersion: text("generation_version").default("v1.0"),
+  generatedAt: timestamp("generated_at").defaultNow(),
+  
+  // User selection tracking
+  selectedIndex: integer("selected_index"),
+  selectedTag: text("selected_tag"),
+  selectedAt: timestamp("selected_at"),
+  
+  // Context used for generation (for debugging/improvement)
+  // { archetype, profession: { occupationId, industry }, hobbies: [{ name, heat }] }
+  generationContext: jsonb("generation_context"),
+}, (table) => [
+  index("idx_social_tags_user").on(table.userId),
+  index("idx_social_tags_selected").on(table.selectedAt),
+  unique("unique_user_latest_tag").on(table.userId),
 ]);
 
 // Events table
@@ -1415,6 +1446,8 @@ export type UpdateFullProfile = z.infer<typeof updateFullProfileSchema>;
 export type UpdatePersonality = z.infer<typeof updatePersonalitySchema>;
 export type RegisterUser = z.infer<typeof registerUserSchema>;
 export type InterestsTopics = z.infer<typeof interestsTopicsSchema>;
+
+export type UserSocialTagGeneration = typeof userSocialTagGenerations.$inferSelect;
 
 export type Event = typeof events.$inferSelect;
 export type EventAttendance = typeof eventAttendance.$inferSelect;

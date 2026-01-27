@@ -169,8 +169,19 @@ export default function UserConnectionCard({
 
                   {/* Right: Personal Info */}
                   <div className="flex-1 space-y-2 pt-1">
-                    <div className="font-bold text-base" data-testid={`text-name-${attendee.userId}`}>
-                      {attendee.displayName}
+                    <div className="space-y-1">
+                      <div className="font-bold text-base" data-testid={`text-name-${attendee.userId}`}>
+                        {attendee.displayName}
+                      </div>
+                      {attendee.socialTag && (
+                        <Badge 
+                          variant="secondary" 
+                          className="text-xs bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border-purple-300"
+                        >
+                          <Sparkles className="w-3 h-3 mr-1" />
+                          {attendee.socialTag}
+                        </Badge>
+                      )}
                     </div>
 
                     <div className="space-y-1.5 text-xs">
