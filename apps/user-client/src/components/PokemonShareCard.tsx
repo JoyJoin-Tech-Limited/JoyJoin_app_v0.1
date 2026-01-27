@@ -177,8 +177,8 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     {tagline}
                   </p>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Stats section - KPI tags */}
             <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-3 sm:p-4 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
