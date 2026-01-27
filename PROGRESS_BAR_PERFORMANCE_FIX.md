@@ -250,7 +250,7 @@ if (process.env.NODE_ENV === 'development') {
   console.log('[AdaptiveAssessment] Optimistic progress update:', {...});
 }
 ```
-Production builds strip these logs automatically.
+In production builds these logs are disabled by the `NODE_ENV === 'development'` guard; they remain in the bundle unless the build is explicitly configured to drop `console` calls.
 
 ---
 
