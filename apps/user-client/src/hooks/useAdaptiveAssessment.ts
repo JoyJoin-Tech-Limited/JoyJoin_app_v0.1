@@ -285,6 +285,18 @@ export function useAdaptiveAssessment() {
     },
     onSuccess: (data) => {
       setPhase("post_signup");
+      
+      // NEW: If backend returns next question, update state immediately
+      if (data.nextQuestion) {
+        setCurrentQuestion(data.nextQuestion);
+      }
+      if (data.progress) {
+        setProgress(data.progress);
+      }
+      if (data.currentMatches) {
+        setCurrentMatches(data.currentMatches);
+      }
+      
       cacheSession({ sessionId: sessionId!, phase: "post_signup" });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
@@ -336,6 +348,15 @@ export function useAdaptiveAssessment() {
       setSessionId(syncedSessionId);
       setPhase("assessment");
       
+      // NEW: Check if we already have a current question (from link-user response)
+      // If so, skip the API call
+      if (currentQuestion) {
+        localStorage.removeItem("joyjoin_synced_session_id");
+        localStorage.removeItem("joyjoin_synced_answer_count");
+        setIsInitialized(true);
+        return;
+      }
+      
       try {
         await startMutation.mutateAsync({ 
           sessionId: syncedSessionId, 
@@ -376,7 +397,7 @@ export function useAdaptiveAssessment() {
     }
     
     await startMutation.mutateAsync({ preSignupAnswers, forceNew });
-  }, [loadCachedSession, getCachedAnswers, startMutation, clearCache]);
+  }, [loadCachedSession, getCachedAnswers, startMutation, clearCache, currentQuestion]);
 
   const startFreshAssessment = useCallback(async () => {
     clearCache();
@@ -389,8 +410,23 @@ export function useAdaptiveAssessment() {
     selectedOption: string,
     traitScores: TraitScores
   ) => {
+    // OPTIMISTIC UPDATE: Immediately update progress before API call
+    setProgress(prev => prev ? { 
+      ...prev, 
+      answered: prev.answered + 1,
+      estimatedRemaining: Math.max(0, prev.estimatedRemaining - 1)
+    } : null);
+    
+    // Add console log for debugging (development only)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[AdaptiveAssessment] Optimistic progress update:', {
+        answered: (progress?.answered || 0) + 1,
+        estimatedRemaining: Math.max(0, (progress?.estimatedRemaining || 0) - 1)
+      });
+    }
+    
     await answerMutation.mutateAsync({ questionId, selectedOption, traitScores });
-  }, [answerMutation]);
+  }, [answerMutation, progress]);
 
   const continueAfterSignup = useCallback(async (userId: string) => {
     await linkUserMutation.mutateAsync(userId);
