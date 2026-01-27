@@ -123,6 +123,7 @@ export default function EditFullProfileDialog({
       educationLevel: user?.educationLevel || "",
       industry: user?.industry || "",
       roleTitleShort: user?.roleTitleShort || "",
+      seniority: user?.seniority || "",
       relationshipStatus: user?.relationshipStatus || "",
       interestsTop: user?.interestsTop || [],
     },
