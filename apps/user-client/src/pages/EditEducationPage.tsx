@@ -20,9 +20,17 @@ import {
 
 const educationSchema = z.object({
   educationLevel: z.enum(["Bachelor's", "Master's", "PhD", "Some college/Associate", "Trade/Vocational"]).optional(),
+  // ❌ DEPRECATED: fieldOfStudy - hidden from UI but kept in DB for backward compatibility
+  // ❌ DEPRECATED: studyLocale - hidden from UI but kept in DB for backward compatibility
+  // ❌ DEPRECATED: overseasRegions - hidden from UI but kept in DB for backward compatibility
 });
 
 type EducationForm = z.infer<typeof educationSchema>;
+
+const overseasRegionOptions = [
+  "美国", "英国", "加拿大", "澳大利亚", "新西兰",
+  "新加坡", "香港", "日本", "韩国", "德国", "法国", "其他"
+];
 
 export default function EditEducationPage() {
   const [, setLocation] = useLocation();
@@ -34,6 +42,7 @@ export default function EditEducationPage() {
     resolver: zodResolver(educationSchema),
     defaultValues: {
       educationLevel: user?.educationLevel || undefined,
+      // ❌ DEPRECATED: fieldOfStudy, studyLocale, overseasRegions - removed from UI
     },
   });
 
@@ -58,6 +67,8 @@ export default function EditEducationPage() {
     updateMutation.mutate(data);
   };
 
+  // ❌ DEPRECATED: toggleRegion helper removed - overseasRegions no longer in UI
+
   if (isLoading || !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -68,6 +79,8 @@ export default function EditEducationPage() {
       </div>
     );
   }
+
+  // ❌ DEPRECATED: studyLocale and overseasRegions logic removed from UI
 
   return (
     <div className="min-h-screen bg-background">
@@ -118,6 +131,12 @@ export default function EditEducationPage() {
             ))}
           </div>
         </div>
+
+        {/* ❌ DEPRECATED: Field of Study - removed from UI */}
+
+        {/* ❌ DEPRECATED: Study Locale - removed from UI */}
+
+        {/* ❌ DEPRECATED: Overseas Regions - removed from UI */}
 
         {/* Save Button */}
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
