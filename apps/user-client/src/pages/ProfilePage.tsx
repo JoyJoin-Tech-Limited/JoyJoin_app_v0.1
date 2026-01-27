@@ -195,6 +195,15 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex-1">
                   <h2 className="text-xl font-bold">{getUserName()}</h2>
+                  {user?.socialTag && (
+                    <Badge 
+                      variant="secondary" 
+                      className="mt-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border-purple-300"
+                    >
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      {user.socialTag}
+                    </Badge>
+                  )}
                   <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
                     <span data-testid="text-events-completed">{stats?.eventsCompleted || 0} 次活动</span>
                     <span data-testid="text-connections-made">{stats?.connectionsMade || 0} 个连接</span>

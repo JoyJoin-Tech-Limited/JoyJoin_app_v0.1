@@ -2,6 +2,7 @@ export interface AttendeeData {
   userId: string;
   displayName: string;
   archetype?: string;
+  socialTag?: string; // Social personality impression tag
   topInterests?: string[];
   primaryInterests?: string[];
   interestFavorite?: string;
