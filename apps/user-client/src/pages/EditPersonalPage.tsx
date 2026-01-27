@@ -5,14 +5,10 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, Check } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { RELATIONSHIP_STATUS_OPTIONS, CHILDREN_OPTIONS } from "@shared/constants";
-
 type PersonalData = {
   relationshipStatus?: string;
-  // ❌ DEPRECATED: children - hidden from UI but kept in DB for backward compatibility
-  // ❌ DEPRECATED: hasPets - hidden from UI but kept in DB for backward compatibility
-  // ❌ DEPRECATED: hasSiblings - hidden from UI but kept in DB for backward compatibility
   currentCity?: string;
+  hometownRegionCity?: string;
 };
 
 const relationshipOptions = [
@@ -21,16 +17,6 @@ const relationshipOptions = [
   { value: "已婚/伴侣", label: "已婚/伴侣" },
   { value: "离异", label: "离异" },
   { value: "丧偶", label: "丧偶" },
-  { value: "不透露", label: "不透露" },
-];
-
-const childrenOptions = [
-  { value: "无孩子", label: "无孩子" },
-  { value: "期待中", label: "期待中" },
-  { value: "0-5岁", label: "0-5岁" },
-  { value: "6-12岁", label: "6-12岁" },
-  { value: "13-18岁", label: "13-18岁" },
-  { value: "成年", label: "成年" },
   { value: "不透露", label: "不透露" },
 ];
 
@@ -43,8 +29,8 @@ export default function EditPersonalPage() {
   const { data: user, isLoading } = useQuery<any>({ queryKey: ["/api/auth/user"] });
   
   const [relationshipStatus, setRelationshipStatus] = useState<string | undefined>(user?.relationshipStatus);
-  // ❌ DEPRECATED: children, hasPets, hasSiblings - removed from UI
   const [currentCity, setCurrentCity] = useState<string | undefined>(user?.currentCity);
+  const [hometownRegionCity, setHometownRegionCity] = useState<string | undefined>(user?.hometownRegionCity);
 
   const updateMutation = useMutation({
     mutationFn: async (data: PersonalData) => {
@@ -67,6 +53,7 @@ export default function EditPersonalPage() {
     updateMutation.mutate({
       relationshipStatus,
       currentCity,
+      hometownRegionCity,
     });
   };
 
@@ -123,12 +110,6 @@ export default function EditPersonalPage() {
           </div>
         </div>
 
-        {/* ❌ DEPRECATED: Children Status - removed from UI */}
-
-        {/* ❌ DEPRECATED: Has Pets - removed from UI */}
-
-        {/* ❌ DEPRECATED: Has Siblings - removed from UI */}
-
         {/* Current City */}
         <div className="space-y-4">
           <div>
@@ -148,6 +129,32 @@ export default function EditPersonalPage() {
                   }
                 `}
                 data-testid={`button-current-city-${city}`}
+              >
+                {city}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Hometown */}
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">家乡</h2>
+            <p className="text-sm text-muted-foreground">用于同乡匹配</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {currentCityOptions.map((city) => (
+              <button
+                key={city}
+                onClick={() => setHometownRegionCity(city)}
+                className={`
+                  px-4 py-3 rounded-lg border text-sm transition-all
+                  ${hometownRegionCity === city
+                    ? 'border-primary bg-primary/5 text-primary'
+                    : 'border-border hover-elevate active-elevate-2'
+                  }
+                `}
+                data-testid={`button-hometown-${city}`}
               >
                 {city}
               </button>

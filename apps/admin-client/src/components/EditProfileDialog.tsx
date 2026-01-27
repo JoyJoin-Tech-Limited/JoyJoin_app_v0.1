@@ -36,27 +36,19 @@ const basicSchema = z.object({
   displayName: z.string().min(1, "请输入昵称"),
   gender: z.string().optional(),
   birthdate: z.string().optional(),
-  languagesComfort: z.array(z.string()).optional(),
 });
 
 const educationSchema = z.object({
   educationLevel: z.string().optional(),
-  fieldOfStudy: z.string().optional(),
-  studyLocale: z.string().optional(),
-  overseasRegions: z.array(z.string()).optional(),
 });
 
 const workSchema = z.object({
   industry: z.string().optional(),
   roleTitleShort: z.string().optional(),
-  seniority: z.string().optional(),
 });
 
 const personalSchema = z.object({
   relationshipStatus: z.string().optional(),
-  children: z.string().optional(),
-  hasPets: z.boolean().optional(),
-  hasSiblings: z.boolean().optional(),
   currentCity: z.string().optional(),
 });
 
@@ -88,27 +80,19 @@ const getDefaultValues = (section: SectionType, user: any) => {
         displayName: user?.displayName || "",
         gender: user?.gender || "",
         birthdate: user?.birthdate ? new Date(user.birthdate).toISOString().split('T')[0] : "",
-        languagesComfort: user?.languagesComfort || [],
       };
     case "education":
       return {
         educationLevel: user?.educationLevel || "",
-        fieldOfStudy: user?.fieldOfStudy || "",
-        studyLocale: user?.studyLocale || "",
-        overseasRegions: user?.overseasRegions || [],
       };
     case "work":
       return {
         industry: user?.industry || "",
         roleTitleShort: user?.roleTitleShort || "",
-        seniority: user?.seniority || "",
       };
     case "personal":
       return {
         relationshipStatus: user?.relationshipStatus || "",
-        children: user?.children || "",
-        hasPets: user?.hasPets,
-        hasSiblings: user?.hasSiblings,
         currentCity: user?.currentCity || "",
       };
     case "interests":
@@ -127,28 +111,6 @@ const sectionTitles: Record<SectionType, string> = {
   personal: "编辑个人背景",
   interests: "编辑兴趣偏好",
 };
-
-const languageOptions = [
-  "普通话",
-  "粤语",
-  "英语",
-  "四川话",
-  "东北话",
-  "河南话",
-  "山东话",
-  "湖北话",
-  "湖南话",
-  "闽南话",
-  "上海话",
-  "客家话",
-  "潮汕话",
-  "温州话",
-  "日语",
-  "韩语",
-  "法语",
-  "德语",
-  "西班牙语",
-];
 
 const overseasRegionOptions = [
   "北美",
@@ -308,23 +270,6 @@ export default function EditProfileDialog({
                     </FormItem>
                   )}
                 />
-
-                <div>
-                  <Label className="mb-2 block">常用语言</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {languageOptions.map((lang) => (
-                      <Badge
-                        key={lang}
-                        variant={(form.watch("languagesComfort") || []).includes(lang) ? "default" : "outline"}
-                        className="cursor-pointer"
-                        onClick={() => toggleArrayItem("languagesComfort", lang)}
-                        data-testid={`badge-language-${lang}`}
-                      >
-                        {lang}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
               </>
             )}
 
@@ -355,62 +300,6 @@ export default function EditProfileDialog({
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="fieldOfStudy"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>专业领域</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="例如：计算机科学" data-testid="input-field-of-study" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="studyLocale"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>学习地点</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-study-locale">
-                            <SelectValue placeholder="选择学习地点" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Local">本地</SelectItem>
-                          <SelectItem value="Overseas">海外</SelectItem>
-                          <SelectItem value="Both">都有</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {(form.watch("studyLocale") === "Overseas" || form.watch("studyLocale") === "Both") && (
-                  <div>
-                    <Label className="mb-2 block">海外地区</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {overseasRegionOptions.map((region) => (
-                        <Badge
-                          key={region}
-                          variant={((form.watch("overseasRegions") as string[] | undefined) || []).includes(region) ? "default" : "outline"}
-                          className="cursor-pointer"
-                          onClick={() => toggleArrayItem("overseasRegions", region)}
-                          data-testid={`badge-region-${region}`}
-                        >
-                          {region}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </>
             )}
 
@@ -454,32 +343,6 @@ export default function EditProfileDialog({
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="seniority"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>资历等级</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-seniority">
-                            <SelectValue placeholder="选择资历等级" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Intern">实习生</SelectItem>
-                          <SelectItem value="Junior">初级</SelectItem>
-                          <SelectItem value="Mid">中级</SelectItem>
-                          <SelectItem value="Senior">高级</SelectItem>
-                          <SelectItem value="Founder">创始人</SelectItem>
-                          <SelectItem value="Executive">高管</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </>
             )}
 
@@ -510,76 +373,6 @@ export default function EditProfileDialog({
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="children"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>孩子状况</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-children">
-                            <SelectValue placeholder="选择孩子状况" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="No kids">无孩子</SelectItem>
-                          <SelectItem value="Expecting">期待中</SelectItem>
-                          <SelectItem value="0-5">0-5岁</SelectItem>
-                          <SelectItem value="6-12">6-12岁</SelectItem>
-                          <SelectItem value="13-18">13-18岁</SelectItem>
-                          <SelectItem value="Adult">成年</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div>
-                  <Label className="mb-2 block">有毛孩子吗</Label>
-                  <div className="flex gap-2">
-                    <Badge
-                      variant={form.watch("hasPets") === true ? "default" : "outline"}
-                      className="cursor-pointer"
-                      onClick={() => form.setValue("hasPets" as any, true)}
-                      data-testid="badge-pets-yes"
-                    >
-                      有
-                    </Badge>
-                    <Badge
-                      variant={form.watch("hasPets") === false ? "default" : "outline"}
-                      className="cursor-pointer"
-                      onClick={() => form.setValue("hasPets" as any, false)}
-                      data-testid="badge-pets-no"
-                    >
-                      没有
-                    </Badge>
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="mb-2 block">有亲兄弟姐妹吗</Label>
-                  <div className="flex gap-2">
-                    <Badge
-                      variant={form.watch("hasSiblings") === true ? "default" : "outline"}
-                      className="cursor-pointer"
-                      onClick={() => form.setValue("hasSiblings" as any, true)}
-                      data-testid="badge-siblings-yes"
-                    >
-                      有
-                    </Badge>
-                    <Badge
-                      variant={form.watch("hasSiblings") === false ? "default" : "outline"}
-                      className="cursor-pointer"
-                      onClick={() => form.setValue("hasSiblings" as any, false)}
-                      data-testid="badge-siblings-no"
-                    >
-                      独生子女
-                    </Badge>
-                  </div>
-                </div>
 
                 <FormField
                   control={form.control}

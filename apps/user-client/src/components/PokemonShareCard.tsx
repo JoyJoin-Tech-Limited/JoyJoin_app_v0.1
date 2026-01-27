@@ -11,6 +11,7 @@ import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
 import logoFull from "@/assets/joyjoin-logo-full.png";
 import { getCardImagePath, hasCardImage } from "@/lib/archetypeCardImages";
+import { getArchetypeIndex, formatTypeNo } from "@/lib/archetypeCanonical";
 
 interface PokemonShareCardProps {
   archetype: string;
@@ -33,10 +34,11 @@ interface PokemonShareCardProps {
   nickname?: string; // Optional user nickname
   isPreview?: boolean; // Whether this is preview mode (show animation) or download mode
   hasExpressionAsset?: boolean; // Whether a dedicated expression asset exists
+  shareDate?: string; // Optional share date in YYYY-MM-DD format (defaults to current date)
 }
 
 export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps>(
-  ({ archetype, archetypeEnglish, variant, illustrationUrl, rankings, traitScores, expression, nickname, isPreview = true, hasExpressionAsset = false }, ref) => {
+  ({ archetype, archetypeEnglish, variant, illustrationUrl, rankings, traitScores, expression, nickname, isPreview = true, hasExpressionAsset = false, shareDate }, ref) => {
     // Get archetype tagline from config
     const archetypeInfo = archetypeConfig[archetype];
     const tagline = archetypeInfo?.tagline || "";
@@ -52,6 +54,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
     // Use card image if available and expression is provided, otherwise fallback to illustrationUrl
     const finalImageUrl = cardImagePath || illustrationUrl;
 
+    // Format date - use provided shareDate or default to current date
+    const formattedDate = shareDate || new Date().toISOString().split('T')[0];
+
     return (
       <motion.div
         ref={ref}
@@ -59,20 +64,21 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
-        className="relative w-full max-w-[420px] mx-auto"
+        className="relative w-full max-w-[360px] mx-auto"
+        style={{ aspectRatio: '9/16' }}
       >
         {/* Card container with dual-layer border - gradient applied to border */}
         <div
-          className={`relative bg-gradient-to-br ${variant.gradient} rounded-3xl p-2 shadow-2xl`}
+          className={`relative bg-gradient-to-br ${variant.gradient} rounded-3xl p-2 shadow-2xl h-full`}
           style={{ boxShadow: `0 25px 70px ${variant.primaryColor}50` }}
         >
           {/* Enhanced dual-layer golden border - adjusted for 9:16 */}
-          <div className="absolute inset-0 rounded-3xl border-[12px] border-yellow-400/90 pointer-events-none shadow-[inset_0_2px_8px_rgba(0,0,0,0.2)]" 
+          <div className="absolute inset-0 rounded-3xl border-[10px] border-yellow-400/90 pointer-events-none shadow-[inset_0_2px_8px_rgba(0,0,0,0.2)]" 
                style={{ 
                  background: `linear-gradient(135deg, rgba(250,204,21,0.3) 0%, transparent 50%, rgba(250,204,21,0.2) 100%)`,
                }}
           />
-          <div className="absolute inset-[12px] rounded-2xl border-[8px] border-yellow-500/60 pointer-events-none shadow-[inset_0_1px_4px_rgba(0,0,0,0.15)]" />
+          <div className="absolute inset-[10px] rounded-2xl border-[6px] border-yellow-500/60 pointer-events-none shadow-[inset_0_1px_4px_rgba(0,0,0,0.15)]" />
           
           {/* Enhanced holographic overlay - Pokemon card style - only in preview */}
           {isPreview && (
@@ -85,9 +91,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
           {/* Enhanced corner shine effects (Pokemon card style) - only in preview mode */}
           {isPreview && (
             <>
-              <div className="absolute top-6 right-6 w-20 h-20 bg-white/40 rounded-full blur-2xl pointer-events-none" />
-              <div className="absolute top-8 right-8 w-12 h-12 bg-yellow-200/50 rounded-full blur-xl pointer-events-none" />
-              <div className="absolute bottom-6 left-6 w-16 h-16 bg-white/30 rounded-full blur-xl pointer-events-none" />
+              <div className="absolute top-6 right-6 w-16 h-16 bg-white/40 rounded-full blur-xl pointer-events-none" />
+              <div className="absolute top-8 right-8 w-10 h-10 bg-yellow-200/50 rounded-full blur-lg pointer-events-none" />
+              <div className="absolute bottom-6 left-6 w-14 h-14 bg-white/30 rounded-full blur-lg pointer-events-none" />
             </>
           )}
           
@@ -120,36 +126,15 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             </motion.div>
           )}
           
-          {/* Content - white/light background as default */}
-          <div className="relative bg-white/98 rounded-[20px] p-4 sm:p-5 flex flex-col">
-            {/* Header badge with long logo */}
-            <div className="text-center mb-1.5 sm:mb-2">
-              <div className="inline-flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full shadow-md">
-                <img 
-                  src={logoFull} 
-                  alt="悦聚 JoyJoin" 
-                  className="h-8 sm:h-10 w-auto object-contain"
-                  onError={(e) => {
-                    // Fallback to text if image fails to load
-                    (e.target as HTMLImageElement).style.display = 'none';
-                    const parent = (e.target as HTMLImageElement).parentElement;
-                    if (parent) {
-                      const fallbackText = document.createElement('p');
-                      fallbackText.className = 'text-xs font-black tracking-wider text-gray-800';
-                      fallbackText.textContent = '悦聚 JOYJOIN 性格图鉴';
-                      parent.appendChild(fallbackText);
-                    }
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Archetype illustration with glow - responsive sizing */}
-            <div className="flex justify-center mb-1 sm:mb-1.5">
+          {/* Content - white/light background as default - 3-section layout */}
+          <div className="relative bg-white/98 rounded-[20px] h-full flex flex-col">
+            {/* SECTION 1: HERO (TOP) - centered mascot + type/name + tagline */}
+            <div className="flex-none px-4 pt-4 pb-3 flex flex-col items-center">
+              {/* Archetype illustration in circular frame */}
               <div
-                className="relative w-[150px] h-[150px] sm:w-[180px] sm:h-[180px] max-w-[45vw] max-h-[45vw] rounded-full flex items-center justify-center"
+                className="relative w-[120px] h-[120px] rounded-full flex items-center justify-center mb-2"
                 style={{
-                  boxShadow: `0 0 50px ${variant.primaryColor}70, 0 0 90px ${variant.primaryColor}40`,
+                  boxShadow: `0 0 40px ${variant.primaryColor}70, 0 0 70px ${variant.primaryColor}40`,
                   background: `radial-gradient(circle, ${variant.primaryColor}15, transparent 70%)`,
                 }}
               >
@@ -159,8 +144,6 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   className="w-full h-full object-contain drop-shadow-2xl"
                   onError={(e) => {
                     const imgElement = e.target as HTMLImageElement;
-                    // Fallback to illustration image on error
-                    // Check if we're currently showing a card image (contains the path signature)
                     if (cardImagePath && imgElement.src.includes('personality test result card')) {
                       console.warn(`Card image failed to load: ${cardImagePath}, falling back to illustration image`);
                       imgElement.src = illustrationUrl;
@@ -171,58 +154,66 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   }}
                 />
               </div>
-            </div>
 
-            {/* Archetype name */}
-            <h1 className="text-3xl sm:text-4xl font-black text-center mb-0.5 tracking-tight text-gray-900">
-              {archetype}
-            </h1>
-            <p className="text-xs sm:text-sm font-semibold text-center tracking-widest uppercase text-gray-600 mb-1 sm:mb-1.5">
-              {archetypeEnglish}
-            </p>
+              {/* Type and Name */}
+              <h1 className="text-2xl font-black text-center mb-0.5 tracking-tight text-gray-900">
+                {archetype} ({archetypeEnglish})
+              </h1>
 
-            {/* User nickname (if provided) */}
-            {nickname && (
-              <p className="text-sm sm:text-base font-bold text-center mb-1 sm:mb-1.5 px-4 text-gray-800">
-                「{nickname}」
-              </p>
-            )}
+              {/* User nickname (if provided) */}
+              {nickname && (
+                <p className="text-sm font-bold text-center mb-1.5 text-gray-800">
+                  「{nickname}」
+                </p>
+              )}
 
-            {/* Archetype tagline - positioned description with improved readability */}
-            {tagline && (
-              <div className="flex justify-center mb-1.5 sm:mb-2 px-3">
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg px-2 sm:px-2.5 py-0.5 sm:py-1 border border-white/40">
+              {/* Tagline pill */}
+              {tagline && (
+                <div className="bg-gray-100 rounded-full px-3 py-1 border border-gray-200">
                   <p 
-                    className="text-[10px] sm:text-xs font-medium text-center"
-                    style={{ 
-                      color: variant.primaryColor,
-                    }}
+                    className="text-[10px] font-medium text-center"
+                    style={{ color: variant.primaryColor }}
                   >
                     {tagline}
                   </p>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* Stats section (Pokemon HP style) */}
+            {/* Stats section - KPI tags */}
             <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-3 sm:p-4 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between">
-                {/* Left: Archetype rank */}
-                <div className="flex items-baseline gap-1.5 sm:gap-2">
-                  <span
-                    className="text-4xl sm:text-5xl font-black bg-gradient-to-br from-red-500 to-pink-500 bg-clip-text text-transparent"
-                  >
-                    No.{rankings.archetypeRank}
-                  </span>
-                  <span className="text-[10px] sm:text-xs font-bold text-gray-700">
-                    /{archetype}
+              <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+                {/* #TYPE tag - archetype type number */}
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] sm:text-xs font-bold text-gray-500">#TYPE</span>
+                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-md">
+                    <span className="text-[10px] sm:text-xs font-black text-white">
+                      {(() => {
+                        const archetypeIndex = getArchetypeIndex(archetype);
+                        // Default to 1 if not found (should not happen in normal operation)
+                        return formatTypeNo(archetypeIndex ?? 1);
+                      })()}
+                    </span>
                   </span>
                 </div>
                 
-                {/* Right: Total user badge */}
-                <div className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full shadow-md">
-                  <span className="text-[10px] sm:text-xs font-black text-white">
-                    #{rankings.totalUserRank}
+                {/* #ARCH tag - archetype-specific rank */}
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] sm:text-xs font-bold text-gray-500">#ARCH</span>
+                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full shadow-md">
+                    <span className="text-[10px] sm:text-xs font-black text-white">
+                      #{rankings.archetypeRank}
+                    </span>
+                  </span>
+                </div>
+                
+                {/* #ALL tag - global rank */}
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] sm:text-xs font-bold text-gray-500">#ALL</span>
+                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full shadow-md">
+                    <span className="text-[10px] sm:text-xs font-black text-white">
+                      #{rankings.totalUserRank}
+                    </span>
                   </span>
                 </div>
               </div>
@@ -242,6 +233,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     positivityScore={traitScores.P}
                     primaryColor={variant.primaryColor}
                     compactMode={true}
+                    variant="compact"
                   />
                 </div>
                 
@@ -260,25 +252,61 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                       />
                     </div>
                   </div>
-                  
-                  {/* Core Skill Box */}
-                  <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-1.5 sm:p-2 border border-purple-200">
-                    <div className="text-[9px] sm:text-[10px] font-bold text-purple-700 mb-0.5">🎯 核心技能</div>
-                    <div className="text-[9px] sm:text-[10px] leading-tight text-gray-800">{archetypeInfo?.coreContributions}</div>
+                </div>
+
+                {/* ARCH ranking */}
+                <div className="bg-gradient-to-br from-blue-50 to-white rounded-lg p-2 border border-blue-100 text-center">
+                  <div className="text-[9px] font-semibold text-blue-600 mb-0.5">#ARCH</div>
+                  <div className="text-lg font-black text-blue-700">
+                    {rankings.archetypeRank}
                   </div>
-                  
-                  {/* Social Role Box */}
-                  <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-lg p-1.5 sm:p-2 border border-pink-200">
-                    <div className="text-[9px] sm:text-[10px] font-bold text-pink-700 mb-0.5">💫 社交定位</div>
-                    <div className="text-[9px] sm:text-[10px] leading-tight text-gray-800">"{archetypeInfo?.nickname}"</div>
+                </div>
+
+                {/* ALL ranking */}
+                <div className="bg-gradient-to-br from-purple-50 to-white rounded-lg p-2 border border-purple-100 text-center">
+                  <div className="text-[9px] font-semibold text-purple-600 mb-0.5">#ALL</div>
+                  <div className="text-lg font-black text-purple-700">
+                    {rankings.totalUserRank}
                   </div>
                 </div>
               </div>
+
+              {/* Vertical divider */}
+              <div className="w-px bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
+
+              {/* Right column: Radar chart */}
+              <div className="flex-1 flex items-center justify-center">
+                <PersonalityRadarChart 
+                  affinityScore={traitScores.A}
+                  opennessScore={traitScores.O}
+                  conscientiousnessScore={traitScores.C}
+                  emotionalStabilityScore={traitScores.E}
+                  extraversionScore={traitScores.X}
+                  positivityScore={traitScores.P}
+                  primaryColor={variant.primaryColor}
+                  compactMode={true}
+                />
+              </div>
             </div>
 
-            {/* Bottom sparkle decoration - fixed overflow */}
-            <div className="text-center text-base sm:text-lg leading-none py-0.5 sm:py-1">
-              <span className="inline-block">✨⭐✨</span>
+            {/* SECTION 3: FOOTER - full-width bar with logo and date */}
+            <div className="flex-none px-4 py-3 border-t border-gray-200 bg-gray-50/50">
+              <div className="flex items-center justify-between">
+                {/* Left: JoyJoin logo */}
+                <img 
+                  src={logoFull} 
+                  alt="悦聚 JoyJoin" 
+                  className="h-6 w-auto object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+
+                {/* Right: Date */}
+                <span className="text-[10px] font-semibold text-gray-600">
+                  {formattedDate}
+                </span>
+              </div>
             </div>
           </div>
         </div>

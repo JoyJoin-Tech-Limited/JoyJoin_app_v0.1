@@ -20,8 +20,6 @@ import {
 const workSchema = z.object({
   industry: z.string().optional(),
   roleTitleShort: z.string().optional(),
-  // ❌ DEPRECATED: companyName - hidden from UI but kept in DB for backward compatibility (now use occupationId)
-  // ❌ DEPRECATED: seniority - hidden from UI but kept in DB for backward compatibility (now use workMode)
   workVisibility: z.enum(["hide_all", "show_industry_only"]).optional(),
 });
 
@@ -43,7 +41,6 @@ export default function EditWorkPage() {
     defaultValues: {
       industry: user?.industry || "",
       roleTitleShort: user?.roleTitleShort || "",
-      // ❌ DEPRECATED: companyName, seniority - removed from UI
       workVisibility: user?.workVisibility || "show_industry_only",
     },
   });
@@ -139,10 +136,6 @@ export default function EditWorkPage() {
             data-testid="input-roleTitleShort"
           />
         </div>
-
-        {/* ❌ DEPRECATED: Company Name - removed from UI (now use occupationId) */}
-
-        {/* ❌ DEPRECATED: Seniority - removed from UI (now use workMode) */}
 
         {/* Work Visibility */}
         <div className="space-y-2">

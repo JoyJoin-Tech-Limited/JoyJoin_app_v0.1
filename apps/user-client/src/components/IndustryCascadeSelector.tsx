@@ -31,6 +31,13 @@ interface IndustryCascadeSelectorProps {
   onSelect: (selection: SelectedIndustry) => void;
   onBack?: () => void;
   className?: string;
+  
+  // 🆕 New props for enhanced functionality
+  initialCategory?: string;      // Pre-set category ID
+  initialSegment?: string;       // Pre-set segment ID
+  hideCategory?: boolean;        // Hide category selection step
+  startFromSegment?: boolean;    // Start from segment level
+  compact?: boolean;             // Compact mode for embedded use
 }
 
 type Step = "category" | "segment" | "niche";
@@ -39,11 +46,40 @@ export function IndustryCascadeSelector({
   onSelect,
   onBack,
   className,
+  initialCategory,
+  initialSegment,
+  hideCategory = false,
+  startFromSegment = false,
+  compact = false,
 }: IndustryCascadeSelectorProps) {
   const prefersReducedMotion = useReducedMotion();
-  const [currentStep, setCurrentStep] = useState<Step>("category");
-  const [selectedCategory, setSelectedCategory] = useState<IndustryCategory | null>(null);
-  const [selectedSegment, setSelectedSegment] = useState<IndustrySegment | null>(null);
+  
+  // Validate that initialCategory is provided when hideCategory is true
+  if (hideCategory && !initialCategory) {
+    console.error("IndustryCascadeSelector: initialCategory must be provided when hideCategory is true");
+  }
+  
+  // Initialize state based on props
+  const [currentStep, setCurrentStep] = useState<Step>(() => {
+    if (startFromSegment || hideCategory) return "segment";
+    return "category";
+  });
+  
+  const [selectedCategory, setSelectedCategory] = useState<IndustryCategory | null>(() => {
+    if (initialCategory) {
+      return INDUSTRY_TAXONOMY.find(c => c.id === initialCategory) || null;
+    }
+    return null;
+  });
+  
+  const [selectedSegment, setSelectedSegment] = useState<IndustrySegment | null>(() => {
+    if (initialSegment && initialCategory) {
+      const cat = INDUSTRY_TAXONOMY.find(c => c.id === initialCategory);
+      return cat?.segments.find(s => s.id === initialSegment) || null;
+    }
+    return null;
+  });
+  
   const [searchQuery, setSearchQuery] = useState("");
 
   // 过滤逻辑
@@ -131,54 +167,104 @@ export function IndustryCascadeSelector({
   // 返回上一步
   const handleGoBack = () => {
     setSearchQuery("");
-    if (currentStep === "segment") {
+    if (currentStep === "segment" && !hideCategory) {
       setCurrentStep("category");
       setSelectedCategory(null);
     } else if (currentStep === "niche") {
       setCurrentStep("segment");
       setSelectedSegment(null);
+    } else if (onBack) {
+      onBack();
     }
   };
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn(compact ? "space-y-2" : "space-y-4", className)}>
+      {/* Locked Category Alert */}
+      {hideCategory && selectedCategory && (
+        <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+          <div className="flex items-center gap-2 text-sm">
+            <Badge variant="outline" className="border-primary/30 text-primary">
+              {selectedCategory.icon} {selectedCategory.label}
+            </Badge>
+            <span className="text-muted-foreground">已锁定大类</span>
+          </div>
+        </div>
+      )}
+      
       {/* Instagram Stories-style Progress Indicator */}
-      <div className="flex gap-1.5">
-        {["category", "segment", "niche"].map((step, index) => {
-          const isActive = 
-            (step === "category" && currentStep === "category") ||
-            (step === "segment" && (currentStep === "segment" || currentStep === "niche")) ||
-            (step === "niche" && currentStep === "niche");
-          const isCompleted = 
-            (step === "category" && (currentStep === "segment" || currentStep === "niche")) ||
-            (step === "segment" && currentStep === "niche");
-          
-          return (
-            <div
-              key={step}
-              className={cn(
-                "h-1 rounded-full flex-1 transition-all duration-300",
-                isActive && "bg-gradient-to-r from-purple-500 to-pink-500",
-                isCompleted && "bg-primary",
-                !isActive && !isCompleted && "bg-gray-200 dark:bg-gray-700"
-              )}
-            />
-          );
-        })}
-      </div>
+      {!hideCategory && (
+        <div className="flex gap-1.5">
+          {["category", "segment", "niche"].map((step, index) => {
+            const isActive = 
+              (step === "category" && currentStep === "category") ||
+              (step === "segment" && (currentStep === "segment" || currentStep === "niche")) ||
+              (step === "niche" && currentStep === "niche");
+            const isCompleted = 
+              (step === "category" && (currentStep === "segment" || currentStep === "niche")) ||
+              (step === "segment" && currentStep === "niche");
+            
+            return (
+              <div
+                key={step}
+                className={cn(
+                  "h-1 rounded-full flex-1 transition-all duration-300",
+                  isActive && "bg-gradient-to-r from-purple-500 to-pink-500",
+                  isCompleted && "bg-primary",
+                  !isActive && !isCompleted && "bg-gray-200 dark:bg-gray-700"
+                )}
+              />
+            );
+          })}
+        </div>
+      )}
+      
+      {/* Adjusted Progress for 2-step flow when category is hidden */}
+      {hideCategory && (
+        <div className="flex gap-1.5">
+          {["segment", "niche"].map((step, index) => {
+            const isActive = 
+              (step === "segment" && (currentStep === "segment" || currentStep === "niche")) ||
+              (step === "niche" && currentStep === "niche");
+            const isCompleted = 
+              (step === "segment" && currentStep === "niche");
+            
+            return (
+              <div
+                key={step}
+                className={cn(
+                  "h-1 rounded-full flex-1 transition-all duration-300",
+                  isActive && "bg-gradient-to-r from-purple-500 to-pink-500",
+                  isCompleted && "bg-primary",
+                  !isActive && !isCompleted && "bg-gray-200 dark:bg-gray-700"
+                )}
+              />
+            );
+          })}
+        </div>
+      )}
 
       {/* 面包屑导航 */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span className={cn("font-medium", currentStep === "category" && "text-foreground")}>
-          选择大类
-        </span>
-        {selectedCategory && (
+      <div className={cn("flex items-center gap-2 text-sm text-muted-foreground", compact && "text-xs")}>
+        {!hideCategory && (
           <>
-            <ChevronRight className="h-4 w-4" />
-            <span className={cn("font-medium", currentStep === "segment" && "text-foreground")}>
-              选择细分
+            <span className={cn("font-medium", currentStep === "category" && "text-foreground")}>
+              选择大类
             </span>
+            {selectedCategory && (
+              <>
+                <ChevronRight className="h-4 w-4" />
+                <span className={cn("font-medium", currentStep === "segment" && "text-foreground")}>
+                  选择细分
+                </span>
+              </>
+            )}
           </>
+        )}
+        {hideCategory && (
+          <span className={cn("font-medium", currentStep === "segment" && "text-foreground")}>
+            选择细分领域
+          </span>
         )}
         {selectedSegment && (
           <>
@@ -223,10 +309,10 @@ export function IndustryCascadeSelector({
       </div>
 
       {/* 选项列表 */}
-      <ScrollArea className="h-[400px] rounded-lg border">
-        <div className="p-4 space-y-2">
+      <ScrollArea className={cn(compact ? "h-[300px]" : "h-[400px]", "rounded-lg border")}>
+        <div className={cn(compact ? "p-2 space-y-1.5" : "p-4 space-y-2")}>
           {/* 第一步：选择大类 - Pinterest style grid */}
-          {currentStep === "category" && (
+          {currentStep === "category" && !hideCategory && (
             <div className="grid grid-cols-2 gap-3">
               {filteredCategories.map((category, index) => (
                 <motion.button

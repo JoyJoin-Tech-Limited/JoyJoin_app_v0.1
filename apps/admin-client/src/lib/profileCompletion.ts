@@ -18,8 +18,6 @@ export function calculateProfileCompletion(user: any): ProfileCompletionResult {
     { key: 'relationshipStatus', label: '感情状态' },
     { key: 'intent', label: '社交意向' },
     { key: 'hometownCountry', label: '家乡' },
-    { key: 'languagesComfort', label: '语言', isArray: true },
-    { key: 'socialStyle', label: '社交风格' },
   ];
   
   let filledCount = 0;
