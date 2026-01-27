@@ -85,7 +85,9 @@ export function useUnifiedProgress(options: UnifiedProgressOptions = {}) {
       // Pre-login: 8 anchor questions → 0% to 50%
       const anchorProgress = Math.min(safeAnsweredCount / 8, 1.0);
       const result = anchorProgress * ONBOARDING_WEIGHT * 100;
-      console.log('[useUnifiedProgress] onboarding:', { answeredCount: safeAnsweredCount, result });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[useUnifiedProgress] onboarding:', { answeredCount: safeAnsweredCount, result });
+      }
       return result;
     }
     
@@ -101,25 +103,31 @@ export function useUnifiedProgress(options: UnifiedProgressOptions = {}) {
       // Avoid division by zero
       if (totalAdditionalQuestions === 0) {
         const result = baseProgress * 100;
-        console.log('[useUnifiedProgress] assessment (no questions):', { answeredCount: safeAnsweredCount, estimatedRemaining: safeEstimatedRemaining, result });
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[useUnifiedProgress] assessment (no questions):', { answeredCount: safeAnsweredCount, estimatedRemaining: safeEstimatedRemaining, result });
+        }
         return result;
       }
       
       const assessmentProgress = Math.min(additionalAnswered / totalAdditionalQuestions, 1.0);
       const result = (baseProgress + assessmentProgress * ASSESSMENT_WEIGHT) * 100;
       
-      console.log('[useUnifiedProgress] assessment:', { 
-        answeredCount: safeAnsweredCount, 
-        estimatedRemaining: safeEstimatedRemaining, 
-        additionalAnswered, 
-        totalAdditionalQuestions, 
-        assessmentProgress,
-        result 
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[useUnifiedProgress] assessment:', { 
+          answeredCount: safeAnsweredCount, 
+          estimatedRemaining: safeEstimatedRemaining, 
+          additionalAnswered, 
+          totalAdditionalQuestions, 
+          assessmentProgress,
+          result 
+        });
+      }
       return result;
     }
     
-    console.warn('[useUnifiedProgress] Unknown context:', context);
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[useUnifiedProgress] Unknown context:', context);
+    }
     return 0;
   }, []);
   
