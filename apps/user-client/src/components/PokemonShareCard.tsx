@@ -44,6 +44,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
     
     // Track if the image failed to load (use emoji overlay as fallback)
     const [imageLoadError, setImageLoadError] = useState(false);
+    
+    // Track image loading state for skeleton and fade-in
+    const [imageLoaded, setImageLoaded] = useState(false);
 
     // Get the actual personality test result card image path (only if it exists)
     const cardImagePath = (expression && hasCardImage(archetype, expression)) 
@@ -137,10 +140,21 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   background: `radial-gradient(circle, ${variant.primaryColor}15, transparent 70%)`,
                 }}
               >
+                {/* Loading skeleton with shimmer */}
+                {!imageLoaded && (
+                  <div className="absolute inset-0 rounded-full bg-gray-200 animate-pulse overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent -translate-x-full animate-shimmer" />
+                  </div>
+                )}
+                
+                {/* Actual image with fade-in transition */}
                 <img
                   src={finalImageUrl}
                   alt={archetype}
-                  className="w-full h-full object-contain drop-shadow-2xl"
+                  className={`w-full h-full object-contain drop-shadow-2xl transition-opacity duration-500 ${
+                    imageLoaded ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  onLoad={() => setImageLoaded(true)}
                   onError={(e) => {
                     const imgElement = e.target as HTMLImageElement;
                     if (cardImagePath && imgElement.src.includes('personality test result card')) {
@@ -150,6 +164,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                       imgElement.style.display = 'none';
                       setImageLoadError(true);
                     }
+                    setImageLoaded(true); // Set to true even on error to hide skeleton
                   }}
                 />
               </div>

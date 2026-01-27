@@ -411,8 +411,8 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">分享你的专属氛围原型卡片</h2>
           </div>
 
-          {/* Card preview - moved before nickname input */}
-          <div className="flex justify-center px-2 sm:px-0">
+          {/* Card preview with bottom padding for sticky panel */}
+          <div className="flex justify-center px-2 sm:px-0 pb-2">
             <AnimatePresence mode="wait">
               <motion.div
                 key={`${selectedVariantIndex}-${selectedExpression}`}
@@ -464,163 +464,148 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
             </motion.div>
           )}
 
-          {/* Nickname input */}
-          <div>
-            <label htmlFor="nickname" className="block text-sm font-semibold text-gray-700 mb-2">
-              你的昵称（可选）
-            </label>
-            <Input
-              id="nickname"
-              type="text"
-              placeholder="输入你的昵称，让卡片更个性化"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              maxLength={20}
-              className="text-center text-lg font-medium"
-            />
-            <p className="text-xs text-gray-500 text-center mt-1">
-              昵称将显示在你的性格卡片上
-            </p>
-          </div>
-
-          {/* Variant selector grid */}
-          <div>
-            <p className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">配色风格</p>
-            <div className="grid grid-cols-4 gap-1.5 sm:gap-2 mb-2 sm:mb-3">
-              {variants.map((variant, index) => (
-                <motion.button
-                  key={variant.name}
-                  onClick={() => setSelectedVariantIndex(index)}
-                  className={`
-                    relative aspect-square rounded-lg overflow-hidden
-                    ${selectedVariantIndex === index ? 'ring-2 ring-primary scale-105' : 'hover:scale-102'}
-                    transition-all duration-200
-                  `}
-                  whileTap={{ scale: 0.95 }}
-                  whileHover={{ y: -2 }}
-                >
-                  <div className={`w-full h-full bg-gradient-to-br ${variant.gradient}`} />
-                  {selectedVariantIndex === index && (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="absolute inset-0 bg-white/30 flex items-center justify-center"
-                    >
-                      <Check className="w-5 h-5 text-white drop-shadow" />
-                    </motion.div>
-                  )}
-                  {/* Variant name tooltip */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-0.5 sm:px-1 py-0.5">
-                    <p className="text-[8px] sm:text-[9px] text-white text-center truncate">
-                      {variant.name}
-                    </p>
-                  </div>
-                </motion.button>
-              ))}
-            </div>
+          {/* Sticky Glassmorphic Customization Panel */}
+          <div className="sticky bottom-0 left-0 right-0 z-10 backdrop-blur-xl bg-white/85 border-t border-gray-200/50 rounded-t-2xl shadow-2xl px-4 pb-4 pt-3 -mx-4 sm:-mx-6 mt-4">
+            {/* Drag handle indicator */}
+            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3" />
             
-            {/* Mood description */}
-            {selectedVariant && (
-              <motion.p
-                key={selectedVariant.name}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-sm text-gray-600 text-center italic"
+            {/* Customization title */}
+            <h3 className="text-sm font-bold text-gray-900 mb-3 text-center">
+              ✨ 自定义你的卡片
+            </h3>
+
+            {/* Nickname input - Compact */}
+            <div className="mb-3">
+              <Input
+                id="nickname"
+                type="text"
+                placeholder="输入昵称（可选）"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                maxLength={20}
+                className="text-center text-sm font-medium bg-white/90 backdrop-blur-sm border-gray-300/50"
+              />
+              <p className="text-[10px] text-gray-500 text-center mt-1">
+                昵称将显示在卡片上
+              </p>
+            </div>
+
+            {/* Color Variants & Expression in 2-column layout */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {/* Color Variants - Compact Grid */}
+              <div>
+                <p className="text-xs font-semibold text-gray-700 mb-1.5">配色</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {variants.map((variant, index) => (
+                    <motion.button
+                      key={variant.name}
+                      onClick={() => setSelectedVariantIndex(index)}
+                      className={`
+                        relative aspect-square rounded-lg overflow-hidden
+                        ${selectedVariantIndex === index ? 'ring-2 ring-primary scale-105' : ''}
+                        transition-all duration-200
+                      `}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <div className={`w-full h-full bg-gradient-to-br ${variant.gradient}`} />
+                      {selectedVariantIndex === index && (
+                        <div className="absolute inset-0 bg-white/30 flex items-center justify-center">
+                          <Check className="w-4 h-4 text-white drop-shadow" />
+                        </div>
+                      )}
+                    </motion.button>
+                  ))}
+                </div>
+                {/* Variant mood description */}
+                {selectedVariant && (
+                  <p className="text-[9px] text-gray-500 text-center mt-1 italic line-clamp-1">
+                    {selectedVariant.mood}
+                  </p>
+                )}
+              </div>
+
+              {/* Expression Selector - Compact */}
+              <div>
+                <p className="text-xs font-semibold text-gray-700 mb-1.5">表情</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {expressionOptions.map((expr) => (
+                    <motion.button
+                      key={expr.id}
+                      onClick={() => setSelectedExpression(expr.id)}
+                      className={`
+                        relative aspect-square rounded-lg flex items-center justify-center transition-all
+                        ${selectedExpression === expr.id 
+                          ? 'bg-primary text-white shadow-md scale-105' 
+                          : 'bg-white/90 text-gray-700 border border-gray-200'}
+                      `}
+                      whileTap={{ scale: 0.96 }}
+                    >
+                      <span className="text-2xl">{expr.emoji}</span>
+                      {selectedExpression === expr.id && (
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow">
+                          <span className="text-primary text-[10px]">✓</span>
+                        </div>
+                      )}
+                    </motion.button>
+                  ))}
+                </div>
+                {/* Expression label */}
+                {selectedExpression && (
+                  <p className="text-[9px] text-gray-500 text-center mt-1">
+                    {expressionOptions.find(e => e.id === selectedExpression)?.label}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Action buttons - kept at bottom of sticky panel */}
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                onClick={handleDownload}
+                disabled={isGenerating}
+                className="relative py-6 rounded-2xl font-bold bg-gradient-to-br from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg overflow-hidden group border-0"
               >
-                {selectedVariant.mood}
-              </motion.p>
-            )}
-          </div>
-
-          {/* Expression selector - simplified minimal design */}
-          <div>
-            <p className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">表情选择</p>
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              {expressionOptions.map((expr) => (
-                <motion.button
-                  key={expr.id}
-                  onClick={() => setSelectedExpression(expr.id)}
-                  className={`
-                    relative px-4 sm:px-5 py-3 sm:py-4 rounded-xl text-sm sm:text-base font-medium transition-all
-                    ${selectedExpression === expr.id 
-                      ? 'bg-primary text-white shadow-md scale-[1.02]' 
-                      : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-primary/30 shadow-sm'}
-                  `}
-                  whileTap={{ scale: 0.96 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                >
-                  <div className="flex flex-col items-center gap-1 sm:gap-1.5">
-                    <span className="text-2xl sm:text-3xl">{expr.emoji}</span>
-                    <span className="text-xs sm:text-sm">{expr.label}</span>
-                  </div>
-                  
-                  {selectedExpression === expr.id && (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md"
-                    >
-                      <span className="text-primary text-sm">✓</span>
-                    </motion.div>
+                <div className="absolute inset-0 rounded-2xl bg-blue-700 translate-y-1 -z-10" />
+                <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+                
+                <span className="relative z-10">
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                      生成中...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 mr-2 inline" />
+                      下载图片
+                    </>
                   )}
-                </motion.button>
-              ))}
+                </span>
+              </Button>
+              
+              <Button
+                onClick={handleShare}
+                disabled={isGenerating}
+                className="relative py-6 rounded-2xl font-bold bg-gradient-to-br from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg overflow-hidden group border-0"
+              >
+                <div className="absolute inset-0 rounded-2xl bg-purple-700 translate-y-1 -z-10" />
+                <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+                
+                <span className="relative z-10">
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                      生成中...
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-4 h-4 mr-2 inline" />
+                      分享卡片
+                    </>
+                  )}
+                </span>
+              </Button>
             </div>
-          </div>
-
-          {/* Action buttons */}
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              onClick={handleDownload}
-              disabled={isGenerating}
-              className="relative py-6 rounded-2xl font-bold bg-gradient-to-br from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg overflow-hidden group border-0"
-            >
-              {/* Duolingo-style shadow - positioned behind button */}
-              <div className="absolute inset-0 rounded-2xl bg-blue-700 translate-y-1 -z-10" />
-              
-              {/* Shimmer effect on hover */}
-              <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
-              
-              <span className="relative z-10">
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
-                    生成中...
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4 mr-2 inline" />
-                    下载图片
-                  </>
-                )}
-              </span>
-            </Button>
-            
-            <Button
-              onClick={handleShare}
-              disabled={isGenerating}
-              className="relative py-6 rounded-2xl font-bold bg-gradient-to-br from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg overflow-hidden group border-0"
-            >
-              {/* Duolingo-style shadow - positioned behind button */}
-              <div className="absolute inset-0 rounded-2xl bg-purple-700 translate-y-1 -z-10" />
-              
-              {/* Shimmer effect on hover */}
-              <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
-              
-              <span className="relative z-10">
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
-                    生成中...
-                  </>
-                ) : (
-                  <>
-                    <Share2 className="w-4 h-4 mr-2 inline" />
-                    分享卡片
-                  </>
-                )}
-              </span>
-            </Button>
           </div>
         </div>
       </DialogContent>
