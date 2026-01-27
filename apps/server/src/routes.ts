@@ -2418,6 +2418,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Social tag endpoints
+  app.post('/api/user/social-tags/generate', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { archetype, profession, hobbies } = req.body;
+
+      if (!archetype) {
+        return res.status(400).json({ error: 'Archetype is required' });
+      }
+
+      // Check if tags were generated within last 24 hours (return cached)
+      const existingTags = await storage.getUserGeneratedTags(userId);
+      if (existingTags && existingTags.generatedAt) {
+        const hoursSinceGeneration = (Date.now() - new Date(existingTags.generatedAt).getTime()) / (1000 * 60 * 60);
+        if (hoursSinceGeneration < 24 && existingTags.tags) {
+          return res.json({
+            tags: existingTags.tags,
+            isFallback: false,
+            cached: true,
+          });
+        }
+      }
+
+      // Generate new tags
+      const { generateSocialTags } = await import('./tagGenerationService');
+      const tags = await generateSocialTags({ archetype, profession, hobbies });
+
+      // Save to database
+      await storage.saveGeneratedTags(userId, {
+        tags,
+        generatedAt: new Date(),
+        version: 'v1.0',
+        context: { archetype, profession, hobbies },
+      });
+
+      res.json({
+        tags,
+        isFallback: tags.some(t => t.reasoning.includes('基于')),
+      });
+    } catch (error) {
+      console.error('Error generating social tags:', error);
+      res.status(500).json({ message: 'Failed to generate social tags' });
+    }
+  });
+
+  app.post('/api/user/social-tags/select', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { tagIndex, fullTag } = req.body;
+
+      if (tagIndex === undefined || !fullTag) {
+        return res.status(400).json({ error: 'Tag index and full tag are required' });
+      }
+
+      await storage.recordTagSelection(userId, {
+        selectedIndex: tagIndex,
+        selectedTag: fullTag,
+        selectedAt: new Date(),
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error selecting social tag:', error);
+      res.status(500).json({ message: 'Failed to select social tag' });
+    }
+  });
+
   // Event routes
   app.get('/api/events/joined', isPhoneAuthenticated, async (req: any, res) => {
     try {
