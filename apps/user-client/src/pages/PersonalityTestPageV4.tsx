@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { AdaptiveProgress } from "@/components/ui/progress-adaptive";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -285,11 +286,28 @@ export default function PersonalityTestPageV4() {
 
   if (isLoading && !currentQuestion && !isComplete) {
     return (
-      <div className="h-screen overflow-hidden bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">加载测评中...</p>
+      <div className="h-screen overflow-hidden bg-background flex flex-col">
+        {/* Header Skeleton */}
+        <div className="h-14 border-b bg-background/95 backdrop-blur-sm flex items-center px-4">
+          <Skeleton className="h-5 w-5 rounded-full" />
+          <Skeleton className="ml-4 h-6 w-32" />
         </div>
+        
+        {/* Question Content Skeleton */}
+        <div className="flex-1 px-4 py-6 space-y-6">
+          <Skeleton className="h-8 w-3/4 mx-auto" /> {/* Question text */}
+          <Skeleton className="h-4 w-1/2 mx-auto" /> {/* Scenario */}
+          
+          {/* Options skeleton */}
+          <div className="space-y-3 mt-8">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-xl" />
+            ))}
+          </div>
+        </div>
+        
+        {/* Progress bar skeleton */}
+        <Skeleton className="h-2 mx-4 mb-4" />
       </div>
     );
   }
