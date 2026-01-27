@@ -179,10 +179,11 @@ export function useSlotMachine({
     const len = ARCHETYPE_NAMES.length;
     const totalSlowSteps = 10;
     
-    // Calculate exact positions we need to hit to reach target
+    // Calculate exact positions we need to hit to approach just BEFORE the target
+    // Final slowing position will be targetIndex - 1; targetIndex is only shown during final snap/land
     const positions: number[] = [];
     for (let i = 0; i < totalSlowSteps; i++) {
-      const pos = (targetIndex - (totalSlowSteps - 1 - i) + len) % len;
+      const pos = (targetIndex - totalSlowSteps + i + len) % len;
       positions.push(pos);
     }
     
