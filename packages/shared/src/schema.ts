@@ -62,13 +62,11 @@ export const users = pgTable("users", {
   
   // Registration fields - Background
   relationshipStatus: varchar("relationship_status"), // 单身, 恋爱中, 已婚/伴侣, 离异, 丧偶, 不透露
-  
-  // ❌ DEPRECATED FIELDS - Hidden from UI but kept in DB for backward compatibility
-  children: varchar("children"), // DEPRECATED: 无孩子, 期待中, 0-5岁, 6-12岁, 13-18岁, 成年, 不透露
-  hasPets: boolean("has_pets"), // DEPRECATED: 是否有毛孩子
-  petTypes: text("pet_types").array(), // DEPRECATED: 宠物类型: 猫, 狗, 兔子, 仓鼠, etc.
-  hasSiblings: boolean("has_siblings"), // DEPRECATED: 是否有亲兄弟姐妹 (false = 独生子女)
-  hasKids: boolean("has_kids"), // DEPRECATED: in favor of children
+  children: varchar("children"), // DEPRECATED: Not collected in onboarding, removed from profile edit
+  hasPets: boolean("has_pets"), // DEPRECATED: Not collected in onboarding, removed from profile edit
+  petTypes: text("pet_types").array(), // DEPRECATED: Not collected in onboarding, removed from profile edit
+  hasSiblings: boolean("has_siblings"), // DEPRECATED: Not collected in onboarding, removed from profile edit
+  hasKids: boolean("has_kids"), // Deprecated in favor of children
   
   // Registration fields - Life Stage & Age Preferences
   lifeStage: varchar("life_stage"), // 学生党, 职场新人, 职场老手, 创业中, 自由职业
@@ -76,9 +74,9 @@ export const users = pgTable("users", {
   
   // Registration fields - Education
   educationLevel: varchar("education_level"), // 高中及以下, 大专, 本科, 硕士, 博士, 职业培训
-  studyLocale: varchar("study_locale"), // DEPRECATED: 本地, 海外, 都有
-  overseasRegions: text("overseas_regions").array(), // DEPRECATED: NA, Europe, East Asia, SE Asia, etc.
-  fieldOfStudy: varchar("field_of_study"), // DEPRECATED: Business, Engineering, CS, Arts/Design, etc.
+  studyLocale: varchar("study_locale"), // DEPRECATED: Not collected in onboarding, removed from profile edit
+  overseasRegions: text("overseas_regions").array(), // DEPRECATED: Not collected in onboarding, removed from profile edit
+  fieldOfStudy: varchar("field_of_study"), // DEPRECATED: Not collected in onboarding, removed from profile edit
   educationVisibility: varchar("education_visibility").default("hide_all"), // hide_all, show_level_only, show_level_and_field
   
   // Registration fields - Work (New standardized occupation system)
@@ -87,9 +85,9 @@ export const users = pgTable("users", {
   
   // Legacy work fields (kept for backward compatibility)
   industry: varchar("industry"), // 学生, 大厂, 金融等中文行业 - now auto-derived from occupationId
-  roleTitleShort: varchar("role_title_short"), // DEPRECATED: Optional short text - use occupationId instead
-  seniority: varchar("seniority"), // DEPRECATED: 实习生, 初级, 中级, 高级, 资深, 创始人, 高管 - use workMode instead
-  companyName: varchar("company_name"), // DEPRECATED: 公司名称（可选，用于职场社交匹配）
+  roleTitleShort: varchar("role_title_short"), // Optional short text - deprecated, use occupationId
+  seniority: varchar("seniority"), // DEPRECATED: was used in matching but never collected - removed from edit & matching
+  companyName: varchar("company_name"), // DEPRECATED: Not collected in onboarding, removed from profile edit
   workVisibility: varchar("work_visibility").default("show_industry_only"), // hide_all, show_industry_only
   
   // Registration fields - Culture & Language
@@ -97,7 +95,7 @@ export const users = pgTable("users", {
   hometownRegionCity: varchar("hometown_region_city"),
   hometownAffinityOptin: boolean("hometown_affinity_optin").default(true),
   currentCity: varchar("current_city"), // 现居城市: 香港, 深圳, 广州, 其他
-  languagesComfort: text("languages_comfort").array(), // 普通话, 粤语, 英语等中文语言
+  languagesComfort: text("languages_comfort").array(), // DEPRECATED - Not collected in onboarding, low matching value
   
   // Registration fields - Deprecated/Legacy
   placeOfOrigin: varchar("place_of_origin"), // Deprecated in favor of hometown fields
@@ -130,8 +128,8 @@ export const users = pgTable("users", {
   interestsTelemetry: jsonb("interests_telemetry"), // 兴趣滑动遥测数据 { version: string, events: [{interestId, choice, reactionTimeMs, timestamp}] }
   
   // Registration fields - Social & Venue Preferences (collected via AI chat)
-  socialStyle: varchar("social_style"), // DEPRECATED: 社交风格: 外向活泼, 内敛沉稳, 看情况
-  icebreakerRole: varchar("icebreaker_role"), // DEPRECATED: 破冰角色: leader(气氛组), supporter(捧场王), observer(观察者), flexible(看情况)
+  socialStyle: varchar("social_style"), // DEPRECATED - Not used in matching algorithm
+  icebreakerRole: varchar("icebreaker_role"), // DEPRECATED - Not used in matching algorithm
   venueStylePreference: varchar("venue_style_preference"), // 场地偏好: 安静咖啡馆, 热闹酒吧, 户外活动, etc.
   cuisinePreference: text("cuisine_preference").array(), // 菜系偏好: 粤菜, 日料, 西餐, etc.
   favoriteRestaurant: varchar("favorite_restaurant"), // 宝藏餐厅推荐
@@ -144,7 +142,7 @@ export const users = pgTable("users", {
   // Personality data (Step 3 - Vibe Vector)
   vibeVector: jsonb("vibe_vector"), // {energy, conversation_style, initiative, novelty, humor} scored 0-1
   archetype: varchar("archetype"), // 12个社交氛围原型: 开心柯基, 太阳鸡, 夸夸豚, 机智狐, 淡定海豚, 织网蛛, 暖心熊, 灵感章鱼, 沉思猫头鹰, 定心大象, 稳如龟, 隐身猫
-  debateComfort: integer("debate_comfort"), // DEPRECATED: 1-7 scale (never used in matching, kept for backward compatibility with analytics)
+  debateComfort: integer("debate_comfort"), // DEPRECATED: 1-7 scale - not collected in onboarding, kept for legacy data
   needsPersonalityRetake: boolean("needs_personality_retake").default(false), // 是否需要重新测评（系统升级后）
   
   // Legacy personality data (deprecated)
@@ -305,14 +303,10 @@ export const eventPools = pgTable("event_pools", {
   // 活动限制（硬约束 - 关联用户表字段）
   genderRestriction: varchar("gender_restriction"), // null=不限 | 女性 | 男性
   industryRestrictions: text("industry_restrictions").array(), // 行业限制列表（空=不限）
-  seniorityRestrictions: text("seniority_restrictions").array(), // 职级限制
+  seniorityRestrictions: text("seniority_restrictions").array(), // DEPRECATED - seniority field no longer collected from users
   educationLevelRestrictions: text("education_level_restrictions").array(), // 学历限制
   ageRangeMin: integer("age_range_min"), // 最小年龄
   ageRangeMax: integer("age_range_max"), // 最大年龄
-  
-  // 预算硬约束 (L1 Hard Constraints) - NEW
-  budgetRestrictions: text("budget_restrictions").array(), // 饭局预算限制：["150以下", "150-200", "200-300", "300-500"]
-  barBudgetRestrictions: text("bar_budget_restrictions").array(), // 酒局预算限制：["80以下", "80-150"]
   
   // 性别平衡配置（软约束）
   genderBalanceMode: varchar("gender_balance_mode").default("soft"), // none=不考虑 | soft=软约束加分 | hard=硬约束必须平衡
@@ -349,14 +343,12 @@ export const eventPoolRegistrations = pgTable("event_pool_registrations", {
   
   // 用户临时偏好（软约束 - 仅用于本次活动）
   budgetRange: text("budget_range").array(), // 饭局预算范围，多选：["150以下", "150-200", "200-300", "300-500"]
-  preferredLanguages: text("preferred_languages").array(), // ❌ DEPRECATED: 首选语言 - 改用 users.languagesComfort 作为单一来源
+  preferredLanguages: text("preferred_languages").array(), // 首选语言：["普通话", "粤语", "英语"]
   eventIntent: text("event_intent").array(), // 本次活动社交目的：["交朋友", "扩展人脉", "放松心情", "行业交流", "flexible"]
-  
-  // ❌ DEPRECATED: 以下字段已废弃，移除以简化用户决策
-  cuisinePreferences: text("cuisine_preferences").array(), // DEPRECATED: 饮食偏好
-  dietaryRestrictions: text("dietary_restrictions").array(), // DEPRECATED: 忌口
-  tasteIntensity: text("taste_intensity").array(), // DEPRECATED: 口味强度
-  decorStylePreferences: text("decor_style_preferences").array(), // DEPRECATED: 场地风格偏好
+  cuisinePreferences: text("cuisine_preferences").array(), // 饮食偏好：["中餐", "川菜", "粤菜", "日料", "西餐"]
+  dietaryRestrictions: text("dietary_restrictions").array(), // 忌口：["素食", "不吃辣", "清真"]
+  tasteIntensity: text("taste_intensity").array(), // 口味强度：["爱吃辣", "不辣/清淡为主"]
+  decorStylePreferences: text("decor_style_preferences").array(), // 场地风格偏好：["轻奢现代风", "绿植花园风", "复古工业风", "温馨日式风"]
   
   // 酒局特有偏好
   barThemes: text("bar_themes").array(), // 酒吧主题偏好：["精酿", "清吧", "私密调酒·Homebar"]
@@ -902,7 +894,7 @@ export const registerUserSchema = z.object({
   hometownRegionCity: z.string().min(1, "请选择家乡"),
   hometownAffinityOptin: z.boolean().optional().default(true), // 同乡亲和力
   currentCity: z.string().min(1, "请选择现居城市"),
-  languagesComfort: z.array(z.string()).min(1, "请至少选择一种语言"),
+  languagesComfort: z.array(z.string()).optional(), // Optional - not collected in onboarding
   
   // Privacy controls
   educationVisibility: z.enum(["hide_all", "show_level_only", "show_level_and_field"]).optional().default("hide_all"),

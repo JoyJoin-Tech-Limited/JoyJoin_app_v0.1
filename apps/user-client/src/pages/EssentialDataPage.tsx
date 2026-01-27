@@ -14,7 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BirthDatePicker } from "@/components/BirthDatePicker";
 import { IndustrySelector } from "@/components/IndustrySelector";
-import { OccupationSelector } from "@/components/OccupationSelector";
+import { EnhancedOccupationSelector } from "@/components/EnhancedOccupationSelector";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 import { haptics } from "@/lib/haptics";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
@@ -793,48 +793,40 @@ export default function EssentialDataPage() {
 
               {currentStep === 4 && (
                 <div className="space-y-4">
-                  {/* OccupationSelector - NEW */}
+                  {/* EnhancedOccupationSelector - Combines occupation & industry with AI */}
                   <div>
-                    <label className="block text-base font-semibold mb-3 text-center">职业信息</label>
-                    <OccupationSelector
+                    <label className="block text-base font-semibold mb-3 text-center">职业与行业信息</label>
+                    <EnhancedOccupationSelector
                       selectedOccupationId={occupationId}
                       selectedWorkMode={workMode as WorkMode | null}
                       socialIntent={intent[0] || "flexible"}
+                      industryCategory={industryCategory}
+                      industrySegment={industrySegmentNew}
+                      industryNiche={industryNiche}
                       onOccupationChange={(id, industryId) => {
                         setOccupationId(id);
-                        // Auto-fill industry from occupation
-                        if (industryId) {
-                          setIndustryCategory(industryId);
-                        }
+                        // industryId is the old-style single industry field, we can ignore it now
+                        // as the AI will infer the three-tier classification
                       }}
                       onWorkModeChange={(mode) => setWorkMode(mode)}
-                    />
-                  </div>
-                  
-                  {/* IndustrySelector - Keep for detailed industry classification */}
-                  <div>
-                    <label className="block text-base font-semibold mb-3 text-center">详细行业分类（可选）</label>
-                    <IndustrySelector
-                      onSelect={(selection) => {
-                        // Update all three-tier classification fields
-                        setIndustryCategory(selection.category.id);
-                        setIndustryCategoryLabel(selection.category.label);
-                        setIndustrySegmentNew(selection.segment.id); // FIXED: use correct field name
-                        setIndustrySegmentLabel(selection.segment.label);
-                        setIndustryNiche(selection.niche?.id || "");
-                        setIndustryNicheLabel(selection.niche?.label || "");
-                        setIndustryRawInput(selection.rawInput || "");
-                        setIndustryNormalized(selection.rawInput || "");
-                        setIndustrySource(selection.source || "manual");
-                        setIndustryConfidence(selection.confidence);
+                      onIndustryChange={(categoryId, segmentId, nicheId, labels) => {
+                        setIndustryCategory(categoryId);
+                        setIndustrySegmentNew(segmentId);
+                        setIndustryNiche(nicheId || "");
                         
-                        // Also update legacy workIndustry field for backward compatibility
-                        const pathParts = [
-                          selection.category.label,
-                          selection.segment.label,
-                          selection.niche?.label
-                        ].filter(Boolean);
-                        setWorkIndustry(pathParts.join(" > "));
+                        if (labels) {
+                          setIndustryCategoryLabel(labels.category);
+                          setIndustrySegmentLabel(labels.segment);
+                          setIndustryNicheLabel(labels.niche || "");
+                          
+                          // Also update legacy workIndustry field for backward compatibility
+                          const pathParts = [
+                            labels.category,
+                            labels.segment,
+                            labels.niche
+                          ].filter(Boolean);
+                          setWorkIndustry(pathParts.join(" > "));
+                        }
                       }}
                     />
                   </div>

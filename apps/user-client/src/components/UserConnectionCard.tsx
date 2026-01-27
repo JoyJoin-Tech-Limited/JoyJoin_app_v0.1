@@ -186,34 +186,19 @@ export default function UserConnectionCard({
                         </div>
                       )}
 
-                      {/* Education · Field of Study */}
-                      {(educationDisplay || attendee.fieldOfStudy) && (
+                      {/* Education */}
+                      {educationDisplay && (
                         <div className="flex items-center gap-1.5 text-foreground">
                           <GraduationCap className="h-3 w-3 text-muted-foreground" />
-                          <span>
-                            {educationDisplay && <span>{educationDisplay}</span>}
-                            {educationDisplay && attendee.fieldOfStudy && <span className="text-muted-foreground"> · </span>}
-                            {attendee.fieldOfStudy && <span className="text-muted-foreground">{attendee.fieldOfStudy}</span>}
-                          </span>
+                          <span>{educationDisplay}</span>
                         </div>
                       )}
 
-                      {/* Industry · Seniority */}
-                      {(attendee.industry || attendee.seniority) && (
+                      {/* Industry */}
+                      {attendee.industry && (
                         <div className="flex items-center gap-1.5 text-foreground">
                           <Briefcase className="h-3 w-3 text-muted-foreground" />
-                          <span>
-                            {attendee.industry && <span>{attendee.industry}</span>}
-                            {attendee.industry && attendee.seniority && <span className="text-muted-foreground"> · </span>}
-                            {attendee.seniority && (
-                              <span className="text-muted-foreground">
-                                {attendee.seniority === "Junior" ? "初级" : 
-                                 attendee.seniority === "Mid" ? "中级" : 
-                                 attendee.seniority === "Senior" ? "高级" :
-                                 attendee.seniority === "Founder" ? "创始人" : attendee.seniority}
-                              </span>
-                            )}
-                          </span>
+                          <span>{attendee.industry}</span>
                         </div>
                       )}
 

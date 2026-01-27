@@ -394,3 +394,34 @@ export function getTaxonomyStats() {
   );
   return { categories: categoryCount, segments: segmentCount, niches: nicheCount };
 }
+
+export function getIndustryPathLabels(
+  categoryId?: string, 
+  segmentId?: string, 
+  nicheId?: string
+): { category?: string; segment?: string; niche?: string } {
+  if (!categoryId) return {};
+  
+  const category = findCategoryById(categoryId);
+  const result: { category?: string; segment?: string; niche?: string } = {};
+  
+  if (category) {
+    result.category = category.label;
+    
+    if (segmentId) {
+      const segment = findSegmentById(categoryId, segmentId);
+      if (segment) {
+        result.segment = segment.label;
+        
+        if (nicheId) {
+          const niche = findNicheById(categoryId, segmentId, nicheId);
+          if (niche) {
+            result.niche = niche.label;
+          }
+        }
+      }
+    }
+  }
+  
+  return result;
+}

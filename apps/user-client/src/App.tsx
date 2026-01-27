@@ -32,7 +32,6 @@ import EditEducationPage from "@/pages/EditEducationPage";
 import EditWorkPage from "@/pages/EditWorkPage";
 import EditPersonalPage from "@/pages/EditPersonalPage";
 import EditIntentPage from "@/pages/EditIntentPage";
-import EditSocialPage from "@/pages/EditSocialPage";
 import EventDetailPage from "@/pages/EventDetailPage";
 import BlindBoxPaymentPage from "@/pages/BlindBoxPaymentPage";
 import BlindBoxConfirmationPage from "@/pages/BlindBoxConfirmationPage";
@@ -158,7 +157,7 @@ function AuthenticatedRouter() {
       <Route path="/profile/edit/personal" component={EditPersonalPage} />
       <Route path="/profile/edit/intent" component={EditIntentPage} />
       {/* Route /profile/edit/interests removed - moved to backup (2026-01-19) */}
-      <Route path="/profile/edit/social" component={EditSocialPage} />
+      {/* Route /profile/edit/social removed - unused fields (2026-01-23) */}
       <Route path="/onboarding/extended" component={ExtendedDataPage} />
       <Route path="/onboarding/review" component={FinalProfileReviewPage} />
       <Route path="/event/:id" component={EventDetailPage} />

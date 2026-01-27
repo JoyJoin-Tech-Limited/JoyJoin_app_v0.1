@@ -434,6 +434,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                   nickname={nickname}
                   isPreview={isPreviewMode}
                   hasExpressionAsset={hasExpressionVariant}
+                  shareDate={new Date().toISOString().split('T')[0]}
                 />
               </motion.div>
             </AnimatePresence>

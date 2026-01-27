@@ -43,15 +43,6 @@ export const studyLocaleMap: Record<string, string> = {
   "Prefer not to say": "不便透露",
 };
 
-export const seniorityMap: Record<string, string> = {
-  "Intern": "实习生",
-  "Junior": "初级",
-  "Mid": "中级",
-  "Senior": "高级",
-  "Founder": "创始人",
-  "Executive": "高管",
-};
-
 export const childrenMap: Record<string, string> = {
   "No kids": "无孩子",
   "Expecting": "期待中",
@@ -145,14 +136,6 @@ export function getStudyLocaleDisplay(studyLocale: string | null | undefined): s
 }
 
 /**
- * Get seniority display text
- */
-export function getSeniorityDisplay(seniority: string | null | undefined): string {
-  if (!seniority) return "";
-  return seniorityMap[seniority] || seniority;
-}
-
-/**
  * Get children status display text
  */
 export function getChildrenDisplay(children: string | null | undefined): string {
@@ -178,44 +161,6 @@ export function getIntentDisplay(intent: string | string[] | null | undefined): 
 export function formatArray(arr: string[] | null | undefined): string {
   if (!arr || arr.length === 0) return "";
   return arr.join(" · ");
-}
-
-/**
- * Icebreaker role display mapping
- */
-const icebreakerRoleMap: Record<string, string> = {
-  "starter": "话题发起者",
-  "listener": "倾听者",
-  "responder": "积极回应者",
-  "observer": "安静观察者",
-  "connector": "连接者",
-};
-
-/**
- * Social style display mapping
- */
-const socialStyleMap: Record<string, string> = {
-  "extrovert": "外向型",
-  "introvert": "内向型",
-  "ambivert": "中间型",
-  "energetic": "活力型",
-  "calm": "沉稳型",
-};
-
-/**
- * Get icebreaker role display text
- */
-export function getIcebreakerRoleDisplay(role: string | null | undefined): string {
-  if (!role) return "";
-  return icebreakerRoleMap[role] || role;
-}
-
-/**
- * Get social style display text
- */
-export function getSocialStyleDisplay(style: string | null | undefined): string {
-  if (!style) return "";
-  return socialStyleMap[style] || style;
 }
 
 /**

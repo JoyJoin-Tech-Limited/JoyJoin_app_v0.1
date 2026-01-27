@@ -30,14 +30,11 @@ import {
   formatAge,
   getEducationDisplay,
   getStudyLocaleDisplay,
-  getSeniorityDisplay,
   getRelationshipDisplay,
   getChildrenDisplay,
   getIntentDisplay,
   getUserPrimaryInterests,
   getUserTopicAvoidances,
-  getIcebreakerRoleDisplay,
-  getSocialStyleDisplay,
 } from "@/lib/userFieldMappings";
 import { getOccupationDisplayLabel, getIndustryDisplayLabel, WORK_MODE_TO_LABEL, INDUSTRY_ID_TO_LABEL, type WorkMode } from "@shared/occupations";
 import { getInterestLabel } from "@shared/interests";
@@ -164,7 +161,6 @@ export default function EditProfilePage() {
             { label: "昵称", value: user.displayName },
             { label: "性别", value: user.gender ? getGenderDisplay(user.gender) : null },
             { label: "年龄", value: ageDisplay },
-            { label: "常用语言", value: user.languagesComfort?.join(", ") },
           ],
         },
       ],
@@ -181,10 +177,6 @@ export default function EditProfilePage() {
           path: "/profile/edit/personal",
           fields: [
             { label: "关系状态", value: user.relationshipStatus ? getRelationshipDisplay(user.relationshipStatus) : null },
-            // ❌ DEPRECATED: children - hidden from UI but kept in DB for backward compatibility
-            // ❌ DEPRECATED: hasPets - hidden from UI but kept in DB for backward compatibility
-            // ❌ DEPRECATED: petTypes - hidden from UI but kept in DB for backward compatibility
-            // ❌ DEPRECATED: hasSiblings - hidden from UI but kept in DB for backward compatibility
           ],
           hint: "仅自己可见",
         },
@@ -212,9 +204,6 @@ export default function EditProfilePage() {
           path: "/profile/edit/education",
           fields: [
             { label: "教育水平", value: user.educationLevel ? getEducationDisplay(user.educationLevel) : null },
-            // ❌ DEPRECATED: fieldOfStudy - hidden from UI but kept in DB for backward compatibility
-            // ❌ DEPRECATED: studyLocale - hidden from UI but kept in DB for backward compatibility
-            // ❌ DEPRECATED: overseasRegions - hidden from UI but kept in DB for backward compatibility
           ],
         },
         {
@@ -226,8 +215,6 @@ export default function EditProfilePage() {
             { label: "职业", value: getOccupationDisplayLabel(user.occupationId, user.workMode, { showWorkMode: true }) || (user.industry ? INDUSTRY_ID_TO_LABEL[user.industry] || user.industry : null) },
             { label: "行业", value: getIndustryDisplayLabel(user.occupationId) || (user.industry ? INDUSTRY_ID_TO_LABEL[user.industry] || user.industry : null) },
             { label: "工作身份", value: user.workMode ? WORK_MODE_TO_LABEL[user.workMode as WorkMode] : null },
-            // ❌ DEPRECATED: companyName - hidden from UI but kept in DB for backward compatibility (now use occupationId)
-            // ❌ DEPRECATED: seniority - hidden from UI but kept in DB for backward compatibility (now use workMode)
           ],
         },
       ],
@@ -272,18 +259,6 @@ export default function EditProfilePage() {
           ],
           hint: "影响活动匹配，加入活动时可调整",
         },
-        // ❌ DEPRECATED: social-style section removed from UI (icebreakerRole, socialStyle)
-        // Fields kept in DB for backward compatibility but no longer shown/editable
-        // {
-        //   id: "social-style",
-        //   title: "社交风格",
-        //   icon: <Users className="h-4 w-4" />,
-        //   path: "/profile/edit/social",
-        //   fields: [
-        //     { label: "破冰角色", value: user.icebreakerRole ? getIcebreakerRoleDisplay(user.icebreakerRole) : null },
-        //     { label: "社交风格", value: user.socialStyle ? getSocialStyleDisplay(user.socialStyle) : null },
-        //   ],
-        // },
       ],
     },
   ];

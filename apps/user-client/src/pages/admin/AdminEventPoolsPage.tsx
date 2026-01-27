@@ -45,7 +45,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { INDUSTRY_ID_TO_LABEL } from "@shared/occupations";
-import { getSeniorityDisplay } from "@/lib/userFieldMappings";
 
 interface AvailableVenueSlot {
   id: string;
@@ -1184,9 +1183,6 @@ export default function AdminEventPoolsPage() {
                           {reg.userAge && <span>年龄：{reg.userAge}</span>}
                           {reg.userIndustry && (
                             <span>行业：{INDUSTRY_ID_TO_LABEL[reg.userIndustry] || reg.userIndustry}</span>
-                          )}
-                          {reg.userSeniority && (
-                            <span>职级：{getSeniorityDisplay(reg.userSeniority)}</span>
                           )}
                           {reg.userArchetype && (
                             <span>人设：{reg.userArchetype}</span>
