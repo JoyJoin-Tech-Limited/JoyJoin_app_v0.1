@@ -69,6 +69,16 @@ export const AdaptiveProgress = React.forwardRef<
   const endowedMin = endowedMinByContext[context] ?? endowedMinByContext.default;
   const displayValue = Math.max(endowedMin, Math.min(100, value));
   
+  // Debug logging
+  if (process.env.NODE_ENV === 'development' && value !== displayValue) {
+    console.log('[AdaptiveProgress] Endowed progress applied:', { 
+      context, 
+      inputValue: value, 
+      endowedMin, 
+      displayValue 
+    });
+  }
+  
   // Goal Gradient Effect - faster animation near completion
   const animationDuration = displayValue >= 90 ? 0.3 : 0.6;
   

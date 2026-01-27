@@ -77,10 +77,18 @@ export function useUnifiedProgress(options: UnifiedProgressOptions = {}) {
     const LOGIN_WEIGHT = 0.05;       // 5% for login
     const ASSESSMENT_WEIGHT = 0.45;  // 45% for post-login
     
+    // Ensure valid inputs
+    const safeAnsweredCount = Math.max(0, answeredCount || 0);
+    const safeEstimatedRemaining = Math.max(0, estimatedRemaining || 0);
+    
     if (context === 'onboarding') {
       // Pre-login: 8 anchor questions → 0% to 50%
-      const anchorProgress = Math.min(answeredCount / 8, 1.0);
-      return anchorProgress * ONBOARDING_WEIGHT * 100;
+      const anchorProgress = Math.min(safeAnsweredCount / 8, 1.0);
+      const result = anchorProgress * ONBOARDING_WEIGHT * 100;
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[useUnifiedProgress] onboarding:', { answeredCount: safeAnsweredCount, result });
+      }
+      return result;
     }
     
     if (context === 'assessment') {
@@ -89,19 +97,37 @@ export function useUnifiedProgress(options: UnifiedProgressOptions = {}) {
       
       // Calculate progress for remaining questions
       // answeredCount includes the 8 anchor questions
-      const additionalAnswered = Math.max(0, answeredCount - 8);
-      const totalAdditionalQuestions = additionalAnswered + estimatedRemaining;
+      const additionalAnswered = Math.max(0, safeAnsweredCount - 8);
+      const totalAdditionalQuestions = additionalAnswered + safeEstimatedRemaining;
       
       // Avoid division by zero
       if (totalAdditionalQuestions === 0) {
-        return baseProgress * 100;
+        const result = baseProgress * 100;
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[useUnifiedProgress] assessment (no questions):', { answeredCount: safeAnsweredCount, estimatedRemaining: safeEstimatedRemaining, result });
+        }
+        return result;
       }
       
       const assessmentProgress = Math.min(additionalAnswered / totalAdditionalQuestions, 1.0);
+      const result = (baseProgress + assessmentProgress * ASSESSMENT_WEIGHT) * 100;
       
-      return (baseProgress + assessmentProgress * ASSESSMENT_WEIGHT) * 100;
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[useUnifiedProgress] assessment:', { 
+          answeredCount: safeAnsweredCount, 
+          estimatedRemaining: safeEstimatedRemaining, 
+          additionalAnswered, 
+          totalAdditionalQuestions, 
+          assessmentProgress,
+          result 
+        });
+      }
+      return result;
     }
     
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[useUnifiedProgress] Unknown context:', context);
+    }
     return 0;
   }, []);
   

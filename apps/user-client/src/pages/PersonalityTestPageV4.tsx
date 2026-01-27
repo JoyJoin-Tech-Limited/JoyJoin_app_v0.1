@@ -175,10 +175,23 @@ export default function PersonalityTestPageV4() {
   }, [progress, estimatedRemaining]);
 
   const progressPercentage = useMemo(() => {
-    if (!progress) return 0;
+    if (!progress) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[PersonalityTestPageV4] Progress is null, returning 0');
+      }
+      return 0;
+    }
     // Use unified progress calculation that accounts for the full onboarding journey
     // This ensures progress flows smoothly from anchor questions (50%) through assessment (100%)
-    return Math.min(100, Math.round(getUnifiedProgress('assessment', progress.answered, estimatedRemaining)));
+    const calculated = Math.min(100, Math.round(getUnifiedProgress('assessment', progress.answered, estimatedRemaining)));
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[PersonalityTestPageV4] Progress calculated:', { 
+        answered: progress.answered, 
+        estimatedRemaining, 
+        calculated 
+      });
+    }
+    return calculated;
   }, [progress, estimatedRemaining, getUnifiedProgress]);
   
   // Detect milestone crossings

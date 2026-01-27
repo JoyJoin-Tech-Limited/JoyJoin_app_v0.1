@@ -307,6 +307,8 @@ export const eventPools = pgTable("event_pools", {
   educationLevelRestrictions: text("education_level_restrictions").array(), // 学历限制
   ageRangeMin: integer("age_range_min"), // 最小年龄
   ageRangeMax: integer("age_range_max"), // 最大年龄
+  budgetRestrictions: text("budget_restrictions").array(), // 饭局预算限制（硬约束）
+  barBudgetRestrictions: text("bar_budget_restrictions").array(), // 酒局预算限制（硬约束）
   
   // 性别平衡配置（软约束）
   genderBalanceMode: varchar("gender_balance_mode").default("soft"), // none=不考虑 | soft=软约束加分 | hard=硬约束必须平衡
