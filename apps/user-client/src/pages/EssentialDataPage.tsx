@@ -109,10 +109,6 @@ const EDUCATION_OPTIONS = [
   { value: "phd", label: "博士" },
 ];
 
-
-
-
-
 const CITY_OPTIONS = [
   { value: "shenzhen", label: "深圳" },
   { value: "hongkong", label: "香港" },
