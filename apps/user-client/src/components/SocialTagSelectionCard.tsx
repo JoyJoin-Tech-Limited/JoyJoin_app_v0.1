@@ -125,6 +125,12 @@ export function SocialTagSelectionCard({
     setSelectedIndex(null);
     
     try {
+      // Invalidate cached tags so regeneration doesn't reuse stale data
+      await queryClient.invalidateQueries({
+        queryKey: ['/api/user/social-tags/generate', archetype],
+        exact: true,
+      });
+      
       await refetch();
       toast({
         title: "标签已刷新 🔄",
@@ -206,52 +212,62 @@ export function SocialTagSelectionCard({
           {/* Tag Options */}
           <AnimatePresence mode="wait">
             <div className="space-y-3">
-              {tags.map((tag, index) => (
-                <motion.div
-                  key={`${tag.fullTag}-${index}`}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ delay: index * 0.1 }}
-                  onClick={() => handleSelectTag(index, tag)}
-                  className={cn(
-                    "relative p-4 rounded-lg cursor-pointer transition-all duration-300",
-                    "hover:scale-[1.02] hover:shadow-lg",
-                    selectedIndex === index
-                      ? "ring-4 ring-purple-400 shadow-xl"
-                      : "hover:ring-2 hover:ring-purple-200",
-                    "bg-gradient-to-r",
-                    GRADIENT_COLORS[index % GRADIENT_COLORS.length]
-                  )}
-                >
-                  {/* Selected check mark */}
-                  {selectedIndex === index && (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-md"
-                    >
-                      <Check className="w-5 h-5 text-purple-600" />
-                    </motion.div>
-                  )}
-
-                  <div className="space-y-2">
-                    <div className="text-white">
-                      <h3 className="text-xl font-bold">{tag.fullTag}</h3>
-                      <p className="text-sm opacity-90 mt-1">{tag.reasoning}</p>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                        {tag.descriptor}
-                      </Badge>
-                      <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                        {tag.archetypeNickname}
-                      </Badge>
-                    </div>
+              {tags.length === 0 ? (
+                <div className="flex items-center gap-2 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-medium">暂时没有可用的社交标签</p>
+                    <p className="mt-1">请稍后重试或刷新页面。</p>
                   </div>
-                </motion.div>
-              ))}
+                </div>
+              ) : (
+                tags.map((tag, index) => (
+                  <motion.div
+                    key={`${tag.fullTag}-${index}`}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ delay: index * 0.1 }}
+                    onClick={() => handleSelectTag(index, tag)}
+                    className={cn(
+                      "relative p-4 rounded-lg cursor-pointer transition-all duration-300",
+                      "hover:scale-[1.02] hover:shadow-lg",
+                      selectedIndex === index
+                        ? "ring-4 ring-purple-400 shadow-xl"
+                        : "hover:ring-2 hover:ring-purple-200",
+                      "bg-gradient-to-r",
+                      GRADIENT_COLORS[index % GRADIENT_COLORS.length]
+                    )}
+                  >
+                    {/* Selected check mark */}
+                    {selectedIndex === index && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-md"
+                      >
+                        <Check className="w-5 h-5 text-purple-600" />
+                      </motion.div>
+                    )}
+
+                    <div className="space-y-2">
+                      <div className="text-white">
+                        <h3 className="text-xl font-bold">{tag.fullTag}</h3>
+                        <p className="text-sm opacity-90 mt-1">{tag.reasoning}</p>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                          {tag.descriptor}
+                        </Badge>
+                        <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                          {tag.archetypeNickname}
+                        </Badge>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+              )}
             </div>
           </AnimatePresence>
 

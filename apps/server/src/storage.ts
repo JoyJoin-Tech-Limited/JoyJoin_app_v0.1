@@ -774,24 +774,27 @@ export class DatabaseStorage implements IStorage {
     selectedTag: string;
     selectedAt: Date;
   }): Promise<void> {
-    // Update the user's selected tag
-    await db
-      .update(users)
-      .set({
-        socialTag: data.selectedTag,
-        socialTagSelectedAt: data.selectedAt,
-      })
-      .where(eq(users.id, userId));
+    // Wrap both updates in a transaction to ensure atomicity
+    await db.transaction(async (tx) => {
+      // Update the user's selected tag
+      await tx
+        .update(users)
+        .set({
+          socialTag: data.selectedTag,
+          socialTagSelectedAt: data.selectedAt,
+        })
+        .where(eq(users.id, userId));
 
-    // Update the generation record with selection info
-    await db
-      .update(userSocialTagGenerations)
-      .set({
-        selectedIndex: data.selectedIndex,
-        selectedTag: data.selectedTag,
-        selectedAt: data.selectedAt,
-      })
-      .where(eq(userSocialTagGenerations.userId, userId));
+      // Update the generation record with selection info
+      await tx
+        .update(userSocialTagGenerations)
+        .set({
+          selectedIndex: data.selectedIndex,
+          selectedTag: data.selectedTag,
+          selectedAt: data.selectedAt,
+        })
+        .where(eq(userSocialTagGenerations.userId, userId));
+    });
   }
 
   // Event operations
