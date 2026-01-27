@@ -109,16 +109,6 @@ const EDUCATION_OPTIONS = [
   { value: "phd", label: "博士" },
 ];
 
-// Display name suggestions with gradients
-const DISPLAY_NAME_SUGGESTIONS = [
-  { text: "深夜漫游者", gradient: "from-purple-100 to-pink-100" },
-  { text: "咖啡爱好者", gradient: "from-blue-100 to-cyan-100" },
-  { text: "城市探险家", gradient: "from-orange-100 to-red-100" },
-  { text: "周末放空者", gradient: "from-green-100 to-emerald-100" },
-];
-
-
-
 const CITY_OPTIONS = [
   { value: "shenzhen", label: "深圳" },
   { value: "hongkong", label: "香港" },
@@ -136,9 +126,9 @@ const BIRTH_YEARS = Array.from({ length: 50 }, (_, i) => {
 const STEP_CONFIG = [
   {
     id: "displayName",
-    title: "你想让大家怎么称呼你？",
-    subtitle: "一个有趣的昵称会让人印象深刻",
-    mascotMessage: "嘿！先给自己取个响亮的名字吧~",
+    title: "选择你的昵称",
+    subtitle: "真实姓名或昵称都可以，这是你在活动中显示的名字",
+    mascotMessage: "嘿！先给自己取个响亮的名字吧~ 后面我会根据你的性格和兴趣，为你生成专属的社交印象标签哦！✨",
     mascotMood: "excited" as XiaoyueMood,
     type: "input" as const,
   },
@@ -535,12 +525,13 @@ export default function EssentialDataPage() {
                       <Input
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
-                        placeholder="输入你的昵称"
+                        placeholder="输入你喜欢的昵称"
                         className={cn(
-                          "h-12 text-lg text-center rounded-xl font-medium transition-all",
+                          "h-14 text-lg text-center rounded-xl font-medium transition-all",
                           displayName.length >= 2 && "border-green-500 bg-green-50/50 dark:bg-green-950/20"
                         )}
                         maxLength={20}
+                        autoFocus
                         data-testid="input-display-name"
                       />
                     </div>
@@ -582,31 +573,14 @@ export default function EssentialDataPage() {
                     )}
                   </div>
                   
-                  {/* Quick suggestions */}
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-3">或者选择一个建议：</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {DISPLAY_NAME_SUGGESTIONS.map((suggestion, index) => (
-                        <motion.button
-                          key={suggestion.text}
-                          type="button"
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: index * 0.05 }}
-                          onClick={() => setDisplayName(suggestion.text)}
-                          className={cn(
-                            "p-2 rounded-xl border-2 border-transparent transition-all",
-                            "bg-gradient-to-br text-xs font-medium",
-                            suggestion.gradient,
-                            "hover:border-primary hover:shadow-md",
-                            "text-gray-700 dark:text-gray-800"
-                          )}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          {suggestion.text}
-                        </motion.button>
-                      ))}
-                    </div>
+                  {/* Helpful hint instead of suggestions */}
+                  <div className="text-center space-y-2 pt-4">
+                    <p className="text-xs text-muted-foreground">
+                      💡 这是你在小聚活动中显示的名字
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      完成后我们会为你生成专属的<strong className="text-primary">社交印象标签</strong>
+                    </p>
                   </div>
                 </div>
               )}
