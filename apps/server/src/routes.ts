@@ -2418,6 +2418,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Social tag endpoints
+  app.post('/api/user/social-tags/generate', isPhoneAuthenticated, aiEndpointLimiter, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { archetype, profession, hobbies, forceRegenerate } = req.body;
+
+      // Input validation
+      if (!archetype || typeof archetype !== 'string') {
+        return res.status(400).json({ error: 'Valid archetype is required' });
+      }
+
+      // Validate profession structure if provided
+      if (profession !== undefined && profession !== null) {
+        if (typeof profession !== 'object' || Array.isArray(profession)) {
+          return res.status(400).json({ error: 'Profession must be an object' });
+        }
+      }
+
+      // Validate hobbies structure if provided
+      if (hobbies !== undefined && hobbies !== null) {
+        if (!Array.isArray(hobbies)) {
+          return res.status(400).json({ error: 'Hobbies must be an array' });
+        }
+        // Validate each hobby has name and heat
+        const invalidHobby = hobbies.find((h: any) => 
+          !h || typeof h !== 'object' || typeof h.name !== 'string' || typeof h.heat !== 'number'
+        );
+        if (invalidHobby) {
+          return res.status(400).json({ error: 'Each hobby must have name (string) and heat (number)' });
+        }
+      }
+
+      // Check if tags were generated within last 24 hours (return cached unless forceRegenerate)
+      if (!forceRegenerate) {
+        const existingTags = await storage.getUserGeneratedTags(userId);
+        if (existingTags && existingTags.generatedAt) {
+          const hoursSinceGeneration = (Date.now() - new Date(existingTags.generatedAt).getTime()) / (1000 * 60 * 60);
+          if (hoursSinceGeneration < 24 && existingTags.tags) {
+            return res.json({
+              tags: existingTags.tags,
+              isFallback: false,
+              cached: true,
+            });
+          }
+        }
+      }
+
+      // Generate new tags
+      const { generateSocialTags } = await import('./tagGenerationService');
+      const result = await generateSocialTags({ archetype, profession, hobbies });
+
+      // Save to database
+      await storage.saveGeneratedTags(userId, {
+        tags: result.tags,
+        generatedAt: new Date(),
+        version: 'v1.0',
+        context: { archetype, profession, hobbies },
+      });
+
+      res.json({
+        tags: result.tags,
+        isFallback: result.isFallback,
+      });
+    } catch (error) {
+      console.error('Error generating social tags:', error);
+      res.status(500).json({ message: 'Failed to generate social tags' });
+    }
+  });
+
+  app.post('/api/user/social-tags/select', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { tagIndex, fullTag } = req.body;
+
+      if (tagIndex === undefined || !fullTag) {
+        return res.status(400).json({ error: 'Tag index and full tag are required' });
+      }
+
+      await storage.recordTagSelection(userId, {
+        selectedIndex: tagIndex,
+        selectedTag: fullTag,
+        selectedAt: new Date(),
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error selecting social tag:', error);
+      res.status(500).json({ message: 'Failed to select social tag' });
+    }
+  });
+
   // Event routes
   app.get('/api/events/joined', isPhoneAuthenticated, async (req: any, res) => {
     try {
