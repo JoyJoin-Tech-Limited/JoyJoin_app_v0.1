@@ -11290,7 +11290,57 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         phase: 'post_signup',
       });
       
-      res.json({ success: true });
+      // Import adaptive engine to get next question
+      const { 
+        initializeEngineState, 
+        processAnswer, 
+        selectNextQuestion, 
+        DEFAULT_ASSESSMENT_CONFIG,
+        V2_ASSESSMENT_CONFIG 
+      } = await import('@shared/personality');
+      
+      // Use V2 config when ENABLE_MATCHER_V2 is set
+      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
+      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
+      
+      // Reconstruct engine state from session answers
+      const answers = await storage.getAssessmentAnswers(sessionId);
+      let engineState = initializeEngineState(assessmentConfig);
+      
+      // Replay answers to rebuild state
+      for (const answer of answers) {
+        const question = (await import('@shared/personality')).questionsV4.find(
+          q => q.id === answer.questionId
+        );
+        if (question) {
+          engineState = processAnswer(engineState, question, answer.selectedOption);
+        }
+      }
+      
+      // Get next question
+      const nextQuestion = selectNextQuestion(engineState);
+      
+      // Return success with next question data
+      res.json({ 
+        success: true,
+        phase: 'post_signup',
+        nextQuestion: nextQuestion ? {
+          id: nextQuestion.id,
+          level: nextQuestion.level,
+          category: nextQuestion.category,
+          scenarioText: nextQuestion.scenarioText,
+          questionText: nextQuestion.questionText,
+          options: shuffleOptions(nextQuestion.options),
+        } : null,
+        progress: {
+          answered: engineState.answeredQuestionIds.size,
+          minQuestions: engineState.config.minQuestions,
+          softMaxQuestions: engineState.config.softMaxQuestions,
+          hardMaxQuestions: engineState.config.hardMaxQuestions,
+          estimatedRemaining: Math.max(0, engineState.config.minQuestions - engineState.answeredQuestionIds.size),
+        },
+        currentMatches: engineState.currentMatches.slice(0, 3),
+      });
     } catch (error: any) {
       console.error('[Assessment V4 Link] Error:', error);
       res.status(500).json({ message: 'Failed to link user', error: error.message });
