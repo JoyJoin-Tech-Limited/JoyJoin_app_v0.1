@@ -165,7 +165,10 @@ ${hobbiesContext ? `- ${hobbiesContext}` : ''}
     // Ensure we have at least 2 tags
     if (validTags.length < 2) {
       const fallbackTags = generateFallbackTags(input);
-      return [...validTags, ...fallbackTags.slice(0, 2 - validTags.length)];
+      // Deduplicate by fullTag to avoid duplicates
+      const existingTags = new Set(validTags.map(t => t.fullTag));
+      const uniqueFallbackTags = fallbackTags.filter(t => !existingTags.has(t.fullTag));
+      return [...validTags, ...uniqueFallbackTags.slice(0, 2 - validTags.length)];
     }
 
     return validTags.slice(0, 3);

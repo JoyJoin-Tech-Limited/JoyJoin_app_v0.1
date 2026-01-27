@@ -755,7 +755,7 @@ export class DatabaseStorage implements IStorage {
         generationContext: data.context,
       })
       .onConflictDoUpdate({
-        target: userSocialTagGenerations.userId,
+        target: [userSocialTagGenerations.userId], // Use column array for unique constraint
         set: {
           tags: data.tags,
           generatedAt: data.generatedAt,
