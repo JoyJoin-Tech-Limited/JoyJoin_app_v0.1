@@ -112,11 +112,15 @@ else
 fi
 
 echo -n "Lines added: "
-LINES_ADDED=$(git diff HEAD~1 HEAD --shortstat | grep -oP '\d+(?= insertion)')
-if [ "$LINES_ADDED" -ge 100 ]; then
+LINES_ADDED=$(git diff HEAD~1 HEAD --shortstat | sed -n 's/.*\([0-9][0-9]*\) insertion.*/\1/p')
+if [ -n "$LINES_ADDED" ] && [ "$LINES_ADDED" -ge 100 ]; then
   echo -e "${GREEN}PASS${NC} ($LINES_ADDED insertions)"
 else
-  echo -e "${YELLOW}WARNING${NC} ($LINES_ADDED insertions, expected ~111)"
+  if [ -z "$LINES_ADDED" ]; then
+    echo -e "${YELLOW}WARNING${NC} (could not parse insertions)"
+  else
+    echo -e "${YELLOW}WARNING${NC} ($LINES_ADDED insertions, expected ~111)"
+  fi
 fi
 
 echo ""

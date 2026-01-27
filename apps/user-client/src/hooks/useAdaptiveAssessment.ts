@@ -410,7 +410,10 @@ export function useAdaptiveAssessment() {
     selectedOption: string,
     traitScores: TraitScores
   ) => {
-    // OPTIMISTIC UPDATE: Immediately update progress before API call
+    // OPTIMISTIC UPDATE: Save previous state for potential rollback
+    const previousProgress = progress;
+    
+    // Immediately update progress before API call
     setProgress(prev => prev ? { 
       ...prev, 
       answered: prev.answered + 1,
@@ -425,7 +428,16 @@ export function useAdaptiveAssessment() {
       });
     }
     
-    await answerMutation.mutateAsync({ questionId, selectedOption, traitScores });
+    try {
+      await answerMutation.mutateAsync({ questionId, selectedOption, traitScores });
+    } catch (error) {
+      // Rollback optimistic update on error
+      setProgress(previousProgress);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[AdaptiveAssessment] Rolled back optimistic update due to error');
+      }
+      throw error; // Re-throw to allow caller to handle
+    }
   }, [answerMutation, progress]);
 
   const continueAfterSignup = useCallback(async (userId: string) => {
