@@ -82,6 +82,7 @@ export interface MatchGroup {
 
 /**
  * 硬约束检查：验证用户是否符合活动池的所有限制
+ * ✅ UPDATED: Added budget as L1 hard constraint
  */
 function meetsHardConstraints(
   user: UserWithProfile, 
@@ -120,6 +121,31 @@ function meetsHardConstraints(
   }
   if (pool.ageRangeMax && user.age && user.age > pool.ageRangeMax) {
     return false;
+  }
+  
+  // ✅ NEW: Budget hard constraint (L1)
+  const eventType = pool.eventType || "饭局";
+  
+  if (eventType === "酒局") {
+    // 酒局预算限制
+    if (pool.barBudgetRestrictions && pool.barBudgetRestrictions.length > 0) {
+      const userBudget = user.barBudgetRange || [];
+      const hasOverlap = userBudget.some(b => pool.barBudgetRestrictions!.includes(b));
+      if (!hasOverlap) {
+        console.log(`[Matching] User ${user.userId} filtered out: bar budget mismatch`);
+        return false;
+      }
+    }
+  } else {
+    // 饭局预算限制
+    if (pool.budgetRestrictions && pool.budgetRestrictions.length > 0) {
+      const userBudget = user.budgetRange || [];
+      const hasOverlap = userBudget.some(b => pool.budgetRestrictions!.includes(b));
+      if (!hasOverlap) {
+        console.log(`[Matching] User ${user.userId} filtered out: budget mismatch`);
+        return false;
+      }
+    }
   }
   
   return true;
@@ -249,10 +275,11 @@ function calculateInterestScore(user1: UserWithProfile, user2: UserWithProfile):
 
 /**
  * 计算语言沟通兼容性 (0-100)
+ * ✅ UPDATED: Only use user profile languagesComfort (single source of truth)
  */
 function calculateLanguageScore(user1: UserWithProfile, user2: UserWithProfile): number {
-  const langs1 = user1.languagesComfort || user1.preferredLanguages || [];
-  const langs2 = user2.languagesComfort || user2.preferredLanguages || [];
+  const langs1 = user1.languagesComfort || []; // ✅ Only from profile
+  const langs2 = user2.languagesComfort || []; // ✅ Only from profile
   
   if (langs1.length === 0 || langs2.length === 0) return 70; // 默认假设可以沟通
   
@@ -262,25 +289,20 @@ function calculateLanguageScore(user1: UserWithProfile, user2: UserWithProfile):
 
 /**
  * 计算活动偏好兼容性 (0-100)
- * 考虑：预算、饮食/酒吧偏好、社交目的
- * 根据活动类型（饭局/酒局）使用不同的偏好维度
+ * ✅ UPDATED: Removed budget (now L1 hard constraint) and food preferences (deprecated)
+ * Only score: eventIntent overlap + barThemes/alcoholComfort for 酒局
  */
+const DEFAULT_PREFERENCE_SCORE = 70; // Default compatibility when no preference data available
+
 function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile): number {
   let score = 0;
   let factors = 0;
   
-  // 根据活动类型选择预算字段
+  // 根据活动类型选择偏好字段
   const eventType = user1.eventType || user2.eventType || "饭局";
   
   if (eventType === "酒局") {
-    // 酒局：使用酒吧预算
-    const barBudget1 = user1.barBudgetRange || [];
-    const barBudget2 = user2.barBudgetRange || [];
-    if (barBudget1.length > 0 && barBudget2.length > 0) {
-      const budgetOverlap = barBudget1.filter(b => barBudget2.includes(b)).length;
-      score += (budgetOverlap / Math.max(barBudget1.length, barBudget2.length)) * 100;
-      factors++;
-    }
+    // ❌ REMOVED: Budget scoring (now L1 hard constraint)
     
     // 酒吧主题偏好兼容性
     const barThemes1 = user1.barThemes || [];
@@ -299,34 +321,9 @@ function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile
       score += (alcoholOverlap / Math.max(alcohol1.length, alcohol2.length)) * 100;
       factors++;
     }
-  } else {
-    // 饭局：使用餐饮预算
-    const budget1 = user1.budgetRange || [];
-    const budget2 = user2.budgetRange || [];
-    if (budget1.length > 0 && budget2.length > 0) {
-      const budgetOverlap = budget1.filter(b => budget2.includes(b)).length;
-      score += (budgetOverlap / Math.max(budget1.length, budget2.length)) * 100;
-      factors++;
-    }
-    
-    // 饮食偏好兼容性
-    const cuisine1 = user1.cuisinePreferences || [];
-    const cuisine2 = user2.cuisinePreferences || [];
-    if (cuisine1.length > 0 && cuisine2.length > 0) {
-      const cuisineOverlap = cuisine1.filter(c => cuisine2.includes(c)).length;
-      score += (cuisineOverlap / Math.max(cuisine1.length, cuisine2.length)) * 100;
-      factors++;
-    }
-    
-    // 口味强度兼容性
-    const taste1 = user1.tasteIntensity || [];
-    const taste2 = user2.tasteIntensity || [];
-    if (taste1.length > 0 && taste2.length > 0) {
-      const tasteOverlap = taste1.filter(t => taste2.includes(t)).length;
-      score += (tasteOverlap / Math.max(taste1.length, taste2.length)) * 100;
-      factors++;
-    }
   }
+  
+  // ❌ REMOVED: Cuisine preferences and taste intensity (饭局 food preferences deprecated)
   
   // 社交目的兼容性（两种活动都使用）
   const goals1 = user1.eventIntent || [];
@@ -337,7 +334,7 @@ function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile
     factors++;
   }
   
-  return factors > 0 ? Math.round(score / factors) : 60; // 默认中等兼容
+  return factors > 0 ? Math.round(score / factors) : DEFAULT_PREFERENCE_SCORE;
 }
 
 /**
@@ -433,33 +430,32 @@ async function calculatePairScore(user1: UserWithProfile, user2: UserWithProfile
   // 判断是否启用同乡匹配（双方都启用）
   const hometownEnabled = user1.hometownAffinityOptin && user2.hometownAffinityOptin;
   
-  // 动态权重配置（经专家验证）：
-  // 同乡匹配启用时，hometown占10%，其他维度相应调整
-  // 同乡匹配未启用时，权重重新分配到其他维度
-  // 注意：background始终为5%
+  // ✅ UPDATED: Rebalanced matching weights (removed emotional, increased interest/eventIntent)
+  // Same preference is now "eventIntent" which includes bar preferences for 酒局
+  // 同乡匹配启用时，hometown占5%（reduced from 10%）
+  // 同乡匹配未启用时，权重重新分配到chemistry和interest
   const weights = hometownEnabled ? {
-    chemistry: 0.30,    // 性格兼容性 30%
-    interest: 0.20,     // 兴趣重叠 20%
-    language: 0.15,     // 语言沟通 15%
-    preference: 0.10,   // 活动偏好 10%
-    hometown: 0.10,     // 同乡亲和力 10%
-    background: 0.05,   // 背景评估 5%
-    emotional: 0.10     // 情绪匹配 10%
+    chemistry: 0.30,    // 性格兼容性 30% (unchanged)
+    interest: 0.30,     // 兴趣重叠 30% (+10% from 20%)
+    language: 0.15,     // 语言沟通 15% (unchanged)
+    preference: 0.15,   // 活动偏好 15% (eventIntent + barThemes/alcoholComfort) (+5% from 10%)
+    hometown: 0.05,     // 同乡亲和力 5% (-5% from 10%)
+    background: 0.05,   // 背景评估 5% (unchanged)
+    // ❌ REMOVED: emotional (was 10%, redistributed)
   } : {
-    chemistry: 0.30,    // 性格兼容性 30%
-    interest: 0.20,     // 兴趣重叠 20%
-    language: 0.15,     // 语言沟通 15%
-    preference: 0.20,   // 活动偏好 20%
+    chemistry: 0.35,    // 性格兼容性 35% (+5% when hometown disabled)
+    interest: 0.35,     // 兴趣重叠 35% (+5% when hometown disabled)
+    language: 0.15,     // 语言沟通 15% (unchanged)
+    preference: 0.15,   // 活动偏好 15% (eventIntent + barThemes/alcoholComfort)
     hometown: 0,        // 同乡亲和力 0%
-    background: 0.05,   // 背景评估 5%
-    emotional: 0.10     // 情绪匹配 10%
+    background: 0,      // 背景评估 0% (removed when hometown disabled, -5%)
+    // ❌ REMOVED: emotional
   };
   
   // 背景多样性分数（鼓励不同背景的人配对）
   const backgroundScore = calculateDiversityScore(user1, user2);
   
-  // 情绪匹配分数（预留，暂时使用默认值）
-  const emotionalScore = 70; // TODO: 从SmartInsight数据计算
+  // ❌ REMOVED: emotionalScore (hardcoded 70, not used)
   
   const totalScore = 
     chemistry * weights.chemistry +
@@ -467,8 +463,8 @@ async function calculatePairScore(user1: UserWithProfile, user2: UserWithProfile
     language * weights.language +
     preference * weights.preference +
     hometown * weights.hometown +
-    backgroundScore * weights.background +
-    emotionalScore * weights.emotional;
+    backgroundScore * weights.background;
+    // ❌ REMOVED: emotionalScore * weights.emotional
   
   return Math.round(totalScore);
 }

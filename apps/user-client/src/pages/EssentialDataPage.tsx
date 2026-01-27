@@ -44,6 +44,7 @@ interface EssentialDataState {
     displayName: string;
     gender: string;
     birthYear: string;
+    languagesComfort: string[]; // NEW - Required language selection (single source of truth)
     relationshipStatus: string;
     education: string;
     workIndustry: string;
@@ -244,6 +245,7 @@ export default function EssentialDataPage() {
   const [birthYear, setBirthYear] = useState("");
   const [birthDate, setBirthDate] = useState<{ year: number; month: number; day: number } | undefined>();
   const [birthDateSheetOpen, setBirthDateSheetOpen] = useState(false);
+  const [languagesComfort, setLanguagesComfort] = useState<string[]>([]); // NEW - Language selection (single source of truth)
   const [relationshipStatus, setRelationshipStatus] = useState("");
   const [education, setEducation] = useState("");
   const [workIndustry, setWorkIndustry] = useState("");
@@ -277,6 +279,7 @@ export default function EssentialDataPage() {
           setDisplayName(state.data.displayName || "");
           setGender(state.data.gender || "");
           setBirthYear(state.data.birthYear || "");
+          setLanguagesComfort(state.data.languagesComfort || []); // NEW - Language
           setRelationshipStatus(state.data.relationshipStatus || "");
           setEducation(state.data.education || "");
           setWorkIndustry(state.data.workIndustry || "");
@@ -304,6 +307,7 @@ export default function EssentialDataPage() {
       if (user.displayName) setDisplayName(user.displayName);
       if (user.gender) setGender(user.gender);
       if (user.currentCity) setCurrentCity(user.currentCity);
+      if (user.languagesComfort) setLanguagesComfort(user.languagesComfort); // NEW - Pre-fill language
     }
   }, [user]);
 
@@ -311,7 +315,7 @@ export default function EssentialDataPage() {
   const saveProgress = useCallback(() => {
     const state: EssentialDataState = {
       currentStep,
-      data: { displayName, gender, birthYear, relationshipStatus, education, workIndustry, 
+      data: { displayName, gender, birthYear, languagesComfort, relationshipStatus, education, workIndustry, 
               industryCategory, industryCategoryLabel, industrySegmentNew, industrySegmentLabel,
               industryNiche, industryNicheLabel, industryRawInput, industryNormalized, industrySource, industryConfidence,
               occupationId, workMode,
@@ -319,7 +323,7 @@ export default function EssentialDataPage() {
       timestamp: Date.now(),
     };
     localStorage.setItem(ESSENTIAL_CACHE_KEY, JSON.stringify(state));
-  }, [currentStep, displayName, gender, birthYear, relationshipStatus, education, workIndustry,
+  }, [currentStep, displayName, gender, birthYear, languagesComfort, relationshipStatus, education, workIndustry,
       industryCategory, industryCategoryLabel, industrySegmentNew, industrySegmentLabel,
       industryNiche, industryNicheLabel, industryRawInput, industryNormalized, industrySource, industryConfidence,
       occupationId, workMode,
@@ -351,9 +355,11 @@ export default function EssentialDataPage() {
   const progress = ((currentStep + 1) / TOTAL_STEPS) * 100;
 
   const canProceed = () => {
+    const MIN_LANGUAGES_REQUIRED = 1; // Minimum language selections required
+    
     switch (currentStep) {
       case 0: return displayName.trim().length >= 2;
-      case 1: return gender && (birthDate?.year || birthYear);
+      case 1: return gender && (birthDate?.year || birthYear) && languagesComfort.length >= MIN_LANGUAGES_REQUIRED;
       case 2: return relationshipStatus;
       case 3: return education;
       case 4: return industryCategory && industrySegmentNew; // FIXED: use correct field name
@@ -404,6 +410,7 @@ export default function EssentialDataPage() {
         const profileData: any = {
           displayName,
           gender,
+          languagesComfort, // NEW - Language selection (single source of truth)
           relationshipStatus,
           education,
           workIndustry,
@@ -701,33 +708,66 @@ export default function EssentialDataPage() {
                         <span className="text-base">点击设置出生日期</span>
                       )}
                     </button>
+
+                    <Sheet open={birthDateSheetOpen} onOpenChange={setBirthDateSheetOpen}>
+                      <SheetContent side="bottom" className="rounded-t-3xl pb-8">
+                        <SheetHeader className="mb-4">
+                          <SheetTitle className="text-center text-xl">选择出生日期</SheetTitle>
+                        </SheetHeader>
+                        <BirthDatePicker
+                          value={birthDate}
+                          onChange={(date) => {
+                            setBirthDate(date);
+                            setBirthYear(String(date.year));
+                          }}
+                          minYear={1960}
+                          maxYear={new Date().getFullYear()}
+                        />
+                        <div className="mt-6 px-4">
+                          <Button
+                            className="w-full h-12 text-base rounded-xl"
+                            onClick={() => setBirthDateSheetOpen(false)}
+                            data-testid="button-confirm-birthdate"
+                          >
+                            确认
+                          </Button>
+                        </div>
+                      </SheetContent>
+                    </Sheet>
                   </div>
 
-                  <Sheet open={birthDateSheetOpen} onOpenChange={setBirthDateSheetOpen}>
-                    <SheetContent side="bottom" className="rounded-t-3xl pb-8">
-                      <SheetHeader className="mb-4">
-                        <SheetTitle className="text-center text-xl">选择出生日期</SheetTitle>
-                      </SheetHeader>
-                      <BirthDatePicker
-                        value={birthDate}
-                        onChange={(date) => {
-                          setBirthDate(date);
-                          setBirthYear(String(date.year));
-                        }}
-                        minYear={1960}
-                        maxYear={new Date().getFullYear()}
-                      />
-                      <div className="mt-6 px-4">
-                        <Button
-                          className="w-full h-12 text-base rounded-xl"
-                          onClick={() => setBirthDateSheetOpen(false)}
-                          data-testid="button-confirm-birthdate"
+                  {/* Language Selection - NEW */}
+                  <div>
+                    <label className="block text-base font-semibold mb-3 text-center">擅长语言（至少选1个）</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {["普通话", "粤语", "英语"].map((lang) => (
+                        <motion.button
+                          key={lang}
+                          type="button"
+                          onClick={() => {
+                            haptics.light();
+                            setLanguagesComfort(prev => 
+                              prev.includes(lang) 
+                                ? prev.filter(l => l !== lang)
+                                : [...prev, lang]
+                            );
+                          }}
+                          className={cn(
+                            "p-3 rounded-xl border-2 transition-all duration-200 text-sm font-medium",
+                            languagesComfort.includes(lang)
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-gray-200 dark:border-gray-700 text-foreground hover:border-primary/50"
+                          )}
+                          whileTap={{ scale: 0.95 }}
                         >
-                          确认
-                        </Button>
-                      </div>
-                    </SheetContent>
-                  </Sheet>
+                          {languagesComfort.includes(lang) && (
+                            <Check className="w-3 h-3 inline-block mr-1" />
+                          )}
+                          {lang}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 
