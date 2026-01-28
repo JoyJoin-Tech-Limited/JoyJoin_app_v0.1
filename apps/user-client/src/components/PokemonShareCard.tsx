@@ -62,6 +62,18 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
       setImageLoaded(false);
     }, [finalImageUrl]);
 
+    // Haptic feedback for skill badge animations in preview mode
+    useEffect(() => {
+      if (isPreview && 'vibrate' in navigator) {
+        // Subtle haptic when badges animate in
+        const timer = setTimeout(() => {
+          navigator.vibrate([5, 10, 5]); // Short-pause-short pattern
+        }, 300); // Match badge animation start
+        
+        return () => clearTimeout(timer);
+      }
+    }, [isPreview]);
+
     // Format date - use provided shareDate or default to current date
     const formattedDate = shareDate || new Date().toISOString().split('T')[0];
 

@@ -4,8 +4,8 @@ import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 import xiaoyueThinking from "@/assets/xiaoyue_thinking.png";
-import xiaoyueCasual from "@/assets/xiaoyue_default.png.png";
-import xiaoyuePointing from "@/assets/xiaoyue_idea.png.png";
+import xiaoyueCasual from "@/assets/xiaoyue_default.png";
+import xiaoyuePointing from "@/assets/xiaoyue_idea.png";
 
 export type XiaoyuePose = "thinking" | "casual" | "pointing";
 
