@@ -72,7 +72,10 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
         className="relative w-full max-w-[360px] mx-auto"
-        style={{ aspectRatio: '9/16' }}
+        style={{ 
+          aspectRatio: '9/16',
+          fontFamily: 'ZhanKuQingKeHuangYouTi, -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif'
+        }}
       >
         {/* Card container with dual-layer border - gradient applied to border */}
         <div
@@ -174,10 +177,33 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                 />
               </div>
 
-              {/* Type and Name */}
-              <h1 className="text-2xl font-black text-center mb-0.5 tracking-tight text-gray-900">
-                {archetype} ({archetypeEnglish})
-              </h1>
+              {/* Archetype name + English subtitle with improved styling */}
+              <div className="text-center mb-1 space-y-0.5">
+                {/* Chinese archetype name - primary */}
+                <h2 
+                  className="text-2xl sm:text-3xl font-black tracking-wide"
+                  style={{
+                    background: `linear-gradient(135deg, ${variant.primaryColor}, ${variant.secondaryColor || variant.primaryColor})`,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    textShadow: `0 2px 8px ${variant.primaryColor}40`,
+                  }}
+                >
+                  {archetype}
+                </h2>
+                
+                {/* English name - secondary label below Chinese */}
+                <p 
+                  className="text-xs font-medium tracking-wider uppercase opacity-70"
+                  style={{
+                    color: variant.secondaryColor || variant.primaryColor,
+                    textShadow: `0 1px 3px ${(variant.secondaryColor || variant.primaryColor)}20`,
+                    letterSpacing: '0.1em',
+                  }}
+                >
+                  {archetypeEnglish}
+                </p>
+              </div>
 
               {/* User nickname (if provided) */}
               {nickname && (
@@ -211,8 +237,8 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   
                   <div className="relative bg-gradient-to-br from-indigo-50 to-purple-50 rounded-[10px] px-3 py-2.5 h-full flex flex-col justify-center">
                     {/* Label */}
-                    <div className="text-[10px] font-medium text-indigo-600/70 mb-0.5 tracking-wide uppercase">
-                      原型排名
+                    <div className="text-[10px] font-bold text-indigo-600/70 mb-0.5 tracking-wide">
+                      原型编号
                     </div>
                     
                     {/* Hero Content - Rank + Archetype */}
@@ -242,8 +268,8 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                 {/* RIGHT: Secondary Tag - 总榜排名 (Global Rank) */}
                 <div className="rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 px-3 py-2.5 flex flex-col justify-center border border-gray-200/50 shadow-sm">
                   {/* Label */}
-                  <div className="text-[10px] font-medium text-gray-500 mb-0.5 tracking-wide uppercase">
-                    总榜排名
+                  <div className="text-[10px] font-bold text-gray-500 mb-0.5 tracking-wide">
+                    总榜编号
                   </div>
                   
                   {/* Rank Number */}
