@@ -20,7 +20,7 @@ import joyJoinLogo from "@/assets/box_logo_archetypes.png";
 import heroVideo from "@/assets/generated_videos/dusk_skyline_fades_to_cozy_dinner.mp4";
 import heroPoster from "@/assets/stock_images/shenzhen_city_roofto_e7cea581.jpg";
 
-import xiaoyueFoxAvatar from "@/assets/Xiao_Yue_Avatar-06.png";
+import xiaoyueFoxAvatar from "@/assets/xiaoyue_default.png";
 // import { SiWechat } from "react-icons/si"; // 暂时注释：微信登录功能
 
 import { useToast } from "@/hooks/use-toast";
