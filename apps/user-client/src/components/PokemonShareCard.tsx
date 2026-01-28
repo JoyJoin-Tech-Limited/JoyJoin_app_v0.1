@@ -11,7 +11,6 @@ import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
 import logoFull from "@/assets/joyjoin-logo-full.png";
 import { getCardImagePath, hasCardImage } from "@/lib/archetypeCardImages";
-import { getSkillIcon } from "./icons";
 
 interface PokemonShareCardProps {
   archetype: string;
@@ -62,7 +61,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
       setImageLoaded(false);
     }, [finalImageUrl]);
 
-    // Haptic feedback for skill badge animations in preview mode
+    // Haptic feedback for skill badge animations in preview mode (trigger only once)
     useEffect(() => {
       if (isPreview && 'vibrate' in navigator) {
         // Subtle haptic when badges animate in
@@ -72,7 +71,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         
         return () => clearTimeout(timer);
       }
-    }, [isPreview]);
+    }, []); // Empty deps - only trigger on mount
 
     // Format date - use provided shareDate or default to current date
     const formattedDate = shareDate || new Date().toISOString().split('T')[0];
@@ -82,7 +81,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         ref={ref}
         data-card-root
         tabIndex={-1}
-        aria-hidden="true"
+        aria-hidden="true" // Card is display-only for image export, not interactive
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
@@ -327,37 +326,41 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     <div className="text-xs font-bold text-gray-700 mb-1.5">💎 核心技能</div>
                     {(() => {
                       const skills = archetypeInfo?.coreContributions?.split(/[、,，]/).map(s => s.trim()).filter(s => s) || [];
-                      const gridCols = skills.length === 2 ? 'grid-cols-2' : 'grid-cols-4';
+                      // Determine grid columns based on skill count: 1->1, 2->2, 3->3, 4+->4
+                      const gridColsMap: Record<number, string> = {
+                        1: 'grid-cols-1',
+                        2: 'grid-cols-2',
+                        3: 'grid-cols-3',
+                      };
+                      const gridCols = gridColsMap[skills.length] || 'grid-cols-4';
                       
                       return (
                         <div className={`grid ${gridCols} gap-1.5`}>
                           {skills.slice(0, 4).map((skill: string, idx: number) => {
                             // Map keywords to appropriate icons and colors
-                            const skillKeywordMap: Record<string, { emoji: string; color?: string }> = {
-                              '破冰': { emoji: '⚡', color: '#F59E0B' },
-                              '启动': { emoji: '⚡', color: '#F59E0B' },
-                              '欢乐': { emoji: '🌟', color: '#FFD93D' },
-                              '氛围': { emoji: '🎪', color: '#EC4899' },
-                              '温暖': { emoji: '💎', color: '#FFA07A' },
-                              '能量': { emoji: '💎', color: '#FFA07A' },
-                              '反馈': { emoji: '👂', color: '#10B981' },
-                              '积极': { emoji: '🌟', color: '#FFD93D' },
-                              '信心': { emoji: '🛡️', color: '#6B7280' },
-                              '体验': { emoji: '🎯', color: '#EF4444' },
-                              '探索': { emoji: '🔬', color: '#8B5CF6' },
-                              '冲突': { emoji: '⚔️', color: '#3B82F6' },
-                              '平衡': { emoji: '🛡️', color: '#6B7280' },
-                              '连接': { emoji: '🤝', color: '#8B5CF6' },
-                              '网络': { emoji: '🔬', color: '#8B5CF6' },
+                            const skillKeywordMap: Record<string, string> = {
+                              '破冰': '⚡',
+                              '启动': '⚡',
+                              '欢乐': '🌟',
+                              '氛围': '🎪',
+                              '温暖': '💎',
+                              '能量': '💎',
+                              '反馈': '👂',
+                              '积极': '🌟',
+                              '信心': '🛡️',
+                              '体验': '🎯',
+                              '探索': '🔬',
+                              '冲突': '⚔️',
+                              '平衡': '🛡️',
+                              '连接': '🤝',
+                              '网络': '🔬',
                             };
                             
                             // Find matching keyword
                             let matchedEmoji = '✨';
-                            let iconColor = variant.primaryColor;
-                            for (const [keyword, { emoji, color }] of Object.entries(skillKeywordMap)) {
+                            for (const [keyword, emoji] of Object.entries(skillKeywordMap)) {
                               if (skill.includes(keyword)) {
                                 matchedEmoji = emoji;
-                                if (color) iconColor = color;
                                 break;
                               }
                             }
