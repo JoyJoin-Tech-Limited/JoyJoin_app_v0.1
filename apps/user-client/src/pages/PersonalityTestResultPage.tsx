@@ -610,10 +610,17 @@ export default function PersonalityTestResultPage() {
       return await apiRequest("POST", "/api/auth/complete-personality-test");
     },
     onSuccess: async () => {
+      console.log('✅ [PERSONALITY-TEST] Test completed, invalidating user query');
+      
+      // Invalidate and refetch to ensure user data is updated before navigation
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
+      
+      console.log('✅ [PERSONALITY-TEST] Navigating to /onboarding/setup');
       setLocation('/onboarding/setup');
     },
     onError: (error: Error) => {
+      console.error('❌ [PERSONALITY-TEST] Failed to complete test:', error);
       toast({
         title: "出错了",
         description: error.message,
