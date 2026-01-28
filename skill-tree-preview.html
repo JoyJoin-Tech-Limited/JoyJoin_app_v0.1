@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokemon Card Skill Tree Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'ZCOOL QingKe HuangYou', -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .skill-card {
+      transition: transform 0.2s;
+    }
+    .skill-card:hover {
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-4xl font-black text-white text-center mb-8">🎴 Pokemon Card Skill Tree Preview</h1>
+    <p class="text-white text-center mb-12 text-lg">New two-column skill layout with active/passive abilities</p>
+    
+    <!-- Example: 开心柯基 -->
+    <div class="bg-white rounded-3xl p-8 mb-8 shadow-2xl">
+      <div class="mb-6">
+        <h2 class="text-3xl font-black text-gray-900 mb-2">开心柯基 (Happy Corgi)</h2>
+        <p class="text-gray-600">破冰点火官 - The Icebreaker</p>
+      </div>
+
+      <!-- NEW SKILL TREE SECTION -->
+      <div class="bg-gradient-to-br from-purple-50/90 to-pink-50/90 rounded-xl p-4 border border-purple-200/30 shadow-inner">
+        <!-- Header with Attribute -->
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">⚡</span>
+            <span class="text-sm font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+              技能树
+            </span>
+          </div>
+          <div class="text-xs font-bold px-3 py-1 bg-white/80 rounded-full border border-purple-200/50 shadow-sm text-orange-600">
+            🔥 热情
+          </div>
+        </div>
+        
+        <!-- Two-Column Layout: Active | Passive -->
+        <div class="grid grid-cols-2 gap-3">
+          <!-- ACTIVE SKILL - Left Column -->
+          <div class="skill-card relative bg-white rounded-lg p-3 shadow-sm border-2 border-orange-200">
+            <!-- Active Badge -->
+            <div class="absolute -top-2 -right-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs px-2 py-1 rounded-full font-bold shadow-sm z-10">
+              主动
+            </div>
+            
+            <!-- Icon Circle -->
+            <div class="w-12 h-12 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mb-2 mx-auto border-2 border-purple-200/50">
+              <span class="text-2xl">⚡</span>
+            </div>
+            
+            <!-- Skill Name -->
+            <div class="text-sm font-bold text-purple-700 text-center mb-2 leading-tight">
+              摇尾热场波
+            </div>
+            
+            <!-- Energy Cost -->
+            <div class="flex items-center justify-center gap-1 mb-2 bg-purple-50/60 rounded-full py-1 px-3 mx-auto w-fit">
+              <span class="text-sm font-bold text-purple-700">2</span>
+              <span class="text-lg">🔥</span>
+            </div>
+            
+            <!-- Short Effect -->
+            <p class="text-xs text-gray-600 text-center leading-tight">
+              破冰启动，参与度+50%
+            </p>
+          </div>
+          
+          <!-- PASSIVE SKILL - Right Column -->
+          <div class="skill-card relative bg-gradient-to-br from-amber-50/80 to-yellow-50/80 rounded-lg p-3 border border-amber-300/50 shadow-sm">
+            <!-- Passive Badge -->
+            <div class="absolute -top-2 -right-2 bg-gradient-to-r from-amber-600 to-yellow-600 text-white text-xs px-2 py-1 rounded-full font-bold shadow-sm z-10">
+              被动
+            </div>
+            
+            <!-- Icon Circle -->
+            <div class="w-12 h-12 bg-gradient-to-br from-amber-100 to-yellow-100 rounded-full flex items-center justify-center mb-2 mx-auto border-2 border-amber-200/50">
+              <span class="text-2xl">🔋</span>
+            </div>
+            
+            <!-- Skill Name -->
+            <div class="text-sm font-bold text-amber-700 text-center mb-2 leading-tight">
+              永动引擎
+            </div>
+            
+            <!-- Always Active Indicator -->
+            <div class="flex items-center justify-center gap-1.5 mb-2">
+              <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span class="text-xs text-gray-500 font-medium">常驻效果</span>
+            </div>
+            
+            <!-- Short Effect -->
+            <p class="text-xs text-gray-600 text-center leading-tight">
+              能量恢复速度+1/分钟
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Example: 机智狐 -->
+    <div class="bg-white rounded-3xl p-8 mb-8 shadow-2xl">
+      <div class="mb-6">
+        <h2 class="text-3xl font-black text-gray-900 mb-2">机智狐 (Clever Fox)</h2>
+        <p class="text-gray-600">秘境引路人 - The Explorer</p>
+      </div>
+
+      <div class="bg-gradient-to-br from-purple-50/90 to-pink-50/90 rounded-xl p-4 border border-purple-200/30 shadow-inner">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">⚡</span>
+            <span class="text-sm font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+              技能树
+            </span>
+          </div>
+          <div class="text-xs font-bold px-3 py-1 bg-white/80 rounded-full border border-purple-200/50 shadow-sm text-blue-600">
+            🗺️ 探索
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div class="skill-card relative bg-white rounded-lg p-3 shadow-sm border-2 border-blue-200">
+            <div class="absolute -top-2 -right-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs px-2 py-1 rounded-full font-bold shadow-sm z-10">
+              主动
+            </div>
+            <div class="w-12 h-12 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mb-2 mx-auto border-2 border-purple-200/50">
+              <span class="text-2xl">🔦</span>
+            </div>
+            <div class="text-sm font-bold text-purple-700 text-center mb-2 leading-tight">
+              秘巷探照灯
+            </div>
+            <div class="flex items-center justify-center gap-1 mb-2 bg-purple-50/60 rounded-full py-1 px-3 mx-auto w-fit">
+              <span class="text-sm font-bold text-purple-700">1</span>
+              <span class="text-lg">🗺️</span>
+            </div>
+            <p class="text-xs text-gray-600 text-center leading-tight">
+              发现隐藏地点或玩法
+            </p>
+          </div>
+          
+          <div class="skill-card relative bg-gradient-to-br from-amber-50/80 to-yellow-50/80 rounded-lg p-3 border border-amber-300/50 shadow-sm">
+            <div class="absolute -top-2 -right-2 bg-gradient-to-r from-amber-600 to-yellow-600 text-white text-xs px-2 py-1 rounded-full font-bold shadow-sm z-10">
+              被动
+            </div>
+            <div class="w-12 h-12 bg-gradient-to-br from-amber-100 to-yellow-100 rounded-full flex items-center justify-center mb-2 mx-auto border-2 border-amber-200/50">
+              <span class="text-2xl">📡</span>
+            </div>
+            <div class="text-sm font-bold text-amber-700 text-center mb-2 leading-tight">
+              新奇雷达
+            </div>
+            <div class="flex items-center justify-center gap-1.5 mb-2">
+              <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span class="text-xs text-gray-500 font-medium">常驻效果</span>
+            </div>
+            <p class="text-xs text-gray-600 text-center leading-tight">
+              30%几率触发惊喜活动
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Example: 稳如龟 (Highest energy cost) -->
+    <div class="bg-white rounded-3xl p-8 mb-8 shadow-2xl">
+      <div class="mb-6">
+        <h2 class="text-3xl font-black text-gray-900 mb-2">稳如龟 (Steady Turtle)</h2>
+        <p class="text-gray-600">真知炮台 - The Sage</p>
+      </div>
+
+      <div class="bg-gradient-to-br from-purple-50/90 to-pink-50/90 rounded-xl p-4 border border-purple-200/30 shadow-inner">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">⚡</span>
+            <span class="text-sm font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+              技能树
+            </span>
+          </div>
+          <div class="text-xs font-bold px-3 py-1 bg-white/80 rounded-full border border-purple-200/50 shadow-sm text-emerald-600">
+            💎 真知
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div class="skill-card relative bg-white rounded-lg p-3 shadow-sm border-2 border-emerald-200">
+            <div class="absolute -top-2 -right-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs px-2 py-1 rounded-full font-bold shadow-sm z-10">
+              主动
+            </div>
+            <div class="w-12 h-12 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mb-2 mx-auto border-2 border-purple-200/50">
+              <span class="text-2xl">💎</span>
+            </div>
+            <div class="text-sm font-bold text-purple-700 text-center mb-2 leading-tight">
+              真知慢放炮
+            </div>
+            <div class="flex items-center justify-center gap-1 mb-2 bg-purple-50/60 rounded-full py-1 px-3 mx-auto w-fit">
+              <span class="text-sm font-bold text-purple-700">3</span>
+              <span class="text-lg">💎</span>
+            </div>
+            <p class="text-xs text-gray-600 text-center leading-tight">
+              蓄力后触发顿悟
+            </p>
+          </div>
+          
+          <div class="skill-card relative bg-gradient-to-br from-amber-50/80 to-yellow-50/80 rounded-lg p-3 border border-amber-300/50 shadow-sm">
+            <div class="absolute -top-2 -right-2 bg-gradient-to-r from-amber-600 to-yellow-600 text-white text-xs px-2 py-1 rounded-full font-bold shadow-sm z-10">
+              被动
+            </div>
+            <div class="w-12 h-12 bg-gradient-to-br from-amber-100 to-yellow-100 rounded-full flex items-center justify-center mb-2 mx-auto border-2 border-amber-200/50">
+              <span class="text-2xl">👀</span>
+            </div>
+            <div class="text-sm font-bold text-amber-700 text-center mb-2 leading-tight">
+              深度观察
+            </div>
+            <div class="flex items-center justify-center gap-1.5 mb-2">
+              <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span class="text-xs text-gray-500 font-medium">常驻效果</span>
+            </div>
+            <p class="text-xs text-gray-600 text-center leading-tight">
+              发现隐藏细节
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center text-white text-sm mt-12">
+      <p>✨ Pokemon TCG-Style Skill Tree System</p>
+      <p class="mt-2">All 12 archetypes have unique active and passive abilities</p>
+    </div>
+  </div>
+</body>
+</html>
