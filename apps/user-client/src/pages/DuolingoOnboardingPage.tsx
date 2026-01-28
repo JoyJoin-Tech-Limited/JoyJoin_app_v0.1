@@ -19,9 +19,9 @@ import { SelectionList } from "@/components/SelectionList";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 
 // Use consistent Xiao Yue Avatar-01.png as primary avatar across all screens
-import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
-import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
-import xiaoyuePointing from "@/assets/Xiao_Yue_Avatar-04.png";
+import xiaoyueNormal from "@/assets/xiaoyue_default.png";
+import xiaoyueExcited from "@/assets/xiaoyue_idea.png";
+import xiaoyuePointing from "@/assets/xiaoyue_thinking.png";
 
 // Archetype imports for floating background effect
 import corgiImg from "@/assets/开心柯基_transparent_1.png";
