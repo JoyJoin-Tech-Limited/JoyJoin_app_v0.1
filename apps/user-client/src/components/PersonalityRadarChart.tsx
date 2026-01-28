@@ -87,19 +87,6 @@ export default function PersonalityRadarChart({
     return `${x},${y}`;
   }).join(' ');
 
-  const labelPoints = userTraits.map((trait, index) => {
-    const angle = (Math.PI * 2 * index) / userTraits.length - Math.PI / 2;
-    // Use increased labelOffset to reduce overlap
-    const labelRadius = maxRadius + labelOffset;
-    const x = centerX + Math.cos(angle) * labelRadius;
-    const y = centerY + Math.sin(angle) * labelRadius;
-    return { x, y, trait, angle, index };
-  });
-
-  // Use custom primary color if provided, otherwise fall back to CSS variable
-  const strokeColor = primaryColor || "hsl(var(--primary))";
-  const fillGradientId = primaryColor ? `customRadarGradient-${uniqueId}` : `userRadarGradient-${uniqueId}`;
-
   // Calculate viewBox and dimensions based on compact mode and variant
   const viewBoxSize = compactMode ? 140 : 320;
   const viewBoxPadding = compactMode ? -5 : -10;
@@ -112,6 +99,19 @@ export default function PersonalityRadarChart({
   const labelOffset = variant === 'compact'
     ? (compactMode ? 12 : 20) // Increased from 10 to 12 in compact mode
     : (compactMode ? 10 : 15);
+
+  const labelPoints = userTraits.map((trait, index) => {
+    const angle = (Math.PI * 2 * index) / userTraits.length - Math.PI / 2;
+    // Use increased labelOffset to reduce overlap
+    const labelRadius = maxRadius + labelOffset;
+    const x = centerX + Math.cos(angle) * labelRadius;
+    const y = centerY + Math.sin(angle) * labelRadius;
+    return { x, y, trait, angle, index };
+  });
+
+  // Use custom primary color if provided, otherwise fall back to CSS variable
+  const strokeColor = primaryColor || "hsl(var(--primary))";
+  const fillGradientId = primaryColor ? `customRadarGradient-${uniqueId}` : `userRadarGradient-${uniqueId}`;
 
   return (
     <div className={`flex flex-col items-center justify-center w-full ${compactMode ? 'py-1' : 'py-4'}`}>
