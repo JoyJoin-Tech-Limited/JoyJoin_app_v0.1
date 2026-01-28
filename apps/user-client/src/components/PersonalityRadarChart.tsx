@@ -119,7 +119,7 @@ export default function PersonalityRadarChart({
         viewBox={`${viewBoxPadding} ${viewBoxPadding} ${viewBoxSize} ${viewBoxSize}`} 
         style={{ 
           maxWidth: `${maxWidth}px`,
-          fontFamily: 'ZhanKuQingKeHuangYouTi, -apple-system, BlinkMacSystemFont, sans-serif'
+          fontFamily: 'ZCOOL QingKe HuangYou, -apple-system, BlinkMacSystemFont, sans-serif'
         }}
       >
         <defs>
