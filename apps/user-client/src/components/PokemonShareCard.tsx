@@ -74,7 +74,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         className="relative w-full max-w-[360px] mx-auto"
         style={{ 
           aspectRatio: '9/16',
-          fontFamily: 'ZhanKuQingKeHuangYouTi, -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif'
+          fontFamily: '"ZCOOL QingKe HuangYou", -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif'
         }}
       >
         {/* Card container with dual-layer border - gradient applied to border */}
