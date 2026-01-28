@@ -11,6 +11,33 @@ import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
 import logoFull from "@/assets/joyjoin-logo-full.png";
 import { getCardImagePath, hasCardImage } from "@/lib/archetypeCardImages";
+import { haptics } from "@/lib/haptics";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
+
+// Module-level constants to avoid recreating on each render
+const GRID_COLS_MAP: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+};
+
+const SKILL_KEYWORD_MAP: Record<string, string> = {
+  '破冰': '⚡',
+  '启动': '⚡',
+  '欢乐': '🌟',
+  '氛围': '🎪',
+  '温暖': '💎',
+  '能量': '💎',
+  '反馈': '👂',
+  '积极': '🌟',
+  '信心': '🛡️',
+  '体验': '🎯',
+  '探索': '🔬',
+  '冲突': '⚔️',
+  '平衡': '🛡️',
+  '连接': '🤝',
+  '网络': '🔬',
+};
 
 interface PokemonShareCardProps {
   archetype: string;
@@ -48,6 +75,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
     // Track image loading state for skeleton and fade-in
     const [imageLoaded, setImageLoaded] = useState(false);
 
+    // Check if user prefers reduced motion
+    const prefersReducedMotion = useReducedMotion();
+
     // Get the actual personality test result card image path (only if it exists)
     const cardImagePath = (expression && hasCardImage(archetype, expression)) 
       ? getCardImagePath(archetype, expression) 
@@ -63,10 +93,10 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
 
     // Haptic feedback for skill badge animations in preview mode (trigger only once)
     useEffect(() => {
-      if (isPreview && typeof navigator !== "undefined" && "vibrate" in navigator) {
+      if (isPreview) {
         // Subtle haptic when badges animate in
         const timer = setTimeout(() => {
-          navigator.vibrate([5, 10, 5]); // Short-pause-short pattern
+          haptics.light();
         }, 300); // Match badge animation start
         
         return () => clearTimeout(timer);
@@ -82,9 +112,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         data-card-root
         tabIndex={-1}
         aria-hidden="true" // Card is display-only for image export, not interactive
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+        initial={prefersReducedMotion ? {} : { scale: 0.8, opacity: 0 }}
+        animate={prefersReducedMotion ? {} : { scale: 1, opacity: 1 }}
+        transition={prefersReducedMotion ? {} : { type: "spring", stiffness: 200, damping: 20 }}
         className="relative w-full max-w-[360px] mx-auto"
         style={{ 
           aspectRatio: '9/16',
@@ -314,9 +344,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                       <motion.div 
                         className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500"
-                        initial={{ width: 0 }}
+                        initial={prefersReducedMotion ? { width: `${archetypeInfo?.energyLevel || 50}%` } : { width: 0 }}
                         animate={{ width: `${archetypeInfo?.energyLevel || 50}%` }}
-                        transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
+                        transition={prefersReducedMotion ? {} : { duration: 1, delay: 0.3, ease: "easeOut" }}
                       />
                     </div>
                   </div>
@@ -326,39 +356,14 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     <div className="text-xs font-bold text-gray-700 mb-1.5">💎 核心技能</div>
                     {(() => {
                       const skills = archetypeInfo?.coreContributions?.split(/[、,，]/).map(s => s.trim()).filter(s => s) || [];
-                      // Determine grid columns based on skill count: 1->1, 2->2, 3->3, 4+->4
-                      const gridColsMap: Record<number, string> = {
-                        1: 'grid-cols-1',
-                        2: 'grid-cols-2',
-                        3: 'grid-cols-3',
-                      };
-                      const gridCols = gridColsMap[skills.length] || 'grid-cols-4';
+                      const gridCols = GRID_COLS_MAP[skills.length] || 'grid-cols-4';
                       
                       return (
                         <div className={`grid ${gridCols} gap-1.5`}>
                           {skills.slice(0, 4).map((skill: string, idx: number) => {
-                            // Map keywords to appropriate icons and colors
-                            const skillKeywordMap: Record<string, string> = {
-                              '破冰': '⚡',
-                              '启动': '⚡',
-                              '欢乐': '🌟',
-                              '氛围': '🎪',
-                              '温暖': '💎',
-                              '能量': '💎',
-                              '反馈': '👂',
-                              '积极': '🌟',
-                              '信心': '🛡️',
-                              '体验': '🎯',
-                              '探索': '🔬',
-                              '冲突': '⚔️',
-                              '平衡': '🛡️',
-                              '连接': '🤝',
-                              '网络': '🔬',
-                            };
-                            
                             // Find matching keyword
                             let matchedEmoji = '✨';
-                            for (const [keyword, emoji] of Object.entries(skillKeywordMap)) {
+                            for (const [keyword, emoji] of Object.entries(SKILL_KEYWORD_MAP)) {
                               if (skill.includes(keyword)) {
                                 matchedEmoji = emoji;
                                 break;
@@ -369,10 +374,10 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                             
                             return (
                               <motion.div
-                                key={idx}
-                                initial={{ scale: 0, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                transition={{ duration: 0.3, delay: 0.4 + idx * 0.1, ease: "backOut" }}
+                                key={`${skill}-${idx}`}
+                                initial={prefersReducedMotion ? {} : { scale: 0, opacity: 0 }}
+                                animate={prefersReducedMotion ? {} : { scale: 1, opacity: 1 }}
+                                transition={prefersReducedMotion ? {} : { duration: 0.3, delay: 0.4 + idx * 0.1, ease: "backOut" }}
                                 className="flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-md py-1.5 border border-purple-100/50 shadow-sm"
                                 role="img"
                                 aria-label={`${skill} skill badge`}
