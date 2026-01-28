@@ -224,10 +224,10 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               )}
             </div>
 
-            {/* Stats Section - 2 Column Layout with Prominent Archetype Rank */}
+            {/* Stats Section - 2 Column Layout with Prominent Archetype Collection Number */}
             <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl px-4 py-3 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
               <div className="grid grid-cols-[1.8fr_1fr] gap-3">
-                {/* LEFT: HERO TAG - 原型排名 (Archetype Rank) */}
+                {/* LEFT: HERO TAG - 原型编号 (Archetype Collection Number) */}
                 <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-[2px] shadow-lg">
                   {/* Animated shimmer effect - only in preview mode */}
                   {isPreview && (
@@ -240,9 +240,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                       原型编号
                     </div>
                     
-                    {/* Hero Content - Rank + Archetype */}
+                    {/* Hero Content - Collection Number + Archetype */}
                     <div className="flex items-baseline gap-1.5">
-                      {/* Rank Number */}
+                      {/* Collection Number */}
                       <div className="flex items-baseline">
                         <span className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
                           No.
@@ -264,14 +264,14 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   </div>
                 </div>
 
-                {/* RIGHT: Secondary Tag - 总榜排名 (Global Rank) */}
+                {/* RIGHT: Secondary Tag - 总榜编号 (Global Collection Number) */}
                 <div className="rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 px-3 py-2.5 flex flex-col justify-center border border-gray-200/50 shadow-sm">
                   {/* Label */}
                   <div className="text-[10px] font-bold text-gray-500 mb-0.5 tracking-wide">
                     总榜编号
                   </div>
                   
-                  {/* Rank Number */}
+                  {/* Collection Number */}
                   <div className="flex items-baseline gap-0.5">
                     <span className="text-sm font-semibold text-gray-400">#</span>
                     <span className="text-xl font-bold text-gray-700">
