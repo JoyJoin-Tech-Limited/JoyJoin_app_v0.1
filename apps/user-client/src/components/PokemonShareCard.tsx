@@ -322,41 +322,66 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     </div>
                   </div>
 
-                  {/* Core Skills - 4-icon glassmorphic badge grid */}
+                  {/* Core Skills - icon badge grid (2 or 4 items based on data) */}
                   <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg px-2 py-2">
                     <div className="text-xs font-bold text-gray-700 mb-1.5">💎 核心技能</div>
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {(archetypeInfo?.coreContributions?.split('、').slice(0, 4) || []).map((skill: string, idx: number) => {
-                        const IconComponent = getSkillIcon(skill);
-                        const skillEmojis: Record<string, string> = {
-                          '共情力': '💎', '创新力': '🌟', '组织力': '🎯', '领导力': '⚔️',
-                          '倾听力': '👂', '分析力': '🔬', '执行力': '⚡', '稳定力': '🛡️',
-                          '社交力': '🎪', '协调力': '🤝', '表达力': '📢', '洞察力': '🔍'
-                        };
-                        const emoji = skillEmojis[skill] || '✨';
-                        const shortName = skill.slice(0, 3);
-                        
-                        return (
-                          <motion.div
-                            key={idx}
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ duration: 0.3, delay: 0.4 + idx * 0.1, ease: "backOut" }}
-                            className="flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-md py-1.5 border border-purple-100/50 shadow-sm"
-                            role="img"
-                            aria-label={`${skill} skill badge`}
-                          >
-                            {/* Use SVG icon if available, fallback to emoji */}
-                            {IconComponent ? (
-                              <IconComponent className="w-5 h-5 mb-0.5" color={variant.primaryColor} />
-                            ) : (
-                              <span className="text-base leading-none mb-0.5">{emoji}</span>
-                            )}
-                            <span className="text-[9px] font-medium text-gray-600 leading-none">{shortName}</span>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
+                    {(() => {
+                      const skills = archetypeInfo?.coreContributions?.split(/[、,，]/).map(s => s.trim()).filter(s => s) || [];
+                      const gridCols = skills.length === 2 ? 'grid-cols-2' : 'grid-cols-4';
+                      
+                      return (
+                        <div className={`grid ${gridCols} gap-1.5`}>
+                          {skills.slice(0, 4).map((skill: string, idx: number) => {
+                            // Map keywords to appropriate icons and colors
+                            const skillKeywordMap: Record<string, { emoji: string; color?: string }> = {
+                              '破冰': { emoji: '⚡', color: '#F59E0B' },
+                              '启动': { emoji: '⚡', color: '#F59E0B' },
+                              '欢乐': { emoji: '🌟', color: '#FFD93D' },
+                              '氛围': { emoji: '🎪', color: '#EC4899' },
+                              '温暖': { emoji: '💎', color: '#FFA07A' },
+                              '能量': { emoji: '💎', color: '#FFA07A' },
+                              '反馈': { emoji: '👂', color: '#10B981' },
+                              '积极': { emoji: '🌟', color: '#FFD93D' },
+                              '信心': { emoji: '🛡️', color: '#6B7280' },
+                              '体验': { emoji: '🎯', color: '#EF4444' },
+                              '探索': { emoji: '🔬', color: '#8B5CF6' },
+                              '冲突': { emoji: '⚔️', color: '#3B82F6' },
+                              '平衡': { emoji: '🛡️', color: '#6B7280' },
+                              '连接': { emoji: '🤝', color: '#8B5CF6' },
+                              '网络': { emoji: '🔬', color: '#8B5CF6' },
+                            };
+                            
+                            // Find matching keyword
+                            let matchedEmoji = '✨';
+                            let iconColor = variant.primaryColor;
+                            for (const [keyword, { emoji, color }] of Object.entries(skillKeywordMap)) {
+                              if (skill.includes(keyword)) {
+                                matchedEmoji = emoji;
+                                if (color) iconColor = color;
+                                break;
+                              }
+                            }
+                            
+                            const shortName = skill.slice(0, 4);
+                            
+                            return (
+                              <motion.div
+                                key={idx}
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ duration: 0.3, delay: 0.4 + idx * 0.1, ease: "backOut" }}
+                                className="flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-md py-1.5 border border-purple-100/50 shadow-sm"
+                                role="img"
+                                aria-label={`${skill} skill badge`}
+                              >
+                                <span className="text-base leading-none mb-0.5">{matchedEmoji}</span>
+                                <span className="text-[9px] font-medium text-gray-600 leading-none">{shortName}</span>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Social Positioning - Quote-style card */}
