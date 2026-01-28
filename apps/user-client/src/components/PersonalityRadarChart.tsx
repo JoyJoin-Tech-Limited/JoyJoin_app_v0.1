@@ -274,9 +274,8 @@ export default function PersonalityRadarChart({
                 dy={dy}
                 fontSize={fontSize}
                 className="font-medium fill-foreground"
-                style={{ 
+                style={{
                   userSelect: 'none',
-                  pointerEvents: 'none' // Prevent interaction issues
                 }}
               >
                 {labelText}
