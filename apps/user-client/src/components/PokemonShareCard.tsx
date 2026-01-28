@@ -198,7 +198,6 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   style={{
                     color: variant.secondaryColor || variant.primaryColor,
                     textShadow: `0 1px 3px ${(variant.secondaryColor || variant.primaryColor)}20`,
-                    letterSpacing: '0.1em',
                   }}
                 >
                   {archetypeEnglish}
