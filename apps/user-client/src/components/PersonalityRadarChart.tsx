@@ -87,12 +87,23 @@ export default function PersonalityRadarChart({
     return `${x},${y}`;
   }).join(' ');
 
+  // Calculate viewBox and dimensions based on compact mode and variant
+  const viewBoxSize = compactMode ? 140 : 320;
+  const viewBoxPadding = compactMode ? -5 : -10;
+  const maxWidth = compactMode ? 140 : 320;
+  // Reduce font sizes to prevent overlap
+  const labelFontSize = variant === 'compact' 
+    ? (compactMode ? 9 : 13) // Reduced from 10 to 9 in compact mode
+    : (compactMode ? 6 : 11);
+  // Increase label offset to reduce overlap with grid lines
+  const labelOffset = variant === 'compact'
+    ? (compactMode ? 12 : 20) // Increased from 10 to 12 in compact mode
+    : (compactMode ? 10 : 15);
+
   const labelPoints = userTraits.map((trait, index) => {
     const angle = (Math.PI * 2 * index) / userTraits.length - Math.PI / 2;
-    // Adjust label distance differently for compact vs default to balance readability and prevent overlapping
-    const labelRadius = variant === 'compact' 
-      ? maxRadius + (22 * compactScale) // Increased from 20 for better spacing
-      : maxRadius + (40 * compactScale); // Increased from 35 for better spacing
+    // Use increased labelOffset to reduce overlap
+    const labelRadius = maxRadius + labelOffset;
     const x = centerX + Math.cos(angle) * labelRadius;
     const y = centerY + Math.sin(angle) * labelRadius;
     return { x, y, trait, angle, index };
@@ -102,15 +113,6 @@ export default function PersonalityRadarChart({
   const strokeColor = primaryColor || "hsl(var(--primary))";
   const fillGradientId = primaryColor ? `customRadarGradient-${uniqueId}` : `userRadarGradient-${uniqueId}`;
 
-  // Calculate viewBox and dimensions based on compact mode and variant
-  const viewBoxSize = compactMode ? 140 : 320;
-  const viewBoxPadding = compactMode ? -5 : -10;
-  const maxWidth = compactMode ? 140 : 320;
-  // Adjusted font sizes to prevent overlapping (reduced by 1px from original)
-  const fontSize = variant === 'compact' 
-    ? (compactMode ? 9 : 12) // Reduced from 10/13 to prevent overlap
-    : (compactMode ? 5 : 10); // Reduced from 6/11 to prevent overlap
-
   return (
     <div className={`flex flex-col items-center justify-center w-full ${compactMode ? 'py-1' : 'py-4'}`}>
       <svg 
@@ -119,7 +121,7 @@ export default function PersonalityRadarChart({
         viewBox={`${viewBoxPadding} ${viewBoxPadding} ${viewBoxSize} ${viewBoxSize}`} 
         style={{ 
           maxWidth: `${maxWidth}px`,
-          fontFamily: 'ZCOOL QingKe HuangYou, -apple-system, BlinkMacSystemFont, sans-serif'
+          fontFamily: 'ZCOOL QingKe HuangYou, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif'
         }}
       >
         <defs>
@@ -272,11 +274,9 @@ export default function PersonalityRadarChart({
                 y={label.y}
                 textAnchor={textAnchor}
                 dy={dy}
-                fontSize={fontSize}
+                fontSize={labelFontSize}
                 className="font-medium fill-foreground"
-                style={{
-                  userSelect: 'none',
-                }}
+                style={{ userSelect: 'none', pointerEvents: 'none' }}
               >
                 {labelText}
                 <title>{traitDescriptions[label.trait.name]}</title>
