@@ -11,6 +11,7 @@ import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
 import logoFull from "@/assets/joyjoin-logo-full.png";
 import { getCardImagePath, hasCardImage } from "@/lib/archetypeCardImages";
+import { getSkillIcon } from "./icons";
 
 interface PokemonShareCardProps {
   archetype: string;
@@ -314,6 +315,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     <div className="text-xs font-bold text-gray-700 mb-1.5">💎 核心技能</div>
                     <div className="grid grid-cols-4 gap-1.5">
                       {(archetypeInfo?.coreContributions?.split('、').slice(0, 4) || []).map((skill: string, idx: number) => {
+                        const IconComponent = getSkillIcon(skill);
                         const skillEmojis: Record<string, string> = {
                           '共情力': '💎', '创新力': '🌟', '组织力': '🎯', '领导力': '⚔️',
                           '倾听力': '👂', '分析力': '🔬', '执行力': '⚡', '稳定力': '🛡️',
@@ -332,7 +334,12 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                             role="img"
                             aria-label={`${skill} skill badge`}
                           >
-                            <span className="text-base leading-none mb-0.5">{emoji}</span>
+                            {/* Use SVG icon if available, fallback to emoji */}
+                            {IconComponent ? (
+                              <IconComponent className="w-5 h-5 mb-0.5" color={variant.primaryColor} />
+                            ) : (
+                              <span className="text-base leading-none mb-0.5">{emoji}</span>
+                            )}
                             <span className="text-[9px] font-medium text-gray-600 leading-none">{shortName}</span>
                           </motion.div>
                         );
