@@ -89,8 +89,7 @@ export default function PersonalityRadarChart({
 
   const labelPoints = userTraits.map((trait, index) => {
     const angle = (Math.PI * 2 * index) / userTraits.length - Math.PI / 2;
-    // In compact variant, reduce label distance from chart and increase font size
-    // Increased offset to prevent overlapping
+    // Adjust label distance differently for compact vs default to balance readability and prevent overlapping
     const labelRadius = variant === 'compact' 
       ? maxRadius + (22 * compactScale) // Increased from 20 for better spacing
       : maxRadius + (40 * compactScale); // Increased from 35 for better spacing
