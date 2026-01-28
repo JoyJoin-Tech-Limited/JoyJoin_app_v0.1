@@ -23,6 +23,8 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
+import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import * as schema from "@shared/schema";
 
 export interface IStorage {
   // User operations
@@ -775,7 +777,7 @@ export class DatabaseStorage implements IStorage {
     selectedAt: Date;
   }): Promise<void> {
     // Wrap both updates in a transaction to ensure atomicity
-    await db.transaction(async (tx) => {
+    await db.transaction(async (tx: NeonDatabase<typeof schema>) => {
       // Update the user's selected tag
       await tx
         .update(users)
