@@ -63,7 +63,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
 
     // Haptic feedback for skill badge animations in preview mode (trigger only once)
     useEffect(() => {
-      if (isPreview && 'vibrate' in navigator) {
+      if (isPreview && typeof navigator !== "undefined" && "vibrate" in navigator) {
         // Subtle haptic when badges animate in
         const timer = setTimeout(() => {
           navigator.vibrate([5, 10, 5]); // Short-pause-short pattern
