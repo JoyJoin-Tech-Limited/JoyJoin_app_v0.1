@@ -89,10 +89,10 @@ export default function PersonalityRadarChart({
 
   const labelPoints = userTraits.map((trait, index) => {
     const angle = (Math.PI * 2 * index) / userTraits.length - Math.PI / 2;
-    // In compact variant, reduce label distance from chart and increase font size
+    // Adjust label distance differently for compact vs default to balance readability and prevent overlapping
     const labelRadius = variant === 'compact' 
-      ? maxRadius + (20 * compactScale) // Closer labels in compact mode
-      : maxRadius + (35 * compactScale);
+      ? maxRadius + (22 * compactScale) // Increased from 20 for better spacing
+      : maxRadius + (40 * compactScale); // Increased from 35 for better spacing
     const x = centerX + Math.cos(angle) * labelRadius;
     const y = centerY + Math.sin(angle) * labelRadius;
     return { x, y, trait, angle, index };
@@ -106,10 +106,10 @@ export default function PersonalityRadarChart({
   const viewBoxSize = compactMode ? 140 : 320;
   const viewBoxPadding = compactMode ? -5 : -10;
   const maxWidth = compactMode ? 140 : 320;
-  // Increase font size significantly in compact variant for better readability in share cards
+  // Adjusted font sizes to prevent overlapping (reduced by 1px from original)
   const fontSize = variant === 'compact' 
-    ? (compactMode ? 10 : 13) // Larger labels for compact variant
-    : (compactMode ? 6 : 11); // Original size for default variant
+    ? (compactMode ? 9 : 12) // Reduced from 10/13 to prevent overlap
+    : (compactMode ? 5 : 10); // Reduced from 6/11 to prevent overlap
 
   return (
     <div className={`flex flex-col items-center justify-center w-full ${compactMode ? 'py-1' : 'py-4'}`}>
@@ -117,7 +117,10 @@ export default function PersonalityRadarChart({
         width="100%" 
         height="auto" 
         viewBox={`${viewBoxPadding} ${viewBoxPadding} ${viewBoxSize} ${viewBoxSize}`} 
-        style={{ maxWidth: `${maxWidth}px` }}
+        style={{ 
+          maxWidth: `${maxWidth}px`,
+          fontFamily: 'ZCOOL QingKe HuangYou, -apple-system, BlinkMacSystemFont, sans-serif'
+        }}
       >
         <defs>
           <radialGradient id={`userRadarGradient-${uniqueId}`} cx="50%" cy="50%" r="50%">
@@ -271,7 +274,9 @@ export default function PersonalityRadarChart({
                 dy={dy}
                 fontSize={fontSize}
                 className="font-medium fill-foreground"
-                style={{ userSelect: 'none' }}
+                style={{
+                  userSelect: 'none',
+                }}
               >
                 {labelText}
                 <title>{traitDescriptions[label.trait.name]}</title>
