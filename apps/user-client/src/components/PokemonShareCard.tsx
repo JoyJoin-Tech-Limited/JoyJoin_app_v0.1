@@ -11,6 +11,33 @@ import PersonalityRadarChart from "./PersonalityRadarChart";
 import { archetypeConfig } from "@/lib/archetypes";
 import logoFull from "@/assets/joyjoin-logo-full.png";
 import { getCardImagePath, hasCardImage } from "@/lib/archetypeCardImages";
+import { haptics } from "@/lib/haptics";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
+
+// Module-level constants to avoid recreating on each render
+const GRID_COLS_MAP: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+};
+
+const SKILL_KEYWORD_MAP: Record<string, string> = {
+  '破冰': '⚡',
+  '启动': '⚡',
+  '欢乐': '🌟',
+  '氛围': '🎪',
+  '温暖': '💎',
+  '能量': '💎',
+  '反馈': '👂',
+  '积极': '🌟',
+  '信心': '🛡️',
+  '体验': '🎯',
+  '探索': '🔬',
+  '冲突': '⚔️',
+  '平衡': '🛡️',
+  '连接': '🤝',
+  '网络': '🔬',
+};
 
 interface PokemonShareCardProps {
   archetype: string;
@@ -48,6 +75,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
     // Track image loading state for skeleton and fade-in
     const [imageLoaded, setImageLoaded] = useState(false);
 
+    // Check if user prefers reduced motion
+    const prefersReducedMotion = useReducedMotion();
+
     // Get the actual personality test result card image path (only if it exists)
     const cardImagePath = (expression && hasCardImage(archetype, expression)) 
       ? getCardImagePath(archetype, expression) 
@@ -61,6 +91,18 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
       setImageLoaded(false);
     }, [finalImageUrl]);
 
+    // Haptic feedback for skill badge animations in preview mode (trigger only once)
+    useEffect(() => {
+      if (isPreview) {
+        // Subtle haptic when badges animate in
+        const timer = setTimeout(() => {
+          haptics.light();
+        }, 300); // Match badge animation start
+        
+        return () => clearTimeout(timer);
+      }
+    }, []); // Empty deps - only trigger on mount
+
     // Format date - use provided shareDate or default to current date
     const formattedDate = shareDate || new Date().toISOString().split('T')[0];
 
@@ -68,13 +110,15 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
       <motion.div
         ref={ref}
         data-card-root
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+        tabIndex={-1}
+        aria-hidden="true" // Card is display-only for image export, not interactive
+        initial={prefersReducedMotion ? {} : { scale: 0.8, opacity: 0 }}
+        animate={prefersReducedMotion ? {} : { scale: 1, opacity: 1 }}
+        transition={prefersReducedMotion ? {} : { type: "spring", stiffness: 200, damping: 20 }}
         className="relative w-full max-w-[360px] mx-auto"
         style={{ 
           aspectRatio: '9/16',
-          fontFamily: '"ZCOOL QingKe HuangYou", -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif'
+          fontFamily: 'ZCOOL QingKe HuangYou, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif'
         }}
       >
         {/* Card container with dual-layer border - gradient applied to border */}
@@ -177,31 +221,20 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                 />
               </div>
 
-              {/* Archetype name + English subtitle with improved styling */}
-              <div className="text-center mb-1 space-y-0.5">
-                {/* Chinese archetype name - primary */}
-                <h2 
-                  className="text-2xl sm:text-3xl font-black tracking-wide"
-                  style={{
-                    background: `linear-gradient(135deg, ${variant.primaryColor}, ${variant.secondaryColor || variant.primaryColor})`,
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    textShadow: `0 2px 8px ${variant.primaryColor}40`,
-                  }}
-                >
-                  {archetype}
-                </h2>
-                
-                {/* English name - secondary label below Chinese */}
-                <p 
-                  className="text-xs font-medium tracking-wider uppercase opacity-70"
-                  style={{
-                    color: variant.secondaryColor || variant.primaryColor,
-                    textShadow: `0 1px 3px ${(variant.secondaryColor || variant.primaryColor)}20`,
-                  }}
-                >
-                  {archetypeEnglish}
-                </p>
+              {/* Type and Name */}
+              <h1 className="text-2xl font-black text-center tracking-tight text-gray-900 leading-tight">
+                {archetype}
+              </h1>
+              
+              {/* English name as tag/label below */}
+              <div 
+                className="text-xs uppercase tracking-wider opacity-70 text-center mt-0.5 mb-1"
+                style={{ 
+                  color: variant.primaryColor,
+                  textShadow: `0 1px 3px ${variant.primaryColor}20`
+                }}
+              >
+                {archetypeEnglish}
               </div>
 
               {/* User nickname (if provided) */}
@@ -236,7 +269,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   
                   <div className="relative bg-gradient-to-br from-indigo-50 to-purple-50 rounded-[10px] px-3 py-2.5 h-full flex flex-col justify-center">
                     {/* Label */}
-                    <div className="text-[10px] font-bold text-indigo-600/70 mb-0.5 tracking-wide">
+                    <div className="text-[10px] font-medium text-indigo-600/70 mb-0.5 tracking-wide uppercase">
                       原型编号
                     </div>
                     
@@ -267,7 +300,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                 {/* RIGHT: Secondary Tag - 总榜编号 (Global Collection Number) */}
                 <div className="rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 px-3 py-2.5 flex flex-col justify-center border border-gray-200/50 shadow-sm">
                   {/* Label */}
-                  <div className="text-[10px] font-bold text-gray-500 mb-0.5 tracking-wide">
+                  <div className="text-[10px] font-medium text-gray-500 mb-0.5 tracking-wide uppercase">
                     总榜编号
                   </div>
                   
@@ -302,32 +335,69 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                 
                 {/* Right: Pokemon Skills Info (55% width) */}
                 <div className="w-[55%] flex flex-col justify-center space-y-3">
-                  {/* Energy Bar - Pokemon HP style */}
-                  <div>
+                  {/* Energy Bar - Pokemon HP style with animation */}
+                  <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg px-2 py-1.5">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs sm:text-sm font-bold text-gray-700">⚡ 社交能量</span>
-                      <span className="text-xs sm:text-sm font-black text-orange-600">{archetypeInfo?.energyLevel}</span>
+                      <span className="text-xs font-bold text-gray-700">⚡ 社交能量</span>
+                      <span className="text-xs font-black text-orange-600">{archetypeInfo?.energyLevel}%</span>
                     </div>
-                    <div className="h-1.5 sm:h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-yellow-400 to-orange-500"
-                        style={{ width: `${archetypeInfo?.energyLevel || 50}%` }}
+                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <motion.div 
+                        className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500"
+                        initial={prefersReducedMotion ? { width: `${archetypeInfo?.energyLevel || 50}%` } : { width: 0 }}
+                        animate={{ width: `${archetypeInfo?.energyLevel || 50}%` }}
+                        transition={prefersReducedMotion ? {} : { duration: 1, delay: 0.3, ease: "easeOut" }}
                       />
                     </div>
                   </div>
 
-                  {/* Core Contributions */}
-                  <div>
-                    <div className="text-xs sm:text-sm font-bold text-gray-700 mb-1">💎 核心技能</div>
-                    <p className="text-[11px] sm:text-xs text-gray-600 leading-relaxed">
-                      {archetypeInfo?.coreContributions}
-                    </p>
+                  {/* Core Skills - icon badge grid (2 or 4 items based on data) */}
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg px-2 py-2">
+                    <div className="text-xs font-bold text-gray-700 mb-1.5">💎 核心技能</div>
+                    {(() => {
+                      const skills = archetypeInfo?.coreContributions?.split(/[、,，]/).map(s => s.trim()).filter(s => s) || [];
+                      const gridCols = GRID_COLS_MAP[skills.length] || 'grid-cols-4';
+                      
+                      return (
+                        <div className={`grid ${gridCols} gap-1.5`}>
+                          {skills.slice(0, 4).map((skill: string, idx: number) => {
+                            // Find matching keyword
+                            let matchedEmoji = '✨';
+                            for (const [keyword, emoji] of Object.entries(SKILL_KEYWORD_MAP)) {
+                              if (skill.includes(keyword)) {
+                                matchedEmoji = emoji;
+                                break;
+                              }
+                            }
+                            
+                            const shortName = skill.slice(0, 4);
+                            
+                            return (
+                              <motion.div
+                                key={`${skill}-${idx}`}
+                                initial={prefersReducedMotion ? {} : { scale: 0, opacity: 0 }}
+                                animate={prefersReducedMotion ? {} : { scale: 1, opacity: 1 }}
+                                transition={prefersReducedMotion ? {} : { duration: 0.3, delay: 0.4 + idx * 0.1, ease: "backOut" }}
+                                className="flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-md py-1.5 border border-purple-100/50 shadow-sm"
+                                role="img"
+                                aria-label={`${skill} skill badge`}
+                              >
+                                <span className="text-base leading-none mb-0.5">{matchedEmoji}</span>
+                                <span className="text-[9px] font-medium text-gray-600 leading-none">{shortName}</span>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </div>
 
-                  {/* Social Positioning */}
-                  <div>
-                    <div className="text-xs sm:text-sm font-bold text-gray-700 mb-1">🎯 社交定位</div>
-                    <p className="text-[11px] sm:text-xs text-gray-600 leading-relaxed">
+                  {/* Social Positioning - Quote-style card */}
+                  <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg px-2.5 py-2 border border-blue-100/50">
+                    {/* Decorative quote mark */}
+                    <div className="absolute top-0 right-1 text-6xl text-blue-200/30 font-serif leading-none pointer-events-none" style={{ marginTop: '-0.3em' }}>"</div>
+                    <div className="text-xs font-bold text-gray-700 mb-1">🎯 社交定位</div>
+                    <p className="text-[10px] text-gray-600 leading-relaxed italic relative z-10">
                       {archetypeInfo?.description}
                     </p>
                   </div>
@@ -335,26 +405,80 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               </div>
             </div>
 
-            {/* SECTION 3: FOOTER - full-width bar with logo and date */}
-            <div className="flex-none px-4 py-3.5 border-t border-gray-200/60 bg-gradient-to-r from-gray-50 via-white to-gray-50/50 backdrop-blur-sm">
-              <div className="flex items-center justify-between">
-                {/* Left: JoyJoin logo */}
-                <img 
-                  src={logoFull} 
-                  alt="悦聚 JoyJoin" 
-                  className="h-5 w-auto object-contain opacity-90"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
+            {/* SECTION 3: FOOTER - Foil Stamp Authentication Bar with STICKY positioning */}
+            <div className="flex-none relative overflow-hidden">
+              {/* Top embossed edge */}
+              <div className="h-[2px] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+              
+              {/* Main metallic gold bar */}
+              <div 
+                className={`relative px-3 py-2.5 ${
+                  isPreview ? 'bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 animate-shimmer-slow' : 'bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400'
+                }`}
+                style={{ backgroundSize: '200% 100%' }}
+              >
+                {/* Sparkle overlay - preview mode only */}
+                {isPreview && (
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none"
+                    initial={{ x: '-100%', opacity: 0 }}
+                    animate={{ 
+                      x: ['100%', '200%'],
+                      opacity: [0, 1, 0]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      repeatDelay: 3,
+                      ease: "easeInOut"
+                    }}
+                  />
+                )}
+                
+                {/* 3-column layout */}
+                <div className="relative flex items-center justify-between text-amber-900">
+                  {/* Left Column - Certification Mark */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-8 bg-gradient-to-b from-amber-600 to-amber-800 rounded-full" />
+                    <div className="flex flex-col">
+                      <span className="text-[8px] uppercase tracking-wide text-amber-900/60 leading-tight">Certified By</span>
+                      <img 
+                        src={logoFull} 
+                        alt="JoyJoin" 
+                        className="h-4 w-auto object-contain"
+                        style={{ filter: 'brightness(0.7) contrast(1.3)' }}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  </div>
 
-                {/* Right: Minimalist date UI */}
-                <div className="px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 shadow-lg">
-                  <span className="text-[10px] font-black text-white tracking-wider">
-                    {formattedDate}
-                  </span>
+                  {/* Center Column - Serial Number */}
+                  <div className="flex flex-col items-center">
+                    <span className="font-mono text-xs text-amber-900/80 font-bold leading-tight">
+                      #{String(rankings.totalUserRank).padStart(5, '0')}
+                    </span>
+                    <span className="text-[8px] uppercase tracking-wide text-amber-800/60 leading-tight">Holographic Ed.</span>
+                  </div>
+
+                  {/* Right Column - Issue Date */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col items-end">
+                      <span className="text-[8px] uppercase tracking-wide text-amber-900/60 leading-tight">Issued</span>
+                      <span className="text-[10px] font-semibold text-amber-900 leading-tight">{formattedDate}</span>
+                    </div>
+                    <div className="w-1 h-8 bg-gradient-to-b from-amber-600 to-amber-800 rounded-full" />
+                  </div>
                 </div>
               </div>
+
+              {/* Bottom embossed edge */}
+              <div className="h-[2px] bg-gradient-to-r from-transparent via-black/20 to-transparent" />
+              
+              {/* Bottom multi-layer strip */}
+              <div className="h-1 bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600" />
+              <div className="h-[2px] bg-gradient-to-r from-transparent via-amber-900/40 to-transparent" />
             </div>
           </div>
         </div>
