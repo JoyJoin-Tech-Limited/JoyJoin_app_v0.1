@@ -13,30 +13,13 @@ import logoFull from "@/assets/joyjoin-logo-full.png";
 import { getCardImagePath, hasCardImage } from "@/lib/archetypeCardImages";
 import { haptics } from "@/lib/haptics";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { archetypeSkills } from "@shared/personality/archetypeSkills";
 
 // Module-level constants to avoid recreating on each render
 const GRID_COLS_MAP: Record<number, string> = {
   1: 'grid-cols-1',
   2: 'grid-cols-2',
   3: 'grid-cols-3',
-};
-
-const SKILL_KEYWORD_MAP: Record<string, string> = {
-  '破冰': '⚡',
-  '启动': '⚡',
-  '欢乐': '🌟',
-  '氛围': '🎪',
-  '温暖': '💎',
-  '能量': '💎',
-  '反馈': '👂',
-  '积极': '🌟',
-  '信心': '🛡️',
-  '体验': '🎯',
-  '探索': '🔬',
-  '冲突': '⚔️',
-  '平衡': '🛡️',
-  '连接': '🤝',
-  '网络': '🔬',
 };
 
 interface PokemonShareCardProps {
@@ -351,46 +334,92 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     </div>
                   </div>
 
-                  {/* Core Skills - icon badge grid (2 or 4 items based on data) */}
-                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg px-2 py-2">
-                    <div className="text-xs font-bold text-gray-700 mb-1.5">💎 核心技能</div>
-                    {(() => {
-                      const skills = archetypeInfo?.coreContributions?.split(/[、,，]/).map(s => s.trim()).filter(s => s) || [];
-                      const gridCols = GRID_COLS_MAP[skills.length] || 'grid-cols-4';
-                      
-                      return (
-                        <div className={`grid ${gridCols} gap-1.5`}>
-                          {skills.slice(0, 4).map((skill: string, idx: number) => {
-                            // Find matching keyword
-                            let matchedEmoji = '✨';
-                            for (const [keyword, emoji] of Object.entries(SKILL_KEYWORD_MAP)) {
-                              if (skill.includes(keyword)) {
-                                matchedEmoji = emoji;
-                                break;
-                              }
-                            }
-                            
-                            const shortName = skill.slice(0, 4);
-                            
-                            return (
-                              <motion.div
-                                key={`${skill}-${idx}`}
-                                initial={prefersReducedMotion ? {} : { scale: 0, opacity: 0 }}
-                                animate={prefersReducedMotion ? {} : { scale: 1, opacity: 1 }}
-                                transition={prefersReducedMotion ? {} : { duration: 0.3, delay: 0.4 + idx * 0.1, ease: "backOut" }}
-                                className="flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-md py-1.5 border border-purple-100/50 shadow-sm"
-                                role="img"
-                                aria-label={`${skill} skill badge`}
-                              >
-                                <span className="text-base leading-none mb-0.5">{matchedEmoji}</span>
-                                <span className="text-[9px] font-medium text-gray-600 leading-none">{shortName}</span>
-                              </motion.div>
-                            );
-                          })}
+                  {/* SKILL TREE SECTION - Pokemon TCG Style */}
+                  {archetypeSkills[archetype] && (
+                    <div className="bg-gradient-to-br from-purple-50/90 to-pink-50/90 rounded-xl p-2.5 border border-purple-200/30 shadow-inner">
+                      {/* Header with Attribute */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs">⚡</span>
+                          <span className="text-[10px] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+                            技能树
+                          </span>
                         </div>
-                      );
-                    })()}
-                  </div>
+                        <div className="text-[9px] font-bold px-2 py-0.5 bg-white/80 rounded-full border border-purple-200/50 shadow-sm"
+                             style={{ color: variant.primaryColor }}>
+                          {archetypeSkills[archetype].attribute}
+                        </div>
+                      </div>
+                      
+                      {/* Two-Column Layout: Active | Passive */}
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {/* ACTIVE SKILL - Left Column */}
+                        <div className="relative bg-white rounded-lg p-1.5 shadow-sm"
+                             style={{
+                               boxShadow: `0 0 0 2px ${variant.primaryColor}30, 0 2px 4px rgba(0,0,0,0.1)`
+                             }}>
+                          {/* Active Badge */}
+                          <div className="absolute -top-1 -right-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[7px] px-1.5 py-0.5 rounded-full font-bold shadow-sm z-10">
+                            主动
+                          </div>
+                          
+                          {/* Icon Circle */}
+                          <div className="w-7 h-7 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mb-1.5 mx-auto border-2 border-purple-200/50">
+                            <span className="text-base">{archetypeSkills[archetype].activeSkill.icon}</span>
+                          </div>
+                          
+                          {/* Skill Name */}
+                          <div className="text-[9px] font-bold text-purple-700 text-center mb-1 leading-tight px-0.5">
+                            {archetypeSkills[archetype].activeSkill.name}
+                          </div>
+                          
+                          {/* Energy Cost */}
+                          <div className="flex items-center justify-center gap-0.5 mb-1.5 bg-purple-50/60 rounded-full py-0.5 px-1.5 mx-auto w-fit">
+                            <span className="text-[9px] font-bold text-purple-700">
+                              {archetypeSkills[archetype].activeSkill.energyCost}
+                            </span>
+                            <span className="text-xs">
+                              {archetypeSkills[archetype].activeSkill.energyType}
+                            </span>
+                          </div>
+                          
+                          {/* Short Effect */}
+                          <p className="text-[8px] text-gray-600 text-center leading-tight px-0.5">
+                            {archetypeSkills[archetype].activeSkill.shortEffect}
+                          </p>
+                        </div>
+                        
+                        {/* PASSIVE SKILL - Right Column */}
+                        <div className="relative bg-gradient-to-br from-amber-50/80 to-yellow-50/80 rounded-lg p-1.5 border border-amber-300/50 shadow-sm">
+                          {/* Passive Badge */}
+                          <div className="absolute -top-1 -right-1 bg-gradient-to-r from-amber-600 to-yellow-600 text-white text-[7px] px-1.5 py-0.5 rounded-full font-bold shadow-sm z-10">
+                            被动
+                          </div>
+                          
+                          {/* Icon Circle */}
+                          <div className="w-7 h-7 bg-gradient-to-br from-amber-100 to-yellow-100 rounded-full flex items-center justify-center mb-1.5 mx-auto border-2 border-amber-200/50">
+                            <span className="text-base">{archetypeSkills[archetype].passiveSkill.icon}</span>
+                          </div>
+                          
+                          {/* Skill Name */}
+                          <div className="text-[9px] font-bold text-amber-700 text-center mb-1 leading-tight px-0.5">
+                            {archetypeSkills[archetype].passiveSkill.name}
+                          </div>
+                          
+                          {/* Always Active Indicator */}
+                          <div className="flex items-center justify-center gap-1 mb-1.5">
+                            <div className="w-1 h-1 bg-green-500 rounded-full" />
+                            <span className="text-[7px] text-gray-500 font-medium">常驻效果</span>
+                          </div>
+                          
+                          {/* Short Effect */}
+                          <p className="text-[8px] text-gray-600 text-center leading-tight px-0.5">
+                            {archetypeSkills[archetype].passiveSkill.shortEffect}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Social Positioning - Quote-style card */}
                   <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg px-2.5 py-2 border border-blue-100/50">
