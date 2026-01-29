@@ -220,6 +220,11 @@ export function useAdaptiveAssessment() {
       // Cache current session
       cacheSession({ sessionId: responseData.sessionId, phase: responseData.phase });
     },
+    onError: (error) => {
+      console.error('[AdaptiveAssessment] startMutation onError:', error);
+      // Set initialized to true so the page doesn't stay in loading state forever
+      setIsInitialized(true);
+    },
   });
 
   const answerMutation = useMutation({
