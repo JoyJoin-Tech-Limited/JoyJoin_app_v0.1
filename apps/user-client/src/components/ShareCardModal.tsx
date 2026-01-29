@@ -73,6 +73,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
   const [isPreviewMode, setIsPreviewMode] = useState(true);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -82,6 +83,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
       setSelectedVariantIndex(0);
       setSelectedExpression("starry");
       setIsPreviewMode(true);
+      setIsFlipped(false);
       // Don't reset nickname - let user keep their previous input
     }
   }, [open]);
@@ -411,34 +413,221 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">分享你的专属氛围原型卡片</h2>
           </div>
 
-          {/* Card preview with bottom padding for sticky panel */}
+          {/* Card flip container */}
           <div className="flex justify-center px-2 sm:px-0 pb-2">
-            <AnimatePresence mode="wait">
+            <div className="w-full max-w-[90vw] sm:max-w-full" style={{ perspective: "1000px" }}>
               <motion.div
-                key={`${selectedVariantIndex}-${selectedExpression}`}
-                initial={{ opacity: 0, scale: 0.9, rotateY: -10 }}
-                animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-                exit={{ opacity: 0, scale: 0.9, rotateY: 10 }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                className="w-full max-w-[90vw] sm:max-w-full"
+                animate={{ rotateY: isFlipped ? 180 : 0 }}
+                transition={{ 
+                  duration: 0.4, 
+                  type: "spring", 
+                  stiffness: 260, 
+                  damping: 20 
+                }}
+                style={{ 
+                  transformStyle: "preserve-3d",
+                  position: "relative",
+                  width: "100%"
+                }}
               >
-                <PokemonShareCard
-                  ref={cardRef}
-                  archetype={archetype}
-                  archetypeEnglish={archetypeEnglishNames[archetype] || archetype}
-                  variant={selectedVariant}
-                  illustrationUrl={illustrationUrl}
-                  rankings={shareCardData.rankings}
-                  traitScores={shareCardData.traitScores}
-                  expression={selectedExpression}
-                  nickname={nickname}
-                  isPreview={isPreviewMode}
-                  hasExpressionAsset={hasExpressionVariant}
-                  shareDate={new Date().toISOString().split('T')[0]}
-                />
+                {/* Front side - Card Preview */}
+                <div
+                  style={{
+                    backfaceVisibility: "hidden",
+                    WebkitBackfaceVisibility: "hidden",
+                    position: isFlipped ? "absolute" : "relative",
+                    width: "100%",
+                    top: 0,
+                    left: 0
+                  }}
+                >
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`${selectedVariantIndex}-${selectedExpression}`}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <PokemonShareCard
+                        ref={cardRef}
+                        archetype={archetype}
+                        archetypeEnglish={archetypeEnglishNames[archetype] || archetype}
+                        variant={selectedVariant}
+                        illustrationUrl={illustrationUrl}
+                        rankings={shareCardData.rankings}
+                        traitScores={shareCardData.traitScores}
+                        expression={selectedExpression}
+                        nickname={nickname}
+                        isPreview={isPreviewMode}
+                        hasExpressionAsset={hasExpressionVariant}
+                        shareDate={new Date().toISOString().split('T')[0]}
+                      />
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+
+                {/* Back side - Customization */}
+                <div
+                  style={{
+                    backfaceVisibility: "hidden",
+                    WebkitBackfaceVisibility: "hidden",
+                    transform: "rotateY(180deg)",
+                    position: isFlipped ? "relative" : "absolute",
+                    width: "100%",
+                    top: 0,
+                    left: 0
+                  }}
+                >
+                  <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 rounded-2xl p-6 shadow-xl border-2 border-purple-200 min-h-[500px] flex flex-col">
+                    {/* Header with back button */}
+                    <div className="flex items-center justify-between mb-6">
+                      <Button
+                        variant="ghost"
+                        onClick={() => setIsFlipped(false)}
+                        className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+                      >
+                        <span className="text-lg">←</span>
+                        <span>返回</span>
+                      </Button>
+                      <h3 className="text-lg font-bold text-gray-800">定制你的卡片</h3>
+                      <div className="w-20" /> {/* Spacer for centering */}
+                    </div>
+
+                    {/* Card ID input */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Card ID
+                      </label>
+                      <Input
+                        type="text"
+                        placeholder="输入你的昵称"
+                        value={nickname}
+                        onChange={(e) => setNickname(e.target.value)}
+                        maxLength={20}
+                        className="text-center text-base font-medium"
+                      />
+                      <p className="text-xs text-gray-500 text-center mt-1.5">
+                        显示在卡片上
+                      </p>
+                    </div>
+
+                    {/* Expression selector */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-semibold text-gray-700 mb-3">
+                        表情选择
+                      </label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {expressionOptions.map((expr) => (
+                          <motion.button
+                            key={expr.id}
+                            onClick={() => setSelectedExpression(expr.id)}
+                            className={`
+                              relative aspect-square rounded-xl flex items-center justify-center
+                              transition-all duration-200
+                              ${selectedExpression === expr.id
+                                ? 'bg-primary text-white shadow-lg scale-105'
+                                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-gray-300'}
+                            `}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <span className="text-3xl">{expr.emoji}</span>
+                            {selectedExpression === expr.id && (
+                              <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-md">
+                                <Check className="w-3 h-3 text-primary" />
+                              </div>
+                            )}
+                          </motion.button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Background color selector */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-semibold text-gray-700 mb-3">
+                        背景配色
+                      </label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {variants.map((variant, index) => (
+                          <motion.button
+                            key={variant.name}
+                            onClick={() => setSelectedVariantIndex(index)}
+                            className={`
+                              relative aspect-square rounded-xl overflow-hidden
+                              transition-all duration-200
+                              ${selectedVariantIndex === index
+                                ? 'ring-4 ring-primary scale-105 shadow-lg'
+                                : 'ring-2 ring-gray-200 hover:ring-gray-300'}
+                            `}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <div className={`w-full h-full bg-gradient-to-br ${variant.gradient}`} />
+                            {selectedVariantIndex === index && (
+                              <div className="absolute inset-0 bg-white/30 flex items-center justify-center">
+                                <Check className="w-6 h-6 text-white drop-shadow-lg" />
+                              </div>
+                            )}
+                          </motion.button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Confirm button */}
+                    <div className="mt-auto">
+                      <Button
+                        onClick={() => setIsFlipped(false)}
+                        className="w-full py-6 text-lg font-bold bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                      >
+                        确认定制
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </motion.div>
-            </AnimatePresence>
+            </div>
           </div>
+
+          {/* Action bar below card */}
+          {!isFlipped && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-center gap-3"
+            >
+              <Button
+                onClick={() => setIsFlipped(true)}
+                className="flex-1 py-6 text-base font-bold bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              >
+                定制卡片
+              </Button>
+              <Button
+                onClick={handleShare}
+                disabled={isGenerating}
+                variant="outline"
+                size="icon"
+                className="h-14 w-14 rounded-full border-2"
+              >
+                {isGenerating ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Share2 className="w-5 h-5" />
+                )}
+              </Button>
+              <Button
+                onClick={handleDownload}
+                disabled={isGenerating}
+                variant="outline"
+                size="icon"
+                className="h-14 w-14 rounded-full border-2"
+              >
+                {isGenerating ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Download className="w-5 h-5" />
+                )}
+              </Button>
+            </motion.div>
+          )}
 
           {/* Progress bar during generation */}
           {isGenerating && generationProgress > 0 && (
@@ -463,150 +652,6 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
               </div>
             </motion.div>
           )}
-
-          {/* Sticky Glassmorphic Customization Panel */}
-          <div className="sticky bottom-0 left-0 right-0 z-10 backdrop-blur-xl bg-white/85 border-t border-gray-200/50 rounded-t-2xl shadow-2xl px-4 pb-4 pt-3 mt-4">
-            {/* Drag handle indicator */}
-            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3" aria-hidden="true" />
-            
-            {/* Customization title */}
-            <h3 className="text-sm font-bold text-gray-900 mb-3 text-center">
-              ✨ 自定义你的卡片
-            </h3>
-
-            {/* Nickname input - Compact */}
-            <div className="mb-3">
-              <Input
-                id="nickname"
-                type="text"
-                placeholder="输入昵称（可选）"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                maxLength={20}
-                className="text-center text-sm font-medium bg-white/90 backdrop-blur-sm border-gray-300/50"
-              />
-              <p className="text-[10px] text-gray-500 text-center mt-1">
-                昵称将显示在卡片上
-              </p>
-            </div>
-
-            {/* Color Variants & Expression in 2-column layout */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              {/* Color Variants - Compact Grid */}
-              <div>
-                <p className="text-xs font-semibold text-gray-700 mb-1.5">配色</p>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {variants.map((variant, index) => (
-                    <motion.button
-                      key={variant.name}
-                      onClick={() => setSelectedVariantIndex(index)}
-                      className={`
-                        relative aspect-square rounded-lg overflow-hidden
-                        ${selectedVariantIndex === index ? 'ring-2 ring-primary scale-105' : ''}
-                        transition-all duration-200
-                      `}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <div className={`w-full h-full bg-gradient-to-br ${variant.gradient}`} />
-                      {selectedVariantIndex === index && (
-                        <div className="absolute inset-0 bg-white/30 flex items-center justify-center">
-                          <Check className="w-4 h-4 text-white drop-shadow" />
-                        </div>
-                      )}
-                    </motion.button>
-                  ))}
-                </div>
-                {/* Variant mood description */}
-                {selectedVariant && (
-                  <p className="text-[9px] text-gray-500 text-center mt-1 italic line-clamp-1">
-                    {selectedVariant.mood}
-                  </p>
-                )}
-              </div>
-
-              {/* Expression Selector - Compact */}
-              <div>
-                <p className="text-xs font-semibold text-gray-700 mb-1.5">表情</p>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {expressionOptions.map((expr) => (
-                    <motion.button
-                      key={expr.id}
-                      onClick={() => setSelectedExpression(expr.id)}
-                      className={`
-                        relative aspect-square rounded-lg flex items-center justify-center transition-all
-                        ${selectedExpression === expr.id 
-                          ? 'bg-primary text-white shadow-md scale-105' 
-                          : 'bg-white/90 text-gray-700 border border-gray-200'}
-                      `}
-                      whileTap={{ scale: 0.96 }}
-                    >
-                      <span className="text-2xl">{expr.emoji}</span>
-                      {selectedExpression === expr.id && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow">
-                          <span className="text-primary text-[10px]">✓</span>
-                        </div>
-                      )}
-                    </motion.button>
-                  ))}
-                </div>
-                {/* Expression label */}
-                {selectedExpression && (
-                  <p className="text-[9px] text-gray-500 text-center mt-1">
-                    {expressionOptions.find(e => e.id === selectedExpression)?.label}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Action buttons - kept at bottom of sticky panel */}
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                onClick={handleDownload}
-                disabled={isGenerating}
-                className="relative py-6 rounded-2xl font-bold bg-gradient-to-br from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg overflow-hidden group border-0"
-              >
-                <div className="absolute inset-0 rounded-2xl bg-blue-700 translate-y-1 -z-10" />
-                <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
-                
-                <span className="relative z-10">
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
-                      生成中...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4 mr-2 inline" />
-                      下载图片
-                    </>
-                  )}
-                </span>
-              </Button>
-              
-              <Button
-                onClick={handleShare}
-                disabled={isGenerating}
-                className="relative py-6 rounded-2xl font-bold bg-gradient-to-br from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg overflow-hidden group border-0"
-              >
-                <div className="absolute inset-0 rounded-2xl bg-purple-700 translate-y-1 -z-10" />
-                <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
-                
-                <span className="relative z-10">
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
-                      生成中...
-                    </>
-                  ) : (
-                    <>
-                      <Share2 className="w-4 h-4 mr-2 inline" />
-                      分享卡片
-                    </>
-                  )}
-                </span>
-              </Button>
-            </div>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
