@@ -43,9 +43,9 @@ Successfully transformed the Pokemon share cards from basic keyword badges into 
 ## 🎴 Complete Skill Reference
 
 ### Energy Cost Distribution
-- **1 Energy** (6 archetypes): Quick-cast abilities
+- **1 Energy** (7 archetypes): Quick-cast abilities
   - 机智狐, 淡定海豚, 织网蛛, 夸夸豚, 定心大象, 灵感章鱼, 隐身猫
-- **2 Energy** (5 archetypes): Medium-cost abilities
+- **2 Energy** (4 archetypes): Medium-cost abilities
   - 开心柯基, 太阳鸡, 暖心熊, 沉思猫头鹰
 - **3 Energy** (1 archetype): High-cost ultimate
   - 稳如龟 (True to its slow but powerful nature)
