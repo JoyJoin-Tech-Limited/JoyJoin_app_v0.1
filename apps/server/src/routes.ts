@@ -10817,6 +10817,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { preSignupAnswers, sessionId: existingSessionId, forceNew } = req.body;
       const userId = req.session?.userId || null;
       
+      console.log('[Assessment V4 Start] Called with:', {
+        existingSessionId,
+        userId,
+        forceNew,
+        preSignupAnswersCount: preSignupAnswers?.length || 0,
+        hasSession: !!req.session,
+      });
+      
       // Import adaptive engine
       const { 
         initializeEngineState, 
@@ -10939,7 +10947,15 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       // Get next question
       const nextQuestion = selectNextQuestion(engineState);
       
-      res.json({
+      console.log('[Assessment V4 Start] Engine state:', {
+        answeredCount: engineState.answeredQuestionIds.size,
+        skipCount: engineState.skipCount,
+        phase: session.phase,
+        hasNextQuestion: !!nextQuestion,
+        nextQuestionId: nextQuestion?.id,
+      });
+      
+      const response = {
         sessionId: session.id,
         phase: session.phase,
         currentQuestionIndex: engineState.answeredQuestionIds.size,
@@ -10960,7 +10976,17 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         },
         currentMatches: engineState.currentMatches.slice(0, 3),
         isComplete: nextQuestion === null,
+      };
+      
+      console.log('[Assessment V4 Start] Response:', {
+        sessionId: response.sessionId,
+        phase: response.phase,
+        answered: response.progress.answered,
+        hasNextQuestion: !!response.nextQuestion,
+        isComplete: response.isComplete,
       });
+      
+      res.json(response);
     } catch (error: any) {
       console.error('[Assessment V4 Start] Error:', error);
       res.status(500).json({ message: 'Failed to start assessment', error: error.message });
@@ -10973,12 +10999,19 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { sessionId } = req.params;
       const { questionId, selectedOption } = req.body;
       
+      console.log('[Assessment V4 Answer] Called with:', {
+        sessionId,
+        questionId,
+        selectedOption,
+      });
+      
       if (!questionId || !selectedOption) {
         return res.status(400).json({ message: 'questionId and selectedOption are required' });
       }
       
       const session = await storage.getAssessmentSession(sessionId);
       if (!session) {
+        console.error('[Assessment V4 Answer] Session not found:', sessionId);
         return res.status(404).json({ message: 'Session not found' });
       }
       
@@ -11136,6 +11169,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           currentMatches: engineState.currentMatches.slice(0, 3),
           encouragement,
         });
+        
+        console.log('[Assessment V4 Answer] Response:', {
+          isComplete: false,
+          hasNextQuestion: !!nextQuestion,
+          nextQuestionId: nextQuestion?.id,
+          answered: answers.length,
+        });
       }
     } catch (error: any) {
       console.error('[Assessment V4 Answer] Error:', error);
@@ -11149,12 +11189,18 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { sessionId } = req.params;
       const { questionId } = req.body;
       
+      console.log('[Assessment V4 Skip] Called with:', {
+        sessionId,
+        questionId,
+      });
+      
       if (!questionId) {
         return res.status(400).json({ message: 'questionId is required' });
       }
       
       const session = await storage.getAssessmentSession(sessionId);
       if (!session) {
+        console.error('[Assessment V4 Skip] Session not found:', sessionId);
         return res.status(404).json({ message: 'Session not found' });
       }
       
@@ -11279,8 +11325,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { sessionId } = req.params;
       const userId = req.user!.id;
       
+      console.log('[Assessment V4 Link] Called with:', {
+        sessionId,
+        userId,
+      });
+      
       const session = await storage.getAssessmentSession(sessionId);
       if (!session) {
+        console.error('[Assessment V4 Link] Session not found:', sessionId);
         return res.status(404).json({ message: 'Session not found' });
       }
       
@@ -11321,7 +11373,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const nextQuestion = selectNextQuestion(engineState);
       
       // Return success with next question data
-      res.json({ 
+      const responseData = { 
         success: true,
         phase: 'post_signup',
         nextQuestion: nextQuestion ? {
@@ -11340,7 +11392,16 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           estimatedRemaining: Math.max(0, engineState.config.minQuestions - engineState.answeredQuestionIds.size),
         },
         currentMatches: engineState.currentMatches.slice(0, 3),
+      };
+      
+      console.log('[Assessment V4 Link] Response:', {
+        success: true,
+        hasNextQuestion: !!nextQuestion,
+        nextQuestionId: nextQuestion?.id,
+        answered: engineState.answeredQuestionIds.size,
       });
+      
+      res.json(responseData);
     } catch (error: any) {
       console.error('[Assessment V4 Link] Error:', error);
       res.status(500).json({ message: 'Failed to link user', error: error.message });
@@ -11420,7 +11481,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           return res.json({ 
             sessionId: session.id, 
             message: 'All answers already synced',
-            answersCount: existingAnswers.length 
+            totalCount: existingAnswers.length,
+            syncedCount: 0
           });
         }
 
@@ -11534,7 +11596,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
       res.json({ 
         sessionId: session.id, 
-        answersCount: uniqueAnswers.length,
+        totalCount: uniqueAnswers.length,
+        syncedCount: uniqueAnswers.length,
         message: 'Pre-signup answers synced successfully'
       });
     } catch (error: any) {
