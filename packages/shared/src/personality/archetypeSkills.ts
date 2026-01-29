@@ -346,7 +346,7 @@ export function getArchetypeSkills(archetype: string): ArchetypeSkillSet | undef
  * @returns True if skills exist for this archetype
  */
 export function hasArchetypeSkills(archetype: string): boolean {
-  return archetype in archetypeSkills;
+  return Object.hasOwn(archetypeSkills, archetype);
 }
 
 /**
