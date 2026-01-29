@@ -165,8 +165,8 @@ Energy costs are balanced by archetype activity level:
 - **3 Energy**: High-cost skills (deep insight, rare)
 
 Distribution:
-- 1 Energy: 6 archetypes
-- 2 Energy: 5 archetypes
+- 1 Energy: 7 archetypes
+- 2 Energy: 4 archetypes
 - 3 Energy: 1 archetype (稳如龟 - slow but powerful)
 
 ## 🧪 Testing

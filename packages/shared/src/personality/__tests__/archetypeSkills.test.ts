@@ -49,7 +49,7 @@ describe('archetypeSkills', () => {
         expect(activeSkill.name.length).toBeGreaterThan(0);
         expect(activeSkill.energyType.length).toBeGreaterThan(0);
         expect(activeSkill.shortEffect.length).toBeGreaterThan(0);
-        expect(activeSkill.shortEffect.length).toBeLessThanOrEqual(20); // Allow some flexibility
+        expect(activeSkill.shortEffect.length).toBeLessThanOrEqual(15); // Match docs constraint
         expect(activeSkill.fullEffect.length).toBeGreaterThan(0);
         expect(activeSkill.icon.length).toBeGreaterThan(0);
       });
@@ -63,7 +63,7 @@ describe('archetypeSkills', () => {
         expect(passiveSkill.energyCost).toBe(0);
         expect(passiveSkill.name.length).toBeGreaterThan(0);
         expect(passiveSkill.shortEffect.length).toBeGreaterThan(0);
-        expect(passiveSkill.shortEffect.length).toBeLessThanOrEqual(20); // Allow some flexibility
+        expect(passiveSkill.shortEffect.length).toBeLessThanOrEqual(15); // Match docs constraint
         expect(passiveSkill.fullEffect.length).toBeGreaterThan(0);
         expect(passiveSkill.icon.length).toBeGreaterThan(0);
       });
@@ -115,6 +115,13 @@ describe('archetypeSkills', () => {
       expect(getArchetypeSkills('不存在')).toBeUndefined();
       expect(getArchetypeSkills('')).toBeUndefined();
     });
+
+    it('should return undefined for prototype keys', () => {
+      expect(getArchetypeSkills('toString')).toBeUndefined();
+      expect(getArchetypeSkills('__proto__')).toBeUndefined();
+      expect(getArchetypeSkills('constructor')).toBeUndefined();
+      expect(getArchetypeSkills('hasOwnProperty')).toBeUndefined();
+    });
   });
 
   describe('hasArchetypeSkills', () => {
@@ -127,6 +134,13 @@ describe('archetypeSkills', () => {
     it('should return false for invalid archetype', () => {
       expect(hasArchetypeSkills('不存在')).toBe(false);
       expect(hasArchetypeSkills('')).toBe(false);
+    });
+
+    it('should return false for prototype keys', () => {
+      expect(hasArchetypeSkills('toString')).toBe(false);
+      expect(hasArchetypeSkills('__proto__')).toBe(false);
+      expect(hasArchetypeSkills('constructor')).toBe(false);
+      expect(hasArchetypeSkills('hasOwnProperty')).toBe(false);
     });
   });
 
