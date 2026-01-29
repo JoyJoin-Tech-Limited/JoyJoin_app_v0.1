@@ -10850,6 +10850,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       // Resume existing session UNLESS user explicitly wants to restart
       if (userId && !isExplicitRestart) {
         const existingUserSession = await storage.getAssessmentSessionByUser(userId);
+        console.log('[V4 Start] Checked for existing user session:', {
+          userId,
+          foundSession: !!existingUserSession,
+          sessionId: existingUserSession?.id,
+          isCompleted: existingUserSession?.completedAt ? true : false,
+        });
+        
         if (existingUserSession && !existingUserSession.completedAt) {
           // Resume existing session - it was created by presignup-sync
           session = existingUserSession;
@@ -10872,6 +10879,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         } else if (existingUserSession && existingUserSession.completedAt) {
           // User has a completed session - start fresh
           console.log('[V4 Start] User has completed session, creating new one');
+        } else {
+          console.log('[V4 Start] No existing session found for user:', userId);
         }
       } else if (userId && isExplicitRestart) {
         console.log('[V4 Start] Explicit restart requested for user:', userId);
@@ -10879,10 +10888,18 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       
       // If resuming by session ID (anonymous pre-signup flow)
       if (!session && existingSessionId && !forceNew) {
+        console.log('[V4 Start] Attempting to resume by sessionId:', existingSessionId);
         session = await storage.getAssessmentSession(existingSessionId);
         if (!session) {
+          console.error('[V4 Start] Session not found by sessionId:', existingSessionId);
           return res.status(404).json({ message: 'Session not found' });
         }
+        
+        console.log('[V4 Start] Found session by sessionId:', {
+          sessionId: session.id,
+          userId: session.userId,
+          phase: session.phase,
+        });
         
         // Reconstruct engine state from session data
         const answers = await storage.getAssessmentAnswers(existingSessionId);
@@ -10897,6 +10914,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
             engineState = processAnswer(engineState, question, answer.selectedOption);
           }
         }
+        
+        console.log('[V4 Start] Replayed', answers.length, 'answers for session:', existingSessionId);
       }
       
       // Create new session if none exists
@@ -10941,7 +10960,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       
       // Ensure engineState is initialized (should always be by this point)
       if (!engineState) {
+        console.log('[V4 Start] Engine state was not initialized, initializing now');
         engineState = initializeEngineState(assessmentConfig);
+      }
+      
+      // Ensure session exists by this point
+      if (!session) {
+        console.error('[V4 Start] No session available after all checks - this should not happen');
+        return res.status(500).json({ message: 'Failed to create or find session' });
       }
       
       // Get next question
