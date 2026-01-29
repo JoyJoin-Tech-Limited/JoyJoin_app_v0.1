@@ -10817,6 +10817,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { preSignupAnswers, sessionId: existingSessionId, forceNew } = req.body;
       const userId = req.session?.userId || null;
       
+      console.log('[Assessment V4 Start] Called with:', {
+        existingSessionId,
+        userId,
+        forceNew,
+        preSignupAnswersCount: preSignupAnswers?.length || 0,
+        hasSession: !!req.session,
+      });
+      
       // Import adaptive engine
       const { 
         initializeEngineState, 
@@ -10842,6 +10850,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       // Resume existing session UNLESS user explicitly wants to restart
       if (userId && !isExplicitRestart) {
         const existingUserSession = await storage.getAssessmentSessionByUser(userId);
+        console.log('[V4 Start] Checked for existing user session:', {
+          userId,
+          foundSession: !!existingUserSession,
+          sessionId: existingUserSession?.id,
+          isCompleted: existingUserSession?.completedAt ? true : false,
+        });
+        
         if (existingUserSession && !existingUserSession.completedAt) {
           // Resume existing session - it was created by presignup-sync
           session = existingUserSession;
@@ -10864,6 +10879,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         } else if (existingUserSession && existingUserSession.completedAt) {
           // User has a completed session - start fresh
           console.log('[V4 Start] User has completed session, creating new one');
+        } else {
+          console.log('[V4 Start] No existing session found for user:', userId);
         }
       } else if (userId && isExplicitRestart) {
         console.log('[V4 Start] Explicit restart requested for user:', userId);
@@ -10871,10 +10888,18 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       
       // If resuming by session ID (anonymous pre-signup flow)
       if (!session && existingSessionId && !forceNew) {
+        console.log('[V4 Start] Attempting to resume by sessionId:', existingSessionId);
         session = await storage.getAssessmentSession(existingSessionId);
         if (!session) {
+          console.error('[V4 Start] Session not found by sessionId:', existingSessionId);
           return res.status(404).json({ message: 'Session not found' });
         }
+        
+        console.log('[V4 Start] Found session by sessionId:', {
+          sessionId: session.id,
+          userId: session.userId,
+          phase: session.phase,
+        });
         
         // Reconstruct engine state from session data
         const answers = await storage.getAssessmentAnswers(existingSessionId);
@@ -10889,6 +10914,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
             engineState = processAnswer(engineState, question, answer.selectedOption);
           }
         }
+        
+        console.log('[V4 Start] Replayed', answers.length, 'answers for session:', existingSessionId);
       }
       
       // Create new session if none exists
@@ -10933,13 +10960,28 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       
       // Ensure engineState is initialized (should always be by this point)
       if (!engineState) {
+        console.log('[V4 Start] Engine state was not initialized, initializing now');
         engineState = initializeEngineState(assessmentConfig);
+      }
+      
+      // Ensure session exists by this point
+      if (!session) {
+        console.error('[V4 Start] No session available after all checks - this should not happen');
+        return res.status(500).json({ message: 'Failed to create or find session' });
       }
       
       // Get next question
       const nextQuestion = selectNextQuestion(engineState);
       
-      res.json({
+      console.log('[Assessment V4 Start] Engine state:', {
+        answeredCount: engineState.answeredQuestionIds.size,
+        skipCount: engineState.skipCount,
+        phase: session.phase,
+        hasNextQuestion: !!nextQuestion,
+        nextQuestionId: nextQuestion?.id,
+      });
+      
+      const response = {
         sessionId: session.id,
         phase: session.phase,
         currentQuestionIndex: engineState.answeredQuestionIds.size,
@@ -10960,7 +11002,17 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         },
         currentMatches: engineState.currentMatches.slice(0, 3),
         isComplete: nextQuestion === null,
+      };
+      
+      console.log('[Assessment V4 Start] Response:', {
+        sessionId: response.sessionId,
+        phase: response.phase,
+        answered: response.progress.answered,
+        hasNextQuestion: !!response.nextQuestion,
+        isComplete: response.isComplete,
       });
+      
+      res.json(response);
     } catch (error: any) {
       console.error('[Assessment V4 Start] Error:', error);
       res.status(500).json({ message: 'Failed to start assessment', error: error.message });
@@ -10973,12 +11025,19 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { sessionId } = req.params;
       const { questionId, selectedOption } = req.body;
       
+      console.log('[Assessment V4 Answer] Called with:', {
+        sessionId,
+        questionId,
+        selectedOption,
+      });
+      
       if (!questionId || !selectedOption) {
         return res.status(400).json({ message: 'questionId and selectedOption are required' });
       }
       
       const session = await storage.getAssessmentSession(sessionId);
       if (!session) {
+        console.error('[Assessment V4 Answer] Session not found:', sessionId);
         return res.status(404).json({ message: 'Session not found' });
       }
       
@@ -11136,6 +11195,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           currentMatches: engineState.currentMatches.slice(0, 3),
           encouragement,
         });
+        
+        console.log('[Assessment V4 Answer] Response:', {
+          isComplete: false,
+          hasNextQuestion: !!nextQuestion,
+          nextQuestionId: nextQuestion?.id,
+          answered: answers.length,
+        });
       }
     } catch (error: any) {
       console.error('[Assessment V4 Answer] Error:', error);
@@ -11149,12 +11215,18 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { sessionId } = req.params;
       const { questionId } = req.body;
       
+      console.log('[Assessment V4 Skip] Called with:', {
+        sessionId,
+        questionId,
+      });
+      
       if (!questionId) {
         return res.status(400).json({ message: 'questionId is required' });
       }
       
       const session = await storage.getAssessmentSession(sessionId);
       if (!session) {
+        console.error('[Assessment V4 Skip] Session not found:', sessionId);
         return res.status(404).json({ message: 'Session not found' });
       }
       
@@ -11279,8 +11351,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { sessionId } = req.params;
       const userId = req.user!.id;
       
+      console.log('[Assessment V4 Link] Called with:', {
+        sessionId,
+        userId,
+      });
+      
       const session = await storage.getAssessmentSession(sessionId);
       if (!session) {
+        console.error('[Assessment V4 Link] Session not found:', sessionId);
         return res.status(404).json({ message: 'Session not found' });
       }
       
@@ -11321,7 +11399,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const nextQuestion = selectNextQuestion(engineState);
       
       // Return success with next question data
-      res.json({ 
+      const responseData = { 
         success: true,
         phase: 'post_signup',
         nextQuestion: nextQuestion ? {
@@ -11340,7 +11418,16 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           estimatedRemaining: Math.max(0, engineState.config.minQuestions - engineState.answeredQuestionIds.size),
         },
         currentMatches: engineState.currentMatches.slice(0, 3),
+      };
+      
+      console.log('[Assessment V4 Link] Response:', {
+        success: true,
+        hasNextQuestion: !!nextQuestion,
+        nextQuestionId: nextQuestion?.id,
+        answered: engineState.answeredQuestionIds.size,
       });
+      
+      res.json(responseData);
     } catch (error: any) {
       console.error('[Assessment V4 Link] Error:', error);
       res.status(500).json({ message: 'Failed to link user', error: error.message });
@@ -11420,7 +11507,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           return res.json({ 
             sessionId: session.id, 
             message: 'All answers already synced',
-            answersCount: existingAnswers.length 
+            totalCount: existingAnswers.length,
+            syncedCount: 0
           });
         }
 
@@ -11534,7 +11622,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
       res.json({ 
         sessionId: session.id, 
-        answersCount: uniqueAnswers.length,
+        totalCount: uniqueAnswers.length,
+        syncedCount: uniqueAnswers.length,
         message: 'Pre-signup answers synced successfully'
       });
     } catch (error: any) {

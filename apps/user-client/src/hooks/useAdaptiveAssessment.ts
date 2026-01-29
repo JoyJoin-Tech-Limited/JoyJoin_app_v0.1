@@ -192,6 +192,16 @@ export function useAdaptiveAssessment() {
     },
     onSuccess: (data) => {
       const { _wasResume, ...responseData } = data as StartResponse & { _wasResume?: boolean };
+      console.log('[AdaptiveAssessment] startMutation onSuccess:', {
+        sessionId: responseData.sessionId,
+        phase: responseData.phase,
+        hasNextQuestion: !!responseData.nextQuestion,
+        nextQuestionId: responseData.nextQuestion?.id,
+        answered: responseData.progress?.answered,
+        isComplete: responseData.isComplete,
+        _wasResume,
+      });
+      
       setSessionId(responseData.sessionId);
       setPhase(responseData.phase);
       setCurrentQuestion(responseData.nextQuestion);
@@ -209,6 +219,11 @@ export function useAdaptiveAssessment() {
       }
       // Cache current session
       cacheSession({ sessionId: responseData.sessionId, phase: responseData.phase });
+    },
+    onError: (error) => {
+      console.error('[AdaptiveAssessment] startMutation onError:', error);
+      // Set initialized to true so the page doesn't stay in loading state forever
+      setIsInitialized(true);
     },
   });
 
@@ -338,8 +353,12 @@ export function useAdaptiveAssessment() {
   });
 
   const startAssessment = useCallback(async (resumeFromCache = true) => {
+    console.log('[AdaptiveAssessment] startAssessment called', { resumeFromCache });
+    
     // Check if we have a synced session from onboarding (highest priority)
     const syncedSessionId = localStorage.getItem("joyjoin_synced_session_id");
+    console.log('[AdaptiveAssessment] Checking for synced session:', { syncedSessionId });
+    
     if (syncedSessionId) {
       // Clear any stale cached answers since they've been synced
       clearCache();
@@ -348,9 +367,12 @@ export function useAdaptiveAssessment() {
       setSessionId(syncedSessionId);
       setPhase("assessment");
       
+      console.log('[AdaptiveAssessment] Found synced session, resuming:', syncedSessionId);
+      
       // NEW: Check if we already have a current question (from link-user response)
       // If so, skip the API call
       if (currentQuestion) {
+        console.log('[AdaptiveAssessment] Already have current question, skipping API call');
         localStorage.removeItem("joyjoin_synced_session_id");
         localStorage.removeItem("joyjoin_synced_answer_count");
         setIsInitialized(true);
@@ -358,6 +380,7 @@ export function useAdaptiveAssessment() {
       }
       
       try {
+        console.log('[AdaptiveAssessment] Calling /start with synced sessionId:', syncedSessionId);
         await startMutation.mutateAsync({ 
           sessionId: syncedSessionId, 
           forceNew: false 
@@ -365,8 +388,10 @@ export function useAdaptiveAssessment() {
         // Only clear synced session marker AFTER successful resume
         localStorage.removeItem("joyjoin_synced_session_id");
         localStorage.removeItem("joyjoin_synced_answer_count");
+        console.log('[AdaptiveAssessment] Successfully resumed from synced session');
       } catch (error) {
         // If resume fails, clear the marker so we don't get stuck
+        console.error('[AdaptiveAssessment] Failed to resume from synced session:', error);
         localStorage.removeItem("joyjoin_synced_session_id");
         localStorage.removeItem("joyjoin_synced_answer_count");
         throw error;
