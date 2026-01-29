@@ -125,6 +125,10 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
       setIsGenerating(true);
       setGenerationProgress(0);
       
+      // Ensure card is flipped to front before capturing
+      setIsFlipped(false);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Step 1: Disable animations (20%)
       setIsPreviewMode(false);
       setGenerationProgress(20);
@@ -427,18 +431,17 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                 style={{ 
                   transformStyle: "preserve-3d",
                   position: "relative",
-                  width: "100%"
+                  width: "100%",
+                  aspectRatio: "9 / 16"
                 }}
+                className="relative"
               >
                 {/* Front side - Card Preview */}
                 <div
+                  className="absolute inset-0"
                   style={{
                     backfaceVisibility: "hidden",
-                    WebkitBackfaceVisibility: "hidden",
-                    position: isFlipped ? "absolute" : "relative",
-                    width: "100%",
-                    top: 0,
-                    left: 0
+                    WebkitBackfaceVisibility: "hidden"
                   }}
                 >
                   <AnimatePresence mode="wait">
@@ -448,6 +451,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
+                      className="h-full"
                     >
                       <PokemonShareCard
                         ref={cardRef}
@@ -469,17 +473,14 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
 
                 {/* Back side - Customization */}
                 <div
+                  className="absolute inset-0"
                   style={{
                     backfaceVisibility: "hidden",
                     WebkitBackfaceVisibility: "hidden",
-                    transform: "rotateY(180deg)",
-                    position: isFlipped ? "relative" : "absolute",
-                    width: "100%",
-                    top: 0,
-                    left: 0
+                    transform: "rotateY(180deg)"
                   }}
                 >
-                  <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 rounded-2xl p-6 shadow-xl border-2 border-purple-200 min-h-[500px] flex flex-col">
+                  <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 rounded-2xl p-6 shadow-xl border-2 border-purple-200 h-full flex flex-col overflow-y-auto">
                     {/* Header with back button */}
                     <div className="flex items-center justify-between mb-6">
                       <Button
@@ -497,7 +498,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                     {/* Card ID input */}
                     <div className="mb-6">
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Card ID
+                        昵称
                       </label>
                       <Input
                         type="text"
@@ -596,6 +597,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
             >
               <Button
                 onClick={() => setIsFlipped(true)}
+                disabled={isGenerating}
                 className="flex-1 py-6 text-base font-bold bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
               >
                 定制卡片
@@ -606,6 +608,8 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                 variant="outline"
                 size="icon"
                 className="h-14 w-14 rounded-full border-2"
+                aria-label="分享卡片"
+                title="分享卡片"
               >
                 {isGenerating ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -619,6 +623,8 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                 variant="outline"
                 size="icon"
                 className="h-14 w-14 rounded-full border-2"
+                aria-label="下载图片"
+                title="下载图片"
               >
                 {isGenerating ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
