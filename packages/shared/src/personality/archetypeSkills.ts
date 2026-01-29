@@ -339,7 +339,7 @@ export const archetypeSkills = {
  * @returns Skill set or undefined if archetype not found
  */
 export function getArchetypeSkills(archetype: string): ArchetypeSkillSet | undefined {
-  return Object.hasOwn(archetypeSkills, archetype) ? archetypeSkills[archetype as ArchetypeName] : undefined;
+  return Object.prototype.hasOwnProperty.call(archetypeSkills, archetype) ? archetypeSkills[archetype as ArchetypeName] : undefined;
 }
 
 /**
@@ -348,7 +348,7 @@ export function getArchetypeSkills(archetype: string): ArchetypeSkillSet | undef
  * @returns True if skills exist for this archetype
  */
 export function hasArchetypeSkills(archetype: string): boolean {
-  return Object.hasOwn(archetypeSkills, archetype);
+  return Object.prototype.hasOwnProperty.call(archetypeSkills, archetype);
 }
 
 /**
