@@ -13,7 +13,7 @@ import logoFull from "@/assets/joyjoin-logo-full.png";
 import { getCardImagePath, hasCardImage } from "@/lib/archetypeCardImages";
 import { haptics } from "@/lib/haptics";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
-import { archetypeSkills } from "@shared/personality/archetypeSkills";
+import { getArchetypeSkills } from "@shared/personality/archetypeSkills";
 
 // Module-level constants to avoid recreating on each render
 const GRID_COLS_MAP: Record<number, string> = {
@@ -68,6 +68,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
     
     // Use card image if available and expression is provided, otherwise fallback to illustrationUrl
     const finalImageUrl = cardImagePath || illustrationUrl;
+
+    // Get skills for this archetype (safely)
+    const skillSet = getArchetypeSkills(archetype);
 
     // Reset imageLoaded state when finalImageUrl changes
     useEffect(() => {
@@ -335,7 +338,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   </div>
 
                   {/* SKILL TREE SECTION - Pokemon TCG Style */}
-                  {archetypeSkills[archetype] && (
+                  {skillSet && (
                     <div className="bg-gradient-to-br from-purple-50/90 to-pink-50/90 rounded-xl p-2.5 border border-purple-200/30 shadow-inner">
                       {/* Header with Attribute */}
                       <div className="flex items-center justify-between mb-2">
@@ -347,7 +350,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                         </div>
                         <div className="text-[9px] font-bold px-2 py-0.5 bg-white/80 rounded-full border border-purple-200/50 shadow-sm"
                              style={{ color: variant.primaryColor }}>
-                          {archetypeSkills[archetype].attribute}
+                          {skillSet.attribute}
                         </div>
                       </div>
                       
@@ -365,27 +368,27 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                           
                           {/* Icon Circle */}
                           <div className="w-7 h-7 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mb-1.5 mx-auto border-2 border-purple-200/50">
-                            <span className="text-base">{archetypeSkills[archetype].activeSkill.icon}</span>
+                            <span className="text-base">{skillSet.activeSkill.icon}</span>
                           </div>
                           
                           {/* Skill Name */}
                           <div className="text-[9px] font-bold text-purple-700 text-center mb-1 leading-tight px-0.5">
-                            {archetypeSkills[archetype].activeSkill.name}
+                            {skillSet.activeSkill.name}
                           </div>
                           
                           {/* Energy Cost */}
                           <div className="flex items-center justify-center gap-0.5 mb-1.5 bg-purple-50/60 rounded-full py-0.5 px-1.5 mx-auto w-fit">
                             <span className="text-[9px] font-bold text-purple-700">
-                              {archetypeSkills[archetype].activeSkill.energyCost}
+                              {skillSet.activeSkill.energyCost}
                             </span>
                             <span className="text-xs">
-                              {archetypeSkills[archetype].activeSkill.energyType}
+                              {skillSet.activeSkill.energyType}
                             </span>
                           </div>
                           
                           {/* Short Effect */}
                           <p className="text-[8px] text-gray-600 text-center leading-tight px-0.5">
-                            {archetypeSkills[archetype].activeSkill.shortEffect}
+                            {skillSet.activeSkill.shortEffect}
                           </p>
                         </div>
                         
@@ -398,12 +401,12 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                           
                           {/* Icon Circle */}
                           <div className="w-7 h-7 bg-gradient-to-br from-amber-100 to-yellow-100 rounded-full flex items-center justify-center mb-1.5 mx-auto border-2 border-amber-200/50">
-                            <span className="text-base">{archetypeSkills[archetype].passiveSkill.icon}</span>
+                            <span className="text-base">{skillSet.passiveSkill.icon}</span>
                           </div>
                           
                           {/* Skill Name */}
                           <div className="text-[9px] font-bold text-amber-700 text-center mb-1 leading-tight px-0.5">
-                            {archetypeSkills[archetype].passiveSkill.name}
+                            {skillSet.passiveSkill.name}
                           </div>
                           
                           {/* Always Active Indicator */}
@@ -414,7 +417,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                           
                           {/* Short Effect */}
                           <p className="text-[8px] text-gray-600 text-center leading-tight px-0.5">
-                            {archetypeSkills[archetype].passiveSkill.shortEffect}
+                            {skillSet.passiveSkill.shortEffect}
                           </p>
                         </div>
                       </div>

@@ -12,6 +12,8 @@
  * - Full Effects: Detailed descriptions for reference/tooltips
  */
 
+import type { ArchetypeName } from './archetypeNames';
+
 export interface ArchetypeSkill {
   /** 技能名称 (e.g., "摇尾热场波") */
   name: string;
@@ -53,7 +55,7 @@ export interface ArchetypeSkillSet {
  * Complete skill tree definitions for all 12 archetypes
  * Keyed by archetype Chinese name
  */
-export const archetypeSkills: Record<string, ArchetypeSkillSet> = {
+export const archetypeSkills = {
   "开心柯基": {
     attribute: "🔥 热情",
     cardTitle: "破冰点火官",
@@ -329,7 +331,7 @@ export const archetypeSkills: Record<string, ArchetypeSkillSet> = {
       icon: "🌙"
     }
   }
-};
+} satisfies Record<ArchetypeName, ArchetypeSkillSet>;
 
 /**
  * Get skill set for a specific archetype
@@ -337,7 +339,7 @@ export const archetypeSkills: Record<string, ArchetypeSkillSet> = {
  * @returns Skill set or undefined if archetype not found
  */
 export function getArchetypeSkills(archetype: string): ArchetypeSkillSet | undefined {
-  return archetypeSkills[archetype];
+  return Object.hasOwn(archetypeSkills, archetype) ? archetypeSkills[archetype as ArchetypeName] : undefined;
 }
 
 /**
