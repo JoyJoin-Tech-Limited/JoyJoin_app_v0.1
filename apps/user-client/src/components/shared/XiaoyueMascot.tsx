@@ -63,8 +63,7 @@ export function XiaoyueMascot({
   size = "md",
   bubbleStyle = "gradient",
 }: XiaoyueMascotProps) {
-  // Force mood to normal as per user request
-  const displayMood = "normal";
+  const displayMood = mood;
   const controls = useAnimation();
   const prefersReducedMotion = useReducedMotion();
 

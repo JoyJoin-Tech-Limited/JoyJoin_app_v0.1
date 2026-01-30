@@ -17,6 +17,7 @@ import { ArchetypePreview } from "@/components/archetype-preview";
 import { useDynamicAccent } from "@/contexts/DynamicAccentContext";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import { useUnifiedProgress } from "@/hooks/useUnifiedProgress";
+import { haptics } from "@/lib/haptics";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -83,6 +84,11 @@ function OnboardingProgress({
             showEncouragement={showExtendedMessage}
             className="mb-1.5"
           />
+          {remaining !== undefined && remaining > 0 && (
+            <p className="text-xs text-muted-foreground mb-1">
+              还剩约 {remaining} 题 - 快要揭晓了
+            </p>
+          )}
           <div className="flex flex-col gap-0.5">
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground font-medium" data-testid="text-progress-indicator">
@@ -256,6 +262,7 @@ export default function PersonalityTestPageV4() {
   const handleSubmitAnswer = useCallback(async () => {
     if (!currentQuestion || !selectedOption) return;
     
+    haptics.medium();
     const selectedOpt = currentQuestion.options.find(o => o.value === selectedOption);
     await submitAnswer(currentQuestion.id, selectedOption, selectedOpt?.traitScores || {});
     
