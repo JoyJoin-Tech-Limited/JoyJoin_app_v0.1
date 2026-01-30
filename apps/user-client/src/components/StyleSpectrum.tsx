@@ -315,6 +315,7 @@ export default function StyleSpectrum({
                     }
                     onClaimCard();
                   }}
+                  aria-label={`领取你的${primary.archetype}卡片`}
                 >
                   {/* Shine animation effect */}
                   <motion.div
