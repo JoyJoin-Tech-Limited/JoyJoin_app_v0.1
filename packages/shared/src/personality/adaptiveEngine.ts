@@ -596,9 +596,12 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
     levelBonus * 0.05 +
     forcedChoiceBonus * 0.05
   );
+
+  // Normalize so that the effective base maximum is 1.0 (0.30 + 0.20 + 0.15 + 0.05 + 0.05 = 0.75)
+  const normalizedBaseUtility = baseUtility / 0.75;
   
   // === Apply multiplier to get final utility ===
-  return baseUtility * utilityMultiplier;
+  return normalizedBaseUtility * utilityMultiplier;
 }
 
 /**
