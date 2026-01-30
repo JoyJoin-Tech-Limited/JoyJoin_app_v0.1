@@ -633,6 +633,20 @@ export function shouldTerminate(state: EngineState): boolean {
   const minConfidence = Math.min(...allConfidences);
   
   // === Tier 3: Persistent Pair Extension Logic ===
+  // NOTE ON THRESHOLDS:
+  // - Tier 1 (early detection) uses a looser threshold (~0.12) to eagerly surface
+  //   potential confusion pairs and inject a targeted disambiguation question as
+  //   soon as we have a signal.
+  // - Tier 2 (multiplicative utility) is intentionally stricter (~0.08) because
+  //   strong scoring bonuses should only apply when two archetypes are *very*
+  //   tightly competing.
+  // - Tier 3 (this block) sits in between: we only extend beyond softMax when we
+  //   still see a *meaningful* but not ultra‑tight confusion. Using 0.10 here is
+  //   deliberate: it is stricter than Tier 1 (to avoid over‑extending) but more
+  //   permissive than Tier 2 (so we can still grant a couple of extra questions
+  //   in borderline cases like a score gap of 0.09–0.11).
+  // If these upstream thresholds are ever retuned, please review this 0.10
+  // extension threshold to keep the relative ordering: Tier1 >= Tier3 >= Tier2.
   const confusionDetection = detectPersistentConfusionPair(currentMatches);
   
   if (confusionDetection.isPersistentPair && confusionDetection.scoreGap < 0.10) {
