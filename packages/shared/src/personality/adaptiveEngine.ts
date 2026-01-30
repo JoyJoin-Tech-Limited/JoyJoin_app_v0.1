@@ -302,8 +302,21 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
   const { answeredQuestionIds, skippedQuestionIds, config, traitConfidences } = state;
   const questionCount = answeredQuestionIds.size;
   
-  // === Tier 1: Early Confusion Detection (After Q5) ===
-  if (questionCount >= 5 && questionCount < config.anchorQuestionCount) {
+  // Complete anchor questions first to ensure calibrated baseline
+  if (questionCount < config.anchorQuestionCount) {
+    const anchors = getAnchorQuestions();
+    const unansweredAnchors = anchors.filter(q => 
+      !answeredQuestionIds.has(q.id) && !skippedQuestionIds.has(q.id)
+    );
+    if (unansweredAnchors.length > 0) {
+      return unansweredAnchors[0];
+    }
+  }
+  
+  // === Tier 1: Early Confusion Detection (After anchor questions) ===
+  // NOTE: Triggers immediately after anchor questions complete (Q8+) rather than during
+  // anchors to avoid interrupting the calibrated baseline measurement
+  if (questionCount >= config.anchorQuestionCount && questionCount < config.anchorQuestionCount + 3) {
     const earlyMatches = state.currentMatches;
     if (earlyMatches.length >= 2) {
       const confusionDetection = detectPersistentConfusionPair(earlyMatches);
@@ -329,17 +342,6 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
           return { ...targetedQuestions[0], options: randomizedOptions };
         }
       }
-    }
-  }
-  
-  // Continue with existing anchor question logic...
-  if (questionCount < config.anchorQuestionCount) {
-    const anchors = getAnchorQuestions();
-    const unansweredAnchors = anchors.filter(q => 
-      !answeredQuestionIds.has(q.id) && !skippedQuestionIds.has(q.id)
-    );
-    if (unansweredAnchors.length > 0) {
-      return unansweredAnchors[0];
     }
   }
   
@@ -658,8 +660,15 @@ export function shouldTerminate(state: EngineState): boolean {
     // For persistent confusion pairs, require HIGHER confidence
     const requiredConfidence = 0.72;  // Elevated from 0.65 for persistent pairs
     
-    // Allow up to 2 extra questions beyond softMax for persistent pairs
-    if (questionCount < config.softMaxQuestions + 2) {
+    // Allow up to 2 extra questions beyond softMax for persistent pairs,
+    // but never exceed the global hardMaxQuestions cap. This keeps Tier 3
+    // extension aligned with other extension mechanisms and the hard limit.
+    const maxPersistentQuestions = Math.min(
+      config.softMaxQuestions + 2,
+      config.hardMaxQuestions
+    );
+    
+    if (questionCount < maxPersistentQuestions) {
       if (avgConfidence < requiredConfidence || minConfidence < requiredConfidence * 0.85) {
         if (IS_DEV) {
           console.log(`[PersistentPair] Extending assessment for pair: ${confusionDetection.pair!.join(' ↔ ')} (avgConf: ${avgConfidence.toFixed(3)}, gap: ${confusionDetection.scoreGap.toFixed(3)})`);
@@ -688,12 +697,21 @@ export function shouldTerminate(state: EngineState): boolean {
       return true;
     }
     
+    // Only apply the 0.15 gap termination logic if persistent pair requirements are also met
+    // This prevents premature termination when persistent pairs need higher confidence (0.72)
     if (questionCount >= config.softMaxQuestions + 2) {
       const topMatch = currentMatches[0];
       const secondMatch = currentMatches[1];
       if (topMatch && secondMatch) {
         const confidenceGap = topMatch.confidence - secondMatch.confidence;
-        if (confidenceGap > 0.15) {
+        
+        // For persistent pairs, respect the elevated confidence requirement even at softMax + 2
+        if (confusionDetection.isPersistentPair && confusionDetection.scoreGap < 0.10) {
+          const persistentRequiredConf = 0.72;
+          if (avgConfidence >= persistentRequiredConf && confidenceGap > 0.15) {
+            return true;
+          }
+        } else if (confidenceGap > 0.15) {
           return true;
         }
       }
