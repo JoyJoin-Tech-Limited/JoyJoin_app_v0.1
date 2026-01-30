@@ -147,3 +147,26 @@ export function getArchetypeColorHSL(name: string): string {
   const info = getArchetypeInfo(name);
   return `hsl(${info.color[0]}, ${info.color[1]}%, ${info.color[2]}%)`;
 }
+
+/**
+ * Validate an archetype name and return the canonical version
+ * Returns the input if valid, or null if not found
+ */
+export function validateArchetypeName(name: string): string | null {
+  // Exact match
+  if (ARCHETYPE_NAMES.includes(name as any)) {
+    return name;
+  }
+  
+  // Trimmed match
+  const trimmed = name.trim();
+  const found = ARCHETYPE_NAMES.find(n => n.trim() === trimmed);
+  if (found) return found;
+  
+  // Normalized match
+  const normalized = name.normalize('NFC');
+  const foundNormalized = ARCHETYPE_NAMES.find(n => n.normalize('NFC') === normalized);
+  if (foundNormalized) return foundNormalized;
+  
+  return null;
+}

@@ -38,6 +38,34 @@ interface SlotMachineReturn {
   intensity: number; // 0-1 for visual effects intensity
 }
 
+/**
+ * Find archetype index with fuzzy matching for robustness
+ * Handles potential whitespace, encoding, or case differences
+ */
+function findArchetypeIndex(archetype: string, archetypeNames: readonly string[]): number {
+  // Exact match first
+  let index = archetypeNames.indexOf(archetype as any);
+  if (index >= 0) return index;
+  
+  // Trimmed match (handles leading/trailing whitespace)
+  const trimmed = archetype.trim();
+  index = archetypeNames.findIndex(name => name.trim() === trimmed);
+  if (index >= 0) return index;
+  
+  // Normalized match (handles Unicode normalization differences)
+  const normalized = archetype.normalize('NFC');
+  index = archetypeNames.findIndex(name => name.normalize('NFC') === normalized);
+  if (index >= 0) return index;
+  
+  // Log error for debugging (this should never happen in production)
+  console.error(
+    `[useSlotMachine] Unknown archetype: "${archetype}" (bytes: ${[...archetype].map(c => c.charCodeAt(0)).join(',')})`,
+    `Valid archetypes:`, archetypeNames
+  );
+  
+  return 0; // Fallback to first archetype
+}
+
 // Haptic patterns for different phases
 const HAPTIC_PATTERNS = {
   anticipation: [30],
@@ -69,9 +97,8 @@ export function useSlotMachine({
   const spinTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onLandRef = useRef(onLand);
 
-  // Find target index
-  const finalIndex = ARCHETYPE_NAMES.indexOf(finalArchetype as typeof ARCHETYPE_NAMES[number]);
-  const targetIndex = finalIndex >= 0 ? finalIndex : 0;
+  // Find target index using robust matching
+  const targetIndex = findArchetypeIndex(finalArchetype, ARCHETYPE_NAMES);
 
   // Get 3 visible items centered on current
   const getVisibleItems = useCallback((idx: number): string[] => {
