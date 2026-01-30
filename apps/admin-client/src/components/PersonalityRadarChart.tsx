@@ -1,7 +1,7 @@
 import { getTraitScoresForArchetype, normalizeScoreTo10 } from '@/lib/archetypeTraitScores';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useState } from 'react';
-import { TRAIT_DISPLAY_CONFIG } from '@joyjoin/shared/personality';
+import { TRAIT_DISPLAY_CONFIG } from '@shared/personality';
 
 interface PersonalityRadarChartProps {
   archetype?: string;
