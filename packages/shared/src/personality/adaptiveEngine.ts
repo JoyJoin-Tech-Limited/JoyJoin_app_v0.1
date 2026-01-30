@@ -455,7 +455,9 @@ export function getRemainingSkips(state: EngineState): number {
  *    - Discrimination index (15%): Question's inherent differentiation power
  *    - Level bonus (5%): Small boost for higher difficulty questions
  *    - Forced choice bonus (5%): Boost for binary choice questions
- *    Note: Weights intentionally sum to 0.75 to leave room for multipliers
+ *    Note: These weights currently sum to 0.75 for calibration/legacy reasons.
+ *          In this multiplicative model that simply scales all utilities
+ *          proportionally and does not affect the relative ranking of questions.
  * 
  * 2. Apply multiplicative bonuses:
  *    - Persistent pair exact match: 2.5x (question targets both confused archetypes)
