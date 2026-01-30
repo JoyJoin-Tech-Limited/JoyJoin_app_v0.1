@@ -462,6 +462,16 @@
     animation: shimmer 3s infinite;
   }
 
+  /* Gradient shift animation for holographic borders */
+  @keyframes gradient-shift {
+    0%, 100% { 
+      background-position: 0% 50%; 
+    }
+    50% { 
+      background-position: 100% 50%; 
+    }
+  }
+
   /* Progress bar fill animation */
   @keyframes progressFill {
     from {
