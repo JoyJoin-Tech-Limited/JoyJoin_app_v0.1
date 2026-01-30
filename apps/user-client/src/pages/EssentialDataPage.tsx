@@ -127,7 +127,7 @@ const STEP_CONFIG = [
   {
     id: "displayName",
     title: "选择你的昵称",
-    subtitle: "真实姓名或昵称都可以，这是你在活动中显示的名字",
+    subtitle: "这是大家在活动中看到的名字",
     mascotMessage: "嘿！先给自己取个响亮的名字吧~ 后面我会根据你的性格和兴趣，为你生成专属的社交印象标签哦！✨",
     mascotMood: "excited" as XiaoyueMood,
     type: "input" as const,
@@ -135,7 +135,7 @@ const STEP_CONFIG = [
   {
     id: "genderBirthday",
     title: "选择出生日期",
-    subtitle: "用于个性化体验，不会公开显示",
+    subtitle: "帮助匹配更合适的活动",
     mascotMessage: "简单两步，帮你找到更合适的朋友！",
     mascotMood: "pointing" as XiaoyueMood,
     type: "dual" as const,
@@ -143,7 +143,7 @@ const STEP_CONFIG = [
   {
     id: "relationshipStatus",
     title: "你的感情状态？",
-    subtitle: "放心，我们会保护好你的隐私",
+    subtitle: "推荐更适合你的社交场景",
     mascotMessage: "这个信息只用于精准匹配哦~",
     mascotMood: "normal" as XiaoyueMood,
     type: "select" as const,
@@ -152,7 +152,7 @@ const STEP_CONFIG = [
   {
     id: "education",
     title: "你的教育背景？",
-    subtitle: "学历不重要，我们只是想了解你",
+    subtitle: "匹配相似背景的伙伴",
     mascotMessage: "不管什么学历，都能找到志同道合的人！",
     mascotMood: "pointing" as XiaoyueMood,
     type: "select" as const,
@@ -161,7 +161,7 @@ const STEP_CONFIG = [
   {
     id: "workIndustry",
     title: "你在哪个行业工作？",
-    subtitle: "方便找到同行或跨界有趣的人",
+    subtitle: "用于兴趣推荐和同行匹配",
     mascotMessage: "可能会遇到同行前辈或者跨界伙伴哦！",
     mascotMood: "excited" as XiaoyueMood,
     type: "select" as const,
@@ -178,7 +178,7 @@ const STEP_CONFIG = [
   {
     id: "intent",
     title: "你想通过悦聚收获什么？",
-    subtitle: "可以多选哦（最多5个）",
+    subtitle: "告诉我你的目标，我帮你精准匹配！",
     mascotMessage: "告诉我你的目标，我帮你精准匹配！最后一步啦！",
     mascotMood: "excited" as XiaoyueMood,
     type: "multiSelect" as const,

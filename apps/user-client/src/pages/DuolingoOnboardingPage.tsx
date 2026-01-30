@@ -14,6 +14,7 @@ import { getOptionFeedback } from "@shared/personality/feedback";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { SelectionList } from "@/components/SelectionList";
 import { QuestionSkeleton } from "@/components/shared/QuestionSkeleton";
+import { haptics } from "@/lib/haptics";
 
 // Use consistent Xiao Yue Avatar-01.png as primary avatar across all screens
 import xiaoyueNormal from "@/assets/xiaoyue_default.png";
@@ -464,6 +465,7 @@ export default function DuolingoOnboardingPage() {
   };
 
   const handleAnswer = (questionId: string, value: string, traitScores?: Record<string, number>) => {
+    haptics.light();
     setAnswers(prev => ({ ...prev, [questionId]: value }));
     if (traitScores) {
       saveV4AnswerToCache(questionId, value, traitScores);
@@ -647,12 +649,22 @@ export default function DuolingoOnboardingPage() {
               </p>
             </motion.div>
             
+            {/* Value proposition subtitle */}
+            <motion.p
+              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: prefersReducedMotion ? 0 : 0.65, duration: 0.4 }}
+              className="mt-3 text-center text-sm text-muted-foreground max-w-[280px] z-10"
+            >
+              只需3分钟，发现你的社交DNA
+            </motion.p>
+            
             {/* Subheadline - whitespace-nowrap on last phrase prevents orphan */}
             <motion.p
               initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: prefersReducedMotion ? 0 : 0.7, duration: 0.4 }}
-              className="mt-4 text-center text-muted-foreground text-sm max-w-[280px] z-10"
+              className="mt-2 text-center text-muted-foreground text-sm max-w-[280px] z-10"
               data-testid="text-welcome-subheadline"
             >
               解锁12种社交动物原型，找到最合拍的<span className="whitespace-nowrap">同频伙伴</span>
@@ -710,6 +722,11 @@ export default function DuolingoOnboardingPage() {
             transition={{ duration: 0.3 }}
             className="flex-1 flex flex-col px-4 py-3 overflow-hidden"
           >
+            {/* Progress Context Text */}
+            <p className="text-xs text-muted-foreground mb-2">
+              第 {currentScreen}/8 题 - 了解你的社交风格
+            </p>
+            
             {/* Segmented Progress */}
             <div className="mb-4">
               <SegmentedProgress 
