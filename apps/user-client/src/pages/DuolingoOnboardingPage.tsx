@@ -377,7 +377,7 @@ export default function DuolingoOnboardingPage() {
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [justAuthenticated, setJustAuthenticated] = useState(false);
   const [temporarySessionId, setTemporarySessionId] = useState<string>("");
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
 
   const { data: anchorQuestionsData, isLoading: isLoadingQuestions } = useQuery<{
     questions: V4AnchorQuestion[];
