@@ -29,6 +29,7 @@ import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 import { ArchetypeSlotMachine } from "@/components/slot-machine";
 import { UnlockOverlay } from "@/components/UnlockOverlay";
 import { getArchetypeColorHSL } from "@/components/slot-machine/archetypeData";
+import { SkipAnimationButton } from "@/components/SkipAnimationButton";
 
 const staggerContainerVariants = {
   hidden: { opacity: 0 },
@@ -511,6 +512,7 @@ export default function PersonalityTestResultPage() {
   const { toast } = useToast();
   const [animationPhase, setAnimationPhase] = useState<AnimationPhase>('slot');
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [skipToResults, setSkipToResults] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   const containerVariants = useMemo(
@@ -604,6 +606,20 @@ export default function PersonalityTestResultPage() {
     setAnimationPhase('results');
   }, []);
 
+  // Handle skip animation during slot machine phase
+  const handleSkipSlotMachine = useCallback(() => {
+    setSkipToResults(true);
+    // Compress animation to 0.5s before showing results
+    setTimeout(() => setAnimationPhase('unlock'), 500);
+  }, []);
+
+  // Handle skip animation during unlock overlay phase
+  const handleSkipUnlock = useCallback(() => {
+    setSkipToResults(true);
+    // Go immediately to results
+    setAnimationPhase('results');
+  }, []);
+
   // Mark personality test as complete and navigate to profile setup
   const completeTestMutation = useMutation({
     mutationFn: async () => {
@@ -687,6 +703,7 @@ export default function PersonalityTestResultPage() {
             confidence={result.isDecisive ? 0.9 : undefined}
             onComplete={handleSlotMachineComplete}
           />
+          <SkipAnimationButton onSkip={handleSkipSlotMachine} delay={2000} />
         </motion.div>
       )}
       
@@ -703,6 +720,7 @@ export default function PersonalityTestResultPage() {
             accentColor={getArchetypeColorHSL(result.primaryArchetype)}
             onComplete={handleUnlockComplete}
           />
+          <SkipAnimationButton onSkip={handleSkipUnlock} delay={1000} />
         </motion.div>
       )}
       

@@ -7,7 +7,10 @@
  */
 
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 import { SpiralWaveAnimation } from "@/components/SpiralWaveAnimation";
 import { ProfilePortraitCard } from "@/components/ProfilePortraitCard";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -16,6 +19,7 @@ type Phase = "analyzing" | "complete";
 
 export default function FinalProfileReviewPage() {
   const [phase, setPhase] = useState<Phase>("analyzing");
+  const [, setLocation] = useLocation();
   const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
@@ -23,6 +27,10 @@ export default function FinalProfileReviewPage() {
     const timer = setTimeout(() => setPhase("complete"), duration);
     return () => clearTimeout(timer);
   }, [prefersReducedMotion]);
+
+  const handleContinue = () => {
+    setLocation("/onboarding/login");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 via-pink-50 to-white">
@@ -59,7 +67,7 @@ export default function FinalProfileReviewPage() {
         ) : (
           <motion.div
             key="complete"
-            className="min-h-screen py-8"
+            className="min-h-screen py-8 pb-24"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ 
@@ -68,6 +76,23 @@ export default function FinalProfileReviewPage() {
             }}
           >
             <ProfilePortraitCard />
+            
+            {/* Fixed bottom CTA */}
+            <motion.div
+              className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent pb-[calc(1rem+env(safe-area-inset-bottom))] pt-6 px-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.4 }}
+            >
+              <Button
+                size="lg"
+                className="w-full max-w-md mx-auto h-14 text-lg rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 flex"
+                onClick={handleContinue}
+              >
+                继续
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
