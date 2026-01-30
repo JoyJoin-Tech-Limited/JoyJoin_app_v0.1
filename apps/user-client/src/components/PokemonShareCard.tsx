@@ -103,7 +103,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         transition={prefersReducedMotion ? {} : { type: "spring", stiffness: 200, damping: 20 }}
         className="relative w-full max-w-[360px] mx-auto"
         style={{ 
-          aspectRatio: '9/16',
+          minHeight: '680px',
+          maxHeight: '90vh',
+          aspectRatio: '9 / 16',
           fontFamily: 'ZCOOL QingKe HuangYou, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif'
         }}
       >
@@ -167,7 +169,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
           )}
           
           {/* Content - white/light background as default - 3-section layout */}
-          <div className="relative bg-white/98 rounded-[20px] h-full flex flex-col">
+          <div className="relative bg-white/98 rounded-[20px] h-full flex flex-col py-4">
             {/* SECTION 1: HERO (TOP) - centered mascot + type/name + tagline */}
             <div className="flex-none px-4 pt-4 pb-3 flex flex-col items-center">
               {/* Archetype illustration in circular frame */}
@@ -214,10 +216,18 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               
               {/* English name as tag/label below */}
               <div 
-                className="text-xs uppercase tracking-wider opacity-70 text-center mt-0.5 mb-1"
+                className="text-xs uppercase tracking-wider font-bold text-center mt-0.5 mb-1"
                 style={{ 
                   color: variant.primaryColor,
-                  textShadow: `0 1px 3px ${variant.primaryColor}20`
+                  textShadow: `
+                    0 0 8px rgba(255,255,255,0.9),
+                    0 1px 2px rgba(0,0,0,0.3),
+                    -1px -1px 0 rgba(255,255,255,0.8),
+                    1px -1px 0 rgba(255,255,255,0.8),
+                    -1px 1px 0 rgba(255,255,255,0.8),
+                    1px 1px 0 rgba(255,255,255,0.8)
+                  `,
+                  WebkitTextStroke: '0.5px rgba(255,255,255,0.5)'
                 }}
               >
                 {archetypeEnglish}
@@ -246,194 +256,206 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             {/* Stats Section - 2 Column Layout with Prominent Archetype Collection Number */}
             <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl px-4 py-3 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
               <div className="grid grid-cols-[1.8fr_1fr] gap-3">
-                {/* LEFT: HERO TAG - 原型编号 (Archetype Collection Number) */}
-                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-[2px] shadow-lg">
-                  {/* Animated shimmer effect - only in preview mode */}
-                  {isPreview && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer" />
-                  )}
+                {/* LEFT: HERO TAG - 原型编号 with holographic effect */}
+                <div className="relative overflow-hidden rounded-xl shadow-lg">
+                  {/* Animated rainbow border gradient - disabled during image generation */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 opacity-80" 
+                       style={{ 
+                         backgroundSize: '200% 200%',
+                         ...(isPreview ? { animation: 'gradient-shift 3s ease infinite' } : {})
+                       }} 
+                  />
                   
-                  <div className="relative bg-gradient-to-br from-indigo-50 to-purple-50 rounded-[10px] px-3 py-2.5 h-full flex flex-col justify-center">
-                    {/* Label */}
-                    <div className="text-[10px] font-medium text-indigo-600/70 mb-0.5 tracking-wide uppercase">
-                      原型编号
+                  {/* Inner content with padding for border effect */}
+                  <div className="relative m-[2px] bg-gradient-to-br from-indigo-50 to-purple-50 rounded-[10px] px-3 py-2.5 h-full">
+                    {/* Rarity stars indicator */}
+                    <div className="absolute top-1 right-1 flex gap-0.5">
+                      <span className="text-yellow-400 text-xs">★</span>
+                      <span className="text-yellow-400 text-xs">★</span>
+                      <span className="text-yellow-400 text-xs">★</span>
                     </div>
                     
-                    {/* Hero Content - Collection Number + Archetype */}
+                    {/* Label with icon */}
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <span className="text-xs">🎴</span>
+                      <span className="text-xs font-medium text-indigo-600/70 tracking-wide uppercase">
+                        原型编号
+                      </span>
+                    </div>
+                    
+                    {/* Hero Content - Larger numbers */}
                     <div className="flex items-baseline gap-1.5">
-                      {/* Collection Number */}
                       <div className="flex items-baseline">
-                        <span className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+                        <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
                           No.
                         </span>
-                        <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 tracking-tight">
+                        <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 tracking-tight">
                           {rankings.archetypeRank}
                         </span>
                       </div>
                       
                       {/* Archetype Name */}
-                      <span className="text-base font-bold text-indigo-700 truncate">
+                      <span className="text-sm font-bold text-indigo-700 truncate">
                         {archetype}
                       </span>
                     </div>
                     
-                    {/* Decorative accent */}
-                    <div className="absolute top-1 right-1 w-6 h-6 bg-gradient-to-br from-yellow-300 to-amber-400 rounded-full opacity-20 blur-sm" />
+                    {/* Decorative accents */}
+                    <div className="absolute top-1 right-8 w-6 h-6 bg-gradient-to-br from-yellow-300 to-amber-400 rounded-full opacity-20 blur-sm" />
                     <div className="absolute bottom-1 left-1 w-4 h-4 bg-gradient-to-br from-pink-300 to-purple-400 rounded-full opacity-20 blur-sm" />
                   </div>
                 </div>
 
-                {/* RIGHT: Secondary Tag - 总榜编号 (Global Collection Number) */}
-                <div className="rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 px-3 py-2.5 flex flex-col justify-center border border-gray-200/50 shadow-sm">
-                  {/* Label */}
-                  <div className="text-[10px] font-medium text-gray-500 mb-0.5 tracking-wide uppercase">
-                    总榜编号
+                {/* RIGHT: Secondary Tag - 总榜编号 with trophy theme */}
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-amber-100 via-yellow-50 to-amber-100 px-3 py-2.5 border-2 border-amber-300/50 shadow-md">
+                  {/* Trophy icon watermark */}
+                  <div className="absolute -bottom-2 -right-2 text-5xl opacity-10 pointer-events-none">🏆</div>
+                  
+                  {/* Label with icon */}
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <span className="text-xs">🏅</span>
+                    <span className="text-xs font-medium text-amber-700/70 tracking-wide uppercase">
+                      全球排名
+                    </span>
                   </div>
                   
-                  {/* Collection Number */}
-                  <div className="flex items-baseline gap-0.5">
-                    <span className="text-sm font-semibold text-gray-400">#</span>
-                    <span className="text-xl font-bold text-gray-700">
-                      {rankings.totalUserRank}
+                  {/* Rank Number - PROMINENT with gradient */}
+                  <div className="relative z-10 flex items-baseline gap-0.5">
+                    <span className="text-lg font-semibold text-amber-600">#</span>
+                    <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-orange-600">
+                      {rankings.totalUserRank.toLocaleString("zh-CN")}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Pokemon-style 2-column Skills Section */}
-            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl px-4 py-2.5 mb-1.5 sm:mb-2 border border-gray-100">
-              <div className="flex gap-2 sm:gap-3">
-                {/* Left: Radar Chart (45% width for better readability) */}
-                <div className="w-[45%] flex items-center justify-center">
-                  <PersonalityRadarChart 
-                    affinityScore={traitScores.A}
-                    opennessScore={traitScores.O}
-                    conscientiousnessScore={traitScores.C}
-                    emotionalStabilityScore={traitScores.E}
-                    extraversionScore={traitScores.X}
-                    positivityScore={traitScores.P}
-                    primaryColor={variant.primaryColor}
-                    compactMode={true}
-                    variant="compact"
+            {/* Vertical Stack Layout - Full width sections */}
+            <div className="space-y-3.5 px-4">
+              {/* 1. Radar Chart - Full width, centered */}
+              <div className="flex justify-center py-2">
+                <PersonalityRadarChart 
+                  affinityScore={traitScores.A}
+                  opennessScore={traitScores.O}
+                  conscientiousnessScore={traitScores.C}
+                  emotionalStabilityScore={traitScores.E}
+                  extraversionScore={traitScores.X}
+                  positivityScore={traitScores.P}
+                  primaryColor={variant.primaryColor}
+                  compactMode={true}
+                  variant="compact"
+                />
+              </div>
+              
+              {/* 2. Energy Bar - Full width */}
+              <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-bold text-gray-700">⚡ 社交能量</span>
+                  <span className="text-sm font-black text-orange-600">{archetypeInfo?.energyLevel}%</span>
+                </div>
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500"
+                    initial={prefersReducedMotion ? { width: `${archetypeInfo?.energyLevel || 50}%` } : { width: 0 }}
+                    animate={{ width: `${archetypeInfo?.energyLevel || 50}%` }}
+                    transition={prefersReducedMotion ? {} : { duration: 1, delay: 0.3, ease: "easeOut" }}
                   />
                 </div>
-                
-                {/* Right: Pokemon Skills Info (55% width) */}
-                <div className="w-[55%] flex flex-col justify-center space-y-3">
-                  {/* Energy Bar - Pokemon HP style with animation */}
-                  <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg px-2 py-1.5">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-gray-700">⚡ 社交能量</span>
-                      <span className="text-xs font-black text-orange-600">{archetypeInfo?.energyLevel}%</span>
+              </div>
+              
+              {/* 3. Skills Section - Side by side with more space */}
+              {skillSet && (
+                <div className="bg-gradient-to-br from-purple-50/90 to-pink-50/90 rounded-xl p-3 border border-purple-200/30">
+                  {/* Header with Attribute */}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm">⚡</span>
+                      <span className="text-xs font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+                        技能树
+                      </span>
                     </div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <motion.div 
-                        className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500"
-                        initial={prefersReducedMotion ? { width: `${archetypeInfo?.energyLevel || 50}%` } : { width: 0 }}
-                        animate={{ width: `${archetypeInfo?.energyLevel || 50}%` }}
-                        transition={prefersReducedMotion ? {} : { duration: 1, delay: 0.3, ease: "easeOut" }}
-                      />
+                    <div className="text-xs font-bold px-2 py-0.5 bg-white/80 rounded-full border border-purple-200/50 shadow-sm"
+                         style={{ color: variant.primaryColor }}>
+                      {skillSet.attribute}
                     </div>
                   </div>
-
-                  {/* SKILL TREE SECTION - Pokemon TCG Style */}
-                  {skillSet && (
-                    <div className="bg-gradient-to-br from-purple-50/90 to-pink-50/90 rounded-xl p-2.5 border border-purple-200/30 shadow-inner">
-                      {/* Header with Attribute */}
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs">⚡</span>
-                          <span className="text-[10px] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
-                            技能树
-                          </span>
-                        </div>
-                        <div className="text-[9px] font-bold px-2 py-0.5 bg-white/80 rounded-full border border-purple-200/50 shadow-sm"
-                             style={{ color: variant.primaryColor }}>
-                          {skillSet.attribute}
-                        </div>
+                  
+                  {/* Two-Column Layout: Active | Passive with more padding */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* ACTIVE SKILL - Left Column */}
+                    <div className="relative bg-white rounded-lg p-2 shadow-sm"
+                         style={{
+                           boxShadow: `0 0 0 2px ${variant.primaryColor}30, 0 2px 4px rgba(0,0,0,0.1)`
+                         }}>
+                      {/* Active Badge */}
+                      <div className="absolute -top-1 -right-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[8px] px-1.5 py-0.5 rounded-full font-bold shadow-sm z-10">
+                        主动
                       </div>
                       
-                      {/* Two-Column Layout: Active | Passive */}
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {/* ACTIVE SKILL - Left Column */}
-                        <div className="relative bg-white rounded-lg p-1.5 shadow-sm"
-                             style={{
-                               boxShadow: `0 0 0 2px ${variant.primaryColor}30, 0 2px 4px rgba(0,0,0,0.1)`
-                             }}>
-                          {/* Active Badge */}
-                          <div className="absolute -top-1 -right-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[7px] px-1.5 py-0.5 rounded-full font-bold shadow-sm z-10">
-                            主动
-                          </div>
-                          
-                          {/* Icon Circle */}
-                          <div className="w-7 h-7 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mb-1.5 mx-auto border-2 border-purple-200/50">
-                            <span className="text-base">{skillSet.activeSkill.icon}</span>
-                          </div>
-                          
-                          {/* Skill Name */}
-                          <div className="text-[9px] font-bold text-purple-700 text-center mb-1 leading-tight px-0.5">
-                            {skillSet.activeSkill.name}
-                          </div>
-                          
-                          {/* Energy Cost */}
-                          <div className="flex items-center justify-center gap-0.5 mb-1.5 bg-purple-50/60 rounded-full py-0.5 px-1.5 mx-auto w-fit">
-                            <span className="text-[9px] font-bold text-purple-700">
-                              {skillSet.activeSkill.energyCost}
-                            </span>
-                            <span className="text-xs">
-                              {skillSet.activeSkill.energyType}
-                            </span>
-                          </div>
-                          
-                          {/* Short Effect */}
-                          <p className="text-[8px] text-gray-600 text-center leading-tight px-0.5">
-                            {skillSet.activeSkill.shortEffect}
-                          </p>
-                        </div>
-                        
-                        {/* PASSIVE SKILL - Right Column */}
-                        <div className="relative bg-gradient-to-br from-amber-50/80 to-yellow-50/80 rounded-lg p-1.5 border border-amber-300/50 shadow-sm">
-                          {/* Passive Badge */}
-                          <div className="absolute -top-1 -right-1 bg-gradient-to-r from-amber-600 to-yellow-600 text-white text-[7px] px-1.5 py-0.5 rounded-full font-bold shadow-sm z-10">
-                            被动
-                          </div>
-                          
-                          {/* Icon Circle */}
-                          <div className="w-7 h-7 bg-gradient-to-br from-amber-100 to-yellow-100 rounded-full flex items-center justify-center mb-1.5 mx-auto border-2 border-amber-200/50">
-                            <span className="text-base">{skillSet.passiveSkill.icon}</span>
-                          </div>
-                          
-                          {/* Skill Name */}
-                          <div className="text-[9px] font-bold text-amber-700 text-center mb-1 leading-tight px-0.5">
-                            {skillSet.passiveSkill.name}
-                          </div>
-                          
-                          {/* Always Active Indicator */}
-                          <div className="flex items-center justify-center gap-1 mb-1.5">
-                            <div className="w-1 h-1 bg-green-500 rounded-full" />
-                            <span className="text-[7px] text-gray-500 font-medium">常驻效果</span>
-                          </div>
-                          
-                          {/* Short Effect */}
-                          <p className="text-[8px] text-gray-600 text-center leading-tight px-0.5">
-                            {skillSet.passiveSkill.shortEffect}
-                          </p>
-                        </div>
+                      {/* Icon Circle */}
+                      <div className="w-8 h-8 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mb-2 mx-auto border-2 border-purple-200/50">
+                        <span className="text-lg">{skillSet.activeSkill.icon}</span>
                       </div>
+                      
+                      {/* Skill Name */}
+                      <div className="text-xs font-bold text-purple-700 text-center mb-1 leading-tight px-0.5">
+                        {skillSet.activeSkill.name}
+                      </div>
+                      
+                      {/* Energy Cost */}
+                      <div className="flex items-center justify-center gap-0.5 mb-2 bg-purple-50/60 rounded-full py-0.5 px-2 mx-auto w-fit">
+                        <span className="text-xs font-bold text-purple-700">
+                          {skillSet.activeSkill.energyCost}
+                        </span>
+                        <span className="text-sm">
+                          {skillSet.activeSkill.energyType}
+                        </span>
+                      </div>
+                      
+                      {/* Short Effect */}
+                      <p className="text-xs text-gray-600 text-center leading-tight px-0.5">
+                        {skillSet.activeSkill.shortEffect}
+                      </p>
                     </div>
-                  )}
-
-                  {/* Social Positioning - Quote-style card */}
-                  <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg px-2.5 py-2 border border-blue-100/50">
-                    {/* Decorative quote mark */}
-                    <div className="absolute top-0 right-1 text-6xl text-blue-200/30 font-serif leading-none pointer-events-none" style={{ marginTop: '-0.3em' }}>"</div>
-                    <div className="text-xs font-bold text-gray-700 mb-1">🎯 社交定位</div>
-                    <p className="text-[10px] text-gray-600 leading-relaxed italic relative z-10">
-                      {archetypeInfo?.description}
-                    </p>
+                    
+                    {/* PASSIVE SKILL - Right Column */}
+                    <div className="relative bg-gradient-to-br from-amber-50/80 to-yellow-50/80 rounded-lg p-2 border border-amber-300/50 shadow-sm">
+                      {/* Passive Badge */}
+                      <div className="absolute -top-1 -right-1 bg-gradient-to-r from-amber-600 to-yellow-600 text-white text-[8px] px-1.5 py-0.5 rounded-full font-bold shadow-sm z-10">
+                        被动
+                      </div>
+                      
+                      {/* Icon Circle */}
+                      <div className="w-8 h-8 bg-gradient-to-br from-amber-100 to-yellow-100 rounded-full flex items-center justify-center mb-2 mx-auto border-2 border-amber-200/50">
+                        <span className="text-lg">{skillSet.passiveSkill.icon}</span>
+                      </div>
+                      
+                      {/* Skill Name */}
+                      <div className="text-xs font-bold text-amber-700 text-center mb-1 leading-tight px-0.5">
+                        {skillSet.passiveSkill.name}
+                      </div>
+                      
+                      {/* Always Active Indicator */}
+                      <div className="flex items-center justify-center gap-1 mb-2">
+                        <div className="w-1 h-1 bg-green-500 rounded-full" />
+                        <span className="text-[8px] text-gray-500 font-medium">常驻效果</span>
+                      </div>
+                      
+                      {/* Short Effect */}
+                      <p className="text-xs text-gray-600 text-center leading-tight px-0.5">
+                        {skillSet.passiveSkill.shortEffect}
+                      </p>
+                    </div>
                   </div>
                 </div>
+              )}
+              
+              {/* 4. Social Positioning - Full width */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg px-3 py-2.5">
+                <div className="text-sm font-bold text-gray-700 mb-1">🎯 社交定位</div>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  {archetypeInfo?.description}
+                </p>
               </div>
             </div>
 
