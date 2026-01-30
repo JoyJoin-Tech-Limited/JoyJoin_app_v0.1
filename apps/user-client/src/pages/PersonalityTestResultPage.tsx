@@ -760,6 +760,8 @@ export default function PersonalityTestResultPage() {
               adjacentStyles={styleSpectrum.adjacentStyles}
               spectrumPosition={styleSpectrum.spectrumPosition}
               isDecisive={styleSpectrum.isDecisive}
+              decisionReason={styleSpectrum.decisionReason}
+              onClaimCard={() => setShareModalOpen(true)}
               traitScores={{
                 A: result.affinityScore,
                 O: result.opennessScore,

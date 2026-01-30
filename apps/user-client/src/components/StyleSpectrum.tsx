@@ -1,5 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { motion } from "framer-motion";
 import { Sparkles, Star, Quote, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -48,7 +50,9 @@ interface StyleSpectrumProps {
     yAxis: { label: string; value: number };
   };
   isDecisive: boolean;
+  decisionReason?: string;
   onLearnMore?: () => void;
+  onClaimCard?: () => void;
   traitScores?: {
     A?: number;
     O?: number;
@@ -169,7 +173,9 @@ export default function StyleSpectrum({
   adjacentStyles,
   spectrumPosition,
   isDecisive,
+  decisionReason,
   onLearnMore,
+  onClaimCard,
   traitScores,
   uniqueTraits,
   epicDescription,
@@ -283,6 +289,59 @@ export default function StyleSpectrum({
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   {epicDescription}
                 </p>
+              </motion.div>
+            )}
+
+            {/* Golden Foil Claim Card Button */}
+            {onClaimCard && (
+              <motion.div
+                className="px-2"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Button
+                  className="relative w-full min-h-[3.5rem] h-14 rounded-xl text-lg font-bold overflow-hidden bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 hover:scale-[1.02] active:scale-[0.98] transition-transform duration-200 border-2 border-yellow-500/50"
+                  style={{
+                    boxShadow: "0 4px 14px rgba(251, 191, 36, 0.4), 0 2px 6px rgba(234, 179, 8, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.5)",
+                    textShadow: "0 1px 2px rgba(0,0,0,0.1)"
+                  }}
+                  onClick={() => {
+                    // Add haptic feedback for mobile
+                    try {
+                      if (navigator.vibrate) navigator.vibrate(50);
+                    } catch (e) {
+                      // Silently fail if vibrate API throws an error
+                    }
+                    onClaimCard();
+                  }}
+                >
+                  {/* Shine animation effect */}
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                    initial={{ x: "-100%" }}
+                    animate={{ x: "200%" }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      repeatDelay: 3,
+                      ease: "linear"
+                    }}
+                    style={{ width: "50%" }}
+                  />
+                  
+                  <div className="relative flex items-center justify-center gap-3 w-full text-amber-900">
+                    <Sparkles className="w-5 h-5" aria-hidden="true" />
+                    <span>领取你的{primary.archetype}卡片</span>
+                    <Badge 
+                      variant="secondary" 
+                      className="ml-2 bg-white/30 backdrop-blur-sm border-amber-100/60 text-xs text-amber-900 font-bold animate-pulse" 
+                      aria-label="限定版"
+                    >
+                      ✨ 限定
+                    </Badge>
+                  </div>
+                </Button>
               </motion.div>
             )}
 
@@ -479,6 +538,41 @@ export default function StyleSpectrum({
                 <p className="text-[10px] text-muted-foreground/60 text-center mt-2 italic">
                   这不是"不准"，而是你的特质更丰富
                 </p>
+              </div>
+            )}
+
+            {/* Debug Score Display - Development mode only */}
+            {import.meta.env.DEV && (
+              <div className="border-t pt-4">
+                <Collapsible>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full flex items-center justify-center gap-2">
+                      <Badge variant="outline" className="text-xs">🔍 Debug Scores</Badge>
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-3">
+                    <div className="text-xs space-y-1 p-3 bg-muted/50 rounded-lg font-mono">
+                      <div>
+                        Primary: {primary.archetype} - {Math.round(primary.score)}% (confidence: {(primary.confidence * 100).toFixed(1)}%)
+                      </div>
+                      {adjacentStyles.length > 0 && (
+                        <>
+                          <div className="mt-2">Adjacent styles:</div>
+                          {adjacentStyles.map(adj => (
+                            <div key={adj.archetype} className="pl-4">
+                              • {adj.archetype}: {Math.round(adj.score)}% ({adj.blendLabel})
+                            </div>
+                          ))}
+                        </>
+                      )}
+                      <div className="pt-2 border-t mt-2">
+                        <div>Spectrum Position: X={spectrumPosition.xAxis.value.toFixed(2)}, Y={spectrumPosition.yAxis.value.toFixed(2)}</div>
+                        <div>Is Decisive: {isDecisive ? 'Yes' : 'No'}</div>
+                        {decisionReason && <div>Reason: {decisionReason}</div>}
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
             )}
           </CardContent>
