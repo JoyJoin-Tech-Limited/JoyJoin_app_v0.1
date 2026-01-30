@@ -598,7 +598,31 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
             <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white via-white/98 to-transparent pointer-events-none" />
             
             {/* Action buttons container */}
-            <div className="relative px-4 sm:px-6 pb-safe pt-6">
+            <div className="relative px-4 sm:px-6 safe-area-pb pt-6">
+              {/* Progress bar - moved inside sticky container */}
+              {isGenerating && generationProgress > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mb-3"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm text-gray-600">
+                      <span>生成高质量图片中...</span>
+                      <span className="font-bold">{generationProgress}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <motion.div 
+                        className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${generationProgress}%` }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              
               <div className="space-y-3">
                 {/* PRIMARY: 定制卡片 Button with 3D effect */}
                 <motion.button
@@ -610,6 +634,8 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                   className="relative w-full h-16 rounded-2xl overflow-hidden shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   whileHover={{ y: -2, scale: 1.01 }}
                   whileTap={{ y: 0.5, scale: 0.99 }}
+                  role="button"
+                  aria-label="定制卡片"
                 >
                   {/* 3D Shadow Layer */}
                   <div className="absolute inset-0 bg-gradient-to-b from-purple-700 via-pink-700 to-purple-800 translate-y-1 rounded-2xl" />
@@ -619,14 +645,14 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                     {/* Animated shimmer overlay */}
                     <motion.div
                       className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
-                      style={{ width: '200%' }}
-                      animate={{ x: ['-100%', '200%'] }}
-                      transition={{ 
+                      style={{ width: '200%', willChange: 'transform' }}
+                      animate={open && !isGenerating ? { x: ['-100%', '200%'] } : { x: 0 }}
+                      transition={open && !isGenerating ? { 
                         duration: 2.5, 
                         repeat: Infinity, 
                         repeatDelay: 1,
                         ease: "easeInOut"
-                      }}
+                      } : { duration: 0 }}
                     />
                     
                     {/* Button content */}
@@ -641,25 +667,27 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                 <div className="flex gap-3 justify-center">
                   {/* Share Button - Glass morphism */}
                   <motion.button
-                    onClick={async () => {
+                    onClick={() => {
                       haptics.light();
-                      await handleShare();
+                      void handleShare();
                     }}
                     disabled={isGenerating}
                     className="group relative w-16 h-16 rounded-2xl bg-white/80 backdrop-blur-md border-2 border-gray-200 shadow-lg disabled:opacity-50"
                     whileHover={{ scale: 1.08, y: -2 }}
                     whileTap={{ scale: 0.95 }}
+                    role="button"
+                    aria-label="分享卡片"
                   >
                     {/* Hover gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-2xl opacity-0 group-hover:opacity-100 group-active:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-200" />
                     
                     {isGenerating ? (
                       <Loader2 className="relative w-6 h-6 animate-spin mx-auto text-gray-600" />
                     ) : (
                       <>
-                        <Share2 className="relative w-6 h-6 mx-auto text-blue-600 group-hover:scale-110 transition-transform" />
-                        {/* Success checkmark badge */}
-                        <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-green-500 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-md transition-opacity">
+                        <Share2 className="relative w-6 h-6 mx-auto text-blue-600 group-hover:scale-110 group-active:scale-110 group-focus-visible:scale-110 transition-transform" />
+                        {/* Success checkmark badge - only show on larger screens with hover */}
+                        <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-green-500 rounded-full hidden md:flex md:opacity-0 md:group-hover:opacity-100 items-center justify-center shadow-md transition-opacity">
                           <Check className="w-3 h-3 text-white" />
                         </div>
                       </>
@@ -668,25 +696,27 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                   
                   {/* Download Button - Glass morphism */}
                   <motion.button
-                    onClick={async () => {
+                    onClick={() => {
                       haptics.light();
-                      await handleDownload();
+                      void handleDownload();
                     }}
                     disabled={isGenerating}
                     className="group relative w-16 h-16 rounded-2xl bg-white/80 backdrop-blur-md border-2 border-gray-200 shadow-lg disabled:opacity-50"
                     whileHover={{ scale: 1.08, y: -2 }}
                     whileTap={{ scale: 0.95 }}
+                    role="button"
+                    aria-label="下载图片"
                   >
                     {/* Hover gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl opacity-0 group-hover:opacity-100 group-active:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-200" />
                     
                     {isGenerating ? (
                       <Loader2 className="relative w-6 h-6 animate-spin mx-auto text-gray-600" />
                     ) : (
                       <>
-                        <Download className="relative w-6 h-6 mx-auto text-purple-600 group-hover:scale-110 transition-transform" />
-                        {/* Success checkmark badge */}
-                        <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-green-500 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-md transition-opacity">
+                        <Download className="relative w-6 h-6 mx-auto text-purple-600 group-hover:scale-110 group-active:scale-110 group-focus-visible:scale-110 transition-transform" />
+                        {/* Success checkmark badge - only show on larger screens with hover */}
+                        <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-green-500 rounded-full hidden md:flex md:opacity-0 md:group-hover:opacity-100 items-center justify-center shadow-md transition-opacity">
                           <Check className="w-3 h-3 text-white" />
                         </div>
                       </>
@@ -696,30 +726,6 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
               </div>
             </div>
           </div>
-        )}
-        
-        {/* Progress bar - keep existing position */}
-        {isGenerating && generationProgress > 0 && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mb-4"
-          >
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm text-gray-600">
-                <span>生成高质量图片中...</span>
-                <span className="font-bold">{generationProgress}%</span>
-              </div>
-              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                <motion.div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${generationProgress}%` }}
-                  transition={{ duration: 0.3 }}
-                />
-              </div>
-            </div>
-          </motion.div>
         )}
       </DialogContent>
     </Dialog>
