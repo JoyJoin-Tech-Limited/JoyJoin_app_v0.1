@@ -16,7 +16,7 @@ import { PartyPopper, Sparkles, Crown, Star } from "lucide-react";
 import { SlotReel } from "./SlotReel";
 import { SlotFrame } from "./SlotFrame";
 import { useSlotMachine, type SlotMachineState } from "./useSlotMachine";
-import { getArchetypeInfo, getArchetypeColorHSL } from "./archetypeData";
+import { getArchetypeInfo, getArchetypeColorHSL, validateArchetypeName } from "./archetypeData";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { CELEBRATION_COLORS, accentWithAlpha, type Particle } from "./particleUtils";
 
@@ -50,6 +50,19 @@ function ArchetypeSlotMachineComponent({
 
   const archetypeInfo = getArchetypeInfo(finalArchetype);
   const accentColor = getArchetypeColorHSL(finalArchetype);
+
+  // Development validation - check for archetype name mismatch
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      const validationResult = validateArchetypeName(finalArchetype);
+      if (!validationResult) {
+        console.warn(
+          `[ArchetypeSlotMachine] Archetype "${finalArchetype}" not found in ARCHETYPE_NAMES.`,
+          `This may cause the slot to land on the wrong archetype.`
+        );
+      }
+    }
+  }, [finalArchetype]);
 
   // Cleanup on unmount
   useEffect(() => {

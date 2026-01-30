@@ -18,7 +18,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { ARCHETYPE_NAMES } from "./archetypeData";
+import { ARCHETYPE_NAMES, validateArchetypeName } from "./archetypeData";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 export type SlotMachineState = "idle" | "anticipation" | "spinning" | "slowing" | "nearMiss" | "landed";
@@ -69,9 +69,16 @@ export function useSlotMachine({
   const spinTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onLandRef = useRef(onLand);
 
-  // Find target index
-  const finalIndex = ARCHETYPE_NAMES.indexOf(finalArchetype as typeof ARCHETYPE_NAMES[number]);
-  const targetIndex = finalIndex >= 0 ? finalIndex : 0;
+  // Find target index using robust matching with shared validation function
+  const validationResult = validateArchetypeName(finalArchetype);
+  const targetIndex = validationResult?.index ?? (() => {
+    // Log error for debugging (this should never happen in production)
+    console.error(
+      `[useSlotMachine] Unknown archetype: "${finalArchetype}" (bytes: ${[...finalArchetype].map(c => c.charCodeAt(0)).join(',')})`,
+      `Valid archetypes:`, ARCHETYPE_NAMES
+    );
+    return 0; // Fallback to first archetype
+  })();
 
   // Get 3 visible items centered on current
   const getVisibleItems = useCallback((idx: number): string[] => {
