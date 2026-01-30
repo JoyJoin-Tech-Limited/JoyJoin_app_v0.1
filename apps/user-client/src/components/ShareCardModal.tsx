@@ -15,6 +15,7 @@ import { getArchetypeVariants, type ShareCardVariant } from "@/lib/archetypeShar
 import { archetypeAvatars, getArchetypeAvatar, hasExpressionAsset } from "@/lib/archetypeAdapter";
 import { Share2, Download, Loader2, Check } from "lucide-react";
 import html2canvas from "html2canvas";
+import { haptics } from "@/lib/haptics";
 
 interface ShareCardModalProps {
   open: boolean;
@@ -411,7 +412,8 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[95vh] overflow-y-auto p-4 sm:p-6">
-        <div className="space-y-4 sm:space-y-6">
+        {/* Scrollable content area with bottom padding */}
+        <div className="space-y-4 sm:space-y-6 pb-40">
           {/* Title */}
           <div className="text-center">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">分享你的专属氛围原型卡片</h2>
@@ -587,78 +589,144 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
               </motion.div>
             </div>
           </div>
-
-          {/* Action bar below card */}
-          {!isFlipped && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center justify-center gap-3"
-            >
-              <Button
-                onClick={() => setIsFlipped(true)}
-                disabled={isGenerating}
-                className="flex-1 py-6 text-base font-bold bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-              >
-                定制卡片
-              </Button>
-              <Button
-                onClick={handleShare}
-                disabled={isGenerating}
-                variant="outline"
-                size="icon"
-                className="h-14 w-14 rounded-full border-2"
-                aria-label="分享卡片"
-                title="分享卡片"
-              >
-                {isGenerating ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Share2 className="w-5 h-5" />
-                )}
-              </Button>
-              <Button
-                onClick={handleDownload}
-                disabled={isGenerating}
-                variant="outline"
-                size="icon"
-                className="h-14 w-14 rounded-full border-2"
-                aria-label="下载图片"
-                title="下载图片"
-              >
-                {isGenerating ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Download className="w-5 h-5" />
-                )}
-              </Button>
-            </motion.div>
-          )}
-
-          {/* Progress bar during generation */}
-          {isGenerating && generationProgress > 0 && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mb-4"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm text-gray-600">
-                  <span>生成高质量图片中...</span>
-                  <span className="font-bold">{generationProgress}%</span>
-                </div>
-                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <motion.div 
-                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${generationProgress}%` }}
-                    transition={{ duration: 0.3 }}
-                  />
+        </div>
+        
+        {/* STICKY BOTTOM BAR - Outside scrollable div */}
+        {!isFlipped && (
+          <div className="sticky bottom-0 left-0 right-0 z-50 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6">
+            {/* Gradient fade overlay */}
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white via-white/98 to-transparent pointer-events-none" />
+            
+            {/* Action buttons container */}
+            <div className="relative px-4 sm:px-6 safe-area-pb pt-6">
+              {/* Progress bar - moved inside sticky container */}
+              {isGenerating && generationProgress > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mb-3"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm text-gray-600">
+                      <span>生成高质量图片中...</span>
+                      <span className="font-bold">{generationProgress}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <motion.div 
+                        className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${generationProgress}%` }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              
+              <div className="space-y-3">
+                {/* PRIMARY: 定制卡片 Button with 3D effect */}
+                <motion.button
+                  onClick={() => {
+                    haptics.medium();
+                    setIsFlipped(true);
+                  }}
+                  disabled={isGenerating}
+                  className="relative w-full h-16 rounded-2xl overflow-hidden shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{ y: -2, scale: 1.01 }}
+                  whileTap={{ y: 0.5, scale: 0.99 }}
+                  role="button"
+                  aria-label="定制卡片"
+                >
+                  {/* 3D Shadow Layer */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-purple-700 via-pink-700 to-purple-800 translate-y-1 rounded-2xl" />
+                  
+                  {/* Main Button Layer */}
+                  <div className="relative h-full bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 rounded-2xl flex items-center justify-center gap-2.5 px-4">
+                    {/* Animated shimmer overlay */}
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                      style={{ width: '200%', willChange: 'transform' }}
+                      animate={open && !isGenerating ? { x: ['-100%', '200%'] } : { x: 0 }}
+                      transition={open && !isGenerating ? { 
+                        duration: 2.5, 
+                        repeat: Infinity, 
+                        repeatDelay: 1,
+                        ease: "easeInOut"
+                      } : { duration: 0 }}
+                    />
+                    
+                    {/* Button content */}
+                    <span className="relative text-2xl drop-shadow-lg">✨</span>
+                    <span className="relative text-lg font-black text-white drop-shadow-lg tracking-wide">
+                      定制你的专属卡片
+                    </span>
+                  </div>
+                </motion.button>
+                
+                {/* SECONDARY: Share & Download Buttons */}
+                <div className="flex gap-3 justify-center">
+                  {/* Share Button - Glass morphism */}
+                  <motion.button
+                    onClick={() => {
+                      haptics.light();
+                      void handleShare();
+                    }}
+                    disabled={isGenerating}
+                    className="group relative w-16 h-16 rounded-2xl bg-white/80 backdrop-blur-md border-2 border-gray-200 shadow-lg disabled:opacity-50"
+                    whileHover={{ scale: 1.08, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    role="button"
+                    aria-label="分享卡片"
+                  >
+                    {/* Hover gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-2xl opacity-0 group-hover:opacity-100 group-active:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-200" />
+                    
+                    {isGenerating ? (
+                      <Loader2 className="relative w-6 h-6 animate-spin mx-auto text-gray-600" />
+                    ) : (
+                      <>
+                        <Share2 className="relative w-6 h-6 mx-auto text-blue-600 group-hover:scale-110 group-active:scale-110 group-focus-visible:scale-110 transition-transform" />
+                        {/* Success checkmark badge - only show on larger screens with hover */}
+                        <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-green-500 rounded-full hidden md:flex md:opacity-0 md:group-hover:opacity-100 items-center justify-center shadow-md transition-opacity">
+                          <Check className="w-3 h-3 text-white" />
+                        </div>
+                      </>
+                    )}
+                  </motion.button>
+                  
+                  {/* Download Button - Glass morphism */}
+                  <motion.button
+                    onClick={() => {
+                      haptics.light();
+                      void handleDownload();
+                    }}
+                    disabled={isGenerating}
+                    className="group relative w-16 h-16 rounded-2xl bg-white/80 backdrop-blur-md border-2 border-gray-200 shadow-lg disabled:opacity-50"
+                    whileHover={{ scale: 1.08, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    role="button"
+                    aria-label="下载图片"
+                  >
+                    {/* Hover gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl opacity-0 group-hover:opacity-100 group-active:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-200" />
+                    
+                    {isGenerating ? (
+                      <Loader2 className="relative w-6 h-6 animate-spin mx-auto text-gray-600" />
+                    ) : (
+                      <>
+                        <Download className="relative w-6 h-6 mx-auto text-purple-600 group-hover:scale-110 group-active:scale-110 group-focus-visible:scale-110 transition-transform" />
+                        {/* Success checkmark badge - only show on larger screens with hover */}
+                        <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-green-500 rounded-full hidden md:flex md:opacity-0 md:group-hover:opacity-100 items-center justify-center shadow-md transition-opacity">
+                          <Check className="w-3 h-3 text-white" />
+                        </div>
+                      </>
+                    )}
+                  </motion.button>
                 </div>
               </div>
-            </motion.div>
-          )}
-        </div>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
