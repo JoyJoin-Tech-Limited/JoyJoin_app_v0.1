@@ -12,3 +12,4 @@ export * from './matcherV2';
 export type { ArchetypeName as CompatibilityArchetypeName } from './archetypeCompatibility';
 export * from './archetypeNames';
 export * from './archetypeSkills';
+export * from './traitDisplayConfig';
