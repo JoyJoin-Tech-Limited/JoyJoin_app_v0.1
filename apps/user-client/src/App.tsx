@@ -53,6 +53,7 @@ import LevelUpProvider from "@/components/LevelUpProvider";
 import DuolingoOnboardingPage from "@/pages/DuolingoOnboardingPage";
 import GuidePage from "@/pages/GuidePage";
 import FinalProfileReviewPage from "@/pages/FinalProfileReviewPage";
+import LoginPromptPage from "@/pages/LoginPromptPage";
 import { LoadingScreen } from "@/components/LoadingScreen";
 
 preloadXiaoyueImages();
@@ -126,6 +127,7 @@ function AuthenticatedRouter() {
         <Route path="/onboarding/setup" component={EssentialDataPage} />
         <Route path="/onboarding/extended" component={ExtendedDataPage} />
         <Route path="/onboarding/review" component={FinalProfileReviewPage} />
+        <Route path="/onboarding/login" component={LoginPromptPage} />
         <Route path="*" component={RedirectToSetup} />
       </Switch>
     );

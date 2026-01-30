@@ -46,10 +46,7 @@ export default function ExtendedDataPage() {
 
   const handleInterestComplete = useCallback((data: InterestCarouselData) => {
     setShowCelebration(true);
-    
-    setTimeout(() => {
-      saveMutation.mutate(data);
-    }, 1500);
+    saveMutation.mutate(data); // No delay - start immediately
   }, [saveMutation]);
 
   const handleBack = useCallback(() => {
