@@ -551,7 +551,7 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
         const pairTraits = getPersistentPairDifferentiatingTraits(confusionDetection.pair!);
         const traitsOverlap = question.primaryTraits.filter(t => pairTraits.includes(t)).length;
         if (traitsOverlap > 0) {
-          utilityMultiplier = Math.max(utilityMultiplier, 1.3 + (traitsOverlap * 0.2));
+          utilityMultiplier *= (1.3 + (traitsOverlap * 0.2));
           
           // Instrumentation
           if (_instrumentation) {
