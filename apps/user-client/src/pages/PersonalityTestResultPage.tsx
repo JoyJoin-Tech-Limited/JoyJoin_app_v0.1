@@ -533,6 +533,8 @@ export default function PersonalityTestResultPage() {
     queryKey: ['/api/personality-test/stats'],
   });
 
+  // Load Xiaoyue analysis async as soon as result is available
+  // This allows it to load in the background during animations
   const xiaoyueAnalysis = useXiaoyueAnalysis({
     archetype: result?.primaryArchetype || null,
     traitScores: result ? {
@@ -543,7 +545,7 @@ export default function PersonalityTestResultPage() {
       X: result.extraversionScore / 100,
       P: result.positivityScore / 100,
     } : null,
-    enabled: !!result && animationPhase === 'results',
+    enabled: !!result, // Enable immediately when result is available
   });
 
   const styleSpectrum = useMemo(() => {

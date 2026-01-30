@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { SegmentedProgress } from "@/components/ui/progress-segmented";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -13,6 +13,7 @@ import { type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { SelectionList } from "@/components/SelectionList";
+import { QuestionSkeleton } from "@/components/shared/QuestionSkeleton";
 
 // Use consistent Xiao Yue Avatar-01.png as primary avatar across all screens
 import xiaoyueNormal from "@/assets/xiaoyue_default.png";
@@ -688,11 +689,7 @@ export default function DuolingoOnboardingPage() {
         const question = anchorQuestions[questionIndex];
         
         if (!question || isLoadingQuestions) {
-          return (
-            <div className="flex-1 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          );
+          return <QuestionSkeleton />;
         }
         
         const currentAnswer = answers[question.id];
@@ -713,6 +710,16 @@ export default function DuolingoOnboardingPage() {
             transition={{ duration: 0.3 }}
             className="flex-1 flex flex-col px-4 py-3 overflow-hidden"
           >
+            {/* Segmented Progress */}
+            <div className="mb-4">
+              <SegmentedProgress 
+                current={currentScreen - 1}
+                total={ONBOARDING_QUESTIONS_COUNT}
+                variant="duolingo"
+                className="h-1.5"
+              />
+            </div>
+
             <div className="shrink-0 mb-2">
               <p className="text-xl text-foreground mb-4 leading-relaxed font-bold">
                 {scenarioText}
