@@ -23,6 +23,9 @@ import { applyZScoreCapping, calculateSdiIndex, applySdiCorrection } from './tra
 // Default true - V2 matcher is now the standard algorithm for consistency
 export const ENABLE_MATCHER_V2_DEFAULT = true;
 
+// Development mode flag for conditional logging
+const IS_DEV = typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
+
 const ALL_TRAITS: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
 
 export const MAX_SKIP_COUNT = 3;
@@ -299,6 +302,37 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
   const { answeredQuestionIds, skippedQuestionIds, config, traitConfidences } = state;
   const questionCount = answeredQuestionIds.size;
   
+  // === Tier 1: Early Confusion Detection (After Q5) ===
+  if (questionCount >= 5 && questionCount < config.anchorQuestionCount) {
+    const earlyMatches = state.currentMatches;
+    if (earlyMatches.length >= 2) {
+      const confusionDetection = detectPersistentConfusionPair(earlyMatches);
+      
+      // If we detect a persistent pair EARLY with close scores (relaxed threshold for early detection)
+      if (confusionDetection.isPersistentPair && confusionDetection.scoreGap < 0.12) {
+        // Look for L1 or L2 questions that target this pair
+        const targetedQuestions = questionsV4.filter(q => 
+          q.level <= 2 &&
+          !answeredQuestionIds.has(q.id) &&
+          !skippedQuestionIds.has(q.id) &&
+          q.targetPairs &&
+          q.targetPairs.includes(confusionDetection.pair![0]) &&
+          q.targetPairs.includes(confusionDetection.pair![1])
+        );
+        
+        if (targetedQuestions.length > 0) {
+          // INJECT targeted question immediately
+          if (IS_DEV) {
+            console.log(`[EarlyDetection] Injecting targeted question for pair: ${confusionDetection.pair!.join(' ↔ ')} (gap: ${confusionDetection.scoreGap.toFixed(3)})`);
+          }
+          const randomizedOptions = [...targetedQuestions[0].options].sort(() => Math.random() - 0.5);
+          return { ...targetedQuestions[0], options: randomizedOptions };
+        }
+      }
+    }
+  }
+  
+  // Continue with existing anchor question logic...
   if (questionCount < config.anchorQuestionCount) {
     const anchors = getAnchorQuestions();
     const unansweredAnchors = anchors.filter(q => 
@@ -414,6 +448,7 @@ export function getRemainingSkips(state: EngineState): number {
 function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState): number {
   const { traitConfidences, currentMatches, detectedCohort } = state;
   
+  // Calculate base utility components
   let informationGain = 0;
   for (const trait of question.primaryTraits) {
     const conf = traitConfidences[trait];
@@ -424,8 +459,6 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
   informationGain /= question.primaryTraits.length;
   
   let discriminationBonus = 0;
-  let targetedPairBonus = 0;
-  let persistentPairBonus = 0;
   
   if (currentMatches.length >= 2) {
     const top2 = currentMatches.slice(0, 2);
@@ -438,114 +471,103 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
         discriminationBonus += diff / 100;
       }
       discriminationBonus /= question.primaryTraits.length;
-      
-      // Check if this question has explicit targetPairs that match the current top 2
-      if (question.targetPairs && question.targetPairs.length > 0) {
-        const topArchetypes = [top2[0].archetype, top2[1].archetype];
-        const matchCount = topArchetypes.filter(a => question.targetPairs!.includes(a)).length;
-        if (matchCount >= 2) {
-          // Strong bonus - this question is designed exactly for this confusion
-          targetedPairBonus = 0.5;
-        } else if (matchCount >= 1) {
-          // Moderate bonus - at least one archetype matches
-          targetedPairBonus = 0.2;
-        }
-      }
-      
-      // ENHANCED: Persistent confusion pair detection with threshold trigger
-      // Relaxed threshold from 0.05 to 0.08 to catch more cases
-      const confusionDetection = detectPersistentConfusionPair(currentMatches);
-      if (confusionDetection.isPersistentPair && confusionDetection.scoreGap < 0.08) {
-        // Instrumentation: track detection
-        if (_instrumentation) {
-          _instrumentation.persistentPairDetected++;
-          const pairKey = confusionDetection.pair!.sort().join(',');
-          _instrumentation.persistentPairTriggersByPair[pairKey] = 
-            (_instrumentation.persistentPairTriggersByPair[pairKey] || 0) + 1;
-          _instrumentation.scoreGapWhenTriggered.push(confusionDetection.scoreGap);
-        }
-        
-        // When we detect a persistent confusion pair with close scores,
-        // give a VERY strong boost to questions targeting that pair
-        if (question.targetPairs && question.targetPairs.length > 0) {
-          const pair = confusionDetection.pair!;
-          const targetsBothInPair = 
-            question.targetPairs.includes(pair[0]) && 
-            question.targetPairs.includes(pair[1]);
-          const targetsOneInPair = 
-            question.targetPairs.includes(pair[0]) || 
-            question.targetPairs.includes(pair[1]);
-          
-          if (targetsBothInPair) {
-            // Maximum priority - question targets exactly this confusion pair
-            // Increased from 0.8 to 1.5 to ensure these questions win selection
-            persistentPairBonus = 1.5;
-            // Instrumentation: track exact match
-            if (_instrumentation) {
-              _instrumentation.targetPairQuestionsSelected++;
-              _instrumentation.targetPairMatchTypes.exact++;
-            }
-          } else if (targetsOneInPair) {
-            // High priority - question targets one of the confusing archetypes
-            // Increased from 0.4 to 0.8
-            persistentPairBonus = 0.8;
-            // Instrumentation: track partial match
-            if (_instrumentation) {
-              _instrumentation.targetPairQuestionsSelected++;
-              _instrumentation.targetPairMatchTypes.partial++;
-            }
-          }
-        }
-        
-        // Also boost questions that target the differentiating traits
-        const pairTraits = getPersistentPairDifferentiatingTraits(confusionDetection.pair!);
-        const traitsOverlap = question.primaryTraits.filter(t => pairTraits.includes(t)).length;
-        if (traitsOverlap > 0 && persistentPairBonus < 0.6) {
-          // Increased from 0.3 to 0.5 per trait overlap
-          persistentPairBonus = Math.max(persistentPairBonus, 0.5 * traitsOverlap);
-          // Instrumentation: track trait match
-          if (_instrumentation) {
-            _instrumentation.targetPairQuestionsSelected++;
-            _instrumentation.targetPairMatchTypes.trait++;
-          }
-        }
-      }
     }
   }
   
   const levelBonus = question.level === 3 ? 0.1 : question.level === 2 ? 0.05 : 0;
-  
   const discriminationIndex = question.discriminationIndex || 0.3;
-  
-  // Forced choice questions get a small boost when differentiating close matches
   const forcedChoiceBonus = question.isForcedChoice && currentMatches.length >= 2 ? 0.1 : 0;
   
-  // Cohort-based routing bonus/penalty
-  let cohortBonus = 0;
-  if (detectedCohort && question.cohortTag) {
-    if (question.cohortTag === detectedCohort) {
-      // Very strong bonus for cohort-matched questions (+0.35)
-      // This ensures cohort questions are prioritized over generic high-discrimination items
-      cohortBonus = 0.35;
-    } else if (question.cohortTag === 'universal') {
-      // No bonus or penalty for universal questions
-      cohortBonus = 0;
-    } else {
-      // Significant penalty for mismatched cohort questions (-0.18)
-      cohortBonus = -0.18;
+  // === Tier 2: Multiplicative Bonus System ===
+  let utilityMultiplier = 1.0;
+  
+  // Persistent pair detection with STRONG multiplier
+  if (currentMatches.length >= 2) {
+    const confusionDetection = detectPersistentConfusionPair(currentMatches);
+    
+    if (confusionDetection.isPersistentPair && confusionDetection.scoreGap < 0.08) {
+      if (question.targetPairs && question.targetPairs.length > 0) {
+        const pair = confusionDetection.pair!;
+        const targetsBothInPair = 
+          question.targetPairs.includes(pair[0]) && 
+          question.targetPairs.includes(pair[1]);
+        const targetsOneInPair = 
+          question.targetPairs.includes(pair[0]) || 
+          question.targetPairs.includes(pair[1]);
+        
+        if (targetsBothInPair) {
+          // CRITICAL MATCH: Apply 2.5x multiplier (increased from 1.5 additive bonus)
+          utilityMultiplier *= 2.5;
+          
+          // Instrumentation
+          if (_instrumentation) {
+            _instrumentation.targetPairQuestionsSelected++;
+            _instrumentation.targetPairMatchTypes.exact++;
+          }
+        } else if (targetsOneInPair) {
+          // PARTIAL MATCH: Apply 1.8x multiplier (increased from 0.8 additive bonus)
+          utilityMultiplier *= 1.8;
+          
+          // Instrumentation
+          if (_instrumentation) {
+            _instrumentation.targetPairQuestionsSelected++;
+            _instrumentation.targetPairMatchTypes.partial++;
+          }
+        }
+      }
+      
+      // Also boost questions that target the differentiating traits
+      const pairTraits = getPersistentPairDifferentiatingTraits(confusionDetection.pair!);
+      const traitsOverlap = question.primaryTraits.filter(t => pairTraits.includes(t)).length;
+      if (traitsOverlap > 0 && utilityMultiplier < 1.5) {
+        utilityMultiplier = Math.max(utilityMultiplier, 1.3 + (traitsOverlap * 0.2));
+        
+        // Instrumentation
+        if (_instrumentation) {
+          _instrumentation.targetPairQuestionsSelected++;
+          _instrumentation.targetPairMatchTypes.trait++;
+        }
+      }
+      
+      // Instrumentation: track detection
+      if (_instrumentation) {
+        _instrumentation.persistentPairDetected++;
+        const pairKey = confusionDetection.pair!.sort().join(',');
+        _instrumentation.persistentPairTriggersByPair[pairKey] = 
+          (_instrumentation.persistentPairTriggersByPair[pairKey] || 0) + 1;
+        _instrumentation.scoreGapWhenTriggered.push(confusionDetection.scoreGap);
+      }
     }
   }
   
-  return (
-    informationGain * 0.25 +
-    discriminationBonus * 0.15 +
-    targetedPairBonus * 0.2 +
-    persistentPairBonus * 0.25 +  // New: strong weight for persistent pair targeting
-    discriminationIndex * 0.1 +
-    levelBonus * 0.03 +
-    forcedChoiceBonus * 0.02 +
-    cohortBonus
+  // Cohort match multiplier (STACKS with persistent pair bonus)
+  let cohortBonus = 0;
+  if (detectedCohort && question.cohortTag) {
+    if (question.cohortTag === detectedCohort) {
+      // Strong cohort match: 1.4x multiplier
+      utilityMultiplier *= 1.4;
+      cohortBonus = 0.35; // Keep for logging/debugging
+    } else if (question.cohortTag === 'universal') {
+      // No penalty for universal questions
+      cohortBonus = 0;
+    } else {
+      // Mismatched cohort: 0.7x penalty multiplier
+      utilityMultiplier *= 0.7;
+      cohortBonus = -0.18; // Keep for logging/debugging
+    }
+  }
+  
+  // === Calculate base utility (weighted sum) ===
+  const baseUtility = (
+    informationGain * 0.30 +
+    discriminationBonus * 0.20 +
+    discriminationIndex * 0.15 +
+    levelBonus * 0.05 +
+    forcedChoiceBonus * 0.05
   );
+  
+  // === Apply multiplier to get final utility ===
+  return baseUtility * utilityMultiplier;
 }
 
 /**
@@ -581,6 +603,25 @@ export function shouldTerminate(state: EngineState): boolean {
   const avgConfidence = allConfidences.reduce((a, b) => a + b, 0) / allConfidences.length;
   const minConfidence = Math.min(...allConfidences);
   
+  // === Tier 3: Persistent Pair Extension Logic ===
+  const confusionDetection = detectPersistentConfusionPair(currentMatches);
+  
+  if (confusionDetection.isPersistentPair && confusionDetection.scoreGap < 0.10) {
+    // For persistent confusion pairs, require HIGHER confidence
+    const requiredConfidence = 0.72;  // Elevated from 0.65 for persistent pairs
+    
+    // Allow up to 2 extra questions beyond softMax for persistent pairs
+    if (questionCount < config.softMaxQuestions + 2) {
+      if (avgConfidence < requiredConfidence || minConfidence < requiredConfidence * 0.85) {
+        if (IS_DEV) {
+          console.log(`[PersistentPair] Extending assessment for pair: ${confusionDetection.pair!.join(' ↔ ')} (avgConf: ${avgConfidence.toFixed(3)}, gap: ${confusionDetection.scoreGap.toFixed(3)})`);
+        }
+        return false;  // Keep asking questions
+      }
+    }
+  }
+  
+  // Continue with existing termination logic
   const hasConfusablePair = checkConfusablePairRisk(currentMatches, config.confusablePairThreshold);
   const requiredConfidence = hasConfusablePair 
     ? config.confusablePairThreshold 
