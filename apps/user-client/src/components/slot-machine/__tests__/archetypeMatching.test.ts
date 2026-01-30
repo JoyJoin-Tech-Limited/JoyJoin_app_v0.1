@@ -27,15 +27,30 @@ describe('Archetype Matching', () => {
 
   describe('validateArchetypeName', () => {
     it('should validate exact matches', () => {
-      for (const name of ARCHETYPE_NAMES) {
-        expect(validateArchetypeName(name)).toBe(name);
+      for (let i = 0; i < ARCHETYPE_NAMES.length; i++) {
+        const name = ARCHETYPE_NAMES[i];
+        const result = validateArchetypeName(name);
+        expect(result).not.toBeNull();
+        expect(result?.name).toBe(name);
+        expect(result?.index).toBe(i);
       }
     });
 
     it('should validate trimmed names (whitespace handling)', () => {
-      expect(validateArchetypeName(' 开心柯基 ')).toBe('开心柯基');
-      expect(validateArchetypeName('太阳鸡  ')).toBe('太阳鸡');
-      expect(validateArchetypeName('  机智狐')).toBe('机智狐');
+      const result1 = validateArchetypeName(' 开心柯基 ');
+      expect(result1).not.toBeNull();
+      expect(result1?.name).toBe('开心柯基');
+      expect(result1?.index).toBe(0);
+
+      const result2 = validateArchetypeName('太阳鸡  ');
+      expect(result2).not.toBeNull();
+      expect(result2?.name).toBe('太阳鸡');
+      expect(result2?.index).toBe(1);
+
+      const result3 = validateArchetypeName('  机智狐');
+      expect(result3).not.toBeNull();
+      expect(result3?.name).toBe('机智狐');
+      expect(result3?.index).toBe(3);
     });
 
     it('should return null for unknown archetypes', () => {
@@ -47,7 +62,19 @@ describe('Archetype Matching', () => {
     it('should handle Unicode normalization differences', () => {
       // Most Chinese characters have stable Unicode forms, but test the mechanism
       const normalized = '开心柯基'.normalize('NFC');
-      expect(validateArchetypeName(normalized)).toBe('开心柯基');
+      const result = validateArchetypeName(normalized);
+      expect(result).not.toBeNull();
+      expect(result?.name).toBe('开心柯基');
+      expect(result?.index).toBe(0);
+    });
+
+    it('should handle combined whitespace and normalization issues', () => {
+      // Test that trimmed version is normalized, not original
+      const withBoth = ' 开心柯基 '.normalize('NFC');
+      const result = validateArchetypeName(withBoth);
+      expect(result).not.toBeNull();
+      expect(result?.name).toBe('开心柯基');
+      expect(result?.index).toBe(0);
     });
   });
 
