@@ -1,5 +1,5 @@
 import { useMemo, useId } from "react";
-import { TRAIT_DISPLAY_CONFIG } from '@joyjoin/shared/personality';
+import { TRAIT_DISPLAY_CONFIG } from '@shared/personality';
 
 interface PersonalityRadarChartProps {
   affinityScore?: number;
