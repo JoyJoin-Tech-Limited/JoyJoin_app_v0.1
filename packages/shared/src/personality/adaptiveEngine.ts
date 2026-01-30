@@ -445,6 +445,31 @@ export function getRemainingSkips(state: EngineState): number {
   return MAX_SKIP_COUNT - state.skipCount;
 }
 
+/**
+ * Calculate utility score for a question using multiplicative bonus system
+ * 
+ * Algorithm:
+ * 1. Calculate base utility as weighted sum of:
+ *    - Information gain (30%): How much the question reduces trait uncertainty
+ *    - Discrimination bonus (20%): How well it differentiates top 2 archetypes
+ *    - Discrimination index (15%): Question's inherent differentiation power
+ *    - Level bonus (5%): Small boost for higher difficulty questions
+ *    - Forced choice bonus (5%): Boost for binary choice questions
+ *    Note: Weights intentionally sum to 0.75 to leave room for multipliers
+ * 
+ * 2. Apply multiplicative bonuses:
+ *    - Persistent pair exact match: 2.5x (question targets both confused archetypes)
+ *    - Persistent pair partial match: 1.8x (question targets one archetype)
+ *    - Persistent pair trait match: 1.3-1.7x (question targets differentiating traits)
+ *    - Cohort match: 1.4x (question matches detected cohort)
+ *    - Cohort mismatch: 0.7x (penalty for mismatched cohort)
+ * 
+ * 3. Multipliers stack multiplicatively (e.g., 2.5x * 1.4x = 3.5x total boost)
+ * 
+ * @param question - The question to score
+ * @param state - Current assessment engine state
+ * @returns Final utility score (base utility * multipliers)
+ */
 function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState): number {
   const { traitConfidences, currentMatches, detectedCohort } = state;
   
@@ -486,6 +511,8 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
     const confusionDetection = detectPersistentConfusionPair(currentMatches);
     
     if (confusionDetection.isPersistentPair && confusionDetection.scoreGap < 0.08) {
+      let persistentPairMultiplierApplied = false;
+      
       if (question.targetPairs && question.targetPairs.length > 0) {
         const pair = confusionDetection.pair!;
         const targetsBothInPair = 
@@ -498,6 +525,7 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
         if (targetsBothInPair) {
           // CRITICAL MATCH: Apply 2.5x multiplier (increased from 1.5 additive bonus)
           utilityMultiplier *= 2.5;
+          persistentPairMultiplierApplied = true;
           
           // Instrumentation
           if (_instrumentation) {
@@ -507,6 +535,7 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
         } else if (targetsOneInPair) {
           // PARTIAL MATCH: Apply 1.8x multiplier (increased from 0.8 additive bonus)
           utilityMultiplier *= 1.8;
+          persistentPairMultiplierApplied = true;
           
           // Instrumentation
           if (_instrumentation) {
@@ -517,15 +546,18 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
       }
       
       // Also boost questions that target the differentiating traits
-      const pairTraits = getPersistentPairDifferentiatingTraits(confusionDetection.pair!);
-      const traitsOverlap = question.primaryTraits.filter(t => pairTraits.includes(t)).length;
-      if (traitsOverlap > 0 && utilityMultiplier < 1.5) {
-        utilityMultiplier = Math.max(utilityMultiplier, 1.3 + (traitsOverlap * 0.2));
-        
-        // Instrumentation
-        if (_instrumentation) {
-          _instrumentation.targetPairQuestionsSelected++;
-          _instrumentation.targetPairMatchTypes.trait++;
+      // Only apply if no targetPairs match was found (to avoid double-counting)
+      if (!persistentPairMultiplierApplied) {
+        const pairTraits = getPersistentPairDifferentiatingTraits(confusionDetection.pair!);
+        const traitsOverlap = question.primaryTraits.filter(t => pairTraits.includes(t)).length;
+        if (traitsOverlap > 0) {
+          utilityMultiplier = Math.max(utilityMultiplier, 1.3 + (traitsOverlap * 0.2));
+          
+          // Instrumentation
+          if (_instrumentation) {
+            _instrumentation.targetPairQuestionsSelected++;
+            _instrumentation.targetPairMatchTypes.trait++;
+          }
         }
       }
       
@@ -541,19 +573,16 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
   }
   
   // Cohort match multiplier (STACKS with persistent pair bonus)
-  let cohortBonus = 0;
   if (detectedCohort && question.cohortTag) {
     if (question.cohortTag === detectedCohort) {
       // Strong cohort match: 1.4x multiplier
       utilityMultiplier *= 1.4;
-      cohortBonus = 0.35; // Keep for logging/debugging
     } else if (question.cohortTag === 'universal') {
       // No penalty for universal questions
-      cohortBonus = 0;
+      // utilityMultiplier remains unchanged
     } else {
       // Mismatched cohort: 0.7x penalty multiplier
       utilityMultiplier *= 0.7;
-      cohortBonus = -0.18; // Keep for logging/debugging
     }
   }
   
