@@ -18,7 +18,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { ARCHETYPE_NAMES } from "./archetypeData";
+import { ARCHETYPE_NAMES, validateArchetypeName } from "./archetypeData";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 export type SlotMachineState = "idle" | "anticipation" | "spinning" | "slowing" | "nearMiss" | "landed";
@@ -36,34 +36,6 @@ interface SlotMachineReturn {
   start: () => void;
   progress: number;
   intensity: number; // 0-1 for visual effects intensity
-}
-
-/**
- * Find archetype index with fuzzy matching for robustness
- * Handles potential whitespace, encoding, or case differences
- */
-function findArchetypeIndex(archetype: string, archetypeNames: readonly string[]): number {
-  // Exact match first
-  let index = archetypeNames.indexOf(archetype as any);
-  if (index >= 0) return index;
-  
-  // Trimmed match (handles leading/trailing whitespace)
-  const trimmed = archetype.trim();
-  index = archetypeNames.findIndex(name => name.trim() === trimmed);
-  if (index >= 0) return index;
-  
-  // Normalized match (handles Unicode normalization differences)
-  const normalized = archetype.normalize('NFC');
-  index = archetypeNames.findIndex(name => name.normalize('NFC') === normalized);
-  if (index >= 0) return index;
-  
-  // Log error for debugging (this should never happen in production)
-  console.error(
-    `[useSlotMachine] Unknown archetype: "${archetype}" (bytes: ${[...archetype].map(c => c.charCodeAt(0)).join(',')})`,
-    `Valid archetypes:`, archetypeNames
-  );
-  
-  return 0; // Fallback to first archetype
 }
 
 // Haptic patterns for different phases
@@ -97,8 +69,16 @@ export function useSlotMachine({
   const spinTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onLandRef = useRef(onLand);
 
-  // Find target index using robust matching
-  const targetIndex = findArchetypeIndex(finalArchetype, ARCHETYPE_NAMES);
+  // Find target index using robust matching with shared validation function
+  const validationResult = validateArchetypeName(finalArchetype);
+  const targetIndex = validationResult?.index ?? (() => {
+    // Log error for debugging (this should never happen in production)
+    console.error(
+      `[useSlotMachine] Unknown archetype: "${finalArchetype}" (bytes: ${[...finalArchetype].map(c => c.charCodeAt(0)).join(',')})`,
+      `Valid archetypes:`, ARCHETYPE_NAMES
+    );
+    return 0; // Fallback to first archetype
+  })();
 
   // Get 3 visible items centered on current
   const getVisibleItems = useCallback((idx: number): string[] => {

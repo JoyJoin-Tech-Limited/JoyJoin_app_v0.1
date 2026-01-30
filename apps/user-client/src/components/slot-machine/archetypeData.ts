@@ -149,24 +149,29 @@ export function getArchetypeColorHSL(name: string): string {
 }
 
 /**
- * Validate an archetype name and return the canonical version
- * Returns the input if valid, or null if not found
+ * Validate an archetype name and return the canonical version with index
+ * Returns { name: canonical name, index: 0-based index } if valid, or null if not found
  */
-export function validateArchetypeName(name: string): string | null {
+export function validateArchetypeName(name: string): { name: string; index: number } | null {
   // Exact match
-  if (ARCHETYPE_NAMES.includes(name as any)) {
-    return name;
+  const exactIndex = ARCHETYPE_NAMES.indexOf(name as any);
+  if (exactIndex >= 0) {
+    return { name, index: exactIndex };
   }
   
   // Trimmed match
   const trimmed = name.trim();
-  const found = ARCHETYPE_NAMES.find(n => n.trim() === trimmed);
-  if (found) return found;
+  const foundIndex = ARCHETYPE_NAMES.findIndex(n => n.trim() === trimmed);
+  if (foundIndex >= 0) {
+    return { name: ARCHETYPE_NAMES[foundIndex], index: foundIndex };
+  }
   
-  // Normalized match
-  const normalized = name.normalize('NFC');
-  const foundNormalized = ARCHETYPE_NAMES.find(n => n.normalize('NFC') === normalized);
-  if (foundNormalized) return foundNormalized;
+  // Normalized match (on trimmed version to handle combined issues)
+  const normalized = trimmed.normalize('NFC');
+  const foundNormalizedIndex = ARCHETYPE_NAMES.findIndex(n => n.trim().normalize('NFC') === normalized);
+  if (foundNormalizedIndex >= 0) {
+    return { name: ARCHETYPE_NAMES[foundNormalizedIndex], index: foundNormalizedIndex };
+  }
   
   return null;
 }
