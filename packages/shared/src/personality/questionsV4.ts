@@ -4311,6 +4311,180 @@ export const questionsV4: AdaptiveQuestion[] = [
         traitScores: { A: 1, C: 0, E: 2, O: 0, X: 1, P: 3 }
       }
     ]
+  },
+
+  // ==================== Q131-Q135: 新增高混淆对区分题 ====================
+  // 针对持续混淆对：太阳鸡↔淡定海豚、沉思猫头鹰↔稳如龟、机智狐↔灵感章鱼、织网蛛↔定心大象、夸夸豚↔暖心熊
+  
+  {
+    id: "Q131",
+    level: 3,
+    category: "能量表达方式",
+    scenarioText: "🌟 团队项目遇到困难,大家情绪有点低落。",
+    questionText: "你会怎么做？",
+    primaryTraits: ["P", "X", "A"],
+    isForcedChoice: true,
+    targetPairs: ["太阳鸡", "淡定海豚"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.85,
+    options: [
+      {
+        value: "A",
+        text: "立刻活跃气氛，\"我们可以的！一起加油！\"，带动大家打起精神",
+        traitScores: { A: 2, C: 0, E: 1, O: 0, X: 5, P: 6 }
+      },
+      {
+        value: "B",
+        text: "保持冷静，分析问题，给出实际可行的建议",
+        traitScores: { A: 2, C: 2, E: 4, O: 1, X: 1, P: -1 }
+      },
+      {
+        value: "C",
+        text: "默默做好自己的部分，用行动支持团队",
+        traitScores: { A: 1, C: 4, E: 2, O: 0, X: -2, P: 0 }
+      },
+      {
+        value: "D",
+        text: "倾听每个人的想法，找到大家都认可的方向",
+        traitScores: { A: 5, C: 1, E: 2, O: 0, X: 0, P: 1 }
+      }
+    ]
+  },
+  {
+    id: "Q132",
+    level: 3,
+    category: "思维方式偏好",
+    scenarioText: "📋 策划一个周末小型聚会，还没有具体方案。",
+    questionText: "你更倾向于？",
+    primaryTraits: ["O", "C", "X"],
+    isForcedChoice: true,
+    targetPairs: ["沉思猫头鹰", "稳如龟"],
+    cohortTag: 'quiet_anchor',
+    discriminationIndex: 0.82,
+    options: [
+      {
+        value: "A",
+        text: "想一些新奇的主题，比如角色扮演、密室逃脱之类的有创意的形式",
+        traitScores: { A: 0, C: -2, E: 1, O: 5, X: 1, P: 2 }
+      },
+      {
+        value: "B",
+        text: "参考以前成功的聚会形式，做个靠谱的经典聚餐或K歌",
+        traitScores: { A: 1, C: 4, E: 2, O: -2, X: 0, P: 0 }
+      },
+      {
+        value: "C",
+        text: "随便聊聊天就行，大家开心最重要，不用太复杂",
+        traitScores: { A: 2, C: -1, E: 2, O: 0, X: 3, P: 3 }
+      },
+      {
+        value: "D",
+        text: "先问问大家想做什么，收集意见再决定",
+        traitScores: { A: 4, C: 1, E: 1, O: 0, X: 1, P: 1 }
+      }
+    ]
+  },
+  {
+    id: "Q133",
+    level: 3,
+    category: "创意产生方式",
+    scenarioText: "💡 需要想一个创意方案，没有时间限制。",
+    questionText: "你更喜欢？",
+    primaryTraits: ["X", "O", "A"],
+    isForcedChoice: true,
+    targetPairs: ["机智狐", "灵感章鱼"],
+    cohortTag: 'creative_explorer',
+    discriminationIndex: 0.78,
+    options: [
+      {
+        value: "A",
+        text: "和朋友们头脑风暴，在讨论中激发灵感",
+        traitScores: { A: 2, C: 0, E: 1, O: 4, X: 5, P: 2 }
+      },
+      {
+        value: "B",
+        text: "独自思考，沉浸在自己的想象世界里",
+        traitScores: { A: -1, C: 1, E: 2, O: 5, X: -3, P: 0 }
+      },
+      {
+        value: "C",
+        text: "参考已有的成功案例，在此基础上优化",
+        traitScores: { A: 0, C: 3, E: 2, O: -1, X: 0, P: 0 }
+      },
+      {
+        value: "D",
+        text: "边做边想，在实践中调整",
+        traitScores: { A: 0, C: -1, E: 1, O: 2, X: 2, P: 2 }
+      }
+    ]
+  },
+  {
+    id: "Q134",
+    level: 3,
+    category: "计划细节程度",
+    scenarioText: "🗓️ 组织一次3天小团队旅行。",
+    questionText: "你会怎么规划？",
+    primaryTraits: ["C", "E", "A"],
+    isForcedChoice: true,
+    targetPairs: ["织网蛛", "定心大象"],
+    cohortTag: 'steady_harmonizer',
+    discriminationIndex: 0.76,
+    options: [
+      {
+        value: "A",
+        text: "详细规划每天行程、交通、预算，做好备选方案",
+        traitScores: { A: 0, C: 5, E: 2, O: -1, X: -1, P: 0 }
+      },
+      {
+        value: "B",
+        text: "定好大方向和关键节点，其他随机应变",
+        traitScores: { A: 1, C: 2, E: 4, O: 1, X: 1, P: 1 }
+      },
+      {
+        value: "C",
+        text: "问问大家想去哪，根据大家意见来",
+        traitScores: { A: 4, C: 0, E: 2, O: 0, X: 2, P: 1 }
+      },
+      {
+        value: "D",
+        text: "随缘吧，走到哪算哪，轻松就好",
+        traitScores: { A: 0, C: -3, E: 2, O: 1, X: 1, P: 2 }
+      }
+    ]
+  },
+  {
+    id: "Q135",
+    level: 3,
+    category: "情感表达深度",
+    scenarioText: "❤️ 好朋友分享了一个好消息。",
+    questionText: "你的反应？",
+    primaryTraits: ["P", "A", "X"],
+    isForcedChoice: true,
+    targetPairs: ["夸夸豚", "暖心熊"],
+    cohortTag: 'social_catalyst',
+    discriminationIndex: 0.80,
+    options: [
+      {
+        value: "A",
+        text: "\"哇！太棒了！你真的超厉害！\"，各种夸赞和感叹",
+        traitScores: { A: 3, C: 0, E: 1, O: 0, X: 4, P: 6 }
+      },
+      {
+        value: "B",
+        text: "给一个温暖的拥抱，真诚地说\"我为你感到开心\"",
+        traitScores: { A: 5, C: 0, E: 3, O: 0, X: 1, P: 2 }
+      },
+      {
+        value: "C",
+        text: "微笑点头，说\"恭喜\"，保持礼貌距离",
+        traitScores: { A: 1, C: 1, E: 3, O: 0, X: -2, P: 0 }
+      },
+      {
+        value: "D",
+        text: "\"意料之中，你一直都很优秀\"，冷静肯定",
+        traitScores: { A: 2, C: 1, E: 4, O: 1, X: 0, P: -1 }
+      }
+    ]
   }
 ];
 
