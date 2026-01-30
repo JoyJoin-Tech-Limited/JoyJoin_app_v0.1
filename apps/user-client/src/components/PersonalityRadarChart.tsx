@@ -1,4 +1,5 @@
 import { useMemo, useId } from "react";
+import { TRAIT_DISPLAY_CONFIG } from '@joyjoin/shared/personality/traitDisplayConfig';
 
 interface PersonalityRadarChartProps {
   affinityScore?: number;
@@ -13,12 +14,12 @@ interface PersonalityRadarChartProps {
 }
 
 const traitDescriptions: Record<string, string> = {
-  '亲和力': '与他人建立温暖联系的能力，包括友善、共情、关心他人',
-  '开放性': '对新事物的好奇心和接纳度，包括创新思维、探索精神',
-  '责任心': '可靠性和计划性，包括守时、言出必行、稳定可靠',
-  '情绪稳定性': '面对压力时的冷静程度，包括抗压能力、情绪调节',
-  '外向性': '社交能量和主动性，喜欢与人互动的程度',
-  '正能量性': '乐观积极的态度，传递热情和正面能量的能力',
+  '亲和力': TRAIT_DISPLAY_CONFIG['A'].fullDesc,
+  '开放性': TRAIT_DISPLAY_CONFIG['O'].fullDesc,
+  '责任心': TRAIT_DISPLAY_CONFIG['C'].fullDesc,
+  '情绪稳定性': TRAIT_DISPLAY_CONFIG['E'].fullDesc,
+  '外向性': TRAIT_DISPLAY_CONFIG['X'].fullDesc,
+  '正能量性': TRAIT_DISPLAY_CONFIG['P'].fullDesc,
 };
 
 // Compact label mapping for share cards (short, intuitive Chinese terms)
