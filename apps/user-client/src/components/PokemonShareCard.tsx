@@ -104,6 +104,8 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         className="relative w-full max-w-[360px] mx-auto"
         style={{ 
           minHeight: '680px',
+          maxHeight: '90vh',
+          aspectRatio: '9 / 16',
           fontFamily: 'ZCOOL QingKe HuangYou, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif'
         }}
       >
@@ -167,7 +169,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
           )}
           
           {/* Content - white/light background as default - 3-section layout */}
-          <div className="relative bg-white/98 rounded-[20px] h-full flex flex-col px-5 py-4">
+          <div className="relative bg-white/98 rounded-[20px] h-full flex flex-col py-4">
             {/* SECTION 1: HERO (TOP) - centered mascot + type/name + tagline */}
             <div className="flex-none px-4 pt-4 pb-3 flex flex-col items-center">
               {/* Archetype illustration in circular frame */}
@@ -256,11 +258,11 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               <div className="grid grid-cols-[1.8fr_1fr] gap-3">
                 {/* LEFT: HERO TAG - 原型编号 with holographic effect */}
                 <div className="relative overflow-hidden rounded-xl shadow-lg">
-                  {/* Animated rainbow border gradient */}
+                  {/* Animated rainbow border gradient - disabled during image generation */}
                   <div className="absolute inset-0 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 opacity-80" 
                        style={{ 
                          backgroundSize: '200% 200%',
-                         animation: 'gradient-shift 3s ease infinite'
+                         ...(isPreview ? { animation: 'gradient-shift 3s ease infinite' } : {})
                        }} 
                   />
                   
@@ -321,7 +323,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   <div className="relative z-10 flex items-baseline gap-0.5">
                     <span className="text-lg font-semibold text-amber-600">#</span>
                     <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-orange-600">
-                      {rankings.totalUserRank.toLocaleString()}
+                      {rankings.totalUserRank.toLocaleString("zh-CN")}
                     </span>
                   </div>
                 </div>
@@ -340,8 +342,8 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   extraversionScore={traitScores.X}
                   positivityScore={traitScores.P}
                   primaryColor={variant.primaryColor}
-                  compactMode={false}
-                  variant="default"
+                  compactMode={true}
+                  variant="compact"
                 />
               </div>
               
