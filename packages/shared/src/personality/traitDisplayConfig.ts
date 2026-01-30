@@ -69,7 +69,7 @@ export const TRAIT_DISPLAY_CONFIG: Record<string, TraitDisplayConfig> = {
   },
   'P': {
     key: 'P',
-    chineseName: '积极性',
+    chineseName: '正能量性',
     englishName: 'Positivity',
     simpleDesc: '待人的乐观心态与人际热情度',
     fullDesc: '待人处事的乐观心态与人际间的热情程度',
