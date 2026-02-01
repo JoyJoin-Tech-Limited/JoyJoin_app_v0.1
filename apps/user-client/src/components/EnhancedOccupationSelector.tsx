@@ -327,7 +327,11 @@ export function EnhancedOccupationSelector({
                     <button
                       key={occ.id}
                       type="button"
-                      onClick={() => handleOccupationSelect(occ)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleOccupationSelect(occ);
+                      }}
                       className={cn(
                         "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all text-sm",
                         isSelected 
@@ -641,7 +645,11 @@ export function EnhancedOccupationSelector({
                     <button
                       key={occ.id}
                       type="button"
-                      onClick={() => handleOccupationSelect(occ)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleOccupationSelect(occ);
+                      }}
                       className="w-full flex items-center justify-between p-3 hover-elevate text-left"
                     >
                       <div>
