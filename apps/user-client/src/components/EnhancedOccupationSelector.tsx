@@ -181,7 +181,7 @@ export function EnhancedOccupationSelector({
   // AI classification mutation
   const classifyMutation = useMutation({
     mutationFn: async (data: { description: string; context?: IndustryClassificationContext }) => {
-      const response = await apiRequest('/api/inference/classify-industry', 'POST', data);
+      const response = await apiRequest('POST', '/api/inference/classify-industry', data);
       return await response.json() as IndustryClassificationResult;
     },
     onSuccess: (data: IndustryClassificationResult) => {
