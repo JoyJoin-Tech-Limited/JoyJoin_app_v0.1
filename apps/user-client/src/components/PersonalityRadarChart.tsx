@@ -138,13 +138,14 @@ export default function PersonalityRadarChart({
           )}
         </defs>
 
+        {/* Grid polygons - Using hardcoded rgba for consistent contrast across all archetype color schemes */}
         <polygon
           points={maxPolygonPoints}
           fill="none"
-          stroke="hsl(var(--muted-foreground))"
+          stroke="rgba(0,0,0,0.25)"
           strokeWidth={1 * compactScale}
           strokeDasharray={`${4 * compactScale},${4 * compactScale}`}
-          opacity="0.5"
+          opacity="0.6"
         />
 
         {[0.25, 0.5, 0.75].map((scale) => {
@@ -160,13 +161,14 @@ export default function PersonalityRadarChart({
               key={scale}
               points={scaledPoints}
               fill="none"
-              stroke="hsl(var(--border))"
+              stroke="rgba(0,0,0,0.2)"
               strokeWidth={1 * compactScale}
-              opacity="0.7"
+              opacity="0.8"
             />
           );
         })}
 
+        {/* Radial lines - Using hardcoded rgba for visibility on all backgrounds */}
         {userTraits.map((_, index) => {
           const angle = (Math.PI * 2 * index) / userTraits.length - Math.PI / 2;
           const x = centerX + Math.cos(angle) * maxRadius;
@@ -178,9 +180,9 @@ export default function PersonalityRadarChart({
               y1={centerY}
               x2={x}
               y2={y}
-              stroke="hsl(var(--border))"
+              stroke="rgba(0,0,0,0.2)"
               strokeWidth={1 * compactScale}
-              opacity="0.7"
+              opacity="0.8"
             />
           );
         })}

@@ -1,9 +1,16 @@
 /**
  * ShareCardModal Component
  * Modal for selecting color variants and sharing personality test result cards
+ * 
+ * Design System:
+ * - Spacing: gap-2.5 (10px), gap-3 (12px), mb-4 (16px), mt-6 (24px), px-2 (8px)
+ * - Font Sizes: text-sm (14px), text-base (16px), text-lg (18px), text-xl (20px)
+ * - Border Radius: rounded-xl (12px), rounded-2xl (16px)
+ * - Mobile-first: Responsive padding and spacing for 375px-428px viewports
+ * - Performance: Uses useMemo for expensive computations, reduced animation durations
  */
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -98,10 +105,18 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
   const archetype = shareCardData?.archetype || "";
   const variants = getArchetypeVariants(archetype);
   const selectedVariant = variants[selectedVariantIndex] || variants[0];
-  // Use getArchetypeAvatar with expression support, fallback to archetypeAvatars for base
-  const illustrationUrl = getArchetypeAvatar(archetype, selectedExpression) || archetypeAvatars[archetype] || "";
+  
+  // Memoize illustration URL to reduce re-renders
+  const illustrationUrl = useMemo(
+    () => getArchetypeAvatar(archetype, selectedExpression) || archetypeAvatars[archetype] || "",
+    [archetype, selectedExpression]
+  );
+  
   // Check if we have a dedicated expression asset (to determine if emoji overlay is needed)
-  const hasExpressionVariant = hasExpressionAsset(archetype, selectedExpression);
+  const hasExpressionVariant = useMemo(
+    () => hasExpressionAsset(archetype, selectedExpression),
+    [archetype, selectedExpression]
+  );
 
   // Safety check for variants
   if (variants.length === 0 && shareCardData) {
@@ -425,10 +440,10 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
               <motion.div
                 animate={{ rotateY: isFlipped ? 180 : 0 }}
                 transition={{ 
-                  duration: 0.4, 
+                  duration: 0.35, 
                   type: "spring", 
-                  stiffness: 260, 
-                  damping: 20 
+                  stiffness: 280, 
+                  damping: 22 
                 }}
                 style={{ 
                   transformStyle: "preserve-3d",
@@ -449,10 +464,10 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={`${selectedVariantIndex}-${selectedExpression}`}
-                      initial={{ opacity: 0, scale: 0.95 }}
+                      initial={{ opacity: 0, scale: 0.97 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
+                      exit={{ opacity: 0, scale: 0.97 }}
+                      transition={{ duration: 0.15 }}
                       className="h-full"
                     >
                       <PokemonShareCard
@@ -516,48 +531,68 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                     </div>
 
                     {/* Expression selector */}
-                    <div className="mb-6">
+                    <div className="mb-4">
                       <label className="block text-sm font-semibold text-gray-700 mb-3">
                         表情选择
                       </label>
-                      <div className="grid grid-cols-4 gap-3">
-                        {expressionOptions.map((expr) => (
-                          <motion.button
-                            key={expr.id}
-                            onClick={() => setSelectedExpression(expr.id)}
-                            className={`
-                              relative aspect-square rounded-xl flex items-center justify-center
-                              transition-all duration-200
-                              ${selectedExpression === expr.id
-                                ? 'bg-primary text-white shadow-lg scale-105'
-                                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-gray-300'}
-                            `}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            <span className="text-3xl">{expr.emoji}</span>
-                            {selectedExpression === expr.id && (
-                              <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-md">
-                                <Check className="w-3 h-3 text-primary" />
+                      <div className="grid grid-cols-4 gap-2.5">
+                        {expressionOptions.map((expr) => {
+                          const expressionImageUrl = getArchetypeAvatar(archetype, expr.id) || illustrationUrl;
+                          return (
+                            <motion.button
+                              key={expr.id}
+                              onClick={() => setSelectedExpression(expr.id)}
+                              className={`
+                                relative aspect-square rounded-xl overflow-hidden
+                                transition-all duration-150
+                                ${selectedExpression === expr.id
+                                  ? 'ring-4 ring-primary shadow-lg scale-105'
+                                  : 'ring-2 ring-gray-200 hover:ring-gray-300'}
+                              `}
+                              whileTap={{ scale: 0.95 }}
+                            >
+                              {/* Fallback emoji background (shown if image fails or is identical) */}
+                              <div className="flex h-full w-full items-center justify-center text-3xl bg-gray-100">
+                                {expr.emoji}
                               </div>
-                            )}
-                          </motion.button>
-                        ))}
+                              {/* Archetype expression image overlay (if different from base) */}
+                              <img 
+                                src={expressionImageUrl}
+                                alt={expr.label}
+                                loading="lazy"
+                                className="absolute inset-0 w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                              {/* Label overlay */}
+                              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent py-1">
+                                <span className="text-xs text-white font-medium block text-center">{expr.label}</span>
+                              </div>
+                              {selectedExpression === expr.id && (
+                                <div className="absolute -top-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-md">
+                                  <Check className="w-3.5 h-3.5 text-white" />
+                                </div>
+                              )}
+                            </motion.button>
+                          );
+                        })}
                       </div>
                     </div>
 
                     {/* Background color selector */}
-                    <div className="mb-6">
+                    <div className="mb-4">
                       <label className="block text-sm font-semibold text-gray-700 mb-3">
                         背景配色
                       </label>
-                      <div className="grid grid-cols-4 gap-3">
+                      <div className="grid grid-cols-4 gap-2.5">
                         {variants.map((variant, index) => (
                           <motion.button
                             key={variant.name}
                             onClick={() => setSelectedVariantIndex(index)}
                             className={`
                               relative aspect-square rounded-xl overflow-hidden
-                              transition-all duration-200
+                              transition-all duration-150
                               ${selectedVariantIndex === index
                                 ? 'ring-4 ring-primary scale-105 shadow-lg'
                                 : 'ring-2 ring-gray-200 hover:ring-gray-300'}
@@ -575,11 +610,11 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                       </div>
                     </div>
 
-                    {/* Confirm button */}
-                    <div className="mt-auto">
+                    {/* Confirm button - closer to content */}
+                    <div className="mt-6">
                       <Button
                         onClick={() => setIsFlipped(false)}
-                        className="w-full py-6 text-lg font-bold bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                        className="w-full py-4 text-base font-semibold bg-primary hover:bg-primary/90 rounded-xl transition-all"
                       >
                         确认定制
                       </Button>
@@ -589,17 +624,60 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
               </motion.div>
             </div>
           </div>
+          
+          {/* PRIMARY ACTION: "定制卡片" Button - Placed right after card preview */}
+          {!isFlipped && (
+            <div className="mt-6 px-2 sm:px-0">
+              <motion.button
+                onClick={() => {
+                  haptics.medium();
+                  setIsFlipped(true);
+                }}
+                disabled={isGenerating}
+                className="relative w-full h-14 rounded-2xl overflow-hidden shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ y: -2, scale: 1.01 }}
+                whileTap={{ y: 0.5, scale: 0.99 }}
+                role="button"
+                aria-label="定制卡片"
+              >
+                {/* 3D Shadow Layer */}
+                <div className="absolute inset-0 bg-gradient-to-b from-purple-700 via-pink-700 to-purple-800 translate-y-1 rounded-2xl" />
+                
+                {/* Main Button Layer */}
+                <div className="relative h-full bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 rounded-2xl flex items-center justify-center gap-2 px-4">
+                  {/* Animated shimmer overlay */}
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                    style={{ width: '200%', willChange: 'transform' }}
+                    animate={open && !isGenerating ? { x: ['-100%', '200%'] } : { x: 0 }}
+                    transition={open && !isGenerating ? { 
+                      duration: 2.5, 
+                      repeat: Infinity, 
+                      repeatDelay: 1,
+                      ease: "easeInOut"
+                    } : { duration: 0 }}
+                  />
+                  
+                  {/* Button content */}
+                  <span className="relative text-xl drop-shadow-lg">✨</span>
+                  <span className="relative text-base font-bold text-white drop-shadow-lg tracking-wide">
+                    定制你的专属卡片
+                  </span>
+                </div>
+              </motion.button>
+            </div>
+          )}
         </div>
         
-        {/* STICKY BOTTOM BAR - Outside scrollable div */}
+        {/* SIMPLIFIED BOTTOM BAR - Only Share & Download */}
         {!isFlipped && (
           <div className="sticky bottom-0 left-0 right-0 z-50 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6">
-            {/* Gradient fade overlay */}
-            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white via-white/98 to-transparent pointer-events-none" />
+            {/* Lighter gradient fade overlay */}
+            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white via-white/95 to-transparent pointer-events-none" />
             
             {/* Action buttons container */}
-            <div className="relative px-4 sm:px-6 safe-area-pb pt-6">
-              {/* Progress bar - moved inside sticky container */}
+            <div className="relative px-4 sm:px-6 safe-area-pb pt-4">
+              {/* Progress bar - only during generation */}
               {isGenerating && generationProgress > 0 && (
                 <motion.div 
                   initial={{ opacity: 0 }}
@@ -623,48 +701,8 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                 </motion.div>
               )}
               
-              <div className="space-y-3">
-                {/* PRIMARY: 定制卡片 Button with 3D effect */}
-                <motion.button
-                  onClick={() => {
-                    haptics.medium();
-                    setIsFlipped(true);
-                  }}
-                  disabled={isGenerating}
-                  className="relative w-full h-16 rounded-2xl overflow-hidden shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                  whileHover={{ y: -2, scale: 1.01 }}
-                  whileTap={{ y: 0.5, scale: 0.99 }}
-                  role="button"
-                  aria-label="定制卡片"
-                >
-                  {/* 3D Shadow Layer */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-purple-700 via-pink-700 to-purple-800 translate-y-1 rounded-2xl" />
-                  
-                  {/* Main Button Layer */}
-                  <div className="relative h-full bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 rounded-2xl flex items-center justify-center gap-2.5 px-4">
-                    {/* Animated shimmer overlay */}
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
-                      style={{ width: '200%', willChange: 'transform' }}
-                      animate={open && !isGenerating ? { x: ['-100%', '200%'] } : { x: 0 }}
-                      transition={open && !isGenerating ? { 
-                        duration: 2.5, 
-                        repeat: Infinity, 
-                        repeatDelay: 1,
-                        ease: "easeInOut"
-                      } : { duration: 0 }}
-                    />
-                    
-                    {/* Button content */}
-                    <span className="relative text-2xl drop-shadow-lg">✨</span>
-                    <span className="relative text-lg font-black text-white drop-shadow-lg tracking-wide">
-                      定制你的专属卡片
-                    </span>
-                  </div>
-                </motion.button>
-                
-                {/* SECONDARY: Share & Download Buttons */}
-                <div className="flex gap-3 justify-center">
+              {/* SECONDARY: Share & Download Buttons */}
+              <div className="flex gap-3 justify-center">
                   {/* Share Button - Glass morphism */}
                   <motion.button
                     onClick={() => {
@@ -725,8 +763,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
       </DialogContent>
     </Dialog>
   );
