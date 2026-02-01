@@ -1,6 +1,13 @@
 /**
  * ShareCardModal Component
  * Modal for selecting color variants and sharing personality test result cards
+ * 
+ * Design System:
+ * - Spacing: gap-2.5 (10px), gap-3 (12px), mb-4 (16px), mt-6 (24px), px-2 (8px)
+ * - Font Sizes: text-sm (14px), text-base (16px), text-lg (18px), text-xl (20px)
+ * - Border Radius: rounded-xl (12px), rounded-2xl (16px)
+ * - Mobile-first: Responsive padding and spacing for 375px-428px viewports
+ * - Performance: Uses useMemo for expensive computations, reduced animation durations
  */
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
@@ -552,7 +559,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                               />
                               {/* Label overlay */}
                               <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent py-1">
-                                <span className="text-[8px] text-white font-medium block text-center">{expr.label}</span>
+                                <span className="text-[10px] text-white font-medium block text-center">{expr.label}</span>
                               </div>
                               {selectedExpression === expr.id && (
                                 <div className="absolute -top-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-md">
