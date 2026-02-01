@@ -748,9 +748,8 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </DialogContent>
+          )}
+       </DialogContent>
     </Dialog>
   );
 }
