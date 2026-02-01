@@ -756,7 +756,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
               </div>
             </div>
           )}
-       </DialogContent>
+      </DialogContent>
     </Dialog>
   );
 }
