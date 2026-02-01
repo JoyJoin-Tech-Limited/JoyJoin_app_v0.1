@@ -387,7 +387,6 @@ export default function DuolingoOnboardingPage() {
   });
 
   const anchorQuestions = anchorQuestionsData?.questions || [];
-  const TOTAL_SCREENS = 8;
 
   useEffect(() => {
     const cached = loadCachedProgress();
@@ -722,21 +721,6 @@ export default function DuolingoOnboardingPage() {
             transition={{ duration: 0.3 }}
             className="flex-1 flex flex-col px-4 py-3 overflow-hidden"
           >
-            {/* Progress Context Text */}
-            <p className="text-xs text-muted-foreground mb-2">
-              第 {currentScreen}/8 题 - 了解你的社交风格
-            </p>
-            
-            {/* Segmented Progress */}
-            <div className="mb-4">
-              <SegmentedProgress 
-                current={currentScreen - 1}
-                total={ONBOARDING_QUESTIONS_COUNT}
-                variant="duolingo"
-                className="h-1.5"
-              />
-            </div>
-
             <div className="shrink-0 mb-2">
               <p className="text-xl text-foreground mb-4 leading-relaxed font-bold">
                 {scenarioText}
