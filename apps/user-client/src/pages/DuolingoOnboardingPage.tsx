@@ -2,21 +2,19 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { SegmentedProgress } from "@/components/ui/progress-segmented";
-import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Sparkles, PartyPopper, ArrowRight, Mail, Eye, EyeOff, Loader2 } from "lucide-react";
-import { SiWechat } from "react-icons/si";
+import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useAdaptiveAssessment, type AssessmentQuestion, type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { SelectionList } from "@/components/SelectionList";
-import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
+import { QuestionSkeleton } from "@/components/shared/QuestionSkeleton";
+import { haptics } from "@/lib/haptics";
 
 // Use consistent Xiao Yue Avatar-01.png as primary avatar across all screens
 import xiaoyueNormal from "@/assets/xiaoyue_default.png";
@@ -379,20 +377,7 @@ export default function DuolingoOnboardingPage() {
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [justAuthenticated, setJustAuthenticated] = useState(false);
   const [temporarySessionId, setTemporarySessionId] = useState<string>("");
-  
-  const [phone, setPhone] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
-  const [isCodeSent, setIsCodeSent] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-  
-  const [nickname, setNickname] = useState("");
-  const [gender, setGender] = useState<string>("");
-  const [city, setCity] = useState<string>("");
-  const [intents, setIntents] = useState<string[]>([]);
-  
-  const [birthYear, setBirthYear] = useState<string>("");
-  const [relationshipStatus, setRelationshipStatus] = useState<string>("");
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
 
   const { data: anchorQuestionsData, isLoading: isLoadingQuestions } = useQuery<{
     questions: V4AnchorQuestion[];
@@ -402,7 +387,6 @@ export default function DuolingoOnboardingPage() {
   });
 
   const anchorQuestions = anchorQuestionsData?.questions || [];
-  const TOTAL_SCREENS = 9;
 
   useEffect(() => {
     const cached = loadCachedProgress();
@@ -466,13 +450,6 @@ export default function DuolingoOnboardingPage() {
     }
   }, [currentScreen, answers]);
 
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
-
   const handleResume = (resume: boolean) => {
     if (resume) {
       const cached = loadCachedProgress();
@@ -487,6 +464,7 @@ export default function DuolingoOnboardingPage() {
   };
 
   const handleAnswer = (questionId: string, value: string, traitScores?: Record<string, number>) => {
+    haptics.light();
     setAnswers(prev => ({ ...prev, [questionId]: value }));
     if (traitScores) {
       saveV4AnswerToCache(questionId, value, traitScores);
@@ -510,7 +488,7 @@ export default function DuolingoOnboardingPage() {
   };
 
   const handleNext = () => {
-    // Progress gate: Block moving from last question to login screen if anchors incomplete
+    // After completing screen 8, navigate to personality test
     if (currentScreen === ONBOARDING_QUESTIONS_COUNT) {
       const cachedAnswers = getV4CachedAnswers();
       const uniqueAnchorIds = new Set(cachedAnswers.map(a => a.questionId));
@@ -522,7 +500,12 @@ export default function DuolingoOnboardingPage() {
         });
         return;
       }
+      
+      // Navigate to personality test after completing all anchor questions
+      setLocation("/personality-test");
+      return;
     }
+    
     const nextScreen = currentScreen + 1;
     setCurrentScreen(nextScreen);
   };
@@ -535,142 +518,10 @@ export default function DuolingoOnboardingPage() {
     }
   };
 
-  const sendCodeMutation = useMutation({
-    mutationFn: async (phoneNumber: string) => {
-      return await apiRequest("POST", "/api/auth/send-code", { phone: phoneNumber });
-    },
-    onSuccess: () => {
-      setIsCodeSent(true);
-      setCountdown(60);
-      toast({
-        title: "验证码已发送",
-        description: "请查看手机短信",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "发送失败",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const verifyCodeMutation = useMutation({
-    mutationFn: async (data: { phone: string; code: string }) => {
-      return await apiRequest("POST", "/api/auth/verify-code", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setJustAuthenticated(true);
-      handleNext();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "验证失败",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const completeOnboardingMutation = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        authData: { phoneNumber: phone, code: verificationCode },
-        profileData: {
-          displayName: nickname,
-          gender,
-          currentCity: city,
-          intent: intents,
-          birthYear: birthYear ? parseInt(birthYear) : undefined,
-          relationshipStatus: relationshipStatus || undefined,
-        },
-        assessmentAnswers: getV4CachedAnswers(),
-        temporarySessionId,
-        metadata: { currentScreen },
-      };
-
-      await apiRequest("POST", "/api/auth/unified-onboarding", payload);
-      return { success: true };
-    },
-    onSuccess: async () => {
-      // Clear onboarding progress cache (but NOT the synced session markers - those are consumed by personality test)
-      clearCachedProgress();
-      // Clear the presignup answers cache since they've been synced
-      localStorage.removeItem(V4_ANSWERS_KEY);
-      
-      // Show loading state immediately to prevent flash
-      setIsLoggingIn(true);
-      
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      
-      // Wait for minimum loading time to prevent flash back to previous screen
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      toast({
-        title: "欢迎加入悦聚",
-        description: "开始探索精彩活动吧",
-      });
-      
-      setLocation("/personality-test");
-    },
-    onError: (error: Error) => {
-      // Reset loading state on error to allow user to retry
-      setIsLoggingIn(false);
-      toast({
-        title: "注册失败",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleSendCode = () => {
-    if (phone.length >= 8) {
-      sendCodeMutation.mutate(phone);
-    }
-  };
-
-  const handleVerifyCode = () => {
-    if (verificationCode.length === 6) {
-      verifyCodeMutation.mutate({ phone, code: verificationCode });
-    }
-  };
-
-  const handleCompleteEssential = () => {
-    if (nickname.length >= 2 && gender && city && intents.length > 0) {
-      handleNext();
-    }
-  };
-
-  const handleCompleteOnboarding = (skip: boolean = false) => {
-    if (!phone || verificationCode.length !== 6 || !/^\d{6}$/.test(verificationCode)) {
-      toast({
-        title: '请填写验证码',
-        description: '请输入收到的6位数字验证码完成注册',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (!nickname || !gender || !city || intents.length === 0) {
-      toast({
-        title: '信息不完整',
-        description: '请先完成基础信息填写',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    completeOnboardingMutation.mutate();
-  };
-
   const getScreenProgress = () => {
     if (currentScreen === 0) return 0;
-    // 8 anchor questions: screens 1-8 = 10% to 80%
-    if (currentScreen <= 8) return (currentScreen / 8) * 80;
-    // Login screen = 90%
-    if (currentScreen === 9) return 90;
+    // 8 anchor questions: screens 1-8 = 10% to 100%
+    if (currentScreen <= 8) return (currentScreen / 8) * 100;
     return 100;
   };
 
@@ -797,12 +648,22 @@ export default function DuolingoOnboardingPage() {
               </p>
             </motion.div>
             
+            {/* Value proposition subtitle */}
+            <motion.p
+              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: prefersReducedMotion ? 0 : 0.65, duration: 0.4 }}
+              className="mt-3 text-center text-sm text-muted-foreground max-w-[280px] z-10"
+            >
+              只需3分钟，发现你的社交DNA
+            </motion.p>
+            
             {/* Subheadline - whitespace-nowrap on last phrase prevents orphan */}
             <motion.p
               initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: prefersReducedMotion ? 0 : 0.7, duration: 0.4 }}
-              className="mt-4 text-center text-muted-foreground text-sm max-w-[280px] z-10"
+              className="mt-2 text-center text-muted-foreground text-sm max-w-[280px] z-10"
               data-testid="text-welcome-subheadline"
             >
               解锁12种社交动物原型，找到最合拍的<span className="whitespace-nowrap">同频伙伴</span>
@@ -839,11 +700,7 @@ export default function DuolingoOnboardingPage() {
         const question = anchorQuestions[questionIndex];
         
         if (!question || isLoadingQuestions) {
-          return (
-            <div className="flex-1 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          );
+          return <QuestionSkeleton />;
         }
         
         const currentAnswer = answers[question.id];
@@ -907,154 +764,6 @@ export default function DuolingoOnboardingPage() {
           </motion.div>
         );
 
-      case 9:
-        // Login screen - after completing all 8 anchor questions
-        return (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col overflow-hidden"
-          >
-            <div className="flex-1 flex flex-col items-center px-6 py-6 overflow-y-auto min-h-0">
-              <XiaoyueMascot 
-                mood="excited"
-                message="快要揭晓你的社交角色了！登录继续"
-              />
-
-              <div className="w-full max-w-sm mt-8 space-y-4">
-                <div className="space-y-2">
-                  <Input
-                    type="tel"
-                    placeholder="输入手机号"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="h-14 text-lg rounded-2xl px-5"
-                    data-testid="input-phone"
-                  />
-                </div>
-
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-border" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">或</span>
-                  </div>
-                </div>
-
-                <Button 
-                  variant="outline"
-                  size="lg"
-                  className="w-full h-14 text-lg rounded-2xl"
-                  onClick={() => window.location.href = "/api/login"}
-                  data-testid="button-replit-auth"
-                >
-                  <SiWechat className="w-5 h-5 mr-2 text-[#07C160]" />
-                  微信一键登录
-                </Button>
-              </div>
-
-              <p className="mt-6 text-sm text-muted-foreground text-center">
-                还需约8-16题即可揭晓结果
-              </p>
-            </div>
-
-            <div className="shrink-0 p-4 bg-background/95 backdrop-blur-sm border-t pb-[calc(1rem+env(safe-area-inset-bottom))]">
-              <div className="max-w-md mx-auto w-full">
-                <Button 
-                  size="lg"
-                  className="w-full h-14 text-lg rounded-2xl"
-                  disabled={isLoggingIn || phone.length < 8}
-                  onClick={async () => {
-                    if (phone.length < 8) {
-                      toast({
-                        title: "请输入有效手机号",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-                    setIsLoggingIn(true);
-                    try {
-                      // 1. Login first
-                      await apiRequest("POST", "/api/auth/quick-login", { phone });
-                      
-                      // 2. Wait for auth state to update before proceeding
-                      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-                      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
-                      
-                      // 3. Sync pre-signup answers to the assessment session
-                      const cachedAnswers = getV4CachedAnswers();
-                      if (cachedAnswers.length > 0) {
-                        // Retry logic to handle session propagation delay
-                        let syncSuccess = false;
-                        let lastError: any = null;
-                        
-                        for (let attempt = 0; attempt < 3; attempt++) {
-                          try {
-                            // Small delay before retry to allow session to propagate
-                            if (attempt > 0) {
-                              await new Promise(resolve => setTimeout(resolve, 500));
-                            }
-                            
-                            const syncResponse = await apiRequest("POST", "/api/assessment/v4/presignup-sync", {
-                              preSignupAnswers: cachedAnswers,
-                            });
-                            const syncData = await syncResponse.json();
-                            
-                            // Store the synced session ID for personality test to resume
-                            if (syncData.sessionId) {
-                              localStorage.setItem("joyjoin_synced_session_id", syncData.sessionId);
-                              localStorage.setItem("joyjoin_synced_answer_count", String(syncData.totalCount || syncData.syncedCount || cachedAnswers.length));
-                              syncSuccess = true;
-                              break;
-                            }
-                          } catch (err) {
-                            lastError = err;
-                            console.warn(`[Presignup Sync] Attempt ${attempt + 1} failed:`, err);
-                          }
-                        }
-                        
-                        // If sync failed after all retries, log but don't block navigation
-                        // The personality test page will handle loading from localStorage cache
-                        if (!syncSuccess) {
-                          console.error("[Presignup Sync] Failed after 3 attempts:", lastError);
-                        }
-                      }
-                      
-                      // 4. Clear cache and redirect to personality test to continue
-                      clearCachedProgress();
-                      setLocation("/personality-test");
-                    } catch (error) {
-                      console.error("Quick login failed:", error);
-                      toast({
-                        title: "登录失败",
-                        description: "请稍后再试",
-                        variant: "destructive",
-                      });
-                    } finally {
-                      setIsLoggingIn(false);
-                    }
-                  }}
-                  data-testid="button-phone-login"
-                >
-                  {isLoggingIn ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      登录中...
-                    </>
-                  ) : (
-                    <>
-                      继续完成测试
-                      <ArrowRight className="w-5 h-5 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        );
-
       default:
         return null;
     }
@@ -1088,15 +797,6 @@ export default function DuolingoOnboardingPage() {
             </Button>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  // Show full-screen loading state during login/navigation
-  if (isLoggingIn) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center z-50 bg-background">
-        <LoadingLogoSleek loop visible />
       </div>
     );
   }
