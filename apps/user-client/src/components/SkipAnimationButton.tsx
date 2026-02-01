@@ -13,7 +13,10 @@ export function SkipAnimationButton({ onSkip, delay = 2000 }: SkipAnimationButto
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: delay / 1000 }}
-      className="fixed bottom-8 right-4 z-50"
+      className="fixed right-4 z-50"
+      style={{
+        bottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))'
+      }}
     >
       <Button
         variant="outline"

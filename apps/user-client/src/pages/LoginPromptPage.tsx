@@ -17,83 +17,39 @@ import { Sparkles, ArrowRight, Lock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { archetypeAvatars } from "@/lib/archetypeAvatars";
 import { getArchetypeGradient } from "@/lib/archetypeAdapter";
-
-// XiaoyueMascot component - imported from DuolingoOnboardingPage pattern
-import xiaoyueDefault from "@/assets/xiaoyue_default.png";
-
-function XiaoyueMascot({ message }: { message: string }) {
-  return (
-    <div className="flex items-start gap-3 mb-6">
-      <motion.div
-        animate={{ 
-          scale: [1, 1.05, 1],
-        }}
-        transition={{ 
-          scale: {
-            duration: 3,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }
-        }}
-        className="relative shrink-0"
-      >
-        <img 
-          src={xiaoyueDefault} 
-          alt="小悦" 
-          className="w-16 h-16 object-contain drop-shadow-lg"
-        />
-      </motion.div>
-      
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9, x: -10 }}
-        animate={{ opacity: 1, scale: 1, x: 0 }}
-        transition={{ duration: 0.3, delay: 0.1 }}
-        className="relative bg-card border border-border rounded-2xl px-4 py-3 shadow-md flex-1"
-      >
-        <div className="absolute top-4 -left-2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-card" />
-        <div className="absolute top-4 -left-[9px] w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-border" />
-        <p className="text-base leading-relaxed">
-          {message}
-        </p>
-      </motion.div>
-    </div>
-  );
-}
+import { XiaoyueMascot } from "@/components/shared/XiaoyueMascot";
 
 export default function LoginPromptPage() {
   const [, setLocation] = useLocation();
   const [archetype, setArchetype] = useState<string>("");
 
-  // Try to get archetype from localStorage (from personality test)
-  useEffect(() => {
-    try {
-      // Check for assessment result in localStorage
-      const syncedSessionId = localStorage.getItem("joyjoin_synced_session_id");
-      const cachedResult = localStorage.getItem("joyjoin_personality_result");
-      
-      if (cachedResult) {
-        const result = JSON.parse(cachedResult);
-        if (result.primaryArchetype) {
-          setArchetype(result.primaryArchetype);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load archetype from cache:", error);
-    }
-  }, []);
+  // Fetch archetype from assessment result API
+  const { data: assessmentResult } = useQuery<{ primaryArchetype?: string }>({
+    queryKey: ["/api/assessment/result"],
+    retry: false,
+  });
 
-  // Fetch user data to get archetype (if logged in somehow)
+  // Fetch user data to get archetype (fallback)
   const { data: userData } = useQuery<{ personalityProfile?: { primaryArchetype?: string } }>({
     queryKey: ["/api/auth/user"],
     retry: false,
   });
 
-  const displayArchetype = archetype || userData?.personalityProfile?.primaryArchetype || "开心柯基";
+  useEffect(() => {
+    if (assessmentResult?.primaryArchetype) {
+      setArchetype(assessmentResult.primaryArchetype);
+    } else if (userData?.personalityProfile?.primaryArchetype) {
+      setArchetype(userData.personalityProfile.primaryArchetype);
+    }
+  }, [assessmentResult, userData]);
+
+  const displayArchetype = archetype || "开心柯基";
   const archetypeAvatar = archetypeAvatars[displayArchetype];
   const archetypeGradient = getArchetypeGradient(displayArchetype);
 
   const handleLogin = () => {
-    setLocation("/login");
+    // Navigate to discover page which will redirect to login if not authenticated
+    setLocation("/");
   };
 
   const handleSkip = () => {
@@ -144,7 +100,11 @@ export default function LoginPromptPage() {
           </Card>
 
           {/* Xiaoyue Mascot with message */}
-          <XiaoyueMascot message="登录保存你的专属角色，解锁完整性格报告和智能匹配功能！" />
+          <XiaoyueMascot 
+            message="登录保存你的专属角色，解锁完整性格报告和智能匹配功能！" 
+            horizontal
+            size="md"
+          />
 
           {/* Benefits List */}
           <div className="mb-8 space-y-3">

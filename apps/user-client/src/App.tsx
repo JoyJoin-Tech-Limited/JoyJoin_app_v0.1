@@ -128,6 +128,7 @@ function AuthenticatedRouter() {
         <Route path="/onboarding/extended" component={ExtendedDataPage} />
         <Route path="/onboarding/review" component={FinalProfileReviewPage} />
         <Route path="/onboarding/login" component={LoginPromptPage} />
+        <Route path="/login" component={LoginPage} />
         <Route path="*" component={RedirectToSetup} />
       </Switch>
     );
@@ -162,6 +163,7 @@ function AuthenticatedRouter() {
       {/* Route /profile/edit/social removed - unused fields (2026-01-23) */}
       <Route path="/onboarding/extended" component={ExtendedDataPage} />
       <Route path="/onboarding/review" component={FinalProfileReviewPage} />
+      <Route path="/onboarding/login" component={LoginPromptPage} />
       <Route path="/event/:id" component={EventDetailPage} />
       <Route path="/invite" component={InvitePage} />
       <Route path="/personality-test" component={PersonalityTestPageV4} />
