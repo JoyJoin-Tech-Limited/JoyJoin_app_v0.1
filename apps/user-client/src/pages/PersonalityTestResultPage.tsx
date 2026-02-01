@@ -29,6 +29,7 @@ import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 import { ArchetypeSlotMachine } from "@/components/slot-machine";
 import { UnlockOverlay } from "@/components/UnlockOverlay";
 import { getArchetypeColorHSL } from "@/components/slot-machine/archetypeData";
+import { SkipAnimationButton } from "@/components/SkipAnimationButton";
 
 const staggerContainerVariants = {
   hidden: { opacity: 0 },
@@ -531,6 +532,8 @@ export default function PersonalityTestResultPage() {
     queryKey: ['/api/personality-test/stats'],
   });
 
+  // Load Xiaoyue analysis async as soon as result is available
+  // This allows it to load in the background during animations
   const xiaoyueAnalysis = useXiaoyueAnalysis({
     archetype: result?.primaryArchetype || null,
     traitScores: result ? {
@@ -541,7 +544,7 @@ export default function PersonalityTestResultPage() {
       X: result.extraversionScore / 100,
       P: result.positivityScore / 100,
     } : null,
-    enabled: !!result && animationPhase === 'results',
+    enabled: !!result, // Enable immediately when result is available
   });
 
   const styleSpectrum = useMemo(() => {
@@ -601,6 +604,20 @@ export default function PersonalityTestResultPage() {
 
   // Handle unlock overlay completion
   const handleUnlockComplete = useCallback(() => {
+    setAnimationPhase('results');
+  }, []);
+
+  // Handle skip animation during slot machine phase
+  const handleSkipSlotMachine = useCallback(() => {
+    setSkipToResults(true);
+    // Compress animation to 0.5s before showing results
+    setTimeout(() => setAnimationPhase('unlock'), 500);
+  }, []);
+
+  // Handle skip animation during unlock overlay phase
+  const handleSkipUnlock = useCallback(() => {
+    setSkipToResults(true);
+    // Go immediately to results
     setAnimationPhase('results');
   }, []);
 
@@ -687,6 +704,7 @@ export default function PersonalityTestResultPage() {
             confidence={result.isDecisive ? 0.9 : undefined}
             onComplete={handleSlotMachineComplete}
           />
+          <SkipAnimationButton onSkip={handleSkipSlotMachine} delay={2000} />
         </motion.div>
       )}
       
@@ -703,6 +721,7 @@ export default function PersonalityTestResultPage() {
             accentColor={getArchetypeColorHSL(result.primaryArchetype)}
             onComplete={handleUnlockComplete}
           />
+          <SkipAnimationButton onSkip={handleSkipUnlock} delay={1000} />
         </motion.div>
       )}
       
