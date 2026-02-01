@@ -109,7 +109,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         transition={prefersReducedMotion ? {} : { type: "spring", stiffness: 200, damping: 20 }}
         className="relative w-full max-w-[360px] mx-auto"
         style={{ 
-          minHeight: '680px', // Minimum height to ensure all sections are visible, expands dynamically for more content
+          // Removed maxHeight: '90vh' and aspectRatio: '9/16' to allow dynamic expansion
+          // minHeight ensures card baseline is visible, expands automatically for content-heavy archetypes
+          minHeight: '680px',
           fontFamily: 'ZCOOL QingKe HuangYou, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif'
         }}
       >
@@ -370,7 +372,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     {/* ACTIVE SKILL - Left Column */}
                     <div className="relative bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-3 border-2 border-orange-300/60 shadow-sm">
                       {/* Active Badge */}
-                      <div className="absolute -top-2 -right-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-md z-10">
+                      <div className="absolute -top-2 -right-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-md z-10">
                         主动
                       </div>
                       
@@ -403,7 +405,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     {/* PASSIVE SKILL - Right Column */}
                     <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-3 border-2 border-blue-300/60 shadow-sm">
                       {/* Passive Badge */}
-                      <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-md z-10">
+                      <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-md z-10">
                         被动
                       </div>
                       
@@ -420,7 +422,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                       {/* Always Active Indicator - More visible */}
                       <div className="flex items-center justify-center gap-1 mb-2">
                         <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                        <span className="text-[10px] text-gray-600 font-medium">常驻效果</span>
+                        <span className="text-xs text-gray-600 font-medium">常驻效果</span>
                       </div>
                       
                       {/* Short Effect - LARGER and more prominent */}
