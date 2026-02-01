@@ -138,6 +138,7 @@ export default function PersonalityRadarChart({
           )}
         </defs>
 
+        {/* Grid polygons - Using hardcoded rgba for consistent contrast across all archetype color schemes */}
         <polygon
           points={maxPolygonPoints}
           fill="none"
@@ -167,6 +168,7 @@ export default function PersonalityRadarChart({
           );
         })}
 
+        {/* Radial lines - Using hardcoded rgba for visibility on all backgrounds */}
         {userTraits.map((_, index) => {
           const angle = (Math.PI * 2 * index) / userTraits.length - Math.PI / 2;
           const x = centerX + Math.cos(angle) * maxRadius;
