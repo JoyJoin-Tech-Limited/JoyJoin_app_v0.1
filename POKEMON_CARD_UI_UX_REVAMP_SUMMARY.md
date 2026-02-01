@@ -95,10 +95,12 @@ Successfully implemented all 7 core UI/UX improvements for the Pokemon Card crea
 **Files Modified**: `apps/user-client/src/components/ShareCardModal.tsx` (Lines 527-606)
 
 **6.1 Expression Selector Enhancement**:
-- Replaced emoji display (`text-3xl` emoji) with actual archetype images
+- Replaced emoji display (`text-3xl` emoji) with hybrid approach: emoji background with optional image overlay
 - Added `img` tags showing preview: `getArchetypeAvatar(archetype, expr.id)`
-- Added label overlay: `bg-gradient-to-t from-black/60` with `text-xs` white text
+- Fallback to emoji if image fails to load or if expression-specific assets don't exist
+- Added label overlay: `bg-gradient-to-t from-black/60` with `text-xs` white text (12px)
 - Selection indicator changed to larger checkmark: `w-6 h-6` with `Check` icon
+- Images use `loading="lazy"` for performance
 
 **6.2 Spacing & Layout**:
 - Reduced margin between sections: `mb-6` → `mb-4`

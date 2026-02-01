@@ -551,15 +551,23 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                               `}
                               whileTap={{ scale: 0.95 }}
                             >
-                              {/* Show actual archetype image instead of emoji */}
+                              {/* Fallback emoji background (shown if image fails or is identical) */}
+                              <div className="flex h-full w-full items-center justify-center text-3xl bg-gray-100">
+                                {expr.emoji}
+                              </div>
+                              {/* Archetype expression image overlay (if different from base) */}
                               <img 
                                 src={expressionImageUrl}
                                 alt={expr.label}
-                                className="w-full h-full object-cover"
+                                loading="lazy"
+                                className="absolute inset-0 w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
                               />
                               {/* Label overlay */}
                               <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent py-1">
-                                <span className="text-[10px] text-white font-medium block text-center">{expr.label}</span>
+                                <span className="text-xs text-white font-medium block text-center">{expr.label}</span>
                               </div>
                               {selectedExpression === expr.id && (
                                 <div className="absolute -top-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-md">
