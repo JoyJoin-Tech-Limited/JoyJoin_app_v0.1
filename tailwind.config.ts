@@ -108,6 +108,9 @@ export default {
         "accordion-up": "accordion-up 0.2s ease-out",
         shimmer: "shimmer 2s infinite",
       },
+      spacing: {
+        safe: "env(safe-area-inset-bottom, 1rem)",
+      },
     },
   },
   plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],

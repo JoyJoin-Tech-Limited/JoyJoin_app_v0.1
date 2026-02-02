@@ -9,6 +9,7 @@ import { CategoryPage } from "./CategoryPage";
 import {
   INTEREST_CATEGORIES,
   HEAT_LEVELS,
+  INTEREST_CAROUSEL_ONBOARDING,
   type HeatLevel,
   type InterestTopic,
   getTopicById,
@@ -66,6 +67,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   const [activeCategory, setActiveCategory] = useState<string>(INTEREST_CATEGORIES[0]?.id || "");
   const [showOnboarding, setShowOnboarding] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout>();
+  const [lastSelectedTopic, setLastSelectedTopic] = useState<string | null>(null);
 
   const [selections, setSelections] = useState<Record<string, HeatLevel>>({});
 
@@ -96,10 +98,11 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
       }
     }
     
-    // Check if user has seen onboarding
-    const hasSeenOnboarding = localStorage.getItem('joyjoin_interest_onboarding_seen');
+    // Check if user has seen onboarding - show after 1 second delay
+    const hasSeenOnboarding = localStorage.getItem(INTEREST_CAROUSEL_ONBOARDING);
     if (!hasSeenOnboarding) {
-      setShowOnboarding(true);
+      const timer = setTimeout(() => setShowOnboarding(true), 1000);
+      return () => clearTimeout(timer);
     }
   }, []);
 
@@ -234,7 +237,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   // Dismiss onboarding tooltip
   const dismissOnboarding = useCallback(() => {
     setShowOnboarding(false);
-    localStorage.setItem('joyjoin_interest_onboarding_seen', 'true');
+    localStorage.setItem(INTEREST_CAROUSEL_ONBOARDING, 'true');
   }, []);
 
   // Handle topic tap - cycle through levels 0 → 1 → 2 → 3 → 0
@@ -254,6 +257,9 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         console.error(`Invalid heat level calculated: ${nextLevel}`);
         return prev;
       }
+      
+      // Update last selected topic for screen reader announcement
+      setLastSelectedTopic(topicId);
       
       // Show explanation when cycling from max (3) back to unselected (0)
       if (currentLevel === 3 && nextLevel === 0) {
@@ -388,20 +394,43 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         </div>
 
         {/* Horizontal Category Quick-Nav Tabs */}
-        <div className="z-10 bg-background border-b shadow-sm">
+        <div className="z-10 bg-background border-b shadow-sm" role="tablist" aria-label="兴趣分类">
           <div className="flex overflow-x-auto gap-1.5 px-3 py-2 no-scrollbar">
-            {INTEREST_CATEGORIES.map((cat) => (
+            {INTEREST_CATEGORIES.map((cat, catIndex) => (
               <button
                 key={cat.id}
-                onClick={() => scrollToCategory(cat.id)}
+                onClick={() => {
+                  setActiveCategory(cat.id);
+                  scrollToCategory(cat.id);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    const currentIndex = INTEREST_CATEGORIES.findIndex(c => c.id === cat.id);
+                    const delta = e.key === 'ArrowRight' ? 1 : -1;
+                    const nextIndex = (currentIndex + delta + INTEREST_CATEGORIES.length) % INTEREST_CATEGORIES.length;
+                    const nextCategoryId = INTEREST_CATEGORIES[nextIndex].id;
+                    setActiveCategory(nextCategoryId);
+                    scrollToCategory(nextCategoryId);
+                    
+                    // Move focus to the next tab
+                    const tabs = e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+                    if (tabs && tabs[nextIndex]) {
+                      tabs[nextIndex].focus();
+                    }
+                  }
+                }}
                 className={cn(
                   "flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all touch-manipulation",
                   activeCategory === cat.id 
                     ? "bg-primary text-primary-foreground shadow-sm" 
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 )}
-                aria-label={`跳转到 ${cat.name}`}
-                aria-current={activeCategory === cat.id ? "location" : undefined}
+                role="tab"
+                aria-selected={activeCategory === cat.id}
+                aria-controls={`category-panel-${cat.id}`}
+                tabIndex={activeCategory === cat.id ? 0 : -1}
+                aria-label={`${cat.name} 类别`}
               >
                 <span className="mr-1">{cat.emoji}</span>
                 {cat.name}
@@ -418,7 +447,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
             initial={prefersReducedMotion ? {} : { opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={prefersReducedMotion ? {} : { opacity: 0, y: -10 }}
-            className="fixed top-[200px] left-4 right-4 z-30 bg-primary text-primary-foreground rounded-xl shadow-lg p-4"
+            className="fixed top-[200px] left-4 right-4 z-30 bg-primary text-primary-foreground dark:bg-gray-900 dark:border dark:border-gray-700 dark:text-gray-100 rounded-xl shadow-lg p-4"
             role="dialog"
             aria-label="使用提示"
           >
@@ -488,6 +517,27 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         )}
       </AnimatePresence>
 
+      {/* Live region for screen reader announcements */}
+      <div 
+        role="status" 
+        aria-live="polite" 
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {lastSelectedTopic && selections[lastSelectedTopic] !== undefined && (() => {
+          const level = selections[lastSelectedTopic];
+          const topic = getTopicById(lastSelectedTopic);
+          if (!topic) return null;
+
+          // For level 0, announce a clear deselection message instead of "已未选择"
+          if (level === 0) {
+            return `已取消选择 ${topic.label}`;
+          }
+
+          return `已${HEAT_LEVELS[level].label} ${topic.label}`;
+        })()}
+      </div>
+
       {/* Sticky continue button - with selection preview */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-background via-background to-transparent pt-6 pb-[env(safe-area-inset-bottom,1rem)]">
         {/* Selection preview - shows selected interests */}
@@ -499,10 +549,10 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
               exit={prefersReducedMotion ? {} : { opacity: 0, y: 10 }}
               className="px-4 pb-3"
             >
-              <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar items-center" role="region" aria-label="已选择的兴趣">
+              <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar items-center bg-background/50 dark:bg-gray-800/50 rounded-lg px-2 py-2" role="region" aria-label="已选择的兴趣">
                 {Object.entries(selections)
                   .filter(([, level]) => level > 0)
-                  .slice(0, 8)
+                  .slice(0, 6)
                   .map(([topicId]) => {
                     const topic = getTopicById(topicId);
                     if (!topic) return null;
@@ -520,9 +570,9 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
                       </motion.span>
                     );
                   })}
-                {totalSelections > 8 && (
+                {totalSelections > 6 && (
                   <span className="text-xs text-muted-foreground font-medium bg-muted px-2 py-1 rounded-full flex-shrink-0">
-                    +{totalSelections - 8}
+                    +{totalSelections - 6}
                   </span>
                 )}
               </div>
