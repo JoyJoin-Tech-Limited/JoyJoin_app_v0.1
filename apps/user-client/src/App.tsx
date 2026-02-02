@@ -82,6 +82,14 @@ function RedirectToSetup() {
   return null;
 }
 
+function RedirectToGuide() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation("/guide");
+  }, [setLocation]);
+  return null;
+}
+
 function AuthenticatedRouter() {
   const { user, nextStep, isLoading } = useAuth();
   const [location] = useLocation();
@@ -142,15 +150,7 @@ function AuthenticatedRouter() {
           <Route path="/guide" component={GuidePage} />
           <Route path="/onboarding/extended" component={ExtendedDataPage} />
           <Route path="/onboarding/review" component={FinalProfileReviewPage} />
-          <Route path="*">
-            {() => {
-              const [, setLocation] = useLocation();
-              useEffect(() => {
-                setLocation("/guide");
-              }, [setLocation]);
-              return null;
-            }}
-          </Route>
+          <Route path="*" component={RedirectToGuide} />
         </Switch>
       );
 
