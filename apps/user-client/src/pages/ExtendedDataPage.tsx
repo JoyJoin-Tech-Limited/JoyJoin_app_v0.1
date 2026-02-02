@@ -5,10 +5,12 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 import { InterestCarousel, type InterestCarouselData } from "@/components/interests/InterestCarousel";
+import { useOnboardingCheckpoint } from "@/hooks/useOnboardingCheckpoint";
 
 export default function ExtendedDataPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { saveCheckpoint } = useOnboardingCheckpoint();
 
   const [showCelebration, setShowCelebration] = useState(false);
 
@@ -29,6 +31,14 @@ export default function ExtendedDataPage() {
       
       // Wait a bit more before navigation to ensure smooth transition
       await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Save checkpoint after completing extended data (await to ensure persistence)
+      try {
+        await saveCheckpoint.mutateAsync('extended-data');
+      } catch (error) {
+        console.error('[ExtendedDataPage] Failed to save checkpoint:', error);
+        // Continue navigation even if checkpoint fails (non-blocking)
+      }
       
       // Navigate while still showing loading
       setLocation("/onboarding/review");

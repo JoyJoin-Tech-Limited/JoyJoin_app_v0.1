@@ -15,6 +15,7 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { SelectionList } from "@/components/SelectionList";
 import { QuestionSkeleton } from "@/components/shared/QuestionSkeleton";
 import { haptics } from "@/lib/haptics";
+import { useOnboardingCheckpoint } from "@/hooks/useOnboardingCheckpoint";
 
 // Use consistent Xiao Yue Avatar-01.png as primary avatar across all screens
 import xiaoyueNormal from "@/assets/xiaoyue_default.png";
@@ -371,6 +372,7 @@ export default function DuolingoOnboardingPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
+  const { saveCheckpoint } = useOnboardingCheckpoint();
   
   const [currentScreen, setCurrentScreen] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -487,7 +489,7 @@ export default function DuolingoOnboardingPage() {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     // After completing screen 8, navigate to personality test
     if (currentScreen === ONBOARDING_QUESTIONS_COUNT) {
       const cachedAnswers = getV4CachedAnswers();
@@ -499,6 +501,14 @@ export default function DuolingoOnboardingPage() {
           variant: "destructive",
         });
         return;
+      }
+      
+      // Save checkpoint before navigating to personality test (await to ensure persistence)
+      try {
+        await saveCheckpoint.mutateAsync('onboarding');
+      } catch (error) {
+        console.error('[DuolingoOnboardingPage] Failed to save checkpoint:', error);
+        // Continue navigation even if checkpoint fails (non-blocking)
       }
       
       // Navigate to personality test after completing all anchor questions
