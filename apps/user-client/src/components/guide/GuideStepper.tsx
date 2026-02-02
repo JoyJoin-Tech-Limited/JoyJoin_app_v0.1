@@ -13,10 +13,6 @@ interface GuideStepperProps {
   currentStep: number;
   /** 总步骤数 */
   totalSteps: number;
-  /** 用户原型名称 */
-  archetype?: string;
-  /** 原型描述 */
-  archetypeDescription?: string;
   /** 进入下一步 */
   onNext: () => void;
   /** 返回上一步 */
@@ -38,8 +34,6 @@ interface GuideStepperProps {
 export function GuideStepper({
   currentStep,
   totalSteps,
-  archetype,
-  archetypeDescription,
   onNext,
   onPrev,
   onSkip,

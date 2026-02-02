@@ -52,7 +52,6 @@ export default function GuidePage() {
     <GuideStepper
       currentStep={currentStep}
       totalSteps={totalSteps}
-      archetype={user?.archetype || undefined}
       onNext={nextStep}
       onPrev={prevStep}
       onSkip={skipGuide}
