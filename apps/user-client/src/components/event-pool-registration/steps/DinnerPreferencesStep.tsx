@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import CollapsibleSection from "../shared/CollapsibleSection";
-import { Badge } from "@/components/ui/badge";
+import SelectableBadge from "../shared/SelectableBadge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { DINNER_OPTIONS } from "@/lib/event-pool-options";
@@ -57,19 +57,13 @@ export default function DinnerPreferencesStep({
       >
         <div className="grid grid-cols-3 gap-2">
           {DINNER_OPTIONS.cuisines.map(cuisine => (
-            <motion.div
+            <SelectableBadge
               key={cuisine.value}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              selected={selectedCuisines.includes(cuisine.value)}
+              onClick={() => handleToggleCuisine(cuisine.value)}
             >
-              <Badge
-                variant={selectedCuisines.includes(cuisine.value) ? "default" : "outline"}
-                className="cursor-pointer w-full justify-center py-2 text-sm"
-                onClick={() => handleToggleCuisine(cuisine.value)}
-              >
-                {cuisine.emoji} {cuisine.label}
-              </Badge>
-            </motion.div>
+              {cuisine.emoji} {cuisine.label}
+            </SelectableBadge>
           ))}
         </div>
       </CollapsibleSection>
@@ -117,19 +111,13 @@ export default function DinnerPreferencesStep({
       >
         <div className="grid grid-cols-2 gap-2">
           {DINNER_OPTIONS.dietary.map(dietary => (
-            <motion.div
+            <SelectableBadge
               key={dietary.value}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              selected={selectedDietary.includes(dietary.value)}
+              onClick={() => handleToggleDietary(dietary.value)}
             >
-              <Badge
-                variant={selectedDietary.includes(dietary.value) ? "default" : "outline"}
-                className="cursor-pointer w-full justify-center py-2 text-sm"
-                onClick={() => handleToggleDietary(dietary.value)}
-              >
-                {dietary.emoji} {dietary.label}
-              </Badge>
-            </motion.div>
+              {dietary.emoji} {dietary.label}
+            </SelectableBadge>
           ))}
         </div>
       </CollapsibleSection>

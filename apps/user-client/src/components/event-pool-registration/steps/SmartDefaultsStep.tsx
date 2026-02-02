@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { SHARED_OPTIONS } from "@/lib/event-pool-options";
-import { shenzhenClusters, getDistrictById } from "@shared/districts";
+import { shenzhenClusters } from "@shared/districts";
 
 interface SmartDefaultsStepProps {
   eventType: "饭局" | "酒局";

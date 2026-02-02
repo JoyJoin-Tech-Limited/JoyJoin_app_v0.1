@@ -40,14 +40,24 @@ export function useEventPoolRegistration({
     languages: [],
   });
 
-  // Auto-save to localStorage every 3s
+  // Auto-save to localStorage, debounced on preference changes
   useEffect(() => {
-    const timer = setInterval(() => {
-      if (Object.keys(preferences).length > 1) { // More than just eventType
+    // Avoid scheduling saves when there's nothing meaningful beyond eventType
+    if (Object.keys(preferences).length <= 1) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      try {
         localStorage.setItem(`draft-${poolId}`, JSON.stringify(preferences));
+      } catch (error) {
+        console.error("Failed to save draft to localStorage:", error);
       }
-    }, 3000);
-    return () => clearInterval(timer);
+    }, 500);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [preferences, poolId]);
 
   // Restore draft on mount
@@ -81,22 +91,39 @@ export function useEventPoolRegistration({
   // Registration mutation
   const registerMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("POST", `/api/event-pools/${poolId}/register`, {
-        budgetRange: [preferences.budget],
+      const basePayload = {
         eventIntent: preferences.socialGoals,
-        preferredDistricts: preferences.districts,
         preferredLanguages: preferences.languages,
-        // Conditional fields based on event type
-        ...(eventType === "饭局" ? {
-          cuisinePreferences: preferences.cuisines,
-          dietaryRestrictions: preferences.dietary,
-          tasteIntensity: preferences.tasteIntensity,
-        } : {
-          barThemes: preferences.barThemes,
-          alcoholComfort: preferences.alcoholComfort,
-          musicPreference: preferences.musicPreference,
-        })
-      });
+      };
+
+      const payload =
+        eventType === "饭局"
+          ? {
+              ...basePayload,
+              // 饭局使用通用 budgetRange
+              budgetRange: preferences.budget ? [preferences.budget] : undefined,
+              cuisinePreferences: preferences.cuisines,
+              dietaryRestrictions: preferences.dietary,
+              tasteIntensity: preferences.tasteIntensity ? [preferences.tasteIntensity] : undefined,
+            }
+          : {
+              ...basePayload,
+              // 酒局使用 barBudgetRange（不是 budgetRange）
+              barBudgetRange: preferences.budget ? [preferences.budget] : undefined,
+              barThemes: preferences.barThemes,
+              // 服务端按数组存储，确保发送数组类型
+              alcoholComfort: Array.isArray(preferences.alcoholComfort)
+                ? preferences.alcoholComfort
+                : preferences.alcoholComfort
+                ? [preferences.alcoholComfort]
+                : [],
+            };
+
+      return await apiRequest(
+        "POST",
+        `/api/event-pools/${poolId}/register`,
+        payload
+      );
     },
     onSuccess: () => {
       haptics.success();

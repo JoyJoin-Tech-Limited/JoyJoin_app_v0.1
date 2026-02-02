@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import CollapsibleSection from "../shared/CollapsibleSection";
-import { Badge } from "@/components/ui/badge";
+import SelectableBadge from "../shared/SelectableBadge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { BAR_OPTIONS } from "@/lib/event-pool-options";
@@ -123,19 +123,13 @@ export default function BarPreferencesStep({
       >
         <div className="grid grid-cols-3 gap-2">
           {BAR_OPTIONS.musicPreference.map(music => (
-            <motion.div
+            <SelectableBadge
               key={music.value}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              selected={selectedMusicPreference.includes(music.value)}
+              onClick={() => handleToggleMusicPreference(music.value)}
             >
-              <Badge
-                variant={selectedMusicPreference.includes(music.value) ? "default" : "outline"}
-                className="cursor-pointer w-full justify-center py-2 text-sm"
-                onClick={() => handleToggleMusicPreference(music.value)}
-              >
-                {music.emoji} {music.label}
-              </Badge>
-            </motion.div>
+              {music.emoji} {music.label}
+            </SelectableBadge>
           ))}
         </div>
       </CollapsibleSection>

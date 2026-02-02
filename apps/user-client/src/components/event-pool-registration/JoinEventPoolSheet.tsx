@@ -3,8 +3,6 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   Sheet,
   SheetContent,
-  SheetHeader as RadixSheetHeader,
-  SheetTitle,
 } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { useEventPoolRegistration } from "@/hooks/useEventPoolRegistration";
@@ -18,7 +16,7 @@ import SocialGoalsStep from "./steps/SocialGoalsStep";
 import SmartDefaultsStep from "./steps/SmartDefaultsStep";
 import DinnerPreferencesStep from "./steps/DinnerPreferencesStep";
 import BarPreferencesStep from "./steps/BarPreferencesStep";
-import { getDistrictIdsByCluster } from "@shared/districts";
+import { shenzhenClusters } from "@shared/districts";
 
 interface JoinEventPoolSheetProps {
   open: boolean;
@@ -65,9 +63,11 @@ export default function JoinEventPoolSheet({
   useEffect(() => {
     if (open && user) {
       // Set default districts based on event area
-      const defaultDistricts = getDistrictIdsByCluster(
-        poolData.area.toLowerCase().replace(/区$/, "")
+      // Map area name (e.g., "南山区") to cluster id (e.g., "nanshan")
+      const cluster = shenzhenClusters.find(c => 
+        c.displayName === poolData.area || c.name === poolData.area
       );
+      const defaultDistricts = cluster ? cluster.districts.map(d => d.id) : [];
       
       // Set default languages from user profile
       const userLanguages = user.languagesComfort || [];
