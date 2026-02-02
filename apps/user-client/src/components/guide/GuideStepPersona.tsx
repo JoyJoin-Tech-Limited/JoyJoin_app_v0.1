@@ -1,40 +1,31 @@
 import { motion } from "framer-motion";
-import { User, Sparkles, Check, Briefcase, Heart, GraduationCap, MapPin } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Sparkles, ArrowRight, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { guideCopy } from "@/copy/guide";
 import { useQuery } from "@tanstack/react-query";
-import {
-  calculateProfileCompleteness,
-  getRelationshipLabel,
-  getEducationLabel,
-  getIntentLabel,
-  getIntentIcon,
-  getCityLabel,
-  calculateAge,
-  type UserProfile,
-} from "@/lib/profileHelpers";
+import { useLocation } from "wouter";
+import { useMemo } from "react";
+import { archetypeConfig } from "@/lib/archetypes";
+import { getArchetypeAvatar } from "@/lib/archetypeAdapter";
+import useXiaoyueAnalysis from "@/hooks/useXiaoyueAnalysis";
+import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
+import type { UserProfile } from "@/lib/profileHelpers";
 
 interface GuideStepPersonaProps {
-  /** 用户原型名称 */
-  archetype?: string;
-  /** 原型描述 */
-  archetypeDescription?: string;
   /** 是否减少动画 */
   reducedMotion?: boolean;
   className?: string;
 }
 
 /**
- * 引导页步骤 1: 用户画像预览卡片
+ * Character Dossier 2.0: Premium Profile Reveal Experience
+ * Redesigned to showcase AI-generated insights and personality analysis
  */
 export function GuideStepPersona({
-  archetype,
-  archetypeDescription,
   reducedMotion = false,
   className,
 }: GuideStepPersonaProps) {
-  const copy = guideCopy.step1;
+  const [, setLocation] = useLocation();
   
   // Fetch user data
   const { data: user } = useQuery<UserProfile>({
@@ -48,268 +39,330 @@ export function GuideStepPersona({
     },
   });
   
-  const containerVariants = reducedMotion
+  // Fetch assessment results
+  const { data: assessment } = useQuery({
+    queryKey: ["/api/assessment/result"],
+    queryFn: async () => {
+      const response = await fetch("/api/assessment/result");
+      if (!response.ok) {
+        throw new Error("Failed to fetch assessment");
+      }
+      return response.json();
+    },
+  });
+  
+  // Fetch interests data
+  const { data: interestsData } = useQuery({
+    queryKey: ["/api/user/interests"],
+    queryFn: async () => {
+      const response = await fetch("/api/user/interests");
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null; // No interests data yet
+        }
+        throw new Error("Failed to fetch interests");
+      }
+      return response.json();
+    },
+  });
+  
+  // Get archetype information
+  const archetype = user?.archetype || user?.primaryArchetype;
+  const archetypeData = archetype ? archetypeConfig[archetype] : null;
+  const archetypeImageUrl = archetype ? getArchetypeAvatar(archetype) : "";
+  
+  // Get Xiaoyue AI analysis
+  const xiaoyueAnalysis = useXiaoyueAnalysis({
+    archetype: archetype || null,
+    traitScores: assessment ? {
+      A: assessment.affinityScore,
+      O: assessment.opennessScore,
+      C: assessment.conscientiousnessScore,
+      E: assessment.extraversionScore,
+      X: assessment.emotionalStabilityScore,
+      P: assessment.positivityScore,
+    } : null,
+    enabled: !!archetype && !!assessment,
+  });
+  
+  // Calculate top 3 traits
+  const topTraits = useMemo(() => {
+    if (!assessment) return [];
+    
+    const traits = [
+      { name: "开放性", score: assessment.opennessScore, icon: "🎯", color: "purple" },
+      { name: "外向性", score: assessment.extraversionScore, icon: "💫", color: "blue" },
+      { name: "亲和力", score: assessment.affinityScore, icon: "🌟", color: "pink" },
+      { name: "尽责性", score: assessment.conscientiousnessScore, icon: "⚡", color: "amber" },
+      { name: "情绪稳定", score: assessment.emotionalStabilityScore, icon: "🛡️", color: "green" },
+      { name: "正能量", score: assessment.positivityScore, icon: "☀️", color: "yellow" },
+    ];
+    
+    return traits.sort((a, b) => b.score - a.score).slice(0, 3);
+  }, [assessment]);
+  
+  // Process interest heat map
+  const interestHeatMap = useMemo(() => {
+    if (!interestsData?.categoryHeat) return [];
+    
+    const categoryEmojis: Record<string, string> = {
+      career: "💼",
+      philosophy: "🧠",
+      lifestyle: "🍜",
+      culture: "🎬",
+      city: "🏙️",
+      tech: "🚀",
+    };
+    
+    const categoryLabels: Record<string, string> = {
+      career: "职业发展",
+      philosophy: "思想哲学",
+      lifestyle: "生活方式",
+      culture: "文化娱乐",
+      city: "城市探索",
+      tech: "科技创新",
+    };
+    
+    return Object.entries(interestsData.categoryHeat)
+      .map(([category, heat]) => ({
+        category,
+        label: categoryLabels[category] || category,
+        heat: heat as number,
+        emoji: categoryEmojis[category] || "✨",
+      }))
+      .sort((a, b) => b.heat - a.heat)
+      .slice(0, 5);
+  }, [interestsData]);
+  
+  // Animation variants
+  const sectionVariants = reducedMotion
     ? { hidden: { opacity: 0 }, visible: { opacity: 1 } }
     : {
         hidden: { opacity: 0, y: 20 },
-        visible: { 
-          opacity: 1, 
-          y: 0,
-          transition: { duration: 0.4, ease: "easeOut" }
-        },
-      };
-  
-  const cardVariants = reducedMotion
-    ? { hidden: { opacity: 0 }, visible: { opacity: 1 } }
-    : {
-        hidden: { scale: 0.9, opacity: 0 },
-        visible: { 
-          scale: 1, 
+        visible: (custom: number) => ({
           opacity: 1,
-          transition: { delay: 0.2, duration: 0.4, type: "spring", stiffness: 200 }
-        },
+          y: 0,
+          transition: {
+            delay: custom,
+            duration: 0.5,
+            ease: "easeOut"
+          }
+        })
       };
-  
-  // Calculate completeness
-  const completeness = user ? calculateProfileCompleteness(user) : 0;
-  const age = user?.birthdate ? calculateAge(user.birthdate) : null;
-  
-  // Get interests (top 6)
-  const interests = user?.interests || [];
-  const topInterests = interests.slice(0, 3);
-  const otherInterests = interests.slice(3, 6);
-  const moreCount = interests.length > 6 ? interests.length - 6 : 0;
-  
-  // Get intents
-  const intents = user?.intent || [];
   
   return (
-    <motion.div
-      className={cn("flex flex-col items-center text-center px-6 pb-8", className)}
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
-      {/* 标题 */}
+    <div className={cn("min-h-screen bg-background pb-24", className)}>
+      {/* Social Tag Banner */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="mb-6"
+        custom={0}
+        variants={sectionVariants}
+        initial="hidden"
+        animate="visible"
+        className="relative bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 py-6 px-6 text-center overflow-hidden"
       >
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <Sparkles className="w-5 h-5 text-yellow-500" />
-          <h1 className="text-2xl font-bold text-foreground">
-            {copy.title}
-          </h1>
-          <Sparkles className="w-5 h-5 text-yellow-500" />
-        </div>
-        
-        <p className="text-muted-foreground">
-          {copy.subtitle}
-        </p>
-      </motion.div>
-      
-      {/* Profile Preview Card - Tinder/Bumble Style */}
-      <motion.div
-        variants={cardVariants}
-        className="relative w-full max-w-sm"
-      >
-        {/* Floating badge */}
+        {/* Shimmer animation */}
         <motion.div
-          initial={{ scale: 0, rotate: 0 }}
-          animate={{ scale: 1, rotate: -12 }}
-          transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
-          className="absolute -top-4 -right-4 z-10"
-        >
-          <Badge className="bg-gradient-to-r from-yellow-400 to-amber-500 text-white border-0 px-3 py-1 text-sm font-bold shadow-lg">
-            ⭐ 这就是你！
-          </Badge>
-        </motion.div>
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+          animate={{ x: ['-100%', '100%'] }}
+          transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+        />
         
-        {/* Main card */}
-        <div className="relative bg-card rounded-3xl border-2 border-purple-200 dark:border-purple-800 shadow-2xl overflow-hidden">
-          {/* Gradient background for header */}
-          <div className="h-24 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 relative">
-            {/* Glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/20" />
-          </div>
+        <div className="relative z-10">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-5 py-2 rounded-full border border-white/40 mb-2"
+          >
+            <Sparkles className="w-4 h-4 text-white" />
+            <span className="text-xs font-bold text-white tracking-wider">
+              AI生成的社交印象
+            </span>
+          </motion.div>
           
-          {/* Avatar circle overlapping header */}
-          <div className="absolute top-12 left-1/2 -translate-x-1/2">
-            <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 p-1 shadow-xl">
-              <div className="w-full h-full rounded-full bg-background flex items-center justify-center">
-                <span className="text-4xl font-black text-purple-600">
-                  {user?.displayName?.[0]?.toUpperCase() || "?"}
-                </span>
-              </div>
-            </div>
-          </div>
+          <h1 className="text-3xl font-black text-white drop-shadow-lg mb-1">
+            {user?.socialTag || archetypeData?.tagline || "探索你的独特标签"}
+          </h1>
           
-          {/* Profile content */}
-          <div className="pt-16 px-5 pb-5 space-y-4">
-            {/* Display name, gender, age, city */}
-            <div className="text-center">
-              <h2 className="text-2xl font-black mb-1">
-                {user?.displayName || "未设置昵称"}
-              </h2>
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <span>{user?.gender === "Woman" ? "👩" : user?.gender === "Man" ? "👨" : "👤"}</span>
-                {age && <span>{age}岁</span>}
-                {user?.currentCity && (
-                  <>
-                    <span>•</span>
-                    <span>{getCityLabel(user.currentCity)}</span>
-                  </>
-                )}
-              </div>
-              
-              {/* Archetype badge */}
-              {archetype && (
-                <Badge className="mt-2 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800">
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  {archetype}
-                </Badge>
-              )}
-            </div>
-            
-            {/* Essential Data Grid (2 columns) */}
-            <div className="grid grid-cols-2 gap-2">
-              {/* Industry */}
-              {user?.industryCategoryLabel && (
-                <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 border border-blue-100 dark:border-blue-900">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Briefcase className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    <span className="text-[10px] uppercase font-bold text-blue-600 dark:text-blue-400">行业</span>
-                  </div>
-                  <p className="text-xs font-semibold text-foreground line-clamp-2">
-                    {user.industrySegmentLabel || user.industryCategoryLabel}
-                  </p>
-                </div>
-              )}
-              
-              {/* Relationship Status */}
-              {user?.relationshipStatus && (
-                <div className="p-3 rounded-xl bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950/30 dark:to-rose-950/30 border border-pink-100 dark:border-pink-900">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Heart className="w-4 h-4 text-pink-600 dark:text-pink-400" />
-                    <span className="text-[10px] uppercase font-bold text-pink-600 dark:text-pink-400">感情</span>
-                  </div>
-                  <p className="text-xs font-semibold text-foreground">
-                    {getRelationshipLabel(user.relationshipStatus)}
-                  </p>
-                </div>
-              )}
-              
-              {/* Education */}
-              {user?.education && (
-                <div className="p-3 rounded-xl bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950/30 dark:to-violet-950/30 border border-purple-100 dark:border-purple-900">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <GraduationCap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                    <span className="text-[10px] uppercase font-bold text-purple-600 dark:text-purple-400">学历</span>
-                  </div>
-                  <p className="text-xs font-semibold text-foreground">
-                    {getEducationLabel(user.education)}
-                  </p>
-                </div>
-              )}
-              
-              {/* Hometown */}
-              {user?.hometown && (
-                <div className="p-3 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-100 dark:border-green-900">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <MapPin className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    <span className="text-[10px] uppercase font-bold text-green-600 dark:text-green-400">家乡</span>
-                  </div>
-                  <p className="text-xs font-semibold text-foreground line-clamp-1">
-                    {user.hometown}
-                  </p>
-                </div>
-              )}
-            </div>
-            
-            {/* Interests Section */}
-            {interests.length > 0 && (
-              <div className="text-left">
-                <h3 className="text-xs uppercase font-bold text-muted-foreground mb-2">兴趣爱好</h3>
-                <div className="flex flex-wrap gap-1.5">
-                  {topInterests.map((interest: string, index: number) => (
-                    <Badge
-                      key={index}
-                      className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 text-xs"
-                    >
-                      <Sparkles className="w-3 h-3 mr-1" />
-                      {interest}
-                    </Badge>
-                  ))}
-                  {otherInterests.map((interest: string, index: number) => (
-                    <Badge
-                      key={index + topInterests.length}
-                      variant="secondary"
-                      className="text-xs"
-                    >
-                      {interest}
-                    </Badge>
-                  ))}
-                  {moreCount > 0 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{moreCount} 更多
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            )}
-            
-            {/* Intent/Goals Section */}
-            {intents.length > 0 && (
-              <div className="text-left">
-                <h3 className="text-xs uppercase font-bold text-muted-foreground mb-2">社交目标</h3>
-                <div className="flex flex-wrap gap-1.5">
-                  {intents.map((intent: string, index: number) => (
-                    <Badge
-                      key={index}
-                      className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 rounded-full text-xs"
-                    >
-                      <span className="mr-1">{getIntentIcon(intent)}</span>
-                      {getIntentLabel(intent)}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Completeness Footer */}
-            <div className="pt-3 border-t">
-              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30">
-                <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
-                <div className="text-left">
-                  <p className="text-xs font-bold text-green-700 dark:text-green-300">
-                    画像完整度 {completeness}%
-                  </p>
-                  <p className="text-[10px] text-green-600 dark:text-green-400">
-                    完美！可以开始匹配了 ✨
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <p className="text-sm text-white/90">
+            {archetypeData?.description || "基于你的性格与兴趣生成"}
+          </p>
         </div>
       </motion.div>
       
-      {/* 底部 CTA */}
+      {/* Archetype Character */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6 }}
-        className="mt-6 text-center space-y-2"
+        custom={0.5}
+        variants={sectionVariants}
+        initial="hidden"
+        animate="visible"
+        className="flex flex-col items-center mt-8 px-6"
       >
-        <p className="text-sm text-muted-foreground">
-          其他用户会看到这样的你
-        </p>
-        <p className="text-xs text-muted-foreground">
-          点击"继续"探索更多玩法 →
+        {archetypeImageUrl && (
+          <motion.div
+            initial={{ scale: 0.8, filter: "blur(10px)", opacity: 0 }}
+            animate={{ scale: 1, filter: "blur(0px)", opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.6, type: "spring" }}
+            className="relative"
+          >
+            {/* Glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 blur-3xl rounded-full" />
+            
+            <img
+              src={archetypeImageUrl}
+              alt={archetype || "角色"}
+              className="relative w-[280px] h-[320px] object-contain drop-shadow-2xl"
+            />
+          </motion.div>
+        )}
+        
+        {/* Name badge below character */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.0 }}
+          className="mt-4 text-center"
+        >
+          <div className="text-4xl mb-2">{archetypeData?.icon || "🎭"}</div>
+          <h2 className="text-2xl font-black text-foreground mb-1">
+            {archetype || "你的角色"}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {archetypeData?.nickname || "能量满满的社交达人"}
+          </p>
+        </motion.div>
+      </motion.div>
+      
+      {/* Xiaoyue Analysis Card */}
+      <motion.div
+        custom={1.5}
+        variants={sectionVariants}
+        initial="hidden"
+        animate="visible"
+        className="mx-4 mt-6 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 rounded-3xl p-5 border-2 border-blue-200 dark:border-blue-800 shadow-xl"
+      >
+        <div className="flex items-start gap-3 mb-3">
+          <img 
+            src={xiaoyueNormal} 
+            alt="小悦" 
+            className="w-12 h-12 rounded-full shadow-lg"
+          />
+          <div>
+            <div className="text-sm font-bold text-blue-600 dark:text-blue-400">
+              💬 小悦的专属洞察
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              基于你的性格测试生成
+            </div>
+          </div>
+        </div>
+        
+        {xiaoyueAnalysis.isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>小悦正在分析你的特质...</span>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+            {xiaoyueAnalysis.analysis || "你的性格特质分析正在生成中..."}
+          </p>
+        )}
+      </motion.div>
+      
+      {/* Top 3 Traits */}
+      {topTraits.length > 0 && (
+        <div className="px-4 mt-6">
+          <h3 className="text-lg font-bold text-foreground mb-3 text-center">
+            ✨ 核心特质 Top 3
+          </h3>
+          <div className="grid grid-cols-3 gap-3">
+            {topTraits.map((trait, idx) => (
+              <motion.div
+                key={trait.name}
+                initial={reducedMotion ? { opacity: 1 } : { scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={reducedMotion ? {} : { delay: 2.5 + (idx * 0.15), type: "spring" }}
+                className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg border-2 border-purple-200 dark:border-purple-800 text-center"
+              >
+                <div className="text-3xl mb-2">{trait.icon}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                  {trait.name}
+                </div>
+                <div className="text-xl font-black text-purple-600 dark:text-purple-400">
+                  {trait.score}%
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Interest Heat Map */}
+      {interestHeatMap.length > 0 && (
+        <motion.div
+          custom={3.5}
+          variants={sectionVariants}
+          initial="hidden"
+          animate="visible"
+          className="px-4 mt-6"
+        >
+          <h3 className="text-lg font-bold text-foreground mb-3 text-center">
+            🔥 兴趣热力榜 Top 5
+          </h3>
+          <div className="space-y-3">
+            {interestHeatMap.map((item, idx) => (
+              <motion.div
+                key={item.category}
+                initial={reducedMotion ? { opacity: 1 } : { opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={reducedMotion ? {} : { delay: 4.0 + (idx * 0.1) }}
+                className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-md"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{item.emoji}</span>
+                    <span className="text-sm font-semibold text-foreground">
+                      {item.label}
+                    </span>
+                  </div>
+                  <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
+                    {item.heat}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${item.heat}%` }}
+                    transition={reducedMotion ? {} : { delay: 4.0 + (idx * 0.1), duration: 0.5 }}
+                    className="h-full bg-gradient-to-r from-purple-600 to-pink-600 rounded-full"
+                  />
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+      
+      {/* Sticky CTA Footer */}
+      <motion.div
+        initial={reducedMotion ? { opacity: 1 } : { opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={reducedMotion ? {} : { delay: 5.0, duration: 0.5 }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-t border-purple-200 dark:border-purple-800 shadow-2xl p-4"
+        style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+      >
+        <Button 
+          className="w-full h-14 text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg shadow-purple-500/50 text-white"
+          onClick={() => setLocation("/discover")}
+        >
+          开始探索活动
+          <ArrowRight className="ml-2 w-5 h-5" />
+        </Button>
+        
+        <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-2">
+          我们已为你匹配推荐活动
         </p>
       </motion.div>
-    </motion.div>
+    </div>
   );
 }
