@@ -186,11 +186,11 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   background: `radial-gradient(circle, ${variant.primaryColor}15, transparent 70%)`,
                 }}
               >
-                {/* Loading skeleton with shimmer */}
+                {/* Loading skeleton with shimmer - uses variant color with low opacity */}
                 {!imageLoaded && (
                   <div 
                     className="absolute inset-0 rounded-full animate-pulse overflow-hidden"
-                    style={{ backgroundColor: `${variant.primaryColor}20` }}
+                    style={{ backgroundColor: `${variant.primaryColor}20` }} // 20 = 12.5% opacity in hex
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent -translate-x-full animate-shimmer" />
                   </div>
