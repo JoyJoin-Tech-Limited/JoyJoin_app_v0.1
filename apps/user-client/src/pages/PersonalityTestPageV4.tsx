@@ -255,7 +255,7 @@ export default function PersonalityTestPageV4() {
       // Navigate directly to results page - slot machine will show there
       setLocation('/personality-test/results');
     }
-  }, [isComplete, result, setLocation, answeredCount, progress?.minQuestions, saveCheckpoint.mutate]);
+  }, [isComplete, result, setLocation, answeredCount, progress?.minQuestions]);
 
   const handleSelectOption = useCallback((value: string | string[]) => {
     const next = Array.isArray(value) ? value[0] : value;
