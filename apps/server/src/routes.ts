@@ -906,8 +906,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         nextStep = 'discover';
       }
       
-      // Incorporate checkpoint to enable cross-device resume
-      // If user has a checkpoint saved, use it if it's earlier in the flow than the baseline nextStep
       const stepOrder: OnboardingStep[] = [
         'onboarding',
         'personality-test', 
