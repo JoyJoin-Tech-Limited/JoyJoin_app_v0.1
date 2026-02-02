@@ -887,7 +887,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Determine next step in onboarding flow
-      let nextStep: string;
+      // Base nextStep on completion flags, then incorporate checkpoint for resume capability
+      type OnboardingStep = 'onboarding' | 'personality-test' | 'essential-data' | 'extended-data' | 'guide' | 'discover';
+      
+      let nextStep: OnboardingStep;
       if (!user.hasCompletedRegistration) {
         nextStep = 'onboarding';
       } else if (!user.hasCompletedPersonalityTest) {
@@ -895,9 +898,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (!profileEssentialComplete) {
         nextStep = 'essential-data';
       } else if (!user.hasSeenGuide) {
-        nextStep = 'guide';
+        // After essential data, check if extended data is needed before guide
+        // Extended data is indicated by user having intent or completed interests carousel
+        const hasExtendedData = !!(user.intent || user.hasCompletedInterestsCarousel);
+        nextStep = hasExtendedData ? 'guide' : 'extended-data';
       } else {
         nextStep = 'discover';
+      }
+      
+      const stepOrder: OnboardingStep[] = [
+        'onboarding',
+        'personality-test', 
+        'essential-data',
+        'extended-data',
+        'guide',
+        'discover'
+      ];
+      
+      const baseIndex = stepOrder.indexOf(nextStep);
+      const checkpointValue = user.onboardingCheckpoint as OnboardingStep | null;
+      const checkpointIndex = checkpointValue ? stepOrder.indexOf(checkpointValue) : -1;
+      
+      // Incorporate checkpoint to enable cross-device resume capability
+      // If checkpoint indicates progress beyond baseline (completion flags), advance user to next step
+      // Example: User completed personality test on device A (checkpoint saved), then opens on device B
+      // before hasCompletedPersonalityTest flag was set. Checkpoint helps resume at correct position.
+      if (
+        checkpointValue &&
+        checkpointIndex !== -1 &&
+        baseIndex !== -1 &&
+        checkpointIndex > baseIndex &&
+        checkpointIndex < stepOrder.indexOf('discover')
+      ) {
+        // Checkpoint is ahead of baseline - user made progress that completion flags don't reflect yet
+        // Advance to the step immediately after their checkpoint
+        const nextStepIndex = Math.min(checkpointIndex + 1, stepOrder.indexOf('discover'));
+        nextStep = stepOrder[nextStepIndex];
       }
       
       res.json({
@@ -942,6 +978,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error marking guide as seen:", error);
       res.status(500).json({ message: "Failed to mark guide as seen" });
+    }
+  });
+
+  // Alias endpoint for guide completion (matches problem statement requirement)
+  app.post('/api/guide/complete', isPhoneAuthenticated, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      
+      await db.update(users).set({ 
+        hasSeenGuide: true,
+        onboardingCheckpoint: 'guide',
+        onboardingCheckpointTimestamp: new Date()
+      }).where(eq(users.id, userId));
+      
+      res.json({ success: true, hasSeenGuide: true });
+    } catch (error) {
+      console.error("Error completing guide:", error);
+      res.status(500).json({ message: "Failed to complete guide" });
+    }
+  });
+
+  // Save onboarding checkpoint
+  app.post('/api/onboarding/checkpoint', isPhoneAuthenticated, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      
+      const { step, timestamp } = req.body;
+      if (!step) {
+        return res.status(400).json({ message: "Step is required" });
+      }
+
+      // Validate step value
+      const validSteps = ['onboarding', 'personality-test', 'essential-data', 'extended-data', 'guide'];
+      if (!validSteps.includes(step)) {
+        return res.status(400).json({ message: "Invalid step value" });
+      }
+      
+      const checkpointTimestamp = timestamp ? new Date(timestamp) : new Date();
+      
+      await db.update(users).set({ 
+        onboardingCheckpoint: step,
+        onboardingCheckpointTimestamp: checkpointTimestamp
+      }).where(eq(users.id, userId));
+      
+      res.json({ success: true, checkpoint: step });
+    } catch (error) {
+      console.error("Error saving checkpoint:", error);
+      res.status(500).json({ message: "Failed to save checkpoint" });
     }
   });
 

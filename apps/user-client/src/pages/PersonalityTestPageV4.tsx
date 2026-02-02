@@ -18,6 +18,7 @@ import { useDynamicAccent } from "@/contexts/DynamicAccentContext";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import { useUnifiedProgress } from "@/hooks/useUnifiedProgress";
 import { haptics } from "@/lib/haptics";
+import { useOnboardingCheckpoint } from "@/hooks/useOnboardingCheckpoint";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -140,6 +141,7 @@ export default function PersonalityTestPageV4() {
   const { toast } = useToast();
   const [selectedOption, setSelectedOption] = useState<string | undefined>();
   const [showMilestone, setShowMilestone] = useState(false);
+  const { saveCheckpoint } = useOnboardingCheckpoint();
   
   const { setArchetype: setDynamicAccent, reset: resetDynamicAccent } = useDynamicAccent();
   const { milestoneReached, detectMilestone, getUnifiedProgress } = useUnifiedProgress();
@@ -246,13 +248,14 @@ export default function PersonalityTestPageV4() {
       queryClient.invalidateQueries({ queryKey: ['/api/assessment/result'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/results'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/stats'] });
-      // Critical: Also invalidate user data so profile page shows updated archetype
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      
+      // Save checkpoint after completing personality test (also invalidates user data)
+      saveCheckpoint.mutate('personality-test');
       
       // Navigate directly to results page - slot machine will show there
       setLocation('/personality-test/results');
     }
-  }, [isComplete, result, setLocation, answeredCount, progress?.minQuestions]);
+  }, [isComplete, result, setLocation, answeredCount, progress?.minQuestions, saveCheckpoint]);
 
   const handleSelectOption = useCallback((value: string | string[]) => {
     const next = Array.isArray(value) ? value[0] : value;

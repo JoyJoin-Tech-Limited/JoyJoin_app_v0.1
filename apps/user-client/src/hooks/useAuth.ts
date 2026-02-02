@@ -21,6 +21,8 @@ export interface AuthUser extends User {
   profileEssentialComplete?: boolean;
   profileExtendedComplete?: boolean;
   activeAssessmentSessionId?: string | null;
+  onboardingCheckpoint?: string | null;
+  onboardingCheckpointTimestamp?: Date | null;
 }
 
 export function useAuth() {

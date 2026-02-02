@@ -55,10 +55,8 @@ export function useOnboardingProgress(): OnboardingProgress {
     const hasCompletedEssentialData = !!(user?.displayName && user?.gender && user?.currentCity);
     const hasCompletedExtendedData = !!(user?.intent || user?.hasCompletedInterestsCarousel);
     
-    // 检查引导是否已看过 (从 localStorage)
-    const hasSeenGuide = typeof window !== 'undefined' 
-      ? localStorage.getItem('joyjoin_guide_seen') === 'true'
-      : false;
+    // Use server-persisted hasSeenGuide instead of localStorage
+    const hasSeenGuide = user?.hasSeenGuide ?? false;
     
     const steps = {
       registration: hasCompletedRegistration,
@@ -68,7 +66,7 @@ export function useOnboardingProgress(): OnboardingProgress {
       guide: hasSeenGuide,
     };
     
-    // 计算当前步骤
+    // Calculate current step
     let currentStep: OnboardingStep = 'complete';
     if (needsRegistration) {
       currentStep = 'registration';
@@ -82,7 +80,7 @@ export function useOnboardingProgress(): OnboardingProgress {
       currentStep = 'guide';
     }
     
-    // 计算进度
+    // Calculate progress
     const currentIndex = STEP_ORDER.indexOf(currentStep);
     const totalSteps = STEP_ORDER.length - 1; // 不包括 'complete'
     const progressPercent = Math.round((currentIndex / totalSteps) * 100);

@@ -18,6 +18,7 @@ import { EnhancedOccupationSelector } from "@/components/EnhancedOccupationSelec
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 import { haptics } from "@/lib/haptics";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
+import { useOnboardingCheckpoint } from "@/hooks/useOnboardingCheckpoint";
 import {
   Sheet,
   SheetContent,
@@ -225,6 +226,7 @@ export default function EssentialDataPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
+  const { saveCheckpoint } = useOnboardingCheckpoint();
 
   const { data: user } = useQuery<any>({ queryKey: ["/api/auth/user"] });
 
@@ -326,6 +328,15 @@ export default function EssentialDataPage() {
     onSuccess: async () => {
       localStorage.removeItem(ESSENTIAL_CACHE_KEY);
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Save checkpoint after completing essential data (await to ensure persistence)
+      try {
+        await saveCheckpoint.mutateAsync('essential-data');
+      } catch (error) {
+        console.error('[EssentialDataPage] Failed to save checkpoint:', error);
+        // Continue navigation even if checkpoint fails (non-blocking)
+      }
+      
       setLocation("/onboarding/extended");
     },
     onError: (error: Error) => {
