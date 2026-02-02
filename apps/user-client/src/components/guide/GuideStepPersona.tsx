@@ -17,6 +17,39 @@ interface GuideStepPersonaProps {
   className?: string;
 }
 
+interface AssessmentResult {
+  primaryArchetype: string;
+  secondaryArchetype?: string;
+  affinityScore: number;
+  opennessScore: number;
+  conscientiousnessScore: number;
+  emotionalStabilityScore: number;
+  extraversionScore: number;
+  positivityScore: number;
+  totalQuestions: number;
+  validityScore: number;
+}
+
+interface InterestsData {
+  id: string;
+  userId: string;
+  totalHeat: number;
+  totalSelections: number;
+  categoryHeat: Record<string, number>;
+  selections: Array<{
+    topicId: string;
+    emoji: string;
+    label: string;
+    category: string;
+    heat: number;
+  }>;
+  topPriorities?: Array<{
+    topicId: string;
+    label: string;
+    heat: number;
+  }>;
+}
+
 /**
  * Character Dossier 2.0: Premium Profile Reveal Experience
  * Redesigned to showcase AI-generated insights and personality analysis
@@ -40,7 +73,7 @@ export function GuideStepPersona({
   });
   
   // Fetch assessment results
-  const { data: assessment } = useQuery({
+  const { data: assessment } = useQuery<AssessmentResult>({
     queryKey: ["/api/assessment/result"],
     queryFn: async () => {
       const response = await fetch("/api/assessment/result");
@@ -52,7 +85,7 @@ export function GuideStepPersona({
   });
   
   // Fetch interests data
-  const { data: interestsData } = useQuery({
+  const { data: interestsData } = useQuery<InterestsData | null>({
     queryKey: ["/api/user/interests"],
     queryFn: async () => {
       const response = await fetch("/api/user/interests");
@@ -75,12 +108,13 @@ export function GuideStepPersona({
   const xiaoyueAnalysis = useXiaoyueAnalysis({
     archetype: archetype || null,
     traitScores: assessment ? {
-      A: assessment.affinityScore,
-      O: assessment.opennessScore,
-      C: assessment.conscientiousnessScore,
-      E: assessment.extraversionScore,
-      X: assessment.emotionalStabilityScore,
-      P: assessment.positivityScore,
+      // Normalize to 0–1 to align with PersonalityTestResultPage and backend caching
+      A: assessment.affinityScore / 100,
+      O: assessment.opennessScore / 100,
+      C: assessment.conscientiousnessScore / 100,
+      E: assessment.extraversionScore / 100,
+      X: assessment.emotionalStabilityScore / 100,
+      P: assessment.positivityScore / 100,
     } : null,
     enabled: !!archetype && !!assessment,
   });
