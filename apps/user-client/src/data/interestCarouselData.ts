@@ -4,6 +4,9 @@
  * Each topic has 3 heat levels (1, 2, 3) with associated heat values (3, 10, 25)
  */
 
+// localStorage keys for onboarding
+export const INTEREST_CAROUSEL_ONBOARDING = "joyjoin_interest_onboarding_seen";
+
 export const HEAT_LEVELS = {
   0: { heat: 0, label: "未选择", color: "gray" },
   1: { heat: 3, label: "有兴趣", color: "purple" },         // Low interest - minimal heat
