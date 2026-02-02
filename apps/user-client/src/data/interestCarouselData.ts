@@ -5,7 +5,7 @@
  */
 
 // localStorage keys for onboarding
-export const INTEREST_CAROUSEL_ONBOARDING = "INTEREST_CAROUSEL_ONBOARDING";
+export const INTEREST_CAROUSEL_ONBOARDING = "joyjoin_interest_onboarding_seen";
 
 export const HEAT_LEVELS = {
   0: { heat: 0, label: "未选择", color: "gray" },

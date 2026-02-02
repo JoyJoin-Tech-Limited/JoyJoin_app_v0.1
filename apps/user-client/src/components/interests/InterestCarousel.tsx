@@ -9,6 +9,7 @@ import { CategoryPage } from "./CategoryPage";
 import {
   INTEREST_CATEGORIES,
   HEAT_LEVELS,
+  INTEREST_CAROUSEL_ONBOARDING,
   type HeatLevel,
   type InterestTopic,
   getTopicById,
@@ -98,7 +99,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
     }
     
     // Check if user has seen onboarding - show after 1 second delay
-    const hasSeenOnboarding = localStorage.getItem('joyjoin_interest_onboarding_seen');
+    const hasSeenOnboarding = localStorage.getItem(INTEREST_CAROUSEL_ONBOARDING);
     if (!hasSeenOnboarding) {
       const timer = setTimeout(() => setShowOnboarding(true), 1000);
       return () => clearTimeout(timer);
@@ -236,7 +237,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   // Dismiss onboarding tooltip
   const dismissOnboarding = useCallback(() => {
     setShowOnboarding(false);
-    localStorage.setItem('joyjoin_interest_onboarding_seen', 'true');
+    localStorage.setItem(INTEREST_CAROUSEL_ONBOARDING, 'true');
   }, []);
 
   // Handle topic tap - cycle through levels 0 → 1 → 2 → 3 → 0
@@ -395,21 +396,28 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         {/* Horizontal Category Quick-Nav Tabs */}
         <div className="z-10 bg-background border-b shadow-sm" role="tablist" aria-label="兴趣分类">
           <div className="flex overflow-x-auto gap-1.5 px-3 py-2 no-scrollbar">
-            {INTEREST_CATEGORIES.map((cat) => (
+            {INTEREST_CATEGORIES.map((cat, catIndex) => (
               <button
                 key={cat.id}
-                onClick={() => scrollToCategory(cat.id)}
+                onClick={() => {
+                  setActiveCategory(cat.id);
+                  scrollToCategory(cat.id);
+                }}
                 onKeyDown={(e) => {
-                  if (e.key === 'ArrowRight') {
+                  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
                     e.preventDefault();
                     const currentIndex = INTEREST_CATEGORIES.findIndex(c => c.id === cat.id);
-                    const nextIndex = (currentIndex + 1) % INTEREST_CATEGORIES.length;
-                    scrollToCategory(INTEREST_CATEGORIES[nextIndex].id);
-                  } else if (e.key === 'ArrowLeft') {
-                    e.preventDefault();
-                    const currentIndex = INTEREST_CATEGORIES.findIndex(c => c.id === cat.id);
-                    const prevIndex = (currentIndex - 1 + INTEREST_CATEGORIES.length) % INTEREST_CATEGORIES.length;
-                    scrollToCategory(INTEREST_CATEGORIES[prevIndex].id);
+                    const delta = e.key === 'ArrowRight' ? 1 : -1;
+                    const nextIndex = (currentIndex + delta + INTEREST_CATEGORIES.length) % INTEREST_CATEGORIES.length;
+                    const nextCategoryId = INTEREST_CATEGORIES[nextIndex].id;
+                    setActiveCategory(nextCategoryId);
+                    scrollToCategory(nextCategoryId);
+                    
+                    // Move focus to the next tab
+                    const tabs = e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+                    if (tabs && tabs[nextIndex]) {
+                      tabs[nextIndex].focus();
+                    }
                   }
                 }}
                 className={cn(
@@ -516,9 +524,18 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         aria-atomic="true"
         className="sr-only"
       >
-        {lastSelectedTopic && selections[lastSelectedTopic] !== undefined && (
-          `已${HEAT_LEVELS[selections[lastSelectedTopic]].label} ${getTopicById(lastSelectedTopic)?.label}`
-        )}
+        {lastSelectedTopic && selections[lastSelectedTopic] !== undefined && (() => {
+          const level = selections[lastSelectedTopic];
+          const topic = getTopicById(lastSelectedTopic);
+          if (!topic) return null;
+
+          // For level 0, announce a clear deselection message instead of "已未选择"
+          if (level === 0) {
+            return `已取消选择 ${topic.label}`;
+          }
+
+          return `已${HEAT_LEVELS[level].label} ${topic.label}`;
+        })()}
       </div>
 
       {/* Sticky continue button - with selection preview */}

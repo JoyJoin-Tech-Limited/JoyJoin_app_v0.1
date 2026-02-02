@@ -133,7 +133,8 @@ This document summarizes all changes made to complete the remaining P1, P2, and 
 **File:** `interestCarouselData.ts`
 
 - Added `INTEREST_CAROUSEL_ONBOARDING` constant for localStorage key
-- Ensures consistency if key needs to be referenced elsewhere
+- Value: `"joyjoin_interest_onboarding_seen"`
+- Ensures consistency across the codebase
 
 ---
 

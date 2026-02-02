@@ -121,7 +121,7 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
       )}
       style={{
         background: styles.background,
-        border: styles.borderImage ? styles.border : styles.border,
+        border: styles.border,
         borderImage: styles.borderImage,
         boxShadow: styles.shadow,
         transition: "all 200ms ease-out",
