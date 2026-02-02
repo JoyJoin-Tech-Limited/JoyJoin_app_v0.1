@@ -370,7 +370,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         </div>
 
         {/* Horizontal Category Quick-Nav Tabs */}
-        <div className="sticky top-[108px] z-10 bg-background border-b shadow-sm">
+        <div className="sticky top-[106px] z-10 bg-background border-b shadow-sm">
           <div className="flex overflow-x-auto gap-1.5 px-3 py-2 no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {INTEREST_CATEGORIES.map((cat) => (
               <button
@@ -400,7 +400,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
             initial={prefersReducedMotion ? {} : { opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={prefersReducedMotion ? {} : { opacity: 0, y: -10 }}
-            className="fixed top-[160px] left-4 right-4 z-30 bg-primary text-primary-foreground rounded-xl shadow-lg p-4"
+            className="fixed top-[200px] left-4 right-4 z-30 bg-primary text-primary-foreground rounded-xl shadow-lg p-4"
             role="dialog"
             aria-label="使用提示"
           >
