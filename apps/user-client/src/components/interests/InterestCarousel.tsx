@@ -56,8 +56,11 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<string>(INTEREST_CATEGORIES[0]?.id || "");
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout>();
 
   const [selections, setSelections] = useState<Record<string, HeatLevel>>({});
@@ -88,6 +91,12 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         localStorage.removeItem(STORAGE_KEY);
       }
     }
+    
+    // Check if user has seen onboarding
+    const hasSeenOnboarding = localStorage.getItem('joyjoin_interest_onboarding_seen');
+    if (!hasSeenOnboarding) {
+      setShowOnboarding(true);
+    }
   }, []);
 
   // Save to localStorage on changes with timestamp
@@ -100,7 +109,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [selections]);
 
-  // Track scroll position to show/hide scroll-to-top button
+  // Track scroll position to show/hide scroll-to-top button and update active category
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
@@ -112,6 +121,24 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
       
       // Optimize: Set isScrolling state to apply willChange only during scroll
       setIsScrolling(true);
+      
+      // Update active category based on scroll position
+      const scrollTop = scrollContainer.scrollTop;
+      let newActiveCategory = INTEREST_CATEGORIES[0]?.id || "";
+      
+      for (const category of INTEREST_CATEGORIES) {
+        const categoryEl = categoryRefs.current[category.id];
+        if (categoryEl) {
+          const rect = categoryEl.getBoundingClientRect();
+          const containerRect = scrollContainer.getBoundingClientRect();
+          // Check if category is in viewport (with some offset for the header)
+          if (rect.top <= containerRect.top + 200) {
+            newActiveCategory = category.id;
+          }
+        }
+      }
+      
+      setActiveCategory(newActiveCategory);
       
       // Clear existing timeout
       if (scrollTimeoutRef.current) {
@@ -169,9 +196,37 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
     }
   }, [prefersReducedMotion]);
 
+  // Scroll to category handler
+  const scrollToCategory = useCallback((categoryId: string) => {
+    const categoryEl = categoryRefs.current[categoryId];
+    if (categoryEl && scrollContainerRef.current) {
+      const containerRect = scrollContainerRef.current.getBoundingClientRect();
+      const categoryRect = categoryEl.getBoundingClientRect();
+      const scrollTop = scrollContainerRef.current.scrollTop;
+      // Account for sticky headers (main header ~52px + heat meter ~56px + tab bar ~48px = ~156px)
+      const offset = categoryRect.top - containerRect.top + scrollTop - 156;
+      
+      scrollContainerRef.current.scrollTo({
+        top: offset,
+        behavior: prefersReducedMotion ? 'auto' : 'smooth'
+      });
+    }
+  }, [prefersReducedMotion]);
+
+  // Dismiss onboarding tooltip
+  const dismissOnboarding = useCallback(() => {
+    setShowOnboarding(false);
+    localStorage.setItem('joyjoin_interest_onboarding_seen', 'true');
+  }, []);
+
   // Handle topic tap - cycle through levels 0 → 1 → 2 → 3 → 0
   // Show toast on first level 3 → 0 cycle to explain behavior
   const handleTopicTap = useCallback((topicId: string) => {
+    // Dismiss onboarding on first tap
+    if (showOnboarding) {
+      dismissOnboarding();
+    }
+    
     setSelections((prev) => {
       const currentLevel = prev[topicId] || 0;
       const nextLevel = (currentLevel + 1) % 4;
@@ -196,7 +251,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
       
       return { ...prev, [topicId]: nextLevel };
     });
-  }, [toast]);
+  }, [toast, showOnboarding, dismissOnboarding]);
 
   // Handle continue button
   const handleContinue = useCallback(() => {
@@ -287,32 +342,87 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
           </div>
         </div>
 
-        {/* Compact guidance pills - improved clarity on color meanings */}
-        <div className="px-4 py-2 bg-primary/5 border-t">
-          <div className="flex items-center gap-2 justify-center flex-wrap text-xs text-muted-foreground">
-            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-background/70">
-              <span className="text-gray-400">⚪</span>
-              <span className="text-gray-600">未选</span>
+        {/* Dynamic Heat Meter - replaces guidance pills */}
+        <div className="px-4 py-2.5 bg-primary/5 border-t">
+          <div className="flex items-center gap-3">
+            <span className="text-lg" role="img" aria-label="Heat">🔥</span>
+            <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden" role="progressbar" aria-valuenow={totalHeat} aria-valuemin={0} aria-valuemax={100}>
+              <motion.div 
+                className="h-full bg-gradient-to-r from-purple-400 via-pink-400 to-orange-500"
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min((totalHeat / 100) * 100, 100)}%` }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              />
             </div>
-            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-background/70">
-              <span>💜</span>
-              <span>感兴趣</span>
-            </div>
-            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-background/70">
-              <span>💗</span>
-              <span>很喜欢</span>
-            </div>
-            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-background/70">
-              <span>🧡</span>
-              <span>超热爱</span>
-            </div>
-            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-background/70 border border-primary/20">
-              <span>✓</span>
-              <span className="font-medium">至少选3个</span>
-            </div>
+            <span className="text-sm font-semibold text-muted-foreground tabular-nums min-w-[3rem] text-right">
+              {totalSelections >= 3 ? (
+                <span className="text-primary">{totalSelections} 个</span>
+              ) : (
+                <span>{totalSelections}/3+</span>
+              )}
+            </span>
+          </div>
+          {totalSelections < 3 && (
+            <p className="text-xs text-muted-foreground text-center mt-1.5" role="status" aria-live="polite">
+              点击兴趣卡片可多次选择，增加热度 💜 → 💗 → 🧡
+            </p>
+          )}
+        </div>
+
+        {/* Horizontal Category Quick-Nav Tabs */}
+        <div className="sticky top-[108px] z-10 bg-background border-b shadow-sm">
+          <div className="flex overflow-x-auto gap-1.5 px-3 py-2 no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {INTEREST_CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => scrollToCategory(cat.id)}
+                className={cn(
+                  "flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all touch-manipulation",
+                  activeCategory === cat.id 
+                    ? "bg-primary text-primary-foreground shadow-sm" 
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                )}
+                aria-label={`跳转到 ${cat.name}`}
+                aria-current={activeCategory === cat.id ? "true" : undefined}
+              >
+                <span className="mr-1">{cat.emoji}</span>
+                {cat.name}
+              </button>
+            ))}
           </div>
         </div>
       </div>
+
+      {/* Onboarding Tooltip - First-time user guidance */}
+      <AnimatePresence>
+        {showOnboarding && (
+          <motion.div
+            initial={prefersReducedMotion ? {} : { opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={prefersReducedMotion ? {} : { opacity: 0, y: -10 }}
+            className="fixed top-[160px] left-4 right-4 z-30 bg-primary text-primary-foreground rounded-xl shadow-lg p-4"
+            role="dialog"
+            aria-label="使用提示"
+          >
+            <div className="flex items-start gap-3">
+              <span className="text-2xl flex-shrink-0">💡</span>
+              <div className="flex-1 text-sm">
+                <p className="font-semibold mb-1">如何选择兴趣？</p>
+                <p className="opacity-90">
+                  点击卡片可多次选择，每次点击增加热度：💜 感兴趣 → 💗 很喜欢 → 🧡 超热爱
+                </p>
+              </div>
+              <button
+                onClick={dismissOnboarding}
+                className="flex-shrink-0 text-primary-foreground/80 hover:text-primary-foreground text-lg font-bold leading-none touch-manipulation p-1"
+                aria-label="关闭提示"
+              >
+                ✕
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Scrollable content - NO CAROUSEL - with performance optimizations */}
       <div 
@@ -329,6 +439,9 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
             category={category}
             selections={selections}
             onTopicTap={handleTopicTap}
+            ref={(el) => {
+              categoryRefs.current[category.id] = el;
+            }}
           />
         ))}
       </div>
@@ -357,8 +470,48 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         )}
       </AnimatePresence>
 
-      {/* Sticky continue button - slightly more compact */}
+      {/* Sticky continue button - with selection preview */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-background via-background to-transparent pt-6 pb-[env(safe-area-inset-bottom,1rem)]">
+        {/* Selection preview - shows selected interests */}
+        <AnimatePresence>
+          {totalSelections >= 3 && (
+            <motion.div 
+              initial={prefersReducedMotion ? {} : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={prefersReducedMotion ? {} : { opacity: 0, y: 10 }}
+              className="px-4 pb-3"
+            >
+              <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar items-center" role="region" aria-label="已选择的兴趣">
+                {Object.entries(selections)
+                  .filter(([, level]) => level > 0)
+                  .slice(0, 8)
+                  .map(([topicId]) => {
+                    const topic = getTopicById(topicId);
+                    if (!topic) return null;
+                    return (
+                      <motion.span 
+                        key={topicId} 
+                        className="text-2xl flex-shrink-0"
+                        initial={prefersReducedMotion ? {} : { scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                        role="img"
+                        aria-label={topic.label}
+                      >
+                        {topic.emoji}
+                      </motion.span>
+                    );
+                  })}
+                {totalSelections > 8 && (
+                  <span className="text-xs text-muted-foreground font-medium bg-muted px-2 py-1 rounded-full flex-shrink-0">
+                    +{totalSelections - 8}
+                  </span>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
         <div className="px-4 pb-4">
           <Button
             onClick={handleContinue}
