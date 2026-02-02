@@ -89,7 +89,7 @@ The 3-step guide is now **server-persisted**:
 
 1. **User Portrait**: Archetype badge, overview, match reasons
 2. **Event Flow**: Explains pool → match → check-in → feedback
-3. **Xiaoyue AI**: Introduces AI assistant, encourage profile completion
+3. **Xiaoyue AI**: Introduces AI assistant, encourages profile completion
 
 **Data Contract:**
 - Server field: `user.hasSeenGuide` (persisted to database)
@@ -147,15 +147,15 @@ activeAssessmentSessionId: string | null;
   // V4 Adaptive Engine State
   currentQuestionIndex: number;
   traitScores: { A: number, C: number, E: number, O: number, X: number, P: number };
-  traitConfidences: { [trait]: { score, confidence, sampleCount } };
-  topArchetypes: [{ archetype, score, confidence }];
+  traitConfidences: { [trait: string]: { score: number; confidence: number; sampleCount: number } };
+  topArchetypes: Array<{ archetype: string; score: number; confidence: number }>;
   
   // MatcherV2 Results
   algorithmVersion: 'v1' | 'v2';
   matchDetailsJson: {
     primaryArchetype: string;
     secondaryArchetype: string;
-    traitDeltas: { [trait]: number };
+    traitDeltas: { [trait: string]: number };
     decisiveReason: string;
     score: number;
   };
@@ -216,21 +216,19 @@ activeAssessmentSessionId: string | null;
   };
   
   // Individual selections
-  selections: [
-    { 
-      topicId, 
-      emoji, 
-      label, 
-      fullName, 
-      category, 
-      categoryId, 
-      level, 
-      heat 
-    }
-  ];
+  selections: Array<{
+    topicId: string;
+    emoji: string;
+    label: string;
+    fullName: string;
+    category: string;
+    categoryId: string;
+    level: number;
+    heat: number;
+  }>;
   
   // Top priorities (level 3 items)
-  topPriorities: [{ topicId, label, heat }];
+  topPriorities: Array<{ topicId: string; label: string; heat: number }>;
 }
 ```
 
@@ -561,9 +559,10 @@ Users control visibility via profile settings:
 ```typescript
 const [isFlipped, setIsFlipped] = useState(false);
 
-// CSS transform
-transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)"
-transition: "transform 0.5s"
+const cardStyle = {
+  transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+  transition: "transform 0.5s",
+};
 ```
 
 ### Key Files
