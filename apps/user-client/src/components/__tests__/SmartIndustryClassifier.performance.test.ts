@@ -179,9 +179,8 @@ describe('SmartIndustryClassifier Performance Optimizations', () => {
       expect(transitionCallback).toBeTruthy();
       
       // Execute the transition
-      if (transitionCallback) {
-        transitionCallback();
-      }
+      expect(transitionCallback).not.toBeNull();
+      transitionCallback!();
     });
   });
 
