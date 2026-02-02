@@ -146,8 +146,6 @@ export function GuideStepper({
           >
             {currentStep === 0 && (
               <GuideStepPersona
-                archetype={archetype}
-                archetypeDescription={archetypeDescription}
                 reducedMotion={prefersReducedMotion}
               />
             )}
