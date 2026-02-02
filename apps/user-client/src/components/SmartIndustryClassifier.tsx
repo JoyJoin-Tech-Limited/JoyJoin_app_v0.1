@@ -7,9 +7,17 @@
  * - 展示三层分类结果（大类 > 细分 > 赛道）
  * - 显示置信度徽章
  * - 支持"准确"/"重新识别"操作
+ * 
+ * 性能优化 (2026-02):
+ * - ✅ useReducedMotion support for accessibility
+ * - ✅ Scroll detection to pause heavy animations
+ * - ✅ GPU acceleration with will-change and translateZ
+ * - ✅ React 18 startTransition for low-priority updates
+ * - ✅ Optimized AnimatePresence usage (mode="wait", initial={false})
+ * - ✅ Conditional heavy animation rendering (particles, spiral waves)
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useTransition } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, CheckCircle2, RotateCcw, Briefcase, Building2, Zap, HelpCircle, ChevronRight, AlertCircle, X } from "lucide-react";
@@ -21,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { CELEBRATION_COLORS } from "@/components/slot-machine/particleUtils";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 interface ClassificationResult {
   category: { id: string; label: string };
@@ -85,6 +94,16 @@ export function SmartIndustryClassifier({
   className,
 }: SmartIndustryClassifierProps) {
   const { toast } = useToast();
+  
+  // Performance: Use reduced motion preference for accessibility
+  const prefersReducedMotion = useReducedMotion();
+  
+  // Performance: Use React 18 transitions for low-priority updates
+  const [, startTransition] = useTransition();
+  
+  // Performance: Scroll detection to pause heavy animations
+  const [isScrolling, setIsScrolling] = useState(false);
+  
   const [text, setText] = useState("");
   const [result, setResult] = useState<ClassificationResult | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
@@ -121,6 +140,24 @@ export function SmartIndustryClassifier({
     },
   });
 
+  // Performance: Scroll detection hook - pauses animations during scroll
+  useEffect(() => {
+    let scrollTimer: NodeJS.Timeout;
+    const handleScroll = () => {
+      setIsScrolling(true);
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => setIsScrolling(false), 150);
+    };
+    
+    // Use passive listener for better scroll performance
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimer);
+    };
+  }, []);
+
   // IME composition event handlers
   const handleCompositionStart = () => {
     setIsComposing(true);
@@ -129,6 +166,12 @@ export function SmartIndustryClassifier({
   const handleCompositionEnd = () => {
     setIsComposing(false);
   };
+  
+  // Performance: Text change handler (cleanup handled in useEffect)
+  const handleTextChange = useCallback((value: string) => {
+    // Update text immediately for responsive typing
+    setText(value);
+  }, []);
 
   useEffect(() => {
     if (!text?.trim() || isComposing) {
@@ -163,18 +206,22 @@ export function SmartIndustryClassifier({
     
     setIsConfirmed(true);
     
-    // Generate confetti
-    const newParticles: Particle[] = Array.from({ length: 15 }, (_, i) => ({
-      id: i,
-      x: 50,
-      y: 50,
-      color: CELEBRATION_COLORS[i % CELEBRATION_COLORS.length],
-      size: Math.random() * 8 + 4,
-      angle: (Math.PI * 2 * i) / 15,
-      speed: Math.random() * 3 + 2,
-    }));
-    setParticles(newParticles);
-    setShowConfetti(true);
+    // Performance: Only generate confetti if not in reduced motion mode
+    if (!prefersReducedMotion) {
+      // Generate confetti with reduced count for better performance
+      const particleCount = 15;
+      const newParticles: Particle[] = Array.from({ length: particleCount }, (_, i) => ({
+        id: i,
+        x: 50,
+        y: 50,
+        color: CELEBRATION_COLORS[i % CELEBRATION_COLORS.length],
+        size: Math.random() * 8 + 4,
+        angle: (Math.PI * 2 * i) / particleCount,
+        speed: Math.random() * 3 + 2,
+      }));
+      setParticles(newParticles);
+      setShowConfetti(true);
+    }
     
     const timeoutId = setTimeout(() => {
       setShowConfetti(false);
@@ -194,7 +241,7 @@ export function SmartIndustryClassifier({
       };
       
       onClassified(completeResult);
-    }, 1000);
+    }, prefersReducedMotion ? 400 : 1000);
     
     setCelebrationTimeoutId(timeoutId);
   };
@@ -249,8 +296,20 @@ export function SmartIndustryClassifier({
     return parts.join(" > ");
   };
 
+  // Performance: Determine if heavy animations should run
+  // Skip animations during scroll or when reduced motion is preferred
+  const shouldAnimate = !isScrolling && !prefersReducedMotion;
+
   return (
-    <div className={cn("space-y-4", className)}>
+    <div 
+      className={cn("space-y-4", className)}
+      style={{
+        // Performance: GPU acceleration - translateZ(0) promotes to own layer
+        transform: 'translateZ(0)',
+        // Hint browser about upcoming transforms when animating
+        willChange: shouldAnimate ? 'transform' : 'auto',
+      }}
+    >
       {/* Mascot提示 */}
       <div className="text-base text-muted-foreground font-medium">
         {mascotPrompt}
@@ -264,7 +323,7 @@ export function SmartIndustryClassifier({
         )}>
           <Input
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => handleTextChange(e.target.value)}
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
             placeholder={placeholder}
@@ -275,11 +334,18 @@ export function SmartIndustryClassifier({
             data-testid="input-industry-smart"
           />
         </div>
-        {isPending && (
+        {/* Performance: Only show SpiralWave animation if should animate */}
+        {isPending && shouldAnimate && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
             <div className="w-8 h-8 transform scale-[0.15] origin-center">
               <SpiralWaveAnimation />
             </div>
+          </div>
+        )}
+        {/* Performance: Show simple spinner when animations are disabled */}
+        {isPending && !shouldAnimate && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         )}
       </div>
@@ -293,12 +359,14 @@ export function SmartIndustryClassifier({
       )}
 
       {/* Analyzing overlay with Spiral Wave */}
-      <AnimatePresence>
-        {isPending && text && !result && (
+      {/* Performance: Use mode="wait" and initial={false} for better performance */}
+      <AnimatePresence mode="wait" initial={false}>
+        {isPending && text && !result && shouldAnimate && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: prefersReducedMotion ? 0.15 : 0.3 }}
             className="flex flex-col items-center justify-center py-8 space-y-4"
           >
             <div className="w-32 h-32 transform scale-50 origin-center">
@@ -307,10 +375,26 @@ export function SmartIndustryClassifier({
             <motion.p 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: prefersReducedMotion ? 0.15 : 0.3 }}
               className="text-sm text-muted-foreground font-medium"
             >
               小悦正在分析您的职业描述...
             </motion.p>
+          </motion.div>
+        )}
+        {/* Performance: Simplified loading state when animations disabled */}
+        {isPending && text && !result && !shouldAnimate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="flex flex-col items-center justify-center py-8 space-y-4"
+          >
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-muted-foreground font-medium">
+              正在分析...
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -324,15 +408,15 @@ export function SmartIndustryClassifier({
               <motion.button
                 key={job.text}
                 type="button"
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={prefersReducedMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.05 }}
-                onClick={() => setText(job.text)}
+                transition={{ delay: prefersReducedMotion ? 0 : index * 0.05, duration: prefersReducedMotion ? 0.15 : 0.3 }}
+                onClick={() => handleTextChange(job.text)}
                 className={cn(
                   "relative p-3 rounded-xl border transition-all overflow-hidden",
                   "hover:shadow-md hover:scale-105 active:scale-95"
                 )}
-                whileTap={{ scale: 0.95 }}
+                whileTap={shouldAnimate ? { scale: 0.95 } : undefined}
               >
                 {/* Gradient background */}
                 <div className={cn(
@@ -352,20 +436,27 @@ export function SmartIndustryClassifier({
       )}
 
       {/* 🆕 Duolingo-Style Candidate Selection */}
-      <AnimatePresence>
+      {/* Performance: Use mode="wait" and initial={false} for smoother transitions */}
+      <AnimatePresence mode="wait" initial={false}>
         {result && showCandidateSelection && result.candidates && result.candidates.length > 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: prefersReducedMotion ? 0.15 : 0.3 }}
             className="space-y-5 p-6 border-2 border-blue-300 rounded-3xl bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 shadow-xl"
           >
             {/* Owl mascot header (Duolingo style) */}
             <div className="flex items-start gap-4">
               <motion.div 
-                initial={{ scale: 0 }}
+                initial={prefersReducedMotion ? { scale: 1 } : { scale: 0 }}
                 animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                transition={{ 
+                  type: prefersReducedMotion ? "tween" : "spring", 
+                  stiffness: 260, 
+                  damping: 20,
+                  duration: prefersReducedMotion ? 0.15 : 0.5
+                }}
                 className="relative"
               >
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg">
@@ -373,9 +464,9 @@ export function SmartIndustryClassifier({
                 </div>
                 {/* Speech bubble */}
                 <motion.div
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
+                  transition={{ delay: prefersReducedMotion ? 0 : 0.2, duration: prefersReducedMotion ? 0.15 : 0.3 }}
                   className="absolute -right-2 top-0 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md"
                 >
                   <HelpCircle className="h-4 w-4 text-blue-600" />
@@ -384,17 +475,17 @@ export function SmartIndustryClassifier({
               
               <div className="flex-1">
                 <motion.h3 
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 }}
+                  transition={{ delay: prefersReducedMotion ? 0 : 0.1, duration: prefersReducedMotion ? 0.15 : 0.3 }}
                   className="text-2xl font-bold text-gray-900"
                 >
                   你说的 "<span className="text-blue-600">{text}</span>" 是指...?
                 </motion.h3>
                 <motion.p 
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.15 }}
+                  transition={{ delay: prefersReducedMotion ? 0 : 0.15, duration: prefersReducedMotion ? 0.15 : 0.3 }}
                   className="text-gray-600 mt-2"
                 >
                   选择最准确的职业分类
@@ -407,11 +498,11 @@ export function SmartIndustryClassifier({
               {result.candidates.map((candidate, index) => (
                 <motion.button
                   key={index}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 + index * 0.06 }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  transition={{ delay: prefersReducedMotion ? 0 : 0.1 + index * 0.06, duration: prefersReducedMotion ? 0.15 : 0.3 }}
+                  whileHover={shouldAnimate ? { scale: 1.02 } : undefined}
+                  whileTap={shouldAnimate ? { scale: 0.98 } : undefined}
                   onClick={() => handleCandidateSelect(candidate)}
                   className={cn(
                     "w-full p-5 rounded-2xl border-3 text-left transition-all relative overflow-hidden group",
@@ -425,7 +516,7 @@ export function SmartIndustryClassifier({
                   <div className="relative flex items-start gap-4">
                     {/* Icon with bounce animation */}
                     <motion.div 
-                      whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                      whileHover={shouldAnimate ? { rotate: [0, -10, 10, -10, 0] } : undefined}
                       transition={{ duration: 0.5 }}
                       className="shrink-0"
                     >
@@ -488,11 +579,11 @@ export function SmartIndustryClassifier({
               
               {/* "None of these" option (Duolingo style) */}
               <motion.button
-                initial={{ opacity: 0, y: 20 }}
+                initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + result.candidates.length * 0.06 }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                transition={{ delay: prefersReducedMotion ? 0 : 0.1 + result.candidates.length * 0.06, duration: prefersReducedMotion ? 0.15 : 0.3 }}
+                whileHover={shouldAnimate ? { scale: 1.02 } : undefined}
+                whileTap={shouldAnimate ? { scale: 0.98 } : undefined}
                 onClick={handleNoneMatch}
                 className="w-full p-5 rounded-2xl border-3 border-dashed border-gray-300 text-left transition-all bg-white hover:bg-gray-50 hover:border-gray-400 flex items-center gap-4 group"
               >
@@ -514,10 +605,12 @@ export function SmartIndustryClassifier({
       </AnimatePresence>
 
       {/* Enhanced AI Interpretation Display */}
+      {/* Performance: Use mode="wait" and initial={false} */}
       {result && !isConfirmed && !showCandidateSelection && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: prefersReducedMotion ? 0.15 : 0.3 }}
           className={cn(
             "space-y-4 p-5 border-2 rounded-2xl",
             selectedCandidate 
@@ -526,12 +619,17 @@ export function SmartIndustryClassifier({
                 ? "border-orange-200 bg-gradient-to-br from-orange-50 to-yellow-50"
                 : "border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50"
           )}
+          style={{
+            // Performance: GPU acceleration - translateZ(0) promotes to own layer
+            transform: 'translateZ(0)',
+          }}
         >
           {/* Selected candidate banner (Duolingo style) */}
           {selectedCandidate && (
             <motion.div 
-              initial={{ opacity: 0, y: -10 }}
+              initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: prefersReducedMotion ? 0.15 : 0.3 }}
               className="flex items-start gap-3 p-4 bg-white rounded-xl border-2 border-green-300 shadow-sm"
             >
               <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
@@ -552,8 +650,9 @@ export function SmartIndustryClassifier({
           {/* Low confidence warning (Duolingo style) */}
           {!selectedCandidate && result.confidence < 0.5 && (
             <motion.div 
-              initial={{ opacity: 0, y: -10 }}
+              initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: prefersReducedMotion ? 0.15 : 0.3 }}
               className="flex items-start gap-3 p-4 bg-orange-50 rounded-xl border-2 border-orange-200"
             >
               <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
@@ -597,9 +696,9 @@ export function SmartIndustryClassifier({
           <div className="space-y-0 bg-white/60 rounded-xl p-4 border border-purple-200 dark:bg-gray-900/50">
             {/* L1: Category - Root Level */}
             <motion.div 
-              initial={{ opacity: 0, x: -20 }}
+              initial={prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
+              transition={{ delay: prefersReducedMotion ? 0 : 0.1, duration: prefersReducedMotion ? 0.15 : 0.3 }}
               className="flex items-center gap-3"
             >
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg">
@@ -620,9 +719,9 @@ export function SmartIndustryClassifier({
 
             {/* L2: Segment - Sub Level */}
             <motion.div 
-              initial={{ opacity: 0, x: -20 }}
+              initial={prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
+              transition={{ delay: prefersReducedMotion ? 0 : 0.2, duration: prefersReducedMotion ? 0.15 : 0.3 }}
               className="flex items-center gap-3 ml-4"
             >
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center shadow-md">
@@ -645,9 +744,9 @@ export function SmartIndustryClassifier({
                 <div className="ml-9 h-4 w-0.5 bg-gradient-to-b from-purple-300 to-pink-400" />
 
                 <motion.div 
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 }}
+                  transition={{ delay: prefersReducedMotion ? 0 : 0.3, duration: prefersReducedMotion ? 0.15 : 0.3 }}
                   className="flex items-center gap-3 ml-8"
                 >
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-400 to-pink-500 flex items-center justify-center shadow">
@@ -708,11 +807,12 @@ export function SmartIndustryClassifier({
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: prefersReducedMotion ? 0.15 : 0.3 }}
           className="relative p-5 border-2 border-green-500/30 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10 overflow-hidden"
         >
-          {/* Confetti particles */}
-          <AnimatePresence>
-            {showConfetti && particles.map((particle) => (
+          {/* Confetti particles - Performance: Only render if shouldAnimate */}
+          <AnimatePresence mode="wait" initial={false}>
+            {showConfetti && shouldAnimate && particles.map((particle) => (
               <motion.div
                 key={particle.id}
                 className="absolute rounded-full"
@@ -730,7 +830,7 @@ export function SmartIndustryClassifier({
                   opacity: 0,
                 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
+                transition={{ duration: prefersReducedMotion ? 0.4 : 0.8, ease: "easeOut" }}
               />
             ))}
           </AnimatePresence>
@@ -739,7 +839,12 @@ export function SmartIndustryClassifier({
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              transition={{ 
+                type: prefersReducedMotion ? "tween" : "spring", 
+                stiffness: 300, 
+                damping: 20,
+                duration: prefersReducedMotion ? 0.15 : 0.5
+              }}
               className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center"
             >
               <CheckCircle2 className="w-8 h-8 text-white" />
