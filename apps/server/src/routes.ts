@@ -921,8 +921,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const checkpointValue = user.onboardingCheckpoint as OnboardingStep | null;
       const checkpointIndex = checkpointValue ? stepOrder.indexOf(checkpointValue) : -1;
       
-      // If checkpoint is valid and represents progress beyond baseline, use checkpoint as nextStep
-      // This allows users to resume from their last saved checkpoint on a different device
+      // Incorporate checkpoint to enable cross-device resume capability
+      // If checkpoint indicates progress beyond baseline (completion flags), advance user to next step
+      // Example: User completed personality test on device A (checkpoint saved), then opens on device B
+      // before hasCompletedPersonalityTest flag was set. Checkpoint helps resume at correct position.
       if (
         checkpointValue &&
         checkpointIndex !== -1 &&
@@ -930,9 +932,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         checkpointIndex > baseIndex &&
         checkpointIndex < stepOrder.indexOf('discover')
       ) {
-        // Checkpoint indicates user made progress beyond what completion flags show
-        // This can happen if user completed a step but completion flag wasn't set yet
-        // Use the checkpoint to advance them to the next step after their checkpoint
+        // Checkpoint is ahead of baseline - user made progress that completion flags don't reflect yet
+        // Advance to the step immediately after their checkpoint
         const nextStepIndex = Math.min(checkpointIndex + 1, stepOrder.indexOf('discover'));
         nextStep = stepOrder[nextStepIndex];
       }
