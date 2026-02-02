@@ -512,6 +512,7 @@ export default function PersonalityTestResultPage() {
   const { toast } = useToast();
   const [animationPhase, setAnimationPhase] = useState<AnimationPhase>('slot');
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [skipToResults, setSkipToResults] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   const containerVariants = useMemo(

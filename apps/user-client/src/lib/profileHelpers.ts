@@ -17,6 +17,8 @@ export interface UserProfile {
   intent?: string[];
   interests?: string[];
   archetype?: string;
+  primaryArchetype?: string;
+  socialTag?: string;
 }
 
 /**
