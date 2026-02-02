@@ -17,51 +17,51 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
     switch (level) {
       case 0:
         return {
-          background: "#FFFFFF",
-          border: "1.5px solid #E5E7EB",
+          background: "hsl(var(--background))",
+          border: "2px solid hsl(var(--border))",
           badgeEmoji: null,
-          emojiOpacity: 0.5,
+          emojiOpacity: 0.6,
           emojiScale: 1,
-          textColor: "text-gray-600",
+          textColor: "text-muted-foreground",
           textSize: "text-xs",
           fontWeight: "",
           shadow: "none",
         };
       case 1:
         return {
-          background: "#FFFFFF",
-          border: "2px solid #A78BFA",
+          background: "hsl(var(--background))",
+          border: "2.5px solid hsl(262 83% 58%)",
           badgeEmoji: "💜",
           emojiOpacity: 1,
-          emojiScale: 1.05,
-          textColor: "text-purple-700",
+          emojiScale: 1.02,
+          textColor: "text-purple-700 dark:text-purple-400",
           textSize: "text-xs",
           fontWeight: "font-medium",
-          shadow: "0 2px 6px rgba(167, 139, 250, 0.2)",
+          shadow: "0 2px 8px hsl(262 83% 58% / 0.25)",
         };
       case 2:
         return {
-          background: "#FFFFFF",
-          border: "3px solid #EC4899",
+          background: "hsl(var(--background))",
+          border: "3px solid hsl(330 81% 60%)",
           badgeEmoji: "💗",
           emojiOpacity: 1,
-          emojiScale: 1.08,
-          textColor: "text-pink-600",
+          emojiScale: 1.05,
+          textColor: "text-pink-600 dark:text-pink-400",
           textSize: "text-xs",
           fontWeight: "font-semibold",
-          shadow: "0 3px 10px rgba(236, 72, 153, 0.25)",
+          shadow: "0 3px 12px hsl(330 81% 60% / 0.3)",
         };
       case 3:
         return {
-          background: "linear-gradient(135deg, #FEF3C7 0%, #FED7AA 100%)",
-          border: "4px solid #FB923C",
+          background: "linear-gradient(135deg, hsl(48 96% 89%) 0%, hsl(24 95% 89%) 100%)",
+          border: "3.5px solid hsl(27 96% 61%)",
           badgeEmoji: "🧡",
           emojiOpacity: 1,
-          emojiScale: 1.12,
-          textColor: "text-orange-700",
+          emojiScale: 1.08,
+          textColor: "text-orange-700 dark:text-orange-600",
           textSize: "text-xs",
           fontWeight: "font-bold",
-          shadow: "0 4px 14px rgba(251, 146, 60, 0.3)",
+          shadow: "0 4px 16px hsl(27 96% 61% / 0.35)",
         };
     }
   };
@@ -95,7 +95,7 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
       type="button"
       onClick={handleTap}
       className={cn(
-        "relative flex flex-col items-center justify-center gap-0.5 rounded-lg p-1.5 transition-all touch-manipulation min-h-[68px]",
+        "relative flex flex-col items-center justify-center gap-1 rounded-xl p-2 transition-all touch-manipulation min-h-[88px] min-w-[88px]",
         className
       )}
       style={{
@@ -106,6 +106,8 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
       animate={{ scale: styles.emojiScale }}
       whileTap={prefersReducedMotion ? {} : { scale: styles.emojiScale * 0.95 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      aria-label={`${topic.label}, ${HEAT_LEVELS[level].label}`}
+      aria-pressed={level > 0}
     >
       {/* Heat level badge (accessibility) */}
       {level > 0 && styles.badgeEmoji && (
