@@ -399,7 +399,7 @@ export default function BlindBoxEventCard({
         }}
       />
 
-      {poolId && (
+      {poolId && newJoinSheetOpen && (
         <JoinEventPoolSheet
           open={newJoinSheetOpen}
           onOpenChange={setNewJoinSheetOpen}

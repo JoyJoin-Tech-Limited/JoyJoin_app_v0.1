@@ -37,9 +37,9 @@ export const SHARED_OPTIONS = {
     }
   ],
   languages: [
-    { value: "cantonese", label: "粤语", flag: "🇭🇰" },
-    { value: "mandarin", label: "普通话", flag: "🇨🇳" },
-    { value: "english", label: "English", flag: "🇬🇧" }
+    { value: "粤语", label: "粤语", flag: "🇭🇰" },
+    { value: "普通话", label: "普通话", flag: "🇨🇳" },
+    { value: "英语", label: "English", flag: "🇬🇧" }
   ]
 };
 
@@ -79,12 +79,12 @@ export const DINNER_OPTIONS = {
     }
   ],
   cuisines: [
-    { value: "cantonese", label: "粤菜", emoji: "🥘" },
-    { value: "sichuan", label: "川菜", emoji: "🌶️" },
-    { value: "japanese", label: "日料", emoji: "🍱" },
-    { value: "western", label: "西餐", emoji: "🍝" },
-    { value: "hotpot", label: "火锅", emoji: "🍲" },
-    { value: "bbq", label: "烧烤", emoji: "🍖" }
+    { value: "粤菜", label: "粤菜", emoji: "🥘" },
+    { value: "川菜", label: "川菜", emoji: "🌶️" },
+    { value: "日料", label: "日料", emoji: "🍱" },
+    { value: "西餐", label: "西餐", emoji: "🍝" },
+    { value: "火锅", label: "火锅", emoji: "🍲" },
+    { value: "烧烤", label: "烧烤", emoji: "🍖" }
   ],
   dietary: [
     { value: "none", label: "无限制", emoji: "✅" },
@@ -135,19 +135,19 @@ export const BAR_OPTIONS = {
   ],
   barThemes: [
     { 
-      value: "craft_beer", 
+      value: "精酿", 
       label: "精酿", 
       emoji: "🍻",
       description: "精酿啤酒吧"
     },
     { 
-      value: "quiet_bar", 
+      value: "清吧", 
       label: "清吧", 
       emoji: "🕯️",
       description: "安静私密的清吧"
     },
     { 
-      value: "cocktail", 
+      value: "私密调酒", 
       label: "私密调酒", 
       emoji: "🍹",
       description: "专业调酒师服务"
@@ -155,19 +155,19 @@ export const BAR_OPTIONS = {
   ],
   alcoholComfort: [
     { 
-      value: "can_drink", 
+      value: "可以喝酒", 
       label: "可以喝酒", 
       emoji: "🍷",
       description: "享受小酌"
     },
     { 
-      value: "tipsy", 
+      value: "微醺就好", 
       label: "微醺就好", 
       emoji: "😌",
       description: "浅尝即止"
     },
     { 
-      value: "no_alcohol", 
+      value: "无酒精", 
       label: "无酒精", 
       emoji: "🥤",
       description: "只喝软饮"
