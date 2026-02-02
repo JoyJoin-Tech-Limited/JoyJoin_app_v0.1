@@ -4,7 +4,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { User } from "@shared/schema";
 
-const GUIDE_SEEN_KEY = "joyjoin_guide_seen";
 const TOTAL_STEPS = 3;
 
 export interface GuideFlowState {
@@ -36,8 +35,8 @@ export interface GuideFlowState {
  * - 步骤 2: 盲盒活动流程介绍
  * - 步骤 3: 小悦 AI 助手引导
  * 
- * Now uses server-driven state for guide persistence (B2).
- * Local storage is used as a fallback/hint only.
+ * Uses server-driven state for guide persistence (B2).
+ * No longer uses localStorage - all state persisted to backend.
  * 
  * @param options.autoShowAfterRegistration - 注册完成后自动显示引导
  */
@@ -54,28 +53,22 @@ export function useGuideFlow(options?: {
     staleTime: Infinity,
   });
   
-  // Server-side mark as seen mutation
-  const markSeenMutation = useMutation({
+  // Server-side mark as complete mutation - uses new /api/guide/complete endpoint
+  const completeGuideMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/guide/mark-seen");
+      return apiRequest("POST", "/api/guide/complete");
     },
     onSuccess: () => {
-      // Also set local storage as a hint
-      localStorage.setItem(GUIDE_SEEN_KEY, 'true');
       // Invalidate user query to refresh hasSeenGuide
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
     onError: (error) => {
-      // Log error but don't block UX - localStorage fallback is already set
-      console.error('[useGuideFlow] Failed to persist guide seen state to server:', error);
-      // Local storage was already set in markAsSeen, so guide won't show again
+      console.error('[useGuideFlow] Failed to persist guide completion to server:', error);
     },
   });
   
-  // Check if guide has been seen - prefer server state, fallback to local storage
-  const hasSeenGuide = user?.hasSeenGuide === true || (
-    typeof window !== 'undefined' && localStorage.getItem(GUIDE_SEEN_KEY) === 'true'
-  );
+  // Check if guide has been seen from server state
+  const hasSeenGuide = user?.hasSeenGuide === true;
   
   // 自动显示引导 (如果需要)
   useEffect(() => {
@@ -84,23 +77,21 @@ export function useGuideFlow(options?: {
     }
   }, [options?.autoShowAfterRegistration, hasSeenGuide]);
   
-  const markAsSeen = useCallback(() => {
-    // Always set local storage immediately for UX
-    localStorage.setItem(GUIDE_SEEN_KEY, 'true');
+  const markAsComplete = useCallback(() => {
     // Persist to server
-    markSeenMutation.mutate();
-  }, [markSeenMutation]);
+    completeGuideMutation.mutate();
+  }, [completeGuideMutation]);
   
   const nextStep = useCallback(() => {
     if (currentStep < TOTAL_STEPS - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
       // 最后一步，完成引导
-      markAsSeen();
+      markAsComplete();
       setShowGuide(false);
       setLocation("/");
     }
-  }, [currentStep, markAsSeen, setLocation]);
+  }, [currentStep, markAsComplete, setLocation]);
   
   const prevStep = useCallback(() => {
     if (currentStep > 0) {
@@ -109,16 +100,16 @@ export function useGuideFlow(options?: {
   }, [currentStep]);
   
   const skipGuide = useCallback(() => {
-    markAsSeen();
+    markAsComplete();
     setShowGuide(false);
     setLocation("/");
-  }, [markAsSeen, setLocation]);
+  }, [markAsComplete, setLocation]);
   
   const completeGuide = useCallback(() => {
-    markAsSeen();
+    markAsComplete();
     setShowGuide(false);
     setLocation("/");
-  }, [markAsSeen, setLocation]);
+  }, [markAsComplete, setLocation]);
   
   const startGuide = useCallback(() => {
     setCurrentStep(0);
@@ -140,18 +131,17 @@ export function useGuideFlow(options?: {
 
 /**
  * 检查是否需要显示引导
- * Uses local storage as a hint - the actual decision should use server state
+ * Uses server state only - no localStorage fallback
  */
 export function shouldShowGuide(): boolean {
-  if (typeof window === 'undefined') return false;
-  return localStorage.getItem(GUIDE_SEEN_KEY) !== 'true';
+  // This function is now deprecated - use hasSeenGuide from useGuideFlow or useAuth
+  return false;
 }
 
 /**
  * 重置引导状态 (用于测试)
+ * No longer needed as state is server-side only
  */
 export function resetGuideState(): void {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem(GUIDE_SEEN_KEY);
-  }
+  console.warn('[useGuideFlow] resetGuideState is deprecated - guide state is now server-side only');
 }
