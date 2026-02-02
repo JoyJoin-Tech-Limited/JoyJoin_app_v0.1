@@ -248,16 +248,14 @@ export default function PersonalityTestPageV4() {
       queryClient.invalidateQueries({ queryKey: ['/api/assessment/result'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/results'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/stats'] });
-      // Critical: Also invalidate user data so profile page shows updated archetype
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       
-      // Save checkpoint after completing personality test
+      // Save checkpoint after completing personality test (also invalidates user data)
       saveCheckpoint.mutate('personality-test');
       
       // Navigate directly to results page - slot machine will show there
       setLocation('/personality-test/results');
     }
-  }, [isComplete, result, setLocation, answeredCount, progress?.minQuestions, saveCheckpoint]);
+  }, [isComplete, result, setLocation, answeredCount, progress?.minQuestions, saveCheckpoint.mutate]);
 
   const handleSelectOption = useCallback((value: string | string[]) => {
     const next = Array.isArray(value) ? value[0] : value;

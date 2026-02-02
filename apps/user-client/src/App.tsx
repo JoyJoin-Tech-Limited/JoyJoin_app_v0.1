@@ -148,8 +148,6 @@ function AuthenticatedRouter() {
       return (
         <Switch>
           <Route path="/guide" component={GuidePage} />
-          <Route path="/onboarding/extended" component={ExtendedDataPage} />
-          <Route path="/onboarding/review" component={FinalProfileReviewPage} />
           <Route path="*" component={RedirectToGuide} />
         </Switch>
       );

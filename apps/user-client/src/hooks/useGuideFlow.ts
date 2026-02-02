@@ -128,3 +128,25 @@ export function useGuideFlow(options?: {
     startGuide,
   };
 }
+
+/**
+ * @deprecated Legacy helper kept for backward compatibility.
+ * Guide visibility is now controlled by server-driven `hasSeenGuide`
+ * via the `useGuideFlow` hook.
+ */
+export function shouldShowGuide(): boolean {
+  console.warn(
+    "[useGuideFlow] shouldShowGuide is deprecated. Use `useGuideFlow` and `hasSeenGuide` instead."
+  );
+  return true;
+}
+
+/**
+ * @deprecated Legacy helper kept for backward compatibility.
+ * Guide completion is now persisted via `useGuideFlow` server calls.
+ */
+export function resetGuideState(): void {
+  console.warn(
+    "[useGuideFlow] resetGuideState is deprecated. Use `useGuideFlow.startGuide` or server endpoints instead."
+  );
+}

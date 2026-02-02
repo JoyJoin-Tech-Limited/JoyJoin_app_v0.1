@@ -489,7 +489,7 @@ export default function DuolingoOnboardingPage() {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     // After completing screen 8, navigate to personality test
     if (currentScreen === ONBOARDING_QUESTIONS_COUNT) {
       const cachedAnswers = getV4CachedAnswers();
@@ -503,8 +503,13 @@ export default function DuolingoOnboardingPage() {
         return;
       }
       
-      // Save checkpoint before navigating to personality test
-      saveCheckpoint.mutate('onboarding');
+      // Save checkpoint before navigating to personality test (await to ensure persistence)
+      try {
+        await saveCheckpoint.mutateAsync('onboarding');
+      } catch (error) {
+        console.error('[DuolingoOnboardingPage] Failed to save checkpoint:', error);
+        // Continue navigation even if checkpoint fails (non-blocking)
+      }
       
       // Navigate to personality test after completing all anchor questions
       setLocation("/personality-test");
