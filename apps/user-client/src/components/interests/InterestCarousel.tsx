@@ -52,11 +52,15 @@ interface StoredProgress {
   timestamp: number;
 }
 
+// Maximum possible heat (56 topics × 25 heat at level 3)
+const MAX_HEAT = 1400;
+
 export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) {
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const headerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>(INTEREST_CATEGORIES[0]?.id || "");
@@ -123,16 +127,23 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
       setIsScrolling(true);
       
       // Update active category based on scroll position
-      const scrollTop = scrollContainer.scrollTop;
+      // Find the category whose top is closest to being at the top of the viewport
       let newActiveCategory = INTEREST_CATEGORIES[0]?.id || "";
+      let minDistance = Infinity;
+      
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const headerHeight = headerRef.current?.getBoundingClientRect().height || 0;
+      const threshold = containerRect.top + headerHeight + 50; // Small buffer below header
       
       for (const category of INTEREST_CATEGORIES) {
         const categoryEl = categoryRefs.current[category.id];
         if (categoryEl) {
           const rect = categoryEl.getBoundingClientRect();
-          const containerRect = scrollContainer.getBoundingClientRect();
-          // Check if category is in viewport (with some offset for the header)
-          if (rect.top <= containerRect.top + 200) {
+          const distance = Math.abs(rect.top - threshold);
+          
+          // If this category is in view and closer to threshold than previous
+          if (rect.top <= threshold && distance < minDistance) {
+            minDistance = distance;
             newActiveCategory = category.id;
           }
         }
@@ -203,8 +214,15 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
       const containerRect = scrollContainerRef.current.getBoundingClientRect();
       const categoryRect = categoryEl.getBoundingClientRect();
       const scrollTop = scrollContainerRef.current.scrollTop;
-      // Account for sticky headers (main header ~52px + heat meter ~56px + tab bar ~48px = ~156px)
-      const offset = categoryRect.top - containerRect.top + scrollTop - 156;
+      
+      // Dynamically account for sticky headers by measuring the header container height
+      const headerContainer = headerRef.current;
+      const headerHeight = headerContainer
+        ? headerContainer.getBoundingClientRect().height
+        : 0;
+
+      const offset =
+        categoryRect.top - containerRect.top + scrollTop - headerHeight;
       
       scrollContainerRef.current.scrollTo({
         top: offset,
@@ -308,7 +326,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b">
+      <div ref={headerRef} className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b">
         <div className="flex items-center gap-3 px-4 py-2.5">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ChevronLeft className="w-5 h-5" />
@@ -346,11 +364,11 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         <div className="px-4 py-2.5 bg-primary/5 border-t">
           <div className="flex items-center gap-3">
             <span className="text-lg" role="img" aria-label="Heat">🔥</span>
-            <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden" role="progressbar" aria-valuenow={totalHeat} aria-valuemin={0} aria-valuemax={100}>
+            <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden" role="progressbar" aria-valuenow={Math.min((totalHeat / MAX_HEAT) * 100, 100)} aria-valuemin={0} aria-valuemax={100} aria-label="兴趣热度进度">
               <motion.div 
                 className="h-full bg-gradient-to-r from-purple-400 via-pink-400 to-orange-500"
                 initial={{ width: 0 }}
-                animate={{ width: `${Math.min((totalHeat / 100) * 100, 100)}%` }}
+                animate={{ width: `${Math.min((totalHeat / MAX_HEAT) * 100, 100)}%` }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               />
             </div>
@@ -370,8 +388,8 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
         </div>
 
         {/* Horizontal Category Quick-Nav Tabs */}
-        <div className="sticky top-[106px] z-10 bg-background border-b shadow-sm">
-          <div className="flex overflow-x-auto gap-1.5 px-3 py-2 no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="z-10 bg-background border-b shadow-sm">
+          <div className="flex overflow-x-auto gap-1.5 px-3 py-2 no-scrollbar">
             {INTEREST_CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
@@ -383,7 +401,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 )}
                 aria-label={`跳转到 ${cat.name}`}
-                aria-current={activeCategory === cat.id ? "true" : undefined}
+                aria-current={activeCategory === cat.id ? "location" : undefined}
               >
                 <span className="mr-1">{cat.emoji}</span>
                 {cat.name}

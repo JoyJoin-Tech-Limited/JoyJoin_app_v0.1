@@ -37,7 +37,7 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
           textColor: "text-purple-700 dark:text-purple-400",
           textSize: "text-xs",
           fontWeight: "font-medium",
-          shadow: "0 2px 8px rgba(167, 139, 250, 0.25)",
+          shadow: "0 2px 8px hsl(262 83% 58% / 0.25)",
         };
       case 2:
         return {
@@ -49,7 +49,7 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
           textColor: "text-pink-600 dark:text-pink-400",
           textSize: "text-xs",
           fontWeight: "font-semibold",
-          shadow: "0 3px 12px rgba(236, 72, 153, 0.3)",
+          shadow: "0 3px 12px hsl(330 81% 60% / 0.3)",
         };
       case 3:
         return {
@@ -61,7 +61,7 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
           textColor: "text-orange-700 dark:text-orange-600",
           textSize: "text-xs",
           fontWeight: "font-bold",
-          shadow: "0 4px 16px rgba(251, 146, 60, 0.35)",
+          shadow: "0 4px 16px hsl(27 96% 61% / 0.35)",
         };
     }
   };
