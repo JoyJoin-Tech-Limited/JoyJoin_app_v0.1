@@ -887,7 +887,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Determine next step in onboarding flow
-      let nextStep: string;
+      // Base nextStep on completion flags, then incorporate checkpoint for resume capability
+      type OnboardingStep = 'onboarding' | 'personality-test' | 'essential-data' | 'extended-data' | 'guide' | 'discover';
+      
+      let nextStep: OnboardingStep;
       if (!user.hasCompletedRegistration) {
         nextStep = 'onboarding';
       } else if (!user.hasCompletedPersonalityTest) {
@@ -895,9 +898,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (!profileEssentialComplete) {
         nextStep = 'essential-data';
       } else if (!user.hasSeenGuide) {
-        nextStep = 'guide';
+        // After essential data, check if extended data is needed before guide
+        // Extended data is indicated by user having intent or completed interests carousel
+        const hasExtendedData = !!(user.intent || user.hasCompletedInterestsCarousel);
+        nextStep = hasExtendedData ? 'guide' : 'extended-data';
       } else {
         nextStep = 'discover';
+      }
+      
+      // Incorporate checkpoint to enable cross-device resume
+      // If user has a checkpoint saved, use it if it's earlier in the flow than the baseline nextStep
+      const stepOrder: OnboardingStep[] = [
+        'onboarding',
+        'personality-test', 
+        'essential-data',
+        'extended-data',
+        'guide',
+        'discover'
+      ];
+      
+      const baseIndex = stepOrder.indexOf(nextStep);
+      const checkpointValue = user.onboardingCheckpoint as OnboardingStep | null;
+      const checkpointIndex = checkpointValue ? stepOrder.indexOf(checkpointValue) : -1;
+      
+      // If checkpoint is valid and represents progress beyond baseline, use checkpoint as nextStep
+      // This allows users to resume from their last saved checkpoint on a different device
+      if (
+        checkpointValue &&
+        checkpointIndex !== -1 &&
+        baseIndex !== -1 &&
+        checkpointIndex > baseIndex &&
+        checkpointIndex < stepOrder.indexOf('discover')
+      ) {
+        // Checkpoint indicates user made progress beyond what completion flags show
+        // This can happen if user completed a step but completion flag wasn't set yet
+        // Use the checkpoint to advance them to the next step after their checkpoint
+        const nextStepIndex = Math.min(checkpointIndex + 1, stepOrder.indexOf('discover'));
+        nextStep = stepOrder[nextStepIndex];
       }
       
       res.json({
