@@ -18,7 +18,7 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
       case 0:
         return {
           background: "hsl(var(--background))",
-          border: "2px solid hsl(var(--border))",
+          border: "1.5px solid hsl(var(--border))",
           badgeEmoji: null,
           emojiOpacity: 0.6,
           emojiScale: 1,
@@ -26,53 +26,74 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
           textSize: "text-xs",
           fontWeight: "",
           shadow: "none",
+          glow: "none",
         };
       case 1:
         return {
           background: "hsl(var(--background))",
-          border: "2.5px solid hsl(262 83% 58%)",
+          border: "2px solid #A78BFA", // Purple-400
           badgeEmoji: "💜",
           emojiOpacity: 1,
           emojiScale: 1.02,
           textColor: "text-purple-700 dark:text-purple-400",
           textSize: "text-xs",
           fontWeight: "font-medium",
-          shadow: "0 2px 8px hsl(262 83% 58% / 0.25)",
+          shadow: "0 2px 8px rgba(167, 139, 250, 0.25)",
+          glow: "0 0 0 0 rgba(167, 139, 250, 0.4)",
         };
       case 2:
         return {
           background: "hsl(var(--background))",
-          border: "3px solid hsl(330 81% 60%)",
+          border: "2.5px solid transparent",
+          borderImage: "linear-gradient(135deg, #EC4899, #F472B6) 1",
           badgeEmoji: "💗",
           emojiOpacity: 1,
           emojiScale: 1.05,
           textColor: "text-pink-600 dark:text-pink-400",
           textSize: "text-xs",
           fontWeight: "font-semibold",
-          shadow: "0 3px 12px hsl(330 81% 60% / 0.3)",
+          shadow: "0 3px 12px rgba(236, 72, 153, 0.3)",
+          glow: "0 0 0 0 rgba(236, 72, 153, 0.5)",
         };
       case 3:
         return {
           background: "linear-gradient(135deg, hsl(48 96% 89%) 0%, hsl(24 95% 89%) 100%)",
-          border: "3.5px solid hsl(27 96% 61%)",
+          border: "3px solid transparent",
+          borderImage: "linear-gradient(135deg, #FB923C, #F59E0B) 1",
           badgeEmoji: "🧡",
           emojiOpacity: 1,
           emojiScale: 1.08,
           textColor: "text-orange-700 dark:text-orange-600",
           textSize: "text-xs",
           fontWeight: "font-bold",
-          shadow: "0 4px 16px hsl(27 96% 61% / 0.35)",
+          shadow: "0 4px 16px rgba(251, 146, 60, 0.35)",
+          glow: "0 0 0 0 rgba(251, 146, 60, 0.6)",
         };
     }
   };
 
   const styles = getHeatStyles();
 
-  // Haptic feedback simulation (if available)
+  // Haptic feedback with improved patterns (P3)
   const triggerHaptic = (nextLevel: HeatLevel) => {
+    // Respect reduced-motion preference
+    if (prefersReducedMotion) return;
+    
     if (typeof window !== "undefined" && "vibrate" in navigator) {
-      const patterns = { 0: 0, 1: 10, 2: 20, 3: 30 };
-      navigator.vibrate(patterns[nextLevel] || 0);
+      switch (nextLevel) {
+        case 0:
+          navigator.vibrate(5); // Very light (deselect)
+          break;
+        case 1:
+          navigator.vibrate(10); // Light tap
+          break;
+        case 2:
+          navigator.vibrate(15); // Medium tap
+          break;
+        case 3:
+          navigator.vibrate([10, 20, 10]); // Double tap pattern for max level
+          break;
+      }
     }
   };
 
@@ -95,19 +116,28 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
       type="button"
       onClick={handleTap}
       className={cn(
-        "relative flex flex-col items-center justify-center gap-1 rounded-xl p-2 transition-all touch-manipulation min-h-[88px] min-w-[88px]",
+        "relative flex flex-col items-center justify-center gap-1 rounded-xl p-2 touch-manipulation min-h-[88px] min-w-[88px]",
         className
       )}
       style={{
         background: styles.background,
-        border: styles.border,
+        border: styles.borderImage ? styles.border : styles.border,
+        borderImage: styles.borderImage,
         boxShadow: styles.shadow,
+        transition: "all 200ms ease-out",
       }}
       animate={{ scale: styles.emojiScale }}
       whileTap={prefersReducedMotion ? {} : { scale: styles.emojiScale * 0.95 }}
+      whileHover={
+        !prefersReducedMotion && level > 0
+          ? { filter: "brightness(1.05)", boxShadow: styles.glow }
+          : {}
+      }
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
       aria-label={`${topic.label}, ${HEAT_LEVELS[level].label}`}
       aria-pressed={level > 0}
+      role="button"
+      tabIndex={0}
     >
       {/* Heat level badge (accessibility) */}
       {level > 0 && styles.badgeEmoji && (
