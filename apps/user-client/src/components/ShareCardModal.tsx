@@ -428,7 +428,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[95vh] flex flex-col p-4 sm:p-6">
         {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto space-y-4 sm:space-y-6">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-4 sm:space-y-6">
           {/* Title */}
           <div className="text-center">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">分享你的专属氛围原型卡片</h2>
@@ -671,7 +671,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
         
         {/* Fixed bottom bar - no negative margins needed */}
         {!isFlipped && (
-          <div className="flex-shrink-0 pt-4 border-t border-gray-100">
+          <div className="flex-shrink-0 pt-4 border-t border-gray-100 safe-area-pb">
             {/* Progress bar - only during generation */}
             {isGenerating && generationProgress > 0 && (
               <motion.div 
