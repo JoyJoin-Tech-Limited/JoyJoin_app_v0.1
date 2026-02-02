@@ -322,9 +322,9 @@ export function IndustryCascadeSelector({
                   transition={{ delay: prefersReducedMotion ? 0 : index * 0.03, duration: prefersReducedMotion ? 0.15 : 0.3 }}
                   onClick={() => handleCategorySelect(category)}
                   className="relative aspect-square rounded-2xl overflow-hidden border-2 border-transparent hover:border-primary hover:shadow-lg transition-all group"
-                  style={{
-                    // Performance: GPU acceleration
-                    transform: 'translateZ(0)',
+                  style={prefersReducedMotion ? undefined : {
+                    // Performance: hint that this element's transform will change
+                    willChange: "transform",
                   }}
                 >
                   {/* Gradient background with pattern overlay */}
@@ -404,9 +404,9 @@ export function IndustryCascadeSelector({
                   transition={{ delay: prefersReducedMotion ? 0 : index * 0.05, duration: prefersReducedMotion ? 0.15 : 0.3 }}
                   onClick={() => handleSegmentSelect(segment)}
                   className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-transparent hover:border-primary hover:bg-primary/5 transition-all text-left group"
-                  style={{
-                    // Performance: GPU acceleration
-                    transform: 'translateZ(0)',
+                  style={prefersReducedMotion ? undefined : {
+                    // Performance: hint browser about upcoming transforms
+                    willChange: "transform",
                   }}
                 >
                   <div className="flex items-center gap-3">

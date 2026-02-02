@@ -8,7 +8,7 @@
  * - 显示置信度徽章
  * - 支持"准确"/"重新识别"操作
  * 
- * 性能优化 (2026-02-02):
+ * 性能优化 (2026-02):
  * - ✅ useReducedMotion support for accessibility
  * - ✅ Scroll detection to pause heavy animations
  * - ✅ GPU acceleration with will-change and translateZ
@@ -99,7 +99,7 @@ export function SmartIndustryClassifier({
   const prefersReducedMotion = useReducedMotion();
   
   // Performance: Use React 18 transitions for low-priority updates
-  const [isPendingTransition, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   
   // Performance: Scroll detection to pause heavy animations
   const [isScrolling, setIsScrolling] = useState(false);
@@ -167,22 +167,11 @@ export function SmartIndustryClassifier({
     setIsComposing(false);
   };
   
-  // Performance: Optimized text change handler with startTransition
+  // Performance: Text change handler (cleanup handled in useEffect)
   const handleTextChange = useCallback((value: string) => {
     // Update text immediately for responsive typing
     setText(value);
-    
-    // Use startTransition for low-priority state updates
-    startTransition(() => {
-      // Reset states when text changes
-      if (!value.trim()) {
-        setResult(null);
-        setIsConfirmed(false);
-        setShowCandidateSelection(false);
-        setSelectedCandidate(null);
-      }
-    });
-  }, [startTransition]);
+  }, []);
 
   useEffect(() => {
     if (!text?.trim() || isComposing) {
@@ -252,7 +241,7 @@ export function SmartIndustryClassifier({
       };
       
       onClassified(completeResult);
-    }, prefersReducedMotion ? 500 : 1000);
+    }, prefersReducedMotion ? 400 : 1000);
     
     setCelebrationTimeoutId(timeoutId);
   };
@@ -317,6 +306,8 @@ export function SmartIndustryClassifier({
       style={{
         // Performance: GPU acceleration - translateZ(0) promotes to own layer
         transform: 'translateZ(0)',
+        // Hint browser about upcoming transforms when animating
+        willChange: shouldAnimate ? 'transform' : 'auto',
       }}
     >
       {/* Mascot提示 */}
@@ -831,8 +822,6 @@ export function SmartIndustryClassifier({
                   backgroundColor: particle.color,
                   left: "50%",
                   top: "50%",
-                  // Performance: GPU acceleration for particles
-                  transform: 'translateZ(0)',
                 }}
                 initial={{ x: 0, y: 0, opacity: 1 }}
                 animate={{
