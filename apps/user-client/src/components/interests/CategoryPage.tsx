@@ -12,8 +12,8 @@ export const CategoryPage = forwardRef<HTMLDivElement, CategoryPageProps>(
   ({ category, selections, onTopicTap }, ref) => {
     return (
       <div className="w-full" ref={ref}>
-        {/* Sticky category header - positioned below tab bar */}
-        <div className="sticky top-[154px] bg-background/95 backdrop-blur-sm z-10 px-3 py-2 border-b">
+        {/* Category header - not sticky, just a regular header */}
+        <div className="bg-background/95 backdrop-blur-sm px-3 py-2 border-b">
           <div className="flex items-center gap-2">
             <span className="text-2xl">{category.emoji}</span>
             <h3 className="text-sm font-bold">{category.name}</h3>
