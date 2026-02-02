@@ -90,12 +90,12 @@ export function GuideStepPersona({
     if (!assessment) return [];
     
     const traits = [
-      { name: "开放性", score: assessment.opennessScore, icon: "🎯", color: "purple" },
-      { name: "外向性", score: assessment.extraversionScore, icon: "💫", color: "blue" },
-      { name: "亲和力", score: assessment.affinityScore, icon: "🌟", color: "pink" },
-      { name: "尽责性", score: assessment.conscientiousnessScore, icon: "⚡", color: "amber" },
-      { name: "情绪稳定", score: assessment.emotionalStabilityScore, icon: "🛡️", color: "green" },
-      { name: "正能量", score: assessment.positivityScore, icon: "☀️", color: "yellow" },
+      { name: "开放性", score: assessment.opennessScore, icon: "🎯" },
+      { name: "外向性", score: assessment.extraversionScore, icon: "💫" },
+      { name: "亲和力", score: assessment.affinityScore, icon: "🌟" },
+      { name: "尽责性", score: assessment.conscientiousnessScore, icon: "⚡" },
+      { name: "情绪稳定", score: assessment.emotionalStabilityScore, icon: "🛡️" },
+      { name: "正能量", score: assessment.positivityScore, icon: "☀️" },
     ];
     
     return traits.sort((a, b) => b.score - a.score).slice(0, 3);
@@ -161,11 +161,13 @@ export function GuideStepPersona({
         className="relative bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 py-6 px-6 text-center overflow-hidden"
       >
         {/* Shimmer animation */}
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-          animate={{ x: ['-100%', '100%'] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-        />
+        {!reducedMotion && (
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+            animate={{ x: ['-100%', '100%'] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          />
+        )}
         
         <div className="relative z-10">
           <motion.div
@@ -223,13 +225,27 @@ export function GuideStepPersona({
           transition={{ delay: 1.0 }}
           className="mt-4 text-center"
         >
-          <div className="text-4xl mb-2">{archetypeData?.icon || "🎭"}</div>
-          <h2 className="text-2xl font-black text-foreground mb-1">
-            {archetype || "你的角色"}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {archetypeData?.nickname || "能量满满的社交达人"}
-          </p>
+          {archetypeData ? (
+            <>
+              <div className="text-4xl mb-2">{archetypeData.icon}</div>
+              <h2 className="text-2xl font-black text-foreground mb-1">
+                {archetype}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {archetypeData.nickname}
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="text-4xl mb-2">🎭</div>
+              <h2 className="text-2xl font-black text-foreground mb-1">
+                你的角色画像
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                完成性格测试后显示
+              </p>
+            </>
+          )}
         </motion.div>
       </motion.div>
       
@@ -262,9 +278,17 @@ export function GuideStepPersona({
             <Loader2 className="w-4 h-4 animate-spin" />
             <span>小悦正在分析你的特质...</span>
           </div>
-        ) : (
+        ) : xiaoyueAnalysis.error ? (
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            小悦分析暂时无法加载，请稍后再试
+          </p>
+        ) : xiaoyueAnalysis.analysis ? (
           <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
-            {xiaoyueAnalysis.analysis || "你的性格特质分析正在生成中..."}
+            {xiaoyueAnalysis.analysis}
+          </p>
+        ) : (
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            完成性格测试后，小悦会为你生成专属的性格分析
           </p>
         )}
       </motion.div>
@@ -348,8 +372,7 @@ export function GuideStepPersona({
         initial={reducedMotion ? { opacity: 1 } : { opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={reducedMotion ? {} : { delay: 5.0, duration: 0.5 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-t border-purple-200 dark:border-purple-800 shadow-2xl p-4"
-        style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-t border-purple-200 dark:border-purple-800 shadow-2xl p-4 pb-safe"
       >
         <Button 
           className="w-full h-14 text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg shadow-purple-500/50 text-white"
