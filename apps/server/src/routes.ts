@@ -945,6 +945,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Alias endpoint for guide completion (matches problem statement requirement)
+  app.post('/api/guide/complete', isPhoneAuthenticated, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      
+      await db.update(users).set({ 
+        hasSeenGuide: true,
+        onboardingCheckpoint: 'guide',
+        onboardingCheckpointTimestamp: new Date()
+      }).where(eq(users.id, userId));
+      
+      res.json({ success: true, hasSeenGuide: true });
+    } catch (error) {
+      console.error("Error completing guide:", error);
+      res.status(500).json({ message: "Failed to complete guide" });
+    }
+  });
+
+  // Save onboarding checkpoint
+  app.post('/api/onboarding/checkpoint', isPhoneAuthenticated, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      
+      const { step, timestamp } = req.body;
+      if (!step) {
+        return res.status(400).json({ message: "Step is required" });
+      }
+
+      // Validate step value
+      const validSteps = ['onboarding', 'personality-test', 'essential-data', 'extended-data', 'guide'];
+      if (!validSteps.includes(step)) {
+        return res.status(400).json({ message: "Invalid step value" });
+      }
+      
+      const checkpointTimestamp = timestamp ? new Date(timestamp) : new Date();
+      
+      await db.update(users).set({ 
+        onboardingCheckpoint: step,
+        onboardingCheckpointTimestamp: checkpointTimestamp
+      }).where(eq(users.id, userId));
+      
+      res.json({ success: true, checkpoint: step });
+    } catch (error) {
+      console.error("Error saving checkpoint:", error);
+      res.status(500).json({ message: "Failed to save checkpoint" });
+    }
+  });
+
   // Profile stats endpoint
   app.get('/api/profile/stats', isPhoneAuthenticated, async (req: Request, res) => {
     try {

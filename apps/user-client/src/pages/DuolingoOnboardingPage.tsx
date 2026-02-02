@@ -15,6 +15,7 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { SelectionList } from "@/components/SelectionList";
 import { QuestionSkeleton } from "@/components/shared/QuestionSkeleton";
 import { haptics } from "@/lib/haptics";
+import { useOnboardingCheckpoint } from "@/hooks/useOnboardingCheckpoint";
 
 // Use consistent Xiao Yue Avatar-01.png as primary avatar across all screens
 import xiaoyueNormal from "@/assets/xiaoyue_default.png";
@@ -371,6 +372,7 @@ export default function DuolingoOnboardingPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
+  const { saveCheckpoint } = useOnboardingCheckpoint();
   
   const [currentScreen, setCurrentScreen] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -500,6 +502,9 @@ export default function DuolingoOnboardingPage() {
         });
         return;
       }
+      
+      // Save checkpoint before navigating to personality test
+      saveCheckpoint.mutate('onboarding');
       
       // Navigate to personality test after completing all anchor questions
       setLocation("/personality-test");
