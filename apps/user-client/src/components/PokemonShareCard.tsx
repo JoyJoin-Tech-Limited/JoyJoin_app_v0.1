@@ -111,7 +111,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         style={{ 
           // Removed maxHeight: '90vh' and aspectRatio: '9/16' to allow dynamic expansion
           // minHeight ensures card baseline is visible, expands automatically for content-heavy archetypes
-          minHeight: '680px',
+          minHeight: 'clamp(580px, 85vh, 780px)',
           fontFamily: 'ZCOOL QingKe HuangYou, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif'
         }}
       >
@@ -186,9 +186,12 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   background: `radial-gradient(circle, ${variant.primaryColor}15, transparent 70%)`,
                 }}
               >
-                {/* Loading skeleton with shimmer */}
+                {/* Loading skeleton with shimmer - uses variant color with low opacity */}
                 {!imageLoaded && (
-                  <div className="absolute inset-0 rounded-full bg-gray-200 animate-pulse overflow-hidden">
+                  <div 
+                    className="absolute inset-0 rounded-full animate-pulse overflow-hidden"
+                    style={{ backgroundColor: `${variant.primaryColor}20` }} // 20 = 12.5% opacity in hex
+                  >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent -translate-x-full animate-shimmer" />
                   </div>
                 )}
@@ -250,7 +253,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               {tagline && (
                 <div className="bg-gray-100 rounded-full px-3 py-1 border border-gray-200">
                   <p 
-                    className="text-[10px] font-medium text-center"
+                    className="text-xs font-medium text-center"
                     style={{ color: variant.primaryColor }}
                   >
                     {tagline}
@@ -351,7 +354,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               </div>
               
               {/* 3. Skills Section - Side by side with improved readability */}
-              {skillSet && (
+              {skillSet ? (
                 <div className="bg-gradient-to-br from-purple-50/90 to-pink-50/90 rounded-xl p-4 border border-purple-200/30">
                   {/* Header with Attribute */}
                   <div className="flex items-center justify-between mb-3">
@@ -432,6 +435,10 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     </div>
                   </div>
                 </div>
+              ) : (
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200/30 text-center">
+                  <span className="text-sm text-gray-500">技能加载中...</span>
+                </div>
               )}
               
               {/* 4. Social Positioning - Full width */}
@@ -479,7 +486,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   <div className="flex items-center gap-2">
                     <div className="w-1 h-8 bg-gradient-to-b from-amber-600 to-amber-800 rounded-full" />
                     <div className="flex flex-col">
-                      <span className="text-[8px] uppercase tracking-wide text-amber-900/60 leading-tight">Certified By</span>
+                      <span className="text-xs uppercase tracking-wide text-amber-900/60 leading-tight">Certified By</span>
                       <img 
                         src={logoFull} 
                         alt="JoyJoin" 
@@ -497,14 +504,14 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                     <span className="font-mono text-xs text-amber-900/80 font-bold leading-tight">
                       #{String(rankings.totalUserRank).padStart(5, '0')}
                     </span>
-                    <span className="text-[8px] uppercase tracking-wide text-amber-800/60 leading-tight">Holographic Ed.</span>
+                    <span className="text-xs uppercase tracking-wide text-amber-800/60 leading-tight">Holographic Ed.</span>
                   </div>
 
                   {/* Right Column - Issue Date */}
                   <div className="flex items-center gap-2">
                     <div className="flex flex-col items-end">
-                      <span className="text-[8px] uppercase tracking-wide text-amber-900/60 leading-tight">Issued</span>
-                      <span className="text-[10px] font-semibold text-amber-900 leading-tight">{formattedDate}</span>
+                      <span className="text-xs uppercase tracking-wide text-amber-900/60 leading-tight">Issued</span>
+                      <span className="text-xs font-semibold text-amber-900 leading-tight">{formattedDate}</span>
                     </div>
                     <div className="w-1 h-8 bg-gradient-to-b from-amber-600 to-amber-800 rounded-full" />
                   </div>
