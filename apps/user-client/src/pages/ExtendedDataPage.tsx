@@ -32,8 +32,13 @@ export default function ExtendedDataPage() {
       // Wait a bit more before navigation to ensure smooth transition
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Save checkpoint after completing extended data
-      saveCheckpoint.mutate('extended-data');
+      // Save checkpoint after completing extended data (await to ensure persistence)
+      try {
+        await saveCheckpoint.mutateAsync('extended-data');
+      } catch (error) {
+        console.error('[ExtendedDataPage] Failed to save checkpoint:', error);
+        // Continue navigation even if checkpoint fails (non-blocking)
+      }
       
       // Navigate while still showing loading
       setLocation("/onboarding/review");

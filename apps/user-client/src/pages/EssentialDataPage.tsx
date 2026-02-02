@@ -329,8 +329,13 @@ export default function EssentialDataPage() {
       localStorage.removeItem(ESSENTIAL_CACHE_KEY);
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
-      // Save checkpoint after completing essential data
-      saveCheckpoint.mutate('essential-data');
+      // Save checkpoint after completing essential data (await to ensure persistence)
+      try {
+        await saveCheckpoint.mutateAsync('essential-data');
+      } catch (error) {
+        console.error('[EssentialDataPage] Failed to save checkpoint:', error);
+        // Continue navigation even if checkpoint fails (non-blocking)
+      }
       
       setLocation("/onboarding/extended");
     },

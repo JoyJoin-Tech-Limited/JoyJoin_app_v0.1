@@ -128,20 +128,3 @@ export function useGuideFlow(options?: {
     startGuide,
   };
 }
-
-/**
- * 检查是否需要显示引导
- * Uses server state only - no localStorage fallback
- */
-export function shouldShowGuide(): boolean {
-  // This function is now deprecated - use hasSeenGuide from useGuideFlow or useAuth
-  return false;
-}
-
-/**
- * 重置引导状态 (用于测试)
- * No longer needed as state is server-side only
- */
-export function resetGuideState(): void {
-  console.warn('[useGuideFlow] resetGuideState is deprecated - guide state is now server-side only');
-}
