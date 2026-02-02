@@ -182,7 +182,7 @@ export function SmartIndustryClassifier({
         setSelectedCandidate(null);
       }
     });
-  }, []);
+  }, [startTransition]);
 
   useEffect(() => {
     if (!text?.trim() || isComposing) {
@@ -315,9 +315,8 @@ export function SmartIndustryClassifier({
     <div 
       className={cn("space-y-4", className)}
       style={{
-        // Performance: GPU acceleration for transform animations
+        // Performance: GPU acceleration - translateZ(0) promotes to own layer
         transform: 'translateZ(0)',
-        willChange: shouldAnimate ? 'transform' : 'auto',
       }}
     >
       {/* Mascot提示 */}
@@ -630,9 +629,8 @@ export function SmartIndustryClassifier({
                 : "border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50"
           )}
           style={{
-            // Performance: GPU acceleration
+            // Performance: GPU acceleration - translateZ(0) promotes to own layer
             transform: 'translateZ(0)',
-            willChange: shouldAnimate ? 'transform' : 'auto',
           }}
         >
           {/* Selected candidate banner (Duolingo style) */}
