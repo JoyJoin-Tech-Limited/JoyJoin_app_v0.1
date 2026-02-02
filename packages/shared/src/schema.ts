@@ -117,7 +117,7 @@ export const users = pgTable("users", {
   hasCompletedPersonalityTest: boolean("has_completed_personality_test").default(false),
   hasSeenGuide: boolean("has_seen_guide").default(false), // Guide page viewed, persisted server-side
   hasCompletedInterestsCarousel: boolean("has_completed_interests_carousel").default(false), // New carousel-based interest selection
-  onboardingCheckpoint: varchar("onboarding_checkpoint"), // Last completed onboarding step (onboarding, personality-test, essential-data, guide)
+  onboardingCheckpoint: varchar("onboarding_checkpoint"), // Last completed onboarding step (onboarding, personality-test, essential-data, extended-data, guide)
   onboardingCheckpointTimestamp: timestamp("onboarding_checkpoint_timestamp"), // When checkpoint was saved
   
   // Interests & Topics (Step 2)
