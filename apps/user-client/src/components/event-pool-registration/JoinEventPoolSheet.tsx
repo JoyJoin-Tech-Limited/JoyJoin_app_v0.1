@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
+  SheetHeader as RadixSheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";

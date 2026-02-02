@@ -131,10 +131,10 @@ export function useEventPoolRegistration({
     });
   };
 
-  const isFormValid = () => {
-    return !!preferences.budget && 
+  const isFormValid = (): boolean => {
+    return !!(preferences.budget && 
            preferences.socialGoals && 
-           preferences.socialGoals.length > 0;
+           preferences.socialGoals.length > 0);
   };
 
   return {

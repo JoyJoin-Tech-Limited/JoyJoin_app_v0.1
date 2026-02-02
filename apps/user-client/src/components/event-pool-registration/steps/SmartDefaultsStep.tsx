@@ -34,7 +34,7 @@ export default function SmartDefaultsStep({
     const cluster = shenzhenClusters.find(c => 
       c.displayName === eventArea || c.id === eventArea
     );
-    return cluster?.districts.slice(0, 3).map(d => d.displayName) || [];
+    return cluster?.districts.slice(0, 3).map(d => d.name) || [];
   };
 
   const defaultDistrictNames = getDefaultDistricts();
@@ -111,7 +111,7 @@ export default function SmartDefaultsStep({
                           htmlFor={district.id} 
                           className="text-sm font-normal cursor-pointer"
                         >
-                          {district.displayName}
+                          {district.name}
                         </Label>
                       </div>
                     ))}
