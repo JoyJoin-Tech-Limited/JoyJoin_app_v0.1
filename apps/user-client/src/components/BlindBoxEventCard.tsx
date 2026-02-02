@@ -7,6 +7,7 @@ import { Calendar, MapPin, Sparkles, Users, Shield, Heart, HelpCircle, Timer, Fl
 import { motion, useReducedMotion } from "framer-motion";
 import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
 import JoinBlindBoxSheet from "./JoinBlindBoxSheet";
+import JoinEventPoolSheet from "./event-pool-registration/JoinEventPoolSheet";
 import { getArchetypeImage } from "@/lib/archetypeImages";
 import { getCountdown, type UrgencyLevel } from "@/lib/chineseDateTime";
 
@@ -91,13 +92,14 @@ export default function BlindBoxEventCard({
 }: BlindBoxEventCardProps) {
   const [infoSheetOpen, setInfoSheetOpen] = useState(false);
   const [joinSheetOpen, setJoinSheetOpen] = useState(false);
+  const [newJoinSheetOpen, setNewJoinSheetOpen] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   const handleJoinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log("[BlindBoxEventCard] opening JoinBlindBoxSheet with poolId:", poolId);
-    setJoinSheetOpen(true);
+    console.log("[BlindBoxEventCard] opening new JoinEventPoolSheet with poolId:", poolId);
+    setNewJoinSheetOpen(true);
   };
 
   const handleFlip = () => {
@@ -396,6 +398,22 @@ export default function BlindBoxEventCard({
           city,
         }}
       />
+
+      {poolId && (
+        <JoinEventPoolSheet
+          open={newJoinSheetOpen}
+          onOpenChange={setNewJoinSheetOpen}
+          poolData={{
+            poolId,
+            title: mysteryTitle,
+            date: `${date} ${time}`,
+            area,
+            city: city ?? "深圳",
+            eventType,
+            registrationCount,
+          }}
+        />
+      )}
     </>
   );
 }

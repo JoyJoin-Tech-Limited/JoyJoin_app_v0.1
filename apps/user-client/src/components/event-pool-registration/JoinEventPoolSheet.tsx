@@ -1,0 +1,244 @@
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { useAuth } from "@/hooks/useAuth";
+import { useEventPoolRegistration } from "@/hooks/useEventPoolRegistration";
+import SheetHeader from "./SheetHeader";
+import FloatingOrbs from "./FloatingOrbs";
+import TransitionMascot from "./TransitionMascot";
+import FooterActions from "./FooterActions";
+import SuccessCelebration from "./SuccessCelebration";
+import BudgetSelectionStep from "./steps/BudgetSelectionStep";
+import SocialGoalsStep from "./steps/SocialGoalsStep";
+import SmartDefaultsStep from "./steps/SmartDefaultsStep";
+import DinnerPreferencesStep from "./steps/DinnerPreferencesStep";
+import BarPreferencesStep from "./steps/BarPreferencesStep";
+import { getDistrictIdsByCluster } from "@shared/districts";
+
+interface JoinEventPoolSheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  poolData: {
+    poolId: string;
+    title: string;
+    date: string;
+    area: string;
+    city: string;
+    eventType: "饭局" | "酒局";
+    registrationCount: number;
+  };
+}
+
+export default function JoinEventPoolSheet({
+  open,
+  onOpenChange,
+  poolData,
+}: JoinEventPoolSheetProps) {
+  const { user } = useAuth();
+  const prefersReducedMotion = useReducedMotion();
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showMascot, setShowMascot] = useState(false);
+  const [mascotMessage, setMascotMessage] = useState("");
+
+  const {
+    step,
+    setStep,
+    preferences,
+    updatePreferences,
+    registerMutation,
+    saveDraft,
+    isFormValid,
+  } = useEventPoolRegistration({
+    poolId: poolData.poolId,
+    eventType: poolData.eventType,
+    onSuccess: () => {
+      setShowSuccess(true);
+    },
+  });
+
+  // Initialize smart defaults
+  useEffect(() => {
+    if (open && user) {
+      // Set default districts based on event area
+      const defaultDistricts = getDistrictIdsByCluster(
+        poolData.area.toLowerCase().replace(/区$/, "")
+      );
+      
+      // Set default languages from user profile
+      const userLanguages = user.languagesComfort || [];
+
+      updatePreferences({
+        districts: defaultDistricts,
+        languages: userLanguages,
+      });
+    }
+  }, [open, user, poolData.area]);
+
+  // Show mascot during step transitions
+  useEffect(() => {
+    if (step === 2 && preferences.budget) {
+      setMascotMessage("太棒了！继续加油 🎉");
+      setShowMascot(true);
+      
+      const timer = setTimeout(() => {
+        setShowMascot(false);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [step, preferences.budget]);
+
+  const handleSubmit = () => {
+    if (isFormValid()) {
+      registerMutation.mutate();
+    }
+  };
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(step - 1);
+    }
+  };
+
+  const handleSkipOptional = () => {
+    // Submit with current preferences
+    handleSubmit();
+  };
+
+  const handleNavigateToEvents = () => {
+    onOpenChange(false);
+    setShowSuccess(false);
+    setStep(1);
+  };
+
+  const totalSteps = 3;
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent 
+        side="bottom" 
+        className="h-[90vh] overflow-hidden flex flex-col"
+      >
+        {/* Floating Orbs Background */}
+        <FloatingOrbs />
+
+        {/* Mascot */}
+        <TransitionMascot show={showMascot} message={mascotMessage} />
+
+        {/* Success Celebration */}
+        {showSuccess ? (
+          <SuccessCelebration onNavigate={handleNavigateToEvents} />
+        ) : (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="shrink-0 pb-4">
+              <SheetHeader
+                currentStep={step}
+                totalSteps={totalSteps}
+                poolData={{
+                  title: poolData.title,
+                  date: poolData.date,
+                  area: poolData.area,
+                  registrationCount: poolData.registrationCount,
+                }}
+              />
+            </div>
+
+            {/* Steps Content */}
+            <div className="flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={step}
+                  initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="pb-4"
+                >
+                  {step === 1 && (
+                    <BudgetSelectionStep
+                      eventType={poolData.eventType}
+                      selectedBudget={preferences.budget}
+                      onSelectBudget={(budget) => updatePreferences({ budget })}
+                    />
+                  )}
+
+                  {step === 2 && (
+                    <SocialGoalsStep
+                      selectedGoals={preferences.socialGoals || []}
+                      onSelectGoals={(goals) => updatePreferences({ socialGoals: goals })}
+                      registrationCount={poolData.registrationCount}
+                    />
+                  )}
+
+                  {step === 3 && (
+                    <>
+                      <SmartDefaultsStep
+                        eventType={poolData.eventType}
+                        eventArea={poolData.area}
+                        userLanguages={user?.languagesComfort || []}
+                        selectedDistricts={preferences.districts || []}
+                        selectedLanguages={preferences.languages || []}
+                        onUpdateDistricts={(districts) => updatePreferences({ districts })}
+                        onUpdateLanguages={(languages) => updatePreferences({ languages })}
+                      />
+
+                      <div className="mt-6">
+                        {poolData.eventType === "饭局" ? (
+                          <DinnerPreferencesStep
+                            selectedCuisines={preferences.cuisines || []}
+                            selectedDietary={preferences.dietary || []}
+                            tasteIntensity={preferences.tasteIntensity}
+                            onUpdateCuisines={(cuisines) => updatePreferences({ cuisines })}
+                            onUpdateDietary={(dietary) => updatePreferences({ dietary })}
+                            onUpdateTasteIntensity={(intensity) => 
+                              updatePreferences({ tasteIntensity: intensity })
+                            }
+                          />
+                        ) : (
+                          <BarPreferencesStep
+                            selectedBarThemes={preferences.barThemes || []}
+                            alcoholComfort={preferences.alcoholComfort}
+                            selectedMusicPreference={preferences.musicPreference || []}
+                            onUpdateBarThemes={(themes) => updatePreferences({ barThemes: themes })}
+                            onUpdateAlcoholComfort={(comfort) => 
+                              updatePreferences({ alcoholComfort: comfort })
+                            }
+                            onUpdateMusicPreference={(music) => 
+                              updatePreferences({ musicPreference: music })
+                            }
+                          />
+                        )}
+                      </div>
+                    </>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Footer */}
+            <div className="shrink-0 mt-auto">
+              <FooterActions
+                currentStep={step}
+                totalSteps={totalSteps}
+                onBack={handleBack}
+                onSubmit={handleSubmit}
+                onSaveDraft={saveDraft}
+                onSkipOptional={step === 3 ? handleSkipOptional : undefined}
+                isSubmitting={registerMutation.isPending}
+                canSubmit={isFormValid()}
+                showSaveDraft={step === 3}
+                showSkipOptional={step === 3}
+              />
+            </div>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
