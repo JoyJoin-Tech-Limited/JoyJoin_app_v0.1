@@ -88,8 +88,8 @@ The `/api/auth/user` endpoint now returns:
 The 3-step guide is now **server-persisted**:
 
 1. **User Portrait**: Archetype badge, overview, match reasons
-2. **Event Flow**: Explain pool → match → check-in → feedback
-3. **Xiaoyue AI**: Introduce AI assistant, encourage profile completion
+2. **Event Flow**: Explains pool → match → check-in → feedback
+3. **Xiaoyue AI**: Introduces AI assistant, encourage profile completion
 
 **Data Contract:**
 - Server field: `user.hasSeenGuide` (persisted to database)
@@ -280,8 +280,8 @@ activeAssessmentSessionId: string | null;
 
 ### Migration Notes
 
-- **V2 Test Deprecated**: Old `personality_questions`, `test_responses`, `role_results` tables are legacy
-- **Interest Fields Removed**: `interestsTop`, `primaryInterests`, `topicsHappy`, `topicsAvoid` moved to `user_interests` table
+- **V2 Test Deprecated**: Old `personality_questions`, `test_responses`, `role_results` tables are legacy (kept for historical data, not used in new code)
+- **Interest Fields Removed**: `interestsTop`, `primaryInterests`, `topicsHappy`, `topicsAvoid` moved to `user_interests` table (old fields deprecated but not dropped)
 - **Language Selection**: No longer collected in onboarding (moved to event pool registration)
 - **Guide State**: Now server-persisted in `hasSeenGuide` (replaces localStorage-only approach)
 
@@ -452,7 +452,7 @@ energyBalance =
 ### Key Changes from Previous Version
 
 1. ✅ **Budget moved to L1 hard constraint** (was soft constraint)
-2. ✅ **Removed food preferences** (cuisine, dietary, taste) from scoring
+2. ✅ **Removed food preferences from scoring** (cuisine, dietary, taste) — still collected for restaurant matching but not used in compatibility scoring
 3. ✅ **Increased interest weight** from 20% → 30%
 4. ✅ **Decreased hometown weight** from 10% → 5%
 5. ✅ **Added heat-weighted interest matching** (level 2/3 bonus)
