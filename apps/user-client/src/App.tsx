@@ -83,7 +83,7 @@ function RedirectToSetup() {
 }
 
 function AuthenticatedRouter() {
-  const { user, needsRegistration, needsPersonalityTest, needsProfileSetup } = useAuth();
+  const { user, nextStep, isLoading } = useAuth();
   const [location] = useLocation();
 
   // Admin routes - separate from user flow
@@ -91,87 +91,109 @@ function AuthenticatedRouter() {
     return <AdminLayout />;
   }
 
-  if (needsRegistration) {
-    return (
-      <Switch>
-        {/* 新版 Duolingo-style Onboarding 流程 */}
-        <Route path="/onboarding" component={DuolingoOnboardingPage} />
-        {/* 性格测试 - onboarding 完成后进入 */}
-        <Route path="/personality-test" component={PersonalityTestPageV4} />
-        <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
-        <Route path="/personality-test/results" component={PersonalityTestResultPage} />
-        <Route path="*" component={RedirectToOnboarding} />
-      </Switch>
-    );
+  // Show loading while fetching user state
+  if (isLoading) {
+    return <LoadingScreen />;
   }
 
-  if (needsPersonalityTest) {
-    return (
-      <Switch>
-        <Route path="/personality-test" component={PersonalityTestPageV4} />
-        <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
-        <Route path="/personality-test/results" component={PersonalityTestResultPage} />
-        <Route path="/onboarding/setup" component={EssentialDataPage} />
-        <Route path="/onboarding/extended" component={ExtendedDataPage} />
-        <Route path="*" component={RedirectToPersonalityTest} />
-      </Switch>
-    );
-  }
+  // Server-driven navigation based on nextStep (B1)
+  // This centralizes all onboarding flow logic on the server
+  switch (nextStep) {
+    case 'onboarding':
+      return (
+        <Switch>
+          <Route path="/onboarding" component={DuolingoOnboardingPage} />
+          <Route path="/personality-test" component={PersonalityTestPageV4} />
+          <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
+          <Route path="/personality-test/results" component={PersonalityTestResultPage} />
+          <Route path="*" component={RedirectToOnboarding} />
+        </Switch>
+      );
 
-  if (needsProfileSetup) {
-    return (
-      <Switch>
-        {/* 保留测试结果页面访问权限，让用户能看到结果后再继续设置 */}
-        <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
-        <Route path="/personality-test/results" component={PersonalityTestResultPage} />
-        <Route path="/onboarding/setup" component={EssentialDataPage} />
-        <Route path="/onboarding/extended" component={ExtendedDataPage} />
-        <Route path="/onboarding/review" component={FinalProfileReviewPage} />
-        <Route path="/onboarding/login" component={LoginPromptPage} />
-        <Route path="/login" component={LoginPage} />
-        <Route path="*" component={RedirectToSetup} />
-      </Switch>
-    );
-  }
+    case 'personality-test':
+      return (
+        <Switch>
+          <Route path="/personality-test" component={PersonalityTestPageV4} />
+          <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
+          <Route path="/personality-test/results" component={PersonalityTestResultPage} />
+          <Route path="/onboarding/setup" component={EssentialDataPage} />
+          <Route path="/onboarding/extended" component={ExtendedDataPage} />
+          <Route path="*" component={RedirectToPersonalityTest} />
+        </Switch>
+      );
 
-  return (
-    <Switch>
-      <Route path="/" component={DiscoverPage} />
-      <Route path="/discover" component={DiscoverPage} />
-      <Route path="/guide" component={GuidePage} />
-      <Route path="/event-pool/:id/register" component={EventPoolRegistrationPage} />
-      <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
-      <Route path="/blindbox/payment" component={BlindBoxPaymentPage} />
-      <Route path="/blindbox/confirmation" component={BlindBoxConfirmationPage} />
-      <Route path="/blind-box-events/:eventId" component={BlindBoxEventDetailPage} />
-      <Route path="/events/:eventId/feedback" component={EventFeedbackFlow} />
-      <Route path="/events/:eventId/deep-feedback" component={DeepFeedbackFlow} />
-      <Route path="/icebreaker/:sessionId" component={IcebreakerSessionPage} />
-      <Route path="/events" component={EventsPage} />
-      <Route path="/chats" component={ChatsPage} />
-      <Route path="/chats/:eventId" component={EventChatDetailPage} />
-      <Route path="/direct-chat/:threadId" component={DirectChatPage} />
-      <Route path="/profile" component={ProfilePage} />
-      <Route path="/rewards" component={RewardsPage} />
-      <Route path="/profile/edit" component={EditProfilePage} />
-      <Route path="/profile/edit/basic" component={EditBasicInfoPage} />
-      <Route path="/profile/edit/education" component={EditEducationPage} />
-      <Route path="/profile/edit/work" component={EditWorkPage} />
-      <Route path="/profile/edit/personal" component={EditPersonalPage} />
-      <Route path="/profile/edit/intent" component={EditIntentPage} />
-      {/* Route /profile/edit/interests removed - moved to backup (2026-01-19) */}
-      {/* Route /profile/edit/social removed - unused fields (2026-01-23) */}
-      <Route path="/onboarding/extended" component={ExtendedDataPage} />
-      <Route path="/onboarding/review" component={FinalProfileReviewPage} />
-      <Route path="/onboarding/login" component={LoginPromptPage} />
-      <Route path="/event/:id" component={EventDetailPage} />
-      <Route path="/invite" component={InvitePage} />
-      <Route path="/personality-test" component={PersonalityTestPageV4} />
-      <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
-      <Route path="/personality-test/results" component={PersonalityTestResultPage} />
-      <Route component={NotFound} />
-    </Switch>
-  );
+    case 'essential-data':
+      return (
+        <Switch>
+          <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
+          <Route path="/personality-test/results" component={PersonalityTestResultPage} />
+          <Route path="/onboarding/setup" component={EssentialDataPage} />
+          <Route path="/onboarding/extended" component={ExtendedDataPage} />
+          <Route path="/onboarding/review" component={FinalProfileReviewPage} />
+          <Route path="/onboarding/login" component={LoginPromptPage} />
+          <Route path="/login" component={LoginPage} />
+          <Route path="*" component={RedirectToSetup} />
+        </Switch>
+      );
+
+    case 'guide':
+      return (
+        <Switch>
+          <Route path="/guide" component={GuidePage} />
+          <Route path="/onboarding/extended" component={ExtendedDataPage} />
+          <Route path="/onboarding/review" component={FinalProfileReviewPage} />
+          <Route path="*">
+            {() => {
+              const [, setLocation] = useLocation();
+              useEffect(() => {
+                setLocation("/guide");
+              }, [setLocation]);
+              return null;
+            }}
+          </Route>
+        </Switch>
+      );
+
+    case 'discover':
+    default:
+      // Main app routes - user has completed onboarding
+      return (
+        <Switch>
+          <Route path="/" component={DiscoverPage} />
+          <Route path="/discover" component={DiscoverPage} />
+          <Route path="/guide" component={GuidePage} />
+          <Route path="/event-pool/:id/register" component={EventPoolRegistrationPage} />
+          <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
+          <Route path="/blindbox/payment" component={BlindBoxPaymentPage} />
+          <Route path="/blindbox/confirmation" component={BlindBoxConfirmationPage} />
+          <Route path="/blind-box-events/:eventId" component={BlindBoxEventDetailPage} />
+          <Route path="/events/:eventId/feedback" component={EventFeedbackFlow} />
+          <Route path="/events/:eventId/deep-feedback" component={DeepFeedbackFlow} />
+          <Route path="/icebreaker/:sessionId" component={IcebreakerSessionPage} />
+          <Route path="/events" component={EventsPage} />
+          <Route path="/chats" component={ChatsPage} />
+          <Route path="/chats/:eventId" component={EventChatDetailPage} />
+          <Route path="/direct-chat/:threadId" component={DirectChatPage} />
+          <Route path="/profile" component={ProfilePage} />
+          <Route path="/rewards" component={RewardsPage} />
+          <Route path="/profile/edit" component={EditProfilePage} />
+          <Route path="/profile/edit/basic" component={EditBasicInfoPage} />
+          <Route path="/profile/edit/education" component={EditEducationPage} />
+          <Route path="/profile/edit/work" component={EditWorkPage} />
+          <Route path="/profile/edit/personal" component={EditPersonalPage} />
+          <Route path="/profile/edit/intent" component={EditIntentPage} />
+          <Route path="/onboarding/extended" component={ExtendedDataPage} />
+          <Route path="/onboarding/review" component={FinalProfileReviewPage} />
+          <Route path="/onboarding/login" component={LoginPromptPage} />
+          <Route path="/event/:id" component={EventDetailPage} />
+          <Route path="/invite" component={InvitePage} />
+          <Route path="/personality-test" component={PersonalityTestPageV4} />
+          <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
+          <Route path="/personality-test/results" component={PersonalityTestResultPage} />
+          <Route component={NotFound} />
+        </Switch>
+      );
+  }
 }
 
 function Router() {
