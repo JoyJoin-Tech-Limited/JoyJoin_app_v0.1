@@ -317,11 +317,15 @@ export function IndustryCascadeSelector({
               {filteredCategories.map((category, index) => (
                 <motion.button
                   key={category.id}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.03 }}
+                  transition={{ delay: prefersReducedMotion ? 0 : index * 0.03, duration: prefersReducedMotion ? 0.15 : 0.3 }}
                   onClick={() => handleCategorySelect(category)}
                   className="relative aspect-square rounded-2xl overflow-hidden border-2 border-transparent hover:border-primary hover:shadow-lg transition-all group"
+                  style={{
+                    // Performance: GPU acceleration
+                    transform: 'translateZ(0)',
+                  }}
                 >
                   {/* Gradient background with pattern overlay */}
                   <div className={cn(
@@ -351,13 +355,13 @@ export function IndustryCascadeSelector({
                   
                   {/* Content */}
                   <div className="relative h-full flex flex-col items-center justify-center p-4 text-center">
-                    {/* Emoji with floating animation */}
+                    {/* Emoji with floating animation - Performance: disabled in reduced motion */}
                     <motion.span
                       className="text-4xl mb-2"
-                      animate={{
+                      animate={prefersReducedMotion ? {} : {
                         y: [0, -5, 0],
                       }}
-                      transition={{
+                      transition={prefersReducedMotion ? undefined : {
                         duration: 2,
                         repeat: Infinity,
                         ease: "easeInOut",
@@ -395,11 +399,15 @@ export function IndustryCascadeSelector({
               {filteredSegments.map((segment, index) => (
                 <motion.button
                   key={segment.id}
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
+                  transition={{ delay: prefersReducedMotion ? 0 : index * 0.05, duration: prefersReducedMotion ? 0.15 : 0.3 }}
                   onClick={() => handleSegmentSelect(segment)}
                   className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-transparent hover:border-primary hover:bg-primary/5 transition-all text-left group"
+                  style={{
+                    // Performance: GPU acceleration
+                    transform: 'translateZ(0)',
+                  }}
                 >
                   <div className="flex items-center gap-3">
                     {/* Category emoji in gradient circle */}
@@ -422,11 +430,11 @@ export function IndustryCascadeSelector({
                     </div>
                   </div>
                   
-                  {/* Animated arrow */}
+                  {/* Animated arrow - Performance: disabled in reduced motion */}
                   <motion.div
                     className="text-muted-foreground"
-                    animate={{ x: [0, 5, 0] }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+                    animate={prefersReducedMotion ? {} : { x: [0, 5, 0] }}
+                    transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "easeInOut" }}
                   >
                     <ChevronRight className="h-5 w-5" />
                   </motion.div>
