@@ -54,6 +54,7 @@ import DuolingoOnboardingPage from "@/pages/DuolingoOnboardingPage";
 import GuidePage from "@/pages/GuidePage";
 import FinalProfileReviewPage from "@/pages/FinalProfileReviewPage";
 import LoginPromptPage from "@/pages/LoginPromptPage";
+import AdaptiveLandingPage from "@/pages/AdaptiveLandingPage";
 import { LoadingScreen } from "@/components/LoadingScreen";
 
 preloadXiaoyueImages();
@@ -215,6 +216,11 @@ function Router() {
   // Icebreaker demo is publicly accessible for testing
   if (location === "/icebreaker-demo") {
     return <Route path="/icebreaker-demo" component={IcebreakerDemoPage} />;
+  }
+
+  // Welcome/landing page is publicly accessible (for first-time visitors and marketing)
+  if (location === "/welcome") {
+    return <Route path="/welcome" component={AdaptiveLandingPage} />;
   }
 
   // Admin login is always accessible (even when not authenticated)
