@@ -49,6 +49,7 @@ export default function LandingPage() {
     <div 
       className="fixed inset-0 overflow-hidden bg-gradient-to-b from-[#FFF5F7] via-[#FFF0F5] to-[#FFE4E1] flex flex-col"
       style={{
+        height: '100vh', // Fallback for browsers that don't support dvh
         height: '100dvh',
       }}
     >
@@ -153,6 +154,8 @@ export default function LandingPage() {
             <button
               onClick={handlePrivacyPolicy}
               className="hover:text-pink-600 transition-colors"
+              role="link"
+              aria-label="查看隐私政策"
             >
               隐私政策
             </button>
@@ -160,6 +163,8 @@ export default function LandingPage() {
             <button
               onClick={handleTermsOfService}
               className="hover:text-pink-600 transition-colors"
+              role="link"
+              aria-label="查看用户协议"
             >
               用户协议
             </button>
