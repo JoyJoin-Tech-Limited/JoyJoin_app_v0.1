@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ArrowUp } from "lucide-react";
+import { ChevronLeft, ArrowUp, AlertCircle, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useOnboardingAnalytics } from "@/hooks/useOnboardingAnalytics"; // Phase 2
 import { CategoryPage } from "./CategoryPage";
 import {
   INTEREST_CATEGORIES,
@@ -59,6 +60,7 @@ const MAX_HEAT = 1400;
 export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) {
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
+  const analytics = useOnboardingAnalytics('extended-data'); // Phase 2: Analytics tracking
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const headerRef = useRef<HTMLDivElement>(null);
@@ -280,6 +282,8 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   // Handle continue button
   const handleContinue = useCallback(() => {
     if (totalSelections < 3) {
+      // Phase 2: Track validation failure
+      analytics.validationFailed('interests', `Only ${totalSelections} selected, minimum 3 required`);
       toast({
         title: "请至少选择3个兴趣",
         variant: "destructive",
@@ -321,11 +325,19 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
       topPriorities,
     };
 
+    // Phase 2: Track successful completion
+    analytics.stepCompleted({
+      totalSelections,
+      totalHeat,
+      topPriorities: topPriorities.length,
+      categoriesUsed: Object.keys(categoryHeat).filter(k => categoryHeat[k] > 0).length,
+    });
+
     // Clear localStorage
     localStorage.removeItem(STORAGE_KEY);
 
     onComplete(data);
-  }, [selections, totalHeat, totalSelections, categoryHeat, onComplete, toast]);
+  }, [selections, totalHeat, totalSelections, categoryHeat, onComplete, toast, analytics]);
 
   const canContinue = totalSelections >= 3;
 
@@ -580,7 +592,19 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
           )}
         </AnimatePresence>
         
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-4 space-y-2">
+          {/* Phase 0: Fix #6 - User feedback for minimum selection */}
+          {totalSelections < 3 && (
+            <motion.p 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-sm text-orange-600 dark:text-orange-400 text-center flex items-center justify-center gap-1"
+            >
+              <AlertCircle className="inline w-4 h-4" />
+              还需选择 {3 - totalSelections} 个兴趣才能继续
+            </motion.p>
+          )}
+          
           <Button
             onClick={handleContinue}
             disabled={totalSelections < 3}
@@ -591,7 +615,13 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
                 : "bg-muted text-muted-foreground"
             )}
           >
-            继续 {totalSelections >= 3 && `(${totalSelections}个)`}
+            {totalSelections >= 3 ? (
+              <>
+                完成 <Check className="ml-2 w-5 h-5" />
+              </>
+            ) : (
+              <>已选择 {totalSelections}/3 个</>
+            )}
           </Button>
         </div>
       </div>

@@ -623,20 +623,46 @@ export default function PersonalityTestResultPage() {
   }, []);
 
   // Mark personality test as complete and navigate to profile setup
+  // Uses optimistic updates to eliminate race conditions (Phase 0: Fix #2)
   const completeTestMutation = useMutation({
     mutationFn: async () => {
       return await apiRequest("POST", "/api/auth/complete-personality-test");
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    onMutate: async () => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Snapshot the previous value
+      const previousUser = queryClient.getQueryData(["/api/auth/user"]);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(["/api/auth/user"], (old: any) => ({
+        ...old,
+        hasCompletedPersonalityTest: true,
+      }));
+      
+      // Return context with previous value for rollback
+      return { previousUser };
+    },
+    onSuccess: () => {
+      // Immediate navigation with optimistic data (zero perceived latency)
       setLocation('/onboarding/setup');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousUser) {
+        queryClient.setQueryData(["/api/auth/user"], context.previousUser);
+      }
+      
       toast({
         title: "出错了",
         description: error.message,
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      // Refetch in background to sync server state
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
   });
 

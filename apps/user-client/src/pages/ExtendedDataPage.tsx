@@ -40,6 +40,10 @@ export default function ExtendedDataPage() {
         // Continue navigation even if checkpoint fails (non-blocking)
       }
       
+      // Phase 0: Fix #8 - Mark that user needs to see profile review
+      // This flag is used by useOnboardingRoute to navigate to /onboarding/review
+      // (Will be set to 'true' after user views the review page)
+      
       // Navigate while still showing loading
       setLocation("/onboarding/review");
       // Don't set showCelebration to false - let the new page handle the transition

@@ -111,7 +111,7 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, onboardingAnalytics, type User } from "@shared/schema";
 import * as schema from "@shared/schema";
 import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION } from "@shared/interests";
 import { db } from "./db";
@@ -1028,6 +1028,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error saving checkpoint:", error);
       res.status(500).json({ message: "Failed to save checkpoint" });
+    }
+  });
+
+  // Phase 2: Onboarding Analytics endpoint
+  app.post('/api/analytics/onboarding', async (req: Request, res) => {
+    try {
+      const { step, eventType, metadata, timestamp, sessionDuration, stepDuration, userAgent, screenSize } = req.body;
+      
+      // Validation
+      if (!step || !eventType) {
+        return res.status(400).json({ message: "Step and eventType are required" });
+      }
+      
+      // Get userId from session if authenticated (optional for unauthenticated tracking)
+      const userId = req.session?.userId || null;
+      
+      // Generate or use session ID
+      const sessionId = req.session?.id || req.headers['x-session-id'] as string || null;
+      
+      // Fix: Validate duration values are non-negative
+      const validSessionDuration = sessionDuration && sessionDuration >= 0 ? sessionDuration : null;
+      const validStepDuration = stepDuration && stepDuration >= 0 ? stepDuration : null;
+      
+      // Insert analytics event
+      await db.insert(onboardingAnalytics).values({
+        userId,
+        sessionId,
+        step,
+        eventType,
+        timestamp: timestamp ? new Date(timestamp) : new Date(),
+        sessionDuration: validSessionDuration,
+        stepDuration: validStepDuration,
+        metadata: metadata || null,
+        userAgent: userAgent || req.headers['user-agent'] || null,
+        screenSize: screenSize || null,
+      });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving analytics event:", error);
+      // Silent fail - analytics should never block user flow
+      res.status(200).json({ success: false, error: 'Analytics tracking failed' });
     }
   });
 
@@ -2455,6 +2497,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const profileData: Record<string, any> = { ...result.data };
+
+      // ✅ Age validation (Phase 0: Fix #8) - JoyJoin is 18+ only
+      if (profileData.birthdate) {
+        const birthDate = new Date(profileData.birthdate);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        // Adjust age if birthday hasn't occurred yet this year
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        
+        if (age < 18) {
+          return res.status(400).json({ 
+            message: "JoyJoin 仅面向 18 岁及以上用户开放",
+            field: "birthdate" 
+          });
+        }
+      }
+      
+      // Age validation for birthYear field (legacy support)
+      // Fix: More strict validation to match birthdate precision
+      if (profileData.birthYear && !profileData.birthdate) {
+        const birthYear = parseInt(profileData.birthYear, 10);
+        
+        if (!Number.isFinite(birthYear)) {
+          return res.status(400).json({
+            message: "无效的出生年份",
+            field: "birthYear",
+          });
+        }
+        
+        const currentYear = new Date().getFullYear();
+        const roughAge = currentYear - birthYear;
+        
+        // Definitely under 18 based on year alone
+        if (roughAge < 18) {
+          return res.status(400).json({ 
+            message: "JoyJoin 仅面向 18 岁及以上用户开放",
+            field: "birthYear" 
+          });
+        }
+        
+        // Borderline case: could be 17 or 18 depending on month/day
+        // Require full birthdate for precise validation
+        if (roughAge === 18) {
+          return res.status(400).json({
+            message: "为了确保您已满 18 周岁，请填写完整出生日期（年-月-日）",
+            field: "birthdate",
+          });
+        }
+      }
 
       // ❌ REMOVED: Interest fields validation - these fields no longer exist
       // Legacy interests are now managed by user_interests table
