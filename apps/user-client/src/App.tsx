@@ -10,6 +10,7 @@ import { AchievementProvider } from "@/contexts/AchievementContext";
 import { AchievementPopup } from "@/components/achievements";
 import { DynamicAccentProvider } from "@/contexts/DynamicAccentContext";
 import LoginPage from "@/pages/LoginPage";
+import LandingPage from "@/pages/LandingPage";
 // RegistrationPage removed - using ChatRegistrationPage instead
 // import RegistrationPage from "@/pages/RegistrationPage";
 // RegistrationMethodPage kept for internal reference only - not imported in user routes
@@ -246,8 +247,10 @@ function Router() {
         <Route path="/registration" component={DuolingoOnboardingPage} />
         <Route path="/registration/chat" component={DuolingoOnboardingPage} />
         <Route path="/register" component={DuolingoOnboardingPage} />
-        {/* All other routes show login page */}
-        <Route path="*" component={LoginPage} />
+        {/* Legacy login page still accessible */}
+        <Route path="/login" component={LoginPage} />
+        {/* New landing page is the default entry point */}
+        <Route path="*" component={LandingPage} />
       </Switch>
     );
   }
