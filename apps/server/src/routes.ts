@@ -111,7 +111,7 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, type User } from "@shared/schema";
 import * as schema from "@shared/schema";
 import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION } from "@shared/interests";
 import { db } from "./db";
@@ -7753,55 +7753,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "缺少必要参数: city and eventType required" });
       }
       
-      // Parse budget restrictions
-      const budgets = budgetRestrictions 
-        ? JSON.parse(budgetRestrictions as string)
-        : [];
-      
-      // Build query
-      let query = db
-        .select()
-        .from(venues)
-        .where(and(
-          eq(venues.city, city as string),
-          eq(venues.isActive, true),
-          eq(venues.venueType, eventType === "酒局" ? "bar" : "restaurant")
-        ));
-      
-      const allVenues = await query;
-      
-      // Filter by budget overlap if restrictions provided
-      let filteredVenues = allVenues;
-      if (budgets.length > 0) {
-        filteredVenues = allVenues.filter(venue => {
-          const venueBudgets = venue.budgetCategories || [];
-          return venueBudgets.some((vb: string) => budgets.includes(vb));
-        });
+      // Parse and validate budget restrictions
+      let budgets: string[] = [];
+      if (budgetRestrictions) {
+        try {
+          const parsed = JSON.parse(budgetRestrictions as string);
+          if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === "string")) {
+            return res.status(400).json({ message: "无效的 budgetRestrictions 参数，必须是字符串数组的 JSON" });
+          }
+          budgets = parsed;
+        } catch {
+          return res.status(400).json({ message: "无法解析 budgetRestrictions 参数，必须是有效的 JSON" });
+        }
       }
+      
+      // Determine allowed venue types based on event type
+      const allowedVenueTypes = eventType === "酒局"
+        ? ["bar", "homebar"]
+        : ["restaurant", "cafe"];
+      
+      // Build base query with venue type filter
+      let whereConditions = and(
+        eq(venues.city, city as string),
+        eq(venues.isActive, true),
+        inArray(venues.venueType, allowedVenueTypes)
+      );
       
       // Apply district filter if provided
       if (district) {
-        filteredVenues = filteredVenues.filter(v => v.area === district);
+        whereConditions = and(
+          whereConditions,
+          eq(venues.area, district as string)
+        );
       }
       
-      // Check which venues have time slots configured
-      const venuesWithSlots = await Promise.all(
-        filteredVenues.map(async (venue) => {
-          const slots = await db
-            .select()
-            .from(venueTimeSlots)
-            .where(and(
-              eq(venueTimeSlots.venueId, venue.id),
-              eq(venueTimeSlots.isActive, true)
-            ))
-            .limit(1);
-          
-          return {
-            ...venue,
-            hasTimeSlots: slots.length > 0
-          };
-        })
-      );
+      // Apply budget filter using SQL array overlap if restrictions provided
+      if (budgets.length > 0) {
+        whereConditions = and(
+          whereConditions,
+          sql`${venues.budgetCategories} && ${budgets}::text[]`
+        );
+      }
+      
+      const filteredVenues = await db
+        .select()
+        .from(venues)
+        .where(whereConditions);
+      
+      // Batch check which venues have time slots configured
+      let venuesWithSlots;
+      if (filteredVenues.length === 0) {
+        venuesWithSlots = [];
+      } else {
+        // Single query to fetch all venueIds that have at least one active time slot
+        const activeSlots = await db
+          .select({ venueId: venueTimeSlots.venueId })
+          .from(venueTimeSlots)
+          .where(eq(venueTimeSlots.isActive, true));
+
+        const venuesWithActiveSlots = new Set(
+          activeSlots.map((slot) => slot.venueId)
+        );
+
+        venuesWithSlots = filteredVenues.map((venue) => ({
+          ...venue,
+          hasTimeSlots: venuesWithActiveSlots.has(venue.id),
+        }));
+      }
       
       res.json(venuesWithSlots);
     } catch (error) {

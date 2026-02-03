@@ -336,7 +336,7 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   matchExplanation: text("match_explanation"), // AI生成的匹配解释
   
   // 活动详情（匹配后生成）
-  venueId: varchar("venue_id"),
+  venueId: varchar("venue_id").references(() => venues.id),
   venueName: varchar("venue_name"),
   venueAddress: text("venue_address"),
   finalDateTime: timestamp("final_date_time"),
