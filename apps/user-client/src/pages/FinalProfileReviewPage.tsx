@@ -58,7 +58,26 @@ export default function FinalProfileReviewPage() {
     
     // Phase 0: Fix #8 - Mark profile review as seen
     localStorage.setItem('profile_review_seen', 'true');
-    setLocation("/onboarding/login");
+    
+    // Fix: Use correct onboarding flow routing
+    // After profile review, check server-driven nextStep or default to guide
+    const nextStep = user?.nextStep;
+    let nextPath: string;
+    
+    switch (nextStep) {
+      case "guide":
+        nextPath = "/guide";
+        break;
+      case "discover":
+        nextPath = "/discover";
+        break;
+      default:
+        // Fallback: send users to the guide if nextStep is missing or unexpected
+        nextPath = "/guide";
+        break;
+    }
+    
+    setLocation(nextPath);
   };
 
   return (

@@ -100,7 +100,7 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
   });
 
   // Fetch personality assessment (Phase 0: Fix #10 - Error state)
-  const { data: assessment, error: assessmentError, isLoading: assessmentLoading, refetch: refetchAssessment } = useQuery<any>({ 
+  const { data: assessment, error: assessmentError, refetch: refetchAssessment } = useQuery<any>({ 
     queryKey: ["/api/assessment/result"],
     retry: 2,
   });
@@ -149,10 +149,11 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
   const genderEmoji = user?.gender === "女性" ? "👩" : user?.gender === "男性" ? "👨" : "";
 
   // Calculate profile completion (Phase 0: Fix #4 - Simplified calculation)
+  // Note: hometown is optional, so location section only requires currentCity
   const profileCompletion = useMemo(() => {
     const sections = {
       basic: !!(user?.displayName && user?.gender && (user?.birthdate || user?.birthYear || user?.age)),
-      location: !!(user?.currentCity && user?.hometown),
+      location: !!(user?.currentCity), // hometown is optional
       work: !!(user?.industryCategory && user?.educationLevel),
       interests: !!user?.hasCompletedInterestsCarousel,
       intent: !!(user?.intent && Array.isArray(user.intent) && user.intent.length > 0),

@@ -32,8 +32,53 @@ interface OnboardingAnalyticsEvent {
 }
 
 class OnboardingAnalytics {
-  private sessionStartTime: number = Date.now();
+  private static SESSION_STORAGE_KEY = 'onboarding_session_start';
+  private sessionStartTime: number;
   private stepStartTimes: Map<OnboardingStep, number> = new Map();
+
+  constructor() {
+    // Fix: Initialize session start time with sessionStorage persistence
+    if (typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined') {
+      const stored = window.sessionStorage.getItem(OnboardingAnalytics.SESSION_STORAGE_KEY);
+      const parsed = stored !== null ? Number(stored) : NaN;
+
+      if (Number.isFinite(parsed) && parsed > 0) {
+        this.sessionStartTime = parsed;
+      } else {
+        this.sessionStartTime = Date.now();
+        try {
+          window.sessionStorage.setItem(
+            OnboardingAnalytics.SESSION_STORAGE_KEY,
+            String(this.sessionStartTime),
+          );
+        } catch {
+          // Ignore storage errors and continue with in-memory sessionStartTime
+        }
+      }
+    } else {
+      // Fallback for non-browser environments (e.g., SSR)
+      this.sessionStartTime = Date.now();
+    }
+  }
+
+  /**
+   * Explicitly reset the onboarding session start time
+   * Can be called when a new onboarding session truly begins (e.g., on login)
+   */
+  resetSession() {
+    this.sessionStartTime = Date.now();
+
+    if (typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined') {
+      try {
+        window.sessionStorage.setItem(
+          OnboardingAnalytics.SESSION_STORAGE_KEY,
+          String(this.sessionStartTime),
+        );
+      } catch {
+        // Ignore storage errors; in-memory sessionStartTime is still updated
+      }
+    }
+  }
 
   /**
    * Track when user starts a step
