@@ -336,6 +336,7 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   matchExplanation: text("match_explanation"), // AI生成的匹配解释
   
   // 活动详情（匹配后生成）
+  venueId: varchar("venue_id"),
   venueName: varchar("venue_name"),
   venueAddress: text("venue_address"),
   finalDateTime: timestamp("final_date_time"),
@@ -899,6 +900,7 @@ export const venues = pgTable("venues", {
   tags: text("tags").array(), // atmosphere tags: cozy, lively, upscale, casual
   cuisines: text("cuisines").array(), // 粤菜, 川菜, 日料, 西餐 etc.
   priceRange: text("price_range"), // 预算档次: "150以下", "150-200", "200-300", "300-500"
+  budgetCategories: text("budget_categories").array(), // Standardized budget ranges: ["150以下","150-200","200-300","300-500"] for restaurants, ["80以下","80-150"] for bars
   decorStyle: text("decor_style").array(), // 装修风格: 轻奢现代风, 绿植花园风, 复古工业风, 温馨日式风
   
   // 酒吧特有标签 (仅当 venueType='bar' 时使用)

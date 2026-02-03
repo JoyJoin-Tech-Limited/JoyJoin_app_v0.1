@@ -111,7 +111,7 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, interestsTopicsSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, type User } from "@shared/schema";
 import * as schema from "@shared/schema";
 import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION } from "@shared/interests";
 import { db } from "./db";
@@ -7736,6 +7736,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching available venues:", error);
       res.status(500).json({ message: "Failed to fetch available venues" });
+    }
+  });
+
+  // Smart venue filter API - with budget and cuisine filtering
+  app.get("/api/admin/smart-venues", requireAdmin, async (req, res) => {
+    try {
+      const { 
+        city, 
+        district, 
+        eventType, 
+        budgetRestrictions 
+      } = req.query;
+      
+      if (!city || !eventType) {
+        return res.status(400).json({ message: "缺少必要参数: city and eventType required" });
+      }
+      
+      // Parse budget restrictions
+      const budgets = budgetRestrictions 
+        ? JSON.parse(budgetRestrictions as string)
+        : [];
+      
+      // Build query
+      let query = db
+        .select()
+        .from(venues)
+        .where(and(
+          eq(venues.city, city as string),
+          eq(venues.isActive, true),
+          eq(venues.venueType, eventType === "酒局" ? "bar" : "restaurant")
+        ));
+      
+      const allVenues = await query;
+      
+      // Filter by budget overlap if restrictions provided
+      let filteredVenues = allVenues;
+      if (budgets.length > 0) {
+        filteredVenues = allVenues.filter(venue => {
+          const venueBudgets = venue.budgetCategories || [];
+          return venueBudgets.some((vb: string) => budgets.includes(vb));
+        });
+      }
+      
+      // Apply district filter if provided
+      if (district) {
+        filteredVenues = filteredVenues.filter(v => v.area === district);
+      }
+      
+      // Check which venues have time slots configured
+      const venuesWithSlots = await Promise.all(
+        filteredVenues.map(async (venue) => {
+          const slots = await db
+            .select()
+            .from(venueTimeSlots)
+            .where(and(
+              eq(venueTimeSlots.venueId, venue.id),
+              eq(venueTimeSlots.isActive, true)
+            ))
+            .limit(1);
+          
+          return {
+            ...venue,
+            hasTimeSlots: slots.length > 0
+          };
+        })
+      );
+      
+      res.json(venuesWithSlots);
+    } catch (error) {
+      console.error("Smart venue filter error:", error);
+      res.status(500).json({ message: "查询失败" });
     }
   });
 
