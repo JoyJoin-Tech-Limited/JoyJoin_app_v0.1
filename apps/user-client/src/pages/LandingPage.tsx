@@ -34,32 +34,28 @@ export default function LandingPage() {
     setLocation('/login');
   };
 
-  // Footer link handlers
-  const handlePrivacyPolicy = () => {
-    console.log('[Analytics] Landing: Privacy policy clicked');
-    window.open('/privacy', '_blank');
-  };
-
-  const handleTermsOfService = () => {
-    console.log('[Analytics] Landing: Terms of service clicked');
-    window.open('/terms', '_blank');
+  // Image error handler
+  const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = event.currentTarget;
+    if (img.dataset.fallbackApplied === "true") return;
+    img.dataset.fallbackApplied = "true";
+    img.src =
+      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='20'%3EImage unavailable%3C/text%3E%3C/svg%3E";
   };
 
   return (
-    <div 
+    <main 
       className="fixed inset-0 overflow-hidden bg-gradient-to-b from-[#FFF5F7] via-[#FFF0F5] to-[#FFE4E1] flex flex-col"
       style={{
-        height: '100vh', // Fallback for browsers that don't support dvh
+        minHeight: '100vh',
         height: '100dvh',
       }}
     >
-      {/* Main content container */}
-      
       {/* Top section: Photo tiles */}
-      <div className="flex-none px-4 pt-6 sm:pt-8">
+      <section className="flex-none px-4 pt-6 sm:pt-8" aria-label="精选活动照片">
         <div className="max-w-sm mx-auto">
           {/* 2x2 grid of tilted photo tiles */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="grid grid-cols-2 gap-3">
             {landingImages.map((image) => (
               <div
                 key={image.id}
@@ -73,15 +69,16 @@ export default function LandingPage() {
                   alt={image.alt}
                   className="w-full h-full object-cover"
                   loading="eager"
+                  onError={handleImageError}
                 />
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Middle section: Logo, title, tags - takes remaining space */}
-      <div className="flex-1 flex flex-col justify-center px-4 -mt-8">
+      <section className="flex-1 flex flex-col justify-center px-4 pt-4" aria-label="品牌介绍">
         <div className="max-w-sm mx-auto w-full text-center">
           {/* Logo */}
           <div className="flex justify-center mb-4">
@@ -104,7 +101,7 @@ export default function LandingPage() {
           </h1>
 
           {/* Three feature tags */}
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
+          <div className="flex flex-wrap justify-center gap-2">
             <Badge 
               variant="outline" 
               className="px-3 py-1.5 bg-white/80 border-pink-200 text-pink-600 text-sm font-medium"
@@ -125,16 +122,16 @@ export default function LandingPage() {
             </Badge>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Bottom section: CTAs and footer */}
-      <div className="flex-none px-4 pb-6 sm:pb-8">
+      <section className="flex-none px-4 pb-6 sm:pb-8" aria-label="行动按钮">
         <div className="max-w-sm mx-auto space-y-3">
           {/* Primary CTA */}
           <Button
             onClick={handlePrimaryCTA}
             size="lg"
-            className="w-full h-14 bg-gradient-to-r from-[#FF1493] to-[#FF69B4] hover:from-[#E6007E] hover:to-[#FF1493] text-white text-lg font-semibold shadow-lg transition-all duration-200 active:scale-[0.98] border-0"
+            className="w-full h-14 bg-gradient-to-r from-[#FF1493] to-[#FF69B4] hover:from-[#E6007E] hover:to-[#FF1493] text-white text-lg font-semibold shadow-lg transition-all duration-200 motion-reduce:transition-none motion-reduce:active:scale-100 active:scale-[0.98] border-0"
           >
             看看我会遇见谁
           </Button>
@@ -144,34 +141,41 @@ export default function LandingPage() {
             onClick={handleSecondaryCTA}
             variant="outline"
             size="lg"
-            className="w-full h-12 border-2 border-pink-200 hover:border-pink-300 hover:bg-pink-50 text-pink-600 font-medium transition-all duration-200 active:scale-[0.98]"
+            className="w-full h-12 border-2 border-pink-200 hover:border-pink-300 hover:bg-pink-50 text-pink-600 font-medium transition-all duration-200 motion-reduce:transition-none motion-reduce:active:scale-100 active:scale-[0.98]"
           >
             已有账号登录
           </Button>
 
           {/* Legal footer */}
-          <div className="pt-2 text-center text-xs text-gray-500">
-            <button
-              onClick={handlePrivacyPolicy}
+          <footer className="pt-2 text-center text-xs text-gray-500">
+            <a
+              href="/privacy"
+              onClick={(e) => {
+                e.preventDefault();
+                console.log('[Analytics] Landing: Privacy policy clicked');
+                window.open('/privacy', '_blank');
+              }}
               className="hover:text-pink-600 transition-colors"
-              role="link"
               aria-label="查看隐私政策"
             >
               隐私政策
-            </button>
+            </a>
             <span className="mx-2">·</span>
-            <button
-              onClick={handleTermsOfService}
+            <a
+              href="/terms"
+              onClick={(e) => {
+                e.preventDefault();
+                console.log('[Analytics] Landing: Terms of service clicked');
+                window.open('/terms', '_blank');
+              }}
               className="hover:text-pink-600 transition-colors"
-              role="link"
               aria-label="查看用户协议"
             >
               用户协议
-            </button>
-          </div>
+            </a>
+          </footer>
         </div>
-      </div>
-
-    </div>
+      </section>
+    </main>
   );
 }
