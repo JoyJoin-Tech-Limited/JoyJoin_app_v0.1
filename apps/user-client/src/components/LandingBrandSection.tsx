@@ -81,11 +81,11 @@ export function LandingBrandSection() {
         transition={{ delay: 0.6, duration: 0.5 }}
         className="flex flex-wrap justify-center gap-2 sm:gap-3"
       >
-        {FEATURES.map((feature, index) => {
+        {FEATURES.map((feature) => {
           const Icon = feature.icon;
           return (
             <Badge
-              key={index}
+              key={feature.text}
               variant="outline"
               className="px-3 py-1.5 sm:px-4 sm:py-2 bg-primary/10 border-primary/20 text-primary hover:bg-primary/20 transition-colors"
             >
