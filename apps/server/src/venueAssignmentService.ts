@@ -91,8 +91,13 @@ async function checkTimeSlotAvailability(
   eventDateTime: Date
 ): Promise<boolean> {
   const dayOfWeek = eventDateTime.getDay();
-  const timeStr = eventDateTime.toTimeString().substring(0, 5); // "HH:MM"
-  const dateStr = eventDateTime.toISOString().split('T')[0]; // "YYYY-MM-DD"
+  const timeStr = eventDateTime.toTimeString().substring(0, 5); // "HH:MM" in local time
+  
+  // Format date in local timezone to avoid UTC shift
+  const year = eventDateTime.getFullYear();
+  const month = String(eventDateTime.getMonth() + 1).padStart(2, '0');
+  const day = String(eventDateTime.getDate()).padStart(2, '0');
+  const dateStr = `${year}-${month}-${day}`; // "YYYY-MM-DD"
   
   // Check for weekly recurring slots
   const weeklySlots = await db
@@ -108,13 +113,13 @@ async function checkTimeSlotAvailability(
   
   if (weeklySlots.length > 0) return true;
   
-  // Check for specific date slots
+  // Check for specific date slots - compare as date type
   const specificSlots = await db
     .select()
     .from(venueTimeSlots)
     .where(and(
       eq(venueTimeSlots.venueId, venueId),
-      sql`${venueTimeSlots.specificDate}::text = ${dateStr}`,
+      sql`${venueTimeSlots.specificDate} = ${dateStr}::date`,
       eq(venueTimeSlots.isActive, true),
       sql`${venueTimeSlots.startTime} <= ${timeStr}`,
       sql`${venueTimeSlots.endTime} >= ${timeStr}`
@@ -138,15 +143,25 @@ async function scoreVenueForGroup(
   
   // 1. Budget Match (40 points)
   const venueBudgets = venue.budgetCategories || [];
-  const budgetOverlap = venueBudgets.filter((vb: string) => groupBudget.includes(vb));
   
-  if (budgetOverlap.length > 0) {
-    const budgetScore = Math.min(40, (budgetOverlap.length / Math.max(groupBudget.length, 1)) * 40);
-    score += budgetScore;
-    reasons.push(`预算匹配 (${budgetOverlap.join(', ')})`);
+  if (groupBudget.length === 0) {
+    // No budget constraint set by group — treat all venue budgets as acceptable
+    score += 40;
+    reasons.push(`未设置预算限制，所有价位均可接受`);
   } else {
-    reasons.push(`预算不匹配`);
-    return { venue, score: 0, reasons }; // Hard fail if no budget overlap
+    const budgetOverlap = venueBudgets.filter((vb: string) => groupBudget.includes(vb));
+
+    if (budgetOverlap.length > 0) {
+      const budgetScore = Math.min(
+        40,
+        (budgetOverlap.length / Math.max(groupBudget.length, 1)) * 40
+      );
+      score += budgetScore;
+      reasons.push(`预算匹配 (${budgetOverlap.join(', ')})`);
+    } else {
+      reasons.push(`预算不匹配`);
+      return { venue, score: 0, reasons }; // Hard fail if no budget overlap
+    }
   }
   
   // 2. Cuisine Match (30 points)
@@ -188,16 +203,22 @@ export async function assignVenuesToGroups(
   
   const assignments = new Map<number, { venue: any; score: number; reasons: string[] }>();
   
-  // 1. Get all active venues in city/district
+  // 1. Get all active venues in city/district with appropriate venue type
+  const allowedVenueTypes = eventType === "酒局" 
+    ? ["bar", "homebar"]
+    : ["restaurant", "cafe"];
+  
   const venueQuery = poolDistrict 
     ? and(
         eq(venues.city, poolCity),
         eq(venues.area, poolDistrict),
-        eq(venues.isActive, true)
+        eq(venues.isActive, true),
+        sql`${venues.venueType} = ANY(${allowedVenueTypes})`
       )
     : and(
         eq(venues.city, poolCity),
-        eq(venues.isActive, true)
+        eq(venues.isActive, true),
+        sql`${venues.venueType} = ANY(${allowedVenueTypes})`
       );
   
   const availableVenues = await db
@@ -207,14 +228,12 @@ export async function assignVenuesToGroups(
   
   console.log(`[VenueAssignment] Found ${availableVenues.length} active venues in ${poolCity} ${poolDistrict || ''}`);
   
-  // 2. Filter by time slot availability
-  const venuesWithSlots: any[] = [];
-  for (const venue of availableVenues) {
-    const hasSlot = await checkTimeSlotAvailability(venue.id, poolDateTime);
-    if (hasSlot) {
-      venuesWithSlots.push(venue);
-    }
-  }
+  // 2. Filter by time slot availability - parallelized for performance
+  const slotAvailabilityResults = await Promise.all(
+    availableVenues.map((venue) => checkTimeSlotAvailability(venue.id, poolDateTime))
+  );
+
+  const venuesWithSlots = availableVenues.filter((venue, index) => slotAvailabilityResults[index]);
   
   console.log(`[VenueAssignment] ${venuesWithSlots.length} venues have available time slots`);
   
@@ -244,7 +263,8 @@ export async function assignVenuesToGroups(
     
     if (scoredVenues.length > 0) {
       const bestMatch = scoredVenues[0];
-      assignments.set(i, bestMatch);
+      // Use 1-based group index to align with group.groupNumber in saveVenueAssignments
+      assignments.set(i + 1, bestMatch);
       console.log(`[VenueAssignment] Group ${i + 1} → ${bestMatch.venue.name} (score: ${bestMatch.score})`);
       console.log(`[VenueAssignment] Reasons: ${bestMatch.reasons.join(', ')}`);
     } else {

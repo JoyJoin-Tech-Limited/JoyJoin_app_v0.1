@@ -45,3 +45,22 @@ ADD COLUMN IF NOT EXISTS venue_id VARCHAR;
 
 -- Add comment for documentation
 COMMENT ON COLUMN event_pool_groups.venue_id IS 'Reference to assigned venue from automatic venue assignment';
+
+-- Add foreign key constraint to ensure venue_id references venues(id)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'event_pool_groups_venue_id_fkey'
+          AND conrelid = 'event_pool_groups'::regclass
+    ) THEN
+        ALTER TABLE event_pool_groups
+        ADD CONSTRAINT event_pool_groups_venue_id_fkey
+        FOREIGN KEY (venue_id) REFERENCES venues(id);
+    END IF;
+END$$;
+
+-- Add index for faster lookups and joins on venue_id
+CREATE INDEX IF NOT EXISTS idx_event_pool_groups_venue_id
+ON event_pool_groups (venue_id);
