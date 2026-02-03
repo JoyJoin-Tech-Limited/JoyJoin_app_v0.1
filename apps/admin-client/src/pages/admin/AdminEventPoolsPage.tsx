@@ -147,6 +147,9 @@ interface PoolGroup {
   poolId: string;
   groupNumber: number;
   status: string | null;
+  venueName?: string | null;
+  venueAddress?: string | null;
+  venueId?: string | null;
   createdAt: string;
   updatedAt?: string;
   members: PoolGroupMember[];
@@ -237,31 +240,54 @@ export default function AdminEventPoolsPage() {
   const currentCityDistricts = CITY_DISTRICTS[currentCity] ?? [];
 
   // Query for available venues based on selected city, district, and dateTime
+  // Updated to use smart-venues endpoint with budget filtering
   const { data: availableVenues = [], isLoading: isLoadingVenues, isError: isVenuesError } = useQuery<AvailableVenue[]>({
-    queryKey: ["/api/admin/available-venues", currentCity, currentDistrict, currentDateTime],
+    queryKey: [
+      "/api/admin/smart-venues", 
+      currentCity, 
+      currentDistrict, 
+      currentDateTime,
+      form.watch("eventType") // Add event type dependency
+    ],
     queryFn: async () => {
       if (!currentCity || !currentDateTime) return [];
-      const dateObj = new Date(currentDateTime);
-      // Use local date format to avoid UTC conversion issues
-      const dateStr = format(dateObj, "yyyy-MM-dd");
-      const hours = dateObj.getHours();
-      const minutes = dateObj.getMinutes();
-      const startTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-      // Handle hour wrap-around for end time (3 hour duration)
-      const endHours = (hours + 3) % 24;
-      const endTime = `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
       
+      const eventType = form.watch("eventType");
       const params = new URLSearchParams({
         city: currentCity,
-        date: dateStr,
-        startTime,
-        endTime,
+        eventType: eventType || "饭局",
       });
+      
       if (currentDistrict) {
         params.append("district", currentDistrict);
       }
-      const res = await apiRequest("GET", `/api/admin/available-venues?${params}`);
-      return res as unknown as AvailableVenue[];
+      
+      // TODO: Add budget restrictions from form when implemented
+      // const budgetRestrictions = form.watch("budgetRestrictions");
+      // if (budgetRestrictions?.length > 0) {
+      //   params.append("budgetRestrictions", JSON.stringify(budgetRestrictions));
+      // }
+      
+      const res = await apiRequest("GET", `/api/admin/smart-venues?${params}`);
+      const venues = res as any[];
+      
+      // Transform to match existing interface
+      return venues
+        .filter((v: any) => v.hasTimeSlots) // Only show venues with configured time slots
+        .map((v: any) => ({
+          venue: {
+            id: v.id,
+            name: v.name,
+            venueType: v.venueType,
+            address: v.address,
+            city: v.city,
+            area: v.area,
+            priceRange: v.priceRange,
+            tags: v.tags,
+            cuisines: v.cuisines,
+          },
+          availableSlots: [], // Will be populated by existing time slot logic if needed
+        }));
     },
     enabled: showCreateDialog && !!currentCity && !!currentDateTime,
   });
@@ -1250,6 +1276,30 @@ export default function AdminEventPoolsPage() {
                             </span>
                           ))}
                         </div>
+                        
+                        {/* Venue Assignment Display */}
+                        {group.venueName ? (
+                          <div className="mt-2 pt-2 border-t">
+                            <div className="flex items-center gap-2">
+                              <Store className="h-3 w-3 text-muted-foreground" />
+                              <span className="font-medium text-green-600">
+                                已分配: {group.venueName}
+                              </span>
+                            </div>
+                            {group.venueAddress && (
+                              <div className="flex items-center gap-2 mt-1 text-muted-foreground">
+                                <MapPin className="h-3 w-3" />
+                                <span className="text-xs">{group.venueAddress}</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="mt-2 pt-2 border-t">
+                            <Badge variant="secondary" className="text-xs">
+                              未分配场地
+                            </Badge>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
