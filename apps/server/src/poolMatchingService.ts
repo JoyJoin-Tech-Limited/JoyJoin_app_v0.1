@@ -35,6 +35,7 @@ import { wsService } from "./wsService";
 import type { PoolMatchedData } from "@shared/wsEvents";
 import { chemistryMatrix as CHEMISTRY_MATRIX, ARCHETYPE_ENERGY } from "./archetypeChemistry";
 import type { ArchetypeName } from "./archetypeConfig";
+import { assignVenuesToGroups, saveVenueAssignments } from "./venueAssignmentService";
 
 export interface UserWithProfile {
   userId: string;
@@ -922,6 +923,28 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
   
   // 6. 发放邀请奖励优惠券 (Invitation Reward Coupons)
   await processInvitationRewards(poolId, groups);
+  
+  // 7. 自动分配场地 (Automatic Venue Assignment)
+  console.log(`[Pool Matching] ✅ ${groups.length} groups created, starting venue assignment...`);
+  
+  try {
+    const venueAssignments = await assignVenuesToGroups(
+      groups,
+      poolId,
+      pool?.dateTime || new Date(),
+      pool?.city || "",
+      pool?.district,
+      pool?.eventType || "饭局"
+    );
+    
+    // Save venue assignments to database
+    await saveVenueAssignments(poolId, venueAssignments);
+    
+    console.log(`[Pool Matching] ✅ Venue assignment complete: ${venueAssignments.size}/${groups.length} groups assigned`);
+  } catch (error) {
+    console.error(`[Pool Matching] ⚠️ Venue assignment failed:`, error);
+    // Don't throw - matching already succeeded, venue assignment is best-effort
+  }
 }
 
 /**
