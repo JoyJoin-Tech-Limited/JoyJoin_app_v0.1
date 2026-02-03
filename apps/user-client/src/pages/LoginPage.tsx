@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Accordion,
   AccordionContent,
@@ -154,6 +153,22 @@ export default function LoginPage() {
   const [isVideoMuted, setIsVideoMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isDevelopment = import.meta.env.DEV;
+  
+  // Respect user's motion preferences for accessibility
+  const prefersReducedMotion = useRef(false);
+  
+  useEffect(() => {
+    // Check if user prefers reduced motion
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    prefersReducedMotion.current = mediaQuery.matches;
+    
+    const handleChange = (e: MediaQueryListEvent) => {
+      prefersReducedMotion.current = e.matches;
+    };
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
 
   // Performance tracking for loading states
   useEffect(() => {
@@ -435,12 +450,12 @@ export default function LoginPage() {
               animate={{ 
                 opacity: 1, 
                 scale: 1,
-                y: [0, -8, 0], // Floating animation
+                y: prefersReducedMotion.current ? 0 : [0, -8, 0], // Disable floating if reduced motion preferred
               }}
               transition={{ 
                 opacity: { duration: 0.5 },
                 scale: { type: "spring", stiffness: 180, damping: 12, duration: 0.8 },
-                y: { 
+                y: prefersReducedMotion.current ? {} : { 
                   duration: 3, 
                   repeat: Infinity, 
                   ease: "easeInOut" 
@@ -490,7 +505,7 @@ export default function LoginPage() {
             >
               <Button
                 size="lg"
-                className="min-h-[56px] min-w-[180px] px-12 py-4 text-lg font-bold bg-gradient-to-r from-purple-600 via-primary to-pink-600 hover:from-purple-700 hover:via-primary/95 hover:to-pink-700 text-white border-0 shadow-2xl transition-all duration-300 hover:scale-[1.03] active:scale-[0.98]"
+                className="min-h-[56px] min-w-[180px] px-12 py-4 text-lg font-bold bg-gradient-to-r from-purple-700 via-primary to-pink-700 hover:from-purple-800 hover:via-primary/95 hover:to-pink-800 text-white border-0 shadow-2xl transition-all duration-300 hover:scale-[1.03] active:scale-[0.98]"
                 onClick={() => setLocation("/onboarding")}
                 data-testid="button-hero-cta"
               >
