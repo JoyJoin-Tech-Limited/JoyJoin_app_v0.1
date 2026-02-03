@@ -158,9 +158,11 @@ async function scoreVenueForGroup(
   
   // 3. Capacity Match (20 points)
   const groupSize = group.members.length;
-  if (venue.capacity && venue.capacity >= 1) {
+  if (venue.capacity && venue.capacity >= groupSize) {
     score += 20;
-    reasons.push(`容量充足`);
+    reasons.push(`容量充足 (可容纳${venue.capacity}人)`);
+  } else if (venue.capacity) {
+    reasons.push(`容量不足 (仅可容纳${venue.capacity}人，需要${groupSize}人)`);
   }
   
   // 4. Location (10 points) - same district as group members
