@@ -233,10 +233,10 @@ export async function assignVenuesToGroups(
   
   // 2. Filter by time slot availability - parallelized for performance
   const slotAvailabilityResults = await Promise.all(
-    availableVenues.map((venue) => checkTimeSlotAvailability(venue.id, poolDateTime))
+    availableVenues.map((venue: typeof venues.$inferSelect) => checkTimeSlotAvailability(venue.id, poolDateTime))
   );
 
-  const venuesWithSlots = availableVenues.filter((venue, index) => slotAvailabilityResults[index]);
+  const venuesWithSlots = availableVenues.filter((venue: typeof venues.$inferSelect, index: number) => slotAvailabilityResults[index]);
   
   console.log(`[VenueAssignment] ${venuesWithSlots.length} venues have available time slots`);
   

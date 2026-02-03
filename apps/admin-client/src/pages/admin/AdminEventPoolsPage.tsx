@@ -263,7 +263,7 @@ export default function AdminEventPoolsPage() {
       }
       
       const res = await apiRequest("GET", `/api/admin/smart-venues?${params}`);
-      const venues = res as any[];
+      const venues = await res.json() as any[];
       
       // Transform to match existing interface
       return venues
