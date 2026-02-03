@@ -5,6 +5,7 @@ import { ChevronLeft, ArrowUp, AlertCircle, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useOnboardingAnalytics } from "@/hooks/useOnboardingAnalytics"; // Phase 2
 import { CategoryPage } from "./CategoryPage";
 import {
   INTEREST_CATEGORIES,
@@ -59,6 +60,7 @@ const MAX_HEAT = 1400;
 export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) {
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
+  const analytics = useOnboardingAnalytics('extended-data'); // Phase 2: Analytics tracking
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const headerRef = useRef<HTMLDivElement>(null);
@@ -280,6 +282,8 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   // Handle continue button
   const handleContinue = useCallback(() => {
     if (totalSelections < 3) {
+      // Phase 2: Track validation failure
+      analytics.validationFailed('interests', `Only ${totalSelections} selected, minimum 3 required`);
       toast({
         title: "请至少选择3个兴趣",
         variant: "destructive",
@@ -321,11 +325,19 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
       topPriorities,
     };
 
+    // Phase 2: Track successful completion
+    analytics.stepCompleted({
+      totalSelections,
+      totalHeat,
+      topPriorities: topPriorities.length,
+      categoriesUsed: Object.keys(categoryHeat).filter(k => categoryHeat[k] > 0).length,
+    });
+
     // Clear localStorage
     localStorage.removeItem(STORAGE_KEY);
 
     onComplete(data);
-  }, [selections, totalHeat, totalSelections, categoryHeat, onComplete, toast]);
+  }, [selections, totalHeat, totalSelections, categoryHeat, onComplete, toast, analytics]);
 
   const canContinue = totalSelections >= 3;
 
