@@ -19,6 +19,7 @@ import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 import { haptics } from "@/lib/haptics";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import { useOnboardingCheckpoint } from "@/hooks/useOnboardingCheckpoint";
+import { useOnboardingAnalytics } from "@/hooks/useOnboardingAnalytics";
 import {
   Sheet,
   SheetContent,
@@ -227,6 +228,7 @@ export default function EssentialDataPage() {
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
   const { saveCheckpoint } = useOnboardingCheckpoint();
+  const analytics = useOnboardingAnalytics('essential-data'); // Phase 2: Analytics tracking
 
   const { data: user } = useQuery<any>({ queryKey: ["/api/auth/user"] });
 
@@ -344,6 +346,22 @@ export default function EssentialDataPage() {
       localStorage.removeItem(ESSENTIAL_CACHE_KEY);
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
+      // Phase 2: Track successful completion
+      analytics.stepCompleted({
+        stepsCompleted: TOTAL_STEPS,
+        fieldsProvided: {
+          displayName: !!displayName,
+          gender: !!gender,
+          birthYear: !!(birthDate || birthYear),
+          relationshipStatus: !!relationshipStatus,
+          education: !!education,
+          industry: !!industryCategory,
+          hometown: !!hometown,
+          currentCity: !!currentCity,
+          intent: intent.length > 0,
+        },
+      });
+      
       // Save checkpoint after completing essential data (await to ensure persistence)
       try {
         await saveCheckpoint.mutateAsync('essential-data');
@@ -355,6 +373,8 @@ export default function EssentialDataPage() {
       setLocation("/onboarding/extended");
     },
     onError: (error: Error) => {
+      // Phase 2: Track errors
+      analytics.errorOccurred('save_failed', error.message);
       toast({
         title: "保存失败",
         description: error.message,
@@ -466,6 +486,8 @@ export default function EssentialDataPage() {
         // Validate age >= 18
         if (calculatedAge < 18) {
           setShowCelebration(false);
+          // Phase 2: Track age validation failure
+          analytics.validationFailed('birthdate', `Age under 18 (${calculatedAge})`);
           toast({
             title: "年龄限制",
             description: "JoyJoin 仅面向 18 岁及以上用户开放",

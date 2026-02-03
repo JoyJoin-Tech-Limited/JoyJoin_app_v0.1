@@ -111,7 +111,7 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, onboardingAnalytics, type User } from "@shared/schema";
 import * as schema from "@shared/schema";
 import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION } from "@shared/interests";
 import { db } from "./db";
@@ -1028,6 +1028,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error saving checkpoint:", error);
       res.status(500).json({ message: "Failed to save checkpoint" });
+    }
+  });
+
+  // Phase 2: Onboarding Analytics endpoint
+  app.post('/api/analytics/onboarding', async (req: Request, res) => {
+    try {
+      const { step, eventType, metadata, timestamp, sessionDuration, stepDuration, userAgent, screenSize } = req.body;
+      
+      // Validation
+      if (!step || !eventType) {
+        return res.status(400).json({ message: "Step and eventType are required" });
+      }
+      
+      // Get userId from session if authenticated (optional for unauthenticated tracking)
+      const userId = req.session?.userId || null;
+      
+      // Generate or use session ID
+      const sessionId = req.session?.id || req.headers['x-session-id'] as string || null;
+      
+      // Insert analytics event
+      await db.insert(onboardingAnalytics).values({
+        userId,
+        sessionId,
+        step,
+        eventType,
+        timestamp: timestamp ? new Date(timestamp) : new Date(),
+        sessionDuration: sessionDuration || null,
+        stepDuration: stepDuration || null,
+        metadata: metadata || null,
+        userAgent: userAgent || req.headers['user-agent'] || null,
+        screenSize: screenSize || null,
+      });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving analytics event:", error);
+      // Silent fail - analytics should never block user flow
+      res.status(200).json({ success: false, error: 'Analytics tracking failed' });
     }
   });
 

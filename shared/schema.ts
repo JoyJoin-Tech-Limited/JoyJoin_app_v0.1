@@ -114,6 +114,8 @@ export const users = pgTable("users", {
   hasCompletedRegistration: boolean("has_completed_registration").default(false),
   hasCompletedInterestsTopics: boolean("has_completed_interests_topics").default(false),
   hasCompletedPersonalityTest: boolean("has_completed_personality_test").default(false),
+  hasCompletedInterestsCarousel: boolean("has_completed_interests_carousel").default(false), // Phase 1: New carousel-based interest selection
+  hasSeenGuide: boolean("has_seen_guide").default(false), // Phase 1: Server-persisted guide completion flag
   
   // Interests & Topics (Step 2)
   interestsTop: text("interests_top").array(), // 3-7 selected interests
@@ -2675,3 +2677,43 @@ export type InsertAssessmentSession = z.infer<typeof insertAssessmentSessionSche
 
 export type AssessmentAnswer = typeof assessmentAnswers.$inferSelect;
 export type InsertAssessmentAnswer = z.infer<typeof insertAssessmentAnswerSchema>;
+
+// ================================
+// Phase 2: Onboarding Analytics
+// ================================
+
+export const onboardingAnalytics = pgTable("onboarding_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  sessionId: varchar("session_id"), // Unique session ID for grouping events
+  
+  // Event details
+  step: varchar("step").notNull(), // onboarding, personality-test, essential-data, etc.
+  eventType: varchar("event_type").notNull(), // step_started, step_completed, step_abandoned, validation_failed, error_occurred
+  
+  // Timing
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  sessionDuration: integer("session_duration"), // Total time in session (ms)
+  stepDuration: integer("step_duration"), // Time spent on this step (ms)
+  
+  // Metadata
+  metadata: jsonb("metadata"), // Additional event data (field, reason, error, etc.)
+  userAgent: varchar("user_agent"),
+  screenSize: varchar("screen_size"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_onboarding_analytics_user_id").on(table.userId),
+  index("idx_onboarding_analytics_session_id").on(table.sessionId),
+  index("idx_onboarding_analytics_step").on(table.step),
+  index("idx_onboarding_analytics_event_type").on(table.eventType),
+  index("idx_onboarding_analytics_timestamp").on(table.timestamp),
+]);
+
+export const insertOnboardingAnalyticsSchema = createInsertSchema(onboardingAnalytics).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type OnboardingAnalytics = typeof onboardingAnalytics.$inferSelect;
+export type InsertOnboardingAnalytics = z.infer<typeof insertOnboardingAnalyticsSchema>;
