@@ -420,6 +420,7 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   iceBreakersCache: jsonb("ice_breakers_cache"), // 缓存的破冰话题: {topics: string[], generatedAt: string}
   
   // 活动详情（匹配后生成）
+  venueId: varchar("venue_id"),
   venueName: varchar("venue_name"),
   venueAddress: text("venue_address"),
   finalDateTime: timestamp("final_date_time"),
@@ -993,6 +994,7 @@ export const venues = pgTable("venues", {
   tags: text("tags").array(), // atmosphere tags: cozy, lively, upscale, casual
   cuisines: text("cuisines").array(), // 菜系: 中餐, 川菜, 粤菜, 火锅, 烧烤, 西餐, 日料
   priceRange: text("price_range"), // 预算档次: "150以下", "150-200", "200-300", "300-500"
+  budgetCategories: text("budget_categories").array(), // Standardized budget ranges: ["150以下","150-200","200-300","300-500"] for restaurants, ["80以下","80-150"] for bars
   decorStyle: text("decor_style").array(), // 装修风格: 轻奢现代风, 绿植花园风, 复古工业风, 温馨日式风
   tasteIntensity: text("taste_intensity").array(), // 口味偏好支持: 爱吃辣, 不辣/清淡为主
   
