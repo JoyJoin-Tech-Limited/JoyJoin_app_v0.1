@@ -410,6 +410,15 @@ export default function LoginPage() {
           
           {/* Dark wash overlay for text readability */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
+          
+          {/* Video mute toggle - OPTIMIZED: Enhanced touch target */}
+          <button
+            onClick={() => setIsVideoMuted(!isVideoMuted)}
+            className="absolute bottom-4 right-4 z-10 bg-black/30 hover:bg-black/50 backdrop-blur-sm text-white p-3 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label={isVideoMuted ? "Unmute video" : "Mute video"}
+          >
+            {isVideoMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+          </button>
         </div>
 
         {/* Content Layer */}
@@ -447,15 +456,15 @@ export default function LoginPage() {
               />
             </motion.div>
             
-            <h1 className="text-4xl font-jiangdou text-white drop-shadow-lg" data-testid="text-brand-name">
+            <h1 className="text-3xl sm:text-4xl font-jiangdou text-white drop-shadow-lg" data-testid="text-brand-name">
               悦聚·JoyJoin
             </h1>
             
-            <p className="text-2xl font-jiangdou text-white/90 mt-2 drop-shadow-md">
+            <p className="text-xl sm:text-2xl font-jiangdou text-white/90 mt-2 drop-shadow-md">
               小局·好能量
             </p>
             
-            <p className="text-white/80 mt-4 leading-relaxed max-w-md mx-auto drop-shadow-sm">
+            <p className="text-base sm:text-lg text-white/80 mt-4 leading-relaxed max-w-md mx-auto drop-shadow-sm">
               在香港和深圳，AI帮你找到真正合拍的朋友。<br/>
               每一场4-6人小聚，都是精心策划的相遇。
             </p>
@@ -540,10 +549,10 @@ export default function LoginPage() {
         </a>
       </div>
 
-      {/* Section 3: 小悦介绍区 - 卡片式全身展示 */}
+      {/* Section 3: 小悦介绍区 - OPTIMIZED: Enhanced card design with better shadow */}
       <section className="py-4 px-4" data-testid="section-features">
         <div className="max-w-lg mx-auto">
-          <Card className="overflow-hidden border-0 shadow-sm bg-white dark:bg-card">
+          <Card className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 bg-white dark:bg-card">
             <CardContent className="p-0">
               <div className="flex">
                 {/* 小悦全身图 - 左侧 */}
@@ -564,19 +573,19 @@ export default function LoginPage() {
                 </motion.div>
 
                 {/* 右侧信息区 */}
-                <div className="flex-1 py-3 pr-4 flex flex-col justify-center">
+                <div className="flex-1 py-4 pr-4 flex flex-col justify-center">
                   {/* 名字和标识 */}
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="mb-2"
+                    className="mb-3"
                   >
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-bold text-foreground">小悦</h3>
-                      <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">AI社交建筑师</span>
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded font-medium">AI社交建筑师</span>
                     </div>
-                    <p className="text-sm text-foreground mt-1" data-testid="text-xiaoyue-message-0">
+                    <p className="text-sm text-foreground mt-1.5" data-testid="text-xiaoyue-message-0">
                       帮 <span className="font-bold text-primary">500+</span> 朋友配到chemistry对的饭搭子
                     </p>
                   </motion.div>
@@ -607,7 +616,7 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* Section 5: Login Form */}
+      {/* Section 5: Login Form - OPTIMIZED: Enhanced card with better shadows */}
       <section id="login-section" className="py-6 px-6" data-testid="section-login">
         <div className="max-w-md mx-auto">
           <motion.div
@@ -616,7 +625,7 @@ export default function LoginPage() {
             viewport={{ once: true }}
             className="text-center mb-6"
           >
-            <Badge variant="secondary" className="mb-3">立即开始</Badge>
+            <Badge variant="secondary" className="mb-3 px-4 py-1.5">立即开始</Badge>
             <h2 className="text-xl font-bold">加入悦聚大家庭</h2>
           </motion.div>
 
@@ -625,7 +634,7 @@ export default function LoginPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <Card className="border shadow-lg">
+            <Card className="border shadow-xl hover:shadow-2xl transition-shadow duration-300">
               <CardContent className="p-6 space-y-5">
                 {/* 暂时注释：微信登录按钮 */}
                 {/* <Button
@@ -748,7 +757,7 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* Section 6: Testimonials */}
+      {/* Section 6: Testimonials - OPTIMIZED: Better spacing and card design */}
       <section className="py-12 px-6 bg-muted/30" data-testid="section-testimonials">
         <div className="max-w-lg mx-auto">
           <motion.div
@@ -757,7 +766,7 @@ export default function LoginPage() {
             viewport={{ once: true }}
             className="text-center mb-8"
           >
-            <Badge variant="secondary" className="mb-3">用户心声</Badge>
+            <Badge variant="secondary" className="mb-3 px-4 py-1.5">用户心声</Badge>
             <h2 className="text-xl font-bold">他们在悦聚找到了</h2>
           </motion.div>
 
@@ -769,7 +778,7 @@ export default function LoginPage() {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
               >
-                <Card data-testid={`testimonial-${testimonial.id}`}>
+                <Card className="hover:shadow-lg transition-shadow duration-300" data-testid={`testimonial-${testimonial.id}`}>
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
                       <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -804,7 +813,7 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* Section 7: FAQ */}
+      {/* Section 7: FAQ - OPTIMIZED: Better accordion styling */}
       <section id="faq-section" className="py-12 px-6" data-testid="section-faq">
         <div className="max-w-lg mx-auto">
           <motion.div
@@ -813,16 +822,16 @@ export default function LoginPage() {
             viewport={{ once: true }}
             className="text-center mb-8"
           >
-            <Badge variant="secondary" className="mb-3">常见问题</Badge>
+            <Badge variant="secondary" className="mb-3 px-4 py-1.5">常见问题</Badge>
             <h2 className="text-xl font-bold">你可能想知道</h2>
           </motion.div>
 
-          <Accordion type="single" collapsible className="space-y-2">
+          <Accordion type="single" collapsible className="space-y-3">
             {FAQ_ITEMS.map((item, i) => (
               <AccordionItem 
                 key={i} 
                 value={`item-${i}`}
-                className="border rounded-lg px-4 data-[state=open]:bg-muted/50"
+                className="border rounded-xl px-4 data-[state=open]:bg-muted/50 data-[state=open]:shadow-md transition-all duration-200"
                 data-testid={`faq-item-${i}`}
               >
                 <AccordionTrigger className="text-left hover:no-underline py-3 text-sm">
