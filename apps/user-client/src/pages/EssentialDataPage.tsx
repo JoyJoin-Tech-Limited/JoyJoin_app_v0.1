@@ -66,6 +66,7 @@ interface EssentialDataState {
     hometown: string;
     currentCity: string;
     intent: string[];
+    preFlexibleIntent?: string[]; // Fix: Persist preFlexibleIntent state
   };
   timestamp: number;
 }
@@ -295,6 +296,7 @@ export default function EssentialDataPage() {
           setHometown(state.data.hometown || "");
           setCurrentCity(state.data.currentCity || "");
           setIntent(state.data.intent || []);
+          setPreFlexibleIntent(state.data.preFlexibleIntent || []); // Fix: Restore preFlexibleIntent
         }
       } catch (error) {
         console.error('[EssentialDataPage] Failed to load cached progress:', error);
@@ -314,7 +316,9 @@ export default function EssentialDataPage() {
       if (user.gender) setGender(user.gender);
       if (user.currentCity) setCurrentCity(user.currentCity);
     }
-  }, [user, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Intentionally omit `toast` from deps: error toasts should not cause cache reloads
+  }, [user]);
 
   // Save progress
   const saveProgress = useCallback(() => {
@@ -324,7 +328,7 @@ export default function EssentialDataPage() {
               industryCategory, industryCategoryLabel, industrySegmentNew, industrySegmentLabel,
               industryNiche, industryNicheLabel, industryRawInput, industryNormalized, industrySource, industryConfidence,
               occupationId, workMode,
-              hometown, currentCity, intent },
+              hometown, currentCity, intent, preFlexibleIntent }, // Fix: Persist preFlexibleIntent
       timestamp: Date.now(),
     };
     localStorage.setItem(ESSENTIAL_CACHE_KEY, JSON.stringify(state));
@@ -332,7 +336,7 @@ export default function EssentialDataPage() {
       industryCategory, industryCategoryLabel, industrySegmentNew, industrySegmentLabel,
       industryNiche, industryNicheLabel, industryRawInput, industryNormalized, industrySource, industryConfidence,
       occupationId, workMode,
-      hometown, currentCity, intent]);
+      hometown, currentCity, intent, preFlexibleIntent]); // Fix: Add preFlexibleIntent to deps
 
   useEffect(() => {
     saveProgress();

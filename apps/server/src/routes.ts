@@ -1047,6 +1047,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate or use session ID
       const sessionId = req.session?.id || req.headers['x-session-id'] as string || null;
       
+      // Fix: Validate duration values are non-negative
+      const validSessionDuration = sessionDuration && sessionDuration >= 0 ? sessionDuration : null;
+      const validStepDuration = stepDuration && stepDuration >= 0 ? stepDuration : null;
+      
       // Insert analytics event
       await db.insert(onboardingAnalytics).values({
         userId,
@@ -1054,8 +1058,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         step,
         eventType,
         timestamp: timestamp ? new Date(timestamp) : new Date(),
-        sessionDuration: sessionDuration || null,
-        stepDuration: stepDuration || null,
+        sessionDuration: validSessionDuration,
+        stepDuration: validStepDuration,
         metadata: metadata || null,
         userAgent: userAgent || req.headers['user-agent'] || null,
         screenSize: screenSize || null,
@@ -2515,15 +2519,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Age validation for birthYear field (legacy support)
-      if (profileData.birthYear) {
+      // Fix: More strict validation to match birthdate precision
+      if (profileData.birthYear && !profileData.birthdate) {
         const birthYear = parseInt(profileData.birthYear, 10);
-        const currentYear = new Date().getFullYear();
-        const age = currentYear - birthYear;
         
-        if (age < 18) {
+        if (!Number.isFinite(birthYear)) {
+          return res.status(400).json({
+            message: "无效的出生年份",
+            field: "birthYear",
+          });
+        }
+        
+        const currentYear = new Date().getFullYear();
+        const roughAge = currentYear - birthYear;
+        
+        // Definitely under 18 based on year alone
+        if (roughAge < 18) {
           return res.status(400).json({ 
             message: "JoyJoin 仅面向 18 岁及以上用户开放",
             field: "birthYear" 
+          });
+        }
+        
+        // Borderline case: could be 17 or 18 depending on month/day
+        // Require full birthdate for precise validation
+        if (roughAge === 18) {
+          return res.status(400).json({
+            message: "为了确保您已满 18 周岁，请填写完整出生日期（年-月-日）",
+            field: "birthdate",
           });
         }
       }

@@ -26,11 +26,18 @@ CREATE TABLE IF NOT EXISTS onboarding_analytics (
 );
 
 -- Indexes for efficient querying
+-- Single column indexes for basic filtering
 CREATE INDEX IF NOT EXISTS idx_onboarding_analytics_user_id ON onboarding_analytics(user_id);
 CREATE INDEX IF NOT EXISTS idx_onboarding_analytics_session_id ON onboarding_analytics(session_id);
 CREATE INDEX IF NOT EXISTS idx_onboarding_analytics_step ON onboarding_analytics(step);
 CREATE INDEX IF NOT EXISTS idx_onboarding_analytics_event_type ON onboarding_analytics(event_type);
 CREATE INDEX IF NOT EXISTS idx_onboarding_analytics_timestamp ON onboarding_analytics(timestamp);
+
+-- Composite indexes optimized for common analytics queries
+CREATE INDEX IF NOT EXISTS idx_onboarding_analytics_user_step_event
+  ON onboarding_analytics(user_id, step, event_type);
+CREATE INDEX IF NOT EXISTS idx_onboarding_analytics_user_timestamp
+  ON onboarding_analytics(user_id, timestamp DESC);
 
 -- Comments for documentation
 COMMENT ON TABLE onboarding_analytics IS 'Tracks user progression through onboarding flow for funnel analysis';
