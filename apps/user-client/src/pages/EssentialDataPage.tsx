@@ -19,6 +19,7 @@ import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 import { haptics } from "@/lib/haptics";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import { useOnboardingCheckpoint } from "@/hooks/useOnboardingCheckpoint";
+import { useOnboardingAnalytics } from "@/hooks/useOnboardingAnalytics";
 import {
   Sheet,
   SheetContent,
@@ -65,6 +66,7 @@ interface EssentialDataState {
     hometown: string;
     currentCity: string;
     intent: string[];
+    preFlexibleIntent?: string[]; // Fix: Persist preFlexibleIntent state
   };
   timestamp: number;
 }
@@ -227,6 +229,7 @@ export default function EssentialDataPage() {
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
   const { saveCheckpoint } = useOnboardingCheckpoint();
+  const analytics = useOnboardingAnalytics('essential-data'); // Phase 2: Analytics tracking
 
   const { data: user } = useQuery<any>({ queryKey: ["/api/auth/user"] });
 
@@ -255,15 +258,21 @@ export default function EssentialDataPage() {
   const [hometown, setHometown] = useState("");
   const [currentCity, setCurrentCity] = useState("");
   const [intent, setIntent] = useState<string[]>([]);
+  const [preFlexibleIntent, setPreFlexibleIntent] = useState<string[]>([]); // Phase 0: Fix #9
   const [showCelebration, setShowCelebration] = useState(false);
   const [showManualIndustry, setShowManualIndustry] = useState(false);
 
-  // Load cached progress
+  // Load cached progress (Phase 0: Fix #11 - Error handling)
   useEffect(() => {
     const cached = localStorage.getItem(ESSENTIAL_CACHE_KEY);
     if (cached) {
       try {
         const state: EssentialDataState = JSON.parse(cached);
+        // Validate state structure
+        if (!state.data || typeof state.data !== 'object') {
+          throw new Error('Invalid cached state structure');
+        }
+        
         if (Date.now() - state.timestamp < 24 * 60 * 60 * 1000) {
           setCurrentStep(state.currentStep);
           setDisplayName(state.data.displayName || "");
@@ -287,8 +296,18 @@ export default function EssentialDataPage() {
           setHometown(state.data.hometown || "");
           setCurrentCity(state.data.currentCity || "");
           setIntent(state.data.intent || []);
+          setPreFlexibleIntent(state.data.preFlexibleIntent || []); // Fix: Restore preFlexibleIntent
         }
-      } catch {}
+      } catch (error) {
+        console.error('[EssentialDataPage] Failed to load cached progress:', error);
+        // Clear corrupted cache
+        localStorage.removeItem(ESSENTIAL_CACHE_KEY);
+        toast({
+          title: "缓存已清除",
+          description: "请重新填写信息",
+          variant: "default",
+        });
+      }
     }
     
     // Pre-fill from user data if available
@@ -297,6 +316,8 @@ export default function EssentialDataPage() {
       if (user.gender) setGender(user.gender);
       if (user.currentCity) setCurrentCity(user.currentCity);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Intentionally omit `toast` from deps: error toasts should not cause cache reloads
   }, [user]);
 
   // Save progress
@@ -307,7 +328,7 @@ export default function EssentialDataPage() {
               industryCategory, industryCategoryLabel, industrySegmentNew, industrySegmentLabel,
               industryNiche, industryNicheLabel, industryRawInput, industryNormalized, industrySource, industryConfidence,
               occupationId, workMode,
-              hometown, currentCity, intent },
+              hometown, currentCity, intent, preFlexibleIntent }, // Fix: Persist preFlexibleIntent
       timestamp: Date.now(),
     };
     localStorage.setItem(ESSENTIAL_CACHE_KEY, JSON.stringify(state));
@@ -315,7 +336,7 @@ export default function EssentialDataPage() {
       industryCategory, industryCategoryLabel, industrySegmentNew, industrySegmentLabel,
       industryNiche, industryNicheLabel, industryRawInput, industryNormalized, industrySource, industryConfidence,
       occupationId, workMode,
-      hometown, currentCity, intent]);
+      hometown, currentCity, intent, preFlexibleIntent]); // Fix: Add preFlexibleIntent to deps
 
   useEffect(() => {
     saveProgress();
@@ -329,6 +350,22 @@ export default function EssentialDataPage() {
       localStorage.removeItem(ESSENTIAL_CACHE_KEY);
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
+      // Phase 2: Track successful completion
+      analytics.stepCompleted({
+        stepsCompleted: TOTAL_STEPS,
+        fieldsProvided: {
+          displayName: !!displayName,
+          gender: !!gender,
+          birthYear: !!(birthDate || birthYear),
+          relationshipStatus: !!relationshipStatus,
+          education: !!education,
+          industry: !!industryCategory,
+          hometown: !!hometown,
+          currentCity: !!currentCity,
+          intent: intent.length > 0,
+        },
+      });
+      
       // Save checkpoint after completing essential data (await to ensure persistence)
       try {
         await saveCheckpoint.mutateAsync('essential-data');
@@ -340,6 +377,8 @@ export default function EssentialDataPage() {
       setLocation("/onboarding/extended");
     },
     onError: (error: Error) => {
+      // Phase 2: Track errors
+      analytics.errorOccurred('save_failed', error.message);
       toast({
         title: "保存失败",
         description: error.message,
@@ -367,11 +406,15 @@ export default function EssentialDataPage() {
   const toggleIntent = (value: string) => {
     setIntent(prev => {
       // Handle "flexible" (随缘) - mutually exclusive with other options
+      // Phase 0: Fix #9 - Preserve previous intents when toggling flexible
       if (value === "flexible") {
         if (prev.includes("flexible")) {
-          return []; // Deselect flexible
+          // Deselecting flexible - restore previous intents if any
+          return preFlexibleIntent.length > 0 ? preFlexibleIntent : [];
         } else {
-          return ["flexible"]; // Select only flexible, clear others
+          // Selecting flexible - save current intents and select only flexible
+          setPreFlexibleIntent(prev.filter(v => v !== "flexible"));
+          return ["flexible"];
         }
       }
       
@@ -426,11 +469,37 @@ export default function EssentialDataPage() {
           occupationId,
           workMode,
         };
+        
+        // Age validation (Phase 0: Fix #8) - Client-side pre-check
+        let calculatedAge = 0;
         if (birthDate) {
           profileData.birthdate = `${birthDate.year}-${String(birthDate.month).padStart(2, '0')}-${String(birthDate.day).padStart(2, '0')}`;
+          
+          const birthDateObj = new Date(profileData.birthdate);
+          const today = new Date();
+          calculatedAge = today.getFullYear() - birthDateObj.getFullYear();
+          const monthDiff = today.getMonth() - birthDateObj.getMonth();
+          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
+            calculatedAge--;
+          }
         } else if (birthYear) {
           profileData.birthdate = `${birthYear}-01-01`;
+          calculatedAge = new Date().getFullYear() - parseInt(birthYear, 10);
         }
+        
+        // Validate age >= 18
+        if (calculatedAge < 18) {
+          setShowCelebration(false);
+          // Phase 2: Track age validation failure
+          analytics.validationFailed('birthdate', `Age under 18 (${calculatedAge})`);
+          toast({
+            title: "年龄限制",
+            description: "JoyJoin 仅面向 18 岁及以上用户开放",
+            variant: "destructive",
+          });
+          return;
+        }
+        
         saveMutation.mutate(profileData);
       }, 1500);
     }

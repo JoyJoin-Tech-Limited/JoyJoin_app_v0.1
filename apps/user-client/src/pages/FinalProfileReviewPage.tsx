@@ -4,16 +4,20 @@
  * Two phases:
  * 1. Analyzing (0-3s): Spiral wave animation with fade-in text
  * 2. Complete (3s+): Profile portrait card with stagger animation
+ * 
+ * Phase 0: Fix #5 - Loading states for all data dependencies
  */
 
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { SpiralWaveAnimation } from "@/components/SpiralWaveAnimation";
 import { ProfilePortraitCard } from "@/components/ProfilePortraitCard";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useOnboardingAnalytics } from "@/hooks/useOnboardingAnalytics"; // Phase 2
 
 type Phase = "analyzing" | "complete";
 
@@ -21,15 +25,59 @@ export default function FinalProfileReviewPage() {
   const [phase, setPhase] = useState<Phase>("analyzing");
   const [, setLocation] = useLocation();
   const prefersReducedMotion = useReducedMotion();
+  const analytics = useOnboardingAnalytics('profile-review'); // Phase 2: Analytics
+
+  // Phase 0: Fix #5 - Wait for all data to load before showing complete phase
+  const { data: user } = useQuery<any>({ 
+    queryKey: ["/api/auth/user"],
+  });
+  
+  const { data: interests, isLoading: interestsLoading } = useQuery<any>({ 
+    queryKey: ["/api/user/interests"],
+    enabled: !!user?.hasCompletedInterestsCarousel,
+  });
 
   useEffect(() => {
     const duration = prefersReducedMotion ? 1000 : 3000;
-    const timer = setTimeout(() => setPhase("complete"), duration);
+    const timer = setTimeout(() => {
+      // Only transition to complete if data is ready
+      if (!interestsLoading && interests && user) {
+        setPhase("complete");
+      }
+    }, duration);
     return () => clearTimeout(timer);
-  }, [prefersReducedMotion]);
+  }, [prefersReducedMotion, interestsLoading, interests, user]);
 
   const handleContinue = () => {
-    setLocation("/onboarding/login");
+    // Phase 2: Track completion
+    analytics.stepCompleted({
+      viewedFullProfile: true,
+      hasInterests: !!interests,
+      hasArchetype: !!user?.archetype,
+    });
+    
+    // Phase 0: Fix #8 - Mark profile review as seen
+    localStorage.setItem('profile_review_seen', 'true');
+    
+    // Fix: Use correct onboarding flow routing
+    // After profile review, check server-driven nextStep or default to guide
+    const nextStep = user?.nextStep;
+    let nextPath: string;
+    
+    switch (nextStep) {
+      case "guide":
+        nextPath = "/guide";
+        break;
+      case "discover":
+        nextPath = "/discover";
+        break;
+      default:
+        // Fallback: send users to the guide if nextStep is missing or unexpected
+        nextPath = "/guide";
+        break;
+    }
+    
+    setLocation(nextPath);
   };
 
   return (

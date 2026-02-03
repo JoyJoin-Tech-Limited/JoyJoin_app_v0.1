@@ -99,9 +99,10 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
     queryKey: ["/api/auth/user"],
   });
 
-  // Fetch personality assessment
-  const { data: assessment } = useQuery<any>({ 
+  // Fetch personality assessment (Phase 0: Fix #10 - Error state)
+  const { data: assessment, error: assessmentError, refetch: refetchAssessment } = useQuery<any>({ 
     queryKey: ["/api/assessment/result"],
+    retry: 2,
   });
 
   // Fetch interest carousel data
@@ -147,18 +148,19 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
   // Gender emoji
   const genderEmoji = user?.gender === "女性" ? "👩" : user?.gender === "男性" ? "👨" : "";
 
-  // Calculate profile completion
+  // Calculate profile completion (Phase 0: Fix #4 - Simplified calculation)
+  // Note: hometown is optional, so location section only requires currentCity
   const profileCompletion = useMemo(() => {
-    const essentialFields = [
-      user?.displayName,
-      user?.gender,
-      user?.birthdate || user?.age,
-      user?.currentCity,
-      user?.industryCategory || user?.industryCategoryLabel,
-      user?.educationLevel,
-    ];
-    const completed = essentialFields.filter(Boolean).length;
-    const total = essentialFields.length;
+    const sections = {
+      basic: !!(user?.displayName && user?.gender && (user?.birthdate || user?.birthYear || user?.age)),
+      location: !!(user?.currentCity), // hometown is optional
+      work: !!(user?.industryCategory && user?.educationLevel),
+      interests: !!user?.hasCompletedInterestsCarousel,
+      intent: !!(user?.intent && Array.isArray(user.intent) && user.intent.length > 0),
+    };
+    
+    const completed = Object.values(sections).filter(Boolean).length;
+    const total = Object.keys(sections).length;
     return Math.round((completed / total) * 100);
   }, [user]);
 
@@ -416,6 +418,26 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
       </motion.div>
 
       {/* 2. Personality Card */}
+      {/* Phase 0: Fix #10 - Xiaoyue analysis error state */}
+      {assessmentError && (
+        <motion.div variants={itemVariants}>
+          <Card className="p-4 border-orange-200 bg-orange-50">
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-orange-800 font-medium">AI分析暂时不可用</p>
+              <p className="text-xs text-orange-600">请稍后重试或继续完善资料</p>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => refetchAssessment()}
+                className="w-fit"
+              >
+                重试
+              </Button>
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
       {assessment && archetype && (
         <motion.div variants={itemVariants}>
           <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
