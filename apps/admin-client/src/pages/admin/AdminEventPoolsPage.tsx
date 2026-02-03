@@ -262,12 +262,6 @@ export default function AdminEventPoolsPage() {
         params.append("district", currentDistrict);
       }
       
-      // TODO: Add budget restrictions from form when implemented
-      // const budgetRestrictions = form.watch("budgetRestrictions");
-      // if (budgetRestrictions?.length > 0) {
-      //   params.append("budgetRestrictions", JSON.stringify(budgetRestrictions));
-      // }
-      
       const res = await apiRequest("GET", `/api/admin/smart-venues?${params}`);
       const venues = res as any[];
       
