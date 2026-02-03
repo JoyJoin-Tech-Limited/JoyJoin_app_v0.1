@@ -17,6 +17,7 @@ import { ArrowRight } from "lucide-react";
 import { SpiralWaveAnimation } from "@/components/SpiralWaveAnimation";
 import { ProfilePortraitCard } from "@/components/ProfilePortraitCard";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useOnboardingAnalytics } from "@/hooks/useOnboardingAnalytics"; // Phase 2
 
 type Phase = "analyzing" | "complete";
 
@@ -24,6 +25,7 @@ export default function FinalProfileReviewPage() {
   const [phase, setPhase] = useState<Phase>("analyzing");
   const [, setLocation] = useLocation();
   const prefersReducedMotion = useReducedMotion();
+  const analytics = useOnboardingAnalytics('profile-review'); // Phase 2: Analytics
 
   // Phase 0: Fix #5 - Wait for all data to load before showing complete phase
   const { data: user } = useQuery<any>({ 
@@ -47,6 +49,13 @@ export default function FinalProfileReviewPage() {
   }, [prefersReducedMotion, interestsLoading, interests, user]);
 
   const handleContinue = () => {
+    // Phase 2: Track completion
+    analytics.stepCompleted({
+      viewedFullProfile: true,
+      hasInterests: !!interests,
+      hasArchetype: !!user?.archetype,
+    });
+    
     // Phase 0: Fix #8 - Mark profile review as seen
     localStorage.setItem('profile_review_seen', 'true');
     setLocation("/onboarding/login");
