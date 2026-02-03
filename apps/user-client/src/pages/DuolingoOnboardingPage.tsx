@@ -510,10 +510,10 @@ export default function DuolingoOnboardingPage() {
         console.error('[DuolingoOnboardingPage] Failed to save checkpoint:', error);
         // Continue navigation even if checkpoint fails (non-blocking)
       } finally {
-        // Invalidate and refetch auth state to ensure server-driven nextStep is updated
+        // Refetch auth state to ensure server-driven nextStep is updated before navigation
         // This ensures /personality-test page renders the adaptive assessment instead of landing screen
         try {
-          await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+          await queryClient.refetchQueries({ queryKey: ['/api/auth/user'] });
         } catch (error) {
           console.error('[DuolingoOnboardingPage] Failed to refresh auth state:', error);
           // Continue navigation even if auth refresh fails (non-blocking)
