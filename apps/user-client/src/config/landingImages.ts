@@ -21,25 +21,25 @@ export interface LandingImage {
 export const landingImages: LandingImage[] = [
   {
     id: 'lifestyle-1',
-    src: '/images/landing/lifestyle-1.jpg',
+    src: '/images/landing/lifestyle-1.svg',
     alt: '朋友聚会',
     rotation: -2,
   },
   {
     id: 'lifestyle-2',
-    src: '/images/landing/lifestyle-2.jpg',
+    src: '/images/landing/lifestyle-2.svg',
     alt: '深度交流',
     rotation: 3,
   },
   {
     id: 'lifestyle-3',
-    src: '/images/landing/lifestyle-3.jpg',
+    src: '/images/landing/lifestyle-3.svg',
     alt: '轻松娱乐',
     rotation: 2,
   },
   {
     id: 'lifestyle-4',
-    src: '/images/landing/lifestyle-4.jpg',
+    src: '/images/landing/lifestyle-4.svg',
     alt: '美食分享',
     rotation: -3,
   },
