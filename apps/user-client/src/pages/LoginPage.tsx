@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Accordion,
   AccordionContent,
@@ -97,6 +98,17 @@ const FAQ_ITEMS = [
   },
 ];
 
+// Design Tokens & UX Principles (2026):
+// - Touch targets: Minimum 48px (52px+ preferred) for better mobile UX
+// - Visual hierarchy: Primary CTA above fold, progressive disclosure
+// - Loading states: Skeleton screens for perceived performance
+// - Animations: Subtle (floating logo 3s loop, hover states <300ms)
+// - Spacing: 4px base grid (using Tailwind's spacing scale)
+// - Shadows: Layered depth (sm/md/lg/xl/2xl for elevation)
+// - Typography: Base 16px, scale up for hierarchy
+// - Colors: Primary gradient (purple-pink), white overlay for trust badges
+// - Accessibility: WCAG AA contrast, keyboard navigation, semantic HTML
+
 // 小悦对话消息序列
 const XIAOYUE_MESSAGES = [
   "嗨～我是小悦，你的社交配局师！",
@@ -143,6 +155,33 @@ export default function LoginPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const isDevelopment = import.meta.env.DEV;
 
+  // Performance tracking for loading states
+  useEffect(() => {
+    const trackLoadingPerformance = () => {
+      if (typeof window !== 'undefined' && window.performance) {
+        const perfData = window.performance.timing;
+        const pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
+        const connectTime = perfData.responseEnd - perfData.requestStart;
+        
+        if (pageLoadTime > 0) {
+          console.log('📊 [Analytics] Landing Page Performance:', {
+            pageLoadTime: `${pageLoadTime}ms`,
+            connectTime: `${connectTime}ms`,
+            domContentLoaded: `${perfData.domContentLoadedEventEnd - perfData.navigationStart}ms`,
+          });
+        }
+      }
+    };
+
+    // Track performance after page fully loaded
+    if (document.readyState === 'complete') {
+      trackLoadingPerformance();
+    } else {
+      window.addEventListener('load', trackLoadingPerformance);
+      return () => window.removeEventListener('load', trackLoadingPerformance);
+    }
+  }, []);
+
   // Test shortcut: press 't' to go to registration
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -160,7 +199,7 @@ export default function LoginPage() {
   }, []);
 
   // Fetch public stats for social proof
-  const { data: stats } = useQuery<PublicStats>({
+  const { data: stats, isLoading: isStatsLoading } = useQuery<PublicStats>({
     queryKey: ["/api/public/stats"],
     retry: false,
   });
@@ -349,9 +388,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Section 1: Hero with Video Background */}
+      {/* Section 1: Hero with Video Background - OPTIMIZED: Reduced height for better CTA visibility */}
       <section 
-        className="relative min-h-[70vh] flex items-center justify-center overflow-hidden"
+        className="relative min-h-[55vh] flex items-center justify-center overflow-hidden"
         data-testid="section-hero"
       >
         {/* Video Background Layer */}
@@ -384,14 +423,27 @@ export default function LoginPage() {
               key={`logo-${Date.now()}`}
               className="flex justify-center mb-6"
               initial={{ opacity: 0, scale: 0.7 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", stiffness: 180, damping: 12, duration: 0.8 }}
+              animate={{ 
+                opacity: 1, 
+                scale: 1,
+                y: [0, -8, 0], // Floating animation
+              }}
+              transition={{ 
+                opacity: { duration: 0.5 },
+                scale: { type: "spring", stiffness: 180, damping: 12, duration: 0.8 },
+                y: { 
+                  duration: 3, 
+                  repeat: Infinity, 
+                  ease: "easeInOut" 
+                }
+              }}
             >
               <img 
                 src={joyJoinLogo} 
                 alt="悦聚 JoyJoin Logo" 
-                className="h-44 w-auto drop-shadow-xl"
+                className="h-36 w-auto drop-shadow-2xl"
                 data-testid="img-logo"
+                loading="eager"
               />
             </motion.div>
             
@@ -409,7 +461,7 @@ export default function LoginPage() {
             </p>
           </motion.div>
 
-          {/* CTA Button - P0 优化：渐变+发光+脉冲动画 */}
+          {/* CTA Button - OPTIMIZED: Enhanced touch target (min 48px), improved gradient, larger size */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -419,44 +471,44 @@ export default function LoginPage() {
             <motion.div
               animate={{ 
                 boxShadow: [
-                  "0 0 15px rgba(168, 85, 247, 0.4), 0 0 30px rgba(168, 85, 247, 0.2)",
-                  "0 0 25px rgba(168, 85, 247, 0.6), 0 0 50px rgba(168, 85, 247, 0.3)",
-                  "0 0 15px rgba(168, 85, 247, 0.4), 0 0 30px rgba(168, 85, 247, 0.2)"
+                  "0 0 20px rgba(168, 85, 247, 0.5), 0 0 40px rgba(168, 85, 247, 0.25)",
+                  "0 0 30px rgba(168, 85, 247, 0.7), 0 0 60px rgba(168, 85, 247, 0.35)",
+                  "0 0 20px rgba(168, 85, 247, 0.5), 0 0 40px rgba(168, 85, 247, 0.25)"
                 ]
               }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="inline-flex rounded-md"
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+              className="inline-flex rounded-lg"
             >
               <Button
                 size="lg"
-                className="min-h-[52px] px-10 text-lg font-bold bg-gradient-to-r from-purple-500 via-primary to-pink-500 hover:from-purple-600 hover:via-primary/90 hover:to-pink-600 text-white border-0 shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                className="min-h-[56px] min-w-[180px] px-12 py-4 text-lg font-bold bg-gradient-to-r from-purple-600 via-primary to-pink-600 hover:from-purple-700 hover:via-primary/95 hover:to-pink-700 text-white border-0 shadow-2xl transition-all duration-300 hover:scale-[1.03] active:scale-[0.98]"
                 onClick={() => setLocation("/onboarding")}
                 data-testid="button-hero-cta"
               >
                 立即体验
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <ArrowRight className="ml-2 h-6 w-6" />
               </Button>
             </motion.div>
           </motion.div>
 
-          {/* Safety Badges - P0 优化 */}
+          {/* Safety Badges - OPTIMIZED: Enhanced visibility and larger touch targets */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.5 }}
-            className="flex items-center justify-center gap-4 flex-wrap"
+            className="flex items-center justify-center gap-5 flex-wrap"
           >
-            <div className="flex items-center gap-1.5 text-white/80 text-sm">
-              <Shield className="h-4 w-4" />
-              <span>实名认证</span>
+            <div className="flex items-center gap-2 text-white/90 text-base bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
+              <Shield className="h-5 w-5" />
+              <span className="font-medium">实名认证</span>
             </div>
-            <div className="flex items-center gap-1.5 text-white/80 text-sm">
-              <CheckCircle2 className="h-4 w-4" />
-              <span>不满意全退</span>
+            <div className="flex items-center gap-2 text-white/90 text-base bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
+              <CheckCircle2 className="h-5 w-5" />
+              <span className="font-medium">不满意全退</span>
             </div>
-            <div className="flex items-center gap-1.5 text-white/80 text-sm">
-              <Users className="h-4 w-4" />
-              <span>4-6人小局</span>
+            <div className="flex items-center gap-2 text-white/90 text-base bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
+              <Users className="h-5 w-5" />
+              <span className="font-medium">4-6人小局</span>
             </div>
           </motion.div>
         </div>
@@ -470,7 +522,7 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* P1-1: FAQ Quick Entry - 社恐安心提示 */}
+      {/* P1-1: FAQ Quick Entry - OPTIMIZED: Larger touch target */}
       <div className="px-4 pb-4" data-testid="section-faq-quick">
         <a href="#faq-section"
           className="block max-w-lg mx-auto"
@@ -480,10 +532,10 @@ export default function LoginPage() {
           }}
           data-testid="link-faq-reassurance"
         >
-          <div className="flex items-center justify-center gap-2 min-h-[44px] px-4 bg-primary/10 hover:bg-primary/15 rounded-lg transition-colors">
-            <Heart className="h-5 w-5 text-primary" />
-            <span className="text-base text-foreground">一个人去会不会尴尬？</span>
-            <ArrowRight className="h-5 w-5 text-muted-foreground" />
+          <div className="flex items-center justify-center gap-3 min-h-[52px] px-5 bg-primary/10 hover:bg-primary/20 rounded-lg transition-all duration-200 hover:shadow-md active:scale-[0.98]">
+            <Heart className="h-5 w-5 text-primary flex-shrink-0" />
+            <span className="text-base font-medium text-foreground">一个人去会不会尴尬？</span>
+            <ArrowRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
           </div>
         </a>
       </div>
@@ -507,6 +559,7 @@ export default function LoginPage() {
                     alt="小悦" 
                     className="w-full h-48 object-contain object-center"
                     data-testid="img-xiaoyue-avatar"
+                    loading="lazy"
                   />
                 </motion.div>
 
@@ -601,7 +654,7 @@ export default function LoginPage() {
                     <Label htmlFor="phone" className="text-sm font-medium">手机号</Label>
                     <div className="flex gap-2">
                       <Select value={areaCode} onValueChange={setAreaCode}>
-                        <SelectTrigger className="w-[110px] h-11" data-testid="select-area-code">
+                        <SelectTrigger className="w-[110px] min-h-[48px]" data-testid="select-area-code">
                           <span className="flex items-center gap-1">
                             <span>{AREA_CODES.find(a => a.code === areaCode)?.flag}</span>
                             <span>{areaCode}</span>
@@ -626,7 +679,7 @@ export default function LoginPage() {
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, getPhoneLength()))}
                         maxLength={getPhoneLength()}
-                        className="h-11 flex-1"
+                        className="min-h-[48px] flex-1 text-base"
                         data-testid="input-phone"
                       />
                     </div>
@@ -661,7 +714,7 @@ export default function LoginPage() {
 
                   <Button
                     size="lg"
-                    className="w-full h-11"
+                    className="w-full min-h-[52px] text-base font-semibold hover:scale-[1.01] active:scale-[0.99] transition-all duration-200"
                     onClick={handleLogin}
                     disabled={loginMutation.isPending}
                     data-testid="button-login"
@@ -802,13 +855,13 @@ export default function LoginPage() {
 
             <Button 
               size="lg" 
-              className="px-8"
+              className="min-h-[52px] px-10 text-base font-semibold hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 shadow-lg"
               onClick={() => document.getElementById('phone')?.focus()}
               data-testid="button-cta"
             >
               <Sparkles className="mr-2 h-5 w-5" />
               立即开始
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </motion.div>
         </div>
