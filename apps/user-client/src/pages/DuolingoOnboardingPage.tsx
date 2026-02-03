@@ -514,7 +514,6 @@ export default function DuolingoOnboardingPage() {
         // This ensures /personality-test page renders the adaptive assessment instead of landing screen
         try {
           await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-          await queryClient.refetchQueries({ queryKey: ['/api/auth/user'] });
         } catch (error) {
           console.error('[DuolingoOnboardingPage] Failed to refresh auth state:', error);
           // Continue navigation even if auth refresh fails (non-blocking)
