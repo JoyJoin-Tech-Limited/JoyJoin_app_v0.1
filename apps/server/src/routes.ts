@@ -7907,10 +7907,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(venueTimeSlots.isActive, true));
 
         const venuesWithActiveSlots = new Set(
-          activeSlots.map((slot) => slot.venueId)
+          activeSlots.map((slot: { venueId: string | null }) => slot.venueId)
         );
 
-        venuesWithSlots = filteredVenues.map((venue) => ({
+        venuesWithSlots = filteredVenues.map((venue: typeof venues.$inferSelect) => ({
           ...venue,
           hasTimeSlots: venuesWithActiveSlots.has(venue.id),
         }));
