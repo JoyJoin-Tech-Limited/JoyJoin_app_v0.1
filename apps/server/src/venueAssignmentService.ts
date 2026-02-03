@@ -70,7 +70,7 @@ function calculateCuisineMatch(
     return 50; // Neutral if group has no preferences
   }
   
-  // Calculate overlap score
+  // Calculate overlap score - normalized by total member count
   let matchCount = 0;
   for (const venueCuisine of venueCuisines) {
     if (groupCuisinePrefs.has(venueCuisine)) {
@@ -78,9 +78,9 @@ function calculateCuisineMatch(
     }
   }
   
-  // Normalize to 0-100
-  const maxPossible = members.length * venueCuisines.length;
-  return Math.min(100, Math.round((matchCount / Math.max(1, groupCuisinePrefs.size)) * 100));
+  // Normalize by member count to get percentage of members satisfied
+  // This prevents easy saturation and reflects actual overlap
+  return Math.min(100, Math.round((matchCount / members.length) * 100));
 }
 
 /**
@@ -172,6 +172,9 @@ async function scoreVenueForGroup(
   }
   
   // 3. Capacity Match (20 points)
+  // NOTE: Current schema's 'capacity' field represents concurrent events, not seating capacity.
+  // This is a known limitation. Future: add dedicated 'seating_capacity' or 'max_group_size' field.
+  // For now, we use 'capacity' as a proxy - if it's set and >= group size, venue likely can handle the group.
   const groupSize = group.members.length;
   if (venue.capacity && venue.capacity >= groupSize) {
     score += 20;
