@@ -108,6 +108,13 @@ const FAQ_ITEMS = [
 // - Colors: Primary gradient (purple-pink), white overlay for trust badges
 // - Accessibility: WCAG AA contrast, keyboard navigation, semantic HTML
 
+// Design Constants
+const DESIGN_TOKENS = {
+  LOGO_HEIGHT: 36, // h-36 in pixels (144px)
+  FLOAT_ANIMATION_OFFSET: 8, // pixels for logo floating effect
+  PRIMARY_GLOW_COLOR: 'rgba(168, 85, 247, 0.5)', // purple-500 for glow effects
+} as const;
+
 // 小悦对话消息序列
 const XIAOYUE_MESSAGES = [
   "嗨～我是小悦，你的社交配局师！",
@@ -188,6 +195,8 @@ export default function LoginPage() {
               domContentLoaded: `${Math.round(perfData.domContentLoadedEventEnd - perfData.fetchStart)}ms`,
             });
           }
+        } else {
+          console.log('📊 [Analytics] Navigation Timing API not available in this environment');
         }
       }
     };
@@ -454,7 +463,7 @@ export default function LoginPage() {
               animate={{ 
                 opacity: 1, 
                 scale: 1,
-                y: prefersReducedMotion ? 0 : [0, -8, 0], // Disable floating if reduced motion preferred
+                y: prefersReducedMotion ? 0 : [0, -DESIGN_TOKENS.FLOAT_ANIMATION_OFFSET, 0], // Floating animation with design token
               }}
               transition={{ 
                 opacity: { duration: 0.5 },
@@ -499,9 +508,9 @@ export default function LoginPage() {
             <motion.div
               animate={{ 
                 boxShadow: [
-                  "0 0 20px rgba(168, 85, 247, 0.5), 0 0 40px rgba(168, 85, 247, 0.25)",
-                  "0 0 30px rgba(168, 85, 247, 0.7), 0 0 60px rgba(168, 85, 247, 0.35)",
-                  "0 0 20px rgba(168, 85, 247, 0.5), 0 0 40px rgba(168, 85, 247, 0.25)"
+                  `0 0 20px ${DESIGN_TOKENS.PRIMARY_GLOW_COLOR}, 0 0 40px rgba(168, 85, 247, 0.25)`,
+                  `0 0 30px rgba(168, 85, 247, 0.7), 0 0 60px rgba(168, 85, 247, 0.35)`,
+                  `0 0 20px ${DESIGN_TOKENS.PRIMARY_GLOW_COLOR}, 0 0 40px rgba(168, 85, 247, 0.25)`
                 ]
               }}
               transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
