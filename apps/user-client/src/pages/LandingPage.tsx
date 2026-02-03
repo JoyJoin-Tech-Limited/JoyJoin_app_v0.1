@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,23 +17,6 @@ import friendsDining3 from "@/assets/stock_images/friends_dining_toget_b131887b.
 import shenzhenCity1 from "@/assets/stock_images/shenzhen_city_roofto_e7cea581.jpg";
 import hongKongShenzhen from "@/assets/stock_images/hong_kong_shenzhen_s_02dfe6bb.jpg";
 
-// Design system tokens (matching requirement specifications)
-const DESIGN_TOKENS = {
-  colors: {
-    primary: '#8B5CF6',    // Purple
-    secondary: '#EC4899',  // Pink
-    accent: '#F59E0B',     // Amber
-  },
-  spacing: {
-    xs: '8px',
-    sm: '16px',
-    md: '24px',
-    lg: '32px',
-    xl: '48px',
-    '2xl': '64px',
-  },
-};
-
 // Sample photos for social proof grid using local assets
 const SAMPLE_PHOTOS = [
   friendsDining1,
@@ -47,17 +30,12 @@ const SAMPLE_PHOTOS = [
 ];
 
 interface LandingPageData {
-  photoLoaded: boolean[];
   userCount: number;
 }
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, nextStep } = useAuth();
-  const [data, setData] = useState<LandingPageData>({
-    photoLoaded: new Array(8).fill(false),
-    userCount: 12847,
-  });
 
   // Track analytics on mount
   useEffect(() => {
@@ -72,13 +50,8 @@ export default function LandingPage() {
     };
   }, []);
 
-  // Handle photo load
-  const handlePhotoLoad = (index: number) => {
-    setData(prev => ({
-      ...prev,
-      photoLoaded: prev.photoLoaded.map((loaded, i) => i === index ? true : loaded)
-    }));
-  };
+  // User count for social proof
+  const userCount = 12847;
 
   // Primary CTA handler
   const handleStartMatching = () => {
@@ -196,25 +169,10 @@ export default function LandingPage() {
           <div className="grid grid-cols-4 gap-2 mb-4">
             {SAMPLE_PHOTOS.map((photo, index) => (
               <div key={index} className="relative aspect-square rounded-2xl overflow-hidden">
-                {/* Skeleton loader */}
-                {!data.photoLoaded[index] && (
-                  <div 
-                    className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse"
-                    style={{
-                      animation: 'shimmer 1.5s infinite',
-                      backgroundSize: '200% 100%',
-                    }}
-                  />
-                )}
-                {/* Actual image */}
-                <motion.img
+                <img
                   src={photo}
                   alt={`User ${index + 1}`}
                   className="w-full h-full object-cover"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: data.photoLoaded[index] ? 1 : 0 }}
-                  transition={{ duration: 0.3 }}
-                  onLoad={() => handlePhotoLoad(index)}
                   loading="lazy"
                 />
               </div>
@@ -225,7 +183,7 @@ export default function LandingPage() {
           <p className="text-center text-sm text-muted-foreground">
             已有{' '}
             <span className="font-bold text-primary text-base">
-              {data.userCount.toLocaleString()}
+              {userCount.toLocaleString()}
             </span>{' '}
             人完成匹配
           </p>
@@ -318,17 +276,8 @@ export default function LandingPage() {
         <p>© 2026 版权所有</p>
       </footer>
 
-      {/* Keyframes for shimmer animation */}
+      {/* Keyframes for accessibility */}
       <style>{`
-        @keyframes shimmer {
-          0% {
-            background-position: 200% 0;
-          }
-          100% {
-            background-position: -200% 0;
-          }
-        }
-
         @media (prefers-reduced-motion: reduce) {
           * {
             animation-duration: 0.01ms !important;
