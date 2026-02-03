@@ -255,15 +255,21 @@ export default function EssentialDataPage() {
   const [hometown, setHometown] = useState("");
   const [currentCity, setCurrentCity] = useState("");
   const [intent, setIntent] = useState<string[]>([]);
+  const [preFlexibleIntent, setPreFlexibleIntent] = useState<string[]>([]); // Phase 0: Fix #9
   const [showCelebration, setShowCelebration] = useState(false);
   const [showManualIndustry, setShowManualIndustry] = useState(false);
 
-  // Load cached progress
+  // Load cached progress (Phase 0: Fix #11 - Error handling)
   useEffect(() => {
     const cached = localStorage.getItem(ESSENTIAL_CACHE_KEY);
     if (cached) {
       try {
         const state: EssentialDataState = JSON.parse(cached);
+        // Validate state structure
+        if (!state.data || typeof state.data !== 'object') {
+          throw new Error('Invalid cached state structure');
+        }
+        
         if (Date.now() - state.timestamp < 24 * 60 * 60 * 1000) {
           setCurrentStep(state.currentStep);
           setDisplayName(state.data.displayName || "");
@@ -288,7 +294,16 @@ export default function EssentialDataPage() {
           setCurrentCity(state.data.currentCity || "");
           setIntent(state.data.intent || []);
         }
-      } catch {}
+      } catch (error) {
+        console.error('[EssentialDataPage] Failed to load cached progress:', error);
+        // Clear corrupted cache
+        localStorage.removeItem(ESSENTIAL_CACHE_KEY);
+        toast({
+          title: "缓存已清除",
+          description: "请重新填写信息",
+          variant: "default",
+        });
+      }
     }
     
     // Pre-fill from user data if available
@@ -297,7 +312,7 @@ export default function EssentialDataPage() {
       if (user.gender) setGender(user.gender);
       if (user.currentCity) setCurrentCity(user.currentCity);
     }
-  }, [user]);
+  }, [user, toast]);
 
   // Save progress
   const saveProgress = useCallback(() => {
@@ -367,11 +382,15 @@ export default function EssentialDataPage() {
   const toggleIntent = (value: string) => {
     setIntent(prev => {
       // Handle "flexible" (随缘) - mutually exclusive with other options
+      // Phase 0: Fix #9 - Preserve previous intents when toggling flexible
       if (value === "flexible") {
         if (prev.includes("flexible")) {
-          return []; // Deselect flexible
+          // Deselecting flexible - restore previous intents if any
+          return preFlexibleIntent.length > 0 ? preFlexibleIntent : [];
         } else {
-          return ["flexible"]; // Select only flexible, clear others
+          // Selecting flexible - save current intents and select only flexible
+          setPreFlexibleIntent(prev.filter(v => v !== "flexible"));
+          return ["flexible"];
         }
       }
       
@@ -426,11 +445,35 @@ export default function EssentialDataPage() {
           occupationId,
           workMode,
         };
+        
+        // Age validation (Phase 0: Fix #8) - Client-side pre-check
+        let calculatedAge = 0;
         if (birthDate) {
           profileData.birthdate = `${birthDate.year}-${String(birthDate.month).padStart(2, '0')}-${String(birthDate.day).padStart(2, '0')}`;
+          
+          const birthDateObj = new Date(profileData.birthdate);
+          const today = new Date();
+          calculatedAge = today.getFullYear() - birthDateObj.getFullYear();
+          const monthDiff = today.getMonth() - birthDateObj.getMonth();
+          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
+            calculatedAge--;
+          }
         } else if (birthYear) {
           profileData.birthdate = `${birthYear}-01-01`;
+          calculatedAge = new Date().getFullYear() - parseInt(birthYear, 10);
         }
+        
+        // Validate age >= 18
+        if (calculatedAge < 18) {
+          setShowCelebration(false);
+          toast({
+            title: "年龄限制",
+            description: "JoyJoin 仅面向 18 岁及以上用户开放",
+            variant: "destructive",
+          });
+          return;
+        }
+        
         saveMutation.mutate(profileData);
       }, 1500);
     }

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ArrowUp } from "lucide-react";
+import { ChevronLeft, ArrowUp, AlertCircle, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -580,7 +580,19 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
           )}
         </AnimatePresence>
         
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-4 space-y-2">
+          {/* Phase 0: Fix #6 - User feedback for minimum selection */}
+          {totalSelections < 3 && (
+            <motion.p 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-sm text-orange-600 dark:text-orange-400 text-center flex items-center justify-center gap-1"
+            >
+              <AlertCircle className="inline w-4 h-4" />
+              还需选择 {3 - totalSelections} 个兴趣才能继续
+            </motion.p>
+          )}
+          
           <Button
             onClick={handleContinue}
             disabled={totalSelections < 3}
@@ -591,7 +603,13 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
                 : "bg-muted text-muted-foreground"
             )}
           >
-            继续 {totalSelections >= 3 && `(${totalSelections}个)`}
+            {totalSelections >= 3 ? (
+              <>
+                完成 <Check className="ml-2 w-5 h-5" />
+              </>
+            ) : (
+              <>已选择 {totalSelections}/3 个</>
+            )}
           </Button>
         </div>
       </div>
