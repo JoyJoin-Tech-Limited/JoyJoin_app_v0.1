@@ -2456,6 +2456,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const profileData: Record<string, any> = { ...result.data };
 
+      // ✅ Age validation (Phase 0: Fix #8) - JoyJoin is 18+ only
+      if (profileData.birthdate) {
+        const birthDate = new Date(profileData.birthdate);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        // Adjust age if birthday hasn't occurred yet this year
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        
+        if (age < 18) {
+          return res.status(400).json({ 
+            message: "JoyJoin 仅面向 18 岁及以上用户开放",
+            field: "birthdate" 
+          });
+        }
+      }
+      
+      // Age validation for birthYear field (legacy support)
+      if (profileData.birthYear) {
+        const birthYear = parseInt(profileData.birthYear, 10);
+        const currentYear = new Date().getFullYear();
+        const age = currentYear - birthYear;
+        
+        if (age < 18) {
+          return res.status(400).json({ 
+            message: "JoyJoin 仅面向 18 岁及以上用户开放",
+            field: "birthYear" 
+          });
+        }
+      }
+
       // ❌ REMOVED: Interest fields validation - these fields no longer exist
       // Legacy interests are now managed by user_interests table
       // if (profileData.interestsTop || profileData.primaryInterests || profileData.topicAvoidances) {

@@ -4,10 +4,13 @@
  * Two phases:
  * 1. Analyzing (0-3s): Spiral wave animation with fade-in text
  * 2. Complete (3s+): Profile portrait card with stagger animation
+ * 
+ * Phase 0: Fix #5 - Loading states for all data dependencies
  */
 
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
@@ -22,13 +25,30 @@ export default function FinalProfileReviewPage() {
   const [, setLocation] = useLocation();
   const prefersReducedMotion = useReducedMotion();
 
+  // Phase 0: Fix #5 - Wait for all data to load before showing complete phase
+  const { data: user } = useQuery<any>({ 
+    queryKey: ["/api/auth/user"],
+  });
+  
+  const { data: interests, isLoading: interestsLoading } = useQuery<any>({ 
+    queryKey: ["/api/user/interests"],
+    enabled: !!user?.hasCompletedInterestsCarousel,
+  });
+
   useEffect(() => {
     const duration = prefersReducedMotion ? 1000 : 3000;
-    const timer = setTimeout(() => setPhase("complete"), duration);
+    const timer = setTimeout(() => {
+      // Only transition to complete if data is ready
+      if (!interestsLoading && interests && user) {
+        setPhase("complete");
+      }
+    }, duration);
     return () => clearTimeout(timer);
-  }, [prefersReducedMotion]);
+  }, [prefersReducedMotion, interestsLoading, interests, user]);
 
   const handleContinue = () => {
+    // Phase 0: Fix #8 - Mark profile review as seen
+    localStorage.setItem('profile_review_seen', 'true');
     setLocation("/onboarding/login");
   };
 
