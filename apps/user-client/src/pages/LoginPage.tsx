@@ -154,16 +154,16 @@ export default function LoginPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const isDevelopment = import.meta.env.DEV;
   
-  // Respect user's motion preferences for accessibility
-  const prefersReducedMotion = useRef(false);
+  // Respect user's motion preferences for accessibility (using state for re-renders)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   
   useEffect(() => {
     // Check if user prefers reduced motion
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    prefersReducedMotion.current = mediaQuery.matches;
+    setPrefersReducedMotion(mediaQuery.matches);
     
     const handleChange = (e: MediaQueryListEvent) => {
-      prefersReducedMotion.current = e.matches;
+      setPrefersReducedMotion(e.matches);
     };
     
     mediaQuery.addEventListener('change', handleChange);
@@ -174,16 +174,20 @@ export default function LoginPage() {
   useEffect(() => {
     const trackLoadingPerformance = () => {
       if (typeof window !== 'undefined' && window.performance) {
-        const perfData = window.performance.timing;
-        const pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
-        const connectTime = perfData.responseEnd - perfData.requestStart;
-        
-        if (pageLoadTime > 0) {
-          console.log('📊 [Analytics] Landing Page Performance:', {
-            pageLoadTime: `${pageLoadTime}ms`,
-            connectTime: `${connectTime}ms`,
-            domContentLoaded: `${perfData.domContentLoadedEventEnd - perfData.navigationStart}ms`,
-          });
+        // Use modern Navigation Timing API
+        const perfEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+        if (perfEntries.length > 0) {
+          const perfData = perfEntries[0];
+          const pageLoadTime = perfData.loadEventEnd - perfData.fetchStart;
+          const connectTime = perfData.responseEnd - perfData.requestStart;
+          
+          if (pageLoadTime > 0) {
+            console.log('📊 [Analytics] Landing Page Performance:', {
+              pageLoadTime: `${Math.round(pageLoadTime)}ms`,
+              connectTime: `${Math.round(connectTime)}ms`,
+              domContentLoaded: `${Math.round(perfData.domContentLoadedEventEnd - perfData.fetchStart)}ms`,
+            });
+          }
         }
       }
     };
@@ -214,7 +218,7 @@ export default function LoginPage() {
   }, []);
 
   // Fetch public stats for social proof
-  const { data: stats, isLoading: isStatsLoading } = useQuery<PublicStats>({
+  const { data: stats } = useQuery<PublicStats>({
     queryKey: ["/api/public/stats"],
     retry: false,
   });
@@ -450,12 +454,12 @@ export default function LoginPage() {
               animate={{ 
                 opacity: 1, 
                 scale: 1,
-                y: prefersReducedMotion.current ? 0 : [0, -8, 0], // Disable floating if reduced motion preferred
+                y: prefersReducedMotion ? 0 : [0, -8, 0], // Disable floating if reduced motion preferred
               }}
               transition={{ 
                 opacity: { duration: 0.5 },
                 scale: { type: "spring", stiffness: 180, damping: 12, duration: 0.8 },
-                y: prefersReducedMotion.current ? {} : { 
+                y: prefersReducedMotion ? {} : { 
                   duration: 3, 
                   repeat: Infinity, 
                   ease: "easeInOut" 
