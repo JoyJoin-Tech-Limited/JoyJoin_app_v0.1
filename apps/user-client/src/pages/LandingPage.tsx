@@ -1,297 +1,181 @@
-import { useEffect } from "react";
+/**
+ * Static Landing Page
+ * 
+ * Fixed viewport landing screen with no scroll required.
+ * Features:
+ * - 4 tilted photo tiles using modular config
+ * - Brand logo with ZCOOL QingKe HuangYou font
+ * - 3 feature tags
+ * - Primary CTA: "看看我会遇见谁" → /onboarding
+ * - Secondary CTA: "已有账号登录" → /login
+ * - Legal footer links
+ * 
+ * Route: /
+ */
+
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Check, Zap, ArrowRight, Sparkles } from "lucide-react";
-import joyJoinLogo from "@/assets/box_logo_archetypes.png";
-import { useAuth } from "@/hooks/useAuth";
-
-// Import local stock images
-import friendsDining1 from "@/assets/stock_images/friends_dining_toget_9b496af1.jpg";
-import friendsGroup1 from "@/assets/stock_images/friends_small_group__18b3bafc.jpg";
-import friendsDining2 from "@/assets/stock_images/friends_dining_toget_6135e857.jpg";
-import friendsGroup2 from "@/assets/stock_images/friends_small_group__ee15565c.jpg";
-import friendsGroup3 from "@/assets/stock_images/friends_small_group__89c66d13.jpg";
-import friendsDining3 from "@/assets/stock_images/friends_dining_toget_b131887b.jpg";
-import shenzhenCity1 from "@/assets/stock_images/shenzhen_city_roofto_e7cea581.jpg";
-import hongKongShenzhen from "@/assets/stock_images/hong_kong_shenzhen_s_02dfe6bb.jpg";
-
-// Sample photos for social proof grid using local assets
-const SAMPLE_PHOTOS = [
-  friendsDining1,
-  friendsGroup1,
-  friendsDining2,
-  friendsGroup2,
-  friendsGroup3,
-  friendsDining3,
-  shenzhenCity1,
-  hongKongShenzhen,
-];
-
-interface LandingPageData {
-  userCount: number;
-}
+import joyJoinLogo from "@/assets/JoyJoinapp_logo_Chinese_FuLuDouTi.png";
+import { landingImages } from "@/config/landingImages";
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
-  const { user, isAuthenticated, nextStep } = useAuth();
 
-  // Track analytics on mount
-  useEffect(() => {
-    // Track page view
-    console.log('[Analytics] Landing page view');
-    const startTime = Date.now();
-
-    // Track time spent
-    return () => {
-      const timeSpent = Date.now() - startTime;
-      console.log('[Analytics] Landing page exit', { timeSpentMs: timeSpent });
-    };
-  }, []);
-
-  // User count for social proof
-  const userCount = 12847;
-
-  // Primary CTA handler
-  const handleStartMatching = () => {
-    console.log('[Analytics] tap_create_room');
-    
-    if (!isAuthenticated) {
-      // Not logged in - go to onboarding
-      setLocation('/onboarding');
-      return;
-    }
-
-    // Use server-driven navigation
-    if (nextStep && nextStep !== 'discover') {
-      // User needs to complete onboarding
-      const routeMap = {
-        'onboarding': '/onboarding',
-        'personality-test': '/personality-test',
-        'essential-data': '/onboarding/setup',
-        'guide': '/guide',
-        'discover': '/discover',
-      };
-      setLocation(routeMap[nextStep as keyof typeof routeMap] || '/onboarding');
-    } else {
-      // User is fully onboarded - go to discover
-      setLocation('/discover');
-    }
+  // Primary CTA handler - go to onboarding (first 8 anchor questions)
+  const handlePrimaryCTA = () => {
+    console.log('[Analytics] Landing: Primary CTA clicked');
+    setLocation('/onboarding');
   };
 
-  // Secondary CTA handler
-  const handleJoinWithCode = () => {
-    console.log('[Analytics] tap_join_room');
-    setLocation('/invite');
+  // Secondary CTA handler - go to login
+  const handleSecondaryCTA = () => {
+    console.log('[Analytics] Landing: Secondary CTA clicked');
+    setLocation('/login');
   };
 
-  // Footer link handlers
-  const handlePrivacyPolicy = () => {
-    console.log('[Analytics] tap_privacy_policy');
-    // Navigate to privacy policy page (to be implemented)
-    window.open('/privacy', '_blank');
-  };
-
-  const handleTermsOfService = () => {
-    console.log('[Analytics] tap_terms_of_service');
-    // Navigate to terms page (to be implemented)
-    window.open('/terms', '_blank');
+  // Image error handler
+  const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = event.currentTarget;
+    if (img.dataset.fallbackApplied === "true") return;
+    img.dataset.fallbackApplied = "true";
+    img.src =
+      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='20'%3EImage unavailable%3C/text%3E%3C/svg%3E";
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FAF5FF] via-[#FEF3F8] to-[#FFFBEB] overflow-hidden">
-      {/* Hero Section */}
-      <section className="relative px-4 pt-12 pb-8 text-center">
-        {/* Floating Logo */}
-        <motion.div
-          className="flex justify-center mb-4"
-          animate={{
-            y: [0, -10, 0],
-          }}
-          transition={{
-            duration: 3,
-            ease: "easeInOut",
-            repeat: Infinity,
-          }}
-        >
-          <img 
-            src={joyJoinLogo}
-            alt="悦聚 Logo"
-            className="h-[120px] w-auto drop-shadow-lg"
-          />
-        </motion.div>
-
-        {/* Brand Tagline */}
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="text-base text-muted-foreground mb-4"
-        >
-          真实社交·有趣相遇
-        </motion.p>
-
-        {/* Main Heading with Gradient */}
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="text-5xl font-bold mb-4 leading-tight bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] bg-clip-text text-transparent"
-          style={{
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}
-        >
-          让陌生相遇<br />不再尴尬
-        </motion.h1>
-
-        {/* Sub-heading */}
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="text-lg text-foreground/80 mb-8"
-        >
-          AI智能匹配，4-6人小局，告别尬聊
-        </motion.p>
-      </section>
-
-      {/* Social Proof Section */}
-      <section className="px-4 pb-8">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="max-w-lg mx-auto"
-        >
-          {/* Photo Grid */}
-          <div className="grid grid-cols-4 gap-2 mb-4">
-            {SAMPLE_PHOTOS.map((photo, index) => (
-              <div key={index} className="relative aspect-square rounded-2xl overflow-hidden">
+    <main 
+      className="fixed inset-0 overflow-hidden bg-gradient-to-b from-[#FFF5F7] via-[#FFF0F5] to-[#FFE4E1] flex flex-col"
+      style={{
+        minHeight: '100vh',
+        height: '100dvh',
+      }}
+    >
+      {/* Top section: Photo tiles */}
+      <section className="flex-none px-4 pt-6 sm:pt-8" aria-label="精选活动照片">
+        <div className="max-w-sm mx-auto">
+          {/* 2x2 grid of tilted photo tiles */}
+          <div className="grid grid-cols-2 gap-3">
+            {landingImages.map((image) => (
+              <div
+                key={image.id}
+                className="relative aspect-square overflow-hidden rounded-2xl shadow-lg"
+                style={{
+                  transform: `rotate(${image.rotation || 0}deg)`,
+                }}
+              >
                 <img
-                  src={photo}
-                  alt={`User ${index + 1}`}
+                  src={image.src}
+                  alt={image.alt}
                   className="w-full h-full object-cover"
-                  loading="lazy"
+                  loading="eager"
+                  onError={handleImageError}
                 />
               </div>
             ))}
           </div>
-
-          {/* Social Proof Text */}
-          <p className="text-center text-sm text-muted-foreground">
-            已有{' '}
-            <span className="font-bold text-primary text-base">
-              {userCount.toLocaleString()}
-            </span>{' '}
-            人完成匹配
-          </p>
-        </motion.div>
+        </div>
       </section>
 
-      {/* Primary Actions */}
-      <section className="px-4 pb-6">
-        <div className="max-w-md mx-auto space-y-4">
-          {/* Primary CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
+      {/* Middle section: Logo, title, tags - takes remaining space */}
+      <section className="flex-1 flex flex-col justify-center px-4 pt-4" aria-label="品牌介绍">
+        <div className="max-w-sm mx-auto w-full text-center">
+          {/* Logo */}
+          <div className="flex justify-center mb-4">
+            <img 
+              src={joyJoinLogo}
+              alt="悦聚 JoyJoin"
+              className="h-16 w-auto"
+            />
+          </div>
+
+          {/* Brand title with ZCOOL QingKe HuangYou font */}
+          <h1 
+            className="text-4xl font-bold mb-6 leading-tight"
+            style={{
+              fontFamily: '"ZCOOL QingKe HuangYou", "Noto Sans SC", sans-serif',
+              color: '#FF1493',
+            }}
           >
-            <Button
-              onClick={handleStartMatching}
-              size="lg"
-              className="w-full min-h-[112px] bg-gradient-to-r from-[#8B5CF6] to-[#A855F7] hover:from-[#7C3AED] hover:to-[#9333EA] text-white text-lg font-semibold shadow-[0_8px_32px_rgba(139,92,246,0.2)] hover:shadow-[0_12px_40px_rgba(139,92,246,0.3)] transition-all duration-200 active:scale-[0.98] border-0 flex flex-col items-center justify-center gap-2"
+            让陌生相遇<br />不再尴尬
+          </h1>
+
+          {/* Three feature tags */}
+          <div className="flex flex-wrap justify-center gap-2">
+            <Badge 
+              variant="outline" 
+              className="px-3 py-1.5 bg-white/80 border-pink-200 text-pink-600 text-sm font-medium"
             >
-              <span className="flex items-center gap-2">
-                开始匹配
-                <Sparkles className="h-5 w-5" />
-              </span>
-              <span className="text-sm text-white/80 font-normal">
-                AI为你推荐合适的人
-              </span>
-            </Button>
-          </motion.div>
+              氛围测试
+            </Badge>
+            <Badge 
+              variant="outline" 
+              className="px-3 py-1.5 bg-white/80 border-pink-200 text-pink-600 text-sm font-medium"
+            >
+              算法匹配
+            </Badge>
+            <Badge 
+              variant="outline" 
+              className="px-3 py-1.5 bg-white/80 border-pink-200 text-pink-600 text-sm font-medium"
+            >
+              4-6人局
+            </Badge>
+          </div>
+        </div>
+      </section>
+
+      {/* Bottom section: CTAs and footer */}
+      <section className="flex-none px-4 pb-6 sm:pb-8" aria-label="行动按钮">
+        <div className="max-w-sm mx-auto space-y-3">
+          {/* Primary CTA */}
+          <Button
+            onClick={handlePrimaryCTA}
+            size="lg"
+            className="w-full h-14 bg-gradient-to-r from-[#FF1493] to-[#FF69B4] hover:from-[#E6007E] hover:to-[#FF1493] text-white text-lg font-semibold shadow-lg transition-all duration-200 motion-reduce:transition-none motion-reduce:active:scale-100 active:scale-[0.98] border-0"
+          >
+            看看我会遇见谁
+          </Button>
 
           {/* Secondary CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
+          <Button
+            onClick={handleSecondaryCTA}
+            variant="outline"
+            size="lg"
+            className="w-full h-12 border-2 border-pink-200 hover:border-pink-300 hover:bg-pink-50 text-pink-600 font-medium transition-all duration-200 motion-reduce:transition-none motion-reduce:active:scale-100 active:scale-[0.98]"
           >
-            <Button
-              onClick={handleJoinWithCode}
-              variant="outline"
-              size="lg"
-              className="w-full min-h-[88px] border-2 border-[#E5E7EB] hover:border-[#D1D5DB] hover:bg-accent/5 text-foreground font-medium transition-all duration-200 active:scale-[0.98]"
+            已有账号登录
+          </Button>
+
+          {/* Legal footer */}
+          <footer className="pt-2 text-center text-xs text-gray-500">
+            <a
+              href="/privacy"
+              onClick={(e) => {
+                e.preventDefault();
+                console.log('[Analytics] Landing: Privacy policy clicked');
+                window.open('/privacy', '_blank');
+              }}
+              className="hover:text-pink-600 transition-colors"
+              aria-label="查看隐私政策"
             >
-              已有邀请码？立即加入
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </motion.div>
+              隐私政策
+            </a>
+            <span className="mx-2">·</span>
+            <a
+              href="/terms"
+              onClick={(e) => {
+                e.preventDefault();
+                console.log('[Analytics] Landing: Terms of service clicked');
+                window.open('/terms', '_blank');
+              }}
+              className="hover:text-pink-600 transition-colors"
+              aria-label="查看用户协议"
+            >
+              用户协议
+            </a>
+          </footer>
         </div>
       </section>
-
-      {/* Trust Signals */}
-      <section className="px-4 pb-8">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-          className="flex items-center justify-center gap-6 flex-wrap"
-        >
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Lock className="h-4 w-4 text-primary" />
-            <span>实名认证</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Check className="h-4 w-4 text-primary" />
-            <span>隐私保护</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Zap className="h-4 w-4 text-primary" />
-            <span>即时匹配</span>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* Footer */}
-      <footer className="px-4 py-8 text-center text-sm text-muted-foreground">
-        <div className="flex items-center justify-center gap-3 mb-2">
-          <button
-            onClick={handlePrivacyPolicy}
-            className="hover:text-primary transition-colors"
-          >
-            隐私政策
-          </button>
-          <span>·</span>
-          <button
-            onClick={handleTermsOfService}
-            className="hover:text-primary transition-colors"
-          >
-            用户协议
-          </button>
-        </div>
-        <p>© 2026 版权所有</p>
-      </footer>
-
-      {/* Keyframes for accessibility */}
-      <style>{`
-        @media (prefers-reduced-motion: reduce) {
-          * {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
-          }
-        }
-
-        @media (prefers-contrast: more) {
-          .bg-gradient-to-r {
-            background: var(--primary) !important;
-          }
-        }
-      `}</style>
-    </div>
+    </main>
   );
 }
