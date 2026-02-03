@@ -30,24 +30,23 @@ export function LandingImageGallery() {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto px-4 pt-8 safe-area-top">
+    <div className="w-full max-w-md mx-auto px-4 pt-8">
       <div className="grid grid-cols-2 gap-3">
         {landingImages.map((image, index) => (
           <motion.div
             key={image.id}
-            initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 20, rotate: image.rotation || 0 }}
+            animate={{ 
+              opacity: 1, 
+              y: 0, 
+              rotate: prefersReducedMotion ? 0 : (image.rotation || 0)
+            }}
             transition={{ 
               delay: index * 0.1,
               duration: 0.5,
               ease: "easeOut"
             }}
             className="relative aspect-square"
-            style={{
-              transform: prefersReducedMotion 
-                ? 'none' 
-                : `rotate(${image.rotation || 0}deg)`,
-            }}
           >
             {/* Gradient fallback - shown until image loads or on error */}
             <div 

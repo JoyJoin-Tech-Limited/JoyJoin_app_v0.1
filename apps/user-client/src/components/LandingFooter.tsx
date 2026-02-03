@@ -29,14 +29,18 @@ export function LandingFooter() {
     >
       <div className="flex justify-center items-center gap-4 text-xs sm:text-sm text-muted-foreground">
         <a 
-          href="/terms" 
+          href="https://www.joyjoin.app/terms" 
+          target="_blank"
+          rel="noopener noreferrer"
           className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
         >
           服务条款
         </a>
         <span className="text-border">•</span>
         <a 
-          href="/privacy" 
+          href="https://www.joyjoin.app/privacy" 
+          target="_blank"
+          rel="noopener noreferrer"
           className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
         >
           隐私政策

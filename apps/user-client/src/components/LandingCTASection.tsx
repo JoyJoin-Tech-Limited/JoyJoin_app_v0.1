@@ -4,7 +4,7 @@
  * Displays two call-to-action buttons with dynamic routing.
  * 
  * Routing Configuration:
- * - Primary CTA: Routes to /personality-test (氛围测试)
+ * - Primary CTA: Routes to /onboarding (Duolingo-style onboarding flow)
  * - Secondary CTA: Routes to /login
  * 
  * Customization:
@@ -29,8 +29,8 @@ export function LandingCTASection() {
   const prefersReducedMotion = useReducedMotion();
 
   const handlePrimaryClick = () => {
-    // Route to personality test (氛围测试)
-    setLocation("/personality-test");
+    // Route to onboarding flow which is accessible for unauthenticated users
+    setLocation("/onboarding");
   };
 
   const handleSecondaryClick = () => {
