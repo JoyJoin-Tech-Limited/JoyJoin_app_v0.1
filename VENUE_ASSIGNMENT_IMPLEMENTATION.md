@@ -185,8 +185,10 @@ interface PoolGroup {
   - High match score: ~80 × 0.3 = 24 points
 
 **Capacity Match (20 points):**
-- Currently simplified: 20 points if venue has capacity ≥ 1
-- Future: could check against group size more precisely
+- Validates `venue.capacity >= group.members.length`
+- Full score if venue can accommodate the group
+- Zero points if capacity is insufficient
+- Note: Current schema's `capacity` field represents concurrent events; future enhancement should add dedicated seating capacity field
 
 **Location (10 points):**
 - Currently default 10 points
@@ -301,7 +303,9 @@ Example:
 **Scalability:**
 - Assignment runs once after matching completes
 - Each group scored independently
-- No N+1 query problems
+- Time slot checks parallelized using Promise.all
+- Budget filtering uses SQL array overlap with GIN index
+- Single batch query for time slot availability in API
 
 **Logging:**
 - Detailed console logs for debugging
