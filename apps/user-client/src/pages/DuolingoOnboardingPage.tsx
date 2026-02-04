@@ -8,7 +8,7 @@ import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -509,6 +509,15 @@ export default function DuolingoOnboardingPage() {
       } catch (error) {
         console.error('[DuolingoOnboardingPage] Failed to save checkpoint:', error);
         // Continue navigation even if checkpoint fails (non-blocking)
+      } finally {
+        // Refetch auth state to ensure server-driven nextStep is updated before navigation
+        // This ensures /personality-test page renders the adaptive assessment instead of landing screen
+        try {
+          await queryClient.refetchQueries({ queryKey: ['/api/auth/user'] });
+        } catch (error) {
+          console.error('[DuolingoOnboardingPage] Failed to refresh auth state:', error);
+          // Continue navigation even if auth refresh fails (non-blocking)
+        }
       }
       
       // Navigate to personality test after completing all anchor questions
