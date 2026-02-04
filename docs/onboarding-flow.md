@@ -1,36 +1,185 @@
-# JoyJoin 注册引导流程
+# JoyJoin User Onboarding Flow
 
-## 流程概览
+## Overview (Updated 2026-02-04)
+
+JoyJoin uses a **value-first** onboarding approach:
+1. **Show value (personality test) BEFORE asking for signup**
+2. Silent WeChat authentication after user is invested
+3. Minimal data collection in onboarding
+4. Progressive profile enrichment
+
+---
+
+## Complete Flow
 
 ```
-登录页 → 注册(Onboarding) → 性格测试 → 必填资料 → [选填资料] → 引导页(3步) → 发现首页
+Landing → Personality Test (Anonymous) → Results → WeChat Login → 
+Essential Data → Extended Data → Guide (3 steps) → Discover Page
 ```
 
-## 服务器驱动导航 (Server-Driven Navigation)
+**Expected Impact:** +15% signup conversion (based on Soul, 16Personalities benchmarks)
 
-> **新增 (Scope B1)**: `/api/auth/user` 现在返回服务器计算的导航状态。
+---
 
-### 响应中的新字段
+## Step-by-Step Flow
 
-| 字段 | 类型 | 描述 |
-|------|------|------|
-| `nextStep` | `string` | 用户应前往的下一步: `onboarding`, `personality-test`, `essential-data`, `guide`, `discover` |
-| `profileEssentialComplete` | `boolean` | 必填资料是否完整 (displayName, gender, currentCity) |
-| `profileExtendedComplete` | `boolean` | 选填资料是否完整 (educationLevel, industry, hometownRegionCity) |
-| `hasSeenGuide` | `boolean` | 是否已查看引导页 (服务器持久化) |
-| `activeAssessmentSessionId` | `string \| null` | 当前进行中的测评会话 ID |
+### Step 1: Landing Page → Personality Test (Anonymous)
 
-### useAuth Hook 扩展
+**Route:** `/personality-test`
+
+**User State:** Unauthenticated
+
+**Data Collection:** None (test answers stored in localStorage)
+
+**Duration:** ~2 minutes
+
+**Implementation:**
+- Anonymous session ID generated: `crypto.randomUUID()`
+- Answers saved to localStorage: `joyjoin_v4_presignup_answers`
+- No backend submission until login
+
+**Why This Works:**
+- Reduce friction: No upfront commitment required
+- Build curiosity: Users want to know their archetype
+- Prove value: Show what JoyJoin can do before asking for signup
+
+---
+
+### Step 2: Personality Test Results → WeChat Login
+
+**Route:** `/personality-test/results`
+
+**User State:** Still unauthenticated, but has test results
+
+**CTA:** "微信登录，查看匹配活动"
+
+**Why This Works:**
+- User has seen their archetype (value delivered)
+- Curiosity triggered: "Who am I compatible with?"
+- Clear value exchange: Login = See Matches
+- Expected conversion: 60-65% (Soul benchmark)
+
+**Implementation:**
+- Show archetype reveal animation (slot machine)
+- After 3 seconds, show WeChat login CTA
+- On login: Send test results to backend, create user, link results
+- Uses endpoint: `POST /api/auth/wechat/login-with-test`
+
+**WeChat Authentication Flow:**
+```typescript
+// Frontend
+const { code } = await wx.login(); // WeChat SDK
+await fetch('/api/auth/wechat/login-with-test', {
+  method: 'POST',
+  body: JSON.stringify({
+    code,
+    anonymousSessionId,
+    testAnswers
+  })
+});
+
+// Backend
+// 1. Exchange code for openid with WeChat API
+// 2. Find or create user with WeChat OpenID
+// 3. Save personality test results to assessment_sessions
+// 4. Mark hasCompletedPersonalityTest = true
+// 5. Create session and return user data
+```
+
+---
+
+### Step 3: Essential Data Collection
+
+**Route:** `/onboarding/setup`
+
+**User State:** Authenticated, test complete, needs profile data
+
+**Required Fields (7 steps):**
+1. Display Name
+2. Gender + Birth Year
+3. Relationship Status
+4. Education Level
+5. Industry (3-tier) + Occupation + Work Mode
+6. Hometown + Current City
+7. Intent (multi-select)
+
+**After Completion:**
+- `profileEssentialComplete = true`
+- Redirect to `/onboarding/extended` or `/guide`
+
+---
+
+### Step 4: Extended Data Collection (Optional)
+
+**Route:** `/onboarding/extended`
+
+**User State:** Can skip entirely
+
+**What's Collected:**
+- **ONLY Interest Carousel**
+  - 56 topics across 8 categories
+  - Multi-tap heat level (0/5/15/25)
+  - Includes topic avoidances
+
+**After Completion/Skip:**
+- `hasCompletedExtendedData = true`
+- Redirect to `/guide`
+
+---
+
+### Step 5: Guide (3 Steps)
+
+**Route:** `/guide`
+
+**User State:** Ready to discover events
+
+**Content:**
+1. **User Portrait**: Archetype badge, overview, match reasons
+2. **Event Flow**: Explains pool → match → check-in → feedback
+3. **Xiaoyue AI**: Introduces AI assistant, encourages profile completion
+
+**Data Contract:**
+- Server field: `user.hasSeenGuide` (persisted to database)
+- Local storage: `joyjoin_guide_seen` (hint only, server state takes priority)
+- API: `POST /api/guide/mark-seen` to mark as seen
+
+**User can skip at any time**
+
+---
+
+### Step 6: Discover Page
+
+**Route:** `/` or `/discover`
+
+**User State:** Onboarding complete
+
+---
+
+## Server-Driven Navigation (Scope B1)
+
+> **New Addition**: `/api/auth/user` now returns server-calculated navigation state.
+
+### Response Fields
+
+| Field | Type | Description |
+|------|------|-------------|
+| `nextStep` | `string` | Server-calculated next route: `onboarding`, `personality-test`, `essential-data`, `guide`, `discover` |
+| `profileEssentialComplete` | `boolean` | Essential data complete (displayName, gender, currentCity) |
+| `profileExtendedComplete` | `boolean` | Extended data complete (interests) |
+| `hasSeenGuide` | `boolean` | Guide viewed (server-persisted) |
+| `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
+
+### useAuth Hook Extension
 
 ```typescript
 const { 
-  // 服务器驱动导航 (推荐)
-  nextStep,                    // 下一步路由
-  profileEssentialComplete,    // 必填资料完整
-  profileExtendedComplete,     // 选填资料完整
-  activeAssessmentSessionId,   // 活跃测评会话
+  // Server-driven navigation (recommended)
+  nextStep,                    // Next route
+  profileEssentialComplete,    // Essential data complete
+  profileExtendedComplete,     // Extended data complete
+  activeAssessmentSessionId,   // Active assessment session
   
-  // 旧版兼容字段 (仍可用)
+  // Legacy computed fields (still available)
   needsRegistration,       
   needsPersonalityTest,    
   needsProfileSetup,       
@@ -39,146 +188,56 @@ const {
 
 ---
 
-## 步骤详情
+## Deprecated Fields (Removed 2026-02-04)
 
-### 1. 注册 (Onboarding)
+The following fields are **NO LONGER** collected in onboarding:
 
-**路由**: `/onboarding`
+- ❌ `languagesComfort` - Available in profile edit only
+- ❌ `activityTimePreference` - Removed
+- ❌ `socialFrequency` - Removed
+- ❌ `groupSizeComfort` - Removed
+- ❌ `hometownCountry` - Removed
 
-**页面**: `DuolingoOnboardingPage.tsx`
-
-**数据契约**:
-- 输入: 手机号、验证码
-- 输出: `user.hasCompletedRegistration = true`
-
-**守护条件**: 用户未完成注册时强制跳转
+These fields remain in the database schema for backward compatibility but are not actively used.
 
 ---
 
-### 2. 性格测试 (Personality Test)
+## Technical Architecture
 
-**路由**: `/personality-test`, `/personality-test/complete`, `/personality-test/results`
+### Anonymous Test Session
+- Session ID: `crypto.randomUUID()`
+- Storage: `localStorage.getItem('joyjoin_v4_presignup_answers')`
+- Expiry: Cleared after successful login
 
-**页面**: `PersonalityTestPageV4.tsx`, `PersonalityTestResultPage.tsx`
+### WeChat Authentication
+- Endpoint: `POST /api/auth/wechat/login-with-test`
+- Payload: `{ code, anonymousSessionId, testAnswers }`
+- Response: `{ success, user }`
 
-**数据契约**:
-- 输入: 氛围测试答案
-- 输出: `user.hasCompletedPersonalityTest = true`, `user.archetype`
-
-**守护条件**: 已注册但未完成测试时强制跳转
-
----
-
-### 3. 必填资料 (Essential Data)
-
-**路由**: `/onboarding/setup`
-
-**页面**: `EssentialDataPage.tsx`
-
-**数据契约**:
-- 输入: 昵称、性别、出生年份、感情状态、学历、行业、家乡、常驻城市
-- 输出: `user.displayName`, `user.gender`, `user.currentCity` 等
-
-**守护条件**: 已完成测试但缺少必填资料时强制跳转
-
-**服务器验证**: `profileEssentialComplete` 字段表示必填资料是否完整
+### State Management
+- `hasCompletedPersonalityTest`: Set after WeChat login with test results
+- `hasCompletedEssentialData`: Set after essential data submission
+- `hasCompletedExtendedData`: Set after interest carousel (or skip)
 
 ---
 
-### 4. 选填资料 (Extended Data) - 可选
+## Performance Benchmarks
 
-**路由**: `/onboarding/extended`
+| Metric | Target | Current |
+|--------|--------|---------|
+| Landing → Start Test | 70% | TBD |
+| Complete Test | 85% | TBD |
+| Test → Login | 65% | TBD |
+| Login → Essential Data | 80% | TBD |
+| **Overall Conversion** | **38%** | **TBD** |
 
-**页面**: `ExtendedDataPage.tsx`
-
-**数据契约**:
-- 输入: 社交意图、兴趣爱好、社交偏好
-- 输出: `user.intent`, `user.interests`, `user.socialPreferences`
-
-**服务器验证**: `profileExtendedComplete` 字段表示选填资料是否完整
-
-**用户可选择跳过**
+*Benchmarks based on Soul (60%), 16Personalities (55%), industry averages*
 
 ---
 
-### 5. 引导页 (Guide)
-
-**路由**: `/guide` 或作为完成后的 overlay
-
-**组件**: `apps/user-client/src/components/guide/`
-
-**内容 (3步)**:
-1. **用户画像生成**: 展示原型徽章、概述及匹配原因
-2. **盲盒活动流程**: 说明 地区→偏好→匹配→签到→反馈 流程
-3. **小悦AI助手**: 介绍 AI 智能体，引导补全画像
-
-**数据契约 (Scope B2 - 服务器持久化)**:
-- 服务器字段: `user.hasSeenGuide` (持久化到数据库)
-- 本地缓存: `joyjoin_guide_seen` (作为提示，优先使用服务器状态)
-- API: `POST /api/guide/mark-seen` 标记已查看
-- 触发: 首次完成注册后显示
-- 完成: 点击"进入发现"或完成3步后设置
-
-**用户可点击"跳过"**
-
----
-
-### 6. 发现首页 (Discover)
-
-**路由**: `/` 或 `/discover`
-
-**页面**: `DiscoverPage.tsx`
-
----
-
-## 路由守护逻辑
-
-使用 `useAuth` hook 判断当前状态:
-
-```typescript
-const { 
-  // 推荐: 使用服务器驱动的 nextStep
-  nextStep,
-  
-  // 兼容: 旧版计算字段
-  needsRegistration,       // 未完成注册
-  needsPersonalityTest,    // 已注册，未完成测试
-  needsProfileSetup,       // 已测试，缺少必填资料
-} = useAuth();
-```
-
-## 状态管理
-
-### 本地缓存 (V4 Only)
-
-**性格测试 V4 缓存键**:
-- `joyjoin_v4_presignup_answers`: 注册前氛围测试答案
-- `joyjoin_v4_assessment_session`: 当前测评会话 ID
-- `joyjoin_synced_session_id`: 已同步到服务器的会话 ID
-- `joyjoin_synced_answer_count`: 已同步的答案数量
-
-**其他缓存键**:
-- `joyjoin_essential_data_progress`: 必填资料进度
-- `joyjoin_extended_data_progress`: 选填资料进度
-- `joyjoin_guide_seen`: 引导页已查看标志 (作为提示，服务器状态优先)
-
-> **注意**: V2 测试已废弃。旧版缓存键 (`joyjoin_personality_test_progress`, `joyjoin_onboarding_answers`) 不再使用。
-
-### 服务端同步
-
-- 用户资料通过 `PATCH /api/profile` 保存
-- 查询用户通过 `GET /api/auth/user` 获取完整状态 (包含服务器驱动导航字段)
-- 引导页状态通过 `POST /api/guide/mark-seen` 同步
-
-## 性能预算
-
-- 每个步骤 TTI ≤ 2s (p75 移动网络)
-- 步骤切换 ≤ 1s
-- 参见 `docs/perf.md`
-
-## 开发命令
+## Development Commands
 
 ```bash
-npm run dev:user   # 启动用户端开发服务器
-npm run check      # TypeScript 类型检查
+npm run dev:user   # Start user client dev server
+npm run check      # TypeScript type check
 ```
