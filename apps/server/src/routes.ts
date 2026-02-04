@@ -954,7 +954,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Added 2026-02-04 for WeChat Mini Program silent authentication
   app.post('/api/auth/wechat/login-with-test', async (req: any, res) => {
     try {
-      const { code, anonymousSessionId, testAnswers } = req.body;
+      const { code, testAnswers } = req.body;
       
       if (!code) {
         return res.status(400).json({ error: "WeChat code is required" });
@@ -1010,7 +1010,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[WeChat Auth] Processing ${testAnswers.length} test answers for user ${user.id}`);
         
         // Import personality matching functions
-        const { getFinalResult } = await import('@shared/personality/adaptiveEngine');
         const { findBestMatchingArchetypesV2 } = await import('@shared/personality/matcherV2');
         
         // Convert answers to trait scores
@@ -1019,18 +1018,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           A: 0, C: 0, E: 0, O: 0, X: 0, P: 0
         };
         
-        // Process each answer to update trait scores
-        // This is a simplified version - in production, use the full adaptive engine
-        testAnswers.forEach((answer: any) => {
-          if (answer.traitScores) {
-            Object.keys(answer.traitScores).forEach((trait: string) => {
-              if (traitScores[trait] !== undefined) {
-                const delta = answer.traitScores[trait];
-                traitScores[trait] += delta;
-              }
-            });
+        // Process each answer to update trait scores with validation
+        for (let i = 0; i < testAnswers.length; i++) {
+          const answer: any = testAnswers[i];
+          if (!answer || typeof answer !== "object") {
+            console.warn(`[WeChat Auth] Skipping invalid test answer at index ${i} for user ${user.id}`);
+            continue;
           }
-        });
+          
+          try {
+            if (answer.traitScores && typeof answer.traitScores === "object") {
+              Object.keys(answer.traitScores).forEach((trait: string) => {
+                if (Object.prototype.hasOwnProperty.call(traitScores, trait)) {
+                  const delta = answer.traitScores[trait];
+                  if (typeof delta === "number" && !Number.isNaN(delta)) {
+                    traitScores[trait] += delta;
+                  }
+                }
+              });
+            }
+          } catch (err) {
+            console.error(
+              `[WeChat Auth] Failed to process test answer at index ${i} for user ${user.id}:`,
+              err
+            );
+          }
+        }
         
         // Normalize scores to 0-100 range
         // Add base of 50 for neutral starting point, then normalize
@@ -1049,9 +1062,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const secondaryArchetype = matchResult.secondaryArchetype;
         
         // Create assessment session record
-        const [session] = await db.insert(assessmentSessions).values({
+        await db.insert(assessmentSessions).values({
           userId: user.id,
-          phase: 'post_signup', // Valid phase: pre_signup, post_signup, completed
+          phase: 'completed', // Test is complete when WeChat login happens
           currentQuestionIndex: testAnswers.length,
           traitScores: traitScores as any,
           traitConfidences: matchResult.traitConfidences || {},
@@ -1087,22 +1100,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[WeChat Auth] Saved personality test results for user ${user.id}: ${primaryArchetype}`);
       }
       
-      // Create session
-      req.session.userId = user.id.toString();
-      
-      res.json({
-        success: true,
-        user: {
-          id: user.id,
-          hasCompletedPersonalityTest: user.hasCompletedPersonalityTest,
-          hasCompletedRegistration: user.hasCompletedRegistration,
-          archetype: user.archetype,
-          wechatOpenId: user.wechatOpenId,
+      // Create session with regeneration to prevent session fixation
+      req.session.regenerate((err: any) => {
+        if (err) {
+          console.error('[WeChat Auth] Error regenerating session during WeChat login:', err);
+          return res.status(500).json({ error: "Server error during authentication" });
         }
+
+        req.session.userId = user.id.toString();
+
+        res.json({
+          success: true,
+          user: {
+            id: user.id,
+            hasCompletedPersonalityTest: user.hasCompletedPersonalityTest,
+            hasCompletedRegistration: user.hasCompletedRegistration,
+            archetype: user.archetype,
+            wechatOpenId: user.wechatOpenId,
+          }
+        });
       });
     } catch (error) {
-      console.error('[WeChat Auth] Error during WeChat login:', error);
-      res.status(500).json({ error: "Server error during authentication" });
+      const err: any = error;
+      // Log detailed error information server-side for debugging
+      console.error('[WeChat Auth] Error during WeChat login:', {
+        message: err?.message,
+        code: err?.code,
+        name: err?.name,
+        stack: err?.stack,
+      });
+
+      // Map known error types to more specific client-facing messages
+      let status = 500;
+      let errorCode = 'AUTH_SERVER_ERROR';
+      let clientMessage = 'Server error during authentication';
+
+      if (err?.code === 'INVALID_TEST_RESULTS') {
+        status = 400;
+        errorCode = 'INVALID_TEST_RESULTS';
+        clientMessage = 'Invalid test results';
+      } else if (err?.code === 'WECHAT_AUTH_FAILED') {
+        status = 401;
+        errorCode = 'WECHAT_AUTH_FAILED';
+        clientMessage = 'WeChat authentication failed';
+      } else if (err?.code === 'DB_ERROR') {
+        status = 503;
+        errorCode = 'DB_ERROR';
+        clientMessage = 'Database error';
+      }
+
+      res.status(status).json({ error: clientMessage, code: errorCode });
     }
   });
 

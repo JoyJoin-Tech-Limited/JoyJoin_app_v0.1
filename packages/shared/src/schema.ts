@@ -101,7 +101,7 @@ export const users = pgTable("users", {
   placeOfOrigin: varchar("place_of_origin"), // Deprecated in favor of hometown fields
   longTermBase: varchar("long_term_base"), // Deprecated - use location preferences
   wechatId: varchar("wechat_id"), // WeChat ID (legacy field)
-  phoneNumber: varchar("phone_number").unique(), // Phone number for authentication (optional with WeChat login)
+  phoneNumber: varchar("phone_number").unique(), // Phone number for authentication (optional; has always been nullable)
   password: varchar("password"), // Hashed password for admin login
   
   // WeChat Mini Program authentication fields (added 2026-02-04)
