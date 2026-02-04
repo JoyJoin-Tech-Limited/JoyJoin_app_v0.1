@@ -27,7 +27,7 @@ The JoyJoin Personality Test System uses a scientifically calibrated adaptive as
 
 - **60-Question Bank**: Divided into 3 levels (L1 Anchor, L2 Adaptive, L3 Disambiguation)
 - **V4 Adaptive Engine**: Dynamically selects 8-16 questions based on real-time confidence tracking
-- **V2 Matcher Algorithm**: Weighted cosine similarity with asymmetric penalties and VETO filters
+- **V2 Matcher Algorithm**: Weighted Manhattan distance with asymmetric penalties and VETO filters
 - **6-Trait Model (ACOEXP)**: Affinity, Conscientiousness, Emotional Stability, Openness, Extraversion, Positivity
 
 **Key Features:**
@@ -381,13 +381,14 @@ Each archetype has 3 categories of traits:
 }
 ```
 
-If a user has **high X (e.g., 90)** while 暖心熊 prototype has **X=48**:
-- Gap: |90 - 48| = 42 points
+If a user has **high X (e.g., raw ≈ 90, z ≈ +2.67)** while 暖心熊 prototype has **X ≈ 48 (z ≈ -0.13)**:
+- Z-gap: userZ[X] − archetypeZ[X] ≈ 2.8σ
 - Weight: 0.4 (avoid trait)
-- Distance contribution: 42 × 0.4 = 16.8
-- **Plus** asymmetric penalty: λ × (gap - threshold)² ≈ 2.0 × 40² = 3200
+- Distance contribution (in the main matcher): 2.8 × 0.4 ≈ 1.12
+- **Plus** asymmetric penalty (same formula as below):  
+  λ × (gap − threshold)² = 2.0 × (2.8 − 0.5)² ≈ 10.6
 
-Result: High-X users are **strongly penalized** from matching to 暖心熊.
+Result: High-X users are **strongly penalized** from matching to 暖心熊, via a moderate base distance plus a sizable asymmetric penalty in Z‑score space.
 
 ### Asymmetric Penalty
 

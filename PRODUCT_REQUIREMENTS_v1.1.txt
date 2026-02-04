@@ -274,7 +274,7 @@ traitConfidence = {
 
 **Step 3: V2 Matcher Algorithm**
 
-The V2 Matcher uses weighted cosine similarity with asymmetric penalties:
+The V2 Matcher uses weighted Manhattan distance with asymmetric penalties:
 
 ```typescript
 function matchArchetype(userTraits):
@@ -341,13 +341,6 @@ Final trait scores are normalized to 0-100 scale for display:
 - **O (Openness)**: Creativity, curiosity, abstract thinking
 - **X (Extraversion)**: Social energy, outgoingness, stimulation seeking
 - **P (Positivity)**: Optimism, enthusiasm, cheerfulness
-
-**Step 5: Generate Personalized Insights**
-
-For each archetype, pre-configured:
-- **Strengths:** 你擅长打开话题、带动气氛... (What you're good at)
-- **Challenges:** 有时可能会跳跃太快... (Potential blind spots)
-- **Ideal Friend Types:** [协调者, 连接者, 探索者] (Top 3 compatible archetypes)
 
 **Step 5: Generate Personalized Insights**
 
