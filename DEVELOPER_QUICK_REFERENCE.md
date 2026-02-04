@@ -403,7 +403,7 @@ const DEFAULT_ASSESSMENT_CONFIG = {
 | `packages/shared/src/personality/archetypeNames.ts` | Canonical 12-archetype ordering |
 | `packages/shared/src/personality/questionsV4.ts` | 60-question bank with trait vectors |
 | `packages/shared/src/personality/adaptiveEngine.ts` | Question selection & confidence tracking |
-| `packages/shared/src/personality/matcherV2.ts` | V2 weighted cosine similarity matcher |
+| `packages/shared/src/personality/matcherV2.ts` | V2 weighted Manhattan distance matcher with asymmetric penalties and VETO filters |
 | `packages/shared/src/personality/prototypes.ts` | 12 archetype trait profiles |
 | `packages/shared/src/personality/types.ts` | Type definitions (TraitKey, ArchetypeMatch, etc.) |
 | `apps/user-client/src/pages/PersonalityTestPageV4.tsx` | Adaptive test UI |
