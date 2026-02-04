@@ -94,7 +94,9 @@ Foster meaningful local connections through AI-powered matching that understands
 
 **User Personas:**
 
-1. **探索者 Lisa (Explorer)** - 28, Marketing Manager
+> **Note:** Persona archetypes updated to V4 system (2026-02-04)
+
+1. **沉思猫头鹰 Lisa (Contemplative Owl)** - 28, Marketing Manager
    - Moved to Shenzhen 6 months ago
    - Wants to meet like-minded professionals
    - Values deep conversations over small talk
@@ -104,7 +106,7 @@ Foster meaningful local connections through AI-powered matching that understands
    - Looking to expand professional network
    - Enjoys facilitating connections
 
-3. **连接者 Amy (Connector)** - 30, HR Director
+3. **暖心熊 Amy (Warm Bear)** - 30, HR Director
    - Observant and empathetic
    - Enjoys helping others meet
    - Values harmony and inclusion
@@ -1256,7 +1258,7 @@ Buttons:
 **Filters:**
 ```typescript
 - Subscription Status: All | Active | Expired | Never
-- Archetype: All | 火花塞 | 探索者 | ...
+- Archetype: All | 开心柯基 | 太阳鸡 | 夸夸豚 | ... (12 total)
 - Registration Date Range
 - Search: Name, phone, email
 ```
@@ -1957,20 +1959,20 @@ Decision:
 
 **4. Chemistry Matrix Editor**
 
-**14×14 Compatibility Matrix:**
+**12×12 Compatibility Matrix:**
+
+> **Note:** Example below uses legacy archetype names for illustration. 
+> Production system uses current 12 archetypes (开心柯基, 太阳鸡, etc.)
+> See `apps/server/src/archetypeChemistry.ts` for actual matrix.
 
 ```typescript
-// Example: 火花塞 compatibility with others
+// Example structure (legacy names for illustration only)
 const chemistryMatrix = {
-  "火花塞": {
-    "火花塞": 75,    // Two spark plugs can compete
-    "探索者": 92,    // High chemistry
-    "故事家": 88,
-    "挑战者": 78,
-    "连接者": 85,
-    "协调者": 85,
-    "氛围组": 82,
-    "肯定者": 80,
+  "开心柯基": {
+    "开心柯基": 70,
+    "太阳鸡": 88,
+    "夸夸豚": 90,
+    "机智狐": 85,
     ...
   },
   ...
@@ -2609,9 +2611,13 @@ Optimization Opportunities:
 
 **Archetype Analytics:**
 
+> **Note:** Example data below uses legacy archetype names from V1/V2 system.
+> Production system uses current 12 archetypes (开心柯基, 太阳鸡, 夸夸豚, etc.)
+> See Section 1.3 for current archetype list.
+
 ```typescript
 1. Overall Distribution
-   Pie Chart:
+   Pie Chart (example data - legacy names):
    - 连接者: 18.5%
    - 探索者: 16.2%
    - 故事家: 14.8%
@@ -2627,7 +2633,7 @@ Optimization Opportunities:
    - Best feedback givers: 探索者 (85% provide deep feedback)
    
 3. Archetype Pairing Success
-   Heatmap: 8x8 matrix
+   Heatmap: 12x12 matrix
    - Best pairs: 探索者 × 火花塞 (4.6 avg atmosphere)
    - Challenging pairs: 挑战者 × 挑战者 (3.8 avg)
    
@@ -2640,11 +2646,11 @@ Optimization Opportunities:
 **Strategic Insights:**
 
 ```typescript
-Auto-Generated Insights:
-  ✅ "连接者 archetype has highest retention - recruit more!"
-  ⚠️ "挑战者 users are underrepresented (5%) - adjust marketing"
-  💡 "Events with 2+ 火花塞 have 15% higher satisfaction"
-  📊 "探索者 users prefer learning events (2.3x attendance)"
+Auto-Generated Insights (example format):
+  ✅ "High retention archetype detected - recruit more!"
+  ⚠️ "Underrepresented archetype (5%) - adjust marketing"
+  💡 "Events with 2+ high-energy archetypes show 15% higher satisfaction"
+  📊 "Certain archetypes prefer specific event types (data-driven)"
 ```
 
 ---
@@ -3117,22 +3123,25 @@ function matchUsersToGroups(users, eventMaxAttendees, weights) {
 }
 ```
 
-**Chemistry Matrix (14×14):**
+**Chemistry Matrix (12×12):**
 
-Stored in: `server/archetypeChemistry.ts`
+> **Note:** Production matrix uses current 12 archetypes.
+> See `apps/server/src/archetypeChemistry.ts` for actual implementation.
 
-Sample values:
+Stored in: `apps/server/src/archetypeChemistry.ts`
+
+Sample structure:
 ```typescript
 const chemistryMatrix = {
-  "火花塞": {
-    "火花塞": 75, "探索者": 92, "故事家": 88, "挑战者": 78,
-    "连接者": 85, "协调者": 85, "氛围组": 82, "肯定者": 80, ...
+  "开心柯基": {
+    "开心柯基": 70, "太阳鸡": 88, "夸夸豚": 90, "机智狐": 85,
+    "淡定海豚": 82, "织网蛛": 83, "暖心熊": 92, "灵感章鱼": 86, ...
   },
-  "探索者": {
-    "火花塞": 92, "探索者": 80, "故事家": 86, "挑战者": 90,
-    "连接者": 86, "协调者": 84, "氛围组": 75, "肯定者": 82, ...
+  "太阳鸡": {
+    "开心柯基": 88, "太阳鸡": 75, "夸夸豚": 85, "机智狐": 80,
+    "淡定海豚": 88, "织网蛛": 82, "暖心熊": 87, "灵感章鱼": 83, ...
   },
-  // ... 14×14 = 196 unique compatibility scores
+  // ... 12×12 = 144 unique compatibility scores (0-100 range)
 };
 ```
 
