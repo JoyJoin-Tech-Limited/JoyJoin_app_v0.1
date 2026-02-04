@@ -100,9 +100,15 @@ export const users = pgTable("users", {
   // Registration fields - Deprecated/Legacy
   placeOfOrigin: varchar("place_of_origin"), // Deprecated in favor of hometown fields
   longTermBase: varchar("long_term_base"), // Deprecated - use location preferences
-  wechatId: varchar("wechat_id"), // WeChat ID
-  phoneNumber: varchar("phone_number").unique(), // Phone number for authentication
+  wechatId: varchar("wechat_id"), // WeChat ID (legacy field)
+  phoneNumber: varchar("phone_number").unique(), // Phone number for authentication (optional; has always been nullable)
   password: varchar("password"), // Hashed password for admin login
+  
+  // WeChat Mini Program authentication fields (added 2026-02-04)
+  wechatOpenId: text("wechat_open_id").unique(), // WeChat unique identifier
+  wechatSessionKey: text("wechat_session_key"), // WeChat session key for API calls
+  wechatNickname: text("wechat_nickname"), // WeChat user nickname
+  wechatAvatarUrl: text("wechat_avatar_url"), // WeChat user avatar URL
   
   // Registration fields - Access & Safety
   accessibilityNeeds: text("accessibility_needs"), // Optional text
@@ -137,9 +143,24 @@ export const users = pgTable("users", {
   favoriteRestaurant: varchar("favorite_restaurant"), // 宝藏餐厅推荐
   favoriteRestaurantReason: text("favorite_restaurant_reason"), // 喜欢这家餐厅的原因
   
-  // Registration fields - Activity Preferences (collected via AI chat)
-  activityTimePreference: varchar("activity_time_preference"), // 活动时段偏好: 工作日晚上, 周末白天, 周末晚上, 都可以
-  socialFrequency: varchar("social_frequency"), // 聚会频率: 每周社交, 每两周一次, 每月一两次, 看心情
+  // ========== DEPRECATED FIELDS (2026-02-04 - Post-Test Signup Flow) ==========
+  // These fields are no longer collected in onboarding
+  // Kept in schema for backward compatibility but not actively used
+  // See: MIGRATION_2026-02-04_SIGNUP_FLOW.md
+  
+  // Registration fields - Activity Preferences (DEPRECATED - not collected in onboarding)
+  activityTimePreference: varchar("activity_time_preference"), // DEPRECATED: 活动时段偏好 - removed from onboarding
+  socialFrequency: varchar("social_frequency"), // DEPRECATED: 聚会频率 - removed from onboarding
+  
+  // Note: The following fields are already marked as deprecated in other sections:
+  // - languagesComfort (see Registration fields - Culture & Language section) - moved to profile edit only
+  // - hometownCountry (see Registration fields - Culture & Language section) - removed entirely
+  // - cuisinePreference (see Registration fields - Social & Venue Preferences section) - simplified/removed
+  // - dietaryRestrictions - not in schema
+  // - decorStylePreferences - not in schema
+  // - groupSizeComfort - not in schema
+  
+  // ========== END DEPRECATED FIELDS ==========
   
   // Personality data (Step 3 - Vibe Vector)
   vibeVector: jsonb("vibe_vector"), // {energy, conversation_style, initiative, novelty, humor} scored 0-1

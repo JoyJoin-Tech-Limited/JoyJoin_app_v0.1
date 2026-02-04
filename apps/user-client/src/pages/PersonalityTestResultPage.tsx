@@ -9,7 +9,7 @@ import { XiaoyueInsightCard } from "@/components/XiaoyueInsightCard";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import StyleSpectrum from "@/components/StyleSpectrum";
 import { ShareCardModal } from "@/components/ShareCardModal";
-import { Sparkles, Users, TrendingUp, Heart, Quote, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
+import { Sparkles, Users, TrendingUp, Heart, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2, Smartphone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   archetypeAvatars, 
@@ -30,6 +30,7 @@ import { ArchetypeSlotMachine } from "@/components/slot-machine";
 import { UnlockOverlay } from "@/components/UnlockOverlay";
 import { getArchetypeColorHSL } from "@/components/slot-machine/archetypeData";
 import { SkipAnimationButton } from "@/components/SkipAnimationButton";
+import { useAuth } from "@/hooks/useAuth";
 
 const staggerContainerVariants = {
   hidden: { opacity: 0 },
@@ -510,9 +511,12 @@ type AnimationPhase = 'slot' | 'unlock' | 'results';
 export default function PersonalityTestResultPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
   const [animationPhase, setAnimationPhase] = useState<AnimationPhase>('slot');
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [skipToResults, setSkipToResults] = useState(false);
+  const [showLoginCTA, setShowLoginCTA] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   const containerVariants = useMemo(
@@ -597,6 +601,90 @@ export default function PersonalityTestResultPage() {
       setAnimationPhase('results');
     }
   }, [prefersReducedMotion, animationPhase]);
+
+  // Show login CTA after results are visible for unauthenticated users (Option B: Post-Test Signup)
+  useEffect(() => {
+    if (!isAuthenticated && animationPhase === 'results') {
+      const timer = setTimeout(() => setShowLoginCTA(true), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, animationPhase]);
+
+  // WeChat login handler (Option B: Post-Test Signup Flow)
+  const handleWeChatLogin = useCallback(async () => {
+    setIsLoggingIn(true);
+    
+    try {
+      // Get anonymous test answers from localStorage with error handling
+      let testAnswers: unknown[] = [];
+      const answers = localStorage.getItem('joyjoin_v4_presignup_answers');
+      if (answers) {
+        try {
+          const parsed = JSON.parse(answers);
+          // Only accept array-like data; otherwise, fall back to empty array
+          testAnswers = Array.isArray(parsed) ? parsed : [];
+        } catch (parseError) {
+          console.warn(
+            "[WeChat Login] Failed to parse joyjoin_v4_presignup_answers from localStorage, falling back to empty array.",
+            parseError
+          );
+          testAnswers = [];
+        }
+      }
+      
+      // In production, this would call wx.login() to get WeChat code
+      // For now, use a mock code for development/testing
+      const mockCode = `wechat_test_${crypto.randomUUID()}`;
+      
+      // TODO: Replace with actual WeChat SDK call in production:
+      // const { code } = await wx.login();
+      
+      const response = await fetch('/api/auth/wechat/login-with-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: mockCode,
+          testAnswers,
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: '登录失败' }));
+        throw new Error(errorData.error || '登录失败');
+      }
+      
+      await response.json();
+      
+      // Clear anonymous data
+      localStorage.removeItem('joyjoin_v4_presignup_answers');
+      localStorage.removeItem('joyjoin_v4_assessment_session');
+      localStorage.removeItem('joyjoin_synced_session_id');
+      localStorage.removeItem('joyjoin_synced_answer_count');
+      
+      // Refresh user auth state (queryClient is imported from @/lib/queryClient)
+      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      
+      toast({
+        title: "登录成功",
+        description: "正在为你准备个性化匹配...",
+      });
+      
+      // Navigate to onboarding (essential data)
+      setTimeout(() => {
+        setLocation('/onboarding/setup');
+      }, 500);
+      
+    } catch (error) {
+      console.error('[WeChat Login] Error:', error);
+      toast({
+        title: "登录失败",
+        description: error instanceof Error ? error.message : "请稍后重试",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoggingIn(false);
+    }
+  }, [setLocation, toast]);
 
   // Handle slot machine completion
   const handleSlotMachineComplete = useCallback(() => {
@@ -1052,28 +1140,66 @@ export default function PersonalityTestResultPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
       >
-        <div className="max-w-2xl mx-auto">
-          <Button 
-            className={`w-full h-14 rounded-2xl text-lg font-bold shadow-lg bg-gradient-to-r ${gradient} hover:opacity-90 transition-all duration-200 border-0`}
-            onClick={handleContinue}
-            disabled={completeTestMutation.isPending}
-            data-testid="button-continue-profile"
-          >
-            {completeTestMutation.isPending ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                加载中...
-              </>
-            ) : (
-              <>
-                继续完善个人信息
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </>
-            )}
-          </Button>
-          <p className="text-center text-xs text-muted-foreground mt-2">
-            完善资料，获得更精准的匹配推荐
-          </p>
+        <div className="max-w-2xl mx-auto space-y-3">
+          {!isAuthenticated && showLoginCTA ? (
+            /* WeChat Login CTA for anonymous users (Option B: Post-Test Signup) */
+            <>
+              <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
+                <CardContent className="p-4 text-center space-y-3">
+                  <h3 className="text-lg font-semibold">想看看本周有谁和你匹配？</h3>
+                  <p className="text-sm text-muted-foreground">
+                    登录后查看为你推荐的活动和可能认识的人
+                  </p>
+                  <Button 
+                    size="lg" 
+                    onClick={handleWeChatLogin}
+                    disabled={isLoggingIn}
+                    className={`w-full h-12 bg-gradient-to-r ${gradient} hover:opacity-90 transition-all duration-200`}
+                  >
+                    {isLoggingIn ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        登录中...
+                      </>
+                    ) : (
+                      <>
+                        <Smartphone className="w-5 h-5 mr-2" />
+                        微信登录，查看匹配活动
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    登录即同意《用户协议》和《隐私政策》
+                  </p>
+                </CardContent>
+              </Card>
+            </>
+          ) : isAuthenticated ? (
+            /* Authenticated users - continue to profile setup */
+            <>
+              <Button 
+                className={`w-full h-14 rounded-2xl text-lg font-bold shadow-lg bg-gradient-to-r ${gradient} hover:opacity-90 transition-all duration-200 border-0`}
+                onClick={handleContinue}
+                disabled={completeTestMutation.isPending}
+                data-testid="button-continue-profile"
+              >
+                {completeTestMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    加载中...
+                  </>
+                ) : (
+                  <>
+                    继续完善个人信息
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </>
+                )}
+              </Button>
+              <p className="text-center text-xs text-muted-foreground">
+                完善资料，获得更精准的匹配推荐
+              </p>
+            </>
+          ) : null}
         </div>
       </motion.div>
         </motion.div>
