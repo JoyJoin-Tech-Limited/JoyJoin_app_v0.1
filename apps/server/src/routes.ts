@@ -1013,10 +1013,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { getFinalResult } = await import('@shared/personality/adaptiveEngine');
         const { findBestMatchingArchetypesV2 } = await import('@shared/personality/matcherV2');
         
-        // Convert answers to trait scores (simplified for now)
-        // In a real implementation, you'd reconstruct the full engine state
+        // Convert answers to trait scores
+        // Initialize with neutral baseline (0 instead of 50 to avoid double-counting)
         const traitScores: Record<string, number> = {
-          A: 50, C: 50, E: 50, O: 50, X: 50, P: 50
+          A: 0, C: 0, E: 0, O: 0, X: 0, P: 0
         };
         
         // Process each answer to update trait scores
@@ -1025,15 +1025,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (answer.traitScores) {
             Object.keys(answer.traitScores).forEach((trait: string) => {
               if (traitScores[trait] !== undefined) {
-                traitScores[trait] += answer.traitScores[trait];
+                const delta = answer.traitScores[trait];
+                traitScores[trait] += delta;
               }
             });
           }
         });
         
         // Normalize scores to 0-100 range
+        // Add base of 50 for neutral starting point, then normalize
         Object.keys(traitScores).forEach(trait => {
-          traitScores[trait] = Math.max(0, Math.min(100, traitScores[trait]));
+          const normalizedScore = 50 + traitScores[trait];
+          traitScores[trait] = Math.max(0, Math.min(100, normalizedScore));
         });
         
         // Calculate best matching archetype using V2 matcher
@@ -1048,7 +1051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create assessment session record
         const [session] = await db.insert(assessmentSessions).values({
           userId: user.id,
-          phase: 'post_signup' as any,
+          phase: 'post_signup', // Valid phase: pre_signup, post_signup, completed
           currentQuestionIndex: testAnswers.length,
           traitScores: traitScores as any,
           traitConfidences: matchResult.traitConfidences || {},
@@ -1056,10 +1059,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             { archetype: primaryArchetype, score: 100, confidence: 0.9 },
             { archetype: secondaryArchetype, score: 80, confidence: 0.7 }
           ],
-          algorithmVersion: 'v2' as any,
+          algorithmVersion: 'v2', // Valid version: v1 or v2
           matchDetailsJson: matchResult.matchDetails || {},
           primaryArchetype,
-          secondaryArchetype,
           isDecisive: matchResult.isDecisive || false,
           completedAt: new Date(),
           createdAt: new Date(),

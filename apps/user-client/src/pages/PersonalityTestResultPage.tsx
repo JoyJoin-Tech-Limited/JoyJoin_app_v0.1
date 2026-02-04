@@ -621,7 +621,7 @@ export default function PersonalityTestResultPage() {
       
       // In production, this would call wx.login() to get WeChat code
       // For now, use a mock code for development/testing
-      const mockCode = `test_${Date.now()}`;
+      const mockCode = `wechat_test_${crypto.randomUUID()}`;
       
       // TODO: Replace with actual WeChat SDK call in production:
       // const { code } = await wx.login();
@@ -648,8 +648,8 @@ export default function PersonalityTestResultPage() {
       localStorage.removeItem('joyjoin_synced_session_id');
       localStorage.removeItem('joyjoin_synced_answer_count');
       
-      // Refresh user auth state
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      // Refresh user auth state (queryClient is imported from @/lib/queryClient)
+      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       
       toast({
         title: "登录成功",
