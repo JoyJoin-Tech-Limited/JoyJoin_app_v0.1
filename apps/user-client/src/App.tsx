@@ -235,12 +235,17 @@ function Router() {
   if (!isAuthenticated) {
     return (
       <Switch>
+        {/* Anonymous personality test (Option B: Post-Test Signup Flow - 2026-02-04) */}
+        <Route path="/personality-test" component={PersonalityTestPageV4} />
+        <Route path="/personality-test/results" component={PersonalityTestResultPage} />
+        <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
+        
         {/* 新版 Duolingo-style Onboarding 流程 */}
         <Route path="/onboarding" component={DuolingoOnboardingPage} />
-        {/* Registration routes redirect to Duolingo-style onboarding */}
-        <Route path="/registration" component={DuolingoOnboardingPage} />
-        <Route path="/registration/chat" component={DuolingoOnboardingPage} />
-        <Route path="/register" component={DuolingoOnboardingPage} />
+        {/* Registration routes redirect to personality test (new flow) */}
+        <Route path="/registration" component={PersonalityTestPageV4} />
+        <Route path="/registration/chat" component={PersonalityTestPageV4} />
+        <Route path="/register" component={PersonalityTestPageV4} />
         {/* Legacy login page still accessible */}
         <Route path="/login" component={LoginPage} />
         {/* New landing page is the default entry point */}

@@ -950,6 +950,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // WeChat authentication with test results (Option B: Post-Test Signup Flow)
+  // Added 2026-02-04 for WeChat Mini Program silent authentication
+  app.post('/api/auth/wechat/login-with-test', async (req: any, res) => {
+    try {
+      const { code, anonymousSessionId, testAnswers } = req.body;
+      
+      if (!code) {
+        return res.status(400).json({ error: "WeChat code is required" });
+      }
+      
+      // Note: In production, this would exchange code for openid with WeChat API
+      // For development/testing, we'll use a mock implementation
+      // TODO: Implement actual WeChat API integration with WECHAT_APPID and WECHAT_SECRET
+      
+      // Mock WeChat response for development
+      // In production, replace with actual API call:
+      // const wechatRes = await fetch(
+      //   `https://api.weixin.qq.com/sns/jscode2session?` +
+      //   `appid=${process.env.WECHAT_APPID}&` +
+      //   `secret=${process.env.WECHAT_SECRET}&` +
+      //   `js_code=${code}&` +
+      //   `grant_type=authorization_code`
+      // );
+      
+      // For now, use code as mock openid for testing
+      const openid = `wechat_${code}`;
+      const session_key = `mock_session_${Date.now()}`;
+      
+      // Find or create user with WeChat OpenID
+      let [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.wechatOpenId, openid))
+        .limit(1);
+      
+      if (!user) {
+        // Create new user (silent signup)
+        [user] = await db.insert(users).values({
+          wechatOpenId: openid,
+          wechatSessionKey: session_key,
+          hasCompletedRegistration: false,
+          hasCompletedPersonalityTest: false,
+          createdAt: new Date(),
+        }).returning();
+        
+        console.log(`[WeChat Auth] Created new user via WeChat: ${user.id}`);
+      } else {
+        // Update session key for existing user
+        await db.update(users)
+          .set({ wechatSessionKey: session_key })
+          .where(eq(users.id, user.id));
+        
+        console.log(`[WeChat Auth] Updated session for existing user: ${user.id}`);
+      }
+      
+      // Save personality test results if provided
+      if (testAnswers && Array.isArray(testAnswers) && testAnswers.length > 0) {
+        console.log(`[WeChat Auth] Processing ${testAnswers.length} test answers for user ${user.id}`);
+        
+        // Import personality matching functions
+        const { getFinalResult } = await import('@shared/personality/adaptiveEngine');
+        const { findBestMatchingArchetypesV2 } = await import('@shared/personality/matcherV2');
+        
+        // Convert answers to trait scores (simplified for now)
+        // In a real implementation, you'd reconstruct the full engine state
+        const traitScores: Record<string, number> = {
+          A: 50, C: 50, E: 50, O: 50, X: 50, P: 50
+        };
+        
+        // Process each answer to update trait scores
+        // This is a simplified version - in production, use the full adaptive engine
+        testAnswers.forEach((answer: any) => {
+          if (answer.traitScores) {
+            Object.keys(answer.traitScores).forEach((trait: string) => {
+              if (traitScores[trait] !== undefined) {
+                traitScores[trait] += answer.traitScores[trait];
+              }
+            });
+          }
+        });
+        
+        // Normalize scores to 0-100 range
+        Object.keys(traitScores).forEach(trait => {
+          traitScores[trait] = Math.max(0, Math.min(100, traitScores[trait]));
+        });
+        
+        // Calculate best matching archetype using V2 matcher
+        const matchResult = findBestMatchingArchetypesV2(traitScores as any, {
+          returnDetails: true,
+          userSecondaryData: {}
+        });
+        
+        const primaryArchetype = matchResult.primaryArchetype;
+        const secondaryArchetype = matchResult.secondaryArchetype;
+        
+        // Create assessment session record
+        const [session] = await db.insert(assessmentSessions).values({
+          userId: user.id,
+          phase: 'post_signup' as any,
+          currentQuestionIndex: testAnswers.length,
+          traitScores: traitScores as any,
+          traitConfidences: matchResult.traitConfidences || {},
+          topArchetypes: [
+            { archetype: primaryArchetype, score: 100, confidence: 0.9 },
+            { archetype: secondaryArchetype, score: 80, confidence: 0.7 }
+          ],
+          algorithmVersion: 'v2' as any,
+          matchDetailsJson: matchResult.matchDetails || {},
+          primaryArchetype,
+          secondaryArchetype,
+          isDecisive: matchResult.isDecisive || false,
+          completedAt: new Date(),
+          createdAt: new Date(),
+        }).returning();
+        
+        // Update user with test completion
+        await db.update(users)
+          .set({ 
+            hasCompletedPersonalityTest: true,
+            archetype: primaryArchetype,
+            primaryArchetype: primaryArchetype,
+            secondaryArchetype: secondaryArchetype,
+          })
+          .where(eq(users.id, user.id));
+        
+        // Refresh user data
+        [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, user.id))
+          .limit(1);
+        
+        console.log(`[WeChat Auth] Saved personality test results for user ${user.id}: ${primaryArchetype}`);
+      }
+      
+      // Create session
+      req.session.userId = user.id.toString();
+      
+      res.json({
+        success: true,
+        user: {
+          id: user.id,
+          hasCompletedPersonalityTest: user.hasCompletedPersonalityTest,
+          hasCompletedRegistration: user.hasCompletedRegistration,
+          archetype: user.archetype,
+          wechatOpenId: user.wechatOpenId,
+        }
+      });
+    } catch (error) {
+      console.error('[WeChat Auth] Error during WeChat login:', error);
+      res.status(500).json({ error: "Server error during authentication" });
+    }
+  });
+
   app.post('/api/auth/logout', async (req: Request, res) => {
     try {
       req.session.destroy((err: any) => {
