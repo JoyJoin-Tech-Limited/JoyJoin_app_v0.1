@@ -9,7 +9,7 @@ import { XiaoyueInsightCard } from "@/components/XiaoyueInsightCard";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import StyleSpectrum from "@/components/StyleSpectrum";
 import { ShareCardModal } from "@/components/ShareCardModal";
-import { Sparkles, Users, TrendingUp, Heart, Quote, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2, Smartphone } from "lucide-react";
+import { Sparkles, Users, TrendingUp, Heart, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2, Smartphone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   archetypeAvatars, 
@@ -615,9 +615,22 @@ export default function PersonalityTestResultPage() {
     setIsLoggingIn(true);
     
     try {
-      // Get anonymous test answers from localStorage
+      // Get anonymous test answers from localStorage with error handling
+      let testAnswers: unknown[] = [];
       const answers = localStorage.getItem('joyjoin_v4_presignup_answers');
-      const testAnswers = answers ? JSON.parse(answers) : [];
+      if (answers) {
+        try {
+          const parsed = JSON.parse(answers);
+          // Only accept array-like data; otherwise, fall back to empty array
+          testAnswers = Array.isArray(parsed) ? parsed : [];
+        } catch (parseError) {
+          console.warn(
+            "[WeChat Login] Failed to parse joyjoin_v4_presignup_answers from localStorage, falling back to empty array.",
+            parseError
+          );
+          testAnswers = [];
+        }
+      }
       
       // In production, this would call wx.login() to get WeChat code
       // For now, use a mock code for development/testing
@@ -631,16 +644,16 @@ export default function PersonalityTestResultPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           code: mockCode,
-          anonymousSessionId: localStorage.getItem('joyjoin_v4_assessment_session'),
           testAnswers,
         })
       });
       
       if (!response.ok) {
-        throw new Error('登录失败');
+        const errorData = await response.json().catch(() => ({ error: '登录失败' }));
+        throw new Error(errorData.error || '登录失败');
       }
       
-      const data = await response.json();
+      await response.json();
       
       // Clear anonymous data
       localStorage.removeItem('joyjoin_v4_presignup_answers');
