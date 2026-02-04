@@ -116,27 +116,13 @@ export interface XPReward {
 }
 
 export const XP_REWARDS: Record<string, XPReward> = {
-  // 注册相关
-  registration_express: {
-    action: "registration_express",
-    actionCn: "快速模式注册",
-    xp: 20,
-    coins: 10,
-    description: "完成快速模式注册",
-  },
-  registration_standard: {
-    action: "registration_standard",
-    actionCn: "标准模式注册",
+  // 注册相关 (simplified - no legacy modes)
+  registration: {
+    action: "registration",
+    actionCn: "完成注册",
     xp: 50,
     coins: 25,
-    description: "完成标准模式注册",
-  },
-  registration_deep: {
-    action: "registration_deep",
-    actionCn: "深度模式注册",
-    xp: 100,
-    coins: 50,
-    description: "完成深度模式注册",
+    description: "完成新用户注册",
   },
   
   // 活动相关

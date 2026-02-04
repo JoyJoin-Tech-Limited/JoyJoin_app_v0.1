@@ -2,10 +2,12 @@
  * 维度编排器 - 统一调度6维度对话引导系统
  * 
  * 职责：
- * 1. 根据模式（极速/标准/深度）决定维度覆盖范围
- * 2. 追踪维度完成进度，决定下一个问题
- * 3. 将6维度映射到L1/L2字段
- * 4. 生成动态prompt注入内容
+ * 1. 追踪维度完成进度，决定下一个问题
+ * 2. 将6维度映射到L1/L2字段
+ * 3. 生成动态prompt注入内容
+ * 
+ * Note: Legacy registration modes (express, standard, deep) have been removed.
+ * This orchestrator is now used only for profile enrichment.
  */
 
 import {
@@ -25,46 +27,6 @@ import {
   type TierFieldConfig
 } from './informationTiers';
 
-// ============ 模式配置 ============
-
-export type RegistrationMode = 'express' | 'standard' | 'deep';
-
-export interface ModeConfig {
-  mode: RegistrationMode;
-  requiredDimensions: InsightDimension[];
-  optionalDimensions: InsightDimension[];
-  maxQuestionsPerDimension: number;
-  followUpBudget: number;
-  skipLowPriority: boolean;
-}
-
-export const MODE_CONFIGS: Record<RegistrationMode, ModeConfig> = {
-  express: {
-    mode: 'express',
-    requiredDimensions: ['interest', 'career'],
-    optionalDimensions: ['lifestyle'],
-    maxQuestionsPerDimension: 1,
-    followUpBudget: 1,
-    skipLowPriority: true
-  },
-  standard: {
-    mode: 'standard',
-    requiredDimensions: ['interest', 'lifestyle', 'personality', 'social', 'career', 'expectation'],
-    optionalDimensions: [],
-    maxQuestionsPerDimension: 2,
-    followUpBudget: 6,
-    skipLowPriority: false
-  },
-  deep: {
-    mode: 'deep',
-    requiredDimensions: ['interest', 'lifestyle', 'personality', 'social', 'career', 'expectation'],
-    optionalDimensions: [],
-    maxQuestionsPerDimension: 3,
-    followUpBudget: 12,
-    skipLowPriority: false
-  }
-};
-
 // ============ 维度到L2字段映射 ============
 // 注意：同时映射informationTiers定义的字段名和stateManager产生的字段名
 
@@ -81,28 +43,33 @@ export const DIMENSION_TO_L2_FIELDS: Record<InsightDimension, string[]> = {
 export const HANDSHAKE_FIELDS = ['displayName', 'gender', 'ageRange', 'currentCity'];
 
 // ============ 编排器状态 ============
+// Simplified configuration (no mode-specific behavior)
+const DEFAULT_MAX_QUESTIONS_PER_DIMENSION = 2;
+const DEFAULT_REQUIRED_DIMENSIONS: InsightDimension[] = [
+  'interest', 'lifestyle', 'personality', 'social', 'career', 'expectation'
+];
 
 export interface OrchestratorState {
-  mode: RegistrationMode;
-  config: ModeConfig;
   tracker: ConversationTracker;
   handshakeComplete: boolean;
   handshakeFieldsCollected: string[];
   currentPhase: 'handshake' | 'dimension_guided' | 'confirmation';
   followUpUsed: number;
   askedQuestionIds: string[];
+  requiredDimensions: InsightDimension[];
+  maxQuestionsPerDimension: number;
 }
 
-export function createOrchestratorState(mode: RegistrationMode): OrchestratorState {
+export function createOrchestratorState(): OrchestratorState {
   return {
-    mode,
-    config: MODE_CONFIGS[mode],
     tracker: createConversationTracker(),
     handshakeComplete: false,
     handshakeFieldsCollected: [],
     currentPhase: 'handshake',
     followUpUsed: 0,
-    askedQuestionIds: []
+    askedQuestionIds: [],
+    requiredDimensions: DEFAULT_REQUIRED_DIMENSIONS,
+    maxQuestionsPerDimension: DEFAULT_MAX_QUESTIONS_PER_DIMENSION
   };
 }
 
@@ -124,7 +91,7 @@ export function getNextQuestion(
   state: OrchestratorState,
   collectedFields: Record<string, unknown>
 ): NextQuestionResult {
-  const { config, tracker, askedQuestionIds } = state;
+  const { tracker, askedQuestionIds, requiredDimensions, maxQuestionsPerDimension } = state;
 
   // Phase 1: 握手阶段 - 收集L1必填字段
   if (!state.handshakeComplete) {
@@ -147,11 +114,10 @@ export function getNextQuestion(
   }
 
   // Phase 2: 维度引导阶段
-  const requiredDims = config.requiredDimensions;
   
   for (const dimension of DIMENSION_ORDER) {
-    // 跳过不在当前模式要求范围内的维度
-    if (!requiredDims.includes(dimension) && !config.optionalDimensions.includes(dimension)) {
+    // 跳过不在要求范围内的维度
+    if (!requiredDimensions.includes(dimension)) {
       continue;
     }
 
@@ -159,7 +125,7 @@ export function getNextQuestion(
     const questionsAskedForDim = coverage?.questionAsked || 0;
 
     // 检查是否已达到该维度的问题上限
-    if (questionsAskedForDim >= config.maxQuestionsPerDimension) {
+    if (questionsAskedForDim >= maxQuestionsPerDimension) {
       continue;
     }
 
@@ -175,7 +141,7 @@ export function getNextQuestion(
     const availableQuestions = GUIDANCE_QUESTIONS.filter(q => 
       q.dimension === dimension && 
       !askedQuestionIds.includes(q.id) &&
-      (!config.skipLowPriority || q.priority >= 4)
+      q.priority >= 4  // Only use high-priority questions
     ).sort((a, b) => b.priority - a.priority);
 
     if (availableQuestions.length > 0) {
@@ -186,7 +152,7 @@ export function getNextQuestion(
         dimension,
         suggestedPrompt: nextQ.question,
         isFollowUp: false,
-        reason: `维度引导：${DIMENSION_NAMES[dimension]}(${questionsAskedForDim + 1}/${config.maxQuestionsPerDimension})`
+        reason: `维度引导：${DIMENSION_NAMES[dimension]}(${questionsAskedForDim + 1}/${maxQuestionsPerDimension})`
       };
     }
   }
@@ -281,7 +247,6 @@ export function generateDynamicPromptInjection(
     `**阶段**: ${nextQ.phase === 'handshake' ? '握手阶段（收集基础信息）' : 
                 nextQ.phase === 'dimension_guided' ? '维度引导阶段' : 
                 nextQ.phase === 'complete' ? '即将完成' : '确认阶段'}`,
-    `**模式**: ${state.mode === 'express' ? '极速模式' : state.mode === 'standard' ? '标准模式' : '深度模式'}`,
     ''
   ];
 
@@ -308,10 +273,10 @@ export function generateDynamicPromptInjection(
   // 添加维度进度概览
   lines.push('');
   lines.push('### 维度覆盖进度');
-  for (const dim of state.config.requiredDimensions) {
+  for (const dim of state.requiredDimensions) {
     const coverage = state.tracker.dimensions.get(dim);
     const status = coverage?.covered ? '✅' : coverage?.questionAsked ? '🔄' : '⏳';
-    lines.push(`- ${status} ${DIMENSION_NAMES[dim]}: ${coverage?.questionAsked || 0}/${state.config.maxQuestionsPerDimension}问`);
+    lines.push(`- ${status} ${DIMENSION_NAMES[dim]}: ${coverage?.questionAsked || 0}/${state.maxQuestionsPerDimension}问`);
   }
 
   return lines.join('\n');
@@ -336,9 +301,8 @@ export function calculateCompletionStatus(
   const l1Filled = l1Required.filter(f => collectedFields[f.field]);
   const l1Percentage = Math.round((l1Filled.length / l1Required.length) * 100);
 
-  // L2 完成度（基于模式要求的维度）
-  // 改进：支持数组值和低置信度条目的检测
-  const relevantL2Fields = state.config.requiredDimensions.flatMap(
+  // L2 完成度（基于要求的维度）
+  const relevantL2Fields = state.requiredDimensions.flatMap(
     dim => DIMENSION_TO_L2_FIELDS[dim]
   );
   const uniqueL2 = Array.from(new Set(relevantL2Fields));
@@ -382,10 +346,10 @@ const sessionStates = new Map<string, OrchestratorState>();
 
 export function getOrCreateOrchestratorState(
   sessionId: string,
-  mode: RegistrationMode = 'standard'
+  mode?: string  // Optional legacy parameter, ignored for backward compatibility
 ): OrchestratorState {
   if (!sessionStates.has(sessionId)) {
-    sessionStates.set(sessionId, createOrchestratorState(mode));
+    sessionStates.set(sessionId, createOrchestratorState());
   }
   return sessionStates.get(sessionId)!;
 }
@@ -393,3 +357,7 @@ export function getOrCreateOrchestratorState(
 export function clearOrchestratorState(sessionId: string): void {
   sessionStates.delete(sessionId);
 }
+
+// Legacy type export for backward compatibility (deprecated)
+// Used in deepseekClient.ts for type checking in legacy code paths
+export type RegistrationMode = 'express' | 'standard' | 'deep';
