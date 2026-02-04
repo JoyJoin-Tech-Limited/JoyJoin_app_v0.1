@@ -346,7 +346,7 @@ const sessionStates = new Map<string, OrchestratorState>();
 
 export function getOrCreateOrchestratorState(
   sessionId: string,
-  _mode?: string  // Legacy parameter, ignored
+  mode?: string  // Optional legacy parameter, ignored for backward compatibility
 ): OrchestratorState {
   if (!sessionStates.has(sessionId)) {
     sessionStates.set(sessionId, createOrchestratorState());
@@ -359,4 +359,5 @@ export function clearOrchestratorState(sessionId: string): void {
 }
 
 // Legacy type export for backward compatibility (deprecated)
+// Used in deepseekClient.ts for type checking in legacy code paths
 export type RegistrationMode = 'express' | 'standard' | 'deep';
