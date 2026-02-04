@@ -99,7 +99,7 @@ Foster meaningful local connections through AI-powered matching that understands
    - Wants to meet like-minded professionals
    - Values deep conversations over small talk
 
-2. **火花塞 David (Spark Plug)** - 26, Startup Founder
+2. **开心柯基 David (Happy Corgi)** - 26, Startup Founder
    - Naturally outgoing, energizes groups
    - Looking to expand professional network
    - Enjoys facilitating connections
@@ -169,103 +169,96 @@ Landing Page → Phone Number Entry → SMS Code Verification → Profile Setup
 
 #### Architecture Overview
 
-**12 Personality Archetypes**:
+**Last Updated:** 2026-02-04 (V4 System)
 
-**Core Archetypes (Mapped in Test):**
-1. 🙌 **火花塞 (Spark Plug)** - Energizer, icebreaker, topic initiator
-2. 🧭 **探索者 (Explorer)** - Curious, deep thinker, knowledge seeker
-3. 📖 **故事家 (Storyteller)** - Shares experiences, emotional connector
-4. ⚡ **挑战者 (Challenger)** - Critical thinker, debate lover
-5. 🤝 **连接者 (Connector)** - Social bridge, empathetic observer
-6. 🎯 **协调者 (Coordinator)** - Mediator, consensus builder
-7. 🎭 **氛围组 (Vibe Keeper)** - Humor, lightness, energy
-8. 🌟 **肯定者 (Affirmer)** - Encourager, supporter, validator
+**12 Personality Archetypes** (Production):
 
-**Extended Archetypes (Configured but not mapped):**
-9. 🦉 智者 (Sage)
-10. 🛡️ 守护者 (Guardian)
-11. 🌈 梦想家 (Dreamer)
-12. 🎨 艺术家 (Artist)
-13. 📋 组织者 (Organizer)
-14. 🔧 实干家 (Pragmatist)
+1. 🐕 **开心柯基 (Happy Corgi)** - High energy socializer (X=95, P=85)
+2. 🐓 **太阳鸡 (Sun Chicken)** - Optimistic motivator (P=92, X=78)
+3. 🐬 **夸夸豚 (Praise Dolphin)** - Warmhearted encourager (A=95, X=82)
+4. 🦊 **机智狐 (Clever Fox)** - Creative problem-solver (O=92, X=78)
+5. 🐬 **淡定海豚 (Calm Dolphin)** - Balanced mediator (E=85, C=70)
+6. 🕷️ **织网蛛 (Weaver Spider)** - Detail-oriented planner (C=85, E=65)
+7. 🐻 **暖心熊 (Warm Bear)** - Empathetic supporter (A=90, E=80)
+8. 🐙 **灵感章鱼 (Inspiration Octopus)** - Innovative ideator (O=95, P=70)
+9. 🦉 **沉思猫头鹰 (Contemplative Owl)** - Analytical thinker (O=88, C=80)
+10. 🐘 **定心大象 (Grounded Elephant)** - Stable anchor (C=90, E=86)
+11. 🐢 **稳如龟 (Steady Turtle)** - Reliable introvert (E=85, C=80)
+12. 🐱 **隐身猫 (Invisible Cat)** - Reserved observer (E=80, X=20)
 
-#### Test Structure - 10 Questions
+*See `packages/shared/src/personality/archetypeNames.ts` for canonical source*
 
-**Question Types:**
-- **Single Choice (6 questions):** Q1, Q3, Q4, Q8, Q9, Q10
-  - User selects 1 option → +2 points to mapped archetype
-  
-- **Dual Choice (4 questions):** Q2, Q5, Q6, Q7
-  - "Most like me" → +2 points
-  - "Second most like me" → +1 point
-  - Cannot select same option twice
+#### Test Structure - V4 Adaptive Assessment (8-16 Questions)
 
-**Question Categories:**
+**Adaptive System:**
+- 60-question bank divided into 3 levels (L1 Anchor, L2 Adaptive, L3 Disambiguation)
+- V4 engine selects 8-16 questions based on real-time confidence tracking
+- Stops when all trait confidences ≥ 0.7 OR 16 questions reached
 
-**基础行为模式 (Basic Behavioral Patterns) - Q1-Q4:**
-- Q1: 聚会开场行为 (Opening behavior at gatherings)
-- Q2: 陌生话题反应 (Reaction to unfamiliar topics)
-- Q3: 情感时刻响应 (Response to emotional moments)
-- Q4: 争论观点 (Attitude toward debates)
-
-**反应偏好 (Response Preferences) - Q5-Q7:**
-- Q5: 不同意见处理 (Handling disagreements)
-- Q6: 贡献方式 (Contribution style)
-- Q7: 话题推动方向 (Topic development approach)
-
-**自我认知 (Self-Awareness) - Q8-Q10:**
-- Q8: 社交焦虑来源 (Social anxiety triggers)
-- Q9: 最不可能角色 (Least likely role)
-- Q10: 朋友形容词 (How friends describe you)
-
-**Example Question (Dual Choice):**
+**Question Flow:**
 ```
-Q7: 有趣但复杂的话题被提起时你更推动：
-A. 向下挖掘：为什么与本质，追求深度 → 探索者
-B. 向外发散：还有什么相关，追求广度 → 火花塞
-C. 向内连接：我们如何感受，联系体验 → 故事家
-D. 向前推进：所以呢？能做什么？导向行动 → 协调者
+Phase 1: Ask 8 anchor questions (L1) → Establish baseline
+Phase 2: Check confidences → If low, ask adaptive questions (L2)
+Phase 3: Check confusion → If top-2 close, ask disambiguation (L3)
+Phase 4: V2 Matcher → Calculate final archetype
 ```
 
-#### Scoring Algorithm
+**Example Adaptive Question:**
+```
+Q18: 周末计划被朋友邀请打断
+A. 立刻调整计划加入 → { X: 4, P: 2, C: -1 }
+B. 明确拒绝，坚守计划 → { E: 3, C: 2, X: -1 }
+C. 尝试拉朋友进计划 → { A: 2, C: 1, E: 1 }
+D. 纠结但最终参加 → { A: 1, X: 1, C: -2 }
+```
 
-**Backend File:** `server/routes.ts` (Lines 16-168)
+#### Scoring Algorithm - V4 + V2 Matcher
 
-**Step 1: Calculate Archetype Scores**
+**Backend Files:** 
+- `packages/shared/src/personality/adaptiveEngine.ts`
+- `packages/shared/src/personality/matcherV2.ts`
+
+**Step 1: Real-time Trait Accumulation**
 ```typescript
-function calculateRoleScores(responses):
-  scores = { 火花塞: 0, 探索者: 0, ... } // 8 archetypes
-  
-  for each question:
-    if (single choice):
-      scores[mappedRole] += 2
-    else if (dual choice):
-      scores[mostLikeRole] += 2
-      scores[secondLikeRole] += 1
-  
-  return scores
+// Each answer updates 6 trait scores (ACOEXP)
+for each answer:
+  traitScores.A += option.traitScores.A
+  traitScores.C += option.traitScores.C
+  traitScores.E += option.traitScores.E
+  traitScores.O += option.traitScores.O
+  traitScores.X += option.traitScores.X
+  traitScores.P += option.traitScores.P
 ```
 
-**Maximum Possible Scores:**
-- Single questions: 6 × 2 = 12 points
-- Dual questions: 4 × (2+1) = 12 points
-- **Total: 24 points distributed**
-
-**Step 2: Determine Primary & Secondary Archetypes**
-```
-sorted_scores = sort(scores, descending)
-primaryArchetype = scores[0]
-secondaryArchetype = scores[1]
+**Step 2: V2 Matcher Execution**
+```typescript
+// Weighted Manhattan distance with asymmetric penalties
+userZ = (userTraits - 50) / 15  // Z-score normalization
+for archetype in prototypes:
+  distance = sum(|userZ - prototypeZ| × weight)
+  penalty = asymmetricPenalty(avoidTraits)
+  score = gaussian_kernel(distance + penalty)
+return topArchetype with confidence score
 ```
 
 **Step 3: Calculate 6-Dimensional Trait Scores**
 
-Each archetype has base trait profiles (0-10 scale):
+Current archetype trait profiles (0-100 scale):
 
-| Archetype | Affinity | Openness | Conscientiousness | Emotional Stability | Extraversion | Positivity |
-|-----------|----------|----------|-------------------|---------------------|--------------|------------|
-| 火花塞 | 7 | 9 | 5 | 7 | 9 | 8 |
-| 探索者 | 6 | 9 | 8 | 7 | 6 | 7 |
+| Archetype | A | C | E | O | X | P |
+|-----------|---|---|---|---|---|---|
+| 开心柯基 | 60 | 50 | 60 | 65 | 95 | 85 |
+| 太阳鸡 | 70 | 78 | 88 | 55 | 78 | 92 |
+| 夸夸豚 | 95 | 50 | 65 | 62 | 82 | 88 |
+| 机智狐 | 40 | 50 | 60 | 92 | 78 | 58 |
+| 淡定海豚 | 70 | 70 | 85 | 65 | 65 | 68 |
+| 织网蛛 | 70 | 85 | 65 | 70 | 60 | 60 |
+| 暖心熊 | 90 | 65 | 80 | 60 | 48 | 70 |
+| 灵感章鱼 | 50 | 28 | 55 | 95 | 52 | 70 |
+| 沉思猫头鹰 | 45 | 80 | 75 | 88 | 40 | 50 |
+| 定心大象 | 70 | 90 | 86 | 50 | 40 | 60 |
+| 稳如龟 | 45 | 80 | 85 | 65 | 30 | 45 |
+| 隐身猫 | 50 | 50 | 80 | 45 | 20 | 45 |
 | 故事家 | 9 | 7 | 6 | 6 | 8 | 7 |
 | 挑战者 | 5 | 9 | 8 | 8 | 7 | 6 |
 | 连接者 | 10 | 7 | 7 | 8 | 6 | 8 |
@@ -273,61 +266,61 @@ Each archetype has base trait profiles (0-10 scale):
 | 氛围组 | 8 | 7 | 6 | 7 | 10 | 10 |
 | 肯定者 | 10 | 6 | 7 | 8 | 7 | 10 |
 
-**Blending Formula:**
-```
-Final Score = (Primary × 70%) + (Secondary × 30%)
-```
-
 **Step 4: Generate Personalized Insights**
 
-For each archetype, pre-configured:
-- **Strengths:** 你擅长打开话题、带动气氛... (What you're good at)
-- **Challenges:** 有时可能会跳跃太快... (Potential blind spots)
-- **Ideal Friend Types:** [协调者, 连接者, 探索者] (Top 3 compatible archetypes)
+For each archetype, system provides:
+- **Strengths:** Key capabilities and natural talents
+- **Growth Areas:** Potential challenges and blind spots  
+- **Compatible Archetypes:** Top 3 from chemistry matrix (see `archetypeChemistry.ts`)
 
-**Step 5: Determine Subtype**
-```typescript
-subtypes = {
-  "火花塞": ["联想家", "提问者"],
-  "探索者": ["专家型", "考证派"],
-  ...
-}
-roleSubtype = subtypes[primaryArchetype][0] // Simplified: always first
-```
+*Note: Blending formula and subtypes removed in V4 - single decisive archetype match*
 
 #### UI/UX Features
 
+**Last Updated:** 2026-02-04 (Personality Test System V4)
+
 **During Test:**
-- ✨ **Progress Indicator:** Visual progress bar + question counter (1/10)
-- 📊 **Mini Radar Chart:** Real-time progress visualization
-- 🎉 **Milestone Animation:** After Q5 - "有意思！我们已经发现了你的一个隐藏特质..."
+- ✨ **Progress Indicator:** Visual progress bar + question counter (1/8 to 1/16, adaptive)
+- 📊 **Mini Radar Chart:** Real-time progress visualization showing 6 traits (ACOEXP)
+- 🎉 **Milestone Animation:** Appears dynamically based on trait confidence levels
 - 🎁 **Blind Box Reveal:** 3-second rotating gift box animation on submission
+- 🔄 **Adaptive Flow:** Questions adjust based on confidence - may finish in 8-12 questions if decisive
 
 **Results Page Components:**
 
 1. **Hero Section (70vh)**
    - Gradient background (archetype-specific color)
-   - Large emoji avatar (🙌 for 火花塞)
-   - Primary role name + description
-   - Secondary role avatar + name (if applicable)
+   - Large emoji avatar (🐕 for 开心柯基, 🐓 for 太阳鸡, etc.)
+   - Primary archetype name + description
+   - Secondary archetype avatar (if match is not decisive)
+   - Confidence indicator (🎯 Decisive Match if confidence ≥ 70%)
 
-2. **Six-Dimensional Radar Chart**
+2. **Six-Dimensional Radar Chart (ACOEXP)**
    - Interactive Recharts visualization
-   - 6 axes: Affinity, Openness, Conscientiousness, Emotional Stability, Extraversion, Positivity
-   - Strengths text
-   - Challenges warning
-   - Ideal friend type badges
+   - 6 axes: 
+     - **A** - Affinity/Agreeableness (亲和力)
+     - **C** - Conscientiousness (责任心)
+     - **O** - Openness (开放性)
+     - **E** - Emotional Stability (情绪稳定)
+     - **X** - Extraversion (外向性)
+     - **P** - Positivity (积极性)
+   - Normalized 0-100 scale for each trait
+   - Archetype-specific strengths text
+   - Challenges/growth areas
+   - Compatible archetype badges (top 3 from chemistry matrix)
 
 3. **Social Distribution Card**
    - "你在人群中的位置" (Your position in the crowd)
-   - Percentage of users with same archetype
+   - Percentage of users with same archetype (from 12-archetype distribution)
    - Top 4 archetype distribution preview
+   - Energy level indicator (0-100 scale)
 
 4. **Chemistry Matching Prediction**
-   - Top 3 compatible archetypes
-   - Compatibility percentage (85%-94%)
+   - Top 3 compatible archetypes based on chemistry matrix
+   - Compatibility percentage (60-100 range)
    - Animated progress bars
-   - AI algorithm explanation
+   - V2 Matcher algorithm explanation
+   - Match reason display (e.g., "High X+P synergy" for 开心柯基×太阳鸡)
 
 5. **Action Buttons**
    - 📤 Share Results (Native Web Share API)
@@ -336,20 +329,27 @@ roleSubtype = subtypes[primaryArchetype][0] // Simplified: always first
 
 **Data Storage:**
 ```sql
+-- V4 Assessment Session (stored in assessment_sessions table)
+INSERT INTO assessment_sessions (
+  user_id,
+  phase,
+  current_question_index,
+  trait_scores,  -- { A: 60, C: 50, E: 60, O: 65, X: 95, P: 85 }
+  trait_confidences,  -- { A: { score: 60, confidence: 0.85, sampleCount: 8 }, ... }
+  top_archetypes,  -- [{ archetype: '开心柯基', score: 85, confidence: 0.82 }, ...]
+  algorithm_version,  -- 'v2'
+  match_details_json,  -- V2 Matcher results with trait deltas
+  primary_archetype,  -- '开心柯基'
+  is_decisive,  -- true if confidence ≥ 0.7
+  completed_at
+) VALUES (...);
+
+-- User profile update
 UPDATE users SET
-  primary_role = '火花塞',
-  secondary_role = '探索者',
-  role_subtype = '联想家',
-  affinity_score = 7,
-  openness_score = 9,
-  conscientiousness_score = 6,
-  emotional_stability_score = 7,
-  extraversion_score = 8,
-  positivity_score = 8,
-  strengths = '你擅长...',
-  challenges = '有时可能...',
-  ideal_friend_types = ARRAY['协调者', '连接者', '探索者'],
-  completed_personality_test = true
+  primary_archetype = '开心柯基',
+  has_completed_personality_test = true,
+  -- Trait scores stored in assessment_sessions, not users table
+  -- Old fields (primary_role, secondary_role) deprecated
 WHERE id = user_id;
 ```
 
