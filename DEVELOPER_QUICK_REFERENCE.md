@@ -99,71 +99,90 @@ joyjoin-monorepo/
 
 ## User Journey & Authentication Flow
 
+**Updated:** 2026-02-04 (Post-Test Signup Flow - Option B)
+
 ### Authentication States
 
-The app uses progressive authentication with 4 distinct states:
+The app uses progressive authentication with server-driven navigation:
 
 ```typescript
-// From useAuth hook
+// From useAuth hook (extended for post-test signup)
 interface AuthState {
-  isAuthenticated: boolean;      // Has valid session
-  needsRegistration: boolean;    // Phone verified, no profile
-  needsPersonalityTest: boolean; // Profile exists, no test results
-  needsProfileSetup: boolean;    // Test done, profile incomplete
+  isAuthenticated: boolean;       // Has valid session
+  nextStep: string;               // Server-calculated next route
+  profileEssentialComplete: boolean;  // Essential data complete
+  profileExtendedComplete: boolean;   // Extended data complete
+  activeAssessmentSessionId: string | null;  // Active test session
+  
+  // Legacy computed fields (still available)
+  needsRegistration: boolean;     // Phone verified, no profile
+  needsPersonalityTest: boolean;  // Profile exists, no test results
+  needsProfileSetup: boolean;     // Test done, profile incomplete
 }
 ```
 
-### Complete User Flow Diagram
+### Complete User Flow Diagram (Option B: Post-Test Signup)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         UNAUTHENTICATED                             │
 ├─────────────────────────────────────────────────────────────────────┤
-│  /login              → LoginPage (SMS verification)                 │
-│  /registration       → ChatRegistrationPage (AI chat onboarding)   │
-│  /register           → ChatRegistrationPage                         │
-│  /invite/:code       → InviteLandingRouter (public invite links)   │
-│  /icebreaker-demo    → IcebreakerDemoPage (public demo)            │
+│  /                   → LandingPage (redirects to /personality-test) │
+│  /personality-test   → PersonalityTestPageV4 (Anonymous)            │
+│  /personality-test/results → PersonalityTestResultPage (+ Login CTA)│
+│  /login              → LoginPage (fallback for non-WeChat)          │
+│  /invite/:code       → InviteLandingRouter (public)                 │
+│  /icebreaker-demo    → IcebreakerDemoPage (public demo)             │
 │  /admin/login        → AdminLoginPage                               │
-│  *                   → Redirects to LoginPage                       │
+│  *                   → Redirects to LandingPage                     │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
-                                    ▼ (After SMS verification)
+                    ▼ (After WeChat Login with test results)
 ┌─────────────────────────────────────────────────────────────────────┐
-│                      needsRegistration = true                       │
+│                    Authenticated - Needs Essential Data             │
 ├─────────────────────────────────────────────────────────────────────┤
-│  /onboarding         → DuolingoOnboardingPage (9-screen flow)      │
-│  /personality-test   → PersonalityTestPageV4                        │
-│  /personality-test/complete → PersonalityTestResultPage             │
-│  *                   → Redirects to /onboarding                     │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼ (After onboarding complete)
-┌─────────────────────────────────────────────────────────────────────┐
-│                    needsPersonalityTest = true                      │
-├─────────────────────────────────────────────────────────────────────┤
-│  /personality-test   → PersonalityTestPageV4 (V4 adaptive)          │
-│  /personality-test/complete → PersonalityTestResultPage             │
-│  *                   → Redirects to /personality-test               │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼ (After test complete)
-┌─────────────────────────────────────────────────────────────────────┐
-│                     needsProfileSetup = true                        │
-├─────────────────────────────────────────────────────────────────────┤
-│  /onboarding/setup   → EssentialDataPage (name, gender, etc.)      │
-│  /onboarding/extended → ExtendedDataPage (work, education)         │
-│  /personality-test/results → PersonalityTestResultPage (viewable)  │
+│  /onboarding/setup   → EssentialDataPage (7 steps)                  │
 │  *                   → Redirects to /onboarding/setup               │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
-                                    ▼ (After profile complete)
+                    ▼ (After Essential Data)
 ┌─────────────────────────────────────────────────────────────────────┐
-│                      FULLY AUTHENTICATED                            │
+│                    Authenticated - Optional Extended Data           │
 ├─────────────────────────────────────────────────────────────────────┤
+│  /onboarding/extended → ExtendedDataPage (Interest Carousel only)   │
+│  *                   → Can skip to /guide or /discover              │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                    ▼ (Complete)
+┌─────────────────────────────────────────────────────────────────────┐
+│                         FULL ACCESS                                 │
+├─────────────────────────────────────────────────────────────────────┤
+│  /discover           → Event recommendations                        │
+│  /events             → My events                                    │
+│  /chats              → Group & direct chats                         │
+│  /profile            → Profile & settings                           │
 │  See "Main App Routes" section below                                │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+### Key Changes (2026-02-04)
+
+1. **Signup Timing:** Now AFTER personality test (was before)
+2. **Anonymous Testing:** Test results stored locally until login
+3. **WeChat Authentication:** Silent login with test result linking via `POST /api/auth/wechat/login-with-test`
+4. **Simplified Extended Data:** Only Interest Carousel (removed 5 deprecated fields)
+5. **Value-First Approach:** Users see their archetype before committing to signup
+
+### Deprecated Fields
+
+The following fields are **NO LONGER** collected in onboarding (2026-02-04):
+- ❌ `languagesComfort` - Moved to profile edit only
+- ❌ `activityTimePreference` - Removed entirely
+- ❌ `socialFrequency` - Removed entirely  
+- ❌ `groupSizeComfort` - Removed entirely
+- ❌ `hometownCountry` - Removed entirely
+
+These are commented out in schema but kept for backward compatibility.
 
 ### Main App Routes (Fully Authenticated)
 
