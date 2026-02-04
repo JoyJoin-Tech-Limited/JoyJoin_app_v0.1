@@ -11,6 +11,7 @@ import { AchievementPopup } from "@/components/achievements";
 import { DynamicAccentProvider } from "@/contexts/DynamicAccentContext";
 import LoginPage from "@/pages/LoginPage";
 import LandingPage from "@/pages/LandingPage";
+import MobileLandingPage from "@/pages/MobileLandingPage";
 // RegistrationPage removed - using ChatRegistrationPage instead
 // import RegistrationPage from "@/pages/RegistrationPage";
 // RegistrationMethodPage kept for internal reference only - not imported in user routes
@@ -211,6 +212,11 @@ function Router() {
   // Invite landing page is publicly accessible (handles both referrals and event invitations)
   if (location.startsWith("/invite/")) {
     return <Route path="/invite/:code" component={InviteLandingRouter} />;
+  }
+
+  // Mobile landing page demo is publicly accessible for testing
+  if (location === "/mobile-landing") {
+    return <Route path="/mobile-landing" component={MobileLandingPage} />;
   }
 
   // Icebreaker demo is publicly accessible for testing
