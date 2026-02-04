@@ -153,9 +153,9 @@ export const users = pgTable("users", {
   socialFrequency: varchar("social_frequency"), // DEPRECATED: 聚会频率 - removed from onboarding
   
   // Note: The following fields are already marked as deprecated in other sections:
-  // - languagesComfort (line 98) - moved to profile edit only
-  // - hometownCountry (line 94) - removed entirely
-  // - cuisinePreference (line 142) - simplified/removed
+  // - languagesComfort (see Registration fields - Culture & Language section) - moved to profile edit only
+  // - hometownCountry (see Registration fields - Culture & Language section) - removed entirely
+  // - cuisinePreference (see Registration fields - Social & Venue Preferences section) - simplified/removed
   // - dietaryRestrictions - not in schema
   // - decorStylePreferences - not in schema
   // - groupSizeComfort - not in schema
