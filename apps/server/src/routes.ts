@@ -1127,7 +1127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         resetConversationTurns(userId);
       }
       
-      // 如果是资料补充模式，使用专门的enrichment函数
+      // Chat registration is deprecated - only enrichment mode is supported
       if (mode === 'enrichment' && enrichmentContext) {
         const { startXiaoyueChatEnrichment } = await import('./deepseekClient');
         const result = await startXiaoyueChatEnrichment(enrichmentContext);
@@ -1135,9 +1135,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       
-      const { startXiaoyueChat } = await import('./deepseekClient');
-      const result = await startXiaoyueChat(mode || 'standard');
-      res.json(result);
+      // Legacy registration modes removed - return error
+      res.status(400).json({ 
+        message: "Chat registration is no longer supported. Please use the Duolingo-style onboarding flow." 
+      });
     } catch (error) {
       console.error("Error starting chat registration:", error);
       res.status(500).json({ message: "Failed to start chat" });
@@ -1633,27 +1634,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.registerUser(userId, result.data);
       console.log("[Backend] User updated successfully:", { id: user.id, displayName: user.displayName, gender: user.gender, birthdate: user.birthdate });
       
-      // Award XP for registration based on method and conversation depth
+      // Award XP for registration (simplified - no mode detection)
       try {
         const { awardXPAndCoins } = await import('./gamificationService');
-        let registrationMode = 'registration_standard';
-        
-        // If registered via chat, check for depth indicators
-        if (result.data.registrationMethod === 'chat') {
-          // Use presence of optional fields as proxy for conversation depth
-          // Note: topicAvoidances removed from schema, using other deep fields
-          const hasDeepFields = result.data.cuisinePreference || result.data.favoriteRestaurant;
-          const hasExpressFields = !result.data.intent;
-          
-          if (hasExpressFields) {
-            registrationMode = 'registration_express';
-          } else if (hasDeepFields) {
-            registrationMode = 'registration_deep';
-          }
-        }
-        
-        await awardXPAndCoins(userId, registrationMode);
-        console.log(`[Gamification] Awarded ${registrationMode} XP to user ${userId}`);
+        // Use a generic registration action instead of mode-specific ones
+        await awardXPAndCoins(userId, 'registration');
+        console.log(`[Gamification] Awarded registration XP to user ${userId}`);
       } catch (xpError) {
         console.error("Error awarding registration XP:", xpError);
       }
