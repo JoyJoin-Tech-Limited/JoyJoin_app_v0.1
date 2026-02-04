@@ -410,21 +410,59 @@ const DEFAULT_ASSESSMENT_CONFIG = {
 
 | Type | Count | Purpose |
 |------|-------|---------|
-| Anchor | 8 | Core trait measurement |
-| Adaptive | Variable | Target weak confidence areas |
-| Forced-Choice | 6 | Tradeoff between competing traits |
-| Differentiation | 16 | Target specific archetype confusion pairs |
-| Attention Check | 2 | Validity verification |
+| Anchor (L1) | 15 | Core trait measurement with high discrimination |
+| Adaptive (L2) | 30 | Target weak confidence areas dynamically |
+| Disambiguation (L3) | 15 | Target specific archetype confusion pairs |
+| Total Bank | 60 | V4 adaptive selection (8-16 asked per session) |
 
 ### Key Files
 
 | File | Purpose |
 |------|---------|
-| `packages/shared/src/personality/questionsV4.ts` | 130+ question bank |
-| `packages/shared/src/personality/adaptiveEngine.ts` | Question selection logic |
-| `packages/shared/src/personality/types.ts` | Type definitions |
-| `apps/user-client/src/pages/PersonalityTestPageV4.tsx` | Test UI |
+| `packages/shared/src/personality/archetypeNames.ts` | Canonical 12-archetype ordering |
+| `packages/shared/src/personality/questionsV4.ts` | 60-question bank with trait vectors |
+| `packages/shared/src/personality/adaptiveEngine.ts` | Question selection & confidence tracking |
+| `packages/shared/src/personality/matcherV2.ts` | V2 weighted Manhattan distance matcher with asymmetric penalties and VETO filters |
+| `packages/shared/src/personality/prototypes.ts` | 12 archetype trait profiles |
+| `packages/shared/src/personality/types.ts` | Type definitions (TraitKey, ArchetypeMatch, etc.) |
+| `apps/user-client/src/pages/PersonalityTestPageV4.tsx` | Adaptive test UI |
 | `apps/user-client/src/pages/PersonalityTestResultPage.tsx` | Results display |
+
+### V2 Matcher Algorithm
+
+**Core Formula:**
+```typescript
+// 1. Z-score normalization for all traits
+userZ = (userScore - 50) / 15  // μ=50, σ=15
+
+// 2. Weighted Manhattan distance
+distance = Σ |userZ[trait] - prototypeZ[trait]| × weight[trait]
+
+// 3. Soul trait weights
+primary_traits: 1.6-1.8    // Core defining traits
+secondary_traits: 1.2-1.3  // Supporting traits
+avoid_traits: 0.4-0.8      // Traits to minimize
+
+// 4. Asymmetric penalty for avoid traits
+if (user[trait] > prototype[trait] && trait in avoid_traits):
+  penalty = λ × (gap - threshold)²  // λ=2.0, threshold=0.5σ
+
+// 5. VETO filters (disqualify extreme mismatches)
+// Example: User with X=95 → cannot be 隐身猫 (X=20)
+
+// 6. Gaussian similarity conversion
+similarity = exp(-distance² / (2σ²))  // σ=1.2
+```
+
+**Trait Scoring Formula:**
+```typescript
+// Each question option has trait score vector
+// Example: { A: 0, C: 2, E: 1, O: 0, X: -1, P: 0 }
+
+// Cumulative scoring across 8-16 questions
+finalScore[trait] = rawScore[trait] × normalizationFactor
+// Normalized to 0-100 scale for display
+```
 
 ---
 
