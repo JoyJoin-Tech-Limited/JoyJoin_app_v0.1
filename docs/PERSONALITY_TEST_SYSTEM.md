@@ -1,0 +1,954 @@
+# Personality Test System - V4 Adaptive Assessment
+
+**Last Updated:** 2026-02-04  
+**Version:** V4 Adaptive Engine + V2 Matcher  
+**Status:** Production
+
+---
+
+## Table of Contents
+
+1. [System Overview](#system-overview)
+2. [12 Archetypes](#12-archetypes)
+3. [6-Trait System (ACOEXP)](#6-trait-system-acoexp)
+4. [Question Bank Structure](#question-bank-structure)
+5. [V4 Adaptive Engine](#v4-adaptive-engine)
+6. [V2 Matcher Algorithm](#v2-matcher-algorithm)
+7. [Data Flow](#data-flow)
+8. [Database Schema](#database-schema)
+9. [API Endpoints](#api-endpoints)
+10. [Testing Guidelines](#testing-guidelines)
+
+---
+
+## System Overview
+
+The JoyJoin Personality Test System uses a scientifically calibrated adaptive assessment to match users to 1 of 12 carefully designed personality archetypes. The system consists of:
+
+- **60-Question Bank**: Divided into 3 levels (L1 Anchor, L2 Adaptive, L3 Disambiguation)
+- **V4 Adaptive Engine**: Dynamically selects 8-16 questions based on real-time confidence tracking
+- **V2 Matcher Algorithm**: Weighted Manhattan distance with asymmetric penalties and VETO filters
+- **6-Trait Model (ACOEXP)**: Affinity, Conscientiousness, Emotional Stability, Openness, Extraversion, Positivity
+
+**Key Features:**
+- Adaptive question selection (not fixed 10 questions)
+- Real-time confidence tracking for each trait
+- Early stopping when confidence thresholds met
+- Confusion pair disambiguation
+- Decisive match detection (confidence ≥ 70%)
+
+---
+
+## 12 Archetypes
+
+The current production system uses 12 archetypes. All archetype names are defined in `packages/shared/src/personality/archetypeNames.ts` (canonical source of truth).
+
+| # | Archetype | Icon | Energy | Trait Profile | Description |
+|---|-----------|------|--------|--------------|-------------|
+| 1 | 开心柯基 (Happy Corgi) | 🐕 | 95 | X=95, P=85, O=65, A=60, E=60, C=50 | High-energy socializer, natural icebreaker |
+| 2 | 太阳鸡 (Sun Chicken) | 🐓 | 90 | P=92, E=88, C=78, X=78, A=70, O=55 | Optimistic motivator, spreads positivity |
+| 3 | 夸夸豚 (Praise Dolphin) | 🐬 | 85 | A=95, P=88, X=82, E=65, O=62, C=50 | Warmhearted encourager, builds people up |
+| 4 | 机智狐 (Clever Fox) | 🦊 | 82 | O=92, X=78, P=58, E=60, C=50, A=40 | Creative problem-solver, quick thinker |
+| 5 | 淡定海豚 (Calm Dolphin) | 🐬 | 75 | E=85, C=70, A=70, O=65, X=65, P=68 | Balanced mediator, stays composed |
+| 6 | 织网蛛 (Weaver Spider) | 🕷️ | 72 | C=85, O=70, A=70, E=65, X=60, P=60 | Detail-oriented planner, builds systems |
+| 7 | 暖心熊 (Warm Bear) | 🐻 | 70 | A=90, E=80, P=70, C=65, O=60, X=48 | Empathetic supporter, nurtures others |
+| 8 | 灵感章鱼 (Inspiration Octopus) | 🐙 | 68 | O=95, P=70, E=55, X=52, A=50, C=28 | Innovative ideator, connects dots |
+| 9 | 沉思猫头鹰 (Contemplative Owl) | 🦉 | 55 | O=88, C=80, E=75, A=45, P=50, X=40 | Analytical thinker, seeks understanding |
+| 10 | 定心大象 (Grounded Elephant) | 🐘 | 52 | C=90, E=86, A=70, P=60, O=50, X=40 | Stable anchor, provides structure |
+| 11 | 稳如龟 (Steady Turtle) | 🐢 | 38 | E=85, C=80, O=65, A=45, P=45, X=30 | Reliable introvert, consistent presence |
+| 12 | 隐身猫 (Invisible Cat) | 🐱 | 30 | E=80, C=50, A=50, O=45, P=45, X=20 | Reserved observer, values solitude |
+
+**Canonical Order:**
+The archetypes are numbered 1-12 in the order above. This ordering is used for:
+- TYPE numbers in share cards (e.g., #01/12 for 开心柯基)
+- Slot machine animation sequence
+- Backend archetype configuration
+- Any feature requiring consistent enumeration
+
+**Energy Levels:**
+- **High Energy (75-100)**: 开心柯基, 太阳鸡, 夸夸豚, 机智狐, 淡定海豚, 织网蛛
+- **Medium Energy (50-74)**: 暖心熊, 灵感章鱼, 沉思猫头鹰, 定心大象
+- **Low Energy (0-49)**: 稳如龟, 隐身猫
+
+---
+
+## 6-Trait System (ACOEXP)
+
+The system measures 6 core personality traits, each scored on a 0-100 scale:
+
+### A - Affinity/Agreeableness (亲和力)
+- **Definition**: Warmth, empathy, cooperation, concern for others
+- **High A (80+)**: 夸夸豚 (95), 暖心熊 (90)
+- **Low A (40-)**: 机智狐 (40), 沉思猫头鹰 (45), 稳如龟 (45)
+- **Key Questions**: Response to emotional moments, conflict handling, encouragement style
+
+### C - Conscientiousness (责任心)
+- **Definition**: Organization, planning, discipline, reliability
+- **High C (80+)**: 定心大象 (90), 织网蛛 (85), 沉思猫头鹰 (80), 稳如龟 (80)
+- **Low C (40-)**: 灵感章鱼 (28)
+- **Key Questions**: Planning vs spontaneity, attention to detail, follow-through
+
+### E - Emotional Stability (情绪稳定性)
+- **Definition**: Calmness, resilience, low reactivity, composure under stress
+- **High E (80+)**: 太阳鸡 (88), 定心大象 (86), 淡定海豚 (85), 稳如龟 (85), 暖心熊 (80), 隐身猫 (80)
+- **Low E (60-)**: 灵感章鱼 (55)
+- **Key Questions**: Stress response, emotional regulation, adaptability
+
+### O - Openness (开放性)
+- **Definition**: Creativity, curiosity, abstract thinking, novelty-seeking
+- **High O (80+)**: 灵感章鱼 (95), 机智狐 (92), 沉思猫头鹰 (88)
+- **Low O (50-)**: 定心大象 (50), 隐身猫 (45)
+- **Key Questions**: Approach to new ideas, intellectual curiosity, imaginative thinking
+
+### X - Extraversion (外向性)
+- **Definition**: Social energy, outgoingness, stimulation-seeking, gregariousness
+- **High X (80+)**: 开心柯基 (95), 夸夸豚 (82), 太阳鸡 (78), 机智狐 (78)
+- **Low X (40-)**: 定心大象 (40), 沉思猫头鹰 (40), 稳如龟 (30), 隐身猫 (20)
+- **Key Questions**: Social initiation, energy sources (people vs alone), party behavior
+
+### P - Positivity (积极性)
+- **Definition**: Optimism, enthusiasm, cheerfulness, positive outlook
+- **High P (80+)**: 太阳鸡 (92), 夸夸豚 (88), 开心柯基 (85)
+- **Low P (50-)**: 隐身猫 (45), 稳如龟 (45), 沉思猫头鹰 (50)
+- **Key Questions**: Outlook on challenges, enthusiasm level, future orientation
+
+**Trait Scoring:**
+- Each question option has a trait score vector (e.g., `{ A: 0, C: 2, E: 1, O: 0, X: -1, P: 0 }`)
+- Scores accumulate across 8-16 questions
+- Final scores normalized to 0-100 scale
+- Z-score standardization: `z = (raw - 50) / 15` (μ=50, σ=15)
+
+---
+
+## Question Bank Structure
+
+**Total: 60 Questions** divided into 3 levels
+
+### L1 基础枢纽题 (Anchor Questions) - Q1-Q15
+
+**Purpose:** Establish baseline trait measurements with high discrimination
+
+**Characteristics:**
+- Discrimination index: 0.40-0.50
+- Multi-trait measurement (3+ traits per question)
+- Always asked first (mandatory)
+- Scenario-based with 4 options
+
+**Categories:**
+- 社交启动 (Social Initiation): Opening behavior, group entry
+- 决策参与 (Decision Participation): Planning style, contribution approach  
+- 能量优先级 (Energy Priority): Social vs solo preference
+- 关系响应 (Relationship Response): Emotional connections, support style
+
+**Example Anchor Question (Q1):**
+```
+🎉 工作日傍晚，同事群里突然有人发起：今晚有人想一起去新开的居酒屋吗？
+
+你的第一反应和接下来的行动会是？
+
+A. 好呀！正好想去看看！
+   → { A: 0, C: 0, E: 0, O: 2, X: 3, P: 1 }
+
+B. 今晚吗？我看看安排...
+   → { A: 0, C: 2, E: 1, O: 0, X: -1, P: 0 }
+
+C. 谢谢！我约了朋友，下次叫我～
+   → { A: 2, C: 1, E: 2, O: 0, X: 0, P: 0 }
+
+D. 今天有点累...你们玩得开心！
+   → { A: 0, C: 0, E: 2, O: 0, X: -2, P: -1 }
+```
+
+### L2 自适应深度题 (Adaptive Deep Questions) - Q16-Q45
+
+**Purpose:** Target specific traits with low confidence
+
+**Characteristics:**
+- Selected dynamically by adaptive engine
+- Focus on 1-2 primary traits
+- Higher trait score magnitudes (±3 to ±4)
+- User sees 0-8 of these (depends on confidence)
+
+**Categories:**
+- 工作场景 (Work Scenarios): Team dynamics, project approach
+- 关系动态 (Relationship Dynamics): Friendship depth, communication
+- 休闲选择 (Leisure Choices): Free time preferences, hobbies
+- 价值判断 (Value Judgments): Priorities, life philosophy
+
+**Example Adaptive Question (Q18):**
+```
+😌 一个你期待已久的周末个人计划，突然被朋友的热闹聚会邀请打断。
+
+你内心更强烈的倾向是？
+
+A. 太好了！立刻调整计划加入，越多人越开心
+   → { A: 0, C: -1, E: 0, O: 0, X: 4, P: 2 }
+
+B. 明确拒绝聚会，坚守自己的计划
+   → { A: 0, C: 2, E: 3, O: 0, X: -1, P: 0 }
+
+C. 尝试把朋友拉入你的计划，或另约时间
+   → { A: 2, C: 1, E: 1, O: 1, X: 0, P: 0 }
+
+D. 纠结但最终参加聚会
+   → { A: 1, C: -2, E: 0, O: 0, X: 1, P: 0 }
+```
+
+### L3 混淆对消解题 (Confusion Pair Disambiguation) - Q46-Q60
+
+**Purpose:** Resolve persistent archetype confusion pairs
+
+**Characteristics:**
+- Triggered when top-2 archetypes have score gap < 10
+- Target differentiating traits between specific pairs
+- High precision (±4 to ±5 scores on key traits)
+
+**Known Confusion Pairs:**
+1. **太阳鸡 vs 淡定海豚**: P gap (92 vs 68) - differentiate on optimism/enthusiasm
+2. **沉思猫头鹰 vs 稳如龟**: O gap (88 vs 65) - differentiate on intellectual curiosity
+3. **淡定海豚 vs 暖心熊**: A gap (70 vs 90) - differentiate on warmth/nurturing
+4. **开心柯基 vs 太阳鸡**: Similar high X+P, differentiate on structure vs spontaneity
+5. **机智狐 vs 灵感章鱼**: Both high O, differentiate on social energy (X: 78 vs 52)
+
+**Example Disambiguation Question (Q48):**
+```
+🤔 在一个深度讨论中，话题变得抽象和哲学化
+
+你更可能的反应是？
+
+A. 兴奋参与，提出新颖理论和假设
+   → { O: 5, X: 2, C: -2 }  // 灵感章鱼
+
+B. 系统分析，寻找逻辑和证据
+   → { O: 4, C: 4, X: -1 }  // 沉思猫头鹰
+
+C. 感兴趣但不深入，更关注实际应用
+   → { O: 1, C: 2, P: 2 }   // 淡定海豚
+
+D. 礼貌倾听，但心里想着其他事
+   → { O: -3, E: 2, X: -1 } // 稳如龟
+```
+
+---
+
+## V4 Adaptive Engine
+
+**Location:** `packages/shared/src/personality/adaptiveEngine.ts`
+
+### Question Selection Algorithm
+
+```typescript
+function selectNextQuestion(state: AssessmentState): Question | null {
+  // Phase 1: Anchor Questions (Q1-Q15)
+  if (answeredCount < 8) {
+    return getAnchorQuestion(answeredCount);
+  }
+  
+  // Phase 2: Check stopping criteria
+  const allConfident = ALL_TRAITS.every(trait => 
+    state.traitConfidences[trait].confidence >= 0.7
+  );
+  
+  if (allConfident || answeredCount >= 16) {
+    return null; // Stop assessment
+  }
+  
+  // Phase 3: Check for confusion pair
+  const topMatches = getTopArchetypes(state.traitScores);
+  const confusionPair = detectPersistentConfusionPair(topMatches);
+  
+  if (confusionPair.isPersistentPair && confusionPair.scoreGap < 10) {
+    // Select L3 disambiguation question
+    return selectDisambiguationQuestion(confusionPair.pair, state);
+  }
+  
+  // Phase 4: Select L2 adaptive question
+  const weakestTrait = findLowestConfidenceTrait(state.traitConfidences);
+  return selectAdaptiveQuestion(weakestTrait, state);
+}
+```
+
+### Confidence Tracking
+
+```typescript
+interface TraitConfidence {
+  score: number;           // Current raw score
+  confidence: number;      // 0-1 confidence level
+  sampleCount: number;     // Number of questions affecting this trait
+  variance: number;        // Score variance (lower = more confident)
+}
+
+function calculateConfidence(variance: number, sampleCount: number): number {
+  // Higher sample count + lower variance = higher confidence
+  const sampleFactor = Math.min(sampleCount / 10, 1.0);
+  const varianceFactor = Math.exp(-variance / 20);
+  return sampleFactor * varianceFactor;
+}
+```
+
+### Stopping Criteria
+
+The assessment stops when **either** condition is met:
+
+1. **Confidence threshold met**: All 6 traits have confidence ≥ 0.7
+2. **Hard limit reached**: 16 questions answered
+
+**Typical Session Lengths:**
+- **Decisive users** (strong, consistent responses): 8-10 questions
+- **Average users**: 12-14 questions
+- **Indecisive/inconsistent users**: 15-16 questions (hit hard limit)
+
+---
+
+## V2 Matcher Algorithm
+
+**Location:** `packages/shared/src/personality/matcherV2.ts`
+
+### Overview
+
+The V2 Matcher uses weighted Manhattan distance with asymmetric penalties to match user trait profiles to archetype prototypes. It addresses key issues from V1:
+
+- **Soul Trait Weighting**: Primary/secondary/avoid traits have different weights
+- **Asymmetric Penalties**: Heavily penalize "avoid" trait violations (e.g., high X → not 暖心熊)
+- **VETO Filters**: Hard constraints for extreme mismatches
+- **Confidence Scoring**: High gap between top-2 = decisive match
+
+### Core Algorithm
+
+```typescript
+function matchArchetype(userTraits: TraitScores): MatchResult {
+  const userZ = normalizeTraits(userTraits); // Z-score: (x - 50) / 15
+  const scores: ArchetypeScore[] = [];
+  
+  for (const archetype of archetypePrototypes) {
+    // 1. Calculate weighted Manhattan distance
+    let distance = 0;
+    
+    for (const trait of ['A', 'C', 'E', 'O', 'X', 'P']) {
+      const gap = Math.abs(userZ[trait] - archetype.traitZ[trait]);
+      const weight = getSoulTraitWeight(archetype.name, trait);
+      distance += gap * weight;
+    }
+    
+    // 2. Apply asymmetric penalty for avoid traits
+    const penalty = calculateAsymmetricPenalty(
+      userZ, 
+      archetype.traitZ, 
+      archetype.avoidTraits
+    );
+    distance += penalty;
+    
+    // 3. Apply VETO filter
+    const veto = applyVetoFilter(userTraits, archetype);
+    if (!veto.passed) {
+      distance = Infinity; // Disqualify
+    }
+    
+    // 4. Convert distance to similarity score (Gaussian kernel)
+    const score = Math.exp(-distance * distance / (2 * 1.2 * 1.2));
+    scores.push({ archetype: archetype.name, score });
+  }
+  
+  // 5. Rank and return top match
+  scores.sort((a, b) => b.score - a.score);
+  const confidence = (scores[0].score - scores[1].score) / scores[0].score;
+  
+  return {
+    primaryArchetype: scores[0].archetype,
+    secondaryArchetype: scores[1].archetype,
+    confidence,
+    isDecisive: confidence >= 0.7
+  };
+}
+```
+
+### Soul Trait Weights
+
+Each archetype has 3 categories of traits:
+
+| Category | Weight Range | Purpose |
+|----------|-------------|---------|
+| **Primary** | 1.6-1.8 | Core defining traits (high weight = must match) |
+| **Secondary** | 1.2-1.3 | Supporting traits (medium importance) |
+| **Avoid** | 0.4-0.8 | Traits to minimize (low weight = divergence OK in this direction) |
+
+**Example: 暖心熊 (Warm Bear)**
+```typescript
+{
+  primary: { A: 1.8 },           // Must have high Affinity
+  secondary: { E: 1.3, P: 1.2 }, // Should have Emotional Stability + Positivity
+  avoid: { O: 0.7, X: 0.4 }      // Low weight on Openness/Extraversion
+}
+```
+
+If a user has **high X (e.g., raw ≈ 90, z ≈ +2.67)** while 暖心熊 prototype has **X ≈ 48 (z ≈ -0.13)**:
+- Z-gap: userZ[X] − archetypeZ[X] ≈ 2.8σ
+- Weight: 0.4 (avoid trait)
+- Distance contribution (in the main matcher): 2.8 × 0.4 ≈ 1.12
+- **Plus** asymmetric penalty (same formula as below):  
+  λ × (gap − threshold)² = 2.0 × (2.8 − 0.5)² ≈ 10.6
+
+Result: High-X users are **strongly penalized** from matching to 暖心熊, via a moderate base distance plus a sizable asymmetric penalty in Z‑score space.
+
+### Asymmetric Penalty
+
+```typescript
+function calculateAsymmetricPenalty(
+  userZ: TraitZScores,
+  archetypeZ: TraitZScores,
+  avoidTraits: TraitKey[]
+): number {
+  let penalty = 0;
+  
+  for (const trait of avoidTraits) {
+    const gap = userZ[trait] - archetypeZ[trait];
+    
+    // Only penalize when user exceeds archetype on avoid trait
+    if (gap > ASYMMETRIC_PENALTY_THRESHOLD_SD) { // threshold = 0.5σ
+      penalty += ASYMMETRIC_PENALTY_LAMBDA * Math.pow(gap - 0.5, 2);
+      // λ = 2.0
+    }
+  }
+  
+  return penalty;
+}
+```
+
+**Example:**
+- 暖心熊 has X=48 (avoid trait)
+- User has X=90
+- Z-scores: User = (90-50)/15 = 2.67σ, Archetype = (48-50)/15 = -0.13σ
+- Gap = 2.67 - (-0.13) = 2.8σ
+- Penalty = 2.0 × (2.8 - 0.5)² = 2.0 × 5.29 = **10.58**
+
+This large penalty effectively **vetoes** high-X users from matching to 暖心熊.
+
+### VETO Filters
+
+Hard constraints that disqualify extreme mismatches:
+
+```typescript
+// Example: 开心柯基 VETO
+{
+  minX: 75,  // Must have X ≥ 75
+  minP: 70,  // Must have P ≥ 70
+  maxE: 70   // Cannot have E > 70 (too stable/introverted)
+}
+
+// Example: 隐身猫 VETO
+{
+  maxX: 40,  // Cannot have X > 40 (too extraverted)
+  minE: 70   // Must have E ≥ 70 (emotionally stable)
+}
+```
+
+---
+
+## Data Flow
+
+### Assessment Flow Diagram
+
+```
+User starts assessment
+         ↓
+┌────────────────────────┐
+│ Create assessment_     │
+│ session record         │
+│ - phase: 'post_signup' │
+│ - status: 'in_progress'│
+└────────────────────────┘
+         ↓
+┌────────────────────────┐
+│ Phase 1: Anchor        │
+│ Questions (Q1-Q8)      │
+│ - Always asked         │
+│ - Establish baseline   │
+└────────────────────────┘
+         ↓
+   For each answer:
+         ↓
+┌────────────────────────┐
+│ Insert assessment_     │
+│ answer record          │
+│ - questionId, option   │
+│ - traitScores vector   │
+└────────────────────────┘
+         ↓
+┌────────────────────────┐
+│ Update session state   │
+│ - traitScores          │
+│ - traitConfidences     │
+│ - currentQuestionIndex │
+└────────────────────────┘
+         ↓
+┌────────────────────────┐
+│ Adaptive Engine        │
+│ Decision:              │
+│ - Check confidences    │
+│ - Detect confusion     │
+│ - Select next question │
+└────────────────────────┘
+         ↓
+    Repeat until:
+    - All confidences ≥ 0.7
+    - OR 16 questions
+         ↓
+┌────────────────────────┐
+│ V2 Matcher Execution   │
+│ - Calculate distances  │
+│ - Apply penalties      │
+│ - Rank archetypes      │
+└────────────────────────┘
+         ↓
+┌────────────────────────┐
+│ Update session record  │
+│ - primaryArchetype     │
+│ - isDecisive           │
+│ - matchDetailsJson     │
+│ - completedAt          │
+└────────────────────────┘
+         ↓
+┌────────────────────────┐
+│ Update users table     │
+│ - primary_archetype    │
+│ - hasCompletedTest     │
+└────────────────────────┘
+         ↓
+  Show results page
+```
+
+### API Call Sequence
+
+```typescript
+// 1. Start assessment
+POST /api/personality-test/start
+→ Creates session, returns sessionId
+
+// 2. Get next question
+GET /api/personality-test/next-question?sessionId={id}
+→ Returns question object or null (if done)
+
+// 3. Submit answer
+POST /api/personality-test/submit-answer
+{
+  sessionId: string,
+  questionId: string,
+  selectedOption: 'A' | 'B' | 'C' | 'D'
+}
+→ Returns updated state (traitScores, confidences, nextQuestion)
+
+// 4. Complete assessment
+POST /api/personality-test/complete
+{
+  sessionId: string
+}
+→ Runs V2 Matcher, returns final archetype result
+
+// 5. Get results
+GET /api/personality-test/results?sessionId={id}
+→ Returns full results (archetype, traits, confidence, etc.)
+```
+
+---
+
+## Database Schema
+
+### assessment_sessions Table
+
+```sql
+CREATE TABLE assessment_sessions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  phase TEXT NOT NULL, -- 'pre_signup' | 'post_signup' | 'completed'
+  
+  -- V4 Adaptive Engine State
+  current_question_index INTEGER DEFAULT 0,
+  trait_scores JSONB DEFAULT '{"A":0,"C":0,"E":0,"O":0,"X":0,"P":0}',
+  trait_confidences JSONB DEFAULT '{}',
+  top_archetypes JSONB DEFAULT '[]',
+  
+  -- V2 Matcher Results
+  algorithm_version TEXT DEFAULT 'v2',
+  match_details_json JSONB, -- { primaryArchetype, secondaryArchetype, traitDeltas, decisiveReason, score }
+  primary_archetype TEXT, -- Final archetype result
+  is_decisive BOOLEAN DEFAULT false, -- confidence ≥ 0.7
+  
+  -- Timestamps
+  created_at TIMESTAMP DEFAULT NOW(),
+  completed_at TIMESTAMP,
+  
+  CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_assessment_sessions_user ON assessment_sessions(user_id);
+CREATE INDEX idx_assessment_sessions_phase ON assessment_sessions(phase);
+```
+
+### assessment_answers Table
+
+```sql
+CREATE TABLE assessment_answers (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL REFERENCES assessment_sessions(id) ON DELETE CASCADE,
+  question_id TEXT NOT NULL, -- 'Q1', 'Q2', etc.
+  selected_option TEXT NOT NULL, -- 'A', 'B', 'C', 'D'
+  trait_scores JSONB NOT NULL, -- { A: 0, C: 2, E: 1, O: 0, X: -1, P: 0 }
+  answer_index INTEGER NOT NULL, -- Order in session (0-based)
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_assessment_answers_session ON assessment_answers(session_id);
+```
+
+### users Table (Personality Fields)
+
+```sql
+-- Current V4 fields
+primary_archetype TEXT, -- '开心柯基', '太阳鸡', etc.
+has_completed_personality_test BOOLEAN DEFAULT false,
+active_assessment_session_id TEXT REFERENCES assessment_sessions(id),
+
+-- Deprecated V1/V2 fields (kept for historical data, not used in new code)
+primary_role TEXT, -- Old: '火花塞', '探索者', etc.
+secondary_role TEXT,
+role_subtype TEXT,
+affinity_score INTEGER,
+openness_score INTEGER,
+conscientiousness_score INTEGER,
+emotional_stability_score INTEGER,
+extraversion_score INTEGER,
+positivity_score INTEGER
+```
+
+**Migration Notes:**
+- Old `primary_role` values (火花塞, 探索者, etc.) are **deprecated**
+- New users get `primary_archetype` from current 12-archetype system
+- Trait scores now stored in `assessment_sessions.trait_scores` (JSONB)
+- Historical V1/V2 test data preserved but not used in production flow
+
+---
+
+## API Endpoints
+
+### POST /api/personality-test/start
+
+**Description:** Create new assessment session
+
+**Request Body:**
+```typescript
+{
+  userId: string;
+  phase: 'pre_signup' | 'post_signup';
+}
+```
+
+**Response:**
+```typescript
+{
+  sessionId: string;
+  firstQuestion: Question;
+}
+```
+
+---
+
+### GET /api/personality-test/next-question
+
+**Description:** Get next adaptive question based on current state
+
+**Query Parameters:**
+- `sessionId`: string
+
+**Response:**
+```typescript
+{
+  question: Question | null; // null if assessment complete
+  progress: {
+    current: number;
+    total: number; // estimated (8-16)
+    phase: 'anchor' | 'adaptive' | 'disambiguation';
+  };
+}
+```
+
+---
+
+### POST /api/personality-test/submit-answer
+
+**Description:** Submit answer and update session state
+
+**Request Body:**
+```typescript
+{
+  sessionId: string;
+  questionId: string; // 'Q1', 'Q2', etc.
+  selectedOption: 'A' | 'B' | 'C' | 'D';
+}
+```
+
+**Response:**
+```typescript
+{
+  traitScores: { A: number, C: number, E: number, O: number, X: number, P: number };
+  traitConfidences: { [trait: string]: { score: number, confidence: number, sampleCount: number } };
+  nextQuestion: Question | null;
+  topArchetypes: Array<{ archetype: string, score: number }>;
+}
+```
+
+---
+
+### POST /api/personality-test/complete
+
+**Description:** Run V2 Matcher and finalize assessment
+
+**Request Body:**
+```typescript
+{
+  sessionId: string;
+}
+```
+
+**Response:**
+```typescript
+{
+  primaryArchetype: string; // '开心柯基', '太阳鸡', etc.
+  secondaryArchetype: string;
+  confidence: number; // 0-1
+  isDecisive: boolean;
+  traitScores: { A: number, C: number, E: number, O: number, X: number, P: number };
+  matchDetails: {
+    traitDeltas: { [trait: string]: number };
+    decisiveReason: string;
+    score: number;
+  };
+}
+```
+
+---
+
+### GET /api/personality-test/results
+
+**Description:** Get full assessment results for display
+
+**Query Parameters:**
+- `sessionId`: string
+
+**Response:**
+```typescript
+{
+  archetype: {
+    name: string;
+    icon: string;
+    energyLevel: number;
+    description: string;
+  };
+  traitScores: { A: number, C: number, E: number, O: number, X: number, P: number };
+  isDecisive: boolean;
+  confidence: number;
+  compatibleArchetypes: string[]; // Top 3 from chemistry matrix
+  distribution: { [archetype: string]: number }; // % of users with each archetype
+}
+```
+
+---
+
+## Testing Guidelines
+
+### Unit Testing
+
+**Test Files:**
+- `packages/shared/src/personality/__tests__/adaptiveEngine.test.ts`
+- `packages/shared/src/personality/__tests__/matcherV2.test.ts`
+- `packages/shared/src/personality/__tests__/prototypes.test.ts`
+
+**Key Test Cases:**
+
+1. **Archetype Prototypes**
+   ```typescript
+   test('All 12 archetypes have valid trait profiles', () => {
+     const archetypes = Object.keys(archetypePrototypes);
+     expect(archetypes).toHaveLength(12);
+     
+     for (const archetype of archetypes) {
+       const profile = archetypePrototypes[archetype].traitProfile;
+       expect(profile.A).toBeGreaterThanOrEqual(0);
+       expect(profile.A).toBeLessThanOrEqual(100);
+       // ... repeat for C, E, O, X, P
+     }
+   });
+   ```
+
+2. **V2 Matcher - Extreme Cases**
+   ```typescript
+   test('High X user does NOT match to 隐身猫', () => {
+     const userTraits = { A: 50, C: 50, E: 50, O: 50, X: 95, P: 50 };
+     const result = matchArchetype(userTraits);
+     expect(result.primaryArchetype).not.toBe('隐身猫');
+   });
+   
+   test('Low X user does NOT match to 开心柯基', () => {
+     const userTraits = { A: 50, C: 50, E: 50, O: 50, X: 20, P: 50 };
+     const result = matchArchetype(userTraits);
+     expect(result.primaryArchetype).not.toBe('开心柯基');
+   });
+   ```
+
+3. **Adaptive Engine - Stopping Criteria**
+   ```typescript
+   test('Engine stops when all confidences ≥ 0.7', () => {
+     const state = createMockState({
+       traitConfidences: {
+         A: { confidence: 0.75 },
+         C: { confidence: 0.80 },
+         E: { confidence: 0.72 },
+         O: { confidence: 0.78 },
+         X: { confidence: 0.85 },
+         P: { confidence: 0.71 }
+       }
+     });
+     
+     const nextQuestion = selectNextQuestion(state);
+     expect(nextQuestion).toBeNull();
+   });
+   ```
+
+### Integration Testing
+
+**End-to-End Flow:**
+
+```typescript
+describe('Full Assessment Flow', () => {
+  let sessionId: string;
+  
+  test('Start assessment', async () => {
+    const response = await request(app)
+      .post('/api/personality-test/start')
+      .send({ userId: 'test-user', phase: 'post_signup' });
+    
+    expect(response.status).toBe(200);
+    expect(response.body.sessionId).toBeDefined();
+    sessionId = response.body.sessionId;
+  });
+  
+  test('Answer 8 anchor questions', async () => {
+    for (let i = 0; i < 8; i++) {
+      const nextQ = await request(app)
+        .get(`/api/personality-test/next-question?sessionId=${sessionId}`);
+      
+      await request(app)
+        .post('/api/personality-test/submit-answer')
+        .send({
+          sessionId,
+          questionId: nextQ.body.question.id,
+          selectedOption: 'A'
+        });
+    }
+  });
+  
+  test('Complete assessment', async () => {
+    const response = await request(app)
+      .post('/api/personality-test/complete')
+      .send({ sessionId });
+    
+    expect(response.status).toBe(200);
+    expect(response.body.primaryArchetype).toBeDefined();
+    expect(ARCHETYPE_CANONICAL_ORDER).toContain(response.body.primaryArchetype);
+  });
+});
+```
+
+### Simulation Testing
+
+**10k User Simulation:**
+
+```typescript
+// Run mass simulation to validate archetype distribution
+const results = simulateAssessments(10000);
+
+// Check distribution
+const distribution = calculateDistribution(results);
+for (const [archetype, percentage] of Object.entries(distribution)) {
+  console.log(`${archetype}: ${percentage.toFixed(1)}%`);
+  
+  // No archetype should be > 20% (avoid clustering)
+  expect(percentage).toBeLessThan(20);
+  
+  // No archetype should be < 2% (avoid dead zones)
+  expect(percentage).toBeGreaterThan(2);
+}
+
+// Check confusion pairs
+const confusionPairs = detectConfusionPairs(results);
+for (const pair of confusionPairs) {
+  console.warn(`Confusion detected: ${pair.archetype1} ↔ ${pair.archetype2} (${pair.frequency}%)`);
+}
+```
+
+### Manual Testing Checklist
+
+**UI/UX Validation:**
+- [ ] Progress bar updates correctly (1/8 → 1/16)
+- [ ] Radar chart displays all 6 traits (ACOEXP)
+- [ ] Archetype icons match canonical list (🐕, 🐓, etc.)
+- [ ] Results show correct archetype name (开心柯基, not 火花塞)
+- [ ] Decisive match badge shows when confidence ≥ 70%
+- [ ] Question flow adapts (may end at 8-12 for decisive users)
+- [ ] No references to deprecated archetypes (火花塞, 探索者, etc.)
+
+**Data Validation:**
+- [ ] `assessment_sessions.trait_scores` contains all 6 traits
+- [ ] `assessment_sessions.primary_archetype` uses current names
+- [ ] `users.primary_archetype` updated on completion
+- [ ] `users.has_completed_personality_test` set to true
+- [ ] Old `primary_role` field NOT updated (deprecated)
+
+---
+
+## Appendix
+
+### Archetype Chemistry Matrix
+
+**Purpose:** Predict compatibility between archetype pairs for matching algorithm
+
+**Scale:** 0-100 (higher = better chemistry)
+
+| Archetype 1 | Archetype 2 | Score | Reason |
+|-------------|-------------|-------|--------|
+| 开心柯基 | 太阳鸡 | 95 | Both high X+P, energy synergy |
+| 开心柯基 | 隐身猫 | 45 | X gap too large (95 vs 20) |
+| 暖心熊 | 定心大象 | 88 | High A+E, stability match |
+| 机智狐 | 灵感章鱼 | 92 | Both high O, creative synergy |
+| 沉思猫头鹰 | 稳如龟 | 60 | Both introverted, but O gap |
+
+(Full matrix: See `packages/shared/src/personality/archetypeChemistry.ts`)
+
+### Historical Notes
+
+**V1 System (Deprecated):**
+- Fixed 10 questions
+- 8 archetypes (火花塞, 探索者, etc.)
+- Simple point accumulation
+- No adaptive selection
+
+**V2 System (Deprecated):**
+- Fixed 10 questions
+- 14 archetypes (8 core + 6 extended)
+- Trait blending formula
+- No matcher algorithm (just highest score)
+
+**V3 System (Deprecated):**
+- Introduced 130-question bank
+- Added confidence tracking
+- Still used old archetype names
+
+**V4 System (Current):**
+- 60-question bank (3 levels)
+- 12 archetypes (canonical names)
+- Adaptive 8-16 questions
+- V2 Matcher with soul trait weighting
+- Asymmetric penalties and VETO filters
+
+---
+
+**End of Document**
