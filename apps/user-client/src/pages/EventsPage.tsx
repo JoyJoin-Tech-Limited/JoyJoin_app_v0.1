@@ -16,7 +16,7 @@ import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { invalidateCacheForEvent } from "@/lib/cacheInvalidation";
 import type { BlindBoxEvent, EventFeedback } from "@shared/schema";
-import type { TeamNameRevealedData } from "@shared/wsEvents";
+import type { TeamNameRevealedData, PoolMatchedData } from "@shared/wsEvents";
 
 interface ReunionInvite {
   responseId: string;
@@ -71,7 +71,7 @@ export default function EventsPage() {
 
   // State for match celebration and team name reveal
   const [showMatchCelebration, setShowMatchCelebration] = useState(false);
-  const [matchData, setMatchData] = useState<any>(null);
+  const [matchData, setMatchData] = useState<PoolMatchedData | null>(null);
   const [showTeamReveal, setShowTeamReveal] = useState(false);
   const [teamData, setTeamData] = useState<TeamNameRevealedData | null>(null);
 
@@ -101,7 +101,7 @@ export default function EventsPage() {
     const unsubscribePoolMatched = subscribe('POOL_MATCHED', async (message) => {
       console.log('[User] Pool matched:', message);
       
-      const poolData = message.data as any;
+      const poolData = message.data as PoolMatchedData;
       setMatchData(poolData);
       setShowMatchCelebration(true);
       
