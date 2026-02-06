@@ -1059,12 +1059,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const primaryArchetype = matchResults[0]?.archetype || '开心柯基';
         const secondaryArchetype = matchResults[1]?.archetype || '太阳鸡';
         
+        // Constants for decisive match thresholds
+        const HIGH_CONFIDENCE_THRESHOLD = 0.8;
+        const DECISIVE_SCORE_DIFFERENCE_THRESHOLD = 10;
+        // Default confidence based on number of answers completed (more answers = higher confidence)
+        const DEFAULT_TRAIT_CONFIDENCE = Math.min(0.85, 0.5 + (testAnswers.length / 100));
+        
         // Build trait confidences from results
         const traitConfidences: Record<string, { score: number; confidence: number; sampleCount: number }> = {};
         Object.keys(traitScores).forEach(trait => {
           traitConfidences[trait] = {
             score: traitScores[trait],
-            confidence: 0.85,
+            confidence: DEFAULT_TRAIT_CONFIDENCE,
             sampleCount: testAnswers.length
           };
         });
@@ -1074,13 +1080,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           primaryArchetype,
           secondaryArchetype,
           traitDeltas: traitScores,
-          decisiveReason: matchResults[0]?.confidence > 0.8 ? 'high_confidence' : 'normal',
+          decisiveReason: matchResults[0]?.confidence > HIGH_CONFIDENCE_THRESHOLD ? 'high_confidence' : 'normal',
           score: matchResults[0]?.score || 0
         };
         
         // Determine if match is decisive (high confidence and clear winner)
-        const isDecisive = matchResults[0]?.confidence > 0.8 && 
-                          (matchResults[0]?.score - (matchResults[1]?.score || 0)) > 10;
+        const isDecisive = matchResults[0]?.confidence > HIGH_CONFIDENCE_THRESHOLD && 
+                          (matchResults[0]?.score - (matchResults[1]?.score || 0)) > DECISIVE_SCORE_DIFFERENCE_THRESHOLD;
         
         // Create assessment session record
         await db.insert(assessmentSessions).values({
