@@ -12,9 +12,15 @@ function getArchetypeEmoji(archetype: string): string {
   const display = archetypeMap[archetype];
   if (!display) return "✨";
   
-  // Extract emoji using regex (emoji is typically at the end after a space)
-  const emojiMatch = display.match(/\s([^\s]+)$/);
-  return emojiMatch ? emojiMatch[1] : "✨";
+  // Extract emoji using a more robust method
+  // Emojis are typically at the end after a space
+  // Using Unicode range for emoji detection
+  const emojiMatch = display.match(/[\u{1F300}-\u{1F9FF}][\u{FE00}-\u{FE0F}]?[\u{200D}\u{FE0F}]*[\u{1F300}-\u{1F9FF}]*/u);
+  if (emojiMatch) return emojiMatch[0];
+  
+  // Fallback: simple split on space and take last element
+  const parts = display.split(' ');
+  return parts[parts.length - 1] || "✨";
 }
 
 export default function ArchetypeCoinMinimal({ 

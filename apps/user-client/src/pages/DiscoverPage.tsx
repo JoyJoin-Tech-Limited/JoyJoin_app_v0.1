@@ -294,23 +294,18 @@ export default function DiscoverPage() {
                   <p className="text-sm text-muted-foreground mt-4">加载中...</p>
                 </div>
               ) : filteredBlindBoxEvents.length > 0 ? (
-                eventPools
-                  .filter(pool => {
-                    if (pool.city !== selectedCity) return false;
-                    if (selectedArea && !pool.district.includes(selectedArea)) return false;
-                    return true;
-                  })
-                  .map((pool) => {
-                    const event = transformEventPool(pool);
-                    if (!event) return null;
-                    return (
-                      <BlindBoxEventCard 
-                        key={event.id} 
-                        {...event}
-                        onDetailsClick={() => handleOpenDrawer(pool)}
-                      />
-                    );
-                  })
+                filteredBlindBoxEvents.map((event) => {
+                  // Find the original pool for drawer data
+                  const pool = eventPools.find(p => p.id === event.id);
+                  
+                  return (
+                    <BlindBoxEventCard 
+                      key={event.id} 
+                      {...event}
+                      onDetailsClick={pool ? () => handleOpenDrawer(pool) : undefined}
+                    />
+                  );
+                })
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>暂无{selectedCity}{selectedArea ? `·${selectedArea}` : ''}的盲盒活动</p>
