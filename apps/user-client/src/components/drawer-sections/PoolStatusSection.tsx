@@ -1,0 +1,198 @@
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronUp, Flame } from "lucide-react";
+import ArchetypeCoinMinimal from "../ArchetypeCoinMinimal";
+import FloatingTeamTags from "../FloatingTeamTags";
+import InteractiveTeamBubbles from "../InteractiveTeamBubbles";
+
+interface PoolStats {
+  totalRegistrations: number;
+  archetypeBreakdown: Record<string, number>;
+  estimatedGroups: number;
+  avgMatchScore: number;
+  recentTeamNames: Array<{
+    teamName: string;
+    teamEmoji: string;
+  }>;
+}
+
+interface TeamBubble {
+  groupId: string;
+  teamName: string;
+  teamEmoji: string;
+  memberCount: number;
+  temperatureLevel: "fire" | "warm" | "mild" | "cold";
+}
+
+interface PoolStatusSectionProps {
+  poolId: string;
+  stats: PoolStats;
+  minGroupSize: number;
+  successfulTeams?: TeamBubble[];
+  onTeamClick?: (groupId: string) => void;
+}
+
+export default function PoolStatusSection({
+  poolId,
+  stats,
+  minGroupSize,
+  successfulTeams = [],
+  onTeamClick,
+}: PoolStatusSectionProps) {
+  const [showAllTeams, setShowAllTeams] = useState(false);
+  
+  const spotsNeeded = minGroupSize - (stats.totalRegistrations % minGroupSize);
+  const isHot = spotsNeeded <= 2 && spotsNeeded > 0;
+  const filledChunks = Math.floor(stats.totalRegistrations / minGroupSize);
+  const currentProgress = stats.totalRegistrations % minGroupSize;
+  
+  // Sort archetypes by count
+  const sortedArchetypes = Object.entries(stats.archetypeBreakdown)
+    .sort(([, a], [, b]) => b - a)
+    .map(([archetype, count]) => ({ archetype, count }));
+  
+  return (
+    <div className="space-y-6">
+      {/* Progress Card */}
+      <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-50">
+            {stats.totalRegistrations} 人在活动池
+          </h3>
+          {isHot && (
+            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 gap-1">
+              <Flame className="h-3 w-3" />
+              即将组队
+            </Badge>
+          )}
+        </div>
+        
+        {/* Chunked Progress Bar */}
+        <div className="space-y-2 mb-4">
+          <div className="flex gap-1">
+            {Array.from({ length: minGroupSize }).map((_, index) => {
+              const isFilled = index < currentProgress;
+              
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: 1 }}
+                  transition={{
+                    delay: index * 0.05,
+                    type: "spring",
+                    stiffness: 260,
+                    damping: 20,
+                  }}
+                  className="flex-1 h-3 rounded-full origin-bottom transition-colors duration-200"
+                  style={{
+                    backgroundColor: isFilled
+                      ? "rgb(139, 92, 246)" // violet-500
+                      : "rgb(229, 231, 235)", // gray-200
+                  }}
+                />
+              );
+            })}
+          </div>
+          
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {spotsNeeded > 0 
+              ? `还差 ${spotsNeeded} 人即可组队`
+              : "已满足组队条件！"}
+          </p>
+        </div>
+        
+        {/* Stats Row */}
+        <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+          <div>
+            <span className="font-medium">预计组队：</span>
+            <span className="ml-1">{stats.estimatedGroups} 组</span>
+          </div>
+          <div>
+            <span className="font-medium">平均匹配度：</span>
+            <span className="ml-1">{stats.avgMatchScore}%</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Archetype Coins Grid */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-50 px-1">
+          谁在活动池？
+        </h3>
+        
+        {sortedArchetypes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
+              <span className="text-3xl">✨</span>
+            </div>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              成为第一个加入的人！
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              开启你的JoyJoin之旅
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-4 gap-3">
+            {sortedArchetypes.map((item, index) => (
+              <ArchetypeCoinMinimal
+                key={item.archetype}
+                archetype={item.archetype}
+                count={item.count}
+                index={index}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+      
+      {/* Team Showcase */}
+      {stats.recentTeamNames.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-50">
+              成功组队案例
+            </h3>
+            
+            {successfulTeams.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAllTeams(!showAllTeams)}
+                className="text-sm font-medium text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 gap-1"
+              >
+                {showAllTeams ? (
+                  <>
+                    收起 <ChevronUp className="h-4 w-4" />
+                  </>
+                ) : (
+                  <>
+                    查看全部 <ChevronDown className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+          
+          {showAllTeams && successfulTeams.length > 0 ? (
+            <InteractiveTeamBubbles
+              teams={successfulTeams}
+              onTeamClick={onTeamClick}
+            />
+          ) : (
+            <FloatingTeamTags
+              poolId={poolId}
+              teamTags={stats.recentTeamNames}
+              maxTags={5}
+              autoRotate={true}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
