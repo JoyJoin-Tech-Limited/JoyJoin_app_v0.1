@@ -658,3 +658,88 @@
     }
   }
 }
+/* ============================================
+ * Mobile UI Design Specification Utilities
+ * ============================================ */
+
+/* Mobile viewport height - uses dynamic viewport units for mobile browsers */
+@supports (height: 100dvh) {
+  .mobile-viewport {
+    height: 100dvh;
+  }
+}
+
+/* Touch feedback utilities */
+.touch-feedback {
+  box-shadow: 0 0 0 4px rgba(168, 107, 255, 0.2);
+}
+
+/* Tilted components - mobile-optimized angles */
+.tilt-1 { transform: rotate(-1.5deg); }
+.tilt-2 { transform: rotate(1.2deg); }
+.tilt-3 { transform: rotate(0.8deg); }
+.tilt-4 { transform: rotate(-1.2deg); }
+
+/* Mobile-specific touch states */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  .mobile-no-hover:hover {
+    background-color: inherit;
+    opacity: inherit;
+  }
+  
+  /* Optimize active states for touch */
+  .mobile-active:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+}
+
+/* Safe area utilities for iOS notch and Android navigation */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 1.5rem);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1.5rem);
+}
+
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 1.25rem);
+}
+
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 1.25rem);
+}
+
+/* Gradient text utility */
+.gradient-text-mobile {
+  background: linear-gradient(135deg, #FF6B9D, #A86BFF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Performance optimization - CSS containment for mobile */
+.mobile-card {
+  contain: layout style paint;
+}
+
+/* Reduce motion support */
+@media (prefers-reduced-motion: reduce) {
+  .tilt-1,
+  .tilt-2,
+  .tilt-3,
+  .tilt-4 {
+    transform: none !important;
+  }
+  
+  .mobile-active:active {
+    transform: none !important;
+  }
+}
+
+/* WeChat Mini Program style font fallback */
+.wechat-font {
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+}
