@@ -1,0 +1,118 @@
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+interface TeamTag {
+  teamName: string;
+  teamEmoji: string;
+}
+
+interface FloatingTeamTagsProps {
+  poolId: string;
+  teamTags: TeamTag[];
+  maxTags?: number;
+  autoRotate?: boolean;
+}
+
+export default function FloatingTeamTags({
+  teamTags,
+  maxTags = 5,
+  autoRotate = true,
+}: FloatingTeamTagsProps) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  // Limit to maxTags
+  const limitedTags = teamTags.slice(0, maxTags);
+  
+  // Get 3 visible tags with wrapping
+  const getVisibleTags = (index: number) => {
+    if (limitedTags.length === 0) return [];
+    
+    const tags = [];
+    for (let i = 0; i < Math.min(3, limitedTags.length); i++) {
+      const tagIndex = (index + i) % limitedTags.length;
+      tags.push({
+        ...limitedTags[tagIndex],
+        key: `${tagIndex}-${index + i}`,
+        position: i,
+      });
+    }
+    return tags;
+  };
+  
+  const [visibleTags, setVisibleTags] = useState(() => getVisibleTags(0));
+  
+  useEffect(() => {
+    if (!autoRotate || limitedTags.length === 0) return;
+    
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % limitedTags.length);
+    }, 4000);
+    
+    return () => clearInterval(interval);
+  }, [autoRotate, limitedTags.length]);
+  
+  useEffect(() => {
+    setVisibleTags(getVisibleTags(currentIndex));
+  }, [currentIndex]);
+  
+  if (limitedTags.length === 0) {
+    return (
+      <div className="text-center py-8 text-sm text-muted-foreground">
+        暂无成功组队案例
+      </div>
+    );
+  }
+  
+  const positions = [
+    { x: "10%", initialY: "0%" },
+    { x: "70%", initialY: "20%" },
+    { x: "30%", initialY: "40%" },
+  ];
+  
+  return (
+    <div className="relative h-48 overflow-hidden">
+      <AnimatePresence mode="popLayout">
+        {visibleTags.map((tag, index) => {
+          const pos = positions[tag.position % 3];
+          
+          return (
+            <motion.div
+              key={tag.key}
+              initial={{
+                opacity: 0,
+                y: 0,
+                x: pos.x,
+              }}
+              animate={{
+                opacity: [0, 1, 1, 0],
+                y: [pos.initialY, "-20px", "-10px", pos.initialY],
+                x: pos.x,
+              }}
+              exit={{
+                opacity: 0,
+                transition: { duration: 0.3 },
+              }}
+              transition={{
+                duration: 4,
+                times: [0, 0.2, 0.8, 1],
+                ease: "easeInOut",
+              }}
+              className="absolute"
+              style={{
+                left: pos.x,
+                top: pos.initialY,
+              }}
+            >
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg border border-gray-200/50 dark:border-gray-700/50">
+                <span className="text-xl">{tag.teamEmoji}</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                  {tag.teamName}
+                </span>
+              </div>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+    </div>
+  );
+}

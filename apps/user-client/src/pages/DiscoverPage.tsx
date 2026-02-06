@@ -7,6 +7,7 @@ import LocationPickerSheet from "@/components/LocationPickerSheet";
 import { PromotionBannerCarousel } from "@/components/PromotionBannerCarousel";
 import InviteFriendCard from "@/components/InviteFriendCard";
 import JourneyProgressCard from "@/components/JourneyProgressCard";
+import EventPoolDetailDrawer from "@/components/EventPoolDetailDrawer";
 import { Sparkles } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,6 +15,7 @@ import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { useQuery } from "@tanstack/react-query";
 import { differenceInDays } from "date-fns";
 import { formatChineseDateOnly, extractChineseTime } from "@/lib/chineseDateTime";
+import { useLocation } from "wouter";
 
 interface EventPool {
   id: string;
@@ -79,12 +81,18 @@ const getSavedLocation = (userCity?: string): { city: "香港" | "深圳"; area:
 
 export default function DiscoverPage() {
   const { user, isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
   
   // Use user's registered city as fallback when no localStorage selection exists
   const savedLocation = getSavedLocation(user?.currentCity ?? undefined);
   const [selectedCity, setSelectedCity] = useState<"香港" | "深圳">(savedLocation.city);
   const [selectedArea, setSelectedArea] = useState<string>(savedLocation.area);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  
+  // Drawer state
+  const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
+  const [showDrawer, setShowDrawer] = useState(false);
+  const [selectedPoolData, setSelectedPoolData] = useState<EventPool | null>(null);
   
   // Update location when user data loads (for first-time visitors without localStorage)
   useEffect(() => {
@@ -163,6 +171,20 @@ export default function DiscoverPage() {
     try {
       localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify({ city, area }));
     } catch {}
+  };
+
+  const handleOpenDrawer = (pool: EventPool) => {
+    setSelectedPoolId(pool.id);
+    setSelectedPoolData(pool);
+    setShowDrawer(true);
+  };
+
+  const handleRegister = () => {
+    if (selectedPoolData?.id) {
+      setShowDrawer(false);
+      // Navigate to registration page
+      setLocation(`/event-pool-registration/${selectedPoolData.id}`);
+    }
   };
 
   // Transform event pools to blind box event card props
@@ -272,9 +294,23 @@ export default function DiscoverPage() {
                   <p className="text-sm text-muted-foreground mt-4">加载中...</p>
                 </div>
               ) : filteredBlindBoxEvents.length > 0 ? (
-                filteredBlindBoxEvents.map((event) => (
-                  <BlindBoxEventCard key={event.id} {...event} />
-                ))
+                eventPools
+                  .filter(pool => {
+                    if (pool.city !== selectedCity) return false;
+                    if (selectedArea && !pool.district.includes(selectedArea)) return false;
+                    return true;
+                  })
+                  .map((pool) => {
+                    const event = transformEventPool(pool);
+                    if (!event) return null;
+                    return (
+                      <BlindBoxEventCard 
+                        key={event.id} 
+                        {...event}
+                        onDetailsClick={() => handleOpenDrawer(pool)}
+                      />
+                    );
+                  })
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>暂无{selectedCity}{selectedArea ? `·${selectedArea}` : ''}的盲盒活动</p>
@@ -296,6 +332,24 @@ export default function DiscoverPage() {
         selectedArea={selectedArea}
         onSave={handleLocationSave}
       />
+
+      {/* Event Pool Detail Drawer */}
+      {selectedPoolData && (
+        <EventPoolDetailDrawer
+          poolId={selectedPoolId}
+          isOpen={showDrawer}
+          onClose={() => setShowDrawer(false)}
+          onRegister={handleRegister}
+          eventData={{
+            eventType: selectedPoolData.eventType,
+            title: selectedPoolData.title,
+            date: formatChineseDateOnly(selectedPoolData.dateTime),
+            location: `${selectedPoolData.city}•${selectedPoolData.district}`,
+            groupSize: "4-6人",
+            minGroupSize: 4, // Default group size, should come from pool data
+          }}
+        />
+      )}
     </div>
   );
 }

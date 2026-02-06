@@ -28,6 +28,7 @@ interface BlindBoxEventCardProps {
   registrationCount?: number;
   sampleArchetypes?: string[];
   registrationDeadline?: string;
+  onDetailsClick?: () => void;
 }
 
 function triggerHaptic() {
@@ -89,6 +90,7 @@ export default function BlindBoxEventCard({
   registrationCount = 0,
   sampleArchetypes = [],
   registrationDeadline,
+  onDetailsClick,
 }: BlindBoxEventCardProps) {
   const [infoSheetOpen, setInfoSheetOpen] = useState(false);
   const [joinSheetOpen, setJoinSheetOpen] = useState(false);
@@ -250,25 +252,39 @@ export default function BlindBoxEventCard({
                     <Sparkles className="h-4 w-4 mr-1.5" />
                     立即参与
                   </Button>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFlip();
-                        }}
-                        aria-label="了解盲盒玩法"
-                        data-testid={`button-flip-${id}`}
-                      >
-                        <HelpCircle className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>了解盲盒玩法</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  {onDetailsClick ? (
+                    <Button
+                      variant="outline"
+                      size="default"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDetailsClick();
+                      }}
+                      data-testid={`button-details-${id}`}
+                    >
+                      详情
+                    </Button>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFlip();
+                          }}
+                          aria-label="了解盲盒玩法"
+                          data-testid={`button-flip-${id}`}
+                        >
+                          <HelpCircle className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>了解盲盒玩法</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
               </div>
             </Card>
