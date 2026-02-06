@@ -1053,13 +1053,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Calculate best matching archetype using V2 matcher
-        const matchResult = findBestMatchingArchetypesV2(traitScores as any, {
-          returnDetails: true,
-          userSecondaryData: {}
+        // Function returns array of { archetype, score, confidence }
+        const matchResults = findBestMatchingArchetypesV2(traitScores as any, undefined, 3);
+        
+        const primaryArchetype = matchResults[0]?.archetype || '开心柯基';
+        const secondaryArchetype = matchResults[1]?.archetype || '太阳鸡';
+        
+        // Constants for decisive match thresholds
+        const HIGH_CONFIDENCE_THRESHOLD = 0.8;
+        const DECISIVE_SCORE_DIFFERENCE_THRESHOLD = 10;
+        // Default confidence based on number of answers completed (more answers = higher confidence)
+        const DEFAULT_TRAIT_CONFIDENCE = Math.min(0.85, 0.5 + (testAnswers.length / 100));
+        
+        // Build trait confidences from results
+        const traitConfidences: Record<string, { score: number; confidence: number; sampleCount: number }> = {};
+        Object.keys(traitScores).forEach(trait => {
+          traitConfidences[trait] = {
+            score: traitScores[trait],
+            confidence: DEFAULT_TRAIT_CONFIDENCE,
+            sampleCount: testAnswers.length
+          };
         });
         
-        const primaryArchetype = matchResult.primaryArchetype;
-        const secondaryArchetype = matchResult.secondaryArchetype;
+        // Build match details for storage
+        const matchDetailsJson = {
+          primaryArchetype,
+          secondaryArchetype,
+          traitDeltas: traitScores,
+          decisiveReason: matchResults[0]?.confidence > HIGH_CONFIDENCE_THRESHOLD ? 'high_confidence' : 'normal',
+          score: matchResults[0]?.score || 0
+        };
+        
+        // Determine if match is decisive (high confidence and clear winner)
+        const isDecisive = matchResults[0]?.confidence > HIGH_CONFIDENCE_THRESHOLD && 
+                          (matchResults[0]?.score - (matchResults[1]?.score || 0)) > DECISIVE_SCORE_DIFFERENCE_THRESHOLD;
         
         // Create assessment session record
         await db.insert(assessmentSessions).values({
@@ -1067,15 +1094,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phase: 'completed', // Test is complete when WeChat login happens
           currentQuestionIndex: testAnswers.length,
           traitScores: traitScores as any,
-          traitConfidences: matchResult.traitConfidences || {},
-          topArchetypes: [
-            { archetype: primaryArchetype, score: 100, confidence: 0.9 },
-            { archetype: secondaryArchetype, score: 80, confidence: 0.7 }
-          ],
+          traitConfidences: traitConfidences as any,
+          topArchetypes: matchResults.map(r => ({
+            archetype: r.archetype,
+            score: r.score,
+            confidence: r.confidence
+          })) as any,
           algorithmVersion: 'v2', // Valid version: v1 or v2
-          matchDetailsJson: matchResult.matchDetails || {},
+          matchDetailsJson: matchDetailsJson as any,
           primaryArchetype,
-          isDecisive: matchResult.isDecisive || false,
+          isDecisive,
           completedAt: new Date(),
           createdAt: new Date(),
         }).returning();
