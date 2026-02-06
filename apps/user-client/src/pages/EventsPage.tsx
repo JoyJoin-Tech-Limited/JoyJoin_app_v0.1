@@ -62,6 +62,9 @@ interface PoolRegistration {
   relatedUserName?: string | null;
 }
 
+// Animation timing constants
+const MATCH_CELEBRATION_DURATION_MS = 2000;
+
 export default function EventsPage() {
   const [activeTab, setActiveTab] = useState<"pending" | "matched" | "completed">("pending");
   const { toast } = useToast();
@@ -105,8 +108,8 @@ export default function EventsPage() {
       setMatchData(poolData);
       setShowMatchCelebration(true);
       
-      // Auto-dismiss after 2s
-      setTimeout(() => setShowMatchCelebration(false), 2000);
+      // Auto-dismiss match celebration
+      setTimeout(() => setShowMatchCelebration(false), MATCH_CELEBRATION_DURATION_MS);
       
       await queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
       setActiveTab("matched");
