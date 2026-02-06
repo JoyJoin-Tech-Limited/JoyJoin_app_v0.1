@@ -4,6 +4,6 @@
  * Reusable components following Mobile UI Design Specification
  */
 
-export { TiltedFeatureCard } from './TiltedFeatureCard';
-export { MobilePrimaryButton } from './MobilePrimaryButton';
-export { MobileContainer } from './MobileContainer';
+export { default as TiltedFeatureCard } from './TiltedFeatureCard';
+export { default as MobilePrimaryButton } from './MobilePrimaryButton';
+export { default as MobileContainer } from './MobileContainer';

@@ -13,16 +13,18 @@
  */
 
 import { useLocation } from "wouter";
-import { MobileContainer } from "@/components/mobile/MobileContainer";
-import { TiltedFeatureCard } from "@/components/mobile/TiltedFeatureCard";
-import { MobilePrimaryButton } from "@/components/mobile/MobilePrimaryButton";
+import MobileContainer from "@/components/mobile/MobileContainer";
+import TiltedFeatureCard from "@/components/mobile/TiltedFeatureCard";
+import MobilePrimaryButton from "@/components/mobile/MobilePrimaryButton";
 import { Users, Brain, Sparkles, Gamepad2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
 export default function MobileLandingPage() {
   const [, setLocation] = useLocation();
   const [agreed, setAgreed] = useState(false);
+  const { toast } = useToast();
 
   // Feature cards configuration
   const features = [
@@ -58,21 +60,21 @@ export default function MobileLandingPage() {
 
   const handleMainAction = () => {
     if (!agreed) {
-      // Show toast or alert
-      alert("请先同意用户协议和隐私政策");
+      toast({
+        title: "请先同意协议",
+        description: "请阅读并同意用户协议和隐私政策",
+        variant: "destructive",
+      });
       return;
     }
-    console.log("[Analytics] Mobile Landing: Main CTA clicked");
     setLocation("/personality-test");
   };
 
   const handleLogin = () => {
-    console.log("[Analytics] Mobile Landing: Login clicked");
     setLocation("/login");
   };
 
   const handleOpenAgreement = (type: 'user' | 'privacy') => {
-    console.log(`[Analytics] Mobile Landing: ${type} agreement clicked`);
     window.open(type === 'user' ? '/terms' : '/privacy', '_blank');
   };
 
@@ -110,7 +112,6 @@ export default function MobileLandingPage() {
               title={feature.title}
               description={feature.description}
               tiltDegrees={feature.tilt}
-              onClick={() => console.log(`Feature ${feature.id} tapped`)}
             />
           ))}
         </div>
@@ -142,7 +143,7 @@ export default function MobileLandingPage() {
             id="agree"
             checked={agreed}
             onCheckedChange={(checked) => setAgreed(checked === true)}
-            className="mt-0.5 min-w-[20px] min-h-[20px]"
+            className="mt-0.5 min-w-[44px] min-h-[44px]"
           />
           <label
             htmlFor="agree"
