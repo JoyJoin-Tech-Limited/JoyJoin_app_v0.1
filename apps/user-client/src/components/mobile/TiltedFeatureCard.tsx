@@ -11,7 +11,7 @@
  */
 
 import { cn } from "@/lib/utils";
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 
 interface TiltedFeatureCardProps {
   icon: ReactNode;
@@ -22,7 +22,7 @@ interface TiltedFeatureCardProps {
   className?: string;
 }
 
-export function TiltedFeatureCard({
+export default function TiltedFeatureCard({
   icon,
   title,
   description,
@@ -30,12 +30,18 @@ export function TiltedFeatureCard({
   onClick,
   className,
 }: TiltedFeatureCardProps) {
+  // Check for motion reduce preference
+  const prefersReducedMotion = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
+
   return (
     <button
       onClick={onClick}
       className={cn(
-        // Base styles
-        "relative w-full aspect-square overflow-hidden rounded-3xl",
+        // Base styles - aspect ratio 165:140 (1.18:1) per spec
+        "relative w-full overflow-hidden rounded-3xl",
         "bg-white shadow-lg",
         "flex flex-col items-center justify-center gap-2",
         "p-6",
@@ -49,7 +55,8 @@ export function TiltedFeatureCard({
         className
       )}
       style={{
-        transform: `rotate(${tiltDegrees}deg)`,
+        aspectRatio: '165 / 140',
+        transform: prefersReducedMotion ? 'none' : `rotate(${tiltDegrees}deg)`,
       }}
       type="button"
       aria-label={title}

@@ -12,18 +12,27 @@
  */
 
 import { cn } from "@/lib/utils";
-import { ButtonHTMLAttributes, forwardRef } from "react";
+import { ButtonHTMLAttributes, forwardRef, useMemo } from "react";
 
 interface MobilePrimaryButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   tiltDegrees?: number;
   enableHaptic?: boolean;
 }
 
-export const MobilePrimaryButton = forwardRef<HTMLButtonElement, MobilePrimaryButtonProps>(
+// Check haptic support once at module level
+const supportsHaptic = typeof navigator !== 'undefined' && 'vibrate' in navigator;
+
+const MobilePrimaryButton = forwardRef<HTMLButtonElement, MobilePrimaryButtonProps>(
   ({ className, children, tiltDegrees = 0.8, enableHaptic = true, onClick, ...props }, ref) => {
+    // Check for motion reduce preference
+    const prefersReducedMotion = useMemo(() => {
+      if (typeof window === 'undefined') return false;
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }, []);
+
     const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
       // Trigger haptic feedback on supported devices
-      if (enableHaptic && 'vibrate' in navigator) {
+      if (enableHaptic && supportsHaptic) {
         navigator.vibrate(20); // 20ms light vibration
       }
       
@@ -53,7 +62,7 @@ export const MobilePrimaryButton = forwardRef<HTMLButtonElement, MobilePrimaryBu
           className
         )}
         style={{
-          transform: `rotate(${tiltDegrees}deg)`,
+          transform: prefersReducedMotion ? 'none' : `rotate(${tiltDegrees}deg)`,
         }}
         {...props}
       >
@@ -64,3 +73,5 @@ export const MobilePrimaryButton = forwardRef<HTMLButtonElement, MobilePrimaryBu
 );
 
 MobilePrimaryButton.displayName = "MobilePrimaryButton";
+
+export default MobilePrimaryButton;

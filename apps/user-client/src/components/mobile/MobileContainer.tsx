@@ -18,7 +18,7 @@ interface MobileContainerProps {
   enableSafeArea?: boolean;
 }
 
-export function MobileContainer({
+export default function MobileContainer({
   children,
   className,
   enableSafeArea = true,
@@ -26,19 +26,17 @@ export function MobileContainer({
   return (
     <div
       className={cn(
-        // Full viewport
-        "w-full min-h-screen",
-        // Use dynamic viewport height for mobile
-        "h-[100dvh]",
-        // Container padding (40rpx ≈ 20px in mobile)
-        "px-5 py-6",
-        // Safe area support
-        enableSafeArea && [
-          "pt-[env(safe-area-inset-top,1.5rem)]",
-          "pb-[env(safe-area-inset-bottom,1.5rem)]",
-          "pl-[env(safe-area-inset-left,1.25rem)]",
-          "pr-[env(safe-area-inset-right,1.25rem)]",
-        ],
+        // Full viewport with consistent height approach
+        "w-full min-h-[100dvh]",
+        // Safe area support OR base padding (not both)
+        enableSafeArea
+          ? [
+              "pt-[env(safe-area-inset-top,1.5rem)]",
+              "pb-[env(safe-area-inset-bottom,1.5rem)]",
+              "pl-[env(safe-area-inset-left,1.25rem)]",
+              "pr-[env(safe-area-inset-right,1.25rem)]",
+            ]
+          : "px-5 py-6",
         className
       )}
     >
