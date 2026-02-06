@@ -104,7 +104,31 @@ export default function EventPoolDetailDrawer({
     }
   }, [isOpen]);
   
-  if (!poolId || !eventData || !stats) return null;
+  if (!poolId || !eventData) {
+    return null;
+  }
+  
+  // Show loading state while fetching stats
+  if (!stats && isOpen) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetPortal>
+          <SheetOverlay />
+          <SheetContent
+            side="bottom"
+            className="h-[92vh] p-0 border-t-0 rounded-t-[32px] overflow-hidden flex items-center justify-center"
+          >
+            <div className="text-center">
+              <div className="h-12 w-12 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-sm text-muted-foreground">加载活动池信息...</p>
+            </div>
+          </SheetContent>
+        </SheetPortal>
+      </Sheet>
+    );
+  }
+  
+  if (!stats) return null;
   
   const spotsNeeded = eventData.minGroupSize - (stats.totalRegistrations % eventData.minGroupSize);
   const isHot = spotsNeeded <= 2 && spotsNeeded > 0;

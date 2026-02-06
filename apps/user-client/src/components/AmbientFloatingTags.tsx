@@ -15,16 +15,16 @@ export default function AmbientFloatingTags({ teamTags }: AmbientFloatingTagsPro
   
   if (ambientTags.length === 0) return null;
   
-  // Define positions across the screen
+  // Define positions across the screen (in pixels for consistent behavior)
   const positions = [
-    { x: "5%", y: "10%" },
-    { x: "85%", y: "15%" },
-    { x: "15%", y: "30%" },
-    { x: "75%", y: "35%" },
-    { x: "30%", y: "50%" },
-    { x: "65%", y: "55%" },
-    { x: "10%", y: "70%" },
-    { x: "80%", y: "75%" },
+    { x: 20, y: 50 },
+    { x: 320, y: 75 },
+    { x: 60, y: 150 },
+    { x: 280, y: 175 },
+    { x: 100, y: 250 },
+    { x: 240, y: 275 },
+    { x: 40, y: 350 },
+    { x: 300, y: 375 },
   ];
   
   return (
@@ -43,8 +43,8 @@ export default function AmbientFloatingTags({ teamTags }: AmbientFloatingTagsPro
               opacity: 0,
             }}
             animate={{
-              x: [pos.x, `calc(${pos.x} + 20%)`, pos.x],
-              y: [pos.y, `calc(${pos.y} + 30%)`, pos.y],
+              x: [0, 80, 0],
+              y: [0, 120, 0],
               opacity: [0, 0.4, 0.4, 0],
             }}
             transition={{
@@ -55,8 +55,8 @@ export default function AmbientFloatingTags({ teamTags }: AmbientFloatingTagsPro
               times: [0, 0.33, 0.66, 1],
             }}
             style={{
-              left: pos.x,
-              top: pos.y,
+              left: `${pos.x}px`,
+              top: `${pos.y}px`,
             }}
           >
             <div className="flex items-center gap-2 px-5 py-3 rounded-full bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm">

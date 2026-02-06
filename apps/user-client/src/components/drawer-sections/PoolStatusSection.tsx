@@ -44,7 +44,7 @@ export default function PoolStatusSection({
   const [showAllTeams, setShowAllTeams] = useState(false);
   
   const spotsNeeded = minGroupSize - (stats.totalRegistrations % minGroupSize);
-  const isHot = spotsNeeded <= 2 && spotsNeeded > 0;
+  const isHot = spotsNeeded <= 2 && spotsNeeded > 0 && spotsNeeded !== minGroupSize;
   const filledChunks = Math.floor(stats.totalRegistrations / minGroupSize);
   const currentProgress = stats.totalRegistrations % minGroupSize;
   
@@ -99,9 +99,11 @@ export default function PoolStatusSection({
           </div>
           
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {spotsNeeded > 0 
-              ? `还差 ${spotsNeeded} 人即可组队`
-              : "已满足组队条件！"}
+            {currentProgress === 0 && stats.totalRegistrations > 0
+              ? "已满足组队条件！"
+              : spotsNeeded > 0 
+                ? `还差 ${spotsNeeded} 人即可组队`
+                : "已满足组队条件！"}
           </p>
         </div>
         

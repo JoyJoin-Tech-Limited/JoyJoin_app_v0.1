@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface TeamTag {
@@ -23,8 +23,8 @@ export default function FloatingTeamTags({
   // Limit to maxTags
   const limitedTags = teamTags.slice(0, maxTags);
   
-  // Get 3 visible tags with wrapping
-  const getVisibleTags = (index: number) => {
+  // Get 3 visible tags with wrapping - memoized function
+  const getVisibleTags = useCallback((index: number) => {
     if (limitedTags.length === 0) return [];
     
     const tags = [];
@@ -37,7 +37,7 @@ export default function FloatingTeamTags({
       });
     }
     return tags;
-  };
+  }, [limitedTags]);
   
   const [visibleTags, setVisibleTags] = useState(() => getVisibleTags(0));
   
@@ -53,7 +53,7 @@ export default function FloatingTeamTags({
   
   useEffect(() => {
     setVisibleTags(getVisibleTags(currentIndex));
-  }, [currentIndex]);
+  }, [currentIndex, getVisibleTags]);
   
   if (limitedTags.length === 0) {
     return (
@@ -64,9 +64,9 @@ export default function FloatingTeamTags({
   }
   
   const positions = [
-    { x: "10%", initialY: "0%" },
-    { x: "70%", initialY: "20%" },
-    { x: "30%", initialY: "40%" },
+    { x: "10%", initialY: 0 },
+    { x: "70%", initialY: 60 },
+    { x: "30%", initialY: 120 },
   ];
   
   return (
@@ -85,7 +85,7 @@ export default function FloatingTeamTags({
               }}
               animate={{
                 opacity: [0, 1, 1, 0],
-                y: [pos.initialY, "-20px", "-10px", pos.initialY],
+                y: [0, -20, -10, 0],
                 x: pos.x,
               }}
               exit={{
@@ -100,7 +100,7 @@ export default function FloatingTeamTags({
               className="absolute"
               style={{
                 left: pos.x,
-                top: pos.initialY,
+                top: `${pos.initialY}px`,
               }}
             >
               <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg border border-gray-200/50 dark:border-gray-700/50">
