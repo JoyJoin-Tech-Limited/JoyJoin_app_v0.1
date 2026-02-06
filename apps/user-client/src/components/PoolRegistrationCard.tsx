@@ -37,6 +37,12 @@ interface PoolRegistration {
   eventIntent: string[];
   invitationRole?: "inviter" | "invitee" | null;
   relatedUserName?: string | null;
+  // Team identity fields
+  teamName?: string;
+  teamTagline?: string;
+  teamEmoji?: string;
+  teamSuperpowers?: string[];
+  teamVibe?: string;
 }
 
 interface PoolRegistrationCardProps {
@@ -119,6 +125,40 @@ export default function PoolRegistrationCard({ registration }: PoolRegistrationC
 
   return (
     <Card data-testid={`card-pool-registration-${registration.id}`}>
+      {/* Team name display section */}
+      {registration.matchStatus === 'matched' && registration.teamName && (
+        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 p-4 border-b border-amber-200 dark:border-amber-800">
+          <div className="flex items-center gap-3">
+            <span className="text-4xl">{registration.teamEmoji}</span>
+            <div className="flex-1">
+              <h3 className="font-bold text-lg text-amber-900 dark:text-amber-100">
+                {registration.teamName}
+              </h3>
+              <p className="text-sm text-amber-700 dark:text-amber-300 italic">
+                {registration.teamTagline}
+              </p>
+            </div>
+            <Badge className="bg-amber-500 text-white">
+              我的队伍
+            </Badge>
+          </div>
+          
+          {/* Team superpowers */}
+          {registration.teamSuperpowers && registration.teamSuperpowers.length > 0 && (
+            <div className="flex gap-2 mt-2 flex-wrap">
+              {registration.teamSuperpowers.map(power => (
+                <span 
+                  key={power} 
+                  className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
+                >
+                  ✨ {power}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">

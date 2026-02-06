@@ -6,6 +6,8 @@ import CompletedEventCard from "@/components/CompletedEventCard";
 import PoolRegistrationCard from "@/components/PoolRegistrationCard";
 import ReunionInviteCard from "@/components/ReunionInviteCard";
 import SlidingTabs from "@/components/SlidingTabs";
+import MatchCelebrationOverlay from "@/components/MatchCelebrationOverlay";
+import TeamNameReveal from "@/components/TeamNameReveal";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -14,6 +16,7 @@ import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { invalidateCacheForEvent } from "@/lib/cacheInvalidation";
 import type { BlindBoxEvent, EventFeedback } from "@shared/schema";
+import type { TeamNameRevealedData } from "@shared/wsEvents";
 
 interface ReunionInvite {
   responseId: string;
@@ -66,6 +69,12 @@ export default function EventsPage() {
   const markAsRead = useMarkNotificationsAsRead();
   const { subscribe } = useWebSocket();
 
+  // State for match celebration and team name reveal
+  const [showMatchCelebration, setShowMatchCelebration] = useState(false);
+  const [matchData, setMatchData] = useState<any>(null);
+  const [showTeamReveal, setShowTeamReveal] = useState(false);
+  const [teamData, setTeamData] = useState<TeamNameRevealedData | null>(null);
+
   // 异步清理通知 - 不阻塞UI (100ms后执行)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -92,17 +101,30 @@ export default function EventsPage() {
     const unsubscribePoolMatched = subscribe('POOL_MATCHED', async (message) => {
       console.log('[User] Pool matched:', message);
       
-      await queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
-      
       const poolData = message.data as any;
-      const tempLabel = getTemperatureLabel(poolData.temperatureLevel || 'mild');
-      const tempSuffix = tempLabel ? `（${tempLabel}）` : "";
-      toast({
-        title: "活动池匹配成功！",
-        description: `你已成功匹配到 ${poolData.poolTitle} 的第${poolData.groupNumber}组${tempSuffix}，共${poolData.memberCount}人，匹配度${poolData.matchScore}分`,
-      });
+      setMatchData(poolData);
+      setShowMatchCelebration(true);
       
+      // Auto-dismiss after 2s
+      setTimeout(() => setShowMatchCelebration(false), 2000);
+      
+      await queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
       setActiveTab("matched");
+    });
+
+    const unsubscribeTeamName = subscribe('TEAM_NAME_REVEALED', async (message) => {
+      console.log('[User] Team name revealed:', message);
+      
+      const teamNameData = message.data as TeamNameRevealedData;
+      setTeamData(teamNameData);
+      setShowTeamReveal(true);
+      
+      // Haptic feedback
+      if (navigator.vibrate) {
+        navigator.vibrate([50, 100, 50]);
+      }
+      
+      await queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
     });
 
     const unsubscribeStatus = subscribe('EVENT_STATUS_CHANGED', async (message) => {
@@ -133,6 +155,7 @@ export default function EventsPage() {
     return () => {
       unsubscribeMatched();
       unsubscribePoolMatched();
+      unsubscribeTeamName();
       unsubscribeStatus();
       unsubscribeCompleted();
     };
@@ -344,6 +367,27 @@ export default function EventsPage() {
       </div>
 
       <BottomNav />
+
+      {/* Stage 1: Quick celebration (2s auto-dismiss) */}
+      {matchData && (
+        <MatchCelebrationOverlay
+          isVisible={showMatchCelebration}
+          onContinue={() => setShowMatchCelebration(false)}
+        />
+      )}
+
+      {/* Stage 2: Gold foil team name reveal */}
+      {teamData && (
+        <TeamNameReveal
+          isVisible={showTeamReveal}
+          teamName={teamData.teamName}
+          teamTagline={teamData.teamTagline}
+          teamEmoji={teamData.teamEmoji}
+          teamSuperpowers={teamData.teamSuperpowers || []}
+          teamVibe={teamData.teamVibe || 'playful'}
+          onClose={() => setShowTeamReveal(false)}
+        />
+      )}
     </div>
   );
 }
