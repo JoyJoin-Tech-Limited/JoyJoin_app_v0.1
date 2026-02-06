@@ -91,19 +91,19 @@ export async function generateAndAssignTeamName(
       .where(inArray(users.id, memberUserIds));
 
     const memberArchetypes = memberProfiles
-      .map(u => u.archetype || '未知')
-      .filter((v, i, arr) => arr.indexOf(v) === i); // unique
+      .map((u: any) => u.archetype || '未知')
+      .filter((v: string, i: number, arr: string[]) => arr.indexOf(v) === i); // unique
 
     // Fetch member interests
     const memberInterestRecords = await db.select().from(userInterests)
       .where(inArray(userInterests.userId, memberUserIds));
 
-    const allInterests = memberInterestRecords.flatMap(record => {
+    const allInterests: string[] = memberInterestRecords.flatMap((record: any) => {
       const selections = record.selections as any[] || [];
-      return selections.map(s => s.label || s.fullName);
+      return selections.map((s: any) => (s.label || s.fullName) as string);
     });
     
-    const uniqueInterests = [...new Set(allInterests)].slice(0, 10); // Top 10 unique interests
+    const uniqueInterests: string[] = [...new Set(allInterests)].slice(0, 10); // Top 10 unique interests
 
     const context: TeamNameContext = {
       groupId,
