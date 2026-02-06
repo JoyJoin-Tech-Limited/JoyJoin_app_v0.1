@@ -440,6 +440,17 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   pairExplanationsCache: jsonb("pair_explanations_cache"), // 缓存的配对解释: [{pairKey, explanation, chemistryScore, sharedInterests, connectionPoints, generatedAt}]
   iceBreakersCache: jsonb("ice_breakers_cache"), // 缓存的破冰话题: {topics: string[], generatedAt: string}
   
+  // Team Identity Fields (AI-generated)
+  teamName: text("team_name"), // "熊猫外交天团"
+  teamTagline: text("team_tagline"), // "我们用温暖融化社交坚冰"
+  teamEmoji: text("team_emoji"), // "🐼"
+  teamSuperpowers: jsonb("team_superpowers").$type<string[]>(), // ["氛围担当", "破冰高手"]
+  teamVibe: text("team_vibe").$type<'playful' | 'professional' | 'creative' | 'adventurous'>(),
+  
+  // Engagement Metrics
+  viewCount: integer("view_count").default(0).notNull(),
+  reactionCount: integer("reaction_count").default(0).notNull(),
+  
   // 活动详情（匹配后生成）
   venueId: varchar("venue_id").references(() => venues.id),
   venueName: varchar("venue_name"),
