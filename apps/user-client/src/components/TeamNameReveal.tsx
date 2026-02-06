@@ -14,6 +14,11 @@ interface TeamNameRevealProps {
   onClose: () => void;
 }
 
+// Animation timing constants
+const UNVEILING_DURATION_MS = 2000;
+const AUTO_DISMISS_DURATION_MS = 7000;
+const SCREENSHOT_HINT_DELAY_MS = 2000;
+
 const vibeStyles = {
   playful: {
     gradient: 'from-pink-400 via-purple-400 to-indigo-400',
@@ -58,11 +63,11 @@ export default function TeamNameReveal({
       setShowConfetti(false);
       setShowScreenshotHint(false);
       
-      // Transition to revealed stage after 2s
+      // Transition to revealed stage
       const timer = setTimeout(() => {
         setStage('revealed');
         setShowConfetti(true);
-      }, 2000);
+      }, UNVEILING_DURATION_MS);
       
       return () => clearTimeout(timer);
     }
@@ -70,18 +75,18 @@ export default function TeamNameReveal({
 
   useEffect(() => {
     if (stage === 'revealed') {
-      // Show screenshot hint after 2s in revealed stage
-      const timer = setTimeout(() => setShowScreenshotHint(true), 2000);
+      // Show screenshot hint in revealed stage
+      const timer = setTimeout(() => setShowScreenshotHint(true), SCREENSHOT_HINT_DELAY_MS);
       return () => clearTimeout(timer);
     }
   }, [stage]);
 
-  // Auto-dismiss after 7s total (2s unveiling + 5s revealed)
+  // Auto-dismiss after total duration (unveiling + revealed)
   useEffect(() => {
     if (isVisible) {
       const timer = setTimeout(() => {
         onClose();
-      }, 7000);
+      }, AUTO_DISMISS_DURATION_MS);
       return () => clearTimeout(timer);
     }
   }, [isVisible, onClose]);
@@ -262,7 +267,7 @@ export default function TeamNameReveal({
                         className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border-2 border-white/50 font-bold"
                         onClick={onClose}
                       >
-                        认领队伍身份
+                        继续
                       </Button>
                     </motion.div>
                   </div>
