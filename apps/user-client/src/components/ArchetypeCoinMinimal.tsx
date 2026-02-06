@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { getArchetypeImage } from "@/lib/archetypeImages";
+import { archetypeMap } from "@/lib/userFieldMappings";
 
 interface ArchetypeCoinMinimalProps {
   archetype: string;
@@ -7,13 +7,22 @@ interface ArchetypeCoinMinimalProps {
   index?: number;
 }
 
+// Extract emoji from archetype display text
+function getArchetypeEmoji(archetype: string): string {
+  const display = archetypeMap[archetype];
+  if (!display) return "✨";
+  
+  // Extract emoji using regex (emoji is typically at the end after a space)
+  const emojiMatch = display.match(/\s([^\s]+)$/);
+  return emojiMatch ? emojiMatch[1] : "✨";
+}
+
 export default function ArchetypeCoinMinimal({ 
   archetype, 
   count,
   index = 0 
 }: ArchetypeCoinMinimalProps) {
-  const archetypeImage = getArchetypeImage(archetype);
-  const emoji = archetypeImage?.emoji || "✨";
+  const emoji = getArchetypeEmoji(archetype);
   
   return (
     <motion.div
