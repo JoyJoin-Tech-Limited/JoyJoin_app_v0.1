@@ -31,6 +31,8 @@ interface EventPool {
   spotsLeft: number;
   genderRestriction?: string;
   sampleArchetypes?: string[];
+  minGroupSize?: number;
+  targetGroups?: number;
 }
 
 interface UserCoupon {
@@ -236,6 +238,9 @@ export default function DiscoverPage() {
     .map(transformEventPool)
     .filter((event): event is NonNullable<typeof event> => event !== null);
 
+  // Create a map for O(1) pool lookup to avoid O(n²) complexity
+  const poolMap = new Map(eventPools.map(pool => [pool.id, pool]));
+
   return (
     <div className="min-h-screen bg-background pb-16">
       <MobileHeader showLogo={true} />
@@ -295,8 +300,8 @@ export default function DiscoverPage() {
                 </div>
               ) : filteredBlindBoxEvents.length > 0 ? (
                 filteredBlindBoxEvents.map((event) => {
-                  // Find the original pool for drawer data
-                  const pool = eventPools.find(p => p.id === event.id);
+                  // O(1) lookup using poolMap
+                  const pool = poolMap.get(event.id);
                   
                   return (
                     <BlindBoxEventCard 
@@ -341,7 +346,7 @@ export default function DiscoverPage() {
             date: formatChineseDateOnly(selectedPoolData.dateTime),
             location: `${selectedPoolData.city}•${selectedPoolData.district}`,
             groupSize: "4-6人",
-            minGroupSize: 4, // Default group size, should come from pool data
+            minGroupSize: selectedPoolData.minGroupSize || 4,
           }}
         />
       )}

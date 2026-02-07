@@ -7,7 +7,6 @@ interface TeamTag {
 }
 
 interface FloatingTeamTagsProps {
-  poolId: string;
   teamTags: TeamTag[];
   maxTags?: number;
   autoRotate?: boolean;
@@ -81,12 +80,12 @@ export default function FloatingTeamTags({
               initial={{
                 opacity: 0,
                 y: 0,
-                x: pos.x,
+                x: 0,
               }}
               animate={{
                 opacity: [0, 1, 1, 0],
                 y: [0, -20, -10, 0],
-                x: pos.x,
+                x: 0,
               }}
               exit={{
                 opacity: 0,
