@@ -440,6 +440,14 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   pairExplanationsCache: jsonb("pair_explanations_cache"), // 缓存的配对解释: [{pairKey, explanation, chemistryScore, sharedInterests, connectionPoints, generatedAt}]
   iceBreakersCache: jsonb("ice_breakers_cache"), // 缓存的破冰话题: {topics: string[], generatedAt: string}
   
+  // Event Theme (Mystery Box 盲盒主题)
+  theme: varchar("theme", { length: 50 }), // Main theme (12-18 chars): "高能充电站：柯基×狐狸的周末探险"
+  subtitle: varchar("subtitle", { length: 80 }), // Subtitle (15-25 chars): "广州老乡的咖啡×人脉派对"
+  vibe: varchar("vibe", { length: 30 }), // Vibe: "🔥 超高能 (88分)"
+  themeEmoji: varchar("theme_emoji", { length: 10 }), // Single emoji: "⚡"
+  themeReasoning: text("theme_reasoning"), // Full reasoning with data provenance
+  themeGeneratedAt: timestamp("theme_generated_at"), // Theme generation timestamp
+  
   // 活动详情（匹配后生成）
   venueId: varchar("venue_id").references(() => venues.id),
   venueName: varchar("venue_name"),
