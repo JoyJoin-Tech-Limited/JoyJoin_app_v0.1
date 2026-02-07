@@ -45,7 +45,6 @@ export default function PoolStatusSection({
   
   const spotsNeeded = minGroupSize - (stats.totalRegistrations % minGroupSize);
   const isHot = spotsNeeded <= 2 && spotsNeeded > 0 && spotsNeeded !== minGroupSize;
-  const filledChunks = Math.floor(stats.totalRegistrations / minGroupSize);
   const currentProgress = stats.totalRegistrations % minGroupSize;
   
   // Sort archetypes by count
@@ -187,7 +186,6 @@ export default function PoolStatusSection({
             />
           ) : (
             <FloatingTeamTags
-              poolId={poolId}
               teamTags={stats.recentTeamNames}
               maxTags={5}
               autoRotate={true}

@@ -31,15 +31,16 @@ export default function AmbientFloatingTags({ teamTags }: AmbientFloatingTagsPro
     <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20 z-0">
       {ambientTags.map((tag, index) => {
         const pos = positions[index % positions.length];
-        const duration = 15 + Math.random() * 10; // 15-25s
+        // Deterministic duration per index to avoid jitter on re-renders
+        const duration = 15 + (index % 10); // 15-24s
         
         return (
           <motion.div
             key={`ambient-${index}`}
             className="absolute"
             initial={{
-              x: pos.x,
-              y: pos.y,
+              x: 0,
+              y: 0,
               opacity: 0,
             }}
             animate={{

@@ -139,9 +139,14 @@ export default function EventPoolDetailDrawer({
         <SheetOverlay />
         <SheetContent
           side="bottom"
-          className="h-[92vh] p-0 border-t-0 rounded-t-[32px] overflow-hidden flex flex-col"
+          className="p-0 border-t-0 overflow-hidden flex flex-col"
+          style={{
+            height: 'var(--drawer-height)',
+            borderTopLeftRadius: 'var(--drawer-radius-top)',
+            borderTopRightRadius: 'var(--drawer-radius-top)',
+          }}
           onPointerDownOutside={(e) => {
-            // Prevent closing when clicking inside
+            // Prevent closing the sheet when clicking on the overlay/outside
             e.preventDefault();
           }}
         >
