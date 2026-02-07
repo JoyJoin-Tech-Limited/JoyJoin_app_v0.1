@@ -36,6 +36,7 @@ import type { PoolMatchedData } from "@shared/wsEvents";
 import { chemistryMatrix as CHEMISTRY_MATRIX, ARCHETYPE_ENERGY } from "./archetypeChemistry";
 import type { ArchetypeName } from "./archetypeConfig";
 import { assignVenuesToGroups, saveVenueAssignments } from "./venueAssignmentService";
+import { generateAndSaveEventTheme } from "./eventThemeGeneratorService";
 
 export interface UserWithProfile {
   userId: string;
@@ -833,6 +834,16 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
       matchExplanation: group.explanation,
       status: "confirmed"
     }).returning();
+    
+    // 1.5 Generate and save event theme (mystery box 盲盒主题)
+    try {
+      const memberIds = group.members.map(m => m.userId);
+      await generateAndSaveEventTheme(groupRecord.id, memberIds, poolId);
+      console.log(`[Pool Matching] ✅ Generated event theme for group ${i + 1}`);
+    } catch (error) {
+      console.error(`[Pool Matching] ⚠️ Theme generation failed for group ${i + 1}:`, error);
+      // Don't throw - matching already succeeded, theme generation is best-effort
+    }
     
     // 2. 更新用户报名状态
     const memberRegistrationIds = group.members.map(m => m.registrationId);
