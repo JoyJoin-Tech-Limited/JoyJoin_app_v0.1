@@ -8,7 +8,7 @@ import ReunionInviteCard from "@/components/ReunionInviteCard";
 import SlidingTabs from "@/components/SlidingTabs";
 import MatchCelebrationOverlay from "@/components/MatchCelebrationOverlay";
 import TeamNameReveal from "@/components/TeamNameReveal";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -78,6 +78,14 @@ export default function EventsPage() {
   const [showTeamReveal, setShowTeamReveal] = useState(false);
   const [teamData, setTeamData] = useState<TeamNameRevealedData | null>(null);
 
+  // Ref to store timeout for match celebration auto-dismiss
+  const matchCelebrationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Stable callback for closing team reveal
+  const handleCloseTeamReveal = useCallback(() => {
+    setShowTeamReveal(false);
+  }, []);
+
   // 异步清理通知 - 不阻塞UI (100ms后执行)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -108,8 +116,15 @@ export default function EventsPage() {
       setMatchData(poolData);
       setShowMatchCelebration(true);
       
+      // Clear any existing timeout before setting a new one
+      if (matchCelebrationTimeoutRef.current) {
+        clearTimeout(matchCelebrationTimeoutRef.current);
+      }
+      
       // Auto-dismiss match celebration
-      setTimeout(() => setShowMatchCelebration(false), MATCH_CELEBRATION_DURATION_MS);
+      matchCelebrationTimeoutRef.current = setTimeout(() => {
+        setShowMatchCelebration(false);
+      }, MATCH_CELEBRATION_DURATION_MS);
       
       await queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
       setActiveTab("matched");
@@ -156,6 +171,11 @@ export default function EventsPage() {
     });
 
     return () => {
+      // Clean up timeout on unmount
+      if (matchCelebrationTimeoutRef.current) {
+        clearTimeout(matchCelebrationTimeoutRef.current);
+      }
+      
       unsubscribeMatched();
       unsubscribePoolMatched();
       unsubscribeTeamName();
@@ -388,7 +408,7 @@ export default function EventsPage() {
           teamEmoji={teamData.teamEmoji}
           teamSuperpowers={teamData.teamSuperpowers || []}
           teamVibe={teamData.teamVibe || 'playful'}
-          onClose={() => setShowTeamReveal(false)}
+          onClose={handleCloseTeamReveal}
         />
       )}
     </div>

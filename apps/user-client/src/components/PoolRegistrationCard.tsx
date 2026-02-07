@@ -129,7 +129,7 @@ export default function PoolRegistrationCard({ registration }: PoolRegistrationC
       {registration.matchStatus === 'matched' && registration.teamName && (
         <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 p-4 border-b border-amber-200 dark:border-amber-800">
           <div className="flex items-center gap-3">
-            <span className="text-4xl">{registration.teamEmoji}</span>
+            <span className="text-4xl">{registration.teamEmoji || '🎉'}</span>
             <div className="flex-1">
               <h3 className="font-bold text-lg text-amber-900 dark:text-amber-100">
                 {registration.teamName}
@@ -146,9 +146,9 @@ export default function PoolRegistrationCard({ registration }: PoolRegistrationC
           {/* Team superpowers */}
           {registration.teamSuperpowers && registration.teamSuperpowers.length > 0 && (
             <div className="flex gap-2 mt-2 flex-wrap">
-              {registration.teamSuperpowers.map(power => (
+              {registration.teamSuperpowers.map((power, idx) => (
                 <span 
-                  key={power} 
+                  key={`${power}-${idx}`} 
                   className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
                 >
                   ✨ {power}
