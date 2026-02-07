@@ -45,7 +45,10 @@ export interface UserWithProfile {
   // User profile (permanent)
   gender: string | null;
   age: number | null;
-  industry: string | null;
+  // ✅ UPDATED: Use 3-tier industry classification instead of legacy industry field
+  industryNiche: string | null;  // Layer 3 industry (most specific)
+  industryNicheLabel: string | null;  // Display name for industry niche
+  industryCategoryLabel: string | null;  // Layer 1 display (fallback if niche not available)
   educationLevel: string | null;
   archetype: string | null;
   secondaryArchetype: string | null;
@@ -96,8 +99,9 @@ function meetsHardConstraints(
   }
   
   // 行业限制
+  // ✅ UPDATED: Use industryNiche for matching (Layer 3 of 3-tier classification)
   if (pool.industryRestrictions && pool.industryRestrictions.length > 0) {
-    if (!user.industry || !pool.industryRestrictions.includes(user.industry)) {
+    if (!user.industryNiche || !pool.industryRestrictions.includes(user.industryNiche)) {
       return false;
     }
   }
@@ -386,12 +390,14 @@ function calculateHometownAffinityScore(user1: UserWithProfile, user2: UserWithP
 /**
  * Calculate background diversity score (0-100)
  * Different industry, education, gender = higher score (encourages diversity)
+ * ✅ UPDATED: Use industryNiche from 3-tier classification
  */
 function calculateDiversityScore(user1: UserWithProfile, user2: UserWithProfile): number {
   let diversityPoints = 0;
   
   // Different industry +40 (primary diversity dimension)
-  if (user1.industry && user2.industry && user1.industry !== user2.industry) {
+  // ✅ UPDATED: Use industryNiche from 3-tier classification
+  if (user1.industryNiche && user2.industryNiche && user1.industryNiche !== user2.industryNiche) {
     diversityPoints += 40;
   }
   
@@ -630,7 +636,10 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       tasteIntensity: eventPoolRegistrations.tasteIntensity,
       gender: users.gender,
       age: users.age,
-      industry: users.industry,
+      // ✅ UPDATED: Use 3-tier industry classification
+      industryNiche: users.industryNiche,
+      industryNicheLabel: users.industryNicheLabel,
+      industryCategoryLabel: users.industryCategoryLabel,
       educationLevel: users.educationLevel,
       archetype: users.archetype,
       secondaryArchetype: users.secondaryArchetype,
