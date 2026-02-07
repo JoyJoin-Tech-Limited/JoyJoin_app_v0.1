@@ -36,6 +36,7 @@ import type { PoolMatchedData } from "@shared/wsEvents";
 import { chemistryMatrix as CHEMISTRY_MATRIX, ARCHETYPE_ENERGY } from "./archetypeChemistry";
 import type { ArchetypeName } from "./archetypeConfig";
 import { assignVenuesToGroups, saveVenueAssignments } from "./venueAssignmentService";
+import { generateTeamName } from "./services/teamNameGenerator";
 
 export interface UserWithProfile {
   userId: string;
@@ -821,6 +822,26 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i];
     
+    // 1.1 Generate team name for this group
+    let teamName: string | null = null;
+    let teamTagline: string | null = null;
+    let teamEmoji: string | null = null;
+    let teamNameReasoning: string | null = null;
+    
+    try {
+      const memberUserIds = group.members.map(m => m.userId);
+      const teamNameResult = await generateTeamName(memberUserIds, poolId);
+      teamName = teamNameResult.teamName;
+      teamTagline = teamNameResult.teamTagline;
+      teamEmoji = teamNameResult.emoji;
+      teamNameReasoning = teamNameResult.reasoning;
+      
+      console.log(`[Pool Matching] Generated team name for group ${i + 1}: ${teamName} - ${teamTagline} ${teamEmoji}`);
+    } catch (error) {
+      console.error(`[Pool Matching] Failed to generate team name for group ${i + 1}:`, error);
+      // Continue without team name - it's not critical for matching
+    }
+    
     const [groupRecord] = await db.insert(eventPoolGroups).values({
       poolId,
       groupNumber: i + 1,
@@ -831,6 +852,10 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
       overallScore: group.overallScore,
       temperatureLevel: group.temperatureLevel,
       matchExplanation: group.explanation,
+      teamName,
+      teamTagline,
+      teamEmoji,
+      teamNameReasoning,
       status: "confirmed"
     }).returning();
     
