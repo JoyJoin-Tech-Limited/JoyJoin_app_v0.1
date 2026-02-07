@@ -91,8 +91,6 @@ export default function TeamNameReveal({
     }
   }, [isVisible, onClose]);
 
-  if (!isVisible) return null;
-
   return (
     <AnimatePresence>
       {isVisible && (
@@ -180,11 +178,11 @@ export default function TeamNameReveal({
 
                   {/* Shine effect */}
                   <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none"
+                    className="absolute top-0 bottom-0 bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none -skew-x-[20deg]"
                     initial={{ x: -500 }}
                     animate={{ x: 500 }}
                     transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
-                    style={{ width: '100px', transform: 'skewX(-20deg)' }}
+                    style={{ width: '100px' }}
                   />
 
                   {/* Content */}
