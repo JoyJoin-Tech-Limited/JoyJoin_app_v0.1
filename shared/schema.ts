@@ -81,13 +81,13 @@ export const users = pgTable("users", {
   // Registration fields - Work (New standardized occupation system)
   occupationId: varchar("occupation_id"), // Standardized occupation ID from occupations.ts
   workMode: varchar("work_mode"), // founder, self_employed, employed, student
-  
-  // Legacy work fields (kept for backward compatibility)
-  industry: varchar("industry"), // 学生, 大厂, 金融等中文行业 - now auto-derived from occupationId
-  roleTitleShort: varchar("role_title_short"), // Optional short text - deprecated, use occupationId
-  seniority: varchar("seniority"), // 实习生, 初级, 中级, 高级, 资深, 创始人, 高管 - deprecated, use workMode
-  companyName: varchar("company_name"), // 公司名称（可选，用于职场社交匹配）
   workVisibility: varchar("work_visibility").default("show_industry_only"), // hide_all, show_industry_only
+  
+  // ❌ REMOVED DEPRECATED FIELDS (not collected in onboarding):
+  // - industry: varchar (legacy field, replaced by 3-tier classification)
+  // - roleTitleShort: varchar (deprecated, use occupationId)
+  // - seniority: varchar (never collected, removed from matching)
+  // - companyName: varchar (not collected in onboarding)
   
   // Registration fields - Culture & Language
   hometownCountry: varchar("hometown_country"),
@@ -337,6 +337,12 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   temperatureLevel: varchar("temperature_level"), // 化学反应温度等级: fire | warm | mild | cold
   matchExplanation: text("match_explanation"), // AI生成的匹配解释
   
+  // Team Name Generation (AI-generated with data provenance)
+  teamName: varchar("team_name"), // Creative team name (8-12 characters)
+  teamTagline: varchar("team_tagline"), // Tagline using Mirror + Insight formula (20-30 characters)
+  teamEmoji: varchar("team_emoji"), // Representative emoji
+  teamNameReasoning: text("team_name_reasoning"), // Full provenance with file/line citations
+  
   // 活动详情（匹配后生成）
   venueId: varchar("venue_id").references(() => venues.id),
   venueName: varchar("venue_name"),
@@ -544,14 +550,10 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   studyLocale: true,
   overseasRegions: true,
   fieldOfStudy: true,
-  industry: true,
   industrySegment: true,  // 智能信息收集：细分领域
   structuredOccupation: true,  // 智能信息收集：规范化职位
   occupationId: true,
   workMode: true,
-  roleTitleShort: true,
-  seniority: true,
-  companyName: true,
   hometownCountry: true,
   hometownRegionCity: true,
   languagesComfort: true,
@@ -566,6 +568,11 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   socialStyle: true,
   icebreakerRole: true,
   workVisibility: true,
+  // ❌ REMOVED DEPRECATED FIELDS:
+  // - industry: true (legacy field, replaced by 3-tier classification)
+  // - roleTitleShort: true (deprecated, use occupationId)
+  // - seniority: true (never collected, removed from matching)
+  // - companyName: true (not collected in onboarding)
 }).partial();
 
 export const updatePersonalitySchema = createInsertSchema(users).pick({
