@@ -7,7 +7,7 @@ import PoolRegistrationCard from "@/components/PoolRegistrationCard";
 import ReunionInviteCard from "@/components/ReunionInviteCard";
 import SlidingTabs from "@/components/SlidingTabs";
 import MatchCelebrationOverlay from "@/components/MatchCelebrationOverlay";
-import TeamNameReveal from "@/components/TeamNameReveal";
+import EventThemeTitleReveal from "@/components/EventThemeTitleReveal";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -16,7 +16,7 @@ import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { invalidateCacheForEvent } from "@/lib/cacheInvalidation";
 import type { BlindBoxEvent, EventFeedback } from "@shared/schema";
-import type { TeamNameRevealedData, PoolMatchedData } from "@shared/wsEvents";
+import type { EventThemeTitleRevealedData, PoolMatchedData } from "@shared/wsEvents";
 
 interface ReunionInvite {
   responseId: string;
@@ -72,18 +72,18 @@ export default function EventsPage() {
   const markAsRead = useMarkNotificationsAsRead();
   const { subscribe } = useWebSocket();
 
-  // State for match celebration and team name reveal
+  // State for match celebration and event theme title reveal
   const [showMatchCelebration, setShowMatchCelebration] = useState(false);
   const [matchData, setMatchData] = useState<PoolMatchedData | null>(null);
-  const [showTeamReveal, setShowTeamReveal] = useState(false);
-  const [teamData, setTeamData] = useState<TeamNameRevealedData | null>(null);
+  const [showThemeReveal, setShowThemeReveal] = useState(false);
+  const [themeData, setThemeData] = useState<EventThemeTitleRevealedData | null>(null);
 
   // Ref to store timeout for match celebration auto-dismiss
   const matchCelebrationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Stable callback for closing team reveal
-  const handleCloseTeamReveal = useCallback(() => {
-    setShowTeamReveal(false);
+  // Stable callback for closing theme reveal
+  const handleCloseThemeReveal = useCallback(() => {
+    setShowThemeReveal(false);
   }, []);
 
   // 异步清理通知 - 不阻塞UI (100ms后执行)
@@ -130,12 +130,12 @@ export default function EventsPage() {
       setActiveTab("matched");
     });
 
-    const unsubscribeTeamName = subscribe('TEAM_NAME_REVEALED', async (message) => {
-      console.log('[User] Team name revealed:', message);
+    const unsubscribeThemeTitle = subscribe('EVENT_THEME_TITLE_REVEALED', async (message) => {
+      console.log('[User] Event theme title revealed:', message);
       
-      const teamNameData = message.data as TeamNameRevealedData;
-      setTeamData(teamNameData);
-      setShowTeamReveal(true);
+      const themeTitleData = message.data as EventThemeTitleRevealedData;
+      setThemeData(themeTitleData);
+      setShowThemeReveal(true);
       
       // Haptic feedback
       if (navigator.vibrate) {
@@ -178,7 +178,7 @@ export default function EventsPage() {
       
       unsubscribeMatched();
       unsubscribePoolMatched();
-      unsubscribeTeamName();
+      unsubscribeThemeTitle();
       unsubscribeStatus();
       unsubscribeCompleted();
     };
@@ -399,16 +399,16 @@ export default function EventsPage() {
         />
       )}
 
-      {/* Stage 2: Gold foil team name reveal */}
-      {teamData && (
-        <TeamNameReveal
-          isVisible={showTeamReveal}
-          teamName={teamData.teamName}
-          teamTagline={teamData.teamTagline}
-          teamEmoji={teamData.teamEmoji}
-          teamSuperpowers={teamData.teamSuperpowers || []}
-          teamVibe={teamData.teamVibe || 'playful'}
-          onClose={handleCloseTeamReveal}
+      {/* Stage 2: Gold foil event theme title reveal */}
+      {themeData && (
+        <EventThemeTitleReveal
+          isVisible={showThemeReveal}
+          eventThemeTitle={themeData.eventThemeTitle}
+          themeTagline={themeData.themeTagline}
+          themeEmoji={themeData.themeEmoji}
+          themeHighlights={themeData.themeHighlights || []}
+          themeVibe={themeData.themeVibe || 'playful'}
+          onClose={handleCloseThemeReveal}
         />
       )}
     </div>

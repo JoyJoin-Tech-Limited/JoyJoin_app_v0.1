@@ -1,7 +1,7 @@
 /**
- * Team Name Generator Service
+ * Event Theme Title Generator Service
  * 
- * Generates creative team names and taglines for event pool groups based on:
+ * Generates creative event theme titles and taglines for event pool groups based on:
  * - Data ONLY collected in onboarding (EssentialDataPage + ExtendedDataPage)
  * - Full data provenance with file/line citations
  * - DeepSeek API for creative generation
@@ -95,11 +95,11 @@ export interface GroupStats {
 }
 
 /**
- * Team name generation result with full provenance
+ * Event theme title generation result with full provenance
  */
-export interface TeamNameResult {
-  teamName: string;
-  teamTagline: string;
+export interface EventThemeTitleResult {
+  eventThemeTitle: string;
+  themeTagline: string;
   emoji: string;
   reasoning: string;
   citedValues: {
@@ -337,7 +337,7 @@ export function calculateGroupStats(
 }
 
 /**
- * Generate team name and tagline with basic heuristics
+ * Generate event theme title and tagline with basic heuristics
  * 
  * Uses "Mirror + Insight" formula:
  * - Mirror: Reflect what users know about themselves
@@ -345,10 +345,10 @@ export function calculateGroupStats(
  * 
  * Note: Currently uses rule-based generation. DeepSeek API integration can be added later.
  */
-export async function generateTeamName(
+export async function generateEventThemeTitle(
   memberIds: string[],
   poolId: string
-): Promise<TeamNameResult> {
+): Promise<EventThemeTitleResult> {
   // Fetch enriched profiles
   const members = await fetchEnrichedMemberProfiles(memberIds, poolId);
   
@@ -366,51 +366,51 @@ export async function generateTeamName(
     .filter((i) => i !== null) as string[];
   const sharedInterests = stats.sharedInterests.map((i) => i.label);
 
-  // Rule-based name generation logic
-  let teamName = "";
-  let teamTagline = "";
+  // Rule-based theme title generation logic
+  let eventThemeTitle = "";
+  let themeTagline = "";
   let emoji: string;
   
   if (stats.sharedInterests.length > 0 && stats.industryDiversity >= 2) {
     const topInterest = stats.sharedInterests[0].label;
-    teamName = `${topInterest}跨界探索队`;
-    teamTagline = `因${topInterest}相遇的跨行业创新组合`;
+    eventThemeTitle = `${topInterest}跨界探索队`;
+    themeTagline = `因${topInterest}相遇的跨行业创新组合`;
     emoji = "🔥";
   } else if (stats.dominantIndustry && stats.sharedInterests.length > 0) {
     const topInterest = stats.sharedInterests[0].label;
-    teamName = `${stats.dominantIndustryLabel}×${topInterest}小组`;
-    teamTagline = `都是${stats.dominantIndustryLabel}圈的${topInterest}爱好者`;
+    eventThemeTitle = `${stats.dominantIndustryLabel}×${topInterest}小组`;
+    themeTagline = `都是${stats.dominantIndustryLabel}圈的${topInterest}爱好者`;
     emoji = "☕";
   } else if (stats.avgEnergy >= 80) {
-    teamName = "高能量探险者联盟";
-    teamTagline = "能量拉满的活力派聚会";
+    eventThemeTitle = "高能量探险者联盟";
+    themeTagline = "能量拉满的活力派聚会";
     emoji = "⚡";
   } else if (stats.avgEnergy < 60) {
-    teamName = "沉思者的温和空间";
-    teamTagline = "低调深度交流的舒适场";
+    eventThemeTitle = "沉思者的温和空间";
+    themeTagline = "低调深度交流的舒适场";
     emoji = "🌙";
   } else {
-    teamName = "多元融合探索组";
-    teamTagline = "不同背景碰撞出的化学反应";
+    eventThemeTitle = "多元融合探索组";
+    themeTagline = "不同背景碰撞出的化学反应";
     emoji = "🎨";
   }
 
   // Validate and enforce length constraints
-  // Team name: 8-12 characters
-  if (teamName.length < 8) {
-    teamName = teamName + "小组"; // Pad if too short
+  // Event theme title: 8-12 characters
+  if (eventThemeTitle.length < 8) {
+    eventThemeTitle = eventThemeTitle + "小组"; // Pad if too short
   }
-  if (teamName.length > 12) {
-    teamName = teamName.substring(0, 12);
+  if (eventThemeTitle.length > 12) {
+    eventThemeTitle = eventThemeTitle.substring(0, 12);
   }
   
   // Tagline: 20-30 characters
-  if (teamTagline.length < 20) {
+  if (themeTagline.length < 20) {
     // Pad with generic suffix if too short
-    teamTagline = teamTagline + "的精彩相遇";
+    themeTagline = themeTagline + "的精彩相遇";
   }
-  if (teamTagline.length > 30) {
-    teamTagline = teamTagline.substring(0, 30);
+  if (themeTagline.length > 30) {
+    themeTagline = themeTagline.substring(0, 30);
   }
 
   // Build reasoning with accurate citations
@@ -418,15 +418,15 @@ export async function generateTeamName(
     members.map(m => m.industryNiche).filter(Boolean)
   );
   
-  const reasoning = `名字整合了以下维度:\n` +
+  const reasoning = `主题整合了以下维度:\n` +
     `1. 行业多样性 [数据源: users.industry_niche, ${uniqueIndustryNiches.size}个不同细分行业]\n` +
     `2. 共同兴趣话题 [数据源: user_interests.selections, ${stats.sharedInterests.length}个共享话题]\n` +
     `3. 能量分布 [数据源: archetypeRegistry.energyLevel, 平均${Math.round(stats.avgEnergy)}]\n` +
     `标语用镜像+洞察公式,反映小组特质。`;
 
   return {
-    teamName,
-    teamTagline,
+    eventThemeTitle,
+    themeTagline,
     emoji,
     reasoning,
     citedValues: {

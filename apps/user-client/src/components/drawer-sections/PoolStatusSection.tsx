@@ -4,24 +4,24 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Flame } from "lucide-react";
 import ArchetypeCoinMinimal from "../ArchetypeCoinMinimal";
-import FloatingTeamTags from "../FloatingTeamTags";
-import InteractiveTeamBubbles from "../InteractiveTeamBubbles";
+import FloatingThemeTags from "../FloatingThemeTags";
+import InteractiveThemeBubbles from "../InteractiveThemeBubbles";
 
 interface PoolStats {
   totalRegistrations: number;
   archetypeBreakdown: Record<string, number>;
   estimatedGroups: number;
   avgMatchScore: number;
-  recentTeamNames: Array<{
-    teamName: string;
-    teamEmoji: string;
+  recentThemeTitles: Array<{
+    themeTitle: string;
+    themeEmoji: string;
   }>;
 }
 
-interface TeamBubble {
+interface ThemeBubble {
   groupId: string;
-  teamName: string;
-  teamEmoji: string;
+  themeTitle: string;
+  themeEmoji: string;
   memberCount: number;
   temperatureLevel: "fire" | "warm" | "mild" | "cold";
 }
@@ -30,18 +30,18 @@ interface PoolStatusSectionProps {
   poolId: string;
   stats: PoolStats;
   minGroupSize: number;
-  successfulTeams?: TeamBubble[];
-  onTeamClick?: (groupId: string) => void;
+  successfulThemes?: ThemeBubble[];
+  onThemeClick?: (groupId: string) => void;
 }
 
 export default function PoolStatusSection({
   poolId,
   stats,
   minGroupSize,
-  successfulTeams = [],
-  onTeamClick,
+  successfulThemes = [],
+  onThemeClick,
 }: PoolStatusSectionProps) {
-  const [showAllTeams, setShowAllTeams] = useState(false);
+  const [showAllThemes, setShowAllThemes] = useState(false);
   
   const spotsNeeded = minGroupSize - (stats.totalRegistrations % minGroupSize);
   const isHot = spotsNeeded <= 2 && spotsNeeded > 0 && spotsNeeded !== minGroupSize;
@@ -151,22 +151,22 @@ export default function PoolStatusSection({
         )}
       </div>
       
-      {/* Team Showcase */}
-      {stats.recentTeamNames.length > 0 && (
+      {/* Theme Showcase */}
+      {stats.recentThemeTitles.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-50">
               成功组队案例
             </h3>
             
-            {successfulTeams.length > 0 && (
+            {successfulThemes.length > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowAllTeams(!showAllTeams)}
+                onClick={() => setShowAllThemes(!showAllThemes)}
                 className="text-sm font-medium text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 gap-1"
               >
-                {showAllTeams ? (
+                {showAllThemes ? (
                   <>
                     收起 <ChevronUp className="h-4 w-4" />
                   </>
@@ -179,14 +179,14 @@ export default function PoolStatusSection({
             )}
           </div>
           
-          {showAllTeams && successfulTeams.length > 0 ? (
-            <InteractiveTeamBubbles
-              teams={successfulTeams}
-              onTeamClick={onTeamClick}
+          {showAllThemes && successfulThemes.length > 0 ? (
+            <InteractiveThemeBubbles
+              themes={successfulThemes}
+              onThemeClick={onThemeClick}
             />
           ) : (
-            <FloatingTeamTags
-              teamTags={stats.recentTeamNames}
+            <FloatingThemeTags
+              themeTags={stats.recentThemeTitles}
               maxTags={5}
               autoRotate={true}
             />

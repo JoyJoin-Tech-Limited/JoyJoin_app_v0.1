@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Crown, Sparkles } from "lucide-react";
 import ConfettiCelebration from "./ConfettiCelebration";
 
-interface TeamNameRevealProps {
+interface EventThemeTitleRevealProps {
   isVisible: boolean;
-  teamName: string;
-  teamTagline: string;
-  teamEmoji: string;
-  teamSuperpowers: string[];
-  teamVibe: 'playful' | 'professional' | 'creative' | 'adventurous';
+  eventThemeTitle: string;
+  themeTagline: string;
+  themeEmoji: string;
+  themeHighlights: string[];
+  themeVibe: 'playful' | 'professional' | 'creative' | 'adventurous';
   onClose: () => void;
 }
 
@@ -42,15 +42,15 @@ const vibeStyles = {
   },
 };
 
-export default function TeamNameReveal({
+export default function EventThemeTitleReveal({
   isVisible,
-  teamName,
-  teamTagline,
-  teamEmoji,
-  teamSuperpowers,
-  teamVibe,
+  eventThemeTitle,
+  themeTagline,
+  themeEmoji,
+  themeHighlights,
+  themeVibe,
   onClose,
-}: TeamNameRevealProps) {
+}: EventThemeTitleRevealProps) {
   const [stage, setStage] = useState<'unveiling' | 'revealed'>('unveiling');
   const [showConfetti, setShowConfetti] = useState(false);
   const [showScreenshotHint, setShowScreenshotHint] = useState(false);
@@ -129,7 +129,7 @@ export default function TeamNameReveal({
                 </motion.div>
                 <div className="space-y-2">
                   <p className="text-xl text-white/90">
-                    小悦正在为你们的队伍创造专属身份...
+                    小悦正在为你们的盲盒创造专属主题...
                   </p>
                   {/* Shimmer line animation */}
                   <div className="h-1 w-48 mx-auto bg-white/10 rounded-full overflow-hidden">
@@ -196,17 +196,17 @@ export default function TeamNameReveal({
                       <Crown className="h-12 w-12 text-yellow-200" />
                     </motion.div>
 
-                    {/* Team emoji */}
+                    {/* Theme emoji */}
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ delay: 0.5, type: 'spring', stiffness: 200 }}
                       className="text-8xl"
                     >
-                      {teamEmoji}
+                      {themeEmoji}
                     </motion.div>
 
-                    {/* Team name */}
+                    {/* Event theme title */}
                     <motion.h1
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -214,7 +214,7 @@ export default function TeamNameReveal({
                       className="text-6xl font-black text-white drop-shadow-2xl"
                       style={{ textShadow: '0 4px 8px rgba(0,0,0,0.5)' }}
                     >
-                      {teamName}
+                      {eventThemeTitle}
                     </motion.h1>
 
                     {/* Tagline */}
@@ -224,18 +224,18 @@ export default function TeamNameReveal({
                       transition={{ delay: 0.9 }}
                       className="text-xl italic text-white/95"
                     >
-                      "{teamTagline}"
+                      "{themeTagline}"
                     </motion.p>
 
-                    {/* Superpowers */}
-                    {teamSuperpowers.length > 0 && (
+                    {/* Theme highlights */}
+                    {themeHighlights.length > 0 && (
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 1 }}
                         className="flex gap-2 flex-wrap justify-center"
                       >
-                        {teamSuperpowers.map((power, idx) => (
+                        {themeHighlights.map((power, idx) => (
                           <motion.span
                             key={power}
                             initial={{ scale: 0 }}

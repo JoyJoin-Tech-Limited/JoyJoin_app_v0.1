@@ -1,11 +1,11 @@
 /**
- * Unit tests for Team Name Generator Service
+ * Unit tests for Event Theme Title Generator Service
  * Tests group statistics calculation and data provenance
  */
 
 import { describe, it, expect } from 'vitest';
-import { calculateGroupStats } from '../services/teamNameGenerator';
-import type { EnrichedMemberProfile } from '../services/teamNameGenerator';
+import { calculateGroupStats } from '../services/eventThemeTitleGenerator';
+import type { EnrichedMemberProfile } from '../services/eventThemeTitleGenerator';
 
 // Mock enriched member profiles for testing
 const mockMembers: EnrichedMemberProfile[] = [
