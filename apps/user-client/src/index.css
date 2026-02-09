@@ -743,3 +743,26 @@
 .wechat-font {
   font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
 }
+
+/* Drawer Design Tokens */
+:root {
+  --drawer-height: 92vh;
+  --drawer-radius-top: 32px;
+  --animation-spring-stiff: 500;
+  --animation-spring-damp: 30;
+}
+
+/* Scrollbar Hide Utility */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Safe Area Support */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
