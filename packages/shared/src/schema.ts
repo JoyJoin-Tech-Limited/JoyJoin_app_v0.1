@@ -441,9 +441,9 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   iceBreakersCache: jsonb("ice_breakers_cache"), // 缓存的破冰话题: {topics: string[], generatedAt: string}
   
   // Team Name Generation (AI-generated with data provenance)
-  teamName: varchar("team_name"), // Creative team name (8-12 characters)
-  teamTagline: varchar("team_tagline"), // Tagline using Mirror + Insight formula (20-30 characters)
-  teamEmoji: varchar("team_emoji"), // Representative emoji
+  teamName: varchar("team_name", { length: 50 }), // Creative team name (8-12 characters)
+  teamTagline: varchar("team_tagline", { length: 100 }), // Tagline using Mirror + Insight formula (20-30 characters)
+  teamEmoji: text("team_emoji"), // Representative emoji (can be complex ZWJ sequences)
   teamNameReasoning: text("team_name_reasoning"), // Full provenance with file/line citations
   
   // 活动详情（匹配后生成）

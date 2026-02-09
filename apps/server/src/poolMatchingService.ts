@@ -502,7 +502,7 @@ async function calculateGroupPairScore(members: UserWithProfile[]): Promise<numb
  * Evaluates diversity across industries, genders, and archetypes
  */
 function calculateGroupDiversity(members: UserWithProfile[]): number {
-  const uniqueIndustries = new Set(members.map((m) => m.industry).filter(Boolean)).size;
+  const uniqueIndustries = new Set(members.map((m) => m.industryNiche).filter(Boolean)).size;
   const uniqueGenders = new Set(members.map((m) => m.gender).filter(Boolean)).size;
   const uniqueArchetypes = new Set(members.map((m) => m.archetype).filter(Boolean)).size;
   
@@ -601,7 +601,7 @@ export function getTemperatureEmoji(temperatureLevel: string): string {
  */
 function generateGroupExplanation(group: MatchGroup): string {
   const archetypes = group.members.map(m => m.archetype || "未知").filter((v, i, a) => a.indexOf(v) === i);
-  const industries = group.members.map(m => m.industry || "未知").filter((v, i, a) => a.indexOf(v) === i);
+  const industries = group.members.map(m => m.industryNicheLabel || m.industryCategoryLabel || "未知").filter((v, i, a) => a.indexOf(v) === i);
   const tempEmoji = getTemperatureEmoji(group.temperatureLevel);
   
   return `${tempEmoji} 这个小组有${group.members.length}位成员，包含${archetypes.length}种人格类型（${archetypes.join("、")}），来自${industries.length}个行业。配对兼容性${group.avgPairScore}分，多样性${group.diversityScore}分，能量平衡${group.energyBalance}分，综合匹配度${group.overallScore}分。`;
