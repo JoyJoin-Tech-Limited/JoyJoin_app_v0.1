@@ -133,7 +133,8 @@ function loadV4PreSignupAnswers(): PreSignupAnswer[] {
 
 function clearV4PreSignupAnswers() {
   localStorage.removeItem(V4_ANSWERS_KEY);
-  localStorage.removeItem("joyjoin_v4_assessment_session");
+  // Don't remove joyjoin_v4_assessment_session - it's needed for result page fallback
+  // localStorage.removeItem("joyjoin_v4_assessment_session");
 }
 
 export default function PersonalityTestPageV4() {
@@ -243,22 +244,13 @@ export default function PersonalityTestPageV4() {
 
   useEffect(() => {
     if (isComplete && result) {
-      // Bug 2 Fix: Pre-populate the query cache so result page has data immediately
-      queryClient.setQueryData(['/api/assessment/result'], {
-        primaryArchetype: result.primaryArchetype,
-        secondaryArchetype: result.secondaryArchetype,
-        archetypeConfidence: result.archetypeConfidence,
-        traitScores: result.traitScores,
-        traitConfidences: result.traitConfidences,
-        topMatches: result.topMatches,
-        totalQuestionsAnswered: result.totalQuestionsAnswered,
-        wasExtended: result.wasExtended,
-        validityScore: result.validityScore,
-      });
+      // Don't pre-populate query cache - let result page fetch normally
+      // The fallback mechanism will handle cases where primary endpoint returns null
       
       clearV4PreSignupAnswers();
       
-      // Invalidate other query keys to ensure profile page is fresh
+      // Invalidate query keys to ensure result page fetches fresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/assessment/result'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/results'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/stats'] });
       
