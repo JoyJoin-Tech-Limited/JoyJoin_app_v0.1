@@ -118,7 +118,7 @@ export interface PoolMatchedData {
   temperatureLevel: string; // fire | warm | mild | cold
 }
 
-// 团队名称揭晓
+// 队伍名称揭晓
 export interface TeamNameRevealedData {
   poolId: string;
   groupId: string;

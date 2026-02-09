@@ -82,13 +82,13 @@ export const users = pgTable("users", {
   // Registration fields - Work (New standardized occupation system)
   occupationId: varchar("occupation_id"), // Standardized occupation ID from occupations.ts
   workMode: varchar("work_mode"), // founder, self_employed, employed, student
-  
-  // Legacy work fields (kept for backward compatibility)
-  industry: varchar("industry"), // 学生, 大厂, 金融等中文行业 - now auto-derived from occupationId
-  roleTitleShort: varchar("role_title_short"), // Optional short text - deprecated, use occupationId
-  seniority: varchar("seniority"), // DEPRECATED: was used in matching but never collected - removed from edit & matching
-  companyName: varchar("company_name"), // DEPRECATED: Not collected in onboarding, removed from profile edit
   workVisibility: varchar("work_visibility").default("show_industry_only"), // hide_all, show_industry_only
+  
+  // ❌ REMOVED DEPRECATED FIELDS (not collected in onboarding):
+  // - industry: varchar (legacy field, replaced by 3-tier classification)
+  // - roleTitleShort: varchar (deprecated, use occupationId)
+  // - seniority: varchar (never collected, removed from matching)
+  // - companyName: varchar (not collected in onboarding)
   
   // Registration fields - Culture & Language
   hometownCountry: varchar("hometown_country"),
@@ -440,16 +440,13 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   pairExplanationsCache: jsonb("pair_explanations_cache"), // 缓存的配对解释: [{pairKey, explanation, chemistryScore, sharedInterests, connectionPoints, generatedAt}]
   iceBreakersCache: jsonb("ice_breakers_cache"), // 缓存的破冰话题: {topics: string[], generatedAt: string}
   
-  // Team Identity Fields (AI-generated)
-  teamName: text("team_name"), // "熊猫外交天团"
-  teamTagline: text("team_tagline"), // "我们用温暖融化社交坚冰"
-  teamEmoji: text("team_emoji"), // "🐼"
-  teamSuperpowers: jsonb("team_superpowers").$type<string[]>(), // ["氛围担当", "破冰高手"]
-  teamVibe: text("team_vibe").$type<'playful' | 'professional' | 'creative' | 'adventurous'>(),
-  
-  // Engagement Metrics
-  viewCount: integer("view_count").default(0).notNull(),
-  reactionCount: integer("reaction_count").default(0).notNull(),
+  // Event Theme (Mystery Box 盲盒主题)
+  theme: varchar("theme", { length: 50 }), // Main theme (12-18 chars): "高能充电站：柯基×狐狸的周末探险"
+  subtitle: varchar("subtitle", { length: 80 }), // Subtitle (15-25 chars): "广州老乡的咖啡×人脉派对"
+  vibe: varchar("vibe", { length: 30 }), // Vibe: "🔥 超高能 (88分)"
+  themeEmoji: varchar("theme_emoji", { length: 10 }), // Single emoji: "⚡"
+  themeReasoning: text("theme_reasoning"), // Full reasoning with data provenance
+  themeGeneratedAt: timestamp("theme_generated_at"), // Theme generation timestamp
   
   // 活动详情（匹配后生成）
   venueId: varchar("venue_id").references(() => venues.id),
@@ -659,7 +656,6 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   studyLocale: true,
   overseasRegions: true,
   fieldOfStudy: true,
-  industry: true,
   industrySegment: true,  // 智能信息收集：细分领域
   structuredOccupation: true,  // 智能信息收集：规范化职位
   // Three-tier industry classification
@@ -676,13 +672,15 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   industryLastVerifiedAt: true,
   occupationId: true,
   workMode: true,
-  roleTitleShort: true,
-  seniority: true,
-  companyName: true,
   hometownCountry: true,
   hometownRegionCity: true,
   languagesComfort: true,
   intent: true,
+  // ❌ REMOVED DEPRECATED FIELDS:
+  // - industry: true (legacy field, replaced by 3-tier classification)
+  // - roleTitleShort: true (deprecated, use occupationId)
+  // - seniority: true (never collected, removed from matching)
+  // - companyName: true (not collected in onboarding)
   // Removed: interestsTop, primaryInterests, topicsHappy, topicsAvoid, topicAvoidances
   // These fields were removed from users table - now managed by user_interests table
   interestsDeep: true,

@@ -859,9 +859,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       // Extended profile fields: education, industry, hometown
+      // ✅ UPDATED: Use 3-tier industry classification instead of legacy industry field
       const profileExtendedComplete = !!(
         user.educationLevel &&
-        user.industry &&
+        (user.industryNicheLabel || user.industryCategoryLabel) &&
         user.hometownRegionCity
       );
       
@@ -1053,13 +1054,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Calculate best matching archetype using V2 matcher
-        const matchResult = findBestMatchingArchetypesV2(traitScores as any, {
-          returnDetails: true,
-          userSecondaryData: {}
+        // Function returns array of { archetype, score, confidence }
+        const matchResults = findBestMatchingArchetypesV2(traitScores as any, undefined, 3);
+        
+        const primaryArchetype = matchResults[0]?.archetype || '开心柯基';
+        const secondaryArchetype = matchResults[1]?.archetype || '太阳鸡';
+        
+        // Constants for decisive match thresholds
+        const HIGH_CONFIDENCE_THRESHOLD = 0.8;
+        const DECISIVE_SCORE_DIFFERENCE_THRESHOLD = 10;
+        // Default confidence based on number of answers completed (more answers = higher confidence)
+        const DEFAULT_TRAIT_CONFIDENCE = Math.min(0.85, 0.5 + (testAnswers.length / 100));
+        
+        // Build trait confidences from results
+        const traitConfidences: Record<string, { score: number; confidence: number; sampleCount: number }> = {};
+        Object.keys(traitScores).forEach(trait => {
+          traitConfidences[trait] = {
+            score: traitScores[trait],
+            confidence: DEFAULT_TRAIT_CONFIDENCE,
+            sampleCount: testAnswers.length
+          };
         });
         
-        const primaryArchetype = matchResult.primaryArchetype;
-        const secondaryArchetype = matchResult.secondaryArchetype;
+        // Build match details for storage
+        const matchDetailsJson = {
+          primaryArchetype,
+          secondaryArchetype,
+          traitDeltas: traitScores,
+          decisiveReason: matchResults[0]?.confidence > HIGH_CONFIDENCE_THRESHOLD ? 'high_confidence' : 'normal',
+          score: matchResults[0]?.score || 0
+        };
+        
+        // Determine if match is decisive (high confidence and clear winner)
+        const isDecisive = matchResults[0]?.confidence > HIGH_CONFIDENCE_THRESHOLD && 
+                          (matchResults[0]?.score - (matchResults[1]?.score || 0)) > DECISIVE_SCORE_DIFFERENCE_THRESHOLD;
         
         // Create assessment session record
         await db.insert(assessmentSessions).values({
@@ -1067,15 +1095,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phase: 'completed', // Test is complete when WeChat login happens
           currentQuestionIndex: testAnswers.length,
           traitScores: traitScores as any,
-          traitConfidences: matchResult.traitConfidences || {},
-          topArchetypes: [
-            { archetype: primaryArchetype, score: 100, confidence: 0.9 },
-            { archetype: secondaryArchetype, score: 80, confidence: 0.7 }
-          ],
+          traitConfidences: traitConfidences as any,
+          topArchetypes: matchResults.map(r => ({
+            archetype: r.archetype,
+            score: r.score,
+            confidence: r.confidence
+          })) as any,
           algorithmVersion: 'v2', // Valid version: v1 or v2
-          matchDetailsJson: matchResult.matchDetails || {},
+          matchDetailsJson: matchDetailsJson as any,
           primaryArchetype,
-          isDecisive: matchResult.isDecisive || false,
+          isDecisive,
           completedAt: new Date(),
           createdAt: new Date(),
         }).returning();
@@ -1602,9 +1631,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // ===== 智能信息收集系统新增字段 =====
-      if (extractedInfo.industry) {
-        registrationData.industry = extractedInfo.industry;
-      }
+      // ❌ REMOVED: industry field (replaced by 3-tier classification)
+      // if (extractedInfo.industry) {
+      //   registrationData.industry = extractedInfo.industry;
+      // }
       if (extractedInfo.industrySegment) {
         registrationData.industrySegment = extractedInfo.industrySegment;
       }
@@ -1614,9 +1644,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (extractedInfo.companyType) {
         registrationData.companyType = extractedInfo.companyType;
       }
-      if (extractedInfo.seniority) {
-        registrationData.seniority = extractedInfo.seniority;
-      }
+      // ❌ REMOVED: seniority field (never collected in onboarding)
+      // if (extractedInfo.seniority) {
+      //   registrationData.seniority = extractedInfo.seniority;
+      // }
       // 智能洞察存储到 insightLedger（JSONB）
       if (extractedInfo.smartInsights && extractedInfo.smartInsights.length > 0) {
         registrationData.insightLedger = extractedInfo.smartInsights;
@@ -8445,8 +8476,9 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
           userEmail: users.email,
           userGender: users.gender,
           userAge: users.age,
-          userIndustry: users.industry,
-          userSeniority: users.seniority,
+          // ✅ UPDATED: Use 3-tier industry classification
+          userIndustryNiche: users.industryNicheLabel,
+          userIndustryCategory: users.industryCategoryLabel,
           userArchetype: users.archetype,
         })
         .from(eventPoolRegistrations)
@@ -8479,7 +8511,9 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
             userLastName: users.lastName,
             userGender: users.gender,
             userArchetype: users.archetype,
-            userIndustry: users.industry,
+            // ✅ UPDATED: Use 3-tier industry classification
+            userIndustryNiche: users.industryNicheLabel,
+            userIndustryCategory: users.industryCategoryLabel,
             matchScore: eventPoolRegistrations.matchScore,
           })
           .from(eventPoolRegistrations)
@@ -9075,7 +9109,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           archetype: users.archetype,
           topInterests: users.interestsRankedTop3,
           age: users.birthdate,
-          industry: users.industry,
+          // ✅ UPDATED: Use 3-tier industry classification
+          industryNicheLabel: users.industryNicheLabel,
+          industryCategoryLabel: users.industryCategoryLabel,
           ageVisible: users.ageVisibility,
           industryVisible: users.workVisibility,
           gender: users.gender,
@@ -9088,7 +9124,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           children: users.children,
           studyLocale: users.studyLocale,
           overseasRegions: users.overseasRegions,
-          seniority: users.seniority,
+          // ❌ REMOVED: seniority field (never collected)
           fieldOfStudy: users.fieldOfStudy,
           languagesComfort: users.languagesComfort,
           // Event-specific preferences from registration

@@ -36,6 +36,7 @@ import type { PoolMatchedData } from "@shared/wsEvents";
 import { chemistryMatrix as CHEMISTRY_MATRIX, ARCHETYPE_ENERGY } from "./archetypeChemistry";
 import type { ArchetypeName } from "./archetypeConfig";
 import { assignVenuesToGroups, saveVenueAssignments } from "./venueAssignmentService";
+import { generateAndSaveEventTheme } from "./eventThemeGeneratorService";
 
 export interface UserWithProfile {
   userId: string;
@@ -44,7 +45,10 @@ export interface UserWithProfile {
   // User profile (permanent)
   gender: string | null;
   age: number | null;
-  industry: string | null;
+  // ✅ UPDATED: Use 3-tier industry classification instead of legacy industry field
+  industryNiche: string | null;  // Layer 3 industry (most specific)
+  industryNicheLabel: string | null;  // Display name for industry niche
+  industryCategoryLabel: string | null;  // Layer 1 display (fallback if niche not available)
   educationLevel: string | null;
   archetype: string | null;
   secondaryArchetype: string | null;
@@ -95,8 +99,9 @@ function meetsHardConstraints(
   }
   
   // 行业限制
+  // ✅ UPDATED: Use industryNiche for matching (Layer 3 of 3-tier classification)
   if (pool.industryRestrictions && pool.industryRestrictions.length > 0) {
-    if (!user.industry || !pool.industryRestrictions.includes(user.industry)) {
+    if (!user.industryNiche || !pool.industryRestrictions.includes(user.industryNiche)) {
       return false;
     }
   }
@@ -385,12 +390,14 @@ function calculateHometownAffinityScore(user1: UserWithProfile, user2: UserWithP
 /**
  * Calculate background diversity score (0-100)
  * Different industry, education, gender = higher score (encourages diversity)
+ * ✅ UPDATED: Use industryNiche from 3-tier classification
  */
 function calculateDiversityScore(user1: UserWithProfile, user2: UserWithProfile): number {
   let diversityPoints = 0;
   
   // Different industry +40 (primary diversity dimension)
-  if (user1.industry && user2.industry && user1.industry !== user2.industry) {
+  // ✅ UPDATED: Use industryNiche from 3-tier classification
+  if (user1.industryNiche && user2.industryNiche && user1.industryNiche !== user2.industryNiche) {
     diversityPoints += 40;
   }
   
@@ -495,7 +502,7 @@ async function calculateGroupPairScore(members: UserWithProfile[]): Promise<numb
  * Evaluates diversity across industries, genders, and archetypes
  */
 function calculateGroupDiversity(members: UserWithProfile[]): number {
-  const uniqueIndustries = new Set(members.map((m) => m.industry).filter(Boolean)).size;
+  const uniqueIndustries = new Set(members.map((m) => m.industryNiche).filter(Boolean)).size;
   const uniqueGenders = new Set(members.map((m) => m.gender).filter(Boolean)).size;
   const uniqueArchetypes = new Set(members.map((m) => m.archetype).filter(Boolean)).size;
   
@@ -594,7 +601,7 @@ export function getTemperatureEmoji(temperatureLevel: string): string {
  */
 function generateGroupExplanation(group: MatchGroup): string {
   const archetypes = group.members.map(m => m.archetype || "未知").filter((v, i, a) => a.indexOf(v) === i);
-  const industries = group.members.map(m => m.industry || "未知").filter((v, i, a) => a.indexOf(v) === i);
+  const industries = group.members.map(m => m.industryNicheLabel || m.industryCategoryLabel || "未知").filter((v, i, a) => a.indexOf(v) === i);
   const tempEmoji = getTemperatureEmoji(group.temperatureLevel);
   
   return `${tempEmoji} 这个小组有${group.members.length}位成员，包含${archetypes.length}种人格类型（${archetypes.join("、")}），来自${industries.length}个行业。配对兼容性${group.avgPairScore}分，多样性${group.diversityScore}分，能量平衡${group.energyBalance}分，综合匹配度${group.overallScore}分。`;
@@ -629,7 +636,10 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       tasteIntensity: eventPoolRegistrations.tasteIntensity,
       gender: users.gender,
       age: users.age,
-      industry: users.industry,
+      // ✅ UPDATED: Use 3-tier industry classification
+      industryNiche: users.industryNiche,
+      industryNicheLabel: users.industryNicheLabel,
+      industryCategoryLabel: users.industryCategoryLabel,
       educationLevel: users.educationLevel,
       archetype: users.archetype,
       secondaryArchetype: users.secondaryArchetype,
@@ -821,6 +831,26 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i];
     
+    // 1.1 Generate team name for this group
+    let teamName: string | null = null;
+    let teamTagline: string | null = null;
+    let teamEmoji: string | null = null;
+    let teamNameReasoning: string | null = null;
+    
+    try {
+      const memberUserIds = group.members.map(m => m.userId);
+      const teamNameResult = await generateTeamName(memberUserIds, poolId);
+      teamName = teamNameResult.teamName;
+      teamTagline = teamNameResult.teamTagline;
+      teamEmoji = teamNameResult.emoji;
+      teamNameReasoning = teamNameResult.reasoning;
+      
+      console.log(`[Pool Matching] Generated team name for group ${i + 1}: ${teamName} - ${teamTagline} ${teamEmoji}`);
+    } catch (error) {
+      console.error(`[Pool Matching] Failed to generate team name for group ${i + 1}:`, error);
+      // Continue without team name - it's not critical for matching
+    }
+    
     const [groupRecord] = await db.insert(eventPoolGroups).values({
       poolId,
       groupNumber: i + 1,
@@ -831,8 +861,22 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
       overallScore: group.overallScore,
       temperatureLevel: group.temperatureLevel,
       matchExplanation: group.explanation,
+      teamName,
+      teamTagline,
+      teamEmoji,
+      teamNameReasoning,
       status: "confirmed"
     }).returning();
+    
+    // 1.5 Generate and save event theme (mystery box 盲盒主题)
+    // Fire-and-forget to avoid blocking match save
+    generateAndSaveEventTheme(groupRecord.id, memberIds, poolId)
+      .then(() => {
+        console.log(`[Pool Matching] ✅ Generated event theme for group ${i + 1}`);
+      })
+      .catch((error) => {
+        console.error(`[Pool Matching] ⚠️ Theme generation failed for group ${i + 1}:`, error);
+      });
     
     // 2. 更新用户报名状态
     const memberRegistrationIds = group.members.map(m => m.registrationId);
