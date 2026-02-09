@@ -859,9 +859,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       // Extended profile fields: education, industry, hometown
+      // ✅ UPDATED: Use 3-tier industry classification instead of legacy industry field
       const profileExtendedComplete = !!(
         user.educationLevel &&
-        user.industry &&
+        (user.industryNicheLabel || user.industryCategoryLabel) &&
         user.hometownRegionCity
       );
       
@@ -1630,9 +1631,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // ===== 智能信息收集系统新增字段 =====
-      if (extractedInfo.industry) {
-        registrationData.industry = extractedInfo.industry;
-      }
+      // ❌ REMOVED: industry field (replaced by 3-tier classification)
+      // if (extractedInfo.industry) {
+      //   registrationData.industry = extractedInfo.industry;
+      // }
       if (extractedInfo.industrySegment) {
         registrationData.industrySegment = extractedInfo.industrySegment;
       }
@@ -1642,9 +1644,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (extractedInfo.companyType) {
         registrationData.companyType = extractedInfo.companyType;
       }
-      if (extractedInfo.seniority) {
-        registrationData.seniority = extractedInfo.seniority;
-      }
+      // ❌ REMOVED: seniority field (never collected in onboarding)
+      // if (extractedInfo.seniority) {
+      //   registrationData.seniority = extractedInfo.seniority;
+      // }
       // 智能洞察存储到 insightLedger（JSONB）
       if (extractedInfo.smartInsights && extractedInfo.smartInsights.length > 0) {
         registrationData.insightLedger = extractedInfo.smartInsights;
@@ -8473,8 +8476,9 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
           userEmail: users.email,
           userGender: users.gender,
           userAge: users.age,
-          userIndustry: users.industry,
-          userSeniority: users.seniority,
+          // ✅ UPDATED: Use 3-tier industry classification
+          userIndustryNiche: users.industryNicheLabel,
+          userIndustryCategory: users.industryCategoryLabel,
           userArchetype: users.archetype,
         })
         .from(eventPoolRegistrations)
@@ -8507,7 +8511,9 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
             userLastName: users.lastName,
             userGender: users.gender,
             userArchetype: users.archetype,
-            userIndustry: users.industry,
+            // ✅ UPDATED: Use 3-tier industry classification
+            userIndustryNiche: users.industryNicheLabel,
+            userIndustryCategory: users.industryCategoryLabel,
             matchScore: eventPoolRegistrations.matchScore,
           })
           .from(eventPoolRegistrations)
@@ -9103,7 +9109,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           archetype: users.archetype,
           topInterests: users.interestsRankedTop3,
           age: users.birthdate,
-          industry: users.industry,
+          // ✅ UPDATED: Use 3-tier industry classification
+          industryNicheLabel: users.industryNicheLabel,
+          industryCategoryLabel: users.industryCategoryLabel,
           ageVisible: users.ageVisibility,
           industryVisible: users.workVisibility,
           gender: users.gender,
@@ -9116,7 +9124,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           children: users.children,
           studyLocale: users.studyLocale,
           overseasRegions: users.overseasRegions,
-          seniority: users.seniority,
+          // ❌ REMOVED: seniority field (never collected)
           fieldOfStudy: users.fieldOfStudy,
           languagesComfort: users.languagesComfort,
           // Event-specific preferences from registration
