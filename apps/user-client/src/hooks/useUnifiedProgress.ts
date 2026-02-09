@@ -27,7 +27,10 @@ export function useUnifiedProgress(options: UnifiedProgressOptions = {}) {
   const lastMilestoneRef = useRef<number | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Bug 13 Fix: High-water mark to ensure progress never decreases
+  // Scope to assessment context only - reset when context changes or answered count decreases
   const highWaterRef = useRef<number>(0);
+  const lastContextRef = useRef<'onboarding' | 'assessment' | null>(null);
+  const lastAnsweredRef = useRef<number>(0);
   
   /**
    * Detect if progress has crossed a milestone
@@ -83,6 +86,13 @@ export function useUnifiedProgress(options: UnifiedProgressOptions = {}) {
     const safeAnsweredCount = Math.max(0, answeredCount || 0);
     const safeEstimatedRemaining = Math.max(0, estimatedRemaining || 0);
     
+    // Reset high-water mark if context changes or answered count decreases (user went back)
+    if (lastContextRef.current !== context || safeAnsweredCount < lastAnsweredRef.current) {
+      highWaterRef.current = 0;
+    }
+    lastContextRef.current = context;
+    lastAnsweredRef.current = safeAnsweredCount;
+    
     let result = 0;
     
     if (context === 'onboarding') {
@@ -122,18 +132,22 @@ export function useUnifiedProgress(options: UnifiedProgressOptions = {}) {
           });
         }
       }
+      
+      // Bug 13 Fix: Apply monotonic increase only for assessment context
+      // This prevents progress bar regression during adaptive assessment
+      if (result > highWaterRef.current) {
+        highWaterRef.current = result;
+      }
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[useUnifiedProgress] monotonic result:', { calculated: result, highWater: highWaterRef.current });
+      }
+      
+      return highWaterRef.current;
     }
     
-    // Bug 13 Fix: Ensure monotonic increase with high-water mark
-    if (result > highWaterRef.current) {
-      highWaterRef.current = result;
-    }
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[useUnifiedProgress] monotonic result:', { calculated: result, highWater: highWaterRef.current });
-    }
-    
-    return highWaterRef.current;
+    // For onboarding, return raw result (allow backwards movement)
+    return result;
   }, []);
   
   // Cleanup on unmount

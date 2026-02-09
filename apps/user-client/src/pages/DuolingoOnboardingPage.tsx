@@ -227,7 +227,7 @@ function OnboardingProgress({
           {current >= 1 && current <= 8 ? (
             <>
               <SegmentedProgress 
-                current={current}
+                current={current - 1}
                 total={8}
                 variant="duolingo"
                 className="mb-2"

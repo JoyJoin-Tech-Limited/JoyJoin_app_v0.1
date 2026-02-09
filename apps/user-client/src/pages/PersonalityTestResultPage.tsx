@@ -417,24 +417,24 @@ function MatchExplanationSection({ result }: { result: UnifiedAssessmentResult }
   const [isOpen, setIsOpen] = useState(false);
   
   const generateMatchExplanation = () => {
-    const archetype = finalResult.primaryArchetype;
+    const archetype = result.primaryArchetype;
     const config = getArchetypeNarrative(archetype);
     
-    if (finalResult.isDecisive) {
-      return `根据你回答的${finalResult.totalQuestions}道题目，你的特质轮廓与「${archetype}」高度匹配！你在社交中展现出的特点，与这个原型的核心特质非常契合。`;
+    if (result.isDecisive) {
+      return `根据你回答的${result.totalQuestions}道题目，你的特质轮廓与「${archetype}」高度匹配！你在社交中展现出的特点，与这个原型的核心特质非常契合。`;
     }
     
-    return `通过${finalResult.totalQuestions}道测试题的分析，我们发现你具有「${archetype}」的核心特质。虽然你可能也有其他原型的一些影子，但整体上最接近这个类型。`;
+    return `通过${result.totalQuestions}道测试题的分析，我们发现你具有「${archetype}」的核心特质。虽然你可能也有其他原型的一些影子，但整体上最接近这个类型。`;
   };
 
   const getTopTraits = () => {
     const traits = [
-      { key: 'A', label: traitLabels.A, score: finalResult.affinityScore },
-      { key: 'O', label: traitLabels.O, score: finalResult.opennessScore },
-      { key: 'C', label: traitLabels.C, score: finalResult.conscientiousnessScore },
-      { key: 'E', label: traitLabels.E, score: finalResult.emotionalStabilityScore },
-      { key: 'X', label: traitLabels.X, score: finalResult.extraversionScore },
-      { key: 'P', label: traitLabels.P, score: finalResult.positivityScore },
+      { key: 'A', label: traitLabels.A, score: result.affinityScore },
+      { key: 'O', label: traitLabels.O, score: result.opennessScore },
+      { key: 'C', label: traitLabels.C, score: result.conscientiousnessScore },
+      { key: 'E', label: traitLabels.E, score: result.emotionalStabilityScore },
+      { key: 'X', label: traitLabels.X, score: result.extraversionScore },
+      { key: 'P', label: traitLabels.P, score: result.positivityScore },
     ];
     
     return traits.sort((a, b) => b.score - a.score).slice(0, 3);
@@ -448,7 +448,7 @@ function MatchExplanationSection({ result }: { result: UnifiedAssessmentResult }
         <CardTitle className="flex items-center gap-2">
           <Zap className="w-5 h-5 text-primary" />
           匹配解读
-          {finalResult.isDecisive && (
+          {result.isDecisive && (
             <Badge variant="outline" className="ml-2 text-xs">
               高置信
             </Badge>
@@ -459,7 +459,7 @@ function MatchExplanationSection({ result }: { result: UnifiedAssessmentResult }
         <XiaoyueInsightCard
           content={generateMatchExplanation()}
           pose="thinking"
-          tone={finalResult.isDecisive ? "confident" : "playful"}
+          tone={result.isDecisive ? "confident" : "playful"}
           badgeText="小悦分析"
           avatarSize="sm"
           animate={false}
@@ -532,7 +532,7 @@ export default function PersonalityTestResultPage() {
   // Bug 11 Fix: Add fallback to sessionId-based endpoint if user-based endpoint returns null
   const sessionId = localStorage.getItem("joyjoin_v4_assessment_session");
   
-  const { data: result, isLoading, error } = useQuery<UnifiedAssessmentResult>({
+  const { data: result, isLoading } = useQuery<UnifiedAssessmentResult>({
     queryKey: ['/api/assessment/result'],
     retry: (failureCount, error) => {
       // Don't retry if we get a 404/null response - we'll use the fallback
@@ -544,6 +544,14 @@ export default function PersonalityTestResultPage() {
   const { data: sessionResult, isLoading: isLoadingSessionResult } = useQuery<UnifiedAssessmentResult>({
     queryKey: [`/api/assessment/v4/${sessionId}/result`],
     enabled: !result && !isLoading && !!sessionId, // Only run if primary query failed and we have a sessionId
+    // The sessionId endpoint wraps the unified result under a `result` field.
+    // Normalize it so the rest of the page always receives a UnifiedAssessmentResult.
+    select: (data: any) => {
+      if (!data) return data;
+      // If the API returns { result: UnifiedAssessmentResult, ...extras },
+      // unwrap the `result` field; otherwise assume it's already unified.
+      return (data as any).result ?? data;
+    },
   });
   
   // Use whichever result is available
@@ -1096,7 +1104,7 @@ export default function PersonalityTestResultPage() {
                   {/* 算法说明 */}
                   {finalResult.algorithmVersion === 'v2' && (
                     <div className="mt-4 pt-4 border-t">
-                      <MatchExplanationSection result={result} />
+                      <MatchExplanationSection result={finalResult} />
                     </div>
                   )}
                 </CardContent>
