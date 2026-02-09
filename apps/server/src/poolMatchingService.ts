@@ -866,6 +866,7 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
       subtitle: themeTagline,
       themeEmoji: themeEmoji,
       themeReasoning: themeReasoning,
+      themeGeneratedAt: (eventThemeTitle || themeTagline || themeEmoji || themeReasoning) ? new Date() : null,
       status: "confirmed"
     }).returning();
     
@@ -991,7 +992,7 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
     // Don't throw - matching already succeeded, venue assignment is best-effort
   }
 
-  // 8. 异步生成团队名称 (Async Team Name Generation)
+  // 8. 异步生成活动主题标题并广播 (Async Event Theme Title Generation & Broadcast)
   // Use setImmediate to queue event theme title generation without blocking
   setImmediate(() => {
     void (async () => {

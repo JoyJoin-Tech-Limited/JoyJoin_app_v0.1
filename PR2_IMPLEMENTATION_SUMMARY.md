@@ -421,11 +421,11 @@ Response:
   "estimatedGroups": 3,
   "avgMatchScore": 82,
   "recentThemeTitles": [
-    { "eventThemeTitle": "炽热冒险家", "themeEmoji": "🔥" },
-    { "eventThemeTitle": "温暖探索者", "themeEmoji": "🌡️" },
-    { "eventThemeTitle": "活力先锋队", "themeEmoji": "⚡" },
-    { "eventThemeTitle": "欢乐缔造者", "themeEmoji": "✨" },
-    { "eventThemeTitle": "热情驱动者", "themeEmoji": "🎯" }
+    { "themeTitle": "炽热冒险家", "themeEmoji": "🔥" },
+    { "themeTitle": "温暖探索者", "themeEmoji": "🌡️" },
+    { "themeTitle": "活力先锋队", "themeEmoji": "⚡" },
+    { "themeTitle": "欢乐缔造者", "themeEmoji": "✨" },
+    { "themeTitle": "热情驱动者", "themeEmoji": "🎯" }
   ]
 }
 ```
