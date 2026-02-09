@@ -1,8 +1,8 @@
 /**
- * Team Name Generator Service
+ * Event Theme Title Generator Service
  * 
- * AI-powered team name generation for event pool groups using DeepSeek API.
- * Generates creative, culturally-relevant Chinese team names based on member
+ * AI-powered event theme title generation for event pool groups using DeepSeek API.
+ * Generates creative, culturally-relevant Chinese event theme titles based on member
  * archetypes, interests, and event context.
  * 
  * Features:
@@ -20,7 +20,7 @@ import type { MatchGroup } from './poolMatchingService';
 
 // Validate API key at module initialization
 if (!process.env.DEEPSEEK_API_KEY) {
-  console.warn('⚠️ DEEPSEEK_API_KEY environment variable is not set. Team name generation will use fallback mode.');
+  console.warn('⚠️ DEEPSEEK_API_KEY environment variable is not set. Event theme title generation will use fallback mode.');
 }
 
 const deepseekClient = new OpenAI({
@@ -29,7 +29,7 @@ const deepseekClient = new OpenAI({
 });
 
 const DEEPSEEK_TIMEOUT_MS = parseInt(process.env.DEEPSEEK_TIMEOUT_MS || '5000', 10);
-const ENABLE_TEAM_NAME_GENERATION = process.env.ENABLE_TEAM_NAME_GENERATION !== 'false';
+const ENABLE_EVENT_THEME_TITLE_GENERATION = process.env.ENABLE_EVENT_THEME_TITLE_GENERATION !== 'false';
 const AI_USAGE_TRACKING_ENABLED = process.env.AI_USAGE_TRACKING_ENABLED !== 'false';
 
 // Blocked keywords for content safety (normalized to lowercase)
@@ -41,15 +41,15 @@ const BLOCKED_KEYWORDS = [
 
 const NORMALIZED_BLOCKED_KEYWORDS = BLOCKED_KEYWORDS.map(k => k.toLowerCase());
 
-export interface TeamNameResult {
-  teamName: string;
-  teamTagline: string;
-  teamEmoji: string;
-  teamSuperpowers: string[];
-  teamVibe: 'playful' | 'professional' | 'creative' | 'adventurous';
+export interface EventThemeTitleResult {
+  eventThemeTitle: string;
+  themeTagline: string;
+  themeEmoji: string;
+  themeHighlights: string[];
+  themeVibe: 'playful' | 'professional' | 'creative' | 'adventurous';
 }
 
-export interface TeamNameContext {
+export interface EventThemeTitleContext {
   groupId: string;
   memberArchetypes: string[];
   memberInterests: string[];
@@ -68,20 +68,20 @@ interface AIUsageMetrics {
 }
 
 /**
- * Main export: Generate and assign team name to a group
+ * Main export: Generate and assign event theme title to a group
  */
-export async function generateAndAssignTeamName(
+export async function generateAndAssignEventThemeTitle(
   groupId: string,
   group: MatchGroup,
   eventType: string
-): Promise<TeamNameResult | null> {
-  if (!ENABLE_TEAM_NAME_GENERATION) {
-    console.log('[TeamNameGen] Feature disabled, skipping');
+): Promise<EventThemeTitleResult | null> {
+  if (!ENABLE_EVENT_THEME_TITLE_GENERATION) {
+    console.log('[EventThemeTitleGen] Feature disabled, skipping');
     return null;
   }
 
   const startTime = Date.now();
-  console.log(`[TeamNameGen] Generating for group ${groupId}...`);
+  console.log(`[EventThemeTitleGen] Generating for group ${groupId}...`);
 
   try {
     // Fetch member details
@@ -104,7 +104,7 @@ export async function generateAndAssignTeamName(
     
     const uniqueInterests: string[] = [...new Set(allInterests)].slice(0, 10); // Top 10 unique interests
 
-    const context: TeamNameContext = {
+    const context: EventThemeTitleContext = {
       groupId,
       memberArchetypes,
       memberInterests: uniqueInterests,
@@ -113,25 +113,25 @@ export async function generateAndAssignTeamName(
     };
 
     // Try AI generation first
-    let result: TeamNameResult | null = null;
+    let result: EventThemeTitleResult | null = null;
     
     if (process.env.DEEPSEEK_API_KEY) {
       try {
-        result = await generateTeamNameWithAI(context);
+        result = await generateEventThemeTitleWithAI(context);
         
-        if (result && validateTeamNameResult(result)) {
+        if (result && validateEventThemeTitleResult(result)) {
           const duration = Date.now() - startTime;
-          console.log(`[AI] Team name generated in ${duration}ms`);
-          console.log(`[TeamNameGen] ✅ ${result.teamEmoji} ${result.teamName}`);
+          console.log(`[AI] Event theme title generated in ${duration}ms`);
+          console.log(`[EventThemeTitleGen] ✅ ${result.themeEmoji} ${result.eventThemeTitle}`);
           
-          // Save to database
+          // Save to database (FIXED: aligning with actual schema field names)
           await db.update(eventPoolGroups)
             .set({
-              teamName: result.teamName,
-              teamTagline: result.teamTagline,
-              teamEmoji: result.teamEmoji,
-              teamSuperpowers: result.teamSuperpowers,
-              teamVibe: result.teamVibe,
+              theme: result.eventThemeTitle,
+              subtitle: result.themeTagline,
+              themeEmoji: result.themeEmoji,
+              themeTags: result.themeHighlights,
+              vibe: result.themeVibe,
               updatedAt: new Date()
             })
             .where(eq(eventPoolGroups.id, groupId));
@@ -148,7 +148,7 @@ export async function generateAndAssignTeamName(
         }
       } catch (error) {
         const duration = Date.now() - startTime;
-        console.error(`[AI] Team name generation failed after ${duration}ms:`, error);
+        console.error(`[AI] Event theme title generation failed after ${duration}ms:`, error);
         
         trackAIUsage({
           groupId,
@@ -160,17 +160,17 @@ export async function generateAndAssignTeamName(
     }
 
     // Fallback to template-based generation
-    result = generateFallbackTeamName(context);
-    console.log(`[TeamNameGen] 🔄 Fallback used: ${result.teamEmoji} ${result.teamName}`);
+    result = generateFallbackEventThemeTitle(context);
+    console.log(`[EventThemeTitleGen] 🔄 Fallback used: ${result.themeEmoji} ${result.eventThemeTitle}`);
 
-    // Save to database
+    // Save to database (FIXED: aligning with actual schema field names)
     await db.update(eventPoolGroups)
       .set({
-        teamName: result.teamName,
-        teamTagline: result.teamTagline,
-        teamEmoji: result.teamEmoji,
-        teamSuperpowers: result.teamSuperpowers,
-        teamVibe: result.teamVibe,
+        theme: result.eventThemeTitle,
+        subtitle: result.themeTagline,
+        themeEmoji: result.themeEmoji,
+        themeTags: result.themeHighlights,
+        vibe: result.themeVibe,
         updatedAt: new Date()
       })
       .where(eq(eventPoolGroups.id, groupId));
@@ -178,16 +178,16 @@ export async function generateAndAssignTeamName(
     return result;
 
   } catch (error) {
-    console.error('[TeamNameGen] Critical error:', error);
+    console.error('[EventThemeTitleGen] Critical error:', error);
     return null;
   }
 }
 
 /**
- * Generate team name using DeepSeek AI (with timeout protection)
+ * Generate event theme title using DeepSeek AI (with timeout protection)
  */
-async function generateTeamNameWithAI(context: TeamNameContext): Promise<TeamNameResult | null> {
-  const prompt = buildTeamNamePrompt(context);
+async function generateEventThemeTitleWithAI(context: EventThemeTitleContext): Promise<EventThemeTitleResult | null> {
+  const prompt = buildEventThemeTitlePrompt(context);
 
   // Timeout protection
   const controller = new AbortController();
@@ -199,7 +199,7 @@ async function generateTeamNameWithAI(context: TeamNameContext): Promise<TeamNam
       messages: [
         {
           role: 'system',
-          content: '你是一个创意团队命名专家，擅长为社交活动小组创造有趣、文化相关的中文团队名称。'
+          content: '你是一个创意盲盒主题命名专家，擅长为社交活动小组创造有趣、文化相关的中文盲盒主题标题。'
         },
         {
           role: 'user',
@@ -223,11 +223,11 @@ async function generateTeamNameWithAI(context: TeamNameContext): Promise<TeamNam
     const parsed = JSON.parse(content);
     
     return {
-      teamName: parsed.teamName || parsed.team_name,
-      teamTagline: parsed.teamTagline || parsed.tagline,
-      teamEmoji: parsed.teamEmoji || parsed.emoji,
-      teamSuperpowers: parsed.teamSuperpowers || parsed.superpowers || [],
-      teamVibe: parsed.teamVibe || parsed.vibe || 'playful'
+      eventThemeTitle: parsed.eventThemeTitle || parsed.event_theme_title || parsed.teamName || parsed.team_name,
+      themeTagline: parsed.themeTagline || parsed.theme_tagline || parsed.teamTagline || parsed.tagline,
+      themeEmoji: parsed.themeEmoji || parsed.theme_emoji || parsed.teamEmoji || parsed.emoji,
+      themeHighlights: parsed.themeHighlights || parsed.theme_highlights || parsed.teamSuperpowers || parsed.superpowers || [],
+      themeVibe: parsed.themeVibe || parsed.theme_vibe || parsed.teamVibe || parsed.vibe || 'playful'
     };
 
   } catch (error) {
@@ -271,45 +271,45 @@ function isSingleGrapheme(input: string): boolean {
 }
 
 /**
- * Validate team name result for content safety and structure
+ * Validate event theme title result for content safety and structure
  */
-function validateTeamNameResult(result: TeamNameResult): boolean {
+function validateEventThemeTitleResult(result: EventThemeTitleResult): boolean {
   // Structure validation
-  if (!result.teamName || result.teamName.length < 2 || result.teamName.length > 20) {
-    console.warn('[AI] Invalid team name length:', result.teamName);
+  if (!result.eventThemeTitle || result.eventThemeTitle.length < 2 || result.eventThemeTitle.length > 20) {
+    console.warn('[AI] Invalid event theme title length:', result.eventThemeTitle);
     return false;
   }
 
-  if (!result.teamTagline || result.teamTagline.length > 20) {
+  if (!result.themeTagline || result.themeTagline.length > 20) {
     console.warn('[AI] Invalid tagline length');
     return false;
   }
 
-  const emoji = (result.teamEmoji || '').trim();
+  const emoji = (result.themeEmoji || '').trim();
   // Require exactly one grapheme cluster for the emoji. We avoid using
   // raw string.length here because many single emojis use multiple UTF-16
   // code units (e.g. skin tones, ZWJ sequences).
   if (!emoji || !isSingleGrapheme(emoji)) {
-    console.warn('[AI] Invalid emoji:', result.teamEmoji);
+    console.warn('[AI] Invalid emoji:', result.themeEmoji);
     return false;
   }
 
-  if (!Array.isArray(result.teamSuperpowers) || result.teamSuperpowers.length === 0) {
-    console.warn('[AI] Invalid superpowers');
+  if (!Array.isArray(result.themeHighlights) || result.themeHighlights.length === 0) {
+    console.warn('[AI] Invalid highlights');
     return false;
   }
 
   const validVibes = ['playful', 'professional', 'creative', 'adventurous'];
-  if (!validVibes.includes(result.teamVibe)) {
-    console.warn('[AI] Invalid vibe:', result.teamVibe);
+  if (!validVibes.includes(result.themeVibe)) {
+    console.warn('[AI] Invalid vibe:', result.themeVibe);
     return false;
   }
 
   // Content safety filtering
   const textToCheck = [
-    result.teamName,
-    result.teamTagline,
-    ...result.teamSuperpowers
+    result.eventThemeTitle,
+    result.themeTagline,
+    ...result.themeHighlights
   ].join(' ').toLowerCase();
 
   for (const keyword of NORMALIZED_BLOCKED_KEYWORDS) {
@@ -323,12 +323,12 @@ function validateTeamNameResult(result: TeamNameResult): boolean {
 }
 
 /**
- * Build prompt for AI team name generation
+ * Build prompt for AI event theme title generation
  */
-function buildTeamNamePrompt(context: TeamNameContext): string {
+function buildEventThemeTitlePrompt(context: EventThemeTitleContext): string {
   const { memberArchetypes, memberInterests, eventType, temperatureLevel } = context;
 
-  return `请为一个社交活动小组创建一个有趣、有创意的团队名称。
+  return `请为一个社交活动小组创建一个有趣、有创意的盲盒主题标题。
 
 **小组信息：**
 - 成员人格类型：${memberArchetypes.join('、')}
@@ -337,18 +337,18 @@ function buildTeamNamePrompt(context: TeamNameContext): string {
 - 化学反应温度：${temperatureLevel} ${temperatureLevel === 'fire' ? '🔥炽热' : temperatureLevel === 'warm' ? '🌡️温暖' : temperatureLevel === 'mild' ? '🌤️适宜' : '❄️冷淡'}
 
 **要求：**
-1. 团队名称要简洁有力（4-8个字）
+1. 盲盒主题标题要简洁有力（4-8个字）
 2. 标语要鼓舞人心、积极向上（不超过20字）
-3. 超能力要体现小组特点（3-4个词）
+3. 主题亮点要体现小组特点（3-4个词）
 4. 氛围风格要符合小组特质
-5. 使用一个合适的emoji代表团队
+5. 使用一个合适的emoji代表主题
 
 **输出格式（JSON）：**
 {
-  "teamName": "团队名称",
+  "eventThemeTitle": "盲盒主题标题",
   "tagline": "标语",
   "emoji": "🎯",
-  "superpowers": ["特长1", "特长2", "特长3"],
+  "highlights": ["亮点1", "亮点2", "亮点3"],
   "vibe": "playful | professional | creative | adventurous"
 }
 
@@ -356,20 +356,20 @@ function buildTeamNamePrompt(context: TeamNameContext): string {
 }
 
 /**
- * Generate fallback team name using templates
+ * Generate fallback event theme title using templates
  */
-function generateFallbackTeamName(context: TeamNameContext): TeamNameResult {
+function generateFallbackEventThemeTitle(context: EventThemeTitleContext): EventThemeTitleResult {
   // Currently, the fallback strategy is purely template-based and does not
   // use detailed context fields like member archetypes or event type.
 
   // Template-based generation
   const prefixes = ['快乐', '温暖', '活力', '梦想', '冒险', '探索'];
-  const suffixes = ['天团', '小队', '联盟', '军团', '战队', '组合'];
+  const suffixes = ['盲盒', '主题', '派对', '聚会', '时光', '空间'];
   
   const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
   const randomSuffix = suffixes[Math.floor(Math.random() * suffixes.length)];
   
-  const teamName = `${randomPrefix}${randomSuffix}`;
+  const eventThemeTitle = `${randomPrefix}${randomSuffix}`;
   
   const taglines = [
     '用热情点燃每一次相遇',
@@ -381,17 +381,17 @@ function generateFallbackTeamName(context: TeamNameContext): TeamNameResult {
   
   const emojis = ['🌟', '🎯', '🎉', '🌈', '🔥', '✨'];
   
-  const superpowers = ['氛围担当', '破冰高手', '话题王', '社交达人'];
+  const highlights = ['氛围担当', '破冰高手', '话题王', '社交达人'];
   
   const vibes: Array<'playful' | 'professional' | 'creative' | 'adventurous'> = 
     ['playful', 'creative', 'adventurous'];
 
   return {
-    teamName,
-    teamTagline: taglines[Math.floor(Math.random() * taglines.length)],
-    teamEmoji: emojis[Math.floor(Math.random() * emojis.length)],
-    teamSuperpowers: superpowers.slice(0, 3),
-    teamVibe: vibes[Math.floor(Math.random() * vibes.length)]
+    eventThemeTitle,
+    themeTagline: taglines[Math.floor(Math.random() * taglines.length)],
+    themeEmoji: emojis[Math.floor(Math.random() * emojis.length)],
+    themeHighlights: highlights.slice(0, 3),
+    themeVibe: vibes[Math.floor(Math.random() * vibes.length)]
   };
 }
 

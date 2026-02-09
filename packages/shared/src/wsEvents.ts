@@ -8,7 +8,7 @@ export type WSEventType =
   | "EVENT_COMPLETED"
   | "EVENT_CANCELED"
   | "POOL_MATCHED"
-  | "TEAM_NAME_REVEALED"
+  | "EVENT_THEME_TITLE_REVEALED"
   | "USER_JOINED"
   | "USER_CONFIRMED"
   | "USER_LEFT"
@@ -118,15 +118,15 @@ export interface PoolMatchedData {
   temperatureLevel: string; // fire | warm | mild | cold
 }
 
-// 队伍名称揭晓
-export interface TeamNameRevealedData {
+// 盲盒主题揭晓
+export interface EventThemeTitleRevealedData {
   poolId: string;
   groupId: string;
-  teamName: string;
-  teamTagline: string;
-  teamEmoji: string;
-  teamSuperpowers: string[];
-  teamVibe: 'playful' | 'professional' | 'creative' | 'adventurous';
+  eventThemeTitle: string;
+  themeTagline: string;
+  themeEmoji: string;
+  themeHighlights: string[];
+  themeVibe: 'playful' | 'professional' | 'creative' | 'adventurous';
 }
 
 // ============ 破冰流程事件数据 ============
