@@ -8,6 +8,7 @@ export type WSEventType =
   | "EVENT_COMPLETED"
   | "EVENT_CANCELED"
   | "POOL_MATCHED"
+  | "POOL_REGISTRATION_ADDED"
   | "USER_JOINED"
   | "USER_CONFIRMED"
   | "USER_LEFT"
@@ -115,6 +116,14 @@ export interface PoolMatchedData {
   matchScore: number;
   memberCount: number;
   temperatureLevel: string; // fire | warm | mild | cold
+}
+
+// 活动池新报名
+export interface PoolRegistrationAddedData {
+  poolId: string;
+  archetype: string;
+  userId: string;
+  totalRegistrations: number;
 }
 
 // ============ 破冰流程事件数据 ============
