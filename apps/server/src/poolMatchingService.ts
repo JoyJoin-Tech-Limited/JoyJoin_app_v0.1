@@ -37,6 +37,7 @@ import { chemistryMatrix as CHEMISTRY_MATRIX, ARCHETYPE_ENERGY } from "./archety
 import type { ArchetypeName } from "./archetypeConfig";
 import { assignVenuesToGroups, saveVenueAssignments } from "./venueAssignmentService";
 import { generateAndSaveEventTheme } from "./eventThemeGeneratorService";
+import { generateEventThemeTitle } from "./services/eventThemeTitleGenerator";
 
 export interface UserWithProfile {
   userId: string;
@@ -831,24 +832,24 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i];
     
-    // 1.1 Generate team name for this group
-    let teamName: string | null = null;
-    let teamTagline: string | null = null;
-    let teamEmoji: string | null = null;
-    let teamNameReasoning: string | null = null;
+    // 1.1 Generate event theme title for this group
+    let eventThemeTitle: string | null = null;
+    let themeTagline: string | null = null;
+    let themeEmoji: string | null = null;
+    let themeReasoning: string | null = null;
     
     try {
       const memberUserIds = group.members.map(m => m.userId);
-      const teamNameResult = await generateTeamName(memberUserIds, poolId);
-      teamName = teamNameResult.teamName;
-      teamTagline = teamNameResult.teamTagline;
-      teamEmoji = teamNameResult.emoji;
-      teamNameReasoning = teamNameResult.reasoning;
+      const themeTitleResult = await generateEventThemeTitle(memberUserIds, poolId);
+      eventThemeTitle = themeTitleResult.eventThemeTitle;
+      themeTagline = themeTitleResult.themeTagline;
+      themeEmoji = themeTitleResult.emoji;
+      themeReasoning = themeTitleResult.reasoning;
       
-      console.log(`[Pool Matching] Generated team name for group ${i + 1}: ${teamName} - ${teamTagline} ${teamEmoji}`);
+      console.log(`[Pool Matching] Generated event theme title for group ${i + 1}: ${eventThemeTitle} - ${themeTagline} ${themeEmoji}`);
     } catch (error) {
-      console.error(`[Pool Matching] Failed to generate team name for group ${i + 1}:`, error);
-      // Continue without team name - it's not critical for matching
+      console.error(`[Pool Matching] Failed to generate event theme title for group ${i + 1}:`, error);
+      // Continue without event theme title - it's not critical for matching
     }
     
     const [groupRecord] = await db.insert(eventPoolGroups).values({
@@ -861,10 +862,11 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
       overallScore: group.overallScore,
       temperatureLevel: group.temperatureLevel,
       matchExplanation: group.explanation,
-      teamName,
-      teamTagline,
-      teamEmoji,
-      teamNameReasoning,
+      theme: eventThemeTitle,
+      subtitle: themeTagline,
+      themeEmoji: themeEmoji,
+      themeReasoning: themeReasoning,
+      themeGeneratedAt: (eventThemeTitle || themeTagline || themeEmoji || themeReasoning) ? new Date() : null,
       status: "confirmed"
     }).returning();
     
@@ -990,14 +992,14 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
     // Don't throw - matching already succeeded, venue assignment is best-effort
   }
 
-  // 8. 异步生成团队名称 (Async Team Name Generation)
-  // Use setImmediate to queue team name generation without blocking
+  // 8. 异步生成活动主题标题并广播 (Async Event Theme Title Generation & Broadcast)
+  // Use setImmediate to queue event theme title generation without blocking
   setImmediate(() => {
     void (async () => {
-      console.log(`[Pool Matching] Starting async team name generation for ${groups.length} groups...`);
+      console.log(`[Pool Matching] Starting async event theme title generation for ${groups.length} groups...`);
       
       try {
-        const { generateAndAssignTeamName } = await import('./teamNameGenerator');
+        const { generateAndAssignEventThemeTitle } = await import('./eventThemeTitleGenerator');
         
         // Pre-fetch all group records for this pool to avoid per-group queries
         const groupRecords = await db.select().from(eventPoolGroups)
@@ -1016,42 +1018,42 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
           if (!groupId) continue;
           
           try {
-            const teamNameResult = await generateAndAssignTeamName(
+            const themeTitleResult = await generateAndAssignEventThemeTitle(
               groupId,
               group,
               pool?.eventType || "饭局"
             );
             
-            if (teamNameResult) {
-              // Broadcast TEAM_NAME_REVEALED to all group members
+            if (themeTitleResult) {
+              // Broadcast EVENT_THEME_TITLE_REVEALED to all group members
               const memberUserIds = group.members.map(m => m.userId);
               
               memberUserIds.forEach(userId => {
                 wsService.broadcastToUser(userId, {
-                  type: "TEAM_NAME_REVEALED",
+                  type: "EVENT_THEME_TITLE_REVEALED",
                   data: {
                     poolId,
                     groupId,
-                    teamName: teamNameResult.teamName,
-                    teamTagline: teamNameResult.teamTagline,
-                    teamEmoji: teamNameResult.teamEmoji,
-                    teamSuperpowers: teamNameResult.teamSuperpowers,
-                    teamVibe: teamNameResult.teamVibe
+                    eventThemeTitle: themeTitleResult.eventThemeTitle,
+                    themeTagline: themeTitleResult.themeTagline,
+                    themeEmoji: themeTitleResult.themeEmoji,
+                    themeHighlights: themeTitleResult.themeHighlights,
+                    themeVibe: themeTitleResult.themeVibe
                   },
                   timestamp: new Date().toISOString()
                 });
               });
               
-              console.log(`[Pool Matching] ✅ Team name revealed for group ${i + 1}: ${teamNameResult.teamEmoji} ${teamNameResult.teamName}`);
+              console.log(`[Pool Matching] ✅ Event theme title revealed for group ${i + 1}: ${themeTitleResult.themeEmoji} ${themeTitleResult.eventThemeTitle}`);
             }
           } catch (error) {
-            console.error(`[Pool Matching] ⚠️ Team name generation failed for group ${i + 1}:`, error);
-            // Don't throw - matching already succeeded, team name is optional
+            console.error(`[Pool Matching] ⚠️ Event theme title generation failed for group ${i + 1}:`, error);
+            // Don't throw - matching already succeeded, event theme title is optional
           }
         }
       } catch (error) {
-        console.error(`[Pool Matching] ⚠️ Async team name generation failed:`, error);
-        // Don't throw - matching already succeeded, team names are best-effort
+        console.error(`[Pool Matching] ⚠️ Async event theme title generation failed:`, error);
+        // Don't throw - matching already succeeded, event theme titles are best-effort
       }
     })();
   });

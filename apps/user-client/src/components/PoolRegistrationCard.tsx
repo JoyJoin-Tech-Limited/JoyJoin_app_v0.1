@@ -37,12 +37,13 @@ interface PoolRegistration {
   eventIntent: string[];
   invitationRole?: "inviter" | "invitee" | null;
   relatedUserName?: string | null;
-  // Team identity fields
-  teamName?: string;
-  teamTagline?: string;
-  teamEmoji?: string;
-  teamSuperpowers?: string[];
-  teamVibe?: string;
+  // Event theme identity fields (from DB schema unless noted)
+  theme?: string;
+  subtitle?: string;
+  themeEmoji?: string;
+  // Note: `highlights` is derived/runtime-only and not persisted in `eventPoolGroups`
+  highlights?: string[];
+  vibe?: string;
 }
 
 interface PoolRegistrationCardProps {
@@ -125,33 +126,33 @@ export default function PoolRegistrationCard({ registration }: PoolRegistrationC
 
   return (
     <Card data-testid={`card-pool-registration-${registration.id}`}>
-      {/* Team name display section */}
-      {registration.matchStatus === 'matched' && registration.teamName && (
+      {/* Event theme title display section */}
+      {registration.matchStatus === 'matched' && registration.theme && (
         <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 p-4 border-b border-amber-200 dark:border-amber-800">
           <div className="flex items-center gap-3">
-            <span className="text-4xl">{registration.teamEmoji || '🎉'}</span>
+            <span className="text-4xl">{registration.themeEmoji || '🎉'}</span>
             <div className="flex-1">
               <h3 className="font-bold text-lg text-amber-900 dark:text-amber-100">
-                {registration.teamName}
+                {registration.theme}
               </h3>
               <p className="text-sm text-amber-700 dark:text-amber-300 italic">
-                {registration.teamTagline}
+                {registration.subtitle}
               </p>
             </div>
             <Badge className="bg-amber-500 text-white">
-              我的队伍
+              我的盲盒主题
             </Badge>
           </div>
           
-          {/* Team superpowers */}
-          {registration.teamSuperpowers && registration.teamSuperpowers.length > 0 && (
+          {/* Theme highlights */}
+          {registration.highlights && registration.highlights.length > 0 && (
             <div className="flex gap-2 mt-2 flex-wrap">
-              {registration.teamSuperpowers.map((power, idx) => (
+              {registration.highlights.map((highlight, idx) => (
                 <span 
-                  key={`${power}-${idx}`} 
+                  key={`${highlight}-${idx}`} 
                   className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
                 >
-                  ✨ {power}
+                  ✨ {highlight}
                 </span>
               ))}
             </div>
