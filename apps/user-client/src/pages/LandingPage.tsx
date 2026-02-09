@@ -16,12 +16,24 @@
 
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import joyJoinLogo from "@/assets/JoyJoinapp_logo_Chinese_FuLuDouTi.png";
-import { landingImages } from "@/config/landingImages";
+import logoImage from "@/assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi.png";
+
+// Import landing screen images
+import malePortrait from "@/assets/landing screen/男生单人.png";
+import femalePortrait from "@/assets/landing screen/女生单人.png";
+import diningScene from "@/assets/landing screen/聚餐.png";
+import drinkingScene from "@/assets/landing screen/酒局.png";
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
+
+  // Inline image array
+  const landingImages = [
+    { src: malePortrait, alt: "男生单人", rotation: -8, translateY: 10 },
+    { src: diningScene, alt: "朋友聚餐", rotation: 5, translateY: 20 },
+    { src: drinkingScene, alt: "酒局现场", rotation: 6, translateY: -15 },
+    { src: femalePortrait, alt: "女生单人", rotation: -5, translateY: -10 },
+  ];
 
   // Primary CTA handler - go directly to personality test (no login required)
   const handlePrimaryCTA = () => {
@@ -47,29 +59,25 @@ export default function LandingPage() {
 
   return (
     <main 
-      className="fixed inset-0 overflow-hidden bg-gradient-to-b from-[#FFF5F7] via-[#FFF0F5] to-[#FFE4E1] flex flex-col"
-      style={{
-        minHeight: '100vh',
-        height: '100dvh',
-      }}
+      className="min-h-screen bg-gradient-to-b from-[#FFF5F7] via-[#FFF0F5] to-[#FFE4E1] flex flex-col items-center justify-between overflow-hidden px-6 pt-4 pb-8"
     >
       {/* Top section: Photo tiles */}
-      <section className="flex-none px-4 pt-6 sm:pt-8" aria-label="精选活动照片">
+      <section className="flex-none pt-6 sm:pt-8" aria-label="精选活动照片">
         <div className="max-w-sm mx-auto">
           {/* 2x2 grid of tilted photo tiles */}
           <div className="grid grid-cols-2 gap-3">
-            {landingImages.map((image) => (
+            {landingImages.map((image, index) => (
               <div
-                key={image.id}
-                className="relative aspect-square overflow-hidden rounded-2xl shadow-lg"
+                key={index}
+                className="relative rounded-2xl overflow-hidden shadow-lg aspect-[4/5] bg-white p-1 transform transition-transform duration-200 hover:scale-[1.02]"
                 style={{
-                  transform: `rotate(${image.rotation || 0}deg)`,
+                  transform: `rotate(${image.rotation}deg) translateY(${image.translateY}px)`,
                 }}
               >
-                <img
+                <img 
                   src={image.src}
                   alt={image.alt}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover rounded-xl filter sepia-[.15] contrast-110" 
                   loading="eager"
                   onError={handleImageError}
                 />
@@ -80,54 +88,48 @@ export default function LandingPage() {
       </section>
 
       {/* Middle section: Logo, title, tags - takes remaining space */}
-      <section className="flex-1 flex flex-col justify-center px-4 pt-4" aria-label="品牌介绍">
+      <section className="flex-1 flex flex-col justify-center pt-4" aria-label="品牌介绍">
         <div className="max-w-sm mx-auto w-full text-center">
-          {/* Logo */}
-          <div className="flex justify-center mb-4">
-            <img 
-              src={joyJoinLogo}
-              alt="悦聚 JoyJoin"
-              className="h-16 w-auto"
-            />
+          {/* Logo with floating animation and glow effect */}
+          <div className="w-24 h-24 relative animate-float mx-auto mb-4">
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-sm rounded-full blur-xl transform scale-150"></div>
+            <div className="relative w-full h-full flex items-center justify-center">
+              <img 
+                src={logoImage} 
+                alt="悦聚 Logo" 
+                className="h-20 w-auto object-contain drop-shadow-xl"
+              />
+            </div>
           </div>
 
-          {/* Brand title with ZCOOL QingKe HuangYou font */}
+          {/* Brand title with gradient */}
           <h1 
-            className="text-4xl font-bold mb-6 leading-tight"
-            style={{
-              fontFamily: '"ZCOOL QingKe HuangYou", "Noto Sans SC", sans-serif',
-              color: '#FF1493',
-            }}
+            className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 via-violet-600 to-purple-500 mb-2 leading-tight drop-shadow-sm"
+            style={{ fontFamily: '"ZCOOL QingKe HuangYou", "Noto Sans SC", sans-serif' }}
           >
-            让陌生相遇<br />不再尴尬
+            让对的相遇<br/>不再错过
           </h1>
 
-          {/* Three feature tags */}
-          <div className="flex flex-wrap justify-center gap-2">
-            <Badge 
-              variant="outline" 
-              className="px-3 py-1.5 bg-white/80 border-pink-200 text-pink-600 text-sm font-medium"
-            >
+          {/* Feature Icons */}
+          <div className="flex items-center justify-center space-x-6 w-full px-4 mt-4">
+            <div className="text-purple-900/70 font-medium text-sm text-center">
+              <span className="block mb-1 opacity-80 text-lg">🧠</span>
               氛围测试
-            </Badge>
-            <Badge 
-              variant="outline" 
-              className="px-3 py-1.5 bg-white/80 border-pink-200 text-pink-600 text-sm font-medium"
-            >
+            </div>
+            <div className="text-purple-900/70 font-medium text-sm text-center">
+              <span className="block mb-1 opacity-80 text-lg">🎯</span>
               算法匹配
-            </Badge>
-            <Badge 
-              variant="outline" 
-              className="px-3 py-1.5 bg-white/80 border-pink-200 text-pink-600 text-sm font-medium"
-            >
+            </div>
+            <div className="text-purple-900/70 font-medium text-sm text-center">
+              <span className="block mb-1 opacity-80 text-lg">👥</span>
               4-6人局
-            </Badge>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Bottom section: CTAs and footer */}
-      <section className="flex-none px-4 pb-6 sm:pb-8" aria-label="行动按钮">
+      <section className="flex-none pb-6 sm:pb-8" aria-label="行动按钮">
         <div className="max-w-sm mx-auto space-y-3">
           {/* Primary CTA */}
           <Button
@@ -149,35 +151,28 @@ export default function LandingPage() {
           </Button>
 
           {/* Legal footer */}
-          <footer className="pt-2 text-center text-xs text-gray-500">
-            <a
-              href="/privacy"
-              onClick={(e) => {
-                e.preventDefault();
-                console.log('[Analytics] Landing: Privacy policy clicked');
-                window.open('/privacy', '_blank');
-              }}
-              className="hover:text-pink-600 transition-colors"
-              aria-label="查看隐私政策"
-            >
-              隐私政策
-            </a>
-            <span className="mx-2">·</span>
-            <a
-              href="/terms"
-              onClick={(e) => {
-                e.preventDefault();
-                console.log('[Analytics] Landing: Terms of service clicked');
-                window.open('/terms', '_blank');
-              }}
-              className="hover:text-pink-600 transition-colors"
-              aria-label="查看用户协议"
-            >
-              用户协议
-            </a>
-          </footer>
+          <div className="text-center mt-4">
+            <p className="text-[10px] text-gray-500">
+              我已阅读并同意
+              <a className="font-bold underline text-gray-700 hover:text-pink-600 transition-colors" href="/terms">《用户协议》</a>
+              和
+              <a className="font-bold underline text-gray-700 hover:text-pink-600 transition-colors" href="/privacy">《隐私政策》</a>
+            </p>
+          </div>
         </div>
       </section>
+
+      {/* Floating animation keyframes */}
+      <style jsx>{`
+        @keyframes float {
+          0% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+          100% { transform: translateY(0px); }
+        }
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+      `}</style>
     </main>
   );
 }
