@@ -669,7 +669,7 @@ npm run db:studio      # Open Drizzle Studio GUI
 | `matchExplanationService.ts` | Match explanations |
 | `icebreakerAIService.ts` | Conversation topics |
 | `conversationTopicsService.ts` | Group icebreakers |
-| `teamNameGenerator.ts` | AI-powered team name generation for pool groups |
+| `eventThemeTitleGenerator.ts` | AI-powered team name generation for pool groups |
 
 ### Team Name Generation Flow
 

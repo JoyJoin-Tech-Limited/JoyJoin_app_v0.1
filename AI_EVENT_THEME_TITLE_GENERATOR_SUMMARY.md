@@ -1,7 +1,7 @@
-# AI Team Name Generator - Implementation Summary
+# AI Event Theme Title Generator - Implementation Summary
 
 ## Overview
-Successfully implemented AI-powered team name generation for event pool groups using DeepSeek API. This feature automatically creates engaging, culturally-relevant Chinese team names when users are matched into groups.
+Successfully implemented AI-powered event theme title generation for event pool groups using DeepSeek API. This feature automatically creates engaging, culturally-relevant Chinese event theme titles when users are matched into groups.
 
 ## Features Delivered
 
@@ -22,7 +22,7 @@ viewCount: integer("view_count").default(0).notNull(),
 reactionCount: integer("reaction_count").default(0).notNull(),
 ```
 
-### 2. Team Name Generator Service
+### 2. Event Theme Title Generator Service
 **File**: `apps/server/src/teamNameGenerator.ts` (384 lines)
 
 **Key Functions**:
@@ -44,12 +44,12 @@ reactionCount: integer("reaction_count").default(0).notNull(),
 
 **Before**:
 ```typescript
-create groups → generate team names → broadcast
+create groups → generate event theme titles → broadcast
 ```
 
 **After**:
 ```typescript
-create groups → broadcast POOL_MATCHED → async team name generation → broadcast TEAM_NAME_REVEALED
+create groups → broadcast POOL_MATCHED → async event theme title generation → broadcast TEAM_NAME_REVEALED
 ```
 
 **Implementation**:
@@ -98,12 +98,12 @@ AI_USAGE_TRACKING_ENABLED=true         # Default: true
 **File**: `apps/server/src/__tests__/teamNameGenerator.test.ts` (283 lines)
 
 **Test Coverage**:
-- ✅ Generate valid team name structure using fallback
+- ✅ Generate valid event theme title structure using fallback
 - ✅ Handle empty member profiles gracefully
 - ✅ Skip generation when feature is disabled
-- ✅ Validate team name length
+- ✅ Validate event theme title length
 - ✅ Validate emoji format
-- ✅ Save team name to database
+- ✅ Save event theme title to database
 - ✅ Handle database errors gracefully
 
 **Results**: 7/7 tests passing (100% pass rate)
@@ -234,13 +234,13 @@ All 3 review comments addressed:
 
 - **PR #2**: Frontend Discovery UX (Drawer + Floating Tags)
 - **PR #3**: Frontend Match Flow (Gold Foil Reveal)
-- **Analytics**: Track team name engagement metrics
-- **A/B Testing**: Compare AI vs fallback team names
+- **Analytics**: Track event theme title engagement metrics
+- **A/B Testing**: Compare AI vs fallback event theme titles
 
 ## Monitoring Queries
 
 ```sql
--- Check team name generation success rate
+-- Check event theme title generation success rate
 SELECT 
   COUNT(*) as total_groups,
   COUNT(team_name) as groups_with_names,
