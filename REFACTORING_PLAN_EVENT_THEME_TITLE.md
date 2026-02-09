@@ -7,7 +7,7 @@
 
 ---
 
-## �� Executive Summary
+## Executive Summary
 
 **Objective**: Rename "team name" terminology to "event theme title" (盲盒主题) across the entire JoyJoin codebase to align product direction with existing database schema.
 

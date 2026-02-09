@@ -37,10 +37,11 @@ interface PoolRegistration {
   eventIntent: string[];
   invitationRole?: "inviter" | "invitee" | null;
   relatedUserName?: string | null;
-  // Event theme identity fields (from DB schema)
+  // Event theme identity fields (from DB schema unless noted)
   theme?: string;
   subtitle?: string;
   themeEmoji?: string;
+  // Note: `highlights` is derived/runtime-only and not persisted in `eventPoolGroups`
   highlights?: string[];
   vibe?: string;
 }
