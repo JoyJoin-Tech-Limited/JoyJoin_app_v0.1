@@ -529,9 +529,34 @@ export default function PersonalityTestResultPage() {
     [prefersReducedMotion]
   );
 
+  // Bug 11 Fix: Add fallback to sessionId-based endpoint if user-based endpoint returns null
+  const sessionId = localStorage.getItem("joyjoin_v4_assessment_session");
+  
   const { data: result, isLoading } = useQuery<UnifiedAssessmentResult>({
     queryKey: ['/api/assessment/result'],
+    retry: (failureCount, error) => {
+      // Don't retry if we get a 404/null response - we'll use the fallback
+      return false;
+    },
   });
+  
+  // Fallback query for sessionId-based endpoint
+  const { data: sessionResult, isLoading: isLoadingSessionResult } = useQuery<UnifiedAssessmentResult>({
+    queryKey: [`/api/assessment/v4/${sessionId}/result`],
+    enabled: !result && !isLoading && !!sessionId, // Only run if primary query failed and we have a sessionId
+    // The sessionId endpoint wraps the unified result under a `result` field.
+    // Normalize it so the rest of the page always receives a UnifiedAssessmentResult.
+    select: (data: any) => {
+      if (!data) return data;
+      // If the API returns { result: UnifiedAssessmentResult, ...extras },
+      // unwrap the `result` field; otherwise assume it's already unified.
+      return (data as any).result ?? data;
+    },
+  });
+  
+  // Use whichever result is available
+  const finalResult = result || sessionResult;
+  const finalIsLoading = isLoading || (isLoadingSessionResult && !result);
 
   const { data: stats } = useQuery<Record<string, number>>({
     queryKey: ['/api/personality-test/stats'],
@@ -540,60 +565,60 @@ export default function PersonalityTestResultPage() {
   // Load Xiaoyue analysis async as soon as result is available
   // This allows it to load in the background during animations
   const xiaoyueAnalysis = useXiaoyueAnalysis({
-    archetype: result?.primaryArchetype || null,
-    traitScores: result ? {
-      A: result.affinityScore / 100,
-      O: result.opennessScore / 100,
-      C: result.conscientiousnessScore / 100,
-      E: result.emotionalStabilityScore / 100,
-      X: result.extraversionScore / 100,
-      P: result.positivityScore / 100,
+    archetype: finalResult?.primaryArchetype || null,
+    traitScores: finalResult ? {
+      A: finalResult.affinityScore / 100,
+      O: finalResult.opennessScore / 100,
+      C: finalResult.conscientiousnessScore / 100,
+      E: finalResult.emotionalStabilityScore / 100,
+      X: finalResult.extraversionScore / 100,
+      P: finalResult.positivityScore / 100,
     } : null,
-    enabled: !!result, // Enable immediately when result is available
+    enabled: !!finalResult, // Enable immediately when result is available
   });
 
   const styleSpectrum = useMemo(() => {
-    if (!result) return null;
+    if (!finalResult) return null;
     try {
       const traits = {
-        A: result.affinityScore,
-        O: result.opennessScore,
-        C: result.conscientiousnessScore,
-        E: result.emotionalStabilityScore,
-        X: result.extraversionScore,
-        P: result.positivityScore,
+        A: finalResult.affinityScore,
+        O: finalResult.opennessScore,
+        C: finalResult.conscientiousnessScore,
+        E: finalResult.emotionalStabilityScore,
+        X: finalResult.extraversionScore,
+        P: finalResult.positivityScore,
       };
       // Pass primaryRole to ensure StyleSpectrum matches backend result
-      return getStyleSpectrum(traits, undefined, result.primaryArchetype);
+      return getStyleSpectrum(traits, undefined, finalResult.primaryArchetype);
     } catch {
       return null;
     }
-  }, [result]);
+  }, [finalResult]);
 
   const allArchetypeScores = useMemo(() => {
-    if (!result) return [];
+    if (!finalResult) return [];
     try {
       const traits = {
-        A: result.affinityScore,
-        O: result.opennessScore,
-        C: result.conscientiousnessScore,
-        E: result.emotionalStabilityScore,
-        X: result.extraversionScore,
-        P: result.positivityScore,
+        A: finalResult.affinityScore,
+        O: finalResult.opennessScore,
+        C: finalResult.conscientiousnessScore,
+        E: finalResult.emotionalStabilityScore,
+        X: finalResult.extraversionScore,
+        P: finalResult.positivityScore,
       };
       return getAllArchetypeScores(traits);
     } catch {
       return [];
     }
-  }, [result]);
+  }, [finalResult]);
 
   const [showDebugScores, setShowDebugScores] = useState(false);
 
   // Cache filtered chemistry list (only show ≥70% compatibility)
   const highCompatibilityPartners = useMemo(() => {
-    if (!result?.chemistryList) return [];
-    return result.chemistryList.filter(c => c.percentage >= 70);
-  }, [result?.chemistryList]);
+    if (!finalResult?.chemistryList) return [];
+    return finalResult.chemistryList.filter(c => c.percentage >= 70);
+  }, [finalResult?.chemistryList]);
 
   // Skip slot machine animation if user prefers reduced motion
   useEffect(() => {
@@ -754,7 +779,7 @@ export default function PersonalityTestResultPage() {
     },
   });
 
-  if (isLoading) {
+  if (finalIsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingLogoSleek loop visible />
@@ -762,7 +787,7 @@ export default function PersonalityTestResultPage() {
     );
   }
 
-  if (!result || !result.primaryArchetype) {
+  if (!finalResult || !finalResult.primaryArchetype) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
@@ -779,9 +804,9 @@ export default function PersonalityTestResultPage() {
     );
   }
 
-  const gradient = getArchetypeGradient(result.primaryArchetype) || 'from-purple-500 to-pink-500';
-  const primaryAvatar = archetypeAvatars[result.primaryArchetype];
-  const primaryArchetypeConfig = getArchetypeNarrative(result.primaryArchetype);
+  const gradient = getArchetypeGradient(finalResult.primaryArchetype) || 'from-purple-500 to-pink-500';
+  const primaryAvatar = archetypeAvatars[finalResult.primaryArchetype];
+  const primaryArchetypeConfig = getArchetypeNarrative(finalResult.primaryArchetype);
   const nickname = primaryArchetypeConfig?.nickname || '';
   const tagline = primaryArchetypeConfig?.tagline || '';
   const epicDescription = primaryArchetypeConfig?.epicDescription || '';
@@ -789,8 +814,8 @@ export default function PersonalityTestResultPage() {
 
   const handleShare = async () => {
     const shareData = {
-      title: `我的社交角色是${result.primaryArchetype}！`,
-      text: `刚完成了JoyJoin性格测评，发现我是${result.primaryArchetype}！快来测测你的社交特质吧~`,
+      title: `我的社交角色是${finalResult.primaryArchetype}！`,
+      text: `刚完成了JoyJoin性格测评，发现我是${finalResult.primaryArchetype}！快来测测你的社交特质吧~`,
       url: window.location.origin + '/personality-test',
     };
     if (navigator.share) {
@@ -815,8 +840,8 @@ export default function PersonalityTestResultPage() {
           transition={{ duration: 0.4 }}
         >
           <ArchetypeSlotMachine
-            finalArchetype={result.primaryArchetype}
-            confidence={result.isDecisive ? 0.9 : undefined}
+            finalArchetype={finalResult.primaryArchetype}
+            confidence={finalResult.isDecisive ? 0.9 : undefined}
             onComplete={handleSlotMachineComplete}
           />
           <SkipAnimationButton onSkip={handleSkipSlotMachine} delay={2000} />
@@ -832,8 +857,8 @@ export default function PersonalityTestResultPage() {
           transition={{ duration: 0.4 }}
         >
           <UnlockOverlay
-            archetype={result.primaryArchetype}
-            accentColor={getArchetypeColorHSL(result.primaryArchetype)}
+            archetype={finalResult.primaryArchetype}
+            accentColor={getArchetypeColorHSL(finalResult.primaryArchetype)}
             onComplete={handleUnlockComplete}
           />
           <SkipAnimationButton onSkip={handleSkipUnlock} delay={1000} />
@@ -860,18 +885,18 @@ export default function PersonalityTestResultPage() {
           <div className="flex justify-center">
             <div className={`w-44 h-44 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center shadow-2xl p-1`}>
               {primaryAvatar ? (
-                <img src={primaryAvatar} alt={result.primaryArchetype} className="w-full h-full rounded-full object-cover" />
+                <img src={primaryAvatar} alt={finalResult.primaryArchetype} className="w-full h-full rounded-full object-cover" />
               ) : (
                 <Sparkles className="w-16 h-16 text-primary" />
               )}
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold" data-testid="text-primary-archetype">{result.primaryArchetype}</h1>
+            <h1 className="text-4xl font-bold" data-testid="text-primary-archetype">{finalResult.primaryArchetype}</h1>
             {nickname && <p className="text-xl font-medium text-primary">{nickname}</p>}
             {tagline && <p className="text-base text-muted-foreground italic">{tagline}</p>}
           </div>
-          {result.algorithmVersion === 'v2' && result.isDecisive && (
+          {finalResult.algorithmVersion === 'v2' && finalResult.isDecisive && (
             <Badge variant="outline" className="mt-2">
               <Crown className="w-3 h-3 mr-1" />
               高置信匹配
@@ -897,18 +922,18 @@ export default function PersonalityTestResultPage() {
               decisionReason={styleSpectrum.decisionReason}
               onClaimCard={() => setShareModalOpen(true)}
               traitScores={{
-                A: result.affinityScore,
-                O: result.opennessScore,
-                C: result.conscientiousnessScore,
-                E: result.emotionalStabilityScore,
-                X: result.extraversionScore,
-                P: result.positivityScore,
+                A: finalResult.affinityScore,
+                O: finalResult.opennessScore,
+                C: finalResult.conscientiousnessScore,
+                E: finalResult.emotionalStabilityScore,
+                X: finalResult.extraversionScore,
+                P: finalResult.positivityScore,
               }}
-              uniqueTraits={archetypeUniqueTraits[result.primaryArchetype]}
+              uniqueTraits={archetypeUniqueTraits[finalResult.primaryArchetype]}
               epicDescription={epicDescription}
               styleQuote={styleQuote}
               counterIntuitiveInsight={(() => {
-                const insight = getArchetypeInsights(result.primaryArchetype);
+                const insight = getArchetypeInsights(finalResult.primaryArchetype);
                 return insight ? {
                   text: insight.counterIntuitive,
                   rarityPercentage: insight.rarityPercentage
@@ -987,7 +1012,7 @@ export default function PersonalityTestResultPage() {
         {/* 2. 小悦分析 */}
         <motion.div variants={itemVariants}>
           <XiaoyueChatBubble
-            content={xiaoyueAnalysis.analysis || getFallbackAnalysis(result.primaryArchetype)}
+            content={xiaoyueAnalysis.analysis || getFallbackAnalysis(finalResult.primaryArchetype)}
             pose={xiaoyueAnalysis.hasAnalysis ? "casual" : "thinking"}
             isLoading={xiaoyueAnalysis.isLoading}
             loadingText="小悦正在分析你的特质..."
@@ -1028,7 +1053,7 @@ export default function PersonalityTestResultPage() {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      {getCompatibilityDescription(result.primaryArchetype, chemistry.role)}
+                      {getCompatibilityDescription(finalResult.primaryArchetype, chemistry.role)}
                     </p>
                   </div>
                 ))}
@@ -1053,21 +1078,21 @@ export default function PersonalityTestResultPage() {
               <CollapsibleContent>
                 <CardContent>
                   <PersonalityRadarChart 
-                    affinityScore={result.affinityScore}
-                    opennessScore={result.opennessScore}
-                    conscientiousnessScore={result.conscientiousnessScore}
-                    emotionalStabilityScore={result.emotionalStabilityScore}
-                    extraversionScore={result.extraversionScore}
-                    positivityScore={result.positivityScore}
+                    affinityScore={finalResult.affinityScore}
+                    opennessScore={finalResult.opennessScore}
+                    conscientiousnessScore={finalResult.conscientiousnessScore}
+                    emotionalStabilityScore={finalResult.emotionalStabilityScore}
+                    extraversionScore={finalResult.extraversionScore}
+                    positivityScore={finalResult.positivityScore}
                   />
                   <div className="mt-6 grid grid-cols-2 gap-3">
                     {[
-                      { key: 'A', label: '亲和力', score: result.affinityScore },
-                      { key: 'O', label: '开放性', score: result.opennessScore },
-                      { key: 'C', label: '责任心', score: result.conscientiousnessScore },
-                      { key: 'E', label: '情绪稳定', score: result.emotionalStabilityScore },
-                      { key: 'X', label: '外向性', score: result.extraversionScore },
-                      { key: 'P', label: '正能量', score: result.positivityScore },
+                      { key: 'A', label: '亲和力', score: finalResult.affinityScore },
+                      { key: 'O', label: '开放性', score: finalResult.opennessScore },
+                      { key: 'C', label: '责任心', score: finalResult.conscientiousnessScore },
+                      { key: 'E', label: '情绪稳定', score: finalResult.emotionalStabilityScore },
+                      { key: 'X', label: '外向性', score: finalResult.extraversionScore },
+                      { key: 'P', label: '正能量', score: finalResult.positivityScore },
                     ].map(({ key, label, score }) => (
                       <div key={key} className="flex flex-col p-2 bg-muted/50 rounded-lg">
                         <span className="text-xs text-muted-foreground">{label}</span>
@@ -1077,9 +1102,9 @@ export default function PersonalityTestResultPage() {
                   </div>
                   
                   {/* 算法说明 */}
-                  {result.algorithmVersion === 'v2' && (
+                  {finalResult.algorithmVersion === 'v2' && (
                     <div className="mt-4 pt-4 border-t">
-                      <MatchExplanationSection result={result} />
+                      <MatchExplanationSection result={finalResult} />
                     </div>
                   )}
                 </CardContent>
@@ -1091,7 +1116,7 @@ export default function PersonalityTestResultPage() {
         {/* Note: AdjacentArchetypesOrbit has been merged into StyleSpectrum */}
 
         <motion.div variants={itemVariants}>
-          <MatchFeedbackSection archetype={result.primaryArchetype} />
+          <MatchFeedbackSection archetype={finalResult.primaryArchetype} />
         </motion.div>
 
         <motion.div variants={itemVariants} className="py-6">
@@ -1116,11 +1141,11 @@ export default function PersonalityTestResultPage() {
                 setShareModalOpen(true);
               }} 
               data-testid="button-share"
-              aria-label={`领取你的${result.primaryArchetype}性格卡片`}
+              aria-label={`领取你的${finalResult.primaryArchetype}性格卡片`}
             >
               <div className="flex items-center justify-center gap-3 w-full">
                 <Sparkles className="w-6 h-6 animate-pulse" aria-hidden="true" />
-                <span>领取你的{result.primaryArchetype}卡片</span>
+                <span>领取你的{finalResult.primaryArchetype}卡片</span>
                 <Badge variant="secondary" className="ml-2 bg-white/20 backdrop-blur-sm border-white/40 text-xs" aria-label="限定版">
                   ✨ 限定
                 </Badge>

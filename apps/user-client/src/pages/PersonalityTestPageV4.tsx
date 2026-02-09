@@ -133,7 +133,8 @@ function loadV4PreSignupAnswers(): PreSignupAnswer[] {
 
 function clearV4PreSignupAnswers() {
   localStorage.removeItem(V4_ANSWERS_KEY);
-  localStorage.removeItem("joyjoin_v4_assessment_session");
+  // Don't remove joyjoin_v4_assessment_session - it's needed for result page fallback
+  // localStorage.removeItem("joyjoin_v4_assessment_session");
 }
 
 export default function PersonalityTestPageV4() {
@@ -243,19 +244,31 @@ export default function PersonalityTestPageV4() {
 
   useEffect(() => {
     if (isComplete && result) {
+      // Don't pre-populate query cache - let result page fetch normally
+      // The fallback mechanism will handle cases where primary endpoint returns null
+      
       clearV4PreSignupAnswers();
-      // Invalidate multiple query keys to ensure result page AND profile page are fresh
+      
+      // Invalidate query keys to ensure result page fetches fresh data
       queryClient.invalidateQueries({ queryKey: ['/api/assessment/result'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/results'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/stats'] });
       
-      // Save checkpoint after completing personality test (also invalidates user data)
-      saveCheckpoint.mutate('personality-test');
-      
-      // Navigate directly to results page - slot machine will show there
-      setLocation('/personality-test/results');
+      // Save checkpoint after completing personality test (await to ensure server state is updated)
+      // Use async IIFE to properly await inside useEffect
+      (async () => {
+        try {
+          await saveCheckpoint.mutateAsync('personality-test');
+        } catch (e) {
+          console.error('[PersonalityTestPageV4] Failed to save checkpoint:', e);
+          // Non-blocking - continue navigation even if checkpoint fails
+        }
+        
+        // Navigate to results page after checkpoint completes
+        setLocation('/personality-test/results');
+      })();
     }
-  }, [isComplete, result, setLocation, answeredCount, progress?.minQuestions, saveCheckpoint]);
+  }, [isComplete, result, setLocation, saveCheckpoint]);
 
   const handleSelectOption = useCallback((value: string | string[]) => {
     const next = Array.isArray(value) ? value[0] : value;

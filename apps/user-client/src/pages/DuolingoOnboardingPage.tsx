@@ -16,6 +16,7 @@ import { SelectionList } from "@/components/SelectionList";
 import { QuestionSkeleton } from "@/components/shared/QuestionSkeleton";
 import { haptics } from "@/lib/haptics";
 import { useOnboardingCheckpoint } from "@/hooks/useOnboardingCheckpoint";
+import { useUnifiedProgress } from "@/hooks/useUnifiedProgress";
 
 // Use consistent Xiao Yue Avatar-01.png as primary avatar across all screens
 import xiaoyueNormal from "@/assets/xiaoyue_default.png";
@@ -79,21 +80,6 @@ function stripEmoji(text: string): string {
     .trim();
 }
 
-const CITIES = [
-  { value: "shenzhen", label: "深圳" },
-  { value: "hongkong", label: "香港" },
-  { value: "guangzhou", label: "广州" },
-  { value: "other", label: "其他城市" },
-];
-
-const INTENTS = [
-  { value: "friends", label: "交朋友" },
-  { value: "networking", label: "拓展人脉" },
-  { value: "discussion", label: "深度交流" },
-  { value: "casual", label: "轻松娱乐" },
-  { value: "dating", label: "浪漫邂逅" },
-];
-
 type XiaoyueMood = "normal" | "excited" | "pointing";
 
 const XIAOYUE_AVATARS: Record<XiaoyueMood, string> = {
@@ -120,7 +106,9 @@ function XiaoyueMascot({
       x: [0, -5, 5, -5, 5, 0],
       transition: { duration: 0.4 }
     });
-  }, [message, controls]);
+    // Bug 8 Fix: Remove `controls` from deps to prevent infinite re-renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message]);
 
   if (horizontal) {
     return (
@@ -348,14 +336,25 @@ function saveV4AnswerToCache(
   try {
     const cached = localStorage.getItem(V4_ANSWERS_KEY);
     const answers: PreSignupAnswer[] = cached ? JSON.parse(cached) : [];
-    answers.push({
+    
+    // Bug 3 Fix: Replace existing answer instead of always pushing
+    const existingIndex = answers.findIndex(a => a.questionId === questionId);
+    const newAnswer = {
       questionId,
       selectedOption,
       traitScores,
       answeredAt: new Date().toISOString(),
-    });
+    };
+    
+    if (existingIndex >= 0) {
+      answers[existingIndex] = newAnswer;
+    } else {
+      answers.push(newAnswer);
+    }
+    
     localStorage.setItem(V4_ANSWERS_KEY, JSON.stringify(answers));
   } catch {
+    // Ignore storage errors
   }
 }
 
@@ -373,15 +372,19 @@ export default function DuolingoOnboardingPage() {
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
   const { saveCheckpoint } = useOnboardingCheckpoint();
+  // Bug 12 Fix: Use unified progress for smooth continuity to assessment
+  const { getUnifiedProgress } = useUnifiedProgress();
   
   const [currentScreen, setCurrentScreen] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [justAuthenticated, setJustAuthenticated] = useState(false);
   const [temporarySessionId, setTemporarySessionId] = useState<string>("");
+  // Bug 4 Fix: Add loading state for server cache check
+  const [isLoadingServerCache, setIsLoadingServerCache] = useState(true);
 
 
-  const { data: anchorQuestionsData, isLoading: isLoadingQuestions } = useQuery<{
+  const { data: anchorQuestionsData, isLoading: isLoadingQuestions, isError, refetch } = useQuery<{
     questions: V4AnchorQuestion[];
     count: number;
   }>({
@@ -390,18 +393,20 @@ export default function DuolingoOnboardingPage() {
 
   const anchorQuestions = anchorQuestionsData?.questions || [];
 
+  // Bug 4 Fix: Unified initialization - check both local cache and server, then decide
   useEffect(() => {
     const cached = loadCachedProgress();
-    // Only show resume prompt if:
-    // 1. There's a valid cached progress with screen > 0
-    // 2. User hasn't just authenticated
-    // 3. There are actual cached answers (not just empty cache)
-    const cachedAnswers = getV4CachedAnswers();
-    const hasValidProgress = cached && cached.currentScreen > 0 && cachedAnswers.length > 0;
-    if (hasValidProgress && !justAuthenticated) {
-      setShowResumePrompt(true);
+    const localAnswers = getV4CachedAnswers();
+    
+    // Wait for server cache check before showing resume prompt
+    // This prevents race condition where local check finishes before server check
+    if (!isLoadingServerCache) {
+      const hasValidProgress = cached && cached.currentScreen > 0 && localAnswers.length > 0;
+      if (hasValidProgress && !justAuthenticated) {
+        setShowResumePrompt(true);
+      }
     }
-  }, [justAuthenticated]);
+  }, [justAuthenticated, isLoadingServerCache]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -426,7 +431,8 @@ export default function DuolingoOnboardingPage() {
               }
             });
             if (!isCancelled && Object.keys(answerMap).length > 0) {
-              setAnswers(prev => ({ ...answerMap, ...prev }));
+              // Bug 4 Fix: Server answers take priority over local answers
+              setAnswers(prev => ({ ...prev, ...answerMap }));
               setCurrentScreen(prev => {
                 const answeredCount = Object.keys(answerMap).length;
                 return prev < answeredCount ? Math.min(ONBOARDING_QUESTIONS_COUNT, answeredCount) : prev;
@@ -437,6 +443,11 @@ export default function DuolingoOnboardingPage() {
       } catch (error) {
         if (!isCancelled) {
           console.error('Failed to load cached answers', error);
+        }
+      } finally {
+        // Bug 4 Fix: Mark server cache check as complete
+        if (!isCancelled) {
+          setIsLoadingServerCache(false);
         }
       }
     })();
@@ -503,21 +514,24 @@ export default function DuolingoOnboardingPage() {
         return;
       }
       
-      // Save checkpoint before navigating to personality test (await to ensure persistence)
-      try {
-        await saveCheckpoint.mutateAsync('onboarding');
-      } catch (error) {
-        console.error('[DuolingoOnboardingPage] Failed to save checkpoint:', error);
-        // Continue navigation even if checkpoint fails (non-blocking)
-      } finally {
-        // Refetch auth state to ensure server-driven nextStep is updated before navigation
-        // This ensures /personality-test page renders the adaptive assessment instead of landing screen
+      // Bug 9 Fix: Only save checkpoint if user is authenticated
+      const isAuthenticated = !!queryClient.getQueryData(['/api/auth/user']);
+      if (isAuthenticated) {
         try {
-          await queryClient.refetchQueries({ queryKey: ['/api/auth/user'] });
+          await saveCheckpoint.mutateAsync('onboarding');
         } catch (error) {
-          console.error('[DuolingoOnboardingPage] Failed to refresh auth state:', error);
-          // Continue navigation even if auth refresh fails (non-blocking)
+          console.error('[DuolingoOnboardingPage] Failed to save checkpoint:', error);
+          // Continue navigation even if checkpoint fails (non-blocking)
         }
+      }
+      
+      // Refetch auth state to ensure server-driven nextStep is updated before navigation
+      // This ensures /personality-test page renders the adaptive assessment instead of landing screen
+      try {
+        await queryClient.refetchQueries({ queryKey: ['/api/auth/user'] });
+      } catch (error) {
+        console.error('[DuolingoOnboardingPage] Failed to refresh auth state:', error);
+        // Continue navigation even if auth refresh fails (non-blocking)
       }
       
       // Navigate to personality test after completing all anchor questions
@@ -531,6 +545,32 @@ export default function DuolingoOnboardingPage() {
 
   const handleBack = () => {
     if (currentScreen > 0) {
+      // Bug 6 Fix: When going back, remove the answer for the current screen's question
+      if (currentScreen >= 1 && currentScreen <= 8) {
+        const questionIndex = currentScreen - 1;
+        const question = anchorQuestions[questionIndex];
+        if (question) {
+          // Remove from answers state
+          setAnswers(prev => {
+            const newAnswers = { ...prev };
+            delete newAnswers[question.id];
+            return newAnswers;
+          });
+          
+          // Remove from localStorage cache
+          try {
+            const cached = localStorage.getItem(V4_ANSWERS_KEY);
+            if (cached) {
+              const answers: PreSignupAnswer[] = JSON.parse(cached);
+              const filtered = answers.filter(a => a.questionId !== question.id);
+              localStorage.setItem(V4_ANSWERS_KEY, JSON.stringify(filtered));
+            }
+          } catch {
+            // Ignore storage errors
+          }
+        }
+      }
+      
       setCurrentScreen(prev => prev - 1);
     } else {
       setLocation("/");
@@ -539,9 +579,10 @@ export default function DuolingoOnboardingPage() {
 
   const getScreenProgress = () => {
     if (currentScreen === 0) return 0;
-    // 8 anchor questions: screens 1-8 = 10% to 100%
-    if (currentScreen <= 8) return (currentScreen / 8) * 100;
-    return 100;
+    // Bug 12 Fix: Use unified progress so onboarding flows smoothly into assessment
+    // 8 anchor questions = 0% to 50% (not 0% to 100%)
+    const remaining = Math.max(0, 8 - currentScreen);
+    return Math.round(getUnifiedProgress('onboarding', currentScreen, remaining));
   };
 
   const renderScreen = () => {
@@ -717,6 +758,18 @@ export default function DuolingoOnboardingPage() {
       case 8:
         const questionIndex = currentScreen - 1;
         const question = anchorQuestions[questionIndex];
+        
+        // Bug 7 Fix: Show error state with retry button if API fails
+        if (isError) {
+          return (
+            <div className="flex-1 flex flex-col items-center justify-center p-6 gap-4">
+              <p className="text-muted-foreground text-center">加载题目失败</p>
+              <Button onClick={() => refetch()} data-testid="button-retry-questions">
+                重试
+              </Button>
+            </div>
+          );
+        }
         
         if (!question || isLoadingQuestions) {
           return <QuestionSkeleton />;
