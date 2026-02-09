@@ -154,9 +154,9 @@ export default function LandingPage() {
           <div className="text-center mt-4">
             <p className="text-[10px] text-gray-500">
               我已阅读并同意
-              <a className="font-bold underline text-gray-700 hover:text-pink-600 transition-colors" href="/terms">《用户协议》</a>
+              <a className="font-bold underline text-gray-700 hover:text-pink-600 transition-colors" href="/terms" aria-label="查看用户协议">《用户协议》</a>
               和
-              <a className="font-bold underline text-gray-700 hover:text-pink-600 transition-colors" href="/privacy">《隐私政策》</a>
+              <a className="font-bold underline text-gray-700 hover:text-pink-600 transition-colors" href="/privacy" aria-label="查看隐私政策">《隐私政策》</a>
             </p>
           </div>
         </div>
