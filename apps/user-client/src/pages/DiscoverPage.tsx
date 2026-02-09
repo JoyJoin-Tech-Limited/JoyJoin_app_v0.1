@@ -7,6 +7,7 @@ import LocationPickerSheet from "@/components/LocationPickerSheet";
 import { PromotionBannerCarousel } from "@/components/PromotionBannerCarousel";
 import InviteFriendCard from "@/components/InviteFriendCard";
 import JourneyProgressCard from "@/components/JourneyProgressCard";
+import EventPoolDetailDrawer from "@/components/EventPoolDetailDrawer";
 import { Sparkles } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,6 +15,7 @@ import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { useQuery } from "@tanstack/react-query";
 import { differenceInDays } from "date-fns";
 import { formatChineseDateOnly, extractChineseTime } from "@/lib/chineseDateTime";
+import { useLocation } from "wouter";
 
 interface EventPool {
   id: string;
@@ -29,6 +31,8 @@ interface EventPool {
   spotsLeft: number;
   genderRestriction?: string;
   sampleArchetypes?: string[];
+  minGroupSize?: number;
+  targetGroups?: number;
 }
 
 interface UserCoupon {
@@ -79,12 +83,18 @@ const getSavedLocation = (userCity?: string): { city: "香港" | "深圳"; area:
 
 export default function DiscoverPage() {
   const { user, isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
   
   // Use user's registered city as fallback when no localStorage selection exists
   const savedLocation = getSavedLocation(user?.currentCity ?? undefined);
   const [selectedCity, setSelectedCity] = useState<"香港" | "深圳">(savedLocation.city);
   const [selectedArea, setSelectedArea] = useState<string>(savedLocation.area);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  
+  // Drawer state
+  const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
+  const [showDrawer, setShowDrawer] = useState(false);
+  const [selectedPoolData, setSelectedPoolData] = useState<EventPool | null>(null);
   
   // Update location when user data loads (for first-time visitors without localStorage)
   useEffect(() => {
@@ -165,6 +175,20 @@ export default function DiscoverPage() {
     } catch {}
   };
 
+  const handleOpenDrawer = (pool: EventPool) => {
+    setSelectedPoolId(pool.id);
+    setSelectedPoolData(pool);
+    setShowDrawer(true);
+  };
+
+  const handleRegister = () => {
+    if (selectedPoolData?.id) {
+      setShowDrawer(false);
+      // Navigate to registration page
+      setLocation(`/event-pool-registration/${selectedPoolData.id}`);
+    }
+  };
+
   // Transform event pools to blind box event card props
   const transformEventPool = (pool: EventPool) => {
     try {
@@ -213,6 +237,9 @@ export default function DiscoverPage() {
     })
     .map(transformEventPool)
     .filter((event): event is NonNullable<typeof event> => event !== null);
+
+  // Create a map for O(1) pool lookup to avoid O(n²) complexity
+  const poolMap = new Map(eventPools.map(pool => [pool.id, pool]));
 
   return (
     <div className="min-h-screen bg-background pb-16">
@@ -272,9 +299,18 @@ export default function DiscoverPage() {
                   <p className="text-sm text-muted-foreground mt-4">加载中...</p>
                 </div>
               ) : filteredBlindBoxEvents.length > 0 ? (
-                filteredBlindBoxEvents.map((event) => (
-                  <BlindBoxEventCard key={event.id} {...event} />
-                ))
+                filteredBlindBoxEvents.map((event) => {
+                  // O(1) lookup using poolMap
+                  const pool = poolMap.get(event.id);
+                  
+                  return (
+                    <BlindBoxEventCard 
+                      key={event.id} 
+                      {...event}
+                      onDetailsClick={pool ? () => handleOpenDrawer(pool) : undefined}
+                    />
+                  );
+                })
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>暂无{selectedCity}{selectedArea ? `·${selectedArea}` : ''}的盲盒活动</p>
@@ -296,6 +332,24 @@ export default function DiscoverPage() {
         selectedArea={selectedArea}
         onSave={handleLocationSave}
       />
+
+      {/* Event Pool Detail Drawer */}
+      {selectedPoolData && (
+        <EventPoolDetailDrawer
+          poolId={selectedPoolId}
+          isOpen={showDrawer}
+          onClose={() => setShowDrawer(false)}
+          onRegister={handleRegister}
+          eventData={{
+            eventType: selectedPoolData.eventType,
+            title: selectedPoolData.title,
+            date: formatChineseDateOnly(selectedPoolData.dateTime),
+            location: `${selectedPoolData.city}•${selectedPoolData.district}`,
+            groupSize: "4-6人",
+            minGroupSize: selectedPoolData.minGroupSize || 4,
+          }}
+        />
+      )}
     </div>
   );
 }
