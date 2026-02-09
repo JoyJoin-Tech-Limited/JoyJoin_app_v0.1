@@ -130,7 +130,7 @@ export async function generateAndAssignEventThemeTitle(
               theme: result.eventThemeTitle,
               subtitle: result.themeTagline,
               themeEmoji: result.themeEmoji,
-              themeTags: result.themeHighlights,
+              // Note: themeHighlights not saved to DB (no schema field)
               vibe: result.themeVibe,
               updatedAt: new Date()
             })
@@ -169,7 +169,7 @@ export async function generateAndAssignEventThemeTitle(
         theme: result.eventThemeTitle,
         subtitle: result.themeTagline,
         themeEmoji: result.themeEmoji,
-        themeTags: result.themeHighlights,
+        // Note: themeHighlights not saved to DB (no schema field)
         vibe: result.themeVibe,
         updatedAt: new Date()
       })
