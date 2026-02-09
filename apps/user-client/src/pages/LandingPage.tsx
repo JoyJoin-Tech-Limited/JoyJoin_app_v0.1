@@ -69,18 +69,22 @@ export default function LandingPage() {
             {landingImages.map((image, index) => (
               <div
                 key={index}
-                className="relative rounded-2xl overflow-hidden shadow-lg aspect-[4/5] bg-white p-1 transform transition-transform duration-200 hover:scale-[1.02]"
-                style={{
-                  transform: `rotate(${image.rotation}deg) translateY(${image.translateY}px)`,
-                }}
+                className="relative rounded-2xl overflow-hidden shadow-lg aspect-[4/5] bg-white p-1"
               >
-                <img 
-                  src={image.src}
-                  alt={image.alt}
-                  className="w-full h-full object-cover rounded-xl filter sepia-[.15] contrast-110" 
-                  loading="eager"
-                  onError={handleImageError}
-                />
+                <div
+                  className="w-full h-full transition-transform duration-200 hover:scale-[1.02]"
+                  style={{
+                    transform: `rotate(${image.rotation}deg) translateY(${image.translateY}px)`,
+                  }}
+                >
+                  <img 
+                    src={image.src}
+                    alt={image.alt}
+                    className="w-full h-full object-cover rounded-xl filter sepia-[.15] contrast-110" 
+                    loading="eager"
+                    onError={handleImageError}
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -154,25 +158,27 @@ export default function LandingPage() {
           <div className="text-center mt-4">
             <p className="text-[10px] text-gray-500">
               我已阅读并同意
-              <a className="font-bold underline text-gray-700 hover:text-pink-600 transition-colors" href="/terms" aria-label="查看用户协议">《用户协议》</a>
+              <a 
+                className="font-bold underline text-gray-700 hover:text-pink-600 transition-colors" 
+                href="/terms" 
+                aria-label="查看用户协议"
+                onClick={() => console.log('[Analytics] Landing: Terms of service clicked')}
+              >
+                《用户协议》
+              </a>
               和
-              <a className="font-bold underline text-gray-700 hover:text-pink-600 transition-colors" href="/privacy" aria-label="查看隐私政策">《隐私政策》</a>
+              <a 
+                className="font-bold underline text-gray-700 hover:text-pink-600 transition-colors" 
+                href="/privacy" 
+                aria-label="查看隐私政策"
+                onClick={() => console.log('[Analytics] Landing: Privacy policy clicked')}
+              >
+                《隐私政策》
+              </a>
             </p>
           </div>
         </div>
       </section>
-
-      {/* Floating animation keyframes */}
-      <style jsx>{`
-        @keyframes float {
-          0% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-          100% { transform: translateY(0px); }
-        }
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-      `}</style>
     </main>
   );
 }
