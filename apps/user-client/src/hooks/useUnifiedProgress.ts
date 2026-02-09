@@ -26,6 +26,11 @@ export function useUnifiedProgress(options: UnifiedProgressOptions = {}) {
   const [milestoneReached, setMilestoneReached] = useState(false);
   const lastMilestoneRef = useRef<number | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Bug 13 Fix: High-water mark to ensure progress never decreases
+  // Scope to assessment context only - reset when context changes or answered count decreases
+  const highWaterRef = useRef<number>(0);
+  const lastContextRef = useRef<'onboarding' | 'assessment' | null>(null);
+  const lastAnsweredRef = useRef<number>(0);
   
   /**
    * Detect if progress has crossed a milestone
@@ -81,17 +86,23 @@ export function useUnifiedProgress(options: UnifiedProgressOptions = {}) {
     const safeAnsweredCount = Math.max(0, answeredCount || 0);
     const safeEstimatedRemaining = Math.max(0, estimatedRemaining || 0);
     
+    // Reset high-water mark if context changes or answered count decreases (user went back)
+    if (lastContextRef.current !== context || safeAnsweredCount < lastAnsweredRef.current) {
+      highWaterRef.current = 0;
+    }
+    lastContextRef.current = context;
+    lastAnsweredRef.current = safeAnsweredCount;
+    
+    let result = 0;
+    
     if (context === 'onboarding') {
       // Pre-login: 8 anchor questions → 0% to 50%
       const anchorProgress = Math.min(safeAnsweredCount / 8, 1.0);
-      const result = anchorProgress * ONBOARDING_WEIGHT * 100;
+      result = anchorProgress * ONBOARDING_WEIGHT * 100;
       if (process.env.NODE_ENV === 'development') {
         console.log('[useUnifiedProgress] onboarding:', { answeredCount: safeAnsweredCount, result });
       }
-      return result;
-    }
-    
-    if (context === 'assessment') {
+    } else if (context === 'assessment') {
       // Post-login: Start at 55% (50% anchors + 5% login)
       const baseProgress = ONBOARDING_WEIGHT + LOGIN_WEIGHT;
       
@@ -102,33 +113,41 @@ export function useUnifiedProgress(options: UnifiedProgressOptions = {}) {
       
       // Avoid division by zero
       if (totalAdditionalQuestions === 0) {
-        const result = baseProgress * 100;
+        result = baseProgress * 100;
         if (process.env.NODE_ENV === 'development') {
           console.log('[useUnifiedProgress] assessment (no questions):', { answeredCount: safeAnsweredCount, estimatedRemaining: safeEstimatedRemaining, result });
         }
-        return result;
+      } else {
+        const assessmentProgress = Math.min(additionalAnswered / totalAdditionalQuestions, 1.0);
+        result = (baseProgress + assessmentProgress * ASSESSMENT_WEIGHT) * 100;
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[useUnifiedProgress] assessment:', { 
+            answeredCount: safeAnsweredCount, 
+            estimatedRemaining: safeEstimatedRemaining, 
+            additionalAnswered, 
+            totalAdditionalQuestions, 
+            assessmentProgress,
+            result 
+          });
+        }
       }
       
-      const assessmentProgress = Math.min(additionalAnswered / totalAdditionalQuestions, 1.0);
-      const result = (baseProgress + assessmentProgress * ASSESSMENT_WEIGHT) * 100;
+      // Bug 13 Fix: Apply monotonic increase only for assessment context
+      // This prevents progress bar regression during adaptive assessment
+      if (result > highWaterRef.current) {
+        highWaterRef.current = result;
+      }
       
       if (process.env.NODE_ENV === 'development') {
-        console.log('[useUnifiedProgress] assessment:', { 
-          answeredCount: safeAnsweredCount, 
-          estimatedRemaining: safeEstimatedRemaining, 
-          additionalAnswered, 
-          totalAdditionalQuestions, 
-          assessmentProgress,
-          result 
-        });
+        console.log('[useUnifiedProgress] monotonic result:', { calculated: result, highWater: highWaterRef.current });
       }
-      return result;
+      
+      return highWaterRef.current;
     }
     
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[useUnifiedProgress] Unknown context:', context);
-    }
-    return 0;
+    // For onboarding, return raw result (allow backwards movement)
+    return result;
   }, []);
   
   // Cleanup on unmount

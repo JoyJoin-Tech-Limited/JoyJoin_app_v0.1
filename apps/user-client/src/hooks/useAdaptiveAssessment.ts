@@ -267,8 +267,16 @@ export function useAdaptiveAssessment() {
         setCurrentQuestion(data.nextQuestion);
       }
       
+      // Bug 13 Fix: Don't let server regress estimatedRemaining (prevents progress bar from going backwards)
       if (data.progress) {
-        setProgress(data.progress);
+        setProgress(prev => {
+          if (!prev) return data.progress!;
+          return {
+            ...data.progress!,
+            // Never let estimatedRemaining increase (prevents bar regression)
+            estimatedRemaining: Math.min(prev.estimatedRemaining, data.progress!.estimatedRemaining),
+          };
+        });
       }
       if (data.currentMatches) {
         setCurrentMatches(data.currentMatches);
@@ -357,9 +365,23 @@ export function useAdaptiveAssessment() {
     
     // Check if we have a synced session from onboarding (highest priority)
     const syncedSessionId = localStorage.getItem("joyjoin_synced_session_id");
-    console.log('[AdaptiveAssessment] Checking for synced session:', { syncedSessionId });
+    const syncedAnswerCount = parseInt(localStorage.getItem("joyjoin_synced_answer_count") || "0", 10);
+    console.log('[AdaptiveAssessment] Checking for synced session:', { syncedSessionId, syncedAnswerCount });
     
     if (syncedSessionId) {
+      // Bug 1 Fix: Validate that synced session has expected answer count (8 anchor questions)
+      if (syncedAnswerCount < 8) {
+        console.warn('[AdaptiveAssessment] Synced session has invalid answer count, clearing stale cache:', syncedAnswerCount);
+        // Clear all stale assessment localStorage keys
+        localStorage.removeItem("joyjoin_synced_session_id");
+        localStorage.removeItem("joyjoin_synced_answer_count");
+        localStorage.removeItem(PRESIGNUP_SESSION_KEY);
+        localStorage.removeItem(PRESIGNUP_ANSWERS_KEY);
+        // Start fresh assessment
+        await startMutation.mutateAsync({ forceNew: true });
+        return;
+      }
+      
       // Clear any stale cached answers since they've been synced
       clearCache();
       
@@ -435,35 +457,29 @@ export function useAdaptiveAssessment() {
     selectedOption: string,
     traitScores: TraitScores
   ) => {
-    // OPTIMISTIC UPDATE: Save previous state for potential rollback
-    const previousProgress = progress;
-    
-    // Immediately update progress before API call
+    // Bug 13 Fix: Use functional updates to avoid stale closure over `progress`
+    // Optimistic update: increment answered, decrement estimatedRemaining
     setProgress(prev => prev ? { 
       ...prev, 
       answered: prev.answered + 1,
       estimatedRemaining: Math.max(0, prev.estimatedRemaining - 1)
     } : null);
     
-    // Add console log for debugging (development only)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[AdaptiveAssessment] Optimistic progress update:', {
-        answered: (progress?.answered || 0) + 1,
-        estimatedRemaining: Math.max(0, (progress?.estimatedRemaining || 0) - 1)
-      });
-    }
-    
     try {
       await answerMutation.mutateAsync({ questionId, selectedOption, traitScores });
     } catch (error) {
-      // Rollback optimistic update on error
-      setProgress(previousProgress);
+      // Rollback using functional update (not stale reference)
+      setProgress(prev => prev ? {
+        ...prev,
+        answered: prev.answered - 1,
+        estimatedRemaining: prev.estimatedRemaining + 1
+      } : null);
       if (process.env.NODE_ENV === 'development') {
         console.log('[AdaptiveAssessment] Rolled back optimistic update due to error');
       }
-      throw error; // Re-throw to allow caller to handle
+      throw error;
     }
-  }, [answerMutation, progress]);
+  }, [answerMutation]); // Bug 13 Fix: Remove `progress` from deps
 
   const continueAfterSignup = useCallback(async (userId: string) => {
     await linkUserMutation.mutateAsync(userId);
