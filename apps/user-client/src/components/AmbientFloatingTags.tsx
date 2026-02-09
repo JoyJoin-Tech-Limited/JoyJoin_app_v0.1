@@ -1,17 +1,17 @@
 import { motion } from "framer-motion";
 
-interface TeamTag {
-  teamName: string;
-  teamEmoji: string;
+interface ThemeTag {
+  themeTitle: string;
+  themeEmoji: string;
 }
 
 interface AmbientFloatingTagsProps {
-  teamTags: TeamTag[];
+  themeTags: ThemeTag[];
 }
 
-export default function AmbientFloatingTags({ teamTags }: AmbientFloatingTagsProps) {
+export default function AmbientFloatingTags({ themeTags }: AmbientFloatingTagsProps) {
   // Limit to 8 tags for ambient background
-  const ambientTags = teamTags.slice(0, 8);
+  const ambientTags = themeTags.slice(0, 8);
   
   if (ambientTags.length === 0) return null;
   
@@ -61,9 +61,9 @@ export default function AmbientFloatingTags({ teamTags }: AmbientFloatingTagsPro
             }}
           >
             <div className="flex items-center gap-2 px-5 py-3 rounded-full bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm">
-              <span className="text-2xl">{tag.teamEmoji}</span>
+              <span className="text-2xl">{tag.themeEmoji}</span>
               <span className="text-base font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                {tag.teamName}
+                {tag.themeTitle}
               </span>
             </div>
           </motion.div>
