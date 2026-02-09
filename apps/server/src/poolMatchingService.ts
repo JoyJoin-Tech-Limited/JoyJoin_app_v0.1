@@ -948,59 +948,68 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
 
   // 8. 异步生成团队名称 (Async Team Name Generation)
   // Use setImmediate to queue team name generation without blocking
-  setImmediate(async () => {
-    console.log(`[Pool Matching] Starting async team name generation for ${groups.length} groups...`);
-    
-    const { generateAndAssignTeamName } = await import('./teamNameGenerator');
-    
-    for (let i = 0; i < groups.length; i++) {
-      const group = groups[i];
-      const groupRecord = await db.select().from(eventPoolGroups)
-        .where(and(
-          eq(eventPoolGroups.poolId, poolId),
-          eq(eventPoolGroups.groupNumber, i + 1)
-        ))
-        .limit(1);
-      
-      if (groupRecord.length === 0) continue;
-      
-      const groupId = groupRecord[0].id;
+  setImmediate(() => {
+    void (async () => {
+      console.log(`[Pool Matching] Starting async team name generation for ${groups.length} groups...`);
       
       try {
-        const teamNameResult = await generateAndAssignTeamName(
-          groupId,
-          group,
-          poolId,
-          pool?.eventType || "饭局"
-        );
+        const { generateAndAssignTeamName } = await import('./teamNameGenerator');
         
-        if (teamNameResult) {
-          // Broadcast TEAM_NAME_REVEALED to all group members
-          const memberUserIds = group.members.map(m => m.userId);
+        // Pre-fetch all group records for this pool to avoid per-group queries
+        const groupRecords = await db.select().from(eventPoolGroups)
+          .where(eq(eventPoolGroups.poolId, poolId));
+        
+        const groupIdByNumber = new Map<number, string>();
+        for (const record of groupRecords) {
+          // Assumes groupNumber is unique per pool
+          groupIdByNumber.set(record.groupNumber, record.id);
+        }
+        
+        for (let i = 0; i < groups.length; i++) {
+          const group = groups[i];
+          const groupId = groupIdByNumber.get(i + 1);
           
-          memberUserIds.forEach(userId => {
-            wsService.broadcastToUser(userId, {
-              type: "TEAM_NAME_REVEALED",
-              data: {
-                poolId,
-                groupId,
-                teamName: teamNameResult.teamName,
-                teamTagline: teamNameResult.teamTagline,
-                teamEmoji: teamNameResult.teamEmoji,
-                teamSuperpowers: teamNameResult.teamSuperpowers,
-                teamVibe: teamNameResult.teamVibe
-              },
-              timestamp: new Date().toISOString()
-            });
-          });
+          if (!groupId) continue;
           
-          console.log(`[Pool Matching] ✅ Team name revealed for group ${i + 1}: ${teamNameResult.teamEmoji} ${teamNameResult.teamName}`);
+          try {
+            const teamNameResult = await generateAndAssignTeamName(
+              groupId,
+              group,
+              pool?.eventType || "饭局"
+            );
+            
+            if (teamNameResult) {
+              // Broadcast TEAM_NAME_REVEALED to all group members
+              const memberUserIds = group.members.map(m => m.userId);
+              
+              memberUserIds.forEach(userId => {
+                wsService.broadcastToUser(userId, {
+                  type: "TEAM_NAME_REVEALED",
+                  data: {
+                    poolId,
+                    groupId,
+                    teamName: teamNameResult.teamName,
+                    teamTagline: teamNameResult.teamTagline,
+                    teamEmoji: teamNameResult.teamEmoji,
+                    teamSuperpowers: teamNameResult.teamSuperpowers,
+                    teamVibe: teamNameResult.teamVibe
+                  },
+                  timestamp: new Date().toISOString()
+                });
+              });
+              
+              console.log(`[Pool Matching] ✅ Team name revealed for group ${i + 1}: ${teamNameResult.teamEmoji} ${teamNameResult.teamName}`);
+            }
+          } catch (error) {
+            console.error(`[Pool Matching] ⚠️ Team name generation failed for group ${i + 1}:`, error);
+            // Don't throw - matching already succeeded, team name is optional
+          }
         }
       } catch (error) {
-        console.error(`[Pool Matching] ⚠️ Team name generation failed for group ${i + 1}:`, error);
-        // Don't throw - matching already succeeded, team name is optional
+        console.error(`[Pool Matching] ⚠️ Async team name generation failed:`, error);
+        // Don't throw - matching already succeeded, team names are best-effort
       }
-    }
+    })();
   });
 }
 
