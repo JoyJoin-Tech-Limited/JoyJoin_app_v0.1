@@ -22,8 +22,8 @@ DiscoverPage
    │  │  ├─ Progress Card (Chunked HP bar)
    │  │  ├─ Archetype Coins Grid
    │  │  └─ Team Showcase
-   │  │     ├─ FloatingTeamTags (Default: 3 auto-rotating)
-   │  │     └─ InteractiveTeamBubbles (Expanded: 6 clickable)
+   │  │     ├─ FloatingThemeTags (Default: 3 auto-rotating)
+   │  │     └─ InteractiveThemeBubbles (Expanded: 6 clickable)
    │  ├─ HowItWorksMinimal (Flow tab)
    │  └─ FAQMinimal (Q&A tab)
    └─ CTAButton (Fixed bottom)
@@ -50,7 +50,7 @@ Main drawer container with:
 - Loading state handling
 ```
 
-#### 2. **FloatingTeamTags.tsx** (115 lines)
+#### 2. **FloatingThemeTags.tsx** (115 lines)
 Auto-rotating team name tags with:
 - 3 tags visible at once
 - 4-second cycle per tag
@@ -69,7 +69,7 @@ Background ambient animation with:
 - Circular motion with easeInOut
 - Pixel-based positioning for consistency
 
-#### 4. **InteractiveTeamBubbles.tsx** (133 lines)
+#### 4. **InteractiveThemeBubbles.tsx** (133 lines)
 Clickable team bubbles with:
 - 6 teams maximum in circular layout
 - Radius: 35% from center
@@ -115,7 +115,7 @@ const emojiMatch = display.match(/[\u{1F300}-\u{1F9FF}][\u{FE00}-\u{FE0F}]?/u);
 - Archetype coins grid (4 columns, sorted by count)
 - Empty state (成为第一个加入的人！)
 - Team showcase toggle (收起 ↔ 查看全部)
-- Conditional rendering: FloatingTeamTags vs InteractiveTeamBubbles
+- Conditional rendering: FloatingThemeTags vs InteractiveThemeBubbles
 
 **HowItWorksMinimal.tsx** (85 lines)
 - 5-step flow explanation
@@ -420,12 +420,12 @@ Response:
   },
   "estimatedGroups": 3,
   "avgMatchScore": 82,
-  "recentTeamNames": [
-    { "teamName": "炽热冒险家", "teamEmoji": "🔥" },
-    { "teamName": "温暖探索者", "teamEmoji": "🌡️" },
-    { "teamName": "活力先锋队", "teamEmoji": "⚡" },
-    { "teamName": "欢乐缔造者", "teamEmoji": "✨" },
-    { "teamName": "热情驱动者", "teamEmoji": "🎯" }
+  "recentThemeTitles": [
+    { "eventThemeTitle": "炽热冒险家", "themeEmoji": "🔥" },
+    { "eventThemeTitle": "温暖探索者", "themeEmoji": "🌡️" },
+    { "eventThemeTitle": "活力先锋队", "themeEmoji": "⚡" },
+    { "eventThemeTitle": "欢乐缔造者", "themeEmoji": "✨" },
+    { "eventThemeTitle": "热情驱动者", "themeEmoji": "🎯" }
   ]
 }
 ```
@@ -486,9 +486,9 @@ Message:
 analytics.track('drawer_opened', { poolId, source: 'event_card' });
 analytics.track('drawer_closed', { poolId, timeSpent: 12000 });
 analytics.track('tab_switched', { from: 'pool', to: 'how' });
-analytics.track('floating_tag_viewed', { teamName, autoRotated: true });
+analytics.track('floating_tag_viewed', { eventThemeTitle, autoRotated: true });
 analytics.track('interactive_bubbles_expanded', { teamCount: 6 });
-analytics.track('team_bubble_clicked', { teamName, groupId });
+analytics.track('team_bubble_clicked', { eventThemeTitle, groupId });
 
 // Engagement
 analytics.track('cta_clicked', { poolId, isHot, registrationCount });
@@ -553,7 +553,7 @@ analytics.track('drawer_render_time', { duration: 85 });
    - Fixed: Now uses `filteredBlindBoxEvents` consistently
    - Removed duplicate filter logic
 
-2. **✅ FloatingTeamTags useEffect dependencies**
+2. **✅ FloatingThemeTags useEffect dependencies**
    - Fixed: Added `getVisibleTags` to dependency array
    - Memoized with `useCallback` to prevent re-creation
 
@@ -569,7 +569,7 @@ analytics.track('drawer_render_time', { duration: 85 });
    - Fixed: `isHot` excludes full group size (spots !== minGroupSize)
    - Clarified message when remainder is 0
 
-6. **✅ FloatingTeamTags animation units**
+6. **✅ FloatingThemeTags animation units**
    - Fixed: Consistent pixel units (0, -20, -10, 0)
    - Removed percentage mixing
 
