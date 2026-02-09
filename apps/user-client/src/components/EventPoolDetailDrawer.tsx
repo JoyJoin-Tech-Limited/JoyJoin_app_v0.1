@@ -22,9 +22,9 @@ interface PoolStats {
   archetypeBreakdown: Record<string, number>;
   estimatedGroups: number;
   avgMatchScore: number;
-  recentTeamNames: Array<{
-    teamName: string;
-    teamEmoji: string;
+  recentThemeTitles: Array<{
+    themeTitle: string;
+    themeEmoji: string;
   }>;
 }
 
@@ -154,8 +154,8 @@ export default function EventPoolDetailDrawer({
           <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-700 z-50" />
           
           {/* Ambient Floating Tags Background */}
-          {stats.recentTeamNames.length > 0 && (
-            <AmbientFloatingTags teamTags={stats.recentTeamNames} />
+          {stats.recentThemeTitles.length > 0 && (
+            <AmbientFloatingTags themeTags={stats.recentThemeTitles} />
           )}
           
           {/* Main Content */}

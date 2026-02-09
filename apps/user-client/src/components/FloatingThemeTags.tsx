@@ -1,26 +1,26 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface TeamTag {
-  teamName: string;
-  teamEmoji: string;
+interface ThemeTag {
+  themeTitle: string;
+  themeEmoji: string;
 }
 
-interface FloatingTeamTagsProps {
-  teamTags: TeamTag[];
+interface FloatingThemeTagsProps {
+  themeTags: ThemeTag[];
   maxTags?: number;
   autoRotate?: boolean;
 }
 
-export default function FloatingTeamTags({
-  teamTags,
+export default function FloatingThemeTags({
+  themeTags,
   maxTags = 5,
   autoRotate = true,
-}: FloatingTeamTagsProps) {
+}: FloatingThemeTagsProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   
   // Limit to maxTags
-  const limitedTags = teamTags.slice(0, maxTags);
+  const limitedTags = themeTags.slice(0, maxTags);
   
   // Get 3 visible tags with wrapping - memoized function
   const getVisibleTags = useCallback((index: number) => {
@@ -57,7 +57,7 @@ export default function FloatingTeamTags({
   if (limitedTags.length === 0) {
     return (
       <div className="text-center py-8 text-sm text-muted-foreground">
-        暂无成功组队案例
+        暂无盲盒主题案例
       </div>
     );
   }
@@ -103,9 +103,9 @@ export default function FloatingTeamTags({
               }}
             >
               <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg border border-gray-200/50 dark:border-gray-700/50">
-                <span className="text-xl">{tag.teamEmoji}</span>
+                <span className="text-xl">{tag.themeEmoji}</span>
                 <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                  {tag.teamName}
+                  {tag.themeTitle}
                 </span>
               </div>
             </motion.div>
