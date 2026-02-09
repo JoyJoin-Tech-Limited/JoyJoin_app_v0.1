@@ -836,14 +836,14 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
     }).returning();
     
     // 1.5 Generate and save event theme (mystery box 盲盒主题)
-    try {
-      const memberIds = group.members.map(m => m.userId);
-      await generateAndSaveEventTheme(groupRecord.id, memberIds, poolId);
-      console.log(`[Pool Matching] ✅ Generated event theme for group ${i + 1}`);
-    } catch (error) {
-      console.error(`[Pool Matching] ⚠️ Theme generation failed for group ${i + 1}:`, error);
-      // Don't throw - matching already succeeded, theme generation is best-effort
-    }
+    // Fire-and-forget to avoid blocking match save
+    generateAndSaveEventTheme(groupRecord.id, memberIds, poolId)
+      .then(() => {
+        console.log(`[Pool Matching] ✅ Generated event theme for group ${i + 1}`);
+      })
+      .catch((error) => {
+        console.error(`[Pool Matching] ⚠️ Theme generation failed for group ${i + 1}:`, error);
+      });
     
     // 2. 更新用户报名状态
     const memberRegistrationIds = group.members.map(m => m.registrationId);

@@ -18,10 +18,7 @@ import type {
 } from '@shared/types/eventTheme';
 import { 
   extractDimensions, 
-  scoreDimensionsForTheme, 
-  selectThemeComponents,
-  getEnergyLabel,
-  getEnergyEmoji 
+  scoreDimensionsForTheme
 } from './themeScoringService';
 import { generateThemeWithLLM } from './themeLLMService';
 
@@ -106,15 +103,13 @@ function buildLLMInput(
   eventType: string,
   memberCount: number
 ): ThemeLLMInput {
-  const selected = selectThemeComponents(components);
-  
   const input: ThemeLLMInput = {
     energyProfile: {
-      avgEnergy: dimensions.archetypes?.avgEnergy || 50,
-      highCount: dimensions.archetypes?.energyDistribution.high || 0,
-      mediumCount: dimensions.archetypes?.energyDistribution.medium || 0,
-      lowCount: dimensions.archetypes?.energyDistribution.low || 0,
-      pattern: dimensions.archetypes?.pattern || 'complementary',
+      avgEnergy: dimensions.archetype?.avgEnergy || 50,
+      highCount: dimensions.archetype?.energyDistribution.high || 0,
+      mediumCount: dimensions.archetype?.energyDistribution.medium || 0,
+      lowCount: dimensions.archetype?.energyDistribution.low || 0,
+      pattern: dimensions.archetype?.pattern || 'complementary',
     },
     eventType,
     city,
@@ -122,10 +117,10 @@ function buildLLMInput(
   };
   
   // Add archetype dynamics (theme lead)
-  if (dimensions.archetypes) {
-    input.archetypeDynamics = dimensions.archetypes.dynamics;
-    input.avgEnergy = dimensions.archetypes.avgEnergy;
-    input.pattern = dimensions.archetypes.pattern;
+  if (dimensions.archetype) {
+    input.archetypeDynamics = dimensions.archetype.dynamics;
+    input.avgEnergy = dimensions.archetype.avgEnergy;
+    input.pattern = dimensions.archetype.pattern;
   }
   
   // Add grounding elements (subtitle)
@@ -165,8 +160,8 @@ function enrichThemeWithMetadata(
   // Build comprehensive reasoning
   const reasoningParts: string[] = ['主题整合:'];
   
-  if (dimensions.archetypes) {
-    const { dynamics, avgEnergy, pattern } = dimensions.archetypes;
+  if (dimensions.archetype) {
+    const { dynamics, avgEnergy, pattern } = dimensions.archetype;
     const patternLabel = 
       pattern === 'homogeneous' ? '同质型' :
       pattern === 'complementary' ? '互补型' : '多样型';

@@ -97,7 +97,7 @@ export function extractDimensions(members: MemberProfile[]): DimensionData {
       dynamics = '原型大聚会';
     }
     
-    dimensions.archetypes = {
+    dimensions.archetype = {
       pattern,
       primaryArchetypes: Array.from(archetypeSet),
       secondaryArchetypes: Array.from(new Set(secondaryArchetypes)),

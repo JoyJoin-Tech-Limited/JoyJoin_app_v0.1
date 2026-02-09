@@ -60,7 +60,7 @@ export interface ThemeComponent {
  * Dimension Data after extraction
  */
 export interface DimensionData {
-  archetypes?: {
+  archetype?: {
     pattern: 'homogeneous' | 'complementary' | 'diverse';
     primaryArchetypes: string[];
     secondaryArchetypes: string[];
