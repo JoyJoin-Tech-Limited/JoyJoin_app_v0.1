@@ -11,7 +11,7 @@ BEGIN;
 -- Add team name, tagline, emoji, and reasoning to groups table
 ALTER TABLE event_pool_groups ADD COLUMN IF NOT EXISTS team_name VARCHAR(50);
 ALTER TABLE event_pool_groups ADD COLUMN IF NOT EXISTS team_tagline VARCHAR(100);
-ALTER TABLE event_pool_groups ADD COLUMN IF NOT EXISTS team_emoji VARCHAR(10);
+ALTER TABLE event_pool_groups ADD COLUMN IF NOT EXISTS team_emoji TEXT;
 ALTER TABLE event_pool_groups ADD COLUMN IF NOT EXISTS team_name_reasoning TEXT;
 
 -- Add comments for documentation

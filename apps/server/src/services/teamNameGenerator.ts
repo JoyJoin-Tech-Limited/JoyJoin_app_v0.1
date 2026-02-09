@@ -10,14 +10,14 @@
  * - users table: displayName, gender, birthYear, relationshipStatus, educationLevel, 
  *                industryCategory, industryCategoryLabel, industryNiche, industryNicheLabel,
  *                occupationId, workMode, hometownRegionCity, currentCity, intent, archetype
- * - user_interests table: Top interests (selections with is_top flag)
+ * - user_interests table: Interest selections from JSONB (selections, topPriorities)
  * - archetypeRegistry: energyLevel for each archetype
  * - eventPoolRegistrations: budgetRange, cuisinePreferences, eventIntent
  */
 
 import { db } from "../db";
 import { users, userInterests, eventPoolRegistrations } from "@shared/schema";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { archetypeRegistry } from "@shared/personality/archetypeRegistry";
 
 /**
@@ -166,7 +166,7 @@ export async function fetchEnrichedMemberProfiles(
     interestsMap.set(row.userId, topInterests);
   });
 
-  // 3. Fetch event registrations
+  // 3. Fetch event registrations for this specific pool
   const registrations = await db
     .select({
       userId: eventPoolRegistrations.userId,
@@ -176,7 +176,10 @@ export async function fetchEnrichedMemberProfiles(
     })
     .from(eventPoolRegistrations)
     .where(
-      inArray(eventPoolRegistrations.userId, memberIds)
+      and(
+        inArray(eventPoolRegistrations.userId, memberIds),
+        eq(eventPoolRegistrations.poolId, poolId)
+      )
     );
 
   const registrationMap = new Map(
@@ -237,7 +240,8 @@ export function calculateGroupStats(
 ): GroupStats {
   // Energy statistics
   const energyLevels = members.map((m) => m.energyLevel);
-  const avgEnergy = energyLevels.reduce((a, b) => a + b, 0) / energyLevels.length;
+  const totalEnergy = energyLevels.reduce((a, b) => a + b, 0);
+  const avgEnergy = energyLevels.length > 0 ? totalEnergy / energyLevels.length : 0;
   
   const energyDistribution = {
     high: energyLevels.filter((e) => e >= 80).length,
@@ -333,11 +337,13 @@ export function calculateGroupStats(
 }
 
 /**
- * Generate team name and tagline using DeepSeek API
+ * Generate team name and tagline with basic heuristics
  * 
  * Uses "Mirror + Insight" formula:
  * - Mirror: Reflect what users know about themselves
  * - Insight: Add meaning they hadn't articulated
+ * 
+ * Note: Currently uses rule-based generation. DeepSeek API integration can be added later.
  */
 export async function generateTeamName(
   memberIds: string[],
@@ -353,16 +359,6 @@ export async function generateTeamName(
   // Calculate group statistics
   const stats = calculateGroupStats(members);
 
-  // Build context for AI
-  const memberSummaries = members.map((m, idx) => ({
-    index: idx + 1,
-    archetype: m.archetype,
-    energy: m.energyLevel,
-    industry: m.industryNicheLabel || m.industryCategoryLabel,
-    interests: m.topInterests.map((i) => i.label).slice(0, 3),
-    city: m.currentCity,
-  }));
-
   // Collect cited values
   const energyLevels = members.map((m) => m.energyLevel);
   const industries = members
@@ -370,13 +366,10 @@ export async function generateTeamName(
     .filter((i) => i !== null) as string[];
   const sharedInterests = stats.sharedInterests.map((i) => i.label);
 
-  // TODO: Integrate with DeepSeek API
-  // For now, return a structured result with basic logic
-  
-  // Simple name generation logic
+  // Rule-based name generation logic
   let teamName = "";
   let teamTagline = "";
-  let emoji = "✨";
+  let emoji: string;
   
   if (stats.sharedInterests.length > 0 && stats.industryDiversity >= 2) {
     const topInterest = stats.sharedInterests[0].label;
@@ -402,18 +395,33 @@ export async function generateTeamName(
     emoji = "🎨";
   }
 
-  // Trim to character limits
+  // Validate and enforce length constraints
+  // Team name: 8-12 characters
+  if (teamName.length < 8) {
+    teamName = teamName + "小组"; // Pad if too short
+  }
   if (teamName.length > 12) {
     teamName = teamName.substring(0, 12);
+  }
+  
+  // Tagline: 20-30 characters
+  if (teamTagline.length < 20) {
+    // Pad with generic suffix if too short
+    teamTagline = teamTagline + "的精彩相遇";
   }
   if (teamTagline.length > 30) {
     teamTagline = teamTagline.substring(0, 30);
   }
 
+  // Build reasoning with accurate citations
+  const uniqueIndustryNiches = new Set(
+    members.map(m => m.industryNiche).filter(Boolean)
+  );
+  
   const reasoning = `名字整合了以下维度:\n` +
-    `1. 行业分布 [数据源: users.industry_niche_label, ${stats.industryDiversity}个不同行业]\n` +
-    `2. 共同兴趣 [数据源: user_interests表交集, ${stats.sharedInterests.length}个共同兴趣]\n` +
-    `3. 能量平衡 [数据源: archetypeRegistry.energyLevel, 平均${Math.round(stats.avgEnergy)}]\n` +
+    `1. 行业多样性 [数据源: users.industry_niche, ${uniqueIndustryNiches.size}个不同细分行业]\n` +
+    `2. 共同兴趣话题 [数据源: user_interests.selections, ${stats.sharedInterests.length}个共享话题]\n` +
+    `3. 能量分布 [数据源: archetypeRegistry.energyLevel, 平均${Math.round(stats.avgEnergy)}]\n` +
     `标语用镜像+洞察公式,反映小组特质。`;
 
   return {
@@ -423,7 +431,7 @@ export async function generateTeamName(
     reasoning,
     citedValues: {
       energyLevels,
-      energySource: "archetypeRegistry.ts Lines 67, 104, 141, 215, 252, 289, 326, 363, 400, 437, 474",
+      energySource: "archetypeRegistry.ts Lines 67, 104, 141, 178, 215, 252, 289, 326, 363, 400, 437, 474",
       sharedInterests,
       interestSource: "user_interests table (selections field)",
       industries,
