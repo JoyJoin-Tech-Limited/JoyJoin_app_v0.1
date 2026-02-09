@@ -44,11 +44,11 @@ describe('themeScoringService', () => {
       
       const dimensions = extractDimensions(members);
       
-      expect(dimensions.archetypes).toBeDefined();
-      expect(dimensions.archetypes?.pattern).toBe('homogeneous');
-      expect(dimensions.archetypes?.primaryArchetypes).toContain('开心柯基');
-      expect(dimensions.archetypes?.avgEnergy).toBeGreaterThan(90); // Corgi is high energy
-      expect(dimensions.archetypes?.dynamics).toContain('开心柯基的快乐派对');
+      expect(dimensions.archetype).toBeDefined();
+      expect(dimensions.archetype?.pattern).toBe('homogeneous');
+      expect(dimensions.archetype?.primaryArchetypes).toContain('开心柯基');
+      expect(dimensions.archetype?.avgEnergy).toBeGreaterThan(90); // Corgi is high energy
+      expect(dimensions.archetype?.dynamics).toContain('开心柯基的快乐派对');
     });
     
     it('should extract archetype dimensions from complementary group', () => {
@@ -60,8 +60,8 @@ describe('themeScoringService', () => {
       
       const dimensions = extractDimensions(members);
       
-      expect(dimensions.archetypes?.pattern).toBe('complementary');
-      expect(dimensions.archetypes?.dynamics).toContain('×'); // Should have × separator
+      expect(dimensions.archetype?.pattern).toBe('complementary');
+      expect(dimensions.archetype?.dynamics).toContain('×'); // Should have × separator
     });
     
     it('should extract archetype dimensions from diverse group', () => {
@@ -75,8 +75,8 @@ describe('themeScoringService', () => {
       
       const dimensions = extractDimensions(members);
       
-      expect(dimensions.archetypes?.pattern).toBe('diverse');
-      expect(dimensions.archetypes?.dynamics).toBe('原型大聚会');
+      expect(dimensions.archetype?.pattern).toBe('diverse');
+      expect(dimensions.archetype?.dynamics).toBe('原型大聚会');
     });
     
     it('should only extract interests with heat >= 2 (heat value >= 10)', () => {
@@ -164,7 +164,7 @@ describe('themeScoringService', () => {
   describe('scoreDimensionsForTheme', () => {
     it('should score archetype as theme-lead (high mystery, low grounding)', () => {
       const dimensions = {
-        archetypes: {
+        archetype: {
           pattern: 'complementary' as const,
           primaryArchetypes: ['开心柯基', '机智狐'],
           secondaryArchetypes: [],
@@ -202,7 +202,7 @@ describe('themeScoringService', () => {
     
     it('should sort components by finalScore descending', () => {
       const dimensions = {
-        archetypes: {
+        archetype: {
           pattern: 'complementary' as const,
           primaryArchetypes: ['开心柯基'],
           secondaryArchetypes: [],
@@ -235,7 +235,7 @@ describe('themeScoringService', () => {
   describe('selectThemeComponents', () => {
     it('should separate components by usage type', () => {
       const dimensions = {
-        archetypes: {
+        archetype: {
           pattern: 'complementary' as const,
           primaryArchetypes: ['开心柯基'],
           secondaryArchetypes: [],

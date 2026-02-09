@@ -91,7 +91,7 @@ describe('themeLLMService - validation', () => {
     it('should pass for lengths within range', () => {
       const theme = {
         theme: '高能充电站：柯基×狐狸的周末探险', // 17 chars - perfect
-        subtitle: '广州老乡的咖啡×人脉派对', // 12 chars - acceptable
+        subtitle: '广州老乡的咖啡×人脉派对聚会', // 15 chars - within range
         vibe: '🔥 超高能 (88分)',
         emoji: '⚡',
       };

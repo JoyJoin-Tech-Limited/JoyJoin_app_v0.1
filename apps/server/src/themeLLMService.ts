@@ -21,6 +21,8 @@ if (!process.env.DEEPSEEK_API_KEY) {
 const deepseekClient = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY || 'dummy-key-for-fallback',
   baseURL: 'https://api.deepseek.com',
+  timeout: 10000, // 10 second timeout to prevent hanging
+  maxRetries: 2,  // Max 2 retries on network errors
 });
 
 /**
@@ -196,8 +198,16 @@ export function validateTheme(
     '沉思猫头鹰', '定心大象', '稳如龟', '隐身猫'
   ];
   
+  // Short aliases for archetypes (used in themes)
+  const ARCHETYPE_ALIASES = [
+    '柯基', '太阳鸡', '豚', '狐狸', '狐',
+    '海豚', '蛛', '熊', '章鱼',
+    '猫头鹰', '大象', '龟', '猫'
+  ];
+  
   if (input.archetypeDynamics) {
-    const hasArchetype = ARCHETYPE_NAMES.some(name => theme.theme.includes(name));
+    const hasArchetype = ARCHETYPE_NAMES.some(name => theme.theme.includes(name)) ||
+                        ARCHETYPE_ALIASES.some(alias => theme.theme.includes(alias));
     if (!hasArchetype) {
       errors.push('Theme must include archetype name when archetype data exists');
     }
