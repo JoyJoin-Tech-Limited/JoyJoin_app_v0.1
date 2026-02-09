@@ -2,7 +2,7 @@
  * Unit Tests for Team Name Generator Service
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock the database
 vi.mock('../db', () => ({
@@ -115,7 +115,6 @@ describe('Team Name Generator', () => {
       const result = await generateAndAssignTeamName(
         'group1',
         mockGroup,
-        'pool1',
         '饭局'
       );
 
@@ -149,7 +148,6 @@ describe('Team Name Generator', () => {
       const result = await generateAndAssignTeamName(
         'group1',
         mockGroup,
-        'pool1',
         '饭局'
       );
 
@@ -170,7 +168,6 @@ describe('Team Name Generator', () => {
       const result = await generateAndAssignTeamName(
         'group1',
         mockGroup,
-        'pool1',
         '饭局'
       );
 
@@ -203,7 +200,6 @@ describe('Team Name Generator', () => {
       const result = await generateAndAssignTeamName(
         'group1',
         mockGroup,
-        'pool1',
         '饭局'
       );
 
@@ -232,7 +228,6 @@ describe('Team Name Generator', () => {
       const result = await generateAndAssignTeamName(
         'group1',
         mockGroup,
-        'pool1',
         '饭局'
       );
 
@@ -265,7 +260,6 @@ describe('Team Name Generator', () => {
       await generateAndAssignTeamName(
         'group1',
         mockGroup,
-        'pool1',
         '饭局'
       );
 
@@ -287,11 +281,126 @@ describe('Team Name Generator', () => {
       const result = await generateAndAssignTeamName(
         'group1',
         mockGroup,
-        'pool1',
         '饭局'
       );
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('Content Safety', () => {
+    it('should reject team names with blocked keywords and use fallback', async () => {
+      process.env.DEEPSEEK_API_KEY = 'test-key';
+      
+      // Re-import to get fresh mocks
+      vi.resetModules();
+      
+      // Mock OpenAI to return content with blocked keyword
+      vi.mock('openai', () => {
+        const MockOpenAI = function() {
+          return {
+            chat: {
+              completions: {
+                create: vi.fn().mockResolvedValue({
+                  choices: [{
+                    message: {
+                      content: JSON.stringify({
+                        teamName: "政治小队", // Contains blocked keyword
+                        tagline: "测试标语",
+                        emoji: "🎯",
+                        superpowers: ["测试"],
+                        vibe: "playful"
+                      })
+                    }
+                  }]
+                }),
+              },
+            },
+          };
+        };
+        return { default: MockOpenAI };
+      });
+      
+      const { generateAndAssignTeamName } = await import('../teamNameGenerator');
+      const { db } = await import('../db');
+      
+      vi.mocked(db.select).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([
+            { id: 'user1', archetype: '暖心熊' }
+          ])
+        })
+      } as any);
+      
+      vi.mocked(db.update).mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(undefined)
+        })
+      } as any);
+
+      const result = await generateAndAssignTeamName(
+        'group1',
+        mockGroup,
+        '饭局'
+      );
+
+      // Should use fallback instead of blocked content
+      expect(result).toBeDefined();
+      expect(result?.teamName).not.toContain('政治');
+    });
+  });
+
+  describe('AI Response Validation', () => {
+    it('should handle malformed JSON and use fallback', async () => {
+      process.env.DEEPSEEK_API_KEY = 'test-key';
+      
+      vi.resetModules();
+      
+      vi.mock('openai', () => {
+        const MockOpenAI = function() {
+          return {
+            chat: {
+              completions: {
+                create: vi.fn().mockResolvedValue({
+                  choices: [{
+                    message: {
+                      content: 'This is not valid JSON'
+                    }
+                  }]
+                }),
+              },
+            },
+          };
+        };
+        return { default: MockOpenAI };
+      });
+      
+      const { generateAndAssignTeamName } = await import('../teamNameGenerator');
+      const { db } = await import('../db');
+      
+      vi.mocked(db.select).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([
+            { id: 'user1', archetype: '暖心熊' }
+          ])
+        })
+      } as any);
+      
+      vi.mocked(db.update).mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(undefined)
+        })
+      } as any);
+
+      const result = await generateAndAssignTeamName(
+        'group1',
+        mockGroup,
+        '饭局'
+      );
+
+      // Should use fallback
+      expect(result).toBeDefined();
+      expect(result?.teamName).toBeTruthy();
     });
   });
 });

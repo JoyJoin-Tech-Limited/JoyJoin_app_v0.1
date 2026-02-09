@@ -73,7 +73,6 @@ interface AIUsageMetrics {
 export async function generateAndAssignTeamName(
   groupId: string,
   group: MatchGroup,
-  poolId: string,
   eventType: string
 ): Promise<TeamNameResult | null> {
   if (!ENABLE_TEAM_NAME_GENERATION) {
@@ -243,6 +242,35 @@ async function generateTeamNameWithAI(context: TeamNameContext): Promise<TeamNam
 }
 
 /**
+ * Count user-perceived characters (grapheme clusters) in a string.
+ * Uses Intl.Segmenter when available, with a safe fallback.
+ */
+function countGraphemeClusters(input: string): number {
+  if (!input) return 0;
+
+  // Prefer Intl.Segmenter for accurate grapheme segmentation
+  if (typeof (Intl as any).Segmenter === 'function') {
+    const segmenter = new (Intl as any).Segmenter('en', { granularity: 'grapheme' });
+    let count = 0;
+    for (const _ of segmenter.segment(input)) {
+      count++;
+    }
+    return count;
+  }
+
+  // Fallback: split by code points. Not perfect for all ZWJ sequences,
+  // but still better than raw UTF-16 .length.
+  return Array.from(input).length;
+}
+
+/**
+ * Whether the given string is exactly one grapheme cluster.
+ */
+function isSingleGrapheme(input: string): boolean {
+  return countGraphemeClusters(input) === 1;
+}
+
+/**
  * Validate team name result for content safety and structure
  */
 function validateTeamNameResult(result: TeamNameResult): boolean {
@@ -252,13 +280,17 @@ function validateTeamNameResult(result: TeamNameResult): boolean {
     return false;
   }
 
-  if (!result.teamTagline || result.teamTagline.length > 50) {
+  if (!result.teamTagline || result.teamTagline.length > 20) {
     console.warn('[AI] Invalid tagline length');
     return false;
   }
 
-  if (!result.teamEmoji || result.teamEmoji.length > 4) {
-    console.warn('[AI] Invalid emoji');
+  const emoji = (result.teamEmoji || '').trim();
+  // Require exactly one grapheme cluster for the emoji. We avoid using
+  // raw string.length here because many single emojis use multiple UTF-16
+  // code units (e.g. skin tones, ZWJ sequences).
+  if (!emoji || !isSingleGrapheme(emoji)) {
+    console.warn('[AI] Invalid emoji:', result.teamEmoji);
     return false;
   }
 
@@ -327,7 +359,8 @@ function buildTeamNamePrompt(context: TeamNameContext): string {
  * Generate fallback team name using templates
  */
 function generateFallbackTeamName(context: TeamNameContext): TeamNameResult {
-  const { memberArchetypes, eventType, temperatureLevel } = context;
+  // Currently, the fallback strategy is purely template-based and does not
+  // use detailed context fields like member archetypes or event type.
 
   // Template-based generation
   const prefixes = ['快乐', '温暖', '活力', '梦想', '冒险', '探索'];
