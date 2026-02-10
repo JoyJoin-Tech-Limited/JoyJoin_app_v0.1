@@ -57,10 +57,12 @@ export function calculateOnboardingRoute(user: AuthUser | undefined): Onboarding
     return '/onboarding/extended';
   }
 
-  // Step 5: Profile review not seen (localStorage flag)
-  const hasSeenProfileReview = typeof window !== 'undefined' 
-    ? localStorage.getItem('profile_review_seen') === 'true'
-    : false;
+  // Step 5: Profile review not seen (prefer server field, fallback to localStorage)
+  const hasSeenProfileReview = user.hasSeenProfileReview ?? (
+    typeof window !== 'undefined' 
+      ? localStorage.getItem('profile_review_seen') === 'true'
+      : false
+  );
   
   if (!hasSeenProfileReview) {
     return '/onboarding/review';
