@@ -19,6 +19,7 @@ import { ProfilePortraitCard } from "@/components/ProfilePortraitCard";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useOnboardingAnalytics } from "@/hooks/useOnboardingAnalytics"; // Phase 2
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { AuthUser } from "@/hooks/useAuth";
 
 type Phase = "analyzing" | "complete";
 
@@ -68,11 +69,11 @@ export default function FinalProfileReviewPage() {
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
       // Fetch updated user with new nextStep
-      const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] });
+      const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as AuthUser;
       
       // Use server-driven nextStep for navigation
-      const nextPath = (updatedUser as any)?.nextStep === 'discover' ? '/discover'
-        : (updatedUser as any)?.nextStep === 'guide' ? '/guide'
+      const nextPath = updatedUser?.nextStep === 'discover' ? '/discover'
+        : updatedUser?.nextStep === 'guide' ? '/guide'
         : '/guide'; // fallback to guide
       
       setLocation(nextPath);

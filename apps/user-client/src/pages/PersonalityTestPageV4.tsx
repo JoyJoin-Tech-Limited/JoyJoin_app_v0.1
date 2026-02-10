@@ -424,8 +424,8 @@ export default function PersonalityTestPageV4() {
         progress={progressPercentage}
         onBack={() => {
           // Check if user came from Duolingo onboarding (has synced session)
-          const hasSyncedSession = localStorage.getItem("joyjoin_synced_session_id");
-          if (hasSyncedSession) {
+          const syncedSessionId = localStorage.getItem("joyjoin_synced_session_id");
+          if (syncedSessionId) {
             setLocation('/onboarding');
           } else {
             // Anonymous user or direct access - go back to landing
