@@ -694,9 +694,18 @@ export default function PersonalityTestResultPage() {
         description: "正在为你准备个性化匹配...",
       });
       
-      // Navigate to onboarding (essential data)
+      // Fetch updated user to get server-calculated nextStep
+      const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as any;
+      
+      // Use server-driven nextStep for navigation
+      const nextPath = updatedUser?.nextStep === 'discover' ? '/discover' 
+        : updatedUser?.nextStep === 'guide' ? '/guide'
+        : updatedUser?.nextStep === 'extended-data' ? '/onboarding/extended'
+        : updatedUser?.nextStep === 'profile-review' ? '/onboarding/review'
+        : '/onboarding/setup'; // fallback to essential data
+      
       setTimeout(() => {
-        setLocation('/onboarding/setup');
+        setLocation(nextPath);
       }, 500);
       
     } catch (error) {
