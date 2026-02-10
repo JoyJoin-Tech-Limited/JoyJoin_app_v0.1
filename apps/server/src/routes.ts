@@ -1267,7 +1267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Validate step value
-      const validSteps = ['onboarding', 'personality-test', 'essential-data', 'extended-data', 'guide'];
+      const validSteps = ['onboarding', 'personality-test', 'essential-data', 'extended-data', 'profile-review', 'guide'];
       if (!validSteps.includes(step)) {
         return res.status(400).json({ message: "Invalid step value" });
       }
