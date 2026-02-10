@@ -422,7 +422,16 @@ export default function PersonalityTestPageV4() {
         total={displayTotal as any}
         remaining={estimatedRemaining}
         progress={progressPercentage}
-        onBack={() => setLocation('/profile')}
+        onBack={() => {
+          // Check if user came from Duolingo onboarding (has synced session)
+          const hasSyncedSession = localStorage.getItem("joyjoin_synced_session_id");
+          if (hasSyncedSession) {
+            setLocation('/onboarding');
+          } else {
+            // Anonymous user or direct access - go back to landing
+            setLocation('/');
+          }
+        }}
         showBack={true}
         showExtendedMessage={answeredCount >= 8 && estimatedRemaining >= 3}
         milestoneReached={milestoneReached}

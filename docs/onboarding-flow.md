@@ -163,11 +163,20 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 | Field | Type | Description |
 |------|------|-------------|
-| `nextStep` | `string` | Server-calculated next route: `onboarding`, `personality-test`, `essential-data`, `guide`, `discover` |
+| `nextStep` | `string` | Server-calculated next route: `onboarding`, `personality-test`, `essential-data`, `extended-data`, `profile-review`, `guide`, `discover` |
 | `profileEssentialComplete` | `boolean` | Essential data complete (displayName, gender, currentCity) |
 | `profileExtendedComplete` | `boolean` | Extended data complete (interests) |
 | `hasSeenGuide` | `boolean` | Guide viewed (server-persisted) |
+| `hasSeenProfileReview` | `boolean` | Profile review viewed (server-persisted) |
 | `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/auth/user` | GET | Get current user and nextStep |
+| `/api/profile-review/complete` | POST | Mark profile review as seen |
+| `/api/guide/complete` | POST | Mark guide as seen |
 
 ### useAuth Hook Extension
 

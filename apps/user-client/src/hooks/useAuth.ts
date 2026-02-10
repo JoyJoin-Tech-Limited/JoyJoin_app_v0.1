@@ -9,6 +9,8 @@ export const NextStep = {
   ONBOARDING: 'onboarding',
   PERSONALITY_TEST: 'personality-test',
   ESSENTIAL_DATA: 'essential-data',
+  EXTENDED_DATA: 'extended-data',
+  PROFILE_REVIEW: 'profile-review',
   GUIDE: 'guide',
   DISCOVER: 'discover',
 } as const;

@@ -92,6 +92,22 @@ function RedirectToGuide() {
   return null;
 }
 
+function RedirectToExtended() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation("/onboarding/extended");
+  }, [setLocation]);
+  return null;
+}
+
+function RedirectToReview() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation("/onboarding/review");
+  }, [setLocation]);
+  return null;
+}
+
 function AuthenticatedRouter() {
   const { user, nextStep, isLoading } = useAuth();
   const [location] = useLocation();
@@ -143,6 +159,24 @@ function AuthenticatedRouter() {
           <Route path="/onboarding/login" component={LoginPromptPage} />
           <Route path="/login" component={LoginPage} />
           <Route path="*" component={RedirectToSetup} />
+        </Switch>
+      );
+
+    case 'extended-data':
+      return (
+        <Switch>
+          <Route path="/onboarding/extended" component={ExtendedDataPage} />
+          <Route path="/onboarding/review" component={FinalProfileReviewPage} />
+          <Route path="*" component={RedirectToExtended} />
+        </Switch>
+      );
+
+    case 'profile-review':
+      return (
+        <Switch>
+          <Route path="/onboarding/review" component={FinalProfileReviewPage} />
+          <Route path="/guide" component={GuidePage} />
+          <Route path="*" component={RedirectToReview} />
         </Switch>
       );
 
