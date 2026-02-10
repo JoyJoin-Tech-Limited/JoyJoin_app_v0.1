@@ -18,8 +18,7 @@ import { SpiralWaveAnimation } from "@/components/SpiralWaveAnimation";
 import { ProfilePortraitCard } from "@/components/ProfilePortraitCard";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useOnboardingAnalytics } from "@/hooks/useOnboardingAnalytics"; // Phase 2
-import { queryClient } from "@/lib/queryClient";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 type Phase = "analyzing" | "complete";
 
