@@ -889,7 +889,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Determine next step in onboarding flow
       // Base nextStep on completion flags, then incorporate checkpoint for resume capability
-      type OnboardingStep = 'onboarding' | 'personality-test' | 'essential-data' | 'extended-data' | 'guide' | 'discover';
+      type OnboardingStep = 'onboarding' | 'personality-test' | 'essential-data' | 'extended-data' | 'profile-review' | 'guide' | 'discover';
       
       let nextStep: OnboardingStep;
       if (!user.hasCompletedRegistration) {
@@ -898,11 +898,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         nextStep = 'personality-test';
       } else if (!profileEssentialComplete) {
         nextStep = 'essential-data';
+      } else if (!user.hasCompletedInterestsCarousel) {
+        // After essential data, must complete interests carousel
+        nextStep = 'extended-data';
+      } else if (!user.hasSeenProfileReview) {
+        // After interests, show profile review
+        nextStep = 'profile-review';
       } else if (!user.hasSeenGuide) {
-        // After essential data, check if extended data is needed before guide
-        // Extended data is indicated by user having intent or completed interests carousel
-        const hasExtendedData = !!(user.intent || user.hasCompletedInterestsCarousel);
-        nextStep = hasExtendedData ? 'guide' : 'extended-data';
+        // After profile review, show guide
+        nextStep = 'guide';
       } else {
         nextStep = 'discover';
       }
@@ -912,6 +916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'personality-test', 
         'essential-data',
         'extended-data',
+        'profile-review',
         'guide',
         'discover'
       ];
@@ -1232,6 +1237,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/profile-review/complete', isPhoneAuthenticated, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      
+      await db.update(users).set({ 
+        hasSeenProfileReview: true,
+        onboardingCheckpoint: 'profile-review',
+        onboardingCheckpointTimestamp: new Date()
+      }).where(eq(users.id, userId));
+      
+      res.json({ success: true, hasSeenProfileReview: true });
+    } catch (error) {
+      console.error("Error completing profile review:", error);
+      res.status(500).json({ message: "Failed to complete profile review" });
+    }
+  });
+
   // Save onboarding checkpoint
   app.post('/api/onboarding/checkpoint', isPhoneAuthenticated, async (req: Request, res) => {
     try {
@@ -1244,7 +1267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Validate step value
-      const validSteps = ['onboarding', 'personality-test', 'essential-data', 'extended-data', 'guide'];
+      const validSteps = ['onboarding', 'personality-test', 'essential-data', 'extended-data', 'profile-review', 'guide'];
       if (!validSteps.includes(step)) {
         return res.status(400).json({ message: "Invalid step value" });
       }

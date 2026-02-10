@@ -58,7 +58,7 @@ Login → AI Chat Registration → Personality Test V4 → Essential Data →
 ```typescript
 const { nextStep } = useAuth(); 
 // Returns: 'onboarding' | 'personality-test' | 'essential-data' | 
-//          'extended-data' | 'guide' | 'discover'
+//          'extended-data' | 'profile-review' | 'guide' | 'discover'
 
 // Redirect logic
 if (nextStep !== 'discover') {
@@ -81,6 +81,7 @@ The `/api/auth/user` endpoint now returns:
 | `profileEssentialComplete` | `boolean` | Essential data complete |
 | `profileExtendedComplete` | `boolean` | Extended data complete |
 | `hasSeenGuide` | `boolean` | Guide viewed (server-persisted) |
+| `hasSeenProfileReview` | `boolean` | Profile review viewed (server-persisted) |
 | `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
 
 #### Guide System (Scope B2)

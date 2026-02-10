@@ -28,6 +28,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
 import { ArchetypeSlotMachine } from "@/components/slot-machine";
 import { UnlockOverlay } from "@/components/UnlockOverlay";
+import type { AuthUser } from "@/hooks/useAuth";
 import { getArchetypeColorHSL } from "@/components/slot-machine/archetypeData";
 import { SkipAnimationButton } from "@/components/SkipAnimationButton";
 import { useAuth } from "@/hooks/useAuth";
@@ -694,9 +695,18 @@ export default function PersonalityTestResultPage() {
         description: "正在为你准备个性化匹配...",
       });
       
-      // Navigate to onboarding (essential data)
+      // Fetch updated user to get server-calculated nextStep
+      const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as AuthUser;
+      
+      // Use server-driven nextStep for navigation
+      const nextPath = updatedUser?.nextStep === 'discover' ? '/discover' 
+        : updatedUser?.nextStep === 'guide' ? '/guide'
+        : updatedUser?.nextStep === 'extended-data' ? '/onboarding/extended'
+        : updatedUser?.nextStep === 'profile-review' ? '/onboarding/review'
+        : '/onboarding/setup'; // fallback to essential data
+      
       setTimeout(() => {
-        setLocation('/onboarding/setup');
+        setLocation(nextPath);
       }, 500);
       
     } catch (error) {

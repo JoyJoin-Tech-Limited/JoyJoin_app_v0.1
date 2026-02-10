@@ -18,6 +18,8 @@ import { SpiralWaveAnimation } from "@/components/SpiralWaveAnimation";
 import { ProfilePortraitCard } from "@/components/ProfilePortraitCard";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useOnboardingAnalytics } from "@/hooks/useOnboardingAnalytics"; // Phase 2
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { AuthUser } from "@/hooks/useAuth";
 
 type Phase = "analyzing" | "complete";
 
@@ -48,7 +50,7 @@ export default function FinalProfileReviewPage() {
     return () => clearTimeout(timer);
   }, [prefersReducedMotion, interestsLoading, interests, user]);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     // Phase 2: Track completion
     analytics.stepCompleted({
       viewedFullProfile: true,
@@ -56,28 +58,30 @@ export default function FinalProfileReviewPage() {
       hasArchetype: !!user?.archetype,
     });
     
-    // Phase 0: Fix #8 - Mark profile review as seen
-    localStorage.setItem('profile_review_seen', 'true');
-    
-    // Fix: Use correct onboarding flow routing
-    // After profile review, check server-driven nextStep or default to guide
-    const nextStep = user?.nextStep;
-    let nextPath: string;
-    
-    switch (nextStep) {
-      case "guide":
-        nextPath = "/guide";
-        break;
-      case "discover":
-        nextPath = "/discover";
-        break;
-      default:
-        // Fallback: send users to the guide if nextStep is missing or unexpected
-        nextPath = "/guide";
-        break;
+    try {
+      // Mark profile review as seen on server
+      await apiRequest("POST", "/api/profile-review/complete");
+      
+      // Keep localStorage as fallback hint
+      localStorage.setItem('profile_review_seen', 'true');
+      
+      // Invalidate auth user query to get updated nextStep
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Fetch updated user with new nextStep
+      const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as AuthUser;
+      
+      // Use server-driven nextStep for navigation
+      const nextPath = updatedUser?.nextStep === 'discover' ? '/discover'
+        : updatedUser?.nextStep === 'guide' ? '/guide'
+        : '/guide'; // fallback to guide
+      
+      setLocation(nextPath);
+    } catch (error) {
+      console.error("Error completing profile review:", error);
+      // Fallback navigation if API fails
+      setLocation('/guide');
     }
-    
-    setLocation(nextPath);
   };
 
   return (
