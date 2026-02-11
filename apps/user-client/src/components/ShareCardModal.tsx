@@ -257,7 +257,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
     } finally {
       setIsGenerating(false);
     }
-  }, [toast]);
+  }, [toast, isRetrying]);
 
   // Handle share
   const handleShare = useCallback(async () => {
@@ -449,7 +449,6 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                   transformStyle: "preserve-3d",
                   position: "relative",
                   width: "100%",
-                  aspectRatio: "9 / 16"
                 }}
                 className="relative"
               >
@@ -671,7 +670,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
         
         {/* Fixed bottom bar - no negative margins needed */}
         {!isFlipped && (
-          <div className="flex-shrink-0 pt-4 border-t border-gray-100 safe-area-pb">
+          <div className="flex-shrink-0 pt-4 pb-6 border-t border-gray-100 safe-area-pb">
             {/* Progress bar - only during generation */}
             {isGenerating && generationProgress > 0 && (
               <motion.div 
