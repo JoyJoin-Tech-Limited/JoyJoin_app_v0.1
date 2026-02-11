@@ -221,13 +221,10 @@ function calculateBackgroundScore(user1: Partial<User>, user2: Partial<User>): n
   
   // ====== 多样性因素（不同加分）======
   
-  // 行业多样性 (+10分如果不同)
-  if (user1.industry && user2.industry) {
-    factors++;
-    if (user1.industry !== user2.industry) {
-      score += 10;
-    }
-  }
+  // 行业多样性 - DEPRECATED: industry field removed from schema
+  // Industry diversity is now handled through industryCategory/industryNicheLabel
+  // This matching logic should be updated to use the new 3-tier classification
+  // For now, removing to fix TypeScript errors
   
   // 学习地域多样性 (+5分如果不同)
   if (user1.studyLocale && user2.studyLocale) {
@@ -271,21 +268,9 @@ function calculateBackgroundScore(user1: Partial<User>, user2: Partial<User>): n
     }
   }
   
-  // 资历相似度 (+10分如果相同资历阶段)
-  if (user1.seniority && user2.seniority) {
-    factors++;
-    if (user1.seniority === user2.seniority) {
-      score += 10;
-    } else {
-      // 相邻资历也有加分
-      const seniorityLevels = ['Junior', 'Mid', 'Senior', 'Executive', 'Founder'];
-      const level1 = seniorityLevels.indexOf(user1.seniority);
-      const level2 = seniorityLevels.indexOf(user2.seniority);
-      if (level1 >= 0 && level2 >= 0 && Math.abs(level1 - level2) === 1) {
-        score += 5; // 相邻资历
-      }
-    }
-  }
+  // 资历相似度 - DEPRECATED: seniority field removed from schema
+  // Seniority was never collected in onboarding and has been removed from matching
+  // For now, removing to fix TypeScript errors
   
   // ====== 人生阶段匹配 ======
   
@@ -511,19 +496,8 @@ export function calculateUserMatchScore(
       }
     }
     
-    // 资历相同
-    if (user1.seniority && user2.seniority && user1.seniority === user2.seniority) {
-      const seniorityLabels: Record<string, string> = {
-        'Junior': '都是职场新人',
-        'Mid': '职场中坚力量',
-        'Senior': '都是职场老司机',
-        'Executive': '都是高管',
-        'Founder': '同为创业者',
-      };
-      if (seniorityLabels[user1.seniority]) {
-        matchPoints.push(seniorityLabels[user1.seniority]);
-      }
-    }
+    // 资历相同 - DEPRECATED: seniority field removed from schema
+    // Commenting out as seniority is no longer collected
   }
   
   // 文化匹配细分
@@ -643,7 +617,9 @@ export function matchUsersToGroups(
     const avgChemistryScore = calculateGroupChemistry(archetypes);
     
     // 计算多样性分数（背景、行业等的多样性）
-    const industries = new Set(group.map(u => u.industry).filter(Boolean));
+    // DEPRECATED: industry field removed from schema
+    // Using industryCategory as replacement for now
+    const industries = new Set(group.map(u => (u as any).industryCategory).filter(Boolean));
     const educations = new Set(group.map(u => u.educationLevel).filter(Boolean));
     const diversityScore = Math.round(
       ((industries.size / group.length) * 50 +

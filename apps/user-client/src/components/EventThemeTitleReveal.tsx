@@ -55,7 +55,7 @@ export default function EventThemeTitleReveal({
   const [showConfetti, setShowConfetti] = useState(false);
   const [showScreenshotHint, setShowScreenshotHint] = useState(false);
 
-  const vibe = vibeStyles[teamVibe] || vibeStyles.playful;
+  const vibe = vibeStyles[themeVibe] || vibeStyles.playful;
 
   useEffect(() => {
     if (isVisible) {

@@ -838,8 +838,9 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
     let themeEmoji: string | null = null;
     let themeReasoning: string | null = null;
     
+    const memberUserIds = group.members.map(m => m.userId);
+    
     try {
-      const memberUserIds = group.members.map(m => m.userId);
       const themeTitleResult = await generateEventThemeTitle(memberUserIds, poolId);
       eventThemeTitle = themeTitleResult.eventThemeTitle;
       themeTagline = themeTitleResult.themeTagline;
@@ -872,7 +873,7 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
     
     // 1.5 Generate and save event theme (mystery box 盲盒主题)
     // Fire-and-forget to avoid blocking match save
-    generateAndSaveEventTheme(groupRecord.id, memberIds, poolId)
+    generateAndSaveEventTheme(groupRecord.id, memberUserIds, poolId)
       .then(() => {
         console.log(`[Pool Matching] ✅ Generated event theme for group ${i + 1}`);
       })
@@ -892,7 +893,6 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
       .where(inArray(eventPoolRegistrations.id, memberRegistrationIds));
     
     // 2.5 创建对应的events记录，使其出现在活动管理模块
-    const memberUserIds = group.members.map(m => m.userId);
     const location = pool?.district ? `${pool.city} ${pool.district}` : pool?.city || "待定";
     
     const [eventRecord] = await db.insert(events).values({

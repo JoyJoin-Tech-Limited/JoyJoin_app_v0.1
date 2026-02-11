@@ -557,14 +557,14 @@ export default function BlindBoxEventDetailPage() {
               matchExplanation={event.matchExplanation || undefined}
               userInterests={["film_entertainment", "travel_exploration"]} // Default interests (interestsTop field removed)
               userEducationLevel={user?.educationLevel || "Master's"}
-              userIndustry={user?.industry || "科技"}
+              userIndustry={undefined} // DEPRECATED: industry field removed from schema
               userAge={user?.birthdate ? calculateAge(user.birthdate) : undefined}
               userGender={user?.gender || undefined}
               userRelationshipStatus={user?.relationshipStatus || "Single"}
               userChildren={user?.children || undefined}
               userStudyLocale={user?.studyLocale || "Overseas"}
               userOverseasRegions={user?.overseasRegions as string[] | undefined}
-              userSeniority={user?.seniority || "Mid"}
+              userSeniority={undefined} // DEPRECATED: seniority field removed from schema
               userFieldOfStudy={user?.fieldOfStudy || undefined}
               userLanguages={user?.languagesComfort as string[] | undefined}
               userHometownCountry={user?.hometownCountry || undefined}
