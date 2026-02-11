@@ -164,7 +164,7 @@ export async function fetchEnrichedMemberProfiles(
   }
   
   const interestsMap = new Map<string, InterestSelection[]>();
-  userInterestsData.forEach((row) => {
+  userInterestsData.forEach((row: { userId: string; selections: unknown }) => {
     const selections = (row.selections as InterestSelection[]) || [];
     // Get top priorities (level 3) or all selections sorted by heat
     const topInterests = selections
@@ -190,14 +190,21 @@ export async function fetchEnrichedMemberProfiles(
       )
     );
 
-  const registrationMap = new Map(
-    registrations.map((r) => [r.userId, r])
+  type RegistrationRecord = {
+    userId: string;
+    budgetRange: string[] | null;
+    cuisinePreferences: string[] | null;
+    eventIntent: string[] | null;
+  };
+
+  const registrationMap = new Map<string, RegistrationRecord>(
+    registrations.map((r: RegistrationRecord) => [r.userId, r])
   );
 
   // 4. Combine into enriched profiles
-  const enrichedProfiles: EnrichedMemberProfile[] = userProfiles.map((user) => {
+  const enrichedProfiles: EnrichedMemberProfile[] = userProfiles.map((user: typeof userProfiles[0]) => {
     const interests = interestsMap.get(user.id) || [];
-    const registration = registrationMap.get(user.id);
+    const registration = registrationMap.get(user.id) as RegistrationRecord | undefined;
     
     // Get energy level from archetypeRegistry
     const archetype = user.archetype || "暖心熊";

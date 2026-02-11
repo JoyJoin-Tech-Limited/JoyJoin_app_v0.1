@@ -7,7 +7,7 @@
  */
 
 import { db } from './db';
-import { users, userInterests, eventPoolGroups } from '@shared/schema';
+import { users, userInterests, eventPoolGroups, eventPools } from '@shared/schema';
 import { eq, inArray } from 'drizzle-orm';
 import type { 
   EventTheme, 
@@ -61,7 +61,7 @@ async function fetchEnrichedMemberProfiles(
   }
 
   for (const user of usersData) {
-    const userInterest = interestsData.find(i => i.userId === user.id);
+    const userInterest = interestsData.find((i: { userId: string }) => i.userId === user.id);
     const selections = (userInterest?.selections as InterestSelection[]) || [];
     
     // Filter for heat >= 2 (stored as 10 or 25)
@@ -216,9 +216,11 @@ export async function generateEventTheme(
   console.log(`[EventThemeGenerator] Generating theme for group with ${memberIds.length} members`);
   
   // Get pool info for context
-  const pool = await db.query.eventPools.findFirst({
-    where: (pools, { eq }) => eq(pools.id, poolId)
-  });
+  const pool = await db.select()
+    .from(eventPools)
+    .where(eq(eventPools.id, poolId))
+    .limit(1)
+    .then((rows: any[]) => rows[0] || null);
   
   const city = pool?.city || '广州';
   const eventType = pool?.eventType || '饭局';
