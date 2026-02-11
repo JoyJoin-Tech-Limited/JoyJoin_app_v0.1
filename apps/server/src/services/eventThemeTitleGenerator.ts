@@ -129,7 +129,6 @@ export async function fetchEnrichedMemberProfiles(
       id: users.id,
       displayName: users.displayName,
       gender: users.gender,
-      birthYear: users.birthYear,
       age: users.age,
       relationshipStatus: users.relationshipStatus,
       educationLevel: users.educationLevel,
@@ -155,13 +154,22 @@ export async function fetchEnrichedMemberProfiles(
     .where(inArray(userInterests.userId, memberIds));
 
   // Create interests map
-  const interestsMap = new Map<string, any[]>();
+  interface InterestSelection {
+    topicId: string;
+    label: string;
+    fullName?: string;
+    category?: string;
+    heat: number;
+    level?: number;
+  }
+  
+  const interestsMap = new Map<string, InterestSelection[]>();
   userInterestsData.forEach((row) => {
-    const selections = (row.selections as any[]) || [];
+    const selections = (row.selections as InterestSelection[]) || [];
     // Get top priorities (level 3) or all selections sorted by heat
     const topInterests = selections
-      .filter((s: any) => s.level === 3 || s.heat >= 10)
-      .sort((a: any, b: any) => b.heat - a.heat)
+      .filter((s: InterestSelection) => s.level === 3 || s.heat >= 10)
+      .sort((a: InterestSelection, b: InterestSelection) => b.heat - a.heat)
       .slice(0, 5);
     interestsMap.set(row.userId, topInterests);
   });
@@ -200,7 +208,7 @@ export async function fetchEnrichedMemberProfiles(
       userId: user.id,
       displayName: user.displayName,
       gender: user.gender,
-      birthYear: user.birthYear,
+      birthYear: null, // birthYear field removed from schema, use birthdate instead
       age: user.age,
       relationshipStatus: user.relationshipStatus,
       educationLevel: user.educationLevel,
@@ -216,11 +224,11 @@ export async function fetchEnrichedMemberProfiles(
       secondaryArchetype: user.secondaryArchetype,
       energyLevel,
       intent: user.intent,
-      topInterests: interests.map((i: any) => ({
+      topInterests: interests.map((i: InterestSelection) => ({
         topicId: i.topicId,
         label: i.label,
-        fullName: i.fullName,
-        category: i.category,
+        fullName: i.fullName || i.label,
+        category: i.category || '',
         heat: i.heat,
       })),
       budgetRange: registration?.budgetRange || null,

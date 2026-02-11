@@ -491,11 +491,7 @@ export default function ChatsPage() {
                                           {getEducationDisplay(otherUser.educationLevel)}
                                         </span>
                                       )}
-                                      {otherUser.industry && (
-                                        <span className="text-xs bg-muted/50 px-2.5 py-1 rounded-full">
-                                          {otherUser.industry}
-                                        </span>
-                                      )}
+                                      {/* DEPRECATED: industry field removed from schema */}
                                     </div>
                                     
                                     {/* Languages */}

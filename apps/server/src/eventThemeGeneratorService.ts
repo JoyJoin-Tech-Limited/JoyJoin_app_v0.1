@@ -53,14 +53,21 @@ async function fetchEnrichedMemberProfiles(
   // Build member profiles
   const profiles: MemberProfile[] = [];
   
+  interface InterestSelection {
+    topicId: string;
+    label: string;
+    heat: number;
+    level: number;
+  }
+
   for (const user of usersData) {
     const userInterest = interestsData.find(i => i.userId === user.id);
-    const selections = (userInterest?.selections as any[]) || [];
+    const selections = (userInterest?.selections as InterestSelection[]) || [];
     
     // Filter for heat >= 2 (stored as 10 or 25)
     const relevantInterests = selections
-      .filter((s: any) => s.heat >= 10)
-      .map((s: any) => ({
+      .filter((s: InterestSelection) => s.heat >= 10)
+      .map((s: InterestSelection) => ({
         topicId: s.topicId,
         label: s.label,
         heat: s.heat,
@@ -225,7 +232,7 @@ export async function generateEventTheme(
   const dimensions = extractDimensions(members);
   
   console.log(`[EventThemeGenerator] Extracted dimensions:`, {
-    hasArchetypes: !!dimensions.archetypes,
+    hasArchetypes: !!dimensions.archetype,
     hasInterests: !!dimensions.interests,
     hasIntent: !!dimensions.intent,
     hasHometown: !!dimensions.hometown,
