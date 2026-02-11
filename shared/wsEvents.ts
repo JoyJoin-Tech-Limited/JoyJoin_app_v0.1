@@ -8,6 +8,7 @@ export type WSEventType =
   | "EVENT_COMPLETED"
   | "EVENT_CANCELED"
   | "POOL_MATCHED"
+  | "EVENT_THEME_TITLE_REVEALED"
   | "POOL_REGISTRATION_ADDED"
   | "USER_JOINED"
   | "USER_CONFIRMED"
@@ -116,6 +117,17 @@ export interface PoolMatchedData {
   matchScore: number;
   memberCount: number;
   temperatureLevel: string; // fire | warm | mild | cold
+}
+
+// 盲盒主题揭晓
+export interface EventThemeTitleRevealedData {
+  poolId: string;
+  groupId: string;
+  eventThemeTitle: string;
+  themeTagline: string;
+  themeEmoji: string;
+  themeHighlights: string[];
+  themeVibe: 'playful' | 'professional' | 'creative' | 'adventurous';
 }
 
 // 活动池新报名
