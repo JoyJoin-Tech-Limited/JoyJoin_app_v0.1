@@ -872,7 +872,7 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
     
     // 1.5 Generate and save event theme (mystery box 盲盒主题)
     // Fire-and-forget to avoid blocking match save
-    generateAndSaveEventTheme(groupRecord.id, memberIds, poolId)
+    generateAndSaveEventTheme(groupRecord.id, memberUserIds, poolId)
       .then(() => {
         console.log(`[Pool Matching] ✅ Generated event theme for group ${i + 1}`);
       })
