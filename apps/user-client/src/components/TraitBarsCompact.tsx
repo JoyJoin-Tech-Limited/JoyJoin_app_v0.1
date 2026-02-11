@@ -35,6 +35,14 @@ const TRAIT_LABELS: Record<string, string> = {
   P: "积极",
 };
 
+// Normalize scores to 0-100 range
+const normalizeScore = (score: number | undefined): number => {
+  if (score === undefined || score === null) return 50;
+  if (score <= 1) return Math.round(score * 100);
+  if (score <= 10) return Math.round(score * 10);
+  return Math.round(score);
+};
+
 export default function TraitBarsCompact({
   affinityScore,
   opennessScore,
@@ -45,14 +53,6 @@ export default function TraitBarsCompact({
   primaryColor,
   animated = true,
 }: TraitBarsCompactProps) {
-  // Normalize scores to 0-100 range
-  const normalizeScore = (score: number | undefined): number => {
-    if (score === undefined || score === null) return 50;
-    if (score <= 1) return Math.round(score * 100);
-    if (score <= 10) return Math.round(score * 10);
-    return Math.round(score);
-  };
-
   // Build trait data array
   const traits = useMemo(() => {
     const data = [

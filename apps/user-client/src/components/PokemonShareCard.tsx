@@ -240,6 +240,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   <p 
                     className="text-xs font-medium text-center truncate"
                     style={{ color: variant.primaryColor }}
+                    title={tagline}
                   >
                     {tagline}
                   </p>
@@ -387,7 +388,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                       </div>
                       
                       {/* Short Effect - REDUCED with line-clamp */}
-                      <p className="text-xs font-semibold text-orange-700 text-center leading-snug line-clamp-2">
+                      <p className="text-xs font-semibold text-orange-700 text-center leading-snug line-clamp-2" title={skillSet.activeSkill.shortEffect}>
                         {skillSet.activeSkill.shortEffect}
                       </p>
                     </div>
@@ -416,7 +417,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                       </div>
                       
                       {/* Short Effect - REDUCED with line-clamp */}
-                      <p className="text-xs font-semibold text-blue-700 text-center leading-snug line-clamp-2">
+                      <p className="text-xs font-semibold text-blue-700 text-center leading-snug line-clamp-2" title={skillSet.passiveSkill.shortEffect}>
                         {skillSet.passiveSkill.shortEffect}
                       </p>
                     </div>
@@ -431,7 +432,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               {/* 4. Social Positioning - Full width */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg px-3 py-2.5">
                 <div className="text-sm font-bold text-gray-700 mb-1">🎯 社交定位</div>
-                <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">
+                <p className="text-xs text-gray-600 leading-relaxed line-clamp-3" title={archetypeInfo?.description}>
                   {archetypeInfo?.description}
                 </p>
               </div>
