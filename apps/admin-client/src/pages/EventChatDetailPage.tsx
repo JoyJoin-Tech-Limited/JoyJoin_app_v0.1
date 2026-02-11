@@ -629,11 +629,7 @@ export default function EventChatDetailPage() {
                     {getEducationDisplay(selectedParticipant.educationLevel)}
                   </span>
                 )}
-                {selectedParticipant.industry && (
-                  <span className="text-xs bg-muted/50 px-3 py-1.5 rounded-full">
-                    {selectedParticipant.industry}
-                  </span>
-                )}
+                {/* DEPRECATED: industry field removed from schema */}
               </div>
             </div>
           </DialogContent>
