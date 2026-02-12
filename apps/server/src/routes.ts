@@ -12192,13 +12192,11 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         // Get archetype prototype for trait profile
         const prototype = archetypePrototypes[primaryArchetype];
         
-        // Normalize trait scores (V2 stores 0-1, V1 expects 0-100)
+        // Trait scores are stored on 0-100 scale from adaptive engine
         const traitScores = session.traitScores as Record<string, number> || {};
         const normalizeScore = (score: number | undefined, fallback: number = 50): number =>  {
           if (score === undefined || score === null) return fallback;
-          // V2 scores are 0-1, convert to 0-100 percentage
-          if (score <= 1) return Math.round(score * 100);
-          // Already in 0-100 range
+          // Scores are already 0-100 from normalizeTraitScore() in adaptive engine
           return Math.round(score);
         };
         
@@ -12316,21 +12314,22 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       if (session) {
         const finalResult = session.finalResult as any;
         archetype = session.primaryArchetype || finalResult?.primaryArchetype || finalResult?.archetype;
+        // Trait scores are already 0-100 from adaptive engine
         traitScores = session.traitScores as Record<string, number> || {};
       } else {
-        // Fallback to legacy role_results
+        // Fallback to legacy role_results (already 0-100 scale)
         const legacyResult = await storage.getRoleResult(userId);
         if (!legacyResult) {
           return res.status(404).json({ message: 'No assessment result found' });
         }
         archetype = legacyResult.primaryArchetype;
         traitScores = {
-          A: legacyResult.affinityScore / 100,
-          O: legacyResult.opennessScore / 100,
-          C: legacyResult.conscientiousnessScore / 100,
-          E: legacyResult.emotionalStabilityScore / 100,
-          X: legacyResult.extraversionScore / 100,
-          P: legacyResult.positivityScore / 100,
+          A: legacyResult.affinityScore,
+          O: legacyResult.opennessScore,
+          C: legacyResult.conscientiousnessScore,
+          E: legacyResult.emotionalStabilityScore,
+          X: legacyResult.extraversionScore,
+          P: legacyResult.positivityScore,
         };
       }
 
@@ -12389,13 +12388,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           totalUserRank,
           archetypeRank,
         },
+        // Trait scores are 0-100 from adaptive engine
         traitScores: {
-          A: typeof traitScores.A === 'number' ? traitScores.A : 0.5,
-          O: typeof traitScores.O === 'number' ? traitScores.O : 0.5,
-          C: typeof traitScores.C === 'number' ? traitScores.C : 0.5,
-          E: typeof traitScores.E === 'number' ? traitScores.E : 0.5,
-          X: typeof traitScores.X === 'number' ? traitScores.X : 0.5,
-          P: typeof traitScores.P === 'number' ? traitScores.P : 0.5,
+          A: typeof traitScores.A === 'number' ? traitScores.A : 50,
+          O: typeof traitScores.O === 'number' ? traitScores.O : 50,
+          C: typeof traitScores.C === 'number' ? traitScores.C : 50,
+          E: typeof traitScores.E === 'number' ? traitScores.E : 50,
+          X: typeof traitScores.X === 'number' ? traitScores.X : 50,
+          P: typeof traitScores.P === 'number' ? traitScores.P : 50,
         }
       });
     } catch (error: any) {
