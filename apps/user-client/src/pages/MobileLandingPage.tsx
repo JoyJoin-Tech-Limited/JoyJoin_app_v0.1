@@ -67,7 +67,7 @@ export default function MobileLandingPage() {
       });
       return;
     }
-    setLocation("/personality-test");
+    setLocation("/onboarding");
   };
 
   const handleLogin = () => {
