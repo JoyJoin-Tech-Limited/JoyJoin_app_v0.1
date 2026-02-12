@@ -52,21 +52,12 @@ import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import NotFound from "@/pages/not-found";
 import LevelUpProvider from "@/components/LevelUpProvider";
-import DuolingoOnboardingPage from "@/pages/DuolingoOnboardingPage";
 import GuidePage from "@/pages/GuidePage";
 import FinalProfileReviewPage from "@/pages/FinalProfileReviewPage";
 import LoginPromptPage from "@/pages/LoginPromptPage";
 import { LoadingScreen } from "@/components/LoadingScreen";
 
 preloadXiaoyueImages();
-
-function RedirectToOnboarding() {
-  const [, setLocation] = useLocation();
-  useEffect(() => {
-    setLocation("/onboarding");
-  }, [setLocation]);
-  return null;
-}
 
 function RedirectToPersonalityTest() {
   const [, setLocation] = useLocation();
@@ -279,8 +270,8 @@ function Router() {
         <Route path="/personality-test/results" component={PersonalityTestResultPage} />
         <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
         
-        {/* 新版 Duolingo-style Onboarding 流程 */}
-        <Route path="/onboarding" component={DuolingoOnboardingPage} />
+        {/* Legacy /onboarding route redirects to personality test */}
+        <Route path="/onboarding" component={PersonalityTestPageV4} />
         {/* Registration routes redirect to personality test (new flow) */}
         <Route path="/registration" component={PersonalityTestPageV4} />
         <Route path="/registration/chat" component={PersonalityTestPageV4} />
