@@ -258,6 +258,11 @@ function generateInsights(primaryArchetype: string, secondaryArchetype: string |
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // 🔧 DEV TOOLS: Debug logging for secret key configuration
+  const DEV_SECRET_KEY = process.env.ADMIN_CREATE_SECRET_KEY;
+  console.log('[DEV TOOLS] Secret key configured:', DEV_SECRET_KEY ? '✅ Yes' : '❌ No');
+  console.log('[DEV TOOLS] Secret key length:', DEV_SECRET_KEY?.length || 0);
+  
   // 🔧 确保 trust proxy 在 session 之前设置（防止 index.ts 漏掉）
   app.set('trust proxy', 1);
   
@@ -12464,13 +12469,30 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // Currently enabled in production for internal testing
   
   // Helper function to verify secret key
-  function verifySecretKey(secretKey: string): boolean {
+  function verifySecretKey(secretKey: string): { valid: boolean; error?: string; hint?: string } {
     const expectedKey = process.env.ADMIN_CREATE_SECRET_KEY;
+    
     if (!expectedKey) {
-      console.error('[Dev Tools] ADMIN_CREATE_SECRET_KEY not set in environment');
-      return false;
+      console.error('[DEV TOOLS] ADMIN_CREATE_SECRET_KEY not set in environment');
+      return { 
+        valid: false, 
+        error: 'ADMIN_CREATE_SECRET_KEY not configured on server',
+        hint: 'Add ADMIN_CREATE_SECRET_KEY=BYPASSSECRET12345678 to .env'
+      };
     }
-    return secretKey === expectedKey;
+    
+    if (secretKey !== expectedKey) {
+      console.error('[DEV TOOLS] Secret key mismatch');
+      console.error('[DEV TOOLS] Expected length:', expectedKey.length);
+      console.error('[DEV TOOLS] Received length:', secretKey?.length || 0);
+      return { 
+        valid: false, 
+        error: 'Invalid secret key',
+        hint: 'Use BYPASSSECRET12345678'
+      };
+    }
+    
+    return { valid: true };
   }
 
   // Create admin account
@@ -12478,10 +12500,15 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     try {
       const { phoneNumber, password, secretKey } = req.body;
 
+      console.log('[DEV] Admin create attempt');
+      console.log('[DEV] Secret key provided:', secretKey ? 'Yes' : 'No');
+      
       // Verify secret key
-      if (!verifySecretKey(secretKey)) {
-        return res.status(403).json({ 
-          message: 'Invalid secret key or ADMIN_CREATE_SECRET_KEY not configured' 
+      const verification = verifySecretKey(secretKey);
+      if (!verification.valid) {
+        return res.status(verification.error?.includes('not configured') ? 500 : 403).json({ 
+          error: verification.error,
+          hint: verification.hint
         });
       }
 
@@ -12562,10 +12589,15 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         topInterests
       } = req.body;
 
+      console.log('[DEV] User create attempt');
+      console.log('[DEV] Secret key provided:', secretKey ? 'Yes' : 'No');
+
       // Verify secret key
-      if (!verifySecretKey(secretKey)) {
-        return res.status(403).json({ 
-          message: 'Invalid secret key or ADMIN_CREATE_SECRET_KEY not configured' 
+      const verification = verifySecretKey(secretKey);
+      if (!verification.valid) {
+        return res.status(verification.error?.includes('not configured') ? 500 : 403).json({ 
+          error: verification.error,
+          hint: verification.hint
         });
       }
 
@@ -12661,10 +12693,15 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { secretKey } = req.body;
       const userId = req.session.userId;
 
+      console.log('[DEV] Personality test bypass attempt');
+      console.log('[DEV] Secret key provided:', secretKey ? 'Yes' : 'No');
+
       // Verify secret key
-      if (!verifySecretKey(secretKey)) {
-        return res.status(403).json({ 
-          message: 'Invalid secret key or ADMIN_CREATE_SECRET_KEY not configured' 
+      const verification = verifySecretKey(secretKey);
+      if (!verification.valid) {
+        return res.status(verification.error?.includes('not configured') ? 500 : 403).json({ 
+          error: verification.error,
+          hint: verification.hint
         });
       }
 
@@ -12707,6 +12744,41 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         error: process.env.NODE_ENV === 'development' ? safeMessage : undefined
       });
     }
+  });
+
+  // Check secret key validity (debugging endpoint)
+  app.post('/api/dev/check-secret', async (req: any, res) => {
+    const { secretKey } = req.body;
+    
+    const DEV_SECRET_KEY = process.env.ADMIN_CREATE_SECRET_KEY;
+    
+    console.log('[DEV] Secret key check');
+    console.log('[DEV] Server has key:', DEV_SECRET_KEY ? 'Yes' : 'No');
+    console.log('[DEV] Key length:', DEV_SECRET_KEY?.length || 0);
+    console.log('[DEV] Provided key length:', secretKey?.length || 0);
+    console.log('[DEV] Match:', secretKey === DEV_SECRET_KEY);
+    
+    if (!DEV_SECRET_KEY) {
+      return res.status(500).json({
+        error: 'ADMIN_CREATE_SECRET_KEY not configured on server',
+        hint: 'Server admin needs to add this to .env file'
+      });
+    }
+    
+    if (secretKey !== DEV_SECRET_KEY) {
+      return res.status(403).json({
+        error: 'Secret key does not match',
+        hint: 'Expected: BYPASSSECRET12345678',
+        serverKeyLength: DEV_SECRET_KEY.length,
+        providedKeyLength: secretKey?.length || 0
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Secret key is valid',
+      keyLength: secretKey.length
+    });
   });
 
   const httpServer = createServer(app);
