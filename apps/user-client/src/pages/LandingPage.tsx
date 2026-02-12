@@ -6,12 +6,12 @@
  * - 4 tilted photo tiles using modular config
  * - Brand logo with ZCOOL QingKe HuangYou font
  * - 3 feature tags
- * - Primary CTA: "看看我会遇见谁" → /personality-test (Option B: Post-Test Signup)
+ * - Primary CTA: "看看我会遇见谁" → /onboarding (8 anchor questions)
  * - Secondary CTA: "已有账号登录" → /login
  * - Legal footer links
  * 
  * Route: /
- * Updated: 2026-02-04 (Post-Test Signup Flow)
+ * Updated: 2026-02-12 (Onboarding First Flow)
  */
 
 import { useLocation } from "wouter";
@@ -35,11 +35,11 @@ export default function LandingPage() {
     { src: femalePortrait, alt: "女生单人", rotation: -5, translateY: -10 },
   ];
 
-  // Primary CTA handler - go directly to personality test (no login required)
+  // Primary CTA handler - go to onboarding (8 anchor questions)
   const handlePrimaryCTA = () => {
     console.log('[Analytics] Landing: Primary CTA clicked');
-    // Option B: Post-Test Signup - show value (personality test) before asking for signup
-    setLocation('/personality-test');
+    // Direct to onboarding (8 anchor questions) first
+    setLocation('/onboarding');
   };
 
   // Secondary CTA handler - go to login
