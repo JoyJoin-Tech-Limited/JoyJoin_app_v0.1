@@ -263,6 +263,22 @@ export function useAdaptiveAssessment() {
       if (data.isComplete && data.result) {
         setResult(data.result);
         setCurrentQuestion(null);
+        
+        // NEW: Persist final result to localStorage for anonymous users
+        if (phase === "pre_signup") {
+          try {
+            const resultData = {
+              sessionId,
+              result: data.result,
+              completedAt: new Date().toISOString(),
+              timestamp: Date.now(),
+            };
+            localStorage.setItem(PRESIGNUP_SESSION_KEY, JSON.stringify(resultData));
+            console.log('[AdaptiveAssessment] Saved anonymous result to localStorage');
+          } catch (e) {
+            console.error('[AdaptiveAssessment] Failed to save result:', e);
+          }
+        }
       } else if (data.nextQuestion) {
         setCurrentQuestion(data.nextQuestion);
       }
