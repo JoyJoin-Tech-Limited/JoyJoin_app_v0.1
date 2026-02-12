@@ -534,7 +534,8 @@ export default function PersonalityTestResultPage() {
   // Load results with fallback chain: authenticated -> sessionId -> anonymous localStorage
   const { data: result, isLoading: resultIsLoading } = useQuery<UnifiedAssessmentResult>({
     queryKey: ['/api/assessment/result'],
-    retry: false,
+    retry: 3, // Retry up to 3 times to handle race conditions
+    retryDelay: 1000, // Wait 1 second between retries
   });
   
   // Fallback 1: Anonymous localStorage results
@@ -788,8 +789,11 @@ export default function PersonalityTestResultPage() {
 
   if (finalIsLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <LoadingLogoSleek loop visible />
+        <p className="text-lg text-muted-foreground animate-pulse">
+          正在生成您的测试结果...
+        </p>
       </div>
     );
   }
@@ -797,8 +801,11 @@ export default function PersonalityTestResultPage() {
   if (!finalResult || !finalResult.primaryArchetype) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center">
+        <div className="text-center space-y-4">
           <div className="text-lg text-muted-foreground">未找到测试结果</div>
+          <p className="text-sm text-muted-foreground">
+            无法加载您的测试结果，请稍后重试
+          </p>
           <Button
             data-testid="button-back-to-test"
             className="mt-4"
