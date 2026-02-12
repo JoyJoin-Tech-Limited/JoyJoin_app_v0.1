@@ -527,7 +527,7 @@ export default function PersonalityTestPageV4() {
               {scenarioText}
             </p>
             <XiaoyueChatBubble 
-              pose="thinking"
+              pose="casual" // xiaoyue pose change
               content={selectedOption 
                 ? getOptionFeedback(currentQuestion.id, selectedOption) || "记下了，很有意思的选择！" 
                 : currentQuestion.questionText
