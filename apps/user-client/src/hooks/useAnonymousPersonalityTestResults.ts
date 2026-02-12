@@ -34,7 +34,7 @@ function transformToUnifiedResult(result: AssessmentResult, completedAt: string)
     extraversionScore: (result.traitScores.X || 0) * 100,
     positivityScore: (result.traitScores.P || 0) * 100,
     totalQuestions: result.totalQuestionsAnswered,
-    chemistryList: result.topMatches.map(match => ({
+    chemistryList: (result.topMatches || []).map(match => ({
       role: match.archetype,
       percentage: Math.round(match.score * 100),
     })),
