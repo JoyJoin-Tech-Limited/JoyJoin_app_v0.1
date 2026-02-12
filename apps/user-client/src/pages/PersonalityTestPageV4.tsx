@@ -167,7 +167,7 @@ function OnboardingProgress({
               {remaining !== undefined && remaining > 0 ? (
                 `第${Math.floor(current)}题 · 还剩约${remaining}题`
               ) : (
-                `第${Math.floor(current)}题 / 约${typeof total === 'string' ? total : total}题`
+                `第${Math.floor(current)}题 / 约${total}题`
               )}
             </span>
             <span className="text-xs font-bold text-primary">
