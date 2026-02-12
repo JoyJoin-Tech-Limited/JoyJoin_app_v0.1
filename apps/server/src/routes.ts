@@ -12535,9 +12535,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       });
     } catch (error: any) {
       console.error('[Dev Tools] Error creating admin:', error);
+      // Sanitize error message to avoid leaking sensitive information
+      const safeMessage = error?.message?.includes('getaddrinfo') 
+        ? 'Database connection failed'
+        : error?.message || 'Failed to create admin account';
       res.status(500).json({ 
         message: 'Failed to create admin account',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: process.env.NODE_ENV === 'development' ? safeMessage : undefined
       });
     }
   });
@@ -12640,9 +12644,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       });
     } catch (error: any) {
       console.error('[Dev Tools] Error creating user:', error);
+      // Sanitize error message to avoid leaking sensitive information
+      const safeMessage = error?.message?.includes('getaddrinfo') 
+        ? 'Database connection failed'
+        : error?.message || 'Failed to create user account';
       res.status(500).json({ 
         message: 'Failed to create user account',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: process.env.NODE_ENV === 'development' ? safeMessage : undefined
       });
     }
   });
@@ -12690,9 +12698,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       });
     } catch (error: any) {
       console.error('[Dev Tools] Error bypassing test:', error);
+      // Sanitize error message to avoid leaking sensitive information
+      const safeMessage = error?.message?.includes('getaddrinfo') 
+        ? 'Database connection failed'
+        : error?.message || 'Failed to bypass personality test';
       res.status(500).json({ 
         message: 'Failed to bypass personality test',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: process.env.NODE_ENV === 'development' ? safeMessage : undefined
       });
     }
   });
