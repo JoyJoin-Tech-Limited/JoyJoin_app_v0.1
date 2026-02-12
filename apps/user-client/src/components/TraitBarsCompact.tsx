@@ -86,7 +86,7 @@ export default function TraitBarsCompact({
         const MotionDiv = animated ? motion.div : "div";
         const animationProps = animated
           ? {
-              initial: { width: 0 },
+              initial: { width: "0%" },
               animate: { width: `${trait.score}%` },
               transition: {
                 duration: 0.8,
