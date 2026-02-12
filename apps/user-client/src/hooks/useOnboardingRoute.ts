@@ -5,13 +5,12 @@
  * Eliminates race conditions by using pure function logic.
  * 
  * Route Order:
- * 1. /onboarding - Registration (AI chat)
- * 2. /personality-test - V4 adaptive assessment
- * 3. /onboarding/setup - Essential data (7 steps)
- * 4. /onboarding/extended - Interest carousel
- * 5. /onboarding/review - Profile preview
- * 6. /guide - Onboarding guide (3 steps)
- * 7. /discover - Main app
+ * 1. /personality-test - Combined registration & V4 adaptive assessment
+ * 2. /onboarding/setup - Essential data (7 steps)
+ * 3. /onboarding/extended - Interest carousel
+ * 4. /onboarding/review - Profile preview
+ * 5. /guide - Onboarding guide (3 steps)
+ * 6. /discover - Main app
  */
 
 import { useMemo } from "react";
@@ -19,7 +18,6 @@ import { useAuth, type AuthUser } from "./useAuth";
 
 export type OnboardingRoute = 
   | '/login'
-  | '/onboarding'
   | '/personality-test'
   | '/onboarding/setup'
   | '/onboarding/extended'
@@ -36,9 +34,9 @@ export function calculateOnboardingRoute(user: AuthUser | undefined): Onboarding
     return '/login';
   }
 
-  // Step 1: Registration not completed
+  // Step 1: Registration not completed (redirects to personality test)
   if (!user.hasCompletedRegistration) {
-    return '/onboarding';
+    return '/personality-test';
   }
 
   // Step 2: Personality test not completed

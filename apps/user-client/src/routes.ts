@@ -19,10 +19,6 @@ export const publicRoutes = {
  * 注册流程路由
  */
 export const onboardingRoutes = {
-  onboarding: '/onboarding',
-  registration: '/registration',
-  registrationChat: '/registration/chat',
-  registrationForm: '/registration/form',
   personalityTest: '/personality-test',
   personalityTestComplete: '/personality-test/complete',
   personalityTestResults: '/personality-test/results',
