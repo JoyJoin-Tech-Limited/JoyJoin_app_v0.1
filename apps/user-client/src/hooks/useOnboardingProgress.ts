@@ -103,7 +103,7 @@ export function useOnboardingProgress(): OnboardingProgress {
 export function getStepRoute(step: OnboardingStep): string {
   switch (step) {
     case 'registration':
-      return '/onboarding';
+      return '/personality-test';
     case 'personality-test':
       return '/personality-test';
     case 'essential-data':
