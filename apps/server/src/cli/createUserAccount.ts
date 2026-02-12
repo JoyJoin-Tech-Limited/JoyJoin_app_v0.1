@@ -27,7 +27,7 @@ function prompt(rl: readline.Interface, question: string): Promise<string> {
   });
 }
 
-async function selectFromMenu(rl: readline.Interface, title: string, options: string[]): Promise<string> {
+async function selectFromMenu(rl: readline.Interface, title: string, options: readonly string[]): Promise<string> {
   console.log(`\n${title}`);
   options.forEach((option, index) => {
     console.log(`  ${index + 1}. ${option}`);
