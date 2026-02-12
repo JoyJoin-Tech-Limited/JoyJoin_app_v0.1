@@ -68,7 +68,7 @@ function OnboardingProgress({
   
   // Detect transition from question 8 to 9
   useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let timeoutId: number | undefined;
 
     if (prevCurrent === 8 && current === 9) {
       setShowTransition(true);
