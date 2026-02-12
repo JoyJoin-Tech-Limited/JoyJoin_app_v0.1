@@ -13,20 +13,13 @@
 import { motion } from "framer-motion";
 import { forwardRef, useState, useEffect } from "react";
 import type { ShareCardVariant } from "@/lib/archetypeShareVariants";
-import PersonalityRadarChart from "./PersonalityRadarChart";
+import TraitBarsCompact from "./TraitBarsCompact";
 import { archetypeConfig } from "@/lib/archetypes";
 import logoFull from "@/assets/joyjoin-logo-full.png";
 import { getCardImagePath, hasCardImage } from "@/lib/archetypeCardImages";
 import { haptics } from "@/lib/haptics";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { getArchetypeSkills } from "@shared/personality/archetypeSkills";
-
-// Module-level constants to avoid recreating on each render
-const GRID_COLS_MAP: Record<number, string> = {
-  1: 'grid-cols-1',
-  2: 'grid-cols-2',
-  3: 'grid-cols-3',
-};
 
 interface PokemonShareCardProps {
   archetype: string;
@@ -57,9 +50,6 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
     // Get archetype tagline from config
     const archetypeInfo = archetypeConfig[archetype];
     const tagline = archetypeInfo?.tagline || "";
-    
-    // Track if the image failed to load (use emoji overlay as fallback)
-    const [imageLoadError, setImageLoadError] = useState(false);
     
     // Track image loading state for skeleton and fade-in
     const [imageLoaded, setImageLoaded] = useState(false);
@@ -109,9 +99,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
         transition={prefersReducedMotion ? {} : { type: "spring", stiffness: 200, damping: 20 }}
         className="relative w-full max-w-[360px] mx-auto"
         style={{ 
-          // Removed maxHeight: '90vh' and aspectRatio: '9/16' to allow dynamic expansion
-          // minHeight ensures card baseline is visible, expands automatically for content-heavy archetypes
-          minHeight: 'clamp(580px, 85vh, 780px)',
+          // Fixed height with overflow hidden to prevent mobile overflow
+          height: 'clamp(560px, 78vh, 720px)',
+          overflow: 'hidden',
           fontFamily: 'ZCOOL QingKe HuangYou, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif'
         }}
       >
@@ -121,19 +111,16 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
           style={{ boxShadow: `0 25px 70px ${variant.primaryColor}50` }}
         >
           {/* Enhanced dual-layer golden border - adjusted for 9:16 */}
-          <div className="absolute inset-0 rounded-3xl border-[10px] border-yellow-400/90 pointer-events-none shadow-[inset_0_2px_8px_rgba(0,0,0,0.2)]" 
+          <div className="absolute inset-0 rounded-3xl border-[6px] border-yellow-400/90 pointer-events-none shadow-[inset_0_2px_8px_rgba(0,0,0,0.2)]" 
                style={{ 
                  background: `linear-gradient(135deg, rgba(250,204,21,0.3) 0%, transparent 50%, rgba(250,204,21,0.2) 100%)`,
                }}
           />
-          <div className="absolute inset-[10px] rounded-2xl border-[6px] border-yellow-500/60 pointer-events-none shadow-[inset_0_1px_4px_rgba(0,0,0,0.15)]" />
+          <div className="absolute inset-[6px] rounded-2xl border-[3px] border-yellow-500/60 pointer-events-none shadow-[inset_0_1px_4px_rgba(0,0,0,0.15)]" />
           
           {/* Enhanced holographic overlay - Pokemon card style - only in preview */}
           {isPreview && (
-            <>
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/30 via-transparent to-purple-200/20 pointer-events-none" />
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-tl from-pink-200/20 via-transparent to-blue-200/20 pointer-events-none" />
-            </>
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/30 via-transparent to-purple-200/20 pointer-events-none" />
           )}
           
           {/* Enhanced corner shine effects (Pokemon card style) - only in preview mode */}
@@ -141,7 +128,6 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             <>
               <div className="absolute top-6 right-6 w-16 h-16 bg-white/40 rounded-full blur-xl pointer-events-none" />
               <div className="absolute top-8 right-8 w-10 h-10 bg-yellow-200/50 rounded-full blur-lg pointer-events-none" />
-              <div className="absolute bottom-6 left-6 w-14 h-14 bg-white/30 rounded-full blur-lg pointer-events-none" />
             </>
           )}
           
@@ -211,7 +197,6 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                       imgElement.src = illustrationUrl;
                     } else {
                       imgElement.style.display = 'none';
-                      setImageLoadError(true);
                     }
                     setImageLoaded(true); // Set to true even on error to hide skeleton
                   }}
@@ -253,8 +238,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               {tagline && (
                 <div className="bg-gray-100 rounded-full px-3 py-1 border border-gray-200">
                   <p 
-                    className="text-xs font-medium text-center"
+                    className="text-xs font-medium text-center truncate"
                     style={{ color: variant.primaryColor }}
+                    title={tagline}
                   >
                     {tagline}
                   </p>
@@ -263,7 +249,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
             </div>
 
             {/* Stats Section - 2 Column Layout with Prominent Archetype Collection Number */}
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl px-4 py-3 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
+            <div className="bg-white/50 rounded-2xl px-4 py-3 mb-1.5 sm:mb-2 shadow-sm border border-gray-100">
               <div className="grid grid-cols-[1.8fr_1fr] gap-3">
                 {/* LEFT: HERO TAG - 原型编号 with glassmorphism */}
                 <div className="relative overflow-hidden rounded-xl backdrop-blur-md bg-white/40 border border-white/50 shadow-lg px-3 py-2.5">
@@ -278,16 +264,16 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   {/* Hero Content - Larger numbers */}
                   <div className="flex items-baseline gap-1.5">
                     <div className="flex items-baseline">
-                      <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+                      <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
                         No.
                       </span>
-                      <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 tracking-tight">
+                      <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 tracking-tight">
                         {rankings.archetypeRank}
                       </span>
                     </div>
                     
                     {/* Archetype Name */}
-                    <span className="text-sm font-bold text-indigo-700 truncate">
+                    <span className="text-xs font-bold text-indigo-700 truncate">
                       {archetype}
                     </span>
                   </div>
@@ -316,25 +302,27 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
 
             {/* Vertical Stack Layout - Full width sections */}
             <div className="space-y-3.5 px-4">
-              {/* 1. Radar Chart - Full width, centered with background */}
-              <div className="flex justify-center py-2">
-                <div className="relative">
-                  {/* Semi-transparent background for better visibility */}
-                  <div className="absolute inset-0 bg-white/70 backdrop-blur-sm rounded-xl -m-2" />
-                  <div className="relative">
-                    <PersonalityRadarChart 
-                      affinityScore={traitScores.A}
-                      opennessScore={traitScores.O}
-                      conscientiousnessScore={traitScores.C}
-                      emotionalStabilityScore={traitScores.E}
-                      extraversionScore={traitScores.X}
-                      positivityScore={traitScores.P}
-                      primaryColor={variant.primaryColor}
-                      compactMode={true}
-                      variant="compact"
-                    />
-                  </div>
+              {/* 1. Trait Bars - Full width */}
+              <div className="bg-gradient-to-br from-indigo-50/90 to-purple-50/90 rounded-xl px-4 py-3 border border-indigo-200/30">
+                {/* Header */}
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-base">📊</span>
+                  <span className="text-sm font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+                    特质面板
+                  </span>
                 </div>
+                
+                {/* Trait Bars */}
+                <TraitBarsCompact
+                  affinityScore={traitScores.A}
+                  opennessScore={traitScores.O}
+                  conscientiousnessScore={traitScores.C}
+                  emotionalStabilityScore={traitScores.E}
+                  extraversionScore={traitScores.X}
+                  positivityScore={traitScores.P}
+                  primaryColor={variant.primaryColor}
+                  animated={isPreview}
+                />
               </div>
               
               {/* 2. Energy Bar - Full width */}
@@ -355,9 +343,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               
               {/* 3. Skills Section - Side by side with improved readability */}
               {skillSet ? (
-                <div className="bg-gradient-to-br from-purple-50/90 to-pink-50/90 rounded-xl p-4 border border-purple-200/30">
+                <div className="bg-gradient-to-br from-purple-50/90 to-pink-50/90 rounded-xl p-2 border border-purple-200/30">
                   {/* Header with Attribute */}
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-base">⚡</span>
                       <span className="text-sm font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
@@ -371,9 +359,9 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                   </div>
                   
                   {/* Two-Column Layout: Active | Passive with improved spacing */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
                     {/* ACTIVE SKILL - Left Column */}
-                    <div className="relative bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-3 border-2 border-orange-300/60 shadow-sm">
+                    <div className="relative bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-2 border-2 border-orange-300/60 shadow-sm">
                       {/* Active Badge */}
                       <div className="absolute -top-2 -right-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-md z-10">
                         主动
@@ -384,8 +372,8 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                         <span className="text-xl">{skillSet.activeSkill.icon}</span>
                       </div>
                       
-                      {/* Skill Name - LARGER */}
-                      <div className="text-base font-bold text-orange-800 text-center mb-2 leading-tight">
+                      {/* Skill Name - REDUCED */}
+                      <div className="text-sm font-bold text-orange-800 text-center mb-2 leading-tight">
                         {skillSet.activeSkill.name}
                       </div>
                       
@@ -399,14 +387,14 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                         </span>
                       </div>
                       
-                      {/* Short Effect - LARGER and more prominent */}
-                      <p className="text-sm font-semibold text-orange-700 text-center leading-snug">
+                      {/* Short Effect - REDUCED with line-clamp */}
+                      <p className="text-xs font-semibold text-orange-700 text-center leading-snug line-clamp-2" title={skillSet.activeSkill.shortEffect}>
                         {skillSet.activeSkill.shortEffect}
                       </p>
                     </div>
                     
                     {/* PASSIVE SKILL - Right Column */}
-                    <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-3 border-2 border-blue-300/60 shadow-sm">
+                    <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-2 border-2 border-blue-300/60 shadow-sm">
                       {/* Passive Badge */}
                       <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-md z-10">
                         被动
@@ -417,8 +405,8 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                         <span className="text-xl">{skillSet.passiveSkill.icon}</span>
                       </div>
                       
-                      {/* Skill Name - LARGER */}
-                      <div className="text-base font-bold text-blue-800 text-center mb-2 leading-tight">
+                      {/* Skill Name - REDUCED */}
+                      <div className="text-sm font-bold text-blue-800 text-center mb-2 leading-tight">
                         {skillSet.passiveSkill.name}
                       </div>
                       
@@ -428,8 +416,8 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                         <span className="text-xs text-gray-600 font-medium">常驻效果</span>
                       </div>
                       
-                      {/* Short Effect - LARGER and more prominent */}
-                      <p className="text-sm font-semibold text-blue-700 text-center leading-snug">
+                      {/* Short Effect - REDUCED with line-clamp */}
+                      <p className="text-xs font-semibold text-blue-700 text-center leading-snug line-clamp-2" title={skillSet.passiveSkill.shortEffect}>
                         {skillSet.passiveSkill.shortEffect}
                       </p>
                     </div>
@@ -444,7 +432,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
               {/* 4. Social Positioning - Full width */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg px-3 py-2.5">
                 <div className="text-sm font-bold text-gray-700 mb-1">🎯 社交定位</div>
-                <p className="text-xs text-gray-600 leading-relaxed">
+                <p className="text-xs text-gray-600 leading-relaxed line-clamp-3" title={archetypeInfo?.description}>
                   {archetypeInfo?.description}
                 </p>
               </div>
@@ -452,9 +440,6 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
 
             {/* SECTION 3: FOOTER - Foil Stamp Authentication Bar with STICKY positioning */}
             <div className="flex-none relative overflow-hidden">
-              {/* Top embossed edge */}
-              <div className="h-[2px] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
-              
               {/* Main metallic gold bar */}
               <div 
                 className={`relative px-3 py-2.5 ${
@@ -518,12 +503,8 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
                 </div>
               </div>
 
-              {/* Bottom embossed edge */}
-              <div className="h-[2px] bg-gradient-to-r from-transparent via-black/20 to-transparent" />
-              
-              {/* Bottom multi-layer strip */}
+              {/* Bottom border */}
               <div className="h-1 bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600" />
-              <div className="h-[2px] bg-gradient-to-r from-transparent via-amber-900/40 to-transparent" />
             </div>
           </div>
         </div>
