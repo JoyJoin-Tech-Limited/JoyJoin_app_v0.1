@@ -12459,6 +12459,256 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  // ============ Development Tools API Endpoints ============
+  // TODO: Restrict to development only before production launch
+  // Currently enabled in production for internal testing
+  
+  // Helper function to verify secret key
+  function verifySecretKey(secretKey: string): boolean {
+    const expectedKey = process.env.ADMIN_CREATE_SECRET_KEY;
+    if (!expectedKey) {
+      console.error('[Dev Tools] ADMIN_CREATE_SECRET_KEY not set in environment');
+      return false;
+    }
+    return secretKey === expectedKey;
+  }
+
+  // Create admin account
+  app.post('/api/dev/admin/create', async (req: any, res) => {
+    try {
+      const { phoneNumber, password, secretKey } = req.body;
+
+      // Verify secret key
+      if (!verifySecretKey(secretKey)) {
+        return res.status(403).json({ 
+          message: 'Invalid secret key or ADMIN_CREATE_SECRET_KEY not configured' 
+        });
+      }
+
+      // Validate inputs
+      if (!phoneNumber || !password) {
+        return res.status(400).json({ message: 'Phone number and password are required' });
+      }
+
+      // Hash password
+      const bcrypt = await import('bcrypt');
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Check if user exists
+      const existingUsers = await storage.getUserByPhone(phoneNumber);
+      let user;
+
+      if (existingUsers.length > 0) {
+        // Update existing user to be admin
+        user = existingUsers[0];
+        user = await storage.updateUser(user.id, {
+          password: hashedPassword,
+          isAdmin: true,
+          hasCompletedPersonalityTest: true,
+          hasCompletedRegistration: true,
+        });
+        console.log(`[Dev Tools] Updated user ${user.id} to admin account`);
+      } else {
+        // Create new admin user
+        user = await storage.createUserWithPhone({
+          phoneNumber,
+          email: `admin_${Date.now()}@joyjoin.app`,
+          firstName: 'Admin',
+          lastName: 'User',
+        });
+        user = await storage.updateUser(user.id, {
+          password: hashedPassword,
+          isAdmin: true,
+          hasCompletedPersonalityTest: true,
+          hasCompletedRegistration: true,
+          displayName: 'Admin',
+          primaryArchetype: '开心柯基', // Default archetype
+        });
+        console.log(`[Dev Tools] Created new admin account ${user.id}`);
+      }
+
+      res.json({
+        success: true,
+        message: 'Admin account created/updated successfully',
+        userId: user.id,
+        phoneNumber: user.phoneNumber,
+      });
+    } catch (error: any) {
+      console.error('[Dev Tools] Error creating admin:', error);
+      // Sanitize error message to avoid leaking sensitive information
+      const safeMessage = error?.message?.includes('getaddrinfo') 
+        ? 'Database connection failed'
+        : error?.message || 'Failed to create admin account';
+      res.status(500).json({ 
+        message: 'Failed to create admin account',
+        error: process.env.NODE_ENV === 'development' ? safeMessage : undefined
+      });
+    }
+  });
+
+  // Create user account with bypass
+  app.post('/api/dev/user/create', async (req: any, res) => {
+    try {
+      const { 
+        phoneNumber, 
+        password, 
+        secretKey, 
+        displayName, 
+        archetype, 
+        gender, 
+        city,
+        age,
+        industry,
+        topInterests
+      } = req.body;
+
+      // Verify secret key
+      if (!verifySecretKey(secretKey)) {
+        return res.status(403).json({ 
+          message: 'Invalid secret key or ADMIN_CREATE_SECRET_KEY not configured' 
+        });
+      }
+
+      // Validate required inputs
+      if (!phoneNumber || !password || !displayName || !archetype || !gender || !city) {
+        return res.status(400).json({ 
+          message: 'Phone number, password, displayName, archetype, gender, and city are required' 
+        });
+      }
+
+      // Validate archetype
+      if (!ARCHETYPE_NAMES.includes(archetype as ArchetypeName)) {
+        return res.status(400).json({ 
+          message: 'Invalid archetype. Must be one of the 12 archetypes.' 
+        });
+      }
+
+      // Hash password
+      const bcrypt = await import('bcrypt');
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Check if user exists
+      const existingUsers = await storage.getUserByPhone(phoneNumber);
+      let user;
+
+      const userData: any = {
+        password: hashedPassword,
+        displayName,
+        primaryArchetype: archetype,
+        gender,
+        currentCity: city,
+        hasCompletedPersonalityTest: true,
+        hasCompletedRegistration: true,
+      };
+
+      if (age) {
+        userData.age = parseInt(age);
+      }
+
+      if (industry) {
+        userData.currentOccupation = industry;
+      }
+
+      if (topInterests) {
+        // Parse comma-separated interests
+        const interestsArray = topInterests.split(',').map((i: string) => i.trim()).filter((i: string) => i);
+        if (interestsArray.length > 0) {
+          userData.interestsTop = interestsArray;
+        }
+      }
+
+      if (existingUsers.length > 0) {
+        // Update existing user
+        user = existingUsers[0];
+        user = await storage.updateUser(user.id, userData);
+        console.log(`[Dev Tools] Updated user ${user.id}`);
+      } else {
+        // Create new user
+        user = await storage.createUserWithPhone({
+          phoneNumber,
+          email: `user_${Date.now()}@joyjoin.app`,
+          firstName: displayName.split(' ')[0] || displayName,
+          lastName: displayName.split(' ')[1] || '',
+        });
+        user = await storage.updateUser(user.id, userData);
+        console.log(`[Dev Tools] Created new user ${user.id}`);
+      }
+
+      res.json({
+        success: true,
+        message: 'User account created/updated successfully',
+        userId: user.id,
+        phoneNumber: user.phoneNumber,
+        displayName: user.displayName,
+        archetype: user.primaryArchetype,
+      });
+    } catch (error: any) {
+      console.error('[Dev Tools] Error creating user:', error);
+      // Sanitize error message to avoid leaking sensitive information
+      const safeMessage = error?.message?.includes('getaddrinfo') 
+        ? 'Database connection failed'
+        : error?.message || 'Failed to create user account';
+      res.status(500).json({ 
+        message: 'Failed to create user account',
+        error: process.env.NODE_ENV === 'development' ? safeMessage : undefined
+      });
+    }
+  });
+
+  // Bypass personality test for current user
+  app.post('/api/dev/personality-test/bypass', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { secretKey } = req.body;
+      const userId = req.session.userId;
+
+      // Verify secret key
+      if (!verifySecretKey(secretKey)) {
+        return res.status(403).json({ 
+          message: 'Invalid secret key or ADMIN_CREATE_SECRET_KEY not configured' 
+        });
+      }
+
+      if (!userId) {
+        return res.status(401).json({ message: 'User not authenticated' });
+      }
+
+      // Get user
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Set default archetype if none exists
+      const updates: any = {
+        hasCompletedPersonalityTest: true,
+      };
+
+      if (!user.primaryArchetype) {
+        updates.primaryArchetype = '开心柯基'; // Default archetype
+      }
+
+      await storage.updateUser(userId, updates);
+
+      console.log(`[Dev Tools] Bypassed personality test for user ${userId}`);
+
+      res.json({
+        success: true,
+        message: 'Personality test bypassed successfully',
+        archetype: user.primaryArchetype || '开心柯基',
+      });
+    } catch (error: any) {
+      console.error('[Dev Tools] Error bypassing test:', error);
+      // Sanitize error message to avoid leaking sensitive information
+      const safeMessage = error?.message?.includes('getaddrinfo') 
+        ? 'Database connection failed'
+        : error?.message || 'Failed to bypass personality test';
+      res.status(500).json({ 
+        message: 'Failed to bypass personality test',
+        error: process.env.NODE_ENV === 'development' ? safeMessage : undefined
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

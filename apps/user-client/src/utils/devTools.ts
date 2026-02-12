@@ -1,0 +1,281 @@
+// TODO: Restrict to development only before production launch
+// Currently enabled in production for internal testing
+
+const ARCHETYPES = [
+  '开心柯基',
+  '太阳鸡',
+  '夸夸豚',
+  '机智狐',
+  '淡定海豚',
+  '织网蛛',
+  '暖心熊',
+  '灵感章鱼',
+  '沉思猫头鹰',
+  '定心大象',
+  '稳如龟',
+  '隐身猫',
+];
+
+const GENDERS = ['男性', '女性', '不透露'];
+const CITIES = ['香港', '深圳', '广州', '北京', '上海'];
+
+// Helper function to prompt for input
+async function promptUser(message: string): Promise<string> {
+  return new Promise((resolve) => {
+    const input = prompt(message);
+    resolve(input || '');
+  });
+}
+
+// Helper function to show numbered menu and get selection
+async function selectFromMenu(title: string, options: string[]): Promise<string> {
+  console.log(`\n${title}`);
+  options.forEach((option, index) => {
+    console.log(`  ${index + 1}. ${option}`);
+  });
+  
+  while (true) {
+    const answer = await promptUser('\nEnter number:');
+    const num = parseInt(answer);
+    if (num >= 1 && num <= options.length) {
+      return options[num - 1];
+    }
+    console.error('❌ Invalid selection. Please try again.');
+  }
+}
+
+// API helper
+async function apiCall(endpoint: string, body: any): Promise<any> {
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(body),
+  });
+
+  const data = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(data.message || 'API request failed');
+  }
+  
+  return data;
+}
+
+// Dev tools object
+export const devTools = {
+  help() {
+    console.log(`
+🔧 JoyJoin Development Tools
+============================
+
+Available Commands:
+------------------
+window.dev.help()           - Show this help message
+window.dev.archetypes()     - List all 12 archetypes
+window.dev.createAdmin()    - Create admin account (interactive)
+window.dev.createUser()     - Create user account (interactive)
+window.dev.bypassTest()     - Bypass personality test for current user
+
+Examples:
+---------
+// List archetypes
+window.dev.archetypes()
+
+// Create admin account
+window.dev.createAdmin()
+> Enter secret key: BYPASSSECRET12345678
+> Enter phone number: +8613800138000
+> Enter password: admin123
+
+// Create user account
+window.dev.createUser()
+> Enter secret key: BYPASSSECRET12345678
+> Enter phone number: +8613900139000
+> Enter password: user123
+> ... (follow prompts)
+
+// Bypass personality test
+window.dev.bypassTest()
+> Enter secret key: BYPASSSECRET12345678
+
+Security:
+---------
+⚠️ All commands require secret key authentication
+⚠️ Currently enabled in production for internal testing
+⚠️ TODO: Disable in production before public launch
+    `);
+  },
+
+  archetypes() {
+    console.log('\n🎭 JoyJoin 12 Archetypes:');
+    console.log('========================\n');
+    ARCHETYPES.forEach((archetype, index) => {
+      console.log(`${index + 1}. ${archetype}`);
+    });
+    console.log('\nUse these names when creating accounts or selecting archetypes.\n');
+  },
+
+  async createAdmin() {
+    try {
+      console.log('\n🔧 Create Admin Account');
+      console.log('=====================\n');
+
+      // Step 1: Secret key
+      const secretKey = await promptUser('🔐 Enter secret key:');
+      if (!secretKey) {
+        console.error('❌ Secret key required');
+        return;
+      }
+
+      // Step 2: Phone number
+      const phoneNumber = await promptUser('📞 Enter phone number (e.g., +8613800138000):');
+      if (!phoneNumber) {
+        console.error('❌ Phone number required');
+        return;
+      }
+
+      // Step 3: Password
+      const password = await promptUser('🔑 Enter password:');
+      if (!password) {
+        console.error('❌ Password required');
+        return;
+      }
+
+      console.log('\n⏳ Creating admin account...');
+
+      const result = await apiCall('/api/dev/admin/create', {
+        phoneNumber,
+        password,
+        secretKey,
+      });
+
+      console.log('\n✅ Success! Admin account created:');
+      console.log(`   User ID: ${result.userId}`);
+      console.log(`   Phone: ${result.phoneNumber}`);
+      console.log('\n   Login at: /admin/login');
+      console.log('   Use phone + password to login');
+    } catch (error: any) {
+      console.error('❌ Error:', error.message);
+    }
+  },
+
+  async createUser() {
+    try {
+      console.log('\n🔧 Create User Account');
+      console.log('====================\n');
+
+      // Step 1: Secret key
+      const secretKey = await promptUser('🔐 Enter secret key:');
+      if (!secretKey) {
+        console.error('❌ Secret key required');
+        return;
+      }
+
+      // Step 2: Phone number
+      const phoneNumber = await promptUser('📞 Enter phone number (e.g., +8613900139000):');
+      if (!phoneNumber) {
+        console.error('❌ Phone number required');
+        return;
+      }
+
+      // Step 3: Password
+      const password = await promptUser('🔑 Enter password:');
+      if (!password) {
+        console.error('❌ Password required');
+        return;
+      }
+
+      // Step 4: Display name
+      const displayName = await promptUser('👤 Enter display name:');
+      if (!displayName) {
+        console.error('❌ Display name required');
+        return;
+      }
+
+      // Step 5: Archetype selection
+      const archetype = await selectFromMenu('🎭 Select archetype:', ARCHETYPES);
+
+      // Step 6: Gender selection
+      const gender = await selectFromMenu('⚧️ Select gender:', GENDERS);
+
+      // Step 7: City selection
+      const city = await selectFromMenu('🌆 Select city:', CITIES);
+
+      // Step 8: Age (optional)
+      const ageStr = await promptUser('🎂 Enter age (optional, press Cancel/ESC to skip):');
+      const age = ageStr ? parseInt(ageStr) : undefined;
+
+      // Step 9: Industry (optional)
+      const industry = await promptUser('💼 Enter industry (optional, press Cancel/ESC to skip):');
+
+      // Step 10: Top interests (optional)
+      const topInterests = await promptUser('❤️ Enter interests (comma-separated, optional, press Cancel/ESC to skip):');
+
+      console.log('\n⏳ Creating user account...');
+
+      const result = await apiCall('/api/dev/user/create', {
+        phoneNumber,
+        password,
+        secretKey,
+        displayName,
+        archetype,
+        gender,
+        city,
+        age: age ? String(age) : undefined,
+        industry: industry || undefined,
+        topInterests: topInterests || undefined,
+      });
+
+      console.log('\n✅ Success! User account created:');
+      console.log(`   User ID: ${result.userId}`);
+      console.log(`   Phone: ${result.phoneNumber}`);
+      console.log(`   Display Name: ${result.displayName}`);
+      console.log(`   Archetype: ${result.archetype}`);
+      console.log('\n   Login at: /login');
+      console.log('   Use phone + verification code (demo: 666666)');
+    } catch (error: any) {
+      console.error('❌ Error:', error.message);
+    }
+  },
+
+  async bypassTest() {
+    try {
+      console.log('\n🔧 Bypass Personality Test');
+      console.log('========================\n');
+
+      // Step 1: Secret key
+      const secretKey = await promptUser('🔐 Enter secret key:');
+      if (!secretKey) {
+        console.error('❌ Secret key required');
+        return;
+      }
+
+      console.log('\n⏳ Bypassing personality test...');
+
+      const result = await apiCall('/api/dev/personality-test/bypass', {
+        secretKey,
+      });
+
+      console.log('\n✅ Success! Personality test bypassed');
+      console.log(`   Archetype: ${result.archetype}`);
+      console.log('\n   Redirecting to discover page...');
+
+      // Redirect to discover page
+      setTimeout(() => {
+        window.location.href = '/discover';
+      }, 1000);
+    } catch (error: any) {
+      console.error('❌ Error:', error.message);
+    }
+  },
+};
+
+// Type declaration for global window
+declare global {
+  interface Window {
+    dev: typeof devTools;
+  }
+}
