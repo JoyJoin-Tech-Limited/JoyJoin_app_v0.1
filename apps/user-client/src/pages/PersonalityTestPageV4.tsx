@@ -244,27 +244,22 @@ export default function PersonalityTestPageV4() {
 
   useEffect(() => {
     if (isComplete && result) {
-      // Don't pre-populate query cache - let result page fetch normally
-      // The fallback mechanism will handle cases where primary endpoint returns null
-      
       clearV4PreSignupAnswers();
       
       // Invalidate query keys to ensure result page fetches fresh data
       queryClient.invalidateQueries({ queryKey: ['/api/assessment/result'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assessment/anonymous-result'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/results'] });
       queryClient.invalidateQueries({ queryKey: ['/api/personality-test/stats'] });
       
-      // Save checkpoint after completing personality test (await to ensure server state is updated)
-      // Use async IIFE to properly await inside useEffect
+      // Save checkpoint and navigate
       (async () => {
         try {
           await saveCheckpoint.mutateAsync('personality-test');
         } catch (e) {
           console.error('[PersonalityTestPageV4] Failed to save checkpoint:', e);
-          // Non-blocking - continue navigation even if checkpoint fails
         }
         
-        // Navigate to results page after checkpoint completes
         setLocation('/personality-test/results');
       })();
     }
