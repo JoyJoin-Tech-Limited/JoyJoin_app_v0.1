@@ -449,6 +449,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
                   transformStyle: "preserve-3d",
                   position: "relative",
                   width: "100%",
+                  aspectRatio: "3 / 5",
                 }}
                 className="relative"
               >
