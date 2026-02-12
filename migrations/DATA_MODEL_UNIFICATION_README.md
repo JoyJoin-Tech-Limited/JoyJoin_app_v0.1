@@ -213,7 +213,7 @@ If issues arise, rollback steps:
 
 - [DEVELOPER_QUICK_REFERENCE.md](../DEVELOPER_QUICK_REFERENCE.md)
 - [PRODUCT_REQUIREMENTS.md](../PRODUCT_REQUIREMENTS.md)
-- [Interest Carousel Implementation](../IMPLEMENTATION_SUMMARY_INTERESTS.md)
+- [Interest Carousel Implementation](../archived/docs/IMPLEMENTATION_SUMMARY_INTERESTS.md)
 
 ---
 
