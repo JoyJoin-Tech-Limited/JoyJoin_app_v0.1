@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { AdaptiveProgress } from "@/components/ui/progress-adaptive";
 import { Progress } from "@/components/ui/progress";
 import { SegmentedProgress } from "@/components/ui/progress-segmented";
 import { Badge } from "@/components/ui/badge";
@@ -69,19 +68,31 @@ function OnboardingProgress({
   
   // Detect transition from question 8 to 9
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
     if (prevCurrent === 8 && current === 9) {
       setShowTransition(true);
       // Trigger haptic feedback at transition
       haptics.medium();
       // Reset transition state after animation
-      setTimeout(() => setShowTransition(false), 1000);
+      timeoutId = window.setTimeout(() => setShowTransition(false), 1000);
     }
     setPrevCurrent(current);
+
+    return () => {
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [current, prevCurrent]);
   
   // Determine which progress bar to show
   const isAnchorPhase = current >= 1 && current <= 8;
-  const isAdaptivePhase = current >= 9;
+  
+  // Dynamic accent color for smooth progress bar
+  const accentColor = currentAccent 
+    ? `hsl(${currentAccent.h}, ${currentAccent.s}%, ${currentAccent.l}%)` 
+    : undefined;
   
   return (
     <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3 safe-top">
@@ -152,6 +163,10 @@ function OnboardingProgress({
                       "h-2 mb-2 transition-all duration-500",
                       showTransition && !prefersReducedMotion && "shadow-lg shadow-primary/20"
                     )}
+                    style={accentColor ? {
+                      // @ts-ignore - CSS variable for dynamic accent color
+                      '--progress-accent': accentColor,
+                    } as React.CSSProperties : undefined}
                   />
                 </motion.div>
               )}
