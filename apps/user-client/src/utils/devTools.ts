@@ -73,14 +73,18 @@ export const devTools = {
 
 Available Commands:
 ------------------
-window.dev.help()           - Show this help message
-window.dev.archetypes()     - List all 12 archetypes
-window.dev.createAdmin()    - Create admin account (interactive)
-window.dev.createUser()     - Create user account (interactive)
-window.dev.bypassTest()     - Bypass personality test for current user
+window.dev.help()              - Show this help message
+window.dev.checkSecretKey()    - Test if secret key is valid (NEW!)
+window.dev.archetypes()        - List all 12 archetypes
+window.dev.createAdmin()       - Create admin account (interactive)
+window.dev.createUser()        - Create user account (interactive)
+window.dev.bypassTest()        - Bypass personality test for current user
 
 Examples:
 ---------
+// Test your secret key first
+window.dev.checkSecretKey()
+
 // List archetypes
 window.dev.archetypes()
 
@@ -101,6 +105,12 @@ window.dev.createUser()
 window.dev.bypassTest()
 > Enter secret key: BYPASSSECRET12345678
 
+Troubleshooting:
+----------------
+- If getting "Invalid secret key", try window.dev.checkSecretKey()
+- Make sure you're using: BYPASSSECRET12345678
+- Check server logs for detailed error messages
+
 Security:
 ---------
 ⚠️ All commands require secret key authentication
@@ -120,25 +130,27 @@ Security:
 
   async createAdmin() {
     try {
-      console.log('\n🔧 Create Admin Account');
-      console.log('=====================\n');
+      console.log('🔐 Admin Account Creator');
+      console.log('========================\n');
 
       // Step 1: Secret key
-      const secretKey = await promptUser('🔐 Enter secret key:');
+      const secretKey = await promptUser('🔑 Enter secret key:');
       if (!secretKey) {
         console.error('❌ Secret key required');
         return;
       }
 
+      console.log('🔍 Verifying secret key...');
+
       // Step 2: Phone number
-      const phoneNumber = await promptUser('📞 Enter phone number (e.g., +8613800138000):');
+      const phoneNumber = await promptUser('📱 Enter phone number (11 digits):');
       if (!phoneNumber) {
         console.error('❌ Phone number required');
         return;
       }
 
       // Step 3: Password
-      const password = await promptUser('🔑 Enter password:');
+      const password = await promptUser('🔒 Enter password:');
       if (!password) {
         console.error('❌ Password required');
         return;
@@ -146,43 +158,55 @@ Security:
 
       console.log('\n⏳ Creating admin account...');
 
-      const result = await apiCall('/api/dev/admin/create', {
-        phoneNumber,
-        password,
-        secretKey,
+      const response = await fetch('/api/dev/admin/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber, password, secretKey }),
+        credentials: 'include',
       });
 
-      console.log('\n✅ Success! Admin account created:');
-      console.log(`   User ID: ${result.userId}`);
-      console.log(`   Phone: ${result.phoneNumber}`);
-      console.log('\n   Login at: /admin/login');
-      console.log('   Use phone + password to login');
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('❌ Error:', data.error || data.message || 'Unknown error');
+        if (data.hint) console.log('💡 Hint:', data.hint);
+        return;
+      }
+
+      console.log('\n✅ Admin account created successfully!');
+      console.log('📋 Login details:');
+      console.log('   Phone:', phoneNumber);
+      console.log('   Password:', password);
+      console.log('   Admin Portal: ' + window.location.origin + '/admin/login');
     } catch (error: any) {
-      console.error('❌ Error:', error.message);
+      console.error('❌ Network error:', error);
+      console.log('💡 Make sure the API server is running');
     }
   },
 
   async createUser() {
     try {
-      console.log('\n🔧 Create User Account');
+      console.log('🔐 User Account Creator');
       console.log('====================\n');
 
       // Step 1: Secret key
-      const secretKey = await promptUser('🔐 Enter secret key:');
+      const secretKey = await promptUser('🔑 Enter secret key:');
       if (!secretKey) {
         console.error('❌ Secret key required');
         return;
       }
 
+      console.log('🔍 Verifying secret key...');
+
       // Step 2: Phone number
-      const phoneNumber = await promptUser('📞 Enter phone number (e.g., +8613900139000):');
+      const phoneNumber = await promptUser('📱 Enter phone number (e.g., +8613900139000):');
       if (!phoneNumber) {
         console.error('❌ Phone number required');
         return;
       }
 
       // Step 3: Password
-      const password = await promptUser('🔑 Enter password:');
+      const password = await promptUser('🔒 Enter password:');
       if (!password) {
         console.error('❌ Password required');
         return;
@@ -216,51 +240,77 @@ Security:
 
       console.log('\n⏳ Creating user account...');
 
-      const result = await apiCall('/api/dev/user/create', {
-        phoneNumber,
-        password,
-        secretKey,
-        displayName,
-        archetype,
-        gender,
-        city,
-        age: age ? String(age) : undefined,
-        industry: industry || undefined,
-        topInterests: topInterests || undefined,
+      const response = await fetch('/api/dev/user/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumber,
+          password,
+          secretKey,
+          displayName,
+          archetype,
+          gender,
+          city,
+          age: age ? String(age) : undefined,
+          industry: industry || undefined,
+          topInterests: topInterests || undefined,
+        }),
+        credentials: 'include',
       });
 
-      console.log('\n✅ Success! User account created:');
-      console.log(`   User ID: ${result.userId}`);
-      console.log(`   Phone: ${result.phoneNumber}`);
-      console.log(`   Display Name: ${result.displayName}`);
-      console.log(`   Archetype: ${result.archetype}`);
-      console.log('\n   Login at: /login');
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('❌ Error:', data.error || data.message || 'Unknown error');
+        if (data.hint) console.log('💡 Hint:', data.hint);
+        return;
+      }
+
+      console.log('\n✅ User account created successfully!');
+      console.log('📋 Login details:');
+      console.log('   Phone:', phoneNumber);
+      console.log('   Display Name:', displayName);
+      console.log('   Archetype:', archetype);
+      console.log('\n   Login at: ' + window.location.origin + '/login');
       console.log('   Use phone + verification code (demo: 666666)');
     } catch (error: any) {
-      console.error('❌ Error:', error.message);
+      console.error('❌ Network error:', error);
+      console.log('💡 Make sure the API server is running');
     }
   },
 
   async bypassTest() {
     try {
-      console.log('\n🔧 Bypass Personality Test');
+      console.log('🔐 Bypass Personality Test');
       console.log('========================\n');
 
       // Step 1: Secret key
-      const secretKey = await promptUser('🔐 Enter secret key:');
+      const secretKey = await promptUser('🔑 Enter secret key:');
       if (!secretKey) {
         console.error('❌ Secret key required');
         return;
       }
 
-      console.log('\n⏳ Bypassing personality test...');
+      console.log('🔍 Verifying secret key...');
+      console.log('⏳ Bypassing personality test...');
 
-      const result = await apiCall('/api/dev/personality-test/bypass', {
-        secretKey,
+      const response = await fetch('/api/dev/personality-test/bypass', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secretKey }),
+        credentials: 'include',
       });
 
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('❌ Error:', data.error || data.message || 'Unknown error');
+        if (data.hint) console.log('💡 Hint:', data.hint);
+        return;
+      }
+
       console.log('\n✅ Success! Personality test bypassed');
-      console.log(`   Archetype: ${result.archetype}`);
+      console.log(`   Archetype: ${data.archetype}`);
       console.log('\n   Redirecting to discover page...');
 
       // Redirect to discover page
@@ -268,7 +318,47 @@ Security:
         window.location.href = '/discover';
       }, 1000);
     } catch (error: any) {
-      console.error('❌ Error:', error.message);
+      console.error('❌ Network error:', error);
+      console.log('💡 Make sure the API server is running');
+    }
+  },
+
+  async checkSecretKey() {
+    try {
+      console.log('🔍 Testing secret key configuration...\n');
+
+      const secretKey = await promptUser('🔑 Enter secret key to test:');
+      if (!secretKey) {
+        console.error('❌ Secret key required');
+        return;
+      }
+
+      console.log('⏳ Checking secret key...');
+
+      const response = await fetch('/api/dev/check-secret', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secretKey }),
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('✅ Secret key is valid!');
+        console.log('   Key length:', data.keyLength);
+      } else {
+        console.error('❌ Secret key validation failed');
+        console.error('   Error:', data.error);
+        if (data.hint) console.log('💡 Hint:', data.hint);
+        if (data.serverKeyLength !== undefined) {
+          console.log('   Expected key length:', data.serverKeyLength);
+          console.log('   Provided key length:', data.providedKeyLength);
+        }
+      }
+    } catch (error: any) {
+      console.error('❌ Network error:', error);
+      console.log('💡 Make sure the API server is running');
     }
   },
 };
