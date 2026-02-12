@@ -22,6 +22,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useXiaoyueAnalysis } from "@/hooks/useXiaoyueAnalysis";
+import { useAnonymousPersonalityTestResults } from "@/hooks/useAnonymousPersonalityTestResults";
 import { getStyleSpectrum, getAllArchetypeScores } from "@shared/personality/matcherV2";
 import { ArrowRight } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -530,34 +531,30 @@ export default function PersonalityTestResultPage() {
     [prefersReducedMotion]
   );
 
-  // Bug 11 Fix: Add fallback to sessionId-based endpoint if user-based endpoint returns null
-  const sessionId = localStorage.getItem("joyjoin_v4_assessment_session");
-  
-  const { data: result, isLoading } = useQuery<UnifiedAssessmentResult>({
+  // Load results with fallback chain: authenticated -> sessionId -> anonymous localStorage
+  const { data: result, isLoading: resultIsLoading } = useQuery<UnifiedAssessmentResult>({
     queryKey: ['/api/assessment/result'],
-    retry: (failureCount, error) => {
-      // Don't retry if we get a 404/null response - we'll use the fallback
-      return false;
-    },
+    retry: false,
   });
   
-  // Fallback query for sessionId-based endpoint
+  // Fallback 1: Anonymous localStorage results
+  const { data: anonymousResult, isLoading: anonymousIsLoading } = useAnonymousPersonalityTestResults();
+  
+  // Fallback 2: SessionId-based endpoint (legacy)
+  const sessionId = localStorage.getItem("joyjoin_v4_assessment_session");
   const { data: sessionResult, isLoading: isLoadingSessionResult } = useQuery<UnifiedAssessmentResult>({
     queryKey: [`/api/assessment/v4/${sessionId}/result`],
-    enabled: !result && !isLoading && !!sessionId, // Only run if primary query failed and we have a sessionId
-    // The sessionId endpoint wraps the unified result under a `result` field.
-    // Normalize it so the rest of the page always receives a UnifiedAssessmentResult.
+    enabled: !result && !anonymousResult && !resultIsLoading && !anonymousIsLoading && !!sessionId,
     select: (data: any) => {
       if (!data) return data;
-      // If the API returns { result: UnifiedAssessmentResult, ...extras },
-      // unwrap the `result` field; otherwise assume it's already unified.
       return (data as any).result ?? data;
     },
   });
   
-  // Use whichever result is available
-  const finalResult = result || sessionResult;
-  const finalIsLoading = isLoading || (isLoadingSessionResult && !result);
+  // Use whichever result is available (priority: authenticated > anonymous > sessionId)
+  const finalResult = result || anonymousResult || sessionResult;
+  const finalIsLoading = resultIsLoading || anonymousIsLoading || (isLoadingSessionResult && !result && !anonymousResult);
+
 
   const { data: stats } = useQuery<Record<string, number>>({
     queryKey: ['/api/personality-test/stats'],
