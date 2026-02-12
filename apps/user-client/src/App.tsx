@@ -128,11 +128,10 @@ function AuthenticatedRouter() {
     case 'onboarding':
       return (
         <Switch>
-          <Route path="/onboarding" component={DuolingoOnboardingPage} />
           <Route path="/personality-test" component={PersonalityTestPageV4} />
           <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
           <Route path="/personality-test/results" component={PersonalityTestResultPage} />
-          <Route path="*" component={RedirectToOnboarding} />
+          <Route path="*" component={RedirectToPersonalityTest} />
         </Switch>
       );
 

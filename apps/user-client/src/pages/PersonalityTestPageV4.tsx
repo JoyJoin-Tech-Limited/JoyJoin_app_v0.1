@@ -3,6 +3,8 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { AdaptiveProgress } from "@/components/ui/progress-adaptive";
+import { Progress } from "@/components/ui/progress";
+import { SegmentedProgress } from "@/components/ui/progress-segmented";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, Sparkles, Loader2, RefreshCw } from "lucide-react";
@@ -19,6 +21,7 @@ import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import { useUnifiedProgress } from "@/hooks/useUnifiedProgress";
 import { haptics } from "@/lib/haptics";
 import { useOnboardingCheckpoint } from "@/hooks/useOnboardingCheckpoint";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -60,6 +63,25 @@ function OnboardingProgress({
   milestoneReached?: boolean;
 }) {
   const { currentAccent } = useDynamicAccent();
+  const prefersReducedMotion = useReducedMotion();
+  const [prevCurrent, setPrevCurrent] = useState(current);
+  const [showTransition, setShowTransition] = useState(false);
+  
+  // Detect transition from question 8 to 9
+  useEffect(() => {
+    if (prevCurrent === 8 && current === 9) {
+      setShowTransition(true);
+      // Trigger haptic feedback at transition
+      haptics.selection();
+      // Reset transition state after animation
+      setTimeout(() => setShowTransition(false), 1000);
+    }
+    setPrevCurrent(current);
+  }, [current, prevCurrent]);
+  
+  // Determine which progress bar to show
+  const isAnchorPhase = current >= 1 && current <= 8;
+  const isAdaptivePhase = current >= 9;
   
   return (
     <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3 safe-top">
@@ -76,46 +98,96 @@ function OnboardingProgress({
           </Button>
         )}
         <div className="flex-1">
-          <AdaptiveProgress 
-            value={progress}
-            context="assessment"
-            remaining={remaining}
-            milestoneReached={milestoneReached}
-            accentColor={currentAccent ? `hsl(${currentAccent.h}, ${currentAccent.s}%, ${currentAccent.l}%)` : undefined}
-            showEncouragement={showExtendedMessage}
-            className="mb-1.5"
-          />
-          {remaining !== undefined && remaining > 0 && (
-            <p className="text-xs text-muted-foreground mb-1">
-              还剩约 {remaining} 题 - 快要揭晓了
-            </p>
-          )}
-          <div className="flex flex-col gap-0.5">
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-muted-foreground font-medium" data-testid="text-progress-indicator">
-                {remaining !== undefined && remaining > 0 ? (
-                  `第${Math.floor(current)}题 · 还剩约${remaining}题`
-                ) : (
-                  `第${Math.floor(current)}题`
-                )}
-              </span>
-              <span className="text-xs font-bold text-primary">
-                {Math.round(progress)}%
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              {showExtendedMessage ? (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
-                  <Sparkles className="w-2.5 h-2.5 mr-1" />
-                  差一点就能揭晓啦
-                </Badge>
+          {/* Progress bar with smooth transition animation */}
+          <div className="relative">
+            <AnimatePresence mode="wait" initial={false}>
+              {isAnchorPhase ? (
+                <motion.div
+                  key="segmented"
+                  initial={false}
+                  exit={
+                    prefersReducedMotion
+                      ? { opacity: 0 }
+                      : {
+                          opacity: 0,
+                          scale: 0.98,
+                          filter: "blur(4px)",
+                        }
+                  }
+                  transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                >
+                  <SegmentedProgress 
+                    current={current - 1}
+                    total={8}
+                    variant="duolingo"
+                    className="mb-2"
+                  />
+                </motion.div>
               ) : (
-                <span className="text-[10px] text-muted-foreground/70">
-                  精准校准你的社交风格
-                </span>
+                <motion.div
+                  key="smooth"
+                  initial={
+                    prefersReducedMotion
+                      ? { opacity: 0 }
+                      : {
+                          opacity: 0,
+                          scale: 1.02,
+                          filter: "blur(4px)",
+                        }
+                  }
+                  animate={{ 
+                    opacity: 1, 
+                    scale: 1,
+                    filter: "blur(0px)",
+                  }}
+                  transition={{ 
+                    duration: 0.5, 
+                    ease: [0.4, 0, 0.2, 1],
+                    delay: 0.1 
+                  }}
+                >
+                  <Progress 
+                    value={progress} 
+                    className={cn(
+                      "h-2 mb-2 transition-all duration-500",
+                      showTransition && !prefersReducedMotion && "shadow-lg shadow-primary/20"
+                    )}
+                  />
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
           </div>
+          
+          {/* Question counter and percentage */}
+          <motion.div 
+            layout={!prefersReducedMotion}
+            className="flex justify-between mt-1"
+          >
+            <span className="text-xs text-muted-foreground font-medium">
+              {remaining !== undefined && remaining > 0 ? (
+                `第${Math.floor(current)}题 · 还剩约${remaining}题`
+              ) : (
+                `第${Math.floor(current)}题 / 约${typeof total === 'string' ? total : total}题`
+              )}
+            </span>
+            <span className="text-xs font-bold text-primary">
+              {Math.round(progress)}%
+            </span>
+          </motion.div>
+          
+          {/* Extended message for near completion */}
+          {showExtendedMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-1.5 mt-1"
+            >
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                <Sparkles className="w-2.5 h-2.5 mr-1" />
+                差一点就能揭晓啦
+              </Badge>
+            </motion.div>
+          )}
         </div>
       </div>
     </div>
@@ -423,14 +495,8 @@ export default function PersonalityTestPageV4() {
         remaining={estimatedRemaining}
         progress={progressPercentage}
         onBack={() => {
-          // Check if user came from Duolingo onboarding (has synced session)
-          const syncedSessionId = localStorage.getItem("joyjoin_synced_session_id");
-          if (syncedSessionId) {
-            setLocation('/onboarding');
-          } else {
-            // Anonymous user or direct access - go back to landing
-            setLocation('/');
-          }
+          // Since /onboarding is merged into /personality-test, go back to landing
+          setLocation('/');
         }}
         showBack={true}
         showExtendedMessage={answeredCount >= 8 && estimatedRemaining >= 3}
