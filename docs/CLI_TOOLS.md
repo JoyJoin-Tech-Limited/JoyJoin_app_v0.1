@@ -743,6 +743,35 @@ npm run user:create
 
 ## Troubleshooting
 
+## Troubleshooting Secret Key Issues
+
+### Error: "Invalid secret key or ADMIN_CREATE_SECRET_KEY not configured"
+
+**Steps to debug:**
+
+1. Test the secret key:
+   ```javascript
+   window.dev.checkSecretKey()
+   // Enter: BYPASSSECRET12345678
+   ```
+
+2. Check server environment:
+   - Make sure `.env` file has: `ADMIN_CREATE_SECRET_KEY=BYPASSSECRET12345678`
+   - Restart server after adding env variable
+   - Check server logs for startup message about secret key
+
+3. Verify exact match:
+   - Secret key is case-sensitive
+   - No extra spaces
+   - Exact value: `BYPASSSECRET12345678`
+
+4. For production deployment:
+   - Add environment variable to hosting platform
+   - Redeploy application
+   - Verify with `window.dev.checkSecretKey()`
+
+---
+
 ### Error: "ADMIN_CREATE_SECRET_KEY not set in environment"
 
 **Problem:** The secret key environment variable is missing.
