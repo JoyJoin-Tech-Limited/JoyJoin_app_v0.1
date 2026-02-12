@@ -532,8 +532,6 @@ export default function PersonalityTestResultPage() {
   );
 
   // Load results with simplified conditional logic based on authentication
-  const { isAuthenticated } = useAuth();
-
   // Authenticated users: fetch from /api/assessment/result
   const { data: authResult, isLoading: authLoading } = useQuery<UnifiedAssessmentResult>({
     queryKey: ['/api/assessment/result'],
