@@ -72,7 +72,7 @@ function OnboardingProgress({
     if (prevCurrent === 8 && current === 9) {
       setShowTransition(true);
       // Trigger haptic feedback at transition
-      haptics.selection();
+      haptics.medium();
       // Reset transition state after animation
       setTimeout(() => setShowTransition(false), 1000);
     }
