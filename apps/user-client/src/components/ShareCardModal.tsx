@@ -12,7 +12,8 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -416,6 +417,10 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
+          <VisuallyHidden>
+            <DialogTitle>加载中</DialogTitle>
+            <DialogDescription>正在准备你的专属卡片</DialogDescription>
+          </VisuallyHidden>
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
@@ -427,6 +432,13 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[95vh] flex flex-col p-4 sm:p-6">
+        <VisuallyHidden>
+          <DialogTitle>分享你的专属氛围原型卡片</DialogTitle>
+          <DialogDescription>
+            选择卡片样式和表情，下载或分享你的个性化原型卡片到社交媒体
+          </DialogDescription>
+        </VisuallyHidden>
+        
         {/* Scrollable content area */}
         <div className="flex-1 min-h-0 overflow-y-auto space-y-4 sm:space-y-6">
           {/* Title */}
