@@ -94,7 +94,7 @@ All components meet mobile touch target requirements:
 ## Related Documentation
 
 - [Mobile Design System](../../../../../docs/mobile-design-system.md)
-- [Implementation Summary](../../../../../docs/MOBILE_UI_IMPLEMENTATION_SUMMARY.md)
+- [Implementation Summary](../../../../../archived/docs/MOBILE_UI_IMPLEMENTATION.md)
 - [WeChat Mini Program Reference](../../../../../docs/wechat-mini-program-reference.md)
 
 ## Demo
