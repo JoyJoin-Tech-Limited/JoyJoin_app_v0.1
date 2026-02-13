@@ -537,14 +537,15 @@ export default function PersonalityTestResultPage() {
     queryKey: ['/api/assessment/result'],
     enabled: isAuthenticated,
     retry: 3,
+    retryDelay: 1000,
   });
 
   // Anonymous users: use localStorage hook (unchanged)
   const { data: anonResult, isLoading: anonLoading } = useAnonymousPersonalityTestResults();
 
-  // Single source of truth - no complex fallback logic
-  const finalResult = isAuthenticated ? authResult : anonResult;
-  const finalIsLoading = isAuthenticated ? authLoading : anonLoading;
+  // Prefer authenticated result when available, but gracefully fall back to anonymous result
+  const finalResult = isAuthenticated ? (authResult ?? anonResult) : anonResult;
+  const finalIsLoading = isAuthenticated ? (authLoading && !finalResult) : anonLoading;
 
 
   const { data: stats } = useQuery<Record<string, number>>({
