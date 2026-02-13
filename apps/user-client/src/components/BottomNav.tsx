@@ -7,6 +7,10 @@ import { queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
 import joyJoinLogo from "@/assets/joyjoin-logo.png";
 
+// Constants
+const MS_PER_HOUR = 1000 * 60 * 60;
+const VENUE_UNLOCK_HOURS = 24;
+
 interface NavItem {
   icon: any;
   label: string;
@@ -108,8 +112,8 @@ export default function BottomNav() {
     // Priority 2: Matched pool event < 24h away (venue revealed)
     const upcomingMatchedPool = matchedPoolRegistrations.find(r => {
       const eventDate = new Date(r.poolDateTime);
-      const hoursUntil = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-      return hoursUntil < 24 && hoursUntil > 0;
+      const hoursUntil = (eventDate.getTime() - now.getTime()) / MS_PER_HOUR;
+      return hoursUntil < VENUE_UNLOCK_HOURS && hoursUntil > 0;
     });
     if (upcomingMatchedPool && upcomingMatchedPool.assignedGroupId) {
       return `/pool-groups/${upcomingMatchedPool.assignedGroupId}`;
@@ -124,8 +128,8 @@ export default function BottomNav() {
     // Priority 4: Matched event in future (> 24h away)
     const futureMatchedPool = matchedPoolRegistrations.find(r => {
       const eventDate = new Date(r.poolDateTime);
-      const hoursUntil = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-      return hoursUntil >= 24;
+      const hoursUntil = (eventDate.getTime() - now.getTime()) / MS_PER_HOUR;
+      return hoursUntil >= VENUE_UNLOCK_HOURS;
     });
     if (futureMatchedPool && futureMatchedPool.assignedGroupId) {
       return `/pool-groups/${futureMatchedPool.assignedGroupId}`;
