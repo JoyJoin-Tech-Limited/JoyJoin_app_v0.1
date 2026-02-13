@@ -12194,7 +12194,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         
         // Use trait scores from finalResult (already normalized to 0-100 by V4 adaptive engine)
         // Fallback to top-level traitScores for legacy sessions
-        const traitScores = finalResult?.traitScores || session.traitScores as Record<string, number> || {};
+        const traitScores = (finalResult?.traitScores || session.traitScores || {}) as Record<string, number>;
         const normalizeScore = (score: number | undefined, fallback: number = 50): number =>  {
           if (score === undefined || score === null) return fallback;
           // V4 finalResult.traitScores are already 0-100 (normalized by adaptive engine)
@@ -12324,7 +12324,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         archetype = session.primaryArchetype || finalResult?.primaryArchetype || finalResult?.archetype;
         // Use trait scores from finalResult (already normalized to 0-100 by V4 adaptive engine)
         // Fallback to top-level traitScores for legacy sessions
-        traitScores = finalResult?.traitScores || session.traitScores as Record<string, number> || {};
+        traitScores = (finalResult?.traitScores || session.traitScores || {}) as Record<string, number>;
       } else {
         // Fallback to legacy role_results
         const legacyResult = await storage.getRoleResult(userId);
