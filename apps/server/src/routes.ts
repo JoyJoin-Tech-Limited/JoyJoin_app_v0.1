@@ -12192,12 +12192,16 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         // Get archetype prototype for trait profile
         const prototype = archetypePrototypes[primaryArchetype];
         
-        // Trait scores are stored on 0-100 scale from adaptive engine
-        // Fallback to finalResult.traitScores if session.traitScores is not populated
-        const traitScores = (session.traitScores ?? finalResult?.traitScores) as Record<string, number> || {};
+        // Use trait scores from finalResult (already normalized to 0-100 by V4 adaptive engine)
+        // Fallback to top-level traitScores for legacy sessions
+        const traitScores = (finalResult?.traitScores || session.traitScores || {}) as Record<string, number>;
         const normalizeScore = (score: number | undefined, fallback: number = 50): number =>  {
           if (score === undefined || score === null) return fallback;
-          // Scores are already 0-100 from normalizeTraitScore() in adaptive engine
+          // V4 finalResult.traitScores are already 0-100 (normalized by adaptive engine)
+          // Top-level session.traitScores are also 0-100 (from engineState.traitConfidences)
+          // Very old legacy V1 sessions might have 0-1 scores, so handle both cases for safety
+          if (score > 0 && score < 1) return Math.round(score * 100);
+          // Already in 0-100 range
           return Math.round(score);
         };
         
@@ -12264,7 +12268,10 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         });
       }
       
-      return res.status(404).json({ message: 'No assessment result found' });
+      return res.status(404).json({ 
+        error: 'No completed assessment found', 
+        hasCompletedTest: false 
+      });
     } catch (error: any) {
       console.error('[Unified Assessment Result] Error:', error);
       res.status(500).json({ message: 'Failed to get result', error: error.message });
@@ -12315,9 +12322,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       if (session) {
         const finalResult = session.finalResult as any;
         archetype = session.primaryArchetype || finalResult?.primaryArchetype || finalResult?.archetype;
-        // Trait scores are already 0-100 from adaptive engine
-        // Fallback to finalResult.traitScores if session.traitScores is not populated
-        traitScores = (session.traitScores ?? finalResult?.traitScores) as Record<string, number> || {};
+        // Use trait scores from finalResult (already normalized to 0-100 by V4 adaptive engine)
+        // Fallback to top-level traitScores for legacy sessions
+        traitScores = (finalResult?.traitScores || session.traitScores || {}) as Record<string, number>;
       } else {
         // Fallback to legacy role_results (already 0-100 scale)
         const legacyResult = await storage.getRoleResult(userId);
@@ -12348,6 +12355,18 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       // Calculate user rankings
       const totalUserRank = await storage.calculateUserRank(user.createdAt);
       const archetypeRank = await storage.calculateArchetypeRank(userId, archetype);
+
+      // Normalize trait scores to 0-100 scale
+      // V4 finalResult.traitScores are already 0-100 (normalized by adaptive engine)
+      // Top-level session.traitScores are also 0-100 (from engineState.traitConfidences)
+      // Legacy role_results are expected to be 0-100; normalization also defensively handles 0-1 inputs
+      const normalizeScore = (score: number | undefined): number => {
+        if (score === undefined || score === null) return 50;
+        // If score is a fractional value in (0, 1), treat as legacy 0-1 and convert to 0-100
+        if (score > 0 && score < 1) return Math.round(score * 100);
+        // Already in 0-100 range (including 0 and 1)
+        return Math.round(score);
+      };
 
       // Get archetype primary color
       const archetypePrimaryColors: Record<string, string> = {
@@ -12392,12 +12411,12 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         },
         // Trait scores are 0-100 from adaptive engine
         traitScores: {
-          A: typeof traitScores.A === 'number' ? traitScores.A : 50,
-          O: typeof traitScores.O === 'number' ? traitScores.O : 50,
-          C: typeof traitScores.C === 'number' ? traitScores.C : 50,
-          E: typeof traitScores.E === 'number' ? traitScores.E : 50,
-          X: typeof traitScores.X === 'number' ? traitScores.X : 50,
-          P: typeof traitScores.P === 'number' ? traitScores.P : 50,
+          A: normalizeScore(traitScores.A),
+          O: normalizeScore(traitScores.O),
+          C: normalizeScore(traitScores.C),
+          E: normalizeScore(traitScores.E),
+          X: normalizeScore(traitScores.X),
+          P: normalizeScore(traitScores.P),
         }
       });
     } catch (error: any) {
