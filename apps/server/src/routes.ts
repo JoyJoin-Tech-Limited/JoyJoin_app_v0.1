@@ -12199,8 +12199,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           if (score === undefined || score === null) return fallback;
           // V4 finalResult.traitScores are already 0-100 (normalized by adaptive engine)
           // Top-level session.traitScores are also 0-100 (from engineState.traitConfidences)
-          // Very old V2 sessions might have 0-1 scores, so handle both cases for safety
-          if (score <= 1) return Math.round(score * 100);
+          // Very old legacy V1 sessions might have 0-1 scores, so handle both cases for safety
+          if (score > 0 && score < 1) return Math.round(score * 100);
           // Already in 0-100 range
           return Math.round(score);
         };
@@ -12359,12 +12359,12 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       // Normalize trait scores to 0-100 scale
       // V4 finalResult.traitScores are already 0-100 (normalized by adaptive engine)
       // Top-level session.traitScores are also 0-100 (from engineState.traitConfidences)
-      // Legacy V1 role_results are 0-100 scale (but we handle 0-1 for very old sessions)
+      // Legacy role_results are expected to be 0-100; normalization also defensively handles 0-1 inputs
       const normalizeScore = (score: number | undefined): number => {
         if (score === undefined || score === null) return 50;
-        // If score is in 0-1 range, convert to 0-100
-        if (score <= 1) return Math.round(score * 100);
-        // Already in 0-100 range
+        // If score is a fractional value in (0, 1), treat as legacy 0-1 and convert to 0-100
+        if (score > 0 && score < 1) return Math.round(score * 100);
+        // Already in 0-100 range (including 0 and 1)
         return Math.round(score);
       };
 
