@@ -531,22 +531,21 @@ export default function PersonalityTestResultPage() {
     [prefersReducedMotion]
   );
 
-  // Load results with simplified conditional logic based on authentication
-  // Authenticated users: fetch from /api/assessment/result
+  // Load results with clean authenticated vs. anonymous split
+  // Authenticated users: use dedicated endpoint
   const { data: authResult, isLoading: authLoading } = useQuery<UnifiedAssessmentResult>({
     queryKey: ['/api/assessment/result'],
     enabled: isAuthenticated,
     retry: 3,
     retryDelay: 1000,
   });
-  
-  // Anonymous users: fetch from localStorage
+
+  // Anonymous users: use localStorage hook (unchanged)
   const { data: anonResult, isLoading: anonLoading } = useAnonymousPersonalityTestResults();
-  
-  // Prefer authenticated result when available, but fall back to anonymous/local result
-  const finalResult = authResult ?? anonResult;
-  // Consider loading while we have no result yet and any source is still loading
-  const finalIsLoading = !finalResult && (authLoading || anonLoading);
+
+  // Prefer authenticated result when available, but gracefully fall back to anonymous result
+  const finalResult = isAuthenticated ? (authResult ?? anonResult) : anonResult;
+  const finalIsLoading = isAuthenticated ? (authLoading && !finalResult) : anonLoading;
 
 
   const { data: stats } = useQuery<Record<string, number>>({
