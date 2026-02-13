@@ -12193,7 +12193,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         const prototype = archetypePrototypes[primaryArchetype];
         
         // Trait scores are stored on 0-100 scale from adaptive engine
-        const traitScores = session.traitScores as Record<string, number> || {};
+        // Fallback to finalResult.traitScores if session.traitScores is not populated
+        const traitScores = (session.traitScores ?? finalResult?.traitScores) as Record<string, number> || {};
         const normalizeScore = (score: number | undefined, fallback: number = 50): number =>  {
           if (score === undefined || score === null) return fallback;
           // Scores are already 0-100 from normalizeTraitScore() in adaptive engine
@@ -12315,7 +12316,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         const finalResult = session.finalResult as any;
         archetype = session.primaryArchetype || finalResult?.primaryArchetype || finalResult?.archetype;
         // Trait scores are already 0-100 from adaptive engine
-        traitScores = session.traitScores as Record<string, number> || {};
+        // Fallback to finalResult.traitScores if session.traitScores is not populated
+        traitScores = (session.traitScores ?? finalResult?.traitScores) as Record<string, number> || {};
       } else {
         // Fallback to legacy role_results (already 0-100 scale)
         const legacyResult = await storage.getRoleResult(userId);

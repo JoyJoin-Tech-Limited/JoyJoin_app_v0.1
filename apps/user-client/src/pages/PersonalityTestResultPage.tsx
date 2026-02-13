@@ -543,9 +543,10 @@ export default function PersonalityTestResultPage() {
   // Anonymous users: fetch from localStorage
   const { data: anonResult, isLoading: anonLoading } = useAnonymousPersonalityTestResults();
   
-  // Use appropriate result based on authentication status
-  const finalResult = isAuthenticated ? authResult : anonResult;
-  const finalIsLoading = isAuthenticated ? authLoading : anonLoading;
+  // Prefer authenticated result when available, but fall back to anonymous/local result
+  const finalResult = authResult ?? anonResult;
+  // Consider loading while we have no result yet and any source is still loading
+  const finalIsLoading = !finalResult && (authLoading || anonLoading);
 
 
   const { data: stats } = useQuery<Record<string, number>>({
