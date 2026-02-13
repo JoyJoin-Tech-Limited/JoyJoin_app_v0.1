@@ -12192,11 +12192,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         // Get archetype prototype for trait profile
         const prototype = archetypePrototypes[primaryArchetype];
         
-        // Normalize trait scores (V2 stores 0-1, V1 expects 0-100)
-        const traitScores = session.traitScores as Record<string, number> || {};
+        // Use trait scores from finalResult (already normalized to 0-100 by V4 adaptive engine)
+        // Fallback to top-level traitScores for legacy sessions
+        const traitScores = finalResult?.traitScores || session.traitScores as Record<string, number> || {};
         const normalizeScore = (score: number | undefined, fallback: number = 50): number =>  {
           if (score === undefined || score === null) return fallback;
-          // V2 scores are 0-1, convert to 0-100 percentage
+          // Scores from finalResult.traitScores are already 0-100 (normalized by adaptive engine)
+          // Legacy scores might be 0-1, so handle both cases
           if (score <= 1) return Math.round(score * 100);
           // Already in 0-100 range
           return Math.round(score);
@@ -12265,7 +12267,10 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         });
       }
       
-      return res.status(404).json({ message: 'No assessment result found' });
+      return res.status(404).json({ 
+        error: 'No completed assessment found', 
+        hasCompletedTest: false 
+      });
     } catch (error: any) {
       console.error('[Unified Assessment Result] Error:', error);
       res.status(500).json({ message: 'Failed to get result', error: error.message });
@@ -12316,7 +12321,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       if (session) {
         const finalResult = session.finalResult as any;
         archetype = session.primaryArchetype || finalResult?.primaryArchetype || finalResult?.archetype;
-        traitScores = session.traitScores as Record<string, number> || {};
+        // Use trait scores from finalResult (already normalized to 0-100 by V4 adaptive engine)
+        // Fallback to top-level traitScores for legacy sessions
+        traitScores = finalResult?.traitScores || session.traitScores as Record<string, number> || {};
       } else {
         // Fallback to legacy role_results
         const legacyResult = await storage.getRoleResult(userId);
@@ -12325,12 +12332,12 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         }
         archetype = legacyResult.primaryArchetype;
         traitScores = {
-          A: legacyResult.affinityScore / 100,
-          O: legacyResult.opennessScore / 100,
-          C: legacyResult.conscientiousnessScore / 100,
-          E: legacyResult.emotionalStabilityScore / 100,
-          X: legacyResult.extraversionScore / 100,
-          P: legacyResult.positivityScore / 100,
+          A: legacyResult.affinityScore,
+          O: legacyResult.opennessScore,
+          C: legacyResult.conscientiousnessScore,
+          E: legacyResult.emotionalStabilityScore,
+          X: legacyResult.extraversionScore,
+          P: legacyResult.positivityScore,
         };
       }
 
@@ -12347,6 +12354,17 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       // Calculate user rankings
       const totalUserRank = await storage.calculateUserRank(user.createdAt);
       const archetypeRank = await storage.calculateArchetypeRank(userId, archetype);
+
+      // Normalize trait scores to 0-100 scale
+      // Trait scores from finalResult are already 0-100, legacy scores are also 0-100
+      // Handle edge case where scores might be 0-1 scale
+      const normalizeScore = (score: number | undefined): number => {
+        if (score === undefined || score === null) return 50;
+        // If score is in 0-1 range, convert to 0-100
+        if (score <= 1) return Math.round(score * 100);
+        // Already in 0-100 range
+        return Math.round(score);
+      };
 
       // Get archetype primary color
       const archetypePrimaryColors: Record<string, string> = {
@@ -12390,12 +12408,12 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           archetypeRank,
         },
         traitScores: {
-          A: typeof traitScores.A === 'number' ? traitScores.A : 0.5,
-          O: typeof traitScores.O === 'number' ? traitScores.O : 0.5,
-          C: typeof traitScores.C === 'number' ? traitScores.C : 0.5,
-          E: typeof traitScores.E === 'number' ? traitScores.E : 0.5,
-          X: typeof traitScores.X === 'number' ? traitScores.X : 0.5,
-          P: typeof traitScores.P === 'number' ? traitScores.P : 0.5,
+          A: normalizeScore(traitScores.A),
+          O: normalizeScore(traitScores.O),
+          C: normalizeScore(traitScores.C),
+          E: normalizeScore(traitScores.E),
+          X: normalizeScore(traitScores.X),
+          P: normalizeScore(traitScores.P),
         }
       });
     } catch (error: any) {
