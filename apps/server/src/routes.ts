@@ -12326,7 +12326,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         // Fallback to top-level traitScores for legacy sessions
         traitScores = (finalResult?.traitScores || session.traitScores || {}) as Record<string, number>;
       } else {
-        // Fallback to legacy role_results
+        // Fallback to legacy role_results (already 0-100 scale)
         const legacyResult = await storage.getRoleResult(userId);
         if (!legacyResult) {
           return res.status(404).json({ message: 'No assessment result found' });
@@ -12409,6 +12409,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           totalUserRank,
           archetypeRank,
         },
+        // Trait scores are 0-100 from adaptive engine
         traitScores: {
           A: normalizeScore(traitScores.A),
           O: normalizeScore(traitScores.O),
