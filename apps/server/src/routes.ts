@@ -12197,8 +12197,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         const traitScores = finalResult?.traitScores || session.traitScores as Record<string, number> || {};
         const normalizeScore = (score: number | undefined, fallback: number = 50): number =>  {
           if (score === undefined || score === null) return fallback;
-          // Scores from finalResult.traitScores are already 0-100 (normalized by adaptive engine)
-          // Legacy scores might be 0-1, so handle both cases
+          // V4 finalResult.traitScores are already 0-100 (normalized by adaptive engine)
+          // Top-level session.traitScores are also 0-100 (from engineState.traitConfidences)
+          // Very old V2 sessions might have 0-1 scores, so handle both cases for safety
           if (score <= 1) return Math.round(score * 100);
           // Already in 0-100 range
           return Math.round(score);
@@ -12356,8 +12357,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const archetypeRank = await storage.calculateArchetypeRank(userId, archetype);
 
       // Normalize trait scores to 0-100 scale
-      // Trait scores from finalResult are already 0-100, legacy scores are also 0-100
-      // Handle edge case where scores might be 0-1 scale
+      // V4 finalResult.traitScores are already 0-100 (normalized by adaptive engine)
+      // Top-level session.traitScores are also 0-100 (from engineState.traitConfidences)
+      // Legacy V1 role_results are 0-100 scale (but we handle 0-1 for very old sessions)
       const normalizeScore = (score: number | undefined): number => {
         if (score === undefined || score === null) return 50;
         // If score is in 0-1 range, convert to 0-100
