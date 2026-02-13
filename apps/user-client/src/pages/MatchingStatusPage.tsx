@@ -37,6 +37,10 @@ import MatchCelebrationOverlay from "@/components/MatchCelebrationOverlay";
 import EventThemeTitleReveal from "@/components/EventThemeTitleReveal";
 import type { PoolMatchedData, EventThemeTitleRevealedData } from "@shared/wsEvents";
 
+// Constants
+const DEFAULT_MIN_GROUP_SIZE = 4;
+const DEFAULT_MAX_GROUP_SIZE = 6;
+
 interface PoolRegistration {
   id: string;
   poolId: string;
@@ -231,13 +235,15 @@ export default function MatchingStatusPage() {
       progress: poolStats?.progress,
     });
 
-    const shareText = `${registration?.poolTitle}\n${formatDateTime(registration?.poolDateTime)}\n一起来参加盲盒社交活动吧！`;
+    const poolTitle = registration?.poolTitle ?? "盲盒社交活动";
+    const formattedDateTime = formatDateTime(registration?.poolDateTime) || "活动时间待定";
+    const shareText = `${poolTitle}\n${formattedDateTime}\n一起来参加盲盒社交活动吧！`;
     const shareUrl = `${window.location.origin}/pools/${registration?.poolId}/register`;
 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: registration?.poolTitle,
+          title: poolTitle,
           text: shareText,
           url: shareUrl,
         });
@@ -455,7 +461,7 @@ export default function MatchingStatusPage() {
             {/* Status text */}
             <div className="text-center space-y-2">
               <h2 className="text-lg font-black">
-                正在为你寻找 {poolStats?.minGroupSize || 4}-{poolStats?.maxGroupSize || 6} 人的完美契合小队...
+                正在为你寻找 {poolStats?.minGroupSize || DEFAULT_MIN_GROUP_SIZE}-{poolStats?.maxGroupSize || DEFAULT_MAX_GROUP_SIZE} 人的完美契合小队...
               </h2>
               <p className="text-sm text-muted-foreground font-medium">
                 匹配中，组队成功后你将收到通知。
@@ -481,7 +487,7 @@ export default function MatchingStatusPage() {
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium">匹配进度</span>
                 <span className="text-muted-foreground">
-                  {poolStats?.currentFill || 0}/{poolStats?.minGroupSize || 4} 人已就绪
+                  {poolStats?.currentFill || 0}/{poolStats?.minGroupSize || DEFAULT_MIN_GROUP_SIZE} 人已就绪
                 </span>
               </div>
               <div className="relative">

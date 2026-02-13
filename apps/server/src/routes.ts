@@ -8773,12 +8773,15 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
       const minSize = pool.minGroupSize || 4;
       const maxSize = pool.maxGroupSize || 6;
       const currentFill = Math.min(pendingRegs[0]?.count || 0, maxSize);
+      
+      // Progress is based on reaching minSize, capped at 100%
+      const progress = Math.min((currentFill / minSize) * 100, 100);
 
       res.json({
         currentFill,
         minGroupSize: minSize,
         maxGroupSize: maxSize,
-        progress: Math.min((currentFill / minSize) * 100, 100),
+        progress,
       });
     } catch (error) {
       console.error("Error fetching group-fill progress:", error);
