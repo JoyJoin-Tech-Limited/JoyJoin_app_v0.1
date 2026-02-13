@@ -531,30 +531,22 @@ export default function PersonalityTestResultPage() {
     [prefersReducedMotion]
   );
 
-  // Load results with fallback chain: authenticated -> sessionId -> anonymous localStorage
-  const { data: result, isLoading: resultIsLoading } = useQuery<UnifiedAssessmentResult>({
+  // Load results with simplified conditional logic based on authentication
+  // Authenticated users: fetch from /api/assessment/result
+  const { data: authResult, isLoading: authLoading } = useQuery<UnifiedAssessmentResult>({
     queryKey: ['/api/assessment/result'],
-    retry: 3, // Retry up to 3 times to handle race conditions
-    retryDelay: 1000, // Wait 1 second between retries
+    enabled: isAuthenticated,
+    retry: 3,
+    retryDelay: 1000,
   });
   
-  // Fallback 1: Anonymous localStorage results
-  const { data: anonymousResult, isLoading: anonymousIsLoading } = useAnonymousPersonalityTestResults();
+  // Anonymous users: fetch from localStorage
+  const { data: anonResult, isLoading: anonLoading } = useAnonymousPersonalityTestResults();
   
-  // Fallback 2: SessionId-based endpoint (legacy)
-  const sessionId = localStorage.getItem("joyjoin_v4_assessment_session");
-  const { data: sessionResult, isLoading: isLoadingSessionResult } = useQuery<UnifiedAssessmentResult>({
-    queryKey: [`/api/assessment/v4/${sessionId}/result`],
-    enabled: !result && !anonymousResult && !resultIsLoading && !anonymousIsLoading && !!sessionId,
-    select: (data: any) => {
-      if (!data) return data;
-      return (data as any).result ?? data;
-    },
-  });
-  
-  // Use whichever result is available (priority: authenticated > anonymous > sessionId)
-  const finalResult = result || anonymousResult || sessionResult;
-  const finalIsLoading = resultIsLoading || anonymousIsLoading || (isLoadingSessionResult && !result && !anonymousResult);
+  // Prefer authenticated result when available, but fall back to anonymous/local result
+  const finalResult = authResult ?? anonResult;
+  // Consider loading while we have no result yet and any source is still loading
+  const finalIsLoading = !finalResult && (authLoading || anonLoading);
 
 
   const { data: stats } = useQuery<Record<string, number>>({
