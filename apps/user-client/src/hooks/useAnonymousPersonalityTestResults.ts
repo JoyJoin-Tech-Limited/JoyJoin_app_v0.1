@@ -37,7 +37,8 @@ function transformToUnifiedResult(result: AssessmentResult, completedAt: string)
     totalQuestions: result.totalQuestionsAnswered,
     chemistryList: (result.topMatches || []).map(match => ({
       role: match.archetype,
-      percentage: Math.round(match.score * 100),
+      // match.score is already 0-100 from findBestMatchingArchetypes
+      percentage: Math.round(match.score),
     })),
     archetypeTraitProfile: {
       A: result.traitScores.A || 0,
