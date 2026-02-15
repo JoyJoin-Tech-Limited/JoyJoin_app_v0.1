@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -34,87 +34,6 @@ XIAOYUE_AVATAR_URLS.forEach((src) => {
 
 const V4_ANSWERS_KEY = "joyjoin_v4_presignup_answers";
 
-function AnchorPhaseComplete({ onContinue }: { onContinue: () => void }) {
-  // Auto-advance after 3 seconds - allows users to read celebration message
-  useEffect(() => {
-    const timer = setTimeout(onContinue, 3000);
-    return () => clearTimeout(timer);
-  }, [onContinue]);
-
-  return (
-    <div className="h-screen overflow-hidden bg-background flex flex-col items-center justify-center p-6">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: "spring", stiffness: 200, damping: 20 }}
-        className="text-center max-w-sm space-y-6"
-      >
-        {/* Phase 1: Checkmark animation */}
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.2, type: "spring", stiffness: 300 }}
-          className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center"
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4, duration: 0.5, ease: "easeOut" }}
-          >
-            <Sparkles className="w-10 h-10 text-primary" />
-          </motion.div>
-        </motion.div>
-
-        {/* Phase 2: Copy */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="space-y-2"
-        >
-          <h2 className="text-2xl font-bold">基础画像已完成 ✨</h2>
-          <p className="text-muted-foreground text-base leading-relaxed">
-            已经大概知道你的vibe了！<br/>
-            接下来几道精准题，帮你锁定专属原型 🎯
-          </p>
-        </motion.div>
-
-        {/* Phase 3: Visual transition hint - segmented dots morphing into a bar */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.0 }}
-          className="flex items-center gap-2 justify-center"
-        >
-          {/* Animated dots merging into a bar */}
-          <motion.div
-            className="h-2 bg-primary rounded-full"
-            initial={{ width: 8 }}
-            animate={{ width: 200 }}
-            transition={{ delay: 1.2, duration: 0.8, ease: "easeInOut" }}
-          />
-        </motion.div>
-
-        {/* Skip button */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-        >
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onContinue}
-            className="text-muted-foreground"
-          >
-            继续 →
-          </Button>
-        </motion.div>
-      </motion.div>
-    </div>
-  );
-}
-
 function stripEmoji(text: string): string {
   return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '')
     .replace(/\*\*/g, '')
@@ -145,23 +64,32 @@ function OnboardingProgress({
   const prefersReducedMotion = useReducedMotion();
   const [prevCurrent, setPrevCurrent] = useState(current);
   const [showTransition, setShowTransition] = useState(false);
+  const [showMicroCopy, setShowMicroCopy] = useState(false);
   
   // Detect transition from question 8 to 9
   useEffect(() => {
-    let timeoutId: number | undefined;
+    let transitionTimeoutId: number | undefined;
+    let microCopyTimeoutId: number | undefined;
 
     if (prevCurrent === 8 && current === 9) {
       setShowTransition(true);
-      // Trigger haptic feedback at transition
+      setShowMicroCopy(true);
+      // Trigger haptic feedback at transition (medium + heavy punch)
       haptics.medium();
+      haptics.heavy();
       // Reset transition state after animation
-      timeoutId = window.setTimeout(() => setShowTransition(false), 1000);
+      transitionTimeoutId = window.setTimeout(() => setShowTransition(false), 1000);
+      // Auto-hide micro-copy after 2 seconds
+      microCopyTimeoutId = window.setTimeout(() => setShowMicroCopy(false), 2000);
     }
     setPrevCurrent(current);
 
     return () => {
-      if (timeoutId !== undefined) {
-        clearTimeout(timeoutId);
+      if (transitionTimeoutId !== undefined) {
+        clearTimeout(transitionTimeoutId);
+      }
+      if (microCopyTimeoutId !== undefined) {
+        clearTimeout(microCopyTimeoutId);
       }
     };
   }, [current, prevCurrent]);
@@ -228,26 +156,46 @@ function OnboardingProgress({
                   }
                   animate={{ 
                     opacity: 1, 
-                    scale: 1,
+                    scale: showTransition && !prefersReducedMotion ? [1, 1.02, 1] : 1,
                     filter: "blur(0px)",
                   }}
                   transition={{ 
                     duration: 0.5, 
                     ease: [0.4, 0, 0.2, 1],
-                    delay: 0.1 
+                    delay: 0.1,
+                    scale: {
+                      duration: 0.6,
+                      ease: "easeInOut",
+                    }
                   }}
                 >
                   <Progress 
                     value={progress} 
                     className={cn(
                       "h-2 mb-2 transition-all duration-500",
-                      showTransition && !prefersReducedMotion && "shadow-lg shadow-primary/20"
+                      showTransition && !prefersReducedMotion && "shadow-[0_0_20px_rgba(var(--primary-rgb,16,185,129),0.5)]"
                     )}
                     style={accentColor ? {
                       // @ts-ignore - CSS variable for dynamic accent color
                       '--progress-accent': accentColor,
                     } as React.CSSProperties : undefined}
                   />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            {/* Inline micro-copy toast - appears briefly during Q8→Q9 transition */}
+            <AnimatePresence>
+              {showMicroCopy && !prefersReducedMotion && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  className="absolute -bottom-1 left-0 right-0 flex items-center gap-1 text-xs text-primary font-medium"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>已锁定你的vibe ✨ 进入精准匹配</span>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -308,8 +256,6 @@ export default function PersonalityTestPageV4() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [selectedOption, setSelectedOption] = useState<string | undefined>();
-  const [showPhaseTransition, setShowPhaseTransition] = useState(false);
-  const hasShownPhaseTransitionRef = useRef(false);
   const { saveCheckpoint } = useOnboardingCheckpoint();
   
   const { setArchetype: setDynamicAccent, reset: resetDynamicAccent } = useDynamicAccent();
@@ -411,16 +357,6 @@ export default function PersonalityTestPageV4() {
     startAssessment(shouldResume);
   }, []);
 
-  // Detect anchor phase completion and show transition (only once)
-  useEffect(() => {
-    if (progress && progress.answered === 8 && !showPhaseTransition && !hasShownPhaseTransitionRef.current) {
-      hasShownPhaseTransitionRef.current = true;
-      setShowPhaseTransition(true);
-      // Trigger haptic feedback for the transition
-      haptics.heavy();
-    }
-  }, [progress?.answered, showPhaseTransition]);
-
   // Update dynamic accent color based on top archetype
   useEffect(() => {
     if (topArchetype && currentMatches[0]) {
@@ -490,11 +426,6 @@ export default function PersonalityTestPageV4() {
       setLocation("/personality-test/results");
     }
   }, [isInitialized, isComplete, setLocation]);
-
-  // Show phase transition screen when completing anchor questions
-  if (showPhaseTransition) {
-    return <AnchorPhaseComplete onContinue={() => setShowPhaseTransition(false)} />;
-  }
 
   if (isLoading && !currentQuestion && !isComplete) {
     return (
