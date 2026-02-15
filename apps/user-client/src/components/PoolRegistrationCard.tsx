@@ -80,6 +80,13 @@ export default function PoolRegistrationCard({ registration }: PoolRegistrationC
       setLocation(`/pool-groups/${registration.assignedGroupId}`);
     }
   };
+
+  // Navigate to matching status page when card is clicked in pending state
+  const handleCardClick = () => {
+    if (registration.matchStatus === "pending") {
+      setLocation(`/pool-matching/${registration.id}`);
+    }
+  };
   
   const getStatusBadge = () => {
     if (registration.matchStatus === "matched") {
@@ -125,7 +132,11 @@ export default function PoolRegistrationCard({ registration }: PoolRegistrationC
   };
 
   return (
-    <Card data-testid={`card-pool-registration-${registration.id}`}>
+    <Card 
+      data-testid={`card-pool-registration-${registration.id}`}
+      onClick={handleCardClick}
+      className={registration.matchStatus === "pending" ? "cursor-pointer hover:shadow-md transition-shadow" : ""}
+    >
       {/* Event theme title display section */}
       {registration.matchStatus === 'matched' && registration.theme && (
         <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 p-4 border-b border-amber-200 dark:border-amber-800">
@@ -202,6 +213,7 @@ export default function PoolRegistrationCard({ registration }: PoolRegistrationC
                 <Clock className="h-4 w-4" />
                 <span>AI正在为你寻找最佳匹配...</span>
               </div>
+              <p className="text-xs text-primary">点击查看匹配进度 →</p>
             </div>
             
             <AlertDialog>
@@ -211,6 +223,7 @@ export default function PoolRegistrationCard({ registration }: PoolRegistrationC
                   size="sm"
                   className="w-full"
                   data-testid={`button-cancel-registration-${registration.id}`}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   取消报名
@@ -226,7 +239,10 @@ export default function PoolRegistrationCard({ registration }: PoolRegistrationC
                 <AlertDialogFooter>
                   <AlertDialogCancel data-testid="button-cancel-dialog-cancel">取消</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={() => cancelMutation.mutate()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      cancelMutation.mutate();
+                    }}
                     disabled={cancelMutation.isPending}
                     data-testid="button-cancel-dialog-confirm"
                   >

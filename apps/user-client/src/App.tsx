@@ -48,6 +48,8 @@ import DeepFeedbackFlow from "@/pages/DeepFeedbackFlow";
 import IcebreakerSessionPage from "@/pages/IcebreakerSessionPage";
 import IcebreakerDemoPage from "@/pages/IcebreakerDemoPage";
 import RewardsPage from "@/pages/RewardsPage";
+import MatchingStatusPage from "@/pages/MatchingStatusPage";
+import MyJourneyPage from "@/pages/MyJourneyPage";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import NotFound from "@/pages/not-found";
@@ -188,6 +190,8 @@ function AuthenticatedRouter() {
           <Route path="/guide" component={GuidePage} />
           <Route path="/event-pool/:id/register" component={EventPoolRegistrationPage} />
           <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
+          <Route path="/pool-matching/:registrationId" component={MatchingStatusPage} />
+          <Route path="/my-journey" component={MyJourneyPage} />
           <Route path="/blindbox/payment" component={BlindBoxPaymentPage} />
           <Route path="/blindbox/confirmation" component={BlindBoxConfirmationPage} />
           <Route path="/blind-box-events/:eventId" component={BlindBoxEventDetailPage} />

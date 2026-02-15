@@ -94,13 +94,15 @@ export default function EventPoolRegistrationPage() {
   // Registration mutation
   const registerMutation = useMutation({
     mutationFn: async (data: RegistrationFormData) => {
-      return await apiRequest("POST", `/api/event-pools/${poolId}/register`, data);
+      const res = await apiRequest("POST", `/api/event-pools/${poolId}/register`, data);
+      return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (registration: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
       setPaymentStep("success");
       setTimeout(() => {
-        navigate("/events");
+        // Navigate to matching status page instead of events page
+        navigate(`/pool-matching/${registration.id}`);
       }, 2000);
     },
     onError: (error: any) => {

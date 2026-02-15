@@ -66,7 +66,7 @@ interface PoolRegistration {
 const MATCH_CELEBRATION_DURATION_MS = 2000;
 
 export default function EventsPage() {
-  const [activeTab, setActiveTab] = useState<"pending" | "matched" | "completed">("pending");
+  const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const markAsRead = useMarkNotificationsAsRead();
@@ -106,7 +106,7 @@ export default function EventsPage() {
         description: `你的活动已成功匹配，地点：${matchData.restaurantName || '未知'}`,
       });
       
-      setActiveTab("matched");
+      setActiveTab("active");
     });
 
     const unsubscribePoolMatched = subscribe('POOL_MATCHED', async (message) => {
@@ -127,7 +127,7 @@ export default function EventsPage() {
       }, MATCH_CELEBRATION_DURATION_MS);
       
       await queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
-      setActiveTab("matched");
+      setActiveTab("active");
     });
 
     const unsubscribeThemeTitle = subscribe('EVENT_THEME_TITLE_REVEALED', async (message) => {
@@ -232,8 +232,7 @@ export default function EventsPage() {
   const matchedPoolRegistrations = poolRegistrations?.filter(r => r.matchStatus === "matched") || [];
   const completedPoolRegistrations = poolRegistrations?.filter(r => r.matchStatus === "completed") || [];
 
-  const totalPending = pendingEvents.length + pendingPoolRegistrations.length;
-  const totalMatched = matchedEvents.length + matchedPoolRegistrations.length;
+  const totalActive = pendingEvents.length + matchedEvents.length + pendingPoolRegistrations.length + matchedPoolRegistrations.length;
   const totalCompleted = completedEvents.length + completedPoolRegistrations.length;
 
   if (isLoading || isLoadingPoolRegistrations) {
@@ -252,8 +251,7 @@ export default function EventsPage() {
   }
 
   const tabs = [
-    { value: "pending", label: "匹配中", count: totalPending },
-    { value: "matched", label: "已匹配", count: totalMatched },
+    { value: "active", label: "进行中", count: totalActive },
     { value: "completed", label: "已完成", count: totalCompleted },
   ];
 
@@ -286,9 +284,9 @@ export default function EventsPage() {
         />
 
         <div className="px-4">
-          {activeTab === "pending" && (
+          {activeTab === "active" && (
             <div className="space-y-3">
-              {totalPending === 0 ? (
+              {totalActive === 0 ? (
                 <div className="text-center py-12">
                   <div className="mb-4">
                     <div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center">
@@ -297,7 +295,7 @@ export default function EventsPage() {
                       </svg>
                     </div>
                   </div>
-                  <h3 className="font-semibold mb-2">暂无匹配中的活动</h3>
+                  <h3 className="font-semibold mb-2">暂无进行中的活动</h3>
                   <p className="text-sm text-muted-foreground">去发现页报名新活动吧</p>
                 </div>
               ) : (
@@ -315,27 +313,6 @@ export default function EventsPage() {
                       onCancel={(eventId) => cancelMutation.mutate(eventId)}
                     />
                   ))}
-                </>
-              )}
-            </div>
-          )}
-
-          {activeTab === "matched" && (
-            <div className="space-y-3">
-              {totalMatched === 0 ? (
-                <div className="text-center py-12">
-                  <div className="mb-4">
-                    <div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center">
-                      <svg className="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <h3 className="font-semibold mb-2">暂无已匹配的活动</h3>
-                  <p className="text-sm text-muted-foreground">匹配成功后会显示在这里</p>
-                </div>
-              ) : (
-                <>
                   {matchedPoolRegistrations.map(registration => (
                     <PoolRegistrationCard 
                       key={registration.id} 

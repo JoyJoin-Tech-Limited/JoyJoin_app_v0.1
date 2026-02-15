@@ -8744,6 +8744,51 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
     }
   });
 
+  // Get group-fill progress for a pool (lightweight progress tracking)
+  app.get("/api/event-pools/:poolId/group-fill", async (req, res) => {
+    try {
+      const { poolId } = req.params;
+
+      // Count pending registrations in this pool
+      const pendingRegs = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(eventPoolRegistrations)
+        .where(
+          and(
+            eq(eventPoolRegistrations.poolId, poolId),
+            eq(eventPoolRegistrations.matchStatus, "pending")
+          )
+        );
+
+      // Get pool config for min/max group size
+      const pool = await db.query.eventPools.findFirst({
+        where: (pools: any, { eq }: any) => eq(pools.id, poolId),
+        columns: { minGroupSize: true, maxGroupSize: true },
+      });
+
+      if (!pool) {
+        return res.status(404).json({ message: "Event pool not found" });
+      }
+
+      const minSize = pool.minGroupSize || 4;
+      const maxSize = pool.maxGroupSize || 6;
+      const currentFill = Math.min(pendingRegs[0]?.count || 0, maxSize);
+      
+      // Progress is based on reaching minSize, capped at 100%
+      const progress = Math.min((currentFill / minSize) * 100, 100);
+
+      res.json({
+        currentFill,
+        minGroupSize: minSize,
+        maxGroupSize: maxSize,
+        progress,
+      });
+    } catch (error) {
+      console.error("Error fetching group-fill progress:", error);
+      res.status(500).json({ message: "Failed to fetch group-fill progress" });
+    }
+  });
+
   // User register for event pool with preferences
   app.post("/api/event-pools/:id/register", requireAuth, async (req, res) => {
     try {
