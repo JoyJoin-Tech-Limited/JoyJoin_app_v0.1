@@ -1132,13 +1132,13 @@ export default function PersonalityTestResultPage() {
                 if (!isAuthenticated) {
                   // Show login CTA and scroll to it
                   setShowLoginCTA(true);
-                  // Smooth scroll to the login CTA card
-                  setTimeout(() => {
+                  // Smooth scroll to the login CTA card on the next frame
+                  requestAnimationFrame(() => {
                     const loginCta = document.querySelector('[data-testid="wechat-login-cta"]');
-                    if (loginCta) {
+                    if (loginCta instanceof HTMLElement) {
                       loginCta.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
-                  }, 100);
+                  });
                   return;
                 }
                 
