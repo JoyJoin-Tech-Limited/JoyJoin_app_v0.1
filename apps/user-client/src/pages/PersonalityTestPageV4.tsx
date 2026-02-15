@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -57,9 +57,9 @@ function AnchorPhaseComplete({ onContinue }: { onContinue: () => void }) {
           className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center"
         >
           <motion.div
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.4, duration: 0.5, ease: "easeOut" }}
           >
             <Sparkles className="w-10 h-10 text-primary" />
           </motion.div>
@@ -309,6 +309,7 @@ export default function PersonalityTestPageV4() {
   const { toast } = useToast();
   const [selectedOption, setSelectedOption] = useState<string | undefined>();
   const [showPhaseTransition, setShowPhaseTransition] = useState(false);
+  const hasShownPhaseTransitionRef = useRef(false);
   const { saveCheckpoint } = useOnboardingCheckpoint();
   
   const { setArchetype: setDynamicAccent, reset: resetDynamicAccent } = useDynamicAccent();
@@ -410,9 +411,10 @@ export default function PersonalityTestPageV4() {
     startAssessment(shouldResume);
   }, []);
 
-  // Detect anchor phase completion and show transition
+  // Detect anchor phase completion and show transition (only once)
   useEffect(() => {
-    if (progress && progress.answered === 8 && !showPhaseTransition) {
+    if (progress && progress.answered === 8 && !showPhaseTransition && !hasShownPhaseTransitionRef.current) {
+      hasShownPhaseTransitionRef.current = true;
       setShowPhaseTransition(true);
       // Trigger haptic feedback for the transition
       haptics.heavy();

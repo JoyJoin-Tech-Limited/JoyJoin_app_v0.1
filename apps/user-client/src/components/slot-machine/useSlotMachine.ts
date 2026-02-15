@@ -80,8 +80,10 @@ export function useSlotMachine({
     return 0; // Fallback to first archetype
   })();
   
-  // Debug logging for archetype validation
-  console.log(`[useSlotMachine] finalArchetype="${finalArchetype}", targetIndex=${targetIndex}, validated=${!!validationResult}`);
+  // Debug logging for archetype validation (dev-only to avoid spamming production logs)
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[useSlotMachine] finalArchetype="${finalArchetype}", targetIndex=${targetIndex}, validated=${!!validationResult}`);
+  }
 
   // Get 3 visible items centered on current
   const getVisibleItems = useCallback((idx: number): string[] => {
