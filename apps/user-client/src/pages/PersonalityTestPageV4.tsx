@@ -35,7 +35,7 @@ XIAOYUE_AVATAR_URLS.forEach((src) => {
 const V4_ANSWERS_KEY = "joyjoin_v4_presignup_answers";
 
 function AnchorPhaseComplete({ onContinue }: { onContinue: () => void }) {
-  // Auto-advance after 3 seconds
+  // Auto-advance after 3 seconds - allows users to read celebration message
   useEffect(() => {
     const timer = setTimeout(onContinue, 3000);
     return () => clearTimeout(timer);
