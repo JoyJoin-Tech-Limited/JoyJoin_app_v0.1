@@ -191,7 +191,10 @@ function OnboardingProgress({
                   initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -4 }}
-                  transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: "easeOut" }}
+                  transition={{ 
+                    duration: prefersReducedMotion ? 0.1 : 0.3, 
+                    ease: "easeOut" 
+                  }}
                   className="absolute top-full left-0 right-0 flex items-center gap-1 text-sm text-primary font-medium mt-0.5"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
