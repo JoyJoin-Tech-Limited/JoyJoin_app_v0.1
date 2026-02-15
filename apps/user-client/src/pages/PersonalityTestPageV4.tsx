@@ -186,15 +186,15 @@ function OnboardingProgress({
             
             {/* Inline micro-copy toast - appears briefly during Q8→Q9 transition */}
             <AnimatePresence>
-              {showMicroCopy && !prefersReducedMotion && (
+              {showMicroCopy && (
                 <motion.div
-                  initial={{ opacity: 0, y: -4 }}
+                  initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
-                  className="absolute top-full left-0 right-0 flex items-center gap-1 text-xs text-primary font-medium mt-0.5"
+                  exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -4 }}
+                  transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: "easeOut" }}
+                  className="absolute top-full left-0 right-0 flex items-center gap-1 text-sm text-primary font-medium mt-0.5"
                 >
-                  <Sparkles className="w-3 h-3" />
+                  <Sparkles className="w-3.5 h-3.5" />
                   <span>已锁定你的vibe ✨ 进入精准匹配</span>
                 </motion.div>
               )}
