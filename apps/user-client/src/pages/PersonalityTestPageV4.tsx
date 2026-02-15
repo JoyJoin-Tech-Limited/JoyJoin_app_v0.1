@@ -173,7 +173,7 @@ function OnboardingProgress({
                     value={progress} 
                     className={cn(
                       "h-2 mb-2 transition-all duration-500",
-                      showTransition && !prefersReducedMotion && "shadow-[0_0_20px_rgba(var(--primary-rgb,16,185,129),0.5)]"
+                      showTransition && !prefersReducedMotion && "shadow-[0_0_20px_hsl(var(--primary)/0.5)]"
                     )}
                     style={accentColor ? {
                       // @ts-ignore - CSS variable for dynamic accent color
@@ -192,7 +192,7 @@ function OnboardingProgress({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.3, ease: "easeOut" }}
-                  className="absolute -bottom-1 left-0 right-0 flex items-center gap-1 text-xs text-primary font-medium"
+                  className="absolute top-full left-0 right-0 flex items-center gap-1 text-xs text-primary font-medium mt-0.5"
                 >
                   <Sparkles className="w-3 h-3" />
                   <span>已锁定你的vibe ✨ 进入精准匹配</span>
