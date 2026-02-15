@@ -158,6 +158,7 @@ export function useSlotMachine({
     // Overshoot by exactly 1 position for dramatic effect
     const overshoot = (targetIndex + 1) % ARCHETYPE_NAMES.length;
     setCurrentIndex(overshoot);
+    // 92% provides optimal visual suspense before final reveal (not 100% to avoid triggering onLand)
     setProgress(92); // Don't use updateProgress which may trigger onLand prematurely
     
     // Pause for suspense, then GUARANTEE snap back to correct target
