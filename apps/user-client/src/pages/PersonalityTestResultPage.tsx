@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import PersonalityRadarChart from "@/components/PersonalityRadarChart";
-import { XiaoyueInsightCard } from "@/components/XiaoyueInsightCard";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import StyleSpectrum from "@/components/StyleSpectrum";
 import { ShareCardModal } from "@/components/ShareCardModal";
@@ -458,14 +457,6 @@ function MatchExplanationSection({ result }: { result: UnifiedAssessmentResult }
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <XiaoyueInsightCard
-          content={generateMatchExplanation()}
-          pose="thinking"
-          tone={result.isDecisive ? "confident" : "playful"}
-          badgeText="小悦分析"
-          avatarSize="sm"
-          animate={false}
-        />
         
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           <CollapsibleTrigger asChild>
@@ -1137,7 +1128,21 @@ export default function PersonalityTestResultPage() {
             <Button 
               className={`relative w-full h-16 rounded-2xl text-lg font-bold shadow-xl bg-gradient-to-r ${gradient} hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 border-2 border-white/30`}
               onClick={() => {
-                // Add haptic feedback for mobile (wrapped in try-catch for safety)
+                // Check authentication first
+                if (!isAuthenticated) {
+                  // Show login CTA and scroll to it
+                  setShowLoginCTA(true);
+                  // Smooth scroll to the login CTA card
+                  setTimeout(() => {
+                    const loginCta = document.querySelector('[data-testid="wechat-login-cta"]');
+                    if (loginCta) {
+                      loginCta.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                  }, 100);
+                  return;
+                }
+                
+                // Authenticated: open share modal normally
                 try {
                   if (navigator.vibrate) navigator.vibrate(50);
                 } catch (e) {
@@ -1174,11 +1179,22 @@ export default function PersonalityTestResultPage() {
           {!isAuthenticated && showLoginCTA ? (
             /* WeChat Login CTA for anonymous users (Option B: Post-Test Signup) */
             <>
-              <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
+              <Card 
+                className="border-2 border-primary bg-gradient-to-br from-background to-primary/5 animate-pulse-slow" 
+                data-testid="wechat-login-cta"
+              >
                 <CardContent className="p-4 text-center space-y-3">
-                  <h3 className="text-lg font-semibold">想看看本周有谁和你匹配？</h3>
+                  <div className="flex items-center justify-center gap-2">
+                    <motion.div
+                      animate={{ rotate: [0, 10, -10, 0] }}
+                      transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
+                    >
+                      🔥
+                    </motion.div>
+                    <h3 className="text-lg font-semibold">你的专属匹配已生成！</h3>
+                  </div>
                   <p className="text-sm text-muted-foreground">
-                    登录后查看为你推荐的活动和可能认识的人
+                    测都测完了，不看结果？你的匹配正在等你解锁…
                   </p>
                   <Button 
                     size="lg" 
@@ -1194,11 +1210,14 @@ export default function PersonalityTestResultPage() {
                     ) : (
                       <>
                         <Smartphone className="w-5 h-5 mr-2" />
-                        微信登录，查看匹配活动
+                        一键登录，立即解锁
                       </>
                     )}
                   </Button>
                   <p className="text-xs text-muted-foreground">
+                    已有 2,847 人领取了匹配报告
+                  </p>
+                  <p className="text-xs text-muted-foreground/70">
                     登录即同意《用户协议》和《隐私政策》
                   </p>
                 </CardContent>

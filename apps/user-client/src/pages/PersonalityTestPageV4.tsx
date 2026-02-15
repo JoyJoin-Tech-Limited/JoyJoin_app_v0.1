@@ -14,7 +14,6 @@ import { useAdaptiveAssessment, type PreSignupAnswer } from "@/hooks/useAdaptive
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { StickyCTA, StickyCTAButton, StickyCTASecondaryButton } from "@/components/StickyCTA";
 import { SelectionList } from "@/components/SelectionList";
-import { ArchetypePreview } from "@/components/archetype-preview";
 import { useDynamicAccent } from "@/contexts/DynamicAccentContext";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import { useUnifiedProgress } from "@/hooks/useUnifiedProgress";
@@ -34,6 +33,87 @@ XIAOYUE_AVATAR_URLS.forEach((src) => {
 });
 
 const V4_ANSWERS_KEY = "joyjoin_v4_presignup_answers";
+
+function AnchorPhaseComplete({ onContinue }: { onContinue: () => void }) {
+  // Auto-advance after 3 seconds
+  useEffect(() => {
+    const timer = setTimeout(onContinue, 3000);
+    return () => clearTimeout(timer);
+  }, [onContinue]);
+
+  return (
+    <div className="h-screen overflow-hidden bg-background flex flex-col items-center justify-center p-6">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+        className="text-center max-w-sm space-y-6"
+      >
+        {/* Phase 1: Checkmark animation */}
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.2, type: "spring", stiffness: 300 }}
+          className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center"
+        >
+          <motion.div
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+          >
+            <Sparkles className="w-10 h-10 text-primary" />
+          </motion.div>
+        </motion.div>
+
+        {/* Phase 2: Copy */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="space-y-2"
+        >
+          <h2 className="text-2xl font-bold">基础画像已完成 ✨</h2>
+          <p className="text-muted-foreground text-base leading-relaxed">
+            已经大概知道你的vibe了！<br/>
+            接下来几道精准题，帮你锁定专属原型 🎯
+          </p>
+        </motion.div>
+
+        {/* Phase 3: Visual transition hint - segmented dots morphing into a bar */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.0 }}
+          className="flex items-center gap-2 justify-center"
+        >
+          {/* Animated dots merging into a bar */}
+          <motion.div
+            className="h-2 bg-primary rounded-full"
+            initial={{ width: 8 }}
+            animate={{ width: 200 }}
+            transition={{ delay: 1.2, duration: 0.8, ease: "easeInOut" }}
+          />
+        </motion.div>
+
+        {/* Skip button */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5 }}
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onContinue}
+            className="text-muted-foreground"
+          >
+            继续 →
+          </Button>
+        </motion.div>
+      </motion.div>
+    </div>
+  );
+}
 
 function stripEmoji(text: string): string {
   return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '')
@@ -228,7 +308,7 @@ export default function PersonalityTestPageV4() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [selectedOption, setSelectedOption] = useState<string | undefined>();
-  const [showMilestone, setShowMilestone] = useState(false);
+  const [showPhaseTransition, setShowPhaseTransition] = useState(false);
   const { saveCheckpoint } = useOnboardingCheckpoint();
   
   const { setArchetype: setDynamicAccent, reset: resetDynamicAccent } = useDynamicAccent();
@@ -278,8 +358,27 @@ export default function PersonalityTestPageV4() {
       }
       return 0;
     }
-    // Use unified progress calculation that accounts for the full onboarding journey
-    // This ensures progress flows smoothly from anchor questions (50%) through assessment (100%)
+    
+    // During anchor phase (questions 1-8): show simple fraction progress
+    const isAnchorPhase = progress.answered < 8;
+    
+    if (isAnchorPhase) {
+      // Calculate progress as fraction of answered / estimated total
+      const estimatedTotal = progress.answered + estimatedRemaining;
+      const total = Math.max(estimatedTotal, progress.answered + 1);
+      const calculated = Math.min(100, Math.round((progress.answered / total) * 100));
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[PersonalityTestPageV4] Anchor phase progress:', { 
+          answered: progress.answered, 
+          estimatedRemaining, 
+          total,
+          calculated 
+        });
+      }
+      return calculated;
+    }
+    
+    // After anchor phase: use unified progress calculation
     const calculated = Math.min(100, Math.round(getUnifiedProgress('assessment', progress.answered, estimatedRemaining)));
     if (process.env.NODE_ENV === 'development') {
       console.log('[PersonalityTestPageV4] Progress calculated:', { 
@@ -311,11 +410,14 @@ export default function PersonalityTestPageV4() {
     startAssessment(shouldResume);
   }, []);
 
+  // Detect anchor phase completion and show transition
   useEffect(() => {
-    if (encouragement && answeredCount > 0 && answeredCount % 5 === 0) {
-      setShowMilestone(true);
+    if (progress && progress.answered === 8 && !showPhaseTransition) {
+      setShowPhaseTransition(true);
+      // Trigger haptic feedback for the transition
+      haptics.heavy();
     }
-  }, [encouragement, answeredCount]);
+  }, [progress?.answered, showPhaseTransition]);
 
   // Update dynamic accent color based on top archetype
   useEffect(() => {
@@ -367,9 +469,7 @@ export default function PersonalityTestPageV4() {
     setSelectedOption(undefined);
   }, [currentQuestion, selectedOption, submitAnswer, answeredCount, estimatedRemaining, currentMatches]);
 
-  const handleMilestoneContinue = useCallback(() => {
-    setShowMilestone(false);
-  }, []);
+
 
   const handleSkipQuestion = useCallback(async () => {
     if (!currentQuestion || !canSkip) return;
@@ -388,6 +488,11 @@ export default function PersonalityTestPageV4() {
       setLocation("/personality-test/results");
     }
   }, [isInitialized, isComplete, setLocation]);
+
+  // Show phase transition screen when completing anchor questions
+  if (showPhaseTransition) {
+    return <AnchorPhaseComplete onContinue={() => setShowPhaseTransition(false)} />;
+  }
 
   if (isLoading && !currentQuestion && !isComplete) {
     return (
@@ -429,56 +534,7 @@ export default function PersonalityTestPageV4() {
     );
   }
 
-  if (showMilestone && encouragement) {
-    return (
-      <div className="h-screen overflow-hidden bg-background flex flex-col items-center justify-center p-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center max-w-sm"
-        >
-          {/* Archetype Preview with layered images and confidence ring */}
-          {currentMatches.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="mb-6"
-            >
-              <ArchetypePreview matches={currentMatches} size="lg" />
-            </motion.div>
-          )}
-          
-          <p className="text-lg font-medium">{encouragement.message}</p>
-          
-          {topArchetype && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="mt-4 p-5 bg-primary/10 rounded-2xl"
-            >
-              <p className="text-2xl font-bold text-primary">{topArchetype}</p>
-              {currentMatches[0] && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  匹配度 {Math.round(currentMatches[0].confidence * 100)}%
-                </p>
-              )}
-            </motion.div>
-          )}
-          
-          <Button 
-            size="lg"
-            className="w-full mt-6 h-14 text-lg rounded-2xl"
-            onClick={handleMilestoneContinue}
-            data-testid="button-milestone-continue"
-          >
-            继续测评
-          </Button>
-        </motion.div>
-      </div>
-    );
-  }
+
 
   if (!currentQuestion) {
     return (
