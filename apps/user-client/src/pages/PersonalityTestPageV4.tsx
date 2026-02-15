@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -62,15 +62,16 @@ function OnboardingProgress({
 }) {
   const { currentAccent } = useDynamicAccent();
   const prefersReducedMotion = useReducedMotion();
-  const [prevCurrent, setPrevCurrent] = useState(current);
+  const prevCurrentRef = useRef(current);
   const [showTransition, setShowTransition] = useState(false);
   const [showMicroCopy, setShowMicroCopy] = useState(false);
+  const transitionTimeoutRef = useRef<number | undefined>();
+  const microCopyTimeoutRef = useRef<number | undefined>();
   
   // Detect transition from question 8 to 9
   useEffect(() => {
-    let transitionTimeoutId: number | undefined;
-    let microCopyTimeoutId: number | undefined;
-
+    const prevCurrent = prevCurrentRef.current;
+    
     if (prevCurrent === 8 && current === 9) {
       setShowTransition(true);
       setShowMicroCopy(true);
@@ -78,21 +79,22 @@ function OnboardingProgress({
       haptics.medium();
       haptics.heavy();
       // Reset transition state after animation
-      transitionTimeoutId = window.setTimeout(() => setShowTransition(false), 1000);
+      transitionTimeoutRef.current = window.setTimeout(() => setShowTransition(false), 1000);
       // Auto-hide micro-copy after 2 seconds
-      microCopyTimeoutId = window.setTimeout(() => setShowMicroCopy(false), 2000);
+      microCopyTimeoutRef.current = window.setTimeout(() => setShowMicroCopy(false), 2000);
     }
-    setPrevCurrent(current);
+    
+    prevCurrentRef.current = current;
 
     return () => {
-      if (transitionTimeoutId !== undefined) {
-        clearTimeout(transitionTimeoutId);
+      if (transitionTimeoutRef.current !== undefined) {
+        clearTimeout(transitionTimeoutRef.current);
       }
-      if (microCopyTimeoutId !== undefined) {
-        clearTimeout(microCopyTimeoutId);
+      if (microCopyTimeoutRef.current !== undefined) {
+        clearTimeout(microCopyTimeoutRef.current);
       }
     };
-  }, [current, prevCurrent]);
+  }, [current]);
   
   // Determine which progress bar to show
   const isAnchorPhase = current >= 1 && current <= 8;
@@ -195,9 +197,12 @@ function OnboardingProgress({
                     duration: prefersReducedMotion ? 0.1 : 0.3, 
                     ease: "easeOut" 
                   }}
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
                   className="absolute top-full left-0 right-0 flex items-center gap-1 text-sm text-primary font-medium mt-0.5"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
                   <span>已锁定你的vibe ✨ 进入精准匹配</span>
                 </motion.div>
               )}
