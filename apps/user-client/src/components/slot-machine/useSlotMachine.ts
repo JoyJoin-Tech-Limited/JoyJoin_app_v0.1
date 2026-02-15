@@ -79,6 +79,11 @@ export function useSlotMachine({
     );
     return 0; // Fallback to first archetype
   })();
+  
+  // Debug logging for archetype validation (dev-only to avoid spamming production logs)
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[useSlotMachine] finalArchetype="${finalArchetype}", targetIndex=${targetIndex}, validated=${!!validationResult}`);
+  }
 
   // Get 3 visible items centered on current
   const getVisibleItems = useCallback((idx: number): string[] => {
@@ -155,7 +160,8 @@ export function useSlotMachine({
     // Overshoot by exactly 1 position for dramatic effect
     const overshoot = (targetIndex + 1) % ARCHETYPE_NAMES.length;
     setCurrentIndex(overshoot);
-    updateProgress(92);
+    // 92% provides optimal visual suspense before final reveal (not 100% to avoid triggering onLand)
+    setProgress(92); // Don't use updateProgress which may trigger onLand prematurely
     
     // Pause for suspense, then GUARANTEE snap back to correct target
     timeoutRef.current = setTimeout(() => {
@@ -322,6 +328,16 @@ export function useSlotMachine({
       }
     }, anticipationInterval);
   }, [cleanup, prefersReducedMotion, targetIndex, updateState, triggerHaptic, onLand, startSpinning]);
+
+  // Safety check: verify final display matches finalArchetype after landing
+  useEffect(() => {
+    if (state === 'landed' && ARCHETYPE_NAMES[currentIndex] !== finalArchetype) {
+      console.error(`[useSlotMachine] MISMATCH! Displayed: ${ARCHETYPE_NAMES[currentIndex]}, Expected: ${finalArchetype}`);
+      // Force correct
+      const correctedIndex = validateArchetypeName(finalArchetype)?.index ?? 0;
+      setCurrentIndex(correctedIndex);
+    }
+  }, [state, currentIndex, finalArchetype]);
 
   return {
     state,
