@@ -26,6 +26,14 @@ export function useCountdown(targetDate: string | undefined): CountdownResult {
 
   useEffect(() => {
     if (!targetDate) {
+      setCountdown({
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        totalMs: 0,
+        isExpired: false,
+      });
       return;
     }
 

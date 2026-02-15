@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,6 @@ import {
 import { 
   ArrowLeft, 
   MapPin, 
-  Calendar, 
   Lock, 
   UserPlus, 
   XCircle,
@@ -36,6 +35,7 @@ import { queryClient } from "@/lib/queryClient";
 import MatchCelebrationOverlay from "@/components/MatchCelebrationOverlay";
 import EventThemeTitleReveal from "@/components/EventThemeTitleReveal";
 import type { PoolMatchedData, EventThemeTitleRevealedData } from "@shared/wsEvents";
+import { formatDateInHongKong } from "@/lib/hongKongTime";
 
 // Constants
 const DEFAULT_MIN_GROUP_SIZE = 4;
@@ -84,6 +84,10 @@ export default function MatchingStatusPage() {
   const [newMemberJoined, setNewMemberJoined] = useState(false);
   const [newMemberArchetype, setNewMemberArchetype] = useState<string | null>(null);
 
+  // Refs for timeout cleanup
+  const matchTransitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const microInteractionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Fetch registration from shared cache
   const { data: poolRegistrations } = useQuery<Array<PoolRegistration>>({
     queryKey: ["/api/my-pool-registrations"],
@@ -113,20 +117,31 @@ export default function MatchingStatusPage() {
   // WebSocket subscriptions
   useEffect(() => {
     const unsubscribePoolMatched = subscribe('POOL_MATCHED', async (message) => {
+      const poolData = message.data as PoolMatchedData;
+      
+      // Guard: only react to matches for the currently viewed registration's pool
+      if (!registration || poolData.poolId !== registration.poolId) {
+        return;
+      }
+
       console.log('[Analytics] matching_succeeded', {
         waitTimeSeconds: message.data?.waitTimeSeconds,
         groupSize: message.data?.groupSize,
         matchScore: message.data?.matchScore,
       });
 
-      const poolData = message.data as PoolMatchedData;
       setMatchData(poolData);
       
       // In-page transition: progress → 100%, ribbon changes
       await queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
       
+      // Clear any existing timeout
+      if (matchTransitionTimeoutRef.current) {
+        clearTimeout(matchTransitionTimeoutRef.current);
+      }
+      
       // Wait 1 second for visual transition
-      setTimeout(() => {
+      matchTransitionTimeoutRef.current = setTimeout(() => {
         setShowMatchCelebration(true);
       }, 1000);
     });
@@ -148,8 +163,13 @@ export default function MatchingStatusPage() {
         navigator.vibrate(50);
       }
 
+      // Clear any existing timeout
+      if (microInteractionTimeoutRef.current) {
+        clearTimeout(microInteractionTimeoutRef.current);
+      }
+
       // Clear micro-interaction after 2s
-      setTimeout(() => {
+      microInteractionTimeoutRef.current = setTimeout(() => {
         setNewMemberJoined(false);
         setNewMemberArchetype(null);
       }, 2000);
@@ -160,9 +180,15 @@ export default function MatchingStatusPage() {
     });
 
     const unsubscribeThemeTitle = subscribe('EVENT_THEME_TITLE_REVEALED', async (message) => {
+      const themeTitleData = message.data as EventThemeTitleRevealedData;
+      
+      // Ignore theme title events for other pools
+      if (!registration || themeTitleData.poolId !== registration.poolId) {
+        return;
+      }
+
       console.log('[User] Event theme title revealed:', message);
       
-      const themeTitleData = message.data as EventThemeTitleRevealedData;
       setThemeData(themeTitleData);
       
       // Haptic feedback
@@ -174,6 +200,14 @@ export default function MatchingStatusPage() {
     });
 
     return () => {
+      // Clean up timeouts
+      if (matchTransitionTimeoutRef.current) {
+        clearTimeout(matchTransitionTimeoutRef.current);
+      }
+      if (microInteractionTimeoutRef.current) {
+        clearTimeout(microInteractionTimeoutRef.current);
+      }
+      
       unsubscribePoolMatched();
       unsubscribeRegistrationAdded();
       unsubscribeThemeTitle();
@@ -198,22 +232,33 @@ export default function MatchingStatusPage() {
     // If theme data is available, show theme reveal
     if (themeData) {
       setShowThemeReveal(true);
-    } else {
-      // Navigate to group detail
-      if (registration?.assignedGroupId) {
-        setLocation(`/pool-groups/${registration.assignedGroupId}`);
-      }
+      return;
     }
-  }, [themeData, registration?.assignedGroupId, setLocation]);
+    
+    // Navigate to group detail, preferring live WS payload over registration refetch
+    const targetGroupId = 
+      themeData?.groupId ?? 
+      matchData?.groupId ?? 
+      registration?.assignedGroupId;
+    
+    if (targetGroupId) {
+      setLocation(`/pool-groups/${targetGroupId}`);
+    }
+  }, [themeData, matchData?.groupId, registration?.assignedGroupId, setLocation]);
 
   const handleCloseThemeReveal = useCallback(() => {
     setShowThemeReveal(false);
     
-    // Navigate to group detail after theme reveal
-    if (registration?.assignedGroupId) {
-      setLocation(`/pool-groups/${registration.assignedGroupId}`);
+    // Navigate to group detail after theme reveal, preferring WS payload
+    const targetGroupId = 
+      themeData?.groupId ?? 
+      matchData?.groupId ?? 
+      registration?.assignedGroupId;
+    
+    if (targetGroupId) {
+      setLocation(`/pool-groups/${targetGroupId}`);
     }
-  }, [registration?.assignedGroupId, setLocation]);
+  }, [themeData?.groupId, matchData?.groupId, registration?.assignedGroupId, setLocation]);
 
   // Handle cancel
   const handleCancel = () => {
@@ -236,9 +281,11 @@ export default function MatchingStatusPage() {
     });
 
     const poolTitle = registration?.poolTitle ?? "盲盒社交活动";
-    const formattedDateTime = formatDateTime(registration?.poolDateTime) || "活动时间待定";
+    const formattedDateTime = registration?.poolDateTime 
+      ? formatDateInHongKong(registration.poolDateTime, 'full')
+      : "活动时间待定";
     const shareText = `${poolTitle}\n${formattedDateTime}\n一起来参加盲盒社交活动吧！`;
-    const shareUrl = `${window.location.origin}/pools/${registration?.poolId}/register`;
+    const shareUrl = `${window.location.origin}/event-pool/${registration?.poolId}/register`;
 
     if (navigator.share) {
       try {
@@ -263,18 +310,6 @@ export default function MatchingStatusPage() {
         description: "邀请链接已复制到剪贴板",
       });
     }
-  };
-
-  const formatDateTime = (dateTime?: string) => {
-    if (!dateTime) return "";
-    const date = new Date(dateTime);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-    const weekday = weekdays[date.getDay()];
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${month}月${day}日 ${weekday} ${hours}:${minutes}`;
   };
 
   const getInviteButtonText = () => {
@@ -373,7 +408,7 @@ export default function MatchingStatusPage() {
               {registration.poolTitle}
             </h1>
             <p className="text-xs text-muted-foreground">
-              {formatDateTime(registration.poolDateTime)}
+              {formatDateInHongKong(registration.poolDateTime, 'full')}
             </p>
           </div>
         </div>
