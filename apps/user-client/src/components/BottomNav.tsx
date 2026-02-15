@@ -6,6 +6,7 @@ import { useNotificationCounts } from "@/hooks/useNotificationCounts";
 import { queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
 import joyJoinLogo from "@/assets/joyjoin-logo.png";
+import { getHongKongDateForComparison } from "@/lib/hongKongTime";
 
 // Constants
 const MS_PER_HOUR = 1000 * 60 * 60;
@@ -41,8 +42,7 @@ interface BlindBoxEvent {
 }
 
 export default function BottomNav() {
-  const [location] = useLocation();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { data: notificationCounts } = useNotificationCounts();
   const [showCenterBadge, setShowCenterBadge] = useState(false);
 
@@ -96,14 +96,15 @@ export default function BottomNav() {
       return '/my-journey';
     }
 
-    const now = new Date();
+    const now = getHongKongDateForComparison(new Date());
     const matchedEvents = events.filter(e => e.status === "matched");
     const matchedPoolRegistrations = poolRegistrations.filter(r => r.matchStatus === "matched");
 
-    // Priority 1: Matched event happening TODAY
+    // Priority 1: Matched event happening TODAY (HK timezone)
     const todayMatchedEvent = matchedEvents.find(e => {
-      const eventDate = new Date(e.dateTime);
-      return eventDate.toDateString() === now.toDateString();
+      const eventDate = getHongKongDateForComparison(e.dateTime);
+      // Compare dates in HK timezone by comparing the date string (YYYY-MM-DD)
+      return eventDate.toISOString().split('T')[0] === now.toISOString().split('T')[0];
     });
     if (todayMatchedEvent) {
       return `/blind-box-events/${todayMatchedEvent.id}`;
@@ -111,7 +112,7 @@ export default function BottomNav() {
 
     // Priority 2: Matched pool event < 24h away (venue revealed)
     const upcomingMatchedPool = matchedPoolRegistrations.find(r => {
-      const eventDate = new Date(r.poolDateTime);
+      const eventDate = getHongKongDateForComparison(r.poolDateTime);
       const hoursUntil = (eventDate.getTime() - now.getTime()) / MS_PER_HOUR;
       return hoursUntil < VENUE_UNLOCK_HOURS && hoursUntil > 0;
     });
@@ -127,7 +128,7 @@ export default function BottomNav() {
 
     // Priority 4: Matched event in future (> 24h away)
     const futureMatchedPool = matchedPoolRegistrations.find(r => {
-      const eventDate = new Date(r.poolDateTime);
+      const eventDate = getHongKongDateForComparison(r.poolDateTime);
       const hoursUntil = (eventDate.getTime() - now.getTime()) / MS_PER_HOUR;
       return hoursUntil >= VENUE_UNLOCK_HOURS;
     });
@@ -136,7 +137,7 @@ export default function BottomNav() {
     }
 
     const futureMatchedEvent = matchedEvents.find(e => {
-      const eventDate = new Date(e.dateTime);
+      const eventDate = getHongKongDateForComparison(e.dateTime);
       return eventDate > now;
     });
     if (futureMatchedEvent) {
