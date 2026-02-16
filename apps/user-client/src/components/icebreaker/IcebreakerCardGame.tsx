@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { BubbleProgress } from "@/components/BubbleProgress";
 import { X, ChevronLeft, ChevronRight, Sparkles, ThumbsUp, Users, Target } from "lucide-react";
 import { useIcebreakerGame, type GameCard } from "@/hooks/useIcebreakerGame";
 import { cn } from "@/lib/utils";
@@ -20,18 +21,21 @@ const DIFFICULTY_CONFIG = {
     color: "text-emerald-600",
     bgColor: "bg-emerald-500/10",
     borderColor: "border-emerald-500/30",
+    glowColor: "shadow-emerald-500/30",
   },
   medium: {
     label: "有点意思",
     color: "text-amber-600",
     bgColor: "bg-amber-500/10",
     borderColor: "border-amber-500/30",
+    glowColor: "shadow-amber-500/30",
   },
   deep: {
     label: "走心聊",
     color: "text-purple-600",
     bgColor: "bg-purple-500/10",
     borderColor: "border-purple-500/30",
+    glowColor: "shadow-purple-500/30",
   },
 };
 
@@ -121,6 +125,7 @@ export default function IcebreakerCardGame({
     const difficultyConfig = DIFFICULTY_CONFIG[card.difficulty];
     const typeConfig = CARD_TYPE_CONFIG[card.cardType];
     const TypeIcon = typeConfig.icon;
+    const isNewCard = !card.revealedAt; // Check if this is a newly revealed card
 
     return (
       <motion.div
@@ -133,9 +138,37 @@ export default function IcebreakerCardGame({
           stiffness: 300,
           damping: 25,
         }}
-        className="w-full max-w-md"
+        className="w-full max-w-md relative"
       >
-        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-6 border border-gray-200 dark:border-gray-800">
+        {/* Ambient glow effect for new cards */}
+        {isNewCard && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: [0, 0.6, 0.3], scale: [0.8, 1.2, 1.1] }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            className="absolute -inset-4 bg-gradient-to-r from-violet-400/20 via-purple-400/20 to-fuchsia-400/20 rounded-3xl blur-2xl pointer-events-none"
+          />
+        )}
+        
+        {/* Card with soft glow and thin border */}
+        <div 
+          className={cn(
+            "bg-white dark:bg-gray-900 rounded-3xl p-6 relative",
+            "border-2 border-transparent",
+            "shadow-xl",
+            difficultyConfig.glowColor,
+            "transition-all duration-300",
+            isNewCard && "animate-pulse-soft"
+          )}
+          style={{
+            boxShadow: isNewCard 
+              ? `0 0 20px rgba(139, 92, 246, 0.3), 0 0 40px rgba(168, 85, 247, 0.2), 0 20px 25px -5px rgba(0, 0, 0, 0.1)`
+              : undefined,
+            borderImage: isNewCard 
+              ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.5), rgba(168, 85, 247, 0.5)) 1'
+              : undefined,
+          }}
+        >
           {/* Card Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -339,11 +372,12 @@ export default function IcebreakerCardGame({
         </div>
 
         {/* Round Progress Bar */}
-        {timeRemaining && !timeRemaining.isExpired && (
+        {timeRemaining && !timeRemaining.isExpired && progress && (
           <div className="mb-6">
-            <Progress 
-              value={timeRemaining.progress} 
-              className="h-2 bg-white/20"
+            <BubbleProgress 
+              value={timeRemaining.progress}
+              totalRounds={progress.totalRounds}
+              currentRound={progress.currentRound}
             />
           </div>
         )}
