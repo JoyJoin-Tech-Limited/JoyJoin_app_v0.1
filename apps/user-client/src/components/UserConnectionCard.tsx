@@ -51,6 +51,10 @@ const archetypeBgColors: Record<string, string> = {
 const DEFAULT_VISIBLE_COUNT = 3;
 const MAX_MATCH_POINTS = 10;
 
+// Card height constants
+const COLLAPSED_HEIGHT = 200;
+const EXPANDED_HEIGHT = 468;
+
 export default function UserConnectionCard({
   attendee,
   connectionTags,
@@ -118,7 +122,7 @@ export default function UserConnectionCard({
     >
       <motion.div
         animate={{ 
-          height: isExpanded ? 468 : 200,
+          height: isExpanded ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT,
         }}
         transition={{ 
           type: "spring",
