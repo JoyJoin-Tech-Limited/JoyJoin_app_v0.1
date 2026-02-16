@@ -8,7 +8,7 @@ import { GuideStepPersona } from "./GuideStepPersona";
 import { GuideStepBlindBoxFlow } from "./GuideStepBlindBoxFlow";
 import { GuideStepAIConcierge } from "./GuideStepAIConcierge";
 import { GuideCompletionState } from "./GuideCompletionState";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface GuideStepperProps {
   /** 当前步骤 (0-2) */
