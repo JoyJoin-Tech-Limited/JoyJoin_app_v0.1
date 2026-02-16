@@ -556,20 +556,20 @@ export default function BlindBoxEventDetailPage() {
                 industryVisible?: boolean;
               }>}
               matchExplanation={event.matchExplanation || undefined}
-              userInterests={["film_entertainment", "travel_exploration"]} // Default interests (interestsTop field removed)
-              userEducationLevel={user?.educationLevel || "Master's"}
-              userIndustry={undefined} // DEPRECATED: industry field removed from schema
-              userAge={user?.birthdate ? calculateAge(user.birthdate) : undefined}
-              userGender={user?.gender || undefined}
-              userRelationshipStatus={user?.relationshipStatus || "Single"}
-              userChildren={user?.children || undefined}
-              userStudyLocale={user?.studyLocale || "Overseas"}
-              userOverseasRegions={user?.overseasRegions as string[] | undefined}
-              userSeniority={undefined} // DEPRECATED: seniority field removed from schema
-              userFieldOfStudy={user?.fieldOfStudy || undefined}
-              userLanguages={user?.languagesComfort as string[] | undefined}
-              userHometownCountry={user?.hometownCountry || undefined}
-              userHometownRegionCity={user?.hometownRegionCity || undefined}
+              currentUser={{
+                interests: ["film_entertainment", "travel_exploration"], // Default interests
+                educationLevel: user?.educationLevel || "Master's",
+                age: user?.birthdate ? calculateAge(user.birthdate) : undefined,
+                gender: user?.gender || undefined,
+                relationshipStatus: user?.relationshipStatus || "Single",
+                children: user?.children || undefined,
+                studyLocale: user?.studyLocale || "Overseas",
+                overseasRegions: user?.overseasRegions as string[] | undefined,
+                fieldOfStudy: user?.fieldOfStudy || undefined,
+                languages: user?.languagesComfort as string[] | undefined,
+                hometownCountry: user?.hometownCountry || undefined,
+                hometownRegionCity: user?.hometownRegionCity || undefined,
+              }}
             />
           ) : (
             <MysteryWaitingCard 

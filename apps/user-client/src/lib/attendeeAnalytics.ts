@@ -227,6 +227,43 @@ const sparkPredictions: Record<string, string> = {
   "cooking_baking": "下厨搭档",
 };
 
+/**
+ * User context for spark predictions and matching
+ * Consolidates all user fields needed for connection point generation
+ */
+export interface UserContext {
+  interests?: string[];
+  primaryInterests?: string[];
+  topicsHappy?: string[];
+  topicsAvoid?: string[];
+  topicAvoidances?: string[];
+  debateComfort?: number;
+  educationLevel?: string;
+  industry?: string;
+  age?: number;
+  gender?: string;
+  relationshipStatus?: string;
+  children?: string;
+  studyLocale?: string;
+  overseasRegions?: string[];
+  seniority?: string;
+  fieldOfStudy?: string;
+  languages?: string[];
+  hometownCountry?: string;
+  hometownRegionCity?: string;
+  hometownAffinityOptin?: boolean;
+  archetype?: string;
+  intent?: string[]; // Event-specific intent (aligned with User.intent)
+  matchedBefore?: string[]; // Array of user IDs previously matched with
+  // New fields from AI chat registration
+  cuisinePreference?: string[];
+  favoriteRestaurant?: string;
+  dialectProfile?: string[]; // Detected dialects from conversation
+}
+
+/**
+ * @deprecated Use UserContext instead. Kept for backward compatibility.
+ */
 export interface SparkPredictionContext {
   userInterests?: string[];
   userPrimaryInterests?: string[];
@@ -318,15 +355,54 @@ export function calculateMatchQuality(connectionPoints: SparkPrediction[]): Matc
   };
 }
 
+/**
+ * Convert UserContext to SparkPredictionContext for backward compatibility
+ */
+function userContextToSparkContext(ctx: UserContext): SparkPredictionContext {
+  return {
+    userInterests: ctx.interests,
+    userPrimaryInterests: ctx.primaryInterests,
+    userTopicsHappy: ctx.topicsHappy,
+    userTopicsAvoid: ctx.topicsAvoid,
+    userTopicAvoidances: ctx.topicAvoidances,
+    userDebateComfort: ctx.debateComfort,
+    userEducationLevel: ctx.educationLevel,
+    userIndustry: ctx.industry,
+    userAge: ctx.age,
+    userGender: ctx.gender,
+    userRelationshipStatus: ctx.relationshipStatus,
+    userChildren: ctx.children,
+    userStudyLocale: ctx.studyLocale,
+    userOverseasRegions: ctx.overseasRegions,
+    userSeniority: ctx.seniority,
+    userFieldOfStudy: ctx.fieldOfStudy,
+    userLanguages: ctx.languages,
+    userHometownCountry: ctx.hometownCountry,
+    userHometownRegionCity: ctx.hometownRegionCity,
+    userHometownAffinityOptin: ctx.hometownAffinityOptin,
+    userArchetype: ctx.archetype,
+    userIntent: ctx.intent,
+    userMatchedBefore: ctx.matchedBefore,
+    userCuisinePreference: ctx.cuisinePreference,
+    userFavoriteRestaurant: ctx.favoriteRestaurant,
+    userDialectProfile: ctx.dialectProfile,
+  };
+}
+
 export function generateSparkPredictions(
-  userContext: SparkPredictionContext,
+  userContext: SparkPredictionContext | UserContext,
   attendee: AttendeeData
 ): SparkPrediction[] {
+  // Convert UserContext to SparkPredictionContext if needed
+  const ctx: SparkPredictionContext = 'userInterests' in userContext 
+    ? userContext as SparkPredictionContext
+    : userContextToSparkContext(userContext as UserContext);
+  
   const predictions: SparkPrediction[] = [];
   
   // Priority 1: Interest-based predictions (most interesting and hidden)
-  if (userContext.userInterests && attendee.topInterests) {
-    const userSet = new Set(userContext.userInterests);
+  if (ctx.userInterests && attendee.topInterests) {
+    const userSet = new Set(ctx.userInterests);
     const commonInterests = attendee.topInterests.filter((interest) =>
       userSet.has(interest)
     );
@@ -342,95 +418,95 @@ export function generateSparkPredictions(
   }
   
   // Priority 2: Study locale - Overseas experience (RARE - hidden info)
-  if (userContext.userStudyLocale === "Overseas" && attendee.studyLocale === "Overseas") {
+  if (ctx.userStudyLocale === "Overseas" && attendee.studyLocale === "Overseas") {
     predictions.push({ text: "都有海外留学经历", rarity: 'rare' });
-  } else if (userContext.userStudyLocale === "Both" && attendee.studyLocale === "Both") {
+  } else if (ctx.userStudyLocale === "Both" && attendee.studyLocale === "Both") {
     predictions.push({ text: "都有海外+国内学习经历", rarity: 'epic' }); // Very rare combination
-  } else if (userContext.userStudyLocale && attendee.studyLocale && 
-             userContext.userStudyLocale !== attendee.studyLocale) {
+  } else if (ctx.userStudyLocale && attendee.studyLocale && 
+             ctx.userStudyLocale !== attendee.studyLocale) {
     // Different study backgrounds can also be interesting
-    if ((userContext.userStudyLocale === "Overseas" && attendee.studyLocale === "Both") ||
-        (userContext.userStudyLocale === "Both" && attendee.studyLocale === "Overseas")) {
+    if ((ctx.userStudyLocale === "Overseas" && attendee.studyLocale === "Both") ||
+        (ctx.userStudyLocale === "Both" && attendee.studyLocale === "Overseas")) {
       predictions.push({ text: "都有国际化视野", rarity: 'rare' });
     }
   }
   
   // Priority 3: Seniority-based predictions (RARE - career stage not obvious)
-  if (userContext.userSeniority && attendee.seniority) {
-    if (userContext.userSeniority === "Founder" && attendee.seniority === "Founder") {
+  if (ctx.userSeniority && attendee.seniority) {
+    if (ctx.userSeniority === "Founder" && attendee.seniority === "Founder") {
       predictions.push({ text: "同为创业者", rarity: 'epic' }); // Founders are rare
     } else if (
-      (userContext.userSeniority === "Senior" || userContext.userSeniority === "Executive") &&
+      (ctx.userSeniority === "Senior" || ctx.userSeniority === "Executive") &&
       (attendee.seniority === "Senior" || attendee.seniority === "Executive")
     ) {
       predictions.push({ text: "都是职场老司机", rarity: 'rare' });
     } else if (
-      userContext.userSeniority === "Junior" && attendee.seniority === "Junior"
+      ctx.userSeniority === "Junior" && attendee.seniority === "Junior"
     ) {
       predictions.push({ text: "都是职场新人", rarity: 'common' });
     } else if (
-      userContext.userSeniority === "Mid" && attendee.seniority === "Mid"
+      ctx.userSeniority === "Mid" && attendee.seniority === "Mid"
     ) {
       predictions.push({ text: "职场中坚力量", rarity: 'common' });
     }
   }
   
   // Priority 4: Relationship status (COMMON - hidden but common)
-  if (userContext.userRelationshipStatus && attendee.relationshipStatus) {
-    if (userContext.userRelationshipStatus === "Married/Partnered" && 
+  if (ctx.userRelationshipStatus && attendee.relationshipStatus) {
+    if (ctx.userRelationshipStatus === "Married/Partnered" && 
         attendee.relationshipStatus === "Married/Partnered") {
       predictions.push({ text: "同为有伴一族", rarity: 'common' });
-    } else if (userContext.userRelationshipStatus === "Single" && 
+    } else if (ctx.userRelationshipStatus === "Single" && 
                attendee.relationshipStatus === "Single") {
       predictions.push({ text: "同为单身贵族", rarity: 'common' });
     }
   }
   
   // Priority 5: Education level (RARE/EPIC - advanced degrees)
-  if (userContext.userEducationLevel && attendee.educationLevel) {
-    if (userContext.userEducationLevel === attendee.educationLevel) {
-      if (userContext.userEducationLevel === "Doctorate") {
+  if (ctx.userEducationLevel && attendee.educationLevel) {
+    if (ctx.userEducationLevel === attendee.educationLevel) {
+      if (ctx.userEducationLevel === "Doctorate") {
         predictions.push({ text: "同为博士学历", rarity: 'epic' }); // PhDs are rare
-      } else if (userContext.userEducationLevel === "Master's") {
+      } else if (ctx.userEducationLevel === "Master's") {
         predictions.push({ text: "同为硕士学历", rarity: 'rare' });
       }
     }
   }
   
   // Priority 6: Age similarity (COMMON - life stage alignment)
-  if (userContext.userAge && attendee.age) {
-    const ageDiff = Math.abs(userContext.userAge - attendee.age);
+  if (ctx.userAge && attendee.age) {
+    const ageDiff = Math.abs(ctx.userAge - attendee.age);
     if (ageDiff <= 3) {
       predictions.push({ text: "年龄相近", rarity: 'common' });
     }
   }
   
   // Priority 6.5: Gender matching (COMMON - identity connection)
-  if (userContext.userGender && attendee.gender && 
-      userContext.userGender === attendee.gender &&
-      userContext.userGender !== "Prefer not to say") {
+  if (ctx.userGender && attendee.gender && 
+      ctx.userGender === attendee.gender &&
+      ctx.userGender !== "Prefer not to say") {
     const genderLabels: Record<string, string> = {
       "Woman": "同为女性",
       "Man": "同为男性",
       "Nonbinary": "同为非二元性别"
     };
     
-    if (genderLabels[userContext.userGender]) {
+    if (genderLabels[ctx.userGender]) {
       predictions.push({ 
-        text: genderLabels[userContext.userGender], 
+        text: genderLabels[ctx.userGender], 
         rarity: 'common' 
       });
     }
   }
   
   // Priority 6.6: Children/Family status matching (RARE/EPIC - life stage connection)
-  if (userContext.userChildren && attendee.children && 
-      userContext.userChildren !== "Prefer not to say" &&
+  if (ctx.userChildren && attendee.children && 
+      ctx.userChildren !== "Prefer not to say" &&
       attendee.children !== "Prefer not to say") {
     
-    if (userContext.userChildren === "Expecting" && attendee.children === "Expecting") {
+    if (ctx.userChildren === "Expecting" && attendee.children === "Expecting") {
       predictions.push({ text: "都在期待新生命", rarity: 'epic' }); // Very specific life stage
-    } else if (userContext.userChildren === attendee.children && userContext.userChildren !== "No kids") {
+    } else if (ctx.userChildren === attendee.children && ctx.userChildren !== "No kids") {
       const childrenLabels: Record<string, { text: string; rarity: RarityLevel }> = {
         "0-5": { text: "都有学龄前孩子", rarity: 'rare' },
         "6-12": { text: "都有小学阶段的孩子", rarity: 'rare' },
@@ -438,19 +514,19 @@ export function generateSparkPredictions(
         "Adult": { text: "都有成年子女", rarity: 'rare' }
       };
       
-      if (childrenLabels[userContext.userChildren]) {
-        predictions.push(childrenLabels[userContext.userChildren]);
+      if (childrenLabels[ctx.userChildren]) {
+        predictions.push(childrenLabels[ctx.userChildren]);
       }
-    } else if (userContext.userChildren === "No kids" && attendee.children === "No kids") {
+    } else if (ctx.userChildren === "No kids" && attendee.children === "No kids") {
       predictions.push({ text: "都是丁克一族", rarity: 'common' });
     }
   }
   
   // Priority 6.7: Specific overseas regions matching (RARE - deeper connection than just "Overseas")
-  if (userContext.userOverseasRegions && userContext.userOverseasRegions.length > 0 &&
+  if (ctx.userOverseasRegions && ctx.userOverseasRegions.length > 0 &&
       attendee.overseasRegions && attendee.overseasRegions.length > 0) {
     
-    const commonRegions = userContext.userOverseasRegions.filter(region => 
+    const commonRegions = ctx.userOverseasRegions.filter(region => 
       attendee.overseasRegions!.includes(region)
     );
     
@@ -478,22 +554,22 @@ export function generateSparkPredictions(
   
   // Priority 7: Hometown matching (RARE/EPIC - 老乡 connection, default enabled)
   // Only match if both users have opted in (default is true, so most will match)
-  const userOptedIn = userContext.userHometownAffinityOptin !== false; // default true
+  const userOptedIn = ctx.userHometownAffinityOptin !== false; // default true
   const attendeeOptedIn = attendee.hometownAffinityOptin !== false; // default true
   
   if (userOptedIn && attendeeOptedIn) {
     // Same city/region - EPIC (very specific)
-    if (userContext.userHometownRegionCity && attendee.hometownRegionCity &&
-        userContext.userHometownRegionCity === attendee.hometownRegionCity) {
+    if (ctx.userHometownRegionCity && attendee.hometownRegionCity &&
+        ctx.userHometownRegionCity === attendee.hometownRegionCity) {
       predictions.push({ 
-        text: `老乡！都来自${userContext.userHometownRegionCity}`, 
+        text: `老乡！都来自${ctx.userHometownRegionCity}`, 
         rarity: 'epic' 
       });
     }
     // Same country but different cities - RARE
-    else if (userContext.userHometownCountry && attendee.hometownCountry &&
-             userContext.userHometownCountry === attendee.hometownCountry &&
-             userContext.userHometownCountry !== "中国") { // China is too broad to be rare
+    else if (ctx.userHometownCountry && attendee.hometownCountry &&
+             ctx.userHometownCountry === attendee.hometownCountry &&
+             ctx.userHometownCountry !== "中国") { // China is too broad to be rare
       const countryLabels: Record<string, string> = {
         "美国": "美国",
         "英国": "英国",
@@ -504,7 +580,7 @@ export function generateSparkPredictions(
         "韩国": "韩国"
       };
       
-      const countryName = countryLabels[userContext.userHometownCountry] || userContext.userHometownCountry;
+      const countryName = countryLabels[ctx.userHometownCountry] || ctx.userHometownCountry;
       predictions.push({ 
         text: `都来自${countryName}`, 
         rarity: 'rare' 
@@ -556,8 +632,8 @@ export function generateSparkPredictions(
   }
   
   // Priority 9: Industry matching (RARE - professional connection, but only if different from obvious info)
-  if (userContext.userIndustry && attendee.industry && 
-      userContext.userIndustry === attendee.industry &&
+  if (ctx.userIndustry && attendee.industry && 
+      ctx.userIndustry === attendee.industry &&
       !attendee.industryVisible) { // Only if industry not visible on card front
     
     const industryNames: Record<string, { text: string; rarity: RarityLevel }> = {
@@ -568,10 +644,10 @@ export function generateSparkPredictions(
       "教育": { text: "都在教育行业", rarity: 'rare' },
     };
     
-    if (industryNames[userContext.userIndustry]) {
+    if (industryNames[ctx.userIndustry]) {
       predictions.push({ 
-        text: industryNames[userContext.userIndustry].text,
-        rarity: industryNames[userContext.userIndustry].rarity
+        text: industryNames[ctx.userIndustry].text,
+        rarity: industryNames[ctx.userIndustry].rarity
       });
     }
   }
@@ -580,14 +656,14 @@ export function generateSparkPredictions(
   // These require 3+ factors to align - extremely rare
   
   // Triple match: Industry + Education + Study Locale (EPIC)
-  if (userContext.userIndustry && attendee.industry &&
-      userContext.userEducationLevel && attendee.educationLevel &&
-      userContext.userStudyLocale && attendee.studyLocale &&
-      userContext.userIndustry === attendee.industry &&
-      userContext.userEducationLevel === "Master's" && attendee.educationLevel === "Master's" &&
-      userContext.userStudyLocale === "Overseas" && attendee.studyLocale === "Overseas") {
+  if (ctx.userIndustry && attendee.industry &&
+      ctx.userEducationLevel && attendee.educationLevel &&
+      ctx.userStudyLocale && attendee.studyLocale &&
+      ctx.userIndustry === attendee.industry &&
+      ctx.userEducationLevel === "Master's" && attendee.educationLevel === "Master's" &&
+      ctx.userStudyLocale === "Overseas" && attendee.studyLocale === "Overseas") {
     predictions.push({ 
-      text: `同为${userContext.userIndustry}圈的硕士海归`,
+      text: `同为${ctx.userIndustry}圈的硕士海归`,
       rarity: 'epic'
     });
   }
@@ -595,14 +671,14 @@ export function generateSparkPredictions(
   // 🌟 NEW Epic-level predictions - Ultra-rare combinations
   
   // Creative interdisciplinary background (EPIC)
-  if (userContext.userFieldOfStudy && attendee.fieldOfStudy) {
+  if (ctx.userFieldOfStudy && attendee.fieldOfStudy) {
     const creativeFields = ["Arts/Design", "Music", "Film"];
     const techFields = ["CS", "Engineering"];
     const businessFields = ["Business", "Economics"];
     
-    const userIsCreative = creativeFields.includes(userContext.userFieldOfStudy);
-    const userIsTech = techFields.includes(userContext.userFieldOfStudy);
-    const userIsBusiness = businessFields.includes(userContext.userFieldOfStudy);
+    const userIsCreative = creativeFields.includes(ctx.userFieldOfStudy);
+    const userIsTech = techFields.includes(ctx.userFieldOfStudy);
+    const userIsBusiness = businessFields.includes(ctx.userFieldOfStudy);
     
     const attendeeIsCreative = creativeFields.includes(attendee.fieldOfStudy);
     const attendeeIsTech = techFields.includes(attendee.fieldOfStudy);
@@ -626,8 +702,8 @@ export function generateSparkPredictions(
   }
   
   // Digital nomad lifestyle (EPIC)
-  if (userContext.userInterests && attendee.topInterests) {
-    const userHasRemoteWork = userContext.userInterests.some(i => 
+  if (ctx.userInterests && attendee.topInterests) {
+    const userHasRemoteWork = ctx.userInterests.some(i => 
       i.includes("远程工作") || i.includes("数字游民") || i.includes("自由职业")
     );
     const attendeeHasRemoteWork = attendee.topInterests.some(i => 
@@ -643,8 +719,8 @@ export function generateSparkPredictions(
   }
   
   // Social impact orientation (EPIC)
-  if (userContext.userInterests && attendee.topInterests) {
-    const userHasSocialImpact = userContext.userInterests.some(i => 
+  if (ctx.userInterests && attendee.topInterests) {
+    const userHasSocialImpact = ctx.userInterests.some(i => 
       i.includes("公益") || i.includes("社会创新") || i.includes("可持续") || i.includes("环保")
     );
     const attendeeHasSocialImpact = attendee.topInterests.some(i => 
@@ -660,10 +736,10 @@ export function generateSparkPredictions(
   }
   
   // Artistic creation experience (EPIC)
-  if (userContext.userInterests && attendee.topInterests) {
+  if (ctx.userInterests && attendee.topInterests) {
     const artisticInterests = ["绘画", "摄影", "写作", "音乐创作", "设计"];
     
-    const userArtisticCount = userContext.userInterests.filter(i => 
+    const userArtisticCount = ctx.userInterests.filter(i => 
       artisticInterests.some(art => i.includes(art))
     ).length;
     
@@ -680,9 +756,9 @@ export function generateSparkPredictions(
   }
   
   // Career transition journey (EPIC)
-  if (userContext.userSeniority === "Founder" && attendee.seniority === "Founder" &&
-      userContext.userIndustry && attendee.industry &&
-      userContext.userIndustry !== attendee.industry) {
+  if (ctx.userSeniority === "Founder" && attendee.seniority === "Founder" &&
+      ctx.userIndustry && attendee.industry &&
+      ctx.userIndustry !== attendee.industry) {
     predictions.push({ 
       text: "都在跨界创业",
       rarity: 'epic'
@@ -690,8 +766,8 @@ export function generateSparkPredictions(
   }
   
   // Multi-city living experience (EPIC - based on language diversity)
-  if (userContext.userLanguages && attendee.languagesComfort) {
-    const userLangCount = userContext.userLanguages.length;
+  if (ctx.userLanguages && attendee.languagesComfort) {
+    const userLangCount = ctx.userLanguages.length;
     const attendeeLangCount = attendee.languagesComfort.length;
     
     if (userLangCount >= 3 && attendeeLangCount >= 3) {
@@ -705,10 +781,10 @@ export function generateSparkPredictions(
   // 🎯 NEW PRIORITY FEATURES - Using collected but previously unused data
   
   // Priority 1.5: Topics matching - RARE/EPIC (more specific than interests)
-  if (userContext.userTopicsHappy && userContext.userTopicsHappy.length > 0 &&
+  if (ctx.userTopicsHappy && ctx.userTopicsHappy.length > 0 &&
       attendee.topicsHappy && attendee.topicsHappy.length > 0) {
     
-    const commonTopics = userContext.userTopicsHappy.filter(topic => 
+    const commonTopics = ctx.userTopicsHappy.filter(topic => 
       attendee.topicsHappy!.includes(topic)
     );
     
@@ -727,8 +803,8 @@ export function generateSparkPredictions(
   
   // Priority 0: Topics anti-matching - CRITICAL (prevent disasters early)
   // Check if someone's happy topic is another's avoid topic
-  if (userContext.userTopicsHappy && attendee.topicsAvoid) {
-    const hasConflict = userContext.userTopicsHappy.some(topic => 
+  if (ctx.userTopicsHappy && attendee.topicsAvoid) {
+    const hasConflict = ctx.userTopicsHappy.some(topic => 
       attendee.topicsAvoid!.includes(topic)
     );
     if (hasConflict) {
@@ -736,8 +812,8 @@ export function generateSparkPredictions(
       // We don't add this as a connection point, but it affects overall compatibility
     }
   }
-  if (userContext.userTopicsAvoid && attendee.topicsHappy) {
-    const hasConflict = userContext.userTopicsAvoid.some(topic => 
+  if (ctx.userTopicsAvoid && attendee.topicsHappy) {
+    const hasConflict = ctx.userTopicsAvoid.some(topic => 
       attendee.topicsHappy!.includes(topic)
     );
     if (hasConflict) {
@@ -746,8 +822,8 @@ export function generateSparkPredictions(
   }
   
   // Priority 6.8: Debate comfort alignment - COMMON/RARE (conversation style match)
-  if (userContext.userDebateComfort !== undefined && attendee.debateComfort !== undefined) {
-    const diff = Math.abs(userContext.userDebateComfort - attendee.debateComfort);
+  if (ctx.userDebateComfort !== undefined && attendee.debateComfort !== undefined) {
+    const diff = Math.abs(ctx.userDebateComfort - attendee.debateComfort);
     
     if (diff === 0) {
       predictions.push({ 
@@ -788,10 +864,10 @@ export function generateSparkPredictions(
   };
   
   const userStage = detectLifeStage(
-    userContext.userAge, 
-    userContext.userChildren, 
-    userContext.userSeniority,
-    userContext.userRelationshipStatus
+    ctx.userAge, 
+    ctx.userChildren, 
+    ctx.userSeniority,
+    ctx.userRelationshipStatus
   );
   const attendeeStage = detectLifeStage(
     attendee.age, 
@@ -820,10 +896,10 @@ export function generateSparkPredictions(
   }
   
   // Priority 6.10: Enhanced language matching beyond Chinese/English - RARE
-  if (userContext.userLanguages && userContext.userLanguages.length > 0 &&
+  if (ctx.userLanguages && ctx.userLanguages.length > 0 &&
       attendee.languagesComfort && attendee.languagesComfort.length > 0) {
     
-    const commonLanguages = userContext.userLanguages.filter(lang => 
+    const commonLanguages = ctx.userLanguages.filter(lang => 
       attendee.languagesComfort!.includes(lang)
     );
     
@@ -878,7 +954,7 @@ export function generateSparkPredictions(
     return null;
   };
   
-  const userCommStyle = detectCommunicationStyle(userContext.userArchetype, userContext.userDebateComfort);
+  const userCommStyle = detectCommunicationStyle(ctx.userArchetype, ctx.userDebateComfort);
   const attendeeCommStyle = detectCommunicationStyle(attendee.archetype, attendee.debateComfort);
   
   if (userCommStyle && attendeeCommStyle) {
@@ -919,7 +995,7 @@ export function generateSparkPredictions(
   // - "flexible" + specific → neutral (no bonus, flexible people adapt)
   // - Same specific intent → rare/epic (strong alignment)
   // - Different specific intents → neutral (no forced mismatch)
-  if (userContext.userIntent && userContext.userIntent.length > 0 && 
+  if (ctx.userIntent && ctx.userIntent.length > 0 && 
       attendee.intent && attendee.intent.length > 0) {
     const intentLabels: Record<string, { text: string; rarity: RarityLevel }> = {
       "flexible": { text: "都保持开放心态", rarity: 'common' },
@@ -931,7 +1007,7 @@ export function generateSparkPredictions(
     };
     
     // Find common intents between user and attendee
-    const commonIntents = userContext.userIntent.filter(i => attendee.intent?.includes(i));
+    const commonIntents = ctx.userIntent.filter(i => attendee.intent?.includes(i));
     
     // Add connection points for matching intents (prioritize higher rarity)
     const rarityOrder: RarityLevel[] = ['epic', 'rare', 'common'];
@@ -947,7 +1023,7 @@ export function generateSparkPredictions(
   }
   
   // 🎯 Anti-repetition scoring - penalize if matched before
-  if (userContext.userMatchedBefore && userContext.userMatchedBefore.includes(attendee.userId)) {
+  if (ctx.userMatchedBefore && ctx.userMatchedBefore.includes(attendee.userId)) {
     // This person has been matched with the user before
     // We don't add a negative connection point, but the backend matching algorithm
     // should use this information to lower their overall match score
@@ -955,9 +1031,9 @@ export function generateSparkPredictions(
   }
   
   // 🍜 NEW: Cuisine preference matching - great icebreaker topic
-  if (userContext.userCuisinePreference && userContext.userCuisinePreference.length > 0 &&
+  if (ctx.userCuisinePreference && ctx.userCuisinePreference.length > 0 &&
       attendee.cuisinePreference && attendee.cuisinePreference.length > 0) {
-    const commonCuisines = userContext.userCuisinePreference.filter(c => 
+    const commonCuisines = ctx.userCuisinePreference.filter(c => 
       attendee.cuisinePreference?.includes(c)
     );
     
@@ -972,10 +1048,10 @@ export function generateSparkPredictions(
   }
   
   // 🍽️ NEW: Favorite restaurant matching - epic connection if same restaurant
-  if (userContext.userFavoriteRestaurant && attendee.favoriteRestaurant) {
+  if (ctx.userFavoriteRestaurant && attendee.favoriteRestaurant) {
     // Normalize restaurant names for comparison (remove spaces, lowercase)
     const normalizeRestaurant = (name: string) => name.toLowerCase().replace(/\s+/g, '');
-    if (normalizeRestaurant(userContext.userFavoriteRestaurant) === 
+    if (normalizeRestaurant(ctx.userFavoriteRestaurant) === 
         normalizeRestaurant(attendee.favoriteRestaurant)) {
       predictions.push({
         text: `同粉${attendee.favoriteRestaurant}`,
@@ -985,9 +1061,9 @@ export function generateSparkPredictions(
   }
   
   // 🗣️ NEW: Dialect matching - 老乡加分 (laoxiang bonus)
-  if (userContext.userDialectProfile && userContext.userDialectProfile.length > 0 &&
+  if (ctx.userDialectProfile && ctx.userDialectProfile.length > 0 &&
       attendee.dialectProfile && attendee.dialectProfile.length > 0) {
-    const commonDialects = userContext.userDialectProfile.filter(d => 
+    const commonDialects = ctx.userDialectProfile.filter(d => 
       attendee.dialectProfile?.includes(d)
     );
     
@@ -1008,7 +1084,7 @@ export function generateSparkPredictions(
         text: dialectDisplayNames[dialectLabel] || `都说${dialectLabel}`,
         rarity: 'rare'
       });
-    } else if (userContext.userDialectProfile.length > 0 && attendee.dialectProfile.length > 0) {
+    } else if (ctx.userDialectProfile.length > 0 && attendee.dialectProfile.length > 0) {
       // Both have dialect backgrounds but different = 移民共鸣
       predictions.push({
         text: '都有方言背景',
