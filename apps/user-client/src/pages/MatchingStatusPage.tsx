@@ -237,7 +237,6 @@ export default function MatchingStatusPage() {
     
     // Navigate to group detail, preferring live WS payload over registration refetch
     const targetGroupId = 
-      themeData?.groupId ?? 
       matchData?.groupId ?? 
       registration?.assignedGroupId;
     
