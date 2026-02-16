@@ -13,7 +13,8 @@ import { Sparkles } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { differenceInDays } from "date-fns";
 import { formatChineseDateOnly, extractChineseTime } from "@/lib/chineseDateTime";
 import { useLocation } from "wouter";
@@ -146,6 +147,25 @@ export default function DiscoverPage() {
   const { mutate: markDiscoverAsRead } = useMarkNotificationsAsRead();
   const hasMarkedRef = useRef(false);
   const eventListRef = useRef<HTMLDivElement>(null);
+  
+  // Mutation to mark guide as complete on server
+  const markGuideCompleteMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/guide/complete");
+    },
+    onSuccess: () => {
+      // Invalidate user query to refresh hasSeenGuide
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    },
+  });
+  
+  // Mark guide as complete when showing coach marks for first time
+  useEffect(() => {
+    if (shouldShowCoachMarks && user && !user.hasSeenGuide) {
+      // Mark guide as complete on server so nextStep doesn't return 'guide'
+      markGuideCompleteMutation.mutate();
+    }
+  }, [shouldShowCoachMarks, user?.hasSeenGuide]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectEvent = () => {
     eventListRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -416,10 +436,16 @@ export default function DiscoverPage() {
                         </div>
                       )}
                       <div 
-                        onClick={isFirstCard && showEventTooltip ? handleDismissEventTooltip : undefined}
+                        onClick={(e) => {
+                          if (isFirstCard && showEventTooltip) {
+                            e.stopPropagation();
+                            handleDismissEventTooltip();
+                          }
+                        }}
                         onKeyDown={(e) => {
                           if (isFirstCard && showEventTooltip && (e.key === 'Enter' || e.key === ' ')) {
                             e.preventDefault();
+                            e.stopPropagation();
                             handleDismissEventTooltip();
                           }
                         }}
@@ -454,8 +480,7 @@ export default function DiscoverPage() {
           showTooltip={!coachMarkState.xiaoyueTooltip && coachMarkState.welcomeBanner === true}
           onTooltipDismiss={handleDismissXiaoyueTooltip}
           onClick={() => {
-            // TODO: Open Xiaoyue chat
-            console.log("Open Xiaoyue chat");
+            // TODO: Wire to actual Xiaoyue chat when implemented
           }}
         />
       )}

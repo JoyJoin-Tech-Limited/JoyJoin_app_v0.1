@@ -267,6 +267,7 @@ export default function PersonalityTestPageV4() {
   const [selectedOption, setSelectedOption] = useState<string | undefined>();
   const { saveCheckpoint } = useOnboardingCheckpoint();
   const [showMilestoneReward, setShowMilestoneReward] = useState(false);
+  const milestoneShownRef = useRef(false); // Track if milestone has been shown
   
   const { setArchetype: setDynamicAccent, reset: resetDynamicAccent } = useDynamicAccent();
   const { milestoneReached, detectMilestone, getUnifiedProgress } = useUnifiedProgress();
@@ -354,12 +355,13 @@ export default function PersonalityTestPageV4() {
     }
   }, [progressPercentage, detectMilestone]);
 
-  // Show milestone reward when answeredCount reaches 8
+  // Show milestone reward when answeredCount reaches 8 (only once)
   useEffect(() => {
-    if (answeredCount === 8 && !showMilestoneReward) {
+    if (answeredCount === 8 && !milestoneShownRef.current) {
       setShowMilestoneReward(true);
+      milestoneShownRef.current = true;
     }
-  }, [answeredCount, showMilestoneReward]);
+  }, [answeredCount]);
 
   useEffect(() => {
     // Check for synced session from onboarding (takes priority)

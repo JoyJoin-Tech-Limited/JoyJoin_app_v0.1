@@ -183,10 +183,45 @@ function AuthenticatedRouter() {
       );
 
     // Guide step now skipped - users go directly to discover with inline coach marks
+    // Render the same routes as 'discover' case to avoid redirect loops
     case 'guide':
       return (
         <Switch>
-          <Route path="*" component={RedirectToDiscover} />
+          <Route path="/" component={DiscoverPage} />
+          <Route path="/discover" component={DiscoverPage} />
+          {/* Guide page deprecated - kept for backward compatibility, redirects to / */}
+          <Route path="/guide" component={GuidePage} />
+          <Route path="/event-pool/:id/register" component={EventPoolRegistrationPage} />
+          <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
+          <Route path="/pool-matching/:registrationId" component={MatchingStatusPage} />
+          <Route path="/my-journey" component={MyJourneyPage} />
+          <Route path="/blindbox/payment" component={BlindBoxPaymentPage} />
+          <Route path="/blindbox/confirmation" component={BlindBoxConfirmationPage} />
+          <Route path="/blind-box-events/:eventId" component={BlindBoxEventDetailPage} />
+          <Route path="/events/:eventId/feedback" component={EventFeedbackFlow} />
+          <Route path="/events/:eventId/deep-feedback" component={DeepFeedbackFlow} />
+          <Route path="/icebreaker/:sessionId" component={IcebreakerSessionPage} />
+          <Route path="/events" component={EventsPage} />
+          <Route path="/chats" component={ChatsPage} />
+          <Route path="/chats/:eventId" component={EventChatDetailPage} />
+          <Route path="/direct-chat/:threadId" component={DirectChatPage} />
+          <Route path="/profile" component={ProfilePage} />
+          <Route path="/rewards" component={RewardsPage} />
+          <Route path="/profile/edit" component={EditProfilePage} />
+          <Route path="/profile/edit/basic" component={EditBasicInfoPage} />
+          <Route path="/profile/edit/education" component={EditEducationPage} />
+          <Route path="/profile/edit/work" component={EditWorkPage} />
+          <Route path="/profile/edit/personal" component={EditPersonalPage} />
+          <Route path="/profile/edit/intent" component={EditIntentPage} />
+          <Route path="/onboarding/extended" component={ExtendedDataPage} />
+          <Route path="/onboarding/review" component={FinalProfileReviewPage} />
+          <Route path="/onboarding/login" component={LoginPromptPage} />
+          <Route path="/event/:id" component={EventDetailPage} />
+          <Route path="/invite" component={InvitePage} />
+          <Route path="/personality-test" component={PersonalityTestPageV4} />
+          <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
+          <Route path="/personality-test/results" component={PersonalityTestResultPage} />
+          <Route component={NotFound} />
         </Switch>
       );
 
