@@ -24,6 +24,7 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
 import xiaoyuePointing from "@/assets/Xiao_Yue_Avatar-04.png";
+import MilestoneRewardOverlay from "@/components/MilestoneRewardOverlay";
 
 // Preload Xiaoyue avatars immediately
 const XIAOYUE_AVATAR_URLS = [xiaoyueNormal, xiaoyueExcited, xiaoyuePointing];
@@ -265,6 +266,7 @@ export default function PersonalityTestPageV4() {
   const { toast } = useToast();
   const [selectedOption, setSelectedOption] = useState<string | undefined>();
   const { saveCheckpoint } = useOnboardingCheckpoint();
+  const [showMilestoneReward, setShowMilestoneReward] = useState(false);
   
   const { setArchetype: setDynamicAccent, reset: resetDynamicAccent } = useDynamicAccent();
   const { milestoneReached, detectMilestone, getUnifiedProgress } = useUnifiedProgress();
@@ -351,6 +353,13 @@ export default function PersonalityTestPageV4() {
       detectMilestone(progressPercentage);
     }
   }, [progressPercentage, detectMilestone]);
+
+  // Show milestone reward when answeredCount reaches 8
+  useEffect(() => {
+    if (answeredCount === 8 && !showMilestoneReward) {
+      setShowMilestoneReward(true);
+    }
+  }, [answeredCount, showMilestoneReward]);
 
   useEffect(() => {
     // Check for synced session from onboarding (takes priority)
@@ -496,6 +505,14 @@ export default function PersonalityTestPageV4() {
 
   return (
     <div className="h-screen overflow-hidden bg-background flex flex-col">
+      {/* Milestone Reward Overlay */}
+      <MilestoneRewardOverlay
+        isVisible={showMilestoneReward}
+        onContinue={() => setShowMilestoneReward(false)}
+        topArchetype={topArchetype || undefined}
+        progress={{ answered: answeredCount, total: 16 }}
+      />
+
       <OnboardingProgress
         current={displayCurrent}
         total={displayTotal as any}
