@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Clock, MapPin, Users, Navigation, AlertCircle, Sparkles } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, Users, Navigation, AlertCircle, Sparkles, ChevronRight } from "lucide-react";
 import PostMatchEventCard from "@/components/PostMatchEventCard";
 import IcebreakerTool from "@/components/IcebreakerTool";
 import { useAuth } from "@/hooks/useAuth";
@@ -241,6 +241,40 @@ export default function PoolGroupDetailPage() {
 
         {/* 破冰工具 */}
         <IcebreakerTool />
+
+        {/* 破冰卡牌游戏入口 (仅活动开始后显示) */}
+        {groupId && data?.pool?.dateTime && (() => {
+          // Client-side time check: event has started
+          const now = new Date();
+          const eventTime = new Date(data.pool.dateTime);
+          const hasEventStarted = now >= eventTime;
+          
+          return hasEventStarted ? (
+            <button
+              onClick={() => {
+                setLocation(`/icebreaker-game?groupId=${groupId}`);
+              }}
+              className="w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-500 hover:from-emerald-700 hover:via-teal-700 hover:to-cyan-600 rounded-xl p-4 transition-all active:scale-[0.98] shadow-lg"
+              data-testid="button-open-card-game"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <Sparkles className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-white font-semibold text-sm">开始破冰卡牌游戏</p>
+                  <p className="text-white/70 text-xs">AI 为你们定制的互动卡牌</p>
+                </div>
+                <div className="flex items-center gap-1 text-white/80">
+                  <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
+                    新
+                  </Badge>
+                  <ChevronRight className="h-4 w-4" />
+                </div>
+              </div>
+            </button>
+          ) : null;
+        })()}
 
         {/* 规则与到场指南 */}
         <Card>
