@@ -8,6 +8,7 @@ import { PromotionBannerCarousel } from "@/components/PromotionBannerCarousel";
 import InviteFriendCard from "@/components/InviteFriendCard";
 import JourneyProgressCard from "@/components/JourneyProgressCard";
 import EventPoolDetailDrawer from "@/components/EventPoolDetailDrawer";
+import { CoachMarkBanner, ProfileCompletionNudge, XiaoyueFAB, PulsingIndicator } from "@/components/coach-marks";
 import { Sparkles } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { differenceInDays } from "date-fns";
 import { formatChineseDateOnly, extractChineseTime } from "@/lib/chineseDateTime";
 import { useLocation } from "wouter";
+import { archetypeConfig } from "@/lib/archetypes";
 
 interface EventPool {
   id: string;
@@ -54,6 +56,15 @@ interface CouponResponse {
 }
 
 const LOCATION_STORAGE_KEY = "joyjoin_user_location";
+const COACH_MARKS_STORAGE_KEY = "joyjoin_coach_marks_seen";
+
+// Coach mark state interface
+interface CoachMarkState {
+  welcomeBanner?: boolean;
+  eventTooltip?: boolean;
+  xiaoyueTooltip?: boolean;
+  profileNudge?: boolean;
+}
 
 // Safe localStorage read with SSR guard, with user profile fallback
 // Note: Hong Kong areas are currently "coming soon", so default to Shenzhen
@@ -81,6 +92,25 @@ const getSavedLocation = (userCity?: string): { city: "香港" | "深圳"; area:
   return { city: "深圳", area: "南山区" };
 };
 
+// Get coach mark state from localStorage
+const getCoachMarkState = (): CoachMarkState => {
+  if (typeof window === "undefined") return {};
+  try {
+    const saved = localStorage.getItem(COACH_MARKS_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+};
+
+// Save coach mark state to localStorage
+const saveCoachMarkState = (state: CoachMarkState) => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(COACH_MARKS_STORAGE_KEY, JSON.stringify(state));
+  } catch {}
+};
+
 export default function DiscoverPage() {
   const { user, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
@@ -96,6 +126,14 @@ export default function DiscoverPage() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [selectedPoolData, setSelectedPoolData] = useState<EventPool | null>(null);
   
+  // Coach marks state
+  const [coachMarkState, setCoachMarkState] = useState<CoachMarkState>(getCoachMarkState);
+  const [showEventTooltip, setShowEventTooltip] = useState(false);
+  
+  // Check if should show coach marks (not if user has seen guide)
+  const shouldShowCoachMarks = user && !user.hasSeenGuide;
+  const profileExtendedComplete = user?.profileExtendedComplete ?? true; // Default to true to hide nudge unless explicitly incomplete
+  
   // Update location when user data loads (for first-time visitors without localStorage)
   useEffect(() => {
     if (user?.currentCity && !localStorage.getItem(LOCATION_STORAGE_KEY)) {
@@ -104,6 +142,7 @@ export default function DiscoverPage() {
       setSelectedArea(userLocation.area);
     }
   }, [user?.currentCity]);
+  
   const { mutate: markDiscoverAsRead } = useMarkNotificationsAsRead();
   const hasMarkedRef = useRef(false);
   const eventListRef = useRef<HTMLDivElement>(null);
@@ -240,12 +279,64 @@ export default function DiscoverPage() {
 
   // Create a map for O(1) pool lookup to avoid O(n²) complexity
   const poolMap = new Map(eventPools.map(pool => [pool.id, pool]));
+  
+  // Show event tooltip after a delay if first time (must be after filteredBlindBoxEvents is defined)
+  useEffect(() => {
+    if (shouldShowCoachMarks && !coachMarkState.eventTooltip && filteredBlindBoxEvents.length > 0) {
+      const timer = setTimeout(() => {
+        setShowEventTooltip(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldShowCoachMarks, coachMarkState.eventTooltip, filteredBlindBoxEvents.length]);
+  
+  // Coach mark handlers
+  const handleDismissWelcomeBanner = () => {
+    const newState = { ...coachMarkState, welcomeBanner: true };
+    setCoachMarkState(newState);
+    saveCoachMarkState(newState);
+  };
+  
+  const handleDismissEventTooltip = () => {
+    setShowEventTooltip(false);
+    const newState = { ...coachMarkState, eventTooltip: true };
+    setCoachMarkState(newState);
+    saveCoachMarkState(newState);
+  };
+  
+  const handleDismissXiaoyueTooltip = () => {
+    const newState = { ...coachMarkState, xiaoyueTooltip: true };
+    setCoachMarkState(newState);
+    saveCoachMarkState(newState);
+  };
+  
+  const handleDismissProfileNudge = () => {
+    const newState = { ...coachMarkState, profileNudge: true };
+    setCoachMarkState(newState);
+    saveCoachMarkState(newState);
+  };
+  
+  // Get archetype info for welcome banner
+  const archetypeInfo = user?.primaryArchetype ? archetypeConfig[user.primaryArchetype] : null;
 
   return (
     <div className="min-h-screen bg-background pb-16">
       <MobileHeader showLogo={true} />
       
       <div className="space-y-4">
+        {/* Coach Mark: Archetype Welcome Banner */}
+        {shouldShowCoachMarks && 
+         !coachMarkState.welcomeBanner && 
+         user?.primaryArchetype && 
+         archetypeInfo && (
+          <CoachMarkBanner
+            archetype={user.primaryArchetype}
+            archetypeName={archetypeInfo.nickname}
+            description={archetypeInfo.tagline}
+            onDismiss={handleDismissWelcomeBanner}
+          />
+        )}
+        
         {/* Hero 欢迎区 */}
         <HeroWelcome 
           userName={user?.displayName || "朋友"}
@@ -266,6 +357,13 @@ export default function DiscoverPage() {
               onSelectEvent={handleSelectEvent}
             />
           </div>
+        )}
+        
+        {/* Coach Mark: Profile Completion Nudge */}
+        {shouldShowCoachMarks && 
+         !coachMarkState.profileNudge && 
+         !profileExtendedComplete && (
+          <ProfileCompletionNudge onDismiss={handleDismissProfileNudge} />
         )}
 
         {/* 推广横幅轮播（含优惠券） */}
@@ -299,16 +397,31 @@ export default function DiscoverPage() {
                   <p className="text-sm text-muted-foreground mt-4">加载中...</p>
                 </div>
               ) : filteredBlindBoxEvents.length > 0 ? (
-                filteredBlindBoxEvents.map((event) => {
+                filteredBlindBoxEvents.map((event, index) => {
                   // O(1) lookup using poolMap
                   const pool = poolMap.get(event.id);
+                  const isFirstCard = index === 0;
                   
                   return (
-                    <BlindBoxEventCard 
-                      key={event.id} 
-                      {...event}
-                      onDetailsClick={pool ? () => handleOpenDrawer(pool) : undefined}
-                    />
+                    <div key={event.id} className="relative">
+                      {/* Coach Mark: Event Tooltip on first card */}
+                      {shouldShowCoachMarks && 
+                       isFirstCard && 
+                       showEventTooltip && (
+                        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+                          <PulsingIndicator size="md" />
+                          <div className="bg-primary text-primary-foreground px-3 py-2 rounded-lg shadow-lg text-sm font-medium max-w-xs">
+                            盲盒活动：报名后才能看到匹配的桌友~
+                          </div>
+                        </div>
+                      )}
+                      <div onClick={isFirstCard && showEventTooltip ? handleDismissEventTooltip : undefined}>
+                        <BlindBoxEventCard 
+                          {...event}
+                          onDetailsClick={pool ? () => handleOpenDrawer(pool) : undefined}
+                        />
+                      </div>
+                    </div>
                   );
                 })
               ) : (
@@ -323,6 +436,18 @@ export default function DiscoverPage() {
       </div>
 
       <BottomNav />
+      
+      {/* Coach Mark: Xiaoyue FAB */}
+      {shouldShowCoachMarks && (
+        <XiaoyueFAB
+          showTooltip={!coachMarkState.xiaoyueTooltip && coachMarkState.welcomeBanner === true}
+          onTooltipDismiss={handleDismissXiaoyueTooltip}
+          onClick={() => {
+            // TODO: Open Xiaoyue chat
+            console.log("Open Xiaoyue chat");
+          }}
+        />
+      )}
       
       {/* 地点选择器 */}
       <LocationPickerSheet

@@ -77,13 +77,22 @@ function RedirectToSetup() {
   return null;
 }
 
-function RedirectToGuide() {
+function RedirectToDiscover() {
   const [, setLocation] = useLocation();
   useEffect(() => {
-    setLocation("/guide");
+    setLocation("/");
   }, [setLocation]);
   return null;
 }
+
+// @deprecated - Guide page replaced with inline coach marks (2026-02-16)
+// function RedirectToGuide() {
+//   const [, setLocation] = useLocation();
+//   useEffect(() => {
+//     setLocation("/guide");
+//   }, [setLocation]);
+//   return null;
+// }
 
 function RedirectToExtended() {
   const [, setLocation] = useLocation();
@@ -167,16 +176,17 @@ function AuthenticatedRouter() {
       return (
         <Switch>
           <Route path="/onboarding/review" component={FinalProfileReviewPage} />
+          {/* Guide page deprecated - using inline coach marks instead */}
           <Route path="/guide" component={GuidePage} />
           <Route path="*" component={RedirectToReview} />
         </Switch>
       );
 
+    // Guide step now skipped - users go directly to discover with inline coach marks
     case 'guide':
       return (
         <Switch>
-          <Route path="/guide" component={GuidePage} />
-          <Route path="*" component={RedirectToGuide} />
+          <Route path="*" component={RedirectToDiscover} />
         </Switch>
       );
 
@@ -187,6 +197,7 @@ function AuthenticatedRouter() {
         <Switch>
           <Route path="/" component={DiscoverPage} />
           <Route path="/discover" component={DiscoverPage} />
+          {/* Guide page deprecated - kept for backward compatibility, redirects to / */}
           <Route path="/guide" component={GuidePage} />
           <Route path="/event-pool/:id/register" component={EventPoolRegistrationPage} />
           <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
