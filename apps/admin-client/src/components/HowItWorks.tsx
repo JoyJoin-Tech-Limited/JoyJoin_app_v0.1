@@ -4,23 +4,23 @@ import { UserCircle, Sparkles, Calendar, MessageCircle } from "lucide-react";
 const steps = [
   {
     icon: UserCircle,
-    title: "Create Your Vibe Profile",
-    description: "Take a quick 3-5 minute quiz about your personality, interests, and social preferences."
+    title: "发现你的社交超能力 ✨",
+    description: "3-5分钟趣味测评，生成你的专属社交人格画像，发现真实的自己~"
   },
   {
     icon: Sparkles,
-    title: "Get AI-Matched",
-    description: "Our algorithm finds events and people that align with your energy and interests."
+    title: "让小悦帮你找到同频的人 🎯",
+    description: "AI智能匹配，为你推荐气场相合的活动和朋友，告别无效社交~"
   },
   {
     icon: Calendar,
-    title: "Attend Small Events",
-    description: "Join curated gatherings with 5-10 like-minded people in safe, welcoming spaces."
+    title: "参加精致小聚 🎊",
+    description: "5-10人精选局，在温馨安全的空间里，遇见志同道合的新朋友~"
   },
   {
     icon: MessageCircle,
-    title: "Build Connections",
-    description: "Make meaningful friendships and discover your local community."
+    title: "建立真实连接 💫",
+    description: "从陌生到熟悉，发现你的本地社群，收获有意义的友谊~"
   }
 ];
 
@@ -31,10 +31,10 @@ export default function HowItWorks() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">
-              How It Works
+              如何开始？
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Four simple steps to finding your community
+              四步开启你的社交新旅程 ✨
             </p>
           </div>
 

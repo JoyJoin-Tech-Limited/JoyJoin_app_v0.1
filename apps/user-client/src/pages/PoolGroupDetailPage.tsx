@@ -221,21 +221,21 @@ export default function PoolGroupDetailPage() {
               industryVisible: m.industryVisible,
             }))}
             matchExplanation={group.matchExplanation || undefined}
-            userInterests={(user?.interestsRankedTop3 as string[] | undefined) || []}
-            userEducationLevel={user?.educationLevel || undefined}
-            userIndustry={undefined} // DEPRECATED: industry field removed from schema
-            userAge={user?.birthdate ? calculateAge(user.birthdate) : undefined}
-            userGender={user?.gender || undefined}
-            userRelationshipStatus={user?.relationshipStatus || undefined}
-            userChildren={user?.children || undefined}
-            userStudyLocale={user?.studyLocale || undefined}
-            userOverseasRegions={user?.overseasRegions as string[] | undefined}
-            userSeniority={undefined} // DEPRECATED: seniority field removed from schema
-            userFieldOfStudy={user?.fieldOfStudy || undefined}
-            userLanguages={user?.languagesComfort as string[] | undefined}
-            userHometownCountry={user?.hometownCountry || undefined}
-            userHometownRegionCity={user?.hometownRegionCity || undefined}
-            userHometownAffinityOptin={user?.hometownAffinityOptin ?? undefined}
+            currentUser={{
+              interests: (user?.interestsRankedTop3 as string[] | undefined) || [],
+              educationLevel: user?.educationLevel || undefined,
+              age: user?.birthdate ? calculateAge(user.birthdate) : undefined,
+              gender: user?.gender || undefined,
+              relationshipStatus: user?.relationshipStatus || undefined,
+              children: user?.children || undefined,
+              studyLocale: user?.studyLocale || undefined,
+              overseasRegions: user?.overseasRegions as string[] | undefined,
+              fieldOfStudy: user?.fieldOfStudy || undefined,
+              languages: user?.languagesComfort as string[] | undefined,
+              hometownCountry: user?.hometownCountry || undefined,
+              hometownRegionCity: user?.hometownRegionCity || undefined,
+              hometownAffinityOptin: user?.hometownAffinityOptin ?? undefined,
+            }}
           />
         )}
 
