@@ -3,7 +3,6 @@ import { CheckCircle2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface GuideCompletionStateProps {
-  onComplete?: () => void;
   className?: string;
 }
 
@@ -12,10 +11,9 @@ interface GuideCompletionStateProps {
  * 
  * Brief, calm completion state shown after guide finishes
  * Duolingo-inspired: warm, simple, encouraging
- * Auto-transitions to Discover page after 2 seconds
+ * Auto-transitions to Discover page after 2 seconds (handled by parent)
  */
 export function GuideCompletionState({
-  onComplete,
   className,
 }: GuideCompletionStateProps) {
   return (
