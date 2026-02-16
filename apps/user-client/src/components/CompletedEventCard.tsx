@@ -68,59 +68,30 @@ export default function CompletedEventCard({ event, feedback }: CompletedEventCa
       className={`relative overflow-visible cursor-pointer transition-all duration-300 ${
         hasFeedback 
           ? "border-2 shadow-lg" 
-          : "border-2 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.3)]"
+          : "border-2 border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.2)]"
       }`}
-      style={hasFeedback ? {
-        borderImage: "linear-gradient(135deg, #a855f7, #ec4899, #f97316, #eab308, #22c55e, #3b82f6, #a855f7) 1",
-        borderImageSlice: 1,
-      } : undefined}
       onClick={() => setLocation(`/blind-box-events/${event.id}`)}
       data-testid={`card-completed-${event.id}`}
     >
-      {/* Animated Corner Badge */}
-      <div className="absolute -top-3 -right-3 z-20">
+      {/* Subdued Corner Badge */}
+      <div className="absolute -top-2 -right-2 z-20">
         {hasFeedback ? (
-          <motion.div
-            initial={{ scale: 0, rotate: -180 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="relative"
-          >
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center shadow-lg">
-              <Check className="h-8 w-8 text-white stroke-[3]" />
-            </div>
-            <motion.div
-              className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 opacity-50"
-              animate={{ scale: [1, 1.3, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-          </motion.div>
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md">
+            <Check className="h-6 w-6 text-white stroke-[2.5]" />
+          </div>
         ) : (
-          <motion.div
-            animate={{ 
-              scale: [1, 1.05, 1],
-              boxShadow: [
-                "0 0 10px rgba(168, 85, 247, 0.4)",
-                "0 0 20px rgba(168, 85, 247, 0.6)",
-                "0 0 10px rgba(168, 85, 247, 0.4)"
-              ]
-            }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="relative"
-          >
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 to-fuchsia-500 flex items-center justify-center shadow-lg">
-              <Gift className="h-7 w-7 text-white" />
-            </div>
-          </motion.div>
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-fuchsia-500 flex items-center justify-center shadow-md">
+            <Gift className="h-5 w-5 text-white" />
+          </div>
         )}
       </div>
 
       <CardContent className="p-4 space-y-3">
         {/* Status Banner */}
         {hasFeedback ? (
-          <div className="flex items-center gap-2 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-orange-500/10 rounded-lg px-3 py-2 border border-purple-200 dark:border-purple-800">
-            <Trophy className="h-5 w-5 text-purple-500" />
-            <span className="font-semibold text-purple-600 dark:text-purple-400">完美收官</span>
+          <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
+            <Trophy className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium text-sm">完美收官</span>
             <span className="text-xs text-muted-foreground ml-auto">感谢你的反馈</span>
           </div>
         ) : (
