@@ -6,7 +6,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Calendar, MapPin, Sparkles, Users, Shield, Heart, HelpCircle, Timer, Flame, Gift, UserCheck, Utensils } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
-import JoinBlindBoxSheet from "./JoinBlindBoxSheet";
 import JoinEventPoolSheet from "./event-pool-registration/JoinEventPoolSheet";
 import { getArchetypeImage } from "@/lib/archetypeImages";
 import { getCountdown, type UrgencyLevel } from "@/lib/chineseDateTime";
@@ -94,14 +93,13 @@ export default function BlindBoxEventCard({
 }: BlindBoxEventCardProps) {
   const [infoSheetOpen, setInfoSheetOpen] = useState(false);
   const [joinSheetOpen, setJoinSheetOpen] = useState(false);
-  const [newJoinSheetOpen, setNewJoinSheetOpen] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   const handleJoinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log("[BlindBoxEventCard] opening new JoinEventPoolSheet with poolId:", poolId);
-    setNewJoinSheetOpen(true);
+    console.log("[BlindBoxEventCard] opening JoinEventPoolSheet with poolId:", poolId);
+    setJoinSheetOpen(true);
   };
 
   const handleFlip = () => {
@@ -399,26 +397,10 @@ export default function BlindBoxEventCard({
         }}
       />
 
-      <JoinBlindBoxSheet
-        open={joinSheetOpen}
-        onOpenChange={setJoinSheetOpen}
-        eventData={{
-          poolId: poolId ?? null,
-          date,
-          time,
-          eventType,
-          area,
-          priceTier,
-          isAA,
-          isGirlsNight,
-          city,
-        }}
-      />
-
-      {poolId && newJoinSheetOpen && (
+      {poolId && joinSheetOpen && (
         <JoinEventPoolSheet
-          open={newJoinSheetOpen}
-          onOpenChange={setNewJoinSheetOpen}
+          open={joinSheetOpen}
+          onOpenChange={setJoinSheetOpen}
           poolData={{
             poolId,
             title: mysteryTitle,
