@@ -1,80 +1,22 @@
 import { useRef } from "react";
 import GroupSummaryCard from "./GroupSummaryCard";
 import UserConnectionCard from "./UserConnectionCard";
-import { generateSparkPredictions, normalizeInterestName, type AttendeeData } from "@/lib/attendeeAnalytics";
+import { generateSparkPredictions, normalizeInterestName, type AttendeeData, type UserContext } from "@/lib/attendeeAnalytics";
 
 interface MeetYourTableProps {
   attendees: AttendeeData[];
-  userInterests?: string[];
-  userTopicsHappy?: string[];
-  userTopicsAvoid?: string[];
-  userDebateComfort?: number;
-  userEducationLevel?: string;
-  userIndustry?: string;
-  userAge?: number;
-  userGender?: string;
-  userRelationshipStatus?: string;
-  userChildren?: string;
-  userStudyLocale?: string;
-  userOverseasRegions?: string[];
-  userSeniority?: string;
-  userFieldOfStudy?: string;
-  userLanguages?: string[];
-  userHometownCountry?: string;
-  userHometownRegionCity?: string;
-  userHometownAffinityOptin?: boolean;
-  userArchetype?: string;
+  currentUser: UserContext;
 }
 
 export default function MeetYourTable({
   attendees,
-  userInterests = [],
-  userTopicsHappy,
-  userTopicsAvoid,
-  userDebateComfort,
-  userEducationLevel,
-  userIndustry,
-  userAge,
-  userGender,
-  userRelationshipStatus,
-  userChildren,
-  userStudyLocale,
-  userOverseasRegions,
-  userSeniority,
-  userFieldOfStudy,
-  userLanguages,
-  userHometownCountry,
-  userHometownRegionCity,
-  userHometownAffinityOptin,
-  userArchetype,
+  currentUser,
 }: MeetYourTableProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   if (!attendees || attendees.length === 0) {
     return null;
   }
-
-  const userContext = {
-    userInterests,
-    userTopicsHappy,
-    userTopicsAvoid,
-    userDebateComfort,
-    userEducationLevel,
-    userIndustry,
-    userAge,
-    userGender,
-    userRelationshipStatus,
-    userChildren,
-    userStudyLocale,
-    userOverseasRegions,
-    userSeniority,
-    userFieldOfStudy,
-    userLanguages,
-    userHometownCountry,
-    userHometownRegionCity,
-    userHometownAffinityOptin,
-    userArchetype,
-  };
 
   const interestIcons: Record<string, string> = {
     "电影娱乐": "🎬",
@@ -113,7 +55,7 @@ export default function MeetYourTable({
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {attendees.map((attendee) => {
-            const sparkPredictions = generateSparkPredictions(userContext, attendee);
+            const sparkPredictions = generateSparkPredictions(currentUser, attendee);
             
             const connectionTags = sparkPredictions.map((prediction) => {
               let icon = "✨";
