@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  User, GraduationCap, Briefcase, MapPin, RotateCw, Globe, Star,
+  User, GraduationCap, Briefcase, MapPin, Globe, Star,
   PartyPopper, MessageSquare, Sparkles, ChevronDown
 } from "lucide-react";
 import EnergyRing from "./EnergyRing";
@@ -48,7 +48,6 @@ const archetypeBgColors: Record<string, string> = {
 };
 
 // Constants for match point display
-const DEFAULT_VISIBLE_COUNT = 3;
 const MAX_MATCH_POINTS = 10;
 
 // Card height constants
@@ -133,7 +132,13 @@ export default function UserConnectionCard({
       >
         <Card 
           className="border-2 hover-elevate transition-all cursor-pointer"
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={(event) => {
+            const target = event.target as HTMLElement | null;
+            if (target && target.closest('button, [role="button"], a, input, textarea, [data-stop-card-toggle="true"]')) {
+              return;
+            }
+            setIsExpanded((prev) => !prev);
+          }}
         >
           <CardContent className="p-4 space-y-3">
             {/* Collapsed View - Minimal Info */}
