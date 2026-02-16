@@ -415,7 +415,18 @@ export default function DiscoverPage() {
                           </div>
                         </div>
                       )}
-                      <div onClick={isFirstCard && showEventTooltip ? handleDismissEventTooltip : undefined}>
+                      <div 
+                        onClick={isFirstCard && showEventTooltip ? handleDismissEventTooltip : undefined}
+                        onKeyDown={(e) => {
+                          if (isFirstCard && showEventTooltip && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault();
+                            handleDismissEventTooltip();
+                          }
+                        }}
+                        role={isFirstCard && showEventTooltip ? "button" : undefined}
+                        tabIndex={isFirstCard && showEventTooltip ? 0 : undefined}
+                        aria-label={isFirstCard && showEventTooltip ? "关闭提示" : undefined}
+                      >
                         <BlindBoxEventCard 
                           {...event}
                           onDetailsClick={pool ? () => handleOpenDrawer(pool) : undefined}

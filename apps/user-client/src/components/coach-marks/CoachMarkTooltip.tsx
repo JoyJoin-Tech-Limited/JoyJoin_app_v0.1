@@ -19,7 +19,9 @@ export function CoachMarkTooltip({
       const timer = setTimeout(onDismiss, autoDismiss);
       return () => clearTimeout(timer);
     }
-  }, [autoDismiss, onDismiss]);
+    // Intentionally not including onDismiss in dependencies to avoid timer reset
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoDismiss]);
 
   const positionStyles = {
     top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
