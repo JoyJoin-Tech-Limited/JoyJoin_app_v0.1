@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Sparkles, Users } from "lucide-react";
 import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
-import JoinBlindBoxSheet from "./JoinBlindBoxSheet";
+import JoinEventPoolSheet from "./event-pool-registration/JoinEventPoolSheet";
 import { getArchetypeImage } from "@/lib/archetypeImages";
 
 type PriceTier = "150以下" | "150-200" | "200-300" | "300-500";
@@ -46,8 +46,7 @@ export default function BlindBoxEventCard({
   const [joinSheetOpen, setJoinSheetOpen] = useState(false);
 
   const handleJoinClick = () => {
-    console.log("[BlindBoxEventCard] opening JoinBlindBoxSheet with poolId:", poolId);
-    // 不再跳转到 /event-pool/...，而是打开盲盒报名弹窗
+    console.log("[BlindBoxEventCard] opening JoinEventPoolSheet with poolId:", poolId);
     setJoinSheetOpen(true);
   };
 
@@ -172,22 +171,21 @@ export default function BlindBoxEventCard({
         }}
       />
 
-      {/* 报名 / 预算 / 偏好弹窗 */}
-      <JoinBlindBoxSheet
-        open={joinSheetOpen}
-        onOpenChange={setJoinSheetOpen}
-        eventData={{
-          poolId: poolId ?? null,
-          date,
-          time,
-          eventType,
-          area,
-          priceTier,
-          isAA,
-          isGirlsNight,
-          city,
-        }}
-      />
+      {poolId && joinSheetOpen && (
+        <JoinEventPoolSheet
+          open={joinSheetOpen}
+          onOpenChange={setJoinSheetOpen}
+          poolData={{
+            poolId,
+            title: mysteryTitle,
+            date: `${date} ${time}`,
+            area,
+            city: city ?? "深圳",
+            eventType,
+            registrationCount,
+          }}
+        />
+      )}
     </>
   );
 }
