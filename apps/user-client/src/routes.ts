@@ -42,7 +42,6 @@ export const appRoutes = {
   eventDeepFeedback: '/events/:eventId/deep-feedback',
   
   // 盲盒相关
-  eventPoolRegister: '/event-pool/:id/register',
   poolGroupDetail: '/pool-groups/:groupId',
   blindBoxPayment: '/blindbox/payment',
   blindBoxConfirmation: '/blindbox/confirmation',
