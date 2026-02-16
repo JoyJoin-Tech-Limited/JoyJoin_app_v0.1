@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import LoginPage from "@/pages/LoginPage";
-// RegistrationPage removed - use ChatRegistrationPage or EventPoolRegistrationPage instead
+// RegistrationPage removed - use ChatRegistrationPage instead
 // import RegistrationPage from "@/pages/RegistrationPage";
 // RegistrationMethodPage kept for internal reference only - not imported in user routes
 // ChatRegistrationPage moved to _backup_modules/chat-registration-legacy/ (2026-01-20) - no longer routed
@@ -31,7 +31,6 @@ import EventDetailPage from "@/pages/EventDetailPage";
 import BlindBoxPaymentPage from "@/pages/BlindBoxPaymentPage";
 import BlindBoxConfirmationPage from "@/pages/BlindBoxConfirmationPage";
 import BlindBoxEventDetailPage from "@/pages/BlindBoxEventDetailPage";
-import EventPoolRegistrationPage from "@/pages/EventPoolRegistrationPage";
 import PoolGroupDetailPage from "@/pages/PoolGroupDetailPage";
 import InvitationLandingPage from "@/pages/InvitationLandingPage";
 import InviteLandingRouter from "@/pages/InviteLandingRouter";
@@ -132,7 +131,6 @@ function AuthenticatedRouter() {
     <Switch>
       <Route path="/" component={DiscoverPage} />
       <Route path="/discover" component={DiscoverPage} />
-      <Route path="/event-pool/:id/register" component={EventPoolRegistrationPage} />
       <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
       <Route path="/blindbox/payment" component={BlindBoxPaymentPage} />
       <Route path="/blindbox/confirmation" component={BlindBoxConfirmationPage} />

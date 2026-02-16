@@ -284,7 +284,7 @@ export default function MatchingStatusPage() {
       ? formatDateInHongKong(registration.poolDateTime, 'full')
       : "活动时间待定";
     const shareText = `${poolTitle}\n${formattedDateTime}\n一起来参加盲盒社交活动吧！`;
-    const shareUrl = `${window.location.origin}/event-pool/${registration?.poolId}/register`;
+    const shareUrl = `${window.location.origin}/discover`;
 
     if (navigator.share) {
       try {
