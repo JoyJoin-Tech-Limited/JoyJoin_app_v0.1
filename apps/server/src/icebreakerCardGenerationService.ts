@@ -1,10 +1,19 @@
 import OpenAI from 'openai';
 import { topicCards } from '@shared/topicCards';
 
-const deepseekClient = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
+const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
+
+if (!deepseekApiKey) {
+  console.warn(
+    '[CardGen] DEEPSEEK_API_KEY environment variable is not set. ' +
+    'AI card generation will be disabled, falling back to curated cards only.'
+  );
+}
+
+const deepseekClient = deepseekApiKey ? new OpenAI({
+  apiKey: deepseekApiKey,
   baseURL: 'https://api.deepseek.com',
-});
+}) : null;
 
 export interface UserPersonalityData {
   // Six-dimension personality scores
@@ -107,6 +116,12 @@ export async function generateAICards(
   cardsCount: number = 2,
   eventType?: string
 ): Promise<GeneratedCard[]> {
+  // If no API key or no attendees, fall back to curated cards
+  if (!deepseekClient) {
+    console.log('[CardGen] DeepSeek client not initialized, using fallback cards');
+    return getFallbackCards(cardsCount, roundNumber);
+  }
+  
   if (attendees.length === 0) {
     console.log('[CardGen] No attendees, using fallback cards');
     return getFallbackCards(cardsCount, roundNumber);
@@ -176,7 +191,18 @@ export async function generateAICards(
       return getFallbackCards(cardsCount, roundNumber);
     }
 
-    const parsed = JSON.parse(content);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(content);
+    } catch (parseError) {
+      console.error(
+        '[CardGen] Failed to parse AI JSON response. Falling back to curated cards. Raw content:',
+        content.substring(0, 200), // Log first 200 chars to avoid flooding logs
+        'Error:',
+        parseError
+      );
+      return getFallbackCards(cardsCount, roundNumber);
+    }
     
     // Handle both single card and array responses
     let cards: GeneratedCard[] = [];
