@@ -183,7 +183,7 @@ export default function BottomNav() {
           data-testid="nav-center-button"
         >
           {/* Background circle with border */}
-          <div className="relative h-16 w-16 rounded-full bg-gray-900 dark:bg-gray-100 border-4 border-background shadow-lg flex items-center justify-center">
+          <div className="relative h-16 w-16 rounded-full bg-primary border-4 border-background shadow-lg flex items-center justify-center">
             <img 
               src={joyJoinLogo} 
               alt="JoyJoin" 
@@ -195,7 +195,7 @@ export default function BottomNav() {
             )}
           </div>
           {/* Label */}
-          <span className="text-xs font-medium text-foreground mt-1">JoyJoin</span>
+          <span className="text-xs font-medium text-foreground mt-1">去参与</span>
         </button>
       </div>
 
