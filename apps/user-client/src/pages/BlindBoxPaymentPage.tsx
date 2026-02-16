@@ -407,29 +407,29 @@ export default function BlindBoxPaymentPage() {
 
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400">
-      {/* 背景装饰动画 */}
-      <div className="absolute inset-0 overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-b from-purple-50 via-pink-50 to-orange-50 dark:from-purple-950/20 dark:via-pink-950/20 dark:to-orange-950/20">
+      {/* 背景装饰动画 - 更柔和的版本 */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
-          className="absolute -top-20 -left-20 w-72 h-72 bg-white/10 rounded-full blur-3xl"
+          className="absolute -top-20 -left-20 w-72 h-72 bg-purple-200/30 dark:bg-purple-600/10 rounded-full blur-3xl"
           animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3],
+            scale: [1, 1.1, 1],
+            opacity: [0.2, 0.3, 0.2],
           }}
           transition={{
-            duration: 4,
+            duration: 6,
             repeat: Infinity,
             ease: "easeInOut",
           }}
         />
         <motion.div
-          className="absolute -bottom-20 -right-20 w-96 h-96 bg-yellow-300/10 rounded-full blur-3xl"
+          className="absolute -bottom-20 -right-20 w-96 h-96 bg-orange-200/20 dark:bg-orange-600/10 rounded-full blur-3xl"
           animate={{
-            scale: [1.2, 1, 1.2],
-            opacity: [0.2, 0.4, 0.2],
+            scale: [1.1, 1, 1.1],
+            opacity: [0.15, 0.25, 0.15],
           }}
           transition={{
-            duration: 5,
+            duration: 7,
             repeat: Infinity,
             ease: "easeInOut",
           }}
@@ -439,15 +439,16 @@ export default function BlindBoxPaymentPage() {
       {/* 关闭按钮 */}
       <button
         onClick={() => setLocation("/discover")}
-        className="absolute top-4 right-4 z-50 bg-black/20 hover:bg-black/40 rounded-full p-2 backdrop-blur-sm transition-colors"
+        className="absolute top-4 right-4 z-50 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 rounded-full p-2 backdrop-blur-sm transition-colors shadow-md"
         data-testid="button-close-payment"
+        aria-label="关闭支付页面，返回发现页"
       >
-        <X className="h-6 w-6 text-white" />
+        <X className="h-6 w-6 text-gray-700 dark:text-gray-300" />
       </button>
 
       <div className="relative z-10 flex flex-col min-h-screen">
-        {/* 顶部动画标题 */}
-        <div className="flex-1 flex items-center justify-center px-6 pt-16 pb-8">
+        {/* 顶部动画标题 - 紧凑版本 */}
+        <div className="flex-none flex items-center justify-center px-6 pt-12 pb-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -456,24 +457,24 @@ export default function BlindBoxPaymentPage() {
           >
             <motion.div
               animate={{
-                rotate: [0, 10, -10, 10, 0],
+                rotate: [0, 5, -5, 5, 0],
               }}
               transition={{
-                duration: 2,
+                duration: 2.5,
                 repeat: Infinity,
                 ease: "easeInOut",
               }}
-              className="inline-block mb-4"
+              className="inline-block mb-3"
             >
-              <Sparkles className="h-16 w-16 text-yellow-300" />
+              <Sparkles className="h-12 w-12 text-purple-600 dark:text-purple-400" />
             </motion.div>
-            <h1 className="text-4xl font-bold text-white mb-3 drop-shadow-lg">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               解锁神秘盲盒
             </h1>
-            <p className="text-white/90 text-lg drop-shadow-md mb-2">
+            <p className="text-gray-700 dark:text-gray-300 text-base mb-1">
               AI精准匹配 · 惊喜体验 · 新朋友
             </p>
-            <p className="text-white/70 text-sm drop-shadow-md">
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
               告别尬聊，省去海量筛选时间
             </p>
           </motion.div>
@@ -486,23 +487,23 @@ export default function BlindBoxPaymentPage() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="bg-background rounded-t-[32px] shadow-2xl p-6 space-y-6"
         >
-          {/* 新用户首单特惠横幅 */}
+          {/* 新用户首单特惠横幅 - 使用梯度高亮 */}
           {hasWelcomeCoupon && !appliedCoupon && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-4 rounded-xl bg-gradient-to-r from-pink-500/20 to-orange-500/20 border border-pink-300 dark:border-pink-800"
+              className="p-4 rounded-xl bg-gradient-to-r from-pink-500 to-orange-500 text-white shadow-lg"
               data-testid="banner-welcome-discount"
             >
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-pink-500 to-orange-500 flex items-center justify-center shrink-0">
+                <div className="h-10 w-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
                   <Gift className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-pink-700 dark:text-pink-300">首单专享5折</p>
-                  <p className="text-xs text-pink-600 dark:text-pink-400">新用户专属优惠券已自动发放，单次票可享半价</p>
+                  <p className="font-bold text-white">首单专享5折</p>
+                  <p className="text-xs text-white/90">新用户专属优惠券已自动发放，单次票可享半价</p>
                 </div>
-                <Badge className="bg-gradient-to-r from-pink-500 to-orange-500 text-white border-0 shrink-0">
+                <Badge className="bg-white/20 backdrop-blur-sm text-white border-0 shrink-0">
                   -50%
                 </Badge>
               </div>

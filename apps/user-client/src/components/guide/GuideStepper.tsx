@@ -1,5 +1,6 @@
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -7,6 +8,7 @@ import { guideCopy } from "@/copy/guide";
 import { GuideStepPersona } from "./GuideStepPersona";
 import { GuideStepBlindBoxFlow } from "./GuideStepBlindBoxFlow";
 import { GuideStepAIConcierge } from "./GuideStepAIConcierge";
+import { GuideCompletionState } from "./GuideCompletionState";
 
 interface GuideStepperProps {
   /** 当前步骤 (0-2) */
@@ -43,9 +45,27 @@ export function GuideStepper({
 }: GuideStepperProps) {
   const prefersReducedMotion = useReducedMotion();
   const copy = guideCopy.common;
+  const [showCompletion, setShowCompletion] = useState(false);
   
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === totalSteps - 1;
+  
+  // Handle completion with emotional checkpoint
+  const handleComplete = useCallback(() => {
+    setShowCompletion(true);
+  }, []);
+  
+  // Auto-transition after 2 seconds when completion state shows
+  useEffect(() => {
+    if (!showCompletion) return;
+    
+    const timeoutId = setTimeout(() => {
+      onComplete();
+    }, 2000);
+    
+    // Cleanup timeout on unmount
+    return () => clearTimeout(timeoutId);
+  }, [showCompletion, onComplete]);
   
   const containerVariants = prefersReducedMotion
     ? { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } }
@@ -72,6 +92,11 @@ export function GuideStepper({
           transition: { duration: 0.25 },
         },
       };
+  
+  // Show completion state
+  if (showCompletion) {
+    return <GuideCompletionState />;
+  }
   
   return (
     <div className={cn(
@@ -165,7 +190,7 @@ export function GuideStepper({
             {/* 最后一步: 两个 CTA */}
             <Button
               className="w-full h-14 rounded-2xl text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
-              onClick={onComplete}
+              onClick={handleComplete}
               data-testid="guide-complete"
             >
               {guideCopy.step3.secondaryCta}
