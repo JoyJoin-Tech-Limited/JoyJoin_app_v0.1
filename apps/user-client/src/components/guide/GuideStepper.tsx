@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,6 @@ import { GuideStepPersona } from "./GuideStepPersona";
 import { GuideStepBlindBoxFlow } from "./GuideStepBlindBoxFlow";
 import { GuideStepAIConcierge } from "./GuideStepAIConcierge";
 import { GuideCompletionState } from "./GuideCompletionState";
-import { useState, useEffect } from "react";
 
 interface GuideStepperProps {
   /** 当前步骤 (0-2) */
@@ -51,9 +51,9 @@ export function GuideStepper({
   const isLastStep = currentStep === totalSteps - 1;
   
   // Handle completion with emotional checkpoint
-  const handleComplete = () => {
+  const handleComplete = useCallback(() => {
     setShowCompletion(true);
-  };
+  }, []);
   
   // Auto-transition after 2 seconds when completion state shows
   useEffect(() => {
