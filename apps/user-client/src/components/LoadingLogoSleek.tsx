@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import styles from "./LoadingLogoSleek.module.css";
-import joyjoinLogo from "@/assets/joyjoin-logo-full.png";
+import joyjoinLogo from "@/assets/box_logo_archetypes.png";
 
 type Props = {
   loop?: boolean;

@@ -16,7 +16,7 @@
 
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import logoImage from "@/assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi.png";
+import logoImage from "@/assets/box_logo_archetypes.png";
 
 // Import landing screen images
 import malePortrait from "@/assets/landing screen/男生单人.png";
