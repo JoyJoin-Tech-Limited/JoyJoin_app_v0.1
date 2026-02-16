@@ -8,7 +8,7 @@ import { GuideStepPersona } from "./GuideStepPersona";
 import { GuideStepBlindBoxFlow } from "./GuideStepBlindBoxFlow";
 import { GuideStepAIConcierge } from "./GuideStepAIConcierge";
 import { GuideCompletionState } from "./GuideCompletionState";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface GuideStepperProps {
   /** 当前步骤 (0-2) */
@@ -53,12 +53,19 @@ export function GuideStepper({
   // Handle completion with emotional checkpoint
   const handleComplete = () => {
     setShowCompletion(true);
+  };
+  
+  // Auto-transition after 2 seconds when completion state shows
+  useEffect(() => {
+    if (!showCompletion) return;
     
-    // Auto-transition after 2 seconds
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       onComplete();
     }, 2000);
-  };
+    
+    // Cleanup timeout on unmount
+    return () => clearTimeout(timeoutId);
+  }, [showCompletion, onComplete]);
   
   const containerVariants = prefersReducedMotion
     ? { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } }
