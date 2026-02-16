@@ -64,7 +64,7 @@ export function GuideCompletionState({
           准备好了
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          可以开始发现了
+          开始发现吧
         </p>
       </motion.div>
 
