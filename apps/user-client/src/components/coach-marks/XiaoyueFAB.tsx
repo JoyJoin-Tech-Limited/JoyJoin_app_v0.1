@@ -56,6 +56,7 @@ export function XiaoyueFAB({
           <Button
             size="icon"
             onClick={handleClick}
+            aria-label="打开小悦聊天"
             className="h-14 w-14 rounded-full shadow-lg bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
           >
             <motion.div
