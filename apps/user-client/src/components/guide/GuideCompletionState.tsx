@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 interface GuideCompletionStateProps {
   className?: string;
@@ -16,6 +17,7 @@ interface GuideCompletionStateProps {
 export function GuideCompletionState({
   className,
 }: GuideCompletionStateProps) {
+  const prefersReducedMotion = useReducedMotion();
   return (
     <motion.div
       className={cn(
@@ -29,14 +31,17 @@ export function GuideCompletionState({
     >
       {/* Success Icon */}
       <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ 
-          delay: 0.2,
-          type: "spring", 
-          stiffness: 200,
-          damping: 15
-        }}
+        initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0 }}
+        animate={prefersReducedMotion ? { opacity: 1 } : { scale: 1 }}
+        transition={prefersReducedMotion 
+          ? { duration: 0.2 }
+          : { 
+              delay: 0.2,
+              type: "spring", 
+              stiffness: 200,
+              damping: 15
+            }
+        }
         className="mb-6"
       >
         <div className="relative">
@@ -44,9 +49,12 @@ export function GuideCompletionState({
           {/* Subtle sparkle effect */}
           <motion.div
             className="absolute -top-2 -right-2"
-            initial={{ scale: 0, rotate: -45 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ delay: 0.5, duration: 0.3 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0, rotate: -45 }}
+            animate={prefersReducedMotion ? { opacity: 1 } : { scale: 1, rotate: 0 }}
+            transition={prefersReducedMotion 
+              ? { delay: 0.3, duration: 0.2 }
+              : { delay: 0.5, duration: 0.3 }
+            }
           >
             <Sparkles className="w-6 h-6 text-yellow-500" />
           </motion.div>

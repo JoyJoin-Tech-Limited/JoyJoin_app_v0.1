@@ -441,6 +441,7 @@ export default function BlindBoxPaymentPage() {
         onClick={() => setLocation("/discover")}
         className="absolute top-4 right-4 z-50 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 rounded-full p-2 backdrop-blur-sm transition-colors shadow-md"
         data-testid="button-close-payment"
+        aria-label="关闭支付页面，返回发现页"
       >
         <X className="h-6 w-6 text-gray-700 dark:text-gray-300" />
       </button>
