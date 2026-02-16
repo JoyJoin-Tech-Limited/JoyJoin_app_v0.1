@@ -2121,6 +2121,124 @@ export type InsertIcebreakerCheckin = z.infer<typeof insertIcebreakerCheckinSche
 export type InsertIcebreakerReadyVote = z.infer<typeof insertIcebreakerReadyVoteSchema>;
 export type InsertIcebreakerActivityLog = z.infer<typeof insertIcebreakerActivityLogSchema>;
 
+// ============ 活动内破冰卡牌游戏系统 ============
+
+// Icebreaker Game Cards table - 破冰卡牌生成记录
+export const icebreakerGameCards = pgTable("icebreaker_game_cards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // 关联到破冰会话
+  sessionId: varchar("session_id").notNull().references(() => icebreakerSessions.id),
+  
+  // 卡牌内容
+  cardType: varchar("card_type").notNull(), // question | vote | mission
+  content: text("content").notNull(), // 卡牌主内容（问题、投票主题、任务描述）
+  hint: text("hint"), // 单个提示/引导
+  category: varchar("category"), // 话题分类
+  difficulty: varchar("difficulty"), // easy | medium | deep
+  
+  // 投票卡专用字段
+  voteOptions: jsonb("vote_options"), // [{id, text, emoji}] 投票选项
+  voteResults: jsonb("vote_results"), // {optionId: count} 投票结果
+  
+  // 任务卡专用字段
+  missionType: varchar("mission_type"), // group_challenge | pair_challenge | individual_share
+  unlockCondition: varchar("unlock_condition"), // 解锁条件描述
+  isUnlocked: boolean("is_unlocked").default(false),
+  
+  // AI生成元数据
+  isAiGenerated: boolean("is_ai_generated").default(false),
+  generationSource: varchar("generation_source"), // curated | ai_deepseek | ai_fallback
+  aiRecommendReason: text("ai_recommend_reason"), // AI推荐理由（显示为标签）
+  personalizedFor: jsonb("personalized_for"), // 个性化依据：{archetypes, interests, industries}
+  
+  // 卡牌使用状态
+  roundNumber: integer("round_number").notNull(), // 属于第几轮（1-5）
+  displayOrder: integer("display_order"), // 在本轮中的显示顺序
+  isRevealed: boolean("is_revealed").default(false), // 是否已揭示
+  revealedAt: timestamp("revealed_at"),
+  
+  // 互动数据
+  interactionCount: integer("interaction_count").default(0), // 交互次数（点击、投票等）
+  skipCount: integer("skip_count").default(0), // 跳过次数
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Icebreaker Game Progress table - 游戏进度追踪
+export const icebreakerGameProgress = pgTable("icebreaker_game_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  sessionId: varchar("session_id").notNull().unique().references(() => icebreakerSessions.id),
+  
+  // 游戏配置
+  totalRounds: integer("total_rounds").default(5), // 总轮数
+  roundDurationMinutes: integer("round_duration_minutes").default(20), // 每轮时长
+  
+  // 当前进度
+  currentRound: integer("current_round").default(1), // 当前轮数
+  roundStartedAt: timestamp("round_started_at"),
+  gameStartedAt: timestamp("game_started_at"),
+  gameEndedAt: timestamp("game_ended_at"),
+  
+  // 卡牌生成策略
+  aiGenerationRatio: integer("ai_generation_ratio").default(70), // AI卡片占比（%）
+  cardsPerRound: integer("cards_per_round").default(3), // 每轮卡片数
+  
+  // 轮次历史记录
+  roundHistory: jsonb("round_history"), // [{round: 1, startedAt, endedAt, cardsRevealed: 3}]
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Icebreaker Card Interactions table - 卡牌交互记录
+export const icebreakerCardInteractions = pgTable("icebreaker_card_interactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  cardId: varchar("card_id").notNull().references(() => icebreakerGameCards.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  sessionId: varchar("session_id").notNull().references(() => icebreakerSessions.id),
+  
+  // 交互类型
+  interactionType: varchar("interaction_type").notNull(), // view | vote | skip | reaction
+  
+  // 投票卡交互数据
+  voteOptionId: varchar("vote_option_id"), // 投票选项ID
+  
+  // 反应/表情
+  reaction: varchar("reaction"), // 👍 | ❤️ | 😂 | 🤔 等
+  
+  interactedAt: timestamp("interacted_at").defaultNow(),
+});
+
+// Insert schemas for icebreaker game tables
+export const insertIcebreakerGameCardSchema = createInsertSchema(icebreakerGameCards).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertIcebreakerGameProgressSchema = createInsertSchema(icebreakerGameProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertIcebreakerCardInteractionSchema = createInsertSchema(icebreakerCardInteractions).omit({
+  id: true,
+  interactedAt: true,
+});
+
+// Types for icebreaker game tables
+export type IcebreakerGameCard = typeof icebreakerGameCards.$inferSelect;
+export type IcebreakerGameProgress = typeof icebreakerGameProgress.$inferSelect;
+export type IcebreakerCardInteraction = typeof icebreakerCardInteractions.$inferSelect;
+export type InsertIcebreakerGameCard = z.infer<typeof insertIcebreakerGameCardSchema>;
+export type InsertIcebreakerGameProgress = z.infer<typeof insertIcebreakerGameProgressSchema>;
+export type InsertIcebreakerCardInteraction = z.infer<typeof insertIcebreakerCardInteractionSchema>;
+
 // ============ 国王游戏多设备同步系统 ============
 
 // King Game Sessions table - 国王游戏会话（多设备同步）
