@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   User, GraduationCap, Briefcase, MapPin, RotateCw, Globe, Star,
-  PartyPopper, MessageSquare, Sparkles
+  PartyPopper, MessageSquare, Sparkles, ChevronDown
 } from "lucide-react";
 import EnergyRing from "./EnergyRing";
 import MysteryBadge from "./MysteryBadge";
@@ -58,9 +58,8 @@ export default function UserConnectionCard({
   threadId,
   onMessageClick,
 }: UserConnectionCardProps) {
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [revealedBadges, setRevealedBadges] = useState<Set<number>>(new Set());
   const [isExpanded, setIsExpanded] = useState(false);
+  const [revealedBadges, setRevealedBadges] = useState<Set<number>>(new Set());
   
   // Total connection points count (for energy ring - always use full count)
   const totalConnectionPoints = connectionTags.length;
@@ -73,10 +72,8 @@ export default function UserConnectionCard({
     })
     .slice(0, MAX_MATCH_POINTS);
   
-  // Display tags: show 3 by default, all when expanded
-  const displayTags = isExpanded ? sortedTags : sortedTags.slice(0, DEFAULT_VISIBLE_COUNT);
-  // Ensure hiddenCount is never negative
-  const hiddenCount = Math.max(0, sortedTags.length - DEFAULT_VISIBLE_COUNT);
+  // Pick highest rarity tag for collapsed view (first epic, or first rare, or first common)
+  const topConnectionTag = sortedTags[0];
 
   const archetypeBgColor = attendee.archetype && archetypeBgColors[attendee.archetype]
     ? archetypeBgColors[attendee.archetype]
@@ -95,10 +92,7 @@ export default function UserConnectionCard({
     setRevealedBadges((prev) => new Set(prev).add(index));
   };
 
-  // All revealed when current display set is fully revealed
-  const allRevealed = isExpanded 
-    ? revealedBadges.size >= sortedTags.length 
-    : revealedBadges.size >= displayTags.length;
+  const allRevealed = revealedBadges.size >= sortedTags.length;
 
   // Format display values
   const genderDisplay = attendee.gender === "Woman" ? "女" : 
@@ -122,296 +116,286 @@ export default function UserConnectionCard({
       className="min-w-[240px] w-[240px] flex-shrink-0"
       data-testid={`connection-card-${attendee.userId}`}
     >
-      <div 
-        className="relative h-[468px]"
-        style={{ perspective: "1200px", willChange: "transform" }}
+      <motion.div
+        animate={{ 
+          height: isExpanded ? 468 : 200,
+        }}
+        transition={{ 
+          type: "spring",
+          stiffness: 300,
+          damping: 30,
+        }}
+        className="overflow-hidden"
       >
-        <motion.div
-          className="relative w-full h-full"
-          style={{ 
-            transformStyle: "preserve-3d",
-            willChange: "transform"
-          }}
-          animate={{ 
-            rotateY: isFlipped ? 180 : 0,
-          }}
-          transition={{ 
-            duration: 0.5,
-            ease: [0.4, 0.0, 0.2, 1],
-          }}
+        <Card 
+          className="border-2 hover-elevate transition-all cursor-pointer"
+          onClick={() => setIsExpanded(!isExpanded)}
         >
-          {/* Front Side - User Info */}
-          <div
-            className="absolute inset-0 w-full h-full"
-            style={{
-              backfaceVisibility: "hidden",
-              WebkitBackfaceVisibility: "hidden",
-              transform: "rotateY(0deg)",
-            }}
-          >
-            <Card className="h-full overflow-hidden border-2 hover-elevate transition-all">
-              <CardContent className="p-4 space-y-4 h-full flex flex-col">
-                {/* Upper Zone: User Identity */}
-                <div className="flex gap-3 items-start">
-                  {/* Left: Archetype Icon */}
-                  <div className="flex-shrink-0 flex flex-col items-center gap-1">
-                    <div className={`w-14 h-14 rounded-xl ${archetypeBgColor} flex items-center justify-center p-1`}>
-                      {archetypeImage ? (
-                        <img src={archetypeImage} alt={attendee.archetype || ""} className="h-full w-full object-contain" />
-                      ) : (
-                        <User className="h-7 w-7 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="text-xs font-semibold text-center text-primary">
-                      {attendee.archetype}
-                    </div>
-                  </div>
-
-                  {/* Right: Personal Info */}
-                  <div className="flex-1 space-y-2 pt-1">
-                    <div className="font-bold text-base" data-testid={`text-name-${attendee.userId}`}>
-                      {attendee.displayName}
-                    </div>
-
-                    <div className="space-y-1.5 text-xs">
-                      {/* Gender · Age */}
-                      {(genderDisplay || attendee.age) && (
-                        <div className="flex items-center gap-1.5 text-foreground">
-                          <User className="h-3 w-3 text-muted-foreground" />
-                          <span>
-                            {genderDisplay && <span>{genderDisplay}</span>}
-                            {genderDisplay && attendee.age && <span> · </span>}
-                            {attendee.age && <span>{attendee.age}岁</span>}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Education */}
-                      {educationDisplay && (
-                        <div className="flex items-center gap-1.5 text-foreground">
-                          <GraduationCap className="h-3 w-3 text-muted-foreground" />
-                          <span>{educationDisplay}</span>
-                        </div>
-                      )}
-
-                      {/* Industry */}
-                      {attendee.industry && (
-                        <div className="flex items-center gap-1.5 text-foreground">
-                          <Briefcase className="h-3 w-3 text-muted-foreground" />
-                          <span>{attendee.industry}</span>
-                        </div>
-                      )}
-
-                      {/* Hometown */}
-                      {attendee.hometownRegionCity && (
-                        <div className="flex items-center gap-1.5 text-foreground">
-                          <MapPin className="h-3 w-3 text-muted-foreground" />
-                          <span>{attendee.hometownRegionCity}</span>
-                        </div>
-                      )}
-
-                      {/* Languages */}
-                      {attendee.languagesComfort && attendee.languagesComfort.length > 0 && (
-                        <div className="flex items-center gap-1.5 text-muted-foreground leading-relaxed">
-                          <Globe className="h-3 w-3" />
-                          <span>{attendee.languagesComfort.join(" · ")}</span>
-                        </div>
-                      )}
-
-                      {/* Starred Favorite Interest */}
-                      {attendee.interestFavorite && (
-                        <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
-                          <Star className="h-3 w-3 fill-current" />
-                          <span className="font-medium">{getInterestLabel(attendee.interestFavorite)}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Happy Topics Section */}
-                {attendee.topicsHappy && attendee.topicsHappy.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <MessageSquare className="h-3 w-3" />
-                        <span>喜欢聊</span>
+          <CardContent className="p-4 space-y-3">
+            {/* Collapsed View - Minimal Info */}
+            <AnimatePresence>
+              {!isExpanded && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-3"
+                >
+                  {/* Archetype & Name */}
+                  <div className="flex gap-3 items-center">
+                    <div className="flex-shrink-0">
+                      <div className={`w-12 h-12 rounded-xl ${archetypeBgColor} flex items-center justify-center p-1`}>
+                        {archetypeImage ? (
+                          <img src={archetypeImage} alt={attendee.archetype || ""} className="h-full w-full object-contain" />
+                        ) : (
+                          <User className="h-6 w-6 text-muted-foreground" />
+                        )}
                       </div>
-                      {topicMatchCount > 0 && (
-                        <Badge 
-                          variant="secondary" 
-                          className="text-xs px-2 py-0.5 bg-primary/10 text-primary"
-                          data-testid="badge-topic-match"
-                        >
-                          {topicMatchCount}个共同话题
-                        </Badge>
-                      )}
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {attendee.topicsHappy.slice(0, 3).map((topic, idx) => (
-                        <Badge 
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-base truncate" data-testid={`text-name-${attendee.userId}`}>
+                        {attendee.displayName}
+                      </div>
+                      <div className="text-xs text-primary font-medium">
+                        {attendee.archetype}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top Connection Tag */}
+                  {topConnectionTag && (
+                    <div className="flex items-center justify-center">
+                      <Badge 
+                        variant={topConnectionTag.rarity === 'epic' ? 'default' : 'secondary'}
+                        className={`text-xs px-3 py-1 ${
+                          topConnectionTag.rarity === 'epic' ? 'bg-amber-500 text-white' :
+                          topConnectionTag.rarity === 'rare' ? 'bg-purple-100 text-purple-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        <span className="mr-1">{topConnectionTag.icon}</span>
+                        {topConnectionTag.label}
+                      </Badge>
+                    </div>
+                  )}
+
+                  {/* Tap Affordance */}
+                  <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                    <ChevronDown className="h-3 w-3" />
+                    <span>点击查看更多</span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Expanded View - Full Details */}
+            <AnimatePresence>
+              {isExpanded && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-4"
+                >
+                  {/* Upper Zone: User Identity */}
+                  <div className="flex gap-3 items-start">
+                    {/* Left: Archetype Icon */}
+                    <div className="flex-shrink-0 flex flex-col items-center gap-1">
+                      <div className={`w-14 h-14 rounded-xl ${archetypeBgColor} flex items-center justify-center p-1`}>
+                        {archetypeImage ? (
+                          <img src={archetypeImage} alt={attendee.archetype || ""} className="h-full w-full object-contain" />
+                        ) : (
+                          <User className="h-7 w-7 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="text-xs font-semibold text-center text-primary">
+                        {attendee.archetype}
+                      </div>
+                    </div>
+
+                    {/* Right: Personal Info */}
+                    <div className="flex-1 space-y-2 pt-1">
+                      <div className="font-bold text-base" data-testid={`text-name-${attendee.userId}`}>
+                        {attendee.displayName}
+                      </div>
+
+                      <div className="space-y-1.5 text-xs">
+                        {/* Gender · Age */}
+                        {(genderDisplay || attendee.age) && (
+                          <div className="flex items-center gap-1.5 text-foreground">
+                            <User className="h-3 w-3 text-muted-foreground" />
+                            <span>
+                              {genderDisplay && <span>{genderDisplay}</span>}
+                              {genderDisplay && attendee.age && <span> · </span>}
+                              {attendee.age && <span>{attendee.age}岁</span>}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Education */}
+                        {educationDisplay && (
+                          <div className="flex items-center gap-1.5 text-foreground">
+                            <GraduationCap className="h-3 w-3 text-muted-foreground" />
+                            <span>{educationDisplay}</span>
+                          </div>
+                        )}
+
+                        {/* Industry */}
+                        {attendee.industry && (
+                          <div className="flex items-center gap-1.5 text-foreground">
+                            <Briefcase className="h-3 w-3 text-muted-foreground" />
+                            <span>{attendee.industry}</span>
+                          </div>
+                        )}
+
+                        {/* Hometown */}
+                        {attendee.hometownRegionCity && (
+                          <div className="flex items-center gap-1.5 text-foreground">
+                            <MapPin className="h-3 w-3 text-muted-foreground" />
+                            <span>{attendee.hometownRegionCity}</span>
+                          </div>
+                        )}
+
+                        {/* Languages */}
+                        {attendee.languagesComfort && attendee.languagesComfort.length > 0 && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground leading-relaxed">
+                            <Globe className="h-3 w-3" />
+                            <span>{attendee.languagesComfort.join(" · ")}</span>
+                          </div>
+                        )}
+
+                        {/* Starred Favorite Interest */}
+                        {attendee.interestFavorite && (
+                          <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                            <Star className="h-3 w-3 fill-current" />
+                            <span className="font-medium">{getInterestLabel(attendee.interestFavorite)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Happy Topics Section */}
+                  {attendee.topicsHappy && attendee.topicsHappy.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <MessageSquare className="h-3 w-3" />
+                          <span>喜欢聊</span>
+                        </div>
+                        {topicMatchCount > 0 && (
+                          <Badge 
+                            variant="secondary" 
+                            className="text-xs px-2 py-0.5 bg-primary/10 text-primary"
+                            data-testid="badge-topic-match"
+                          >
+                            {topicMatchCount}个共同话题
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {attendee.topicsHappy.slice(0, 3).map((topic, idx) => (
+                          <Badge 
+                            key={idx}
+                            variant="secondary" 
+                            className="text-xs px-2 py-0.5"
+                          >
+                            {getTopicLabel(topic)}
+                          </Badge>
+                        ))}
+                        {attendee.topicsHappy.length > 3 && (
+                          <Badge variant="outline" className="text-xs px-2 py-0.5 text-muted-foreground">
+                            +{attendee.topicsHappy.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Connection Tags Section */}
+                  <div className="space-y-2 border-t pt-3">
+                    <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                      <Sparkles className="h-4 w-4" />
+                      我们的潜在契合点
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 max-h-[180px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                      {sortedTags.map((badge, idx) => (
+                        <MysteryBadge
                           key={idx}
-                          variant="secondary" 
-                          className="text-xs px-2 py-0.5"
-                        >
-                          {getTopicLabel(topic)}
-                        </Badge>
+                          icon={badge.icon}
+                          label={badge.label}
+                          type={badge.type}
+                          rarity={badge.rarity}
+                          isRevealed={revealedBadges.has(idx)}
+                          onReveal={() => handleBadgeReveal(idx)}
+                          delay={idx * 0.1}
+                        />
                       ))}
-                      {attendee.topicsHappy.length > 3 && (
-                        <Badge variant="outline" className="text-xs px-2 py-0.5 text-muted-foreground">
-                          +{attendee.topicsHappy.length - 3}
-                        </Badge>
+                    </div>
+                    
+                    {/* Completion Message */}
+                    <AnimatePresence>
+                      {allRevealed && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          transition={{ delay: 0.3 }}
+                          className="flex items-center justify-center gap-1.5 text-xs text-primary font-medium pt-2"
+                        >
+                          <PartyPopper className="h-4 w-4" />
+                          全部解锁完成
+                        </motion.div>
                       )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Energy Ring with Match Quality */}
+                  <div className="flex justify-center items-center border-t pt-3">
+                    <div className="relative">
+                      <EnergyRing 
+                        percentage={matchQuality.percentage}
+                        qualityTier={matchQuality.qualityTier}
+                        visualBoost={matchQuality.visualBoost}
+                        size={100}
+                        strokeWidth={6}
+                      >
+                        <div className="flex flex-col items-center justify-center">
+                          <div className={`text-3xl font-bold ${numberColorClass}`}>
+                            {totalConnectionPoints}
+                          </div>
+                          <div className="text-[10px] font-medium text-muted-foreground text-center px-1">
+                            契合点
+                          </div>
+                        </div>
+                      </EnergyRing>
                     </div>
                   </div>
-                )}
 
-                {/* Lower Zone: Energy Ring surrounding Connection Count */}
-                <div className="flex-1 flex flex-col justify-center items-center gap-4 border-t pt-6">
-                  {/* Energy Ring with Connection Count - always based on ALL tags */}
-                  <div className="relative">
-                    <EnergyRing 
-                      percentage={matchQuality.percentage}
-                      qualityTier={matchQuality.qualityTier}
-                      visualBoost={matchQuality.visualBoost}
-                      size={140}
-                      strokeWidth={8}
-                    >
-                      <div className="flex flex-col items-center justify-center">
-                        <div className={`text-5xl font-bold ${numberColorClass}`}>
-                          {totalConnectionPoints}
-                        </div>
-                        <div className="text-xs font-medium text-muted-foreground mt-1 text-center px-2">
-                          个潜在契合点
-                        </div>
-                      </div>
-                    </EnergyRing>
-                    {/* +N indicator when there are hidden tags */}
-                    {hiddenCount > 0 && !isExpanded && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-md"
-                        data-testid={`badge-hidden-count-${attendee.userId}`}
-                      >
-                        +{hiddenCount}
-                      </motion.div>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2">
+                  {/* Action Buttons */}
+                  {threadId && onMessageClick && (
                     <motion.button
-                      onClick={() => setIsFlipped(true)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover-elevate active-elevate-2 text-sm font-medium"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMessageClick(attendee.userId, threadId);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover-elevate active-elevate-2 text-sm font-medium"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      data-testid={`button-flip-${attendee.userId}`}
+                      data-testid={`button-message-${attendee.userId}`}
                     >
-                      <RotateCw className="h-4 w-4" />
-                      翻转探索
-                    </motion.button>
-                    
-                    {threadId && onMessageClick && (
-                      <motion.button
-                        onClick={() => onMessageClick(attendee.userId, threadId)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover-elevate active-elevate-2 text-sm font-medium"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        data-testid={`button-message-${attendee.userId}`}
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        发消息
-                      </motion.button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Back Side - Mystery Badges Only */}
-          <div
-            className="absolute inset-0 w-full h-full"
-            style={{
-              backfaceVisibility: "hidden",
-              WebkitBackfaceVisibility: "hidden",
-              transform: "rotateY(180deg)",
-            }}
-          >
-            <Card className="h-full overflow-hidden border-2 hover-elevate transition-all">
-              <CardContent className="p-4 h-full flex flex-col">
-                {/* Header with title and flip back button */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-                    <Sparkles className="h-4 w-4" />
-                    我们的潜在契合点
-                  </div>
-                  <motion.button
-                    onClick={() => setIsFlipped(false)}
-                    className="p-1.5 rounded-md hover-elevate active-elevate-2 text-muted-foreground"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    data-testid={`button-flip-back-${attendee.userId}`}
-                  >
-                    <RotateCw className="h-4 w-4" />
-                  </motion.button>
-                </div>
-
-                {/* Mystery Badges Grid - sorted by rarity, with expand functionality */}
-                <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                  <div className="grid grid-cols-2 gap-3">
-                    {displayTags.map((badge, idx) => (
-                      <MysteryBadge
-                        key={idx}
-                        icon={badge.icon}
-                        label={badge.label}
-                        type={badge.type}
-                        rarity={badge.rarity}
-                        isRevealed={revealedBadges.has(idx)}
-                        onReveal={() => handleBadgeReveal(idx)}
-                        delay={idx * 0.1}
-                      />
-                    ))}
-                  </div>
-                  
-                  {/* Expand/Collapse button */}
-                  {hiddenCount > 0 && (
-                    <motion.button
-                      onClick={() => setIsExpanded(!isExpanded)}
-                      className="w-full mt-3 py-2 text-sm text-primary hover:text-primary/80 flex items-center justify-center gap-1"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      data-testid={`button-expand-${attendee.userId}`}
-                    >
-                      {isExpanded ? (
-                        <>收起</>
-                      ) : (
-                        <>查看更多 (+{hiddenCount})</>
-                      )}
+                      <MessageSquare className="h-4 w-4" />
+                      发消息
                     </motion.button>
                   )}
-                </div>
-
-                {/* Completion Message */}
-                <AnimatePresence>
-                  {allRevealed && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      transition={{ delay: 0.3 }}
-                      className="flex items-center justify-center gap-1.5 text-xs text-primary font-medium pt-3 border-t mt-3"
-                    >
-                      <PartyPopper className="h-4 w-4" />
-                      全部解锁完成
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </CardContent>
-            </Card>
-          </div>
-        </motion.div>
-      </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 }
