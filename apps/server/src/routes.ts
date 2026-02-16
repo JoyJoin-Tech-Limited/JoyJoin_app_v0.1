@@ -6216,6 +6216,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ In-Event Icebreaker Card Game Endpoints ============
   
+  // Helper function to verify user is authorized to access session
+  async function verifySessionAccess(sessionId: string, userId: string, db: any, schema: any): Promise<boolean> {
+    const { icebreakerSessions, eventPoolRegistrations, eventPoolGroups } = schema;
+    const { eq, and } = await import('drizzle-orm');
+    
+    // Get session
+    const [session] = await db.select().from(icebreakerSessions).where(eq(icebreakerSessions.id, sessionId)).limit(1);
+    if (!session) return false;
+    
+    // Check if user is in the event/group
+    if (session.groupId) {
+      // Check pool group membership
+      const registration = await db.select()
+        .from(eventPoolRegistrations)
+        .where(
+          and(
+            eq(eventPoolRegistrations.userId, userId),
+            eq(eventPoolRegistrations.assignedGroupId, session.groupId)
+          )
+        )
+        .limit(1);
+      return registration.length > 0;
+    } else if (session.blindBoxEventId) {
+      // Check blind box event attendance
+      const event = await storage.getBlindBoxEventById(session.blindBoxEventId, userId);
+      if (!event) return false;
+      const matchedAttendees = (Array.isArray(event.matchedAttendees) ? event.matchedAttendees : []) as Array<{ userId?: string }>;
+      return matchedAttendees.some((a: any) => a.userId === userId);
+    }
+    
+    return false;
+  }
+  
   // Generate cards for current round
   app.post('/api/icebreaker/game/generate-cards', isPhoneAuthenticated, async (req: any, res) => {
     try {
@@ -6236,8 +6269,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userInterests,
         eventPoolRegistrations,
         eventPoolGroups,
+        assessmentSessions,
       } = await import('@shared/schema');
-      const { eq, and, inArray } = await import('drizzle-orm');
+      const { eq, and, inArray, sql, desc, isNotNull } = await import('drizzle-orm');
       
       // Find or create icebreaker session
       let session;
@@ -6274,6 +6308,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!session) {
         return res.status(404).json({ message: "Session not found" });
+      }
+      
+      // Verify user authorization to access this session
+      const isAuthorized = await verifySessionAccess(session.id, userId, db, {
+        icebreakerSessions,
+        eventPoolRegistrations,
+        eventPoolGroups,
+      });
+      
+      if (!isAuthorized) {
+        return res.status(403).json({ message: "Unauthorized to access this session" });
       }
       
       // Get attendees data for personalization
@@ -6334,17 +6379,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           attendee.topPriorities = interests.topPriorities;
         }
         
-        // Get personality trait scores from assessment results
-        const assessmentQuery = `
-          SELECT trait_scores, primary_archetype, secondary_archetype 
-          FROM assessment_sessions 
-          WHERE user_id = $1 AND completed_at IS NOT NULL 
-          ORDER BY completed_at DESC 
-          LIMIT 1
-        `;
-        const result = await db.execute(sql.raw(assessmentQuery, [attendee.id]));
-        if (result.rows && result.rows.length > 0) {
-          attendee.traitScores = result.rows[0].trait_scores;
+        // Get personality trait scores from assessment results using Drizzle query builder
+        const [assessment] = await db
+          .select({
+            traitScores: assessmentSessions.traitScores,
+            primaryArchetype: assessmentSessions.primaryArchetype,
+            secondaryArchetype: assessmentSessions.secondaryArchetype,
+          })
+          .from(assessmentSessions)
+          .where(
+            and(
+              eq(assessmentSessions.userId, attendee.id),
+              isNotNull(assessmentSessions.completedAt)
+            )
+          )
+          .orderBy(desc(assessmentSessions.completedAt))
+          .limit(1);
+        
+        if (assessment) {
+          attendee.traitScores = assessment.traitScores;
         }
         
         // Get intent from pool registration if available
@@ -6450,12 +6503,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get cards for a session
   app.get('/api/icebreaker/game/cards/:sessionId', isPhoneAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.session.userId;
       const { sessionId } = req.params;
       const { roundNumber } = req.query;
       
       const { db } = await import('@db');
-      const { icebreakerGameCards } = await import('@shared/schema');
+      const { icebreakerGameCards, icebreakerSessions, eventPoolRegistrations, eventPoolGroups } = await import('@shared/schema');
       const { eq, and } = await import('drizzle-orm');
+      
+      // Verify user authorization
+      const isAuthorized = await verifySessionAccess(sessionId, userId, db, {
+        icebreakerSessions,
+        eventPoolRegistrations,
+        eventPoolGroups,
+      });
+      
+      if (!isAuthorized) {
+        return res.status(403).json({ message: "Unauthorized to access this session" });
+      }
       
       let query = db.select().from(icebreakerGameCards).where(eq(icebreakerGameCards.sessionId, sessionId));
       
@@ -6488,59 +6553,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { db } = await import('@db');
-      const { icebreakerCardInteractions, icebreakerGameCards } = await import('@shared/schema');
-      const { eq } = await import('drizzle-orm');
+      const { icebreakerCardInteractions, icebreakerGameCards, icebreakerSessions, eventPoolRegistrations, eventPoolGroups } = await import('@shared/schema');
+      const { eq, and } = await import('drizzle-orm');
       
-      // Record interaction
-      await db.insert(icebreakerCardInteractions).values({
-        cardId,
-        userId,
-        sessionId,
-        interactionType,
-        voteOptionId,
-        reaction,
+      // Verify user authorization
+      const isAuthorized = await verifySessionAccess(sessionId, userId, db, {
+        icebreakerSessions,
+        eventPoolRegistrations,
+        eventPoolGroups,
       });
       
-      // Update card interaction count
-      const [card] = await db.select().from(icebreakerGameCards).where(eq(icebreakerGameCards.id, cardId)).limit(1);
-      if (card) {
-        const newCount = (card.interactionCount || 0) + 1;
-        const newSkipCount = interactionType === 'skip' ? (card.skipCount || 0) + 1 : card.skipCount;
-        
-        await db.update(icebreakerGameCards)
-          .set({ 
-            interactionCount: newCount, 
-            skipCount: newSkipCount,
-            updatedAt: new Date(),
-          })
-          .where(eq(icebreakerGameCards.id, cardId));
-        
-        // For vote cards, update vote results
-        if (interactionType === 'vote' && voteOptionId && card.voteOptions) {
-          const currentResults = (card.voteResults as Record<string, number>) || {};
-          currentResults[voteOptionId] = (currentResults[voteOptionId] || 0) + 1;
-          
-          await db.update(icebreakerGameCards)
-            .set({ voteResults: currentResults })
-            .where(eq(icebreakerGameCards.id, cardId));
-        }
+      if (!isAuthorized) {
+        return res.status(403).json({ message: "Unauthorized to access this session" });
       }
+      
+      // Use transaction to prevent race conditions and ensure atomic updates
+      await db.transaction(async (tx) => {
+        // For vote interactions, check for duplicate votes first
+        if (interactionType === 'vote') {
+          const existingVote = await tx
+            .select()
+            .from(icebreakerCardInteractions)
+            .where(
+              and(
+                eq(icebreakerCardInteractions.cardId, cardId),
+                eq(icebreakerCardInteractions.userId, userId),
+                eq(icebreakerCardInteractions.interactionType, 'vote')
+              )
+            )
+            .limit(1);
+          
+          if (existingVote.length > 0) {
+            throw new Error('User has already voted on this card');
+          }
+        }
+        
+        // Record interaction
+        await tx.insert(icebreakerCardInteractions).values({
+          cardId,
+          userId,
+          sessionId,
+          interactionType,
+          voteOptionId,
+          reaction,
+        });
+        
+        // Lock the card row and update interaction counts atomically
+        const [card] = await tx
+          .select()
+          .from(icebreakerGameCards)
+          .where(eq(icebreakerGameCards.id, cardId))
+          .limit(1)
+          .for('update');
+        
+        if (card) {
+          const newCount = (card.interactionCount || 0) + 1;
+          const newSkipCount = interactionType === 'skip' ? (card.skipCount || 0) + 1 : card.skipCount;
+          
+          await tx
+            .update(icebreakerGameCards)
+            .set({ 
+              interactionCount: newCount, 
+              skipCount: newSkipCount,
+              updatedAt: new Date(),
+            })
+            .where(eq(icebreakerGameCards.id, cardId));
+          
+          // For vote cards, update vote results under the same lock
+          if (interactionType === 'vote' && voteOptionId && card.voteOptions) {
+            const currentResults = (card.voteResults as Record<string, number>) || {};
+            currentResults[voteOptionId] = (currentResults[voteOptionId] || 0) + 1;
+            
+            await tx
+              .update(icebreakerGameCards)
+              .set({ voteResults: currentResults })
+              .where(eq(icebreakerGameCards.id, cardId));
+          }
+        }
+      });
       
       res.json({ success: true });
     } catch (error) {
       console.error("Error recording card interaction:", error);
-      res.status(500).json({ message: "Failed to record interaction" });
+      const errorMessage = error instanceof Error ? error.message : "Failed to record interaction";
+      res.status(error instanceof Error && error.message.includes('already voted') ? 409 : 500)
+        .json({ message: errorMessage });
     }
   });
   
   // Get game progress
   app.get('/api/icebreaker/game/progress/:sessionId', isPhoneAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.session.userId;
       const { sessionId } = req.params;
       
       const { db } = await import('@db');
-      const { icebreakerGameProgress } = await import('@shared/schema');
+      const { icebreakerGameProgress, icebreakerSessions, eventPoolRegistrations, eventPoolGroups } = await import('@shared/schema');
       const { eq } = await import('drizzle-orm');
+      
+      // Verify user authorization
+      const isAuthorized = await verifySessionAccess(sessionId, userId, db, {
+        icebreakerSessions,
+        eventPoolRegistrations,
+        eventPoolGroups,
+      });
+      
+      if (!isAuthorized) {
+        return res.status(403).json({ message: "Unauthorized to access this session" });
+      }
       
       const [progress] = await db.select().from(icebreakerGameProgress).where(eq(icebreakerGameProgress.sessionId, sessionId)).limit(1);
       

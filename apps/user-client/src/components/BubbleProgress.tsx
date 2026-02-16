@@ -52,10 +52,9 @@ export function BubbleProgress({ value, totalRounds, currentRound, className }: 
                     initial={{ height: '0%' }}
                     animate={{ height: `${value}%` }}
                     transition={{ duration: 0.5, ease: "easeOut" }}
-                    className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white to-white/80 rounded-full"
+                    className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white to-white/80 rounded-full -z-10"
                     style={{ 
                       clipPath: 'circle(50% at 50% 50%)',
-                      zIndex: -1
                     }}
                   />
                 )}
@@ -65,7 +64,7 @@ export function BubbleProgress({ value, totalRounds, currentRound, className }: 
                   <motion.svg
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute inset-0 w-full h-full"
+                    className="absolute inset-0 w-full h-full z-10"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"

@@ -2007,7 +2007,7 @@ export const icebreakerSessions = pgTable("icebreaker_sessions", {
   
   // 关联（三选一：eventId用于旧系统，groupId用于新的eventPool系统，blindBoxEventId用于盲盒活动）
   eventId: varchar("event_id").references(() => events.id),
-  groupId: varchar("group_id").references(() => eventPoolGroups.id),
+  groupId: varchar("group_id").unique().references(() => eventPoolGroups.id), // 唯一约束防止重复创建
   blindBoxEventId: varchar("blind_box_event_id").unique(), // 盲盒活动ID（唯一约束防止重复创建）
   
   // 会话状态

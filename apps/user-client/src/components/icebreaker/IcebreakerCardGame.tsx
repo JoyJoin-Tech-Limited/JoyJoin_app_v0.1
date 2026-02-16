@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -93,6 +93,7 @@ export default function IcebreakerCardGame({
 
   const [userVotes, setUserVotes] = useState<Record<string, string>>({});
   const [showVoteResults, setShowVoteResults] = useState(false);
+  const voteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!sessionId && (eventId || groupId)) {
@@ -100,19 +101,34 @@ export default function IcebreakerCardGame({
     }
   }, [sessionId, eventId, groupId, initializeGame]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (voteTimeoutRef.current) {
+        clearTimeout(voteTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const timeRemaining = getRoundTimeRemaining();
 
   const handleVote = async (optionId: string) => {
     if (!currentCard) return;
     
+    // Clear any existing timeout
+    if (voteTimeoutRef.current) {
+      clearTimeout(voteTimeoutRef.current);
+    }
+    
     setUserVotes(prev => ({ ...prev, [currentCard.id]: optionId }));
     await recordVote(currentCard.id, optionId);
     setShowVoteResults(true);
     
-    // Auto-advance after 2 seconds
-    setTimeout(() => {
+    // Auto-advance after 2 seconds with cleanup
+    voteTimeoutRef.current = setTimeout(() => {
       setShowVoteResults(false);
       nextCard();
+      voteTimeoutRef.current = null;
     }, 2000);
   };
 
