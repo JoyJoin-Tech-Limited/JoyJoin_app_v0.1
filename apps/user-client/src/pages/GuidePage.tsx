@@ -1,62 +1,27 @@
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { useGuideFlow, shouldShowGuide } from "@/hooks/useGuideFlow";
-import { GuideStepper } from "@/components/guide";
-import { LoadingScreen } from "@/components/LoadingScreen";
-import type { User } from "@shared/schema";
+import { useEffect } from "react";
 
 /**
- * 引导页
+ * @deprecated 引导页已废弃 (2026-02-16)
  * 
- * 3 步全屏引导流程:
- * 1. 用户画像生成说明
- * 2. 盲盒活动流程介绍
- * 3. 小悦 AI 助手引导
+ * 原 3 步全屏引导流程已替换为 DiscoverPage 上的内联教练标记 (inline coach marks)。
+ * 此页面现在直接重定向到首页。
+ * 
+ * 迁移详情:
+ * - 用户画像欢迎横幅 → CoachMarkBanner (DiscoverPage 顶部)
+ * - 盲盒活动说明 → 首个事件卡片工具提示
+ * - 小悦 AI 助手 → 浮动操作按钮 (XiaoyueFAB)
+ * - 资料完善引导 → ProfileCompletionNudge
+ * 
+ * Related: Task 2 - Inline Coach Marks Implementation
  */
 export default function GuidePage() {
   const [, setLocation] = useLocation();
   
-  const { data: user, isLoading } = useQuery<User>({
-    queryKey: ["/api/auth/user"],
-    staleTime: Infinity,
-  });
-  
-  const {
-    currentStep,
-    totalSteps,
-    nextStep,
-    prevStep,
-    skipGuide,
-    completeGuide,
-  } = useGuideFlow();
-  
-  // 检查是否需要显示引导
-  if (!shouldShowGuide()) {
-    // 已看过引导，直接跳转首页
+  // 立即重定向到首页
+  useEffect(() => {
     setLocation("/");
-    return null;
-  }
+  }, [setLocation]);
   
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
-  
-  const handleChatWithXiaoyue = () => {
-    // 完成引导并跳转到小悦聊天
-    completeGuide();
-    // 可以跳转到聊天页面或打开聊天对话框
-    // setLocation("/chat-registration");
-  };
-  
-  return (
-    <GuideStepper
-      currentStep={currentStep}
-      totalSteps={totalSteps}
-      onNext={nextStep}
-      onPrev={prevStep}
-      onSkip={skipGuide}
-      onComplete={completeGuide}
-      onChatWithXiaoyue={handleChatWithXiaoyue}
-    />
-  );
+  return null;
 }
