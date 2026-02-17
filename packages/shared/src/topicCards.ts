@@ -912,3 +912,6 @@ export function getRandomSceneTopic(scene: 'dinner' | 'bar' | 'both'): SceneTopi
   const topics = getSceneTopics(scene);
   return topics[Math.floor(Math.random() * topics.length)];
 }
+
+// Flatten all topics into a single array for backward compatibility
+export const topicCards: TopicCard[] = Object.values(energyBasedTopics).flat();
