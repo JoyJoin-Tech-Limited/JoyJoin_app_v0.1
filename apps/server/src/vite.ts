@@ -1,7 +1,11 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import { type Server } from "http";
+
+// Add this helper at the top of the file
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function setupVite(app: Express, server: Server) {
   if (process.env.NODE_ENV === "production") return;
@@ -39,7 +43,7 @@ export async function setupVite(app: Express, server: Server) {
 
     try {
       const clientTemplate = path.resolve(
-        import.meta.dirname,
+        __dirname,
         "..",
         "..",
         "user-client",
@@ -62,7 +66,7 @@ export async function setupVite(app: Express, server: Server) {
 
 // Returns true if static files were found and served, false if running as pure API
 export function serveStatic(app: Express): boolean {
-  const distPath = path.resolve(import.meta.dirname, "public");
+  const distPath = path.resolve(__dirname, "public");
 
   if (!fs.existsSync(distPath)) {
     console.warn("Static build directory not found. Running as pure API server.");
