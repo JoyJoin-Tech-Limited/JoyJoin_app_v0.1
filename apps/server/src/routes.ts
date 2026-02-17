@@ -119,6 +119,9 @@ import { eq, or, and, desc, inArray, isNotNull, gt, sql } from "drizzle-orm";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
 import { z } from "zod";
 
+// Type alias for database transaction
+type DbTransaction = NeonDatabase<typeof schema>;
+
 // 12个社交氛围原型题目映射表（与前端personalityQuestions.ts保持一致）
 const roleMapping: Record<string, Record<string, string>> = {
   "1": { "A": "开心柯基", "B": "淡定海豚", "C": "隐身猫", "D": "织网蛛" },
@@ -6567,7 +6570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Use transaction to prevent race conditions and ensure atomic updates
-      await db.transaction(async (tx: NeonDatabase<typeof import("@shared/schema")>) => {
+      await db.transaction(async (tx: DbTransaction) => {
         // For vote interactions, check for duplicate votes first
         if (interactionType === 'vote') {
           const existingVote = await tx

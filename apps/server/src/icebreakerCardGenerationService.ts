@@ -237,7 +237,7 @@ export async function generateAICards(
 
 export function getFallbackCards(count: number, roundNumber: number): GeneratedCard[] {
   // Use curated topic cards as fallback
-  const availableCards = topicCards.filter((card: TopicCard) => {
+  const availableCards = topicCards.filter(card => {
     if (roundNumber <= 2) {
       return card.difficulty === 'easy' || card.difficulty === 'medium';
     }
