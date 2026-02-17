@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { topicCards } from '@shared/topicCards';
+import { topicCards, type TopicCard } from '@shared/topicCards';
 
 const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
 
@@ -237,7 +237,7 @@ export async function generateAICards(
 
 export function getFallbackCards(count: number, roundNumber: number): GeneratedCard[] {
   // Use curated topic cards as fallback
-  const availableCards = topicCards.filter(card => {
+  const availableCards = topicCards.filter((card: TopicCard) => {
     if (roundNumber <= 2) {
       return card.difficulty === 'easy' || card.difficulty === 'medium';
     }
@@ -257,7 +257,7 @@ export function getFallbackCards(count: number, roundNumber: number): GeneratedC
     category: topic.category,
     difficulty: topic.difficulty,
     hint: '分享你的想法',
-    aiRecommendReason: topic.recommendReason,
+    aiRecommendReason: topic.targetDynamic || '适合当前氛围',
   }));
 
   // Add a vote card if we have room
