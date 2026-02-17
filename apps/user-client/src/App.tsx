@@ -50,6 +50,7 @@ import IcebreakerGamePage from "@/pages/IcebreakerGamePage";
 import RewardsPage from "@/pages/RewardsPage";
 import MatchingStatusPage from "@/pages/MatchingStatusPage";
 import MyJourneyPage from "@/pages/MyJourneyPage";
+import EventPoolRegistrationPage from "@/pages/EventPoolRegistrationPage";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import NotFound from "@/pages/not-found";

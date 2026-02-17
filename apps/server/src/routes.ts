@@ -119,6 +119,9 @@ import { eq, or, and, desc, inArray, isNotNull, gt, sql } from "drizzle-orm";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
 import { z } from "zod";
 
+// Type alias for database transaction
+type DbTransaction = NeonDatabase<typeof schema>;
+
 // 12个社交氛围原型题目映射表（与前端personalityQuestions.ts保持一致）
 const roleMapping: Record<string, Record<string, string>> = {
   "1": { "A": "开心柯基", "B": "淡定海豚", "C": "隐身猫", "D": "织网蛛" },
@@ -6260,7 +6263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { generateMixedCards } = await import('./icebreakerCardGenerationService');
-      const { db } = await import('@db');
+      const { db } = await import('./db');
       const { 
         icebreakerSessions, 
         icebreakerGameCards, 
@@ -6384,7 +6387,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .select({
             traitScores: assessmentSessions.traitScores,
             primaryArchetype: assessmentSessions.primaryArchetype,
-            secondaryArchetype: assessmentSessions.secondaryArchetype,
           })
           .from(assessmentSessions)
           .where(
@@ -6507,7 +6509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sessionId } = req.params;
       const { roundNumber } = req.query;
       
-      const { db } = await import('@db');
+      const { db } = await import('./db');
       const { icebreakerGameCards, icebreakerSessions, eventPoolRegistrations, eventPoolGroups } = await import('@shared/schema');
       const { eq, and } = await import('drizzle-orm');
       
@@ -6552,7 +6554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "cardId, sessionId, and interactionType required" });
       }
       
-      const { db } = await import('@db');
+      const { db } = await import('./db');
       const { icebreakerCardInteractions, icebreakerGameCards, icebreakerSessions, eventPoolRegistrations, eventPoolGroups } = await import('@shared/schema');
       const { eq, and } = await import('drizzle-orm');
       
@@ -6568,7 +6570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Use transaction to prevent race conditions and ensure atomic updates
-      await db.transaction(async (tx) => {
+      await db.transaction(async (tx: DbTransaction) => {
         // For vote interactions, check for duplicate votes first
         if (interactionType === 'vote') {
           const existingVote = await tx
@@ -6647,7 +6649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.session.userId;
       const { sessionId } = req.params;
       
-      const { db } = await import('@db');
+      const { db } = await import('./db');
       const { icebreakerGameProgress, icebreakerSessions, eventPoolRegistrations, eventPoolGroups } = await import('@shared/schema');
       const { eq } = await import('drizzle-orm');
       
