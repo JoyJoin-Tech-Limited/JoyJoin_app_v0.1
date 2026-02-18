@@ -159,9 +159,9 @@ export default function BottomNav() {
       getHongKongDateForComparison(e.dateTime).toISOString().split('T')[0] === now.toISOString().split('T')[0]);
     if (todayEvent) return '今日出发！🎉';
     
-    // 24h 内场地揭晓
+    // 24h 内场地揭晓 - must have assignedGroupId to match destination logic
     const upcomingPool = poolRegistrations.find(r => {
-      if (r.matchStatus !== "matched") return false;
+      if (r.matchStatus !== "matched" || !r.assignedGroupId) return false;
       const hoursUntil = (getHongKongDateForComparison(r.poolDateTime).getTime() - now.getTime()) / MS_PER_HOUR;
       return hoursUntil < VENUE_UNLOCK_HOURS && hoursUntil > 0;
     });
@@ -171,8 +171,8 @@ export default function BottomNav() {
     const pending = poolRegistrations.find(r => r.matchStatus === "pending");
     if (pending) return '匹配中…';
     
-    // 已匹配未到时间
-    const matched = poolRegistrations.find(r => r.matchStatus === "matched");
+    // 已匹配未到时间 - must have assignedGroupId to match destination logic
+    const matched = poolRegistrations.find(r => r.matchStatus === "matched" && r.assignedGroupId);
     if (matched) return '查看桌友 👥';
     
     return '去参与';

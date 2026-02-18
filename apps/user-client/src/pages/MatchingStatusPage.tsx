@@ -115,14 +115,15 @@ export default function MatchingStatusPage() {
   });
 
   // Fetch group members when matched
-  const { data: groupMembers } = useQuery<Array<GroupMember>>({
-    queryKey: ["/api/pool-groups", registration?.assignedGroupId, "members"],
+  const { data: groupMembers } = useQuery<{ members: GroupMember[] }, unknown, GroupMember[]>({
+    queryKey: ["/api/pool-groups", registration?.assignedGroupId],
     enabled: registration?.matchStatus === "matched" && !!registration?.assignedGroupId,
+    select: (data) => data.members,
   });
 
   // Helper function to get chemistry temperature emoji and label
   const getChemistryBadge = (score?: number) => {
-    if (!score) return { emoji: '🌤️', label: '适宜', color: 'bg-blue-100 text-blue-700' };
+    if (score == null) return { emoji: '🌤️', label: '适宜', color: 'bg-blue-100 text-blue-700' };
     if (score >= 85) return { emoji: '🔥', label: '炽热', color: 'bg-red-100 text-red-700' };
     if (score >= 70) return { emoji: '🌡️', label: '温暖', color: 'bg-orange-100 text-orange-700' };
     if (score >= 55) return { emoji: '🌤️', label: '适宜', color: 'bg-blue-100 text-blue-700' };
@@ -508,7 +509,7 @@ export default function MatchingStatusPage() {
 
               {/* P1-2: New member joined floating card */}
               <AnimatePresence>
-                {newMemberJoined && newMemberArchetype && (
+                {newMemberJoined && (
                   <motion.div
                     initial={{ y: -60, opacity: 0, scale: 0.8 }}
                     animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -516,14 +517,18 @@ export default function MatchingStatusPage() {
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     className="absolute top-2 left-1/2 -translate-x-1/2 z-20 bg-white shadow-lg rounded-2xl px-4 py-2 flex items-center gap-2"
                   >
-                    <img
-                      src={getArchetypeAvatar(newMemberArchetype)}
-                      alt={newMemberArchetype}
-                      className="h-8 w-8 rounded-full object-contain"
-                    />
+                    {newMemberArchetype && (
+                      <img
+                        src={getArchetypeAvatar(newMemberArchetype)}
+                        alt={newMemberArchetype}
+                        className="h-8 w-8 rounded-full object-contain"
+                      />
+                    )}
                     <div className="flex flex-col">
                       <p className="text-sm font-bold text-primary">新朋友加入！</p>
-                      <p className="text-xs text-muted-foreground">{newMemberArchetype}</p>
+                      {newMemberArchetype && (
+                        <p className="text-xs text-muted-foreground">{newMemberArchetype}</p>
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -620,7 +625,7 @@ export default function MatchingStatusPage() {
         </Card>
 
         {/* P0-2: Group members (桌友) reveal section */}
-        {registration.matchStatus === "matched" && (
+        {registration.matchStatus === "matched" && registration.assignedGroupId && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -749,7 +754,7 @@ export default function MatchingStatusPage() {
             <motion.div
               initial={false}
               animate={{
-                rotateY: isVenueUnlocked ? 0 : 0,
+                rotateY: isVenueUnlocked ? 0 : 90,
               }}
               transition={{ duration: 0.6, ease: "easeInOut" }}
               className="h-32 bg-gradient-to-br from-primary/10 to-secondary/10 relative"
@@ -956,7 +961,7 @@ export default function MatchingStatusPage() {
                   console.log('[Analytics] icebreaker_tapped', {
                     groupId: registration.assignedGroupId,
                   });
-                  setLocation(`/pool-groups/${registration.assignedGroupId}?tab=icebreaker`);
+                  setLocation(`/icebreaker-game?groupId=${registration.assignedGroupId}`);
                 }}
               >
                 <Gamepad2 className="h-5 w-5 mr-2" />
