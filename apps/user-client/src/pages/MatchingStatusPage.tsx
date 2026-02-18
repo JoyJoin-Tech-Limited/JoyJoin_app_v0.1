@@ -24,7 +24,10 @@ import {
   XCircle,
   Navigation,
   CheckCircle,
+  RefreshCw,
+  Gamepad2,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCountdown } from "@/hooks/useCountdown";
 import { usePoolRegistrationCancel } from "@/hooks/usePoolRegistrationCancel";
 import { getArchetypeAvatar } from "@/lib/archetypeAdapter";
@@ -57,6 +60,16 @@ interface PoolRegistration {
   themeEmoji?: string;
   highlights?: string[];
   vibe?: string;
+  venueName?: string;
+  venueAddress?: string;
+  venuePhone?: string;
+}
+
+interface GroupMember {
+  userId: string;
+  displayName: string;
+  archetype?: string;
+  chemistryScore?: number;
 }
 
 interface PoolStats {
@@ -100,6 +113,21 @@ export default function MatchingStatusPage() {
     queryKey: ["/api/event-pools", registration?.poolId, "group-fill"],
     enabled: !!registration?.poolId,
   });
+
+  // Fetch group members when matched
+  const { data: groupMembers } = useQuery<Array<GroupMember>>({
+    queryKey: ["/api/pool-groups", registration?.assignedGroupId, "members"],
+    enabled: registration?.matchStatus === "matched" && !!registration?.assignedGroupId,
+  });
+
+  // Helper function to get chemistry temperature emoji and label
+  const getChemistryBadge = (score?: number) => {
+    if (!score) return { emoji: '🌤️', label: '适宜', color: 'bg-blue-100 text-blue-700' };
+    if (score >= 85) return { emoji: '🔥', label: '炽热', color: 'bg-red-100 text-red-700' };
+    if (score >= 70) return { emoji: '🌡️', label: '温暖', color: 'bg-orange-100 text-orange-700' };
+    if (score >= 55) return { emoji: '🌤️', label: '适宜', color: 'bg-blue-100 text-blue-700' };
+    return { emoji: '❄️', label: '冷淡', color: 'bg-gray-100 text-gray-700' };
+  };
 
   // Countdown to event
   const countdown = useCountdown(registration?.poolDateTime);
@@ -478,18 +506,28 @@ export default function MatchingStatusPage() {
                 ))}
               </div>
 
-              {/* New member joined indicator */}
-              {newMemberJoined && (
-                <div 
-                  className="absolute top-0 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium shadow-lg"
-                  style={{
-                    animation: "fadeInOut 2s ease-in-out",
-                  }}
-                >
-                  +1 新朋友加入！
-                  {newMemberArchetype && ` ${newMemberArchetype}`}
-                </div>
-              )}
+              {/* P1-2: New member joined floating card */}
+              <AnimatePresence>
+                {newMemberJoined && newMemberArchetype && (
+                  <motion.div
+                    initial={{ y: -60, opacity: 0, scale: 0.8 }}
+                    animate={{ y: 0, opacity: 1, scale: 1 }}
+                    exit={{ y: -60, opacity: 0, scale: 0.8 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    className="absolute top-2 left-1/2 -translate-x-1/2 z-20 bg-white shadow-lg rounded-2xl px-4 py-2 flex items-center gap-2"
+                  >
+                    <img
+                      src={getArchetypeAvatar(newMemberArchetype)}
+                      alt={newMemberArchetype}
+                      className="h-8 w-8 rounded-full object-contain"
+                    />
+                    <div className="flex flex-col">
+                      <p className="text-sm font-bold text-primary">新朋友加入！</p>
+                      <p className="text-xs text-muted-foreground">{newMemberArchetype}</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Status text */}
@@ -556,24 +594,169 @@ export default function MatchingStatusPage() {
                   </div>
                 )}
               </div>
+              {/* P1-1: Dynamic remaining members text */}
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={
+                    registration.matchStatus === "matched"
+                      ? "matched"
+                      : Math.max(0, (poolStats?.minGroupSize || 4) - (poolStats?.currentFill || 0))
+                  }
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  className="text-sm text-center font-medium text-primary"
+                >
+                  {registration.matchStatus === "matched"
+                    ? "组队完成！🎉"
+                    : Math.max(0, (poolStats?.minGroupSize || 4) - (poolStats?.currentFill || 0)) === 0
+                    ? "人数已达成！正在组队中 ✨"
+                    : `还差 ${Math.max(0, (poolStats?.minGroupSize || 4) - (poolStats?.currentFill || 0))} 人就成局了！🎯`}
+                </motion.p>
+              </AnimatePresence>
             </div>
           </CardContent>
         </Card>
 
-        {/* Locked venue card */}
+        {/* P0-2: Group members (桌友) reveal section */}
+        {registration.matchStatus === "matched" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.2 }}
+          >
+            <Card className="relative overflow-hidden">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold">🎉 你的桌友来了！</h3>
+                  <Badge className="bg-green-500 hover:bg-green-600">已组队</Badge>
+                </div>
+
+                {/* Horizontal scrolling member cards */}
+                <div className="overflow-x-auto -mx-2 px-2">
+                  <div className="flex gap-3 pb-2">
+                    {groupMembers && groupMembers.length > 0 ? (
+                      groupMembers.map((member, index) => {
+                        const chemistryBadge = getChemistryBadge(member.chemistryScore);
+                        const memberAvatar = member.archetype
+                          ? getArchetypeAvatar(member.archetype)
+                          : null;
+
+                        return (
+                          <motion.div
+                            key={member.userId}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 300,
+                              damping: 25,
+                              delay: index * 0.1,
+                            }}
+                            className="flex-shrink-0 w-32"
+                          >
+                            <Card className="border-2 border-muted">
+                              <CardContent className="p-4 space-y-2 flex flex-col items-center">
+                                {/* Avatar */}
+                                <div className="relative">
+                                  {memberAvatar ? (
+                                    <img
+                                      src={memberAvatar}
+                                      alt={member.displayName}
+                                      className="h-16 w-16 rounded-full object-contain bg-muted"
+                                    />
+                                  ) : (
+                                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary">
+                                      {member.displayName.slice(0, 2)}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Name */}
+                                <p className="text-sm font-bold text-center line-clamp-1">
+                                  {member.displayName.length > 4
+                                    ? member.displayName.slice(0, 4)
+                                    : member.displayName}
+                                </p>
+
+                                {/* Archetype */}
+                                {member.archetype && (
+                                  <p className="text-xs text-muted-foreground text-center line-clamp-1">
+                                    {member.archetype}
+                                  </p>
+                                )}
+
+                                {/* Chemistry badge */}
+                                <Badge
+                                  className={`text-xs px-2 py-0.5 ${chemistryBadge.color}`}
+                                  variant="secondary"
+                                >
+                                  {chemistryBadge.emoji} {chemistryBadge.label}
+                                </Badge>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        );
+                      })
+                    ) : (
+                      // Skeleton loader
+                      [1, 2, 3].map((i) => (
+                        <div key={i} className="flex-shrink-0 w-32">
+                          <Card className="border-2 border-muted">
+                            <CardContent className="p-4 space-y-2 flex flex-col items-center">
+                              <div className="h-16 w-16 rounded-full bg-muted animate-pulse" />
+                              <div className="h-4 w-16 bg-muted animate-pulse rounded" />
+                              <div className="h-3 w-20 bg-muted animate-pulse rounded" />
+                              <div className="h-5 w-12 bg-muted animate-pulse rounded-full" />
+                            </CardContent>
+                          </Card>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* P0-1: Enhanced venue reveal card */}
         <Card 
-          className="relative overflow-hidden"
+          className={`relative overflow-hidden ${
+            isVenueUnlocked ? "ring-2 ring-green-400 shadow-lg shadow-green-200" : ""
+          }`}
           style={{
             transition: "all 0.5s ease-in-out",
           }}
         >
+          {/* P0-1: Green badge when unlocked */}
+          {isVenueUnlocked && (
+            <motion.div
+              initial={{ x: -100, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.3 }}
+              className="absolute top-3 right-3 z-10"
+            >
+              <Badge className="bg-green-500 hover:bg-green-600 text-white shadow-lg">
+                ✅ 场地已揭晓
+              </Badge>
+            </motion.div>
+          )}
+
           <CardContent className="p-0">
-            {/* Blurred map background */}
-            <div 
+            {/* Map background with flip animation */}
+            <motion.div
+              initial={false}
+              animate={{
+                rotateY: isVenueUnlocked ? 0 : 0,
+              }}
+              transition={{ duration: 0.6, ease: "easeInOut" }}
               className="h-32 bg-gradient-to-br from-primary/10 to-secondary/10 relative"
               style={{
                 filter: isVenueUnlocked ? "blur(0px)" : "blur(8px)",
                 transition: "filter 0.5s ease-in-out",
+                transformStyle: "preserve-3d",
               }}
             >
               {/* Mock map pattern */}
@@ -586,29 +769,56 @@ export default function MatchingStatusPage() {
                 </svg>
               </div>
 
-              {/* Lock overlay */}
+              {/* P0-1: Lock overlay with pulse animation */}
               {!isVenueUnlocked && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-sm">
                   <div className="text-center">
-                    <Lock className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm font-semibold">🔒 目的地即将揭晓！</p>
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.1, 1],
+                        opacity: [0.7, 1, 0.7],
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                    >
+                      <Lock className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                    </motion.div>
+                    <p className="text-sm font-semibold">🔒 活动场地将在 24 小时前揭晓</p>
                   </div>
                 </div>
               )}
 
-              {/* Unlocked venue info */}
+              {/* P0-1: Unlocked venue info with flip reveal */}
               {isVenueUnlocked && (
-                <div className="absolute inset-0 flex items-center justify-center">
+                <motion.div
+                  initial={{ rotateY: 90, opacity: 0 }}
+                  animate={{ rotateY: 0, opacity: 1 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30,
+                    duration: 0.6,
+                  }}
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ transformStyle: "preserve-3d" }}
+                >
                   <div className="text-center space-y-2 p-4">
                     <MapPin className="h-6 w-6 mx-auto text-primary" />
                     <p className="text-sm font-semibold">
-                      {registration.poolCity} · {registration.poolDistrict}
+                      {registration.venueName || `${registration.poolCity} · ${registration.poolDistrict}`}
                     </p>
+                    {registration.venueAddress && (
+                      <p className="text-xs text-muted-foreground">{registration.venueAddress}</p>
+                    )}
                     <Button
                       size="sm"
                       onClick={() => {
+                        console.log('[Analytics] venue_navigation_tapped');
                         // Navigate to Google Maps or Amap
-                        const address = `${registration.poolCity} ${registration.poolDistrict}`;
+                        const address = registration.venueAddress || `${registration.poolCity} ${registration.poolDistrict}`;
                         if (registration.poolCity === '深圳') {
                           window.open(`https://uri.amap.com/marker?address=${encodeURIComponent(address)}`, '_blank');
                         } else {
@@ -620,9 +830,9 @@ export default function MatchingStatusPage() {
                       到这去
                     </Button>
                   </div>
-                </div>
+                </motion.div>
               )}
-            </div>
+            </motion.div>
           </CardContent>
         </Card>
 
@@ -681,15 +891,79 @@ export default function MatchingStatusPage() {
           </div>
         )}
 
-        {/* Matched state: View group button */}
-        {registration.matchStatus === "matched" && registration.assignedGroupId && (
-          <Button 
-            className="w-full"
-            size="lg"
-            onClick={() => setLocation(`/pool-groups/${registration.assignedGroupId}`)}
+        {/* P0-3: Matched state without assignedGroupId - show loading */}
+        {registration.matchStatus === "matched" && !registration.assignedGroupId && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="space-y-3"
           >
-            查看小组成员
-          </Button>
+            <Card>
+              <CardContent className="p-6 text-center space-y-4">
+                <div className="h-12 w-12 mx-auto">
+                  <RefreshCw className="h-12 w-12 text-primary animate-spin" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg mb-2">小组信息准备中</h3>
+                  <p className="text-sm text-muted-foreground">
+                    正在为你分配最佳小组，马上就好...
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    console.log('[Analytics] group_info_refresh_tapped');
+                    queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  刷新
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Matched state: View group button + P1-3: Ice-breaker CTA */}
+        {registration.matchStatus === "matched" && registration.assignedGroupId && (
+          <div className="space-y-3">
+            <Button 
+              className="w-full"
+              size="lg"
+              onClick={() => {
+                console.log('[Analytics] view_group_members_tapped', {
+                  groupId: registration.assignedGroupId,
+                });
+                setLocation(`/pool-groups/${registration.assignedGroupId}`);
+              }}
+            >
+              查看小组成员
+            </Button>
+
+            {/* P1-3: Ice-breaker CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.2 }}
+            >
+              <Button
+                variant="outline"
+                className="w-full"
+                size="lg"
+                onClick={() => {
+                  console.log('[Analytics] icebreaker_tapped', {
+                    groupId: registration.assignedGroupId,
+                  });
+                  setLocation(`/pool-groups/${registration.assignedGroupId}?tab=icebreaker`);
+                }}
+              >
+                <Gamepad2 className="h-5 w-5 mr-2" />
+                开始破冰游戏 🎮
+              </Button>
+            </motion.div>
+          </div>
         )}
       </div>
 
