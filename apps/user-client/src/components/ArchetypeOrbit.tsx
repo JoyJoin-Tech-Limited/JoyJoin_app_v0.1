@@ -97,11 +97,14 @@ export default function ArchetypeOrbit({
   
   // Animation sequence
   useEffect(() => {
-    if (!animated) {
-      if (onAnimationComplete) {
-        setTimeout(onAnimationComplete, 100);
-      }
-      return;
+    // Reset states when animated prop changes
+    if (animated) {
+      setShowLogo(false);
+      setShowOrbiters(false);
+    } else {
+      setShowLogo(true);
+      setShowOrbiters(true);
+      return; // No animation or callback in static mode
     }
     
     // Step A: Logo wake-up (0.5s)

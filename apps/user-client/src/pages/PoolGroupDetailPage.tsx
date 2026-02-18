@@ -158,7 +158,7 @@ export default function PoolGroupDetailPage() {
               </div>
             </div>
             
-            {group.matchScore && (
+            {group.matchScore != null && (
               <div className="text-center">
                 <Badge variant="secondary" className="text-base px-4 py-2">
                   匹配度 {group.matchScore}分

@@ -235,18 +235,18 @@ No animation (reveal already happened)
 
 ## Performance Considerations
 
-1. **Asset loading**: All 12 archetype PNGs are imported at build time (~2-3MB total)
+1. **Asset loading**: All 12 archetype PNGs are imported at build time (~2-3MB total). Future optimization: conditional loading of only used archetypes.
 2. **Animation performance**: CSS animations with `transform` and `opacity` for 60fps
 3. **WebSocket handling**: Fetches group data only after POOL_MATCHED event
 4. **Loading states**: Shows loading indicator while fetching group data
-5. **Memory**: Imports are tree-shaken to only include used archetypes
+5. **Memory**: All archetype assets are bundled; selective tree-shaking is a potential future optimization
 
 ## Accessibility
 
 - All images have `alt` attributes with archetype names
 - Click/tap targets meet minimum size requirements (44x44px)
 - Safe-area padding ensures content is visible on all devices
-- Animations respect user's motion preferences (via CSS `@media (prefers-reduced-motion)`)
+- Animations are always enabled in the current implementation; integration with user's motion preferences (e.g. CSS `@media (prefers-reduced-motion)`) is planned as a future improvement
 
 ## Mobile Optimization
 
