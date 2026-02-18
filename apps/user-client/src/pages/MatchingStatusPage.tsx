@@ -34,8 +34,10 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import MatchCelebrationOverlay from "@/components/MatchCelebrationOverlay";
 import EventThemeTitleReveal from "@/components/EventThemeTitleReveal";
+import ArchetypeOrbit from "@/components/ArchetypeOrbit";
 import type { PoolMatchedData, EventThemeTitleRevealedData } from "@shared/wsEvents";
 import { formatDateInHongKong } from "@/lib/hongKongTime";
+import type { AttendeeData } from "@/lib/attendeeAnalytics";
 
 // Constants
 const DEFAULT_MIN_GROUP_SIZE = 4;
@@ -59,6 +61,30 @@ interface PoolRegistration {
   vibe?: string;
 }
 
+interface PoolGroupResponse {
+  group: {
+    id: string;
+    groupNumber: number;
+    memberCount: number;
+    matchScore: number | null;
+    matchExplanation: string | null;
+    venueName: string | null;
+    venueAddress: string | null;
+    finalDateTime: string | null;
+    status: string;
+  };
+  pool: {
+    id: string;
+    title: string;
+    description: string | null;
+    eventType: string;
+    city: string;
+    district: string | null;
+    dateTime: string;
+  };
+  members: AttendeeData[];
+}
+
 interface PoolStats {
   currentFill: number;
   minGroupSize: number;
@@ -79,6 +105,11 @@ export default function MatchingStatusPage() {
   const [matchData, setMatchData] = useState<PoolMatchedData | null>(null);
   const [showThemeReveal, setShowThemeReveal] = useState(false);
   const [themeData, setThemeData] = useState<EventThemeTitleRevealedData | null>(null);
+  
+  // Reveal animation states
+  const [showRevealAnimation, setShowRevealAnimation] = useState(false);
+  const [groupMembersData, setGroupMembersData] = useState<PoolGroupResponse | null>(null);
+  const [isLoadingGroupData, setIsLoadingGroupData] = useState(false);
 
   // Progress update micro-interaction state
   const [newMemberJoined, setNewMemberJoined] = useState(false);
@@ -135,14 +166,32 @@ export default function MatchingStatusPage() {
       // In-page transition: progress → 100%, ribbon changes
       await queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
       
+      // Fetch group members data before starting reveal
+      if (poolData.groupId) {
+        setIsLoadingGroupData(true);
+        try {
+          const response = await fetch(`/api/pool-groups/${poolData.groupId}`, {
+            credentials: 'include',
+          });
+          if (response.ok) {
+            const groupData = await response.json();
+            setGroupMembersData(groupData);
+          }
+        } catch (error) {
+          console.error('Failed to fetch group data:', error);
+        } finally {
+          setIsLoadingGroupData(false);
+        }
+      }
+      
       // Clear any existing timeout
       if (matchTransitionTimeoutRef.current) {
         clearTimeout(matchTransitionTimeoutRef.current);
       }
       
-      // Wait 1 second for visual transition
+      // Wait 1 second for visual transition, then show reveal animation
       matchTransitionTimeoutRef.current = setTimeout(() => {
-        setShowMatchCelebration(true);
+        setShowRevealAnimation(true);
       }, 1000);
     });
 
@@ -223,6 +272,12 @@ export default function MatchingStatusPage() {
         timeUntilEvent: countdown.totalMs,
       });
     }
+  }, []);
+
+  // Handle reveal animation complete
+  const handleRevealAnimationComplete = useCallback(() => {
+    // After orbit completes, show match celebration
+    setShowMatchCelebration(true);
   }, []);
 
   // Handle match celebration flow
@@ -375,7 +430,7 @@ export default function MatchingStatusPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 safe-area-bottom">
       {/* Ambient glow effects */}
       <div 
         className="fixed top-0 left-0 w-[300px] h-[300px] pointer-events-none"
@@ -440,57 +495,65 @@ export default function MatchingStatusPage() {
           </div>
 
           <CardContent className="p-6 space-y-6">
-            {/* Mascot animation area */}
-            <div className="relative h-48 flex items-center justify-center">
-              {/* Main user archetype */}
-              {userArchetypeAvatar && (
-                <div className="relative z-10">
-                  <img 
-                    src={userArchetypeAvatar} 
-                    alt="你的人格原型" 
-                    className="h-32 w-32 object-contain"
-                    style={{
-                      animation: registration.matchStatus === "matched" 
-                        ? "bounce 1s ease-in-out"
-                        : "float 3s ease-in-out infinite",
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Orbiting emoji circles */}
-              <div 
-                className="absolute inset-0 flex items-center justify-center"
-                style={{
-                  animation: "spin 20s linear infinite",
-                }}
-              >
-                {['🦊', '🐘', '🕷️', '⚙️'].map((emoji, idx) => (
-                  <div
-                    key={idx}
-                    className="absolute text-2xl"
-                    style={{
-                      transform: `rotate(${idx * 90}deg) translateY(-80px)`,
-                    }}
-                  >
-                    {emoji}
+            {/* Mascot animation area - Show ArchetypeOrbit after match */}
+            {registration.matchStatus === "matched" && groupMembersData ? (
+              <ArchetypeOrbit
+                archetypes={groupMembersData.members.map(m => m.archetype || '')}
+                size="medium"
+                animated={false}
+              />
+            ) : (
+              <div className="relative h-48 flex items-center justify-center">
+                {/* Main user archetype */}
+                {userArchetypeAvatar && (
+                  <div className="relative z-10">
+                    <img 
+                      src={userArchetypeAvatar} 
+                      alt="你的人格原型" 
+                      className="h-32 w-32 object-contain"
+                      style={{
+                        animation: registration.matchStatus === "matched" 
+                          ? "bounce 1s ease-in-out"
+                          : "float 3s ease-in-out infinite",
+                      }}
+                    />
                   </div>
-                ))}
-              </div>
+                )}
 
-              {/* New member joined indicator */}
-              {newMemberJoined && (
+                {/* Orbiting emoji circles */}
                 <div 
-                  className="absolute top-0 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium shadow-lg"
+                  className="absolute inset-0 flex items-center justify-center"
                   style={{
-                    animation: "fadeInOut 2s ease-in-out",
+                    animation: "spin 20s linear infinite",
                   }}
                 >
-                  +1 新朋友加入！
-                  {newMemberArchetype && ` ${newMemberArchetype}`}
+                  {['🦊', '🐘', '🕷️', '⚙️'].map((emoji, idx) => (
+                    <div
+                      key={idx}
+                      className="absolute text-2xl"
+                      style={{
+                        transform: `rotate(${idx * 90}deg) translateY(-80px)`,
+                      }}
+                    >
+                      {emoji}
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
+
+                {/* New member joined indicator */}
+                {newMemberJoined && (
+                  <div 
+                    className="absolute top-0 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium shadow-lg"
+                    style={{
+                      animation: "fadeInOut 2s ease-in-out",
+                    }}
+                  >
+                    +1 新朋友加入！
+                    {newMemberArchetype && ` ${newMemberArchetype}`}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Status text */}
             <div className="text-center space-y-2">
@@ -683,13 +746,29 @@ export default function MatchingStatusPage() {
 
         {/* Matched state: View group button */}
         {registration.matchStatus === "matched" && registration.assignedGroupId && (
-          <Button 
-            className="w-full"
-            size="lg"
-            onClick={() => setLocation(`/pool-groups/${registration.assignedGroupId}`)}
-          >
-            查看小组成员
-          </Button>
+          <div className="space-y-3">
+            <Button 
+              className="w-full"
+              size="lg"
+              onClick={() => setLocation(`/pool-groups/${registration.assignedGroupId}`)}
+            >
+              查看小组详情
+            </Button>
+            
+            {/* Secondary CTA: Icebreaker */}
+            {isVenueUnlocked && (
+              <Button 
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  // Navigate to icebreaker or other secondary action
+                  setLocation(`/pool-groups/${registration.assignedGroupId}`);
+                }}
+              >
+                准备破冰话题 💬
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -727,6 +806,41 @@ export default function MatchingStatusPage() {
           isVisible={showMatchCelebration}
           onContinue={handleCelebrationContinue}
         />
+      )}
+
+      {/* Reveal animation overlay */}
+      {showRevealAnimation && groupMembersData && !isLoadingGroupData && (
+        <div 
+          className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center p-6"
+          onClick={handleRevealAnimationComplete}
+        >
+          <div className="text-center space-y-8 max-w-md w-full">
+            <h2 className="text-2xl font-bold animate-fadeIn">
+              🎉 匹配成功！
+            </h2>
+            
+            <ArchetypeOrbit
+              archetypes={groupMembersData.members.map(m => m.archetype || '')}
+              size="large"
+              animated={true}
+              onAnimationComplete={handleRevealAnimationComplete}
+            />
+            
+            <p className="text-sm text-muted-foreground animate-fadeIn">
+              点击任意位置继续
+            </p>
+          </div>
+          
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; transform: translateY(10px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+            .animate-fadeIn {
+              animation: fadeIn 0.5s ease-out;
+            }
+          `}</style>
+        </div>
       )}
 
       {/* Theme title reveal */}
