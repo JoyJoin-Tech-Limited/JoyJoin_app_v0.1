@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Clock, MapPin, Users, Navigation, AlertCircle, Sparkles, ChevronRight } from "lucide-react";
 import PostMatchEventCard from "@/components/PostMatchEventCard";
 import IcebreakerTool from "@/components/IcebreakerTool";
+import ArchetypeOrbit from "@/components/ArchetypeOrbit";
 import { useAuth } from "@/hooks/useAuth";
 import { calculateAge } from "@shared/utils";
 import type { AttendeeData } from "@/lib/attendeeAnalytics";
@@ -109,7 +110,9 @@ export default function PoolGroupDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 safe-area-bottom">
+      {/* Bottom nav gradient transition */}
+      <div className="fixed bottom-16 left-0 right-0 h-20 pointer-events-none z-40 bg-gradient-to-t from-background via-background/50 to-transparent" />
       {/* Header */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b">
         <div className="flex items-center h-14 px-4">
@@ -126,39 +129,53 @@ export default function PoolGroupDetailPage() {
       </div>
 
       <div className="px-4 py-4 space-y-4">
-        {/* 顶部摘要 */}
-        <Card>
-          <CardContent className="p-4 space-y-3">
-            <div className="space-y-1">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1">
-                  <h2 className="text-xl font-bold">{pool.title}</h2>
-                  <p className="text-sm text-muted-foreground mt-1">{pool.eventType}</p>
-                </div>
-                <Badge className="bg-gradient-to-r from-purple-500 to-pink-500">
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  #{group.groupNumber}组
-                </Badge>
-              </div>
+        {/* Archetype Orbit Reveal Section */}
+        <Card className="overflow-hidden">
+          <CardContent className="p-6 space-y-4">
+            <div className="text-center">
+              <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 mb-4">
+                <Sparkles className="h-3 w-3 mr-1" />
+                #{group.groupNumber}组
+              </Badge>
+            </div>
+            
+            <ArchetypeOrbit
+              archetypes={members.map(m => m.archetype || '')}
+              size="medium"
+              animated={false}
+            />
+            
+            <div className="text-center space-y-2">
+              <h2 className="text-xl font-bold">{pool.title}</h2>
               <p className="text-sm text-muted-foreground">
                 {formatDateTime(group.finalDateTime || pool.dateTime)}
               </p>
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center justify-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-primary" />
                 <span className="font-medium text-primary">
                   {getCountdown(group.finalDateTime || pool.dateTime)}
                 </span>
               </div>
             </div>
+            
+            {group.matchScore && (
+              <div className="text-center">
+                <Badge variant="secondary" className="text-base px-4 py-2">
+                  匹配度 {group.matchScore}分
+                </Badge>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
+        {/* 顶部摘要 - Simplified */}
+        <Card>
+          <CardContent className="p-4 space-y-3">
             <div className="flex items-center gap-2 text-sm">
               <Users className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium">{group.memberCount}人小组</span>
-              {group.matchScore && (
-                <Badge variant="secondary" className="ml-auto">
-                  匹配度 {group.matchScore}分
-                </Badge>
-              )}
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground">{pool.eventType}</span>
             </div>
           </CardContent>
         </Card>
