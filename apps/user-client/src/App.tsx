@@ -240,7 +240,9 @@ function AuthenticatedRouter() {
           <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
           <Route path="/pool-matching/:registrationId" component={MatchingStatusPage} />
           <Route path="/my-journey" component={MyJourneyPage} />
-          <Route path="/test/archetype-orbit" component={TestArchetypeOrbit} />
+          {process.env.NODE_ENV !== "production" && (
+            <Route path="/test/archetype-orbit" component={TestArchetypeOrbit} />
+          )}
           <Route path="/blindbox/payment" component={BlindBoxPaymentPage} />
           <Route path="/blindbox/confirmation" component={BlindBoxConfirmationPage} />
           <Route path="/blind-box-events/:eventId" component={BlindBoxEventDetailPage} />

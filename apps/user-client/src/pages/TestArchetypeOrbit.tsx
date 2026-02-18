@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export default function TestArchetypeOrbit() {
   const [animated, setAnimated] = useState(false);
   const [size, setSize] = useState<"small" | "medium" | "large">("medium");
+  const [showRevealOverlay, setShowRevealOverlay] = useState(false);
   
   const testArchetypes = [
     "开心柯基",
@@ -82,27 +83,36 @@ export default function TestArchetypeOrbit() {
           <CardTitle>Reveal Animation (Click to Trigger)</CardTitle>
         </CardHeader>
         <CardContent>
-          <div 
-            className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center p-6 cursor-pointer"
-            onClick={() => console.log("Reveal clicked")}
+          <Button 
+            onClick={() => setShowRevealOverlay(true)}
+            className="w-full"
           >
-            <div className="text-center space-y-8 max-w-md w-full">
-              <h2 className="text-2xl font-bold animate-fadeIn">
-                🎉 匹配成功！
-              </h2>
-              
-              <ArchetypeOrbit
-                archetypes={testArchetypes}
-                size="large"
-                animated={true}
-                onAnimationComplete={() => console.log("Reveal complete!")}
-              />
-              
-              <p className="text-sm text-muted-foreground animate-fadeIn">
-                点击任意位置继续
-              </p>
+            Show Reveal Overlay
+          </Button>
+          
+          {showRevealOverlay && (
+            <div 
+              className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center p-6 cursor-pointer"
+              onClick={() => setShowRevealOverlay(false)}
+            >
+              <div className="text-center space-y-8 max-w-md w-full">
+                <h2 className="text-2xl font-bold animate-fadeIn">
+                  🎉 匹配成功！
+                </h2>
+                
+                <ArchetypeOrbit
+                  archetypes={testArchetypes}
+                  size="large"
+                  animated={true}
+                  onAnimationComplete={() => console.log("Reveal complete!")}
+                />
+                
+                <p className="text-sm text-muted-foreground animate-fadeIn">
+                  点击任意位置继续
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

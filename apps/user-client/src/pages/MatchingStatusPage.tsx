@@ -110,6 +110,7 @@ export default function MatchingStatusPage() {
   const [showRevealAnimation, setShowRevealAnimation] = useState(false);
   const [groupMembersData, setGroupMembersData] = useState<PoolGroupResponse | null>(null);
   const [isLoadingGroupData, setIsLoadingGroupData] = useState(false);
+  const [revealAnimationComplete, setRevealAnimationComplete] = useState(false);
 
   // Progress update micro-interaction state
   const [newMemberJoined, setNewMemberJoined] = useState(false);
@@ -176,9 +177,15 @@ export default function MatchingStatusPage() {
           if (response.ok) {
             const groupData = await response.json();
             setGroupMembersData(groupData);
+          } else {
+            console.error('Failed to fetch group data: non-OK response');
+            // Fallback: proceed without member data
+            setGroupMembersData(null);
           }
         } catch (error) {
           console.error('Failed to fetch group data:', error);
+          // Fallback: proceed without member data
+          setGroupMembersData(null);
         } finally {
           setIsLoadingGroupData(false);
         }
@@ -189,9 +196,23 @@ export default function MatchingStatusPage() {
         clearTimeout(matchTransitionTimeoutRef.current);
       }
       
-      // Wait 1 second for visual transition, then show reveal animation
+      // Wait 1 second for visual transition, then show celebration
+      // If we have member data, show reveal animation; otherwise go straight to celebration
       matchTransitionTimeoutRef.current = setTimeout(() => {
-        setShowRevealAnimation(true);
+        if (groupMembersData || poolData.groupId) {
+          // Wait a bit more for member data to load if it's still loading
+          const checkDataTimer = setTimeout(() => {
+            if (groupMembersData) {
+              setShowRevealAnimation(true);
+            } else {
+              // Fallback: no member data, skip reveal and go straight to celebration
+              setShowMatchCelebration(true);
+            }
+          }, isLoadingGroupData ? 500 : 0);
+        } else {
+          // No groupId, skip reveal and go straight to celebration
+          setShowMatchCelebration(true);
+        }
       }, 1000);
     });
 
@@ -275,10 +296,20 @@ export default function MatchingStatusPage() {
   }, []);
 
   // Handle reveal animation complete
-  const handleRevealAnimationComplete = useCallback(() => {
-    // After orbit completes, show match celebration
-    setShowMatchCelebration(true);
+  const handleRevealOrbitComplete = useCallback(() => {
+    // Mark animation as complete, enabling click to continue
+    setRevealAnimationComplete(true);
   }, []);
+  
+  // Handle user clicking to continue after animation
+  const handleRevealContinue = useCallback(() => {
+    if (!revealAnimationComplete) return; // Don't allow skipping animation
+    
+    // Hide the reveal overlay and show match celebration
+    setShowRevealAnimation(false);
+    setRevealAnimationComplete(false);
+    setShowMatchCelebration(true);
+  }, [revealAnimationComplete]);
 
   // Handle match celebration flow
   const handleCelebrationContinue = useCallback(() => {
@@ -812,7 +843,8 @@ export default function MatchingStatusPage() {
       {showRevealAnimation && groupMembersData && !isLoadingGroupData && (
         <div 
           className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center p-6"
-          onClick={handleRevealAnimationComplete}
+          onClick={handleRevealContinue}
+          style={{ cursor: revealAnimationComplete ? 'pointer' : 'default' }}
         >
           <div className="text-center space-y-8 max-w-md w-full">
             <h2 className="text-2xl font-bold animate-fadeIn">
@@ -823,11 +855,14 @@ export default function MatchingStatusPage() {
               archetypes={groupMembersData.members.map(m => m.archetype || '')}
               size="large"
               animated={true}
-              onAnimationComplete={handleRevealAnimationComplete}
+              onAnimationComplete={handleRevealOrbitComplete}
             />
             
-            <p className="text-sm text-muted-foreground animate-fadeIn">
-              点击任意位置继续
+            <p 
+              className="text-sm text-muted-foreground animate-fadeIn"
+              style={{ opacity: revealAnimationComplete ? 1 : 0.3 }}
+            >
+              {revealAnimationComplete ? '点击任意位置继续' : '正在加载...'}
             </p>
           </div>
           
