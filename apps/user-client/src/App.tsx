@@ -51,6 +51,7 @@ import RewardsPage from "@/pages/RewardsPage";
 import MatchingStatusPage from "@/pages/MatchingStatusPage";
 import MyJourneyPage from "@/pages/MyJourneyPage";
 import EventPoolRegistrationPage from "@/pages/EventPoolRegistrationPage";
+import TestArchetypeOrbit from "@/pages/TestArchetypeOrbit";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import NotFound from "@/pages/not-found";
@@ -239,6 +240,7 @@ function AuthenticatedRouter() {
           <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
           <Route path="/pool-matching/:registrationId" component={MatchingStatusPage} />
           <Route path="/my-journey" component={MyJourneyPage} />
+          <Route path="/test/archetype-orbit" component={TestArchetypeOrbit} />
           <Route path="/blindbox/payment" component={BlindBoxPaymentPage} />
           <Route path="/blindbox/confirmation" component={BlindBoxConfirmationPage} />
           <Route path="/blind-box-events/:eventId" component={BlindBoxEventDetailPage} />
