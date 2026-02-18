@@ -9,7 +9,7 @@ COPY packages/shared/package.json ./packages/shared/
 COPY apps/server/package.json ./apps/server/
 
 # Configure npm to prevent race conditions during installation
-RUN npm config set cache-concurrency 1
+RUN npm config set maxsockets 5
 
 # Install all dependencies
 RUN npm ci
