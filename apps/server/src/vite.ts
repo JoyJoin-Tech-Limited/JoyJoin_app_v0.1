@@ -9,11 +9,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function setupVite(app: Express, server: Server) {
   if (process.env.NODE_ENV === "production") return;
-  // Use computed strings to prevent esbuild from analyzing these imports at build time
-  const vite = await import(/* @vite-ignore */ "vi" + "te");
+  const vite = await import("vite");
   const viteConfigModule = await import("../../../vite.config.js");
   const viteConfig = viteConfigModule.default;
-  const nanoidModule = await import(/* @vite-ignore */ "nan" + "oid");
+  const nanoidModule = await import("nanoid");
   const nanoid = nanoidModule.nanoid;
   
   const viteLogger = vite.createLogger();
