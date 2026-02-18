@@ -10,6 +10,7 @@ COPY apps/server/package.json ./apps/server/
 
 # Configure npm to prevent race conditions during installation
 RUN npm config set maxsockets 5
+RUN npm config set prefer-offline true
 
 # Install all dependencies
 RUN npm ci
