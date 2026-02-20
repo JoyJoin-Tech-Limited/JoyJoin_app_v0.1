@@ -7,6 +7,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
 import joyJoinLogo from "@/assets/joyjoin-logo.png";
 import { getHongKongDateForComparison } from "@/lib/hongKongTime";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Constants
 const MS_PER_HOUR = 1000 * 60 * 60;
@@ -148,6 +149,35 @@ export default function BottomNav() {
     return '/my-journey';
   }, [poolRegistrations, events]);
 
+  // P2-1: Dynamic center button label
+  const centerButtonLabel = useMemo(() => {
+    if (!poolRegistrations || !events) return '去参与';
+    const now = getHongKongDateForComparison(new Date());
+    
+    // 今日有活动
+    const todayEvent = events.find(e => e.status === "matched" && 
+      getHongKongDateForComparison(e.dateTime).toISOString().split('T')[0] === now.toISOString().split('T')[0]);
+    if (todayEvent) return '今日出发！🎉';
+    
+    // 24h 内场地揭晓 - must have assignedGroupId to match destination logic
+    const upcomingPool = poolRegistrations.find(r => {
+      if (r.matchStatus !== "matched" || !r.assignedGroupId) return false;
+      const hoursUntil = (getHongKongDateForComparison(r.poolDateTime).getTime() - now.getTime()) / MS_PER_HOUR;
+      return hoursUntil < VENUE_UNLOCK_HOURS && hoursUntil > 0;
+    });
+    if (upcomingPool) return '查看场地 📍';
+    
+    // 匹配中
+    const pending = poolRegistrations.find(r => r.matchStatus === "pending");
+    if (pending) return '匹配中…';
+    
+    // 已匹配未到时间 - must have assignedGroupId to match destination logic
+    const matched = poolRegistrations.find(r => r.matchStatus === "matched" && r.assignedGroupId);
+    if (matched) return '查看桌友 👥';
+    
+    return '去参与';
+  }, [poolRegistrations, events]);
+
   // Show notification badge when there's pending or matched activity
   useEffect(() => {
     if (!poolRegistrations || !events) return;
@@ -194,8 +224,19 @@ export default function BottomNav() {
               <div className="absolute -top-1 -right-1 h-4 w-4 bg-primary rounded-full border-2 border-background animate-pulse" />
             )}
           </div>
-          {/* Label */}
-          <span className="text-xs font-medium text-foreground mt-1">去参与</span>
+          {/* P2-1: Dynamic label with animation */}
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={centerButtonLabel}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -5 }}
+              transition={{ duration: 0.2 }}
+              className="text-xs font-medium text-foreground mt-1"
+            >
+              {centerButtonLabel}
+            </motion.span>
+          </AnimatePresence>
         </button>
       </div>
 
