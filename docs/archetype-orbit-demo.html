@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ArchetypeOrbit Component Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: white;
+    }
+    
+    .container {
+      max-width: 800px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 2.5em;
+    }
+    
+    .subtitle {
+      text-align: center;
+      margin-bottom: 40px;
+      opacity: 0.9;
+      font-size: 1.1em;
+    }
+    
+    .demo-section {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 15px;
+      padding: 30px;
+      margin-bottom: 30px;
+    }
+    
+    .demo-title {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .orbit-container {
+      position: relative;
+      height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    
+    .logo {
+      width: 120px;
+      height: 120px;
+      animation: logoWakeUp 0.5s ease-out;
+      z-index: 10;
+    }
+    
+    @keyframes logoWakeUp {
+      0% {
+        opacity: 0;
+        transform: scale(0.75) translateY(10px);
+      }
+      60% {
+        transform: scale(1.05) translateY(0);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+    
+    .archetype-orbit {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .archetype {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      animation: flyIn 0.6s ease-out both;
+    }
+    
+    @keyframes flyIn {
+      0% {
+        opacity: 0;
+        transform: scale(0) translateY(-20px);
+      }
+      60% {
+        transform: scale(1.1) translateY(0);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+    
+    .feature-list {
+      list-style: none;
+      margin-top: 30px;
+    }
+    
+    .feature-list li {
+      padding: 15px;
+      margin-bottom: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .feature-list li::before {
+      content: "✓";
+      margin-right: 15px;
+      font-size: 1.5em;
+      color: #4ade80;
+    }
+    
+    .code-block {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+      overflow-x: auto;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    
+    button {
+      padding: 12px 24px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      color: white;
+      font-size: 1em;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    button:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+    
+    button.active {
+      background: rgba(255, 255, 255, 0.4);
+      border-color: rgba(255, 255, 255, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎭 ArchetypeOrbit Component</h1>
+    <p class="subtitle">JoyJoin Matching & Reveal Flow UI</p>
+    
+    <div class="demo-section">
+      <h2 class="demo-title">Live Demo</h2>
+      <div class="orbit-container">
+        <img src="/src/assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi.png" alt="JoyJoin Logo" class="logo" />
+        <div class="archetype-orbit" id="orbit">
+          <!-- Archetype images will be dynamically positioned here -->
+        </div>
+      </div>
+      
+      <div class="button-group">
+        <button onclick="restartAnimation()">🔄 Restart Animation</button>
+        <button id="sizeSmall" onclick="setSize('small')">Small</button>
+        <button id="sizeMedium" onclick="setSize('medium')" class="active">Medium</button>
+        <button id="sizeLarge" onclick="setSize('large')">Large</button>
+      </div>
+    </div>
+    
+    <div class="demo-section">
+      <h2 class="demo-title">Key Features</h2>
+      <ul class="feature-list">
+        <li>Logo wake-up animation with smooth scale and fade</li>
+        <li>Staggered fly-in for 4-6 archetype PNGs (0.1s delays)</li>
+        <li>Three configurable sizes: small, medium, large</li>
+        <li>Graceful fallback for unknown archetype names</li>
+        <li>Maps 12 JoyJoin archetypes to transparent PNG assets</li>
+        <li>Optimized for 60fps with CSS transforms</li>
+      </ul>
+    </div>
+    
+    <div class="demo-section">
+      <h2 class="demo-title">Usage Example</h2>
+      <div class="code-block">
+&lt;ArchetypeOrbit<br/>
+&nbsp;&nbsp;archetypes={["开心柯基", "机智狐", "暖心熊", "织网蛛"]}<br/>
+&nbsp;&nbsp;size="medium"<br/>
+&nbsp;&nbsp;animated={true}<br/>
+&nbsp;&nbsp;onAnimationComplete={() => console.log("Done!")}<br/>
+/&gt;
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const archetypes = [
+      { name: "开心柯基", file: "开心柯基_transparent_1.png" },
+      { name: "机智狐", file: "机智狐_transparent_2.png" },
+      { name: "暖心熊", file: "暖心熊_transparent_3.png" },
+      { name: "织网蛛", file: "织网蛛_transparent_4.png" },
+      { name: "夸夸豚", file: "夸夸豚_transparent_5.png" },
+      { name: "太阳鸡", file: "太阳鸡_transparent_6.png" }
+    ];
+    
+    let currentSize = 'medium';
+    const sizes = {
+      small: 60,
+      medium: 90,
+      large: 110
+    };
+    
+    function createArchetypeOrbit() {
+      const orbit = document.getElementById('orbit');
+      orbit.innerHTML = '';
+      
+      const radius = sizes[currentSize];
+      const count = archetypes.length;
+      
+      archetypes.forEach((arch, idx) => {
+        const angle = (360 / count) * idx;
+        const delay = idx * 0.1;
+        
+        const img = document.createElement('img');
+        img.src = `/src/assets/${arch.file}`;
+        img.alt = arch.name;
+        img.className = 'archetype';
+        img.style.transform = `rotate(${angle}deg) translateY(-${radius}px) rotate(-${angle}deg)`;
+        img.style.animationDelay = `${delay}s`;
+        img.style.width = currentSize === 'small' ? '60px' : currentSize === 'large' ? '80px' : '70px';
+        img.style.height = img.style.width;
+        
+        orbit.appendChild(img);
+      });
+    }
+    
+    function restartAnimation() {
+      createArchetypeOrbit();
+    }
+    
+    function setSize(size) {
+      currentSize = size;
+      
+      // Update button states
+      document.querySelectorAll('button[id^="size"]').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.getElementById(`size${size.charAt(0).toUpperCase() + size.slice(1)}`).classList.add('active');
+      
+      createArchetypeOrbit();
+    }
+    
+    // Initialize on load
+    createArchetypeOrbit();
+  </script>
+</body>
+</html>

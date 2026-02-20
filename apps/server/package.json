@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "NODE_ENV=development node --env-file=../../.env --import tsx/esm src/index.ts",
-    "build": "NODE_ENV=production esbuild ./src/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --define:process.env.NODE_ENV=\\\"production\\\"",
+    "build": "NODE_ENV=production esbuild ./src/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --external:vite --external:nanoid --external:../../../vite.config.js --define:process.env.NODE_ENV=\\\"production\\\"",
     "start": "NODE_ENV=production node dist/index.js",
     "lint": "tsc --noEmit",
     "db:push": "drizzle-kit push",
@@ -17,6 +17,7 @@
     "@neondatabase/serverless": "^0.10.4",
     "bcrypt": "^6.0.0",
     "connect-pg-simple": "^10.0.0",
+    "dotenv": "^16.4.7",
     "drizzle-orm": "^0.39.1",
     "drizzle-zod": "^0.7.0",
     "express": "^4.21.2",

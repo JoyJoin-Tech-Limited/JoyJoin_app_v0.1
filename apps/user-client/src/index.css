@@ -413,6 +413,11 @@
   .safe-area-pb {
     padding-bottom: env(safe-area-inset-bottom);
   }
+  
+  /* Bottom nav gradient transition */
+  .bottom-nav-gradient {
+    background: linear-gradient(to top, hsl(var(--background)), transparent);
+  }
 
   /* 3D Card Flip Animation */
   .perspective-1000 {
