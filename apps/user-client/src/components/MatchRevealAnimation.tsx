@@ -13,8 +13,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Share2, Sparkles, RotateCcw, RotateCw, Theater, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoadingProgressTracker } from "@/lib/loadingProgressTracker";
-import { AnimationLoadingScreen } from "@/components/AnimationLoadingScreen";
 import { archetypeAvatars, archetypeGradients } from "@/lib/archetypeAvatars";
+import Lottie from "lottie-react";
+import matchRevealAnimation from "@/assets/match-reveal/MatchReveal.json";
 import { 
   archetypeAnimations, 
   getEventTypeTheme,
@@ -182,14 +183,50 @@ function MatchRevealAnimationComponent({
     onComplete();
   }, [onComplete]);
 
-  // Loading state with progress indicator
+  // Loading state — Lottie match reveal animation
   if (currentAct === 'loading' && !loadError) {
     return (
-      <AnimationLoadingScreen 
-        progress={loadProgress}
-        eventTheme={theme}
-        message={loadProgress < 100 ? '小悦正在组局...' : '就要揭晓了...'}
-      />
+      <motion.div
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        {/* Lottie blind-box reveal animation (720x1280 portrait, scaled to fit) */}
+        <div className="w-full max-w-sm">
+          <Lottie
+            animationData={matchRevealAnimation}
+            loop={true}
+            autoplay={true}
+            style={{ width: "100%", height: "auto" }}
+          />
+        </div>
+
+        {/* Rotating message */}
+        <motion.p
+          key={loadProgress < 100 ? 0 : 1}
+          className="mt-4 mb-6 text-center text-lg font-medium text-primary"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          {loadProgress < 100 ? '小悦正在组局...' : '就要揭晓了...'}
+        </motion.p>
+
+        {/* Progress bar */}
+        <div className="w-48 h-1.5 rounded-full overflow-hidden bg-primary/15 mb-3">
+          <motion.div
+            className="h-full rounded-full bg-primary"
+            initial={{ width: "0%" }}
+            animate={{ width: `${Math.min(loadProgress, 99)}%` }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          />
+        </div>
+
+        {/* Progress percentage */}
+        <p className="text-sm text-primary/50">
+          {Math.min(loadProgress, 99)}%
+        </p>
+      </motion.div>
     );
   }
 
