@@ -1,4 +1,15 @@
 /**
+ * @legacy / @deprecated for match reveal use
+ *
+ * This component was previously used as the loading screen inside MatchRevealAnimation.
+ * It has been replaced by an inline Lottie-based loading screen directly in
+ * MatchRevealAnimation.tsx (apps/user-client/src/components/MatchRevealAnimation.tsx).
+ *
+ * This component is kept here for potential future reuse in other contexts.
+ * Do not delete without checking for any new usages.
+ */
+
+/**
  * Enhanced Loading Screen with OS1-style Animation
  * 加载屏幕 - 灵感来自《Her》电影的OS1界面
  * 柔和的波形动画 + 动态主题支持 + 呼吸感脉动
