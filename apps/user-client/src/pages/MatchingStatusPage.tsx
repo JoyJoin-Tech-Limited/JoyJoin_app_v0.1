@@ -37,8 +37,10 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import MatchCelebrationOverlay from "@/components/MatchCelebrationOverlay";
 import EventThemeTitleReveal from "@/components/EventThemeTitleReveal";
+import ArchetypeOrbit from "@/components/ArchetypeOrbit";
 import type { PoolMatchedData, EventThemeTitleRevealedData } from "@shared/wsEvents";
 import { formatDateInHongKong } from "@/lib/hongKongTime";
+import type { AttendeeData } from "@/lib/attendeeAnalytics";
 
 // Constants
 const DEFAULT_MIN_GROUP_SIZE = 4;
@@ -72,6 +74,30 @@ interface GroupMember {
   chemistryScore?: number;
 }
 
+interface PoolGroupResponse {
+  group: {
+    id: string;
+    groupNumber: number;
+    memberCount: number;
+    matchScore: number | null;
+    matchExplanation: string | null;
+    venueName: string | null;
+    venueAddress: string | null;
+    finalDateTime: string | null;
+    status: string;
+  };
+  pool: {
+    id: string;
+    title: string;
+    description: string | null;
+    eventType: string;
+    city: string;
+    district: string | null;
+    dateTime: string;
+  };
+  members: AttendeeData[];
+}
+
 interface PoolStats {
   currentFill: number;
   minGroupSize: number;
@@ -92,6 +118,12 @@ export default function MatchingStatusPage() {
   const [matchData, setMatchData] = useState<PoolMatchedData | null>(null);
   const [showThemeReveal, setShowThemeReveal] = useState(false);
   const [themeData, setThemeData] = useState<EventThemeTitleRevealedData | null>(null);
+  
+  // Reveal animation states
+  const [showRevealAnimation, setShowRevealAnimation] = useState(false);
+  const [groupMembersData, setGroupMembersData] = useState<PoolGroupResponse | null>(null);
+  const [isLoadingGroupData, setIsLoadingGroupData] = useState(false);
+  const [revealAnimationComplete, setRevealAnimationComplete] = useState(false);
 
   // Progress update micro-interaction state
   const [newMemberJoined, setNewMemberJoined] = useState(false);
@@ -164,14 +196,52 @@ export default function MatchingStatusPage() {
       // In-page transition: progress → 100%, ribbon changes
       await queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
       
+      // Fetch group members data before starting reveal
+      if (poolData.groupId) {
+        setIsLoadingGroupData(true);
+        try {
+          const response = await fetch(`/api/pool-groups/${poolData.groupId}`, {
+            credentials: 'include',
+          });
+          if (response.ok) {
+            const groupData = await response.json();
+            setGroupMembersData(groupData);
+          } else {
+            console.error('Failed to fetch group data: non-OK response');
+            // Fallback: proceed without member data
+            setGroupMembersData(null);
+          }
+        } catch (error) {
+          console.error('Failed to fetch group data:', error);
+          // Fallback: proceed without member data
+          setGroupMembersData(null);
+        } finally {
+          setIsLoadingGroupData(false);
+        }
+      }
+      
       // Clear any existing timeout
       if (matchTransitionTimeoutRef.current) {
         clearTimeout(matchTransitionTimeoutRef.current);
       }
       
-      // Wait 1 second for visual transition
+      // Wait 1 second for visual transition, then show celebration
+      // If we have member data, show reveal animation; otherwise go straight to celebration
       matchTransitionTimeoutRef.current = setTimeout(() => {
-        setShowMatchCelebration(true);
+        if (groupMembersData || poolData.groupId) {
+          // Wait a bit more for member data to load if it's still loading
+          const checkDataTimer = setTimeout(() => {
+            if (groupMembersData) {
+              setShowRevealAnimation(true);
+            } else {
+              // Fallback: no member data, skip reveal and go straight to celebration
+              setShowMatchCelebration(true);
+            }
+          }, isLoadingGroupData ? 500 : 0);
+        } else {
+          // No groupId, skip reveal and go straight to celebration
+          setShowMatchCelebration(true);
+        }
       }, 1000);
     });
 
@@ -253,6 +323,22 @@ export default function MatchingStatusPage() {
       });
     }
   }, []);
+
+  // Handle reveal animation complete
+  const handleRevealOrbitComplete = useCallback(() => {
+    // Mark animation as complete, enabling click to continue
+    setRevealAnimationComplete(true);
+  }, []);
+  
+  // Handle user clicking to continue after animation
+  const handleRevealContinue = useCallback(() => {
+    if (!revealAnimationComplete) return; // Don't allow skipping animation
+    
+    // Hide the reveal overlay and show match celebration
+    setShowRevealAnimation(false);
+    setRevealAnimationComplete(false);
+    setShowMatchCelebration(true);
+  }, [revealAnimationComplete]);
 
   // Handle match celebration flow
   const handleCelebrationContinue = useCallback(() => {
@@ -404,7 +490,7 @@ export default function MatchingStatusPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 safe-area-bottom">
       {/* Ambient glow effects */}
       <div 
         className="fixed top-0 left-0 w-[300px] h-[300px] pointer-events-none"
@@ -469,43 +555,30 @@ export default function MatchingStatusPage() {
           </div>
 
           <CardContent className="p-6 space-y-6">
-            {/* Mascot animation area */}
-            <div className="relative h-48 flex items-center justify-center">
-              {/* Main user archetype */}
-              {userArchetypeAvatar && (
-                <div className="relative z-10">
-                  <img 
-                    src={userArchetypeAvatar} 
-                    alt="你的人格原型" 
-                    className="h-32 w-32 object-contain"
-                    style={{
-                      animation: registration.matchStatus === "matched" 
-                        ? "bounce 1s ease-in-out"
-                        : "float 3s ease-in-out infinite",
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Orbiting emoji circles */}
-              <div 
-                className="absolute inset-0 flex items-center justify-center"
-                style={{
-                  animation: "spin 20s linear infinite",
-                }}
-              >
-                {['🦊', '🐘', '🕷️', '⚙️'].map((emoji, idx) => (
-                  <div
-                    key={idx}
-                    className="absolute text-2xl"
-                    style={{
-                      transform: `rotate(${idx * 90}deg) translateY(-80px)`,
-                    }}
-                  >
-                    {emoji}
+            {/* Mascot animation area - Show ArchetypeOrbit after match */}
+            {registration.matchStatus === "matched" && groupMembersData ? (
+              <ArchetypeOrbit
+                archetypes={groupMembersData.members.map(m => m.archetype || '')}
+                size="medium"
+                animated={false}
+              />
+            ) : (
+              <div className="relative h-48 flex items-center justify-center">
+                {/* Main user archetype */}
+                {userArchetypeAvatar && (
+                  <div className="relative z-10">
+                    <img 
+                      src={userArchetypeAvatar} 
+                      alt="你的人格原型" 
+                      className="h-32 w-32 object-contain"
+                      style={{
+                        animation: registration.matchStatus === "matched" 
+                          ? "bounce 1s ease-in-out"
+                          : "float 3s ease-in-out infinite",
+                      }}
+                    />
                   </div>
-                ))}
-              </div>
+                )}
 
               {/* P1-2: New member joined floating card */}
               <AnimatePresence>
@@ -1006,6 +1079,45 @@ export default function MatchingStatusPage() {
           isVisible={showMatchCelebration}
           onContinue={handleCelebrationContinue}
         />
+      )}
+
+      {/* Reveal animation overlay */}
+      {showRevealAnimation && groupMembersData && !isLoadingGroupData && (
+        <div 
+          className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center p-6"
+          onClick={handleRevealContinue}
+          style={{ cursor: revealAnimationComplete ? 'pointer' : 'default' }}
+        >
+          <div className="text-center space-y-8 max-w-md w-full">
+            <h2 className="text-2xl font-bold animate-fadeIn">
+              🎉 匹配成功！
+            </h2>
+            
+            <ArchetypeOrbit
+              archetypes={groupMembersData.members.map(m => m.archetype || '')}
+              size="large"
+              animated={true}
+              onAnimationComplete={handleRevealOrbitComplete}
+            />
+            
+            <p 
+              className="text-sm text-muted-foreground animate-fadeIn"
+              style={{ opacity: revealAnimationComplete ? 1 : 0.3 }}
+            >
+              {revealAnimationComplete ? '点击任意位置继续' : '正在加载...'}
+            </p>
+          </div>
+          
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; transform: translateY(10px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+            .animate-fadeIn {
+              animation: fadeIn 0.5s ease-out;
+            }
+          `}</style>
+        </div>
       )}
 
       {/* Theme title reveal */}
