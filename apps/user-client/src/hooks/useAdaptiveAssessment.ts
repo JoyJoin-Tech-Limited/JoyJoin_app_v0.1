@@ -432,7 +432,6 @@ export function useAdaptiveAssessment() {
         console.error('[AdaptiveAssessment] Failed to resume from synced session:', error);
         localStorage.removeItem("joyjoin_synced_session_id");
         localStorage.removeItem("joyjoin_synced_answer_count");
-        throw error;
       }
       return;
     }
