@@ -69,8 +69,8 @@ export default function JoinEventPoolSheet({
       );
       const defaultDistricts = cluster ? cluster.districts.map(d => d.id) : [];
       
-      // Set default languages from user profile
-      const userLanguages = user.languagesComfort || [];
+      // Set default languages from user profile (deprecated field, using empty array)
+      const userLanguages: string[] = [];
 
       updatePreferences({
         districts: defaultDistricts,
@@ -181,7 +181,7 @@ export default function JoinEventPoolSheet({
                       <SmartDefaultsStep
                         eventType={poolData.eventType}
                         eventArea={poolData.area}
-                        userLanguages={user?.languagesComfort || []}
+                        userLanguages={[]}
                         selectedDistricts={preferences.districts || []}
                         selectedLanguages={preferences.languages || []}
                         onUpdateDistricts={(districts) => updatePreferences({ districts })}

@@ -267,12 +267,9 @@ async function createDemoDataForUser(userId: string) {
         hasCompletedVoiceQuiz: true,
         // 添加背景信息以触发Epic契合点
         educationLevel: 'Master\'s',
-        studyLocale: 'Overseas',
-        fieldOfStudy: 'CS',
         seniority: 'Founder',
         industry: '科技',
         interestsTop: ['摄影', '写作', '创业', '可持续发展', '咖啡'],
-        languagesComfort: ['普通话', '英语', '粤语'],
       })
       .where(eq(users.id, userId));
     

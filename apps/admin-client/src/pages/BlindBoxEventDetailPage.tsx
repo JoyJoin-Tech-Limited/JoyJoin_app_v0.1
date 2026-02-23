@@ -562,11 +562,6 @@ export default function BlindBoxEventDetailPage() {
                 gender: user?.gender || undefined,
                 relationshipStatus: user?.relationshipStatus || "Single",
                 children: user?.children || undefined,
-                studyLocale: user?.studyLocale || "Overseas",
-                overseasRegions: user?.overseasRegions as string[] | undefined,
-                fieldOfStudy: user?.fieldOfStudy || undefined,
-                languages: user?.languagesComfort as string[] | undefined,
-                hometownCountry: user?.hometownCountry || undefined,
                 hometownRegionCity: user?.hometownRegionCity || undefined,
               }}
             />

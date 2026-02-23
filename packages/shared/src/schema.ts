@@ -22,11 +22,7 @@ import {
   WORK_MODE_OPTIONS,
   RELATIONSHIP_STATUS_OPTIONS,
   CHILDREN_OPTIONS,
-  STUDY_LOCALE_OPTIONS,
   PRONOUNS_OPTIONS,
-  LANGUAGES_COMFORT_OPTIONS,
-  ACTIVITY_TIME_PREFERENCE_OPTIONS,
-  SOCIAL_FREQUENCY_OPTIONS,
 } from "./constants";
 
 // Session storage table (required for Replit Auth)
@@ -74,9 +70,6 @@ export const users = pgTable("users", {
   
   // Registration fields - Education
   educationLevel: varchar("education_level"), // 高中及以下, 大专, 本科, 硕士, 博士, 职业培训
-  studyLocale: varchar("study_locale"), // DEPRECATED: Not collected in onboarding, removed from profile edit
-  overseasRegions: text("overseas_regions").array(), // DEPRECATED: Not collected in onboarding, removed from profile edit
-  fieldOfStudy: varchar("field_of_study"), // DEPRECATED: Not collected in onboarding, removed from profile edit
   educationVisibility: varchar("education_visibility").default("hide_all"), // hide_all, show_level_only, show_level_and_field
   
   // Registration fields - Work (New standardized occupation system)
@@ -91,11 +84,9 @@ export const users = pgTable("users", {
   // - companyName: varchar (not collected in onboarding)
   
   // Registration fields - Culture & Language
-  hometownCountry: varchar("hometown_country"),
   hometownRegionCity: varchar("hometown_region_city"),
   hometownAffinityOptin: boolean("hometown_affinity_optin").default(true),
   currentCity: varchar("current_city"), // 现居城市: 香港, 深圳, 广州, 其他
-  languagesComfort: text("languages_comfort").array(), // DEPRECATED - Not collected in onboarding, low matching value
   
   // Registration fields - Deprecated/Legacy
   placeOfOrigin: varchar("place_of_origin"), // Deprecated in favor of hometown fields
@@ -148,18 +139,6 @@ export const users = pgTable("users", {
   // These fields are no longer collected in onboarding
   // Kept in schema for backward compatibility but not actively used
   // See: MIGRATION_2026-02-04_SIGNUP_FLOW.md
-  
-  // Registration fields - Activity Preferences (DEPRECATED - not collected in onboarding)
-  activityTimePreference: varchar("activity_time_preference"), // DEPRECATED: 活动时段偏好 - removed from onboarding
-  socialFrequency: varchar("social_frequency"), // DEPRECATED: 聚会频率 - removed from onboarding
-  
-  // Note: The following fields are already marked as deprecated in other sections:
-  // - languagesComfort (see Registration fields - Culture & Language section) - moved to profile edit only
-  // - hometownCountry (see Registration fields - Culture & Language section) - removed entirely
-  // - cuisinePreference (see Registration fields - Social & Venue Preferences section) - simplified/removed
-  // - dietaryRestrictions - not in schema
-  // - decorStylePreferences - not in schema
-  // - groupSizeComfort - not in schema
   
   // ========== END DEPRECATED FIELDS ==========
   
@@ -654,9 +633,6 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   hasSiblings: true,
   currentCity: true,
   educationLevel: true,
-  studyLocale: true,
-  overseasRegions: true,
-  fieldOfStudy: true,
   industrySegment: true,  // 智能信息收集：细分领域
   structuredOccupation: true,  // 智能信息收集：规范化职位
   // Three-tier industry classification
@@ -673,9 +649,7 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   industryLastVerifiedAt: true,
   occupationId: true,
   workMode: true,
-  hometownCountry: true,
   hometownRegionCity: true,
-  languagesComfort: true,
   intent: true,
   // ❌ REMOVED DEPRECATED FIELDS:
   // - industry: true (legacy field, replaced by 3-tier classification)
@@ -936,11 +910,6 @@ export const registerUserSchema = z.object({
   educationLevel: z.enum(EDUCATION_LEVEL_OPTIONS, {
     errorMap: () => ({ message: "请选择教育水平" }),
   }),
-  studyLocale: z.enum(STUDY_LOCALE_OPTIONS, {
-    errorMap: () => ({ message: "请选择学习地点" }),
-  }),
-  overseasRegions: z.array(z.string()).optional(),
-  fieldOfStudy: z.string().optional(), // Now optional - auto-derived from occupation
   
   // Work - New standardized occupation system
   occupationId: z.string().min(1, "请选择职业"),
@@ -957,11 +926,9 @@ export const registerUserSchema = z.object({
   intent: z.array(z.enum(["networking", "friends", "discussion", "fun", "romance", "flexible"])).min(1, "请至少选择一个活动意图"),
   
   // Culture & Language - Required for matching algorithm
-  hometownCountry: z.string().optional(), // Auto-set based on province selection
   hometownRegionCity: z.string().min(1, "请选择家乡"),
   hometownAffinityOptin: z.boolean().optional().default(true), // 同乡亲和力
   currentCity: z.string().min(1, "请选择现居城市"),
-  languagesComfort: z.array(z.string()).optional(), // Optional - not collected in onboarding
   
   // Privacy controls
   educationVisibility: z.enum(["hide_all", "show_level_only", "show_level_and_field"]).optional().default("hide_all"),
