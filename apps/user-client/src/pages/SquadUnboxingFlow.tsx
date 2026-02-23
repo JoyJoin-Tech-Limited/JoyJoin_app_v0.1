@@ -32,13 +32,23 @@ const JOYJOIN_GRADIENT = "linear-gradient(135deg, #4C1D95, #7C3AED)";
 
 // Mock squad data — replace with real API data when available.
 // TODO: integrate with POST /api/squad/confirm-attendance and add loading/error states.
+// Fields beyond displayName/archetype/topInterests are included so that
+// generateSparkPredictions can produce meaningful sparks during local dev/demo.
 const MOCK_SQUAD: SquadMember[] = [
   {
     userId: "u1",
     displayName: "小雅",
     archetype: "开心柯基",
     age: 26,
+    gender: "Woman",
+    educationLevel: "Master's",
     topInterests: ["旅行", "美食", "摄影"],
+    primaryInterests: ["travel_exploration", "food_dining", "photography"],
+    industry: "创意设计",
+    studyLocale: "Overseas",
+    relationshipStatus: "Single",
+    hometownRegionCity: "成都",
+    hometownCountry: "中国",
     matchReason: "你们都热爱探索新事物，话题永远聊不完",
     compatibilityScore: 92,
   },
@@ -47,7 +57,15 @@ const MOCK_SQUAD: SquadMember[] = [
     displayName: "志明",
     archetype: "机智狐",
     age: 28,
+    gender: "Man",
+    educationLevel: "Bachelor's",
     topInterests: ["科技", "阅读", "音乐"],
+    primaryInterests: ["technology", "reading_books", "music_concerts"],
+    industry: "科技互联网",
+    studyLocale: "Mainland",
+    relationshipStatus: "Single",
+    hometownRegionCity: "上海",
+    hometownCountry: "中国",
     matchReason: "理性与感性的碰撞，能激发彼此的新想法",
     compatibilityScore: 88,
   },
@@ -56,7 +74,15 @@ const MOCK_SQUAD: SquadMember[] = [
     displayName: "晓晴",
     archetype: "暖心熊",
     age: 25,
+    gender: "Woman",
+    educationLevel: "Master's",
     topInterests: ["艺术", "健身", "美食"],
+    primaryInterests: ["art_culture", "fitness_health", "food_dining"],
+    industry: "教育培训",
+    studyLocale: "Overseas",
+    relationshipStatus: "Single",
+    hometownRegionCity: "北京",
+    hometownCountry: "中国",
     matchReason: "暖意十足，是整桌的情绪担当",
     compatibilityScore: 85,
   },
@@ -65,7 +91,15 @@ const MOCK_SQUAD: SquadMember[] = [
     displayName: "铭轩",
     archetype: "淡定海豚",
     age: 29,
+    gender: "Man",
+    educationLevel: "Bachelor's",
     topInterests: ["旅行", "游戏", "电影"],
+    primaryInterests: ["travel_exploration", "gaming", "film_entertainment"],
+    industry: "金融投资",
+    studyLocale: "Mainland",
+    relationshipStatus: "Single",
+    hometownRegionCity: "广州",
+    hometownCountry: "中国",
     matchReason: "沉稳又幽默，气氛冷场时总能救场",
     compatibilityScore: 83,
   },
@@ -82,13 +116,13 @@ export default function SquadUnboxingFlow() {
 
   // Fetch current user — `useAuth` uses the cached `/api/auth/user` query,
   // which fires independently from squad data so there is no sequential waterfall.
-  const { user } = useAuth();
+  const { user, isLoading: isUserLoading } = useAuth();
 
   // Build UserContext from auth user for spark-prediction engine
   const currentUser = useMemo<UserContext | undefined>(() => {
     if (!user) return undefined;
     return {
-      interests: user.interestsRankedTop3 ?? undefined,
+      interests: user.interestsDeep ?? undefined,
       educationLevel: user.educationLevel ?? undefined,
       industry: user.industryCategoryLabel ?? user.industryCategory ?? undefined,
       age: user.age ?? undefined,
@@ -302,11 +336,14 @@ export default function SquadUnboxingFlow() {
               transition={{ duration: 0.4 }}
             >
               <p className="text-sm text-muted-foreground mb-2 text-center">
-                点击卡片查看详情 ✨
+                {isUserLoading
+                  ? "正在加载个性化连接点…"
+                  : "点击卡片查看详情 ✨"}
               </p>
               <CardDeckReveal
                 members={MOCK_SQUAD}
                 currentUser={currentUser}
+                isUserLoading={isUserLoading}
                 onAllRevealed={handleAllRevealed}
                 onCardFlipped={handleCardFlipped}
               />
