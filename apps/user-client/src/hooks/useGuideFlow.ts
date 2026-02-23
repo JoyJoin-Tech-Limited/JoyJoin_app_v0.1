@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { User } from "@shared/schema";
 
 const TOTAL_STEPS = 3;
@@ -46,6 +47,7 @@ export function useGuideFlow(options?: {
   const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
   const [showGuide, setShowGuide] = useState(false);
+  const { toast } = useToast();
   
   // Server-driven guide state (B2)
   const { data: user } = useQuery<User & { hasSeenGuide?: boolean }>({
@@ -59,11 +61,18 @@ export function useGuideFlow(options?: {
       return apiRequest("POST", "/api/guide/complete");
     },
     onSuccess: () => {
-      // Invalidate user query to refresh hasSeenGuide
+      // Invalidate user query to refresh hasSeenGuide, then navigate
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setShowGuide(false);
+      setLocation("/");
     },
     onError: (error) => {
       console.error('[useGuideFlow] Failed to persist guide completion to server:', error);
+      toast({
+        title: "出现错误",
+        description: "无法保存引导进度，请重试",
+        variant: "destructive",
+      });
     },
   });
   
@@ -86,12 +95,10 @@ export function useGuideFlow(options?: {
     if (currentStep < TOTAL_STEPS - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
-      // 最后一步，完成引导
+      // 最后一步，完成引导 - navigation happens in mutation onSuccess
       markAsComplete();
-      setShowGuide(false);
-      setLocation("/");
     }
-  }, [currentStep, markAsComplete, setLocation]);
+  }, [currentStep, markAsComplete]);
   
   const prevStep = useCallback(() => {
     if (currentStep > 0) {
@@ -100,16 +107,14 @@ export function useGuideFlow(options?: {
   }, [currentStep]);
   
   const skipGuide = useCallback(() => {
+    // navigation happens in mutation onSuccess
     markAsComplete();
-    setShowGuide(false);
-    setLocation("/");
-  }, [markAsComplete, setLocation]);
+  }, [markAsComplete]);
   
   const completeGuide = useCallback(() => {
+    // navigation happens in mutation onSuccess
     markAsComplete();
-    setShowGuide(false);
-    setLocation("/");
-  }, [markAsComplete, setLocation]);
+  }, [markAsComplete]);
   
   const startGuide = useCallback(() => {
     setCurrentStep(0);

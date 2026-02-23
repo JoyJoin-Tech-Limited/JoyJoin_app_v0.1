@@ -1641,16 +1641,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (extractedInfo.educationLevel) {
         registrationData.educationLevel = extractedInfo.educationLevel;
       }
-      if (extractedInfo.fieldOfStudy) {
-        registrationData.fieldOfStudy = extractedInfo.fieldOfStudy;
-      }
       // ❌ REMOVED: topicAvoidances field no longer exists in schema
       // if (extractedInfo.topicAvoidances && extractedInfo.topicAvoidances.length > 0) {
       //   registrationData.topicAvoidances = extractedInfo.topicAvoidances;
       // }
-      if (extractedInfo.languagesComfort && extractedInfo.languagesComfort.length > 0) {
-        registrationData.languagesComfort = extractedInfo.languagesComfort;
-      }
       if (extractedInfo.hometown) {
         registrationData.hometownRegionCity = extractedInfo.hometown;
       }
@@ -7033,7 +7027,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         interestsTop: ['科技', '创业', '咖啡', '产品'],
         interestsRankedTop3: ['科技', '创业', '咖啡'],
         topicsHappy: ['AI发展', '产品设计', '创业故事'],
-        languagesComfort: ['粤语', '普通话', '英语'],
         eventsAttended: 5,
         matchesMade: 8,
       }).returning();
@@ -7052,7 +7045,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         interestsTop: ['设计', '艺术', '旅行', '摄影'],
         interestsRankedTop3: ['设计', '艺术', '旅行'],
         topicsHappy: ['UI/UX设计', '摄影', '文化交流'],
-        languagesComfort: ['粤语', '普通话'],
         eventsAttended: 12,
         matchesMade: 15,
       }).returning();
@@ -7071,7 +7063,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         interestsTop: ['投资', '徒步', '读书', '历史'],
         interestsRankedTop3: ['投资', '徒步', '读书'],
         topicsHappy: ['股市分析', '户外运动', '历史'],
-        languagesComfort: ['粤语', '普通话', '英语'],
         eventsAttended: 8,
         matchesMade: 10,
       }).returning();
@@ -7398,15 +7389,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       { key: 'interestsTop', label: '兴趣', weight: 1, isArray: true },
       { key: 'intent', label: '活动意向', weight: 1, isArray: true },
       { key: 'archetype', label: '社交原型', weight: 1 },
-      { key: 'languagesComfort', label: '语言', weight: 0.5, isArray: true },
       { key: 'relationshipStatus', label: '感情状态', weight: 0.5 },
       { key: 'educationLevel', label: '学历', weight: 0.5 },
       { key: 'lifeStage', label: '人生阶段', weight: 0.5 },
       { key: 'socialStyle', label: '社交风格', weight: 0.5 },
       { key: 'venueStylePreference', label: '场地偏好', weight: 0.5 },
       { key: 'cuisinePreference', label: '菜系偏好', weight: 0.5, isArray: true },
-      { key: 'activityTimePreference', label: '活动时段', weight: 0.5 },
-      { key: 'socialFrequency', label: '聚会频率', weight: 0.5 },
     ];
     
     const totalWeight = fields.reduce((sum, f) => sum + f.weight, 0);
@@ -7585,7 +7573,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       { key: 'interestsTop', label: '兴趣', weight: 1, isArray: true },
       { key: 'intent', label: '活动意向', weight: 1, isArray: true },
       { key: 'archetype', label: '社交原型', weight: 1 },
-      { key: 'languagesComfort', label: '语言', weight: 0.5, isArray: true },
     ];
     const enrichmentFields = [
       { key: 'relationshipStatus', label: '感情状态', weight: 0.5 },
@@ -7595,8 +7582,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       { key: 'venueStylePreference', label: '场地偏好', weight: 0.5 },
       { key: 'cuisinePreference', label: '菜系偏好', weight: 0.5, isArray: true },
       { key: 'topicAvoidances', label: '避免话题', weight: 0.3, isArray: true },
-      { key: 'activityTimePreference', label: '活动时段', weight: 0.5 },
-      { key: 'socialFrequency', label: '聚会频率', weight: 0.5 },
       { key: 'hasPets', label: '养宠物', weight: 0.3 },
       { key: 'hometown', label: '家乡', weight: 0.3 },
     ];
@@ -9652,17 +9637,11 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           industryVisible: users.workVisibility,
           gender: users.gender,
           educationLevel: users.educationLevel,
-          hometownCountry: users.hometownCountry,
           hometownRegionCity: users.hometownRegionCity,
           hometownAffinityOptin: users.hometownAffinityOptin,
           educationVisible: users.educationVisibility,
           relationshipStatus: users.relationshipStatus,
           children: users.children,
-          studyLocale: users.studyLocale,
-          overseasRegions: users.overseasRegions,
-          // ❌ REMOVED: seniority field (never collected)
-          fieldOfStudy: users.fieldOfStudy,
-          languagesComfort: users.languagesComfort,
           // Event-specific preferences from registration
           intent: eventPoolRegistrations.eventIntent,
         })

@@ -27,7 +27,6 @@ const fullProfileSchema = z.object({
   displayName: z.string().min(1, "请输入昵称"),
   gender: z.string().optional(),
   birthdate: z.string().optional(),
-  languagesComfort: z.array(z.string()).optional(),
   educationLevel: z.string().optional(),
   industry: z.string().optional(),
   roleTitleShort: z.string().optional(),
@@ -119,7 +118,6 @@ export default function EditFullProfileDialog({
       displayName: user?.displayName || "",
       gender: user?.gender || "",
       birthdate: user?.birthdate ? new Date(user.birthdate).toISOString().split('T')[0] : "",
-      languagesComfort: user?.languagesComfort || [],
       educationLevel: user?.educationLevel || "",
       industry: user?.industry || "",
       roleTitleShort: user?.roleTitleShort || "",
@@ -218,23 +216,6 @@ export default function EditFullProfileDialog({
                   </FormItem>
                 )}
               />
-
-              <div>
-                <Label className="mb-2 block">常用语言</Label>
-                <div className="flex flex-wrap gap-2">
-                  {languageOptions.map((lang) => (
-                    <Badge
-                      key={lang}
-                      variant={(form.watch("languagesComfort") || []).includes(lang) ? "default" : "outline"}
-                      className="cursor-pointer"
-                      onClick={() => toggleArrayItem("languagesComfort", lang)}
-                      data-testid={`badge-language-${lang}`}
-                    >
-                      {lang}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
             </div>
 
             <Separator />

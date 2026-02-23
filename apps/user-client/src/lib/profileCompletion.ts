@@ -17,7 +17,6 @@ export function calculateProfileCompletion(user: any): ProfileCompletionResult {
     { key: 'educationLevel', label: '学历' },
     { key: 'relationshipStatus', label: '感情状态' },
     { key: 'intent', label: '社交意向' },
-    { key: 'hometownCountry', label: '家乡' },
   ];
   
   let filledCount = 0;

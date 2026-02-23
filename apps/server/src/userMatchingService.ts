@@ -226,13 +226,7 @@ function calculateBackgroundScore(user1: Partial<User>, user2: Partial<User>): n
   // This matching logic should be updated to use the new 3-tier classification
   // For now, removing to fix TypeScript errors
   
-  // 学习地域多样性 (+5分如果不同)
-  if (user1.studyLocale && user2.studyLocale) {
-    factors++;
-    if (user1.studyLocale !== user2.studyLocale) {
-      score += 5;
-    }
-  }
+  // 学习地域多样性 - REMOVED: studyLocale field deprecated and dropped
   
   // ====== 相似性因素（相同加分）======
   
@@ -252,19 +246,11 @@ function calculateBackgroundScore(user1: Partial<User>, user2: Partial<User>): n
     // 年龄差>8岁不加分也不扣分
   }
   
-  // 城市级老乡匹配 (+20分如果同城，+10分如果同国)
+  // 城市级老乡匹配 (+20分如果同城)
   if (user1.hometownRegionCity && user2.hometownRegionCity) {
     factors++;
     if (user1.hometownRegionCity === user2.hometownRegionCity) {
       score += 20; // 同城老乡！超级加分
-    } else if (user1.hometownCountry && user2.hometownCountry && 
-               user1.hometownCountry === user2.hometownCountry) {
-      score += 10; // 同国老乡
-    }
-  } else if (user1.hometownCountry && user2.hometownCountry) {
-    factors++;
-    if (user1.hometownCountry === user2.hometownCountry) {
-      score += 10; // 同国老乡
     }
   }
   
@@ -331,44 +317,6 @@ function calculateBackgroundScore(user1: Partial<User>, user2: Partial<User>): n
  */
 function calculateCultureScore(user1: Partial<User>, user2: Partial<User>): number {
   let score = 40; // 基础分
-  
-  // ====== 语言匹配 ======
-  const lang1 = user1.languagesComfort || [];
-  const lang2 = user2.languagesComfort || [];
-  
-  if (lang1.length > 0 && lang2.length > 0) {
-    const commonLanguages = lang1.filter(l => lang2.includes(l));
-    
-    if (commonLanguages.length === 0) {
-      score -= 20; // 没有共同语言，扣分
-    } else if (commonLanguages.length >= 2) {
-      score += 30; // 多个共同语言，大加分
-    } else {
-      score += 20; // 一个共同语言，加分
-    }
-  }
-  
-  // ====== 海外地区经历匹配 ======
-  const overseas1 = user1.overseasRegions || [];
-  const overseas2 = user2.overseasRegions || [];
-  
-  if (overseas1.length > 0 && overseas2.length > 0) {
-    const commonRegions = overseas1.filter(r => overseas2.includes(r));
-    
-    if (commonRegions.length > 0) {
-      // 相同海外经历地区，非常有共同话题
-      score += Math.min(commonRegions.length * 15, 30); // 最多+30分
-    }
-  }
-  
-  // ====== 学习地域匹配 ======
-  // 都有海外经历时额外加分（有共同国际化视野）
-  if (user1.studyLocale && user2.studyLocale) {
-    if ((user1.studyLocale === 'Overseas' || user1.studyLocale === 'Both') &&
-        (user2.studyLocale === 'Overseas' || user2.studyLocale === 'Both')) {
-      score += 10; // 都有国际化视野
-    }
-  }
   
   // 确保分数在有效范围内（0-100）
   return Math.min(100, Math.max(0, score));
@@ -474,10 +422,6 @@ export function calculateUserMatchScore(
     if (user1.hometownRegionCity && user2.hometownRegionCity && 
         user1.hometownRegionCity === user2.hometownRegionCity) {
       matchPoints.push(`老乡！都来自${user1.hometownRegionCity}`);
-    } else if (user1.hometownCountry && user2.hometownCountry && 
-               user1.hometownCountry === user2.hometownCountry &&
-               user1.hometownCountry !== '中国') {
-      matchPoints.push(`都来自${user1.hometownCountry}`);
     }
     
     // 子女状态相同
@@ -502,22 +446,7 @@ export function calculateUserMatchScore(
   
   // 文化匹配细分
   if (cultureScore >= 70) {
-    const overseas1 = user1.overseasRegions || [];
-    const overseas2 = user2.overseasRegions || [];
-    const commonRegions = overseas1.filter(r => overseas2.includes(r));
-    if (commonRegions.length > 0) {
-      const regionLabels: Record<string, string> = {
-        'North America': '北美',
-        'Europe': '欧洲',
-        'East Asia (excl. China)': '东亚',
-        'Southeast Asia': '东南亚',
-        'Oceania': '大洋洲',
-      };
-      const regionName = regionLabels[commonRegions[0]] || commonRegions[0];
-      matchPoints.push(`都在${regionName}留过学`);
-    } else if (cultureScore >= 80) {
-      matchPoints.push('语言文化相通');
-    }
+    matchPoints.push('语言文化相通');
   }
   
   if (conversationSignatureScore >= 75) {
