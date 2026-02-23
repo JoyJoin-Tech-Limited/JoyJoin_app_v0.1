@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { Sparkles, Package } from "lucide-react";
@@ -18,7 +18,11 @@ import CardDeckReveal, { type SquadMember } from "@/components/CardDeckReveal";
 
 type FlowState = "ready" | "shaking" | "revealed";
 
-// Mock squad data — replace with real API data when available
+// Shared JoyJoin gradient used across box and buttons in this flow
+const JOYJOIN_GRADIENT = "linear-gradient(135deg, #4C1D95, #7C3AED)";
+
+// Mock squad data — replace with real API data when available.
+// TODO: integrate with POST /api/squad/confirm-attendance and add loading/error states.
 const MOCK_SQUAD: SquadMember[] = [
   {
     userId: "u1",
@@ -58,10 +62,8 @@ const MOCK_SQUAD: SquadMember[] = [
   },
 ];
 
-// paddingBottom: BottomNav (~64px bar + ~16px safe area) + action zone height (~64px button + 32px text + 16px gap) ≈ 160px
-const CONTAINER_PADDING_BOTTOM = 160;
-// Action zone sits above BottomNav; 96px = ~80px nav height + 16px breathing room
-const ACTION_ZONE_BOTTOM = 96;
+// Action zone sits above BottomNav; aligns with standard bottom spacing (~64px / pb-16)
+const ACTION_ZONE_BOTTOM = 64;
 
 export default function SquadUnboxingFlow() {
   const [, setLocation] = useLocation();
@@ -69,18 +71,25 @@ export default function SquadUnboxingFlow() {
   const [showActionZone, setShowActionZone] = useState(false);
   const [showSkipDialog, setShowSkipDialog] = useState(false);
 
+  // Derive compatibility stats dynamically from squad data
+  const squadCompatibilityPercent = useMemo(() => {
+    const scores = MOCK_SQUAD.map((m) => m.compatibilityScore ?? 0).filter(Boolean);
+    if (scores.length === 0) return 0;
+    return Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
+  }, []);
+
   // Shaking → revealed transition after 1.5s
   useEffect(() => {
     if (flowState !== "shaking") return;
-    const t = setTimeout(() => setFlowState("revealed"), 1500);
-    return () => clearTimeout(t);
+    const shakeToRevealTimeout = setTimeout(() => setFlowState("revealed"), 1500);
+    return () => clearTimeout(shakeToRevealTimeout);
   }, [flowState]);
 
-  // Show action zone 2.5s after revealed
+  // Show action zone 2.5s after revealed (gives cards time to fan and flip)
   useEffect(() => {
     if (flowState !== "revealed") return;
-    const t = setTimeout(() => setShowActionZone(true), 2500);
-    return () => clearTimeout(t);
+    const actionZoneTimeout = setTimeout(() => setShowActionZone(true), 2500);
+    return () => clearTimeout(actionZoneTimeout);
   }, [flowState]);
 
   const handleOpenBox = () => {
@@ -88,8 +97,8 @@ export default function SquadUnboxingFlow() {
   };
 
   const handleConfirmAttendance = () => {
-    // TODO: call POST /api/squad/confirm-attendance
-    setLocation("/my-journey");
+    // TODO: call POST /api/squad/confirm-attendance before navigating
+    setLocation("/");
   };
 
   const handleSkip = () => {
@@ -101,12 +110,30 @@ export default function SquadUnboxingFlow() {
     setLocation("/");
   };
 
+  // Stable ref passed to CardDeckReveal; no-op for now (action zone timing is independent)
+  const handleAllRevealed = useCallback(() => {}, []);
+
+  // Human-readable label for the current flow state (read by screen readers)
+  const flowStateLabel =
+    flowState === "ready"
+      ? "盲盒已就绪，点击按钮开启"
+      : flowState === "shaking"
+      ? "正在开盒"
+      : "桌友卡片已揭晓";
+
   return (
-    <div className="min-h-screen bg-background flex flex-col" style={{ paddingBottom: CONTAINER_PADDING_BOTTOM }}>
+    <div className="min-h-screen bg-background flex flex-col pb-16">
+      {/* Screen-reader announcement of state changes */}
+      <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {flowStateLabel}
+      </p>
+
       {/* Header */}
       <div className="px-5 pt-12 pb-4">
         <h1 className="text-2xl font-bold text-foreground">你的饭局桌友 🎉</h1>
-        <p className="text-sm text-muted-foreground mt-1">92% 匹配度 · 4人同桌</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          {squadCompatibilityPercent}% 匹配度 · {MOCK_SQUAD.length}人同桌
+        </p>
       </div>
 
       {/* Main content area */}
@@ -140,7 +167,7 @@ export default function SquadUnboxingFlow() {
                 {/* Box */}
                 <div
                   className="h-32 w-32 rounded-3xl flex items-center justify-center shadow-2xl"
-                  style={{ background: "linear-gradient(135deg, #4C1D95, #7C3AED)" }}
+                  style={{ background: JOYJOIN_GRADIENT }}
                 >
                   <Package className="h-16 w-16 text-white/90" />
                 </div>
@@ -154,11 +181,11 @@ export default function SquadUnboxingFlow() {
               <Button
                 size="lg"
                 className="w-full max-w-xs text-base font-semibold rounded-2xl h-14 shadow-lg"
-                style={{ background: "linear-gradient(135deg, #4C1D95, #7C3AED)" }}
+                style={{ background: JOYJOIN_GRADIENT }}
                 onClick={handleOpenBox}
                 data-testid="button-open-blind-box"
               >
-                <Sparkles className="h-5 w-5 mr-2" />
+                <Sparkles className="h-5 w-5 mr-2" aria-hidden="true" />
                 立即开启盲盒
               </Button>
             </motion.div>
@@ -176,7 +203,7 @@ export default function SquadUnboxingFlow() {
             >
               <motion.div
                 className="h-32 w-32 rounded-3xl flex items-center justify-center shadow-2xl"
-                style={{ background: "linear-gradient(135deg, #4C1D95, #7C3AED)" }}
+                style={{ background: JOYJOIN_GRADIENT }}
                 animate={{
                   rotate: [0, -10, 10, -10, 10, -6, 6, -3, 3, 0],
                   y: [0, -8, 4, -8, 4, -4, 2, 0],
@@ -209,7 +236,7 @@ export default function SquadUnboxingFlow() {
               <p className="text-sm text-muted-foreground mb-2 text-center">
                 点击卡片查看详情 ✨
               </p>
-              <CardDeckReveal members={MOCK_SQUAD} />
+              <CardDeckReveal members={MOCK_SQUAD} onAllRevealed={handleAllRevealed} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -229,7 +256,7 @@ export default function SquadUnboxingFlow() {
             <Button
               size="lg"
               className="w-full h-14 text-base font-bold rounded-2xl shadow-lg"
-              style={{ background: "linear-gradient(135deg, #4C1D95, #7C3AED)" }}
+              style={{ background: JOYJOIN_GRADIENT }}
               onClick={handleConfirmAttendance}
               data-testid="button-confirm-attendance"
             >
@@ -252,7 +279,7 @@ export default function SquadUnboxingFlow() {
           <AlertDialogHeader>
             <AlertDialogTitle>确定要放弃吗？</AlertDialogTitle>
             <AlertDialogDescription>
-              你将错过这次 92% 匹配度的桌友组合，下次等待可能需要更长时间。
+              你将错过这次 {squadCompatibilityPercent}% 匹配度的桌友组合，下次等待可能需要更长时间。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
