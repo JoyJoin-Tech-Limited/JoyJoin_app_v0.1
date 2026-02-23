@@ -1,5 +1,5 @@
-import { LoadingLogoSleek } from "./LoadingLogoSleek";
+import { FancyLineLoadingScreen } from "./FancyLineLoadingScreen";
 
 export function LoadingScreen() {
-  return <LoadingLogoSleek loop />;
+  return <FancyLineLoadingScreen loop />;
 }
