@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import styles from "./FancyLineLoadingScreen.module.css";
 
 type Props = {
@@ -13,6 +13,7 @@ export function FancyLineLoadingScreen({
   visible = true,
 }: Props) {
   const [done, setDone] = useState(false);
+  const gradientId = useId().replace(/:/g, "-") + "-joy-gradient";
 
   useEffect(() => {
     if (!loop) {
@@ -28,7 +29,7 @@ export function FancyLineLoadingScreen({
 
   return (
     <div
-      className={`${styles.wrap} ${done ? styles.fadeOut : ""}`}
+      className={`${styles.wrap} ${loop ? styles.loop : ""} ${done ? styles.fadeOut : ""}`}
       role="status"
       aria-live="polite"
       aria-label="Loading"
@@ -40,7 +41,7 @@ export function FancyLineLoadingScreen({
         aria-hidden="true"
       >
         <defs>
-          <linearGradient id="joy-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#a259c6" />
             <stop offset="50%" stopColor="#8B5CF6" />
             <stop offset="100%" stopColor="#a259c6" />
@@ -49,6 +50,7 @@ export function FancyLineLoadingScreen({
         {/* Infinity symbol path centred in 200×80 viewport */}
         <path
           className={styles.line}
+          stroke={`url(#${gradientId})`}
           d="M100,40
              C100,20 120,10 140,10
              C160,10 180,20 180,40

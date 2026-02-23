@@ -20,7 +20,6 @@
 
 .line {
   fill: none;
-  stroke: url(#joy-gradient);
   stroke-width: 4;
   stroke-linecap: round;
   stroke-linejoin: round;
