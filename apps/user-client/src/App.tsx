@@ -58,6 +58,7 @@ import NotFound from "@/pages/not-found";
 import LevelUpProvider from "@/components/LevelUpProvider";
 import GuidePage from "@/pages/GuidePage";
 import FinalProfileReviewPage from "@/pages/FinalProfileReviewPage";
+import SquadUnboxingFlow from "@/pages/SquadUnboxingFlow";
 import LoginPromptPage from "@/pages/LoginPromptPage";
 import { LoadingScreen } from "@/components/LoadingScreen";
 
@@ -197,6 +198,7 @@ function AuthenticatedRouter() {
           <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
           <Route path="/pool-matching/:registrationId" component={MatchingStatusPage} />
           <Route path="/my-journey" component={MyJourneyPage} />
+          <Route path="/squad-unboxing/:groupId" component={SquadUnboxingFlow} />
           <Route path="/blindbox/payment" component={BlindBoxPaymentPage} />
           <Route path="/blindbox/confirmation" component={BlindBoxConfirmationPage} />
           <Route path="/blind-box-events/:eventId" component={BlindBoxEventDetailPage} />
@@ -240,6 +242,7 @@ function AuthenticatedRouter() {
           <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
           <Route path="/pool-matching/:registrationId" component={MatchingStatusPage} />
           <Route path="/my-journey" component={MyJourneyPage} />
+          <Route path="/squad-unboxing/:groupId" component={SquadUnboxingFlow} />
           {process.env.NODE_ENV !== "production" && (
             <Route path="/test/archetype-orbit" component={TestArchetypeOrbit} />
           )}

@@ -127,14 +127,14 @@ export default function BottomNav() {
       return `/pool-matching/${pendingRegistration.id}`;
     }
 
-    // Priority 4: Matched event in future (> 24h away)
+    // Priority 4: Matched event in future (> 24h away) — show squad unboxing experience
     const futureMatchedPool = matchedPoolRegistrations.find(r => {
       const eventDate = getHongKongDateForComparison(r.poolDateTime);
       const hoursUntil = (eventDate.getTime() - now.getTime()) / MS_PER_HOUR;
       return hoursUntil >= VENUE_UNLOCK_HOURS;
     });
     if (futureMatchedPool && futureMatchedPool.assignedGroupId) {
-      return `/pool-groups/${futureMatchedPool.assignedGroupId}`;
+      return `/squad-unboxing/${futureMatchedPool.assignedGroupId}`;
     }
 
     const futureMatchedEvent = matchedEvents.find(e => {
