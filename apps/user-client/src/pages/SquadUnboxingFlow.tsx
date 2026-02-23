@@ -15,6 +15,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import BottomNav from "@/components/BottomNav";
 import CardDeckReveal, { type SquadMember } from "@/components/CardDeckReveal";
+import { useAuth } from "@/hooks/useAuth";
+import { generateSparkPredictions, type UserContext } from "@/lib/attendeeAnalytics";
+
+// Safe wrapper around the Web Vibration API
+const hapticVibrate = (pattern: number | number[]) => {
+  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+    navigator.vibrate(pattern);
+  }
+};
 
 type FlowState = "ready" | "shaking" | "revealed";
 
@@ -71,12 +80,64 @@ export default function SquadUnboxingFlow() {
   const [showActionZone, setShowActionZone] = useState(false);
   const [showSkipDialog, setShowSkipDialog] = useState(false);
 
+  // Fetch current user — `useAuth` uses the cached `/api/auth/user` query,
+  // which fires independently from squad data so there is no sequential waterfall.
+  const { user } = useAuth();
+
+  // Build UserContext from auth user for spark-prediction engine
+  const currentUser = useMemo<UserContext | undefined>(() => {
+    if (!user) return undefined;
+    return {
+      interests: user.interestsRankedTop3 ?? undefined,
+      educationLevel: user.educationLevel ?? undefined,
+      industry: user.industryCategoryLabel ?? user.industryCategory ?? undefined,
+      age: user.age ?? undefined,
+      gender: user.gender ?? undefined,
+      archetype: user.archetype ?? undefined,
+      relationshipStatus: user.relationshipStatus ?? undefined,
+      children: user.children ?? undefined,
+      studyLocale: user.studyLocale ?? undefined,
+      overseasRegions: user.overseasRegions ?? undefined,
+      languages: user.languagesComfort ?? undefined,
+      hometownCountry: user.hometownCountry ?? undefined,
+      hometownRegionCity: user.hometownRegionCity ?? undefined,
+      hometownAffinityOptin: user.hometownAffinityOptin ?? undefined,
+    };
+  }, [user]);
+
   // Derive compatibility stats dynamically from squad data
   const squadCompatibilityPercent = useMemo(() => {
     const scores = MOCK_SQUAD.map((m) => m.compatibilityScore ?? 0).filter(Boolean);
     if (scores.length === 0) return 0;
     return Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
   }, []);
+
+  // Aggregate total sparks across the whole squad (for dynamic FOMO modal)
+  const totalSquadSparks = useMemo(() => {
+    if (!currentUser) return 0;
+    return MOCK_SQUAD.reduce((total, member) => {
+      const sparks = generateSparkPredictions(currentUser, {
+        userId: member.userId,
+        displayName: member.displayName,
+        archetype: member.archetype,
+        age: member.age,
+        topInterests: member.topInterests,
+        primaryInterests: member.primaryInterests,
+        educationLevel: member.educationLevel,
+        industry: member.industry,
+        gender: member.gender,
+        relationshipStatus: member.relationshipStatus,
+        children: member.children,
+        studyLocale: member.studyLocale,
+        overseasRegions: member.overseasRegions,
+        languagesComfort: member.languagesComfort,
+        hometownCountry: member.hometownCountry,
+        hometownRegionCity: member.hometownRegionCity,
+        hometownAffinityOptin: member.hometownAffinityOptin,
+      });
+      return total + sparks.length;
+    }, 0);
+  }, [currentUser]);
 
   // Shaking → revealed transition after 1.5s
   useEffect(() => {
@@ -93,6 +154,8 @@ export default function SquadUnboxingFlow() {
   }, [flowState]);
 
   const handleOpenBox = () => {
+    // Haptic: "weight of the box" shake pattern
+    hapticVibrate([50, 50, 50, 50, 100]);
     setFlowState("shaking");
   };
 
@@ -112,6 +175,11 @@ export default function SquadUnboxingFlow() {
 
   // Stable ref passed to CardDeckReveal; no-op for now (action zone timing is independent)
   const handleAllRevealed = useCallback(() => {}, []);
+
+  // Haptic tick per card flip — creates "tick-tick-tick" dealing effect
+  const handleCardFlipped = useCallback(() => {
+    hapticVibrate(20);
+  }, []);
 
   // Human-readable label for the current flow state (read by screen readers)
   const flowStateLabel =
@@ -236,7 +304,12 @@ export default function SquadUnboxingFlow() {
               <p className="text-sm text-muted-foreground mb-2 text-center">
                 点击卡片查看详情 ✨
               </p>
-              <CardDeckReveal members={MOCK_SQUAD} onAllRevealed={handleAllRevealed} />
+              <CardDeckReveal
+                members={MOCK_SQUAD}
+                currentUser={currentUser}
+                onAllRevealed={handleAllRevealed}
+                onCardFlipped={handleCardFlipped}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -279,7 +352,13 @@ export default function SquadUnboxingFlow() {
           <AlertDialogHeader>
             <AlertDialogTitle>确定要放弃吗？</AlertDialogTitle>
             <AlertDialogDescription>
-              你将错过这次 {squadCompatibilityPercent}% 匹配度的桌友组合，下次等待可能需要更长时间。
+              你确定要放弃吗？系统检测到你与这桌新朋友共有{" "}
+              {totalSquadSparks > 0 ? (
+                <span className="font-semibold text-foreground">{totalSquadSparks} 个</span>
+              ) : (
+                "若干"
+              )}
+              潜在契合点，错过这波缘分可就太可惜啦！
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
