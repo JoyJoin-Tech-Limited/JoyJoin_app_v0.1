@@ -15,6 +15,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import BottomNav from "@/components/BottomNav";
 import CardDeckReveal, { type SquadMember } from "@/components/CardDeckReveal";
+import { useAuth } from "@/hooks/useAuth";
+import { generateSparkPredictions, type UserContext } from "@/lib/attendeeAnalytics";
+
+// Safe wrapper around the Web Vibration API
+const hapticVibrate = (pattern: number | number[]) => {
+  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+    navigator.vibrate(pattern);
+  }
+};
 
 type FlowState = "ready" | "shaking" | "revealed";
 
@@ -23,13 +32,23 @@ const JOYJOIN_GRADIENT = "linear-gradient(135deg, #4C1D95, #7C3AED)";
 
 // Mock squad data — replace with real API data when available.
 // TODO: integrate with POST /api/squad/confirm-attendance and add loading/error states.
+// Fields beyond displayName/archetype/topInterests are included so that
+// generateSparkPredictions can produce meaningful sparks during local dev/demo.
 const MOCK_SQUAD: SquadMember[] = [
   {
     userId: "u1",
     displayName: "小雅",
     archetype: "开心柯基",
     age: 26,
+    gender: "Woman",
+    educationLevel: "Master's",
     topInterests: ["旅行", "美食", "摄影"],
+    primaryInterests: ["travel_exploration", "food_dining", "photography"],
+    industry: "创意设计",
+    studyLocale: "Overseas",
+    relationshipStatus: "Single",
+    hometownRegionCity: "成都",
+    hometownCountry: "中国",
     matchReason: "你们都热爱探索新事物，话题永远聊不完",
     compatibilityScore: 92,
   },
@@ -38,7 +57,15 @@ const MOCK_SQUAD: SquadMember[] = [
     displayName: "志明",
     archetype: "机智狐",
     age: 28,
+    gender: "Man",
+    educationLevel: "Bachelor's",
     topInterests: ["科技", "阅读", "音乐"],
+    primaryInterests: ["technology", "reading_books", "music_concerts"],
+    industry: "科技互联网",
+    studyLocale: "Mainland",
+    relationshipStatus: "Single",
+    hometownRegionCity: "上海",
+    hometownCountry: "中国",
     matchReason: "理性与感性的碰撞，能激发彼此的新想法",
     compatibilityScore: 88,
   },
@@ -47,7 +74,15 @@ const MOCK_SQUAD: SquadMember[] = [
     displayName: "晓晴",
     archetype: "暖心熊",
     age: 25,
+    gender: "Woman",
+    educationLevel: "Master's",
     topInterests: ["艺术", "健身", "美食"],
+    primaryInterests: ["art_culture", "fitness_health", "food_dining"],
+    industry: "教育培训",
+    studyLocale: "Overseas",
+    relationshipStatus: "Single",
+    hometownRegionCity: "北京",
+    hometownCountry: "中国",
     matchReason: "暖意十足，是整桌的情绪担当",
     compatibilityScore: 85,
   },
@@ -56,7 +91,15 @@ const MOCK_SQUAD: SquadMember[] = [
     displayName: "铭轩",
     archetype: "淡定海豚",
     age: 29,
+    gender: "Man",
+    educationLevel: "Bachelor's",
     topInterests: ["旅行", "游戏", "电影"],
+    primaryInterests: ["travel_exploration", "gaming", "film_entertainment"],
+    industry: "金融投资",
+    studyLocale: "Mainland",
+    relationshipStatus: "Single",
+    hometownRegionCity: "广州",
+    hometownCountry: "中国",
     matchReason: "沉稳又幽默，气氛冷场时总能救场",
     compatibilityScore: 83,
   },
@@ -71,12 +114,64 @@ export default function SquadUnboxingFlow() {
   const [showActionZone, setShowActionZone] = useState(false);
   const [showSkipDialog, setShowSkipDialog] = useState(false);
 
+  // Fetch current user — `useAuth` uses the cached `/api/auth/user` query,
+  // which fires independently from squad data so there is no sequential waterfall.
+  const { user, isLoading: isUserLoading } = useAuth();
+
+  // Build UserContext from auth user for spark-prediction engine
+  const currentUser = useMemo<UserContext | undefined>(() => {
+    if (!user) return undefined;
+    return {
+      interests: user.interestsDeep ?? undefined,
+      educationLevel: user.educationLevel ?? undefined,
+      industry: user.industryCategoryLabel ?? user.industryCategory ?? undefined,
+      age: user.age ?? undefined,
+      gender: user.gender ?? undefined,
+      archetype: user.archetype ?? undefined,
+      relationshipStatus: user.relationshipStatus ?? undefined,
+      children: user.children ?? undefined,
+      studyLocale: user.studyLocale ?? undefined,
+      overseasRegions: user.overseasRegions ?? undefined,
+      languages: user.languagesComfort ?? undefined,
+      hometownCountry: user.hometownCountry ?? undefined,
+      hometownRegionCity: user.hometownRegionCity ?? undefined,
+      hometownAffinityOptin: user.hometownAffinityOptin ?? undefined,
+    };
+  }, [user]);
+
   // Derive compatibility stats dynamically from squad data
   const squadCompatibilityPercent = useMemo(() => {
     const scores = MOCK_SQUAD.map((m) => m.compatibilityScore ?? 0).filter(Boolean);
     if (scores.length === 0) return 0;
     return Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
   }, []);
+
+  // Aggregate total sparks across the whole squad (for dynamic FOMO modal)
+  const totalSquadSparks = useMemo(() => {
+    if (!currentUser) return 0;
+    return MOCK_SQUAD.reduce((total, member) => {
+      const sparks = generateSparkPredictions(currentUser, {
+        userId: member.userId,
+        displayName: member.displayName,
+        archetype: member.archetype,
+        age: member.age,
+        topInterests: member.topInterests,
+        primaryInterests: member.primaryInterests,
+        educationLevel: member.educationLevel,
+        industry: member.industry,
+        gender: member.gender,
+        relationshipStatus: member.relationshipStatus,
+        children: member.children,
+        studyLocale: member.studyLocale,
+        overseasRegions: member.overseasRegions,
+        languagesComfort: member.languagesComfort,
+        hometownCountry: member.hometownCountry,
+        hometownRegionCity: member.hometownRegionCity,
+        hometownAffinityOptin: member.hometownAffinityOptin,
+      });
+      return total + sparks.length;
+    }, 0);
+  }, [currentUser]);
 
   // Shaking → revealed transition after 1.5s
   useEffect(() => {
@@ -93,6 +188,8 @@ export default function SquadUnboxingFlow() {
   }, [flowState]);
 
   const handleOpenBox = () => {
+    // Haptic: "weight of the box" shake pattern
+    hapticVibrate([50, 50, 50, 50, 100]);
     setFlowState("shaking");
   };
 
@@ -112,6 +209,11 @@ export default function SquadUnboxingFlow() {
 
   // Stable ref passed to CardDeckReveal; no-op for now (action zone timing is independent)
   const handleAllRevealed = useCallback(() => {}, []);
+
+  // Haptic tick per card flip — creates "tick-tick-tick" dealing effect
+  const handleCardFlipped = useCallback(() => {
+    hapticVibrate(20);
+  }, []);
 
   // Human-readable label for the current flow state (read by screen readers)
   const flowStateLabel =
@@ -234,9 +336,17 @@ export default function SquadUnboxingFlow() {
               transition={{ duration: 0.4 }}
             >
               <p className="text-sm text-muted-foreground mb-2 text-center">
-                点击卡片查看详情 ✨
+                {isUserLoading
+                  ? "正在加载个性化连接点…"
+                  : "点击卡片查看详情 ✨"}
               </p>
-              <CardDeckReveal members={MOCK_SQUAD} onAllRevealed={handleAllRevealed} />
+              <CardDeckReveal
+                members={MOCK_SQUAD}
+                currentUser={currentUser}
+                isUserLoading={isUserLoading}
+                onAllRevealed={handleAllRevealed}
+                onCardFlipped={handleCardFlipped}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -279,7 +389,13 @@ export default function SquadUnboxingFlow() {
           <AlertDialogHeader>
             <AlertDialogTitle>确定要放弃吗？</AlertDialogTitle>
             <AlertDialogDescription>
-              你将错过这次 {squadCompatibilityPercent}% 匹配度的桌友组合，下次等待可能需要更长时间。
+              你确定要放弃吗？系统检测到你与这桌新朋友共有{" "}
+              {totalSquadSparks > 0 ? (
+                <span className="font-semibold text-foreground">{totalSquadSparks} 个</span>
+              ) : (
+                "若干"
+              )}
+              潜在契合点，错过这波缘分可就太可惜啦！
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
