@@ -194,6 +194,7 @@ function AuthenticatedRouter() {
           <Route path="/discover" component={DiscoverPage} />
           {/* Guide page deprecated - kept for backward compatibility, redirects to / */}
           <Route path="/guide" component={GuidePage} />
+          <Route path="/squad-unboxing" component={SquadUnboxingFlow} />
           <Route path="/event-pool/:id/register" component={EventPoolRegistrationPage} />
           <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
           <Route path="/pool-matching/:registrationId" component={MatchingStatusPage} />
@@ -239,6 +240,7 @@ function AuthenticatedRouter() {
           <Route path="/discover" component={DiscoverPage} />
           {/* Guide page deprecated - kept for backward compatibility, redirects to / */}
           <Route path="/guide" component={GuidePage} />
+          <Route path="/squad-unboxing" component={SquadUnboxingFlow} />
           <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
           <Route path="/pool-matching/:registrationId" component={MatchingStatusPage} />
           <Route path="/my-journey" component={MyJourneyPage} />
