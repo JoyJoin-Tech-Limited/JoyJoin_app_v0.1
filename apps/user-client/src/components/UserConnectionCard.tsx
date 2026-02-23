@@ -278,14 +278,6 @@ export default function UserConnectionCard({
                           </div>
                         )}
 
-                        {/* Languages */}
-                        {attendee.languagesComfort && attendee.languagesComfort.length > 0 && (
-                          <div className="flex items-center gap-1.5 text-muted-foreground leading-relaxed">
-                            <Globe className="h-3 w-3" />
-                            <span>{attendee.languagesComfort.join(" · ")}</span>
-                          </div>
-                        )}
-
                         {/* Starred Favorite Interest */}
                         {attendee.interestFavorite && (
                           <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">

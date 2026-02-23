@@ -229,11 +229,6 @@ export default function PoolGroupDetailPage() {
               gender: user?.gender || undefined,
               relationshipStatus: user?.relationshipStatus || undefined,
               children: user?.children || undefined,
-              studyLocale: user?.studyLocale || undefined,
-              overseasRegions: user?.overseasRegions as string[] | undefined,
-              fieldOfStudy: user?.fieldOfStudy || undefined,
-              languages: user?.languagesComfort as string[] | undefined,
-              hometownCountry: user?.hometownCountry || undefined,
               hometownRegionCity: user?.hometownRegionCity || undefined,
               hometownAffinityOptin: user?.hometownAffinityOptin ?? undefined,
             }}

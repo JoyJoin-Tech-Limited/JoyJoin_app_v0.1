@@ -124,10 +124,6 @@ function MemberCard({
       gender: member.gender,
       relationshipStatus: member.relationshipStatus,
       children: member.children,
-      studyLocale: member.studyLocale,
-      overseasRegions: member.overseasRegions,
-      languagesComfort: member.languagesComfort,
-      hometownCountry: member.hometownCountry,
       hometownRegionCity: member.hometownRegionCity,
       hometownAffinityOptin: member.hometownAffinityOptin,
     });

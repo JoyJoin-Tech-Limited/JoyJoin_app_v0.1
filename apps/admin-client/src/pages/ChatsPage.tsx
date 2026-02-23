@@ -468,14 +468,6 @@ export default function ChatsPage() {
                                       )}
                                       {/* DEPRECATED: industry field removed from schema */}
                                     </div>
-                                    
-                                    {/* Languages */}
-                                    {otherUser.languagesComfort && otherUser.languagesComfort.length > 0 && (
-                                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                        <span>🗣</span>
-                                        <span>{otherUser.languagesComfort.join(' · ')}</span>
-                                      </div>
-                                    )}
                                   </div>
                                 </motion.div>
                               )}

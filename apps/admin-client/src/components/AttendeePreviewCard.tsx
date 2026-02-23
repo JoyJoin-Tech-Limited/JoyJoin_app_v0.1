@@ -286,15 +286,6 @@ export default function AttendeePreviewCard({
                   <span>{attendee.hometownRegionCity}</span>
                 </div>
               )}
-
-              {attendee.languagesComfort && attendee.languagesComfort.length > 0 && (
-                <div className="flex items-start gap-1.5">
-                  <Globe className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                  <span className="text-xs text-muted-foreground leading-relaxed">
-                    {attendee.languagesComfort.join(" · ")}
-                  </span>
-                </div>
-              )}
             </div>
 
             {topInterests.length > 0 && (

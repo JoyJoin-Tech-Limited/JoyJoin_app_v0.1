@@ -54,7 +54,6 @@ export interface UserWithProfile {
   archetype: string | null;
   secondaryArchetype: string | null;
   // ❌ REMOVED: interestsTop - now use getUserInterests() to fetch from user_interests table
-  languagesComfort: string[] | null;
   hometown: string | null;  // 家乡（用于同乡亲和力）
   hometownAffinityOptin: boolean;  // 是否启用同乡匹配加分
   
@@ -282,11 +281,11 @@ function calculateInterestScore(user1: UserWithProfile, user2: UserWithProfile):
 
 /**
  * 计算语言沟通兼容性 (0-100)
- * ✅ UPDATED: Only use user profile languagesComfort (single source of truth)
+ * ✅ UPDATED: Uses preferredLanguages from event registration
  */
 function calculateLanguageScore(user1: UserWithProfile, user2: UserWithProfile): number {
-  const langs1 = user1.languagesComfort || []; // ✅ Only from profile
-  const langs2 = user2.languagesComfort || []; // ✅ Only from profile
+  const langs1 = user1.preferredLanguages || [];
+  const langs2 = user2.preferredLanguages || [];
   
   if (langs1.length === 0 || langs2.length === 0) return 70; // 默认假设可以沟通
   
@@ -644,7 +643,6 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       educationLevel: users.educationLevel,
       archetype: users.archetype,
       secondaryArchetype: users.secondaryArchetype,
-      languagesComfort: users.languagesComfort,
       hometown: users.hometownRegionCity,
       hometownAffinityOptin: users.hometownAffinityOptin,
       eventType: eventPools.eventType,
