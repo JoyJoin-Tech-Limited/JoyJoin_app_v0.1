@@ -58,6 +58,7 @@ import NotFound from "@/pages/not-found";
 import LevelUpProvider from "@/components/LevelUpProvider";
 import GuidePage from "@/pages/GuidePage";
 import FinalProfileReviewPage from "@/pages/FinalProfileReviewPage";
+import SquadUnboxingFlow from "@/pages/SquadUnboxingFlow";
 import LoginPromptPage from "@/pages/LoginPromptPage";
 import { LoadingScreen } from "@/components/LoadingScreen";
 
@@ -193,6 +194,7 @@ function AuthenticatedRouter() {
           <Route path="/discover" component={DiscoverPage} />
           {/* Guide page deprecated - kept for backward compatibility, redirects to / */}
           <Route path="/guide" component={GuidePage} />
+          <Route path="/squad-unboxing" component={SquadUnboxingFlow} />
           <Route path="/event-pool/:id/register" component={EventPoolRegistrationPage} />
           <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
           <Route path="/pool-matching/:registrationId" component={MatchingStatusPage} />
@@ -237,6 +239,7 @@ function AuthenticatedRouter() {
           <Route path="/discover" component={DiscoverPage} />
           {/* Guide page deprecated - kept for backward compatibility, redirects to / */}
           <Route path="/guide" component={GuidePage} />
+          <Route path="/squad-unboxing" component={SquadUnboxingFlow} />
           <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
           <Route path="/pool-matching/:registrationId" component={MatchingStatusPage} />
           <Route path="/my-journey" component={MyJourneyPage} />
