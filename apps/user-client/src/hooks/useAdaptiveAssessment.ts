@@ -394,7 +394,11 @@ export function useAdaptiveAssessment() {
         localStorage.removeItem(PRESIGNUP_SESSION_KEY);
         localStorage.removeItem(PRESIGNUP_ANSWERS_KEY);
         // Start fresh assessment
-        await startMutation.mutateAsync({ forceNew: true });
+        try {
+          await startMutation.mutateAsync({ forceNew: true });
+        } catch (error) {
+          console.error('[AdaptiveAssessment] Failed to start fresh assessment after invalid sync count:', error);
+        }
         return;
       }
       
@@ -449,16 +453,24 @@ export function useAdaptiveAssessment() {
         setSessionId(cached.sessionId);
         setPhase(cached.phase);
         // Send sessionId to backend to resume existing session
-        await startMutation.mutateAsync({ 
-          sessionId: cached.sessionId, 
-          preSignupAnswers, 
-          forceNew: false 
-        });
+        try {
+          await startMutation.mutateAsync({ 
+            sessionId: cached.sessionId, 
+            preSignupAnswers, 
+            forceNew: false 
+          });
+        } catch (error) {
+          console.error('[AdaptiveAssessment] Failed to resume cached session:', error);
+        }
         return;
       }
     }
     
-    await startMutation.mutateAsync({ preSignupAnswers, forceNew });
+    try {
+      await startMutation.mutateAsync({ preSignupAnswers, forceNew });
+    } catch (error) {
+      console.error('[AdaptiveAssessment] Failed to start assessment:', error);
+    }
   }, [loadCachedSession, getCachedAnswers, startMutation, clearCache, currentQuestion]);
 
   const startFreshAssessment = useCallback(async () => {
