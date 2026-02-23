@@ -58,6 +58,11 @@ const MOCK_SQUAD: SquadMember[] = [
   },
 ];
 
+// paddingBottom: BottomNav (~64px bar + ~16px safe area) + action zone height (~64px button + 32px text + 16px gap) ≈ 160px
+const CONTAINER_PADDING_BOTTOM = 160;
+// Action zone sits above BottomNav; 96px = ~80px nav height + 16px breathing room
+const ACTION_ZONE_BOTTOM = 96;
+
 export default function SquadUnboxingFlow() {
   const [, setLocation] = useLocation();
   const [flowState, setFlowState] = useState<FlowState>("ready");
@@ -97,7 +102,7 @@ export default function SquadUnboxingFlow() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col" style={{ paddingBottom: 160 }}>
+    <div className="min-h-screen bg-background flex flex-col" style={{ paddingBottom: CONTAINER_PADDING_BOTTOM }}>
       {/* Header */}
       <div className="px-5 pt-12 pb-4">
         <h1 className="text-2xl font-bold text-foreground">你的饭局桌友 🎉</h1>
@@ -215,7 +220,7 @@ export default function SquadUnboxingFlow() {
         {showActionZone && (
           <motion.div
             className="fixed left-0 right-0 px-5 flex flex-col gap-3"
-            style={{ bottom: 96 }}
+            style={{ bottom: ACTION_ZONE_BOTTOM }}
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}

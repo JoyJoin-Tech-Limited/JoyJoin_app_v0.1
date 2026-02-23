@@ -82,7 +82,9 @@ export default function CardDeckReveal({ members, onAllRevealed }: CardDeckRevea
               phase === "shooting"
                 ? { y: 60, x: 0, rotate: 0, opacity: 0.8, scale: 0.7 }
                 : isSelected
+                // Raise selected card slightly higher than the fan; -180 keeps it visible on short screens
                 ? { y: -180, x: 0, rotate: 0, opacity: 1, scale: 1.08 }
+                // Cap at -160 (not -200) so cards don't clip the top of the screen
                 : { y: -160, x: xOffset, rotate: angle, opacity: 1, scale: 1 }
             }
             transition={{
