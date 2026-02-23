@@ -284,6 +284,7 @@ export default function PersonalityTestPageV4() {
     isLoading,
     isSubmitting,
     isSkipping,
+    error,
     startAssessment,
     submitAnswer,
     skipQuestion,
@@ -487,6 +488,30 @@ export default function PersonalityTestPageV4() {
   }
 
 
+
+  if (error && !isLoading && !currentQuestion) {
+    return (
+      <div className="h-screen overflow-hidden bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4 px-6 text-center">
+          <p className="text-muted-foreground">加载题目失败，请检查网络后重试</p>
+          <Button
+            onClick={async () => {
+              try {
+                await startAssessment(false);
+              } catch {
+                toast({
+                  variant: "destructive",
+                  description: "重试失败，请稍后再试",
+                });
+              }
+            }}
+          >
+            重试
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (!currentQuestion) {
     return (
