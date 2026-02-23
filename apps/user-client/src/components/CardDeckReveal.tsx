@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { archetypeConfig } from "@/lib/archetypes";
 import { getArchetypeImage } from "@/lib/archetypeImages";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import type { AttendeeData } from "@/lib/attendeeAnalytics";
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -22,7 +23,15 @@ const JOYJOIN_CARD_BACK = "linear-gradient(135deg, #4C1D95, #7C3AED)";
 
 const CARD_DECK_HEIGHT = 320;
 
-/** Fan positions for up to 6 cards (rotation & x-offset when fanned). */
+/** Width and height of each individual card (px). */
+const CARD_WIDTH = 144;
+const CARD_HEIGHT = 210;
+
+/**
+ * Fan positions for up to 6 cards (rotation & x-offset when fanned).
+ * The component accepts arrays of any size; cards beyond the 6th slot
+ * will share the last fan position and overlap visually.
+ */
 const FAN_CONFIGS: Array<{ rotate: number; x: number }> = [
   { rotate: -20, x: -130 },
   { rotate: -10, x: -70 },
@@ -48,6 +57,7 @@ function MemberCard({ attendee, index, total, isSelected, onSelect }: MemberCard
   const cfg = attendee.archetype ? archetypeConfig[attendee.archetype] : undefined;
   const img = getArchetypeImage(attendee.archetype);
   const gradient = CARD_GRADIENTS[index % CARD_GRADIENTS.length];
+  const prefersReducedMotion = useReducedMotion();
 
   // Pick fan position; clamp to last config when more cards than slots
   const fanIdx = Math.min(index, FAN_CONFIGS.length - 1);
@@ -56,46 +66,74 @@ function MemberCard({ attendee, index, total, isSelected, onSelect }: MemberCard
   // Stacking order: selected card always on top
   const zIndex = isSelected ? 50 : total - index;
 
+  // Respect reduced-motion: skip 3D flip, collapse stagger
+  const animDelay = prefersReducedMotion ? 0 : index * 0.15;
+  const flipTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { delay: animDelay + 0.4, duration: 0.5, ease: "easeInOut" };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onSelect();
+    }
+  };
+
+  const handleKeyUp = (e: React.KeyboardEvent) => {
+    if (e.key === " ") {
+      e.preventDefault();
+      onSelect();
+    }
+  };
+
   return (
     <motion.div
       layoutId={`card-${attendee.userId}`}
-      className="absolute cursor-pointer"
+      className="absolute cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:rounded-2xl"
+      tabIndex={0}
+      role="button"
+      aria-pressed={isSelected}
+      aria-label={`${attendee.displayName}${attendee.archetype ? `，${attendee.archetype}` : ""}`}
       style={{
         zIndex,
         transformStyle: "preserve-3d",
         perspective: 1000,
         bottom: 0,
         left: "50%",
-        marginLeft: "-72px", // half card width
+        marginLeft: -(CARD_WIDTH / 2),
       }}
       // ── Shoot up from centre, fan out, then flip face-up ──
-      initial={{ y: 0, x: 0, rotate: 0, rotateY: 180, opacity: 0 }}
+      initial={{ y: 0, x: 0, rotate: 0, rotateY: prefersReducedMotion ? 0 : 180, opacity: 0 }}
       animate={
         isSelected
-          ? // Selected: come to front, fully visible, no Y offset
-            { y: -180, x: 0, rotate: 0, rotateY: 0, opacity: 1 }
+          ? // Selected: come to front, lift higher, scale up, add glow
+            { y: -200, x: 0, rotate: 0, rotateY: 0, opacity: 1, scale: 1.08 }
           : {
               y: -160,
               x: fan.x,
               rotate: fan.rotate,
               rotateY: 0,
               opacity: 1,
+              scale: 1,
             }
       }
       transition={{
-        duration: 0.6,
-        delay: index * 0.15,
-        rotateY: { delay: index * 0.15 + 0.4, duration: 0.5, ease: "easeInOut" },
+        duration: prefersReducedMotion ? 0.15 : 0.6,
+        delay: animDelay,
+        rotateY: flipTransition,
         ease: "easeOut",
       }}
       onClick={onSelect}
+      onKeyDown={handleKeyDown}
+      onKeyUp={handleKeyUp}
       whileHover={isSelected ? {} : { y: -175, scale: 1.03 }}
+      whileFocus={isSelected ? {} : { y: -175, scale: 1.03 }}
     >
       {/* ── 3D flip container ── */}
       <div
         style={{
-          width: 144,
-          height: 210,
+          width: CARD_WIDTH,
+          height: CARD_HEIGHT,
           transformStyle: "preserve-3d",
           position: "relative",
         }}
@@ -128,7 +166,9 @@ function MemberCard({ attendee, index, total, isSelected, onSelect }: MemberCard
             position: "absolute",
             inset: 0,
             borderRadius: 16,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
+            boxShadow: isSelected
+              ? "0 12px 40px rgba(124,58,237,0.5), 0 0 0 2px rgba(255,255,255,0.6)"
+              : "0 8px 24px rgba(0,0,0,0.25)",
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
@@ -275,6 +315,7 @@ export default function CardDeckReveal({ attendees }: CardDeckRevealProps) {
         display: "flex",
         alignItems: "flex-end",
         justifyContent: "center",
+        overflowX: "clip",
       }}
     >
       {attendees.map((attendee, i) => (
@@ -304,7 +345,7 @@ export default function CardDeckReveal({ attendees }: CardDeckRevealProps) {
             color: "rgba(0,0,0,0.45)",
           }}
         >
-          点击卡片查看详情
+          点击或按 Enter 键查看详情
         </motion.p>
       )}
     </div>
