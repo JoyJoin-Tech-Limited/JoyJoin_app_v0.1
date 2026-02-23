@@ -38,6 +38,8 @@ export interface SquadMember {
 interface CardDeckRevealProps {
   members: SquadMember[];
   currentUser?: UserContext;
+  /** True while the auth user is still being fetched — shows a loading placeholder in the sparks section. */
+  isUserLoading?: boolean;
   /** Called once when all cards have flipped face-up. Wrap in useCallback to avoid spurious re-runs. */
   onAllRevealed?: () => void;
   /** Called each time an individual card flips face-up (for haptic tick). */
@@ -46,24 +48,25 @@ interface CardDeckRevealProps {
 
 // Card dimension constants (keep in sync with DECK_CONTAINER_HEIGHT)
 const CARD_WIDTH = 120;
-const CARD_HEIGHT_COLLAPSED = 200;
-const CARD_HEIGHT_EXPANDED = 300;
-const DECK_CONTAINER_HEIGHT = 320; // gives ~20px breathing room above expanded cards
+const CARD_HEIGHT_COLLAPSED = 180;
+const CARD_HEIGHT_EXPANDED = 240;
+const DECK_CONTAINER_HEIGHT = 260; // expanded + ~20px breathing room
 
 // ── Social Energy Bar ─────────────────────────────────────────────────────────
 function EnergyBar({ level }: { level: number }) {
+  const clampedLevel = Math.min(100, Math.max(0, level));
   const colorClass =
-    level > 80 ? "bg-orange-500" : level > 50 ? "bg-amber-400" : "bg-slate-400";
+    clampedLevel > 80 ? "bg-orange-500" : clampedLevel > 50 ? "bg-amber-400" : "bg-slate-400";
   return (
     <div className="w-full mt-1.5">
       <div className="flex items-center justify-between mb-0.5">
         <span className="text-[9px] text-muted-foreground">社交能量</span>
-        <span className="text-[9px] font-medium text-foreground">{level}</span>
+        <span className="text-[9px] font-medium text-foreground">{clampedLevel}</span>
       </div>
       <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full ${colorClass} transition-all`}
-          style={{ width: `${level}%` }}
+          style={{ width: `${clampedLevel}%` }}
         />
       </div>
     </div>
@@ -76,6 +79,7 @@ interface MemberCardProps {
   index: number;
   total: number;
   currentUser?: UserContext;
+  isUserLoading?: boolean;
   isFlipped: boolean;
   isSelected: boolean;
   phase: "shooting" | "fanned";
@@ -94,6 +98,7 @@ function MemberCard({
   index,
   total,
   currentUser,
+  isUserLoading,
   isFlipped,
   isSelected,
   phase,
@@ -292,7 +297,18 @@ function MemberCard({
               }
             >
               {/* The Magic Connection — Our Sparks (契合点) */}
-              {sortedSparks.length > 0 ? (
+              {isUserLoading ? (
+                // Loading placeholder while auth user is being fetched
+                <div className="text-center px-1 py-2 rounded-lg border border-dashed border-border/40">
+                  <motion.p
+                    className="text-[9px] text-muted-foreground"
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1.2, repeat: Infinity }}
+                  >
+                    正在计算契合点…
+                  </motion.p>
+                </div>
+              ) : sortedSparks.length > 0 ? (
                 <div className="space-y-1">
                   {sortedSparks.slice(0, 5).map((spark, i) => (
                     <div
@@ -308,6 +324,7 @@ function MemberCard({
                       {spark.rarity === "epic" && (
                         <motion.span
                           className="text-amber-500 text-[10px] shrink-0"
+                          aria-hidden="true"
                           animate={{ opacity: [0.6, 1, 0.6] }}
                           transition={{ duration: 1.5, repeat: Infinity }}
                         >
@@ -315,7 +332,7 @@ function MemberCard({
                         </motion.span>
                       )}
                       {spark.rarity === "rare" && (
-                        <span className="text-violet-500 text-[10px] shrink-0">💫</span>
+                        <span className="text-violet-500 text-[10px] shrink-0" aria-hidden="true">💫</span>
                       )}
                       <span
                         className={`text-[9px] font-medium leading-tight ${
@@ -360,7 +377,7 @@ function MemberCard({
               {/* Core Contribution */}
               {config?.coreContributions && (
                 <p className="text-[9px] text-center text-foreground/70 font-medium">
-                  🎯 {config.coreContributions}
+                  <span aria-hidden="true">🎯</span> {config.coreContributions}
                 </p>
               )}
 
@@ -382,6 +399,7 @@ function MemberCard({
 export default function CardDeckReveal({
   members,
   currentUser,
+  isUserLoading,
   onAllRevealed,
   onCardFlipped,
 }: CardDeckRevealProps) {
@@ -482,6 +500,7 @@ export default function CardDeckReveal({
           index={idx}
           total={members.length}
           currentUser={currentUser}
+          isUserLoading={isUserLoading}
           isFlipped={flippedCards.has(idx)}
           isSelected={selectedIndex === idx}
           phase={phase}
