@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
-import { useLocation } from "wouter";
+import { useState, useCallback } from "react";
+import { useLocation, useParams } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BottomNav from "@/components/BottomNav";
 import CardDeckReveal from "@/components/CardDeckReveal";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import boxImg from "@/assets/box_logo_archetypes.png";
 import type { AttendeeData } from "@/lib/attendeeAnalytics";
 
@@ -12,7 +13,8 @@ import type { AttendeeData } from "@/lib/attendeeAnalytics";
 // Layout constants
 // ──────────────────────────────────────────────────────────────────────────────
 
-/** Height of the BottomNav bar (h-16 = 64px) + protrusion clearance. */
+/** Approximate vertical footprint of the BottomNav (h-16 = 64px) plus
+ *  the protrusion of the center button (~32px above the bar). */
 const BOTTOM_NAV_HEIGHT = 96;
 /** Extra padding so page content clears both BottomNav and the Action Zone. */
 const BOTTOM_SPACING = BOTTOM_NAV_HEIGHT + 64;
@@ -23,11 +25,15 @@ const BOTTOM_SPACING = BOTTOM_NAV_HEIGHT + 64;
 
 type FlowState = "ready" | "shaking" | "revealed";
 
-/** Placeholder until a real match score is passed via props / API. */
+/**
+ * TODO: Replace with real squad match score from props or API before production.
+ * DO NOT SHIP: This hardcoded value always shows "92%" and will mislead users
+ * if not wired to the actual matching algorithm output.
+ */
 const PLACEHOLDER_MATCH_SCORE = 92;
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Mock data (replaced when real API is wired up)
+// Mock data (TODO: replace with real API response from /api/pool-groups/:id)
 // ──────────────────────────────────────────────────────────────────────────────
 
 const MOCK_ATTENDEES: AttendeeData[] = [
@@ -36,30 +42,50 @@ const MOCK_ATTENDEES: AttendeeData[] = [
     displayName: "小明",
     archetype: "开心柯基",
     topInterests: ["旅行", "摄影", "咖啡"],
+    age: 27,
+    industry: "科技",
+    educationLevel: "本科",
+    gender: "male",
   },
   {
     userId: "u2",
     displayName: "晓雯",
     archetype: "太阳鸡",
     topInterests: ["读书", "美食", "音乐"],
+    age: 25,
+    industry: "设计",
+    educationLevel: "硕士",
+    gender: "female",
   },
   {
     userId: "u3",
     displayName: "阿哲",
     archetype: "机智狐",
     topInterests: ["科技", "健身", "游戏"],
+    age: 29,
+    industry: "互联网",
+    educationLevel: "本科",
+    gender: "male",
   },
   {
     userId: "u4",
     displayName: "小玲",
     archetype: "暖心熊",
     topInterests: ["电影", "绘画", "瑜伽"],
+    age: 26,
+    industry: "教育",
+    educationLevel: "硕士",
+    gender: "female",
   },
   {
     userId: "u5",
     displayName: "大壮",
     archetype: "织网蛛",
     topInterests: ["商业", "篮球", "烹饪"],
+    age: 30,
+    industry: "金融",
+    educationLevel: "本科",
+    gender: "male",
   },
 ];
 
@@ -135,10 +161,16 @@ function SkipModal({ onConfirm, onCancel }: SkipModalProps) {
 // ──────────────────────────────────────────────────────────────────────────────
 
 export default function SquadUnboxingFlow() {
+  const { groupId } = useParams<{ groupId: string }>();
   const [, setLocation] = useLocation();
   const [flowState, setFlowState] = useState<FlowState>("ready");
   const [showActions, setShowActions] = useState(false);
   const [showSkipModal, setShowSkipModal] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+
+  // Durations collapse to near-zero when reduced motion is preferred
+  const shakeDuration = prefersReducedMotion ? 0 : 1500;
+  const cardAnimDuration = prefersReducedMotion ? 0 : 2500;
 
   // ── Transition: ready → shaking → revealed ──
   const handleOpenBox = useCallback(() => {
@@ -146,20 +178,20 @@ export default function SquadUnboxingFlow() {
     setTimeout(() => {
       setFlowState("revealed");
       // Show action zone after cards finish animating
-      setTimeout(() => setShowActions(true), 2500);
-    }, 1500);
-  }, []);
+      setTimeout(() => setShowActions(true), cardAnimDuration);
+    }, shakeDuration);
+  }, [shakeDuration, cardAnimDuration]);
 
   const handleConfirmAttendance = useCallback(() => {
-    // TODO: fire API call to confirm attendance
+    // TODO: fire POST /api/pool-groups/${groupId}/confirm-attendance before navigating
     setLocation("/");
-  }, [setLocation]);
+  }, [setLocation, groupId]);
 
   const handleSkipConfirm = useCallback(() => {
     setShowSkipModal(false);
-    // TODO: fire API call to decline
+    // TODO: fire POST /api/pool-groups/${groupId}/decline before navigating
     setLocation("/");
-  }, [setLocation]);
+  }, [setLocation, groupId]);
 
   // ── Box shaking animation variants ──
   const boxVariants = {
@@ -242,11 +274,7 @@ export default function SquadUnboxingFlow() {
                 >
                   <Button
                     size="lg"
-                    className="h-14 px-8 text-base font-bold rounded-2xl shadow-lg"
-                    style={{
-                      background: "linear-gradient(135deg, #4C1D95, #7C3AED)",
-                      color: "white",
-                    }}
+                    className="h-14 px-8 text-base font-bold rounded-2xl shadow-lg bg-gradient-to-br from-purple-900 to-violet-500 text-white hover:from-purple-800 hover:to-violet-400"
                     onClick={handleOpenBox}
                   >
                     <Sparkles className="mr-2 h-5 w-5" />
@@ -306,11 +334,7 @@ export default function SquadUnboxingFlow() {
           >
             <Button
               size="lg"
-              className="w-full max-w-sm h-14 text-base font-bold rounded-2xl shadow-lg"
-              style={{
-                background: "linear-gradient(135deg, #4C1D95, #7C3AED)",
-                color: "white",
-              }}
+              className="w-full max-w-sm h-14 text-base font-bold rounded-2xl shadow-lg bg-gradient-to-br from-purple-900 to-violet-500 text-white hover:from-purple-800 hover:to-violet-400"
               onClick={handleConfirmAttendance}
             >
               确认参与 🎉
