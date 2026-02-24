@@ -122,6 +122,9 @@ export default {
         "shimmer-slow": "shimmer-slow 4s ease-in-out infinite",
         float: "float 6s ease-in-out infinite",
       },
+      zIndex: {
+        60: "60",
+      },
     },
   },
   plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
