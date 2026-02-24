@@ -13,13 +13,14 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { motion, AnimatePresence, useAnimation } from "framer-motion";
+import { motion, AnimatePresence, useAnimation, LayoutGroup } from "framer-motion";
 import { Sparkles, ChevronDown, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SwipeToUnlock from "@/components/SwipeToUnlock";
 import CardDeckReveal, { type SquadMember } from "@/components/CardDeckReveal";
 import { archetypeAvatars, archetypeGradients } from "@/lib/archetypeAvatars";
 import type { UserContext } from "@/lib/attendeeAnalytics";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 interface MatchSuccessSheetProps {
   members: SquadMember[];
@@ -36,9 +37,10 @@ interface FloatingAvatarProps {
   index: number;
   total: number;
   phase: Phase;
+  prefersReducedMotion: boolean;
 }
 
-function FloatingAvatar({ archetype, index, total, phase }: FloatingAvatarProps) {
+function FloatingAvatar({ archetype, index, total, phase, prefersReducedMotion }: FloatingAvatarProps) {
   const img = archetypeAvatars[archetype];
   const gradient = archetypeGradients[archetype] || "from-violet-500 to-purple-500";
   const controls = useAnimation();
@@ -48,9 +50,9 @@ function FloatingAvatar({ archetype, index, total, phase }: FloatingAvatarProps)
   const baseX = -spread / 2 + (index / Math.max(total - 1, 1)) * spread;
   const baseY = -60 - (index % 2) * 30;
 
-  // Slow infinite float in intro phase
+  // Slow infinite float in intro phase (skip for reduced motion)
   useEffect(() => {
-    if (phase === "intro") {
+    if (phase === "intro" && !prefersReducedMotion) {
       controls.start({
         y: [baseY, baseY - 14, baseY],
         transition: {
@@ -61,7 +63,7 @@ function FloatingAvatar({ archetype, index, total, phase }: FloatingAvatarProps)
         },
       });
     }
-  }, [phase, baseY, controls, index]);
+  }, [phase, baseY, controls, index, prefersReducedMotion]);
 
   // Fly to center when merging
   useEffect(() => {
@@ -82,8 +84,9 @@ function FloatingAvatar({ archetype, index, total, phase }: FloatingAvatarProps)
 
   return (
     <motion.div
+      layoutId={`floating-avatar-${index}`}
       className="absolute"
-      style={{ x: baseX, y: baseY }}
+      initial={{ x: baseX, y: baseY }}
       animate={controls}
     >
       <div
@@ -111,8 +114,19 @@ export default function MatchSuccessSheet({
   isUserLoading,
   onDismiss,
 }: MatchSuccessSheetProps) {
-  const [phase, setPhase] = useState<Phase>("intro");
-  const [showDeck, setShowDeck] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+
+  // Skip intro/merging phases for reduced-motion users
+  const [phase, setPhase] = useState<Phase>(prefersReducedMotion ? "deck" : "intro");
+  const [showDeck, setShowDeck] = useState(!!prefersReducedMotion);
+
+  // Skip button in intro phase after 3.5 s of inactivity
+  const [showSkip, setShowSkip] = useState(false);
+  useEffect(() => {
+    if (phase !== "intro") return;
+    const t = setTimeout(() => setShowSkip(true), 3500);
+    return () => clearTimeout(t);
+  }, [phase]);
 
   const handleUnlock = useCallback(() => {
     setPhase("merging");
@@ -136,7 +150,7 @@ export default function MatchSuccessSheet({
 
   return (
     <AnimatePresence>
-      {/* Darkened backdrop – z-40 */}
+      {/* Darkened backdrop – z-40; no dismiss on tap (prevents accidental exits) */}
       <motion.div
         key="backdrop"
         className="fixed inset-0 z-40"
@@ -144,7 +158,6 @@ export default function MatchSuccessSheet({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={phase === "deck" ? onDismiss : undefined}
       />
 
       {/* Volumetric glass card – z-50 */}
@@ -194,44 +207,114 @@ export default function MatchSuccessSheet({
           </button>
         </div>
 
-        {/* Content area */}
-        <div className="px-5 pb-8" style={{ minHeight: 380 }}>
-          <AnimatePresence mode="wait">
-            {/* ── INTRO PHASE ── */}
-            {phase === "intro" && (
-              <motion.div
-                key="intro"
-                className="flex flex-col items-center gap-6"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.3 }}
-              >
-                {/* Avatar arc + map background */}
-                <div className="relative w-full flex items-center justify-center" style={{ height: 200 }}>
-                  {/* Blurred map placeholder */}
-                  <div
-                    className="absolute inset-0 rounded-2xl overflow-hidden"
-                    style={{
-                      background:
-                        "radial-gradient(ellipse at 60% 40%, rgba(139,92,246,0.25), rgba(30,20,60,0.8))",
-                    }}
-                  >
-                    {/* Grid lines */}
-                    <svg className="absolute inset-0 w-full h-full opacity-10">
-                      <defs>
-                        <pattern id="mgrid" width="24" height="24" patternUnits="userSpaceOnUse">
-                          <path d="M 24 0 L 0 0 0 24" fill="none" stroke="white" strokeWidth="0.5" />
-                        </pattern>
-                      </defs>
-                      <rect width="100%" height="100%" fill="url(#mgrid)" />
-                    </svg>
-                    {/* Blur overlay for mystery */}
-                    <div className="absolute inset-0 backdrop-blur-sm bg-black/20 rounded-2xl" />
+        {/* Content area – safe-area-inset-bottom aware */}
+        <div
+          className="px-5"
+          style={{
+            paddingBottom: "max(env(safe-area-inset-bottom, 0px) + 16px, 32px)",
+            minHeight: 380,
+          }}
+        >
+          <LayoutGroup>
+            <AnimatePresence mode="wait">
+              {/* ── INTRO PHASE ── */}
+              {phase === "intro" && (
+                <motion.div
+                  key="intro"
+                  className="relative flex flex-col items-center gap-6"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {/* Skip button – appears after 3.5 s */}
+                  <AnimatePresence>
+                    {showSkip && (
+                      <motion.button
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={onDismiss}
+                        className="absolute top-0 right-0 text-xs text-white/40 hover:text-white/70 px-2 py-1"
+                      >
+                        跳过 →
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Avatar arc + map background */}
+                  <div className="relative w-full flex items-center justify-center" style={{ height: 200 }}>
+                    {/* Blurred map placeholder */}
+                    <div
+                      className="absolute inset-0 rounded-2xl overflow-hidden"
+                      style={{
+                        background:
+                          "radial-gradient(ellipse at 60% 40%, rgba(139,92,246,0.25), rgba(30,20,60,0.8))",
+                      }}
+                    >
+                      {/* Grid lines */}
+                      <svg className="absolute inset-0 w-full h-full opacity-10">
+                        <defs>
+                          <pattern id="mgrid" width="24" height="24" patternUnits="userSpaceOnUse">
+                            <path d="M 24 0 L 0 0 0 24" fill="none" stroke="white" strokeWidth="0.5" />
+                          </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#mgrid)" />
+                      </svg>
+                      {/* Blur overlay for mystery */}
+                      <div className="absolute inset-0 backdrop-blur-sm bg-black/20 rounded-2xl" />
+                    </div>
+
+                    {/* Floating avatars */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {archetypes.slice(0, 5).map((archetype, i) => (
+                        <FloatingAvatar
+                          key={i}
+                          archetype={archetype}
+                          index={i}
+                          total={Math.min(archetypes.length, 5)}
+                          phase={phase}
+                          prefersReducedMotion={prefersReducedMotion}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Member count badge */}
+                    <div
+                      className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1 rounded-full"
+                      style={{
+                        background: "rgba(139,92,246,0.3)",
+                        border: "1px solid rgba(139,92,246,0.5)",
+                        backdropFilter: "blur(8px)",
+                      }}
+                    >
+                      <Users className="w-3.5 h-3.5 text-violet-300" />
+                      <span className="text-xs text-white font-medium">{members.length} 位伙伴</span>
+                    </div>
                   </div>
 
-                  {/* Floating avatars */}
-                  <div className="absolute inset-0 flex items-center justify-center">
+                  {/* Copy */}
+                  <p className="text-center text-white/70 text-sm px-4">
+                    小悦已经为你精心匹配了 {members.length} 位志同道合的伙伴 ✨
+                  </p>
+
+                  {/* Swipe-to-unlock slider */}
+                  <SwipeToUnlock onUnlock={handleUnlock} />
+                </motion.div>
+              )}
+
+              {/* ── MERGING PHASE ── */}
+              {phase === "merging" && (
+                <motion.div
+                  key="merging"
+                  className="flex flex-col items-center justify-center gap-6"
+                  style={{ height: 380 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  {/* Avatars fly to center from their intro positions */}
+                  <div className="relative flex items-center justify-center" style={{ height: 200 }}>
                     {archetypes.slice(0, 5).map((archetype, i) => (
                       <FloatingAvatar
                         key={i}
@@ -239,114 +322,91 @@ export default function MatchSuccessSheet({
                         index={i}
                         total={Math.min(archetypes.length, 5)}
                         phase={phase}
+                        prefersReducedMotion={prefersReducedMotion}
                       />
                     ))}
-                  </div>
 
-                  {/* Member count badge */}
-                  <div
-                    className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1 rounded-full"
-                    style={{
-                      background: "rgba(139,92,246,0.3)",
-                      border: "1px solid rgba(139,92,246,0.5)",
-                      backdropFilter: "blur(8px)",
-                    }}
-                  >
-                    <Users className="w-3.5 h-3.5 text-violet-300" />
-                    <span className="text-xs text-white font-medium">{members.length} 位伙伴</span>
-                  </div>
-                </div>
-
-                {/* Copy */}
-                <p className="text-center text-white/70 text-sm px-4">
-                  小悦已经为你精心匹配了 {members.length} 位志同道合的伙伴 ✨
-                </p>
-
-                {/* Swipe-to-unlock slider */}
-                <SwipeToUnlock onUnlock={handleUnlock} />
-              </motion.div>
-            )}
-
-            {/* ── MERGING PHASE ── */}
-            {phase === "merging" && (
-              <motion.div
-                key="merging"
-                className="flex flex-col items-center justify-center gap-6"
-                style={{ height: 380 }}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                {/* Avatars fly to center from their intro positions */}
-                <div className="relative flex items-center justify-center" style={{ height: 200 }}>
-                  {archetypes.slice(0, 5).map((archetype, i) => (
-                    <FloatingAvatar
-                      key={i}
-                      archetype={archetype}
-                      index={i}
-                      total={Math.min(archetypes.length, 5)}
-                      phase={phase}
+                    {/* Merge flash */}
+                    <motion.div
+                      className="absolute inset-0 rounded-full pointer-events-none"
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={{ opacity: [0, 0.8, 0], scale: [0, 1.5, 2] }}
+                      transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
+                      style={{ background: "radial-gradient(circle, rgba(139,92,246,0.8), transparent)" }}
                     />
-                  ))}
+                  </div>
 
-                  {/* Merge flash */}
-                  <motion.div
-                    className="absolute inset-0 rounded-full pointer-events-none"
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: [0, 0.8, 0], scale: [0, 1.5, 2] }}
-                    transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
-                    style={{ background: "radial-gradient(circle, rgba(139,92,246,0.8), transparent)" }}
-                  />
-                </div>
+                  {/* Theatrical merging text with animated dots */}
+                  <div className="flex flex-col items-center gap-3">
+                    <motion.p
+                      className="text-white font-bold text-base tracking-wide"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      ⚡ 正在为你组建专属小队
+                    </motion.p>
+                    <div className="flex items-center gap-1">
+                      {[0, 1, 2].map((i) => (
+                        <motion.span
+                          key={i}
+                          className="w-1.5 h-1.5 rounded-full bg-violet-400"
+                          animate={{ scale: [1, 1.5, 1], opacity: [0.4, 1, 0.4] }}
+                          transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.2 }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
 
-                <motion.p
-                  className="text-white/70 text-sm"
-                  animate={{ opacity: [0.4, 1, 0.4] }}
-                  transition={{ duration: 1.2, repeat: Infinity }}
+              {/* ── DECK PHASE ── */}
+              {phase === "deck" && showDeck && (
+                <motion.div
+                  key="deck"
+                  className="flex flex-col gap-4"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
                 >
-                  正在组队...
-                </motion.p>
-              </motion.div>
-            )}
+                  <p className="text-white/60 text-xs text-center">点击卡片翻转查看契合点</p>
 
-            {/* ── DECK PHASE ── */}
-            {phase === "deck" && showDeck && (
-              <motion.div
-                key="deck"
-                className="flex flex-col gap-4"
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
-              >
-                <p className="text-white/60 text-xs text-center">点击卡片翻转查看契合点</p>
-
-                {/* 3-D Card Deck */}
-                <CardDeckReveal
-                  members={members}
-                  currentUser={currentUser}
-                  isUserLoading={isUserLoading}
-                  onCardFlipped={() => {
-                    if (navigator.vibrate) navigator.vibrate(15);
-                  }}
-                />
-
-                {/* CTA buttons */}
-                <div className="flex flex-col gap-2 mt-2">
-                  <Button
-                    className="w-full font-semibold"
-                    style={{
-                      background: "linear-gradient(135deg, #7c3aed, #a855f7)",
+                  {/* 3-D Card Deck */}
+                  <CardDeckReveal
+                    members={members}
+                    currentUser={currentUser}
+                    isUserLoading={isUserLoading}
+                    onCardFlipped={() => {
+                      if (navigator.vibrate) navigator.vibrate(15);
                     }}
-                    onClick={onDismiss}
-                    data-testid="button-meet-tablemates"
-                  >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    开始认识伙伴！
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  />
+
+                  {/* CTA buttons */}
+                  <div className="flex flex-col gap-2 mt-2">
+                    <Button
+                      className="w-full font-semibold"
+                      style={{
+                        background: "linear-gradient(135deg, #7c3aed, #a855f7)",
+                      }}
+                      onClick={onDismiss}
+                      data-testid="button-meet-tablemates"
+                    >
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      开始认识伙伴！
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full text-white/50 hover:text-white/80 text-sm"
+                      onClick={onDismiss}
+                      data-testid="button-dismiss-later"
+                    >
+                      稍后再说
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </LayoutGroup>
         </div>
       </motion.div>
     </AnimatePresence>

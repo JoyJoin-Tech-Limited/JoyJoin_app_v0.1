@@ -13,6 +13,9 @@ export default {
         md: ".375rem",
         sm: ".1875rem",
       },
+      padding: {
+        safe: "env(safe-area-inset-bottom, 16px)",
+      },
       colors: {
         background: "hsl(var(--background) / <alpha-value>)",
         foreground: "hsl(var(--foreground) / <alpha-value>)",
