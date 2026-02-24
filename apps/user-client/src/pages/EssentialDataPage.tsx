@@ -557,29 +557,31 @@ export default function EssentialDataPage() {
                 <span className="sr-only">
                   第 {currentStep + 1} 步 / 共 {TOTAL_STEPS} 步
                 </span>
-                第{" "}
-                {/* Enhancement 5: Animated step number ticker */}
-                <span className="relative overflow-hidden h-5 inline-flex items-center" aria-hidden="true">
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    <motion.span
-                      key={currentStep}
-                      initial={prefersReducedMotion ? { opacity: 0 } : {
-                        y: directionRef.current > 0 ? 16 : -16,
-                        opacity: 0,
-                      }}
-                      animate={{ y: 0, opacity: 1 }}
-                      exit={prefersReducedMotion ? { opacity: 0 } : {
-                        y: directionRef.current > 0 ? -16 : 16,
-                        opacity: 0,
-                      }}
-                      transition={{ duration: 0.2, ease: "easeInOut" }}
-                      className="inline-block tabular-nums"
-                    >
-                      {currentStep + 1}
-                    </motion.span>
-                  </AnimatePresence>
+                {/* Visible step number ticker hidden — progress bar communicates progress visually */}
+                <span className="hidden">
+                  第{" "}
+                  <span className="relative overflow-hidden h-5 inline-flex items-center">
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      <motion.span
+                        key={currentStep}
+                        initial={prefersReducedMotion ? { opacity: 0 } : {
+                          y: directionRef.current > 0 ? 16 : -16,
+                          opacity: 0,
+                        }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={prefersReducedMotion ? { opacity: 0 } : {
+                          y: directionRef.current > 0 ? -16 : 16,
+                          opacity: 0,
+                        }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        className="inline-block tabular-nums"
+                      >
+                        {currentStep + 1}
+                      </motion.span>
+                    </AnimatePresence>
+                  </span>
+                  {" "}步 / 共 {TOTAL_STEPS} 步
                 </span>
-                {" "}步 / 共 {TOTAL_STEPS} 步
               </span>
               <span className="text-primary font-semibold">{Math.round(progress)}%</span>
             </div>
@@ -1133,7 +1135,7 @@ export default function EssentialDataPage() {
       >
         <div className="max-w-md mx-auto">
           <Button 
-            className="w-full h-12 rounded-xl text-base font-bold shadow-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 transition-all duration-200 border-0"
+            className="w-full h-12 rounded-xl text-base font-bold shadow-lg bg-gradient-to-r from-[#FF6B9D] to-[#A86BFF] hover:from-[#e55f8e] hover:to-[#9257e6] transition-all duration-200 border-0"
             onClick={handleNext}
             disabled={!canProceed() || saveMutation.isPending}
             data-testid="button-next"

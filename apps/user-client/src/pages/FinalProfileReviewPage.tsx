@@ -1,13 +1,16 @@
 /**
  * FinalProfileReviewPage - Magical profile reveal experience
- * 
+ *
  * Two phases:
- * 1. Analyzing: Spiral wave animation with fade-in text (shown until data loads)
+ * 1. Analyzing: Spiral wave animation with fade-in text (min 2.5s guaranteed)
  * 2. Complete: Profile portrait card with stagger animation
- * 
- * Phase 0: Fix #5 - Loading states for all data dependencies
+ *
+ * Fix (2026-02-24): Added minTimePassed guard to prevent instant phase
+ * transition when React Query cache is warm. The "analyzing" reveal must
+ * always play for at least 2500ms regardless of data load speed.
  */
 
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,12 +25,24 @@ import type { AuthUser } from "@/hooks/useAuth";
 
 type Phase = "analyzing" | "complete";
 
+// Minimum duration the "analyzing" phase must be shown (ms).
+// Prevents instant skip when React Query cache is already warm.
+const MIN_ANALYZING_MS = 2500;
+
 export default function FinalProfileReviewPage() {
   const [, setLocation] = useLocation();
   const analytics = useOnboardingAnalytics('profile-review'); // Phase 2: Analytics
   const { toast } = useToast();
 
-  // Phase 0: Fix #5 - Wait for all data to load before showing complete phase
+  // Minimum time guard – ensures the reveal animation always plays
+  const [minTimePassed, setMinTimePassed] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMinTimePassed(true), MIN_ANALYZING_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Data dependencies
   const { data: user } = useQuery<any>({ 
     queryKey: ["/api/auth/user"],
   });
@@ -37,8 +52,11 @@ export default function FinalProfileReviewPage() {
     enabled: !!user?.hasCompletedInterestsCarousel,
   });
 
-  // Transition to complete phase immediately when data is ready (no artificial delay)
-  const phase: Phase = (!interestsLoading && interests && user) ? "complete" : "analyzing";
+  // Only transition when BOTH min time has passed AND data is ready
+  const phase: Phase =
+    minTimePassed && !interestsLoading && interests && user
+      ? "complete"
+      : "analyzing";
 
   const handleContinue = async () => {
     // Phase 2: Track completion
@@ -105,6 +123,16 @@ export default function FinalProfileReviewPage() {
             >
               分析性格特质 • 兴趣偏好 • 社交风格
             </motion.p>
+
+            {/* Subtle hint message to fill the 2.5s wait */}
+            <motion.p
+              className="text-xs text-muted-foreground/60 text-center px-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.6, duration: 0.5 }}
+            >
+              综合你的测评答案和兴趣选择，正在计算最适合你的社交场景...
+            </motion.p>
           </motion.div>
         ) : (
           <motion.div
@@ -128,7 +156,7 @@ export default function FinalProfileReviewPage() {
             >
               <Button
                 size="lg"
-                className="w-full max-w-md mx-auto h-14 text-lg rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 flex"
+                className="w-full max-w-md mx-auto h-14 text-lg rounded-2xl bg-gradient-to-r from-[#FF6B9D] to-[#A86BFF] hover:from-[#e55f8e] hover:to-[#9257e6] flex"
                 onClick={handleContinue}
               >
                 继续

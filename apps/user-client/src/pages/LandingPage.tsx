@@ -11,10 +11,11 @@
  * - Legal footer links
  * 
  * Route: /
- * Updated: 2026-02-12 (Route Consolidation)
+ * Updated: 2026-02-24 (Entrance animation + gradient consistency fix)
  */
 
 import { useLocation } from "wouter";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import logoImage from "@/assets/box_logo_archetypes.png";
 
@@ -61,15 +62,22 @@ export default function LandingPage() {
     <main 
       className="min-h-screen bg-gradient-to-b from-[#FFF5F7] via-[#FFF0F5] to-[#FFE4E1] flex flex-col items-center justify-between overflow-hidden px-6 pt-4 pb-8"
     >
-      {/* Top section: Photo tiles */}
+      {/* Top section: Photo tiles — staggered entrance */}
       <section className="flex-none pt-6 sm:pt-8" aria-label="精选活动照片">
         <div className="max-w-sm mx-auto">
           {/* 2x2 grid of tilted photo tiles */}
           <div className="grid grid-cols-2 gap-3">
             {landingImages.map((image, index) => (
-              <div
+              <motion.div
                 key={index}
                 className="relative rounded-2xl overflow-hidden shadow-lg aspect-[4/5] bg-white p-1"
+                initial={{ opacity: 0, y: 24, rotate: image.rotation * 0.5 }}
+                animate={{ opacity: 1, y: 0, rotate: 0 }}
+                transition={{
+                  duration: 0.5,
+                  delay: 0.1 + index * 0.08,
+                  ease: [0.34, 1.2, 0.64, 1],
+                }}
               >
                 <div
                   className="w-full h-full transition-transform duration-200 hover:scale-[1.02]"
@@ -85,18 +93,35 @@ export default function LandingPage() {
                     onError={handleImageError}
                   />
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
       {/* Middle section: Logo, title, tags - takes remaining space */}
-      <section className="flex-1 flex flex-col justify-center pt-4" aria-label="品牌介绍">
+      <motion.section
+        className="flex-1 flex flex-col justify-center pt-4"
+        aria-label="品牌介绍"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.42, ease: "easeOut" }}
+      >
         <div className="max-w-sm mx-auto w-full text-center">
           {/* Logo with floating animation and glow effect */}
-          <div className="w-24 h-24 relative animate-float mx-auto mb-4">
-            <div className="absolute inset-0 bg-white/40 backdrop-blur-sm rounded-full blur-xl transform scale-150"></div>
+          <motion.div
+            className="w-24 h-24 relative mx-auto mb-4"
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{
+              duration: 0.6,
+              delay: 0.32,
+              type: "spring",
+              stiffness: 180,
+              damping: 14,
+            }}
+          >
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-sm rounded-full blur-xl transform scale-150 animate-float" />
             <div className="relative w-full h-full flex items-center justify-center">
               <img 
                 src={logoImage} 
@@ -104,7 +129,7 @@ export default function LandingPage() {
                 className="h-20 w-auto object-contain drop-shadow-xl"
               />
             </div>
-          </div>
+          </motion.div>
 
           {/* Brand title with gradient */}
           <h1 
@@ -116,30 +141,40 @@ export default function LandingPage() {
 
           {/* Feature Icons */}
           <div className="flex items-center justify-center space-x-6 w-full px-4 mt-4">
-            <div className="text-purple-900/70 font-medium text-sm text-center">
-              <span className="block mb-1 opacity-80 text-lg">🧠</span>
-              氛围测试
-            </div>
-            <div className="text-purple-900/70 font-medium text-sm text-center">
-              <span className="block mb-1 opacity-80 text-lg">🎯</span>
-              算法匹配
-            </div>
-            <div className="text-purple-900/70 font-medium text-sm text-center">
-              <span className="block mb-1 opacity-80 text-lg">👥</span>
-              4-6人局
-            </div>
+            {[
+              { icon: "🧠", label: "氛围测试" },
+              { icon: "🎯", label: "算法匹配" },
+              { icon: "👥", label: "4-6人局" },
+            ].map((tag, i) => (
+              <motion.div
+                key={tag.label}
+                className="text-purple-900/70 font-medium text-sm text-center"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.52 + i * 0.07 }}
+              >
+                <span className="block mb-1 opacity-80 text-lg">{tag.icon}</span>
+                {tag.label}
+              </motion.div>
+            ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Bottom section: CTAs and footer */}
-      <section className="flex-none pb-6 sm:pb-8" aria-label="行动按钮">
+      <motion.section
+        className="flex-none pb-6 sm:pb-8"
+        aria-label="行动按钮"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: 0.65, ease: "easeOut" }}
+      >
         <div className="max-w-sm mx-auto space-y-3">
-          {/* Primary CTA */}
+          {/* Primary CTA — unified gradient from-[#FF6B9D] to-[#A86BFF] */}
           <Button
             onClick={handlePrimaryCTA}
             size="lg"
-            className="w-full h-14 bg-gradient-to-r from-[#FF1493] to-[#FF69B4] hover:from-[#E6007E] hover:to-[#FF1493] text-white text-lg font-semibold shadow-lg transition-all duration-200 motion-reduce:transition-none motion-reduce:active:scale-100 active:scale-[0.98] border-0"
+            className="w-full h-14 bg-gradient-to-r from-[#FF6B9D] to-[#A86BFF] hover:from-[#e55f8e] hover:to-[#9257e6] text-white text-lg font-semibold shadow-lg transition-all duration-200 motion-reduce:transition-none motion-reduce:active:scale-100 active:scale-[0.98] border-0"
           >
             看看我会遇见谁
           </Button>
@@ -178,7 +213,7 @@ export default function LandingPage() {
             </p>
           </div>
         </div>
-      </section>
+      </motion.section>
     </main>
   );
 }
