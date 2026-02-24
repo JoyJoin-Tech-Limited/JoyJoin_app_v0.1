@@ -1,0 +1,56 @@
+.wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  touch-action: none;
+  pointer-events: none;
+  user-select: none;
+}
+
+.svg {
+  width: min(280px, 70vw);
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 0 8px #a259c6) drop-shadow(0 0 18px #8B5CF6);
+  will-change: filter;
+}
+
+.line {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 400;
+  stroke-dashoffset: 400;
+  animation: drawLine 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.fadeOut {
+  animation: fadeOut 260ms ease-in forwards;
+}
+
+@keyframes drawLine {
+  0%   { stroke-dashoffset: 400; opacity: 0.4; }
+  30%  { opacity: 1; }
+  70%  { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: -400; opacity: 0; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line {
+    animation: none !important;
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  .fadeOut {
+    animation: none !important;
+  }
+}

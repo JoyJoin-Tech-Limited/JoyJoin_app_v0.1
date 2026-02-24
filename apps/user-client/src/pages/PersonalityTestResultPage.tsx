@@ -25,7 +25,7 @@ import { useAnonymousPersonalityTestResults } from "@/hooks/useAnonymousPersonal
 import { getStyleSpectrum, getAllArchetypeScores } from "@shared/personality/matcherV2";
 import { ArrowRight } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { LoadingLogoSleek } from "@/components/LoadingLogoSleek";
+import { FancyLineLoadingScreen } from "@/components/FancyLineLoadingScreen";
 import { ArchetypeSlotMachine } from "@/components/slot-machine";
 import { UnlockOverlay } from "@/components/UnlockOverlay";
 import type { AuthUser } from "@/hooks/useAuth";
@@ -772,7 +772,7 @@ export default function PersonalityTestResultPage() {
   if (finalIsLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <LoadingLogoSleek loop visible />
+        <FancyLineLoadingScreen loop visible />
         <p className="text-lg text-muted-foreground animate-pulse">
           正在生成您的测试结果...
         </p>
