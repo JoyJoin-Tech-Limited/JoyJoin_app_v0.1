@@ -5,18 +5,15 @@ import PersonalityRadarChart from "@/components/PersonalityRadarChart";
 import QuizIntro from "@/components/QuizIntro";
 import EditFullProfileDialog from "@/components/EditFullProfileDialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target,
-  RefreshCw, MessageCircle, Star, ChevronDown, Dna, Globe, Users,
-  Coffee, Zap, Crown, ArrowRight, Check,
+  RefreshCw, MessageCircle, Star, ChevronDown, Globe, Users,
+  Zap, Crown, Check,
   Calendar, Gift, ChevronRight, Trophy,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { getInsightCategoryConfig, INSIGHT_CONFIDENCE_THRESHOLD, INSIGHT_DISPLAY_LIMIT } from "@/lib/insightCategoryConfig";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -25,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { archetypeConfig } from "@/lib/archetypes";
 import { archetypeGradients, archetypeAvatars, archetypeEmojis } from "@/lib/archetypeAvatars";
 import { getArchetypeImage } from "@/lib/archetypeImages";
-import { getTopCompatibleArchetypes, getCompatibilityCategory } from "@/lib/archetypeCompatibility";
+import { getTopCompatibleArchetypes } from "@/lib/archetypeCompatibility";
 import { getMatchesWithDescriptions } from "@/lib/archetypeCompatibilityDescriptions";
 import xiaoyueAvatar from "@/assets/Xiao_Yue_Avatar-04.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -236,13 +233,7 @@ export default function ProfilePage() {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div
-      className="min-h-screen pb-20"
-      style={{
-        background:
-          "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
-      }}
-    >
+    <div className="min-h-screen pb-20 bg-epic-gradient">
       {/* ── Top navigation bar ── */}
       <MobileHeader title="我的" showSettings={true} />
 
@@ -261,6 +252,7 @@ export default function ProfilePage() {
             animate={{ scale: [1, 1.08, 1], opacity: [0.6, 1, 0.6] }}
             transition={{ duration: 2, repeat: Infinity }}
             className="absolute inset-0 rounded-full blur-lg"
+            aria-hidden="true"
             style={{
               background: "rgba(168, 85, 247, 0.5)",
               transform: "scale(1.3)",
@@ -289,7 +281,7 @@ export default function ProfilePage() {
                         user?.primaryArchetype
                     )!
                   }
-                  alt="archetype avatar"
+                  alt={`你的原型：${personalityResults?.primaryArchetype || user?.primaryArchetype || "未知"}`}
                   className="w-full h-full object-contain bg-purple-900/40"
                 />
               ) : (
@@ -327,7 +319,14 @@ export default function ProfilePage() {
                 {xpCurrent} / {xpNext}
               </span>
             </div>
-            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+            <div
+              className="h-2 bg-white/10 rounded-full overflow-hidden"
+              role="progressbar"
+              aria-label="经验值进度"
+              aria-valuenow={xpCurrent}
+              aria-valuemin={0}
+              aria-valuemax={xpNext}
+            >
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${xpProgress}%` }}
@@ -618,7 +617,7 @@ export default function ProfilePage() {
               xp={200}
             />
             <MissionItem
-              label="一个月内参加2场活动"
+              label="参加2场活动"
               completed={(stats?.eventsCompleted ?? 0) >= 2}
               xp={500}
             />
@@ -975,7 +974,7 @@ export default function ProfilePage() {
           <span className="flex-1 text-white text-sm font-medium text-left">
             专属福利柜
           </span>
-          <span className="text-xs text-amber-400 font-semibold">5张待用</span>
+          <span className="text-xs text-amber-400 font-semibold">待用福利</span>
           <ChevronRight className="w-4 h-4 text-white/40" />
         </motion.button>
 
