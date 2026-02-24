@@ -550,13 +550,16 @@ export default function EssentialDataPage() {
           <div className="flex-1">
             <div className="flex items-center justify-between text-sm font-medium text-muted-foreground mb-2">
               <span
-                aria-label={`第 ${currentStep + 1} 步 / 共 ${TOTAL_STEPS} 步`}
                 aria-live="polite"
                 aria-atomic="true"
               >
+                {/* Screen-reader-only text so live region has the current step in its content */}
+                <span className="sr-only">
+                  第 {currentStep + 1} 步 / 共 {TOTAL_STEPS} 步
+                </span>
                 第{" "}
                 {/* Enhancement 5: Animated step number ticker */}
-                <div className="relative overflow-hidden h-5 inline-flex items-center" aria-hidden="true">
+                <span className="relative overflow-hidden h-5 inline-flex items-center" aria-hidden="true">
                   <AnimatePresence mode="popLayout" initial={false}>
                     <motion.span
                       key={currentStep}
@@ -575,7 +578,7 @@ export default function EssentialDataPage() {
                       {currentStep + 1}
                     </motion.span>
                   </AnimatePresence>
-                </div>
+                </span>
                 {" "}步 / 共 {TOTAL_STEPS} 步
               </span>
               <span className="text-primary font-semibold">{Math.round(progress)}%</span>
