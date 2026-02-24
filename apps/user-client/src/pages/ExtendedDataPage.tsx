@@ -69,7 +69,7 @@ export default function ExtendedDataPage() {
 
   if (showCelebration) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center z-50">
+      <div className="fixed inset-0 flex items-center justify-center z-[60]">
         <FancyLineLoadingScreen loop visible />
       </div>
     );
