@@ -48,8 +48,8 @@ export default function LoginPromptPage() {
   const archetypeGradient = getArchetypeGradient(displayArchetype);
 
   const handleLogin = () => {
-    // Navigate to discover page which will redirect to login if not authenticated
-    setLocation("/");
+    // Navigate to login page to authenticate and save the user's archetype profile
+    setLocation("/login");
   };
 
   const handleSkip = () => {
