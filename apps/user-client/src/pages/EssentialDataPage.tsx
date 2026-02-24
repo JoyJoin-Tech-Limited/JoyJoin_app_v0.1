@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -261,6 +261,8 @@ export default function EssentialDataPage() {
   const [preFlexibleIntent, setPreFlexibleIntent] = useState<string[]>([]); // Phase 0: Fix #9
   const [showCelebration, setShowCelebration] = useState(false);
   const [showManualIndustry, setShowManualIndustry] = useState(false);
+  // Enhancement 5: direction tracking for step number ticker
+  const directionRef = useRef<1 | -1>(1);
 
   // Load cached progress (Phase 0: Fix #11 - Error handling)
   useEffect(() => {
@@ -439,6 +441,7 @@ export default function EssentialDataPage() {
     // Haptic feedback
     haptics.medium();
 
+    directionRef.current = 1;
     if (currentStep < TOTAL_STEPS - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
@@ -507,6 +510,7 @@ export default function EssentialDataPage() {
 
   const handleBack = () => {
     if (currentStep > 0) {
+      directionRef.current = -1;
       setCurrentStep(prev => prev - 1);
     }
   };
@@ -545,7 +549,35 @@ export default function EssentialDataPage() {
           )}
           <div className="flex-1">
             <div className="flex items-center justify-between text-sm font-medium text-muted-foreground mb-2">
-              <span>第 {currentStep + 1} 步 / 共 {TOTAL_STEPS} 步</span>
+              <span
+                aria-label={`第 ${currentStep + 1} 步 / 共 ${TOTAL_STEPS} 步`}
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                第{" "}
+                {/* Enhancement 5: Animated step number ticker */}
+                <div className="relative overflow-hidden h-5 inline-flex items-center" aria-hidden="true">
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <motion.span
+                      key={currentStep}
+                      initial={prefersReducedMotion ? { opacity: 0 } : {
+                        y: directionRef.current > 0 ? 16 : -16,
+                        opacity: 0,
+                      }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={prefersReducedMotion ? { opacity: 0 } : {
+                        y: directionRef.current > 0 ? -16 : 16,
+                        opacity: 0,
+                      }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
+                      className="inline-block tabular-nums"
+                    >
+                      {currentStep + 1}
+                    </motion.span>
+                  </AnimatePresence>
+                </div>
+                {" "}步 / 共 {TOTAL_STEPS} 步
+              </span>
               <span className="text-primary font-semibold">{Math.round(progress)}%</span>
             </div>
             {/* Segmented progress - Duolingo style */}

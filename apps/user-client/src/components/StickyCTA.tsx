@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
-import { forwardRef } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { forwardRef, useEffect, useRef, useState } from "react";
 
 interface StickyCTAProps {
   children: React.ReactNode;
@@ -57,17 +57,46 @@ interface StickyCTAButtonProps extends React.ComponentPropsWithoutRef<typeof But
  */
 export const StickyCTAButton = forwardRef<HTMLButtonElement, StickyCTAButtonProps>(
   ({ children, isLoading, loadingText, disabled, className, ...props }, ref) => {
+    const prefersReducedMotion = useReducedMotion();
+    const [shimmerKey, setShimmerKey] = useState(0);
+    const wasDisabled = useRef(disabled ?? false);
+
+    // Fire shimmer once when button transitions from disabled → enabled
+    useEffect(() => {
+      const isNowEnabled = !(disabled || isLoading);
+      const wasEnabled = !wasDisabled.current;
+      if (!wasEnabled && isNowEnabled) {
+        setShimmerKey(k => k + 1);
+      }
+      wasDisabled.current = !!(disabled || isLoading);
+    }, [disabled, isLoading]);
+
     return (
       <Button
         ref={ref}
         size="lg"
         disabled={disabled || isLoading}
         className={cn(
-          "w-full h-14 text-lg rounded-2xl",
+          "w-full h-14 text-lg rounded-2xl relative overflow-hidden",
           className
         )}
         {...props}
       >
+        {/* Enhancement 2: One-shot shimmer sweep on unlock */}
+        {!prefersReducedMotion && shimmerKey > 0 && (
+          <motion.div
+            key={shimmerKey}
+            className="absolute inset-0 pointer-events-none"
+            initial={{ x: "-110%" }}
+            animate={{ x: "110%" }}
+            transition={{ duration: 0.55, ease: "easeInOut" }}
+            aria-hidden="true"
+            style={{
+              background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.28) 50%, transparent 60%)",
+              width: "100%",
+            }}
+          />
+        )}
         {isLoading ? (
           <>
             <Loader2 className="h-5 w-5 animate-spin mr-2" />
