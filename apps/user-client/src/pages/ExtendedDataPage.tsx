@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
@@ -7,6 +7,9 @@ import { FancyLineLoadingScreen } from "@/components/FancyLineLoadingScreen";
 import { InterestCarousel, type InterestCarouselData } from "@/components/interests/InterestCarousel";
 import { useOnboardingCheckpoint } from "@/hooks/useOnboardingCheckpoint";
 
+// Maximum time to wait for data save before navigating anyway (ms).
+const MAX_NAVIGATION_WAIT_MS = 5000;
+
 export default function ExtendedDataPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -14,13 +17,30 @@ export default function ExtendedDataPage() {
 
   const [showCelebration, setShowCelebration] = useState(false);
 
+  // Flag set by onSuccess; consumed by FancyLineLoadingScreen's onFinish.
+  // This ensures navigation only happens AFTER the loading animation completes,
+  // so FinalProfileReviewPage mounts cleanly and its SpiralWaveAnimation is visible.
+  const readyToNavigateRef = useRef(false);
+
+  // Holds the polling interval so it can be cancelled on error or unmount.
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cancel any in-flight polling interval on unmount to prevent stale navigation.
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
       // Single API call - backend handles both operations in transaction
       return await apiRequest("POST", "/api/user/interests", { interests: data });
     },
     onSuccess: async () => {
-      // Keep showing celebration during navigation to prevent flash
+      // Data work: invalidate cache, show toast, save checkpoint
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       
@@ -28,9 +48,6 @@ export default function ExtendedDataPage() {
         title: "兴趣保存成功！",
         description: "正在生成你的专属画像...",
       });
-      
-      // Wait a bit more before navigation to ensure smooth transition
-      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Save checkpoint after completing extended data (await to ensure persistence)
       try {
@@ -40,16 +57,17 @@ export default function ExtendedDataPage() {
         // Continue navigation even if checkpoint fails (non-blocking)
       }
       
-      // Phase 0: Fix #8 - Mark that user needs to see profile review
-      // This flag is used by useOnboardingRoute to navigate to /onboarding/review
-      // (Will be set to 'true' after user views the review page)
-      
-      // Navigate while still showing loading
-      setLocation("/onboarding/review");
-      // Don't set showCelebration to false - let the new page handle the transition
+      // Signal that it's safe to navigate once the animation finishes
+      readyToNavigateRef.current = true;
     },
     onError: (error: Error) => {
+      // Cancel any pending navigation polling before hiding the overlay.
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       setShowCelebration(false);
+      readyToNavigateRef.current = false;
       toast({
         title: "保存失败",
         description: error.message,
@@ -67,10 +85,45 @@ export default function ExtendedDataPage() {
     setLocation("/onboarding/setup");
   }, [setLocation]);
 
+  // Called when the ~1s FancyLineLoadingScreen animation finishes.
+  // If data is already saved, navigate immediately. If onSuccess hasn't
+  // completed yet (slow network), poll until confirmed then navigate.
+  // The interval is stored in intervalRef so onError and unmount can cancel it.
+  const handleCelebrationFinish = useCallback(() => {
+    if (readyToNavigateRef.current) {
+      setLocation("/onboarding/review");
+    } else {
+      // Data save is still in-flight; poll until confirmed successful (max 5s)
+      const start = Date.now();
+      intervalRef.current = setInterval(() => {
+        if (readyToNavigateRef.current) {
+          clearInterval(intervalRef.current!);
+          intervalRef.current = null;
+          setLocation("/onboarding/review");
+        } else if (Date.now() - start > MAX_NAVIGATION_WAIT_MS) {
+          // Timed out without confirmation — stop polling, hide overlay, show error
+          clearInterval(intervalRef.current!);
+          intervalRef.current = null;
+          setShowCelebration(false);
+          toast({
+            title: "保存超时",
+            description: "请检查网络连接后重试",
+            variant: "destructive",
+          });
+        }
+      }, 100);
+    }
+  }, [setLocation, toast]);
+
   if (showCelebration) {
     return (
       <div className="fixed inset-0 flex items-center justify-center z-[60]">
-        <FancyLineLoadingScreen loop visible />
+        {/* loop={false}: plays once (~1s) then calls onFinish → triggers navigation */}
+        <FancyLineLoadingScreen
+          loop={false}
+          onFinish={handleCelebrationFinish}
+          visible
+        />
       </div>
     );
   }
