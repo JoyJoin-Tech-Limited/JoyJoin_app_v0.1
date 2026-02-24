@@ -616,6 +616,7 @@ export default function MatchingStatusPage() {
                 )}
               </AnimatePresence>
             </div>
+            )}
 
             {/* Status text */}
             <div className="text-center space-y-2">
