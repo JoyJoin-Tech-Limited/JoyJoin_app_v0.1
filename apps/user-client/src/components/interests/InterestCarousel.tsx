@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ArrowUp, AlertCircle, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -72,6 +72,12 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   const [lastSelectedTopic, setLastSelectedTopic] = useState<string | null>(null);
 
   const [selections, setSelections] = useState<Record<string, HeatLevel>>({});
+
+  // Enhancement 4: Heat bar milestone burst particles
+  const HEAT_MILESTONES = [0.18, 0.35, 0.55, 0.75];
+  const [burstKey, setBurstKey] = useState(0);
+  const [burstPct, setBurstPct] = useState(0);
+  const lastMilestoneRef = useRef(-1);
 
   // Load from localStorage on mount with expiry check
   useEffect(() => {
@@ -201,6 +207,35 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   }, [selections]);
 
   const { totalSelections, totalHeat, categoryHeat } = calculateMetrics();
+
+  // Enhancement 4: Detect milestone crossings for heat bar burst
+  const hasInitializedMilestoneRef = useRef(false);
+  useEffect(() => {
+    const rawHeatPct = MAX_HEAT > 0 ? totalHeat / MAX_HEAT : 0;
+    const clampedHeatPct = Number.isFinite(rawHeatPct)
+      ? Math.max(0, Math.min(1, rawHeatPct))
+      : 0;
+
+    let crossedIndex = -1;
+    for (let i = HEAT_MILESTONES.length - 1; i >= 0; i--) {
+      if (clampedHeatPct >= HEAT_MILESTONES[i]) { crossedIndex = i; break; }
+    }
+
+    // Initialize lastMilestoneRef based on the initial heatPct so we don't
+    // trigger a burst on first render or state hydration.
+    if (!hasInitializedMilestoneRef.current) {
+      hasInitializedMilestoneRef.current = true;
+      lastMilestoneRef.current = crossedIndex;
+      return;
+    }
+
+    if (crossedIndex > lastMilestoneRef.current) {
+      lastMilestoneRef.current = crossedIndex;
+      // Burst at the current fill endpoint rather than the milestone value.
+      setBurstPct(clampedHeatPct);
+      setBurstKey(k => k + 1);
+    }
+  }, [totalHeat]);
 
   // Scroll to top handler
   const handleScrollToTop = useCallback(() => {
@@ -380,7 +415,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
 
         {/* Dynamic Heat Meter - replaces guidance pills */}
         <div className="px-4 py-2.5 bg-primary/5 border-t">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 relative">
             <span className="text-lg" role="img" aria-label="Heat">🔥</span>
             <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden" role="progressbar" aria-valuenow={Math.min((totalHeat / MAX_HEAT) * 100, 100)} aria-valuemin={0} aria-valuemax={100} aria-label="兴趣热度进度">
               <motion.div 
@@ -390,6 +425,43 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               />
             </div>
+            {/* Enhancement 4: Milestone burst particles — outside overflow-hidden bar */}
+            {!prefersReducedMotion && burstKey > 0 && (
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{ overflow: "visible" }}
+                aria-hidden="true"
+              >
+                {[...Array(8)].map((_, i) => {
+                  const angle = (i / 8) * 2 * Math.PI - Math.PI / 2;
+                  const distance = 14;
+                  return (
+                    <motion.div
+                      key={`burst-${burstKey}-${i}`}
+                      className="absolute rounded-full"
+                      style={{
+                        width: 5,
+                        height: 5,
+                        // offset from left edge: emoji (~28px) + gap (12px) + bar fill %
+                        left: `calc(2.5rem + ${Math.min(burstPct * 100, 97)}%)`,
+                        top: "50%",
+                        marginLeft: -2.5,
+                        marginTop: -2.5,
+                        backgroundColor: i % 3 === 0 ? "#a855f7" : i % 3 === 1 ? "#ec4899" : "#f97316",
+                      }}
+                      initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                      animate={{
+                        x: Math.cos(angle) * distance,
+                        y: Math.sin(angle) * distance,
+                        opacity: 0,
+                        scale: 0,
+                      }}
+                      transition={{ duration: 0.45, ease: "easeOut", delay: i * 0.025 }}
+                    />
+                  );
+                })}
+              </div>
+            )}
             <span className="text-sm font-semibold text-muted-foreground tabular-nums min-w-[3rem] text-right">
               {totalSelections >= 3 ? (
                 <span className="text-primary">{totalSelections} 个</span>
@@ -407,48 +479,64 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
 
         {/* Horizontal Category Quick-Nav Tabs */}
         <div className="z-10 bg-background border-b shadow-sm" role="tablist" aria-label="兴趣分类">
-          <div className="flex overflow-x-auto gap-1.5 px-3 py-2 no-scrollbar">
-            {INTEREST_CATEGORIES.map((cat, catIndex) => (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  setActiveCategory(cat.id);
-                  scrollToCategory(cat.id);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-                    e.preventDefault();
-                    const currentIndex = INTEREST_CATEGORIES.findIndex(c => c.id === cat.id);
-                    const delta = e.key === 'ArrowRight' ? 1 : -1;
-                    const nextIndex = (currentIndex + delta + INTEREST_CATEGORIES.length) % INTEREST_CATEGORIES.length;
-                    const nextCategoryId = INTEREST_CATEGORIES[nextIndex].id;
-                    setActiveCategory(nextCategoryId);
-                    scrollToCategory(nextCategoryId);
-                    
-                    // Move focus to the next tab
-                    const tabs = e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
-                    if (tabs && tabs[nextIndex]) {
-                      tabs[nextIndex].focus();
+          <LayoutGroup id="interest-category-tabs">
+            <div className="flex overflow-x-auto gap-1.5 px-3 py-2 no-scrollbar">
+              {INTEREST_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    setActiveCategory(cat.id);
+                    scrollToCategory(cat.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                      e.preventDefault();
+                      const currentIndex = INTEREST_CATEGORIES.findIndex(c => c.id === cat.id);
+                      const delta = e.key === 'ArrowRight' ? 1 : -1;
+                      const nextIndex = (currentIndex + delta + INTEREST_CATEGORIES.length) % INTEREST_CATEGORIES.length;
+                      const nextCategoryId = INTEREST_CATEGORIES[nextIndex].id;
+                      setActiveCategory(nextCategoryId);
+                      scrollToCategory(nextCategoryId);
+                      
+                      // Move focus to the next tab
+                      const tabs = e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+                      if (tabs && tabs[nextIndex]) {
+                        tabs[nextIndex].focus();
+                      }
                     }
-                  }
-                }}
-                className={cn(
-                  "flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all touch-manipulation",
-                  activeCategory === cat.id 
-                    ? "bg-primary text-primary-foreground shadow-sm" 
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                )}
-                role="tab"
-                aria-selected={activeCategory === cat.id}
-                aria-controls={`category-panel-${cat.id}`}
-                tabIndex={activeCategory === cat.id ? 0 : -1}
-                aria-label={`${cat.name} 类别`}
-              >
-                <span className="mr-1">{cat.emoji}</span>
-                {cat.name}
-              </button>
-            ))}
-          </div>
+                  }}
+                  className={cn(
+                    "relative flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors touch-manipulation",
+                    activeCategory === cat.id
+                      ? "text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  role="tab"
+                  aria-selected={activeCategory === cat.id}
+                  aria-controls={`category-panel-${cat.id}`}
+                  tabIndex={activeCategory === cat.id ? 0 : -1}
+                  aria-label={`${cat.name} 类别`}
+                >
+                  {/* Enhancement 1: Sliding pill background */}
+                  {activeCategory === cat.id && !prefersReducedMotion && (
+                    <motion.span
+                      layoutId="active-category-pill"
+                      className="absolute inset-0 rounded-full bg-primary shadow-sm"
+                      transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                      aria-hidden="true"
+                    />
+                  )}
+                  {activeCategory === cat.id && prefersReducedMotion && (
+                    <span className="absolute inset-0 rounded-full bg-primary" aria-hidden="true" />
+                  )}
+                  <span className="relative z-10 flex items-center">
+                    <span className="mr-1">{cat.emoji}</span>
+                    {cat.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </LayoutGroup>
         </div>
       </div>
 

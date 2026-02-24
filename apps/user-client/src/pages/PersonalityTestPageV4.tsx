@@ -584,14 +584,24 @@ export default function PersonalityTestPageV4() {
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={currentQuestion.id}
-          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 60 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: -60 }}
+          initial={prefersReducedMotion
+            ? { opacity: 0 }
+            : { opacity: 0, x: 60, rotateY: 8, transformPerspective: 1200 }
+          }
+          animate={prefersReducedMotion
+            ? { opacity: 1 }
+            : { opacity: 1, x: 0, rotateY: 0, transformPerspective: 1200 }
+          }
+          exit={prefersReducedMotion
+            ? { opacity: 0 }
+            : { opacity: 0, x: -60, rotateY: -8, transformPerspective: 1200 }
+          }
           transition={
             prefersReducedMotion
               ? { duration: 0.15 }
               : { type: "spring", stiffness: 260, damping: 24, mass: 0.9 }
           }
+          style={prefersReducedMotion ? undefined : { transformStyle: "preserve-3d" }}
           className="flex-1 flex flex-col px-4 pt-4 pb-2 overflow-hidden"
         >
           <div className="shrink-0 mb-3">
