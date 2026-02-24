@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -38,9 +38,10 @@ import { queryClient } from "@/lib/queryClient";
 import MatchCelebrationOverlay from "@/components/MatchCelebrationOverlay";
 import EventThemeTitleReveal from "@/components/EventThemeTitleReveal";
 import ArchetypeOrbit from "@/components/ArchetypeOrbit";
+import MatchSuccessSheet from "@/components/MatchSuccessSheet";
 import type { PoolMatchedData, EventThemeTitleRevealedData } from "@shared/wsEvents";
 import { formatDateInHongKong } from "@/lib/hongKongTime";
-import type { AttendeeData } from "@/lib/attendeeAnalytics";
+import type { AttendeeData, UserContext } from "@/lib/attendeeAnalytics";
 
 // Constants
 const DEFAULT_MIN_GROUP_SIZE = 4;
@@ -123,9 +124,7 @@ export default function MatchingStatusPage() {
   const [showRevealAnimation, setShowRevealAnimation] = useState(false);
   const [groupMembersData, setGroupMembersData] = useState<PoolGroupResponse | null>(null);
   const [isLoadingGroupData, setIsLoadingGroupData] = useState(false);
-  const [revealAnimationComplete, setRevealAnimationComplete] = useState(false);
-
-  // Progress update micro-interaction state
+  const [revealAnimationComplete, setRevealAnimationComplete] = useState(false);  // Progress update micro-interaction state
   const [newMemberJoined, setNewMemberJoined] = useState(false);
   const [newMemberArchetype, setNewMemberArchetype] = useState<string | null>(null);
 
@@ -174,6 +173,24 @@ export default function MatchingStatusPage() {
   const userArchetypeAvatar = user?.archetype 
     ? getArchetypeAvatar(user.archetype) 
     : null;
+
+  // Build UserContext for spark-prediction engine in MatchSuccessSheet
+  const currentUserContext = useMemo<UserContext | undefined>(() => {
+    if (!user) return undefined;
+    const ctx: UserContext = {};
+    if (user.interestsDeep && user.interestsDeep.length > 0) ctx.interests = user.interestsDeep;
+    if (user.educationLevel != null) ctx.educationLevel = user.educationLevel;
+    const industry = user.industryCategoryLabel ?? user.industryCategory;
+    if (industry != null && industry !== "") ctx.industry = industry;
+    if (user.age != null) ctx.age = user.age;
+    if (user.gender != null) ctx.gender = user.gender;
+    if (user.archetype != null) ctx.archetype = user.archetype;
+    if (user.relationshipStatus != null) ctx.relationshipStatus = user.relationshipStatus;
+    if (user.children != null) ctx.children = user.children;
+    if (user.hometownRegionCity != null && user.hometownRegionCity !== "") ctx.hometownRegionCity = user.hometownRegionCity;
+    if (user.hometownAffinityOptin != null) ctx.hometownAffinityOptin = user.hometownAffinityOptin;
+    return ctx;
+  }, [user]);
 
   // WebSocket subscriptions
   useEffect(() => {
@@ -324,21 +341,13 @@ export default function MatchingStatusPage() {
     }
   }, []);
 
-  // Handle reveal animation complete
-  const handleRevealOrbitComplete = useCallback(() => {
-    // Mark animation as complete, enabling click to continue
-    setRevealAnimationComplete(true);
-  }, []);
-  
-  // Handle user clicking to continue after animation
+    // Handle user dismissing the MatchSuccessSheet (animation is handled internally by the sheet)
   const handleRevealContinue = useCallback(() => {
-    if (!revealAnimationComplete) return; // Don't allow skipping animation
-    
     // Hide the reveal overlay and show match celebration
     setShowRevealAnimation(false);
     setRevealAnimationComplete(false);
     setShowMatchCelebration(true);
-  }, [revealAnimationComplete]);
+  }, []);
 
   // Handle match celebration flow
   const handleCelebrationContinue = useCallback(() => {
@@ -1081,43 +1090,28 @@ export default function MatchingStatusPage() {
         />
       )}
 
-      {/* Reveal animation overlay */}
+      {/* Premium Match Success Sheet */}
       {showRevealAnimation && groupMembersData && !isLoadingGroupData && (
-        <div 
-          className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center p-6"
-          onClick={handleRevealContinue}
-          style={{ cursor: revealAnimationComplete ? 'pointer' : 'default' }}
-        >
-          <div className="text-center space-y-8 max-w-md w-full">
-            <h2 className="text-2xl font-bold animate-fadeIn">
-              🎉 匹配成功！
-            </h2>
-            
-            <ArchetypeOrbit
-              archetypes={groupMembersData.members.map(m => m.archetype || '')}
-              size="large"
-              animated={true}
-              onAnimationComplete={handleRevealOrbitComplete}
-            />
-            
-            <p 
-              className="text-sm text-muted-foreground animate-fadeIn"
-              style={{ opacity: revealAnimationComplete ? 1 : 0.3 }}
-            >
-              {revealAnimationComplete ? '点击任意位置继续' : '正在加载...'}
-            </p>
-          </div>
-          
-          <style>{`
-            @keyframes fadeIn {
-              from { opacity: 0; transform: translateY(10px); }
-              to { opacity: 1; transform: translateY(0); }
-            }
-            .animate-fadeIn {
-              animation: fadeIn 0.5s ease-out;
-            }
-          `}</style>
-        </div>
+        <MatchSuccessSheet
+          members={groupMembersData.members.map((m) => ({
+            userId: m.userId,
+            displayName: m.displayName,
+            archetype: m.archetype,
+            age: m.age,
+            topInterests: m.topInterests,
+            primaryInterests: m.primaryInterests,
+            socialTag: m.socialTag,
+            educationLevel: m.educationLevel,
+            industry: m.industry,
+            gender: m.gender,
+            relationshipStatus: m.relationshipStatus,
+            children: m.children,
+            hometownRegionCity: m.hometownRegionCity,
+            hometownAffinityOptin: m.hometownAffinityOptin,
+          }))}
+          currentUser={currentUserContext}
+          onDismiss={handleRevealContinue}
+        />
       )}
 
       {/* Theme title reveal */}

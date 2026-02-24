@@ -121,7 +121,7 @@ function OnboardingProgress({
         )}
         <div className="flex-1">
           {/* Progress bar with smooth transition animation */}
-          <div className="relative">
+          <div className="relative" style={{ minHeight: '2.5rem' }}>
             <AnimatePresence mode="wait" initial={false}>
               {isAnchorPhase ? (
                 <motion.div
@@ -201,9 +201,9 @@ function OnboardingProgress({
                   role="status"
                   aria-live="polite"
                   aria-atomic="true"
-                  className="absolute top-full left-0 right-0 flex items-center gap-1 text-sm text-primary font-medium mt-0.5"
+                  className="absolute top-full left-0 right-0 flex items-center gap-1 text-sm text-primary font-medium mt-0.5 pt-0.5"
                 >
-                  <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                   <span>已锁定你的vibe ✨ 进入精准匹配</span>
                 </motion.div>
               )}
@@ -447,30 +447,57 @@ export default function PersonalityTestPageV4() {
     }
   }, [isInitialized, isComplete, setLocation]);
 
+  const prefersReducedMotion = useReducedMotion();
+
+  // Dynamic Xiaoyue pose based on user state (H1)
+  const xiaoyuePose = useMemo((): "thinking" | "casual" | "pointing" => {
+    if (selectedOption) return "pointing";        // user made a choice — Xiaoyue points approvingly
+    if (answeredCount === 0) return "pointing";   // very first question — Xiaoyue welcomes/guides
+    if (estimatedRemaining <= 2) return "casual"; // almost done — relaxed, encouraging
+    return "thinking";                            // mid-assessment — Xiaoyue is thoughtfully considering
+  }, [selectedOption, answeredCount, estimatedRemaining]);
+
   if (isLoading && !currentQuestion && !isComplete) {
     return (
       <div className="h-screen overflow-hidden bg-background flex flex-col">
-        {/* Header Skeleton */}
-        <div className="h-14 border-b bg-background/95 backdrop-blur-sm flex items-center px-4">
-          <Skeleton className="h-5 w-5 rounded-full" />
-          <Skeleton className="ml-4 h-6 w-32" />
+        {/* Sticky header skeleton - matches real OnboardingProgress */}
+        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-2.5 w-full rounded-full" />
+              <div className="flex justify-between">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-8" />
+              </div>
+            </div>
+          </div>
         </div>
         
-        {/* Question Content Skeleton */}
-        <div className="flex-1 px-4 py-6 space-y-6">
-          <Skeleton className="h-8 w-3/4 mx-auto" /> {/* Question text */}
-          <Skeleton className="h-4 w-1/2 mx-auto" /> {/* Scenario */}
+        {/* Content skeleton */}
+        <div className="flex-1 px-4 pt-4 space-y-4 overflow-hidden">
+          {/* Scenario text */}
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-4/5" />
           
-          {/* Options skeleton */}
-          <div className="space-y-3 mt-8">
+          {/* Xiaoyue bubble skeleton - horizontal layout */}
+          <div className="flex items-start gap-3 mt-2">
+            <Skeleton className="h-12 w-12 rounded-full shrink-0" />
+            <Skeleton className="h-16 flex-1 rounded-2xl" />
+          </div>
+          
+          {/* Option rows */}
+          <div className="grid grid-cols-1 gap-3 mt-4">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-16 w-full rounded-xl" />
             ))}
           </div>
         </div>
         
-        {/* Progress bar skeleton */}
-        <Skeleton className="h-2 mx-4 mb-4" />
+        {/* Sticky CTA skeleton */}
+        <div className="border-t p-4 bg-background/95">
+          <Skeleton className="h-14 w-full rounded-2xl" />
+        </div>
       </div>
     );
   }
@@ -579,12 +606,13 @@ export default function PersonalityTestPageV4() {
               {scenarioText}
             </p>
             <XiaoyueChatBubble 
-              pose="casual" // xiaoyue pose change
+              pose={xiaoyuePose}
               content={selectedOption 
                 ? getOptionFeedback(currentQuestion.id, selectedOption) || "记下了，很有意思的选择！" 
                 : currentQuestion.questionText
               }
               horizontal
+              animate={!prefersReducedMotion}
               className="mb-1"
             />
           </div>

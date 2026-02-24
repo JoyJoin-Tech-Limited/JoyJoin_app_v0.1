@@ -204,7 +204,7 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-background border-t z-50 safe-area-pb">
+    <nav className="fixed bottom-0 left-0 right-0 bg-background border-t z-60 safe-area-pb">
       {/* Protruding center button wrapper */}
       <div className="absolute left-1/2 -translate-x-1/2 -top-6 z-10">
         <button
