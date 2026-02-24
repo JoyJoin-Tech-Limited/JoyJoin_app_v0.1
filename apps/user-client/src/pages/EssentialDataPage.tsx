@@ -213,10 +213,8 @@ function TappableCard({
         className
       )}
       whileTap={{ scale: 0.97 }}
-      animate={selected ? { 
-        scale: [1, 1.02, 1],
-        transition: { duration: 0.2 },
-      } : { scale: 1 }}
+      animate={selected ? { scale: [1, 1.02, 1] } : { scale: 1 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       data-testid={`card-option`}
     >
       {children}
@@ -443,6 +441,7 @@ export default function EssentialDataPage() {
 
     directionRef.current = 1;
     if (currentStep < TOTAL_STEPS - 1) {
+      directionRef.current = 1;
       setCurrentStep(prev => prev + 1);
     } else {
       // Final step - save and navigate
@@ -518,15 +517,15 @@ export default function EssentialDataPage() {
   const containerVariants = prefersReducedMotion 
     ? { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } }
     : { 
-        hidden: { opacity: 0, x: 50 }, 
-        visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
-        exit: { opacity: 0, x: -50, transition: { duration: 0.2 } }
+        hidden: { opacity: 0, x: directionRef.current * 50 }, 
+        visible: { opacity: 1, x: 0, transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } },
+        exit: { opacity: 0, x: directionRef.current * -50, transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }
       };
 
   // Celebration overlay
   if (showCelebration) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center z-50">
+      <div className="fixed inset-0 flex items-center justify-center z-[60]">
         <FancyLineLoadingScreen loop visible />
       </div>
     );
@@ -542,6 +541,7 @@ export default function EssentialDataPage() {
               variant="ghost" 
               size="icon" 
               onClick={handleBack}
+              className="min-w-[44px] min-h-[44px] shrink-0"
               data-testid="button-back"
             >
               <ChevronLeft className="w-6 h-6" />
@@ -607,6 +607,7 @@ export default function EssentialDataPage() {
               pose={stepConfig.mascotMood === "excited" ? "casual" : stepConfig.mascotMood === "pointing" ? "pointing" : "thinking"}
               content={stepConfig.mascotMessage}
               horizontal
+              animate={!prefersReducedMotion}
             />
 
             {/* Title */}
@@ -819,7 +820,10 @@ export default function EssentialDataPage() {
 
               {/* Step 2-4: Single select */}
               {(currentStep === 2 || currentStep === 3) && stepConfig.options && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className={cn(
+                  "grid gap-3",
+                  currentStep === 2 ? "grid-cols-2" : "grid-cols-1"
+                )}>
                   {stepConfig.options.map(opt => {
                     const value = currentStep === 2 ? relationshipStatus : education;
                     const setValue = currentStep === 2 ? setRelationshipStatus : setEducation;
@@ -927,7 +931,7 @@ export default function EssentialDataPage() {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ 
-                            delay: index * 0.05,
+                            delay: Math.min(index * 0.04, 0.12),
                             type: "spring",
                             stiffness: 300,
                             damping: 24
@@ -1011,7 +1015,7 @@ export default function EssentialDataPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ 
-                      delay: 0.3,
+                      delay: 0.18,
                       type: "spring",
                       stiffness: 300,
                       damping: 24
@@ -1115,11 +1119,11 @@ export default function EssentialDataPage() {
       </div>
 
       {/* Spacer for floating button */}
-      <div className="h-24" />
+      <div className="h-32" />
 
       {/* Floating CTA button */}
       <motion.div 
-        className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent z-40"
+        className="fixed bottom-0 left-0 right-0 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] bg-gradient-to-t from-background via-background to-transparent z-40"
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
