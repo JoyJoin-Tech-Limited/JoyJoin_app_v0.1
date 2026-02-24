@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Sparkles } from "lucide-react";
 import { haptics } from "@/lib/haptics";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 export interface SelectionOption {
   value: string;
@@ -37,6 +38,7 @@ export function SelectionList({
   multiSelect = false,
   className,
 }: SelectionListProps) {
+  const prefersReducedMotion = useReducedMotion();
   const handleSelect = (value: string) => {
     haptics.light();
     if (multiSelect) {
@@ -90,6 +92,21 @@ export function SelectionList({
             )}
             data-testid={`button-option-${option.value}`}
           >
+            {/* Enhancement 6: Selection ripple/glow */}
+            {!prefersReducedMotion && isSelected(option.value) && (
+              <motion.span
+                key={`ripple-${option.value}`}
+                className="absolute inset-0 rounded-xl pointer-events-none"
+                initial={{ scale: 0, opacity: 0.45 }}
+                animate={{ scale: 2.2, opacity: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                style={{
+                  background: "radial-gradient(circle, rgba(139,92,246,0.35) 0%, transparent 70%)",
+                  transformOrigin: "center center",
+                }}
+                aria-hidden="true"
+              />
+            )}
             <div className="flex-1 text-left">
               <span className={cn(
                 "text-lg font-semibold leading-snug tracking-tight block",
