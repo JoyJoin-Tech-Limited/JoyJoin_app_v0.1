@@ -1,4 +1,3 @@
-import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
   FileText,
@@ -171,9 +170,6 @@ function TermsSectionCard({ section }: { section: TermsSection }) {
 // ---------------------------------------------------------------------------
 
 export default function TermsPage() {
-  // useLocation available for future programmatic navigation
-  const [, setLocation] = useLocation();
-
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* ── Header ── */}
@@ -194,7 +190,7 @@ export default function TermsPage() {
           <div>
             <p className="text-sm font-semibold">服务条款</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              最后更新：2025年1月1日
+              最后更新：2024年12月1日
             </p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
               在使用悦聚服务前，请仔细阅读以下条款。继续使用即视为您已同意本协议全部内容。

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronDown,
@@ -200,9 +199,6 @@ function FAQAccordionItem({ item, isOpen, onToggle }: FAQAccordionItemProps) {
 export default function FAQPage() {
   // Track which FAQ item is currently open (null = all closed)
   const [openItem, setOpenItem] = useState<string | null>(null);
-
-  // useLocation available for future navigation
-  const [, setLocation] = useLocation();
 
   const handleToggle = (id: string) => {
     // Toggle: close if already open, open otherwise

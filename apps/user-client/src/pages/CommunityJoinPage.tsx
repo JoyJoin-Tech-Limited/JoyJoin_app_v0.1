@@ -1,4 +1,3 @@
-import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
   QrCode,
@@ -82,9 +81,6 @@ const communityBenefits = [
 // ---------------------------------------------------------------------------
 
 export default function CommunityJoinPage() {
-  // useLocation is imported but setLocation is available for future navigation
-  const [, setLocation] = useLocation();
-
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* ── Header ── */}

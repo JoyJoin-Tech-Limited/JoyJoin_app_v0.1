@@ -1,4 +1,3 @@
-import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
   Wallet,
@@ -168,7 +167,7 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
     <motion.div
       variants={cardVariants}
       className={`glass rounded-2xl overflow-hidden transition-opacity ${
-        isUsed ? "opacity-55" : ""
+        isUsed ? "opacity-50" : ""
       }`}
       data-testid={`coupon-card-${coupon.id}`}
     >
@@ -238,9 +237,6 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
 // ---------------------------------------------------------------------------
 
 export default function WalletPage() {
-  // useLocation available for future programmatic navigation
-  const [, setLocation] = useLocation();
-
   const availableCount = COUPONS.filter((c) => c.status === "可使用").length;
 
   return (
