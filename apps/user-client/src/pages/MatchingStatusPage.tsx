@@ -124,9 +124,7 @@ export default function MatchingStatusPage() {
   const [showRevealAnimation, setShowRevealAnimation] = useState(false);
   const [groupMembersData, setGroupMembersData] = useState<PoolGroupResponse | null>(null);
   const [isLoadingGroupData, setIsLoadingGroupData] = useState(false);
-  const [revealAnimationComplete, setRevealAnimationComplete] = useState(false);
-
-  // Progress update micro-interaction state
+  const [revealAnimationComplete, setRevealAnimationComplete] = useState(false);  // Progress update micro-interaction state
   const [newMemberJoined, setNewMemberJoined] = useState(false);
   const [newMemberArchetype, setNewMemberArchetype] = useState<string | null>(null);
 
@@ -179,18 +177,19 @@ export default function MatchingStatusPage() {
   // Build UserContext for spark-prediction engine in MatchSuccessSheet
   const currentUserContext = useMemo<UserContext | undefined>(() => {
     if (!user) return undefined;
-    return {
-      interests: user.interestsDeep ?? undefined,
-      educationLevel: user.educationLevel ?? undefined,
-      industry: user.industryCategoryLabel ?? user.industryCategory ?? undefined,
-      age: user.age ?? undefined,
-      gender: user.gender ?? undefined,
-      archetype: user.archetype ?? undefined,
-      relationshipStatus: user.relationshipStatus ?? undefined,
-      children: user.children ?? undefined,
-      hometownRegionCity: user.hometownRegionCity ?? undefined,
-      hometownAffinityOptin: user.hometownAffinityOptin ?? undefined,
-    };
+    const ctx: UserContext = {};
+    if (user.interestsDeep && user.interestsDeep.length > 0) ctx.interests = user.interestsDeep;
+    if (user.educationLevel != null) ctx.educationLevel = user.educationLevel;
+    const industry = user.industryCategoryLabel ?? user.industryCategory;
+    if (industry != null && industry !== "") ctx.industry = industry;
+    if (user.age != null) ctx.age = user.age;
+    if (user.gender != null) ctx.gender = user.gender;
+    if (user.archetype != null) ctx.archetype = user.archetype;
+    if (user.relationshipStatus != null) ctx.relationshipStatus = user.relationshipStatus;
+    if (user.children != null) ctx.children = user.children;
+    if (user.hometownRegionCity != null && user.hometownRegionCity !== "") ctx.hometownRegionCity = user.hometownRegionCity;
+    if (user.hometownAffinityOptin != null) ctx.hometownAffinityOptin = user.hometownAffinityOptin;
+    return ctx;
   }, [user]);
 
   // WebSocket subscriptions
@@ -342,13 +341,7 @@ export default function MatchingStatusPage() {
     }
   }, []);
 
-  // Handle reveal animation complete
-  const handleRevealOrbitComplete = useCallback(() => {
-    // Mark animation as complete, enabling click to continue
-    setRevealAnimationComplete(true);
-  }, []);
-  
-  // Handle user dismissing the MatchSuccessSheet (animation is handled internally by the sheet)
+    // Handle user dismissing the MatchSuccessSheet (animation is handled internally by the sheet)
   const handleRevealContinue = useCallback(() => {
     // Hide the reveal overlay and show match celebration
     setShowRevealAnimation(false);

@@ -60,6 +60,7 @@ function FloatingAvatar({ archetype, index, total, phase }: FloatingAvatarProps)
           delay: index * 0.18,
         },
       });
+      return () => controls.stop();
     }
   }, [phase, baseY, controls, index]);
 
@@ -77,6 +78,7 @@ function FloatingAvatar({ archetype, index, total, phase }: FloatingAvatarProps)
           delay: index * 0.07,
         },
       });
+      return () => controls.stop();
     }
   }, [phase, index, controls]);
 
@@ -144,7 +146,7 @@ export default function MatchSuccessSheet({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={phase === "deck" ? onDismiss : undefined}
+        onClick={onDismiss}
       />
 
       {/* Volumetric glass card – z-50 */}
