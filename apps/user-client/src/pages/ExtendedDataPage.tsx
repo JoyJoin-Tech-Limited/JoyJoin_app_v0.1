@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
@@ -21,6 +21,18 @@ export default function ExtendedDataPage() {
   // This ensures navigation only happens AFTER the loading animation completes,
   // so FinalProfileReviewPage mounts cleanly and its SpiralWaveAnimation is visible.
   const readyToNavigateRef = useRef(false);
+
+  // Holds the polling interval so it can be cancelled on error or unmount.
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cancel any in-flight polling interval on unmount to prevent stale navigation.
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -49,6 +61,11 @@ export default function ExtendedDataPage() {
       readyToNavigateRef.current = true;
     },
     onError: (error: Error) => {
+      // Cancel any pending navigation polling before hiding the overlay.
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       setShowCelebration(false);
       readyToNavigateRef.current = false;
       toast({
@@ -70,21 +87,33 @@ export default function ExtendedDataPage() {
 
   // Called when the ~1s FancyLineLoadingScreen animation finishes.
   // If data is already saved, navigate immediately. If onSuccess hasn't
-  // completed yet (slow network), poll briefly then navigate.
+  // completed yet (slow network), poll until confirmed then navigate.
+  // The interval is stored in intervalRef so onError and unmount can cancel it.
   const handleCelebrationFinish = useCallback(() => {
     if (readyToNavigateRef.current) {
       setLocation("/onboarding/review");
     } else {
-      // Data save is still in-flight; poll until ready (max 5s)
+      // Data save is still in-flight; poll until confirmed successful (max 5s)
       const start = Date.now();
-      const interval = setInterval(() => {
-        if (readyToNavigateRef.current || Date.now() - start > MAX_NAVIGATION_WAIT_MS) {
-          clearInterval(interval);
+      intervalRef.current = setInterval(() => {
+        if (readyToNavigateRef.current) {
+          clearInterval(intervalRef.current!);
+          intervalRef.current = null;
           setLocation("/onboarding/review");
+        } else if (Date.now() - start > MAX_NAVIGATION_WAIT_MS) {
+          // Timed out without confirmation — stop polling, hide overlay, show error
+          clearInterval(intervalRef.current!);
+          intervalRef.current = null;
+          setShowCelebration(false);
+          toast({
+            title: "保存超时",
+            description: "请检查网络连接后重试",
+            variant: "destructive",
+          });
         }
       }, 100);
     }
-  }, [setLocation]);
+  }, [setLocation, toast]);
 
   if (showCelebration) {
     return (

@@ -47,14 +47,24 @@ export default function FinalProfileReviewPage() {
     queryKey: ["/api/auth/user"],
   });
   
+  // Use a custom queryFn that treats 404 as null so the page doesn't get stuck
+  // in "analyzing" forever when the server returns 404 (no interests yet).
+  // Matches the pattern used in GuideStepPersona.
   const { data: interests, isLoading: interestsLoading } = useQuery<any>({ 
     queryKey: ["/api/user/interests"],
     enabled: !!user?.hasCompletedInterestsCarousel,
+    queryFn: async () => {
+      const res = await fetch("/api/user/interests", { credentials: "include" });
+      if (res.status === 404) return null; // No interests data yet — treat as settled
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      return res.json();
+    },
   });
 
-  // Only transition when BOTH min time has passed AND data is ready
+  // Only transition when BOTH min time has passed AND queries are settled.
+  // `interests` may be null (404) — that's fine, profile card handles missing data.
   const phase: Phase =
-    minTimePassed && !interestsLoading && interests && user
+    minTimePassed && user && !interestsLoading
       ? "complete"
       : "analyzing";
 
