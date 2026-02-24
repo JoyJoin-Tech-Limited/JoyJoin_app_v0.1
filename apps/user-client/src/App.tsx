@@ -61,6 +61,10 @@ import FinalProfileReviewPage from "@/pages/FinalProfileReviewPage";
 import SquadUnboxingFlow from "@/pages/SquadUnboxingFlow";
 import LoginPromptPage from "@/pages/LoginPromptPage";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import CommunityJoinPage from "@/pages/CommunityJoinPage";
+import WalletPage from "@/pages/WalletPage";
+import FAQPage from "@/pages/FAQPage";
+import TermsPage from "@/pages/TermsPage";
 
 preloadXiaoyueImages();
 
@@ -219,6 +223,10 @@ function AuthenticatedRouter() {
           <Route path="/profile/edit/work" component={EditWorkPage} />
           <Route path="/profile/edit/personal" component={EditPersonalPage} />
           <Route path="/profile/edit/intent" component={EditIntentPage} />
+          <Route path="/profile/wallet" component={WalletPage} />
+          <Route path="/profile/faq" component={FAQPage} />
+          <Route path="/profile/terms" component={TermsPage} />
+          <Route path="/community/join" component={CommunityJoinPage} />
           <Route path="/onboarding/extended" component={ExtendedDataPage} />
           <Route path="/onboarding/review" component={FinalProfileReviewPage} />
           <Route path="/onboarding/login" component={LoginPromptPage} />
@@ -267,6 +275,10 @@ function AuthenticatedRouter() {
           <Route path="/profile/edit/work" component={EditWorkPage} />
           <Route path="/profile/edit/personal" component={EditPersonalPage} />
           <Route path="/profile/edit/intent" component={EditIntentPage} />
+          <Route path="/profile/wallet" component={WalletPage} />
+          <Route path="/profile/faq" component={FAQPage} />
+          <Route path="/profile/terms" component={TermsPage} />
+          <Route path="/community/join" component={CommunityJoinPage} />
           <Route path="/onboarding/extended" component={ExtendedDataPage} />
           <Route path="/onboarding/review" component={FinalProfileReviewPage} />
           <Route path="/onboarding/login" component={LoginPromptPage} />
