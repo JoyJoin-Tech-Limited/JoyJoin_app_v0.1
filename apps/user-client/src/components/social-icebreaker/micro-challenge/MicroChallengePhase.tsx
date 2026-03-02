@@ -73,16 +73,15 @@ export function MicroChallengePhase({
   }, [challenge?.id]);
 
   useEffect(() => {
-    if (secondsLeft <= 0) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      return;
-    }
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (secondsLeft <= 0) return;
     intervalRef.current = setInterval(() => {
       setSecondsLeft(prev => Math.max(0, prev - 1));
     }, 1000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [challenge?.id]);
 
   useEffect(() => {

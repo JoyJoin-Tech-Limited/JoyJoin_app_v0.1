@@ -55,7 +55,8 @@ export interface SocialSessionState {
   hostUserId: string;
   hostDisplayName: string;
   playerCount: number;
-  phaseStartedAt: number; // timestamp
+  phaseStartedAt: number; // timestamp of current phase start
+  sessionStartedAt: number; // timestamp of session creation
   completedPhases: SocialIcebreakerPhase[];
   // Per-phase data
   warmupTopics?: SocialTopic[];

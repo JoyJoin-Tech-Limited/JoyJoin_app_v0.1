@@ -284,7 +284,7 @@ export function SocialIcebreakerOrchestrator({
               <SocialIcebreakerRecap
                 socialSessionId={socialSessionId || ''}
                 participants={participants}
-                durationMinutes={Math.round((Date.now() - state.phaseStartedAt) / 60000)}
+                durationMinutes={Math.round((Date.now() - (state.sessionStartedAt || state.phaseStartedAt)) / 60000)}
                 onLeave={onEnd}
               />
             </motion.div>

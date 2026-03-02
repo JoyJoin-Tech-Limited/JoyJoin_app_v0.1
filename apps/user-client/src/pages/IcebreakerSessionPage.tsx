@@ -361,7 +361,7 @@ export default function IcebreakerSessionPage() {
                     userId={user?.id || ''}
                     displayName={user?.displayName || '参与者'}
                     eventType={eventData?.eventType}
-                    participants={participantProfiles.map(p => ({ userId: p.displayName, displayName: p.displayName, archetype: p.archetype }))}
+                    participants={(sessionData?.participants || []).map(p => ({ userId: p.userId, displayName: p.displayName, archetype: p.archetype || undefined }))}
                     onEnd={handleLeave}
                   />
                 ) : topicsLoading ? (
