@@ -1,0 +1,404 @@
+import OpenAI from 'openai';
+import type {
+  SocialTopic,
+  MicroChallenge,
+  LieDetectiveStatement,
+  AtmosphereMood,
+} from '@shared/socialIcebreaker';
+
+const deepseekClient = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY,
+  baseURL: 'https://api.deepseek.com',
+});
+
+// ============ CURATED FALLBACK CONTENT ============
+
+const FALLBACK_WARMUP_TOPICS: SocialTopic[] = [
+  { id: 'w1', question: '最近最离谱的一次外卖经历是什么？', mood: 'funny', emoji: '🍜' },
+  { id: 'w2', question: '如果能把今天的一件事重来，你会改变什么？', mood: 'life', emoji: '🔄' },
+  { id: 'w3', question: '你手机里现在最奇怪的一张照片是什么？', mood: 'funny', emoji: '📱' },
+  { id: 'w4', question: '最近让你觉得"世界真小"的一次巧合？', mood: 'life', emoji: '🌍' },
+  { id: 'w5', question: '如果你的性格是一道菜，你是什么菜？', mood: 'funny', emoji: '🍽️' },
+  { id: 'w6', question: '你最近一次真正放松是什么时候？在哪里？', mood: 'relaxed', emoji: '😌' },
+  { id: 'w7', question: '如果明天不用工作，你最想做什么？', mood: 'relaxed', emoji: '🌟' },
+  { id: 'w8', question: '你最想和谁（活着或已故）共进一顿晚餐？', mood: 'emotional', emoji: '💫' },
+  { id: 'w9', question: '最近让你感动到的一个小细节是什么？', mood: 'emotional', emoji: '🥹' },
+  { id: 'w10', question: '你觉得自己哪个优点是被低估的？', mood: 'life', emoji: '💡' },
+  { id: 'w11', question: '描述一下你的理想周末是什么样的？', mood: 'relaxed', emoji: '☀️' },
+  { id: 'w12', question: '如果你能突然精通一门技能，你想要什么技能？', mood: 'funny', emoji: '🎯' },
+  { id: 'w13', question: '最近让你哈哈大笑的是什么？', mood: 'funny', emoji: '😂' },
+  { id: 'w14', question: '你小时候最想成为什么职业？现在还想吗？', mood: 'life', emoji: '👶' },
+  { id: 'w15', question: '如果你能给5年前的自己一句话，你会说什么？', mood: 'emotional', emoji: '⏰' },
+  { id: 'w16', question: '最近尝试过什么新事物，结果怎么样？', mood: 'life', emoji: '🚀' },
+  { id: 'w17', question: '你的"精神充电"方式是什么？', mood: 'relaxed', emoji: '🔋' },
+  { id: 'w18', question: '有什么事情看起来很难但实际上很容易？', mood: 'funny', emoji: '🤔' },
+  { id: 'w19', question: '什么样的环境让你感到最舒适？', mood: 'relaxed', emoji: '🏡' },
+  { id: 'w20', question: '你最想去但还没去过的地方是哪里？为什么？', mood: 'emotional', emoji: '✈️' },
+  { id: 'w21', question: '今晚来这里，你最期待的是什么？', mood: 'relaxed', emoji: '🎉' },
+  { id: 'w22', question: '用三个词描述你今天的心情？', mood: 'life', emoji: '💭' },
+  { id: 'w23', question: '你有什么"奇怪"的生活习惯不好意思承认的？', mood: 'funny', emoji: '🙈' },
+  { id: 'w24', question: '最近有没有什么让你改变看法的经历？', mood: 'emotional', emoji: '🌱' },
+  { id: 'w25', question: '如果你的生活是一部电影，现在是哪个章节？', mood: 'life', emoji: '🎬' },
+];
+
+const FALLBACK_MICRO_CHALLENGES: MicroChallenge[] = [
+  {
+    id: 'c1',
+    title: '找3个共同点',
+    description: '在座所有人找出3个共同的爱好或经历',
+    durationSeconds: 180,
+    completionCTA: '找到了！',
+  },
+  {
+    id: 'c2',
+    title: '用3个词形容彼此',
+    description: '每人用3个词形容坐在自己右边的人',
+    durationSeconds: 120,
+    completionCTA: '说完了！',
+  },
+  {
+    id: 'c3',
+    title: '组队想出最离谱的创业点子',
+    description: '大家一起想出一个绝对不会成功的创业想法',
+    durationSeconds: 150,
+    completionCTA: '想到了！',
+  },
+  {
+    id: 'c4',
+    title: '哼歌猜曲',
+    description: '每人哼一首歌，其他人猜歌名，猜对了换下一首',
+    durationSeconds: 120,
+    completionCTA: '猜完了！',
+  },
+  {
+    id: 'c5',
+    title: '最快自我介绍',
+    description: '每人用30秒介绍自己最不为人知的一面',
+    durationSeconds: 180,
+    completionCTA: '介绍完了！',
+  },
+  {
+    id: 'c6',
+    title: '心灵感应挑战',
+    description: '两人背对背同时说出同一个数字，全组尝试心灵感应',
+    durationSeconds: 90,
+    completionCTA: '挑战完成！',
+  },
+  {
+    id: 'c7',
+    title: '排列组合游戏',
+    description: '所有人按照生日月份从小到大排成一排，不能说话只能用手势',
+    durationSeconds: 120,
+    completionCTA: '排好了！',
+  },
+  {
+    id: 'c8',
+    title: '集体讲故事',
+    description: '每人说一句话，接力完成一个完整故事，结尾必须出乎意料',
+    durationSeconds: 180,
+    completionCTA: '故事完成！',
+  },
+];
+
+const FALLBACK_LIE_DETECTIVE_STATEMENTS: LieDetectiveStatement[][] = [
+  [
+    { index: 1, text: '我曾经在凌晨3点独自爬过一座山', isLie: false },
+    { index: 2, text: '我会说5种语言', isLie: true },
+    { index: 3, text: '我的第一份工作是在便利店打工', isLie: false },
+  ],
+  [
+    { index: 1, text: '我曾经在电视上出现过', isLie: true },
+    { index: 2, text: '我养过一只龟，养了10年', isLie: false },
+    { index: 3, text: '我大学时是系里的长跑冠军', isLie: false },
+  ],
+  [
+    { index: 1, text: '我曾经在飞机上遇到过名人', isLie: false },
+    { index: 2, text: '我做过职业厨师', isLie: true },
+    { index: 3, text: '我第一次坐飞机是25岁之后', isLie: false },
+  ],
+];
+
+// ============ AI GENERATORS ============
+
+export async function generateWarmupTopics(params: {
+  mood: AtmosphereMood;
+  eventType: string;
+  participantCount: number;
+  avoidTopics?: string[];
+}): Promise<SocialTopic[]> {
+  const moodMap: Record<AtmosphereMood, string> = {
+    relaxed: '轻松',
+    funny: '搞笑',
+    life: '生活',
+    emotional: '情感',
+  };
+
+  try {
+    const prompt = `你是社交破冰专家小悦。请为一个${params.eventType}活动（${params.participantCount}人）生成5个${moodMap[params.mood]}类型的破冰话题。
+    
+要求：
+- 话题要轻松有趣，适合初次见面
+- 每个话题一句话，不超过30字
+- 不要过于严肃或私人
+${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join('、')}` : ''}
+
+请以JSON格式返回，格式如下：
+[{"id":"ai1","question":"话题文本","mood":"${params.mood}","emoji":"相关emoji"}]
+
+直接返回JSON数组，不要其他内容。`;
+
+    const response = await deepseekClient.chat.completions.create({
+      model: 'deepseek-chat',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.9,
+      max_tokens: 500,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    if (!content) return getFallbackTopics(params.mood);
+
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.slice(0, 5);
+    }
+  } catch (error) {
+    console.error('[SocialIcebreakerAI] generateWarmupTopics error:', error);
+  }
+
+  return getFallbackTopics(params.mood);
+}
+
+function getFallbackTopics(mood: AtmosphereMood): SocialTopic[] {
+  const filtered = FALLBACK_WARMUP_TOPICS.filter(t => t.mood === mood);
+  const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+  // If not enough for this mood, supplement with others
+  if (shuffled.length < 5) {
+    const others = FALLBACK_WARMUP_TOPICS.filter(t => t.mood !== mood)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 5 - shuffled.length);
+    return [...shuffled, ...others];
+  }
+  return shuffled.slice(0, 5);
+}
+
+export async function generateMicroChallenges(params: {
+  eventType: string;
+  participantCount: number;
+  completedChallengeIds?: string[];
+}): Promise<MicroChallenge[]> {
+  try {
+    const prompt = `你是社交破冰专家小悦。请为一个${params.eventType}活动（${params.participantCount}人）生成3个有趣的微挑战。
+
+要求：
+- 挑战要简单易执行，2-5分钟内可完成
+- 适合在餐桌/酒桌旁进行，不需要太多空间
+- 有趣且能促进互动
+
+请以JSON格式返回：
+[{"id":"ai_c1","title":"挑战名称","description":"详细描述","durationSeconds":120,"completionCTA":"完成按钮文字"}]
+
+直接返回JSON数组，不要其他内容。`;
+
+    const response = await deepseekClient.chat.completions.create({
+      model: 'deepseek-chat',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.8,
+      max_tokens: 400,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    if (!content) return getFallbackChallenges(params.completedChallengeIds);
+
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.slice(0, 3);
+    }
+  } catch (error) {
+    console.error('[SocialIcebreakerAI] generateMicroChallenges error:', error);
+  }
+
+  return getFallbackChallenges(params.completedChallengeIds);
+}
+
+function getFallbackChallenges(completedIds?: string[]): MicroChallenge[] {
+  const available = FALLBACK_MICRO_CHALLENGES.filter(
+    c => !completedIds?.includes(c.id)
+  );
+  return [...available].sort(() => Math.random() - 0.5).slice(0, 3);
+}
+
+export async function generateLieDetectiveStatements(params: {
+  userId: string;
+  displayName: string;
+  archetype?: string;
+  interests?: string[];
+}): Promise<LieDetectiveStatement[]> {
+  try {
+    const context = [
+      params.archetype ? `性格类型：${params.archetype}` : '',
+      params.interests?.length ? `兴趣爱好：${params.interests.slice(0, 3).join('、')}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const prompt = `你是社交破冰专家小悦。请为"${params.displayName}"生成"两真一假"游戏的3个陈述句。
+${context ? `关于这个人的信息：\n${context}` : ''}
+
+要求：
+- 3个陈述中，2个是可能为真的，1个是假的
+- 陈述要有趣且令人难以判断真假
+- 每句不超过20字
+- 要有一定的个人特色
+
+请以JSON格式返回，并标注哪个是假的：
+[{"index":1,"text":"陈述文本","isLie":false},{"index":2,"text":"陈述文本","isLie":true},{"index":3,"text":"陈述文本","isLie":false}]
+
+直接返回JSON数组，确保只有一个isLie为true。`;
+
+    const response = await deepseekClient.chat.completions.create({
+      model: 'deepseek-chat',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.9,
+      max_tokens: 300,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    if (!content) return getRandomFallbackStatements();
+
+    const parsed = JSON.parse(content);
+    if (
+      Array.isArray(parsed) &&
+      parsed.length === 3 &&
+      parsed.filter((s: LieDetectiveStatement) => s.isLie).length === 1
+    ) {
+      return parsed;
+    }
+  } catch (error) {
+    console.error('[SocialIcebreakerAI] generateLieDetectiveStatements error:', error);
+  }
+
+  return getRandomFallbackStatements();
+}
+
+function getRandomFallbackStatements(): LieDetectiveStatement[] {
+  const sets = [...FALLBACK_LIE_DETECTIVE_STATEMENTS].sort(() => Math.random() - 0.5);
+  return sets[0];
+}
+
+export async function generateXiaoYueComment(params: {
+  phase: string;
+  event: string;
+  context?: string;
+}): Promise<string> {
+  const defaultComments: Record<string, Record<string, string>> = {
+    warmup: {
+      phase_start: '欢迎来到今晚的破冰时间！先从轻松的话题暖暖场吧 🌅',
+      topic_refresh: '换个话题，继续聊！这个更有趣～ ✨',
+      mood_change: '好主意，切换心情！新话题来了 🎯',
+    },
+    micro_challenge: {
+      phase_start: '热身完毕！接下来是微挑战环节，大家准备好了吗？⚡',
+      timer_warning: '加油！时间不多了 ⚡',
+      challenge_complete: '太棒了！大家都完成了！🎉',
+    },
+    lie_detective: {
+      phase_start: '侦探们，仔细听每一句话，找出谎言！🕵️',
+      vote_reveal: '揭晓时刻到了！谁是最佳说谎者？😏',
+      generating: '小悦正在为大家准备谎言游戏内容...',
+    },
+    recap: {
+      phase_start: '今晚的破冰之旅圆满结束！✨',
+    },
+  };
+
+  const phaseComments = defaultComments[params.phase];
+  if (phaseComments?.[params.event]) {
+    return phaseComments[params.event];
+  }
+
+  try {
+    const prompt = `你是社交破冰助手小悦。请为以下场景生成一句简短的主持评语（20-30字）：
+- 当前阶段：${params.phase}
+- 触发事件：${params.event}
+${params.context ? `- 上下文：${params.context}` : ''}
+
+要求：温暖有趣，有主持人的活力，可以加emoji。直接返回评语文本，不要其他内容。`;
+
+    const response = await deepseekClient.chat.completions.create({
+      model: 'deepseek-chat',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.8,
+      max_tokens: 100,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    return content || '继续加油，破冰进行中！✨';
+  } catch (error) {
+    console.error('[SocialIcebreakerAI] generateXiaoYueComment error:', error);
+    return '继续加油，破冰进行中！✨';
+  }
+}
+
+export async function generateRecapSummary(params: {
+  participants: Array<{ displayName: string; archetype?: string }>;
+  topicsDiscussed: string[];
+  challengesCompleted: number;
+  lieDetectiveHighlights?: string[];
+  durationMinutes: number;
+}): Promise<{ headline: string; moments: string[]; closingLine: string }> {
+  try {
+    const prompt = `你是社交破冰助手小悦。请为今晚的活动生成一个温馨的总结：
+
+参与者：${params.participants.map(p => p.displayName).join('、')}
+讨论话题数：${params.topicsDiscussed.length}
+完成挑战数：${params.challengesCompleted}
+活动时长：${params.durationMinutes}分钟
+${params.lieDetectiveHighlights?.length ? `谎言侦探亮点：${params.lieDetectiveHighlights.join('、')}` : ''}
+
+请以JSON格式返回：
+{
+  "headline": "一句话总结（15字内）",
+  "moments": ["精彩瞬间1", "精彩瞬间2", "精彩瞬间3"],
+  "closingLine": "温馨结束语（20-30字）"
+}
+
+直接返回JSON，不要其他内容。`;
+
+    const response = await deepseekClient.chat.completions.create({
+      model: 'deepseek-chat',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.8,
+      max_tokens: 300,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    if (!content) return getDefaultRecap(params);
+
+    const parsed = JSON.parse(content);
+    if (parsed.headline && parsed.moments && parsed.closingLine) {
+      return parsed;
+    }
+  } catch (error) {
+    console.error('[SocialIcebreakerAI] generateRecapSummary error:', error);
+  }
+
+  return getDefaultRecap(params);
+}
+
+function getDefaultRecap(params: {
+  participants: Array<{ displayName: string }>;
+  topicsDiscussed: string[];
+  challengesCompleted: number;
+  durationMinutes: number;
+}): { headline: string; moments: string[]; closingLine: string } {
+  const names = params.participants.map(p => p.displayName);
+  return {
+    headline: `${params.durationMinutes}分钟的精彩破冰！`,
+    moments: [
+      `聊了${params.topicsDiscussed.length}个有趣话题`,
+      `完成了${params.challengesCompleted}个微挑战`,
+      `${names.length}个人的新奇缘分`,
+    ],
+    closingLine: `感谢${names.slice(0, 2).join('和')}${names.length > 2 ? '等' : ''}大家的参与！期待下次再见 🌟`,
+  };
+}

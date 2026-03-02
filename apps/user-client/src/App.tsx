@@ -47,6 +47,7 @@ import DeepFeedbackFlow from "@/pages/DeepFeedbackFlow";
 import IcebreakerSessionPage from "@/pages/IcebreakerSessionPage";
 import IcebreakerDemoPage from "@/pages/IcebreakerDemoPage";
 import IcebreakerGamePage from "@/pages/IcebreakerGamePage";
+import SocialIcebreakerRecapPage from "@/pages/SocialIcebreakerRecapPage";
 import RewardsPage from "@/pages/RewardsPage";
 import MatchingStatusPage from "@/pages/MatchingStatusPage";
 import MyJourneyPage from "@/pages/MyJourneyPage";
@@ -210,6 +211,7 @@ function AuthenticatedRouter() {
           <Route path="/events/:eventId/feedback" component={EventFeedbackFlow} />
           <Route path="/events/:eventId/deep-feedback" component={DeepFeedbackFlow} />
           <Route path="/icebreaker/:sessionId" component={IcebreakerSessionPage} />
+          <Route path="/icebreaker-recap/:sessionId" component={SocialIcebreakerRecapPage} />
           <Route path="/icebreaker-game" component={IcebreakerGamePage} />
           <Route path="/events" component={EventsPage} />
           <Route path="/chats" component={ChatsPage} />

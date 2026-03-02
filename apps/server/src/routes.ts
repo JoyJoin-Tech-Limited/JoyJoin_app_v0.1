@@ -1,6 +1,7 @@
 //my path:/Users/felixg/projects/JoyJoin3/server/routes.ts
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
+import socialIcebreakerRoutes from "./routes/socialIcebreaker";
 import { storage } from "./storage";
 import { matchIndustryFromText } from "./inference/industryOntology";
 import { INDUSTRY_OPTIONS } from "@shared/constants";
@@ -13288,6 +13289,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       keyLength: secretKey.length
     });
   });
+
+  app.use('/api/social-icebreaker', socialIcebreakerRoutes);
 
   const httpServer = createServer(app);
 
