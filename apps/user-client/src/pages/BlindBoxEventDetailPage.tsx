@@ -578,7 +578,14 @@ export default function BlindBoxEventDetailPage() {
         {(event.status === "matched" || event.status === "completed") && eventId && (
           <>
             <button
-              onClick={() => setIcebreakerSheetOpen(true)}
+              onClick={() => {
+                const hasStarted = new Date() >= new Date(event.dateTime);
+                if (hasStarted) {
+                  setLocation(`/icebreaker/${eventId}?mode=social&eventId=${eventId}`);
+                } else {
+                  setIcebreakerSheetOpen(true);
+                }
+              }}
               className="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-600 rounded-xl p-4 transition-all active:scale-[0.98] shadow-lg"
               data-testid="button-open-icebreaker"
             >
@@ -589,8 +596,12 @@ export default function BlindBoxEventDetailPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 text-left">
-                  <p className="text-white font-semibold text-sm">查看小悦精选话题</p>
-                  <p className="text-white/70 text-xs">为你们准备的破冰话题</p>
+                  <p className="text-white font-semibold text-sm">
+                    {new Date() >= new Date(event.dateTime) ? '🎲 开始破冰体验' : '查看小悦精选话题'}
+                  </p>
+                  <p className="text-white/70 text-xs">
+                    {new Date() >= new Date(event.dateTime) ? 'AI主持·5个环节·90分钟' : '为你们准备的破冰话题'}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1 text-white/80">
                   <Sparkles className="h-4 w-4" />
