@@ -60,6 +60,7 @@ router.post('/start', async (req: any, res) => {
     hostDisplayName: displayName || '主持人',
     playerCount: 1,
     phaseStartedAt: Date.now(),
+    sessionStartedAt: Date.now(),
     completedPhases: [],
   };
 
@@ -351,13 +352,13 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
     return res.status(404).json({ error: 'Social session not found' });
   }
 
-  const durationMinutes = Math.round((Date.now() - state.phaseStartedAt) / 60000);
+  const durationMinutes = Math.round((Date.now() - (state.sessionStartedAt || state.phaseStartedAt)) / 60000);
 
   try {
     const players = state.lieDetectivePlayers || [];
     const summary = await generateRecapSummary({
       participants: players.map((p: LieDetectivePlayer) => ({ displayName: p.displayName })),
-      topicsDiscussed: (state.warmupTopics || []).slice(0, state.currentTopicIndex || 0).map(t => t.question),
+      topicsDiscussed: (state.warmupTopics || []).slice(0, (state.currentTopicIndex ?? 0) + 1).map(t => t.question),
       challengesCompleted: state.challengeCompletedBy?.length || 0,
       durationMinutes,
     });

@@ -41,10 +41,10 @@ export function useSocialIcebreaker({
   const startedRef = useRef(false);
 
   // Poll for state every 3 seconds once we have a session
-  const { data: state, isLoading } = useQuery<SocialSessionState>({
+  const { data: state, isLoading } = useQuery<SocialSessionState | null>({
     queryKey: ['/api/social-icebreaker', socialSessionId],
     queryFn: async () => {
-      if (!socialSessionId) return null as any;
+      if (!socialSessionId) return null;
       const res = await apiRequest('GET', `/api/social-icebreaker/${socialSessionId}?userId=${userId}`);
       return res.json();
     },
@@ -160,7 +160,7 @@ export function useSocialIcebreaker({
   );
 
   return {
-    state: state || null,
+    state: state ?? null,
     isLoading,
     isHost,
     socialSessionId,

@@ -56,6 +56,7 @@ export function WarmupPhase({
   );
 
   const handleRefresh = useCallback(() => {
+    if (currentTopics.length === 0) return;
     const nextIndex = (currentIndex + 1) % currentTopics.length;
     setDirection(1);
     setCurrentIndex(nextIndex);
