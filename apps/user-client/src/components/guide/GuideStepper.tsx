@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -120,25 +120,26 @@ export function GuideStepper({
         </div>
         
         {/* 进度指示器 */}
-        <div className="flex items-center gap-2">
-          {Array.from({ length: totalSteps }).map((_, index) => (
-            <motion.div
-              key={index}
-              className={cn(
-                "w-2 h-2 rounded-full transition-colors",
-                index === currentStep
-                  ? "bg-purple-600"
-                  : index < currentStep
-                  ? "bg-purple-300"
-                  : "bg-gray-300 dark:bg-gray-600"
-              )}
-              animate={{
-                scale: index === currentStep ? 1.2 : 1,
-              }}
-              transition={{ duration: 0.2 }}
-            />
-          ))}
-        </div>
+        <LayoutGroup id="guide-step-dots">
+          <div className="flex items-center gap-1.5">
+            {Array.from({ length: totalSteps }).map((_, index) => (
+              index === currentStep ? (
+                prefersReducedMotion ? (
+                  <div key={index} className="w-5 h-2 rounded-full bg-primary" />
+                ) : (
+                  <motion.div
+                    key="active-dot"
+                    layoutId="guide-active-dot"
+                    className="w-5 h-2 rounded-full bg-primary"
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  />
+                )
+              ) : (
+                <div key={index} className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+              )
+            ))}
+          </div>
+        </LayoutGroup>
         
         {/* 跳过按钮 */}
         <Button

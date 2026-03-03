@@ -66,6 +66,12 @@ const reducedMotionItemVariants = {
   visible: { opacity: 1, transition: { duration: 0.15 } },
 };
 
+// Stable shake keyframes for results hero — defined outside component so the
+// reference never changes between renders, ensuring the shake plays only once.
+const heroShakeAnimate = { opacity: 1, x: [0, -6, 6, -4, 4, -2, 2, 0] } as const;
+const heroFadeAnimate = { opacity: 1 } as const;
+const heroShakeTransition = { duration: 0.6, ease: "easeOut" } as const;
+
 const traitLabels: Record<string, string> = {
   A: '亲和力',
   O: '开放性',
@@ -872,8 +878,8 @@ export default function PersonalityTestResultPage() {
       
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6 }}
+        animate={prefersReducedMotion ? heroFadeAnimate : heroShakeAnimate}
+        transition={heroShakeTransition}
         className="relative min-h-[70vh] flex flex-col items-center justify-center px-4 py-6"
       >
         <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-10`} />
