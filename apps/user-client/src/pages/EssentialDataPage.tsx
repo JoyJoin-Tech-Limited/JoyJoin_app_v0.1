@@ -377,10 +377,29 @@ export default function EssentialDataPage() {
       
       // Use server-driven nextStep for navigation instead of hardcoded URL
       const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as AuthUser;
-      const nextPath =
-        updatedUser?.nextStep === 'extended-data' ? '/onboarding/extended'
-        : updatedUser?.nextStep === 'profile-review' ? '/onboarding/review'
-        : '/onboarding/extended'; // guide/discover both handled by home route; fallback to extended
+      let nextPath = '/';
+      switch (updatedUser?.nextStep) {
+        case 'onboarding':
+          nextPath = '/onboarding';
+          break;
+        case 'personality-test':
+          nextPath = '/personality-test';
+          break;
+        case 'essential-data':
+          nextPath = '/onboarding/setup';
+          break;
+        case 'extended-data':
+          nextPath = '/onboarding/extended';
+          break;
+        case 'profile-review':
+          nextPath = '/onboarding/review';
+          break;
+        case 'guide':
+        case 'discover':
+        default:
+          nextPath = '/';
+          break;
+      }
       setLocation(nextPath);
     },
     onError: (error: Error) => {

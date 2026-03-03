@@ -363,8 +363,7 @@ function Router() {
 }
 
 function App() {
-  // Load dev tools globally (works in dev and prod temporarily)
-  // TODO: Restrict to development only before production launch
+  // Load dev tools in non-production environments for easier debugging
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') {
       import('./utils/devTools').then(module => {
