@@ -296,7 +296,7 @@ export function SocialIcebreakerOrchestrator({
               <SocialIcebreakerRecap
                 socialSessionId={socialSessionId || ''}
                 participants={participants}
-                durationMinutes={Math.round((Date.now() - (state.sessionStartedAt || state.phaseStartedAt)) / 60000)}
+                durationMinutes={Math.max(1, Math.round((Date.now() - (state.sessionStartedAt || state.phaseStartedAt)) / 60000))}
                 onLeave={onEnd}
                 eventId={eventId}
               />

@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
@@ -7,8 +6,8 @@ import MobilePrimaryButton from '@/components/mobile/MobilePrimaryButton';
 
 interface SocialIcebreakerRecapProps {
   socialSessionId: string;
-  participants: Array<{ userId: string; displayName: string; archetype?: string }>;
-  durationMinutes: number;
+  participants?: Array<{ userId: string; displayName: string; archetype?: string }>;
+  durationMinutes?: number;
   onLeave: () => void;
   eventId?: string;
 }
@@ -42,6 +41,21 @@ export function SocialIcebreakerRecap({
 
   const summary = recapData?.summary;
 
+  const effectiveDuration =
+    durationMinutes ??
+    (recapData?.state?.sessionStartedAt
+      ? Math.max(1, Math.round((Date.now() - recapData.state.sessionStartedAt) / 60000))
+      : 30);
+
+  const effectiveParticipants: Array<{ userId: string; displayName: string; archetype?: string }> =
+    participants ??
+    (recapData?.state?.lieDetectivePlayers?.length
+      ? recapData.state.lieDetectivePlayers.map((p: { userId: string; displayName: string }) => ({
+          userId: p.userId,
+          displayName: p.displayName,
+        }))
+      : []);
+
   return (
     <div
       className="flex flex-col min-h-full bg-gradient-to-br from-violet-900 via-purple-900 to-fuchsia-900 text-white"
@@ -57,7 +71,7 @@ export function SocialIcebreakerRecap({
         >
           <div className="text-5xl mb-3">✨</div>
           <h2 className="text-3xl font-black">今晚的精彩回顾</h2>
-          <p className="text-violet-300 mt-1 text-sm">{durationMinutes} 分钟的破冰时光</p>
+          <p className="text-violet-300 mt-1 text-sm">{effectiveDuration} 分钟的破冰时光</p>
         </motion.div>
 
         {isLoading ? (
@@ -105,7 +119,7 @@ export function SocialIcebreakerRecap({
 
         {/* Participants */}
         <div className="flex flex-wrap justify-center gap-2 mb-8">
-          {participants.slice(0, 6).map(p => (
+          {effectiveParticipants.slice(0, 6).map(p => (
             <div
               key={p.userId}
               className="bg-white/10 rounded-full px-3 py-1 text-xs text-violet-200"
