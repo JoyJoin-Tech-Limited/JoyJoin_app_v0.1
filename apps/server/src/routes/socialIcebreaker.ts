@@ -24,30 +24,91 @@ const socialSessions = new Map<string, SocialSessionState>();
 const sessionIndex = new Map<string, string>();
 // Store lie statements server-side (isLie hidden from clients)
 const lieStatements = new Map<string, Map<string, Array<{ index: number; text: string; isLie: boolean }>>>();
+// Track unique joined users per session for accurate playerCount
+const sessionJoinedUsers = new Map<string, Set<string>>();
+
+// ============ TTL / MEMORY CLEANUP ============
+const SESSION_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+const SESSION_SWEEP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_SOCIAL_SESSIONS = 1000;
+
+function deleteSocialSession(socialSessionId: string): void {
+  socialSessions.delete(socialSessionId);
+  lieStatements.delete(socialSessionId);
+  sessionJoinedUsers.delete(socialSessionId);
+  for (const [icebreakerSessionId, mapped] of sessionIndex.entries()) {
+    if (mapped === socialSessionId) {
+      sessionIndex.delete(icebreakerSessionId);
+    }
+  }
+}
+
+function cleanupStaleSessions(): void {
+  const now = Date.now();
+  for (const [id, state] of socialSessions.entries()) {
+    if (now - (state.sessionStartedAt || 0) > SESSION_TTL_MS) {
+      deleteSocialSession(id);
+    }
+  }
+  if (socialSessions.size > MAX_SOCIAL_SESSIONS) {
+    const byAge = Array.from(socialSessions.entries()).sort(
+      ([, a], [, b]) => (a.sessionStartedAt || 0) - (b.sessionStartedAt || 0),
+    );
+    const excess = socialSessions.size - MAX_SOCIAL_SESSIONS;
+    for (let i = 0; i < excess; i++) {
+      deleteSocialSession(byAge[i][0]);
+    }
+  }
+}
+
+const sweepInterval = setInterval(cleanupStaleSessions, SESSION_SWEEP_INTERVAL_MS);
+sweepInterval.unref?.();
 
 function getSocialSessionId(icebreakerSessionId: string): string {
   return `social_${icebreakerSessionId}`;
 }
 
+// Helper: sanitize state before sending to client (hide isLie)
+function sanitizeStateForClient(state: SocialSessionState): SocialSessionState {
+  return { ...state };
+}
+
+// Helper: update playerCount from joined user set
+function syncPlayerCount(socialSessionId: string, state: SocialSessionState): void {
+  const joined = sessionJoinedUsers.get(socialSessionId);
+  if (joined) {
+    state.playerCount = joined.size;
+  }
+}
+
 // POST /api/social-icebreaker/start
 router.post('/start', async (req: any, res) => {
-  const { sessionId, userId, displayName } = req.body;
+  // Use authenticated session user; fall back to body only for display name
+  const userId: string = req.session?.userId;
+  const { sessionId, displayName } = req.body;
 
   if (!sessionId || !userId) {
-    return res.status(400).json({ error: 'sessionId and userId are required' });
+    return res.status(400).json({ error: 'sessionId and authenticated userId are required' });
   }
 
   const socialSessionId = getSocialSessionId(sessionId);
   const existing = socialSessions.get(socialSessionId);
 
+  // Track this user as joined
+  if (!sessionJoinedUsers.has(socialSessionId)) {
+    sessionJoinedUsers.set(socialSessionId, new Set());
+  }
+  sessionJoinedUsers.get(socialSessionId)!.add(userId);
+
   if (existing) {
-    // Already started — return existing state
+    syncPlayerCount(socialSessionId, existing);
+    socialSessions.set(socialSessionId, existing);
     return res.json({
       socialSessionId,
       hostUserId: existing.hostUserId,
       hostDisplayName: existing.hostDisplayName,
       currentPhase: existing.currentPhase,
-      state: sanitizeStateForClient(existing, userId),
+      state: sanitizeStateForClient(existing),
     });
   }
 
@@ -72,26 +133,38 @@ router.post('/start', async (req: any, res) => {
     hostUserId: newState.hostUserId,
     hostDisplayName: newState.hostDisplayName,
     currentPhase: newState.currentPhase,
-    state: sanitizeStateForClient(newState, userId),
+    state: sanitizeStateForClient(newState),
   });
 });
 
 // GET /api/social-icebreaker/:socialSessionId
 router.get('/:socialSessionId', (req: any, res) => {
   const { socialSessionId } = req.params;
-  const userId = req.query.userId as string;
+  const userId: string = req.session?.userId;
 
   const state = socialSessions.get(socialSessionId);
   if (!state) {
     return res.status(404).json({ error: 'Social session not found' });
   }
 
-  return res.json(sanitizeStateForClient(state, userId));
+  // Track this user as joined (polling counts as presence)
+  if (userId) {
+    if (!sessionJoinedUsers.has(socialSessionId)) {
+      sessionJoinedUsers.set(socialSessionId, new Set());
+    }
+    sessionJoinedUsers.get(socialSessionId)!.add(userId);
+    syncPlayerCount(socialSessionId, state);
+    socialSessions.set(socialSessionId, state);
+  }
+
+  return res.json(sanitizeStateForClient(state));
 });
 
 // POST /api/social-icebreaker/:socialSessionId/topics
+// Only the host can refresh/change topics (shared session-level state)
 router.post('/:socialSessionId/topics', async (req: any, res) => {
   const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
   const { mood, eventType = '活动', participantCount = 4, avoidTopics } = req.body as {
     mood: AtmosphereMood;
     eventType?: string;
@@ -108,15 +181,19 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
     return res.status(404).json({ error: 'Social session not found' });
   }
 
+  if (state.hostUserId !== userId) {
+    return res.status(403).json({ error: 'Only the host can change topics' });
+  }
+
   try {
     const topics = await generateWarmupTopics({
       mood,
       eventType,
-      participantCount,
+      participantCount: state.playerCount || participantCount,
       avoidTopics,
     });
 
-    // Store topics in session
+    // Store topics in session so pollers see them too
     state.warmupTopics = topics;
     state.selectedMood = mood;
     state.currentTopicIndex = 0;
@@ -132,13 +209,11 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
 // POST /api/social-icebreaker/:socialSessionId/advance
 router.post('/:socialSessionId/advance', async (req: any, res) => {
   const { socialSessionId } = req.params;
-  const { userId, currentPhase } = req.body as {
-    userId: string;
-    currentPhase: SocialIcebreakerPhase;
-  };
+  const userId: string = req.session?.userId;
+  const { currentPhase } = req.body as { currentPhase: SocialIcebreakerPhase };
 
-  if (!userId || !currentPhase) {
-    return res.status(400).json({ error: 'userId and currentPhase are required' });
+  if (!currentPhase) {
+    return res.status(400).json({ error: 'currentPhase is required' });
   }
 
   const state = socialSessions.get(socialSessionId);
@@ -154,7 +229,6 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     return res.status(400).json({ error: 'Phase mismatch' });
   }
 
-  // Determine next phase
   const nextPhase = getNextPhase(currentPhase, MVP_PHASES);
   const resolvedNextPhase: SocialIcebreakerPhase = nextPhase === 'recap' ? 'recap' : nextPhase;
 
@@ -164,7 +238,6 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
       ? 'recap'
       : resolvedNextPhase;
 
-  // Mark current phase as completed
   if (!state.completedPhases.includes(currentPhase)) {
     state.completedPhases = [...(state.completedPhases || []), currentPhase];
   }
@@ -174,7 +247,6 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   state.pulseChecks = [];
   socialSessions.set(socialSessionId, state);
 
-  // Pre-generate content for new phase
   let content: any = null;
   if (effectiveNextPhase === 'micro_challenge') {
     try {
@@ -200,17 +272,21 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     nextPhase: effectiveNextPhase,
     content,
     xiaoYueComment: comment,
-    state: sanitizeStateForClient(state, userId),
+    state: sanitizeStateForClient(state),
   });
 });
 
 // POST /api/social-icebreaker/:socialSessionId/pulse-check
 router.post('/:socialSessionId/pulse-check', (req: any, res) => {
   const { socialSessionId } = req.params;
-  const { userId, vibe } = req.body as { userId: string; vibe: 1 | 2 | 3 };
+  const userId: string = req.session?.userId;
+  const { vibe } = req.body as { vibe: number };
 
-  if (!userId || !vibe) {
-    return res.status(400).json({ error: 'userId and vibe are required' });
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  if (typeof vibe !== 'number' || ![1, 2, 3].includes(vibe)) {
+    return res.status(400).json({ error: 'vibe must be 1, 2, or 3' });
   }
 
   const state = socialSessions.get(socialSessionId);
@@ -218,13 +294,13 @@ router.post('/:socialSessionId/pulse-check', (req: any, res) => {
     return res.status(404).json({ error: 'Social session not found' });
   }
 
-  // Record pulse check
   const pulseChecks = state.pulseChecks || [];
   const existingIdx = pulseChecks.findIndex((p: PulseCheckResult) => p.userId === userId);
+  const vibeValue = vibe as 1 | 2 | 3;
   if (existingIdx >= 0) {
-    pulseChecks[existingIdx].vibe = vibe;
+    pulseChecks[existingIdx].vibe = vibeValue;
   } else {
-    pulseChecks.push({ userId, vibe });
+    pulseChecks.push({ userId, vibe: vibeValue });
   }
   state.pulseChecks = pulseChecks;
   socialSessions.set(socialSessionId, state);
@@ -239,18 +315,50 @@ router.post('/:socialSessionId/pulse-check', (req: any, res) => {
   });
 });
 
+// POST /api/social-icebreaker/:socialSessionId/micro-challenge/complete
+router.post('/:socialSessionId/micro-challenge/complete', (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = socialSessions.get(socialSessionId);
+  if (!state) {
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  if (state.currentPhase !== 'micro_challenge') {
+    return res.status(400).json({ error: 'Not in micro_challenge phase' });
+  }
+
+  const completedBy = state.challengeCompletedBy || [];
+  if (!completedBy.includes(userId)) {
+    completedBy.push(userId);
+    state.challengeCompletedBy = completedBy;
+    socialSessions.set(socialSessionId, state);
+  }
+
+  return res.json({
+    completedBy: state.challengeCompletedBy,
+    completedCount: completedBy.length,
+    totalCount: state.playerCount,
+  });
+});
+
 // POST /api/social-icebreaker/:socialSessionId/lie-detective/generate
 router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) => {
   const { socialSessionId } = req.params;
-  const { userId, displayName, archetype, interests } = req.body as {
-    userId: string;
+  const userId: string = req.session?.userId;
+  const { displayName, archetype, interests } = req.body as {
     displayName: string;
     archetype?: string;
     interests?: string[];
   };
 
   if (!userId || !displayName) {
-    return res.status(400).json({ error: 'userId and displayName are required' });
+    return res.status(400).json({ error: 'Authentication and displayName are required' });
   }
 
   const state = socialSessions.get(socialSessionId);
@@ -266,13 +374,11 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
       interests,
     });
 
-    // Store full statements (with isLie) server-side
     if (!lieStatements.has(socialSessionId)) {
       lieStatements.set(socialSessionId, new Map());
     }
     lieStatements.get(socialSessionId)!.set(userId, statements);
 
-    // Register player in session
     const players: LieDetectivePlayer[] = state.lieDetectivePlayers || [];
     const existingPlayer = players.findIndex((p: LieDetectivePlayer) => p.userId === userId);
     const sanitizedStatements = statements.map(s => ({ index: s.index, text: s.text }));
@@ -300,10 +406,14 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
 // POST /api/social-icebreaker/:socialSessionId/lie-detective/vote
 router.post('/:socialSessionId/lie-detective/vote', (req: any, res) => {
   const { socialSessionId } = req.params;
-  const { voterId, targetUserId, guessedStatementIndex } = req.body as LieDetectiveVote;
+  const voterId: string = req.session?.userId;
+  const { targetUserId, guessedStatementIndex } = req.body as {
+    targetUserId: string;
+    guessedStatementIndex: number;
+  };
 
   if (!voterId || !targetUserId || !guessedStatementIndex) {
-    return res.status(400).json({ error: 'voterId, targetUserId, and guessedStatementIndex are required' });
+    return res.status(400).json({ error: 'Authentication, targetUserId, and guessedStatementIndex are required' });
   }
 
   const state = socialSessions.get(socialSessionId);
@@ -323,7 +433,6 @@ router.post('/:socialSessionId/lie-detective/vote', (req: any, res) => {
   state.votes = votes;
   socialSessions.set(socialSessionId, state);
 
-  // Check if all players have voted for this target
   const targetPlayers = state.lieDetectivePlayers || [];
   const otherPlayerCount = targetPlayers.filter((p: LieDetectivePlayer) => p.userId !== targetUserId).length;
   const votesForTarget = votes.filter((v: LieDetectiveVote) => v.targetUserId === targetUserId).length;
@@ -363,18 +472,10 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
       durationMinutes,
     });
 
-    return res.json({ summary, state: sanitizeStateForClient(state, '') });
+    return res.json({ summary, state: sanitizeStateForClient(state) });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to generate recap' });
   }
 });
-
-// Helper: sanitize state before sending to client (hide isLie)
-function sanitizeStateForClient(state: SocialSessionState, _userId: string): SocialSessionState {
-  return {
-    ...state,
-    // lieDetectivePlayers already has isLie stripped (stored without it)
-  };
-}
 
 export default router;

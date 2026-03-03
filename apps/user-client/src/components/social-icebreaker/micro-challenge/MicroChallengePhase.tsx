@@ -11,6 +11,7 @@ interface MicroChallengePhaseProps {
   challenge: MicroChallenge | null;
   completedBy: string[];
   userId: string;
+  onComplete: () => Promise<void>;
   onAdvance: () => void;
   isAdvancing: boolean;
 }
@@ -59,6 +60,7 @@ export function MicroChallengePhase({
   challenge,
   completedBy,
   userId,
+  onComplete,
   onAdvance,
   isAdvancing,
 }: MicroChallengePhaseProps) {
@@ -76,7 +78,13 @@ export function MicroChallengePhase({
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (secondsLeft <= 0) return;
     intervalRef.current = setInterval(() => {
-      setSecondsLeft(prev => Math.max(0, prev - 1));
+      setSecondsLeft(prev => {
+        const next = Math.max(0, prev - 1);
+        if (next === 0 && intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+        return next;
+      });
     }, 1000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -146,9 +154,10 @@ export function MicroChallengePhase({
         {/* Complete button */}
         {!hasCompleted && (
           <MobilePrimaryButton
-            onClick={() => {
+            onClick={async () => {
               setHasCompleted(true);
               if (navigator.vibrate) navigator.vibrate(40);
+              await onComplete();
             }}
             className="w-full min-h-[72px] bg-gradient-to-r from-cyan-500 to-blue-600 border-0"
           >

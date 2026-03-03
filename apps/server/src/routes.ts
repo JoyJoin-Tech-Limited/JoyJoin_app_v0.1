@@ -13290,7 +13290,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     });
   });
 
-  app.use('/api/social-icebreaker', socialIcebreakerRoutes);
+  app.use('/api/social-icebreaker', isPhoneAuthenticated, socialIcebreakerRoutes);
 
   const httpServer = createServer(app);
 

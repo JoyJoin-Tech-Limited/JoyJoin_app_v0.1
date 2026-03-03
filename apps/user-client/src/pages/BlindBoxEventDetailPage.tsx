@@ -578,10 +578,28 @@ export default function BlindBoxEventDetailPage() {
         {(event.status === "matched" || event.status === "completed") && eventId && (
           <>
             <button
-              onClick={() => {
+              onClick={async () => {
                 const hasStarted = new Date() >= new Date(event.dateTime);
                 if (hasStarted) {
-                  setLocation(`/icebreaker/${eventId}?mode=social&eventId=${eventId}`);
+                  try {
+                    const response = await fetch(`/api/events/${eventId}/session`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                    });
+                    if (!response.ok) {
+                      console.error('[BlindBox] Failed to get icebreaker session', response.statusText);
+                      return;
+                    }
+                    const data = await response.json();
+                    const sessionId = data?.sessionId;
+                    if (!sessionId) {
+                      console.error('[BlindBox] Missing sessionId in response', data);
+                      return;
+                    }
+                    setLocation(`/icebreaker/${sessionId}?mode=social&eventId=${eventId}`);
+                  } catch (error) {
+                    console.error('[BlindBox] Error starting icebreaker session', error);
+                  }
                 } else {
                   setIcebreakerSheetOpen(true);
                 }
