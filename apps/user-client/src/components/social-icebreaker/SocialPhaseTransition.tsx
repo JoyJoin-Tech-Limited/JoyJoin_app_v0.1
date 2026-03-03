@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface SocialPhaseTransitionProps {
@@ -49,6 +50,23 @@ function Particle({ index, colorClass }: { index: number; colorClass: string }) 
 }
 
 export function SocialPhaseTransition({ type, isVisible, onComplete }: SocialPhaseTransitionProps) {
+  const completedRef = useRef(false);
+
+  // Reset guard when visibility changes
+  useEffect(() => {
+    if (!isVisible) {
+      completedRef.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      if (!completedRef.current) {
+        completedRef.current = true;
+        onComplete?.();
+      }
+    }, 2200);
+    return () => clearTimeout(timer);
+  }, [isVisible, onComplete]);
+
   if (!type) return null;
   const config = TRANSITION_CONFIG[type];
 
@@ -60,10 +78,6 @@ export function SocialPhaseTransition({ type, isVisible, onComplete }: SocialPha
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          onAnimationComplete={() => {
-            // Trigger complete after 2.5s
-            setTimeout(() => onComplete?.(), 2200);
-          }}
           className={`fixed inset-0 z-[60] bg-gradient-to-br ${config.bgClass} flex flex-col items-center justify-center overflow-hidden`}
           data-testid="social-phase-transition"
         >

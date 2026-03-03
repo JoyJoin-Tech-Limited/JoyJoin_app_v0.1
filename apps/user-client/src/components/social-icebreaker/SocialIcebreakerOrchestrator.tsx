@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { useSocialIcebreaker } from '@/hooks/useSocialIcebreaker';
@@ -57,6 +57,7 @@ export function SocialIcebreakerOrchestrator({
     submitPulseCheck,
     generateMyStatements,
     castVote,
+    completeChallenge,
     isAdvancing,
   } = useSocialIcebreaker({ sessionId, userId, displayName });
 
@@ -64,6 +65,8 @@ export function SocialIcebreakerOrchestrator({
   const [showTransition, setShowTransition] = useState(false);
   const [transitionType, setTransitionType] = useState<TransitionType | null>(null);
   const [previousPhase, setPreviousPhase] = useState<SocialIcebreakerPhase | null>(null);
+  // Store from/to pair together so handlePulseComplete always sees the correct transition
+  const phaseChangeRef = useRef<{ from: SocialIcebreakerPhase; to: SocialIcebreakerPhase } | null>(null);
   const [pulseGroupAverage, setPulseGroupAverage] = useState<number | undefined>();
   const [warmupTopics, setWarmupTopics] = useState<SocialTopic[]>([]);
   const [xiaoYueVisible, setXiaoYueVisible] = useState(false);
@@ -90,7 +93,8 @@ export function SocialIcebreakerOrchestrator({
   useEffect(() => {
     if (!state?.currentPhase) return;
     if (previousPhase && previousPhase !== state.currentPhase) {
-      // Show pulse check between phases
+      // Capture the (from, to) pair atomically before updating previousPhase
+      phaseChangeRef.current = { from: previousPhase, to: state.currentPhase };
       setShowPulseCheck(true);
     }
     setPreviousPhase(state.currentPhase);
@@ -98,7 +102,10 @@ export function SocialIcebreakerOrchestrator({
 
   const handlePulseSubmit = async (vibe: 1 | 2 | 3) => {
     try {
-      await submitPulseCheck(vibe);
+      const result = await submitPulseCheck(vibe);
+      if (result?.averageVibe !== undefined) {
+        setPulseGroupAverage(result.averageVibe);
+      }
     } catch {
       // silent
     }
@@ -106,13 +113,15 @@ export function SocialIcebreakerOrchestrator({
 
   const handlePulseComplete = () => {
     setShowPulseCheck(false);
-    if (previousPhase && state?.currentPhase) {
-      const tt = getTransitionType(previousPhase, state.currentPhase);
+    const change = phaseChangeRef.current;
+    if (change) {
+      const tt = getTransitionType(change.from, change.to);
       if (tt) {
         setTransitionType(tt);
         setShowTransition(true);
         if (navigator.vibrate) navigator.vibrate(200);
       }
+      phaseChangeRef.current = null;
     }
   };
 
@@ -210,6 +219,7 @@ export function SocialIcebreakerOrchestrator({
                 challenge={state.currentChallenge || null}
                 completedBy={state.challengeCompletedBy || []}
                 userId={userId}
+                onComplete={completeChallenge}
                 onAdvance={handleAdvancePhase}
                 isAdvancing={isAdvancing}
               />

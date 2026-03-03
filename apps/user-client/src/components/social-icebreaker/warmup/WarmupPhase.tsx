@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw } from 'lucide-react';
 import MobilePrimaryButton from '@/components/mobile/MobilePrimaryButton';
@@ -35,6 +35,14 @@ export function WarmupPhase({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [topicsUsed, setTopicsUsed] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
+
+  // Sync topics when the host's fetch propagates via polling
+  useEffect(() => {
+    if (topics.length > 0) {
+      setCurrentTopics(topics);
+      setCurrentIndex(0);
+    }
+  }, [topics]);
 
   const currentTopic = currentTopics[currentIndex] || null;
 
