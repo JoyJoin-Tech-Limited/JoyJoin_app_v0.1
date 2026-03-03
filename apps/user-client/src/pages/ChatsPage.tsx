@@ -1,7 +1,6 @@
 import MobileHeader from "@/components/MobileHeader";
 import BottomNav from "@/components/BottomNav";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -16,6 +15,55 @@ import {
   getEducationDisplay
 } from "@/lib/userFieldMappings";
 import type { DirectMessageThread, User as UserType } from "@shared/schema";
+
+const listVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.07, delayChildren: 0.05 },
+  },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.96 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: "spring", stiffness: 320, damping: 26 },
+  },
+};
+
+// Maps archetype to a soft colored glow shadow using the archetypeGradients palette
+const archetypeCardShadow = (archetype: string | null | undefined): string => {
+  const shadowMap: Record<string, string> = {
+    '开心柯基': '0 4px 20px rgba(249,115,22,0.15), 0 1px 4px rgba(0,0,0,0.06)',
+    '太阳鸡': '0 4px 20px rgba(245,158,11,0.15), 0 1px 4px rgba(0,0,0,0.06)',
+    '夸夸豚': '0 4px 20px rgba(6,182,212,0.15), 0 1px 4px rgba(0,0,0,0.06)',
+    '机智狐': '0 4px 20px rgba(239,68,68,0.15), 0 1px 4px rgba(0,0,0,0.06)',
+    '淡定海豚': '0 4px 20px rgba(99,102,241,0.15), 0 1px 4px rgba(0,0,0,0.06)',
+    '织网蛛': '0 4px 20px rgba(168,85,247,0.15), 0 1px 4px rgba(0,0,0,0.06)',
+    '暖心熊': '0 4px 20px rgba(244,63,94,0.15), 0 1px 4px rgba(0,0,0,0.06)',
+    '灵感章鱼': '0 4px 20px rgba(139,92,246,0.18), 0 1px 4px rgba(0,0,0,0.06)',
+    '沉思猫头鹰': '0 4px 20px rgba(100,116,139,0.15), 0 1px 4px rgba(0,0,0,0.06)',
+    '定心大象': '0 4px 20px rgba(107,114,128,0.15), 0 1px 4px rgba(0,0,0,0.06)',
+    '稳如龟': '0 4px 20px rgba(16,185,129,0.15), 0 1px 4px rgba(0,0,0,0.06)',
+    '隐身猫': '0 4px 20px rgba(99,102,241,0.15), 0 1px 4px rgba(0,0,0,0.06)',
+  };
+  return archetype ? (shadowMap[archetype] || '0 2px 12px rgba(0,0,0,0.08)') : '0 2px 12px rgba(0,0,0,0.08)';
+};
+
+// Maps archetype to a 3px top border color (accent stripe), derived from archetypeBgColors
+const archetypeAccentBorder = (archetype: string | null | undefined): string => {
+  const defaultBorder = "border-t-primary/30";
+  if (!archetype) return defaultBorder;
+  const bgColors = archetypeBgColors as Record<string, unknown>;
+  const bgClass = bgColors[archetype];
+  if (typeof bgClass === "string") {
+    const borderClass = bgClass.replace(/^bg-/, "border-t-");
+    if (borderClass !== bgClass) return borderClass;
+  }
+  return defaultBorder;
+};
 
 type DirectThreadWithUser = DirectMessageThread & {
   otherUser: UserType;
@@ -72,7 +120,7 @@ export default function ChatsPage() {
 
   if (isLoadingThreads) {
     return (
-      <div className="min-h-screen bg-background pb-16 flex flex-col">
+      <div className="min-h-screen bg-[#fafaf8] pb-16 flex flex-col">
         <MobileHeader title="圈子" />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
@@ -88,7 +136,7 @@ export default function ChatsPage() {
   const hasDirectChats = directThreads && directThreads.length > 0;
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-screen bg-[#fafaf8] pb-16">
       <MobileHeader title="圈子" />
 
       {!hasDirectChats ? (
@@ -104,8 +152,11 @@ export default function ChatsPage() {
       ) : (
         <motion.div
           className="px-4 pb-4 pt-4 space-y-3"
+          variants={listVariants}
+          initial="hidden"
+          animate="visible"
         >
-          {directThreads.map((thread, index) => {
+          {directThreads.map((thread) => {
             const otherUser = thread.otherUser;
             const lastMessage = thread.lastMessage;
             const sourceEvent = thread.sourceEvent;
@@ -119,10 +170,9 @@ export default function ChatsPage() {
               <motion.a
                 key={thread.id}
                 href={`/direct-chat/${thread.id}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.07 }}
-                className="block bg-white rounded-2xl shadow-sm border border-muted overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
+                variants={cardVariants}
+                className={`block rounded-2xl overflow-hidden cursor-pointer active:scale-[0.97] transition-transform border-t-[3px] ${archetypeAccentBorder(otherUser.archetype)}`}
+                style={{ background: 'white', boxShadow: archetypeCardShadow(otherUser.archetype) }}
                 onClick={(e) => { e.preventDefault(); setLocation(`/direct-chat/${thread.id}`); }}
                 data-testid={`card-direct-${thread.id}`}
               >
@@ -183,9 +233,10 @@ export default function ChatsPage() {
                       </div>
 
                       {otherUser.archetype && (
-                        <Badge variant="secondary" className="text-[10px] h-5 mb-2">
+                        <span className={`inline-flex items-center gap-1 text-[11px] font-bold mb-2 px-2 py-0.5 rounded-full bg-muted/60 ${archetypeData?.color || 'text-foreground'}`}>
+                          <span aria-hidden="true">{archetypeData?.icon || '✨'}</span>
                           {otherUser.archetype}
-                        </Badge>
+                        </span>
                       )}
 
                       {lastMessage ? (
