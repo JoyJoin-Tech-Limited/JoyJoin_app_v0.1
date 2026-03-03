@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'wouter';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -23,7 +24,9 @@ export function SocialIcebreakerRecap({
   participants,
   durationMinutes,
   onLeave,
+  eventId,
 }: SocialIcebreakerRecapProps) {
+  const [, setLocation] = useLocation();
   const { data: recapData, isLoading } = useQuery<{
     summary: RecapSummary;
     state: any;
@@ -114,7 +117,15 @@ export function SocialIcebreakerRecap({
       </div>
 
       {/* Leave button */}
-      <div className="px-6 pb-8">
+      <div className="px-6 pb-8 flex flex-col gap-3">
+        {eventId && (
+          <MobilePrimaryButton
+            onClick={() => setLocation(`/events/${eventId}/feedback`)}
+            className="w-full"
+          >
+            留下反馈 📝
+          </MobilePrimaryButton>
+        )}
         <MobilePrimaryButton
           onClick={onLeave}
           className="w-full bg-white/20 hover:bg-white/30 border-white/30 text-white"

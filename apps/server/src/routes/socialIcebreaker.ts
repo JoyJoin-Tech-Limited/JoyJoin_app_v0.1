@@ -85,7 +85,7 @@ function syncPlayerCount(socialSessionId: string, state: SocialSessionState): vo
 router.post('/start', async (req: any, res) => {
   // Use authenticated session user; fall back to body only for display name
   const userId: string = req.session?.userId;
-  const { sessionId, displayName } = req.body;
+  const { sessionId, displayName, eventType } = req.body;
 
   if (!sessionId || !userId) {
     return res.status(400).json({ error: 'sessionId and authenticated userId are required' });
@@ -123,6 +123,7 @@ router.post('/start', async (req: any, res) => {
     phaseStartedAt: Date.now(),
     sessionStartedAt: Date.now(),
     completedPhases: [],
+    eventType,
   };
 
   socialSessions.set(socialSessionId, newState);
@@ -251,7 +252,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   if (effectiveNextPhase === 'micro_challenge') {
     try {
       const challenges = await generateMicroChallenges({
-        eventType: '活动',
+        eventType: state.eventType || '活动',
         participantCount: state.playerCount,
       });
       state.currentChallenge = challenges[0];
