@@ -157,7 +157,11 @@ export default function BottomNav() {
     // 今日有活动
     const todayEvent = events.find(e => e.status === "matched" && 
       getHongKongDateForComparison(e.dateTime).toISOString().split('T')[0] === now.toISOString().split('T')[0]);
-    if (todayEvent) return '今日出发！🎉';
+    if (todayEvent) {
+      const hasStarted = now >= getHongKongDateForComparison(todayEvent.dateTime);
+      if (hasStarted) return '🎲 破冰进行中！';
+      return '今日出发！🎉';
+    }
     
     // 24h 内场地揭晓 - must have assignedGroupId to match destination logic
     const upcomingPool = poolRegistrations.find(r => {

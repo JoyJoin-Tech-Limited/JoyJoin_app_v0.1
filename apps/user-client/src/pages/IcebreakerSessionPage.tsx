@@ -14,6 +14,7 @@ import { IcebreakerEndingScreen } from "@/components/icebreaker/IcebreakerEnding
 import { NetworkStatusBanner } from "@/components/icebreaker/NetworkStatusBanner";
 import { PhaseTransition, type TransitionType } from "@/components/icebreaker/PhaseTransition";
 import { IcebreakerOverlayProvider, IcebreakerSurface } from "@/components/icebreaker/IcebreakerOverlayProvider";
+import { SocialIcebreakerOrchestrator } from "@/components/social-icebreaker/SocialIcebreakerOrchestrator";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, WifiOff, RefreshCcw } from "lucide-react";
@@ -46,6 +47,8 @@ interface BlindBoxEventData {
 export default function IcebreakerSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [, setLocation] = useLocation();
+  
+  const isSocialMode = new URLSearchParams(window.location.search).get('mode') === 'social';
   
   const [selectedGame, setSelectedGame] = useState<IcebreakerGame | null>(null);
   const [hasVotedReady, setHasVotedReady] = useState(false);
@@ -352,7 +355,16 @@ export default function IcebreakerSessionPage() {
                 exit={{ opacity: 0 }}
                 className="h-screen relative"
               >
-                {topicsLoading ? (
+                {isSocialMode ? (
+                  <SocialIcebreakerOrchestrator
+                    sessionId={sessionId || ''}
+                    userId={user?.id || ''}
+                    displayName={user?.displayName || '参与者'}
+                    eventType={eventData?.eventType}
+                    participants={(sessionData?.participants || []).map(p => ({ userId: p.userId, displayName: p.displayName, archetype: p.archetype || undefined }))}
+                    onEnd={handleLeave}
+                  />
+                ) : topicsLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
