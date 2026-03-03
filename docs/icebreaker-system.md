@@ -31,7 +31,7 @@
 ## 1. Social Icebreaker System (Central Flow)
 
 ### Overview
-The Social Icebreaker is a **multi-phase, real-time group experience** that runs in-memory on the server (no DB required). It is session-keyed, host-driven, and supports 2–6 players.
+The Social Icebreaker is a **multi-phase, real-time group experience** that runs in-memory on the server (no DB required). It is session-keyed, host-driven, and designed for small groups. Each phase enforces its own minimum: most phases require ≥2 players; `lie_detective` requires ≥3 (auto-skipped otherwise). There is no enforced upper cap on player count.
 
 ### Shared Types
 **File:** `shared/socialIcebreaker.ts` (also `packages/shared/src/socialIcebreaker.ts`)
@@ -79,11 +79,12 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
         │
         ▼
 [WARMUP PHASE]
-  Host selects mood → POST .../topics
-  Host navigates topics (index managed server-side)
+  Host selects mood → POST .../topics (server generates shared warmupTopics list)
+  All clients see the same topic list; the host's UI drives topic rotation locally
+  (no per-topic server API — the host's client advances the local index)
   Any player → POST .../pulse-check { vibe: 1|2|3 }
         │
-        ▼ Host calls POST .../advance
+        ▼ Host calls POST .../advance (phase advance, not per-topic navigation)
 [MICRO_CHALLENGE PHASE]
   Server auto-generates challenge on advance
   Each player → POST .../micro-challenge/complete
@@ -148,7 +149,9 @@ socialSessions: Map<string, SocialSessionState>
   // TTL: 6 hours, max 1000 sessions, 5-min sweep
 
 sessionIndex: Map<icebreakerSessionId, socialSessionId>
-  // deduplication: prevents multiple sessions for same icebreaker
+  // reverse-lookup index: maps icebreakerSessionId → socialSessionId for
+  // fast retrieval and cleanup; deduplication is effectively ensured by the
+  // deterministic key socialSessionId = `social_${icebreakerSessionId}`
 
 lieStatements: Map<socialSessionId, Map<userId, LieDetectiveStatement[]>>
   // server-side truth: isLie never exposed to clients via poll
@@ -228,7 +231,8 @@ The Toolkit is a **pre-session browsing and host preparation tool**. A host expl
 Function: `generateGameRecommendation()` using `GAME_RECOMMENDATION_PROMPT`
 
 ### Relationship to Social Icebreaker
-The Toolkit is the **host preparation layer**. Game content from `icebreakerGames.ts` can feed `micro_challenge` phase content when a host selects a specific game before launching the session.
+The Toolkit is the **host preparation layer**, helping hosts browse and choose suitable games/topics before running an event.
+At present, the Social Icebreaker `micro_challenge` phase is always populated server-side via `generateMicroChallenges(...)` and does **not** consume Toolkit game selections directly; wiring Toolkit selection into `micro_challenge` is an aspirational/future integration, not yet implemented.
 
 ---
 
@@ -273,7 +277,7 @@ An **AI-personalized card game** that runs within the Social Icebreaker warmup p
 `/icebreaker-game?eventId=X` or `?groupId=X` or `?sessionId=X`
 
 ### Relationship to Social Icebreaker
-The Card Game runs **within** the Social Icebreaker `warmup` phase OR as a standalone deep-dive. Question cards from this system can be surfaced during warmup topics if the host activates card mode.
+The Card Game is currently exposed as a standalone deep-dive experience at `/icebreaker-game`, which hosts can optionally link to from Social Icebreaker flows (for example, during or after the warmup phase). It is architected to complement the Social Icebreaker warmup experience, but the warmup UI does not yet embed or directly surface this game in-session.
 
 ---
 
@@ -290,7 +294,7 @@ A **simple question widget** shown on the Discover/Home page. Surfaces a random 
 `GET /api/icebreakers/random` → `{ question, category, categoryColor }`
 
 ### Relationship to Social Icebreaker
-This is the **lightweight entry point**. Clicking "join" from the widget should navigate users to the Social Icebreaker session for their current event or group.
+This widget **fetches and displays a random question** (`GET /api/icebreakers/random`). It serves as a lightweight teaser for the icebreaker experience. There is currently no in-widget "join" CTA or direct navigation into a Social Icebreaker session; that funnel must be implemented by the page embedding this component.
 
 ---
 
@@ -335,12 +339,13 @@ This is the **lightweight entry point**. Clicking "join" from the widget should 
 ## 7. Debugging Tips
 
 **Session not found / duplicate sessions:**
-- Check `sessionIndex` map — deduplication is based on `icebreakerSessionId`
+- Session IDs are deterministic: `socialSessionId = social_${icebreakerSessionId}`, so the same icebreaker always maps to the same session key
+- `sessionIndex` is a reverse-lookup map (icebreakerSessionId → socialSessionId) used for retrieval and cleanup, not for deduplication
 - Sessions expire after 6h; max 1000 active sessions
 
 **Lie Detective `isLie` leaking to client:**
-- The `GET /state` endpoint strips `isLie` from `LieDetectivePlayer.statements`
-- `lieStatements` map is server-only; never serialized into `SocialSessionState`
+- The poll endpoint `GET /api/social-icebreaker/:socialSessionId` returns `SocialSessionState` via `sanitizeStateForClient` (currently a no-op pass-through)
+- `isLie` is never stored on `SocialSessionState` (statements are sanitized on insert into `lieDetectivePlayers`), so it cannot be serialized to the client
 
 **Phase not advancing:**
 - Verify caller is host (`hostUserId === userId`)
