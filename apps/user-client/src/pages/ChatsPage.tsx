@@ -52,23 +52,17 @@ const archetypeCardShadow = (archetype: string | null | undefined): string => {
   return archetype ? (shadowMap[archetype] || '0 2px 12px rgba(0,0,0,0.08)') : '0 2px 12px rgba(0,0,0,0.08)';
 };
 
-// Maps archetype to a 3px top border color (accent stripe)
+// Maps archetype to a 3px top border color (accent stripe), derived from archetypeBgColors
 const archetypeAccentBorder = (archetype: string | null | undefined): string => {
-  const borderMap: Record<string, string> = {
-    '开心柯基': 'border-t-orange-400',
-    '太阳鸡': 'border-t-amber-400',
-    '夸夸豚': 'border-t-cyan-400',
-    '机智狐': 'border-t-red-400',
-    '淡定海豚': 'border-t-indigo-400',
-    '织网蛛': 'border-t-purple-400',
-    '暖心熊': 'border-t-rose-400',
-    '灵感章鱼': 'border-t-violet-400',
-    '沉思猫头鹰': 'border-t-slate-400',
-    '定心大象': 'border-t-gray-400',
-    '稳如龟': 'border-t-emerald-400',
-    '隐身猫': 'border-t-indigo-500',
-  };
-  return archetype ? (borderMap[archetype] || 'border-t-primary/30') : 'border-t-primary/30';
+  const defaultBorder = "border-t-primary/30";
+  if (!archetype) return defaultBorder;
+  const bgColors = archetypeBgColors as Record<string, unknown>;
+  const bgClass = bgColors[archetype];
+  if (typeof bgClass === "string") {
+    const borderClass = bgClass.replace(/^bg-/, "border-t-");
+    if (borderClass !== bgClass) return borderClass;
+  }
+  return defaultBorder;
 };
 
 type DirectThreadWithUser = DirectMessageThread & {
