@@ -20,6 +20,7 @@ import { haptics } from "@/lib/haptics";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import { useOnboardingCheckpoint } from "@/hooks/useOnboardingCheckpoint";
 import { useOnboardingAnalytics } from "@/hooks/useOnboardingAnalytics";
+import type { AuthUser } from "@/hooks/useAuth";
 import {
   Sheet,
   SheetContent,
@@ -374,7 +375,13 @@ export default function EssentialDataPage() {
         // Continue navigation even if checkpoint fails (non-blocking)
       }
       
-      setLocation("/onboarding/extended");
+      // Use server-driven nextStep for navigation instead of hardcoded URL
+      const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as AuthUser;
+      const nextPath =
+        updatedUser?.nextStep === 'extended-data' ? '/onboarding/extended'
+        : updatedUser?.nextStep === 'profile-review' ? '/onboarding/review'
+        : '/onboarding/extended'; // guide/discover both handled by home route; fallback to extended
+      setLocation(nextPath);
     },
     onError: (error: Error) => {
       // Phase 2: Track errors
