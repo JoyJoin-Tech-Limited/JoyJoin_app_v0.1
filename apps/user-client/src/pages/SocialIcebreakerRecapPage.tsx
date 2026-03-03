@@ -1,16 +1,12 @@
 import { useParams, useLocation } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
 import { SocialIcebreakerRecap } from '@/components/social-icebreaker/SocialIcebreakerRecap';
-import { Loader2 } from 'lucide-react';
 
 export default function SocialIcebreakerRecapPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [, setLocation] = useLocation();
   const socialSessionId = sessionId ? `social_${sessionId}` : '';
 
-  const { data: user } = useQuery<{ id: string; displayName: string }>({
-    queryKey: ['/api/auth/user'],
-  });
+  const eventId = new URLSearchParams(window.location.search).get('eventId') || undefined;
 
   if (!sessionId) {
     return (
@@ -23,9 +19,8 @@ export default function SocialIcebreakerRecapPage() {
   return (
     <SocialIcebreakerRecap
       socialSessionId={socialSessionId}
-      participants={user ? [{ userId: user.id, displayName: user.displayName }] : []}
-      durationMinutes={30}
       onLeave={() => setLocation('/events')}
+      eventId={eventId}
     />
   );
 }

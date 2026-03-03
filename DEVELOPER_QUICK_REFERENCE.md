@@ -210,6 +210,8 @@ These are commented out in schema but kept for backward compatibility.
 | `/events/:eventId/feedback` | EventFeedbackFlow | Post-event feedback |
 | `/events/:eventId/deep-feedback` | DeepFeedbackFlow | Anonymous deep feedback |
 | `/icebreaker/:sessionId` | IcebreakerSessionPage | Icebreaker games |
+| `/icebreaker-recap/:sessionId` | SocialIcebreakerRecapPage | Social icebreaker recap/summary |
+| `/icebreaker-game` | IcebreakerGamePage | AI-personalised icebreaker card game |
 
 ### Profile Edit Routes
 
