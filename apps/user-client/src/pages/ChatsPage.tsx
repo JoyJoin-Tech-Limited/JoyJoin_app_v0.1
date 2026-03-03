@@ -2,7 +2,7 @@ import MobileHeader from "@/components/MobileHeader";
 import BottomNav from "@/components/BottomNav";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Users, Sparkles } from "lucide-react";
+import { Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
@@ -23,6 +23,12 @@ type DirectThreadWithUser = DirectMessageThread & {
     content: string;
     createdAt: Date;
   } | null;
+  sourceEvent?: {
+    title: string;
+    eventType: string;
+    district: string;
+    dateTime: string | Date;
+  };
 };
 
 export default function ChatsPage() {
@@ -98,18 +104,11 @@ export default function ChatsPage() {
       ) : (
         <motion.div
           className="px-4 pb-4 pt-4 space-y-3"
-          initial="hidden"
-          animate="visible"
         >
           {directThreads.map((thread, index) => {
             const otherUser = thread.otherUser;
             const lastMessage = thread.lastMessage;
-            const sourceEvent = (thread as any).sourceEvent as {
-              title: string;
-              eventType: string;
-              district: string;
-              dateTime: string | Date;
-            } | undefined;
+            const sourceEvent = thread.sourceEvent;
             const isExpanded = expandedThreadId === thread.id;
             const archetypeData =
               otherUser.archetype && archetypeConfig[otherUser.archetype]
@@ -117,13 +116,14 @@ export default function ChatsPage() {
                 : null;
 
             return (
-              <motion.div
+              <motion.a
                 key={thread.id}
+                href={`/direct-chat/${thread.id}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.07 }}
-                className="bg-white rounded-2xl shadow-sm border border-muted overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
-                onClick={() => setLocation(`/direct-chat/${thread.id}`)}
+                className="block bg-white rounded-2xl shadow-sm border border-muted overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
+                onClick={(e) => { e.preventDefault(); setLocation(`/direct-chat/${thread.id}`); }}
                 data-testid={`card-direct-${thread.id}`}
               >
                 <div className="p-4">
@@ -239,7 +239,7 @@ export default function ChatsPage() {
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </motion.a>
             );
           })}
         </motion.div>

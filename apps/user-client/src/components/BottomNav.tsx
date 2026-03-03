@@ -23,7 +23,7 @@ interface NavItem {
 
 const sideNavItems: NavItem[] = [
   { icon: Compass, label: "发现", path: "/", testId: "nav-discover", badgeCategory: 'discover' },
-  { icon: MapPin, label: "足迹", path: "/my-journey", testId: "nav-journey" },
+  { icon: MapPin, label: "足迹", path: "/my-journey", testId: "nav-journey", badgeCategory: 'activities' },
   { icon: Users, label: "圈子", path: "/chats", testId: "nav-chats", badgeCategory: 'chat' },
   { icon: User, label: "我的", path: "/profile", testId: "nav-profile" }
 ];
