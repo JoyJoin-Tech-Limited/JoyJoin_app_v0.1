@@ -42,7 +42,14 @@ export type WSEventType =
   | "KING_GAME_KING_REVEALED"
   | "KING_GAME_COMMAND_ISSUED"
   | "KING_GAME_ROUND_COMPLETE"
-  | "KING_GAME_STATE_SYNC";
+  | "KING_GAME_STATE_SYNC"
+  // Social Icebreaker events
+  | "SOCIAL_PHASE_CHANGED"
+  | "SOCIAL_PULSE_UPDATE"
+  | "SOCIAL_LIE_VOTE_UPDATE"
+  | "SOCIAL_PHASE_ADVANCE"
+  | "SOCIAL_PULSE_VOTE"
+  | "SOCIAL_LIE_VOTE";
 
 export interface WSMessage {
   type: WSEventType;
@@ -325,4 +332,30 @@ export interface KingGameStateSyncData {
   targetNumber: number | null;
   myCardNumber: number | null; // 只有本人能看到自己的牌
   myIsKing: boolean;
+}
+
+// ============ 社交破冰系统事件数据 ============
+
+// 社交阶段变更 (server → client)
+export interface SocialPhaseChangedData {
+  sessionId: string;
+  socialSessionId: string;
+  phase: string;
+  hostUserId: string;
+  xiaoYueComment?: string;
+}
+
+// 脉冲检查更新 (server → client)
+export interface SocialPulseUpdateData {
+  socialSessionId: string;
+  averageVibe: number;
+  voteCount: number;
+}
+
+// 谎言投票更新 (server → client)
+export interface SocialLieVoteUpdateData {
+  socialSessionId: string;
+  votes: Array<{ voterId: string; targetUserId: string; guessedStatementIndex: number }>;
+  isRevealed: boolean;
+  lieIndex?: number;
 }
