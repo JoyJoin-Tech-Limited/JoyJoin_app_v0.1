@@ -394,12 +394,22 @@ export default function DuolingoOnboardingPage() {
 
   const anchorQuestions = anchorQuestionsData?.questions || [];
 
-  // Typing dots: show for 600ms before revealing speech bubble text
+  // Typing dots: play when entering screen 0; skip entirely for reduced motion
   useEffect(() => {
-    if (prefersReducedMotion) return;
+    if (prefersReducedMotion) {
+      setShowTyping(false);
+      return;
+    }
+
+    if (currentScreen !== 0) {
+      setShowTyping(false);
+      return;
+    }
+
+    setShowTyping(true);
     const timer = setTimeout(() => setShowTyping(false), 600);
     return () => clearTimeout(timer);
-  }, [prefersReducedMotion]);
+  }, [prefersReducedMotion, currentScreen]);
 
   // Bug 4 Fix: Unified initialization - check both local cache and server, then decide
   useEffect(() => {
@@ -722,6 +732,13 @@ export default function DuolingoOnboardingPage() {
                     />
                   ))}
                 </div>
+              ) : prefersReducedMotion ? (
+                <p
+                  className="text-center text-lg leading-relaxed font-medium"
+                  data-testid="text-xiaoyue-welcome-message"
+                >
+                  3分钟完成我们自研的氛围测试，让我精准了解你的社交节奏
+                </p>
               ) : (
                 <motion.p
                   initial={{ opacity: 0 }}
