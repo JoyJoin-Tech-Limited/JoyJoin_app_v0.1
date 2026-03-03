@@ -52,7 +52,12 @@ export default function MyJourneyPage() {
     );
   }
 
-  const pastEvents = events ?? [];
+  const now = new Date();
+  const pastEvents = (events ?? []).filter((event) => {
+    if (!event.dateTime) return false;
+    const eventDate = new Date(event.dateTime as unknown as string);
+    return eventDate < now;
+  });
   const hasEvents = pastEvents.length > 0;
 
   // ── Empty state ────────────────────────────────────────────────────────────
@@ -108,7 +113,7 @@ export default function MyJourneyPage() {
           {archetypeAvatar ? (
             <img
               src={archetypeAvatar}
-              alt="avatar"
+              alt={user?.displayName ? `${user.displayName}的人格原型头像` : "你的人格原型头像"}
               className="w-full h-full object-contain p-1"
             />
           ) : (
@@ -173,13 +178,14 @@ export default function MyJourneyPage() {
           <div className="h-12 w-12 rounded-full border-2 border-dashed border-primary/40 bg-white flex items-center justify-center text-xl flex-shrink-0 z-10" aria-hidden="true">
             ✨
           </div>
-          <div
-            className="flex-1 bg-primary/5 rounded-2xl p-3 border border-dashed border-primary/30 cursor-pointer active:scale-[0.98] transition-transform"
+          <button
+            type="button"
+            className="flex-1 bg-primary/5 rounded-2xl p-3 border border-dashed border-primary/30 cursor-pointer active:scale-[0.98] transition-transform text-left"
             onClick={() => setLocation("/")}
           >
             <p className="font-bold text-sm text-primary">下一站，等你来！</p>
             <p className="text-[11px] text-muted-foreground mt-1">探索更多精彩活动</p>
-          </div>
+          </button>
         </motion.div>
       </div>
 
