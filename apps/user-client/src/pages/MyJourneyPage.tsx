@@ -8,7 +8,38 @@ import { useQuery } from "@tanstack/react-query";
 import MobileHeader from "@/components/MobileHeader";
 import BottomNav from "@/components/BottomNav";
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 import type { Event } from "@shared/schema";
+
+// Event iconName → visual theme for timeline nodes
+// iconName values set by poolMatchingService: 'utensils' (饭局), 'wine' (酒局), 'calendar' (other)
+const eventTypeNodeTheme = (iconName: string | null | undefined): { gradient: string; emoji: string; label?: string } => {
+  const themes: Record<string, { gradient: string; emoji: string; label: string }> = {
+    'utensils': { gradient: 'from-orange-400 to-red-500', emoji: '🍜', label: '饭局' },
+    'wine': { gradient: 'from-amber-400 to-orange-500', emoji: '🍻', label: '酒局' },
+    'gamepad': { gradient: 'from-cyan-400 to-indigo-500', emoji: '🎮', label: '游戏局' },
+    'leaf': { gradient: 'from-green-400 to-teal-500', emoji: '🌿', label: '户外' },
+    'palette': { gradient: 'from-rose-400 to-fuchsia-500', emoji: '🎨', label: '文艺' },
+  };
+  const key = iconName || '';
+  return themes[key] || { gradient: 'from-violet-500 to-purple-600', emoji: '🎉' };
+};
+
+// Archetype → hex background color for header gradient
+const archetypeBgColorToHex: Record<string, string> = {
+  '开心柯基': '#ffedd5',
+  '太阳鸡': '#fef3c7',
+  '夸夸豚': '#cffafe',
+  '机智狐': '#ffedd5',
+  '淡定海豚': '#dbeafe',
+  '织网蛛': '#f3e8ff',
+  '暖心熊': '#ffe4e6',
+  '灵感章鱼': '#ede9fe',
+  '沉思猫头鹰': '#f1f5f9',
+  '定心大象': '#f9fafb',
+  '稳如龟': '#d1fae5',
+  '隐身猫': '#e0e7ff',
+};
 
 /**
  * Social Journey Timeline — shows the user's past events as a vertical timeline
@@ -22,6 +53,11 @@ export default function MyJourneyPage() {
     queryKey: ["/api/events/joined"],
   });
 
+  const { data: directThreads } = useQuery<Array<{ id: string }>>({
+    queryKey: ["/api/direct-messages"],
+  });
+  const connectionsCount = directThreads?.length ?? 0;
+
   const archetypeAvatar = user?.archetype
     ? getArchetypeAvatar(user.archetype)
     : null;
@@ -30,16 +66,62 @@ export default function MyJourneyPage() {
     ? archetypeBgColors[user.archetype] || "bg-primary/10"
     : "bg-primary/10";
 
+  const headerBgHex = user?.archetype ? (archetypeBgColorToHex[user.archetype] || '#ede9fe') : '#ede9fe';
+
   const formatDate = (dateTime: Date | null | string) => {
     if (!dateTime) return "";
     const date = new Date(dateTime);
     return `${date.getMonth() + 1}月${date.getDate()}日`;
   };
 
+  const pastEvents = useMemo(() =>
+    (events ?? []).filter((event) => {
+      if (!event.dateTime) return false;
+      return new Date(event.dateTime as unknown as string) < new Date();
+    }),
+  [events]);
+  const hasEvents = pastEvents.length > 0;
+
+  const streakWeeks = useMemo(() => {
+    if (pastEvents.length === 0) return 0;
+    const sorted = [...pastEvents]
+      .filter(e => e.dateTime)
+      .sort((a, b) => new Date(b.dateTime as string).getTime() - new Date(a.dateTime as string).getTime());
+    if (sorted.length === 0) return 0;
+    const getWeek = (d: Date) => {
+      const start = new Date(d);
+      start.setHours(0, 0, 0, 0);
+      start.setDate(start.getDate() - start.getDay());
+      const year = start.getFullYear();
+      const month = String(start.getMonth() + 1).padStart(2, "0");
+      const day = String(start.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+    const eventWeeks = new Set(sorted.map(e => getWeek(new Date(e.dateTime as string))));
+    const nowWeek = getWeek(new Date());
+    let streak = 0;
+    const checkWeek = new Date();
+    for (let i = 0; i < 52; i++) {
+      const w = getWeek(checkWeek);
+      if (eventWeeks.has(w)) {
+        streak++;
+        checkWeek.setDate(checkWeek.getDate() - 7);
+      } else if (i === 0 && w === nowWeek) {
+        checkWeek.setDate(checkWeek.getDate() - 7);
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }, [pastEvents]);
+
   // ── Loading state ──────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-violet-50 to-background pb-24 flex flex-col">
+      <div
+        className="min-h-screen pb-24 flex flex-col"
+        style={{ background: `linear-gradient(to bottom, ${headerBgHex} 0%, white 45%)` }}
+      >
         <MobileHeader title="足迹" />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
@@ -52,18 +134,13 @@ export default function MyJourneyPage() {
     );
   }
 
-  const now = new Date();
-  const pastEvents = (events ?? []).filter((event) => {
-    if (!event.dateTime) return false;
-    const eventDate = new Date(event.dateTime as unknown as string);
-    return eventDate < now;
-  });
-  const hasEvents = pastEvents.length > 0;
-
   // ── Empty state ────────────────────────────────────────────────────────────
   if (!hasEvents) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-violet-50 to-background pb-24 flex flex-col">
+      <div
+        className="min-h-screen pb-24 flex flex-col"
+        style={{ background: `linear-gradient(to bottom, ${headerBgHex} 0%, white 45%)` }}
+      >
         <MobileHeader title="足迹" />
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
           <div className="flex justify-center">
@@ -102,7 +179,10 @@ export default function MyJourneyPage() {
 
   // ── Timeline ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-b from-violet-50 to-background pb-24">
+    <div
+      className="min-h-screen pb-24"
+      style={{ background: `linear-gradient(to bottom, ${headerBgHex} 0%, white 45%)` }}
+    >
       <MobileHeader title="足迹" />
 
       {/* User greeting */}
@@ -127,22 +207,27 @@ export default function MyJourneyPage() {
       </div>
 
       {/* Stats bar */}
-      <div className="mx-4 mb-5 p-3 bg-white rounded-2xl shadow-sm flex gap-4">
+      <div className="mx-4 mb-5 p-4 bg-white rounded-2xl shadow-sm flex gap-3">
         <div className="text-center flex-1" aria-label={`已参加 ${pastEvents.length} 个活动`}>
           <div className="text-2xl font-black text-primary">{pastEvents.length}</div>
-          <div className="text-[10px] text-muted-foreground">已参加</div>
+          <div className="text-[10px] text-muted-foreground font-medium">已参加</div>
         </div>
-        <div className="w-px bg-muted" />
-        <div className="text-center flex-1" aria-label="活跃状态">
-          <div className="text-2xl font-black text-amber-500" aria-hidden="true">🔥</div>
-          <div className="text-[10px] text-muted-foreground">活跃</div>
+        <div className="w-px bg-muted/60" />
+        <div className="text-center flex-1" aria-label={`已结识 ${connectionsCount} 位朋友`}>
+          <div className="text-2xl font-black text-rose-500">{connectionsCount}</div>
+          <div className="text-[10px] text-muted-foreground font-medium">已结识</div>
+        </div>
+        <div className="w-px bg-muted/60" />
+        <div className="text-center flex-1" aria-label={`连续 ${streakWeeks} 周活跃`}>
+          <div className="text-2xl font-black text-amber-500" aria-hidden="true">{streakWeeks > 0 ? `${streakWeeks}🔥` : '—'}</div>
+          <div className="text-[10px] text-muted-foreground font-medium" aria-hidden="true">连胜周</div>
         </div>
       </div>
 
       {/* Vertical timeline */}
       <div className="px-4 relative">
         {/* Vertical connecting line */}
-        <div className="absolute left-10 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary/60 to-primary/10 pointer-events-none" />
+        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary/60 to-primary/10 pointer-events-none" />
 
         {pastEvents.map((event, index) => (
           <motion.div
@@ -152,19 +237,35 @@ export default function MyJourneyPage() {
             transition={{ delay: index * 0.1 }}
             className="flex gap-4 mb-5 relative"
           >
-            {/* Node circle */}
-            <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center text-white text-xl flex-shrink-0 z-10 shadow-lg" aria-hidden="true">
-              🎉
-            </div>
+            {(() => {
+              const nodeTheme = eventTypeNodeTheme(event.iconName);
+              return (
+                <>
+                  <div
+                    className={`h-12 w-12 rounded-full bg-gradient-to-br ${nodeTheme.gradient} flex items-center justify-center text-xl flex-shrink-0 z-10 shadow-lg`}
+                    aria-hidden="true"
+                  >
+                    {nodeTheme.emoji}
+                  </div>
 
-            {/* Event card */}
-            <div className="flex-1 bg-white rounded-2xl p-3 shadow-sm border border-primary/10">
-              <h3 className="font-bold text-sm">{event.title}</h3>
-              <div className="flex gap-3 mt-1 text-[11px] text-muted-foreground flex-wrap">
-                <span>📅 {formatDate(event.dateTime)}</span>
-                {event.location && <span>📍 {event.location}</span>}
-              </div>
-            </div>
+                  <div
+                    className="flex-1 bg-white rounded-2xl p-3"
+                    style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}
+                  >
+                    <h3 className="font-bold text-sm leading-snug">{event.title}</h3>
+                    <div className="flex gap-3 mt-1.5 text-[11px] text-muted-foreground flex-wrap items-center">
+                      <span>📅 {formatDate(event.dateTime)}</span>
+                      {event.location && <span>📍 {event.location}</span>}
+                      {nodeTheme.label && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-muted/60 font-medium">
+                          {nodeTheme.label}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </motion.div>
         ))}
 

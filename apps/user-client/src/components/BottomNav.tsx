@@ -217,7 +217,7 @@ export default function BottomNav() {
           data-testid="nav-center-button"
         >
           {/* Background circle with border */}
-          <div className="relative h-16 w-16 rounded-full bg-primary border-4 border-background shadow-lg flex items-center justify-center">
+          <div className="relative h-16 w-16 rounded-full bg-gradient-to-br from-violet-500 to-purple-700 border-4 border-background shadow-xl shadow-violet-200 flex items-center justify-center ring-2 ring-violet-300/40">
             <img 
               src={joyJoinLogo} 
               alt="JoyJoin" 
@@ -265,7 +265,15 @@ export default function BottomNav() {
               }`}
               data-testid={item.testId}
             >
-              <div className="relative h-5 w-5">
+              {/* Sliding active pill — shared layoutId creates the slide animation */}
+              {isActive && (
+                <motion.div
+                  layoutId="nav-active-pill"
+                  className="absolute inset-x-1 inset-y-1.5 rounded-xl bg-primary/10"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <div className="relative h-5 w-5 z-10">
                 <item.icon className={`h-5 w-5 ${isActive ? "fill-primary/20" : ""}`} />
                 {showBadge && (
                   <Badge 
@@ -276,7 +284,7 @@ export default function BottomNav() {
                   </Badge>
                 )}
               </div>
-              <span className="text-xs font-medium">{item.label}</span>
+              <span className="text-xs font-medium z-10">{item.label}</span>
             </a>
           );
         })}
@@ -302,7 +310,15 @@ export default function BottomNav() {
               }`}
               data-testid={item.testId}
             >
-              <div className="relative h-5 w-5">
+              {/* Sliding active pill — shared layoutId creates the slide animation */}
+              {isActive && (
+                <motion.div
+                  layoutId="nav-active-pill"
+                  className="absolute inset-x-1 inset-y-1.5 rounded-xl bg-primary/10"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <div className="relative h-5 w-5 z-10">
                 <item.icon className={`h-5 w-5 ${isActive ? "fill-primary/20" : ""}`} />
                 {showBadge && (
                   <Badge 
@@ -313,7 +329,7 @@ export default function BottomNav() {
                   </Badge>
                 )}
               </div>
-              <span className="text-xs font-medium">{item.label}</span>
+              <span className="text-xs font-medium z-10">{item.label}</span>
             </a>
           );
         })}
