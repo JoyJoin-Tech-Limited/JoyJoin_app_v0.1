@@ -592,6 +592,49 @@ This system utilizes rarity-based scoring:
 - **Quality Tiers**: Different quality levels based on user data and matching.
 - **generateSparkPredictions**: Function to generate predictions based on user matches.
 
+## Social Icebreaker System
+
+> **Architecture principle:** The **Social Icebreaker** (`shared/socialIcebreaker.ts` + `apps/server/src/routes/socialIcebreaker.ts` + `apps/server/src/socialIcebreakerAIService.ts`) is the **central icebreaking flow**. All other icebreaker components are supporting layers.
+
+### Component Hierarchy
+
+| Component | Role | Files |
+|-----------|------|-------|
+| **Social Icebreaker** | Central flow — multi-phase real-time session | `shared/socialIcebreaker.ts`, `apps/server/src/routes/socialIcebreaker.ts`, `apps/server/src/socialIcebreakerAIService.ts`, `apps/user-client/src/hooks/useSocialIcebreaker.ts` |
+| **IcebreakerToolkit** | Supporting — pre-session host prep, browse 13 curated games | `apps/user-client/src/components/icebreaker/IcebreakerToolkit.tsx`, `shared/icebreakerGames.ts` |
+| **IcebreakerCardGame** | Supporting — in-session AI card game (DB-persisted, 70/30 AI) | `apps/user-client/src/components/icebreaker/IcebreakerCardGame.tsx`, `apps/server/src/icebreakerCardGenerationService.ts` |
+| **IcebreakerTool Widget** | Supporting — lightweight entry point on Discover page | `apps/user-client/src/components/IcebreakerTool.tsx` |
+
+### Social Icebreaker Phases (MVP)
+
+```
+warmup → micro_challenge → lie_detective → recap
+```
+
+`MVP_PHASES = ['warmup', 'micro_challenge', 'lie_detective']`
+
+`AtmosphereMood = 'relaxed' | 'funny' | 'life' | 'emotional'`
+
+### Key API Routes
+
+- `POST /api/social-icebreaker/start` — join/create session (first caller = host)
+- `GET /api/social-icebreaker/:socialSessionId` — poll state every 3s
+- `POST /api/social-icebreaker/:socialSessionId/advance` — host advances phase
+- `POST /api/social-icebreaker/:socialSessionId/topics` — host generates warmup topics
+- `POST /api/social-icebreaker/:socialSessionId/lie-detective/generate` — per-user AI statements
+- `POST /api/social-icebreaker/:socialSessionId/lie-detective/vote` — vote on the lie
+- `GET /api/social-icebreaker/:socialSessionId/recap` — AI session summary
+
+### Frontend Hook
+
+```typescript
+const { state, isHost, startSession, fetchTopics, advancePhase,
+        submitPulseCheck, generateMyStatements, castVote, completeChallenge }
+  = useSocialIcebreaker({ sessionId, userId, displayName });
+```
+
+**Full reference:** `docs/icebreaker-system.md`
+
 ## Recent Major Changes
 - Onboarding redesign to streamline the user experience.
 - Interests carousel for enhanced user engagement.
