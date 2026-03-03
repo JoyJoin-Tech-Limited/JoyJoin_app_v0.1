@@ -153,9 +153,9 @@ export default function DiscoverPage() {
     mutationFn: async () => {
       return apiRequest("POST", "/api/guide/complete");
     },
-    onSuccess: () => {
-      // Invalidate user query to refresh hasSeenGuide
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    onSuccess: async () => {
+      // Refetch user query to refresh hasSeenGuide immediately
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
     },
   });
   

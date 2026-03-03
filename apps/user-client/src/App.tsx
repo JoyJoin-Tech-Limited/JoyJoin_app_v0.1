@@ -363,15 +363,16 @@ function Router() {
 }
 
 function App() {
-  // Load dev tools globally (works in dev and prod temporarily)
-  // TODO: Restrict to development only before production launch
+  // Load dev tools in non-production environments for easier debugging
   useEffect(() => {
-    import('./utils/devTools').then(module => {
-      (window as any).dev = module.devTools;
-      console.log('🔧 Dev tools loaded! Type window.dev.help() for commands');
-    }).catch(error => {
-      console.error('Failed to load dev tools:', error);
-    });
+    if (process.env.NODE_ENV !== 'production') {
+      import('./utils/devTools').then(module => {
+        (window as any).dev = module.devTools;
+        console.log('🔧 Dev tools loaded! Type window.dev.help() for commands');
+      }).catch(error => {
+        console.error('Failed to load dev tools:', error);
+      });
+    }
   }, []);
 
   return (

@@ -6,6 +6,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FancyLineLoadingScreen } from "@/components/FancyLineLoadingScreen";
 import { InterestCarousel, type InterestCarouselData } from "@/components/interests/InterestCarousel";
 import { useOnboardingCheckpoint } from "@/hooks/useOnboardingCheckpoint";
+import type { AuthUser } from "@/hooks/useAuth";
 
 // Maximum time to wait for data save before navigating anyway (ms).
 const MAX_NAVIGATION_WAIT_MS = 5000;
@@ -21,6 +22,9 @@ export default function ExtendedDataPage() {
   // This ensures navigation only happens AFTER the loading animation completes,
   // so FinalProfileReviewPage mounts cleanly and its SpiralWaveAnimation is visible.
   const readyToNavigateRef = useRef(false);
+
+  // Holds the server-driven next path computed in onSuccess.
+  const nextPathRef = useRef<string>('/onboarding/review');
 
   // Holds the polling interval so it can be cancelled on error or unmount.
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -58,6 +62,11 @@ export default function ExtendedDataPage() {
       }
       
       // Signal that it's safe to navigate once the animation finishes
+      const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as AuthUser;
+      nextPathRef.current =
+        updatedUser?.nextStep === 'profile-review' ? '/onboarding/review'
+        : updatedUser?.nextStep === 'guide' || updatedUser?.nextStep === 'discover' ? '/'
+        : '/onboarding/review'; // safe fallback
       readyToNavigateRef.current = true;
     },
     onError: (error: Error) => {
@@ -91,7 +100,7 @@ export default function ExtendedDataPage() {
   // The interval is stored in intervalRef so onError and unmount can cancel it.
   const handleCelebrationFinish = useCallback(() => {
     if (readyToNavigateRef.current) {
-      setLocation("/onboarding/review");
+      setLocation(nextPathRef.current);
     } else {
       // Data save is still in-flight; poll until confirmed successful (max 5s)
       const start = Date.now();
@@ -99,7 +108,7 @@ export default function ExtendedDataPage() {
         if (readyToNavigateRef.current) {
           clearInterval(intervalRef.current!);
           intervalRef.current = null;
-          setLocation("/onboarding/review");
+          setLocation(nextPathRef.current);
         } else if (Date.now() - start > MAX_NAVIGATION_WAIT_MS) {
           // Timed out without confirmation — stop polling, hide overlay, show error
           clearInterval(intervalRef.current!);
