@@ -88,8 +88,7 @@ export default function FinalProfileReviewPage() {
       
       // Use server-driven nextStep for navigation
       const nextPath = updatedUser?.nextStep === 'discover' ? '/discover'
-        : updatedUser?.nextStep === 'guide' ? '/guide'
-        : '/guide'; // fallback to guide
+        : '/'; // guide is deprecated - go directly to discover/home
       
       setLocation(nextPath);
     } catch (error) {

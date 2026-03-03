@@ -19,6 +19,7 @@ export interface OnboardingProgress {
     personalityTest: boolean;
     essentialData: boolean;
     extendedData: boolean;
+    profileReview: boolean;
     guide: boolean;
   };
 }
@@ -28,6 +29,7 @@ export type OnboardingStep =
   | 'personality-test'
   | 'essential-data'
   | 'extended-data'
+  | 'profile-review'
   | 'guide'
   | 'complete';
 
@@ -36,6 +38,7 @@ const STEP_ORDER: OnboardingStep[] = [
   'personality-test',
   'essential-data',
   'extended-data',
+  'profile-review',
   'guide',
   'complete',
 ];
@@ -55,7 +58,8 @@ export function useOnboardingProgress(): OnboardingProgress {
     const hasCompletedEssentialData = !!(user?.displayName && user?.gender && user?.currentCity);
     const hasCompletedExtendedData = !!(user?.intent || user?.hasCompletedInterestsCarousel);
     
-    // Use server-persisted hasSeenGuide instead of localStorage
+    // Use server-persisted flags instead of localStorage
+    const hasSeenProfileReview = user?.hasSeenProfileReview ?? false;
     const hasSeenGuide = user?.hasSeenGuide ?? false;
     
     const steps = {
@@ -63,6 +67,7 @@ export function useOnboardingProgress(): OnboardingProgress {
       personalityTest: hasCompletedPersonalityTest,
       essentialData: hasCompletedEssentialData,
       extendedData: hasCompletedExtendedData,
+      profileReview: hasSeenProfileReview,
       guide: hasSeenGuide,
     };
     
@@ -76,6 +81,8 @@ export function useOnboardingProgress(): OnboardingProgress {
       currentStep = 'essential-data';
     } else if (!hasCompletedExtendedData) {
       currentStep = 'extended-data';
+    } else if (!hasSeenProfileReview) {
+      currentStep = 'profile-review';
     } else if (!hasSeenGuide) {
       currentStep = 'guide';
     }
@@ -110,6 +117,8 @@ export function getStepRoute(step: OnboardingStep): string {
       return '/onboarding/setup';
     case 'extended-data':
       return '/onboarding/extended';
+    case 'profile-review':
+      return '/onboarding/review';
     case 'guide':
       return '/guide';
     case 'complete':
@@ -131,6 +140,8 @@ export function getStepLabel(step: OnboardingStep): string {
       return '基本资料';
     case 'extended-data':
       return '补充资料';
+    case 'profile-review':
+      return '资料预览';
     case 'guide':
       return '新手引导';
     case 'complete':
