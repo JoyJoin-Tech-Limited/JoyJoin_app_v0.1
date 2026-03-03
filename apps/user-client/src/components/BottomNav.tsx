@@ -1,4 +1,4 @@
-import { Compass, Calendar, MessageSquare, User } from "lucide-react";
+import { Compass, MapPin, Users, User } from "lucide-react";
 import { useLocation } from "wouter";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +23,8 @@ interface NavItem {
 
 const sideNavItems: NavItem[] = [
   { icon: Compass, label: "发现", path: "/", testId: "nav-discover", badgeCategory: 'discover' },
-  { icon: Calendar, label: "活动", path: "/events", testId: "nav-events", badgeCategory: 'activities' },
-  { icon: MessageSquare, label: "聊天", path: "/chats", testId: "nav-chats", badgeCategory: 'chat' },
+  { icon: MapPin, label: "足迹", path: "/my-journey", testId: "nav-journey", badgeCategory: 'activities' },
+  { icon: Users, label: "圈子", path: "/chats", testId: "nav-chats", badgeCategory: 'chat' },
   { icon: User, label: "我的", path: "/profile", testId: "nav-profile" }
 ];
 
