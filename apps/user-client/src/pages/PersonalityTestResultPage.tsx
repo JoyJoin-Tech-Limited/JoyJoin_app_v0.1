@@ -872,8 +872,11 @@ export default function PersonalityTestResultPage() {
       
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6 }}
+        animate={prefersReducedMotion
+          ? { opacity: 1 }
+          : { opacity: 1, x: [0, -6, 6, -4, 4, -2, 2, 0] }
+        }
+        transition={{ duration: 0.6, ease: "easeOut" }}
         className="relative min-h-[70vh] flex flex-col items-center justify-center px-4 py-6"
       >
         <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-10`} />

@@ -376,6 +376,7 @@ export default function DuolingoOnboardingPage() {
   const { getUnifiedProgress } = useUnifiedProgress();
   
   const [currentScreen, setCurrentScreen] = useState(0);
+  const [showTyping, setShowTyping] = useState(!prefersReducedMotion);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [justAuthenticated, setJustAuthenticated] = useState(false);
@@ -392,6 +393,13 @@ export default function DuolingoOnboardingPage() {
   });
 
   const anchorQuestions = anchorQuestionsData?.questions || [];
+
+  // Typing dots: show for 600ms before revealing speech bubble text
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+    const timer = setTimeout(() => setShowTyping(false), 600);
+    return () => clearTimeout(timer);
+  }, [prefersReducedMotion]);
 
   // Bug 4 Fix: Unified initialization - check both local cache and server, then decide
   useEffect(() => {
@@ -703,9 +711,28 @@ export default function DuolingoOnboardingPage() {
             >
               <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-card" />
               <div className="absolute -top-[9px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-border" />
-              <p className="text-center text-lg leading-relaxed font-medium" data-testid="text-xiaoyue-welcome-message">
-                3分钟完成我们自研的氛围测试，让我精准了解你的社交节奏
-              </p>
+              {showTyping ? (
+                <div className="flex gap-1 items-center justify-center py-1">
+                  {[0, 1, 2].map((i) => (
+                    <motion.span
+                      key={i}
+                      className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 inline-block"
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.25 }}
+                  className="text-center text-lg leading-relaxed font-medium"
+                  data-testid="text-xiaoyue-welcome-message"
+                >
+                  3分钟完成我们自研的氛围测试，让我精准了解你的社交节奏
+                </motion.p>
+              )}
             </motion.div>
             
             {/* Value proposition subtitle */}
