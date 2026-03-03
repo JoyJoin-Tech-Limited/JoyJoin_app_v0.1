@@ -215,8 +215,8 @@ export default function MyJourneyPage() {
         </div>
         <div className="w-px bg-muted/60" />
         <div className="text-center flex-1" aria-label={`连续 ${streakWeeks} 周活跃`}>
-          <div className="text-2xl font-black text-amber-500">{streakWeeks > 0 ? `${streakWeeks}🔥` : '—'}</div>
-          <div className="text-[10px] text-muted-foreground font-medium">连胜周</div>
+          <div className="text-2xl font-black text-amber-500" aria-hidden="true">{streakWeeks > 0 ? `${streakWeeks}🔥` : '—'}</div>
+          <div className="text-[10px] text-muted-foreground font-medium" aria-hidden="true">连胜周</div>
         </div>
       </div>
 
