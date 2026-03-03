@@ -12,6 +12,7 @@ interface UseSocialIcebreakerOptions {
   sessionId: string;
   userId: string;
   displayName: string;
+  eventType?: string;
 }
 
 interface UseSocialIcebreakerReturn {
@@ -34,6 +35,7 @@ export function useSocialIcebreaker({
   sessionId,
   userId,
   displayName,
+  eventType,
 }: UseSocialIcebreakerOptions): UseSocialIcebreakerReturn {
   const qc = useQueryClient();
   const [socialSessionId, setSocialSessionId] = useState<string | null>(null);
@@ -64,6 +66,7 @@ export function useSocialIcebreaker({
       const res = await apiRequest('POST', '/api/social-icebreaker/start', {
         sessionId,
         displayName,
+        eventType,
       });
       const data = await res.json();
       setSocialSessionId(data.socialSessionId);
@@ -73,7 +76,7 @@ export function useSocialIcebreaker({
     } finally {
       setIsStarting(false);
     }
-  }, [sessionId, displayName]);
+  }, [sessionId, displayName, eventType]);
 
   const fetchTopics = useCallback(
     async (mood: AtmosphereMood): Promise<SocialTopic[]> => {
@@ -81,6 +84,7 @@ export function useSocialIcebreaker({
       try {
         const res = await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/topics`, {
           mood,
+          eventType,
           participantCount: state?.playerCount || 4,
         });
         const data = await res.json();
@@ -91,7 +95,7 @@ export function useSocialIcebreaker({
         return [];
       }
     },
-    [socialSessionId, state?.playerCount, qc]
+    [socialSessionId, state?.playerCount, eventType, qc]
   );
 
   const advancePhase = useCallback(async () => {

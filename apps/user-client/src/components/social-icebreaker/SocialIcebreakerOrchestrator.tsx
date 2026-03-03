@@ -20,6 +20,7 @@ interface SocialIcebreakerOrchestratorProps {
   userId: string;
   displayName: string;
   eventType?: string;
+  eventId?: string;
   participants: Array<{ userId: string; displayName: string; archetype?: string }>;
   onEnd: () => void;
 }
@@ -42,6 +43,7 @@ export function SocialIcebreakerOrchestrator({
   userId,
   displayName,
   eventType,
+  eventId,
   participants,
   onEnd,
 }: SocialIcebreakerOrchestratorProps) {
@@ -59,7 +61,7 @@ export function SocialIcebreakerOrchestrator({
     castVote,
     completeChallenge,
     isAdvancing,
-  } = useSocialIcebreaker({ sessionId, userId, displayName });
+  } = useSocialIcebreaker({ sessionId, userId, displayName, eventType });
 
   const [showPulseCheck, setShowPulseCheck] = useState(false);
   const [showTransition, setShowTransition] = useState(false);
@@ -294,8 +296,9 @@ export function SocialIcebreakerOrchestrator({
               <SocialIcebreakerRecap
                 socialSessionId={socialSessionId || ''}
                 participants={participants}
-                durationMinutes={Math.round((Date.now() - (state.sessionStartedAt || state.phaseStartedAt)) / 60000)}
+                durationMinutes={Math.max(1, Math.round((Date.now() - (state.sessionStartedAt || state.phaseStartedAt)) / 60000))}
                 onLeave={onEnd}
+                eventId={eventId}
               />
             </motion.div>
           )}

@@ -58,6 +58,7 @@ export interface SocialSessionState {
   phaseStartedAt: number; // timestamp of current phase start
   sessionStartedAt: number; // timestamp of session creation
   completedPhases: SocialIcebreakerPhase[];
+  eventType?: string;
   // Per-phase data
   warmupTopics?: SocialTopic[];
   currentTopicIndex?: number;
