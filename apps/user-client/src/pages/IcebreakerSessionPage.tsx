@@ -49,6 +49,7 @@ export default function IcebreakerSessionPage() {
   const [, setLocation] = useLocation();
   
   const isSocialMode = new URLSearchParams(window.location.search).get('mode') === 'social';
+  const urlEventId = new URLSearchParams(window.location.search).get('eventId') || undefined;
   
   const [selectedGame, setSelectedGame] = useState<IcebreakerGame | null>(null);
   const [hasVotedReady, setHasVotedReady] = useState(false);
@@ -361,6 +362,7 @@ export default function IcebreakerSessionPage() {
                     userId={user?.id || ''}
                     displayName={user?.displayName || '参与者'}
                     eventType={eventData?.eventType}
+                    eventId={urlEventId || sessionData?.eventId}
                     participants={(sessionData?.participants || []).map(p => ({ userId: p.userId, displayName: p.displayName, archetype: p.archetype || undefined }))}
                     onEnd={handleLeave}
                   />

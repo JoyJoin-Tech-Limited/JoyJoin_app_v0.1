@@ -1,7 +1,8 @@
 import { useParams, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import { SocialIcebreakerRecap } from '@/components/social-icebreaker/SocialIcebreakerRecap';
-import { Loader2 } from 'lucide-react';
+import type { SocialSessionState } from '@shared/socialIcebreaker';
 
 export default function SocialIcebreakerRecapPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -11,6 +12,31 @@ export default function SocialIcebreakerRecapPage() {
   const { data: user } = useQuery<{ id: string; displayName: string }>({
     queryKey: ['/api/auth/user'],
   });
+
+  const { data: recapData } = useQuery<{ state: SocialSessionState }>({
+    queryKey: ['/api/social-icebreaker', socialSessionId, 'recap'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/social-icebreaker/${socialSessionId}/recap`);
+      return res.json();
+    },
+    enabled: !!socialSessionId,
+    staleTime: Infinity,
+  });
+
+  const eventId = new URLSearchParams(window.location.search).get('eventId') || undefined;
+
+  const state = recapData?.state;
+
+  const durationMinutes = state?.sessionStartedAt
+    ? Math.max(1, Math.round((Date.now() - state.sessionStartedAt) / 60000))
+    : 30;
+
+  const participants =
+    state?.lieDetectivePlayers && state.lieDetectivePlayers.length > 0
+      ? state.lieDetectivePlayers.map(p => ({ userId: p.userId, displayName: p.displayName }))
+      : user
+      ? [{ userId: user.id, displayName: user.displayName }]
+      : [];
 
   if (!sessionId) {
     return (
@@ -23,9 +49,10 @@ export default function SocialIcebreakerRecapPage() {
   return (
     <SocialIcebreakerRecap
       socialSessionId={socialSessionId}
-      participants={user ? [{ userId: user.id, displayName: user.displayName }] : []}
-      durationMinutes={30}
+      participants={participants}
+      durationMinutes={durationMinutes}
       onLeave={() => setLocation('/events')}
+      eventId={eventId}
     />
   );
 }
