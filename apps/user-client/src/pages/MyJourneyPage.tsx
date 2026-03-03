@@ -11,16 +11,17 @@ import { motion } from "framer-motion";
 import { useMemo } from "react";
 import type { Event } from "@shared/schema";
 
-// Event type → visual theme for timeline nodes
-const eventTypeNodeTheme = (eventType: string | null | undefined): { gradient: string; emoji: string } => {
-  const themes: Record<string, { gradient: string; emoji: string }> = {
-    '饭局': { gradient: 'from-orange-400 to-red-500', emoji: '🍜' },
-    '酒局': { gradient: 'from-amber-400 to-orange-500', emoji: '🍻' },
-    '游戏局': { gradient: 'from-cyan-400 to-indigo-500', emoji: '🎮' },
-    '户外': { gradient: 'from-green-400 to-teal-500', emoji: '🌿' },
-    '文艺': { gradient: 'from-rose-400 to-fuchsia-500', emoji: '🎨' },
+// Event iconName → visual theme for timeline nodes
+// iconName values set by poolMatchingService: 'utensils' (饭局), 'wine' (酒局), 'calendar' (other)
+const eventTypeNodeTheme = (iconName: string | null | undefined): { gradient: string; emoji: string; label?: string } => {
+  const themes: Record<string, { gradient: string; emoji: string; label: string }> = {
+    'utensils': { gradient: 'from-orange-400 to-red-500', emoji: '🍜', label: '饭局' },
+    'wine': { gradient: 'from-amber-400 to-orange-500', emoji: '🍻', label: '酒局' },
+    'gamepad': { gradient: 'from-cyan-400 to-indigo-500', emoji: '🎮', label: '游戏局' },
+    'leaf': { gradient: 'from-green-400 to-teal-500', emoji: '🌿', label: '户外' },
+    'palette': { gradient: 'from-rose-400 to-fuchsia-500', emoji: '🎨', label: '文艺' },
   };
-  const key = eventType || '';
+  const key = iconName || '';
   return themes[key] || { gradient: 'from-violet-500 to-purple-600', emoji: '🎉' };
 };
 
@@ -73,12 +74,12 @@ export default function MyJourneyPage() {
     return `${date.getMonth() + 1}月${date.getDate()}日`;
   };
 
-  const now = new Date();
-  const pastEvents = (events ?? []).filter((event) => {
-    if (!event.dateTime) return false;
-    const eventDate = new Date(event.dateTime as unknown as string);
-    return eventDate < now;
-  });
+  const pastEvents = useMemo(() =>
+    (events ?? []).filter((event) => {
+      if (!event.dateTime) return false;
+      return new Date(event.dateTime as unknown as string) < new Date();
+    }),
+  [events]);
   const hasEvents = pastEvents.length > 0;
 
   const streakWeeks = useMemo(() => {
@@ -91,7 +92,10 @@ export default function MyJourneyPage() {
       const start = new Date(d);
       start.setHours(0, 0, 0, 0);
       start.setDate(start.getDate() - start.getDay());
-      return start.toISOString().split('T')[0];
+      const year = start.getFullYear();
+      const month = String(start.getMonth() + 1).padStart(2, "0");
+      const day = String(start.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
     };
     const eventWeeks = new Set(sorted.map(e => getWeek(new Date(e.dateTime as string))));
     const nowWeek = getWeek(new Date());
@@ -234,7 +238,7 @@ export default function MyJourneyPage() {
             className="flex gap-4 mb-5 relative"
           >
             {(() => {
-              const nodeTheme = eventTypeNodeTheme((event as any).eventType);
+              const nodeTheme = eventTypeNodeTheme(event.iconName);
               return (
                 <>
                   <div
@@ -252,9 +256,9 @@ export default function MyJourneyPage() {
                     <div className="flex gap-3 mt-1.5 text-[11px] text-muted-foreground flex-wrap items-center">
                       <span>📅 {formatDate(event.dateTime)}</span>
                       {event.location && <span>📍 {event.location}</span>}
-                      {(event as any).eventType && (
+                      {nodeTheme.label && (
                         <span className="px-1.5 py-0.5 rounded-full bg-muted/60 font-medium">
-                          {(event as any).eventType}
+                          {nodeTheme.label}
                         </span>
                       )}
                     </div>
