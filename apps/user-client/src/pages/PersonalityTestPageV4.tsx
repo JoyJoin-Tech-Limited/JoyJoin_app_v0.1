@@ -191,10 +191,10 @@ function OnboardingProgress({
             <AnimatePresence initial={false}>
               {showMicroCopy && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
+                  initial={prefersReducedMotion ? false : { opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
                   className="overflow-hidden"
                 >
                   <div
