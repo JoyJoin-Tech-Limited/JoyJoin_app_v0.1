@@ -4843,10 +4843,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Only allow user-settable statuses (not 'pending')
       const validStatuses = ['confirmed', 'late', 'absent'] as const;
-      if (typeof status !== 'string' || !validStatuses.includes(status as any)) {
+      type AttendanceStatus = (typeof validStatuses)[number];
+      const isValidStatus = (s: unknown): s is AttendanceStatus =>
+        typeof s === 'string' && (validStatuses as readonly string[]).includes(s);
+      if (!isValidStatus(status)) {
         return res.status(400).json({ message: "Invalid status value" });
       }
-      const normalizedStatus = status as (typeof validStatuses)[number];
+      const normalizedStatus: AttendanceStatus = status;
 
       // Verify the caller is a participant in this event
       const event = await storage.getBlindBoxEventAdmin(eventId);
