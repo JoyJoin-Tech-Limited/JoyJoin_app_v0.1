@@ -6,6 +6,7 @@ import type {
   UserConfirmedData,
   MatchProgressUpdateData,
   AdminActionData,
+  AttendanceStatusUpdatedData,
 } from '@shared/wsEvents';
 
 /**
@@ -170,6 +171,34 @@ export async function broadcastAdminAction(
   if (shouldNotifyUsers(action)) {
     await createAdminActionNotification(eventId, action, details);
   }
+}
+
+/**
+ * 广播出席状态更新
+ */
+export function broadcastAttendanceStatusUpdated(
+  eventId: string,
+  userId: string,
+  displayName: string,
+  status: 'pending' | 'confirmed' | 'late' | 'absent',
+  estimatedLateMinutes?: number,
+  absentReason?: string,
+) {
+  const data: AttendanceStatusUpdatedData = {
+    eventId,
+    userId,
+    displayName,
+    status,
+    estimatedLateMinutes,
+    absentReason,
+  };
+
+  wsService.broadcastToEvent(eventId, {
+    type: 'ATTENDANCE_STATUS_UPDATED',
+    eventId,
+    data,
+    timestamp: new Date().toISOString(),
+  });
 }
 
 /**

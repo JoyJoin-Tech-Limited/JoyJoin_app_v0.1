@@ -381,6 +381,13 @@ export interface IStorage {
   // Share Card Rankings
   calculateUserRank(userCreatedAt: Date): Promise<number>;
   calculateArchetypeRank(userId: string, archetype: string): Promise<number>;
+
+  // Attendance Status operations
+  getAttendanceStatus(eventId: string, userId: string): Promise<{ status: string; estimatedLateMinutes?: number | null; absentReason?: string | null } | null>;
+  updateAttendanceStatus(eventId: string, userId: string, status: string, estimatedLateMinutes?: number | null, absentReason?: string | null): Promise<void>;
+  getEventAttendanceSummary(eventId: string): Promise<Array<{ userId: string; displayName: string; archetype: string | null; status: string; estimatedLateMinutes: number | null; absentReason: string | null; }>>;
+  adminOverrideAttendanceStatus(eventId: string, userId: string, status: string, adminId: string): Promise<void>;
+  getPendingAttendees(eventId: string): Promise<Array<{ userId: string; displayName: string; }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4092,6 +4099,76 @@ export class DatabaseStorage implements IStorage {
         sql`${users.createdAt} < ${user.createdAt}`
       ));
     return (result?.count || 0) + 1;
+  }
+
+  // ============ ATTENDANCE STATUS ============
+
+  async getAttendanceStatus(eventId: string, userId: string): Promise<{ status: string; estimatedLateMinutes?: number | null; absentReason?: string | null } | null> {
+    const result = await db.execute(sql`
+      SELECT attendance_status as status, estimated_late_minutes, absent_reason
+      FROM event_attendance
+      WHERE event_id = ${eventId} AND user_id = ${userId}
+      LIMIT 1
+    `);
+    if (!result.rows[0]) return null;
+    const row = result.rows[0] as any;
+    return {
+      status: row.status ?? 'pending',
+      estimatedLateMinutes: row.estimated_late_minutes ?? null,
+      absentReason: row.absent_reason ?? null,
+    };
+  }
+
+  async updateAttendanceStatus(eventId: string, userId: string, status: string, estimatedLateMinutes?: number | null, absentReason?: string | null): Promise<void> {
+    await db.execute(sql`
+      UPDATE event_attendance
+      SET
+        attendance_status = ${status},
+        estimated_late_minutes = ${estimatedLateMinutes ?? null},
+        absent_reason = ${absentReason ?? null},
+        attendance_status_updated_at = NOW()
+      WHERE event_id = ${eventId} AND user_id = ${userId}
+    `);
+  }
+
+  async getEventAttendanceSummary(eventId: string): Promise<Array<{ userId: string; displayName: string; archetype: string | null; status: string; estimatedLateMinutes: number | null; absentReason: string | null; }>> {
+    const result = await db.execute(sql`
+      SELECT
+        ea.user_id as "userId",
+        COALESCE(u.display_name, u.first_name, 'Unknown') as "displayName",
+        u.archetype,
+        COALESCE(ea.attendance_status, 'pending') as status,
+        ea.estimated_late_minutes as "estimatedLateMinutes",
+        ea.absent_reason as "absentReason"
+      FROM event_attendance ea
+      LEFT JOIN users u ON ea.user_id = u.id
+      WHERE ea.event_id = ${eventId}
+    `);
+    return result.rows as any[];
+  }
+
+  async adminOverrideAttendanceStatus(eventId: string, userId: string, status: string, adminId: string): Promise<void> {
+    await db.execute(sql`
+      UPDATE event_attendance
+      SET
+        attendance_status = ${status},
+        attendance_status_updated_at = NOW()
+      WHERE event_id = ${eventId} AND user_id = ${userId}
+    `);
+    console.log(`[AdminOverride] Admin ${adminId} overrode attendance status for user ${userId} in event ${eventId} to ${status}`);
+  }
+
+  async getPendingAttendees(eventId: string): Promise<Array<{ userId: string; displayName: string; }>> {
+    const result = await db.execute(sql`
+      SELECT
+        ea.user_id as "userId",
+        COALESCE(u.display_name, u.first_name, 'Unknown') as "displayName"
+      FROM event_attendance ea
+      LEFT JOIN users u ON ea.user_id = u.id
+      WHERE ea.event_id = ${eventId}
+        AND (ea.attendance_status = 'pending' OR ea.attendance_status IS NULL)
+    `);
+    return result.rows as any[];
   }
 }
 

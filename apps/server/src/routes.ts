@@ -10,7 +10,7 @@ import { paymentService } from "./paymentService";
 import { subscriptionService } from "./subscriptionService";
 import { venueMatchingService } from "./venueMatchingService";
 import { calculateUserMatchScore, matchUsersToGroups, validateWeights, DEFAULT_WEIGHTS, type MatchingWeights } from "./userMatchingService";
-import { broadcastEventStatusChanged, broadcastAdminAction } from "./eventBroadcast";
+import { broadcastEventStatusChanged, broadcastAdminAction, broadcastAttendanceStatusUpdated } from "./eventBroadcast";
 import { matchEventPool, saveMatchResults } from "./poolMatchingService";
 import { ARCHETYPE_NAMES } from "./archetypeConfig";
 import type { ArchetypeName } from "./archetypeConfig";
@@ -4803,6 +4803,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("[EventSession] Error creating session:", error);
       res.status(500).json({ message: "Failed to create session" });
+    }
+  });
+
+  // ============ ATTENDANCE STATUS ROUTES ============
+
+  function getUserDisplayName(user: any): string {
+    return user?.displayName || user?.display_name || user?.firstName || 'Unknown';
+  }
+
+  // User: get my attendance status for an event
+  app.get('/api/blind-box-events/:eventId/my-attendance-status', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { eventId } = req.params;
+      const status = await storage.getAttendanceStatus(eventId, userId);
+      if (!status) {
+        return res.json({ status: 'pending', estimatedLateMinutes: null, absentReason: null });
+      }
+      res.json(status);
+    } catch (error) {
+      console.error("[AttendanceStatus] Error fetching status:", error);
+      res.status(500).json({ message: "Failed to fetch attendance status" });
+    }
+  });
+
+  // User: update my attendance status for an event
+  app.post('/api/blind-box-events/:eventId/attendance-status', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { eventId } = req.params;
+      const { status, estimatedLateMinutes, absentReason } = req.body;
+
+      const validStatuses = ['pending', 'confirmed', 'late', 'absent'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+
+      await storage.updateAttendanceStatus(eventId, userId, status, estimatedLateMinutes ?? null, absentReason ?? null);
+
+      // Fetch user displayName for broadcast
+      const user = await storage.getUser(userId);
+      const displayName = getUserDisplayName(user);
+
+      broadcastAttendanceStatusUpdated(eventId, userId, displayName, status, estimatedLateMinutes, absentReason);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("[AttendanceStatus] Error updating status:", error);
+      res.status(500).json({ message: "Failed to update attendance status" });
+    }
+  });
+
+  // User/TableMates: get attendance summary for an event (all attendees' statuses)
+  app.get('/api/blind-box-events/:eventId/attendance-summary', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const summary = await storage.getEventAttendanceSummary(eventId);
+      res.json(summary);
+    } catch (error) {
+      console.error("[AttendanceStatus] Error fetching attendance summary:", error);
+      res.status(500).json({ message: "Failed to fetch attendance summary" });
+    }
+  });
+
+  // Admin: get attendance summary for an event
+  app.get('/api/admin/events/:eventId/attendance-summary', requireAdmin, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const summary = await storage.getEventAttendanceSummary(eventId);
+      res.json(summary);
+    } catch (error) {
+      console.error("[AttendanceStatus] Admin error fetching attendance summary:", error);
+      res.status(500).json({ message: "Failed to fetch attendance summary" });
+    }
+  });
+
+  // Admin: override attendance status for a specific user
+  app.patch('/api/admin/events/:eventId/attendees/:userId/attendance-status', requireAdmin, async (req: any, res) => {
+    try {
+      const adminId = req.session.userId;
+      const { eventId, userId } = req.params;
+      const { status } = req.body;
+
+      const validStatuses = ['pending', 'confirmed', 'late', 'absent'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+
+      await storage.adminOverrideAttendanceStatus(eventId, userId, status, adminId);
+
+      // Broadcast the override
+      const user = await storage.getUser(userId);
+      const displayName = getUserDisplayName(user);
+      broadcastAttendanceStatusUpdated(eventId, userId, displayName, status as any);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("[AttendanceStatus] Admin error overriding status:", error);
+      res.status(500).json({ message: "Failed to override attendance status" });
     }
   });
 
