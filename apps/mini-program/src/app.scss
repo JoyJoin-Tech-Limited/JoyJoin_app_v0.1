@@ -1,0 +1,12 @@
+@import './styles/variables';
+@import './styles/reset';
+@import './styles/mixins';
+
+page {
+  font-family: $font-body;
+  background-color: $color-bg;
+  color: $color-text-primary;
+  font-size: 28rpx;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}

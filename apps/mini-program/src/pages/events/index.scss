@@ -1,0 +1,30 @@
+@import '../../styles/variables';
+@import '../../styles/mixins';
+
+.page {
+  @include page-gradient-bg;
+  @include safe-area-bottom;
+  @include flex-center;
+  flex-direction: column;
+
+  &__placeholder {
+    text-align: center;
+    padding: $spacing-xl;
+  }
+
+  &__title {
+    display: block;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    font-family: $font-brand;
+    color: $color-primary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__subtitle {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+}
+
