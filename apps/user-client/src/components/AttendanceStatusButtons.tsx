@@ -271,7 +271,7 @@ export default function AttendanceStatusButtons({
         }
       );
     },
-    [attendanceMutation, onStatusChange, toast]
+    [submitAttendance, onStatusChange, toast]
   );
 
   const handleAbsent = useCallback(
