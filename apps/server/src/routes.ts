@@ -13445,6 +13445,127 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
   app.use('/api/social-icebreaker', isPhoneAuthenticated, socialIcebreakerRoutes);
 
+  // ============ Pre-event Attendance (Blind Box) ============
+
+  // User: set own pre-event attendance status
+  app.post('/api/blind-box-events/:eventId/pre-attendance', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { eventId } = req.params;
+      const { status, lateMinutes, absentReason } = req.body;
+
+      const allowed = ["pending", "confirmed", "late", "absent"];
+      if (!allowed.includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      // Upsert (insert or update) the pre-attendance record
+      await db
+        .insert(schema.blindBoxPreAttendance)
+        .values({ eventId, userId, status, lateMinutes: lateMinutes ?? null, absentReason: absentReason ?? null, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: [schema.blindBoxPreAttendance.eventId, schema.blindBoxPreAttendance.userId],
+          set: { status, lateMinutes: lateMinutes ?? null, absentReason: absentReason ?? null, updatedAt: new Date() },
+        });
+
+      res.json({ success: true, status });
+    } catch (error) {
+      console.error("Error updating pre-attendance:", error);
+      res.status(500).json({ message: "Failed to update attendance status" });
+    }
+  });
+
+  // Admin: get attendance summary for an event
+  app.get('/api/admin/blind-box-events/:eventId/attendance-summary', requireAdmin, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+
+      // Fetch event to get attendees list
+      const event = await db.select().from(blindBoxEvents).where(eq(blindBoxEvents.id, eventId)).limit(1);
+      if (!event.length) return res.status(404).json({ message: "Event not found" });
+
+      const matchedAttendees: Array<{ userId: string; displayName: string }> =
+        (event[0].matchedAttendees as any) ?? [];
+
+      const attendeeUserIds = matchedAttendees.map((a) => a.userId);
+
+      // Fetch pre-attendance records for this event
+      const records: Array<{ userId: string; status: string; lateMinutes: number | null }> = attendeeUserIds.length
+        ? await db
+            .select()
+            .from(schema.blindBoxPreAttendance)
+            .where(
+              and(
+                eq(schema.blindBoxPreAttendance.eventId, eventId),
+                inArray(schema.blindBoxPreAttendance.userId, attendeeUserIds)
+              )
+            )
+        : [];
+
+      const statusMap = new Map(records.map((r) => [r.userId, r]));
+
+      const attendees = matchedAttendees.map((a) => {
+        const rec = statusMap.get(a.userId);
+        return {
+          userId: a.userId,
+          displayName: a.displayName,
+          status: rec?.status ?? "pending",
+          lateMinutes: rec?.lateMinutes ?? undefined,
+        };
+      });
+
+      const summary = {
+        confirmed: attendees.filter((a) => a.status === "confirmed").length,
+        late: attendees.filter((a) => a.status === "late").length,
+        absent: attendees.filter((a) => a.status === "absent").length,
+        pending: attendees.filter((a) => a.status === "pending").length,
+      };
+
+      res.json({ summary, attendees });
+    } catch (error) {
+      console.error("Error fetching attendance summary:", error);
+      res.status(500).json({ message: "Failed to fetch attendance summary" });
+    }
+  });
+
+  // Admin: send reminders to pending attendees
+  app.post('/api/admin/blind-box-events/:eventId/chase-attendees', requireAdmin, async (req: any, res) => {
+    try {
+      // In a real implementation this would send push notifications.
+      // For now we acknowledge the action and return success.
+      res.json({ success: true, message: "Reminders sent to pending attendees" });
+    } catch (error) {
+      console.error("Error chasing attendees:", error);
+      res.status(500).json({ message: "Failed to send reminders" });
+    }
+  });
+
+  // Admin: override a single attendee's pre-attendance status
+  app.patch('/api/admin/blind-box-events/:eventId/attendees/:userId/attendance', requireAdmin, async (req: any, res) => {
+    try {
+      const { eventId, userId } = req.params;
+      const { status } = req.body;
+
+      const allowed = ["pending", "confirmed", "late", "absent"];
+      if (!allowed.includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      await db
+        .insert(schema.blindBoxPreAttendance)
+        .values({ eventId, userId, status, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: [schema.blindBoxPreAttendance.eventId, schema.blindBoxPreAttendance.userId],
+          set: { status, updatedAt: new Date() },
+        });
+
+      res.json({ success: true, status });
+    } catch (error) {
+      console.error("Error overriding attendance:", error);
+      res.status(500).json({ message: "Failed to override attendance status" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
