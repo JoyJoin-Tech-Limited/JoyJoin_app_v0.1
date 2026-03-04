@@ -15,6 +15,7 @@
   "dependencies": {
     "@joyjoin/shared": "^1.0.0",
     "@neondatabase/serverless": "^0.10.4",
+    "@types/jsonwebtoken": "^9.0.10",
     "bcrypt": "^6.0.0",
     "connect-pg-simple": "^10.0.0",
     "dotenv": "^16.4.7",
@@ -22,6 +23,7 @@
     "drizzle-zod": "^0.7.0",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
+    "jsonwebtoken": "^9.0.3",
     "memorystore": "^1.6.7",
     "openai": "^6.10.0",
     "ws": "^8.18.0",
