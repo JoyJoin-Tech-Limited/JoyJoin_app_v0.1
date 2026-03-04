@@ -14,7 +14,7 @@ import {
 import { 
   Users, Gift, Sparkles, Star, Heart, 
   Shield, Quote, MapPin, CheckCircle2, ArrowRight,
-  Flower2, Target, Sun, Play, Volume2, VolumeX
+  Flower2, Target, Sun, Play, Volume2, VolumeX, Loader2
 } from "lucide-react";
 import joyJoinLogo from "@/assets/box_logo_archetypes.png";
 import heroVideo from "@/assets/generated_videos/dusk_skyline_fades_to_cozy_dinner.mp4";
@@ -250,6 +250,33 @@ export default function LoginPage() {
           title: "登录成功",
           description: "欢迎回来！",
         });
+        setTimeout(() => setLocation("/"), 500);
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "登录失败",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const devQuickLoginMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/auth/phone-login", {
+        phoneNumber: "+8613800000001",
+        code: "666666",
+      });
+      return await response.json();
+    },
+    onSuccess: async (userData) => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      if (!userData.hasCompletedRegistration) {
+        toast({ title: "欢迎加入悦聚！", description: "让我们开始认识你吧~" });
+        setTimeout(() => setLocation("/onboarding"), 500);
+      } else {
+        toast({ title: "登录成功", description: "欢迎回来！" });
         setTimeout(() => setLocation("/"), 500);
       }
     },
@@ -594,6 +621,37 @@ export default function LoginPage() {
                     <span className="bg-card px-3 text-muted-foreground">或使用手机号登录</span>
                   </div>
                 </div> */}
+
+                {/* DEV ONLY: Quick tester bypass */}
+                {isDevelopment && (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-amber-200"></div>
+                      </div>
+                      <div className="relative flex justify-center text-xs">
+                        <span className="bg-card px-3 text-amber-500 font-medium">🧪 测试快捷入口 (DEV ONLY)</span>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="w-full border-amber-400 text-amber-600 hover:bg-amber-50"
+                      data-testid="button-dev-quick-login"
+                      disabled={devQuickLoginMutation.isPending}
+                      onClick={() => devQuickLoginMutation.mutate()}
+                    >
+                      {devQuickLoginMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          登录中...
+                        </>
+                      ) : (
+                        "⚡ 测试账号一键登录"
+                      )}
+                    </Button>
+                  </div>
+                )}
 
                 {/* Phone Number Login */}
                 <div className="space-y-4">
