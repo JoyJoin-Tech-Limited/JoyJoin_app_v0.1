@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import confetti from "canvas-confetti";
+import { confettiPresets } from "@/lib/confetti-utils";
 import { haptics } from "@/lib/haptics";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
@@ -21,7 +21,7 @@ export default function TransitionOverlay({
   useEffect(() => {
     onCompleteRef.current = onComplete;
     prefersReducedMotionRef.current = prefersReducedMotion;
-  });
+  }, [onComplete, prefersReducedMotion]);
 
   // Haptic feedback + premium sparkle confetti + auto-dismiss — all driven
   // solely by `isVisible` changing to true, avoiding spurious re-runs.
@@ -30,15 +30,7 @@ export default function TransitionOverlay({
 
     haptics.medium();
     if (!prefersReducedMotionRef.current) {
-      confetti({
-        particleCount: 30,
-        spread: 50,
-        origin: { x: 0.5, y: 0.25 },
-        colors: ["#FFD700", "#FFFFFF", "#FFF8DC", "#F0E68C"],
-        scalar: 0.9,
-        gravity: 1.0,
-        ticks: 80,
-      });
+      confettiPresets.goldSparkle();
     }
     const timer = setTimeout(() => onCompleteRef.current(), 1800);
     return () => clearTimeout(timer);
