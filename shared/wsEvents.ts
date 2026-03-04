@@ -368,6 +368,6 @@ export interface AttendanceStatusUpdatedData {
   userId: string;
   displayName: string;
   status: 'pending' | 'confirmed' | 'late' | 'absent';
-  estimatedLateMinutes?: number;
-  absentReason?: string;
+  estimatedLateMinutes?: number | null;
+  absentReason?: string | null;
 }
