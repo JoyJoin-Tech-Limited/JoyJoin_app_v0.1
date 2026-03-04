@@ -10,7 +10,7 @@ import { paymentService } from "./paymentService";
 import { subscriptionService } from "./subscriptionService";
 import { venueMatchingService } from "./venueMatchingService";
 import { calculateUserMatchScore, matchUsersToGroups, validateWeights, DEFAULT_WEIGHTS, type MatchingWeights } from "./userMatchingService";
-import { broadcastEventStatusChanged, broadcastAdminAction } from "./eventBroadcast";
+import { broadcastEventStatusChanged, broadcastAdminAction, broadcastAttendanceStatusUpdated } from "./eventBroadcast";
 import { matchEventPool, saveMatchResults } from "./poolMatchingService";
 import { ARCHETYPE_NAMES } from "./archetypeConfig";
 import type { ArchetypeName } from "./archetypeConfig";
@@ -4803,6 +4803,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("[EventSession] Error creating session:", error);
       res.status(500).json({ message: "Failed to create session" });
+    }
+  });
+
+  // ============ ATTENDANCE STATUS ROUTES ============
+
+  function getUserDisplayName(user: any): string {
+    return user?.displayName || user?.display_name || user?.firstName || 'Unknown';
+  }
+
+  function isParticipantOfBlindBoxEvent(event: any, userId: string): boolean {
+    if (event.userId === userId) return true;
+    const matchedAttendees = Array.isArray(event.matchedAttendees) ? event.matchedAttendees : [];
+    return matchedAttendees.some((a: any) => a.userId === userId);
+  }
+
+  // User: get my attendance status for an event
+  app.get('/api/blind-box-events/:eventId/my-attendance-status', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { eventId } = req.params;
+      const status = await storage.getAttendanceStatus(eventId, userId);
+      if (!status) {
+        return res.json({ status: 'pending', estimatedLateMinutes: null, absentReason: null });
+      }
+      res.json(status);
+    } catch (error) {
+      console.error("[AttendanceStatus] Error fetching status:", error);
+      res.status(500).json({ message: "Failed to fetch attendance status" });
+    }
+  });
+
+  // User: update my attendance status for an event
+  app.post('/api/blind-box-events/:eventId/attendance-status', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { eventId } = req.params;
+      const { status, estimatedLateMinutes, absentReason } = req.body;
+
+      // Only allow user-settable statuses (not 'pending')
+      const validStatuses = ['confirmed', 'late', 'absent'] as const;
+      if (typeof status !== 'string' || !validStatuses.includes(status as any)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+
+      // Verify the caller is a participant in this event
+      const event = await storage.getBlindBoxEventAdmin(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      if (!isParticipantOfBlindBoxEvent(event, userId)) {
+        return res.status(403).json({ message: "Not a participant in this event" });
+      }
+
+      // Enforce time-window constraints
+      const eventStart = new Date(event.date_time);
+      const now = new Date();
+      const diffMinutes = (now.getTime() - eventStart.getTime()) / 60000;
+
+      let normalizedEstimatedLateMinutes: number | null = null;
+      let normalizedAbsentReason: string | null = null;
+
+      if (status === 'absent') {
+        if (diffMinutes >= 0) {
+          return res.status(400).json({ message: "Cannot mark absent after the event has started" });
+        }
+        if (typeof absentReason !== 'string' || absentReason.trim().length === 0) {
+          return res.status(400).json({ message: "absentReason is required when marking absent" });
+        }
+        normalizedAbsentReason = absentReason.trim();
+      } else if (status === 'late') {
+        if (diffMinutes < -120 || diffMinutes > 45) {
+          return res.status(400).json({ message: "Late status can only be set within 2 hours before to 45 minutes after the event" });
+        }
+        if (typeof estimatedLateMinutes !== 'number' || !Number.isFinite(estimatedLateMinutes) || estimatedLateMinutes <= 0) {
+          return res.status(400).json({ message: "estimatedLateMinutes must be a positive number when marking late" });
+        }
+        normalizedEstimatedLateMinutes = estimatedLateMinutes;
+      }
+      // 'confirmed' uses no auxiliary fields
+
+      await storage.updateAttendanceStatus(eventId, userId, status, normalizedEstimatedLateMinutes, normalizedAbsentReason);
+
+      // Fetch user displayName for broadcast
+      const user = await storage.getUser(userId);
+      const displayName = getUserDisplayName(user);
+
+      broadcastAttendanceStatusUpdated(eventId, userId, displayName, status, normalizedEstimatedLateMinutes, normalizedAbsentReason);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("[AttendanceStatus] Error updating status:", error);
+      res.status(500).json({ message: "Failed to update attendance status" });
+    }
+  });
+
+  // User/TableMates: get attendance summary for an event (all attendees' statuses)
+  app.get('/api/blind-box-events/:eventId/attendance-summary', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { eventId } = req.params;
+
+      // Verify the caller is a participant in this event
+      const event = await storage.getBlindBoxEventAdmin(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      if (!isParticipantOfBlindBoxEvent(event, userId)) {
+        return res.status(403).json({ message: "Not a participant in this event" });
+      }
+
+      const summary = await storage.getEventAttendanceSummary(eventId);
+      res.json(summary);
+    } catch (error) {
+      console.error("[AttendanceStatus] Error fetching attendance summary:", error);
+      res.status(500).json({ message: "Failed to fetch attendance summary" });
+    }
+  });
+
+  // Admin: get attendance summary for an event
+  app.get('/api/admin/events/:eventId/attendance-summary', requireAdmin, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const summary = await storage.getEventAttendanceSummary(eventId);
+      res.json(summary);
+    } catch (error) {
+      console.error("[AttendanceStatus] Admin error fetching attendance summary:", error);
+      res.status(500).json({ message: "Failed to fetch attendance summary" });
+    }
+  });
+
+  // Admin: override attendance status for a specific user
+  app.patch('/api/admin/events/:eventId/attendees/:userId/attendance-status', requireAdmin, async (req: any, res) => {
+    try {
+      const adminId = req.session.userId;
+      const { eventId, userId } = req.params;
+      const { status } = req.body;
+
+      const validStatuses = ['pending', 'confirmed', 'late', 'absent'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+
+      await storage.adminOverrideAttendanceStatus(eventId, userId, status, adminId);
+
+      // Broadcast the override
+      const user = await storage.getUser(userId);
+      const displayName = getUserDisplayName(user);
+      broadcastAttendanceStatusUpdated(eventId, userId, displayName, status as any);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("[AttendanceStatus] Admin error overriding status:", error);
+      res.status(500).json({ message: "Failed to override attendance status" });
     }
   });
 
