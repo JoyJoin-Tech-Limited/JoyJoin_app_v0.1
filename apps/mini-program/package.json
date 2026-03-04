@@ -1,0 +1,68 @@
+{
+  "name": "@joyjoin/mini-program",
+  "version": "1.0.0",
+  "private": true,
+  "description": "JoyJoin WeChat mini-program (Taro)",
+  "templateInfo": {
+    "name": "default",
+    "typescript": true,
+    "css": "sass"
+  },
+  "scripts": {
+    "build:weapp": "taro build --type weapp",
+    "build:swan": "taro build --type swan",
+    "build:alipay": "taro build --type alipay",
+    "build:tt": "taro build --type tt",
+    "build:h5": "taro build --type h5",
+    "build:rn": "taro build --type rn",
+    "build:qq": "taro build --type qq",
+    "build:kwai": "taro build --type kwai",
+    "build:jd": "taro build --type jd",
+    "dev:weapp": "npm run build:weapp -- --watch",
+    "dev:swan": "npm run build:swan -- --watch",
+    "dev:alipay": "npm run build:alipay -- --watch",
+    "dev:tt": "npm run build:tt -- --watch",
+    "dev:h5": "npm run build:h5 -- --watch",
+    "dev:rn": "npm run build:rn -- --watch",
+    "dev:qq": "npm run build:qq -- --watch",
+    "dev:kwai": "npm run build:kwai -- --watch",
+    "dev:jd": "npm run build:jd -- --watch"
+  },
+  "browserslist": [
+    "last 3 versions",
+    "Android >= 4.1",
+    "ios >= 8"
+  ],
+  "dependencies": {
+    "@tarojs/components": "4.1.11",
+    "@tarojs/helper": "4.1.11",
+    "@tarojs/plugin-framework-react": "4.1.11",
+    "@tarojs/plugin-platform-weapp": "4.1.11",
+    "@tarojs/plugin-platform-alipay": "4.1.11",
+    "@tarojs/plugin-platform-swan": "4.1.11",
+    "@tarojs/plugin-platform-tt": "4.1.11",
+    "@tarojs/plugin-platform-qq": "4.1.11",
+    "@tarojs/plugin-platform-kwai": "4.1.11",
+    "@tarojs/plugin-platform-jd": "4.1.11",
+    "@tarojs/react": "4.1.11",
+    "@tarojs/runtime": "4.1.11",
+    "@tarojs/shared": "4.1.11",
+    "@tarojs/taro": "4.1.11",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.8.0",
+    "@tarojs/cli": "4.1.11",
+    "@tarojs/plugin-html": "4.1.11",
+    "@tarojs/vite-runner": "4.1.11",
+    "@types/react": "^18.0.0",
+    "@types/webpack-env": "^1.13.6",
+    "babel-preset-taro": "4.1.11",
+    "eslint-config-taro": "4.1.11",
+    "stylelint": "^16.0.0",
+    "stylelint-config-standard": "^36.0.0",
+    "typescript": "^5.0.4",
+    "vite": "^5.0.0"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "miniprogramRoot": "dist/",
+  "projectname": "JoyJoin",
+  "description": "JoyJoin WeChat Mini-Program",
+  "appid": "wx5a038ee6dee12032",
+  "setting": {
+    "urlCheck": false,
+    "es6": false,
+    "enhance": false,
+    "postcss": false,
+    "minified": false
+  },
+  "compileType": "miniprogram",
+  "condition": {}
+}
