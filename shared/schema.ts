@@ -231,11 +231,16 @@ export const events = pgTable("events", {
 // Event attendance table
 export const eventAttendance = pgTable("event_attendance", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  eventId: varchar("event_id").notNull().references(() => events.id),
+  eventId: varchar("event_id").references(() => events.id), // nullable: required for legacy events, omitted for blind-box events
+  blindBoxEventId: varchar("blind_box_event_id"), // blind_box_events.id (no FK constraint, mirrors icebreaker_sessions pattern)
   userId: varchar("user_id").notNull().references(() => users.id),
   joinedAt: timestamp("joined_at").defaultNow(),
   status: varchar("status").default("confirmed"), // confirmed, cancelled, attended
   intent: text("intent").array(), // Event-specific intent: networking, friends, discussion, fun, romance, flexible
+  attendanceStatus: varchar("attendance_status").default("pending"), // pending | confirmed | late | absent
+  estimatedLateMinutes: integer("estimated_late_minutes"), // 10 | 20 | 30
+  absentReason: varchar("absent_reason"), // '突发事情' | '身体不适' | '其他'
+  attendanceStatusUpdatedAt: timestamp("attendance_status_updated_at"),
 });
 
 // ============ 两阶段匹配模型 - Event Pools ============
