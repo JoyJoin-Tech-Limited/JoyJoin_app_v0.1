@@ -121,7 +121,7 @@ function OnboardingProgress({
         )}
         <div className="flex-1">
           {/* Progress bar with smooth transition animation */}
-          <div className="relative" style={{ minHeight: '2.5rem' }}>
+          <div className="relative">
             <AnimatePresence mode="wait" initial={false}>
               {isAnchorPhase ? (
                 <motion.div
@@ -188,33 +188,31 @@ function OnboardingProgress({
             </AnimatePresence>
             
             {/* Inline micro-copy toast - appears briefly during Q8→Q9 transition */}
-            <AnimatePresence>
+            <AnimatePresence initial={false}>
               {showMicroCopy && (
                 <motion.div
-                  initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -4 }}
-                  transition={{ 
-                    duration: prefersReducedMotion ? 0.1 : 0.3, 
-                    ease: "easeOut" 
-                  }}
-                  role="status"
-                  aria-live="polite"
-                  aria-atomic="true"
-                  className="absolute top-full left-0 right-0 flex items-center gap-1 text-sm text-primary font-medium mt-0.5 pt-0.5"
+                  initial={prefersReducedMotion ? false : { opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
+                  className="overflow-hidden"
                 >
-                  <Sparkles className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                  <span>已锁定你的vibe ✨ 进入精准匹配</span>
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                    className="flex items-center gap-1 text-sm text-primary font-medium mt-0.5"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                    <span>已锁定你的vibe ✨ 进入精准匹配</span>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
           
           {/* Question counter and percentage */}
-          <motion.div 
-            layout={!prefersReducedMotion}
-            className="flex justify-between mt-1"
-          >
+          <div className="flex justify-start mt-1">
             <span className="text-xs text-muted-foreground font-medium">
               {remaining !== undefined && remaining > 0 ? (
                 `第${Math.floor(current)}题 · 还剩约${remaining}题`
@@ -222,10 +220,7 @@ function OnboardingProgress({
                 `第${Math.floor(current)}题 / 约${total}题`
               )}
             </span>
-            <span className="text-xs font-bold text-primary">
-              {Math.round(progress)}%
-            </span>
-          </motion.div>
+          </div>
           
           {/* Extended message for near completion */}
           {showExtendedMessage && (
@@ -338,7 +333,7 @@ export default function PersonalityTestPageV4() {
     }
     
     // After anchor phase: use unified progress calculation
-    const calculated = Math.min(100, Math.round(getUnifiedProgress('assessment', progress.answered, estimatedRemaining)));
+    const calculated = Math.min(100, Math.round(getUnifiedProgress('assessment', displayCurrent, estimatedRemaining)));
     if (process.env.NODE_ENV === 'development') {
       console.log('[PersonalityTestPageV4] Progress calculated:', { 
         answered: progress.answered, 
@@ -347,7 +342,7 @@ export default function PersonalityTestPageV4() {
       });
     }
     return calculated;
-  }, [progress, estimatedRemaining, getUnifiedProgress]);
+  }, [progress, estimatedRemaining, displayCurrent, getUnifiedProgress]);
   
   // Detect milestone crossings
   useEffect(() => {
