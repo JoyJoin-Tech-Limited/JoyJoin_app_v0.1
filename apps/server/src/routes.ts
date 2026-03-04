@@ -4843,9 +4843,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Only allow user-settable statuses (not 'pending')
       const validStatuses = ['confirmed', 'late', 'absent'] as const;
-      if (typeof status !== 'string' || !validStatuses.includes(status as any)) {
+      type AttendanceStatus = (typeof validStatuses)[number];
+      const isValidStatus = (s: unknown): s is AttendanceStatus =>
+        typeof s === 'string' && (validStatuses as readonly string[]).includes(s);
+      if (!isValidStatus(status)) {
         return res.status(400).json({ message: "Invalid status value" });
       }
+      const normalizedStatus: AttendanceStatus = status;
 
       // Verify the caller is a participant in this event
       const event = await storage.getBlindBoxEventAdmin(eventId);
@@ -4864,7 +4868,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let normalizedEstimatedLateMinutes: number | null = null;
       let normalizedAbsentReason: string | null = null;
 
-      if (status === 'absent') {
+      if (normalizedStatus === 'absent') {
         if (diffMinutes >= 0) {
           return res.status(400).json({ message: "Cannot mark absent after the event has started" });
         }
@@ -4872,7 +4876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "absentReason is required when marking absent" });
         }
         normalizedAbsentReason = absentReason.trim();
-      } else if (status === 'late') {
+      } else if (normalizedStatus === 'late') {
         if (diffMinutes < -120 || diffMinutes > 45) {
           return res.status(400).json({ message: "Late status can only be set within 2 hours before to 45 minutes after the event" });
         }
@@ -4883,13 +4887,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       // 'confirmed' uses no auxiliary fields
 
-      await storage.updateAttendanceStatus(eventId, userId, status, normalizedEstimatedLateMinutes, normalizedAbsentReason);
+      await storage.updateAttendanceStatus(eventId, userId, normalizedStatus, normalizedEstimatedLateMinutes, normalizedAbsentReason);
 
       // Fetch user displayName for broadcast
       const user = await storage.getUser(userId);
       const displayName = getUserDisplayName(user);
 
-      broadcastAttendanceStatusUpdated(eventId, userId, displayName, status, normalizedEstimatedLateMinutes, normalizedAbsentReason);
+      broadcastAttendanceStatusUpdated(eventId, userId, displayName, normalizedStatus, normalizedEstimatedLateMinutes ?? undefined, normalizedAbsentReason ?? undefined);
 
       res.json({ success: true });
     } catch (error) {
