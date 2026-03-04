@@ -262,33 +262,6 @@ export default function LoginPage() {
     },
   });
 
-  const devQuickLoginMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/auth/phone-login", {
-        phoneNumber: "+8613800000001",
-        code: "666666",
-      });
-      return await response.json();
-    },
-    onSuccess: async (userData) => {
-      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      if (!userData.hasCompletedRegistration) {
-        toast({ title: "欢迎加入悦聚！", description: "让我们开始认识你吧~" });
-        setTimeout(() => setLocation("/onboarding"), 500);
-      } else {
-        toast({ title: "登录成功", description: "欢迎回来！" });
-        setTimeout(() => setLocation("/"), 500);
-      }
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "登录失败",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const getPhoneLength = () => {
     if (areaCode === "+86") return 11;
     if (areaCode === "+852" || areaCode === "+853") return 8;
@@ -638,10 +611,10 @@ export default function LoginPage() {
                       size="lg"
                       className="w-full border-amber-400 text-amber-600 hover:bg-amber-50"
                       data-testid="button-dev-quick-login"
-                      disabled={devQuickLoginMutation.isPending}
-                      onClick={() => devQuickLoginMutation.mutate()}
+                      disabled={loginMutation.isPending}
+                      onClick={() => loginMutation.mutate({ phoneNumber: "+8613800000001", code: "666666" })}
                     >
-                      {devQuickLoginMutation.isPending ? (
+                      {loginMutation.isPending ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                           登录中...
