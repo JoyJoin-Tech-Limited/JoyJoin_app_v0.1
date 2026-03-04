@@ -86,7 +86,7 @@ export default function MyJourneyPage() {
     if (pastEvents.length === 0) return 0;
     const sorted = [...pastEvents]
       .filter(e => e.dateTime)
-      .sort((a, b) => new Date(b.dateTime as string).getTime() - new Date(a.dateTime as string).getTime());
+      .sort((a, b) => new Date(b.dateTime!).getTime() - new Date(a.dateTime!).getTime());
     if (sorted.length === 0) return 0;
     const getWeek = (d: Date) => {
       const start = new Date(d);
@@ -97,7 +97,7 @@ export default function MyJourneyPage() {
       const day = String(start.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
     };
-    const eventWeeks = new Set(sorted.map(e => getWeek(new Date(e.dateTime as string))));
+    const eventWeeks = new Set(sorted.map(e => getWeek(new Date(e.dateTime!))));
     const nowWeek = getWeek(new Date());
     let streak = 0;
     const checkWeek = new Date();
