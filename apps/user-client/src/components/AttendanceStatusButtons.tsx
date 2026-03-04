@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -59,18 +60,26 @@ const LATE_OPTIONS = [
 
 function LateOptionsSheet({ open, onOpenChange, onSelect, isSubmitting }: LateOptionsSheetProps) {
   const [selectedMinutes, setSelectedMinutes] = useState<number | null>(null);
+  const pendingRef = React.useRef(false);
 
   const handleSelect = (minutes: number) => {
+    // Prevent multiple submissions from rapid taps
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setSelectedMinutes(minutes);
     // Confirm flash: visual feedback then 300ms delay before closing
     setTimeout(() => {
       onSelect(minutes);
+      pendingRef.current = false;
     }, 300);
   };
 
   // Reset selection when sheet closes
   useEffect(() => {
-    if (!open) setSelectedMinutes(null);
+    if (!open) {
+      setSelectedMinutes(null);
+      pendingRef.current = false;
+    }
   }, [open]);
 
   return (
@@ -218,13 +227,21 @@ export default function AttendanceStatusButtons({
     }) => {
       const res = await apiRequest(
         "POST",
-        `/api/events/${eventId}/pre-attendance`,
+        `/api/blind-box-events/${eventId}/pre-attendance`,
         payload
       );
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/blind-box-events", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-events"] });
+    },
+    onError: () => {
+      toast({
+        title: "提交失败",
+        description: "出席状态提交失败，请稍后重试。",
+        variant: "destructive",
+      });
     },
   });
 
@@ -324,7 +341,7 @@ export default function AttendanceStatusButtons({
     {
       key: "late" as const,
       emoji: "⏰",
-      label: "我会迟到",
+      label: status === "late" && lateMinutes ? `迟到~${lateMinutes}min` : "我会迟到",
       selectedClass: "bg-amber-500 text-white shadow-md shadow-amber-200",
       ariaLabel: "通知会迟到",
       onClick: () => { setShowNudge(false); setShowLateSheet(true); },

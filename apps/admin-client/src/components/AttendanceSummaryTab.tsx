@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Select,
@@ -105,11 +104,12 @@ export default function AttendanceSummaryTab({ eventId }: AttendanceSummaryTabPr
   const [chaseSuccess, setChaseSuccess] = useState(false);
 
   const { data, isLoading } = useQuery<AttendanceSummaryData>({
-    queryKey: ["/api/events", eventId, "attendance-summary"],
+    queryKey: ["/api/admin/blind-box-events", eventId, "attendance-summary"],
     queryFn: async () => {
-      const res = await fetch(`/api/events/${eventId}/attendance-summary`, {
-        credentials: "include",
-      });
+      const res = await apiRequest(
+        "GET",
+        `/api/admin/blind-box-events/${eventId}/attendance-summary`
+      );
       if (!res.ok) throw new Error("Failed to fetch attendance summary");
       return res.json();
     },
@@ -119,7 +119,7 @@ export default function AttendanceSummaryTab({ eventId }: AttendanceSummaryTabPr
     mutationFn: async () => {
       const res = await apiRequest(
         "POST",
-        `/api/events/${eventId}/chase-attendees`
+        `/api/admin/blind-box-events/${eventId}/chase-attendees`
       );
       return res.json();
     },
@@ -149,14 +149,14 @@ export default function AttendanceSummaryTab({ eventId }: AttendanceSummaryTabPr
     }) => {
       const res = await apiRequest(
         "PATCH",
-        `/api/events/${eventId}/attendees/${userId}/attendance`,
+        `/api/admin/blind-box-events/${eventId}/attendees/${userId}/attendance`,
         { status }
       );
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["/api/events", eventId, "attendance-summary"],
+        queryKey: ["/api/admin/blind-box-events", eventId, "attendance-summary"],
       });
       toast({ title: "✓ 状态已更新" });
     },
