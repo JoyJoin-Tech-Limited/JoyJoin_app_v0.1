@@ -236,6 +236,10 @@ export const eventAttendance = pgTable("event_attendance", {
   joinedAt: timestamp("joined_at").defaultNow(),
   status: varchar("status").default("confirmed"), // confirmed, cancelled, attended
   intent: text("intent").array(), // Event-specific intent: networking, friends, discussion, fun, romance, flexible
+  attendanceStatus: varchar("attendance_status").default("pending"), // pending | confirmed | late | absent
+  estimatedLateMinutes: integer("estimated_late_minutes"), // 10 | 20 | 30
+  absentReason: varchar("absent_reason"), // '突发事情' | '身体不适' | '其他'
+  attendanceStatusUpdatedAt: timestamp("attendance_status_updated_at"),
 });
 
 // ============ 两阶段匹配模型 - Event Pools ============

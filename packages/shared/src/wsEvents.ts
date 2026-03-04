@@ -48,7 +48,9 @@ export type WSEventType =
   | "SOCIAL_LIE_VOTE_UPDATE"
   | "SOCIAL_PHASE_ADVANCE"
   | "SOCIAL_PULSE_VOTE"
-  | "SOCIAL_LIE_VOTE";
+  | "SOCIAL_LIE_VOTE"
+  // Attendance status events
+  | "ATTENDANCE_STATUS_UPDATED";
 
 export interface WSMessage {
   type: WSEventType;
@@ -349,4 +351,14 @@ export interface SocialLieVoteUpdateData {
   votes: Array<{ voterId: string; targetUserId: string; guessedStatementIndex: number }>;
   isRevealed: boolean;
   lieIndex?: number;
+}
+
+// 出席状态更新 (server → client)
+export interface AttendanceStatusUpdatedData {
+  eventId: string;
+  userId: string;
+  displayName: string;
+  status: 'pending' | 'confirmed' | 'late' | 'absent';
+  estimatedLateMinutes?: number;
+  absentReason?: string;
 }
