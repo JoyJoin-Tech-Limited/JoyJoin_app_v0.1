@@ -24,7 +24,7 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
 import xiaoyuePointing from "@/assets/Xiao_Yue_Avatar-04.png";
-import MilestoneRewardOverlay from "@/components/MilestoneRewardOverlay";
+import TransitionOverlay from "@/components/TransitionOverlay";
 
 // Preload Xiaoyue avatars immediately
 const XIAOYUE_AVATAR_URLS = [xiaoyueNormal, xiaoyueExcited, xiaoyuePointing];
@@ -554,12 +554,10 @@ export default function PersonalityTestPageV4() {
 
   return (
     <div className="h-screen overflow-hidden bg-background flex flex-col">
-      {/* Milestone Reward Overlay */}
-      <MilestoneRewardOverlay
+      {/* Transition Overlay - auto-dismissing Apple-style modal at question 8 milestone */}
+      <TransitionOverlay
         isVisible={showMilestoneReward}
-        onContinue={() => setShowMilestoneReward(false)}
-        topArchetype={topArchetype || undefined}
-        progress={{ answered: answeredCount, total: 16 }}
+        onComplete={() => setShowMilestoneReward(false)}
       />
 
       <OnboardingProgress
