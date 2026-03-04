@@ -1,0 +1,59 @@
+@import 'variables';
+
+// ─── Gradient text ────────────────────────────────────────────────
+@mixin gradient-text {
+  background: $brand-gradient;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+// ─── Primary button ───────────────────────────────────────────────
+@mixin button-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: $button-height;
+  border-radius: $button-radius;
+  background: $brand-gradient;
+  color: $color-text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  box-shadow: 0 8rpx 32rpx rgba(168, 107, 255, 0.35);
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+// ─── Card ─────────────────────────────────────────────────────────
+@mixin card {
+  background: $color-surface;
+  border-radius: $card-radius;
+  box-shadow: $shadow-card;
+}
+
+// ─── Page gradient background ─────────────────────────────────────
+@mixin page-gradient-bg {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
+}
+
+// ─── Safe area bottom ─────────────────────────────────────────────
+@mixin safe-area-bottom {
+  padding-bottom: calc(#{$tab-bar-height} + constant(safe-area-inset-bottom));
+  padding-bottom: calc(#{$tab-bar-height} + env(safe-area-inset-bottom));
+}
+
+// ─── Flex center ──────────────────────────────────────────────────
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// ─── Text truncate ────────────────────────────────────────────────
+@mixin text-truncate {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
