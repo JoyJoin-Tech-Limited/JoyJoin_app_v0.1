@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getArchetypeImage } from "@/lib/archetypeImages";
 import { confettiPresets } from "@/lib/confetti-utils";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
 
 interface MilestoneRewardOverlayProps {
@@ -17,6 +18,7 @@ export default function MilestoneRewardOverlay({
   topArchetype,
   progress,
 }: MilestoneRewardOverlayProps) {
+  const prefersReducedMotion = useReducedMotion();
   // Auto-dismiss after 2 seconds
   useEffect(() => {
     if (!isVisible) return;
@@ -62,7 +64,10 @@ export default function MilestoneRewardOverlay({
               duration: 0.4, 
               ease: [0.4, 0, 0.2, 1]
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onContinue();
+            }}
             className="w-full bg-card rounded-t-3xl p-6 space-y-5"
           >
             {/* Congratulations Title */}
@@ -81,9 +86,7 @@ export default function MilestoneRewardOverlay({
 
             {/* Xiaoyue Mascot with Bouncing Animation */}
             <motion.div
-              animate={{ 
-                y: [0, -6, 0],
-              }}
+              animate={prefersReducedMotion ? {} : { y: [0, -6, 0] }}
               transition={{ 
                 duration: 1.2, 
                 repeat: Infinity,
@@ -190,8 +193,8 @@ export default function MilestoneRewardOverlay({
             {/* Tap to continue hint */}
             <motion.p
               initial={{ opacity: 0 }}
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
+              animate={prefersReducedMotion ? { opacity: 1 } : { opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1.5, repeat: prefersReducedMotion ? 0 : Infinity }}
               className="text-muted-foreground text-sm text-center"
             >
               点击屏幕继续
