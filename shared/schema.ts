@@ -2729,3 +2729,29 @@ export const insertOnboardingAnalyticsSchema = createInsertSchema(onboardingAnal
 
 export type OnboardingAnalytics = typeof onboardingAnalytics.$inferSelect;
 export type InsertOnboardingAnalytics = z.infer<typeof insertOnboardingAnalyticsSchema>;
+
+// ================================
+// Pre-event Attendance (Blind Box)
+// ================================
+
+export const blindBoxPreAttendance = pgTable("blind_box_pre_attendance", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull().references(() => blindBoxEvents.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  // "pending" | "confirmed" | "late" | "absent"
+  status: varchar("status").notNull().default("pending"),
+  lateMinutes: integer("late_minutes"), // populated when status = "late"
+  absentReason: varchar("absent_reason"), // populated when status = "absent"
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique("uq_blind_box_pre_attendance").on(table.eventId, table.userId),
+  index("idx_blind_box_pre_attendance_event").on(table.eventId),
+]);
+
+export const insertBlindBoxPreAttendanceSchema = createInsertSchema(blindBoxPreAttendance).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type BlindBoxPreAttendance = typeof blindBoxPreAttendance.$inferSelect;
+export type InsertBlindBoxPreAttendance = z.infer<typeof insertBlindBoxPreAttendanceSchema>;
