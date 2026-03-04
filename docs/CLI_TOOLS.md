@@ -1,4 +1,65 @@
-# JoyJoin Development Tools - CLI and Browser Console
+# CLI Development Tools
+
+## ⚠️ CRITICAL SECURITY WARNING ⚠️
+
+**HARDCODED SECRET KEY - TEMPORARY TESTING ONLY**
+
+This version has the secret key **hardcoded** in the source code for testing purposes.
+
+```
+Secret Key: BYPASSSECRET12345678
+Location: apps/server/src/routes.ts
+```
+
+### 🚨 BEFORE PUBLIC RELEASE - MANDATORY CHANGES:
+
+1. **Remove hardcoded secret** from `apps/server/src/routes.ts`
+2. **Replace with environment variable** check only
+3. **Add production restrictions** to disable dev tools
+4. **Remove browser console access** in production
+5. **Disable all `/api/dev/*` endpoints** in production
+
+Search codebase for: `TODO: REMOVE BEFORE PUBLIC RELEASE`
+
+---
+
+## Current Status: TESTING ONLY
+
+✅ Works immediately without environment setup
+✅ Can test all dev tools functionality
+❌ NOT SECURE for public deployment
+❌ Anyone can access dev tools with known secret
+
+---
+
+## Hardcoded Secret (Temporary)
+
+**Current Secret Key:** `BYPASSSECRET12345678`
+
+This key is currently **hardcoded** in:
+- `apps/server/src/routes.ts` - All `/api/dev/*` endpoints
+- `apps/server/src/cli/createAdminAccount.ts` - Has fallback to hardcoded secret
+- `apps/server/src/cli/createUserAccount.ts` - Has fallback to hardcoded secret
+- `apps/server/src/cli/bypassLogin.ts` - Has fallback to hardcoded secret
+
+**Why hardcoded?**
+- Environment variables not working in current deployment
+- Allows testing of dev tools functionality
+- Temporary solution for internal testing
+
+**Security Risk:**
+- Secret is visible in source code
+- Anyone with code access can use dev tools
+- Must be removed before public release
+
+**Migration Plan:**
+1. Test all dev tools functionality (current phase)
+2. Set up proper environment variable system
+3. Remove hardcoded secrets
+4. Add production restrictions
+5. Deploy securely
+
+---
 
 ## ⚠️ Security Warning
 

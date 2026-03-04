@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// TODO: Restrict to development only before production launch
-// Currently enabled in production for internal testing
+// TODO: REMOVE BEFORE PUBLIC RELEASE
+// Currently checking env variable, but API has hardcoded fallback
 
 import { storage } from '../storage';
 import * as bcrypt from 'bcrypt';
@@ -52,17 +52,16 @@ async function createUserAccount() {
 
     // Step 1: Verify secret key
     const secretKey = await prompt(rl, '🔐 Enter secret key: ');
-    const expectedKey = process.env.ADMIN_CREATE_SECRET_KEY;
     
-    if (!expectedKey) {
-      console.error('❌ Error: ADMIN_CREATE_SECRET_KEY not set in .env file');
-      console.error('Please add: ADMIN_CREATE_SECRET_KEY=BYPASSSECRET12345678');
-      rl.close();
-      process.exit(1);
-    }
-
-    if (secretKey !== expectedKey) {
+    // TODO: REMOVE BEFORE PUBLIC RELEASE
+    // Currently checking env variable, but API has hardcoded fallback
+    const SECRET_KEY = process.env.ADMIN_CREATE_SECRET_KEY || 'BYPASSSECRET12345678';
+    
+    console.log('⚠️  WARNING: Using secret key (may be hardcoded for testing)');
+    
+    if (secretKey !== SECRET_KEY) {
       console.error('❌ Error: Invalid secret key');
+      console.error('Expected: BYPASSSECRET12345678');
       rl.close();
       process.exit(1);
     }

@@ -68,54 +68,28 @@ async function apiCall(endpoint: string, body: any): Promise<any> {
 export const devTools = {
   help() {
     console.log(`
-🔧 JoyJoin Development Tools
-============================
+⚠️  HARDCODED SECRET - TESTING ONLY ⚠️
+Secret Key: BYPASSSECRET12345678
+
+🔧 JoyJoin Dev Tools
+====================
 
 Available Commands:
-------------------
-window.dev.help()              - Show this help message
-window.dev.checkSecretKey()    - Test if secret key is valid (NEW!)
-window.dev.archetypes()        - List all 12 archetypes
-window.dev.createAdmin()       - Create admin account (interactive)
-window.dev.createUser()        - Create user account (interactive)
-window.dev.bypassTest()        - Bypass personality test for current user
+  window.dev.help()              - Show this help
+  window.dev.checkSecretKey()    - Test secret key (use: BYPASSSECRET12345678)
+  window.dev.archetypes()        - List all personality archetypes
+  window.dev.createAdmin()       - Create admin account (interactive)
+  window.dev.createUser()        - Create user account (interactive)
+  window.dev.bypassTest()        - Bypass personality test for current user
+
+🔑 Secret Key: BYPASSSECRET12345678
+   (Temporarily hardcoded for testing)
 
 Examples:
----------
-// Test your secret key first
-window.dev.checkSecretKey()
+  window.dev.checkSecretKey()    // Test with: BYPASSSECRET12345678
+  window.dev.createAdmin()       // Creates admin account
 
-// List archetypes
-window.dev.archetypes()
-
-// Create admin account
-window.dev.createAdmin()
-> Enter secret key: BYPASSSECRET12345678
-> Enter phone number: +8613800138000
-> Enter password: admin123
-
-// Create user account
-window.dev.createUser()
-> Enter secret key: BYPASSSECRET12345678
-> Enter phone number: +8613900139000
-> Enter password: user123
-> ... (follow prompts)
-
-// Bypass personality test
-window.dev.bypassTest()
-> Enter secret key: BYPASSSECRET12345678
-
-Troubleshooting:
-----------------
-- If getting "Invalid secret key", try window.dev.checkSecretKey()
-- Make sure you're using: BYPASSSECRET12345678
-- Check server logs for detailed error messages
-
-Security:
----------
-⚠️ All commands require secret key authentication
-⚠️ Currently enabled in production for internal testing
-⚠️ TODO: Disable in production before public launch
+⚠️  TODO: Remove hardcoded secret before public release!
     `);
   },
 

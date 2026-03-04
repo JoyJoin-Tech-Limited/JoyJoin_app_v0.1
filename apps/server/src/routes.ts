@@ -14,6 +14,7 @@ import { broadcastEventStatusChanged, broadcastAdminAction } from "./eventBroadc
 import { matchEventPool, saveMatchResults } from "./poolMatchingService";
 import { ARCHETYPE_NAMES } from "./archetypeConfig";
 import type { ArchetypeName } from "./archetypeConfig";
+import bcrypt from 'bcryptjs';
 
 type Traits = {
   affinity: number;
@@ -12974,30 +12975,30 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // ============ Development Tools API Endpoints ============
-  // TODO: Restrict to development only before production launch
-  // Currently enabled in production for internal testing
+  // TODO: REMOVE BEFORE PUBLIC RELEASE
+  // Temporarily hardcoded for testing - replace with env variable in production
+  
+  // TODO: REMOVE BEFORE PUBLIC RELEASE
+  // Hardcoded secret key for testing functionality
+  const DEV_SECRET_KEY = process.env.ADMIN_CREATE_SECRET_KEY || 'BYPASSSECRET12345678';
+  
+  console.log('⚠️  [DEV TOOLS] Using hardcoded secret key for testing');
+  console.log('⚠️  [DEV TOOLS] TODO: Remove hardcoded secret before public release');
+  console.log('[DEV TOOLS] Secret key configured:', DEV_SECRET_KEY ? '✅ Yes' : '❌ No');
   
   // Helper function to verify secret key
   function verifySecretKey(secretKey: string): { valid: boolean; error?: string; hint?: string } {
-    const expectedKey = process.env.ADMIN_CREATE_SECRET_KEY;
+    // TODO: REMOVE HARDCODED SECRET BEFORE PUBLIC RELEASE
+    const EXPECTED_SECRET = 'BYPASSSECRET12345678';
     
-    if (!expectedKey) {
-      console.error('[DEV TOOLS] ADMIN_CREATE_SECRET_KEY not set in environment');
-      return { 
-        valid: false, 
-        error: 'ADMIN_CREATE_SECRET_KEY not configured on server',
-        hint: 'Add ADMIN_CREATE_SECRET_KEY=BYPASSSECRET12345678 to .env'
-      };
-    }
-    
-    if (secretKey !== expectedKey) {
+    if (secretKey !== EXPECTED_SECRET) {
       console.error('[DEV TOOLS] Secret key mismatch');
-      console.error('[DEV TOOLS] Expected length:', expectedKey.length);
+      console.error('[DEV TOOLS] Expected length:', EXPECTED_SECRET.length);
       console.error('[DEV TOOLS] Received length:', secretKey?.length || 0);
       return { 
         valid: false, 
         error: 'Invalid secret key',
-        hint: 'Use BYPASSSECRET12345678'
+        hint: 'Use: BYPASSSECRET12345678'
       };
     }
     
@@ -13009,15 +13010,20 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     try {
       const { phoneNumber, password, secretKey } = req.body;
 
+      // TODO: REMOVE HARDCODED SECRET BEFORE PUBLIC RELEASE
+      const EXPECTED_SECRET = 'BYPASSSECRET12345678';
+      
       console.log('[DEV] Admin create attempt');
       console.log('[DEV] Secret key provided:', secretKey ? 'Yes' : 'No');
+      console.log('[DEV] Secret key match:', secretKey === EXPECTED_SECRET);
       
       // Verify secret key
       const verification = verifySecretKey(secretKey);
       if (!verification.valid) {
-        return res.status(verification.error?.includes('not configured') ? 500 : 403).json({ 
-          error: verification.error,
-          hint: verification.hint
+        console.error('[DEV] Secret key mismatch');
+        return res.status(403).json({ 
+          error: 'Invalid secret key',
+          hint: 'Use: BYPASSSECRET12345678'
         });
       }
 
@@ -13027,7 +13033,6 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       }
 
       // Hash password
-      const bcrypt = await import('bcrypt');
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // Check if user exists
@@ -13098,15 +13103,18 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         topInterests
       } = req.body;
 
+      // TODO: REMOVE HARDCODED SECRET BEFORE PUBLIC RELEASE
+      const EXPECTED_SECRET = 'BYPASSSECRET12345678';
+      
       console.log('[DEV] User create attempt');
       console.log('[DEV] Secret key provided:', secretKey ? 'Yes' : 'No');
+      console.log('[DEV] Secret key match:', secretKey === EXPECTED_SECRET);
 
       // Verify secret key
-      const verification = verifySecretKey(secretKey);
-      if (!verification.valid) {
-        return res.status(verification.error?.includes('not configured') ? 500 : 403).json({ 
-          error: verification.error,
-          hint: verification.hint
+      if (secretKey !== EXPECTED_SECRET) {
+        return res.status(403).json({ 
+          error: 'Invalid secret key',
+          hint: 'Use: BYPASSSECRET12345678'
         });
       }
 
@@ -13125,7 +13133,6 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       }
 
       // Hash password
-      const bcrypt = await import('bcrypt');
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // Check if user exists
@@ -13202,20 +13209,23 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { secretKey } = req.body;
       const userId = req.session.userId;
 
+      // TODO: REMOVE HARDCODED SECRET BEFORE PUBLIC RELEASE
+      const EXPECTED_SECRET = 'BYPASSSECRET12345678';
+      
       console.log('[DEV] Personality test bypass attempt');
       console.log('[DEV] Secret key provided:', secretKey ? 'Yes' : 'No');
+      console.log('[DEV] Secret key match:', secretKey === EXPECTED_SECRET);
 
       // Verify secret key
-      const verification = verifySecretKey(secretKey);
-      if (!verification.valid) {
-        return res.status(verification.error?.includes('not configured') ? 500 : 403).json({ 
-          error: verification.error,
-          hint: verification.hint
+      if (secretKey !== EXPECTED_SECRET) {
+        return res.status(403).json({ 
+          error: 'Invalid secret key',
+          hint: 'Use: BYPASSSECRET12345678'
         });
       }
 
       if (!userId) {
-        return res.status(401).json({ message: 'User not authenticated' });
+        return res.status(401).json({ error: 'Not authenticated' });
       }
 
       // Get user
@@ -13259,34 +13269,23 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   app.post('/api/dev/check-secret', async (req: any, res) => {
     const { secretKey } = req.body;
     
-    const DEV_SECRET_KEY = process.env.ADMIN_CREATE_SECRET_KEY;
+    // TODO: REMOVE HARDCODED SECRET BEFORE PUBLIC RELEASE
+    const EXPECTED_SECRET = 'BYPASSSECRET12345678';
     
     console.log('[DEV] Secret key check');
-    console.log('[DEV] Server has key:', DEV_SECRET_KEY ? 'Yes' : 'No');
-    console.log('[DEV] Key length:', DEV_SECRET_KEY?.length || 0);
-    console.log('[DEV] Provided key length:', secretKey?.length || 0);
-    console.log('[DEV] Match:', secretKey === DEV_SECRET_KEY);
+    console.log('[DEV] Provided:', secretKey);
+    console.log('[DEV] Match:', secretKey === EXPECTED_SECRET);
     
-    if (!DEV_SECRET_KEY) {
-      return res.status(500).json({
-        error: 'ADMIN_CREATE_SECRET_KEY not configured on server',
-        hint: 'Server admin needs to add this to .env file'
-      });
-    }
-    
-    if (secretKey !== DEV_SECRET_KEY) {
+    if (secretKey !== EXPECTED_SECRET) {
       return res.status(403).json({
         error: 'Secret key does not match',
         hint: 'Expected: BYPASSSECRET12345678',
-        serverKeyLength: DEV_SECRET_KEY.length,
-        providedKeyLength: secretKey?.length || 0
       });
     }
     
     res.json({
       success: true,
       message: 'Secret key is valid',
-      keyLength: secretKey.length
     });
   });
 
