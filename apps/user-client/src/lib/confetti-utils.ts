@@ -70,5 +70,21 @@ export const confettiPresets = {
       origin: { x: 0.5, y: 0.5 },
       colors: ['#FF6B6B', '#4ECDC4', '#FFE66D', '#A8E6CF', '#FF8B94']
     });
+  },
+
+  /**
+   * Gold sparkle - 30 premium gold/white particles from top-center
+   * Used for mid-assessment milestone transition overlay
+   */
+  goldSparkle: () => {
+    confetti({
+      particleCount: 30,
+      spread: 50,
+      origin: { x: 0.5, y: 0.25 },
+      colors: ['#FFD700', '#FFFFFF', '#FFF8DC', '#F0E68C'],
+      scalar: 0.9,
+      gravity: 1.0,
+      ticks: 80,
+    });
   }
 };
