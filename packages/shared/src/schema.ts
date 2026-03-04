@@ -310,7 +310,8 @@ export const events = pgTable("events", {
 // Event attendance table
 export const eventAttendance = pgTable("event_attendance", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  eventId: varchar("event_id").notNull().references(() => events.id),
+  eventId: varchar("event_id").references(() => events.id), // nullable: required for legacy events, omitted for blind-box events
+  blindBoxEventId: varchar("blind_box_event_id"), // blind_box_events.id (no FK constraint, mirrors icebreaker_sessions pattern)
   userId: varchar("user_id").notNull().references(() => users.id),
   joinedAt: timestamp("joined_at").defaultNow(),
   status: varchar("status").default("confirmed"), // confirmed, cancelled, attended

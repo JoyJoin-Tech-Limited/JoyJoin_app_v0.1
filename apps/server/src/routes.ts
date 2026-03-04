@@ -4812,6 +4812,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return user?.displayName || user?.display_name || user?.firstName || 'Unknown';
   }
 
+  function isParticipantOfBlindBoxEvent(event: any, userId: string): boolean {
+    if (event.userId === userId) return true;
+    const matchedAttendees = Array.isArray(event.matchedAttendees) ? event.matchedAttendees : [];
+    return matchedAttendees.some((a: any) => a.userId === userId);
+  }
+
   // User: get my attendance status for an event
   app.get('/api/blind-box-events/:eventId/my-attendance-status', isPhoneAuthenticated, async (req: any, res) => {
     try {
@@ -4835,18 +4841,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { eventId } = req.params;
       const { status, estimatedLateMinutes, absentReason } = req.body;
 
-      const validStatuses = ['pending', 'confirmed', 'late', 'absent'];
-      if (!validStatuses.includes(status)) {
+      // Only allow user-settable statuses (not 'pending')
+      const validStatuses = ['confirmed', 'late', 'absent'] as const;
+      if (typeof status !== 'string' || !validStatuses.includes(status as any)) {
         return res.status(400).json({ message: "Invalid status value" });
       }
 
-      await storage.updateAttendanceStatus(eventId, userId, status, estimatedLateMinutes ?? null, absentReason ?? null);
+      // Verify the caller is a participant in this event
+      const event = await storage.getBlindBoxEventAdmin(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      if (!isParticipantOfBlindBoxEvent(event, userId)) {
+        return res.status(403).json({ message: "Not a participant in this event" });
+      }
+
+      // Enforce time-window constraints
+      const eventStart = new Date(event.date_time);
+      const now = new Date();
+      const diffMinutes = (now.getTime() - eventStart.getTime()) / 60000;
+
+      let normalizedEstimatedLateMinutes: number | null = null;
+      let normalizedAbsentReason: string | null = null;
+
+      if (status === 'absent') {
+        if (diffMinutes >= 0) {
+          return res.status(400).json({ message: "Cannot mark absent after the event has started" });
+        }
+        if (typeof absentReason !== 'string' || absentReason.trim().length === 0) {
+          return res.status(400).json({ message: "absentReason is required when marking absent" });
+        }
+        normalizedAbsentReason = absentReason.trim();
+      } else if (status === 'late') {
+        if (diffMinutes < -120 || diffMinutes > 45) {
+          return res.status(400).json({ message: "Late status can only be set within 2 hours before to 45 minutes after the event" });
+        }
+        if (typeof estimatedLateMinutes !== 'number' || !Number.isFinite(estimatedLateMinutes) || estimatedLateMinutes <= 0) {
+          return res.status(400).json({ message: "estimatedLateMinutes must be a positive number when marking late" });
+        }
+        normalizedEstimatedLateMinutes = estimatedLateMinutes;
+      }
+      // 'confirmed' uses no auxiliary fields
+
+      await storage.updateAttendanceStatus(eventId, userId, status, normalizedEstimatedLateMinutes, normalizedAbsentReason);
 
       // Fetch user displayName for broadcast
       const user = await storage.getUser(userId);
       const displayName = getUserDisplayName(user);
 
-      broadcastAttendanceStatusUpdated(eventId, userId, displayName, status, estimatedLateMinutes, absentReason);
+      broadcastAttendanceStatusUpdated(eventId, userId, displayName, status, normalizedEstimatedLateMinutes, normalizedAbsentReason);
 
       res.json({ success: true });
     } catch (error) {
@@ -4858,7 +4901,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User/TableMates: get attendance summary for an event (all attendees' statuses)
   app.get('/api/blind-box-events/:eventId/attendance-summary', isPhoneAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.session.userId;
       const { eventId } = req.params;
+
+      // Verify the caller is a participant in this event
+      const event = await storage.getBlindBoxEventAdmin(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      if (!isParticipantOfBlindBoxEvent(event, userId)) {
+        return res.status(403).json({ message: "Not a participant in this event" });
+      }
+
       const summary = await storage.getEventAttendanceSummary(eventId);
       res.json(summary);
     } catch (error) {

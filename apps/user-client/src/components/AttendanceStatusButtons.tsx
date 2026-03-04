@@ -18,6 +18,12 @@ interface AttendanceStatusResponse {
   absentReason?: string | null;
 }
 
+interface UpdatePayload {
+  status: AttendanceStatus;
+  estimatedLateMinutes?: number | null;
+  absentReason?: string | null;
+}
+
 const LATE_OPTIONS = [
   { label: "⏰ 5–10分钟", value: 10 },
   { label: "⏰ 15–20分钟", value: 20 },
@@ -35,14 +41,22 @@ export default function AttendanceStatusButtons({ eventId, eventDateTime }: Atte
   const [currentStatus, setCurrentStatus] = useState<AttendanceStatus>('pending');
   const [lateSheetOpen, setLateSheetOpen] = useState(false);
   const [absentSheetOpen, setAbsentSheetOpen] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   const eventStart = new Date(eventDateTime).getTime();
-  const now = Date.now();
   const twoHoursBefore = eventStart - 2 * 60 * 60 * 1000;
   const fortyFiveMinAfter = eventStart + 45 * 60 * 1000;
 
   const showAbsentButton = now < eventStart;
   const showLateAndConfirmButtons = now >= twoHoursBefore && now <= fortyFiveMinAfter;
+
+  // Update `now` every 30s so visibility windows re-evaluate without a full page reload
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setNow(Date.now());
+    }, 30000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Fetch current status on mount
   useEffect(() => {
@@ -57,12 +71,12 @@ export default function AttendanceStatusButtons({ eventId, eventDateTime }: Atte
   }, [eventId]);
 
   const updateStatusMutation = useMutation({
-    mutationFn: async (payload: { status: string; estimatedLateMinutes?: number; absentReason?: string }) => {
+    mutationFn: async (payload: UpdatePayload) => {
       const res = await apiRequest("POST", `/api/blind-box-events/${eventId}/attendance-status`, payload);
       return res.json();
     },
     onSuccess: (_data, variables) => {
-      setCurrentStatus(variables.status as AttendanceStatus);
+      setCurrentStatus(variables.status);
       setLateSheetOpen(false);
       setAbsentSheetOpen(false);
       toast({
