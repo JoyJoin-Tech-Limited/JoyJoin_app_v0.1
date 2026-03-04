@@ -716,6 +716,12 @@ export default function PersonalityTestResultPage() {
       return await response.json();
     },
     onSuccess: async () => {
+      // Clear anonymous assessment data, same as handleWeChatLogin
+      localStorage.removeItem('joyjoin_v4_presignup_answers');
+      localStorage.removeItem('joyjoin_v4_assessment_session');
+      localStorage.removeItem('joyjoin_synced_session_id');
+      localStorage.removeItem('joyjoin_synced_answer_count');
+
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       toast({ title: "登录成功", description: "正在为你准备个性化匹配..." });
       const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as AuthUser;
