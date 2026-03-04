@@ -104,6 +104,7 @@ interface EditFullProfileDialogProps {
   onOpenChange: (open: boolean) => void;
   user: any;
   onSave: (data: any) => void;
+  isSaving?: boolean;
 }
 
 export default function EditFullProfileDialog({
@@ -111,6 +112,7 @@ export default function EditFullProfileDialog({
   onOpenChange,
   user,
   onSave,
+  isSaving = false,
 }: EditFullProfileDialogProps) {
   const form = useForm({
     resolver: zodResolver(fullProfileSchema),
@@ -391,7 +393,7 @@ export default function EditFullProfileDialog({
               >
                 取消
               </Button>
-              <Button type="submit" data-testid="button-save-profile">
+              <Button type="submit" data-testid="button-save-profile" disabled={isSaving}>
                 保存
               </Button>
             </DialogFooter>
