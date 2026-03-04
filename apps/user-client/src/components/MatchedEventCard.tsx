@@ -13,6 +13,7 @@ import { formatDateInHongKong, getHongKongDateForComparison } from "@/lib/hongKo
 import { useState } from "react";
 import InvitePreviewSheet from "./InvitePreviewSheet";
 import JoyRadar from "./JoyRadar";
+import AttendanceStatusButtons from "./AttendanceStatusButtons";
 
 interface MatchedEventCardProps {
   event: BlindBoxEvent;
@@ -212,6 +213,19 @@ export default function MatchedEventCard({ event }: MatchedEventCardProps) {
               className="h-2 bg-purple-100 dark:bg-purple-900/50"
             />
           </motion.div>
+        )}
+
+        {/* 出席确认 — only shown for upcoming matched events */}
+        {!eventInProgress && (
+          <div
+            className="border-t border-border/50 pt-3 mt-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-xs text-muted-foreground mb-2">出席确认</p>
+            <AttendanceStatusButtons
+              eventId={event.id}
+            />
+          </div>
         )}
 
         {/* 操作按钮 */}
