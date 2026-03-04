@@ -649,11 +649,10 @@ export default function DuolingoOnboardingPage() {
                       scale: 0.85,
                     }}
                     animate={{
-                      x: [0, archetype.driftX, 0],
-                      y: [0, archetype.driftY, 0],
+                      x: [0, archetype.driftX * 0.4, 0],
+                      y: [0, archetype.driftY * 0.4, 0],
                       opacity: [archetype.opacity * 0.5, archetype.opacity, archetype.opacity, archetype.opacity * 0.5],
-                      scale: [0.85, 1, 1, 0.85],
-                      rotate: [0, 6, -6, 0],
+                      scale: [0.95, 1, 0.95],
                     }}
                     transition={{
                       duration: archetype.duration,
@@ -689,8 +688,7 @@ export default function DuolingoOnboardingPage() {
             >
               <motion.div
                 animate={prefersReducedMotion ? {} : { 
-                  scale: [1, 1.05, 1],
-                  rotate: [0, -2, 2, 0]
+                  scale: [1, 1.03, 1],
                 }}
                 transition={{ 
                   duration: 4,
@@ -831,10 +829,10 @@ export default function DuolingoOnboardingPage() {
         return (
           <motion.div
             key={currentScreen}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             className="flex-1 flex flex-col px-4 py-3 overflow-hidden"
           >
             <div className="shrink-0 mb-2">
