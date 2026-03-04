@@ -707,6 +707,40 @@ export default function PersonalityTestResultPage() {
     }
   }, [setLocation, toast]);
 
+  const devBypassMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/auth/phone-login", {
+        phoneNumber: "+8613800000001",
+        code: "666666",
+      });
+      return await response.json();
+    },
+    onSuccess: async () => {
+      // Clear anonymous assessment data, same as handleWeChatLogin
+      localStorage.removeItem('joyjoin_v4_presignup_answers');
+      localStorage.removeItem('joyjoin_v4_assessment_session');
+      localStorage.removeItem('joyjoin_synced_session_id');
+      localStorage.removeItem('joyjoin_synced_answer_count');
+
+      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      toast({ title: "登录成功", description: "正在为你准备个性化匹配..." });
+      const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as AuthUser;
+      const nextPath = updatedUser?.nextStep === 'discover' ? '/discover'
+        : updatedUser?.nextStep === 'guide' ? '/guide'
+        : updatedUser?.nextStep === 'extended-data' ? '/onboarding/extended'
+        : updatedUser?.nextStep === 'profile-review' ? '/onboarding/review'
+        : '/onboarding/setup';
+      setTimeout(() => setLocation(nextPath), 500);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "登录失败",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handle slot machine completion
   const handleSlotMachineComplete = useCallback(() => {
     setAnimationPhase('unlock');
@@ -1228,6 +1262,28 @@ export default function PersonalityTestResultPage() {
                   </p>
                 </CardContent>
               </Card>
+              {import.meta.env.DEV && (
+                <div className="space-y-1 text-center">
+                  <p className="text-xs text-amber-500 font-medium">🧪 DEV: 跳过微信，用测试账号登录</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-amber-400 text-amber-600 hover:bg-amber-50"
+                    data-testid="button-dev-wechat-bypass"
+                    disabled={devBypassMutation.isPending}
+                    onClick={() => devBypassMutation.mutate()}
+                  >
+                    {devBypassMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        登录中...
+                      </>
+                    ) : (
+                      "⚡ 测试账号登录"
+                    )}
+                  </Button>
+                </div>
+              )}
             </>
           ) : isAuthenticated ? (
             /* Authenticated users - continue to profile setup */
