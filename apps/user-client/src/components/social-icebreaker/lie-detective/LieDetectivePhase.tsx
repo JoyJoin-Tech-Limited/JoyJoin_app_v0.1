@@ -1,8 +1,109 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MobilePrimaryButton from '@/components/mobile/MobilePrimaryButton';
 import type { LieDetectivePlayer, LieDetectiveVote } from '@shared/socialIcebreaker';
 
+// ─── RevealCountdown sub-component ───────────────────────────────────────────
+function RevealCountdown({ onComplete }: { onComplete: () => void }) {
+  const [count, setCount] = useState(3);
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    if (count <= 0) {
+      if (!doneRef.current) {
+        doneRef.current = true;
+        onComplete();
+      }
+      return;
+    }
+    const timer = setTimeout(() => setCount(c => c - 1), 700);
+    return () => clearTimeout(timer);
+  }, [count, onComplete]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/95 flex items-center justify-center">
+      <AnimatePresence mode="wait">
+        {count > 0 && (
+          <motion.div
+            key={count}
+            initial={{ scale: 1.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.5, opacity: 0 }}
+            transition={{ duration: 0.35 }}
+            className="text-white font-black text-9xl select-none"
+          >
+            {count}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── LieRevealCard sub-component ─────────────────────────────────────────────
+function LieRevealCard({
+  statements,
+  lieIndex,
+  voteCount,
+  correctVoteCount,
+}: {
+  statements: Array<{ index: number; text: string }>;
+  lieIndex: number;
+  voteCount: number;
+  correctVoteCount: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+      className="w-full max-w-sm space-y-3"
+    >
+      <p className="text-center text-purple-200 font-bold text-lg mb-4">揭晓！🎯</p>
+      {statements.map(stmt => {
+        const isLie = stmt.index === lieIndex;
+        return (
+          <div
+            key={stmt.index}
+            className={`rounded-2xl border-2 p-4 ${
+              isLie
+                ? 'bg-red-900/50 border-red-500'
+                : 'bg-green-900/50 border-green-500'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <span
+                className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                  isLie ? 'bg-red-800 text-red-200' : 'bg-green-800 text-green-200'
+                }`}
+              >
+                #{stmt.index}
+              </span>
+              <div className="flex-1">
+                <p className="text-white text-sm leading-relaxed">{stmt.text}</p>
+                {isLie && (
+                  <p className="text-red-300 text-xs mt-1 font-semibold">🤥 这是谎言！</p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      <div className="text-center mt-3 bg-purple-900/40 rounded-xl py-3">
+        <p className="text-purple-200 text-sm font-semibold">
+          {correctVoteCount} 个人猜对了！
+        </p>
+        {voteCount > 0 && (
+          <p className="text-purple-400 text-xs mt-1">
+            共 {voteCount} 人投票
+          </p>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Main LieDetectivePhase ───────────────────────────────────────────────────
 interface LieDetectivePhaseProps {
   sessionId: string;
   socialSessionId: string;
@@ -38,13 +139,31 @@ export function LieDetectivePhase({
   const [myStatements, setMyStatements] = useState<Array<{ index: number; text: string }>>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedVote, setSelectedVote] = useState<number | null>(null);
-  const [isRevealed, setIsRevealed] = useState(false);
+
+  // Host reveal flow
+  const [hostRevealLieIndex, setHostRevealLieIndex] = useState<number | null>(null);
+  const [showRevealPicker, setShowRevealPicker] = useState(false);
+  const [showCountdown, setShowCountdown] = useState(false);
+  const [showRevealResult, setShowRevealResult] = useState(false);
 
   const currentPlayer = players[currentPlayerIndex] || null;
   const isMyTurn = currentPlayer?.userId === userId;
   const hasVotedForCurrent = currentPlayer
     ? votes.some(v => v.voterId === userId && v.targetUserId === currentPlayer.userId)
     : false;
+
+  // Count votes for the current player
+  const votesForCurrent = currentPlayer
+    ? votes.filter(v => v.targetUserId === currentPlayer.userId)
+    : [];
+  const otherPlayerCount = players.filter(p => p.userId !== currentPlayer?.userId).length;
+  const allVoted = otherPlayerCount > 0 && votesForCurrent.length >= otherPlayerCount;
+
+  // Count correct votes when we know the lie index
+  const correctVoteCount =
+    hostRevealLieIndex !== null
+      ? votesForCurrent.filter(v => v.guessedStatementIndex === hostRevealLieIndex).length
+      : 0;
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -63,6 +182,26 @@ export function LieDetectivePhase({
     await onCastVote(currentPlayer.userId, statementIndex);
     if (navigator.vibrate) navigator.vibrate(40);
   };
+
+  const handlePickLie = (lieIndex: number) => {
+    setHostRevealLieIndex(lieIndex);
+    setShowRevealPicker(false);
+    setShowCountdown(true);
+  };
+
+  const handleCountdownComplete = () => {
+    setShowCountdown(false);
+    setShowRevealResult(true);
+  };
+
+  const handleNextPlayer = () => {
+    setShowRevealResult(false);
+    setHostRevealLieIndex(null);
+    setSelectedVote(null);
+    onAdvance();
+  };
+
+  const isLastPlayer = currentPlayerIndex >= players.length - 1;
 
   return (
     <div
@@ -117,8 +256,8 @@ export function LieDetectivePhase({
           </motion.div>
         )}
 
-        {/* Presenting state */}
-        {subPhase === 'presenting' && currentPlayer && (
+        {/* Presenting / voting state */}
+        {subPhase === 'presenting' && currentPlayer && !showRevealResult && (
           <motion.div
             key={`presenting-${currentPlayerIndex}`}
             initial={{ opacity: 0, y: 20 }}
@@ -131,7 +270,7 @@ export function LieDetectivePhase({
             </p>
             <p className="text-center text-purple-400 text-xs mb-2">其中有一句是谎言...</p>
 
-            {/* Statement cards stacked */}
+            {/* Statement cards */}
             <div className="relative flex-1 flex items-center justify-center">
               <div className="w-full max-w-sm space-y-3">
                 {currentPlayer.statements.map((stmt, idx) => (
@@ -174,33 +313,128 @@ export function LieDetectivePhase({
               </div>
             )}
 
-            {hasVotedForCurrent && (
+            {hasVotedForCurrent && !isHost && (
               <div className="text-center py-3">
-                <p className="text-purple-300 text-sm">✓ 你已投票，等待结果...</p>
+                <p className="text-purple-300 text-sm">✓ 你已投票</p>
+                {allVoted ? (
+                  <p className="text-purple-400 text-xs mt-1">等待主持人揭晓...</p>
+                ) : (
+                  <div className="flex justify-center gap-1 mt-2">
+                    {[0, 1, 2].map(i => (
+                      <span
+                        key={i}
+                        className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+                        style={{ animationDelay: `${i * 150}ms` }}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
-            {isMyTurn && (
+            {isMyTurn && !isHost && (
               <div className="text-center py-3">
                 <p className="text-purple-300 text-sm">这是你的陈述，等大家投票...</p>
               </div>
+            )}
+
+            {/* Host: reveal button when all voted, or manual trigger */}
+            {isHost && (
+              <div className="space-y-2 pb-2">
+                {(allVoted || votesForCurrent.length > 0) && !showRevealPicker && (
+                  <MobilePrimaryButton
+                    onClick={() => setShowRevealPicker(true)}
+                    className="w-full bg-gradient-to-r from-purple-600 to-violet-600 border-0"
+                  >
+                    揭晓谎言 🎯
+                  </MobilePrimaryButton>
+                )}
+                <button
+                  onClick={onAdvance}
+                  disabled={isAdvancing}
+                  className="w-full text-sm text-muted-foreground hover:text-purple-300 transition-colors py-2"
+                >
+                  {isAdvancing ? '切换中...' : '结束侦探游戏 →'}
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Reveal result state */}
+        {showRevealResult && currentPlayer && hostRevealLieIndex !== null && (
+          <motion.div
+            key="reveal-result"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex-1 flex flex-col items-center justify-center px-4 gap-4"
+          >
+            <LieRevealCard
+              statements={currentPlayer.statements}
+              lieIndex={hostRevealLieIndex}
+              voteCount={votesForCurrent.length}
+              correctVoteCount={correctVoteCount}
+            />
+            {isHost && (
+              <MobilePrimaryButton
+                onClick={handleNextPlayer}
+                disabled={isAdvancing}
+                className="w-full mt-2"
+              >
+                {isAdvancing ? '切换中...' : isLastPlayer ? '结束侦探游戏 →' : '下一位 →'}
+              </MobilePrimaryButton>
+            )}
+            {!isHost && (
+              <p className="text-purple-400 text-sm text-center">等主持人继续...</p>
             )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Host controls */}
-      {isHost && (
-        <div className="px-4 pb-6">
-          <button
-            onClick={onAdvance}
-            disabled={isAdvancing}
-            className="w-full text-sm text-muted-foreground hover:text-purple-300 transition-colors py-2"
+      {/* Host lie picker bottom sheet */}
+      <AnimatePresence>
+        {showRevealPicker && currentPlayer && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-black/60 flex items-end"
+            onClick={() => setShowRevealPicker(false)}
           >
-            {isAdvancing ? '切换中...' : '结束侦探游戏 →'}
-          </button>
-        </div>
-      )}
+            <motion.div
+              initial={{ y: 200 }}
+              animate={{ y: 0 }}
+              exit={{ y: 200 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="w-full bg-slate-900 rounded-t-3xl p-6 space-y-3"
+              onClick={e => e.stopPropagation()}
+            >
+              <p className="text-purple-200 font-bold text-center mb-4">
+                哪句是 {currentPlayer.displayName} 的谎言？
+              </p>
+              {currentPlayer.statements.map(stmt => (
+                <button
+                  key={stmt.index}
+                  onClick={() => handlePickLie(stmt.index)}
+                  className="w-full bg-purple-900/50 border border-purple-700 rounded-2xl px-4 py-4 text-left hover:bg-purple-800/50 transition-colors"
+                >
+                  <span className="text-purple-300 font-bold mr-2">#{stmt.index}</span>
+                  <span className="text-white text-sm">{stmt.text}</span>
+                </button>
+              ))}
+              <button
+                onClick={() => setShowRevealPicker(false)}
+                className="w-full text-sm text-muted-foreground py-2"
+              >
+                取消
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Countdown overlay */}
+      {showCountdown && <RevealCountdown onComplete={handleCountdownComplete} />}
     </div>
   );
 }
