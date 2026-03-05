@@ -7,18 +7,20 @@ import type { LieDetectivePlayer, LieDetectiveVote } from '@shared/socialIcebrea
 function RevealCountdown({ onComplete }: { onComplete: () => void }) {
   const [count, setCount] = useState(3);
   const doneRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
 
   useEffect(() => {
     if (count <= 0) {
       if (!doneRef.current) {
         doneRef.current = true;
-        onComplete();
+        onCompleteRef.current();
       }
       return;
     }
     const timer = setTimeout(() => setCount(c => c - 1), 700);
     return () => clearTimeout(timer);
-  }, [count, onComplete]);
+  }, [count]);
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/95 flex items-center justify-center">

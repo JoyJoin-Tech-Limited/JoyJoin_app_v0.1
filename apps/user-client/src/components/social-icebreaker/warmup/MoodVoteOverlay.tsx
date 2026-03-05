@@ -27,7 +27,9 @@ export function MoodVoteOverlay({ isVisible, isHost, onVoteComplete }: MoodVoteO
   const selectedRef = useRef<AtmosphereMood | null>(null);
 
   // Keep refs in sync so timer closure always calls the latest callback with latest selection
-  useEffect(() => { onVoteCompleteRef.current = onVoteComplete; }, [onVoteComplete]);
+  useEffect(() => {
+    onVoteCompleteRef.current = onVoteComplete;
+  }, [onVoteComplete]);
 
   useEffect(() => {
     if (!isVisible) {
