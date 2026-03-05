@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { useSocialIcebreaker } from '@/hooks/useSocialIcebreaker';
@@ -199,9 +199,13 @@ export function SocialIcebreakerOrchestrator({
   const currentTopics = warmupTopics.length > 0 ? warmupTopics : state.warmupTopics || [];
 
   // Enable personality_dice phase if any participant has an archetype
-  const enabledPhases = participants.some(p => p.archetype)
-    ? ([...MVP_PHASES, 'personality_dice'] as SocialIcebreakerPhase[])
-    : MVP_PHASES;
+  const enabledPhases = useMemo(
+    () =>
+      participants.some(p => p.archetype)
+        ? ([...MVP_PHASES, 'personality_dice'] as SocialIcebreakerPhase[])
+        : MVP_PHASES,
+    [participants]
+  );
 
   // Handlers for personality dice
   const handleGenerateDice = async () => {
