@@ -23,6 +23,7 @@ const MOOD_OPTIONS: Array<{ mood: AtmosphereMood; emoji: string; label: string }
 
 export function WarmupPhase({
   isHost,
+  // Accepted but not used in render body — available for future feature additions
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   participants,
   topics,

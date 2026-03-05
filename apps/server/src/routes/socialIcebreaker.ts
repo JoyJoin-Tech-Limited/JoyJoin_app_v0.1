@@ -591,7 +591,7 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
     }
   }
 
-  // 💬 话题王: host gets credit if ≥3 topics discussed
+  // 💬 话题王: host gets credit if currentTopicIndex >= 2, meaning at least 3 topics were reached (0-indexed)
   if ((state.currentTopicIndex ?? 0) >= 2) {
     medals.push({
       emoji: '💬',

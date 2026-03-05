@@ -23,6 +23,11 @@ export function MoodVoteOverlay({ isVisible, isHost, onVoteComplete }: MoodVoteO
   const [dismissed, setDismissed] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const doneRef = useRef(false);
+  const onVoteCompleteRef = useRef(onVoteComplete);
+  const selectedRef = useRef<AtmosphereMood | null>(null);
+
+  // Keep refs in sync so timer closure always calls the latest callback with latest selection
+  useEffect(() => { onVoteCompleteRef.current = onVoteComplete; }, [onVoteComplete]);
 
   useEffect(() => {
     if (!isVisible) {
@@ -30,6 +35,7 @@ export function MoodVoteOverlay({ isVisible, isHost, onVoteComplete }: MoodVoteO
       setTimeLeft(COUNTDOWN_SECONDS);
       setDismissed(false);
       doneRef.current = false;
+      selectedRef.current = null;
       return;
     }
 
@@ -39,7 +45,7 @@ export function MoodVoteOverlay({ isVisible, isHost, onVoteComplete }: MoodVoteO
           clearInterval(timerRef.current!);
           if (!doneRef.current) {
             doneRef.current = true;
-            onVoteComplete(selected);
+            onVoteCompleteRef.current(selectedRef.current);
           }
           return 0;
         }
@@ -50,18 +56,18 @@ export function MoodVoteOverlay({ isVisible, isHost, onVoteComplete }: MoodVoteO
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVisible]);
 
   const handleSelect = (mood: AtmosphereMood) => {
     if (dismissed || doneRef.current) return;
     setSelected(mood);
+    selectedRef.current = mood;
     if (timerRef.current) clearInterval(timerRef.current);
     setDismissed(true);
     setTimeout(() => {
       if (!doneRef.current) {
         doneRef.current = true;
-        onVoteComplete(mood);
+        onVoteCompleteRef.current(mood);
       }
     }, 1500);
   };
