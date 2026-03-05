@@ -4,10 +4,11 @@ import { Loader2 } from 'lucide-react';
 import { useSocialIcebreaker } from '@/hooks/useSocialIcebreaker';
 import { PhaseProgressBar } from './PhaseProgressBar';
 import { WarmupPhase } from './warmup/WarmupPhase';
+import { MoodVoteOverlay } from './warmup/MoodVoteOverlay';
 import { MicroChallengePhase } from './micro-challenge/MicroChallengePhase';
 import { LieDetectivePhase } from './lie-detective/LieDetectivePhase';
 import { AuctionPhaseStub } from './AuctionPhaseStub';
-import { PersonalityDiceStub } from './PersonalityDiceStub';
+import { PersonalityDicePhase } from './PersonalityDicePhase';
 import { SocialIcebreakerRecap } from './SocialIcebreakerRecap';
 import { PulseCheckOverlay } from './PulseCheckOverlay';
 import { SocialPhaseTransition } from './SocialPhaseTransition';
@@ -26,6 +27,12 @@ interface SocialIcebreakerOrchestratorProps {
 }
 
 type TransitionType = 'warmup_to_challenge' | 'challenge_to_detective' | 'detective_to_recap';
+
+const PHASE_COMPLETION_LABELS: Partial<Record<SocialIcebreakerPhase, string>> = {
+  warmup: '🌅 热身结束啦，今晚的开场感觉如何？',
+  micro_challenge: '⚡ 挑战完成！大家玩得开心吗？',
+  lie_detective: '🕵️ 侦探游戏结束！今晚气氛怎么样？',
+};
 
 function getTransitionType(
   from: SocialIcebreakerPhase,
@@ -60,6 +67,8 @@ export function SocialIcebreakerOrchestrator({
     generateMyStatements,
     castVote,
     completeChallenge,
+    generateDiceChallenges,
+    completeDiceChallenge,
     isAdvancing,
   } = useSocialIcebreaker({ sessionId, userId, displayName, eventType });
 
@@ -67,10 +76,12 @@ export function SocialIcebreakerOrchestrator({
   const [showTransition, setShowTransition] = useState(false);
   const [transitionType, setTransitionType] = useState<TransitionType | null>(null);
   const [previousPhase, setPreviousPhase] = useState<SocialIcebreakerPhase | null>(null);
-  // Store from/to pair together so handlePulseComplete always sees the correct transition
+  const [phaseLabelForPulse, setPhaseLabelForPulse] = useState<string>('');
+  // Store from/to pair together so transition always sees the correct pair
   const phaseChangeRef = useRef<{ from: SocialIcebreakerPhase; to: SocialIcebreakerPhase } | null>(null);
   const [pulseGroupAverage, setPulseGroupAverage] = useState<number | undefined>();
   const [warmupTopics, setWarmupTopics] = useState<SocialTopic[]>([]);
+  const [showMoodVote, setShowMoodVote] = useState(false);
   const [xiaoYueVisible, setXiaoYueVisible] = useState(false);
   const [startedOnce, setStartedOnce] = useState(false);
 
@@ -82,6 +93,13 @@ export function SocialIcebreakerOrchestrator({
     }
   }, [startSession, startedOnce]);
 
+  // Show mood vote overlay when warmup starts with no topics
+  useEffect(() => {
+    if (state?.currentPhase === 'warmup' && (!state.warmupTopics || state.warmupTopics.length === 0)) {
+      setShowMoodVote(true);
+    }
+  }, [state?.currentPhase, state?.warmupTopics?.length]);
+
   // Show XiaoYue on phase start
   useEffect(() => {
     if (state?.currentPhase) {
@@ -91,13 +109,22 @@ export function SocialIcebreakerOrchestrator({
     }
   }, [state?.currentPhase]);
 
-  // Detect phase changes for pulse check + transition
+  // Detect phase changes → start transition immediately; pulse follows after transition
   useEffect(() => {
     if (!state?.currentPhase) return;
     if (previousPhase && previousPhase !== state.currentPhase) {
-      // Capture the (from, to) pair atomically before updating previousPhase
-      phaseChangeRef.current = { from: previousPhase, to: state.currentPhase };
-      setShowPulseCheck(true);
+      const from = previousPhase;
+      const to = state.currentPhase;
+      phaseChangeRef.current = { from, to };
+      // Set pulse label for when we show it after the transition
+      setPhaseLabelForPulse(PHASE_COMPLETION_LABELS[from] ?? '');
+      // Start transition immediately
+      const tt = getTransitionType(from, to);
+      if (tt) {
+        setTransitionType(tt);
+        setShowTransition(true);
+        if (navigator.vibrate) navigator.vibrate(200);
+      }
     }
     setPreviousPhase(state.currentPhase);
   }, [state?.currentPhase]);
@@ -115,21 +142,22 @@ export function SocialIcebreakerOrchestrator({
 
   const handlePulseComplete = () => {
     setShowPulseCheck(false);
-    const change = phaseChangeRef.current;
-    if (change) {
-      const tt = getTransitionType(change.from, change.to);
-      if (tt) {
-        setTransitionType(tt);
-        setShowTransition(true);
-        if (navigator.vibrate) navigator.vibrate(200);
-      }
-      phaseChangeRef.current = null;
-    }
+    setPulseGroupAverage(undefined);
+    phaseChangeRef.current = null;
   };
 
   const handleTransitionComplete = () => {
     setShowTransition(false);
     setTransitionType(null);
+    // Show pulse check after transition, only for MVP phase transitions
+    const change = phaseChangeRef.current;
+    if (change && change.to !== 'recap') {
+      setTimeout(() => {
+        setShowPulseCheck(true);
+      }, 300);
+    } else {
+      phaseChangeRef.current = null;
+    }
   };
 
   const handleAdvancePhase = async () => {
@@ -141,6 +169,13 @@ export function SocialIcebreakerOrchestrator({
     const topics = await fetchTopics(mood);
     setWarmupTopics(topics);
     return topics;
+  };
+
+  const handleMoodVoteComplete = async (mood: AtmosphereMood | null) => {
+    setShowMoodVote(false);
+    if (isHost && mood) {
+      await handleFetchTopics(mood);
+    }
   };
 
   if (isStarting || (isLoading && !state)) {
@@ -163,6 +198,20 @@ export function SocialIcebreakerOrchestrator({
   const completedPhases = state.completedPhases || [];
   const currentTopics = warmupTopics.length > 0 ? warmupTopics : state.warmupTopics || [];
 
+  // Enable personality_dice phase if any participant has an archetype
+  const enabledPhases = participants.some(p => p.archetype)
+    ? ([...MVP_PHASES, 'personality_dice'] as SocialIcebreakerPhase[])
+    : MVP_PHASES;
+
+  // Handlers for personality dice
+  const handleGenerateDice = async () => {
+    await generateDiceChallenges(participants);
+  };
+
+  const handleCompleteDice = async (diceUserId: string) => {
+    await completeDiceChallenge(diceUserId);
+  };
+
   return (
     <div className="flex flex-col h-screen overflow-hidden" data-testid="social-icebreaker-orchestrator">
       {/* Host badge */}
@@ -176,7 +225,7 @@ export function SocialIcebreakerOrchestrator({
       {/* Progress bar */}
       <PhaseProgressBar
         currentPhase={state.currentPhase}
-        enabledPhases={MVP_PHASES}
+        enabledPhases={enabledPhases}
         completedPhases={completedPhases}
         isHost={isHost}
       />
@@ -277,8 +326,16 @@ export function SocialIcebreakerOrchestrator({
               exit={{ opacity: 0 }}
               className="h-full"
             >
-              <PersonalityDiceStub
+              <PersonalityDicePhase
+                socialSessionId={socialSessionId || ''}
+                userId={userId}
                 isHost={isHost}
+                participants={participants}
+                challenges={state.personalityDiceChallenges || []}
+                currentPlayerIndex={state.currentDicePlayerIndex ?? 0}
+                completedBy={state.diceCompletedBy || []}
+                onGenerate={handleGenerateDice}
+                onComplete={handleCompleteDice}
                 onAdvance={handleAdvancePhase}
                 isAdvancing={isAdvancing}
               />
@@ -305,12 +362,20 @@ export function SocialIcebreakerOrchestrator({
         </AnimatePresence>
       </div>
 
+      {/* Mood vote overlay (warmup entry) */}
+      <MoodVoteOverlay
+        isVisible={showMoodVote}
+        isHost={isHost}
+        onVoteComplete={handleMoodVoteComplete}
+      />
+
       {/* Pulse check overlay */}
       <PulseCheckOverlay
         isVisible={showPulseCheck}
         onSubmit={handlePulseSubmit}
         onComplete={handlePulseComplete}
         groupAverage={pulseGroupAverage}
+        phaseLabel={phaseLabelForPulse || undefined}
       />
 
       {/* Phase transition */}

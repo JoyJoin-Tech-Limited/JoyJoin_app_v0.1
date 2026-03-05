@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw } from 'lucide-react';
 import MobilePrimaryButton from '@/components/mobile/MobilePrimaryButton';
 import type { SocialTopic, AtmosphereMood } from '@shared/socialIcebreaker';
 
@@ -24,6 +23,8 @@ const MOOD_OPTIONS: Array<{ mood: AtmosphereMood; emoji: string; label: string }
 
 export function WarmupPhase({
   isHost,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  participants,
   topics,
   onFetchTopics,
   onAdvance,
@@ -84,26 +85,28 @@ export function WarmupPhase({
         </span>
       </div>
 
-      {/* Mood selector */}
-      <div className="flex justify-center gap-2 px-4 py-3">
-        {MOOD_OPTIONS.map(({ mood, emoji, label }) => (
-          <button
-            key={mood}
-            onClick={() => handleMoodSelect(mood)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-              selectedMood === mood
-                ? 'bg-primary text-white shadow-md scale-105'
-                : 'bg-muted/60 text-muted-foreground'
-            }`}
-          >
-            <span>{emoji}</span>
-            <span>{label}</span>
-          </button>
-        ))}
-      </div>
+      {/* Mood selector — host only */}
+      {isHost && (
+        <div className="flex justify-center gap-2 px-4 py-3">
+          {MOOD_OPTIONS.map(({ mood, emoji, label }) => (
+            <button
+              key={mood}
+              onClick={() => handleMoodSelect(mood)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                selectedMood === mood
+                  ? 'bg-primary text-white shadow-md scale-105'
+                  : 'bg-muted/60 text-muted-foreground'
+              }`}
+            >
+              <span>{emoji}</span>
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
-      {/* Topic card */}
-      <div className="flex-1 flex items-center justify-center px-4">
+      {/* Topic card + inline refresh */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4">
         <AnimatePresence mode="wait">
           {isRefreshing ? (
             <motion.div
@@ -140,27 +143,29 @@ export function WarmupPhase({
             <div className="text-muted-foreground text-sm">暂无话题，请选择心情</div>
           )}
         </AnimatePresence>
+
+        {/* Host: prominent refresh button with tooltip */}
+        {isHost && (
+          <div className="flex flex-col items-center gap-1">
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing || currentTopics.length === 0}
+              className="text-amber-600 dark:text-amber-400 font-medium text-base border border-amber-300 dark:border-amber-700 rounded-xl px-5 py-2 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors disabled:opacity-40"
+            >
+              换个话题 →
+            </button>
+            <span className="text-xs text-muted-foreground">只有你能看见这个按钮</span>
+          </div>
+        )}
+
+        {/* Non-host: static hint */}
+        {!isHost && (
+          <p className="text-xs text-muted-foreground">主持人正在带领话题</p>
+        )}
       </div>
 
       {/* Bottom actions */}
       <div className="px-4 pb-6 space-y-3">
-        {/* Refresh button */}
-        <div className="flex justify-end">
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing || currentTopics.length === 0}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
-          >
-            <motion.span
-              animate={isRefreshing ? { rotate: 360 } : { rotate: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <RefreshCw className="w-4 h-4" />
-            </motion.span>
-            换一个 ↺
-          </button>
-        </div>
-
         {/* Advance CTA (host only, after ≥1 topic discussed) */}
         {isHost && topicsUsed >= 1 && (
           <motion.div
