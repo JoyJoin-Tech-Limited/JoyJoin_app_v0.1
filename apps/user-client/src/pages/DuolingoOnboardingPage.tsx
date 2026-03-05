@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,8 @@ interface V4AnchorQuestion {
 }
 
 const ONBOARDING_QUESTIONS_COUNT = 8;
+const AUTO_ADVANCE_DELAY_MS = 600;
+const AUTO_ADVANCE_DELAY_REDUCED_MOTION_MS = 100;
 
 function stripEmoji(text: string): string {
   return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '')
@@ -383,6 +385,11 @@ export default function DuolingoOnboardingPage() {
   const [temporarySessionId, setTemporarySessionId] = useState<string>("");
   // Bug 4 Fix: Add loading state for server cache check
   const [isLoadingServerCache, setIsLoadingServerCache] = useState(true);
+  // Slide direction: 1 = forward, -1 = backward
+  const [direction, setDirection] = useState<1 | -1>(1);
+  // Auto-advance state: locks interaction during transition
+  const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
+  const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 
   const { data: anchorQuestionsData, isLoading: isLoadingQuestions, isError, refetch } = useQuery<{
@@ -481,6 +488,13 @@ export default function DuolingoOnboardingPage() {
     }
   }, [currentScreen, answers]);
 
+  // Cleanup auto-advance timer on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(autoAdvanceTimerRef.current);
+    };
+  }, []);
+
   const handleResume = (resume: boolean) => {
     if (resume) {
       const cached = loadCachedProgress();
@@ -496,6 +510,27 @@ export default function DuolingoOnboardingPage() {
 
   const handleAnswer = (questionId: string, value: string, traitScores?: Record<string, number>) => {
     haptics.light();
+
+    // Toggle off: if user clicks the already-selected option, clear the answer
+    if (value === answers[questionId]) {
+      setAnswers(prev => {
+        const newAnswers = { ...prev };
+        delete newAnswers[questionId];
+        return newAnswers;
+      });
+      try {
+        const cached = localStorage.getItem(V4_ANSWERS_KEY);
+        if (cached) {
+          const cachedParsed: PreSignupAnswer[] = JSON.parse(cached);
+          const filtered = cachedParsed.filter(a => a.questionId !== questionId);
+          localStorage.setItem(V4_ANSWERS_KEY, JSON.stringify(filtered));
+        }
+      } catch {
+        // Ignore storage errors
+      }
+      return;
+    }
+
     setAnswers(prev => ({ ...prev, [questionId]: value }));
     if (traitScores) {
       saveV4AnswerToCache(questionId, value, traitScores);
@@ -516,6 +551,14 @@ export default function DuolingoOnboardingPage() {
         });
       }
     }
+
+    // Auto-advance after selection (single-select)
+    clearTimeout(autoAdvanceTimerRef.current);
+    setIsAutoAdvancing(true);
+    autoAdvanceTimerRef.current = setTimeout(() => {
+      setIsAutoAdvancing(false);
+      handleNext();
+    }, prefersReducedMotion ? AUTO_ADVANCE_DELAY_REDUCED_MOTION_MS : AUTO_ADVANCE_DELAY_MS);
   };
 
   const handleNext = async () => {
@@ -557,6 +600,7 @@ export default function DuolingoOnboardingPage() {
       return;
     }
     
+    setDirection(1);
     const nextScreen = currentScreen + 1;
     setCurrentScreen(nextScreen);
   };
@@ -589,6 +633,10 @@ export default function DuolingoOnboardingPage() {
         }
       }
       
+      // Cancel any pending auto-advance when navigating backward
+      clearTimeout(autoAdvanceTimerRef.current);
+      setIsAutoAdvancing(false);
+      setDirection(-1);
       setCurrentScreen(prev => prev - 1);
     } else {
       setLocation("/");
@@ -601,6 +649,22 @@ export default function DuolingoOnboardingPage() {
     // 8 anchor questions = 0% to 50% (not 0% to 100%)
     const remaining = Math.max(0, 8 - currentScreen);
     return Math.round(getUnifiedProgress('onboarding', currentScreen, remaining));
+  };
+
+  // Slide variants for question screens (cases 1–8)
+  const questionVariants = {
+    enter: (dir: number) => ({
+      x: prefersReducedMotion ? 0 : (dir > 0 ? 40 : -40),
+      opacity: 0,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+    },
+    exit: (dir: number) => ({
+      x: prefersReducedMotion ? 0 : (dir > 0 ? -40 : 40),
+      opacity: 0,
+    }),
   };
 
   const renderScreen = () => {
@@ -829,10 +893,15 @@ export default function DuolingoOnboardingPage() {
         return (
           <motion.div
             key={currentScreen}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            custom={direction}
+            variants={questionVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              x: { type: "spring", stiffness: 380, damping: 32, mass: 0.8 },
+              opacity: { duration: 0.15 },
+            }}
             className="flex-1 flex flex-col px-4 py-3 overflow-hidden"
           >
             <div className="shrink-0 mb-2">
@@ -851,7 +920,7 @@ export default function DuolingoOnboardingPage() {
             </div>
             
             <div className="flex-1 flex flex-col justify-center py-2 min-h-0">
-              <div className="overflow-y-auto -mx-4 px-4">
+              <div className={cn("overflow-y-auto -mx-4 px-4", isAutoAdvancing && "pointer-events-none")}>
                 <SelectionList
                   options={optionsForList}
                   selected={currentAnswer}
@@ -928,7 +997,7 @@ export default function DuolingoOnboardingPage() {
         />
       )}
       
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="popLayout" custom={direction}>
         {renderScreen()}
       </AnimatePresence>
     </div>
