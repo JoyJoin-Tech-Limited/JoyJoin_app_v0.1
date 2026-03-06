@@ -53,8 +53,6 @@ import MatchingStatusPage from "@/pages/MatchingStatusPage";
 import MyJourneyPage from "@/pages/MyJourneyPage";
 import EventPoolRegistrationPage from "@/pages/EventPoolRegistrationPage";
 import TestArchetypeOrbit from "@/pages/TestArchetypeOrbit";
-import AdminLayout from "@/pages/admin/AdminLayout";
-import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import NotFound from "@/pages/not-found";
 import LevelUpProvider from "@/components/LevelUpProvider";
 import GuidePage from "@/pages/GuidePage";
@@ -118,13 +116,18 @@ function RedirectToReview() {
   return null;
 }
 
+function RedirectToAdminSite() {
+  window.location.replace("https://admin.yuejuapp.com");
+  return null;
+}
+
 function AuthenticatedRouter() {
   const { user, nextStep, isLoading } = useAuth();
   const [location] = useLocation();
 
-  // Admin routes - separate from user flow
-  if (user?.isAdmin && location.startsWith("/admin")) {
-    return <AdminLayout />;
+  // Admin routes - redirect to the dedicated admin subdomain
+  if (location.startsWith("/admin")) {
+    return <RedirectToAdminSite />;
   }
 
   // Show loading while fetching user state
@@ -323,17 +326,9 @@ function Router() {
     return <Route path="/icebreaker-demo" component={IcebreakerDemoPage} />;
   }
 
-  // Admin login is always accessible (even when not authenticated)
-  if (location.startsWith("/admin/login") || location === "/admin/login") {
-    return <Route path="/admin/login" component={AdminLoginPage} />;
-  }
-
-  // Admin routes require authentication
+  // Admin routes - redirect to the dedicated admin subdomain
   if (location.startsWith("/admin")) {
-    if (!isAuthenticated) {
-      return <Route path="*" component={AdminLoginPage} />;
-    }
-    return <AuthenticatedRouter />;
+    return <RedirectToAdminSite />;
   }
 
   // Regular user routes
