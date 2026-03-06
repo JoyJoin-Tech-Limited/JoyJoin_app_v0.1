@@ -1,5 +1,41 @@
 # Copilot Instructions
 
+## Copilot Operating Guidelines
+
+### Freshness & Source-of-Truth Priority
+
+When this file conflicts with inline code comments, older documentation in `docs/`, or stale variable names, **this file takes precedence**. Always prefer:
+
+1. Current server-calculated `nextStep` values over client-side flow assumptions.
+2. Active database schema and flags over legacy field names.
+3. Sections marked ✅ Active over sections marked ⚠️ Legacy.
+
+### Legacy-Handling Rules
+
+- Deprecated flows (e.g., AI Chat Registration (`DuolingoOnboardingPage`)) exist only as **historical context**. Do not describe them as current behavior, route users through them, or add new code that depends on them.
+- Tables and fields retained for historical data (e.g., `registration_sessions`, `hasCompletedRegistration`) must not be used in new feature development.
+- Legacy components marked ⚠️ must not receive new CTAs, routes, or feature additions.
+
+### Evidence-First Reasoning
+
+- Ground all suggestions in actual file paths and function names referenced in this document.
+- Label uncertainty explicitly: *"I believe X, but verify in `<file>`."*
+- Do not infer behavior from deprecated code paths or stale comments.
+
+### Minimal Safe Changes
+
+- Prefer the smallest correct change over broad refactoring.
+- Do not remove legacy tables or fields without an explicit migration task.
+- Do not change onboarding state flags without understanding server-side implications.
+
+### Onboarding State Consistency
+
+- Always use server-driven `nextStep` for navigation; never reconstruct onboarding progress client-side.
+- Onboarding flags are server-owned. The client reads state; it writes only through designated API endpoints.
+- The authoritative onboarding flow is defined in the **Onboarding Flow Architecture** section of this file.
+
+---
+
 ## Tech Stack
 - List the technologies used in the project.
 
@@ -183,6 +219,8 @@ activeAssessmentSessionId: string | null;
 
 ### Registration Sessions Table
 
+> ⚠️ **Legacy telemetry table.** Retained for historical data only. Do not use in new feature development.
+
 **Structure** (`registration_sessions`):
 ```typescript
 {
@@ -250,10 +288,10 @@ activeAssessmentSessionId: string | null;
 
 | Table | Purpose | Key Fields |
 |-------|---------|------------|
-| `users` | User profiles | `hasCompletedRegistration`, `hasSeenGuide`, `hasCompletedInterestsCarousel` |
+| `users` | User profiles | `hasSeenGuide`, `hasCompletedPersonalityTest`, `hasCompletedInterestsCarousel` |
 | `assessment_sessions` | V4 personality tests | `phase`, `traitScores`, `primaryArchetype`, `matchDetailsJson` |
 | `assessment_answers` | V4 test responses | `sessionId`, `questionId`, `selectedOption`, `traitScores` |
-| `registration_sessions` | Onboarding telemetry | `sessionMode`, `l1CompletedAt`, `completionQuality` |
+| `registration_sessions` | ⚠️ Legacy telemetry | `sessionMode`, `l1CompletedAt`, `completionQuality` |
 | `user_interests` | Interest selections | `totalHeat`, `categoryHeat`, `selections`, `topPriorities` |
 | `user_social_tag_generations` | Social tags | `tags` (JSONB array), `selectedTag`, `selectedAt` |
 
