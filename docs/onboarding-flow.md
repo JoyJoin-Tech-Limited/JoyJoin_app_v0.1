@@ -127,7 +127,27 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 ---
 
-### Step 5: Discover Page
+### Step 5: Profile Review
+
+**Route:** `/onboarding/review`
+
+**User State:** Has completed essential and extended data
+
+**Content:**
+- Animated "analyzing" phase (minimum 2.5 seconds)
+- Profile portrait card reveal with archetype, interests, and stats
+
+**Data Contract:**
+- Server field: `user.hasSeenProfileReview` (persisted to database)
+- API: `POST /api/profile-review/complete` to mark as seen
+
+**After Completion:**
+- `hasSeenProfileReview = true`
+- Navigate to `/discover`
+
+---
+
+### Step 6: Discover Page
 
 **Route:** `/` or `/discover`
 
@@ -145,10 +165,10 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 | Field | Type | Description |
 |------|------|-------------|
-| `nextStep` | `string` | Server-calculated next route: `onboarding`, `personality-test`, `essential-data`, `extended-data`, `profile-review`, `discover` (note: `guide` is deprecated and no longer returned) |
+| `nextStep` | `string` | Server-calculated next route: `onboarding`, `personality-test`, `essential-data`, `extended-data`, `profile-review`, `discover`. Note: the server may still return `guide` for users with `hasSeenGuide = false` (backward compat); the client ignores `guide` and treats it as `discover`. |
 | `profileEssentialComplete` | `boolean` | Essential data complete (displayName, gender, currentCity) |
 | `profileExtendedComplete` | `boolean` | Extended data complete (interests) |
-| `hasSeenGuide` | `boolean` | Legacy field — guide step removed from onboarding flow (2026-02-16) |
+| `hasSeenGuide` | `boolean` | Legacy field — guide step removed from onboarding flow (2026-02-16); retained on server for backward compatibility |
 | `hasSeenProfileReview` | `boolean` | Profile review viewed (server-persisted) |
 | `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
 
