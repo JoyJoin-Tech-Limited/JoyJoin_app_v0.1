@@ -160,8 +160,8 @@ hasCompletedInterestsCarousel: boolean; // Carousel-based interest selection
 **Server-Calculated Navigation Fields** (returned by `/api/auth/user`):
 ```typescript
 nextStep: string;  
-// 'personality-test' | 'essential-data' | 
-// 'extended-data' | 'guide' | 'discover'
+// 'onboarding' | 'personality-test' | 'essential-data' | 
+// 'extended-data' | 'profile-review' | 'guide' | 'discover'
 
 profileEssentialComplete: boolean;  
 // Server-validates: displayName, gender, currentCity present
