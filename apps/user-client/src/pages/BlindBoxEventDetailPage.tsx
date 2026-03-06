@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Clock, MapPin, DollarSign, Users, Phone, Navigation, AlertCircle, Sparkles, ChevronRight } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, DollarSign, Users, Navigation, AlertCircle, Sparkles, ChevronRight, CheckCircle2 } from "lucide-react";
 import type { BlindBoxEvent, Venue, VenueDeal } from "@shared/schema";
 import { getCurrencySymbol } from "@/lib/currency";
 import { calculateAge } from "@shared/utils";
@@ -31,6 +31,8 @@ import { detectDevice } from "@/lib/deviceDetection";
 import { getOrAssignVariant } from "@/lib/abTestingFramework";
 import { useRevealStatus } from "@/hooks/useRevealStatus";
 import EventSessionBanner, { FloatingCheckinButton } from "@/components/EventSessionBanner";
+import { motion, AnimatePresence } from "framer-motion";
+import WechatServiceQRCard from "@/components/WechatServiceQRCard";
 
 interface AnimationStatus {
   hasViewed: boolean;
@@ -58,6 +60,7 @@ export default function BlindBoxEventDetailPage() {
   const [icebreakerSheetOpen, setIcebreakerSheetOpen] = useState(false);
   const [hasAutoShownIcebreaker, setHasAutoShownIcebreaker] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [supportCardOpen, setSupportCardOpen] = useState(true);
 
   const { data: event, isLoading } = useQuery<BlindBoxEvent>({
     queryKey: ["/api/blind-box-events", eventId],
@@ -706,15 +709,60 @@ export default function BlindBoxEventDetailPage() {
         </Card>
 
         {/* 帮助与支持 */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">帮助与支持</CardTitle>
+        <Card data-testid="card-help-support">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">帮助与支持</CardTitle>
+              {supportCardOpen && (
+                <button
+                  onClick={() => setSupportCardOpen(false)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="button-support-collapse"
+                >
+                  暂不需要
+                </button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full" data-testid="button-contact-support">
-              <Phone className="h-4 w-4 mr-2" />
-              联系支持
-            </Button>
+            <AnimatePresence initial={false}>
+              {supportCardOpen ? (
+                <motion.div
+                  key="open"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  <WechatServiceQRCard variant="inline" />
+                  <Button
+                    className="w-full mt-3 bg-[#07C160] hover:bg-[#06AD56] text-white border-0"
+                    size="sm"
+                    onClick={() => setSupportCardOpen(false)}
+                    data-testid="button-support-added"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                    已添加客服，关闭
+                  </Button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="closed"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <button
+                    onClick={() => setSupportCardOpen(true)}
+                    className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-1 text-center"
+                    data-testid="button-support-reopen"
+                  >
+                    点击查看客服二维码
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </CardContent>
         </Card>
       </div>
