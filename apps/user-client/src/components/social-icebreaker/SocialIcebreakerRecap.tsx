@@ -18,6 +18,13 @@ interface RecapSummary {
   closingLine: string;
 }
 
+interface Medal {
+  emoji: string;
+  title: string;
+  recipientDisplayName: string;
+  description: string;
+}
+
 export function SocialIcebreakerRecap({
   socialSessionId,
   participants,
@@ -28,6 +35,7 @@ export function SocialIcebreakerRecap({
   const [, setLocation] = useLocation();
   const { data: recapData, isLoading } = useQuery<{
     summary: RecapSummary;
+    medals?: Medal[];
     state: any;
   }>({
     queryKey: ['/api/social-icebreaker', socialSessionId, 'recap'],
@@ -40,6 +48,7 @@ export function SocialIcebreakerRecap({
   });
 
   const summary = recapData?.summary;
+  const medals = recapData?.medals || [];
 
   const effectiveDuration =
     durationMinutes ??
@@ -116,6 +125,36 @@ export function SocialIcebreakerRecap({
             </div>
           </motion.div>
         ) : null}
+
+        {/* Medals section */}
+        {medals.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="w-full max-w-sm mb-6"
+          >
+            <p className="text-center text-sm font-bold text-violet-300 mb-3">🏅 今晚荣誉榜</p>
+            <div className="space-y-2">
+              {medals.map((medal, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.15 }}
+                  className="bg-white/10 border border-white/20 rounded-xl p-3 flex items-center gap-3"
+                >
+                  <span className="text-3xl flex-shrink-0">{medal.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-white text-sm">{medal.title}</p>
+                    <p className="text-violet-200 text-xs">{medal.recipientDisplayName}</p>
+                    <p className="text-violet-300 text-xs">{medal.description}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* Participants */}
         <div className="flex flex-wrap justify-center gap-2 mb-8">

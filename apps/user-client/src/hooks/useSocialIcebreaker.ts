@@ -6,6 +6,7 @@ import type {
   SocialIcebreakerPhase,
   AtmosphereMood,
   SocialTopic,
+  PersonalityDiceChallenge,
 } from '@shared/socialIcebreaker';
 
 interface UseSocialIcebreakerOptions {
@@ -22,11 +23,13 @@ interface UseSocialIcebreakerReturn {
   socialSessionId: string | null;
   startSession: () => Promise<void>;
   fetchTopics: (mood: AtmosphereMood) => Promise<SocialTopic[]>;
-  advancePhase: () => Promise<void>;
+  advancePhase: (enabledPhases?: SocialIcebreakerPhase[]) => Promise<void>;
   submitPulseCheck: (vibe: 1 | 2 | 3) => Promise<{ averageVibe: number; voteCount: number; allVoted: boolean } | null>;
   generateMyStatements: () => Promise<Array<{ index: number; text: string }>>;
   castVote: (targetUserId: string, statementIndex: number) => Promise<void>;
   completeChallenge: () => Promise<void>;
+  generateDiceChallenges: (participants: Array<{ userId: string; displayName: string; archetype?: string; traitScores?: Record<string, number> }>) => Promise<PersonalityDiceChallenge[]>;
+  completeDiceChallenge: (userId: string) => Promise<void>;
   isStarting: boolean;
   isAdvancing: boolean;
 }
@@ -98,12 +101,13 @@ export function useSocialIcebreaker({
     [socialSessionId, state?.playerCount, eventType, qc]
   );
 
-  const advancePhase = useCallback(async () => {
+  const advancePhase = useCallback(async (enabledPhases?: SocialIcebreakerPhase[]) => {
     if (!socialSessionId || !state) return;
     setIsAdvancing(true);
     try {
       await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/advance`, {
         currentPhase: state.currentPhase,
+        ...(enabledPhases ? { enabledPhases } : {}),
       });
       qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
     } catch (error) {
@@ -172,6 +176,35 @@ export function useSocialIcebreaker({
     [socialSessionId, qc]
   );
 
+  const generateDiceChallenges = useCallback(
+    async (participants: Array<{ userId: string; displayName: string; archetype?: string; traitScores?: Record<string, number> }>): Promise<PersonalityDiceChallenge[]> => {
+      if (!socialSessionId) return [];
+      try {
+        const res = await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/personality-dice/generate`, { participants });
+        const data = await res.json();
+        qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
+        return data.challenges || [];
+      } catch (error) {
+        console.error('[useSocialIcebreaker] generateDiceChallenges error:', error);
+        return [];
+      }
+    },
+    [socialSessionId, qc]
+  );
+
+  const completeDiceChallenge = useCallback(
+    async (diceUserId: string) => {
+      if (!socialSessionId) return;
+      try {
+        await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/personality-dice/complete`, { userId: diceUserId });
+        qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
+      } catch (error) {
+        console.error('[useSocialIcebreaker] completeDiceChallenge error:', error);
+      }
+    },
+    [socialSessionId, qc]
+  );
+
   return {
     state: state ?? null,
     isLoading,
@@ -184,6 +217,8 @@ export function useSocialIcebreaker({
     generateMyStatements,
     castVote,
     completeChallenge,
+    generateDiceChallenges,
+    completeDiceChallenge,
     isStarting,
     isAdvancing,
   };
