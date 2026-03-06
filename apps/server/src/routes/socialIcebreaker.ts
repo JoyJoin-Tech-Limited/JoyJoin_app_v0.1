@@ -213,7 +213,7 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
 router.post('/:socialSessionId/advance', async (req: any, res) => {
   const { socialSessionId } = req.params;
   const userId: string = req.session?.userId;
-  const { currentPhase } = req.body as { currentPhase: SocialIcebreakerPhase };
+  const { currentPhase, enabledPhases } = req.body as { currentPhase: SocialIcebreakerPhase; enabledPhases?: SocialIcebreakerPhase[] };
 
   if (!currentPhase) {
     return res.status(400).json({ error: 'currentPhase is required' });
@@ -232,7 +232,15 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     return res.status(400).json({ error: 'Phase mismatch' });
   }
 
-  const nextPhase = getNextPhase(currentPhase, MVP_PHASES);
+  // Use client-provided enabledPhases (for optional phases like personality_dice) or fall back to MVP_PHASES.
+  // Only allow phases that are valid SocialIcebreakerPhase values to prevent injection.
+  const VALID_PHASES = new Set<SocialIcebreakerPhase>(['warmup', 'micro_challenge', 'lie_detective', 'auction', 'personality_dice', 'recap']);
+  const resolvedEnabledPhases: SocialIcebreakerPhase[] =
+    Array.isArray(enabledPhases) && enabledPhases.every(p => VALID_PHASES.has(p))
+      ? enabledPhases
+      : MVP_PHASES;
+
+  const nextPhase = getNextPhase(currentPhase, resolvedEnabledPhases);
   const resolvedNextPhase: SocialIcebreakerPhase = nextPhase === 'recap' ? 'recap' : nextPhase;
 
   // Auto-skip lie_detective if not enough players

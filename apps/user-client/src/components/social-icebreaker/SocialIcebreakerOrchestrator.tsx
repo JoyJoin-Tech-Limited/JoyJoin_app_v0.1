@@ -85,6 +85,16 @@ export function SocialIcebreakerOrchestrator({
   const [xiaoYueVisible, setXiaoYueVisible] = useState(false);
   const [startedOnce, setStartedOnce] = useState(false);
 
+  // Enable personality_dice phase if any participant has an archetype.
+  // Must be declared before early returns to satisfy React's Rules of Hooks.
+  const enabledPhases = useMemo(
+    () =>
+      participants.some(p => p.archetype)
+        ? ([...MVP_PHASES, 'personality_dice'] as SocialIcebreakerPhase[])
+        : MVP_PHASES,
+    [participants]
+  );
+
   // Start session on mount
   useEffect(() => {
     if (!startedOnce) {
@@ -162,7 +172,7 @@ export function SocialIcebreakerOrchestrator({
 
   const handleAdvancePhase = async () => {
     if (navigator.vibrate) navigator.vibrate(100);
-    await advancePhase();
+    await advancePhase(enabledPhases);
   };
 
   const handleFetchTopics = async (mood: AtmosphereMood): Promise<SocialTopic[]> => {
@@ -197,15 +207,6 @@ export function SocialIcebreakerOrchestrator({
 
   const completedPhases = state.completedPhases || [];
   const currentTopics = warmupTopics.length > 0 ? warmupTopics : state.warmupTopics || [];
-
-  // Enable personality_dice phase if any participant has an archetype
-  const enabledPhases = useMemo(
-    () =>
-      participants.some(p => p.archetype)
-        ? ([...MVP_PHASES, 'personality_dice'] as SocialIcebreakerPhase[])
-        : MVP_PHASES,
-    [participants]
-  );
 
   // Handlers for personality dice
   const handleGenerateDice = async () => {
