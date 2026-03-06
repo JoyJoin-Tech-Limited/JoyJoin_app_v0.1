@@ -23,6 +23,7 @@ export interface MicroChallenge {
   description: string;
   durationSeconds: number;
   completionCTA: string;
+  visualHint?: string;
 }
 
 export interface LieDetectiveStatement {
@@ -41,6 +42,17 @@ export interface LieDetectiveVote {
   voterId: string;
   targetUserId: string;
   guessedStatementIndex: number;
+}
+
+export interface PersonalityDiceChallenge {
+  userId: string;
+  displayName: string;
+  archetype?: string;
+  dominantTrait: 'A' | 'C' | 'E' | 'O' | 'X' | 'P';
+  challengeTitle: string;
+  challengeBody: string;
+  challengeEmoji: string;
+  difficulty: 'easy' | 'medium' | 'hard';
 }
 
 export interface PulseCheckResult {
@@ -69,6 +81,10 @@ export interface SocialSessionState {
   currentLieDetectivePlayerIndex?: number;
   votes?: LieDetectiveVote[];
   pulseChecks?: PulseCheckResult[];
+  // PersonalityDice phase data
+  personalityDiceChallenges?: PersonalityDiceChallenge[];
+  currentDicePlayerIndex?: number;
+  diceCompletedBy?: string[];
   // Recap data
   recapData?: {
     topicsDiscussed: string[];

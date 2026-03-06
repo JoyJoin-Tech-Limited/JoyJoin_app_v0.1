@@ -127,6 +127,7 @@ export function MicroChallengePhase({
           {/* Gradient border card */}
           <div className="p-[1px] rounded-2xl bg-gradient-to-br from-cyan-400 to-indigo-500 shadow-xl">
             <div className="bg-card rounded-[calc(1rem-1px)] p-6">
+              <div className="text-4xl text-center mb-2">{challenge.visualHint || '⚡'}</div>
               <h3 className="text-2xl font-black text-foreground mb-3">{challenge.title}</h3>
               <p className="text-base text-muted-foreground leading-relaxed mb-6">
                 {challenge.description}

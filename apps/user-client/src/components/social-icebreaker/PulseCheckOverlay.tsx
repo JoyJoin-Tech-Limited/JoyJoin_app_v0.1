@@ -6,6 +6,7 @@ interface PulseCheckOverlayProps {
   onSubmit: (vibe: 1 | 2 | 3) => void;
   onComplete: () => void;
   groupAverage?: number;
+  phaseLabel?: string;
 }
 
 const VIBE_OPTIONS: Array<{ vibe: 1 | 2 | 3; emoji: string; label: string }> = [
@@ -27,6 +28,7 @@ export function PulseCheckOverlay({
   onSubmit,
   onComplete,
   groupAverage,
+  phaseLabel,
 }: PulseCheckOverlayProps) {
   const [selectedVibe, setSelectedVibe] = useState<1 | 2 | 3 | null>(null);
   const [timeLeft, setTimeLeft] = useState(TIMEOUT_SECONDS);
@@ -88,6 +90,9 @@ export function PulseCheckOverlay({
             </div>
 
             <h3 className="text-xl font-bold text-center mb-2">此刻的你感觉怎样？</h3>
+            {phaseLabel && (
+              <p className="text-sm font-semibold text-center mb-4">{phaseLabel}</p>
+            )}
             <p className="text-sm text-muted-foreground text-center mb-6">
               下一环节即将开始
             </p>
