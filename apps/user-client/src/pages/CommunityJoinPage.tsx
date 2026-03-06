@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   QrCode,
@@ -7,10 +8,12 @@ import {
   Star,
   MessageCircle,
   Gift,
+  CheckCircle2,
 } from "lucide-react";
 import MobileHeader from "@/components/MobileHeader";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
+import WechatServiceQRCard from "@/components/WechatServiceQRCard";
 
 // ---------------------------------------------------------------------------
 // Animation variants
@@ -81,6 +84,7 @@ const communityBenefits = [
 // ---------------------------------------------------------------------------
 
 export default function CommunityJoinPage() {
+  const [serviceAdded, setServiceAdded] = useState(false);
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* ── Header ── */}
@@ -209,6 +213,41 @@ export default function CommunityJoinPage() {
             })}
           </motion.div>
         </div>
+
+        {/* ── 智能客服 QR ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.75, duration: 0.4 }}
+          data-testid="section-customer-service"
+        >
+          <h3 className="text-base font-semibold mb-3">联系智能客服</h3>
+          <WechatServiceQRCard variant="full" />
+
+          {/* CTA */}
+          {!serviceAdded ? (
+            <Button
+              className="w-full mt-3 bg-[#07C160] hover:bg-[#06AD56] text-white border-0"
+              onClick={() => setServiceAdded(true)}
+              data-testid="button-service-added"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              已添加客服 ✓
+            </Button>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mt-3 flex items-center justify-center gap-2 text-[#07C160] text-sm font-medium"
+              data-testid="service-added-confirmation"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              <span style={{ fontFamily: "'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif" }}>
+                已添加！有问题随时找我们 💬
+              </span>
+            </motion.div>
+          )}
+        </motion.div>
 
         {/* ── Footer disclaimer ── */}
         <motion.p

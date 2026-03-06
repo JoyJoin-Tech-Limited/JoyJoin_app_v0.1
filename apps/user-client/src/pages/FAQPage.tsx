@@ -17,6 +17,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import WechatServiceQRCard from "@/components/WechatServiceQRCard";
 
 // ---------------------------------------------------------------------------
 // Types & data
@@ -248,18 +249,14 @@ export default function FAQPage() {
           ))}
         </motion.div>
 
-        {/* ── Still have questions ── */}
+        {/* ── Still have questions — WeChat 智能客服 QR ── */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7, duration: 0.4 }}
-          className="glass rounded-2xl p-4 text-center space-y-1"
           data-testid="section-contact-prompt"
         >
-          <p className="text-sm font-semibold">还有其他问题？</p>
-          <p className="text-xs text-muted-foreground">
-            加入悦聚微信社群，运营团队实时为您解答 💬
-          </p>
+          <WechatServiceQRCard variant="inline" />
         </motion.div>
 
         <div className="h-2" />
