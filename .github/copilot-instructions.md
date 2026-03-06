@@ -1,5 +1,41 @@
 # Copilot Instructions
 
+## Copilot Operating Guidelines
+
+### Freshness & Source-of-Truth Priority
+
+When this file conflicts with inline code comments, older documentation in `docs/`, or stale variable names, **this file takes precedence**. Always prefer:
+
+1. Current server-calculated `nextStep` values over client-side flow assumptions.
+2. Active database schema and flags over legacy field names.
+3. Sections marked ✅ Active over sections marked ⚠️ Legacy.
+
+### Legacy-Handling Rules
+
+- Deprecated flows (e.g., AI Chat Registration (`DuolingoOnboardingPage`)) exist only as **historical context**. Do not describe them as current behavior, route users through them, or add new code that depends on them.
+- Tables and fields retained for historical data (e.g., `registration_sessions`, `hasCompletedRegistration`) must not be used in new feature development.
+- Legacy components marked ⚠️ must not receive new CTAs, routes, or feature additions.
+
+### Evidence-First Reasoning
+
+- Ground all suggestions in actual file paths and function names referenced in this document.
+- Label uncertainty explicitly: *"I believe X, but verify in `<file>`."*
+- Do not infer behavior from deprecated code paths or stale comments.
+
+### Minimal Safe Changes
+
+- Prefer the smallest correct change over broad refactoring.
+- Do not remove legacy tables or fields without an explicit migration task.
+- Do not change onboarding state flags without understanding server-side implications.
+
+### Onboarding State Consistency
+
+- Always use server-driven `nextStep` for navigation; never reconstruct onboarding progress client-side.
+- Onboarding flags are server-owned. The client reads state; it writes only through designated API endpoints.
+- The authoritative onboarding flow is defined in the **Onboarding Flow Architecture** section of this file.
+
+---
+
 ## Tech Stack
 - List the technologies used in the project.
 
@@ -33,23 +69,22 @@
 ### Onboarding Flow Architecture
 
 **Overview:**
-JoyJoin uses a 5-step guided onboarding flow with **server-driven progress tracking**.
+JoyJoin uses a 4-step guided onboarding flow with **server-driven progress tracking**.
 
 #### Flow Sequence
 ```
-Login → AI Chat Registration → Personality Test V4 → Essential Data → 
-[Extended Data] → Profile Review → Discover Page
+Login → Personality Test V4 → Essential Data → Extended Data → Guide → Discover
 ```
+> **Note:** `Discover` is the post-onboarding destination, not a formal step. The 4 active onboarding steps are listed in the table below.
 
 #### Step Details
 
 | Step | Route | Component | Required Fields | Completion Flag |
 |------|-------|-----------|-----------------|-----------------|
-| 1. Registration | `/onboarding` | `DuolingoOnboardingPage` | 8 anchor questions | `hasCompletedRegistration` |
-| 2. Personality Test | `/personality-test` | `PersonalityTestPageV4` | Adaptive assessment | `hasCompletedPersonalityTest` |
-| 3. Essential Data | `/onboarding/setup` | `EssentialDataPage` | Nickname, gender, city, etc. | `profileEssentialComplete` |
-| 4. Extended Data | `/onboarding/extended` | `ExtendedDataPage` | Interests carousel | `hasCompletedInterestsCarousel` |
-| 5. Profile Review | `/onboarding/review` | `FinalProfileReviewPage` | Profile preview | `hasSeenProfileReview` (server) |
+| 1. Personality Test | `/personality-test` | `PersonalityTestPageV4` | Adaptive assessment | `hasCompletedPersonalityTest` |
+| 2. Essential Data | `/onboarding/setup` | `EssentialDataPage` | Nickname, gender, city, etc. | `profileEssentialComplete` |
+| 3. Extended Data | `/onboarding/extended` | `ExtendedDataPage` | Interests carousel | `hasCompletedInterestsCarousel` |
+| 4. Guide | `/guide` | Guide components | 3-step tutorial | `hasSeenGuide` (server) |
 
 #### Server-Driven Navigation (Scope B1)
 
@@ -57,8 +92,11 @@ Login → AI Chat Registration → Personality Test V4 → Essential Data →
 
 ```typescript
 const { nextStep } = useAuth(); 
-// Returns: 'onboarding' | 'personality-test' | 'essential-data' | 
-//          'extended-data' | 'profile-review' | 'discover'
+// Returns: 'onboarding' | 'personality-test' | 'essential-data' |
+//          'extended-data' | 'profile-review' | 'guide' | 'discover'
+// Note: 'onboarding' is a ⚠️ legacy alias still emitted by the server;
+//       clients must treat it as the Personality Test step (`/personality-test`)
+//       and must not introduce new flows that depend on it.
 
 // Redirect logic
 if (nextStep !== 'discover') {
@@ -93,7 +131,7 @@ The `/api/auth/user` endpoint now returns:
 - `apps/user-client/src/hooks/useGuideFlow.ts` — Guide state management
 - `apps/user-client/src/hooks/useAuth.ts` — Returns `nextStep` from server
 - `docs/onboarding-flow.md` — Full flow documentation
-- `apps/user-client/src/pages/DuolingoOnboardingPage.tsx` — AI chat registration
+- `apps/user-client/src/pages/PersonalityTestPageV4.tsx` — V4 adaptive assessment
 - `apps/user-client/src/pages/EssentialDataPage.tsx` — 7-step essential data
 - `apps/user-client/src/pages/ExtendedDataPage.tsx` — Interests carousel
 
@@ -103,7 +141,6 @@ The `/api/auth/user` endpoint now returns:
 
 **Progress Flags** (`users` table):
 ```typescript
-hasCompletedRegistration: boolean;     // SMS verification + basic info
 hasCompletedPersonalityTest: boolean;  // V4 adaptive assessment complete
 hasSeenGuide: boolean;                 // 3-step guide viewed (server-persisted)
 hasCompletedInterestsCarousel: boolean; // Carousel-based interest selection
@@ -113,7 +150,7 @@ hasCompletedInterestsCarousel: boolean; // Carousel-based interest selection
 ```typescript
 nextStep: string;  
 // 'onboarding' | 'personality-test' | 'essential-data' | 
-// 'extended-data' | 'profile-review' | 'discover'
+// 'extended-data' | 'profile-review' | 'guide' | 'discover'
 
 profileEssentialComplete: boolean;  
 // Server-validates: displayName, gender, currentCity present
@@ -158,6 +195,8 @@ activeAssessmentSessionId: string | null;
 ```
 
 ### Registration Sessions Table
+
+> ⚠️ **Legacy telemetry table.** Retained for historical data only. Do not use in new feature development.
 
 **Structure** (`registration_sessions`):
 ```typescript
@@ -226,52 +265,46 @@ activeAssessmentSessionId: string | null;
 
 | Table | Purpose | Key Fields |
 |-------|---------|------------|
-| `users` | User profiles | `hasCompletedRegistration`, `hasSeenGuide`, `hasCompletedInterestsCarousel` |
+| `users` | User profiles | `hasSeenGuide`, `hasCompletedPersonalityTest`, `hasCompletedInterestsCarousel` |
 | `assessment_sessions` | V4 personality tests | `phase`, `traitScores`, `primaryArchetype`, `matchDetailsJson` |
 | `assessment_answers` | V4 test responses | `sessionId`, `questionId`, `selectedOption`, `traitScores` |
-| `registration_sessions` | Onboarding telemetry | `sessionMode`, `l1CompletedAt`, `completionQuality` |
+| `registration_sessions` | ⚠️ Legacy telemetry | `sessionMode`, `l1CompletedAt`, `completionQuality` |
 | `user_interests` | Interest selections | `totalHeat`, `categoryHeat`, `selections`, `topPriorities` |
 | `user_social_tag_generations` | Social tags | `tags` (JSONB array), `selectedTag`, `selectedAt` |
 
 ### Data Flow
 
 ```
-1. User starts onboarding
-   ├─> Create registration_session (sessionMode: 'ai_chat')
-   └─> hasCompletedRegistration = false
-
-2. User completes basic info (L1)
-   ├─> Update registration_session.l1CompletedAt
-   └─> hasCompletedRegistration = true
-
-3. User takes V4 personality test
+1. User takes V4 personality test
    ├─> Create assessment_session (phase: 'post_signup')
    ├─> For each answer: insert assessment_answer
    ├─> Update assessment_session.traitScores (real-time)
    └─> On completion: hasCompletedPersonalityTest = true
 
-4. User completes essential data
+2. User completes essential data
    ├─> Update users (displayName, gender, currentCity)
    └─> Server sets profileEssentialComplete = true
 
-5. User completes interests carousel
+3. User completes interests carousel
    ├─> Insert/Update user_interests
    └─> hasCompletedInterestsCarousel = true
 
-6. User views guide
+4. User views guide
    ├─> POST /api/guide/mark-seen
    └─> hasSeenGuide = true
 
-7. Server calculates nextStep
+5. Server calculates nextStep
    └─> Return 'discover' when all flags true
 ```
 
 ### Migration Notes
 
-- **V2 Test Deprecated**: Old `personality_questions`, `test_responses`, `role_results` tables are legacy (kept for historical data, not used in new code)
-- **Interest Fields Removed**: `interestsTop`, `primaryInterests`, `topicsHappy`, `topicsAvoid` moved to `user_interests` table (old fields deprecated but not dropped)
-- **Language Selection**: No longer collected in onboarding (moved to event pool registration)
-- **Guide State**: Now server-persisted in `hasSeenGuide` (replaces localStorage-only approach)
+- **AI Chat Registration UI Deprecated**: `DuolingoOnboardingPage` and the standalone `/onboarding` experience are deprecated from a product/UI perspective. In the current implementation, `/onboarding` should behave as a thin shell / redirect that effectively starts users at the V4 Personality Test, and new flows must not link to or extend this page.
+- **`hasCompletedRegistration` Legacy Backend Flag**: `hasCompletedRegistration` (and any server `nextStep = 'onboarding'` values that still depend on it in `apps/server/src/routes.ts`) remain in the backend for backward compatibility but are considered **legacy state**. Do not introduce new logic or features that gate behavior on this flag or on the `'onboarding'` `nextStep`; instead, treat the V4 Personality Test as the first meaningful onboarding step.
+- **V2 Test Deprecated**: Old `personality_questions`, `test_responses`, `role_results` tables are legacy (kept for historical data, not used in new code).
+- **Interest Fields Removed**: `interestsTop`, `primaryInterests`, `topicsHappy`, `topicsAvoid` moved to `user_interests` table (old fields deprecated but not dropped).
+- **Language Selection**: No longer collected in onboarding (moved to event pool registration).
+- **Guide State**: Now server-persisted in `hasSeenGuide` (replaces localStorage-only approach).
 
 ## Updated Pool Matching Algorithm (7-Dimension Weighted Scoring)
 
@@ -630,9 +663,9 @@ const { state, isHost, startSession, fetchTopics, advancePhase,
 
 ## Recent Major Changes
 - Social Icebreaker established as the primary in-event flow (2026-03-06); IcebreakerToolkit demoted to legacy.
-- Onboarding redesign to streamline the user experience.
-- Interests carousel for enhanced user engagement.
-- Guide persistence to maintain user orientation.
-- Updates to the matching algorithm for improved accuracy.
+- AI Chat Registration (`DuolingoOnboardingPage`) removed from active onboarding flow; flow now starts at Personality Test V4.
+- Interests carousel introduced for extended data collection.
+- Guide step server-persisted via `hasSeenGuide` (replaces localStorage-only approach).
+- Pool matching algorithm updated to 7-dimension weighted scoring.
 
 **Note**: Ensure to follow the existing formatting style and professional tone throughout the document.
