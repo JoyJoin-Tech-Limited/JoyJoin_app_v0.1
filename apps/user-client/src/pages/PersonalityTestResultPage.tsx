@@ -33,9 +33,6 @@ import { getArchetypeColorHSL } from "@/components/slot-machine/archetypeData";
 import { SkipAnimationButton } from "@/components/SkipAnimationButton";
 import { useAuth } from "@/hooks/useAuth";
 
-// WeChat Mini Program global — available in MP environment, undefined in web/dev
-declare const wx: any;
-
 const staggerContainerVariants = {
   hidden: { opacity: 0 },
   visible: {
