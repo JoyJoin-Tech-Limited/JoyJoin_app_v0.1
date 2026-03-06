@@ -1,20 +1,24 @@
 import type { Express } from "express";
 import { storage } from "./storage";
-import { assessmentSessions } from "@shared/schema";
+import { assessmentSessions, assessmentAnswers, users } from "@shared/schema";
 import { db } from "./db";
+import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import * as schema from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { findBestMatchingArchetypesV2 } from "@shared/personality/matcherV2";
 
 const DEBUG_AUTH = process.env.DEBUG_AUTH === "1";
+const MAX_ERROR_BODY_LOG_LENGTH = 1000;
 
 /**
  * Exchange a WeChat Mini Program login code for an openid.
- * In development (NODE_ENV !== 'production'), uses the code directly as a mock openid.
- * In production, calls the WeChat jscode2session API.
+ * In development (NODE_ENV === 'development'), uses the code directly as a mock openid.
+ * In staging and production, calls the WeChat jscode2session API.
  */
-async function getWechatOpenId(
+export async function getWechatOpenId(
   code: string
 ): Promise<{ openid: string; session_key: string }> {
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV === "development") {
     return {
       openid: `mock_openid_${code}`,
       session_key: `mock_session_${Date.now()}`,
@@ -39,12 +43,51 @@ async function getWechatOpenId(
     `&grant_type=authorization_code`;
 
   const wechatRes = await fetch(url);
-  const wechatData = (await wechatRes.json()) as {
+
+  if (!wechatRes.ok) {
+    let bodyText: string | undefined;
+    try {
+      bodyText = await wechatRes.text();
+    } catch {
+      bodyText = undefined;
+    }
+    console.error("[WeChat Auth] jscode2session HTTP error:", {
+      status: wechatRes.status,
+      statusText: wechatRes.statusText,
+      bodySnippet: bodyText?.slice(0, MAX_ERROR_BODY_LOG_LENGTH),
+    });
+    throw Object.assign(
+      new Error(
+        `WeChat authentication HTTP error: ${wechatRes.status} ${wechatRes.statusText}`
+      ),
+      {
+        code: "WECHAT_AUTH_FAILED",
+        status: wechatRes.status,
+      }
+    );
+  }
+
+  let wechatData: {
     openid?: string;
     session_key?: string;
     errcode?: number;
     errmsg?: string;
   };
+
+  try {
+    wechatData = (await wechatRes.json()) as {
+      openid?: string;
+      session_key?: string;
+      errcode?: number;
+      errmsg?: string;
+    };
+  } catch (err) {
+    console.error("[WeChat Auth] Failed to parse jscode2session JSON response:", err);
+    throw Object.assign(
+      new Error("WeChat authentication failed: invalid JSON response"),
+      { code: "WECHAT_AUTH_FAILED" }
+    );
+  }
 
   if (wechatData.errcode) {
     console.error("[WeChat Auth] jscode2session error:", wechatData);
@@ -61,20 +104,27 @@ async function getWechatOpenId(
     );
   }
 
+  if (!wechatData.session_key) {
+    throw Object.assign(
+      new Error("WeChat authentication failed: no session_key returned"),
+      { code: "WECHAT_AUTH_FAILED" }
+    );
+  }
+
   return {
     openid: wechatData.openid,
-    session_key: wechatData.session_key ?? "",
+    session_key: wechatData.session_key,
   };
 }
 
 /**
  * Find or create a user by WeChat openid, updating the session key if existing.
  */
-async function findOrCreateWechatUser(
+export async function findOrCreateWechatUser(
   openid: string,
   session_key: string
 ): Promise<{ user: NonNullable<Awaited<ReturnType<typeof storage.getUserByWechatOpenId>>>; isNewUser: boolean }> {
-  let existingUser = await storage.getUserByWechatOpenId(openid);
+  const existingUser = await storage.getUserByWechatOpenId(openid);
 
   if (!existingUser) {
     const newUser = await storage.createUserWithWechat({
@@ -87,16 +137,15 @@ async function findOrCreateWechatUser(
 
   await storage.updateUser(existingUser.id, { wechatSessionKey: session_key });
   console.log(`[WeChat Auth] Updated session for existing user: ${existingUser.id}`);
-  // Re-fetch to get updated data
   const updated = await storage.getUserById(existingUser.id);
   return { user: updated ?? existingUser, isNewUser: false };
 }
 
 /**
- * Process test answers and update the user's personality archetype.
- * Returns the updated user (refreshed from DB).
+ * Process test answers, persist per-question data to assessment_answers, and update the user's
+ * personality archetype. All writes are wrapped in a transaction for atomicity.
  */
-async function processTestAnswers(
+export async function processTestAnswers(
   userId: string,
   testAnswers: unknown[]
 ): Promise<void> {
@@ -186,31 +235,65 @@ async function processTestAnswers(
     ((matchResults[0]?.score ?? 0) - (matchResults[1]?.score ?? 0)) >
       DECISIVE_SCORE_DIFFERENCE_THRESHOLD;
 
-  await db.insert(assessmentSessions).values({
-    userId,
-    phase: "completed",
-    currentQuestionIndex: testAnswers.length,
-    traitScores: traitScores as any,
-    traitConfidences: traitConfidences as any,
-    topArchetypes: matchResults.map((r) => ({
-      archetype: r.archetype,
-      score: r.score,
-      confidence: r.confidence,
-    })) as any,
-    algorithmVersion: "v2",
-    matchDetailsJson: matchDetailsJson as any,
-    primaryArchetype,
-    isDecisive,
-    completedAt: new Date(),
-    createdAt: new Date(),
-  });
+  // Wrap assessment_sessions insert + per-question assessment_answers inserts + user update
+  // in a single transaction so a partial failure cannot leave the DB inconsistent.
+  await db.transaction(async (tx: NeonDatabase<typeof schema>) => {
+    const [session] = await tx.insert(assessmentSessions).values({
+      userId,
+      phase: "completed",
+      currentQuestionIndex: testAnswers.length,
+      traitScores: traitScores as any,
+      traitConfidences: traitConfidences as any,
+      topArchetypes: matchResults.map((r) => ({
+        archetype: r.archetype,
+        score: r.score,
+        confidence: r.confidence,
+      })) as any,
+      algorithmVersion: "v2",
+      matchDetailsJson: matchDetailsJson as any,
+      primaryArchetype,
+      isDecisive,
+      completedAt: new Date(),
+      createdAt: new Date(),
+    }).returning();
 
-  await storage.updateUser(userId, {
-    hasCompletedPersonalityTest: true,
-    archetype: primaryArchetype,
-    primaryArchetype,
-    secondaryArchetype,
-  } as any);
+    // Persist per-question answers to assessment_answers
+    for (const ans of testAnswers as any[]) {
+      if (!ans || typeof ans !== "object") continue;
+      const questionId = String(ans.questionId ?? ans.question_id ?? ans.id ?? "");
+      const selectedOption = String(
+        ans.selectedOption ?? ans.value ?? ans.answer ?? ans.selected_option ?? ""
+      );
+      if (!questionId || !selectedOption) continue;
+
+      await tx.insert(assessmentAnswers).values({
+        sessionId: session.id,
+        questionId,
+        questionLevel: Number(ans.questionLevel ?? ans.question_level ?? 1),
+        selectedOption,
+        traitScores: ans.traitScores ?? ans.trait_scores ?? {},
+      }).onConflictDoUpdate({
+        target: [assessmentAnswers.sessionId, assessmentAnswers.questionId],
+        set: {
+          selectedOption,
+          traitScores: ans.traitScores ?? ans.trait_scores ?? {},
+          answeredAt: new Date(),
+        },
+      });
+    }
+
+    // Update user flags and archetype within the same transaction
+    await tx
+      .update(users)
+      .set({
+        hasCompletedPersonalityTest: true,
+        archetype: primaryArchetype,
+        primaryArchetype,
+        secondaryArchetype,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  });
 
   console.log(
     `[WeChat Auth] Saved personality test results for user ${userId}: ${primaryArchetype}`
@@ -265,7 +348,7 @@ export function setupWechatAuth(app: Express) {
           console.error("[WeChat Auth] Session save error:", err);
           return res.status(500).json({ error: "Failed to create session" });
         }
-        
+
         console.log(
           "[WeChat Auth] Session saved successfully! sessionID:",
           req.sessionID
@@ -294,6 +377,10 @@ export function setupWechatAuth(app: Express) {
         status = 401;
         errorCode = "WECHAT_AUTH_FAILED";
         clientMessage = "WeChat authentication failed";
+      } else if (err?.code === "WECHAT_CONFIG_ERROR") {
+        status = 500;
+        errorCode = "WECHAT_CONFIG_ERROR";
+        clientMessage = "Server configuration error";
       } else if (err?.code === "INVALID_TEST_RESULTS") {
         status = 400;
         errorCode = "INVALID_TEST_RESULTS";
@@ -353,7 +440,7 @@ export function setupWechatAuth(app: Express) {
       let status = 500;
       let clientMessage = "Server error during authentication";
 
-      if (err?.code === "WECHAT_AUTH_FAILED") {
+      if (err?.code === "WECHAT_AUTH_FAILED" || err?.code === "WECHAT_CONFIG_ERROR") {
         status = 401;
         clientMessage = "WeChat authentication failed";
       }

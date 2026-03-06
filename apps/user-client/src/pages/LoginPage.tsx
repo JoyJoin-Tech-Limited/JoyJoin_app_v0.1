@@ -36,9 +36,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// WeChat Mini Program global — available in MP environment, undefined in web/dev
-declare const wx: any;
-
 const AREA_CODES = [
   { code: "+86", country: "中国大陆", flag: "🇨🇳" },
   { code: "+852", country: "中国香港", flag: "🇭🇰" },
@@ -339,11 +336,34 @@ export default function LoginPage() {
       if (data.success) {
         await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
         const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as any;
-        const nextPath = updatedUser?.nextStep === 'discover' ? '/discover'
-          : updatedUser?.nextStep === 'guide' ? '/guide'
-          : updatedUser?.nextStep === 'extended-data' ? '/onboarding/extended'
-          : updatedUser?.nextStep === 'profile-review' ? '/onboarding/review'
-          : '/onboarding/setup';
+        const step = updatedUser?.nextStep;
+        let nextPath: string;
+        switch (step) {
+          case 'discover':
+            nextPath = '/discover';
+            break;
+          case 'guide':
+            nextPath = '/guide';
+            break;
+          case 'onboarding':
+            nextPath = '/onboarding';
+            break;
+          case 'personality-test':
+            nextPath = '/personality-test';
+            break;
+          case 'essential-data':
+            nextPath = '/onboarding/setup';
+            break;
+          case 'extended-data':
+            nextPath = '/onboarding/extended';
+            break;
+          case 'profile-review':
+            nextPath = '/onboarding/review';
+            break;
+          default:
+            nextPath = '/onboarding/setup';
+            break;
+        }
         setLocation(nextPath);
       }
     } catch (err) {
