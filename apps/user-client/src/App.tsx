@@ -116,19 +116,9 @@ function RedirectToReview() {
   return null;
 }
 
-function RedirectToAdminSite() {
-  window.location.replace("https://admin.yuejuapp.com");
-  return null;
-}
-
 function AuthenticatedRouter() {
   const { user, nextStep, isLoading } = useAuth();
   const [location] = useLocation();
-
-  // Admin routes - redirect to the dedicated admin subdomain
-  if (location.startsWith("/admin")) {
-    return <RedirectToAdminSite />;
-  }
 
   // Show loading while fetching user state
   if (isLoading) {
@@ -302,6 +292,18 @@ function Router() {
   const { isAuthenticated, isLoading } = useAuth();
   const [location] = useLocation();
 
+  // Admin routes - unconditional redirect to dedicated admin subdomain.
+  // Must be before any isLoading / isAuthenticated checks so there is no
+  // fallback path that lets user-client render admin UI.
+  if (location.startsWith("/admin/login")) {
+    window.location.replace("https://admin.yuejuapp.com/login");
+    return null;
+  }
+  if (location.startsWith("/admin")) {
+    window.location.replace("https://admin.yuejuapp.com");
+    return null;
+  }
+
   if (isLoading) {
     return <LoadingScreen />;
   }
@@ -324,11 +326,6 @@ function Router() {
   // Icebreaker demo is publicly accessible for testing
   if (location === "/icebreaker-demo") {
     return <Route path="/icebreaker-demo" component={IcebreakerDemoPage} />;
-  }
-
-  // Admin routes - redirect to the dedicated admin subdomain
-  if (location.startsWith("/admin")) {
-    return <RedirectToAdminSite />;
   }
 
   // Regular user routes
