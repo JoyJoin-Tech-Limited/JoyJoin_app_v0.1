@@ -7,15 +7,10 @@ import customerServiceQR from "@/assets/customer service/悦聚JoyJoin客服二�
 
 interface WechatServiceQRCardProps {
   variant?: "full" | "compact" | "inline";
-  showBenefits?: boolean;
   title?: string;
   subtitle?: string;
   footer?: string;
   className?: string;
-  // CTA props
-  onAdded?: () => void;
-  onSkip?: () => void;
-  showCTAs?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -68,23 +63,33 @@ export default function WechatServiceQRCard({
         >
           {title}
         </p>
-        <p className="text-xs text-muted-foreground">{subtitle}</p>
+        <p
+          className="font-brand text-xs text-muted-foreground"
+          style={{ fontFamily: "'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif" }}
+        >
+          {subtitle}
+        </p>
       </div>
 
       {/* QR image */}
-      <div
-        className={`${qrSize} rounded-2xl overflow-hidden bg-white`}
-        aria-label="长按保存二维码"
-      >
+      <div className={`${qrSize} rounded-2xl overflow-hidden bg-white`}>
         <img
           src={customerServiceQR}
           alt="悦聚智能客服二维码"
           className="w-full h-full object-contain"
+          aria-describedby="wechat-qr-instruction"
+          loading="lazy"
+          decoding="async"
         />
       </div>
 
       {/* Helper text */}
-      <p className="text-xs text-muted-foreground/70 text-center">长按保存二维码</p>
+      <p
+        id="wechat-qr-instruction"
+        className="text-xs text-muted-foreground/70 text-center"
+      >
+        长按保存二维码
+      </p>
 
       {/* Footer */}
       <p
