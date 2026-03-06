@@ -4,6 +4,11 @@
 Implement revamped in-event icebreaker game experience with AI-powered card generation
 
 ## Overview
+
+> **Context (2026-03-06):** The IcebreakerCardGame described here is a **supporting deep-dive layer** that complements the Social Icebreaker (primary flow). It is NOT the primary in-event icebreaking experience. The primary flow is `IcebreakerSessionPage` / Social Icebreaker (`/icebreaker/:sessionId`). The Card Game (`/icebreaker-game`) is accessed as an optional deep-dive from within or after the Social Icebreaker warmup phase.
+>
+> The **IcebreakerToolkit** (pre-event game browser with 13 curated games) referenced in older docs is a **legacy tool** and should not be treated as the main icebreaking CTA.
+
 This PR implements a complete card-based icebreaker game system for matched events, featuring AI-generated personalized cards, round-based progression, and a polished UI with ambient glow effects and bubble progress indicators.
 
 ## Key Features
