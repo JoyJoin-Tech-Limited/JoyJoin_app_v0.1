@@ -1,5 +1,6 @@
 //my path:/Users/felixg/projects/JoyJoin3/client/src/pages/BlindBoxConfirmationPage.tsx
 
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,9 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, MapPin, Users, DollarSign, Calendar, Clock, ArrowRight, Settings } from "lucide-react";
 import { motion } from "framer-motion";
 import { getCurrencySymbol } from "@/lib/currency";
+import WechatServiceQRCard from "@/components/WechatServiceQRCard";
 
 export default function BlindBoxConfirmationPage() {
   const [, setLocation] = useLocation();
+  const [serviceAdded, setServiceAdded] = useState(false);
   const city = (localStorage.getItem("blindbox_city") || "深圳") as "香港" | "深圳";
   const currencySymbol = getCurrencySymbol(city);
 
@@ -219,6 +222,54 @@ export default function BlindBoxConfirmationPage() {
               </div>
             </div>
           </Card>
+        </motion.div>
+
+        {/* 客服二维码 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          data-testid="section-customer-service-qr"
+        >
+          <WechatServiceQRCard
+            variant="compact"
+            onAdded={() => setServiceAdded(true)}
+          />
+          {/* CTA buttons */}
+          {!serviceAdded ? (
+            <div className="flex gap-3 mt-3">
+              <Button
+                size="sm"
+                className="flex-1 bg-[#07C160] hover:bg-[#06AD56] text-white border-0"
+                onClick={() => setServiceAdded(true)}
+                data-testid="button-service-added"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                已添加客服 ✓
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="flex-1 text-muted-foreground"
+                onClick={() => {/* no-op */}}
+                data-testid="button-service-skip"
+              >
+                暂不加入
+              </Button>
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mt-3 flex items-center justify-center gap-2 text-[#07C160] text-sm font-medium"
+              data-testid="service-added-confirmation"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              <span style={{ fontFamily: "'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif" }}>
+                已成功添加客服，有问题随时找我们 💬
+              </span>
+            </motion.div>
+          )}
         </motion.div>
 
         {/* 操作按钮 */}
