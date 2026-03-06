@@ -86,11 +86,7 @@ export default function FinalProfileReviewPage() {
       // Fetch updated user with new nextStep
       const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as AuthUser;
       
-      // Use server-driven nextStep for navigation
-      const nextPath = updatedUser?.nextStep === 'discover' ? '/discover'
-        : '/'; // guide is deprecated - go directly to discover/home
-      
-      setLocation(nextPath);
+      setLocation('/discover');
     } catch (error) {
       console.error("Error completing profile review:", error);
       toast({
