@@ -648,14 +648,27 @@ export default function PersonalityTestResultPage() {
       // For now, use a mock code for development/testing
       const mockCode = `wechat_test_${crypto.randomUUID()}`;
       
-      // TODO: Replace with actual WeChat SDK call in production:
-      // const { code } = await wx.login();
+      // Use wx.login() in WeChat Mini Program environment, fall back to mock in web/dev
+      let code: string;
+      if (typeof wx !== 'undefined' && wx.login) {
+        const loginResult = await new Promise<any>((resolve, reject) => {
+          wx.login({
+            success: resolve,
+            fail: (err: any) => reject(new Error(err.errMsg || 'wx.login failed')),
+          });
+        });
+        code = loginResult.code;
+      } else {
+        // Web/development environment fallback
+        code = mockCode;
+        console.warn('[WeChatLogin] wx.login() not available, using mock code for dev/web');
+      }
       
       const response = await fetch('/api/auth/wechat/login-with-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          code: mockCode,
+          code,
           testAnswers,
         })
       });

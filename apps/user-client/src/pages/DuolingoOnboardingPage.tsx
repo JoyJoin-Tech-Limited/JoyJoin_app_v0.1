@@ -491,7 +491,7 @@ export default function DuolingoOnboardingPage() {
   // Cleanup auto-advance timer on unmount
   useEffect(() => {
     return () => {
-      clearTimeout(autoAdvanceTimerRef.current);
+      clearTimeout(autoAdvanceTimerRef.current ?? undefined);
     };
   }, []);
 
@@ -553,7 +553,7 @@ export default function DuolingoOnboardingPage() {
     }
 
     // Auto-advance after selection (single-select)
-    clearTimeout(autoAdvanceTimerRef.current);
+    clearTimeout(autoAdvanceTimerRef.current ?? undefined);
     setIsAutoAdvancing(true);
     autoAdvanceTimerRef.current = setTimeout(() => {
       setIsAutoAdvancing(false);
@@ -634,7 +634,7 @@ export default function DuolingoOnboardingPage() {
       }
       
       // Cancel any pending auto-advance when navigating backward
-      clearTimeout(autoAdvanceTimerRef.current);
+      clearTimeout(autoAdvanceTimerRef.current ?? undefined);
       setIsAutoAdvancing(false);
       setDirection(-1);
       setCurrentScreen(prev => prev - 1);
