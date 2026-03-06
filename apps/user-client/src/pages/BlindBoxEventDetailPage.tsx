@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Clock, MapPin, DollarSign, Users, Phone, Navigation, AlertCircle, Sparkles, ChevronRight, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, DollarSign, Users, Navigation, AlertCircle, Sparkles, ChevronRight, CheckCircle2 } from "lucide-react";
 import type { BlindBoxEvent, Venue, VenueDeal } from "@shared/schema";
 import { getCurrencySymbol } from "@/lib/currency";
 import { calculateAge } from "@shared/utils";
@@ -31,7 +31,7 @@ import { detectDevice } from "@/lib/deviceDetection";
 import { getOrAssignVariant } from "@/lib/abTestingFramework";
 import { useRevealStatus } from "@/hooks/useRevealStatus";
 import EventSessionBanner, { FloatingCheckinButton } from "@/components/EventSessionBanner";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import WechatServiceQRCard from "@/components/WechatServiceQRCard";
 
 interface AnimationStatus {
@@ -725,33 +725,44 @@ export default function BlindBoxEventDetailPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {supportCardOpen ? (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.25 }}
-              >
-                <WechatServiceQRCard variant="inline" />
-                <Button
-                  className="w-full mt-3 bg-[#07C160] hover:bg-[#06AD56] text-white border-0"
-                  size="sm"
-                  onClick={() => setSupportCardOpen(false)}
-                  data-testid="button-support-added"
+            <AnimatePresence initial={false}>
+              {supportCardOpen ? (
+                <motion.div
+                  key="open"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
                 >
-                  <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                  已添加客服，关闭
-                </Button>
-              </motion.div>
-            ) : (
-              <button
-                onClick={() => setSupportCardOpen(true)}
-                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-1 text-center"
-                data-testid="button-support-reopen"
-              >
-                点击查看客服二维码
-              </button>
-            )}
+                  <WechatServiceQRCard variant="inline" />
+                  <Button
+                    className="w-full mt-3 bg-[#07C160] hover:bg-[#06AD56] text-white border-0"
+                    size="sm"
+                    onClick={() => setSupportCardOpen(false)}
+                    data-testid="button-support-added"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                    已添加客服，关闭
+                  </Button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="closed"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <button
+                    onClick={() => setSupportCardOpen(true)}
+                    className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-1 text-center"
+                    data-testid="button-support-reopen"
+                  >
+                    点击查看客服二维码
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </CardContent>
         </Card>
       </div>

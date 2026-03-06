@@ -13,6 +13,7 @@ import WechatServiceQRCard from "@/components/WechatServiceQRCard";
 export default function BlindBoxConfirmationPage() {
   const [, setLocation] = useLocation();
   const [serviceAdded, setServiceAdded] = useState(false);
+  const [serviceVisible, setServiceVisible] = useState(true);
   const city = (localStorage.getItem("blindbox_city") || "深圳") as "香港" | "深圳";
   const currencySymbol = getCurrencySymbol(city);
 
@@ -225,16 +226,14 @@ export default function BlindBoxConfirmationPage() {
         </motion.div>
 
         {/* 客服二维码 */}
+        {serviceVisible && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
           data-testid="section-customer-service-qr"
         >
-          <WechatServiceQRCard
-            variant="compact"
-            onAdded={() => setServiceAdded(true)}
-          />
+          <WechatServiceQRCard variant="compact" />
           {/* CTA buttons */}
           {!serviceAdded ? (
             <div className="flex gap-3 mt-3">
@@ -251,7 +250,7 @@ export default function BlindBoxConfirmationPage() {
                 size="sm"
                 variant="ghost"
                 className="flex-1 text-muted-foreground"
-                onClick={() => {/* no-op */}}
+                onClick={() => setServiceVisible(false)}
                 data-testid="button-service-skip"
               >
                 暂不加入
@@ -271,6 +270,7 @@ export default function BlindBoxConfirmationPage() {
             </motion.div>
           )}
         </motion.div>
+        )}
 
         {/* 操作按钮 */}
         <div className="space-y-3">
