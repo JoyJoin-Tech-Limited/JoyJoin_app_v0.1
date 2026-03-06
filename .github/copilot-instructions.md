@@ -594,16 +594,20 @@ This system utilizes rarity-based scoring:
 
 ## Social Icebreaker System
 
+> **The Social Icebreaker is the PRIMARY and MANDATORY in-event icebreaking flow. All other icebreaker components are supporting layers. New icebreaker features MUST integrate with Social Icebreaker.**
+
 > **Architecture principle:** The **Social Icebreaker** (`shared/socialIcebreaker.ts` + `apps/server/src/routes/socialIcebreaker.ts` + `apps/server/src/socialIcebreakerAIService.ts`) is the **central icebreaking flow**. All other icebreaker components are supporting layers.
 
 ### Component Hierarchy
 
-| Component | Role | Files |
-|-----------|------|-------|
-| **Social Icebreaker** | Central flow — multi-phase real-time session | `shared/socialIcebreaker.ts`, `apps/server/src/routes/socialIcebreaker.ts`, `apps/server/src/socialIcebreakerAIService.ts`, `apps/user-client/src/hooks/useSocialIcebreaker.ts` |
-| **IcebreakerToolkit** | Supporting — pre-session host prep, browse 13 curated games | `apps/user-client/src/components/icebreaker/IcebreakerToolkit.tsx`, `shared/icebreakerGames.ts` |
-| **IcebreakerCardGame** | Supporting — in-session AI card game (DB-persisted, 70/30 AI) | `apps/user-client/src/components/icebreaker/IcebreakerCardGame.tsx`, `apps/server/src/icebreakerCardGenerationService.ts` |
-| **IcebreakerTool Widget** | Supporting — lightweight entry point on Discover page | `apps/user-client/src/components/IcebreakerTool.tsx` |
+| Component | Role | Status | Files |
+|-----------|------|--------|-------|
+| **Social Icebreaker** | ⭐ PRIMARY — central multi-phase in-event session | ✅ Active — use this | `shared/socialIcebreaker.ts`, `apps/server/src/routes/socialIcebreaker.ts`, `apps/server/src/socialIcebreakerAIService.ts`, `apps/user-client/src/hooks/useSocialIcebreaker.ts` |
+| **IcebreakerToolkit** | 🗂️ LEGACY — pre-event host prep, 13 curated games | ⚠️ Legacy — do not extend | `apps/user-client/src/components/icebreaker/IcebreakerToolkit.tsx`, `shared/icebreakerGames.ts` |
+| **IcebreakerCardGame** | 🎴 SUPPORTING — AI card deep-dive, runs within warmup | ✅ Active — supporting layer | `apps/user-client/src/components/icebreaker/IcebreakerCardGame.tsx`, `apps/server/src/icebreakerCardGenerationService.ts` |
+| **IcebreakerTool Widget** | 🔗 ENTRY POINT — teaser widget on Discover page | ✅ Active — entry point only | `apps/user-client/src/components/IcebreakerTool.tsx` |
+
+> **Legacy Toolkit Notice:** The IcebreakerToolkit must **not** be featured as the main CTA during events. It is a legacy pre-event game browser retained for backward compatibility. Do not add new Toolkit CTAs or direct users to the Toolkit as the primary in-event icebreaking experience.
 
 ### Social Icebreaker Phases (MVP)
 
@@ -636,6 +640,7 @@ const { state, isHost, startSession, fetchTopics, advancePhase,
 **Full reference:** `docs/icebreaker-system.md`
 
 ## Recent Major Changes
+- Social Icebreaker established as the primary in-event flow (2026-03-06); IcebreakerToolkit demoted to legacy.
 - Onboarding redesign to streamline the user experience.
 - Interests carousel for enhanced user engagement.
 - Guide persistence to maintain user orientation.
