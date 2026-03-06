@@ -8,12 +8,10 @@ import { Shield, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
@@ -35,9 +33,9 @@ export default function AdminLoginPage() {
 
   useEffect(() => {
     if (user && (user as any).isAdmin) {
-      setLocation("/admin");
+      window.location.href = "https://admin.yuejuapp.com";
     }
-  }, [user, setLocation]);
+  }, [user]);
 
   const sendCodeMutation = useMutation({
     mutationFn: async (phone: string) => {
@@ -82,7 +80,7 @@ export default function AdminLoginPage() {
       
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       setTimeout(() => {
-        setLocation("/admin");
+        window.location.href = "https://admin.yuejuapp.com";
       }, 500);
     },
     onError: (error: Error) => {
@@ -119,7 +117,7 @@ export default function AdminLoginPage() {
       
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       setTimeout(() => {
-        setLocation("/admin");
+        window.location.href = "https://admin.yuejuapp.com";
       }, 500);
     },
     onError: (error: Error) => {
