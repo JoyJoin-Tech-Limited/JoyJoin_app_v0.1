@@ -310,8 +310,8 @@ activeAssessmentSessionId: string | null;
 
 ### Migration Notes
 
-- **AI Chat Registration Removed**: `DuolingoOnboardingPage` and the `/onboarding` route are deprecated. The onboarding flow now begins directly at the V4 Personality Test.
-- **`hasCompletedRegistration` Deprecated**: This flag is no longer part of the active flow. Do not gate new features on it.
+- **AI Chat Registration UI Deprecated**: `DuolingoOnboardingPage` and the standalone `/onboarding` experience are deprecated from a product/UI perspective. In the current implementation, `/onboarding` should behave as a thin shell / redirect that effectively starts users at the V4 Personality Test, and new flows must not link to or extend this page.
+- **`hasCompletedRegistration` Legacy Backend Flag**: `hasCompletedRegistration` (and any server `nextStep = 'onboarding'` values that still depend on it in `apps/server/src/routes.ts`) remain in the backend for backward compatibility but are considered **legacy state**. Do not introduce new logic or features that gate behavior on this flag or on the `'onboarding'` `nextStep`; instead, treat the V4 Personality Test as the first meaningful onboarding step.
 - **V2 Test Deprecated**: Old `personality_questions`, `test_responses`, `role_results` tables are legacy (kept for historical data, not used in new code).
 - **Interest Fields Removed**: `interestsTop`, `primaryInterests`, `topicsHappy`, `topicsAvoid` moved to `user_interests` table (old fields deprecated but not dropped).
 - **Language Selection**: No longer collected in onboarding (moved to event pool registration).
