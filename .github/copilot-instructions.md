@@ -92,8 +92,11 @@ Login → Personality Test V4 → Essential Data → Extended Data → Guide →
 
 ```typescript
 const { nextStep } = useAuth(); 
-// Returns: 'personality-test' | 'essential-data' | 
+// Returns: 'onboarding' | 'personality-test' | 'essential-data' |
 //          'extended-data' | 'profile-review' | 'guide' | 'discover'
+// Note: 'onboarding' is a ⚠️ legacy alias still emitted by the server;
+//       clients must treat it as the Personality Test step (`/personality-test`)
+//       and must not introduce new flows that depend on it.
 
 // Redirect logic
 if (nextStep !== 'discover') {
