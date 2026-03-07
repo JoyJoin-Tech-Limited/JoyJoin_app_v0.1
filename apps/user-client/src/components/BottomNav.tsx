@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
 import { queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
-import joyJoinLogo from "@/assets/joyjoin-logo.png";
+import joyJoinLogo from "@/assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi.png";
 import { getHongKongDateForComparison } from "@/lib/hongKongTime";
 import { motion, AnimatePresence } from "framer-motion";
 
