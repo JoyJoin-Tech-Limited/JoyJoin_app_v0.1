@@ -94,7 +94,7 @@ export default function BottomNav() {
   // Smart routing logic for center button
   const centerButtonDestination = useMemo(() => {
     if (!poolRegistrations || !events) {
-      return '/my-journey';
+      return '/discover';
     }
 
     const now = getHongKongDateForComparison(new Date());
@@ -145,8 +145,8 @@ export default function BottomNav() {
       return `/blind-box-events/${futureMatchedEvent.id}`;
     }
 
-    // Priority 5: No activity — show empty state
-    return '/my-journey';
+    // Priority 5: No activity — navigate to discover
+    return '/discover';
   }, [poolRegistrations, events]);
 
   // P2-1: Dynamic center button label
@@ -202,7 +202,7 @@ export default function BottomNav() {
   const handleCenterClick = () => {
     console.log('[Analytics] center_button_tapped', {
       destination: centerButtonDestination,
-      userState: centerButtonDestination.includes('my-journey') ? 'no_activity' : 'has_activity',
+      userState: centerButtonDestination === '/discover' ? 'no_activity' : 'has_activity',
     });
     setLocation(centerButtonDestination);
   };
@@ -210,18 +210,18 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t z-60 safe-area-pb">
       {/* Protruding center button wrapper */}
-      <div className="absolute left-1/2 -translate-x-1/2 -top-6 z-10">
+      <div className="absolute left-1/2 -translate-x-1/2 -top-8 z-10">
         <button
           onClick={handleCenterClick}
           className="relative flex flex-col items-center justify-center gap-1 transition-transform active:scale-95"
           data-testid="nav-center-button"
         >
           {/* Background circle with border */}
-          <div className="relative h-16 w-16 rounded-full bg-gradient-to-br from-violet-500 to-purple-700 border-4 border-background shadow-xl shadow-violet-200 flex items-center justify-center ring-2 ring-violet-300/40">
+          <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-violet-500 to-purple-700 border-[5px] border-background shadow-2xl shadow-violet-300 flex items-center justify-center ring-2 ring-violet-400/50">
             <img 
               src={joyJoinLogo} 
               alt="JoyJoin" 
-              className="h-10 w-10 object-contain"
+              className="h-12 w-12 object-contain"
             />
             {/* Notification badge/pulse */}
             {showCenterBadge && (
