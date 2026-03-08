@@ -79,7 +79,7 @@ When this file conflicts with inline code comments, older documentation in `docs
 
 | User Type | Entry Behaviour |
 |-----------|-----------------|
-| **New / unauthenticated user** | Lands on `LandingPage`; navigates to `/personality-test` and completes `PersonalityTestPageV4` **anonymously**. WeChat 微信授权登入 (account creation / sign-up) happens **after** the personality test during `PersonalityTestResultPage`. Once authenticated the server returns `nextStep` and routes the user forward. |
+| **New / unauthenticated user** | Lands on `LandingPage`; navigates to `/personality-test` and completes `PersonalityTestPageV4` **anonymously**. WeChat 微信授权登入 (account creation / sign-up) happens **after** the personality test during `PersonalityTestResultPage`. After auth, the client calls `/api/auth/user` and uses the server-calculated `nextStep` to decide whether to continue onboarding (e.g. essential data) or send the user to later routes, depending on their stored flags. |
 | **Partially completed user** | Re-enters at the step indicated by the server-returned `nextStep` (e.g. `essential-data`, `extended-data`, `profile-review`). Earlier steps are not repeated. |
 | **Returning user** | Server returns `nextStep === 'discover'` → navigated directly to `/discover`. No onboarding steps are shown. |
 
@@ -97,7 +97,7 @@ All post-authentication routing is controlled by `nextStep` from the `/api/auth/
 
 > **Note on the Guide step**: The `nextStep === 'guide'` case in `AuthenticatedRouter` currently renders `DiscoverPage` directly (inline coach marks replaced the dedicated guide flow). The `/guide` route and `GuidePage` are kept for backward compatibility. Do not treat the guide as a mandatory blocking step in new code unless the active `App.tsx` switch confirms otherwise.
 
-> **Note on Registration**: The legacy AI Chat Registration step (`DuolingoOnboardingPage`) has been removed from the active onboarding flow. The `/onboarding` path now redirects unauthenticated users to `/personality-test`. Any reference to this step in older code or documentation is legacy and should be treated as such.
+> **Note on Registration**: The legacy AI Chat Registration step (`DuolingoOnboardingPage`) has been removed from the active onboarding flow. The `/onboarding` path now aliases/renders the V4 personality test (`PersonalityTestPageV4`) directly at `/onboarding` rather than redirecting to `/personality-test`. Any reference to this step in older code or documentation is legacy and should be treated as such.
 
 #### Server-Driven Navigation (Scope B1)
 
@@ -130,7 +130,7 @@ The `/api/auth/user` endpoint returns:
 |-------|------|-------------|
 | `nextStep` | `string` | Server-calculated next route: `'onboarding' \| 'personality-test' \| 'essential-data' \| 'extended-data' \| 'profile-review' \| 'guide' \| 'discover'` (`'onboarding'` is a legacy/fallback value; routes to `/personality-test`) |
 | `profileEssentialComplete` | `boolean` | Essential data complete (displayName, gender, currentCity) |
-| `profileExtendedComplete` | `boolean` | Extended data complete |
+| `profileExtendedComplete` | `boolean` | Profile enrichment flag based on `educationLevel` + `industryNicheLabel\|industryCategoryLabel` + `hometownRegionCity` (not the interests carousel / `/onboarding/extended` step) |
 | `hasSeenGuide` | `boolean` | Guide viewed (server-persisted) |
 | `hasSeenProfileReview` | `boolean` | Profile review viewed (server-persisted) |
 | `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
@@ -139,9 +139,9 @@ The `/api/auth/user` endpoint returns:
 
 The guide is **server-persisted** but **currently conditional** in routing: `AuthenticatedRouter` treats `nextStep === 'guide'` the same as `nextStep === 'discover'`, routing users directly to `DiscoverPage` with inline coach marks. The dedicated `GuidePage` is retained for backward compatibility only.
 
-- Server field: `user.hasSeenGuide` (persisted to database)
-- Local storage: `joyjoin_guide_seen` (hint only, server state takes priority)
-- API: `POST /api/guide/mark-seen` to mark as seen
+- Server field: `user.hasSeenGuide` (persisted to database; single source of truth for guide completion)
+- Client: Inline coach marks/state should use their own storage keys as needed; do **not** introduce or rely on a `joyjoin_guide_seen` localStorage flag.
+- API: `POST /api/guide/mark-seen` or `POST /api/guide/complete` to mark the guide as seen/completed
 
 #### Key Files
 - `apps/user-client/src/App.tsx` — `AuthenticatedRouter` switch on `nextStep` (authoritative routing source)
@@ -161,7 +161,7 @@ The guide is **server-persisted** but **currently conditional** in routing: `Aut
 
 **Progress Flags** (`users` table):
 ```typescript
-hasCompletedRegistration: boolean;     // Account created (WeChat auth completed)
+hasCompletedRegistration: boolean;     // LEGACY — registration/essential profile completion gate (set after displayName/gender/currentCity, not at WeChat auth)
 hasCompletedPersonalityTest: boolean;  // V4 adaptive assessment complete
 hasSeenProfileReview: boolean;         // Final Profile Review viewed (server-persisted)
 hasSeenGuide: boolean;                 // Guide viewed (server-persisted)
@@ -179,7 +179,7 @@ profileEssentialComplete: boolean;
 // Server-validates: displayName, gender, currentCity present
 
 profileExtendedComplete: boolean;
-// Server-validates: interests, intent filled
+// Server-validates: education + industry labels + hometown present
 
 activeAssessmentSessionId: string | null;
 // Current V4 assessment session if in progress
@@ -305,10 +305,9 @@ activeAssessmentSessionId: string | null;
    └─> On completion: user is prompted for WeChat 微信授权登入
 
 2. User authenticates via WeChat 微信授权登入
-   ├─> POST /api/auth/wechat/login-with-test (links anonymous session to account)
-   ├─> hasCompletedRegistration = true
-   ├─> hasCompletedPersonalityTest = true
-   └─> Server calculates nextStep → 'essential-data'
+   ├─> POST /api/auth/wechat/login-with-test (authenticates user and returns auth/user state, including server-calculated nextStep)
+   ├─> If there is an existing anonymous assessment_session: client calls POST /api/assessment/v4/:sessionId/link-user (post-auth) to associate it with the user
+   └─> This auth endpoint does not itself mutate onboarding flags (e.g. hasCompletedRegistration, hasCompletedPersonalityTest, profileEssentialComplete)
 
 3. User completes essential data (/onboarding/setup)
    ├─> Update users (displayName, gender, currentCity)
@@ -329,8 +328,8 @@ activeAssessmentSessionId: string | null;
 
 ### Migration Notes
 
-- **AI Chat Registration Removed**: The `DuolingoOnboardingPage` / AI Chat Registration step is no longer part of the active onboarding flow. `/onboarding` now redirects unauthenticated users to `/personality-test`. Any code or documentation referencing this step is legacy.
-- **Personality Test Now Pre-Auth**: Users can complete the V4 personality test anonymously before creating an account. WeChat 微信授权登入 occurs after the test. Assessment answers are linked to the account via `POST /api/auth/wechat/login-with-test`.
+- **AI Chat Registration Removed**: The `DuolingoOnboardingPage` / AI Chat Registration step is no longer part of the active onboarding flow. The `/onboarding` path now aliases/renders `PersonalityTestPageV4` directly. Any code or documentation referencing this step is legacy.
+- **Personality Test Now Pre-Auth**: Users can complete the V4 personality test anonymously before creating an account. WeChat 微信授权登入 occurs after the test. If an anonymous `assessment_session` exists, the client links it via `POST /api/assessment/v4/:sessionId/link-user` after auth.
 - **Guide Step Now Conditional**: `nextStep === 'guide'` currently renders `DiscoverPage` directly (inline coach marks). The `GuidePage` is kept for backward compatibility only.
 - **Final Profile Review Added**: `FinalProfileReviewPage` (`/onboarding/review`) is an active onboarding step between Extended Data and the main app. Tracked by `hasSeenProfileReview` (server-persisted).
 - **V2 Test Deprecated**: Old `personality_questions`, `test_responses`, `role_results` tables are legacy (kept for historical data, not used in new code).
