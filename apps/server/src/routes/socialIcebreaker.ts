@@ -6,6 +6,7 @@ import type {
   LieDetectivePlayer,
   LieDetectiveVote,
   PulseCheckResult,
+  PersonalityDiceChallenge,
 } from '@shared/socialIcebreaker';
 import { MVP_PHASES, getNextPhase } from '@shared/socialIcebreaker';
 import {
@@ -14,6 +15,7 @@ import {
   generateLieDetectiveStatements,
   generateXiaoYueComment,
   generateRecapSummary,
+  generatePersonalityDiceChallenges,
 } from '../socialIcebreakerAIService';
 
 const router = Router();
@@ -211,7 +213,7 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
 router.post('/:socialSessionId/advance', async (req: any, res) => {
   const { socialSessionId } = req.params;
   const userId: string = req.session?.userId;
-  const { currentPhase } = req.body as { currentPhase: SocialIcebreakerPhase };
+  const { currentPhase, enabledPhases } = req.body as { currentPhase: SocialIcebreakerPhase; enabledPhases?: SocialIcebreakerPhase[] };
 
   if (!currentPhase) {
     return res.status(400).json({ error: 'currentPhase is required' });
@@ -230,7 +232,15 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     return res.status(400).json({ error: 'Phase mismatch' });
   }
 
-  const nextPhase = getNextPhase(currentPhase, MVP_PHASES);
+  // Use client-provided enabledPhases (for optional phases like personality_dice) or fall back to MVP_PHASES.
+  // Only allow phases that are valid SocialIcebreakerPhase values to prevent injection.
+  const VALID_PHASES = new Set<SocialIcebreakerPhase>(['warmup', 'micro_challenge', 'lie_detective', 'auction', 'personality_dice', 'recap']);
+  const resolvedEnabledPhases: SocialIcebreakerPhase[] =
+    Array.isArray(enabledPhases) && enabledPhases.every(p => VALID_PHASES.has(p))
+      ? enabledPhases
+      : MVP_PHASES;
+
+  const nextPhase = getNextPhase(currentPhase, resolvedEnabledPhases);
   const resolvedNextPhase: SocialIcebreakerPhase = nextPhase === 'recap' ? 'recap' : nextPhase;
 
   // Auto-skip lie_detective if not enough players
@@ -453,6 +463,75 @@ router.post('/:socialSessionId/lie-detective/vote', (req: any, res) => {
   });
 });
 
+// POST /api/social-icebreaker/:socialSessionId/personality-dice/generate
+router.post('/:socialSessionId/personality-dice/generate', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+  const { participants } = req.body as {
+    participants: Array<{ userId: string; displayName: string; archetype?: string; traitScores?: Record<string, number> }>;
+  };
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = socialSessions.get(socialSessionId);
+  if (!state) {
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  if (state.hostUserId !== userId) {
+    return res.status(403).json({ error: 'Only the host can generate dice challenges' });
+  }
+
+  try {
+    const challenges = await generatePersonalityDiceChallenges(participants || []);
+    state.personalityDiceChallenges = challenges;
+    state.currentDicePlayerIndex = 0;
+    state.diceCompletedBy = [];
+    socialSessions.set(socialSessionId, state);
+
+    return res.json({ challenges });
+  } catch (error) {
+    console.error('[SocialIcebreaker] personality-dice/generate error:', error);
+    return res.status(500).json({ error: 'Failed to generate dice challenges' });
+  }
+});
+
+// POST /api/social-icebreaker/:socialSessionId/personality-dice/complete
+router.post('/:socialSessionId/personality-dice/complete', (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const { userId } = req.body as { userId: string };
+
+  const state = socialSessions.get(socialSessionId);
+  if (!state) {
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  const diceCompletedBy = state.diceCompletedBy || [];
+  if (!diceCompletedBy.includes(userId)) {
+    diceCompletedBy.push(userId);
+    state.diceCompletedBy = diceCompletedBy;
+  }
+
+  // Advance currentDicePlayerIndex if the current player just completed
+  const challenges = state.personalityDiceChallenges || [];
+  const currentIdx = state.currentDicePlayerIndex ?? 0;
+  if (challenges[currentIdx]?.userId === userId) {
+    state.currentDicePlayerIndex = Math.min(currentIdx + 1, challenges.length - 1);
+  }
+
+  socialSessions.set(socialSessionId, state);
+
+  const allCompleted = challenges.length > 0 && diceCompletedBy.length >= challenges.length;
+
+  return res.json({
+    diceCompletedBy,
+    currentDicePlayerIndex: state.currentDicePlayerIndex,
+    allCompleted,
+  });
+});
+
 // GET /api/social-icebreaker/:socialSessionId/recap
 router.get('/:socialSessionId/recap', async (req: any, res) => {
   const { socialSessionId } = req.params;
@@ -464,6 +543,73 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
 
   const durationMinutes = Math.round((Date.now() - (state.sessionStartedAt || state.phaseStartedAt)) / 60000);
 
+  // ── Compute medals ──────────────────────────────────────────────────────────
+  interface Medal {
+    emoji: string;
+    title: string;
+    recipientDisplayName: string;
+    description: string;
+  }
+  const medals: Medal[] = [];
+
+  // 🕵️ 最佳侦探: most correct lie guesses
+  const sessionLieMap = lieStatements.get(socialSessionId);
+  if (sessionLieMap && (state.votes || []).length > 0) {
+    const correctByVoter: Record<string, number> = {};
+    for (const vote of state.votes || []) {
+      const playerStmts = sessionLieMap.get(vote.targetUserId);
+      const lieStmt = playerStmts?.find(s => s.isLie);
+      if (lieStmt && vote.guessedStatementIndex === lieStmt.index) {
+        correctByVoter[vote.voterId] = (correctByVoter[vote.voterId] || 0) + 1;
+      }
+    }
+    const topVoter = Object.entries(correctByVoter).sort((a, b) => b[1] - a[1])[0];
+    if (topVoter && topVoter[1] > 0) {
+      const allPlayers = [
+        ...(state.lieDetectivePlayers || []),
+        { userId: state.hostUserId, displayName: state.hostDisplayName },
+      ];
+      const recipient = allPlayers.find(p => p.userId === topVoter[0]);
+      if (recipient) {
+        medals.push({
+          emoji: '🕵️',
+          title: '最佳侦探',
+          recipientDisplayName: recipient.displayName,
+          description: `猜对了 ${topVoter[1]} 个谎言`,
+        });
+      }
+    }
+  }
+
+  // ⚡ 挑战先锋: first person in challengeCompletedBy
+  if (state.challengeCompletedBy && state.challengeCompletedBy.length > 0) {
+    const firstUserId = state.challengeCompletedBy[0];
+    const allPlayersForChallenge = [
+      ...(state.lieDetectivePlayers || []),
+      { userId: state.hostUserId, displayName: state.hostDisplayName },
+    ];
+    const recipient = allPlayersForChallenge.find(p => p.userId === firstUserId);
+    if (recipient) {
+      medals.push({
+        emoji: '⚡',
+        title: '挑战先锋',
+        recipientDisplayName: recipient.displayName,
+        description: '第一个完成挑战',
+      });
+    }
+  }
+
+  // 💬 话题王: host gets credit if at least 3 topics were reached (currentTopicIndex is 0-indexed)
+  const MIN_TOPICS_FOR_MEDAL = 3;
+  if ((state.currentTopicIndex ?? 0) >= MIN_TOPICS_FOR_MEDAL - 1) {
+    medals.push({
+      emoji: '💬',
+      title: '话题王',
+      recipientDisplayName: state.hostDisplayName,
+      description: '带领大家聊了多个精彩话题',
+    });
+  }
+
   try {
     const players = state.lieDetectivePlayers || [];
     const summary = await generateRecapSummary({
@@ -473,7 +619,7 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
       durationMinutes,
     });
 
-    return res.json({ summary, state: sanitizeStateForClient(state) });
+    return res.json({ summary, medals, state: sanitizeStateForClient(state) });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to generate recap' });
   }

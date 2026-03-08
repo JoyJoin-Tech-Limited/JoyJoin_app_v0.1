@@ -32,6 +32,8 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   getUserByPhone(phoneNumber: string): Promise<User[]>;
   createUserWithPhone(data: { phoneNumber: string; email: string; firstName: string; lastName: string }): Promise<User>;
+  getUserByWechatOpenId(openId: string): Promise<User | undefined>;
+  createUserWithWechat(data: { wechatOpenId: string; wechatSessionKey?: string; wechatNickname?: string; wechatAvatarUrl?: string }): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateProfile(id: string, profile: UpdateProfile): Promise<User>;
   updateFullProfile(id: string, profile: UpdateFullProfile): Promise<User>;
@@ -447,6 +449,34 @@ export class DatabaseStorage implements IStorage {
         firstName: data.firstName,
         lastName: data.lastName,
         // Removed DEMO MODE - Users must complete full registration flow
+        hasCompletedRegistration: false,
+        hasCompletedInterestsTopics: false,
+        hasCompletedPersonalityTest: false,
+        hasCompletedProfileSetup: false,
+        hasCompletedVoiceQuiz: false,
+      })
+      .returning();
+    return user;
+  }
+
+  async getUserByWechatOpenId(openId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.wechatOpenId, openId));
+    return user;
+  }
+
+  async createUserWithWechat(data: {
+    wechatOpenId: string;
+    wechatSessionKey?: string;
+    wechatNickname?: string;
+    wechatAvatarUrl?: string;
+  }): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({
+        wechatOpenId: data.wechatOpenId,
+        wechatSessionKey: data.wechatSessionKey,
+        wechatNickname: data.wechatNickname,
+        wechatAvatarUrl: data.wechatAvatarUrl,
         hasCompletedRegistration: false,
         hasCompletedInterestsTopics: false,
         hasCompletedPersonalityTest: false,
