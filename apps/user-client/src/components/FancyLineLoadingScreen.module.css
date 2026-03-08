@@ -19,10 +19,8 @@
   will-change: transform, filter, opacity;
 }
 
-.loop {}  /* no-op, animation is handled inline via JS for loop vs non-loop */
-
 .fadeOut {
-  animation: fadeOut 260ms ease-in forwards !important;
+  animation: fadeOut 260ms ease-in forwards;
 }
 
 @keyframes logoEntrance {
