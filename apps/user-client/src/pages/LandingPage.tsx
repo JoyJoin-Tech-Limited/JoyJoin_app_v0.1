@@ -11,7 +11,7 @@
  * - Legal footer links
  * 
  * Route: /
- * Updated: 2026-02-24 (Entrance animation + gradient consistency fix)
+ * Updated: 2026-03-07 (Fix: clear stale assessment cache on CTA to ensure fresh start)
  */
 
 import { useLocation } from "wouter";
@@ -39,6 +39,17 @@ export default function LandingPage() {
   // Primary CTA handler - go to personality test (combined registration & assessment)
   const handlePrimaryCTA = () => {
     console.log('[Analytics] Landing: Primary CTA clicked');
+
+    // Clear any stale assessment session cache so the personality test
+    // always starts fresh from the landing page CTA.
+    // Keys must match constants in useAdaptiveAssessment.ts:
+    //   PRESIGNUP_SESSION_KEY = "joyjoin_v4_assessment_session"
+    //   PRESIGNUP_ANSWERS_KEY = "joyjoin_v4_presignup_answers"
+    localStorage.removeItem("joyjoin_v4_assessment_session");
+    localStorage.removeItem("joyjoin_v4_presignup_answers");
+    localStorage.removeItem("joyjoin_synced_session_id");
+    localStorage.removeItem("joyjoin_synced_answer_count");
+
     // Direct to personality test (includes registration + adaptive assessment)
     setLocation('/personality-test');
   };
