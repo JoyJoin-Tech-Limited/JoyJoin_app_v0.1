@@ -14,7 +14,7 @@ JoyJoin uses a **value-first** onboarding approach:
 
 ```
 Landing → Personality Test (Anonymous) → Results → WeChat Login → 
-Essential Data → Extended Data → Guide (3 steps) → Discover Page
+Essential Data → Extended Data → Profile Review → Discover Page
 ```
 
 **Expected Impact:** +15% signup conversion (based on Soul, 16Personalities benchmarks)
@@ -105,7 +105,7 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 **After Completion:**
 - `profileEssentialComplete = true`
-- Redirect to `/onboarding/extended` or `/guide`
+- Redirect to `/onboarding/extended` or `/onboarding/review`
 
 ---
 
@@ -123,27 +123,27 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 **After Completion/Skip:**
 - `hasCompletedExtendedData = true`
-- Redirect to `/guide`
+- Redirect to `/onboarding/review`
 
 ---
 
-### Step 5: Guide (3 Steps)
+### Step 5: Profile Review
 
-**Route:** `/guide`
+**Route:** `/onboarding/review`
 
-**User State:** Ready to discover events
+**User State:** Has completed essential and extended data
 
 **Content:**
-1. **User Portrait**: Archetype badge, overview, match reasons
-2. **Event Flow**: Explains pool → match → check-in → feedback
-3. **Xiaoyue AI**: Introduces AI assistant, encourages profile completion
+- Animated "analyzing" phase (minimum 2.5 seconds)
+- Profile portrait card reveal with archetype, interests, and stats
 
 **Data Contract:**
-- Server field: `user.hasSeenGuide` (persisted to database)
-- Local storage: `joyjoin_guide_seen` (hint only, server state takes priority)
-- API: `POST /api/guide/mark-seen` to mark as seen
+- Server field: `user.hasSeenProfileReview` (persisted to database)
+- API: `POST /api/profile-review/complete` to mark as seen
 
-**User can skip at any time**
+**After Completion:**
+- `hasSeenProfileReview = true`
+- Navigate to `/discover`
 
 ---
 
@@ -152,6 +152,8 @@ await fetch('/api/auth/wechat/login-with-test', {
 **Route:** `/` or `/discover`
 
 **User State:** Onboarding complete
+
+> **Note:** The 3-step guide (`/guide`) that previously preceded the Discover page was deprecated on 2026-02-16. Its content has been replaced by inline coach marks (`CoachMarkBanner`, `XiaoyueFAB`, `ProfileCompletionNudge`) on the Discover page itself.
 
 ---
 
@@ -163,10 +165,10 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 | Field | Type | Description |
 |------|------|-------------|
-| `nextStep` | `string` | Server-calculated next route: `onboarding`, `personality-test`, `essential-data`, `extended-data`, `profile-review`, `guide`, `discover` |
+| `nextStep` | `string` | Server-calculated next route: `onboarding`, `personality-test`, `essential-data`, `extended-data`, `profile-review`, `discover`. Note: the server may still return `guide` for users with `hasSeenGuide = false` (backward compat); the client ignores `guide` and treats it as `discover`. |
 | `profileEssentialComplete` | `boolean` | Essential data complete (displayName, gender, currentCity) |
 | `profileExtendedComplete` | `boolean` | Extended data complete (interests) |
-| `hasSeenGuide` | `boolean` | Guide viewed (server-persisted) |
+| `hasSeenGuide` | `boolean` | Legacy field — guide step removed from onboarding flow (2026-02-16); retained on server for backward compatibility |
 | `hasSeenProfileReview` | `boolean` | Profile review viewed (server-persisted) |
 | `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
 

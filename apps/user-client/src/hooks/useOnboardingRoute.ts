@@ -9,8 +9,7 @@
  * 2. /onboarding/setup - Essential data (7 steps)
  * 3. /onboarding/extended - Interest carousel
  * 4. /onboarding/review - Profile preview
- * 5. /guide - Onboarding guide (3 steps)
- * 6. /discover - Main app
+ * 5. /discover - Main app
  */
 
 import { useMemo } from "react";
@@ -22,7 +21,6 @@ export type OnboardingRoute =
   | '/onboarding/setup'
   | '/onboarding/extended'
   | '/onboarding/review'
-  | '/guide'
   | '/discover';
 
 /**
@@ -60,11 +58,6 @@ export function calculateOnboardingRoute(user: AuthUser | undefined): Onboarding
   
   if (!hasSeenProfileReview) {
     return '/onboarding/review';
-  }
-
-  // Step 6: Guide not seen
-  if (!user.hasSeenGuide) {
-    return '/guide';
   }
 
   // All onboarding steps complete -> main app
