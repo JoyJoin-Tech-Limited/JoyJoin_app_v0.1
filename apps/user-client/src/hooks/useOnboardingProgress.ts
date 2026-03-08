@@ -20,7 +20,6 @@ export interface OnboardingProgress {
     essentialData: boolean;
     extendedData: boolean;
     profileReview: boolean;
-    guide: boolean;
   };
 }
 
@@ -30,7 +29,6 @@ export type OnboardingStep =
   | 'essential-data'
   | 'extended-data'
   | 'profile-review'
-  | 'guide'
   | 'complete';
 
 const STEP_ORDER: OnboardingStep[] = [
@@ -39,7 +37,6 @@ const STEP_ORDER: OnboardingStep[] = [
   'essential-data',
   'extended-data',
   'profile-review',
-  'guide',
   'complete',
 ];
 
@@ -60,7 +57,6 @@ export function useOnboardingProgress(): OnboardingProgress {
     
     // Use server-persisted flags instead of localStorage
     const hasSeenProfileReview = user?.hasSeenProfileReview ?? false;
-    const hasSeenGuide = user?.hasSeenGuide ?? false;
     
     const steps = {
       registration: hasCompletedRegistration,
@@ -68,7 +64,6 @@ export function useOnboardingProgress(): OnboardingProgress {
       essentialData: hasCompletedEssentialData,
       extendedData: hasCompletedExtendedData,
       profileReview: hasSeenProfileReview,
-      guide: hasSeenGuide,
     };
     
     // Calculate current step
@@ -83,8 +78,6 @@ export function useOnboardingProgress(): OnboardingProgress {
       currentStep = 'extended-data';
     } else if (!hasSeenProfileReview) {
       currentStep = 'profile-review';
-    } else if (!hasSeenGuide) {
-      currentStep = 'guide';
     }
     
     // Calculate progress
@@ -119,8 +112,6 @@ export function getStepRoute(step: OnboardingStep): string {
       return '/onboarding/extended';
     case 'profile-review':
       return '/onboarding/review';
-    case 'guide':
-      return '/guide';
     case 'complete':
     default:
       return '/';
@@ -142,8 +133,6 @@ export function getStepLabel(step: OnboardingStep): string {
       return '补充资料';
     case 'profile-review':
       return '资料预览';
-    case 'guide':
-      return '新手引导';
     case 'complete':
       return '完成';
   }

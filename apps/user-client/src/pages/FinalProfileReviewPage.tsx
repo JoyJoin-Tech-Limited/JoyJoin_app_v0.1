@@ -21,7 +21,6 @@ import { ProfilePortraitCard } from "@/components/ProfilePortraitCard";
 import { useOnboardingAnalytics } from "@/hooks/useOnboardingAnalytics"; // Phase 2
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { AuthUser } from "@/hooks/useAuth";
 
 type Phase = "analyzing" | "complete";
 
@@ -83,14 +82,10 @@ export default function FinalProfileReviewPage() {
       // Invalidate auth user query to get updated nextStep
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
-      // Fetch updated user with new nextStep
-      const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as AuthUser;
+      // Warm the cache so the Discover page loads instantly after navigation
+      await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] });
       
-      // Use server-driven nextStep for navigation
-      const nextPath = updatedUser?.nextStep === 'discover' ? '/discover'
-        : '/'; // guide is deprecated - go directly to discover/home
-      
-      setLocation(nextPath);
+      setLocation('/discover');
     } catch (error) {
       console.error("Error completing profile review:", error);
       toast({
