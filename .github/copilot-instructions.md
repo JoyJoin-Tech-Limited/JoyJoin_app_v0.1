@@ -73,7 +73,7 @@ JoyJoin uses a 4-step guided onboarding flow with **server-driven progress track
 
 #### Flow Sequence
 ```
-Login → Personality Test V4 → Essential Data → Extended Data → Guide → Discover
+Login → Personality Test V4 → Essential Data → Extended Data → Profile Review → Discover
 ```
 > **Note:** `Discover` is the post-onboarding destination, not a formal step. The 4 active onboarding steps are listed in the table below.
 
@@ -84,7 +84,7 @@ Login → Personality Test V4 → Essential Data → Extended Data → Guide →
 | 1. Personality Test | `/personality-test` | `PersonalityTestPageV4` | Adaptive assessment | `hasCompletedPersonalityTest` |
 | 2. Essential Data | `/onboarding/setup` | `EssentialDataPage` | Nickname, gender, city, etc. | `profileEssentialComplete` |
 | 3. Extended Data | `/onboarding/extended` | `ExtendedDataPage` | Interests carousel | `hasCompletedInterestsCarousel` |
-| 4. Guide | `/guide` | Guide components | 3-step tutorial | `hasSeenGuide` (server) |
+| 4. Profile Review | `/onboarding/review` | `FinalProfileReviewPage` | Profile preview | `hasSeenProfileReview` (server) |
 
 #### Server-Driven Navigation (Scope B1)
 
@@ -93,10 +93,12 @@ Login → Personality Test V4 → Essential Data → Extended Data → Guide →
 ```typescript
 const { nextStep } = useAuth(); 
 // Returns: 'onboarding' | 'personality-test' | 'essential-data' |
-//          'extended-data' | 'profile-review' | 'guide' | 'discover'
+//          'extended-data' | 'profile-review' | 'discover'
 // Note: 'onboarding' is a ⚠️ legacy alias still emitted by the server;
 //       clients must treat it as the Personality Test step (`/personality-test`)
 //       and must not introduce new flows that depend on it.
+// Note: 'guide' may still be returned by the server for users with hasSeenGuide=false
+//       (backward compat); the client ignores it and routes to Discover instead.
 
 // Redirect logic
 if (nextStep !== 'discover') {
@@ -118,24 +120,13 @@ The `/api/auth/user` endpoint now returns:
 | `nextStep` | `string` | Server-calculated next route |
 | `profileEssentialComplete` | `boolean` | Essential data complete |
 | `profileExtendedComplete` | `boolean` | Extended data complete |
-| `hasSeenGuide` | `boolean` | Guide viewed (server-persisted) |
+| `hasSeenGuide` | `boolean` | ⚠️ Legacy — guide step removed 2026-02-16; field retained for backward compat |
 | `hasSeenProfileReview` | `boolean` | Profile review viewed (server-persisted) |
 | `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
 
-#### Guide System (Scope B2)
+#### Guide System (Scope B2) — Deprecated
 
-The 3-step guide is now **server-persisted**:
-
-1. **User Portrait**: Archetype badge, overview, match reasons
-2. **Event Flow**: Explains pool → match → check-in → feedback
-3. **Xiaoyue AI**: Introduces AI assistant, encourages profile completion
-
-**Data Contract:**
-- Server field: `user.hasSeenGuide` (persisted to database)
-- Local storage: `joyjoin_guide_seen` (hint only, server state takes priority)
-- API: `POST /api/guide/mark-seen` to mark as seen
-- Trigger: After essential data completion
-- User can skip at any time
+> **Deprecated (2026-02-16):** The 3-step guide onboarding step has been removed from the onboarding flow. Guide content is now delivered via inline coach marks (`CoachMarkBanner`, `XiaoyueFAB`, `ProfileCompletionNudge`) on the Discover page. `GuidePage.tsx` and `useGuideFlow.ts` are retained for backward compatibility but are no longer active onboarding steps.
 
 #### Key Files
 - `apps/user-client/src/hooks/useOnboardingProgress.ts` — Progress tracking
@@ -300,9 +291,9 @@ activeAssessmentSessionId: string | null;
    ├─> Insert/Update user_interests
    └─> hasCompletedInterestsCarousel = true
 
-4. User views guide
-   ├─> POST /api/guide/mark-seen
-   └─> hasSeenGuide = true
+4. User views profile review
+   ├─> POST /api/profile-review/complete
+   └─> hasSeenProfileReview = true
 
 5. Server calculates nextStep
    └─> Return 'discover' when all flags true
