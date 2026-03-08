@@ -31,6 +31,12 @@ export interface GuideFlowState {
 /**
  * 引导流程管理 Hook
  * 
+ * @deprecated The 3-step guide onboarding step was removed from the onboarding flow
+ * on 2026-02-16. Guide content has been replaced by inline coach marks
+ * (CoachMarkBanner, XiaoyueFAB, ProfileCompletionNudge) on the Discover page.
+ * This hook is no longer used in the onboarding flow and will be removed in a
+ * future cleanup PR.
+ * 
  * 管理 3 步引导页的状态和导航
  * - 步骤 1: 用户画像生成说明
  * - 步骤 2: 盲盒活动流程介绍
