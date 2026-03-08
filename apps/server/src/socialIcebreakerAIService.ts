@@ -4,6 +4,7 @@ import type {
   MicroChallenge,
   LieDetectiveStatement,
   AtmosphereMood,
+  PersonalityDiceChallenge,
 } from '@shared/socialIcebreaker';
 
 const deepseekClient = new OpenAI({
@@ -48,6 +49,7 @@ const FALLBACK_MICRO_CHALLENGES: MicroChallenge[] = [
     description: '在座所有人找出3个共同的爱好或经历',
     durationSeconds: 180,
     completionCTA: '找到了！',
+    visualHint: '🔍🤝',
   },
   {
     id: 'c2',
@@ -55,6 +57,7 @@ const FALLBACK_MICRO_CHALLENGES: MicroChallenge[] = [
     description: '每人用3个词形容坐在自己右边的人',
     durationSeconds: 120,
     completionCTA: '说完了！',
+    visualHint: '💬🌟',
   },
   {
     id: 'c3',
@@ -62,6 +65,7 @@ const FALLBACK_MICRO_CHALLENGES: MicroChallenge[] = [
     description: '大家一起想出一个绝对不会成功的创业想法',
     durationSeconds: 150,
     completionCTA: '想到了！',
+    visualHint: '🚀💡',
   },
   {
     id: 'c4',
@@ -69,6 +73,7 @@ const FALLBACK_MICRO_CHALLENGES: MicroChallenge[] = [
     description: '每人哼一首歌，其他人猜歌名，猜对了换下一首',
     durationSeconds: 120,
     completionCTA: '猜完了！',
+    visualHint: '🎵🎤',
   },
   {
     id: 'c5',
@@ -76,6 +81,7 @@ const FALLBACK_MICRO_CHALLENGES: MicroChallenge[] = [
     description: '每人用30秒介绍自己最不为人知的一面',
     durationSeconds: 180,
     completionCTA: '介绍完了！',
+    visualHint: '⚡👤',
   },
   {
     id: 'c6',
@@ -83,6 +89,7 @@ const FALLBACK_MICRO_CHALLENGES: MicroChallenge[] = [
     description: '两人背对背同时说出同一个数字，全组尝试心灵感应',
     durationSeconds: 90,
     completionCTA: '挑战完成！',
+    visualHint: '🧠✨',
   },
   {
     id: 'c7',
@@ -90,6 +97,7 @@ const FALLBACK_MICRO_CHALLENGES: MicroChallenge[] = [
     description: '所有人按照生日月份从小到大排成一排，不能说话只能用手势',
     durationSeconds: 120,
     completionCTA: '排好了！',
+    visualHint: '🎯👥',
   },
   {
     id: 'c8',
@@ -97,6 +105,7 @@ const FALLBACK_MICRO_CHALLENGES: MicroChallenge[] = [
     description: '每人说一句话，接力完成一个完整故事，结尾必须出乎意料',
     durationSeconds: 180,
     completionCTA: '故事完成！',
+    visualHint: '📖🎭',
   },
 ];
 
@@ -195,7 +204,7 @@ export async function generateMicroChallenges(params: {
 - 有趣且能促进互动
 
 请以JSON格式返回：
-[{"id":"ai_c1","title":"挑战名称","description":"详细描述","durationSeconds":120,"completionCTA":"完成按钮文字"}]
+[{"id":"ai_c1","title":"挑战名称","description":"详细描述","durationSeconds":120,"completionCTA":"完成按钮文字","visualHint":"2-3个相关emoji"}]
 
 直接返回JSON数组，不要其他内容。`;
 
@@ -401,4 +410,99 @@ function getDefaultRecap(params: {
     ],
     closingLine: `感谢${names.slice(0, 2).join('和')}${names.length > 2 ? '等' : ''}大家的参与！期待下次再见 🌟`,
   };
+}
+
+// ─── Personality Dice ─────────────────────────────────────────────────────────
+
+type DominantTrait = 'A' | 'C' | 'E' | 'O' | 'X' | 'P';
+
+const DICE_CURATED: Record<DominantTrait, Omit<PersonalityDiceChallenge, 'userId' | 'displayName' | 'archetype' | 'dominantTrait'>> = {
+  X: { challengeTitle: '快速印象官', challengeBody: '用3个词描述在座每个人，不能重复！', challengeEmoji: '🎤', difficulty: 'easy' },
+  A: { challengeTitle: '温暖传递者', challengeBody: '找出今晚你感受到最多温暖的人，当面告诉他为什么', challengeEmoji: '🤗', difficulty: 'medium' },
+  O: { challengeTitle: '奇异探险家', challengeBody: '分享一件你最近做过的、大多数人不会做的事', challengeEmoji: '🌟', difficulty: 'medium' },
+  C: { challengeTitle: '严苛评委', challengeBody: '你来当评委：给今晚的破冰打分，并说出最值得改进的一点', challengeEmoji: '📋', difficulty: 'hard' },
+  E: { challengeTitle: '误解澄清者', challengeBody: '有没有一件事，你觉得大家可能误解你了？说出来', challengeEmoji: '💭', difficulty: 'medium' },
+  P: { challengeTitle: '阳光分享者', challengeBody: '说一件今晚让你开心的小事，越具体越好', challengeEmoji: '☀️', difficulty: 'easy' },
+};
+
+function getDominantTrait(traitScores?: Record<string, number>): DominantTrait {
+  if (!traitScores) return 'P';
+  const traits: DominantTrait[] = ['A', 'C', 'E', 'O', 'X', 'P'];
+  let best: DominantTrait = 'P';
+  let bestScore = -Infinity;
+  for (const t of traits) {
+    const score = traitScores[t] ?? traitScores[t.toLowerCase()] ?? 0;
+    if (score > bestScore) {
+      bestScore = score;
+      best = t;
+    }
+  }
+  return best;
+}
+
+export async function generatePersonalityDiceChallenges(participants: Array<{
+  userId: string;
+  displayName: string;
+  archetype?: string;
+  traitScores?: Record<string, number>;
+}>): Promise<PersonalityDiceChallenge[]> {
+  // Build curated fallbacks first
+  const fallbacks: PersonalityDiceChallenge[] = participants.map(p => {
+    const trait = getDominantTrait(p.traitScores);
+    const curated = DICE_CURATED[trait];
+    return {
+      userId: p.userId,
+      displayName: p.displayName,
+      archetype: p.archetype,
+      dominantTrait: trait,
+      ...curated,
+    };
+  });
+
+  try {
+    const participantList = participants.map(p => ({
+      displayName: p.displayName,
+      archetype: p.archetype || '未知',
+      dominantTrait: getDominantTrait(p.traitScores),
+    }));
+
+    const prompt = `你是社交破冰专家小悦。请为以下参与者各生成一个个性化挑战：
+
+${JSON.stringify(participantList, null, 2)}
+
+每个挑战要基于该人的人格特质(dominantTrait)，要有趣且适合当场执行（1-2分钟内）。
+
+请以JSON数组返回（顺序与输入一致）：
+[{"challengeTitle":"挑战名称","challengeBody":"挑战说明（20字内）","challengeEmoji":"1个emoji","difficulty":"easy|medium|hard"}]
+
+直接返回JSON数组，不要其他内容。`;
+
+    const response = await deepseekClient.chat.completions.create({
+      model: 'deepseek-chat',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.85,
+      max_tokens: 400,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    if (!content) return fallbacks;
+
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed) && parsed.length === participants.length) {
+      return participants.map((p, i) => ({
+        userId: p.userId,
+        displayName: p.displayName,
+        archetype: p.archetype,
+        dominantTrait: getDominantTrait(p.traitScores),
+        challengeTitle: parsed[i].challengeTitle || fallbacks[i].challengeTitle,
+        challengeBody: parsed[i].challengeBody || fallbacks[i].challengeBody,
+        challengeEmoji: parsed[i].challengeEmoji || fallbacks[i].challengeEmoji,
+        difficulty: parsed[i].difficulty || fallbacks[i].difficulty,
+      }));
+    }
+  } catch (error) {
+    console.error('[SocialIcebreakerAI] generatePersonalityDiceChallenges error:', error);
+  }
+
+  return fallbacks;
 }

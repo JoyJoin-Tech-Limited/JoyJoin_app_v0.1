@@ -53,8 +53,6 @@ import MatchingStatusPage from "@/pages/MatchingStatusPage";
 import MyJourneyPage from "@/pages/MyJourneyPage";
 import EventPoolRegistrationPage from "@/pages/EventPoolRegistrationPage";
 import TestArchetypeOrbit from "@/pages/TestArchetypeOrbit";
-import AdminLayout from "@/pages/admin/AdminLayout";
-import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import NotFound from "@/pages/not-found";
 import LevelUpProvider from "@/components/LevelUpProvider";
 import GuidePage from "@/pages/GuidePage";
@@ -121,11 +119,6 @@ function RedirectToReview() {
 function AuthenticatedRouter() {
   const { user, nextStep, isLoading } = useAuth();
   const [location] = useLocation();
-
-  // Admin routes - separate from user flow
-  if (user?.isAdmin && location.startsWith("/admin")) {
-    return <AdminLayout />;
-  }
 
   // Show loading while fetching user state
   if (isLoading) {
@@ -299,6 +292,18 @@ function Router() {
   const { isAuthenticated, isLoading } = useAuth();
   const [location] = useLocation();
 
+  // Admin routes - unconditional redirect to dedicated admin subdomain.
+  // Must be before any isLoading / isAuthenticated checks so there is no
+  // fallback path that lets user-client render admin UI.
+  if (location.startsWith("/admin/login")) {
+    window.location.replace("https://admin.yuejuapp.com/login");
+    return null;
+  }
+  if (location.startsWith("/admin")) {
+    window.location.replace("https://admin.yuejuapp.com");
+    return null;
+  }
+
   if (isLoading) {
     return <LoadingScreen />;
   }
@@ -321,19 +326,6 @@ function Router() {
   // Icebreaker demo is publicly accessible for testing
   if (location === "/icebreaker-demo") {
     return <Route path="/icebreaker-demo" component={IcebreakerDemoPage} />;
-  }
-
-  // Admin login is always accessible (even when not authenticated)
-  if (location.startsWith("/admin/login") || location === "/admin/login") {
-    return <Route path="/admin/login" component={AdminLoginPage} />;
-  }
-
-  // Admin routes require authentication
-  if (location.startsWith("/admin")) {
-    if (!isAuthenticated) {
-      return <Route path="*" component={AdminLoginPage} />;
-    }
-    return <AuthenticatedRouter />;
   }
 
   // Regular user routes

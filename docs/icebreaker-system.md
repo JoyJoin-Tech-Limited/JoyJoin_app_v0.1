@@ -1,37 +1,44 @@
 # Icebreaker System — Complete Reference
 
-> **Architecture principle:** The **Social Icebreaker** is the central, authoritative icebreaking flow. All other components (Toolkit, Card Game, Widget) are supporting layers that blend into this central flow.
+**Last Updated:** 2026-03-06
+
+> ⭐ **CANONICAL FLOW:** The Social Icebreaker is the **primary and default in-event icebreaking experience** for JoyJoin matched groups. When building any feature that relates to icebreaking or in-event social facilitation, you MUST integrate with or extend the Social Icebreaker. Do NOT build new standalone icebreaking UIs.
 
 ---
 
 ## System Map
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    ICEBREAKER ECOSYSTEM                         │
-│                                                                 │
-│  [IcebreakerTool Widget]  ──────────────────────┐              │
-│  Simple random question                         │ entry point  │
-│  GET /api/icebreakers/random                    ▼              │
-│                                                                 │
-│  [IcebreakerToolkit]  ──────── host prep ──► [SOCIAL           │
-│  Browse 13 games / topics                    ICEBREAKER        │
-│  AI game recommendation                       SESSION]         │
-│  shared/icebreakerGames.ts                    ◄────────────────┤
-│                                                    ▲           │
-│  [IcebreakerCardGame]  ─── deep warmup ────────────┘           │
-│  AI-personalized cards (70/30)                                 │
-│  5 rounds × 20 min                                             │
-│  DB-persisted                                                  │
-└─────────────────────────────────────────────────────────────────┘
++─────────────────────────────────────────────────────────────────+
+|           ⭐ PRIMARY FLOW — SOCIAL ICEBREAKER ⭐                  |
+|                                                                 |
+|  [IcebreakerTool Widget]  ──────────────────────┐              |
+|  Entry-point teaser widget                      | entry point  |
+|  GET /api/icebreakers/random                    ▼              |
+|                                    +──────────────────────+    |
+|                                    |  SOCIAL ICEBREAKER   |    |
+|                                    |      SESSION         |    |
+|                                    |  /icebreaker/:id     |    |
+|                                    |  warmup → challenge  |    |
+|                                    |  → detective → recap |    |
+|                                    +──────────┬───────────+    |
+|                                               |                |
+|  [IcebreakerCardGame]  <── optional deep-dive─┘                |
+|  AI-personalized cards (70/30)                                 |
+|  5 rounds × 20 min, DB-persisted                               |
++─────────────────────────────────────────────────────────────────+
+
+> ⚠️ **LEGACY PATH (do not use as primary CTA):**
+> [IcebreakerToolkit] — pre-event game browser, 13 curated games
+> (retained for backward compatibility only)
 ```
 
 ---
 
-## 1. Social Icebreaker System (Central Flow)
+## §1 — Social Icebreaker System (Primary In-Event Flow — Required Reading)
 
 ### Overview
-The Social Icebreaker is a **multi-phase, real-time group experience** that runs in-memory on the server (no DB required). It is session-keyed, host-driven, and designed for small groups. Each phase enforces its own minimum: most phases require ≥2 players; `lie_detective` requires ≥3 (auto-skipped otherwise). There is no enforced upper cap on player count.
+The Social Icebreaker is a **multi-phase, real-time group experience** that runs in-memory on the server (no DB required). It is the **primary and default in-event icebreaking experience** for all JoyJoin matched groups. It is session-keyed, host-driven, and designed for small groups. Each phase enforces its own minimum: most phases require ≥2 players; `lie_detective` requires ≥3 (auto-skipped otherwise). There is no enforced upper cap on player count.
 
 ### Shared Types
 **File:** `shared/socialIcebreaker.ts` (also `packages/shared/src/socialIcebreaker.ts`)
@@ -202,7 +209,11 @@ Polls via `useQuery` with `refetchInterval: 3000`.
 
 ---
 
-## 2. IcebreakerToolkit (Pre-Event Browser — Supporting Layer)
+## §2 — IcebreakerToolkit (Legacy Host-Prep Tool — NOT the Primary Flow)
+
+> **Note:** This section was previously titled "IcebreakerToolkit (Pre-Event Browser — Supporting Layer)". It has been renamed to make clear that the Toolkit is a **legacy** component and must not be treated as the recommended icebreaking path.
+
+> ⚠️ **LEGACY:** The IcebreakerToolkit is a legacy pre-event game browser. It is no longer the recommended icebreaking path. New development should NOT use or extend this toolkit as the primary icebreaking experience. It is retained for backward compatibility.
 
 ### Overview
 The Toolkit is a **pre-session browsing and host preparation tool**. A host explores curated games, gets AI recommendations, then launches a Social Icebreaker session.
@@ -236,10 +247,10 @@ At present, the Social Icebreaker `micro_challenge` phase is always populated se
 
 ---
 
-## 3. IcebreakerCardGame (In-Session AI Card System — Deep Integration Layer)
+## §3 — IcebreakerCardGame (Supporting Deep-Dive Layer)
 
 ### Overview
-An **AI-personalized card game** that runs within the Social Icebreaker warmup phase, or as a standalone deep-dive for matched groups. Cards are DB-persisted and personalized using 6-dimension personality scores.
+An **AI-personalized card game** that serves as an **optional deep-dive supporting layer** accessible from within or after the Social Icebreaker warmup phase. It is **not** a standalone primary in-event experience — the primary flow is always the Social Icebreaker (`/icebreaker/:sessionId`). Cards are DB-persisted and personalized using 6-dimension personality scores.
 
 ### Files
 - `apps/user-client/src/components/icebreaker/IcebreakerCardGame.tsx`
@@ -277,14 +288,14 @@ An **AI-personalized card game** that runs within the Social Icebreaker warmup p
 `/icebreaker-game?eventId=X` or `?groupId=X` or `?sessionId=X`
 
 ### Relationship to Social Icebreaker
-The Card Game is currently exposed as a standalone deep-dive experience at `/icebreaker-game`, which hosts can optionally link to from Social Icebreaker flows (for example, during or after the warmup phase). It is architected to complement the Social Icebreaker warmup experience, but the warmup UI does not yet embed or directly surface this game in-session.
+The Card Game is an **optional deep-dive** that complements the Social Icebreaker. It is accessible at `/icebreaker-game` as a supporting layer that hosts can link to from within or after the Social Icebreaker warmup phase. The warmup UI does not yet embed or directly surface this game in-session, but the Card Game is architecturally subordinate to the Social Icebreaker and should not be presented to users as the default or first icebreaking experience.
 
 ---
 
-## 4. IcebreakerTool Widget (Lightweight Entry Point)
+## §4 — IcebreakerTool Widget (Entry-Point Teaser — Not a Flow)
 
 ### Overview
-A **simple question widget** shown on the Discover/Home page. Surfaces a random warmup question and funnels users into a full Social Icebreaker session.
+A **simple question widget** shown on the Discover/Home page. Surfaces a random warmup question as a teaser, then funnels users into a full Social Icebreaker session. This component is an **entry-point only** — it is not a complete icebreaking flow.
 
 ### Files
 - `apps/user-client/src/components/IcebreakerTool.tsx`
@@ -298,7 +309,7 @@ This widget **fetches and displays a random question** (`GET /api/icebreakers/ra
 
 ---
 
-## 5. AI Services Summary
+## §5 — AI Services Summary
 
 ### `socialIcebreakerAIService.ts`
 **File:** `apps/server/src/socialIcebreakerAIService.ts`
@@ -316,7 +327,7 @@ This widget **fetches and displays a random question** (`GET /api/icebreakers/ra
 
 ---
 
-## 6. Key Files Reference
+## §6 — Key Files Reference
 
 | File | Purpose |
 |------|---------|
@@ -336,7 +347,7 @@ This widget **fetches and displays a random question** (`GET /api/icebreakers/ra
 
 ---
 
-## 7. Debugging Tips
+## §7 — Debugging Tips
 
 **Session not found / duplicate sessions:**
 - Session IDs are deterministic: `socialSessionId = social_${icebreakerSessionId}`, so the same icebreaker always maps to the same session key

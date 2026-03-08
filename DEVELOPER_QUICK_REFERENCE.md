@@ -1,7 +1,7 @@
 # JoyJoin Developer Quick Reference Guide
 
 **Version:** 2.0  
-**Last Updated:** January 2026  
+**Last Updated:** March 2026  
 **For:** Tech Team Onboarding & Codebase Navigation
 
 ---
@@ -209,9 +209,9 @@ These are commented out in schema but kept for backward compatibility.
 | `/blindbox/confirmation` | BlindBoxConfirmationPage | Payment confirmation |
 | `/events/:eventId/feedback` | EventFeedbackFlow | Post-event feedback |
 | `/events/:eventId/deep-feedback` | DeepFeedbackFlow | Anonymous deep feedback |
-| `/icebreaker/:sessionId` | IcebreakerSessionPage | Icebreaker games |
+| `/icebreaker/:sessionId` | IcebreakerSessionPage | Social Icebreaker — **PRIMARY in-event icebreaking flow (use this)** |
 | `/icebreaker-recap/:sessionId` | SocialIcebreakerRecapPage | Social icebreaker recap/summary |
-| `/icebreaker-game` | IcebreakerGamePage | AI-personalised icebreaker card game |
+| `/icebreaker-game` | IcebreakerGamePage | AI card game — **supporting deep-dive layer** (not the primary flow) |
 
 ### Profile Edit Routes
 
@@ -242,6 +242,22 @@ These are commented out in schema but kept for backward compatibility.
 | `/admin/coupons` | AdminCouponsPage | Coupon management |
 | `/admin/venues` | AdminVenuesPage | Venue partners |
 | `/admin/evolution` | AdminEvolutionPage | AI evolution dashboard |
+
+---
+
+### In-Event Icebreaker — Primary Flow
+
+The PRIMARY icebreaking experience for matched groups is the **Social Icebreaker**:
+- Route: `/icebreaker/:sessionId`
+- Component: `IcebreakerSessionPage`
+- Hook: `useSocialIcebreaker`
+- Phases: warmup → micro_challenge → lie_detective → recap
+- Full reference: `docs/icebreaker-system.md`
+
+Do NOT direct users to `/icebreaker-game` (AI Card Game) as the first/default experience.
+The Card Game is an optional deep-dive accessible from within the Social Icebreaker.
+
+The IcebreakerToolkit (pre-event game browser) is a LEGACY tool. Do not add new Toolkit CTAs.
 
 ---
 

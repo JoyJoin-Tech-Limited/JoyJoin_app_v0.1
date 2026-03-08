@@ -21,7 +21,7 @@ import heroVideo from "@/assets/generated_videos/dusk_skyline_fades_to_cozy_dinn
 import heroPoster from "@/assets/stock_images/shenzhen_city_roofto_e7cea581.jpg";
 
 import xiaoyueFoxAvatar from "@/assets/xiaoyue_default.png";
-// import { SiWechat } from "react-icons/si"; // 暂时注释：微信登录功能
+import { SiWechat } from "react-icons/si";
 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -315,13 +315,65 @@ export default function LoginPage() {
     });
   };
 
-  // 暂时注释：微信登录处理函数
-  // const handleWeChatLogin = () => {
-  //   toast({
-  //     title: "微信登录",
-  //     description: "微信授权登录功能开发中，敬请期待",
-  //   });
-  // };
+  const handleWeChatLogin = async () => {
+    try {
+      let code: string;
+      if (typeof wx !== 'undefined' && wx.login) {
+        const loginResult = await new Promise<any>((resolve, reject) => {
+          wx.login({ success: resolve, fail: (err: any) => reject(new Error(err.errMsg || 'wx.login failed')) });
+        });
+        code = loginResult.code;
+      } else {
+        code = `wechat_test_${crypto.randomUUID()}`;
+      }
+
+      const response = await apiRequest("POST", "/api/auth/wechat/login-with-test", {
+        code,
+        testAnswers: [],
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+        const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as any;
+        const step = updatedUser?.nextStep;
+        let nextPath: string;
+        switch (step) {
+          case 'discover':
+            nextPath = '/discover';
+            break;
+          case 'guide':
+            nextPath = '/guide';
+            break;
+          case 'onboarding':
+            nextPath = '/onboarding';
+            break;
+          case 'personality-test':
+            nextPath = '/personality-test';
+            break;
+          case 'essential-data':
+            nextPath = '/onboarding/setup';
+            break;
+          case 'extended-data':
+            nextPath = '/onboarding/extended';
+            break;
+          case 'profile-review':
+            nextPath = '/onboarding/review';
+            break;
+          default:
+            nextPath = '/onboarding/setup';
+            break;
+        }
+        setLocation(nextPath);
+      }
+    } catch (err) {
+      toast({
+        title: "登录失败",
+        description: err instanceof Error ? err.message : "登录失败，请检查网络连接后重试",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Stats display with fallback values
   const displayStats = [
@@ -574,8 +626,8 @@ export default function LoginPage() {
           >
             <Card className="border shadow-lg">
               <CardContent className="p-6 space-y-5">
-                {/* 暂时注释：微信登录按钮 */}
-                {/* <Button
+                {/* WeChat Login */}
+                <Button
                   size="lg"
                   className="w-full bg-[#07C160] hover:bg-[#06AD56] text-white border-0"
                   onClick={handleWeChatLogin}
@@ -583,17 +635,17 @@ export default function LoginPage() {
                 >
                   <SiWechat className="h-5 w-5 mr-2" />
                   微信一键登录
-                </Button> */}
+                </Button>
 
-                {/* 暂时注释：分隔线 */}
-                {/* <div className="relative">
+                {/* Divider */}
+                <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-border"></div>
                   </div>
                   <div className="relative flex justify-center text-xs">
                     <span className="bg-card px-3 text-muted-foreground">或使用手机号登录</span>
                   </div>
-                </div> */}
+                </div>
 
                 {/* DEV ONLY: Quick tester bypass */}
                 {isDevelopment && (

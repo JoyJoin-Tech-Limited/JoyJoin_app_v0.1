@@ -1,7 +1,7 @@
 # JoyJoin (悦聚·Joy) - Product Requirements Document
 
-**Version:** 1.1  
-**Last Updated:** November 20, 2025  
+**Version:** 1.2  
+**Last Updated:** March 6, 2026  
 **Platform:** WeChat H5 Mini-App  
 **Target Market:** Hong Kong & Shenzhen  
 
@@ -74,6 +74,7 @@ JoyJoin is an AI-powered social networking platform that connects individuals lo
 - **AI-Driven Matching:** 14 personality archetypes with 5-dimensional compatibility scoring
 - **Micro-Event Format:** Small group sizes (5-10 people) for meaningful interactions
 - **Blind Box Experience:** Gamified event discovery with surprise reveals
+- **In-Event Social Experience:** Social Icebreaker multi-phase group facilitation (热身 → 挑战 → 侦探 → 回顾) as the core in-event engagement tool
 - **Data-Driven Insights:** Comprehensive feedback system to refine matching algorithms
 - **Subscription Model:** ¥98/month or ¥294/3-month with WeChat Pay integration
 
@@ -429,6 +430,8 @@ Full Access:
   - Full attendee profiles visible
   - Venue address + map
   - Check-in functionality
+  - In-Event Icebreaker: Social Icebreaker session available via `/icebreaker/:sessionId`
+    — multi-phase group experience (热身 → 挑战 → 侦探 → 回顾)
 ```
 
 **Phase 6: Post-Event**
@@ -784,7 +787,40 @@ CREATE TABLE chat_logs (
 
 ---
 
-### 1.7 Feedback System (氛围温度计)
+### 1.7 In-Event Social Experience (Social Icebreaker)
+
+**Route:** `/icebreaker/:sessionId`  
+**Component:** `IcebreakerSessionPage`  
+**Status:** ✅ Primary in-event flow
+
+The Social Icebreaker is the **core in-event facilitation tool** for matched JoyJoin groups. It replaces any standalone game browsers as the primary icebreaking experience.
+
+#### Phases (MVP)
+
+| Phase | CN Name | Duration | Mechanic |
+|-------|---------|----------|----------|
+| `warmup` | 🌅 热身 | 20 min | Mood-filtered conversation topics |
+| `micro_challenge` | ⚡ 挑战 | 15 min | Group challenge, tap "done" |
+| `lie_detective` | 🕵️ 侦探 | 25 min | Two Truths One Lie — AI-generated |
+| `recap` | ✨ 回顾 | 5 min | AI-generated session summary |
+
+#### Entry
+- Available on event day when event status is `in_progress`
+- Accessible via BottomNav "去参与" button or from `PoolGroupDetailPage`
+- First user to open becomes HOST and drives phase progression
+
+#### Supporting Layers (Optional)
+- **AI Card Game** (`/icebreaker-game`): Optional deep-dive card experience accessible from within the warmup phase
+- **Toolkit** (legacy): Pre-event game browser — retained for backward compatibility, not featured as primary CTA
+
+#### Technical Reference
+Full system documentation: `docs/icebreaker-system.md`
+
+---
+
+### 1.8 Feedback System (氛围温度计)
+
+> **Note:** Previously numbered 1.7. Renumbered to 1.8 to accommodate the new §1.7 In-Event Social Experience section.
 
 **File Location:** `client/src/pages/EventFeedbackFlow.tsx`, `client/src/pages/DeepFeedbackFlow.tsx`
 
