@@ -68,37 +68,48 @@ When this file conflicts with inline code comments, older documentation in `docs
 
 ### Onboarding Flow Architecture
 
-**Overview:**
-JoyJoin uses a 4-step guided onboarding flow with **server-driven progress tracking**.
+> **⚠️ Important for Copilot**: Onboarding is **state-driven and conditional** — not a single universal linear sequence. Always reason about onboarding using:
+> - The server-returned `nextStep` value from `/api/auth/user`
+> - Active `switch` cases in `App.tsx` → `AuthenticatedRouter`
+> - Persisted completion flags on the `users` table
+>
+> **Do not** infer the onboarding path from stale documentation, deprecated helpers, or historical code comments. **Do not** assume all users pass through every step, or that login/signup always occurs at the same point for every user type. Prefer active implementation over any prior documented flow.
 
-#### Flow Sequence
-```
-Login → Personality Test V4 → Essential Data → Extended Data → Profile Review → Discover
-```
-> **Note:** `Discover` is the post-onboarding destination, not a formal step. The 4 active onboarding steps are listed in the table below.
+#### User Entry Contexts (Conditional)
 
-#### Step Details
+| User Type | Entry Behaviour |
+|-----------|-----------------|
+| **New / unauthenticated user** | Lands on `LandingPage`; navigates to `/personality-test` and completes `PersonalityTestPageV4` **anonymously**. WeChat 微信授权登入 (account creation / sign-up) happens **after** the personality test during `PersonalityTestResultPage`. After auth, the client calls `/api/auth/user` and uses the server-calculated `nextStep` to decide whether to continue onboarding (e.g. essential data) or send the user to later routes, depending on their stored flags. |
+| **Partially completed user** | Re-enters at the step indicated by the server-returned `nextStep` (e.g. `essential-data`, `extended-data`, `profile-review`). Earlier steps are not repeated. |
+| **Returning user** | Server returns `nextStep === 'discover'` → navigated directly to `/discover`. No onboarding steps are shown. |
 
-| Step | Route | Component | Required Fields | Completion Flag |
-|------|-------|-----------|-----------------|-----------------|
-| 1. Personality Test | `/personality-test` | `PersonalityTestPageV4` | Adaptive assessment | `hasCompletedPersonalityTest` |
-| 2. Essential Data | `/onboarding/setup` | `EssentialDataPage` | Nickname, gender, city, etc. | `profileEssentialComplete` |
-| 3. Extended Data | `/onboarding/extended` | `ExtendedDataPage` | Interests carousel | `hasCompletedInterestsCarousel` |
-| 4. Profile Review | `/onboarding/review` | `FinalProfileReviewPage` | Profile preview | `hasSeenProfileReview` (server) |
+#### State-Driven Navigation
+
+All post-authentication routing is controlled by `nextStep` from the `/api/auth/user` response. The `AuthenticatedRouter` in `App.tsx` switches on this value to present only the routes appropriate for the user's current state. The active onboarding steps for a first-time user follow the sequence below, but any step may be the entry point for a partially-completed user:
+
+| Step | Route | Component | Completion Flag |
+|------|-------|-----------|-----------------|
+| Personality Test | `/personality-test` | `PersonalityTestPageV4` | `hasCompletedPersonalityTest` |
+| Essential Data | `/onboarding/setup` | `EssentialDataPage` | `profileEssentialComplete` |
+| Extended Data | `/onboarding/extended` | `ExtendedDataPage` | `hasCompletedInterestsCarousel` |
+| Final Profile Review | `/onboarding/review` | `FinalProfileReviewPage` | `hasSeenProfileReview` (server) |
+| Guide *(conditional)* | `/guide` | `GuidePage` | `hasSeenGuide` (server) |
+
+> **Note on the Guide step**: The `nextStep === 'guide'` case in `AuthenticatedRouter` currently renders `DiscoverPage` directly (inline coach marks replaced the dedicated guide flow). The `/guide` route and `GuidePage` are kept for backward compatibility. Do not treat the guide as a mandatory blocking step in new code unless the active `App.tsx` switch confirms otherwise.
+
+> **Note on Registration**: The legacy AI Chat Registration step (`DuolingoOnboardingPage`) has been removed from the active onboarding flow. The `/onboarding` path now aliases/renders the V4 personality test (`PersonalityTestPageV4`) directly at `/onboarding` rather than redirecting to `/personality-test`. Any reference to this step in older code or documentation is legacy and should be treated as such.
 
 #### Server-Driven Navigation (Scope B1)
 
-**Use server-driven `nextStep` instead of client-side calculations:**
+**Prefer `nextStep` over client-side onboarding calculations:**
 
 ```typescript
-const { nextStep } = useAuth(); 
+const { nextStep } = useAuth();
 // Returns: 'onboarding' | 'personality-test' | 'essential-data' |
-//          'extended-data' | 'profile-review' | 'discover'
-// Note: 'onboarding' is a ⚠️ legacy alias still emitted by the server;
-//       clients must treat it as the Personality Test step (`/personality-test`)
-//       and must not introduce new flows that depend on it.
-// Note: 'guide' may still be returned by the server for users with hasSeenGuide=false
-//       (backward compat); the client ignores it and routes to Discover instead.
+//          'extended-data' | 'profile-review' | 'guide' | 'discover'
+// Note: 'onboarding' is a legacy/fallback value — the server may return it
+// for users whose registration is incomplete; AuthenticatedRouter redirects
+// this case to /personality-test. It is not a distinct step in new flows.
 
 // Redirect logic
 if (nextStep !== 'discover') {
@@ -113,29 +124,36 @@ const { currentStep, progress, isComplete, steps } = useOnboardingProgress();
 
 #### Auth Response Extensions
 
-The `/api/auth/user` endpoint now returns:
+The `/api/auth/user` endpoint returns:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `nextStep` | `string` | Server-calculated next route |
-| `profileEssentialComplete` | `boolean` | Essential data complete |
-| `profileExtendedComplete` | `boolean` | Extended data complete |
-| `hasSeenGuide` | `boolean` | ⚠️ Legacy — guide step removed 2026-02-16; field retained for backward compat |
+| `nextStep` | `string` | Server-calculated next route: `'onboarding' \| 'personality-test' \| 'essential-data' \| 'extended-data' \| 'profile-review' \| 'guide' \| 'discover'` (`'onboarding'` is a legacy/fallback value; routes to `/personality-test`) |
+| `profileEssentialComplete` | `boolean` | Essential data complete (displayName, gender, currentCity) |
+| `profileExtendedComplete` | `boolean` | Profile enrichment flag based on `educationLevel` + `industryNicheLabel\|industryCategoryLabel` + `hometownRegionCity` (not the interests carousel / `/onboarding/extended` step) |
+| `hasSeenGuide` | `boolean` | Guide viewed (server-persisted) |
 | `hasSeenProfileReview` | `boolean` | Profile review viewed (server-persisted) |
 | `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
 
-#### Guide System (Scope B2) — Deprecated
+#### Guide System
 
-> **Deprecated (2026-02-16):** The 3-step guide onboarding step has been removed from the onboarding flow. Guide content is now delivered via inline coach marks (`CoachMarkBanner`, `XiaoyueFAB`, `ProfileCompletionNudge`) on the Discover page. `GuidePage.tsx` and `useGuideFlow.ts` are retained for backward compatibility but are no longer active onboarding steps.
+The guide is **server-persisted** but **currently conditional** in routing: `AuthenticatedRouter` treats `nextStep === 'guide'` the same as `nextStep === 'discover'`, routing users directly to `DiscoverPage` with inline coach marks. The dedicated `GuidePage` is retained for backward compatibility only.
+
+- Server field: `user.hasSeenGuide` (persisted to database; single source of truth for guide completion)
+- Client: Inline coach marks/state should use their own storage keys as needed; do **not** introduce or rely on a `joyjoin_guide_seen` localStorage flag.
+- API: `POST /api/guide/mark-seen` or `POST /api/guide/complete` to mark the guide as seen/completed
 
 #### Key Files
-- `apps/user-client/src/hooks/useOnboardingProgress.ts` — Progress tracking
-- `apps/user-client/src/hooks/useGuideFlow.ts` — Guide state management
+- `apps/user-client/src/App.tsx` — `AuthenticatedRouter` switch on `nextStep` (authoritative routing source)
 - `apps/user-client/src/hooks/useAuth.ts` — Returns `nextStep` from server
-- `docs/onboarding-flow.md` — Full flow documentation
-- `apps/user-client/src/pages/PersonalityTestPageV4.tsx` — V4 adaptive assessment
+- `apps/user-client/src/hooks/useOnboardingRoute.ts` — Client-side route calculation helper
+- `apps/user-client/src/hooks/useOnboardingProgress.ts` — Progress tracking
+- `apps/user-client/src/pages/PersonalityTestPageV4.tsx` — V4 adaptive assessment (runs unauthenticated)
+- `apps/user-client/src/pages/PersonalityTestResultPage.tsx` — Shows result; hosts WeChat 微信授权登入 for new users
 - `apps/user-client/src/pages/EssentialDataPage.tsx` — 7-step essential data
 - `apps/user-client/src/pages/ExtendedDataPage.tsx` — Interests carousel
+- `apps/user-client/src/pages/FinalProfileReviewPage.tsx` — Profile preview and review
+- `apps/user-client/src/pages/LoginPage.tsx` — WeChat 微信授权登入
 
 ## Onboarding Data Model
 
@@ -143,24 +161,27 @@ The `/api/auth/user` endpoint now returns:
 
 **Progress Flags** (`users` table):
 ```typescript
+hasCompletedRegistration: boolean;     // LEGACY — registration/essential profile completion gate (set after displayName/gender/currentCity, not at WeChat auth)
 hasCompletedPersonalityTest: boolean;  // V4 adaptive assessment complete
-hasSeenGuide: boolean;                 // 3-step guide viewed (server-persisted)
+hasSeenProfileReview: boolean;         // Final Profile Review viewed (server-persisted)
+hasSeenGuide: boolean;                 // Guide viewed (server-persisted)
 hasCompletedInterestsCarousel: boolean; // Carousel-based interest selection
 ```
 
 **Server-Calculated Navigation Fields** (returned by `/api/auth/user`):
 ```typescript
-nextStep: string;  
-// 'onboarding' | 'personality-test' | 'essential-data' | 
+nextStep: string;
+// 'onboarding' | 'personality-test' | 'essential-data' |
 // 'extended-data' | 'profile-review' | 'guide' | 'discover'
+// ('onboarding' is a legacy/fallback value; routes to /personality-test)
 
-profileEssentialComplete: boolean;  
+profileEssentialComplete: boolean;
 // Server-validates: displayName, gender, currentCity present
 
-profileExtendedComplete: boolean;   
-// Server-validates: interests, intent filled
+profileExtendedComplete: boolean;
+// Server-validates: education + industry labels + hometown present
 
-activeAssessmentSessionId: string | null;  
+activeAssessmentSessionId: string | null;
 // Current V4 assessment session if in progress
 ```
 
@@ -277,36 +298,43 @@ activeAssessmentSessionId: string | null;
 ### Data Flow
 
 ```
-1. User takes V4 personality test
-   ├─> Create assessment_session (phase: 'post_signup')
+1. Unauthenticated user takes Personality Test (/personality-test)
+   ├─> Create assessment_session (phase: 'pre_signup')
    ├─> For each answer: insert assessment_answer
    ├─> Update assessment_session.traitScores (real-time)
-   └─> On completion: hasCompletedPersonalityTest = true
+   └─> On completion: user is prompted for WeChat 微信授权登入
 
-2. User completes essential data
+2. User authenticates via WeChat 微信授权登入
+   ├─> POST /api/auth/wechat/login-with-test (authenticates user and returns auth/user state, including server-calculated nextStep)
+   ├─> If there is an existing anonymous assessment_session: client calls POST /api/assessment/v4/:sessionId/link-user (post-auth) to associate it with the user
+   └─> This auth endpoint does not itself mutate onboarding flags (e.g. hasCompletedRegistration, hasCompletedPersonalityTest, profileEssentialComplete)
+
+3. User completes essential data (/onboarding/setup)
    ├─> Update users (displayName, gender, currentCity)
-   └─> Server sets profileEssentialComplete = true
+   └─> Server sets profileEssentialComplete = true → nextStep = 'extended-data'
 
-3. User completes interests carousel
+4. User completes interests carousel (/onboarding/extended)
    ├─> Insert/Update user_interests
-   └─> hasCompletedInterestsCarousel = true
+   └─> hasCompletedInterestsCarousel = true → nextStep = 'profile-review'
 
-4. User views profile review
+5. User views Final Profile Review (/onboarding/review)
    ├─> POST /api/profile-review/complete
-   └─> hasSeenProfileReview = true
+   └─> hasSeenProfileReview = true → nextStep = 'guide' or 'discover'
 
-5. Server calculates nextStep
-   └─> Return 'discover' when all flags true
+6. Server calculates nextStep
+   └─> Returns 'discover' when all flags true
+       (nextStep === 'guide' also routes to /discover in current implementation)
 ```
 
 ### Migration Notes
 
-- **AI Chat Registration UI Deprecated**: `DuolingoOnboardingPage` and the standalone `/onboarding` experience are deprecated from a product/UI perspective. In the current implementation, `/onboarding` should behave as a thin shell / redirect that effectively starts users at the V4 Personality Test, and new flows must not link to or extend this page.
-- **`hasCompletedRegistration` Legacy Backend Flag**: `hasCompletedRegistration` (and any server `nextStep = 'onboarding'` values that still depend on it in `apps/server/src/routes.ts`) remain in the backend for backward compatibility but are considered **legacy state**. Do not introduce new logic or features that gate behavior on this flag or on the `'onboarding'` `nextStep`; instead, treat the V4 Personality Test as the first meaningful onboarding step.
+- **AI Chat Registration Removed**: The `DuolingoOnboardingPage` / AI Chat Registration step is no longer part of the active onboarding flow. The `/onboarding` path now aliases/renders `PersonalityTestPageV4` directly. Any code or documentation referencing this step is legacy.
+- **Personality Test Now Pre-Auth**: Users can complete the V4 personality test anonymously before creating an account. WeChat 微信授权登入 occurs after the test. If an anonymous `assessment_session` exists, the client links it via `POST /api/assessment/v4/:sessionId/link-user` after auth.
+- **Guide Step Now Conditional**: `nextStep === 'guide'` currently renders `DiscoverPage` directly (inline coach marks). The `GuidePage` is kept for backward compatibility only.
+- **Final Profile Review Added**: `FinalProfileReviewPage` (`/onboarding/review`) is an active onboarding step between Extended Data and the main app. Tracked by `hasSeenProfileReview` (server-persisted).
 - **V2 Test Deprecated**: Old `personality_questions`, `test_responses`, `role_results` tables are legacy (kept for historical data, not used in new code).
 - **Interest Fields Removed**: `interestsTop`, `primaryInterests`, `topicsHappy`, `topicsAvoid` moved to `user_interests` table (old fields deprecated but not dropped).
 - **Language Selection**: No longer collected in onboarding (moved to event pool registration).
-- **Guide State**: Now server-persisted in `hasSeenGuide` (replaces localStorage-only approach).
 
 ## Updated Pool Matching Algorithm (7-Dimension Weighted Scoring)
 
@@ -665,9 +693,9 @@ const { state, isHost, startSession, fetchTopics, advancePhase,
 
 ## Recent Major Changes
 - Social Icebreaker established as the primary in-event flow (2026-03-06); IcebreakerToolkit demoted to legacy.
-- AI Chat Registration (`DuolingoOnboardingPage`) removed from active onboarding flow; flow now starts at Personality Test V4.
-- Interests carousel introduced for extended data collection.
-- Guide step server-persisted via `hasSeenGuide` (replaces localStorage-only approach).
-- Pool matching algorithm updated to 7-dimension weighted scoring.
+- Onboarding flow updated to state-driven, conditional architecture: personality test runs anonymously before WeChat sign-up; `FinalProfileReviewPage` added as active step; AI Chat Registration removed; guide step now conditional (renders Discover directly).
+- Interests carousel for enhanced user engagement.
+- Guide persistence to maintain user orientation.
+- Updates to the matching algorithm for improved accuracy.
 
 **Note**: Ensure to follow the existing formatting style and professional tone throughout the document.
