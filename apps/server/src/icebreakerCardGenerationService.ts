@@ -29,7 +29,7 @@ export interface UserPersonalityData {
   secondaryArchetype?: string;
   
   // Essential data
-  age?: number;
+  birthdate?: string;
   gender?: string;
   educationLevel?: string;
   industryCategory?: string;
@@ -140,7 +140,17 @@ export async function generateAICards(
     .slice(0, 5);
 
   const industries = attendees.map(a => a.industryCategory).filter(Boolean);
-  const avgAge = attendees.filter(a => a.age).reduce((sum, a) => sum + (a.age || 0), 0) / attendees.filter(a => a.age).length;
+  const attendeesWithBirthdate = attendees.filter(a => a.birthdate) as Array<typeof attendees[0] & { birthdate: string }>;
+  const now = new Date();
+  const avgAge = attendeesWithBirthdate.length > 0
+    ? attendeesWithBirthdate.reduce((sum, a) => {
+        const birth = new Date(a.birthdate);
+        let age = now.getFullYear() - birth.getFullYear();
+        const monthDiff = now.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age--;
+        return sum + age;
+      }, 0) / attendeesWithBirthdate.length
+    : NaN;
   
   // Calculate average personality traits
   const avgTraits: Record<string, number> = {};

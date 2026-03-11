@@ -13,8 +13,7 @@ const mockMembers: EnrichedMemberProfile[] = [
     userId: 'user1',
     displayName: '小明',
     gender: '男性',
-    birthYear: 1995,
-    age: 29,
+    birthdate: '1996-06-15',
     relationshipStatus: '单身',
     educationLevel: '本科',
     industryCategory: 'tech',
@@ -42,8 +41,7 @@ const mockMembers: EnrichedMemberProfile[] = [
     userId: 'user2',
     displayName: '小红',
     gender: '女性',
-    birthYear: 1996,
-    age: 28,
+    birthdate: '1997-06-15',
     relationshipStatus: '单身',
     educationLevel: '硕士',
     industryCategory: 'finance',
@@ -71,8 +69,7 @@ const mockMembers: EnrichedMemberProfile[] = [
     userId: 'user3',
     displayName: '小李',
     gender: '男性',
-    birthYear: 1994,
-    age: 30,
+    birthdate: '1995-06-15',
     relationshipStatus: '恋爱中',
     educationLevel: '博士',
     industryCategory: 'tech',
@@ -159,6 +156,10 @@ describe('Team Name Generator - calculateGroupStats', () => {
   it('should calculate average age correctly', () => {
     const stats = calculateGroupStats(mockMembers);
     
+    // All members have June 15 birthdates; test runs after March 11 so birthdays haven't occurred yet
+    // User1: born 1996-06-15 → 29 in 2026 (not yet birthday)
+    // User2: born 1997-06-15 → 28 in 2026 (not yet birthday)
+    // User3: born 1995-06-15 → 30 in 2026 (not yet birthday)
     // Average: (29 + 28 + 30) / 3 = 29
     expect(stats.avgAge).toBe(29);
   });
@@ -215,7 +216,7 @@ describe('Team Name Generator - Data Provenance', () => {
     // These fields MUST be present (from EssentialDataPage)
     expect(profile).toHaveProperty('displayName');
     expect(profile).toHaveProperty('gender');
-    expect(profile).toHaveProperty('birthYear');
+    expect(profile).toHaveProperty('birthdate');
     expect(profile).toHaveProperty('educationLevel');
     expect(profile).toHaveProperty('industryNicheLabel'); // 3-tier classification
     expect(profile).toHaveProperty('occupationId');

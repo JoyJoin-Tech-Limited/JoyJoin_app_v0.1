@@ -612,7 +612,6 @@ export class DatabaseStorage implements IStorage {
         gender: data.gender,
         pronouns: data.pronouns,
         relationshipStatus: data.relationshipStatus,
-        children: data.children,
         educationLevel: data.educationLevel,
         educationVisibility: data.educationVisibility,
         industry: data.industry,

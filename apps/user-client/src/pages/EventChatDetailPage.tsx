@@ -19,6 +19,7 @@ import type { User, ChatMessage } from "@shared/schema";
 import { 
   getGenderDisplay, 
   formatAge, 
+  calculateAge,
   getEducationDisplay
 } from "@/lib/userFieldMappings";
 import { archetypeAvatars, archetypeBgColors } from "@/lib/archetypeAvatars";
@@ -577,9 +578,9 @@ export default function EventChatDetailPage() {
               
               {/* Basic Info Chips */}
               <div className="flex flex-wrap gap-2">
-                {selectedParticipant.gender && selectedParticipant.age && (
+                {selectedParticipant.gender && selectedParticipant.birthdate && (
                   <span className="text-xs bg-muted/50 px-3 py-1.5 rounded-full">
-                    {getGenderDisplay(selectedParticipant.gender)} · {formatAge(selectedParticipant.age)}
+                    {getGenderDisplay(selectedParticipant.gender)} · {formatAge(calculateAge(selectedParticipant.birthdate))}
                   </span>
                 )}
                 {selectedParticipant.educationLevel && (

@@ -51,18 +51,12 @@ export const users = pgTable("users", {
   
   // Registration fields - Identity
   birthdate: date("birthdate"), // Used to calculate age
-  age: integer("age"), // Deprecated - calculated from birthdate
   ageVisibility: varchar("age_visibility").default("show_age_range"), // hide_all, show_age_range (legacy: show_generation, show_exact_age)
   gender: varchar("gender"), // 女性, 男性, 不透露
   pronouns: varchar("pronouns"), // 她/She, 他/He, 它们/They, 自定义, 不透露
   
   // Registration fields - Background
   relationshipStatus: varchar("relationship_status"), // 单身, 恋爱中, 已婚/伴侣, 离异, 丧偶, 不透露
-  children: varchar("children"), // DEPRECATED: Not collected in onboarding, removed from profile edit
-  hasPets: boolean("has_pets"), // DEPRECATED: Not collected in onboarding, removed from profile edit
-  petTypes: text("pet_types").array(), // DEPRECATED: Not collected in onboarding, removed from profile edit
-  hasSiblings: boolean("has_siblings"), // DEPRECATED: Not collected in onboarding, removed from profile edit
-  hasKids: boolean("has_kids"), // Deprecated in favor of children
   
   // Registration fields - Life Stage & Age Preferences
   lifeStage: varchar("life_stage"), // 学生党, 职场新人, 职场老手, 创业中, 自由职业
@@ -632,10 +626,6 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   birthdate: true,
   gender: true,
   relationshipStatus: true,
-  children: true,
-  hasPets: true,
-  petTypes: true,
-  hasSiblings: true,
   currentCity: true,
   educationLevel: true,
   industrySegment: true,  // 智能信息收集：细分领域
@@ -907,9 +897,6 @@ export const registerUserSchema = z.object({
   relationshipStatus: z.enum(RELATIONSHIP_STATUS_OPTIONS, {
     errorMap: () => ({ message: "请选择关系状态" }),
   }),
-  children: z.enum(CHILDREN_OPTIONS).optional(),
-  hasPets: z.boolean().optional(), // 是否有毛孩子
-  hasSiblings: z.boolean().optional(), // 是否有亲兄弟姐妹
   
   // Education - All required for matching algorithm
   educationLevel: z.enum(EDUCATION_LEVEL_OPTIONS, {
@@ -952,7 +939,6 @@ export const registerUserSchema = z.object({
   cuisinePreference: z.array(z.string()).optional(),
   favoriteRestaurant: z.string().optional(),
   primaryInterests: z.array(z.string()).optional(),
-  petTypes: z.array(z.string()).optional(),
   companyName: z.string().optional(),
 });
 

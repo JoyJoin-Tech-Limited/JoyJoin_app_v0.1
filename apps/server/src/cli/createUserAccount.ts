@@ -108,14 +108,10 @@ async function createUserAccount() {
     // Step 7: City selection
     const city = await selectFromMenu(rl, '🌆 Select city:', CITIES);
 
-    // Step 8: Age (optional)
-    const ageStr = await prompt(rl, '🎂 Enter age (optional, press Enter to skip): ');
-    const age = ageStr ? parseInt(ageStr) : undefined;
-
-    // Step 9: Industry (optional)
+    // Step 8: Industry (optional)
     const industry = await prompt(rl, '💼 Enter industry (optional, press Enter to skip): ');
 
-    // Step 10: Top interests (optional)
+    // Step 9: Top interests (optional)
     const topInterests = await prompt(rl, '❤️ Enter interests (comma-separated, optional, press Enter to skip): ');
 
     console.log('\n⏳ Creating user account...');
@@ -136,10 +132,6 @@ async function createUserAccount() {
       hasCompletedPersonalityTest: true,
       hasCompletedRegistration: true,
     };
-
-    if (age) {
-      userData.age = age;
-    }
 
     if (industry) {
       userData.currentOccupation = industry;
@@ -177,7 +169,6 @@ async function createUserAccount() {
     console.log(`   Archetype: ${user.primaryArchetype}`);
     console.log(`   Gender: ${user.gender}`);
     console.log(`   City: ${user.currentCity}`);
-    if (age) console.log(`   Age: ${age}`);
     if (industry) console.log(`   Industry: ${industry}`);
     if (topInterests) console.log(`   Interests: ${topInterests}`);
     console.log('\n   Login at: /login');
