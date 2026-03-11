@@ -270,6 +270,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // 🔧 确保 trust proxy 在 session 之前设置（防止 index.ts 漏掉）
   app.set('trust proxy', 1);
+
+  // API v1 backward compat: /api/v1/* routes work identically to /api/* routes.
+  // Rewrite happens before session and route handlers so all existing logic is reused.
+  app.use((req, _res, next) => {
+    if (req.url && req.url.startsWith('/api/v1/')) {
+      req.url = '/api/' + req.url.slice('/api/v1/'.length);
+    }
+    next();
+  });
   
   // 🔧 DEBUG: Add identity headers to ALL API responses (Phase 1.1)
   app.use((req, res, next) => {
