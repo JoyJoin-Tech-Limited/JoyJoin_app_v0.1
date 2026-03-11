@@ -41,6 +41,7 @@ import ArchetypeOrbit from "@/components/ArchetypeOrbit";
 import MatchSuccessSheet from "@/components/MatchSuccessSheet";
 import type { PoolMatchedData, EventThemeTitleRevealedData } from "@shared/wsEvents";
 import { formatDateInHongKong } from "@/lib/hongKongTime";
+import { calculateAge } from "@/lib/userFieldMappings";
 import type { AttendeeData, UserContext } from "@/lib/attendeeAnalytics";
 
 // Constants
@@ -182,11 +183,10 @@ export default function MatchingStatusPage() {
     if (user.educationLevel != null) ctx.educationLevel = user.educationLevel;
     const industry = user.industryCategoryLabel ?? user.industryCategory;
     if (industry != null && industry !== "") ctx.industry = industry;
-    if (user.age != null) ctx.age = user.age;
+    if (user.birthdate != null) ctx.age = calculateAge(user.birthdate);
     if (user.gender != null) ctx.gender = user.gender;
     if (user.archetype != null) ctx.archetype = user.archetype;
     if (user.relationshipStatus != null) ctx.relationshipStatus = user.relationshipStatus;
-    if (user.children != null) ctx.children = user.children;
     if (user.hometownRegionCity != null && user.hometownRegionCity !== "") ctx.hometownRegionCity = user.hometownRegionCity;
     if (user.hometownAffinityOptin != null) ctx.hometownAffinityOptin = user.hometownAffinityOptin;
     return ctx;

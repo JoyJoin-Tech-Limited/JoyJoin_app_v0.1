@@ -38,8 +38,12 @@ Thumbs.db
 *.bak
 
 # Agent / tool state
-.agent*
-.replit*
+.agent state
+.agentstate
+.agent.json
+.replit
+.replit.nix
+.replit.json
 
 # Misc legacy
 server/public

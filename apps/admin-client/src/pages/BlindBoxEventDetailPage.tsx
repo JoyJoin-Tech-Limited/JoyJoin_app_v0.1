@@ -561,7 +561,6 @@ export default function BlindBoxEventDetailPage() {
                 age: user?.birthdate ? calculateAge(user.birthdate) : undefined,
                 gender: user?.gender || undefined,
                 relationshipStatus: user?.relationshipStatus || "Single",
-                children: user?.children || undefined,
                 hometownRegionCity: user?.hometownRegionCity || undefined,
               }}
             />

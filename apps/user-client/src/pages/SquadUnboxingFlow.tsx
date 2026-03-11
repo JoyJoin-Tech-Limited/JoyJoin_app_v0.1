@@ -16,6 +16,7 @@ import {
 import BottomNav from "@/components/BottomNav";
 import CardDeckReveal, { type SquadMember } from "@/components/CardDeckReveal";
 import { useAuth } from "@/hooks/useAuth";
+import { calculateAge } from "@/lib/userFieldMappings";
 import { generateSparkPredictions, type UserContext } from "@/lib/attendeeAnalytics";
 
 // Safe wrapper around the Web Vibration API
@@ -117,11 +118,10 @@ export default function SquadUnboxingFlow() {
       interests: user.interestsDeep ?? undefined,
       educationLevel: user.educationLevel ?? undefined,
       industry: user.industryCategoryLabel ?? user.industryCategory ?? undefined,
-      age: user.age ?? undefined,
+      age: user.birthdate ? calculateAge(user.birthdate) : undefined,
       gender: user.gender ?? undefined,
       archetype: user.archetype ?? undefined,
       relationshipStatus: user.relationshipStatus ?? undefined,
-      children: user.children ?? undefined,
       hometownRegionCity: user.hometownRegionCity ?? undefined,
       hometownAffinityOptin: user.hometownAffinityOptin ?? undefined,
     };
