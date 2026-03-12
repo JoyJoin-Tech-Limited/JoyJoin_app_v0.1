@@ -108,14 +108,54 @@ interface UserInterests {
   topPriorities?: Array<{ topicId: string; label: string; heat: number }>;
 }
 
+interface JoinedEvent {
+  id: string;
+  title?: string;
+  eventType?: string;
+  dateTime?: string;
+  attendanceStatus?: string;
+}
+
+interface PoolRegistration {
+  id: string;
+  poolId: string;
+  assignedGroupId?: string | null;
+  matchStatus?: string;
+  matchScore?: number | null;
+  registeredAt?: string;
+  eventIntent?: string[];
+  budgetRange?: string[];
+}
+
+interface Connection {
+  id: string;
+  eventId: string;
+  userAId: string;
+  userBId: string;
+  status: string;
+  revealedAt?: string | null;
+  createdAt?: string;
+}
+
+interface MatchHistoryEntry {
+  id: string;
+  user1Id: string;
+  user2Id: string;
+  eventId: string;
+  matchedAt?: string | null;
+  connectionQuality?: number | null;
+  wouldMeetAgain?: boolean | null;
+  connectionPointTypes?: string[] | null;
+}
+
 interface UserDetail {
   user: User & { profileCompleteness: ProfileCompleteness };
   onboarding: OnboardingState;
   assessmentSession: AssessmentSession | null;
-  joinedEvents: any[];
-  poolRegistrations: any[];
-  connections: any[];
-  matchHistory: any[];
+  joinedEvents: JoinedEvent[];
+  poolRegistrations: PoolRegistration[];
+  connections: Connection[];
+  matchHistory: MatchHistoryEntry[];
   interests: UserInterests | null;
   matchingReadiness: { isReady: boolean; blockers: string[] };
 }
@@ -448,7 +488,7 @@ export default function AdminUsersPage() {
               ))}
             </div>
           ) : userDetail ? (
-            <Tabs defaultValue="overview" className="flex-1 flex flex-col overflow-hidden">
+            <Tabs defaultValue="overview" className="flex-1 flex flex-col overflow-hidden" aria-label="用户详情标签页">
               <TabsList className="mx-6 mt-4 mb-0 shrink-0 flex flex-wrap h-auto gap-1 justify-start bg-muted/50">
                 <TabsTrigger value="overview" className="text-xs">概览</TabsTrigger>
                 <TabsTrigger value="portrait" className="text-xs">用户画像</TabsTrigger>
@@ -540,7 +580,7 @@ export default function AdminUsersPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1.5">
-                      <OnboardingStep done={userDetail.onboarding.hasCompletedRegistration} label="WeChat 注册完成" />
+                      <OnboardingStep done={userDetail.onboarding.hasCompletedRegistration} label="账号已激活" />
                       <OnboardingStep done={userDetail.onboarding.hasCompletedPersonalityTest} label="人格测试完成" />
                       <OnboardingStep done={userDetail.onboarding.profileEssentialComplete} label="基本资料完成" />
                       <OnboardingStep done={userDetail.onboarding.hasCompletedInterestsCarousel} label="兴趣偏好完成" />
@@ -705,7 +745,7 @@ export default function AdminUsersPage() {
                         <p className="text-sm text-muted-foreground">尚未参与任何活动</p>
                       ) : (
                         <div className="space-y-2">
-                          {userDetail.joinedEvents.map((event: any) => (
+                          {userDetail.joinedEvents.map((event) => (
                             <div key={event.id} className="flex justify-between items-center text-sm border-l-2 border-primary pl-3 py-1">
                               <div>
                                 <p className="font-medium">{event.title || event.eventType}</p>
@@ -734,7 +774,7 @@ export default function AdminUsersPage() {
                         <p className="text-sm text-muted-foreground">暂无活动池报名记录</p>
                       ) : (
                         <div className="space-y-2">
-                          {userDetail.poolRegistrations.map((reg: any) => (
+                          {userDetail.poolRegistrations.map((reg) => (
                             <div key={reg.id} className="text-sm border rounded-md px-3 py-2">
                               <div className="flex justify-between items-start">
                                 <div>
@@ -780,7 +820,7 @@ export default function AdminUsersPage() {
                         <p className="text-sm text-muted-foreground">暂无连接记录</p>
                       ) : (
                         <div className="space-y-2">
-                          {userDetail.connections.map((conn: any) => {
+                          {userDetail.connections.map((conn) => {
                             const otherId = conn.userAId === userDetail.user.id ? conn.userBId : conn.userAId;
                             return (
                               <div key={conn.id} className="text-sm border rounded-md px-3 py-2">
@@ -819,7 +859,7 @@ export default function AdminUsersPage() {
                         <p className="text-sm text-muted-foreground">暂无匹配记录</p>
                       ) : (
                         <div className="space-y-2">
-                          {userDetail.matchHistory.map((match: any) => {
+                          {userDetail.matchHistory.map((match) => {
                             const otherId = match.user1Id === userDetail.user.id ? match.user2Id : match.user1Id;
                             return (
                               <div key={match.id} className="text-sm border rounded-md px-3 py-2">
