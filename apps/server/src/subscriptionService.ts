@@ -62,8 +62,8 @@ export class SubscriptionService {
             userId: subscription.userId,
             category: "activities",
             type: "subscription_expired",
-            title: "会员已过期",
-            message: "您的JoyJoin会员已过期。续费以继续享受会员权益！",
+            title: "活动礼包已过期",
+            message: "您的JoyJoin活动礼包已过期。再次购买以继续享受礼包权益！",
             relatedResourceId: subscription.id,
           });
           
@@ -80,8 +80,8 @@ export class SubscriptionService {
             userId: subscription.userId,
             category: "activities",
             type: "subscription_expiring",
-            title: "会员即将过期",
-            message: `您的JoyJoin会员将在 ${this.formatDaysRemaining(now, endDate)} 后过期。立即续费享受不间断服务！`,
+            title: "活动礼包即将过期",
+            message: `您的JoyJoin活动礼包将在 ${this.formatDaysRemaining(now, endDate)} 后过期。再次购买以继续享受权益！`,
             relatedResourceId: subscription.id,
           });
           
@@ -157,6 +157,10 @@ export class SubscriptionService {
   /**
    * Renew a subscription by creating a new payment
    * Returns the payment details for WeChat Pay checkout
+   * 
+   * Display labels (shown in UI):
+   *   monthly  → "月度活动礼包" (one-time goods purchase, not a subscription)
+   *   quarterly → "季度活动礼包"
    */
   async renewSubscription(userId: string, planType: "monthly" | "quarterly"): Promise<any> {
     // Get the user's current subscription
@@ -189,11 +193,17 @@ export class SubscriptionService {
     
     console.log(`[Subscription] Created pending ${planType} renewal for user ${userId}`);
     
+    const displayLabels: Record<string, string> = {
+      monthly: "月度活动礼包",
+      quarterly: "季度活动礼包",
+    };
+
     // Return subscription ID for payment creation
     return {
       subscriptionId: newSubscription.id,
       amount: originalAmount,
       planType,
+      displayLabel: displayLabels[planType] || planType,
     };
   }
 }

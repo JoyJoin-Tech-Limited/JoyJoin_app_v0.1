@@ -11,15 +11,17 @@ import { motion } from "framer-motion";
 import type { BlindBoxEvent, EventFeedback } from "@shared/schema";
 import AtmosphereThermometer from "@/components/feedback/AtmosphereThermometer";
 import SelectConnectionsStep from "@/components/feedback/SelectConnectionsStep";
+import WechatIdSetupStep from "@/components/feedback/WechatIdSetupStep";
 import ImprovementCards from "@/components/feedback/ImprovementCards";
 import FeedbackCompletion from "@/components/feedback/FeedbackCompletion";
 
-type FeedbackStep = "intro" | "atmosphere" | "selectConnections" | "venueStyle" | "improvement" | "completion";
+type FeedbackStep = "intro" | "atmosphere" | "selectConnections" | "wechatIdSetup" | "venueStyle" | "improvement" | "completion";
 
 interface FeedbackData {
   atmosphereScore?: number;
   atmosphereNote?: string;
   connections?: string[];
+  wechatContactId?: string | null;
   venueStyleRating?: "like" | "neutral" | "dislike";
   improvementAreas?: string[];
   improvementOther?: string;
@@ -32,6 +34,12 @@ export default function EventFeedbackFlow() {
   
   const [currentStep, setCurrentStep] = useState<FeedbackStep>("intro");
   const [feedbackData, setFeedbackData] = useState<FeedbackData>({});
+  const [mutualMatches, setMutualMatches] = useState<Array<{
+    userId: string;
+    displayName: string;
+    archetype?: string;
+    wechatContactId?: string | null;
+  }>>([]);
 
   // Fetch event details
   const { data: event, isLoading } = useQuery<BlindBoxEvent>({
@@ -45,6 +53,9 @@ export default function EventFeedbackFlow() {
     enabled: !!eventId,
   });
 
+  // Fetch current user to check if wechatContactId is already set
+  const { data: currentUser } = useQuery<any>({ queryKey: ["/api/user"] });
+
   // Submit feedback mutation
   const submitMutation = useMutation({
     mutationFn: async (data: FeedbackData) => {
@@ -54,20 +65,11 @@ export default function EventFeedbackFlow() {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/feedback`] });
       queryClient.invalidateQueries({ queryKey: ["/api/my-events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/my-feedbacks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/direct-messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       
-      // Check for mutual matches
+      // Store mutual matches to display on completion screen
       if (response.mutualMatches && response.mutualMatches.length > 0) {
-        const matchCount = response.mutualMatches.length;
-        const names = response.mutualMatches
-          .map((m: any) => m.displayName || "某位参与者")
-          .join("、");
-        
-        toast({
-          title: "双向匹配成功！",
-          description: `你和${names}互相选择了对方！现在可以开始1对1私聊了～`,
-          duration: 6000,
-        });
+        setMutualMatches(response.mutualMatches);
       }
       
       setCurrentStep("completion");
@@ -81,9 +83,12 @@ export default function EventFeedbackFlow() {
     },
   });
 
-  const steps: FeedbackStep[] = ["intro", "atmosphere", "selectConnections", "venueStyle", "improvement", "completion"];
+  const steps: FeedbackStep[] = ["intro", "atmosphere", "selectConnections", "wechatIdSetup", "venueStyle", "improvement", "completion"];
   const currentStepIndex = steps.indexOf(currentStep);
-  const progressPercentage = (currentStepIndex / (steps.length - 1)) * 100;
+  // For progress, exclude wechatIdSetup if it won't be shown
+  const hadWechatStep = !currentUser?.wechatContactId && (feedbackData.connections?.length ?? 0) > 0;
+  const visibleStepCount = hadWechatStep ? steps.length : steps.length - 1;
+  const progressPercentage = (currentStepIndex / (visibleStepCount - 1)) * 100;
 
   const handleNext = (stepData: Partial<FeedbackData>) => {
     const updatedData = { ...feedbackData, ...stepData };
@@ -91,7 +96,12 @@ export default function EventFeedbackFlow() {
 
     if (currentStep === "intro") setCurrentStep("atmosphere");
     else if (currentStep === "atmosphere") setCurrentStep("selectConnections");
-    else if (currentStep === "selectConnections") setCurrentStep("venueStyle");
+    else if (currentStep === "selectConnections") {
+      const selectedSomeone = (updatedData.connections?.length ?? 0) > 0;
+      const needsWechatSetup = !currentUser?.wechatContactId && selectedSomeone;
+      setCurrentStep(needsWechatSetup ? "wechatIdSetup" : "venueStyle");
+    }
+    else if (currentStep === "wechatIdSetup") setCurrentStep("venueStyle");
     else if (currentStep === "venueStyle") setCurrentStep("improvement");
     else if (currentStep === "improvement") {
       // Submit feedback
@@ -102,7 +112,11 @@ export default function EventFeedbackFlow() {
   const handleBack = () => {
     if (currentStep === "atmosphere") setCurrentStep("intro");
     else if (currentStep === "selectConnections") setCurrentStep("atmosphere");
-    else if (currentStep === "venueStyle") setCurrentStep("selectConnections");
+    else if (currentStep === "wechatIdSetup") setCurrentStep("selectConnections");
+    else if (currentStep === "venueStyle") {
+      const showWechatStep = !currentUser?.wechatContactId && (feedbackData.connections?.length ?? 0) > 0;
+      setCurrentStep(showWechatStep ? "wechatIdSetup" : "selectConnections");
+    }
     else if (currentStep === "improvement") setCurrentStep("venueStyle");
     else if (currentStep === "intro") navigate("/events");
   };
@@ -206,6 +220,10 @@ export default function EventFeedbackFlow() {
           />
         ) : null}
         
+        {currentStep === "wechatIdSetup" && (
+          <WechatIdSetupStep onNext={handleNext} />
+        )}
+        
         {currentStep === "venueStyle" && (
           <VenueStyleStep
             venueName={event.restaurantName}
@@ -227,6 +245,7 @@ export default function EventFeedbackFlow() {
           <FeedbackCompletion 
             onDone={() => navigate("/events")}
             onDeepFeedback={() => navigate(`/events/${eventId}/deep-feedback`)}
+            mutualMatches={mutualMatches}
           />
         )}
       </div>

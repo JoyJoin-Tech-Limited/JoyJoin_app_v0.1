@@ -205,6 +205,10 @@ export const users = pgTable("users", {
   structuredOccupation: varchar("structured_occupation"), // 规范化职位：投资经理/产品经理等（区别于legacy的roleTitleShort）
   // 智能洞察存储（JSONB灵活schema）
   insightLedger: jsonb("insight_ledger"), // SmartInsight[] - 带provenance/confidence的动态事实存储
+
+  // ============ WeChat Contact ID (微信号) ============
+  wechatContactId: varchar("wechat_contact_id"),        // user's WeChat ID (微信号)
+  wechatContactIdSetAt: timestamp("wechat_contact_id_set_at"), // when first set, used to show prompt only once
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -524,6 +528,22 @@ export const eventFeedback = pgTable("event_feedback", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Connections table - WeChat ID exchange after mutual post-event selection
+// userAId < userBId alphabetically for dedup
+export const connections = pgTable("connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull().references(() => events.id),
+  userAId: varchar("user_a_id").notNull().references(() => users.id),
+  userBId: varchar("user_b_id").notNull().references(() => users.id),
+  status: varchar("status").notNull().default("pending"), // "pending" | "mutual"
+  userAWechatId: varchar("user_a_wechat_id"),   // snapshot at reveal time
+  userBWechatId: varchar("user_b_wechat_id"),   // snapshot at reveal time
+  revealedAt: timestamp("revealed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("connections_event_pair_unique").on(table.eventId, table.userAId, table.userBId),
+]);
+
 // Schemas
 export const upsertUserSchema = createInsertSchema(users).pick({
   id: true,
@@ -573,6 +593,7 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   socialStyle: true,
   icebreakerRole: true,
   workVisibility: true,
+  wechatContactId: true,
   // ❌ REMOVED DEPRECATED FIELDS:
   // - industry: true (legacy field, replaced by 3-tier classification)
   // - roleTitleShort: true (deprecated, use occupationId)
@@ -1037,7 +1058,7 @@ export const payments = pgTable("payments", {
   userId: varchar("user_id").notNull().references(() => users.id),
   
   // Payment type
-  paymentType: varchar("payment_type").notNull(), // "subscription", "event"
+  paymentType: varchar("payment_type").notNull(), // "subscription", "event", "event_bundle"
   relatedId: varchar("related_id"), // subscription ID or event ID
   
   // Amount
@@ -1379,6 +1400,7 @@ export type ChatMessage = typeof chatMessages.$inferSelect;
 export type DirectMessageThread = typeof directMessageThreads.$inferSelect;
 export type DirectMessage = typeof directMessages.$inferSelect;
 export type EventFeedback = typeof eventFeedback.$inferSelect;
+export type Connection = typeof connections.$inferSelect;
 export type BlindBoxEvent = typeof blindBoxEvents.$inferSelect;
 export type PersonalityQuestion = typeof personalityQuestions.$inferSelect;
 export type TestResponse = typeof testResponses.$inferSelect;

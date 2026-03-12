@@ -276,10 +276,10 @@ export default function BlindBoxPaymentPage() {
         }
         
         toast({
-          title: "VIP订阅成功！",
+          title: "礼包购买成功！",
           description: selectedPlan === "vip_quarterly" 
-            ? "季度VIP已开通，享3个月无限活动 + 专属权益" 
-            : "月度VIP已开通，享无限盲盒活动",
+            ? "季度活动礼包已激活，享3个月无限活动 + 专属权益" 
+            : "月度活动礼包已激活，尽情参加本月所有悦聚活动吧！",
         });
         
         queryClient.invalidateQueries({ queryKey: ['/api/user'] });
@@ -625,7 +625,7 @@ export default function BlindBoxPaymentPage() {
             <div className="space-y-2 pt-2">
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Crown className="h-3 w-3" />
-                VIP无限卡 · 专属权益
+                活动礼包 · 专属权益
               </p>
               <div className="grid grid-cols-2 gap-3">
                 {/* 月度VIP */}
@@ -648,7 +648,7 @@ export default function BlindBoxPaymentPage() {
                   >
                     <div className="flex flex-col items-center text-center gap-1">
                       <Crown className="h-5 w-5 text-amber-500" />
-                      <h4 className="font-bold text-sm">月度VIP</h4>
+                      <h4 className="font-bold text-sm">月度活动礼包</h4>
                       <div className="text-lg font-bold">{currencySymbol}{(VIP_MONTHLY_PRICE / 100).toFixed(0)}</div>
                       <p className="text-xs text-muted-foreground">无限活动</p>
                     </div>
@@ -680,7 +680,7 @@ export default function BlindBoxPaymentPage() {
                     </div>
                     <div className="flex flex-col items-center text-center gap-1">
                       <Crown className="h-5 w-5 text-amber-500" />
-                      <h4 className="font-bold text-sm">季度尊享</h4>
+                      <h4 className="font-bold text-sm">季度活动礼包</h4>
                       <div className="text-lg font-bold">{currencySymbol}{(VIP_QUARTERLY_PRICE / 100).toFixed(0)}</div>
                       <p className="text-xs text-muted-foreground">约{currencySymbol}{Math.round(VIP_QUARTERLY_PRICE / 300)}/月</p>
                     </div>
@@ -696,7 +696,7 @@ export default function BlindBoxPaymentPage() {
                   className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs space-y-2"
                 >
                   <p className="font-medium text-amber-700 dark:text-amber-300 flex items-center gap-1">
-                    <Crown className="h-3 w-3" /> VIP专属权益：
+                    <Crown className="h-3 w-3" /> 礼包专属权益：
                   </p>
                   <ul className="text-muted-foreground space-y-1">
                     <li className="flex items-center gap-2">
@@ -714,11 +714,11 @@ export default function BlindBoxPaymentPage() {
                     </li>
                     <li className="flex items-center gap-2">
                       <MessageCircle className="h-3 w-3 text-green-500 shrink-0" /> 
-                      <span>专属VIP交流群</span>
+                      <span>专属悦聚伙伴交流群</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <Star className="h-3 w-3 text-amber-500 shrink-0" /> 
-                      <span>会员身份标识</span>
+                      <span>悦聚伙伴身份标识</span>
                     </li>
                   </ul>
                 </motion.div>
@@ -885,8 +885,8 @@ export default function BlindBoxPaymentPage() {
                   {selectedPlan === "single" && "单次体验"}
                   {selectedPlan === "pack3" && "入门3次包"}
                   {selectedPlan === "pack6" && "超值6次包"}
-                  {selectedPlan === "vip_monthly" && "月度VIP"}
-                  {selectedPlan === "vip_quarterly" && "季度VIP"}
+                  {selectedPlan === "vip_monthly" && "月度活动礼包"}
+                  {selectedPlan === "vip_quarterly" && "季度活动礼包"}
                 </span>
                 <span>
                   {currencySymbol}{(basePrice / 100).toFixed(0)}
@@ -938,8 +938,8 @@ export default function BlindBoxPaymentPage() {
                     {selectedPlan === "single" && "微信支付"}
                     {selectedPlan === "pack3" && "微信支付 · 购买3次包"}
                     {selectedPlan === "pack6" && "微信支付 · 购买6次包"}
-                    {selectedPlan === "vip_monthly" && "微信支付 · 开通月度VIP"}
-                    {selectedPlan === "vip_quarterly" && "微信支付 · 开通季度VIP"}
+                    {selectedPlan === "vip_monthly" && "微信支付 · 购买月度活动礼包"}
+                    {selectedPlan === "vip_quarterly" && "微信支付 · 购买季度活动礼包"}
                   </>
                 )}
               </Button>

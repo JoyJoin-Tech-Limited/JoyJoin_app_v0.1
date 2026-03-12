@@ -81,7 +81,7 @@ export default function SelectConnectionsStep({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              只有双方互选才会解锁1对1私聊，保护你的隐私
+              双方互选后，将互相展示微信号，方便线下保持联系
             </motion.p>
           </div>
 
@@ -102,7 +102,7 @@ export default function SelectConnectionsStep({
               <div className="flex-1 text-sm">
                 <p className="font-medium text-primary mb-1">隐私保护机制</p>
                 <p className="text-muted-foreground leading-relaxed">
-                  对方不会知道你选了Ta，除非Ta也选了你。只有双向匹配才解锁私聊，避免尴尬和骚扰。
+                  对方不会知道你选了Ta，除非Ta也选了你。双向匹配后，双方微信号才会互相显示，避免尴尬和骚扰。
                 </p>
               </div>
             </div>
@@ -227,7 +227,7 @@ export default function SelectConnectionsStep({
           {/* Helpful Tip */}
           <div className="bg-muted/30 rounded-lg p-3">
             <p className="text-xs text-muted-foreground text-center leading-relaxed">
-              💡 小贴士：可以选择多位参与者，也可以一个都不选。双向匹配成功后会收到通知～
+              💡 小贴士：可以选择多位参与者，也可以一个都不选。双向匹配成功，微信号将直接展示在反馈完成页面。
             </p>
           </div>
         </CardContent>
