@@ -695,32 +695,13 @@ CREATE TABLE chat_messages (
 wsService.broadcastToEvent(eventId, message);
 ```
 
-#### Direct Messages (1-on-1)
+#### Direct Messages (Removed)
 
-**Thread Management:**
-```sql
-CREATE TABLE direct_message_threads (
-  id SERIAL PRIMARY KEY,
-  participant1_id INTEGER REFERENCES users(id),
-  participant2_id INTEGER REFERENCES users(id),
-  last_message_at TIMESTAMP,
-  UNIQUE(participant1_id, participant2_id)
-);
-
-CREATE TABLE direct_messages (
-  id SERIAL PRIMARY KEY,
-  thread_id INTEGER REFERENCES direct_message_threads(id),
-  sender_id INTEGER REFERENCES users(id),
-  content TEXT NOT NULL,
-  read_at TIMESTAMP,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-**Privacy Controls:**
-- Only attendees from same past events can DM
-- Block/report functionality
-- Message encryption (E2E planned for future)
+> **⚠️ Removed (PR 3 of 3):** In-app private/direct messaging has been removed.
+> The canonical continuation model is:
+> - Post-event mutual selection (via event feedback)
+> - Structured `connections` record with WeChat contact reveal
+> - No in-app private chat
 
 #### Chat Moderation System
 
@@ -1097,7 +1078,6 @@ interface PrivacySettings {
    
 4. 💬 消息 (Messages) → /chats
    - Event group chats
-   - Direct messages
    - Unread badge
    
 5. 👤 我的 (Profile) → /profile
@@ -2908,8 +2888,8 @@ export function useWebSocket() {
 9. **venues** - Partner venue database
 10. **venue_bookings** - Event-venue reservations
 11. **chat_messages** - Event group chat
-12. **direct_message_threads** - 1-on-1 conversation containers
-13. **direct_messages** - 1-on-1 messages
+12. ~~**direct_message_threads**~~ - Removed (PR 3 of 3; connection-first model)
+13. ~~**direct_messages**~~ - Removed (PR 3 of 3; connection-first model)
 14. **chat_reports** - User-reported messages
 15. **chat_logs** - Technical chat audit logs
 16. **contents** - CMS content (announcements, FAQs)
