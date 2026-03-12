@@ -159,7 +159,7 @@ interface AuthState {
 ├─────────────────────────────────────────────────────────────────────┤
 │  /discover           → Event recommendations                        │
 │  /events             → My events                                    │
-│  /chats              → Group & direct chats                         │
+│  /chats              → Event group chats                            │
 │  /profile            → Profile & settings                           │
 │  See "Main App Routes" section below                                │
 └─────────────────────────────────────────────────────────────────────┘
@@ -191,9 +191,8 @@ These are commented out in schema but kept for backward compatibility.
 | `/` | DiscoverPage | Home - event pool discovery |
 | `/discover` | DiscoverPage | Same as home |
 | `/events` | EventsPage | My events (pending/matched/completed tabs) |
-| `/chats` | ChatsPage | Chat list |
+| `/chats` | ChatsPage | Event group chat list |
 | `/chats/:eventId` | EventChatDetailPage | Group chat |
-| `/direct-chat/:threadId` | DirectChatPage | 1-on-1 chat |
 | `/profile` | ProfilePage | User profile |
 | `/rewards` | RewardsPage | XP, levels, coupons |
 | `/invite` | InvitePage | Invite friends |
@@ -656,7 +655,7 @@ interface PoolMatchedData {
 | `eventPoolGroups` | Matched groups |
 | `events` | Confirmed events |
 | `eventAttendees` | Event participants |
-| `chatMessages` | Group and direct messages |
+| `chatMessages` | Event group chat messages |
 | `invitations` | Referral tracking |
 | `userCoupons` | Discount coupons |
 | `subscriptions` | Premium subscriptions |
