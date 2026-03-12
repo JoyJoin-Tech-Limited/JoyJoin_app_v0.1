@@ -2935,6 +2935,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // After the connections loop, notify the other side of any newly mutual connections
+      const MUTUAL_MATCH_NOTIFICATION_WINDOW_MS = 60_000; // 60 seconds
+      try {
+        const freshMutualRows = await storage.getMutualConnections(eventId, userId);
+        for (const conn of freshMutualRows) {
+          const otherUserId = conn.userAId === userId ? conn.userBId : conn.userAId;
+          // Only notify if this mutual was just created (revealedAt within last 60 seconds)
+          const isNew = conn.revealedAt && (Date.now() - new Date(conn.revealedAt).getTime()) < MUTUAL_MATCH_NOTIFICATION_WINDOW_MS;
+          if (isNew && otherUserId !== userId) {
+            try {
+              // Deduplicate: only create notification if one doesn't already exist for this user+event
+              const existing = await db
+                .select({ id: schema.notifications.id })
+                .from(schema.notifications)
+                .where(
+                  and(
+                    eq(schema.notifications.userId, otherUserId),
+                    eq(schema.notifications.type, 'mutual_match'),
+                    eq(schema.notifications.relatedResourceId, eventId)
+                  )
+                )
+                .limit(1);
+              if (existing.length === 0) {
+                await storage.createNotification({
+                  userId: otherUserId,
+                  category: 'chat',
+                  type: 'mutual_match',
+                  title: '🎉 新的双向匹配',
+                  message: `你和一位参与者互相选择了对方！查看Ta的微信号吧`,
+                  relatedResourceId: eventId,
+                });
+              }
+            } catch (notifError) {
+              console.error(`[Connections] Failed to notify other user ${otherUserId}:`, notifError);
+            }
+          }
+        }
+      } catch (notifLoopError) {
+        console.error(`[Connections] Failed to process mutual match notifications:`, notifLoopError);
+      }
+
       // Collect all mutual connections for this event and return with wechat IDs.
       // Use the snapshot stored on the connection row at reveal time; fall back to live user
       // field only for legacy rows that pre-date snapshotting.
