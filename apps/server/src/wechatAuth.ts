@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import { randomUUID } from "crypto";
 import { storage } from "./storage";
 import { assessmentSessions, assessmentAnswers, users } from "@shared/schema";
 import { db } from "./db";
@@ -118,24 +119,144 @@ export async function getWechatOpenId(
 }
 
 /**
- * Find or create a user by WeChat openid, updating the session key if existing.
+ * Exchange a WeChat OAuth2 web authorization code for an openid.
+ *
+ * This is the server-side token exchange for the **WeChat Official Account (公众号) web
+ * authorization** subtype (scope: snsapi_base). It calls the OA OAuth2 endpoint
+ * `sns/oauth2/access_token` — different from the Mini Program `jscode2session` endpoint
+ * used by `getWechatOpenId` above.
+ *
+ * WeChat OAuth subtypes at a glance:
+ *   ① Mini Program (小程序) — wx.login() → jscode2session → openid+session_key
+ *      AppID source: 微信公众平台 → 小程序 AppID (WECHAT_APPID)
+ *   ② Official Account web (公众号网页授权) — oauth2/authorize → sns/oauth2/access_token → openid
+ *      AppID source: 微信公众平台 → 公众号 AppID  ← this function, ALSO uses WECHAT_APPID
+ *   ③ Open Platform PC QR scan (开放平台扫码) — qrconnect → open.weixin.qq.com/connect/qrconnect
+ *      AppID source: 微信开放平台 AppID — a completely separate credential, NOT used here
+ *
+ * JoyJoin uses a **single WECHAT_APPID** for both flows ① and ②. This is the normal
+ * setup when the Mini Program and Official Account are bound together under the same
+ * WeChat Open Platform account, which gives them a shared UnionID namespace.
+ *
+ * In development (NODE_ENV === 'development'), the real WeChat API is skipped and a mock
+ * openid is returned so the flow can be exercised without a registered OA callback URL.
+ *
+ * @taroMigration This function is only called by the server-side OAuth2 callback handler.
+ *   The Mini Program / Taro path continues to use `getWechatOpenId` above.
+ */
+export async function getWechatOAuthOpenId(
+  code: string
+): Promise<{ openid: string; access_token: string }> {
+  if (process.env.NODE_ENV === "development") {
+    return {
+      openid: `mock_openid_${code}`,
+      access_token: `mock_access_token_${Date.now()}`,
+    };
+  }
+
+  const appid = process.env.WECHAT_APPID;
+  const secret = process.env.WECHAT_SECRET;
+
+  if (!appid || !secret) {
+    throw Object.assign(
+      new Error("Server configuration error: WeChat credentials missing"),
+      { code: "WECHAT_CONFIG_ERROR" }
+    );
+  }
+
+  const url =
+    `https://api.weixin.qq.com/sns/oauth2/access_token` +
+    `?appid=${encodeURIComponent(appid)}` +
+    `&secret=${encodeURIComponent(secret)}` +
+    `&code=${encodeURIComponent(code)}` +
+    `&grant_type=authorization_code`;
+
+  const wechatRes = await fetch(url);
+
+  if (!wechatRes.ok) {
+    let bodyText: string | undefined;
+    try {
+      bodyText = await wechatRes.text();
+    } catch {
+      bodyText = undefined;
+    }
+    console.error("[WeChat Auth] OAuth2 access_token HTTP error:", {
+      status: wechatRes.status,
+      statusText: wechatRes.statusText,
+      bodySnippet: bodyText?.slice(0, MAX_ERROR_BODY_LOG_LENGTH),
+    });
+    throw Object.assign(
+      new Error(
+        `WeChat OAuth2 HTTP error: ${wechatRes.status} ${wechatRes.statusText}`
+      ),
+      { code: "WECHAT_AUTH_FAILED", status: wechatRes.status }
+    );
+  }
+
+  let oauthData: {
+    access_token?: string;
+    openid?: string;
+    errcode?: number;
+    errmsg?: string;
+  };
+
+  try {
+    oauthData = (await wechatRes.json()) as {
+      access_token?: string;
+      openid?: string;
+      errcode?: number;
+      errmsg?: string;
+    };
+  } catch (err) {
+    console.error("[WeChat Auth] Failed to parse OAuth2 access_token JSON response:", err);
+    throw Object.assign(
+      new Error("WeChat OAuth2 authentication failed: invalid JSON response"),
+      { code: "WECHAT_AUTH_FAILED" }
+    );
+  }
+
+  if (oauthData.errcode) {
+    console.error("[WeChat Auth] OAuth2 access_token error:", oauthData);
+    throw Object.assign(
+      new Error(oauthData.errmsg || "WeChat OAuth2 authentication failed"),
+      { code: "WECHAT_AUTH_FAILED" }
+    );
+  }
+
+  if (!oauthData.openid || !oauthData.access_token) {
+    throw Object.assign(
+      new Error("WeChat OAuth2 authentication failed: missing openid or access_token"),
+      { code: "WECHAT_AUTH_FAILED" }
+    );
+  }
+
+  return { openid: oauthData.openid, access_token: oauthData.access_token };
+}
+
+/**
+ * Find or create a user by WeChat openid.
+ * `session_key` is optional: it is present in the Mini Program flow but absent in the
+ * OAuth2 web flow. When provided it is persisted so the Mini Program can use it for
+ * encrypted-data decryption; when absent the existing value is left unchanged.
  */
 export async function findOrCreateWechatUser(
   openid: string,
-  session_key: string
+  session_key?: string
 ): Promise<{ user: NonNullable<Awaited<ReturnType<typeof storage.getUserByWechatOpenId>>>; isNewUser: boolean }> {
   const existingUser = await storage.getUserByWechatOpenId(openid);
 
   if (!existingUser) {
     const newUser = await storage.createUserWithWechat({
       wechatOpenId: openid,
-      wechatSessionKey: session_key,
+      ...(session_key ? { wechatSessionKey: session_key } : {}),
     });
     console.log(`[WeChat Auth] Created new user via WeChat: ${newUser.id}`);
     return { user: newUser, isNewUser: true };
   }
 
-  await storage.updateUser(existingUser.id, { wechatSessionKey: session_key });
+  if (session_key) {
+    await storage.updateUser(existingUser.id, { wechatSessionKey: session_key });
+  }
   console.log(`[WeChat Auth] Updated session for existing user: ${existingUser.id}`);
   const updated = await storage.getUserById(existingUser.id);
   return { user: updated ?? existingUser, isNewUser: false };
@@ -301,6 +422,135 @@ export async function processTestAnswers(
 }
 
 export function setupWechatAuth(app: Express) {
+  /**
+   * GET /api/auth/wechat/oauth/start
+   *
+   * Step 1 of the WeChat Official Account OAuth2 web login flow.
+   * Generates a CSRF state token, saves it to the session, then redirects the browser
+   * to WeChat's OAuth consent/authorize page.
+   *
+   * In development (NODE_ENV === 'development') the WeChat redirect is skipped and
+   * the user is bounced directly to the callback with a mock code so the flow can be
+   * tested without a registered WeChat Official Account.
+   */
+  app.get("/api/auth/wechat/oauth/start", (req: any, res) => {
+    // APP_URL is the public-facing origin of the app (e.g. https://yuejuapp.com).
+    // The Caddy reverse proxy routes /api/* from this same origin to the backend
+    // (path-based, not subdomain), so a single variable covers both the WeChat OAuth2
+    // redirect_uri AND the post-login redirect target.
+    const appUrl = (process.env.APP_URL ?? "http://localhost:5173").replace(/\/$/, "");
+
+    const appid = process.env.WECHAT_APPID;
+    if (!appid && process.env.NODE_ENV !== "development") {
+      console.error("[WeChat OAuth] Missing WECHAT_APPID");
+      return res.redirect(`${appUrl}/?wechat_oauth_error=config_error`);
+    }
+
+    const state = randomUUID();
+    req.session.oauthState = state;
+
+    // Persist the state token to the session before redirecting, regardless of
+    // whether this is the development shortcut or the real WeChat OAuth path.
+    req.session.save((err: any) => {
+      if (err) {
+        console.error("[WeChat OAuth] Session save error (start):", err);
+        return res.redirect(`${appUrl}/?wechat_oauth_error=session_error`);
+      }
+
+      // Development shortcut: bypass the real WeChat OAuth redirect so the flow
+      // can be exercised locally without a registered Official Account callback URL.
+      if (process.env.NODE_ENV === "development") {
+        const mockCode = `mock_oauth_code_${randomUUID()}`;
+        return res.redirect(
+          `${appUrl}/api/auth/wechat/oauth/callback` +
+          `?code=${encodeURIComponent(mockCode)}` +
+          `&state=${encodeURIComponent(state)}`
+        );
+      }
+
+      // WeChat Official Account (公众号) web authorization — subtype ②.
+      // Uses the same WECHAT_APPID as the Mini Program (subtype ①) because JoyJoin's
+      // Mini Program and Official Account are bound under the same WeChat Open Platform
+      // account, sharing credentials and a unified UnionID namespace.
+      //
+      // scope=snsapi_base: silent auth — no consent screen shown to the user, returns
+      // openid only. This is suitable for login because we only need identity, not profile.
+      // Use snsapi_userinfo instead if you need nickname/avatar from WeChat directly.
+      //
+      // "网页授权域名" prerequisite: the domain in APP_URL (e.g. yuejuapp.com) must be
+      // registered as the webpage authorization domain in the WeChat OA backend settings.
+      const callbackUri = `${appUrl}/api/auth/wechat/oauth/callback`;
+      const oauthUrl =
+        `https://open.weixin.qq.com/connect/oauth2/authorize` +
+        `?appid=${encodeURIComponent(appid!)}` +
+        `&redirect_uri=${encodeURIComponent(callbackUri)}` +
+        `&response_type=code` +
+        `&scope=snsapi_base` +
+        `&state=${encodeURIComponent(state)}` +
+        `#wechat_redirect`;
+
+      console.log("[WeChat OAuth] Redirecting to WeChat OA OAuth2 consent page");
+      res.redirect(oauthUrl);
+    });
+  });
+
+  /**
+   * GET /api/auth/wechat/oauth/callback
+   *
+   * Step 2 of the WeChat Official Account OAuth2 web login flow.
+   * WeChat redirects here with `?code=<code>&state=<state>` after user consent.
+   * The handler validates the CSRF state, exchanges the code for an openid, finds or
+   * creates the user, persists the session, then redirects the browser to the frontend.
+   */
+  app.get("/api/auth/wechat/oauth/callback", async (req: any, res) => {
+    const appUrl = (process.env.APP_URL ?? "http://localhost:5173").replace(/\/$/, "");
+    const { code, state } = req.query as { code?: string; state?: string };
+
+    // CSRF state validation
+    const savedState = req.session.oauthState as string | undefined;
+    if (!state || !savedState || state !== savedState) {
+      console.warn("[WeChat OAuth] Invalid or missing state in callback", {
+        received: state,
+        expected: savedState,
+      });
+      return res.redirect(`${appUrl}/?wechat_oauth_error=invalid_state`);
+    }
+    delete req.session.oauthState;
+
+    if (!code) {
+      console.warn("[WeChat OAuth] No code received in callback");
+      return res.redirect(`${appUrl}/?wechat_oauth_error=no_code`);
+    }
+
+    try {
+      const { openid } = await getWechatOAuthOpenId(code);
+      const { user, isNewUser } = await findOrCreateWechatUser(openid);
+
+      const fullUser = (await storage.getUserById(user.id)) ?? user;
+      req.session.userId = fullUser.id;
+
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err: any) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
+      console.log(`[WeChat OAuth] Callback login success; userId=${fullUser.id} isNewUser=${isNewUser}`);
+
+      // Let the frontend's AuthenticatedRouter drive navigation via nextStep.
+      res.redirect(appUrl);
+    } catch (error) {
+      const err: any = error;
+      console.error("[WeChat OAuth] Callback error:", {
+        message: err?.message,
+        code: err?.code,
+        stack: err?.stack,
+      });
+      res.redirect(`${appUrl}/?wechat_oauth_error=auth_failed`);
+    }
+  });
+
   /**
    * POST /api/auth/wechat/login-with-test
    * WeChat Mini Program authentication with optional personality test answers.
