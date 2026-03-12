@@ -234,13 +234,13 @@ export default function ChatsPage() {
                       )}
 
                       {/* WeChat reveal section */}
-                      {conn.wechatContactId ? (
+                      {conn.wechatContactId && conn.wechatContactId.trim() ? (
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs text-muted-foreground">微信号：</span>
                           <span className="text-xs font-medium">{conn.wechatContactId}</span>
                           <button
                             type="button"
-                            onClick={() => handleCopyWechat(conn.wechatContactId!, conn.connectionId)}
+                            onClick={() => handleCopyWechat(conn.wechatContactId as string, conn.connectionId)}
                             className="ml-1 p-1 rounded hover:bg-muted/50 transition-colors"
                             aria-label="复制微信号"
                           >

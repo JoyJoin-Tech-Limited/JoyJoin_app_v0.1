@@ -2818,7 +2818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await Promise.all(
         mutualConnections.map(async (conn: any) => {
           const otherUserId = conn.userAId === userId ? conn.userBId : conn.userAId;
-          const snapshotWechatId =
+          const capturedWechatId =
             conn.userAId === userId ? conn.userBWechatId : conn.userAWechatId;
           const otherUser = await storage.getUser(otherUserId);
           const [sourceEvent] = await db.select().from(events).where(eq(events.id, conn.eventId));
@@ -2827,7 +2827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eventId: conn.eventId,
             connectedAt: conn.createdAt,
             revealedAt: conn.revealedAt ?? null,
-            wechatContactId: snapshotWechatId ?? otherUser?.wechatContactId ?? null,
+            wechatContactId: capturedWechatId ?? otherUser?.wechatContactId ?? null,
             otherUser: otherUser
               ? {
                   id: otherUser.id,
