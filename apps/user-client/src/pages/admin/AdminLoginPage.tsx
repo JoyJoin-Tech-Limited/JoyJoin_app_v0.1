@@ -33,7 +33,7 @@ export default function AdminLoginPage() {
 
   useEffect(() => {
     if (user && (user as any).isAdmin) {
-      window.location.href = "https://admin.yuejuapp.com";
+      window.location.href = "https://admin.yuejuapp.com/login";
     }
   }, [user]);
 
@@ -80,7 +80,7 @@ export default function AdminLoginPage() {
       
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       setTimeout(() => {
-        window.location.href = "https://admin.yuejuapp.com";
+        window.location.href = "https://admin.yuejuapp.com/login";
       }, 500);
     },
     onError: (error: Error) => {
@@ -117,7 +117,7 @@ export default function AdminLoginPage() {
       
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       setTimeout(() => {
-        window.location.href = "https://admin.yuejuapp.com";
+        window.location.href = "https://admin.yuejuapp.com/login";
       }, 500);
     },
     onError: (error: Error) => {
