@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Ticket, Gift, Sparkles } from "lucide-react";
 import type { PromotionBanner } from "@shared/schema";
+import bannerOne from "@/assets/promotional banner/banner方案一_AI隐藏式_算好的人.png";
+import bannerTwo from "@/assets/promotional banner/banner方案二_AI隐藏式_同频的人.png";
+import bannerThree from "@/assets/promotional banner/banner方案三_AI隐藏式_懂你的人.png";
 
 interface CouponSlide {
   type: "coupon";
@@ -18,6 +21,20 @@ interface CouponSlide {
 interface FallbackSlide {
   type: "fallback";
 }
+
+type LocalBannerSlide = Pick<
+  PromotionBanner,
+  "id" | "imageUrl" | "title" | "subtitle" | "linkType" | "linkUrl"
+> & {
+  linkType: "none";
+  linkUrl: null;
+};
+
+const discoverLocalBanners: LocalBannerSlide[] = [
+  { id: "discover-local-1", imageUrl: bannerOne, title: "AI 匹配：帮你算好遇见什么样的人", subtitle: "算好的人 · 用数据找到更合适的缘分", linkType: "none", linkUrl: null },
+  { id: "discover-local-2", imageUrl: bannerTwo, title: "AI 匹配：帮你遇见同频的人", subtitle: "同频的人 · 和你合拍的社交伙伴", linkType: "none", linkUrl: null },
+  { id: "discover-local-3", imageUrl: bannerThree, title: "AI 匹配：帮你遇见懂你的人", subtitle: "懂你的人 · 更懂你的线下聚会", linkType: "none", linkUrl: null },
+];
 
 interface PromotionBannerCarouselProps {
   city?: string;
@@ -37,8 +54,11 @@ export function PromotionBannerCarousel({
   const [, navigate] = useLocation();
   const [selectedIndex, setSelectedIndex] = useState(0);
 
+  const isDiscover = placement === "discover";
+
   const { data: banners, isLoading } = useQuery<PromotionBanner[]>({
     queryKey: ["/api/banners", { city, placement }],
+    enabled: !isDiscover,
     queryFn: async () => {
       const params = new URLSearchParams();
       if (city) params.set("city", city);
@@ -68,9 +88,9 @@ export function PromotionBannerCarousel({
     };
   }, [emblaApi, onSelect]);
 
-  const handleBannerClick = (banner: PromotionBanner) => {
+  const handleBannerClick = (banner: PromotionBanner | LocalBannerSlide) => {
     if (banner.linkType === "none" || !banner.linkUrl) return;
-    
+
     if (banner.linkType === "external") {
       window.open(banner.linkUrl, "_blank", "noopener,noreferrer");
     } else {
@@ -78,7 +98,7 @@ export function PromotionBannerCarousel({
     }
   };
 
-  if (isLoading) {
+  if (!isDiscover && isLoading) {
     return (
       <div className={cn("w-full px-4", className)}>
         <Skeleton className="w-full h-40 rounded-xl" data-testid="skeleton-banner" />
@@ -86,8 +106,10 @@ export function PromotionBannerCarousel({
     );
   }
 
-  const allSlides: Array<PromotionBanner | CouponSlide | FallbackSlide> = [];
-  if (banners && banners.length > 0) {
+  const allSlides: Array<PromotionBanner | LocalBannerSlide | CouponSlide | FallbackSlide> = [];
+  if (isDiscover) {
+    allSlides.push(...discoverLocalBanners);
+  } else if (banners && banners.length > 0) {
     banners.forEach((banner, idx) => {
       allSlides.push(banner);
       if (idx === 0 && coupon) {
@@ -183,7 +205,7 @@ export function PromotionBannerCarousel({
               );
             }
 
-            const banner = slide as PromotionBanner;
+            const banner = slide as PromotionBanner | LocalBannerSlide;
             return (
               <div
                 key={banner.id}

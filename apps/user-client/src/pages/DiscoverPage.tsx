@@ -15,7 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { differenceInDays } from "date-fns";
+
 import { formatChineseDateOnly, extractChineseTime } from "@/lib/chineseDateTime";
 import { useLocation } from "wouter";
 import { archetypeConfig } from "@/lib/archetypes";
@@ -204,16 +204,6 @@ export default function DiscoverPage() {
     return new Date(c.validUntil) > new Date();
   });
 
-  // Calculate days until expiry
-  const getExpiryText = (validUntil: string | null) => {
-    if (!validUntil) return undefined;
-    const days = differenceInDays(new Date(validUntil), new Date());
-    if (days <= 0) return "今日到期";
-    if (days === 1) return "1天";
-    if (days <= 7) return `${days}天`;
-    return undefined;
-  };
-
   // 异步清理通知 - 不阻塞UI (仅执行一次)
   useEffect(() => {
     if (!isAuthenticated || hasMarkedRef.current) return;
@@ -386,17 +376,11 @@ export default function DiscoverPage() {
           <ProfileCompletionNudge onDismiss={handleDismissProfileNudge} />
         )}
 
-        {/* 推广横幅轮播（含优惠券） */}
+        {/* 推广横幅轮播 */}
         <PromotionBannerCarousel 
           city={selectedCity} 
           placement="discover"
           className="mt-2"
-          coupon={bestCoupon ? {
-            type: "coupon",
-            discountType: bestCoupon.discountType as "percentage" | "fixed_amount",
-            discountValue: bestCoupon.discountValue,
-            expiresIn: getExpiryText(bestCoupon.validUntil),
-          } : undefined}
         />
 
         <div className="px-4 pb-2">
