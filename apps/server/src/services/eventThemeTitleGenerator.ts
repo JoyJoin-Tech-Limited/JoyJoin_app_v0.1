@@ -19,6 +19,7 @@ import { db } from "../db";
 import { users, userInterests, eventPoolRegistrations } from "@shared/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { archetypeRegistry } from "@shared/personality/archetypeRegistry";
+import { calculateAge } from "@shared/utils";
 
 /**
  * Enriched member profile with all onboarding data + event preferences
@@ -326,17 +327,9 @@ export function calculateGroupStats(
     other: members.filter((m) => m.gender && !["男性", "女性"].includes(m.gender)).length,
   };
 
-  // Average age (calculated from birthdate)
-  const now = new Date();
+  // Average age (calculated from birthdate using shared helper)
   const ages = members
-    .map((m) => {
-      if (!m.birthdate) return null;
-      const birth = new Date(m.birthdate);
-      let age = now.getFullYear() - birth.getFullYear();
-      const monthDiff = now.getMonth() - birth.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age--;
-      return age;
-    })
+    .map((m) => m.birthdate ? calculateAge(m.birthdate) : null)
     .filter((a) => a !== null) as number[];
   const avgAge = ages.length > 0 ? ages.reduce((a, b) => a + b, 0) / ages.length : null;
 

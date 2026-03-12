@@ -274,8 +274,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API v1 backward compat: /api/v1/* routes work identically to /api/* routes.
   // Rewrite happens before session and route handlers so all existing logic is reused.
   app.use((req, _res, next) => {
-    if (req.url && req.url.startsWith('/api/v1/')) {
-      req.url = '/api/' + req.url.slice('/api/v1/'.length);
+    if (req.url) {
+      if (req.url.startsWith('/api/v1/')) {
+        req.url = '/api/' + req.url.slice('/api/v1/'.length);
+      } else if (req.url === '/api/v1' || req.url.startsWith('/api/v1?')) {
+        req.url = '/api' + req.url.slice('/api/v1'.length);
+      }
     }
     next();
   });

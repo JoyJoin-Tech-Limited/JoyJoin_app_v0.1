@@ -31,6 +31,7 @@ import {
   userCoupons
 } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
+import { calculateAge } from "@shared/utils";
 import { wsService } from "./wsService";
 import type { PoolMatchedData } from "@shared/wsEvents";
 import { chemistryMatrix as CHEMISTRY_MATRIX, ARCHETYPE_ENERGY } from "./archetypeChemistry";
@@ -122,14 +123,7 @@ function meetsHardConstraints(
   }
   
   // 年龄限制 (calculated from birthdate)
-  const userAge = user.birthdate ? (() => {
-    const birth = new Date(user.birthdate);
-    const now = new Date();
-    let age = now.getFullYear() - birth.getFullYear();
-    const m = now.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
-    return age;
-  })() : null;
+  const userAge = user.birthdate ? calculateAge(user.birthdate) : null;
   if (pool.ageRangeMin && userAge !== null && userAge < pool.ageRangeMin) {
     return false;
   }

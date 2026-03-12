@@ -3,7 +3,7 @@
  * Tests group statistics calculation and data provenance
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { calculateGroupStats } from '../services/eventThemeTitleGenerator';
 import type { EnrichedMemberProfile } from '../services/eventThemeTitleGenerator';
 
@@ -96,6 +96,18 @@ const mockMembers: EnrichedMemberProfile[] = [
 ];
 
 describe('Team Name Generator - calculateGroupStats', () => {
+  // Freeze time so age calculations are deterministic.
+  // Birthdates in mockMembers are all 1995-1997-06-15; freeze to 2026-03-12 (before June)
+  // so ages are: user1=29 (1996), user2=28 (1997), user3=30 (1995) → average 29
+  const FROZEN_DATE = new Date('2026-03-12T00:00:00.000Z');
+  beforeAll(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(FROZEN_DATE);
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
   it('should calculate average energy correctly', () => {
     const stats = calculateGroupStats(mockMembers);
     
@@ -156,11 +168,8 @@ describe('Team Name Generator - calculateGroupStats', () => {
   it('should calculate average age correctly', () => {
     const stats = calculateGroupStats(mockMembers);
     
-    // All members have June 15 birthdates; test runs after March 11 so birthdays haven't occurred yet
-    // User1: born 1996-06-15 → 29 in 2026 (not yet birthday)
-    // User2: born 1997-06-15 → 28 in 2026 (not yet birthday)
-    // User3: born 1995-06-15 → 30 in 2026 (not yet birthday)
-    // Average: (29 + 28 + 30) / 3 = 29
+    // Time is frozen to 2026-03-12. Birthdays are on June 15 so all have not turned yet.
+    // user1 (1996-06-15) = 29, user2 (1997-06-15) = 28, user3 (1995-06-15) = 30 → avg 29
     expect(stats.avgAge).toBe(29);
   });
 
