@@ -18,6 +18,7 @@ import { archetypeConfig } from "@/lib/archetypes";
 import { 
   getGenderDisplay, 
   formatAge, 
+  calculateAge,
   getEducationDisplay
 } from "@/lib/userFieldMappings";
 import type { Event, DirectMessageThread, User as UserType } from "@shared/schema";
@@ -456,9 +457,9 @@ export default function ChatsPage() {
                                     
                                     {/* Info Chips */}
                                     <div className="flex flex-wrap gap-1.5">
-                                      {otherUser.gender && otherUser.age && (
+                                      {otherUser.gender && otherUser.birthdate && (
                                         <span className="text-xs bg-muted/50 px-2.5 py-1 rounded-full">
-                                          {getGenderDisplay(otherUser.gender)} · {formatAge(otherUser.age)}
+                                          {getGenderDisplay(otherUser.gender)} · {formatAge(calculateAge(otherUser.birthdate))}
                                         </span>
                                       )}
                                       {otherUser.educationLevel && (

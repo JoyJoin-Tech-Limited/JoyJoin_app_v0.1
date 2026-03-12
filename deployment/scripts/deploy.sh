@@ -71,7 +71,7 @@ fi
 
 # Then sync schema with push
 echo "  📤 Running schema push..."
-npx drizzle-kit push --config=./drizzle.config.ts
+npx drizzle-kit push --config=apps/server/drizzle.config.ts
 
 
 

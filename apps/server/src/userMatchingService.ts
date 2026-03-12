@@ -260,30 +260,6 @@ function calculateBackgroundScore(user1: Partial<User>, user2: Partial<User>): n
   
   // ====== 人生阶段匹配 ======
   
-  // 子女状态匹配 (+15分如果相同阶段)
-  if (user1.children && user2.children && 
-      user1.children !== 'Prefer not to say' && user2.children !== 'Prefer not to say') {
-    factors++;
-    if (user1.children === user2.children) {
-      // 相同子女状态，人生阶段一致
-      if (user1.children === 'Expecting') {
-        score += 20; // 都在期待新生命，非常特殊的共鸣
-      } else if (user1.children === 'No kids') {
-        score += 10; // 都没有孩子
-      } else {
-        score += 15; // 孩子年龄段相同
-      }
-    } else {
-      // 相近子女阶段也有加分
-      const childStages = ['No kids', 'Expecting', '0-5', '6-12', '13-18', 'Adult'];
-      const stage1 = childStages.indexOf(user1.children);
-      const stage2 = childStages.indexOf(user2.children);
-      if (stage1 >= 2 && stage2 >= 2 && Math.abs(stage1 - stage2) === 1) {
-        score += 8; // 相邻孩子年龄段
-      }
-    }
-  }
-  
   // 感情状态匹配 (+8分如果相同)
   if (user1.relationshipStatus && user2.relationshipStatus &&
       user1.relationshipStatus !== 'Prefer not to say' && user2.relationshipStatus !== 'Prefer not to say') {
@@ -422,22 +398,6 @@ export function calculateUserMatchScore(
     if (user1.hometownRegionCity && user2.hometownRegionCity && 
         user1.hometownRegionCity === user2.hometownRegionCity) {
       matchPoints.push(`老乡！都来自${user1.hometownRegionCity}`);
-    }
-    
-    // 子女状态相同
-    if (user1.children && user2.children && user1.children === user2.children &&
-        user1.children !== 'Prefer not to say') {
-      const childrenLabels: Record<string, string> = {
-        'No kids': '都是丁克一族',
-        'Expecting': '都在期待新生命',
-        '0-5': '都有学龄前孩子',
-        '6-12': '都有小学阶段的孩子',
-        '13-18': '都有青少年孩子',
-        'Adult': '都有成年子女',
-      };
-      if (childrenLabels[user1.children]) {
-        matchPoints.push(childrenLabels[user1.children]);
-      }
     }
     
     // 资历相同 - DEPRECATED: seniority field removed from schema

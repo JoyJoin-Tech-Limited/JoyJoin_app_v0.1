@@ -244,7 +244,6 @@ export default function PoolGroupDetailPage() {
               age: user?.birthdate ? calculateAge(user.birthdate) : undefined,
               gender: user?.gender || undefined,
               relationshipStatus: user?.relationshipStatus || undefined,
-              children: user?.children || undefined,
               hometownRegionCity: user?.hometownRegionCity || undefined,
               hometownAffinityOptin: user?.hometownAffinityOptin ?? undefined,
             }}
