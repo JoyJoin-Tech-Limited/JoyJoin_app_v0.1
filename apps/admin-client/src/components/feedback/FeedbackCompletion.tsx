@@ -1,15 +1,79 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { Sparkles, Gift, Star, Target } from "lucide-react";
+import { Sparkles, Gift, Star, Target, Heart, MessageCircle, Copy, Check } from "lucide-react";
+import { archetypeConfig } from "@/lib/archetypes";
+
+interface MutualMatch {
+  userId: string;
+  displayName: string;
+  archetype?: string;
+  wechatContactId?: string | null;
+}
 
 interface FeedbackCompletionProps {
   onDone: () => void;
   onDeepFeedback?: () => void;
+  mutualMatches?: MutualMatch[];
 }
 
-export default function FeedbackCompletion({ onDone, onDeepFeedback }: FeedbackCompletionProps) {
+function MutualMatchCard({ match }: { match: MutualMatch }) {
+  const [copied, setCopied] = useState(false);
+  const archetypeData = match.archetype && archetypeConfig[match.archetype]
+    ? archetypeConfig[match.archetype]
+    : { icon: "✨", bgColor: "bg-muted" };
+
+  const handleCopy = () => {
+    if (match.wechatContactId) {
+      navigator.clipboard.writeText(match.wechatContactId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="border-2 border-rose-200 bg-rose-50/50 rounded-xl p-4 space-y-3">
+      {/* User info row */}
+      <div className="flex items-center gap-3">
+        <div className={`h-12 w-12 rounded-full ${archetypeData.bgColor} flex items-center justify-center text-xl`}>
+          {archetypeData.icon}
+        </div>
+        <div>
+          <p className="font-semibold">{match.displayName}</p>
+          {match.archetype && (
+            <Badge variant="secondary" className="text-xs">{match.archetype}</Badge>
+          )}
+        </div>
+      </div>
+
+      {/* WeChat ID reveal */}
+      {match.wechatContactId ? (
+        <div className="bg-white rounded-lg p-3 flex items-center justify-between gap-2 border border-rose-100">
+          <div className="flex items-center gap-2 min-w-0">
+            <MessageCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+            <span className="text-sm font-mono font-medium truncate">{match.wechatContactId}</span>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="flex-shrink-0 h-8 px-2"
+            onClick={handleCopy}
+          >
+            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+          </Button>
+        </div>
+      ) : (
+        <div className="bg-muted/50 rounded-lg p-3 text-center">
+          <p className="text-xs text-muted-foreground">对方暂未设置微信号，可在活动群中联系</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function FeedbackCompletion({ onDone, onDeepFeedback, mutualMatches }: FeedbackCompletionProps) {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <motion.div
@@ -63,6 +127,24 @@ export default function FeedbackCompletion({ onDone, onDeepFeedback }: FeedbackC
                 感谢你的宝贵意见，帮助我们变得更好
               </p>
             </motion.div>
+
+            {/* Mutual Matches Section */}
+            {mutualMatches && mutualMatches.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3 }}
+                className="space-y-3"
+              >
+                <div className="flex items-center gap-2">
+                  <Heart className="h-5 w-5 text-rose-500 fill-rose-500" />
+                  <span className="font-semibold text-rose-600">你们互相选择了彼此！</span>
+                </div>
+                {mutualMatches.map((match) => (
+                  <MutualMatchCard key={match.userId} match={match} />
+                ))}
+              </motion.div>
+            )}
 
             {/* Rewards Section */}
             <motion.div

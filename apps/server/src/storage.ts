@@ -19,7 +19,7 @@ import {
   directMessageThreads, directMessages, payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs,
   pricingSettings, promotionBanners, eventPools, eventPoolGroups, venueTimeSlots, venueTimeSlotBookings, venues,
   icebreakerSessions, icebreakerCheckins, icebreakerReadyVotes, icebreakerActivityLogs, registrationSessions, preSignupData,
-  assessmentSessions, assessmentAnswers, userSocialTagGenerations
+  assessmentSessions, assessmentAnswers, userSocialTagGenerations, connections
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
@@ -86,6 +86,11 @@ export interface IStorage {
   getEventFeedbacks(eventId: string): Promise<Array<EventFeedback>>;
   createEventFeedback(userId: string, feedback: InsertEventFeedback): Promise<EventFeedback>;
   updateEventFeedbackDeep(userId: string, eventId: string, deepData: Record<string, any>): Promise<EventFeedback>;
+
+  // Connection operations (WeChat ID exchange)
+  upsertConnection(eventId: string, userAId: string, userBId: string): Promise<any>;
+  getMutualConnections(eventId: string, userId: string): Promise<any[]>;
+  updateUserWechatId(userId: string, wechatContactId: string): Promise<void>;
 
   // Direct message operations
   findDirectMessageThread(userId1: string, userId2: string, eventId: string): Promise<DirectMessageThread | undefined>;
@@ -973,6 +978,83 @@ export class DatabaseStorage implements IStorage {
       )
       .returning();
     return updatedFeedback;
+  }
+
+  // Connection operations (WeChat ID exchange)
+  async upsertConnection(eventId: string, userAId: string, userBId: string): Promise<any> {
+    // Determine canonical ordering: userAId < userBId alphabetically
+    const [canonA, canonB] = userAId < userBId ? [userAId, userBId] : [userBId, userAId];
+
+    // Check if the row already exists
+    const [existing] = await db
+      .select()
+      .from(connections)
+      .where(
+        and(
+          eq(connections.eventId, eventId),
+          eq(connections.userAId, canonA),
+          eq(connections.userBId, canonB)
+        )
+      );
+
+    if (!existing) {
+      // First selection: insert with pending status
+      const [inserted] = await db
+        .insert(connections)
+        .values({
+          eventId,
+          userAId: canonA,
+          userBId: canonB,
+          status: "pending",
+        })
+        .returning();
+      return inserted;
+    } else if (existing.status === "pending") {
+      // Check which user originally created this (the one who didn't create it is now completing the mutual)
+      // If existing was created by canonA selecting canonB, now canonB is selecting canonA → mutual
+      // We need to figure out who's the new selector: the current call tells us userAId/userBId before sorting
+      // The row was already created, so one side already selected. Now the OTHER side is calling → mutual.
+      // Fetch both users' wechat IDs for snapshot
+      const [userARecord] = await db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonA));
+      const [userBRecord] = await db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonB));
+
+      const [updated] = await db
+        .update(connections)
+        .set({
+          status: "mutual",
+          userAWechatId: userARecord?.wechatContactId ?? null,
+          userBWechatId: userBRecord?.wechatContactId ?? null,
+          revealedAt: new Date(),
+        })
+        .where(eq(connections.id, existing.id))
+        .returning();
+      return updated;
+    }
+    // Already mutual — return as-is
+    return existing;
+  }
+
+  async getMutualConnections(eventId: string, userId: string): Promise<any[]> {
+    return db
+      .select()
+      .from(connections)
+      .where(
+        and(
+          eq(connections.eventId, eventId),
+          eq(connections.status, "mutual"),
+          sql`(${connections.userAId} = ${userId} OR ${connections.userBId} = ${userId})`
+        )
+      );
+  }
+
+  async updateUserWechatId(userId: string, wechatContactId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        wechatContactId,
+        wechatContactIdSetAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   // Direct message operations
