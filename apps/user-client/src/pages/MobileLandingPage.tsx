@@ -20,11 +20,13 @@ import { Users, Brain, Sparkles, Gamepad2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { useWeChatLogin } from "@/hooks/useWeChatLogin";
 
 export default function MobileLandingPage() {
   const [, setLocation] = useLocation();
   const [agreed, setAgreed] = useState(false);
   const { toast } = useToast();
+  const { handleWeChatLogin, isLoggingIn } = useWeChatLogin();
 
   // Feature cards configuration
   const features = [
@@ -71,7 +73,7 @@ export default function MobileLandingPage() {
   };
 
   const handleLogin = () => {
-    setLocation("/login");
+    handleWeChatLogin();
   };
 
   const handleOpenAgreement = (type: 'user' | 'privacy') => {
@@ -131,9 +133,10 @@ export default function MobileLandingPage() {
         <div className="text-center">
           <button
             onClick={handleLogin}
-            className="text-sm text-[#A86BFF] font-normal active:opacity-70 transition-opacity"
+            disabled={isLoggingIn}
+            className="text-sm text-[#A86BFF] font-normal active:opacity-70 transition-opacity disabled:opacity-50"
           >
-            已有账号登录
+            {isLoggingIn ? "登录中..." : "已有账号登录"}
           </button>
         </div>
 
