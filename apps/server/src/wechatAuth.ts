@@ -120,10 +120,26 @@ export async function getWechatOpenId(
 
 /**
  * Exchange a WeChat OAuth2 web authorization code for an openid.
- * Used by the Official Account (公众号) OAuth2 web flow (`oauth2/authorize`).
  *
- * In development (NODE_ENV === 'development'), uses the code directly as a mock openid
- * so the flow can be exercised without a registered WeChat Official Account callback URL.
+ * This is the server-side token exchange for the **WeChat Official Account (公众号) web
+ * authorization** subtype (scope: snsapi_base). It calls the OA OAuth2 endpoint
+ * `sns/oauth2/access_token` — different from the Mini Program `jscode2session` endpoint
+ * used by `getWechatOpenId` above.
+ *
+ * WeChat OAuth subtypes at a glance:
+ *   ① Mini Program (小程序) — wx.login() → jscode2session → openid+session_key
+ *      AppID source: 微信公众平台 → 小程序 AppID (WECHAT_APPID)
+ *   ② Official Account web (公众号网页授权) — oauth2/authorize → sns/oauth2/access_token → openid
+ *      AppID source: 微信公众平台 → 公众号 AppID  ← this function, ALSO uses WECHAT_APPID
+ *   ③ Open Platform PC QR scan (开放平台扫码) — qrconnect → open.weixin.qq.com/connect/qrconnect
+ *      AppID source: 微信开放平台 AppID — a completely separate credential, NOT used here
+ *
+ * JoyJoin uses a **single WECHAT_APPID** for both flows ① and ②. This is the normal
+ * setup when the Mini Program and Official Account are bound together under the same
+ * WeChat Open Platform account, which gives them a shared UnionID namespace.
+ *
+ * In development (NODE_ENV === 'development'), the real WeChat API is skipped and a mock
+ * openid is returned so the flow can be exercised without a registered OA callback URL.
  *
  * @taroMigration This function is only called by the server-side OAuth2 callback handler.
  *   The Mini Program / Taro path continues to use `getWechatOpenId` above.
@@ -138,8 +154,8 @@ export async function getWechatOAuthOpenId(
     };
   }
 
-  const appid = process.env.WECHAT_OA_APPID ?? process.env.WECHAT_APPID;
-  const secret = process.env.WECHAT_OA_SECRET ?? process.env.WECHAT_SECRET;
+  const appid = process.env.WECHAT_APPID;
+  const secret = process.env.WECHAT_SECRET;
 
   if (!appid || !secret) {
     throw Object.assign(
@@ -418,14 +434,15 @@ export function setupWechatAuth(app: Express) {
    * tested without a registered WeChat Official Account.
    */
   app.get("/api/auth/wechat/oauth/start", (req: any, res) => {
-    // APP_URL is the public-facing base URL of the app (e.g. https://yuejuapp.com).
-    // Both the frontend and /api/* are served from this same origin via the Caddy reverse
-    // proxy, so a single variable covers the OAuth2 redirect_uri and the post-login redirect.
+    // APP_URL is the public-facing origin of the app (e.g. https://yuejuapp.com).
+    // The Caddy reverse proxy routes /api/* from this same origin to the backend
+    // (path-based, not subdomain), so a single variable covers both the WeChat OAuth2
+    // redirect_uri AND the post-login redirect target.
     const appUrl = (process.env.APP_URL ?? "http://localhost:5173").replace(/\/$/, "");
 
-    const appid = process.env.WECHAT_OA_APPID ?? process.env.WECHAT_APPID;
+    const appid = process.env.WECHAT_APPID;
     if (!appid && process.env.NODE_ENV !== "development") {
-      console.error("[WeChat OAuth] Missing WECHAT_OA_APPID / WECHAT_APPID");
+      console.error("[WeChat OAuth] Missing WECHAT_APPID");
       return res.redirect(`${appUrl}/?wechat_oauth_error=config_error`);
     }
 
@@ -451,23 +468,17 @@ export function setupWechatAuth(app: Express) {
         );
       }
 
-      // WeChat Official Account (公众号) OAuth2 web authorization.
-      // This flow works inside WeChat's browser (微信内置浏览器) using snsapi_base scope,
-      // which performs a silent authorization and returns only the openid — no consent screen.
+      // WeChat Official Account (公众号) web authorization — subtype ②.
+      // Uses the same WECHAT_APPID as the Mini Program (subtype ①) because JoyJoin's
+      // Mini Program and Official Account are bound under the same WeChat Open Platform
+      // account, sharing credentials and a unified UnionID namespace.
       //
-      // Prerequisites:
-      //   - WECHAT_OA_APPID must be the Official Account appid (公众号 AppID), not the
-      //     Mini Program appid. They are different credentials for different platforms.
-      //   - The "网页授权域名" (webpage authorization domain) in the WeChat OA backend must
-      //     include the domain in APP_URL (e.g. yuejuapp.com).
+      // scope=snsapi_base: silent auth — no consent screen shown to the user, returns
+      // openid only. This is suitable for login because we only need identity, not profile.
+      // Use snsapi_userinfo instead if you need nickname/avatar from WeChat directly.
       //
-      // Scope options:
-      //   snsapi_base   — silent, returns openid only (no user approval screen). ✅ Used here.
-      //   snsapi_userinfo — shows consent screen, returns openid + nickname + avatar.
-      //
-      // Note: this endpoint is for the Official Account web flow only.
-      // For PC login via QR scan (开放平台), use the open.weixin.qq.com/connect/qrconnect
-      // endpoint with an Open Platform appid — that is a different subtype entirely.
+      // "网页授权域名" prerequisite: the domain in APP_URL (e.g. yuejuapp.com) must be
+      // registered as the webpage authorization domain in the WeChat OA backend settings.
       const callbackUri = `${appUrl}/api/auth/wechat/oauth/callback`;
       const oauthUrl =
         `https://open.weixin.qq.com/connect/oauth2/authorize` +
