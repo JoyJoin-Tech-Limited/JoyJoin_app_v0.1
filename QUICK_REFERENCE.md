@@ -93,12 +93,16 @@ npm run dev              # Start on http://localhost:5000
 
 ---
 
-## 💳 Payment & Subscription
+## 💳 Payment & Activity Bundles
 
-### Tiers
-- **月度会员:** ¥98/month
-- **季度会员:** ¥294/3 months (15% discount)
-- **单次票:** ¥148/event
+### Tiers (displayed as one-time product purchases, NOT subscriptions)
+- **月度活动礼包:** ¥99/次购买，本月内有效
+- **季度活动礼包:** ¥294/次购买，3个月内有效（省15%）
+- **单次活动票:** ¥148/场
+
+### Compliance Note
+Bundles are sold as one-time goods (商品), not recurring subscriptions.
+paymentType = "event_bundle" for bundle purchases.
 
 ### WeChat Pay Flow
 ```
