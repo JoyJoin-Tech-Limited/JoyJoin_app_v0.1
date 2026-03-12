@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { topicCards, type TopicCard } from '@shared/topicCards';
+import { calculateAge } from '@shared/utils';
 
 const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
 
@@ -141,15 +142,8 @@ export async function generateAICards(
 
   const industries = attendees.map(a => a.industryCategory).filter(Boolean);
   const attendeesWithBirthdate = attendees.filter(a => a.birthdate) as Array<typeof attendees[0] & { birthdate: string }>;
-  const now = new Date();
   const avgAge = attendeesWithBirthdate.length > 0
-    ? attendeesWithBirthdate.reduce((sum, a) => {
-        const birth = new Date(a.birthdate);
-        let age = now.getFullYear() - birth.getFullYear();
-        const monthDiff = now.getMonth() - birth.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age--;
-        return sum + age;
-      }, 0) / attendeesWithBirthdate.length
+    ? attendeesWithBirthdate.reduce((sum, a) => sum + calculateAge(a.birthdate), 0) / attendeesWithBirthdate.length
     : NaN;
   
   // Calculate average personality traits

@@ -13,7 +13,7 @@
  * - hot标记基于平台用户分布统计，定期更新
  */
 
-import { WorkMode } from "./constants";
+import type { WorkMode } from "./constants";
 export type { WorkMode };
 
 // 行业分类
