@@ -1011,7 +1011,10 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    if (!row) return null; // Should never happen after the insert above
+    if (!row) {
+      // This should never happen after the atomic insert above, but fail fast if it does
+      throw new Error(`[Connections] Row not found after insert for event=${eventId} userA=${canonA} userB=${canonB}`);
+    }
 
     // If the row is already mutual, nothing more to do
     if (row.status === "mutual") return row;
@@ -1025,6 +1028,7 @@ export class DatabaseStorage implements IStorage {
         db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonB)).then(r => r[0]),
       ]);
 
+      // Drizzle .returning() returns an array; destructuring gives the first row or undefined
       const [updated] = await db
         .update(connections)
         .set({
@@ -1040,6 +1044,7 @@ export class DatabaseStorage implements IStorage {
           )
         )
         .returning();
+      // If the WHERE condition didn't match (concurrent update already set mutual), re-return the row we fetched
       return updated ?? row;
     }
 
