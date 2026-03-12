@@ -2941,6 +2941,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Collect all mutual connections for this event and return with wechat IDs
+      // Note: mutual matches are typically few (≤5 per event), so parallel getUser calls are acceptable
       const mutualConnectionRows = await storage.getMutualConnections(eventId, userId);
       const mutualMatches = await Promise.all(
         mutualConnectionRows.map(async (conn: any) => {

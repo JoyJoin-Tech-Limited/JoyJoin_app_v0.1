@@ -88,7 +88,7 @@ export default function EventFeedbackFlow() {
   // For progress, exclude wechatIdSetup if it won't be shown
   const hadWechatStep = !currentUser?.wechatContactId && (feedbackData.connections?.length ?? 0) > 0;
   const visibleStepCount = hadWechatStep ? steps.length : steps.length - 1;
-  const progressPercentage = (currentStepIndex / (visibleStepCount - 1)) * 100;
+  const progressPercentage = (currentStepIndex / Math.max(1, visibleStepCount - 1)) * 100;
 
   const handleNext = (stepData: Partial<FeedbackData>) => {
     const updatedData = { ...feedbackData, ...stepData };

@@ -1014,9 +1014,11 @@ export class DatabaseStorage implements IStorage {
       // If existing was created by canonA selecting canonB, now canonB is selecting canonA → mutual
       // We need to figure out who's the new selector: the current call tells us userAId/userBId before sorting
       // The row was already created, so one side already selected. Now the OTHER side is calling → mutual.
-      // Fetch both users' wechat IDs for snapshot
-      const [userARecord] = await db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonA));
-      const [userBRecord] = await db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonB));
+      // Fetch both users' wechat IDs in parallel for snapshot
+      const [userARecord, userBRecord] = await Promise.all([
+        db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonA)).then(r => r[0]),
+        db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonB)).then(r => r[0]),
+      ]);
 
       const [updated] = await db
         .update(connections)
