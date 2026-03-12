@@ -19,6 +19,7 @@ import { db } from "../db";
 import { users, userInterests, eventPoolRegistrations } from "@shared/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { archetypeRegistry } from "@shared/personality/archetypeRegistry";
+import { calculateAge } from "@shared/utils";
 
 /**
  * Enriched member profile with all onboarding data + event preferences
@@ -27,8 +28,7 @@ export interface EnrichedMemberProfile {
   userId: string;
   displayName: string | null;
   gender: string | null;
-  birthYear: number | null;
-  age: number | null;
+  birthdate: string | null;
   relationshipStatus: string | null;
   educationLevel: string | null;
   
@@ -129,7 +129,7 @@ export async function fetchEnrichedMemberProfiles(
       id: users.id,
       displayName: users.displayName,
       gender: users.gender,
-      age: users.age,
+      birthdate: users.birthdate,
       relationshipStatus: users.relationshipStatus,
       educationLevel: users.educationLevel,
       industryCategory: users.industryCategory,
@@ -215,8 +215,7 @@ export async function fetchEnrichedMemberProfiles(
       userId: user.id,
       displayName: user.displayName,
       gender: user.gender,
-      birthYear: null, // birthYear field removed from schema, use birthdate instead
-      age: user.age,
+      birthdate: user.birthdate ?? null,
       relationshipStatus: user.relationshipStatus,
       educationLevel: user.educationLevel,
       industryCategory: user.industryCategory,
@@ -328,8 +327,10 @@ export function calculateGroupStats(
     other: members.filter((m) => m.gender && !["男性", "女性"].includes(m.gender)).length,
   };
 
-  // Average age
-  const ages = members.map((m) => m.age).filter((a) => a !== null) as number[];
+  // Average age (calculated from birthdate using shared helper)
+  const ages = members
+    .map((m) => m.birthdate ? calculateAge(m.birthdate) : null)
+    .filter((a) => a !== null) as number[];
   const avgAge = ages.length > 0 ? ages.reduce((a, b) => a + b, 0) / ages.length : null;
 
   // Cities represented

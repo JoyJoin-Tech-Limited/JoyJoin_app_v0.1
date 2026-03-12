@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export async function setupVite(app: Express, server: Server) {
   if (process.env.NODE_ENV === "production") return;
   const vite = await import("vite");
-  const viteConfigModule = await import("../../../vite.config.js");
+  const viteConfigModule = await import("../../user-client/vite.config.js");
   const viteConfig = viteConfigModule.default;
   const nanoidModule = await import("nanoid");
   const nanoid = nanoidModule.nanoid;

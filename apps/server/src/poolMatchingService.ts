@@ -31,6 +31,7 @@ import {
   userCoupons
 } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
+import { calculateAge } from "@shared/utils";
 import { wsService } from "./wsService";
 import type { PoolMatchedData } from "@shared/wsEvents";
 import { chemistryMatrix as CHEMISTRY_MATRIX, ARCHETYPE_ENERGY } from "./archetypeChemistry";
@@ -45,7 +46,7 @@ export interface UserWithProfile {
   
   // User profile (permanent)
   gender: string | null;
-  age: number | null;
+  birthdate: string | null; // Used to calculate age at matching time
   // ✅ UPDATED: Use 3-tier industry classification instead of legacy industry field
   industryNiche: string | null;  // Layer 3 industry (most specific)
   industryNicheLabel: string | null;  // Display name for industry niche
@@ -121,11 +122,12 @@ function meetsHardConstraints(
     }
   }
   
-  // 年龄限制
-  if (pool.ageRangeMin && user.age && user.age < pool.ageRangeMin) {
+  // 年龄限制 (calculated from birthdate)
+  const userAge = user.birthdate ? calculateAge(user.birthdate) : null;
+  if (pool.ageRangeMin && userAge !== null && userAge < pool.ageRangeMin) {
     return false;
   }
-  if (pool.ageRangeMax && user.age && user.age > pool.ageRangeMax) {
+  if (pool.ageRangeMax && userAge !== null && userAge > pool.ageRangeMax) {
     return false;
   }
   
@@ -635,7 +637,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       dietaryRestrictions: eventPoolRegistrations.dietaryRestrictions,
       tasteIntensity: eventPoolRegistrations.tasteIntensity,
       gender: users.gender,
-      age: users.age,
+      birthdate: users.birthdate,
       // ✅ UPDATED: Use 3-tier industry classification
       industryNiche: users.industryNiche,
       industryNicheLabel: users.industryNicheLabel,

@@ -270,6 +270,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // 🔧 确保 trust proxy 在 session 之前设置（防止 index.ts 漏掉）
   app.set('trust proxy', 1);
+
+  // API v1 backward compat: /api/v1/* routes work identically to /api/* routes.
+  // Rewrite happens before session and route handlers so all existing logic is reused.
+  app.use((req, _res, next) => {
+    if (req.url) {
+      if (req.url.startsWith('/api/v1/')) {
+        req.url = '/api/' + req.url.slice('/api/v1/'.length);
+      } else if (req.url === '/api/v1' || req.url.startsWith('/api/v1?')) {
+        req.url = '/api' + req.url.slice('/api/v1'.length);
+      }
+    }
+    next();
+  });
   
   // 🔧 DEBUG: Add identity headers to ALL API responses (Phase 1.1)
   app.use((req, res, next) => {
@@ -1382,15 +1395,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (extractedInfo.ageMatchPreference) {
         registrationData.ageMatchPreference = extractedInfo.ageMatchPreference;
       }
-      if (extractedInfo.hasPets !== undefined) {
-        registrationData.hasPets = extractedInfo.hasPets;
-      }
-      if (extractedInfo.petTypes && extractedInfo.petTypes.length > 0) {
-        registrationData.petTypes = extractedInfo.petTypes;
-      }
-      if (extractedInfo.hasSiblings !== undefined) {
-        registrationData.hasSiblings = extractedInfo.hasSiblings;
-      }
       if (extractedInfo.relationshipStatus) {
         registrationData.relationshipStatus = extractedInfo.relationshipStatus;
       }
@@ -1408,9 +1412,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       if (extractedInfo.favoriteRestaurantReason) {
         registrationData.favoriteRestaurantReason = extractedInfo.favoriteRestaurantReason;
-      }
-      if (extractedInfo.children) {
-        registrationData.children = extractedInfo.children;
       }
       if (extractedInfo.educationLevel) {
         registrationData.educationLevel = extractedInfo.educationLevel;
@@ -1503,17 +1504,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           registrationData.safetyNoteHost = safetyInsights
             .map(i => `[${i.subType}] ${i.value}`)
             .join('; ');
-        }
-        
-        // Merge lifestyle insights
-        const petInsights = insightResult.insights.filter(i => 
-          i.subType === 'pet_owner_cat' || i.subType === 'pet_owner_dog'
-        );
-        if (petInsights.length > 0 && !registrationData.hasPets) {
-          registrationData.hasPets = true;
-          registrationData.petTypes = petInsights.map(i => 
-            i.subType === 'pet_owner_cat' ? '猫' : '狗'
-          );
         }
       } catch (insightError) {
         console.error('[AI Evolution] Insight detection error:', insightError);
@@ -6261,7 +6251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             attendees = await db.select({
               id: users.id,
               displayName: users.displayName,
-              age: users.age,
+              birthdate: users.birthdate,
               gender: users.gender,
               educationLevel: users.educationLevel,
               industryCategory: users.industryCategory,
@@ -6283,7 +6273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             attendees = await db.select({
               id: users.id,
               displayName: users.displayName,
-              age: users.age,
+              birthdate: users.birthdate,
               gender: users.gender,
               educationLevel: users.educationLevel,
               industryCategory: users.industryCategory,
@@ -8882,7 +8872,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
           userLastName: users.lastName,
           userEmail: users.email,
           userGender: users.gender,
-          userAge: users.age,
+          userBirthdate: users.birthdate,
           // ✅ UPDATED: Use 3-tier industry classification
           userIndustryNiche: users.industryNicheLabel,
           userIndustryCategory: users.industryCategoryLabel,
@@ -9572,7 +9562,6 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           hometownAffinityOptin: users.hometownAffinityOptin,
           educationVisible: users.educationVisibility,
           relationshipStatus: users.relationshipStatus,
-          children: users.children,
           // Event-specific preferences from registration
           intent: eventPoolRegistrations.eventIntent,
         })

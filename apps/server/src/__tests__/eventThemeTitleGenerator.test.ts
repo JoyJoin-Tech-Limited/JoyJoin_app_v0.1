@@ -3,7 +3,7 @@
  * Tests group statistics calculation and data provenance
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { calculateGroupStats } from '../services/eventThemeTitleGenerator';
 import type { EnrichedMemberProfile } from '../services/eventThemeTitleGenerator';
 
@@ -13,8 +13,7 @@ const mockMembers: EnrichedMemberProfile[] = [
     userId: 'user1',
     displayName: '小明',
     gender: '男性',
-    birthYear: 1995,
-    age: 29,
+    birthdate: '1996-06-15',
     relationshipStatus: '单身',
     educationLevel: '本科',
     industryCategory: 'tech',
@@ -42,8 +41,7 @@ const mockMembers: EnrichedMemberProfile[] = [
     userId: 'user2',
     displayName: '小红',
     gender: '女性',
-    birthYear: 1996,
-    age: 28,
+    birthdate: '1997-06-15',
     relationshipStatus: '单身',
     educationLevel: '硕士',
     industryCategory: 'finance',
@@ -71,8 +69,7 @@ const mockMembers: EnrichedMemberProfile[] = [
     userId: 'user3',
     displayName: '小李',
     gender: '男性',
-    birthYear: 1994,
-    age: 30,
+    birthdate: '1995-06-15',
     relationshipStatus: '恋爱中',
     educationLevel: '博士',
     industryCategory: 'tech',
@@ -99,6 +96,18 @@ const mockMembers: EnrichedMemberProfile[] = [
 ];
 
 describe('Team Name Generator - calculateGroupStats', () => {
+  // Freeze time so age calculations are deterministic.
+  // Birthdates in mockMembers are all 1995-1997-06-15; freeze to 2026-03-12 (before June)
+  // so ages are: user1=29 (1996), user2=28 (1997), user3=30 (1995) → average 29
+  const FROZEN_DATE = new Date('2026-03-12T00:00:00.000Z');
+  beforeAll(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(FROZEN_DATE);
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
   it('should calculate average energy correctly', () => {
     const stats = calculateGroupStats(mockMembers);
     
@@ -159,7 +168,8 @@ describe('Team Name Generator - calculateGroupStats', () => {
   it('should calculate average age correctly', () => {
     const stats = calculateGroupStats(mockMembers);
     
-    // Average: (29 + 28 + 30) / 3 = 29
+    // Time is frozen to 2026-03-12. Birthdays are on June 15 so all have not turned yet.
+    // user1 (1996-06-15) = 29, user2 (1997-06-15) = 28, user3 (1995-06-15) = 30 → avg 29
     expect(stats.avgAge).toBe(29);
   });
 
@@ -215,7 +225,7 @@ describe('Team Name Generator - Data Provenance', () => {
     // These fields MUST be present (from EssentialDataPage)
     expect(profile).toHaveProperty('displayName');
     expect(profile).toHaveProperty('gender');
-    expect(profile).toHaveProperty('birthYear');
+    expect(profile).toHaveProperty('birthdate');
     expect(profile).toHaveProperty('educationLevel');
     expect(profile).toHaveProperty('industryNicheLabel'); // 3-tier classification
     expect(profile).toHaveProperty('occupationId');
