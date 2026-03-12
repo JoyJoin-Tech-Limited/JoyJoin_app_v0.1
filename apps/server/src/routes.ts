@@ -7659,9 +7659,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const profileCompleteness = calculateProfileCompleteness(user);
 
-      // Onboarding lifecycle
+      // Onboarding lifecycle — mirrors /api/auth/user logic including onboardingCheckpoint override
+      type OnboardingStep = 'onboarding' | 'personality-test' | 'essential-data' | 'extended-data' | 'profile-review' | 'guide' | 'discover';
       const profileEssentialComplete = !!(user.displayName && user.gender && user.currentCity);
-      let nextStep: string;
+      let nextStep: OnboardingStep;
       if (!user.hasCompletedRegistration) nextStep = 'onboarding';
       else if (!user.hasCompletedPersonalityTest) nextStep = 'personality-test';
       else if (!profileEssentialComplete) nextStep = 'essential-data';
@@ -7670,50 +7671,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       else if (!user.hasSeenGuide) nextStep = 'guide';
       else nextStep = 'discover';
 
-      // Latest completed assessment session
-      const [assessmentSession] = await db
-        .select()
-        .from(assessmentSessions)
-        .where(and(eq(assessmentSessions.userId, userId), eq(assessmentSessions.phase, 'completed')))
-        .orderBy(desc(assessmentSessions.completedAt))
-        .limit(1);
+      const stepOrder: OnboardingStep[] = ['onboarding', 'personality-test', 'essential-data', 'extended-data', 'profile-review', 'guide', 'discover'];
+      const baseIndex = stepOrder.indexOf(nextStep);
+      const checkpointValue = user.onboardingCheckpoint as OnboardingStep | null;
+      const checkpointIndex = checkpointValue ? stepOrder.indexOf(checkpointValue) : -1;
+      if (checkpointValue && checkpointIndex !== -1 && baseIndex !== -1 && checkpointIndex > baseIndex && checkpointIndex < stepOrder.indexOf('discover')) {
+        const nextStepIndex = Math.min(checkpointIndex + 1, stepOrder.indexOf('discover'));
+        nextStep = stepOrder[nextStepIndex];
+      }
 
-      // Joined events
-      const joinedEvents = await storage.getUserJoinedEvents(userId);
+      // Fetch all independent data in parallel
+      const [
+        assessmentSessionResult,
+        joinedEvents,
+        poolRegistrations,
+        userConnections,
+        userMatchHistory,
+        interestsResult,
+      ] = await Promise.all([
+        db
+          .select()
+          .from(assessmentSessions)
+          .where(and(eq(assessmentSessions.userId, userId), eq(assessmentSessions.phase, 'completed')))
+          .orderBy(desc(assessmentSessions.completedAt))
+          .limit(1),
+        storage.getUserJoinedEvents(userId),
+        db
+          .select()
+          .from(eventPoolRegistrations)
+          .where(eq(eventPoolRegistrations.userId, userId))
+          .orderBy(desc(eventPoolRegistrations.registeredAt))
+          .limit(20),
+        db
+          .select()
+          .from(connections)
+          .where(and(
+            or(eq(connections.userAId, userId), eq(connections.userBId, userId)),
+            eq(connections.status, 'mutual')
+          ))
+          .orderBy(desc(connections.createdAt))
+          .limit(20),
+        db
+          .select()
+          .from(matchHistory)
+          .where(or(eq(matchHistory.user1Id, userId), eq(matchHistory.user2Id, userId)))
+          .orderBy(desc(matchHistory.matchedAt))
+          .limit(20),
+        db
+          .select()
+          .from(userInterests)
+          .where(eq(userInterests.userId, userId))
+          .limit(1),
+      ]);
 
-      // Pool registrations
-      const poolRegistrations = await db
-        .select()
-        .from(eventPoolRegistrations)
-        .where(eq(eventPoolRegistrations.userId, userId))
-        .orderBy(desc(eventPoolRegistrations.registeredAt))
-        .limit(20);
-
-      // Mutual connections
-      const userConnections = await db
-        .select()
-        .from(connections)
-        .where(and(
-          or(eq(connections.userAId, userId), eq(connections.userBId, userId)),
-          eq(connections.status, 'mutual')
-        ))
-        .orderBy(desc(connections.createdAt))
-        .limit(20);
-
-      // Match history
-      const userMatchHistory = await db
-        .select()
-        .from(matchHistory)
-        .where(or(eq(matchHistory.user1Id, userId), eq(matchHistory.user2Id, userId)))
-        .orderBy(desc(matchHistory.matchedAt))
-        .limit(20);
-
-      // User interests
-      const [interests] = await db
-        .select()
-        .from(userInterests)
-        .where(eq(userInterests.userId, userId))
-        .limit(1);
+      const assessmentSession = assessmentSessionResult[0] || null;
+      const interests = interestsResult[0] || null;
 
       // Matching readiness
       const blockers: string[] = [];
@@ -7724,8 +7736,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user.isBanned) blockers.push('用户已被封禁');
       const matchingReadiness = { isReady: blockers.length === 0, blockers };
 
+      // Strip sensitive credential fields before sending to browser
+      const { password, wechatSessionKey, wechatOpenId, ...safeUser } = user as any;
       res.json({
-        user: { ...user, profileCompleteness },
+        user: { ...safeUser, profileCompleteness },
         onboarding: {
           nextStep,
           profileEssentialComplete,

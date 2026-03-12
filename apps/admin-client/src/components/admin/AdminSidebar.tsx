@@ -15,6 +15,8 @@ import {
   ScrollText,
   Brain,
   CalendarDays,
+  Tag,
+  ReceiptText,
 } from "lucide-react";
 import {
   Sidebar,
@@ -54,7 +56,10 @@ const contentRevenueItems = [
   { title: "场地管理", url: "/admin/venues", icon: MapPin },
   { title: "活动管理", url: "/admin/events", icon: CalendarDays },
   { title: "订阅管理", url: "/admin/subscriptions", icon: CreditCard },
+  { title: "定价管理", url: "/admin/pricing", icon: DollarSign },
+  { title: "优惠券", url: "/admin/coupons", icon: Tag },
   { title: "财务管理", url: "/admin/finance", icon: DollarSign },
+  { title: "举报管理", url: "/admin/reports", icon: ReceiptText },
   { title: "小悦进化", url: "/admin/evolution", icon: Brain },
 ];
 

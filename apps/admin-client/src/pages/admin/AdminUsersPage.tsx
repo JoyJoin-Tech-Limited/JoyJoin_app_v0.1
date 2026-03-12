@@ -20,7 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import {
   Search,
   UserX,
@@ -39,6 +38,7 @@ import {
   Zap,
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { calculateAge } from "@/lib/userFieldMappings";
 import { format } from "date-fns";
 import { useLocation, useSearch } from "wouter";
 import { CURRENT_CITY_OPTIONS } from "@shared/constants";
@@ -241,16 +241,6 @@ export default function AdminUsersPage() {
   };
 
   const hasActiveFilters = cityFilter || archetypeFilter || maxCompleteness;
-
-  const calculateAge = (dateOfBirth?: string) => {
-    if (!dateOfBirth) return null;
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth + 'T00:00:00');
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
-    return age;
-  };
 
   const OnboardingStep = ({ done, label }: { done: boolean; label: string }) => (
     <div className="flex items-center gap-2 text-sm">
