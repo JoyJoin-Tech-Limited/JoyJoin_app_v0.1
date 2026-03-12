@@ -91,6 +91,7 @@ export interface IStorage {
   upsertConnection(eventId: string, currentUserId: string, targetUserId: string): Promise<any>;
   getMutualConnections(eventId: string, userId: string): Promise<any[]>;
   getAllMutualConnectionsForUser(userId: string): Promise<any[]>;
+  countMutualConnectionsForUser(userId: string): Promise<number>;
   updateUserWechatId(userId: string, wechatContactId: string): Promise<void>;
 
   // Direct message operations
@@ -1075,6 +1076,19 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(desc(connections.createdAt));
+  }
+
+  async countMutualConnectionsForUser(userId: string): Promise<number> {
+    const [row] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(connections)
+      .where(
+        and(
+          eq(connections.status, "mutual"),
+          sql`(${connections.userAId} = ${userId} OR ${connections.userBId} = ${userId})`
+        )
+      );
+    return row?.count ?? 0;
   }
 
   async updateUserWechatId(userId: string, wechatContactId: string): Promise<void> {

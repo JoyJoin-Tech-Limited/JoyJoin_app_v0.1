@@ -1143,10 +1143,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const eventsCompleted = completedEventsResult.length || 0;
       
-      // Calculate connections made: count mutual connections from the connections table
-      const connectionsResult = await storage.getAllMutualConnectionsForUser(userId);
-      
-      const connectionsMade = connectionsResult.length || 0;
+      // Calculate connections made: use COUNT(*) query to avoid loading all rows
+      const connectionsMade = await storage.countMutualConnectionsForUser(userId);
       
       res.json({
         eventsCompleted,
@@ -2815,19 +2813,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.session.userId;
       const mutualConnections = await storage.getAllMutualConnectionsForUser(userId);
+
+      // Preload all source events in a single query to avoid N+1 event lookups.
+      const uniqueEventIds = Array.from(
+        new Set(
+          mutualConnections
+            .map((conn: any) => conn.eventId)
+            .filter((id: any) => !!id)
+        )
+      );
+      let eventsById = new Map<string, any>();
+      if (uniqueEventIds.length > 0) {
+        const eventRows = await db
+          .select()
+          .from(events)
+          .where(inArray(events.id, uniqueEventIds));
+        eventsById = new Map(eventRows.map((evt: any) => [evt.id, evt]));
+      }
+
+      // Simple in-memory cache to avoid duplicate user lookups for the same otherUserId.
+      const userCache = new Map<string, any>();
+
       const result = await Promise.all(
         mutualConnections.map(async (conn: any) => {
           const otherUserId = conn.userAId === userId ? conn.userBId : conn.userAId;
           const capturedWechatId =
             conn.userAId === userId ? conn.userBWechatId : conn.userAWechatId;
-          const otherUser = await storage.getUser(otherUserId);
-          const [sourceEvent] = await db.select().from(events).where(eq(events.id, conn.eventId));
+
+          let otherUser = userCache.get(otherUserId);
+          if (otherUser === undefined) {
+            otherUser = await storage.getUser(otherUserId);
+            userCache.set(otherUserId, otherUser ?? null);
+          }
+
+          const sourceEvent = conn.eventId ? eventsById.get(conn.eventId) : null;
+          const revealedAt = conn.revealedAt ?? null;
+
           return {
             connectionId: conn.id,
             eventId: conn.eventId,
             connectedAt: conn.createdAt,
-            revealedAt: conn.revealedAt ?? null,
-            wechatContactId: capturedWechatId ?? otherUser?.wechatContactId ?? null,
+            revealedAt,
+            // Only return the WeChat ID that was snapshotted at reveal time.
+            // Do not fall back to the live user field — the reveal must be explicit.
+            wechatContactId: revealedAt ? capturedWechatId ?? null : null,
             otherUser: otherUser
               ? {
                   id: otherUser.id,

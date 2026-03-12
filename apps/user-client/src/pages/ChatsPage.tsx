@@ -115,11 +115,29 @@ export default function ChatsPage() {
   };
 
   const handleCopyWechat = (wechatId: string, connectionId: string) => {
-    navigator.clipboard.writeText(wechatId).then(() => {
-      setCopiedId(connectionId);
-      toast({ title: "已复制微信号", description: wechatId });
-      setTimeout(() => setCopiedId(null), 2500);
-    });
+    if (!navigator.clipboard?.writeText) {
+      toast({
+        title: "复制失败",
+        description: "当前环境不支持一键复制，请手动复制微信号",
+        variant: "destructive",
+      });
+      return;
+    }
+    navigator.clipboard
+      .writeText(wechatId)
+      .then(() => {
+        setCopiedId(connectionId);
+        toast({ title: "已复制微信号", description: wechatId });
+        setTimeout(() => setCopiedId(null), 2500);
+      })
+      .catch((err) => {
+        console.error("Failed to copy WeChat ID:", err);
+        toast({
+          title: "复制失败",
+          description: "请手动复制微信号",
+          variant: "destructive",
+        });
+      });
   };
 
   if (isLoading) {
