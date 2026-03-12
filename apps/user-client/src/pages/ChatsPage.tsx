@@ -1,9 +1,8 @@
 import MobileHeader from "@/components/MobileHeader";
 import BottomNav from "@/components/BottomNav";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Users } from "lucide-react";
+import { Users, Copy, Check } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,7 +14,7 @@ import {
   calculateAge,
   getEducationDisplay
 } from "@/lib/userFieldMappings";
-import type { DirectMessageThread, User as UserType } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 const listVariants = {
   hidden: {},
@@ -34,7 +33,6 @@ const cardVariants = {
   },
 };
 
-// Maps archetype to a soft colored glow shadow using the archetypeGradients palette
 const archetypeCardShadow = (archetype: string | null | undefined): string => {
   const shadowMap: Record<string, string> = {
     '开心柯基': '0 4px 20px rgba(249,115,22,0.15), 0 1px 4px rgba(0,0,0,0.06)',
@@ -53,7 +51,6 @@ const archetypeCardShadow = (archetype: string | null | undefined): string => {
   return archetype ? (shadowMap[archetype] || '0 2px 12px rgba(0,0,0,0.08)') : '0 2px 12px rgba(0,0,0,0.08)';
 };
 
-// Maps archetype to a 3px top border color (accent stripe), derived from archetypeBgColors
 const archetypeAccentBorder = (archetype: string | null | undefined): string => {
   const defaultBorder = "border-t-primary/30";
   if (!archetype) return defaultBorder;
@@ -66,52 +63,44 @@ const archetypeAccentBorder = (archetype: string | null | undefined): string => 
   return defaultBorder;
 };
 
-type DirectThreadWithUser = DirectMessageThread & {
-  otherUser: UserType;
-  lastMessage: {
-    content: string;
-    createdAt: Date;
+type ConnectionItem = {
+  connectionId: string;
+  eventId: string;
+  connectedAt: string | Date;
+  revealedAt: string | Date | null;
+  wechatContactId: string | null;
+  otherUser: {
+    id: string;
+    displayName: string | null;
+    archetype: string | null;
+    gender: string | null;
+    birthdate: string | null;
+    educationLevel: string | null;
+    industryNicheLabel: string | null;
+    industryCategoryLabel: string | null;
+    currentCity: string | null;
   } | null;
-  sourceEvent?: {
+  sourceEvent: {
     title: string;
     eventType: string;
     district: string;
     dateTime: string | Date;
-  };
+  } | null;
 };
 
 export default function ChatsPage() {
-  const [, setLocation] = useLocation();
   const markAsRead = useMarkNotificationsAsRead();
-  const [expandedThreadId, setExpandedThreadId] = useState<string | null>(null);
+  const { toast } = useToast();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const { data: directThreads, isLoading: isLoadingThreads } = useQuery<Array<DirectThreadWithUser>>({
-    queryKey: ["/api/direct-messages"],
+  const { data: connections, isLoading } = useQuery<ConnectionItem[]>({
+    queryKey: ["/api/connections/my"],
   });
 
-  // Mark chat notifications as read when the page mounts
   useEffect(() => {
     markAsRead.mutate('chat');
   }, []);
-
-  const formatMessageTime = (date: Date | null) => {
-    if (!date) return "";
-    const messageDate = new Date(date);
-    const now = new Date();
-    const diffMs = now.getTime() - messageDate.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffMins < 1) return "刚刚";
-    if (diffMins < 60) return `${diffMins}分钟前`;
-    if (diffHours < 24) return `${diffHours}小时前`;
-    if (diffDays < 7) return `${diffDays}天前`;
-    
-    const month = messageDate.getMonth() + 1;
-    const day = messageDate.getDate();
-    return `${month}月${day}日`;
-  };
 
   const getInitials = (name: string | null) => {
     if (!name) return "?";
@@ -119,7 +108,21 @@ export default function ChatsPage() {
     return chars.length > 0 ? chars[0].toUpperCase() : "?";
   };
 
-  if (isLoadingThreads) {
+  const formatConnectedTime = (date: string | Date | null) => {
+    if (!date) return "";
+    const d = new Date(date);
+    return `${d.getMonth() + 1}月${d.getDate()}日`;
+  };
+
+  const handleCopyWechat = (wechatId: string, connectionId: string) => {
+    navigator.clipboard.writeText(wechatId).then(() => {
+      setCopiedId(connectionId);
+      toast({ title: "已复制微信号", description: wechatId });
+      setTimeout(() => setCopiedId(null), 2500);
+    });
+  };
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-[#fafaf8] pb-16 flex flex-col">
         <MobileHeader title="圈子" />
@@ -134,20 +137,20 @@ export default function ChatsPage() {
     );
   }
 
-  const hasDirectChats = directThreads && directThreads.length > 0;
+  const hasConnections = connections && connections.length > 0;
 
   return (
     <div className="min-h-screen bg-[#fafaf8] pb-16">
       <MobileHeader title="圈子" />
 
-      {!hasDirectChats ? (
+      {!hasConnections ? (
         <div className="px-4 py-16 flex flex-col items-center justify-center text-center">
           <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Users className="h-10 w-10 text-primary/40" />
           </div>
           <h3 className="font-semibold mb-2">暂无连接</h3>
           <p className="text-sm text-muted-foreground max-w-[260px]">
-            参加活动后与其他参与者建立连接，就可以在这里找到他们
+            参加活动后与其他参与者互相选择，就可以在这里看到你们的连接
           </p>
         </div>
       ) : (
@@ -157,32 +160,28 @@ export default function ChatsPage() {
           initial="hidden"
           animate="visible"
         >
-          {directThreads.map((thread) => {
-            const otherUser = thread.otherUser;
-            const lastMessage = thread.lastMessage;
-            const sourceEvent = thread.sourceEvent;
-            const isExpanded = expandedThreadId === thread.id;
+          {connections.map((conn) => {
+            const other = conn.otherUser;
+            const isExpanded = expandedId === conn.connectionId;
             const archetypeData =
-              otherUser.archetype && archetypeConfig[otherUser.archetype]
-                ? archetypeConfig[otherUser.archetype]
+              other?.archetype && archetypeConfig[other.archetype]
+                ? archetypeConfig[other.archetype]
                 : null;
 
             return (
-              <motion.a
-                key={thread.id}
-                href={`/direct-chat/${thread.id}`}
+              <motion.div
+                key={conn.connectionId}
                 variants={cardVariants}
-                className={`block rounded-2xl overflow-hidden cursor-pointer active:scale-[0.97] transition-transform border-t-[3px] ${archetypeAccentBorder(otherUser.archetype)}`}
-                style={{ background: 'white', boxShadow: archetypeCardShadow(otherUser.archetype) }}
-                onClick={(e) => { e.preventDefault(); setLocation(`/direct-chat/${thread.id}`); }}
-                data-testid={`card-direct-${thread.id}`}
+                className={`rounded-2xl overflow-hidden border-t-[3px] ${archetypeAccentBorder(other?.archetype)}`}
+                style={{ background: 'white', boxShadow: archetypeCardShadow(other?.archetype) }}
+                data-testid={`card-connection-${conn.connectionId}`}
               >
                 <div className="p-4">
                   {/* Source Event Badge */}
-                  {sourceEvent && (
+                  {conn.sourceEvent && (
                     <div className="mb-3">
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-bold">
-                        <span aria-hidden="true">✨</span> {sourceEvent.title}
+                        <span aria-hidden="true">✨</span> {conn.sourceEvent.title}
                       </span>
                     </div>
                   )}
@@ -191,31 +190,27 @@ export default function ChatsPage() {
                     {/* Avatar — tap to expand user info */}
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setExpandedThreadId(isExpanded ? null : thread.id);
-                      }}
+                      onClick={() => setExpandedId(isExpanded ? null : conn.connectionId)}
                       className="cursor-pointer flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-full"
-                      aria-label={`查看 ${otherUser.displayName || '用户'} 的资料`}
+                      aria-label={`查看 ${other?.displayName || '用户'} 的资料`}
                       aria-expanded={isExpanded}
-                      data-testid={`avatar-expand-${thread.id}`}
                     >
-                      {otherUser.archetype && archetypeAvatars[otherUser.archetype] ? (
+                      {other?.archetype && archetypeAvatars[other.archetype] ? (
                         <div
                           className={`h-16 w-16 rounded-full ${
-                            archetypeBgColors[otherUser.archetype] || 'bg-muted'
+                            archetypeBgColors[other.archetype] || 'bg-muted'
                           } flex items-center justify-center overflow-hidden shadow-lg ring-2 ring-offset-2 ring-primary/30`}
                         >
                           <img
-                            src={archetypeAvatars[otherUser.archetype]}
-                            alt={otherUser.archetype}
+                            src={archetypeAvatars[other.archetype]}
+                            alt={other.archetype}
                             className="w-full h-full object-contain p-1"
                           />
                         </div>
                       ) : (
                         <Avatar className="h-16 w-16 flex-shrink-0 shadow-lg ring-2 ring-offset-2 ring-primary/30">
                           <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                            {getInitials(otherUser.displayName)}
+                            {getInitials(other?.displayName ?? null)}
                           </AvatarFallback>
                         </Avatar>
                       )}
@@ -224,30 +219,39 @@ export default function ChatsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <h3 className="font-semibold truncate">
-                          {otherUser.displayName || "匿名用户"}
+                          {other?.displayName || "参与者"}
                         </h3>
-                        {lastMessage && (
-                          <span className="text-xs text-muted-foreground flex-shrink-0">
-                            {formatMessageTime(lastMessage.createdAt)}
-                          </span>
-                        )}
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                          {formatConnectedTime(conn.connectedAt)}
+                        </span>
                       </div>
 
-                      {otherUser.archetype && (
+                      {other?.archetype && (
                         <span className={`inline-flex items-center gap-1 text-[11px] font-bold mb-2 px-2 py-0.5 rounded-full bg-muted/60 ${archetypeData?.color || 'text-foreground'}`}>
                           <span aria-hidden="true">{archetypeData?.icon || '✨'}</span>
-                          {otherUser.archetype}
+                          {other.archetype}
                         </span>
                       )}
 
-                      {lastMessage ? (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {lastMessage.content}
-                        </p>
+                      {/* WeChat reveal section */}
+                      {conn.wechatContactId ? (
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-muted-foreground">微信号：</span>
+                          <span className="text-xs font-medium">{conn.wechatContactId}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyWechat(conn.wechatContactId!, conn.connectionId)}
+                            className="ml-1 p-1 rounded hover:bg-muted/50 transition-colors"
+                            aria-label="复制微信号"
+                          >
+                            {copiedId === conn.connectionId
+                              ? <Check className="h-3.5 w-3.5 text-green-500" />
+                              : <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                            }
+                          </button>
+                        </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground italic">
-                          暂无消息
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">互相选择后可查看微信号</p>
                       )}
 
                       {/* Expandable User Info */}
@@ -259,10 +263,8 @@ export default function ChatsPage() {
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.2 }}
                             className="overflow-hidden"
-                            onClick={(e) => e.stopPropagation()}
                           >
                             <div className="pt-3 mt-3 border-t space-y-2">
-                              {/* Archetype Description */}
                               {archetypeData && (
                                 <div className="bg-muted/30 rounded-lg p-2.5">
                                   <p className="text-xs text-muted-foreground leading-relaxed">
@@ -270,17 +272,20 @@ export default function ChatsPage() {
                                   </p>
                                 </div>
                               )}
-
-                              {/* Info Chips */}
                               <div className="flex flex-wrap gap-1.5">
-                                {otherUser.gender && otherUser.birthdate && (
+                                {other?.gender && other?.birthdate && (
                                   <span className="text-xs bg-muted/50 px-2.5 py-1 rounded-full">
-                                    {getGenderDisplay(otherUser.gender)} · {formatAge(calculateAge(otherUser.birthdate))}
+                                    {getGenderDisplay(other.gender)} · {formatAge(calculateAge(other.birthdate))}
                                   </span>
                                 )}
-                                {otherUser.educationLevel && (
+                                {other?.educationLevel && (
                                   <span className="text-xs bg-muted/50 px-2.5 py-1 rounded-full">
-                                    {getEducationDisplay(otherUser.educationLevel)}
+                                    {getEducationDisplay(other.educationLevel)}
+                                  </span>
+                                )}
+                                {other?.currentCity && (
+                                  <span className="text-xs bg-muted/50 px-2.5 py-1 rounded-full">
+                                    {other.currentCity}
                                   </span>
                                 )}
                               </div>
@@ -291,7 +296,7 @@ export default function ChatsPage() {
                     </div>
                   </div>
                 </div>
-              </motion.a>
+              </motion.div>
             );
           })}
         </motion.div>
@@ -301,4 +306,3 @@ export default function ChatsPage() {
     </div>
   );
 }
-

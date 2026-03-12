@@ -50,7 +50,6 @@ export const appRoutes = {
   // 聊天相关
   chats: '/chats',
   eventChat: '/chats/:eventId',
-  directChat: '/direct-chat/:threadId',
   chatRegistration: '/chat-registration',
   
   // 破冰游戏

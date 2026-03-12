@@ -113,7 +113,7 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, onboardingAnalytics, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, onboardingAnalytics, type User } from "@shared/schema";
 import * as schema from "@shared/schema";
 import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION } from "@shared/interests";
 import { db } from "./db";
@@ -1143,16 +1143,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const eventsCompleted = completedEventsResult.length || 0;
       
-      // Calculate connections made: count direct message threads where user is participant
-      const connectionsResult = await db
-        .select({ count: directMessageThreads.id })
-        .from(directMessageThreads)
-        .where(
-          or(
-            eq(directMessageThreads.user1Id, userId),
-            eq(directMessageThreads.user2Id, userId)
-          )
-        );
+      // Calculate connections made: count mutual connections from the connections table
+      const connectionsResult = await storage.getAllMutualConnectionsForUser(userId);
       
       const connectionsMade = connectionsResult.length || 0;
       
@@ -2817,47 +2809,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Direct message routes (1-on-1 chats unlocked via mutual matching)
-  app.get('/api/direct-messages', isPhoneAuthenticated, async (req: any, res) => {
+  // Connections endpoint — structured social outcome model (mutual event selections)
+  // This replaces the legacy direct-message routes as the canonical user connections surface.
+  app.get('/api/connections/my', isPhoneAuthenticated, async (req: any, res) => {
     try {
       const userId = req.session.userId;
-      const threads = await storage.getUserDirectMessageThreads(userId);
-      res.json(threads);
+      const mutualConnections = await storage.getAllMutualConnectionsForUser(userId);
+      const result = await Promise.all(
+        mutualConnections.map(async (conn: any) => {
+          const otherUserId = conn.userAId === userId ? conn.userBId : conn.userAId;
+          const snapshotWechatId =
+            conn.userAId === userId ? conn.userBWechatId : conn.userAWechatId;
+          const otherUser = await storage.getUser(otherUserId);
+          const [sourceEvent] = await db.select().from(events).where(eq(events.id, conn.eventId));
+          return {
+            connectionId: conn.id,
+            eventId: conn.eventId,
+            connectedAt: conn.createdAt,
+            revealedAt: conn.revealedAt ?? null,
+            wechatContactId: snapshotWechatId ?? otherUser?.wechatContactId ?? null,
+            otherUser: otherUser
+              ? {
+                  id: otherUser.id,
+                  displayName: otherUser.displayName,
+                  archetype: otherUser.archetype,
+                  gender: otherUser.gender,
+                  birthdate: otherUser.birthdate,
+                  educationLevel: otherUser.educationLevel,
+                  industryNicheLabel: otherUser.industryNicheLabel,
+                  industryCategoryLabel: otherUser.industryCategoryLabel,
+                  currentCity: otherUser.currentCity,
+                }
+              : null,
+            sourceEvent: sourceEvent
+              ? {
+                  title: sourceEvent.title,
+                  eventType: sourceEvent.eventType,
+                  district: sourceEvent.district,
+                  dateTime: sourceEvent.dateTime,
+                }
+              : null,
+          };
+        })
+      );
+      res.json(result);
     } catch (error) {
-      console.error("Error fetching direct message threads:", error);
-      res.status(500).json({ message: "Failed to fetch direct message threads" });
-    }
-  });
-
-  app.get('/api/direct-messages/:threadId', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const { threadId } = req.params;
-      const messages = await storage.getThreadMessages(threadId);
-      res.json(messages);
-    } catch (error) {
-      console.error("Error fetching thread messages:", error);
-      res.status(500).json({ message: "Failed to fetch thread messages" });
-    }
-  });
-
-  app.post('/api/direct-messages/:threadId', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { threadId } = req.params;
-      const result = insertDirectMessageSchema.safeParse({
-        ...req.body,
-        threadId,
-      });
-      
-      if (!result.success) {
-        return res.status(400).json({ error: result.error });
-      }
-
-      const message = await storage.sendDirectMessage(userId, result.data);
-      res.json(message);
-    } catch (error) {
-      console.error("Error sending direct message:", error);
-      res.status(500).json({ message: "Failed to send direct message" });
+      console.error("Error fetching user connections:", error);
+      res.status(500).json({ message: "Failed to fetch connections" });
     }
   });
 
@@ -7112,72 +7110,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { eventId: event3.id, userId: demoUser3.id, status: 'confirmed' },
       ]);
 
-      // Create direct message threads (private 1-1 chats)
-      console.log(`[SEED-DEMO] Creating direct message thread 1: ${userId} <-> ${demoUser1.id}`);
-      // Thread 1: Current user with demoUser1 (小明-开心柯基)
-      const [thread1] = await db.insert(directMessageThreads).values({
-        user1Id: userId,
-        user2Id: demoUser1.id,
-        eventId: event3.id, // They matched at the past event
-        lastMessageAt: new Date(now.getTime() - 30 * 60 * 1000), // 30 mins ago
-      }).returning();
-      console.log(`[SEED-DEMO] Thread 1 created with ID: ${thread1.id}`);
-
-      // Messages in thread 1
-      const thread1Messages = [
-        { senderId: demoUser1.id, message: '今天玩得很开心！我们可以加个好友吗？', createdAt: new Date(now.getTime() - 60 * 60 * 1000) },
-        { senderId: userId, message: '当然可以！我也觉得今天很有趣', createdAt: new Date(now.getTime() - 55 * 60 * 1000) },
-        { senderId: demoUser1.id, message: '下次有类似的活动记得叫我！', createdAt: new Date(now.getTime() - 30 * 60 * 1000) },
-      ];
-
-      for (const msg of thread1Messages) {
-        await db.insert(directMessages).values({
-          threadId: thread1.id,
-          senderId: msg.senderId,
-          message: msg.message,
-          createdAt: msg.createdAt,
-        });
-      }
-
-      // Thread 2: Current user with demoUser2 (小红-织网蛛)
-      console.log(`[SEED-DEMO] Creating direct message thread 2: ${userId} <-> ${demoUser2.id}`);
-      const [thread2] = await db.insert(directMessageThreads).values({
-        user1Id: userId,
-        user2Id: demoUser2.id,
-        eventId: event3.id,
-        lastMessageAt: new Date(now.getTime() - 10 * 60 * 1000), // 10 mins ago
-      }).returning();
-      console.log(`[SEED-DEMO] Thread 2 created with ID: ${thread2.id}`);
-
-      // Messages in thread 2
-      const thread2Messages = [
-        { senderId: demoUser2.id, message: '嗨！刚才的狼人杀你玩得真棒', createdAt: new Date(now.getTime() - 45 * 60 * 1000) },
-        { senderId: userId, message: '谢谢！你也很厉害呀', createdAt: new Date(now.getTime() - 40 * 60 * 1000) },
-        { senderId: demoUser2.id, message: '我们下周还有个咖啡聚会，要来吗？', createdAt: new Date(now.getTime() - 35 * 60 * 1000) },
-        { senderId: userId, message: '好啊！具体什么时间？', createdAt: new Date(now.getTime() - 10 * 60 * 1000) },
-      ];
-
-      for (const msg of thread2Messages) {
-        await db.insert(directMessages).values({
-          threadId: thread2.id,
-          senderId: msg.senderId,
-          message: msg.message,
-          createdAt: msg.createdAt,
-        });
-      }
+      // Create demo mutual connections (structured social outcome model)
+      console.log(`[SEED-DEMO] Creating mutual connections for user: ${userId}`);
+      await storage.upsertConnection(event3.id, userId, demoUser1.id);
+      await storage.upsertConnection(event3.id, demoUser1.id, userId);
+      await storage.upsertConnection(event3.id, userId, demoUser2.id);
+      await storage.upsertConnection(event3.id, demoUser2.id, userId);
 
       console.log(`[SEED-DEMO] Demo data creation completed successfully for user: ${userId}`);
       res.json({ 
         success: true, 
-        message: 'Demo chat data created (including 2 private chats)',
+        message: 'Demo event and connection data created',
         events: [
           { title: event1.title, status: 'unlocked', dateTime: event1.dateTime },
           { title: event2.title, status: 'locked', dateTime: event2.dateTime },
           { title: event3.title, status: 'past', dateTime: event3.dateTime },
         ],
-        privateChats: [
-          { with: '小明 (开心柯基)', messages: 3, threadId: thread1.id },
-          { with: '小红 (织网蛛)', messages: 4, threadId: thread2.id },
+        connections: [
+          { with: '小明 (开心柯基)' },
+          { with: '小红 (织网蛛)' },
         ]
       });
     } catch (error) {

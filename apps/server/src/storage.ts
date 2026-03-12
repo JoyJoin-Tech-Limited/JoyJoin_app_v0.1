@@ -90,6 +90,7 @@ export interface IStorage {
   // Connection operations (WeChat ID exchange)
   upsertConnection(eventId: string, currentUserId: string, targetUserId: string): Promise<any>;
   getMutualConnections(eventId: string, userId: string): Promise<any[]>;
+  getAllMutualConnectionsForUser(userId: string): Promise<any[]>;
   updateUserWechatId(userId: string, wechatContactId: string): Promise<void>;
 
   // Direct message operations
@@ -1061,6 +1062,19 @@ export class DatabaseStorage implements IStorage {
           sql`(${connections.userAId} = ${userId} OR ${connections.userBId} = ${userId})`
         )
       );
+  }
+
+  async getAllMutualConnectionsForUser(userId: string): Promise<any[]> {
+    return db
+      .select()
+      .from(connections)
+      .where(
+        and(
+          eq(connections.status, "mutual"),
+          sql`(${connections.userAId} = ${userId} OR ${connections.userBId} = ${userId})`
+        )
+      )
+      .orderBy(desc(connections.createdAt));
   }
 
   async updateUserWechatId(userId: string, wechatContactId: string): Promise<void> {

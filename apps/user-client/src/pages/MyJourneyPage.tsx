@@ -53,10 +53,10 @@ export default function MyJourneyPage() {
     queryKey: ["/api/events/joined"],
   });
 
-  const { data: directThreads } = useQuery<Array<{ id: string }>>({
-    queryKey: ["/api/direct-messages"],
+  const { data: profileStats } = useQuery<{ eventsCompleted: number; connectionsMade: number }>({
+    queryKey: ["/api/profile/stats"],
   });
-  const connectionsCount = directThreads?.length ?? 0;
+  const connectionsCount = profileStats?.connectionsMade ?? 0;
 
   const archetypeAvatar = user?.archetype
     ? getArchetypeAvatar(user.archetype)
