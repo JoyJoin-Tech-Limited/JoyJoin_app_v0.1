@@ -1,4 +1,4 @@
-import { Compass, Calendar, MessageSquare, User } from "lucide-react";
+import { Compass, Calendar, User } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
@@ -14,7 +14,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: Compass, label: "发现", path: "/", testId: "nav-discover", badgeCategory: 'discover' },
   { icon: Calendar, label: "活动", path: "/events", testId: "nav-events", badgeCategory: 'activities' },
-  { icon: MessageSquare, label: "聊天", path: "/chats", testId: "nav-chats", badgeCategory: 'chat' },
   { icon: User, label: "我的", path: "/profile", testId: "nav-profile" }
 ];
 

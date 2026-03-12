@@ -16,8 +16,6 @@ import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
 import ProfileSetupPage from "@/pages/ProfileSetupPage";
 import DiscoverPage from "@/pages/DiscoverPage";
 import EventsPage from "@/pages/EventsPage";
-import ChatsPage from "@/pages/ChatsPage";
-import EventChatDetailPage from "@/pages/EventChatDetailPage";
 import ProfilePage from "@/pages/ProfilePage";
 import EditProfilePage from "@/pages/EditProfilePage";
 import EditBasicInfoPage from "@/pages/EditBasicInfoPage";
@@ -138,8 +136,6 @@ function AuthenticatedRouter() {
       <Route path="/events/:eventId/deep-feedback" component={DeepFeedbackFlow} />
       <Route path="/icebreaker/:sessionId" component={IcebreakerSessionPage} />
       <Route path="/events" component={EventsPage} />
-      <Route path="/chats" component={ChatsPage} />
-      <Route path="/chats/:eventId" component={EventChatDetailPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/rewards" component={RewardsPage} />
       <Route path="/profile/edit" component={EditProfilePage} />

@@ -105,11 +105,6 @@ const analyticsItems = [
     icon: MessageSquareWarning,
   },
   {
-    title: "聊天日志",
-    url: "/admin/chat-logs",
-    icon: FileText,
-  },
-  {
     title: "匹配实验室",
     url: "/admin/matching",
     icon: FlaskConical,

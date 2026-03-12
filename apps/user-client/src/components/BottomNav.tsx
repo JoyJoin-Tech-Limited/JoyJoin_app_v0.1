@@ -24,7 +24,7 @@ interface NavItem {
 const sideNavItems: NavItem[] = [
   { icon: Compass, label: "发现", path: "/", testId: "nav-discover", badgeCategory: 'discover' },
   { icon: Footprints, label: "足迹", path: "/my-journey", testId: "nav-journey", badgeCategory: 'activities' },
-  { icon: Users, label: "圈子", path: "/chats", testId: "nav-chats", badgeCategory: 'chat' },
+  { icon: Users, label: "连接", path: "/connections", testId: "nav-connections" },
   { icon: User, label: "我的", path: "/profile", testId: "nav-profile" }
 ];
 
@@ -65,12 +65,12 @@ export default function BottomNav() {
         return;
       }
 
-      // Prefetch in priority order: events -> chats -> profile
+      // Prefetch in priority order: my-events / pool-registrations -> connections -> profile
       // These keys match the actual queryKey arrays used in the pages
       const prefetchQueries = [
         ['/api/my-events'],           // EventsPage
         ['/api/my-pool-registrations'], // EventsPage
-        ['/api/events/joined'],        // ChatsPage
+        ['/api/connections/my'],       // ConnectionsPage
         ['/api/auth/user'],            // ProfilePage (auth state)
       ];
 

@@ -1,12 +1,11 @@
 //my path:/Users/felixg/projects/JoyJoin3/server/storage.ts
 import { 
   type User, type UpsertUser, type UpdateProfile, type UpdateFullProfile, type UpdatePersonality,
-  type Event, type EventAttendance, type ChatMessage, type EventFeedback, type BlindBoxEvent,
-  type InsertEventAttendance, type InsertChatMessage, type InsertEventFeedback,
+  type Event, type EventAttendance, type EventFeedback, type BlindBoxEvent,
+  type InsertEventAttendance, type InsertEventFeedback,
   type RegisterUser, type InsertTestResponse, type InsertRoleResult, type RoleResult, type InterestsTopics,
   type Notification, type InsertNotification, type NotificationCounts,
   type Content, type InsertContent,
-  type ChatReport, type InsertChatReport, type ChatLog, type InsertChatLog,
   type PricingSetting, type PromotionBanner,
   type VenueTimeSlot, type InsertVenueTimeSlot, type VenueTimeSlotBooking, type InsertVenueTimeSlotBooking,
   type IcebreakerSession, type IcebreakerCheckin, type IcebreakerReadyVote, type IcebreakerActivityLog,
@@ -14,8 +13,8 @@ import {
   type RegistrationSession,
   type PreSignupData,
   type UserSocialTagGeneration,
-  users, events, eventAttendance, chatMessages, eventFeedback, blindBoxEvents, testResponses, roleResults, notifications,
-  payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs,
+  users, events, eventAttendance, eventFeedback, blindBoxEvents, testResponses, roleResults, notifications,
+  payments, coupons, couponUsage, subscriptions, contents,
   pricingSettings, promotionBanners, eventPools, eventPoolGroups, venueTimeSlots, venueTimeSlotBookings, venues,
   icebreakerSessions, icebreakerCheckins, icebreakerReadyVotes, icebreakerActivityLogs, registrationSessions, preSignupData,
   assessmentSessions, assessmentAnswers, userSocialTagGenerations, connections
@@ -74,10 +73,6 @@ export interface IStorage {
   // Event operations
   getUserJoinedEvents(userId: string): Promise<Array<Event & { attendanceStatus: string; attendeeCount: number; participants: Array<{ id: string; displayName: string | null; archetype: string | null }> }>>;
   getEventParticipants(eventId: string): Promise<Array<User>>;
-  
-  // Chat operations
-  getEventMessages(eventId: string): Promise<Array<ChatMessage & { user: User }>>;
-  createChatMessage(userId: string, message: InsertChatMessage): Promise<ChatMessage>;
   
   // Feedback operations
   getUserAllFeedbacks(userId: string): Promise<Array<EventFeedback>>;
@@ -245,18 +240,6 @@ export interface IStorage {
     topImprovementAreas: Array<{ area: string; count: number }>;
     connectionStatusBreakdown: Record<string, number>;
   }>;
-
-  // Chat Report operations
-  createChatReport(data: InsertChatReport): Promise<ChatReport>;
-  getChatReports(status?: string): Promise<Array<ChatReport & { reporter: User; reportedUser: User; message: ChatMessage }>>;
-  getChatReport(id: string): Promise<(ChatReport & { reporter: User; reportedUser: User; message: ChatMessage }) | undefined>;
-  updateChatReport(id: string, updates: { status?: string; reviewedBy?: string; reviewNotes?: string; actionTaken?: string }): Promise<ChatReport>;
-  getChatReportContext(messageId: string, eventId?: string, threadId?: string): Promise<Array<ChatMessage & { user: User }>>;
-
-  // Chat Log operations
-  createChatLog(data: InsertChatLog): Promise<ChatLog>;
-  getChatLogs(filters?: { eventId?: string; userId?: string; severity?: string; startDate?: Date; endDate?: Date }): Promise<ChatLog[]>;
-  getChatLogStats(): Promise<{ total: number; errors: number; warnings: number; info: number }>;
 
   // Admin Content Management operations
   getAllContents(type?: string): Promise<any[]>;
@@ -885,35 +868,6 @@ export class DatabaseStorage implements IStorage {
       );
 
     return result.map((r: { user: User }) => r.user);
-  }
-
-  // Chat operations
-  async getEventMessages(eventId: string): Promise<Array<ChatMessage & { user: User }>> {
-    const result = await db
-      .select({
-        message: chatMessages,
-        user: users,
-      })
-      .from(chatMessages)
-      .innerJoin(users, eq(chatMessages.userId, users.id))
-      .where(eq(chatMessages.eventId, eventId))
-      .orderBy(chatMessages.createdAt);
-
-    return result.map((r: { message: ChatMessage; user: User }) => ({
-      ...r.message,
-      user: r.user,
-    }));
-  }
-
-  async createChatMessage(userId: string, message: InsertChatMessage): Promise<ChatMessage> {
-    const [newMessage] = await db
-      .insert(chatMessages)
-      .values({
-        ...message,
-        userId,
-      })
-      .returning();
-    return newMessage;
   }
 
   // Feedback operations
@@ -3254,154 +3208,6 @@ export class DatabaseStorage implements IStorage {
       deepFeedbackRate: Math.round(deepFeedbackRate * 10) / 10,
       topImprovementAreas,
       connectionStatusBreakdown,
-    };
-  }
-
-  // ============ CHAT REPORT OPERATIONS ============
-
-  async createChatReport(data: InsertChatReport): Promise<ChatReport> {
-    const [report] = await db.insert(chatReports).values(data).returning();
-    return report;
-  }
-
-  async getChatReports(status?: string): Promise<Array<ChatReport & { reporter: User; reportedUser: User; message: ChatMessage }>> {
-    const query = db
-      .select({
-        report: chatReports,
-        reporter: users,
-        reportedUser: users,
-        message: chatMessages,
-      })
-      .from(chatReports)
-      .leftJoin(users, eq(chatReports.reportedBy, users.id))
-      .leftJoin(users as any, eq(chatReports.reportedUserId, (users as any).id))
-      .leftJoin(chatMessages, eq(chatReports.messageId, chatMessages.id))
-      .orderBy(desc(chatReports.createdAt));
-
-    const results: any = status
-      ? await query.where(eq(chatReports.status, status))
-      : await query;
-
-    return results.map((r: any) => ({
-      ...r.report,
-      reporter: r.reporter,
-      reportedUser: r.reportedUser,
-      message: r.message,
-    }));
-  }
-
-  async getChatReport(id: string): Promise<(ChatReport & { reporter: User; reportedUser: User; message: ChatMessage }) | undefined> {
-    const result: any = await db
-      .select({
-        report: chatReports,
-        reporter: users,
-        reportedUser: users,
-        message: chatMessages,
-      })
-      .from(chatReports)
-      .leftJoin(users, eq(chatReports.reportedBy, users.id))
-      .leftJoin(users as any, eq(chatReports.reportedUserId, (users as any).id))
-      .leftJoin(chatMessages, eq(chatReports.messageId, chatMessages.id))
-      .where(eq(chatReports.id, id))
-      .limit(1);
-
-    if (!result || result.length === 0) return undefined;
-
-    return {
-      ...result[0].report,
-      reporter: result[0].reporter,
-      reportedUser: result[0].reportedUser,
-      message: result[0].message,
-    };
-  }
-
-  async updateChatReport(id: string, updates: { status?: string; reviewedBy?: string; reviewNotes?: string; actionTaken?: string }): Promise<ChatReport> {
-    const [report] = await db
-      .update(chatReports)
-      .set({ ...updates, reviewedAt: new Date() })
-      .where(eq(chatReports.id, id))
-      .returning();
-    return report;
-  }
-
-  async getChatReportContext(messageId: string, eventId?: string, threadId?: string): Promise<Array<ChatMessage & { user: User }>> {
-    // Get the reported message's timestamp
-    const [reportedMessage] = await db
-      .select()
-      .from(chatMessages)
-      .where(eq(chatMessages.id, messageId))
-      .limit(1);
-
-    if (!reportedMessage) return [];
-
-    // Get 10 messages before and after (total 21 including the reported message)
-    const result: any = await db
-      .select({
-        message: chatMessages,
-        user: users,
-      })
-      .from(chatMessages)
-      .leftJoin(users, eq(chatMessages.userId, users.id))
-      .where(
-        and(
-          eventId ? eq(chatMessages.eventId, eventId) : undefined
-        )
-      )
-      .orderBy(chatMessages.createdAt)
-      .limit(21);
-
-    return result.map((r: any) => ({ ...r.message, user: r.user }));
-  }
-
-  // ============ CHAT LOG OPERATIONS ============
-
-  async createChatLog(data: InsertChatLog): Promise<ChatLog> {
-    const [log] = await db.insert(chatLogs).values(data).returning();
-    return log;
-  }
-
-  async getChatLogs(filters?: { eventId?: string; userId?: string; severity?: string; startDate?: Date; endDate?: Date }): Promise<ChatLog[]> {
-    const conditions = [];
-
-    if (filters?.eventId) {
-      conditions.push(eq(chatLogs.eventId, filters.eventId));
-    }
-    if (filters?.userId) {
-      conditions.push(eq(chatLogs.userId, filters.userId));
-    }
-    if (filters?.severity) {
-      conditions.push(eq(chatLogs.severity, filters.severity));
-    }
-    if (filters?.startDate) {
-      conditions.push(gte(chatLogs.createdAt, filters.startDate));
-    }
-    if (filters?.endDate) {
-      conditions.push(lte(chatLogs.createdAt, filters.endDate));
-    }
-
-    return await db
-      .select()
-      .from(chatLogs)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(chatLogs.createdAt));
-  }
-
-  async getChatLogStats(): Promise<{ total: number; errors: number; warnings: number; info: number }> {
-    const result = await db.execute(sql`
-      SELECT 
-        COUNT(*) as total,
-        SUM(CASE WHEN severity = 'error' THEN 1 ELSE 0 END) as errors,
-        SUM(CASE WHEN severity = 'warning' THEN 1 ELSE 0 END) as warnings,
-        SUM(CASE WHEN severity = 'info' THEN 1 ELSE 0 END) as info
-      FROM chat_logs
-    `);
-
-    const row: any = result.rows[0];
-    return {
-      total: parseInt(row.total) || 0,
-      errors: parseInt(row.errors) || 0,
-      warnings: parseInt(row.warnings) || 0,
-      info: parseInt(row.info) || 0,
     };
   }
 

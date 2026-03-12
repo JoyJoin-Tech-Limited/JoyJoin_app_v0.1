@@ -3,8 +3,7 @@ import BottomNav from "@/components/BottomNav";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Users, Copy, Check } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { archetypeConfig } from "@/lib/archetypes";
 import { archetypeAvatars, archetypeBgColors } from "@/lib/archetypeAvatars";
@@ -88,8 +87,7 @@ type ConnectionItem = {
   } | null;
 };
 
-export default function ChatsPage() {
-  const markAsRead = useMarkNotificationsAsRead();
+export default function ConnectionsPage() {
   const { toast } = useToast();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -97,10 +95,6 @@ export default function ChatsPage() {
   const { data: connections, isLoading } = useQuery<ConnectionItem[]>({
     queryKey: ["/api/connections/my"],
   });
-
-  useEffect(() => {
-    markAsRead.mutate('chat');
-  }, []);
 
   const getInitials = (name: string | null) => {
     if (!name) return "?";
@@ -143,7 +137,7 @@ export default function ChatsPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#fafaf8] pb-16 flex flex-col">
-        <MobileHeader title="圈子" />
+        <MobileHeader title="连接" />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
             <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
@@ -159,7 +153,7 @@ export default function ChatsPage() {
 
   return (
     <div className="min-h-screen bg-[#fafaf8] pb-16">
-      <MobileHeader title="圈子" />
+      <MobileHeader title="连接" />
 
       {!hasConnections ? (
         <div className="px-4 py-16 flex flex-col items-center justify-center text-center">
