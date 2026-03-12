@@ -3,8 +3,10 @@
  *
  * Code-acquisition strategy (see `getWeChatCode` below):
  *   1. wx.login() when the WeChat Mini Program global `wx` is available.
- *   2. Mock UUID fallback for web / dev environments (server accepts these in
- *      development mode via the `wechat_test_` prefix convention).
+ *   2. WeChat OAuth2 web redirect (`/api/auth/wechat/oauth/start`) in staging/production
+ *      browser environments. The page navigates away; the server callback handles session
+ *      creation and redirects back to the frontend.
+ *   3. Mock UUID fallback in local development (server accepts these in dev mode).
  *
  * @taroMigration To migrate to Taro, update only `getWeChatCode()` — the hook
  *   itself requires no changes.
@@ -29,22 +31,29 @@ interface WxLoginResult {
 }
 
 /**
- * Obtains a WeChat login code for the `/api/auth/wechat/login-with-test` endpoint.
+ * Obtains a WeChat login code for the `/api/auth/wechat/login-with-test` endpoint,
+ * or initiates the WeChat OAuth2 web redirect flow.
  *
- * Current behaviour (pre-Taro migration):
- *   1. Uses `wx.login()` when running inside the WeChat Mini Program runtime.
- *   2. Falls back to a `wechat_test_<uuid>` mock code for web / dev — the server
- *      accepts this in development mode (NODE_ENV === 'development').
+ * Priority order:
+ *   1. wx.login() — WeChat Mini Program runtime (wx global is present).
+ *   2. Development mode — returns a mock `wechat_test_<uuid>` code so the server's
+ *      development mock path (`NODE_ENV === 'development'`) can process it without
+ *      hitting the real WeChat API.
+ *   3. Staging / Production browser (no wx global) — redirects the browser to
+ *      `/api/auth/wechat/oauth/start`, which begins the WeChat OAuth2 web flow.
+ *      The returned Promise intentionally never resolves because the page navigates away;
+ *      the server-side callback at `/api/auth/wechat/oauth/callback` takes over.
  *
- * @taroMigration Replace this function body with:
+ * @taroMigration Replace the entire body of this function with:
  *   ```ts
  *   import Taro from '@tarojs/taro';
  *   const result = await Taro.login();
  *   return result.code;
  *   ```
- *   No other changes are needed in this file.
+ *   No other changes are needed anywhere in this file.
  */
 async function getWeChatCode(): Promise<string> {
+  // 1. Mini Program runtime: use wx.login()
   if (typeof wx !== 'undefined' && typeof wx.login === 'function') {
     const result = await new Promise<WxLoginResult>((resolve, reject) => {
       wx.login({
@@ -55,9 +64,24 @@ async function getWeChatCode(): Promise<string> {
     return result.code;
   }
 
-  // Web / development fallback — server mocks openid for any code in dev mode.
-  console.warn('[useWeChatLogin] wx.login() not available, using mock code for dev/web');
-  return `wechat_test_${crypto.randomUUID()}`;
+  // 2. Local development: use a mock code (server accepts in dev mode).
+  if (import.meta.env.DEV) {
+    console.warn('[useWeChatLogin] Development mode: using mock WeChat code');
+    return `wechat_test_${crypto.randomUUID()}`;
+  }
+
+  // 3. Web browser (staging/production): initiate WeChat OAuth2 web flow.
+  // The browser is redirected to the WeChat authorization page via the server.
+  // The server callback at /api/auth/wechat/oauth/callback handles session creation
+  // and redirects back to the frontend — this Promise never resolves.
+  //
+  // @taroMigration Replace this block with:
+  //   import Taro from '@tarojs/taro';
+  //   const result = await Taro.login();
+  //   return result.code;
+  console.log('[useWeChatLogin] Initiating WeChat OAuth2 web flow');
+  window.location.href = '/api/auth/wechat/oauth/start';
+  return new Promise<string>(() => {}); // page navigates away; never resolves
 }
 
 export function useWeChatLogin() {
