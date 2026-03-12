@@ -2932,6 +2932,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process connection selections and detect mutual matches
       if (feedback.connections && feedback.connections.length > 0) {
         for (const selectedUserId of feedback.connections) {
+          // Guard: skip self-selection
+          if (selectedUserId === userId) {
+            console.warn(`[Connections] User ${userId} attempted self-selection — skipped`);
+            continue;
+          }
           try {
             await storage.upsertConnection(eventId, userId, selectedUserId);
           } catch (connError) {
@@ -2940,18 +2945,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Collect all mutual connections for this event and return with wechat IDs
-      // Note: mutual matches are typically few (≤5 per event), so parallel getUser calls are acceptable
+      // Collect all mutual connections for this event and return with wechat IDs.
+      // Use the snapshot stored on the connection row at reveal time; fall back to live user
+      // field only for legacy rows that pre-date snapshotting.
       const mutualConnectionRows = await storage.getMutualConnections(eventId, userId);
       const mutualMatches = await Promise.all(
         mutualConnectionRows.map(async (conn: any) => {
           const otherUserId = conn.userAId === userId ? conn.userBId : conn.userAId;
+          // Snapshot WeChat ID for THIS user's counterpart
+          const snapshotWechatId =
+            conn.userAId === userId ? conn.userBWechatId : conn.userAWechatId;
           const otherUser = await storage.getUser(otherUserId);
           return {
             userId: otherUserId,
             displayName: otherUser?.displayName || otherUser?.firstName || "参与者",
             archetype: otherUser?.archetype ?? null,
-            wechatContactId: otherUser?.wechatContactId ?? null,
+            // Prefer snapshot; fall back to live field for legacy rows
+            wechatContactId: snapshotWechatId ?? otherUser?.wechatContactId ?? null,
           };
         })
       );
@@ -10015,7 +10025,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       
       const paymentResult = await paymentService.createPayment({
         userId,
-        paymentType: "subscription",
+        paymentType: "event_bundle",
         relatedId: renewalData.subscriptionId,
         originalAmount: renewalData.amount,
         couponId,

@@ -536,6 +536,7 @@ export const connections = pgTable("connections", {
   userAId: varchar("user_a_id").notNull().references(() => users.id),
   userBId: varchar("user_b_id").notNull().references(() => users.id),
   status: varchar("status").notNull().default("pending"), // "pending" | "mutual"
+  initiatorId: varchar("initiator_id").notNull().references(() => users.id), // who first selected
   userAWechatId: varchar("user_a_wechat_id"),   // snapshot at reveal time
   userBWechatId: varchar("user_b_wechat_id"),   // snapshot at reveal time
   revealedAt: timestamp("revealed_at"),

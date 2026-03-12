@@ -88,7 +88,7 @@ export interface IStorage {
   updateEventFeedbackDeep(userId: string, eventId: string, deepData: Record<string, any>): Promise<EventFeedback>;
 
   // Connection operations (WeChat ID exchange)
-  upsertConnection(eventId: string, userAId: string, userBId: string): Promise<any>;
+  upsertConnection(eventId: string, currentUserId: string, targetUserId: string): Promise<any>;
   getMutualConnections(eventId: string, userId: string): Promise<any[]>;
   updateUserWechatId(userId: string, wechatContactId: string): Promise<void>;
 
@@ -981,12 +981,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Connection operations (WeChat ID exchange)
-  async upsertConnection(eventId: string, userAId: string, userBId: string): Promise<any> {
-    // Determine canonical ordering: userAId < userBId alphabetically
-    const [canonA, canonB] = userAId < userBId ? [userAId, userBId] : [userBId, userAId];
+  async upsertConnection(eventId: string, currentUserId: string, targetUserId: string): Promise<any> {
+    // Determine canonical ordering: userAId < userBId alphabetically for dedup
+    const [canonA, canonB] = currentUserId < targetUserId
+      ? [currentUserId, targetUserId]
+      : [targetUserId, currentUserId];
 
-    // Check if the row already exists
-    const [existing] = await db
+    // Atomic insert — if a concurrent request beat us, ON CONFLICT DO NOTHING keeps the original row intact.
+    await db
+      .insert(connections)
+      .values({
+        eventId,
+        userAId: canonA,
+        userBId: canonB,
+        status: "pending",
+        initiatorId: currentUserId,
+      })
+      .onConflictDoNothing();
+
+    // Re-fetch the authoritative row (whether we just inserted or it already existed)
+    const [row] = await db
       .select()
       .from(connections)
       .where(
@@ -997,23 +1011,14 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    if (!existing) {
-      // First selection: insert with pending status
-      const [inserted] = await db
-        .insert(connections)
-        .values({
-          eventId,
-          userAId: canonA,
-          userBId: canonB,
-          status: "pending",
-        })
-        .returning();
-      return inserted;
-    } else if (existing.status === "pending") {
-      // Check which user originally created this (the one who didn't create it is now completing the mutual)
-      // If existing was created by canonA selecting canonB, now canonB is selecting canonA → mutual
-      // We need to figure out who's the new selector: the current call tells us userAId/userBId before sorting
-      // The row was already created, so one side already selected. Now the OTHER side is calling → mutual.
+    if (!row) return null; // Should never happen after the insert above
+
+    // If the row is already mutual, nothing more to do
+    if (row.status === "mutual") return row;
+
+    // Flip to mutual only when the OTHER user is calling (i.e. the initiator is NOT currentUserId).
+    // If the initiator IS currentUserId it means the same user re-submitted — keep it pending.
+    if (row.initiatorId !== currentUserId) {
       // Fetch both users' wechat IDs in parallel for snapshot
       const [userARecord, userBRecord] = await Promise.all([
         db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonA)).then(r => r[0]),
@@ -1028,12 +1033,17 @@ export class DatabaseStorage implements IStorage {
           userBWechatId: userBRecord?.wechatContactId ?? null,
           revealedAt: new Date(),
         })
-        .where(eq(connections.id, existing.id))
+        .where(
+          and(
+            eq(connections.id, row.id),
+            eq(connections.status, "pending") // guard against a concurrent mutual update
+          )
+        )
         .returning();
-      return updated;
+      return updated ?? row;
     }
-    // Already mutual — return as-is
-    return existing;
+
+    return row;
   }
 
   async getMutualConnections(eventId: string, userId: string): Promise<any[]> {
