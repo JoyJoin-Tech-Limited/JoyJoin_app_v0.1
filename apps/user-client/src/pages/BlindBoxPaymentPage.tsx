@@ -21,7 +21,6 @@ import {
   CheckCircle,
   Loader,
   Ticket,
-  Crown,
   Package,
   Users,
   Calendar,

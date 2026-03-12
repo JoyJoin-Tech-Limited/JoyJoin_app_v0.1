@@ -2945,14 +2945,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const isNew = conn.revealedAt && (Date.now() - new Date(conn.revealedAt).getTime()) < MUTUAL_MATCH_NOTIFICATION_WINDOW_MS;
           if (isNew && otherUserId !== userId) {
             try {
-              await storage.createNotification({
-                userId: otherUserId,
-                category: 'chat',
-                type: 'mutual_match',
-                title: '🎉 新的双向匹配',
-                message: `你和一位参与者互相选择了对方！查看Ta的微信号吧`,
-                relatedResourceId: eventId,
-              });
+              // Deduplicate: only create notification if one doesn't already exist for this user+event
+              const existing = await db
+                .select({ id: schema.notifications.id })
+                .from(schema.notifications)
+                .where(
+                  and(
+                    eq(schema.notifications.userId, otherUserId),
+                    eq(schema.notifications.type, 'mutual_match'),
+                    eq(schema.notifications.relatedResourceId, eventId)
+                  )
+                )
+                .limit(1);
+              if (existing.length === 0) {
+                await storage.createNotification({
+                  userId: otherUserId,
+                  category: 'chat',
+                  type: 'mutual_match',
+                  title: '🎉 新的双向匹配',
+                  message: `你和一位参与者互相选择了对方！查看Ta的微信号吧`,
+                  relatedResourceId: eventId,
+                });
+              }
             } catch (notifError) {
               console.error(`[Connections] Failed to notify other user ${otherUserId}:`, notifError);
             }

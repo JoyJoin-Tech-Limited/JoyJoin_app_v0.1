@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,17 +22,33 @@ interface FeedbackCompletionProps {
 function MutualMatchCard({ match }: { match: MutualMatch }) {
   const [copied, setCopied] = useState(false);
   const [copyFlash, setCopyFlash] = useState(false);
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+    };
+  }, []);
+
   const archetypeData = match.archetype && archetypeConfig[match.archetype]
     ? archetypeConfig[match.archetype]
     : { icon: "✨", bgColor: "bg-muted" };
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (match.wechatContactId) {
-      navigator.clipboard.writeText(match.wechatContactId);
-      setCopied(true);
-      setCopyFlash(true);
-      setTimeout(() => setCopied(false), 2000);
-      setTimeout(() => setCopyFlash(false), 1000);
+      try {
+        await navigator.clipboard.writeText(match.wechatContactId);
+        setCopied(true);
+        setCopyFlash(true);
+        if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+        if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+        copiedTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+        flashTimeoutRef.current = setTimeout(() => setCopyFlash(false), 1000);
+      } catch {
+        // Clipboard write failed (e.g., permission denied or non-secure context) — no-op
+      }
     }
   };
 
