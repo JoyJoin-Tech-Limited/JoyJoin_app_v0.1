@@ -1145,7 +1145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Calculate connections made: count mutual connections where user is participant
       const connectionsResult = await db
-        .select({ count: connections.id })
+        .select({ id: connections.id })
         .from(connections)
         .where(
           and(

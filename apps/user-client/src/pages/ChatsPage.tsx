@@ -9,7 +9,7 @@ import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
  *
  * In-app private/direct chat has been removed. Connections are now
  * structured post-event mutual selections with WeChat contact reveal
- * (see the `connections` table and /api/feedback for mutual selection flow).
+ * (see the `connections` table; mutual selection via `/api/events/:eventId/feedback`).
  */
 export default function ChatsPage() {
   const markAsRead = useMarkNotificationsAsRead();
