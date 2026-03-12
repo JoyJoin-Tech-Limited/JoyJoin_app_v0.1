@@ -143,8 +143,8 @@ draft → matching → registration_open → confirmed
 - **File:** `client/src/pages/EventChatDetailPage.tsx`
 
 ### Direct Messages
-- **Access:** Must have attended same event
-- **Schema:** `direct_message_threads` + `direct_messages`
+- **Removed:** In-app private/direct chat has been removed (PR 3 of 3).
+- **Canonical model:** Post-event mutual selection → structured `connections` record → WeChat contact reveal. No in-app private chat.
 
 ### Moderation
 - **Reports:** User-submitted + auto-flagged

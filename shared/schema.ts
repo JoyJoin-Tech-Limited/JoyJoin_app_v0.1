@@ -443,26 +443,6 @@ export const chatMessages = pgTable("chat_messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Direct message threads table (1-on-1 chats unlocked via mutual matching)
-export const directMessageThreads = pgTable("direct_message_threads", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  user1Id: varchar("user1_id").notNull().references(() => users.id),
-  user2Id: varchar("user2_id").notNull().references(() => users.id),
-  eventId: varchar("event_id").notNull().references(() => events.id), // Event where they matched
-  unlockedAt: timestamp("unlocked_at").defaultNow(), // When mutual matching unlocked the thread
-  lastMessageAt: timestamp("last_message_at"), // For sorting threads by activity
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Direct messages table (1-on-1 private messages)
-export const directMessages = pgTable("direct_messages", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  threadId: varchar("thread_id").notNull().references(() => directMessageThreads.id),
-  senderId: varchar("sender_id").notNull().references(() => users.id),
-  message: text("message").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
 // Post-event feedback table
 export const eventFeedback = pgTable("event_feedback", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -659,19 +639,6 @@ export const insertEventPoolGroupSchema = createInsertSchema(eventPoolGroups).om
 
 export const insertChatMessageSchema = createInsertSchema(chatMessages).pick({
   eventId: true,
-  message: true,
-}).extend({
-  message: z.string().min(1, "消息不能为空"),
-});
-
-export const insertDirectMessageThreadSchema = createInsertSchema(directMessageThreads).pick({
-  user1Id: true,
-  user2Id: true,
-  eventId: true,
-});
-
-export const insertDirectMessageSchema = createInsertSchema(directMessages).pick({
-  threadId: true,
   message: true,
 }).extend({
   message: z.string().min(1, "消息不能为空"),
@@ -1398,8 +1365,6 @@ export type EventPool = typeof eventPools.$inferSelect;
 export type EventPoolRegistration = typeof eventPoolRegistrations.$inferSelect;
 export type EventPoolGroup = typeof eventPoolGroups.$inferSelect;
 export type ChatMessage = typeof chatMessages.$inferSelect;
-export type DirectMessageThread = typeof directMessageThreads.$inferSelect;
-export type DirectMessage = typeof directMessages.$inferSelect;
 export type EventFeedback = typeof eventFeedback.$inferSelect;
 export type Connection = typeof connections.$inferSelect;
 export type BlindBoxEvent = typeof blindBoxEvents.$inferSelect;
@@ -1412,8 +1377,6 @@ export type InsertEventPool = z.infer<typeof insertEventPoolSchema>;
 export type InsertEventPoolRegistration = z.infer<typeof insertEventPoolRegistrationSchema>;
 export type InsertEventPoolGroup = z.infer<typeof insertEventPoolGroupSchema>;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
-export type InsertDirectMessageThread = z.infer<typeof insertDirectMessageThreadSchema>;
-export type InsertDirectMessage = z.infer<typeof insertDirectMessageSchema>;
 export type InsertEventFeedback = z.infer<typeof insertEventFeedbackSchema>;
 export type InsertBlindBoxEvent = z.infer<typeof insertBlindBoxEventSchema>;
 export type InsertTestResponse = z.infer<typeof insertTestResponseSchema>;
@@ -1567,7 +1530,7 @@ export const chatReports = pgTable("chat_reports", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   messageId: varchar("message_id").notNull().references(() => chatMessages.id),
   eventId: varchar("event_id").references(() => events.id),
-  threadId: varchar("thread_id").references(() => directMessageThreads.id),
+  threadId: varchar("thread_id"), // Legacy: was FK to direct_message_threads (dropped)
   reportedBy: varchar("reported_by").notNull().references(() => users.id),
   reportedUserId: varchar("reported_user_id").notNull().references(() => users.id),
   
@@ -1588,7 +1551,7 @@ export const chatLogs = pgTable("chat_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   eventType: varchar("event_type").notNull(), // message_sent, message_failed, connection_error, ws_connected, ws_disconnected
   eventId: varchar("event_id").references(() => events.id),
-  threadId: varchar("thread_id").references(() => directMessageThreads.id),
+  threadId: varchar("thread_id"), // Legacy: was FK to direct_message_threads (dropped)
   userId: varchar("user_id").references(() => users.id),
   
   severity: varchar("severity").notNull().default("info"), // info, warning, error
