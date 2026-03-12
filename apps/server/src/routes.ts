@@ -2898,6 +2898,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: result.error });
       }
 
+      // Save wechatContactId if provided and not previously set
+      const { wechatContactId } = req.body;
+      if (wechatContactId && typeof wechatContactId === 'string' && wechatContactId.trim()) {
+        const currentUser = await storage.getUser(userId);
+        if (!currentUser?.wechatContactId) {
+          await storage.updateUserWechatId(userId, wechatContactId.trim());
+        }
+      }
+
       // Create feedback
       const feedback = await storage.createEventFeedback(userId, result.data);
       
@@ -2910,53 +2919,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Error awarding feedback XP:", xpError);
       }
       
-      // Check for mutual matches if user has new connections
-      const mutualMatches: string[] = [];
-      if (feedback.hasNewConnections && feedback.connections && feedback.connections.length > 0) {
-        // Get all feedbacks for this event to check for mutual matches
-        const eventFeedbacks = await storage.getEventFeedbacks(eventId);
-        
+      // Process connection selections and detect mutual matches
+      if (feedback.connections && feedback.connections.length > 0) {
         for (const selectedUserId of feedback.connections) {
-          // Find the feedback from the selected user
-          const otherUserFeedback = eventFeedbacks.find(f => f.userId === selectedUserId);
-          
-          // Check if they also selected the current user
-          if (otherUserFeedback?.hasNewConnections && 
-              otherUserFeedback.connections && 
-              otherUserFeedback.connections.includes(userId)) {
-            mutualMatches.push(selectedUserId);
-            
-            // Create direct message thread if it doesn't exist
-            const existingThread = await storage.findDirectMessageThread(userId, selectedUserId, eventId);
-            if (!existingThread) {
-              await storage.createDirectMessageThread({
-                user1Id: userId,
-                user2Id: selectedUserId,
-                eventId: eventId,
-              });
-              
-              // Send mutual match notifications to both users
-              await storage.createNotification({
-                userId: userId,
-                category: 'chat',
-                type: 'mutual_match',
-                title: '🎉 双向匹配成功',
-                message: `你和另一位参与者互相选择，现在可以开始私聊了！`,
-                relatedResourceId: eventId,
-              });
-              
-              await storage.createNotification({
-                userId: selectedUserId,
-                category: 'chat',
-                type: 'mutual_match',
-                title: '🎉 双向匹配成功',
-                message: `你和另一位参与者互相选择，现在可以开始私聊了！`,
-                relatedResourceId: eventId,
-              });
-            }
+          // Guard: skip self-selection
+          if (selectedUserId === userId) {
+            console.warn(`[Connections] User ${userId} attempted self-selection — skipped`);
+            continue;
+          }
+          try {
+            await storage.upsertConnection(eventId, userId, selectedUserId);
+          } catch (connError) {
+            console.error(`[Connections] Error upserting connection for ${userId} → ${selectedUserId}:`, connError);
           }
         }
       }
+
+      // Collect all mutual connections for this event and return with wechat IDs.
+      // Use the snapshot stored on the connection row at reveal time; fall back to live user
+      // field only for legacy rows that pre-date snapshotting.
+      const mutualConnectionRows = await storage.getMutualConnections(eventId, userId);
+      const mutualMatches = await Promise.all(
+        mutualConnectionRows.map(async (conn: any) => {
+          const otherUserId = conn.userAId === userId ? conn.userBId : conn.userAId;
+          // Snapshot WeChat ID for THIS user's counterpart
+          const snapshotWechatId =
+            conn.userAId === userId ? conn.userBWechatId : conn.userAWechatId;
+          const otherUser = await storage.getUser(otherUserId);
+          return {
+            userId: otherUserId,
+            displayName: otherUser?.displayName || otherUser?.firstName || "参与者",
+            archetype: otherUser?.archetype ?? null,
+            // Prefer snapshot; fall back to live field for legacy rows
+            wechatContactId: snapshotWechatId ?? otherUser?.wechatContactId ?? null,
+          };
+        })
+      );
       
       // Note: In a real app, you'd update user points here
       // await storage.awardFeedbackPoints(userId, 50);
@@ -10016,7 +10014,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       
       const paymentResult = await paymentService.createPayment({
         userId,
-        paymentType: "subscription",
+        paymentType: "event_bundle",
         relatedId: renewalData.subscriptionId,
         originalAmount: renewalData.amount,
         couponId,

@@ -19,7 +19,7 @@ import { getLevelDiscount } from "@shared/gamification";
 
 export interface CreatePaymentParams {
   userId: string;
-  paymentType: "subscription" | "event";
+  paymentType: "subscription" | "event" | "event_bundle";
   relatedId: string; // subscription ID or event ID
   originalAmount: number; // in cents (¥98 = 9800)
   couponId?: string;
@@ -110,7 +110,8 @@ export class PaymentService {
     // Example (pseudo-code):
     // const wechatPay = new WeChatPay({ appId, mchId, ... });
     // const prepayResult = await wechatPay.transactions.h5({
-    //   description: paymentType === 'subscription' ? 'JoyJoin会员订阅' : 'JoyJoin活动报名',
+    //   description: paymentType === 'event_bundle' ? 'JoyJoin月度活动礼包' :
+    //                paymentType === 'subscription' ? 'JoyJoin活动礼包' : 'JoyJoin活动报名',
     //   out_trade_no: wechatOrderId,
     //   amount: { total: finalAmount, currency: 'CNY' },
     //   scene_info: { payer_client_ip: '...' },
@@ -189,20 +190,24 @@ export class PaymentService {
     }
     
     // Activate subscription or confirm event registration
-    if (payment.paymentType === "subscription") {
+    if (payment.paymentType === "subscription" || payment.paymentType === "event_bundle") {
       await this.activateSubscription(payment.relatedId, payment.id);
     } else if (payment.paymentType === "event") {
       await this.confirmEventRegistration(payment.relatedId, payment.userId);
     }
     
     // TODO: Send notification to user
+    const isBundle = payment.paymentType === "event_bundle";
+    const isSubscription = payment.paymentType === "subscription";
     await storage.createNotification({
       userId: payment.userId,
       category: "activities",
-      type: payment.paymentType === "subscription" ? "subscription_activated" : "event_confirmed",
-      title: payment.paymentType === "subscription" ? "会员订阅成功" : "活动报名成功",
-      message: payment.paymentType === "subscription" 
-        ? "您的JoyJoin会员已激活，开始探索精彩活动吧！" 
+      type: (isSubscription || isBundle) ? "subscription_activated" : "event_confirmed",
+      title: isBundle ? "悦聚月度礼包已激活" : isSubscription ? "会员订阅成功" : "活动报名成功",
+      message: isBundle
+        ? "你的本月活动礼包已生效，尽情参加本月所有悦聚活动吧！"
+        : isSubscription
+        ? "您的JoyJoin会员已激活，开始探索精彩活动吧！"
         : "您的活动报名已确认，期待与您见面！",
       relatedResourceId: payment.relatedId,
     });
@@ -246,8 +251,8 @@ export class PaymentService {
       status: "refunded",
     });
     
-    // Deactivate subscription if it was a subscription payment
-    if (payment.paymentType === "subscription" && payment.relatedId) {
+    // Deactivate subscription if it was a subscription or bundle payment
+    if ((payment.paymentType === "subscription" || payment.paymentType === "event_bundle") && payment.relatedId) {
       await storage.updateSubscription(payment.relatedId, {
         status: "cancelled",
       });
