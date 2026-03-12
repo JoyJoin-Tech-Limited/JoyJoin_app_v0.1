@@ -386,17 +386,11 @@ export default function DiscoverPage() {
           <ProfileCompletionNudge onDismiss={handleDismissProfileNudge} />
         )}
 
-        {/* 推广横幅轮播（含优惠券） */}
+        {/* 推广横幅轮播 */}
         <PromotionBannerCarousel 
           city={selectedCity} 
           placement="discover"
           className="mt-2"
-          coupon={bestCoupon ? {
-            type: "coupon",
-            discountType: bestCoupon.discountType as "percentage" | "fixed_amount",
-            discountValue: bestCoupon.discountValue,
-            expiresIn: getExpiryText(bestCoupon.validUntil),
-          } : undefined}
         />
 
         <div className="px-4 pb-2">
