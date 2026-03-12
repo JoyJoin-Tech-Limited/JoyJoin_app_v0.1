@@ -22,19 +22,18 @@ interface FallbackSlide {
   type: "fallback";
 }
 
-interface LocalBannerSlide {
-  id: string;
-  imageUrl: string;
-  title: string | null;
-  subtitle: string | null;
+type LocalBannerSlide = Pick<
+  PromotionBanner,
+  "id" | "imageUrl" | "title" | "subtitle" | "linkType" | "linkUrl"
+> & {
   linkType: "none";
   linkUrl: null;
-}
+};
 
 const discoverLocalBanners: LocalBannerSlide[] = [
-  { id: "discover-local-1", imageUrl: bannerOne, title: null, subtitle: null, linkType: "none", linkUrl: null },
-  { id: "discover-local-2", imageUrl: bannerTwo, title: null, subtitle: null, linkType: "none", linkUrl: null },
-  { id: "discover-local-3", imageUrl: bannerThree, title: null, subtitle: null, linkType: "none", linkUrl: null },
+  { id: "discover-local-1", imageUrl: bannerOne, title: "AI 匹配：帮你算好遇见什么样的人", subtitle: "算好的人 · 用数据找到更合适的缘分", linkType: "none", linkUrl: null },
+  { id: "discover-local-2", imageUrl: bannerTwo, title: "AI 匹配：帮你遇见同频的人", subtitle: "同频的人 · 和你合拍的社交伙伴", linkType: "none", linkUrl: null },
+  { id: "discover-local-3", imageUrl: bannerThree, title: "AI 匹配：帮你遇见懂你的人", subtitle: "懂你的人 · 更懂你的线下聚会", linkType: "none", linkUrl: null },
 ];
 
 interface PromotionBannerCarouselProps {
