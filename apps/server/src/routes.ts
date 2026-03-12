@@ -113,7 +113,7 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, onboardingAnalytics, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, onboardingAnalytics, matchHistory, connections, type User } from "@shared/schema";
 import * as schema from "@shared/schema";
 import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION } from "@shared/interests";
 import { db } from "./db";
@@ -7645,6 +7645,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user details:", error);
       res.status(500).json({ message: "Failed to fetch user details" });
+    }
+  });
+
+  // User Management - Get comprehensive user detail for admin portal
+  app.get("/api/admin/users/:id/detail", requireAdmin, async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const profileCompleteness = calculateProfileCompleteness(user);
+
+      // Onboarding lifecycle
+      const profileEssentialComplete = !!(user.displayName && user.gender && user.currentCity);
+      let nextStep: string;
+      if (!user.hasCompletedRegistration) nextStep = 'onboarding';
+      else if (!user.hasCompletedPersonalityTest) nextStep = 'personality-test';
+      else if (!profileEssentialComplete) nextStep = 'essential-data';
+      else if (!user.hasCompletedInterestsCarousel) nextStep = 'extended-data';
+      else if (!user.hasSeenProfileReview) nextStep = 'profile-review';
+      else if (!user.hasSeenGuide) nextStep = 'guide';
+      else nextStep = 'discover';
+
+      // Latest completed assessment session
+      const [assessmentSession] = await db
+        .select()
+        .from(assessmentSessions)
+        .where(and(eq(assessmentSessions.userId, userId), eq(assessmentSessions.phase, 'completed')))
+        .orderBy(desc(assessmentSessions.completedAt))
+        .limit(1);
+
+      // Joined events
+      const joinedEvents = await storage.getUserJoinedEvents(userId);
+
+      // Pool registrations
+      const poolRegistrations = await db
+        .select()
+        .from(eventPoolRegistrations)
+        .where(eq(eventPoolRegistrations.userId, userId))
+        .orderBy(desc(eventPoolRegistrations.registeredAt))
+        .limit(20);
+
+      // Mutual connections
+      const userConnections = await db
+        .select()
+        .from(connections)
+        .where(and(
+          or(eq(connections.userAId, userId), eq(connections.userBId, userId)),
+          eq(connections.status, 'mutual')
+        ))
+        .orderBy(desc(connections.createdAt))
+        .limit(20);
+
+      // Match history
+      const userMatchHistory = await db
+        .select()
+        .from(matchHistory)
+        .where(or(eq(matchHistory.user1Id, userId), eq(matchHistory.user2Id, userId)))
+        .orderBy(desc(matchHistory.matchedAt))
+        .limit(20);
+
+      // User interests
+      const [interests] = await db
+        .select()
+        .from(userInterests)
+        .where(eq(userInterests.userId, userId))
+        .limit(1);
+
+      // Matching readiness
+      const blockers: string[] = [];
+      if (!user.hasCompletedPersonalityTest) blockers.push('人格测试未完成');
+      if (!user.archetype) blockers.push('原型未确定');
+      if (!profileEssentialComplete) blockers.push('基本资料不完整');
+      if (!user.hasCompletedInterestsCarousel) blockers.push('兴趣数据未完成');
+      if (user.isBanned) blockers.push('用户已被封禁');
+      const matchingReadiness = { isReady: blockers.length === 0, blockers };
+
+      res.json({
+        user: { ...user, profileCompleteness },
+        onboarding: {
+          nextStep,
+          profileEssentialComplete,
+          hasCompletedRegistration: user.hasCompletedRegistration,
+          hasCompletedPersonalityTest: user.hasCompletedPersonalityTest,
+          hasCompletedInterestsCarousel: user.hasCompletedInterestsCarousel,
+          hasSeenProfileReview: user.hasSeenProfileReview,
+          hasSeenGuide: user.hasSeenGuide,
+        },
+        assessmentSession: assessmentSession || null,
+        joinedEvents,
+        poolRegistrations,
+        connections: userConnections,
+        matchHistory: userMatchHistory,
+        interests: interests || null,
+        matchingReadiness,
+      });
+    } catch (error) {
+      console.error("Error fetching user detail:", error);
+      res.status(500).json({ message: "Failed to fetch user detail" });
     }
   });
 
