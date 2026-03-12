@@ -7,9 +7,9 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Ticket, Gift, Sparkles } from "lucide-react";
 import type { PromotionBanner } from "@shared/schema";
-import bannerOne from "@/assets/promotional banner/banner方案一_AI隐藏式_算好的人.png";
-import bannerTwo from "@/assets/promotional banner/banner方案二_AI隐藏式_同频的人.png";
-import bannerThree from "@/assets/promotional banner/banner方案三_AI隐藏式_懂你的人.png";
+import bannerOne from "@/assets/promotional banner/banner方案一_算法匹配.png";
+import bannerTwo from "@/assets/promotional banner/banner方案二_AI定制主题.png";
+import bannerThree from "@/assets/promotional banner/banner方案三_舒服的距离.png";
 
 interface CouponSlide {
   type: "coupon";

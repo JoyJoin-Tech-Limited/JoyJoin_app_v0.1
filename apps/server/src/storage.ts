@@ -1017,8 +1017,16 @@ export class DatabaseStorage implements IStorage {
     if (row.initiatorId !== currentUserId) {
       // Fetch both users' wechat IDs in parallel for snapshot
       const [userARecord, userBRecord] = await Promise.all([
-        db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonA)).then(r => r[0]),
-        db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonB)).then(r => r[0]),
+        db
+          .select({ wechatContactId: users.wechatContactId })
+          .from(users)
+          .where(eq(users.id, canonA))
+          .then((rows: Array<{ wechatContactId: string | null }>) => rows[0]),
+        db
+          .select({ wechatContactId: users.wechatContactId })
+          .from(users)
+          .where(eq(users.id, canonB))
+          .then((rows: Array<{ wechatContactId: string | null }>) => rows[0]),
       ]);
 
       // Drizzle .returning() returns an array; destructuring gives the first row or undefined
