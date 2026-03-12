@@ -8,9 +8,9 @@ import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { motion, AnimatePresence } from "framer-motion";
 import { archetypeConfig } from "@/lib/archetypes";
 import { archetypeAvatars, archetypeBgColors } from "@/lib/archetypeAvatars";
-import { 
-  getGenderDisplay, 
-  formatAge, 
+import {
+  getGenderDisplay,
+  formatAge,
   calculateAge,
   getEducationDisplay
 } from "@/lib/userFieldMappings";
@@ -195,7 +195,6 @@ export default function ChatsPage() {
                 data-testid={`card-connection-${conn.connectionId}`}
               >
                 <div className="p-4">
-                  {/* Source Event Badge */}
                   {conn.sourceEvent && (
                     <div className="mb-3">
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-bold">
@@ -205,7 +204,6 @@ export default function ChatsPage() {
                   )}
 
                   <div className="flex items-start gap-3">
-                    {/* Avatar — tap to expand user info */}
                     <button
                       type="button"
                       onClick={() => setExpandedId(isExpanded ? null : conn.connectionId)}
@@ -251,7 +249,6 @@ export default function ChatsPage() {
                         </span>
                       )}
 
-                      {/* WeChat reveal section */}
                       {conn.wechatContactId && conn.wechatContactId.trim() ? (
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs text-muted-foreground">微信号：</span>
@@ -272,7 +269,6 @@ export default function ChatsPage() {
                         <p className="text-xs text-muted-foreground mt-1">互相选择后可查看微信号</p>
                       )}
 
-                      {/* Expandable User Info */}
                       <AnimatePresence>
                         {isExpanded && (
                           <motion.div

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Lock } from "lucide-react";
+import { ShieldCheck, MessageCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface WechatIdSetupStepProps {
@@ -30,8 +30,8 @@ export default function WechatIdSetupStep({ onNext }: WechatIdSetupStepProps) {
             <motion.div
               className="flex justify-center text-4xl"
               initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
+              animate={{ opacity: 1, scale: [1, 1.15, 0.95, 1.05, 1] }}
+              transition={{ delay: 0.5, duration: 0.6, ease: "easeInOut" }}
             >
               🤝
             </motion.div>
@@ -58,27 +58,38 @@ export default function WechatIdSetupStep({ onNext }: WechatIdSetupStepProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
+            className="space-y-1"
           >
-            <Input
-              placeholder="你的微信号（选填）"
-              value={wechatId}
-              onChange={(e) => setWechatId(e.target.value)}
-              maxLength={32}
-              data-testid="input-wechat-id"
-            />
+            <div className="relative">
+              <MessageCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="你的微信号（选填）"
+                value={wechatId}
+                onChange={(e) => setWechatId(e.target.value)}
+                maxLength={32}
+                className="rounded-2xl border-2 focus:ring-2 focus:ring-primary/40 focus:bg-primary/5 pl-10"
+                data-testid="input-wechat-id"
+              />
+            </div>
+            <p className={`text-xs text-right pr-1 ${wechatId.length >= 28 ? "text-amber-500" : "text-muted-foreground"}`}>
+              {wechatId.length}/32
+            </p>
           </motion.div>
 
           {/* Privacy note */}
           <motion.div
-            className="flex items-start gap-3 bg-primary/5 border border-primary/20 rounded-lg p-4"
+            className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-lg p-4"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <Lock className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              微信号仅在双向匹配时才对对方可见，其他人看不到
-            </p>
+            <ShieldCheck className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+            <div className="space-y-1">
+              <p className="text-sm text-emerald-800 leading-relaxed">
+                微信号仅在双向匹配时才对对方可见，其他人看不到
+              </p>
+              <a href="/privacy" className="text-xs text-emerald-600 underline">了解隐私政策</a>
+            </div>
           </motion.div>
 
           {/* Buttons */}
@@ -89,15 +100,15 @@ export default function WechatIdSetupStep({ onNext }: WechatIdSetupStepProps) {
             transition={{ delay: 0.5 }}
           >
             <Button
-              variant="outline"
-              className="flex-1"
+              variant="ghost"
+              className="text-muted-foreground hover:text-foreground"
               onClick={handleSkip}
               data-testid="button-wechat-skip"
             >
-              跳过
+              暂时跳过（可在设置中补充）
             </Button>
             <Button
-              className="flex-1"
+              className="flex-1 h-12 shadow-md font-semibold"
               onClick={handleSave}
               data-testid="button-wechat-save"
             >
