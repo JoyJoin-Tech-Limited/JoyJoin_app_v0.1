@@ -54,7 +54,8 @@ export default function EventFeedbackFlow() {
   });
 
   // Fetch current user to check if wechatContactId is already set
-  const { data: currentUser } = useQuery<any>({ queryKey: ["/api/user"] });
+  // Using /api/auth/user — the canonical current-user endpoint
+  const { data: currentUser, isLoading: isCurrentUserLoading } = useQuery<any>({ queryKey: ["/api/auth/user"] });
 
   // Submit feedback mutation
   const submitMutation = useMutation({
@@ -65,7 +66,7 @@ export default function EventFeedbackFlow() {
       queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/feedback`] });
       queryClient.invalidateQueries({ queryKey: ["/api/my-events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/my-feedbacks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
       // Store mutual matches to display on completion screen
       if (response.mutualMatches && response.mutualMatches.length > 0) {
@@ -84,11 +85,18 @@ export default function EventFeedbackFlow() {
   });
 
   const steps: FeedbackStep[] = ["intro", "atmosphere", "selectConnections", "wechatIdSetup", "venueStyle", "improvement", "completion"];
-  const currentStepIndex = steps.indexOf(currentStep);
-  // For progress, exclude wechatIdSetup if it won't be shown
-  const hadWechatStep = !currentUser?.wechatContactId && (feedbackData.connections?.length ?? 0) > 0;
-  const visibleStepCount = hadWechatStep ? steps.length : steps.length - 1;
-  const progressPercentage = (currentStepIndex / Math.max(1, visibleStepCount - 1)) * 100;
+
+  // Build the actual visible step list based on whether the wechat step applies.
+  // When currentUser is still loading we conservatively include wechatIdSetup so the
+  // denominator doesn't shift once the query resolves.
+  const userWechatAlreadySet = !isCurrentUserLoading && !!currentUser?.wechatContactId;
+  const connectionsSelected = (feedbackData.connections?.length ?? 0) > 0;
+  const showWechatStep = !userWechatAlreadySet && connectionsSelected;
+  const visibleSteps: FeedbackStep[] = steps.filter(
+    (s) => s !== "wechatIdSetup" || showWechatStep
+  );
+  const currentStepIndex = visibleSteps.indexOf(currentStep);
+  const progressPercentage = (currentStepIndex / Math.max(1, visibleSteps.length - 1)) * 100;
 
   const handleNext = (stepData: Partial<FeedbackData>) => {
     const updatedData = { ...feedbackData, ...stepData };
@@ -98,7 +106,8 @@ export default function EventFeedbackFlow() {
     else if (currentStep === "atmosphere") setCurrentStep("selectConnections");
     else if (currentStep === "selectConnections") {
       const selectedSomeone = (updatedData.connections?.length ?? 0) > 0;
-      const needsWechatSetup = !currentUser?.wechatContactId && selectedSomeone;
+      // Only show wechat step once currentUser has loaded; if still loading, skip (safe default)
+      const needsWechatSetup = !isCurrentUserLoading && !currentUser?.wechatContactId && selectedSomeone;
       setCurrentStep(needsWechatSetup ? "wechatIdSetup" : "venueStyle");
     }
     else if (currentStep === "wechatIdSetup") setCurrentStep("venueStyle");
@@ -114,8 +123,8 @@ export default function EventFeedbackFlow() {
     else if (currentStep === "selectConnections") setCurrentStep("atmosphere");
     else if (currentStep === "wechatIdSetup") setCurrentStep("selectConnections");
     else if (currentStep === "venueStyle") {
-      const showWechatStep = !currentUser?.wechatContactId && (feedbackData.connections?.length ?? 0) > 0;
-      setCurrentStep(showWechatStep ? "wechatIdSetup" : "selectConnections");
+      const hadWechatStepVisible = !isCurrentUserLoading && !currentUser?.wechatContactId && (feedbackData.connections?.length ?? 0) > 0;
+      setCurrentStep(hadWechatStepVisible ? "wechatIdSetup" : "selectConnections");
     }
     else if (currentStep === "improvement") setCurrentStep("venueStyle");
     else if (currentStep === "intro") navigate("/events");

@@ -251,8 +251,8 @@ export class PaymentService {
       status: "refunded",
     });
     
-    // Deactivate subscription if it was a subscription payment
-    if (payment.paymentType === "subscription" && payment.relatedId) {
+    // Deactivate subscription if it was a subscription or bundle payment
+    if ((payment.paymentType === "subscription" || payment.paymentType === "event_bundle") && payment.relatedId) {
       await storage.updateSubscription(payment.relatedId, {
         status: "cancelled",
       });
