@@ -7,7 +7,7 @@
  * - Brand logo with ZCOOL QingKe HuangYou font
  * - 3 feature tags
  * - Primary CTA: "看看我会遇见谁" → /personality-test (combined registration & assessment)
- * - Secondary CTA: "已有账号登录" → /login
+ * - Secondary CTA: "已有账号登录" → WeChat OAuth (direct login or onboarding)
  * - Legal footer links
  * 
  * Route: /
@@ -18,6 +18,7 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import logoImage from "@/assets/box_logo_archetypes.png";
+import { useWeChatLogin } from "@/hooks/useWeChatLogin";
 
 // Import landing screen images
 import malePortrait from "@/assets/landing screen/男生单人.png";
@@ -27,6 +28,7 @@ import drinkingScene from "@/assets/landing screen/酒局.png";
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
+  const { handleWeChatLogin, isLoggingIn } = useWeChatLogin();
 
   // Inline image array
   const landingImages = [
@@ -54,10 +56,10 @@ export default function LandingPage() {
     setLocation('/personality-test');
   };
 
-  // Secondary CTA handler - go to login
+  // Secondary CTA handler - trigger WeChat OAuth directly
   const handleSecondaryCTA = () => {
     console.log('[Analytics] Landing: Secondary CTA clicked');
-    setLocation('/login');
+    handleWeChatLogin();
   };
 
   // Image error handler
@@ -195,9 +197,10 @@ export default function LandingPage() {
             onClick={handleSecondaryCTA}
             variant="outline"
             size="lg"
+            disabled={isLoggingIn}
             className="w-full h-12 border-2 border-pink-200 hover:border-pink-300 hover:bg-pink-50 text-pink-600 font-medium transition-all duration-200 motion-reduce:transition-none motion-reduce:active:scale-100 active:scale-[0.98]"
           >
-            已有账号登录
+            {isLoggingIn ? "登录中..." : "已有账号登录"}
           </Button>
 
           {/* Legal footer */}
