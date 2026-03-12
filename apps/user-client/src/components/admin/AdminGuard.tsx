@@ -4,7 +4,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
 
   if (!isLoading && (!user || !user.isAdmin)) {
-    window.location.replace("https://admin.yuejuapp.com");
+    window.location.replace("https://admin.yuejuapp.com/login");
     return null;
   }
 
