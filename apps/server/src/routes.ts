@@ -1142,10 +1142,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       
       const eventsCompleted = completedEventsResult.length || 0;
-      
+
       // Calculate connections made: use COUNT(*) query to avoid loading all rows
       const connectionsMade = await storage.countMutualConnectionsForUser(userId);
-      
+
       res.json({
         eventsCompleted,
         connectionsMade,
@@ -6900,7 +6900,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to create notification" });
     }
   });
-
   // Demo: Create sample notifications
   app.post('/api/notifications/seed-demo', isPhoneAuthenticated, async (req: any, res) => {
     try {
