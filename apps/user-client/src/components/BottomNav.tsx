@@ -217,7 +217,24 @@ export default function BottomNav() {
           data-testid="nav-center-button"
         >
           {/* Background circle with border */}
-          <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-violet-500 to-purple-700 border-[5px] border-background shadow-2xl shadow-violet-300 flex items-center justify-center ring-2 ring-violet-400/50">
+          <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-violet-500 to-purple-700 border-[5px] border-background shadow-2xl shadow-violet-500/40 flex items-center justify-center">
+            {/* Animated outer glow ring — only when no active event */}
+            {!showCenterBadge && (
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                style={{ boxShadow: "0 0 0 0 rgba(139, 92, 246, 0.7)" }}
+                animate={{ boxShadow: ["0 0 0 0px rgba(139,92,246,0.5)", "0 0 0 10px rgba(139,92,246,0)"] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+              />
+            )}
+            {/* Active pulse ring — shown when there's pending/matched activity */}
+            {showCenterBadge && (
+              <motion.div
+                className="absolute inset-0 rounded-full ring-2 ring-violet-400"
+                animate={{ scale: [1, 1.12, 1], opacity: [1, 0.4, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              />
+            )}
             <img 
               src={joyJoinLogo} 
               alt="JoyJoin" 
@@ -225,7 +242,11 @@ export default function BottomNav() {
             />
             {/* Notification badge/pulse */}
             {showCenterBadge && (
-              <div className="absolute -top-1 -right-1 h-4 w-4 bg-primary rounded-full border-2 border-background animate-pulse" />
+              <div 
+                className={`absolute -top-1 -right-1 h-4 w-4 bg-primary rounded-full border-2 border-background ${
+                  centerButtonLabel === '匹配中…' ? 'animate-ping' : 'animate-pulse'
+                }`}
+              />
             )}
           </div>
           {/* P2-1: Dynamic label with animation */}
