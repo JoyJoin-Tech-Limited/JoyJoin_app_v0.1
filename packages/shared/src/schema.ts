@@ -600,7 +600,9 @@ export const connections = pgTable("connections", {
   userBWechatId: varchar("user_b_wechat_id"),   // snapshot at reveal time
   revealedAt: timestamp("revealed_at"),
   createdAt: timestamp("created_at").defaultNow(),
-  // Optional enrichment: per-user lightweight connection feedback (stored on the initiating side record)
+  // Optional enrichment: per-user lightweight connection feedback.
+  // Each user stores their own reasons and next-step preference independently
+  // in dedicated A/B columns; neither user sees the other's feedback.
   userAConnectionReasons: text("user_a_connection_reasons").array(), // structured reasons from userA
   userANextStepPreference: varchar("user_a_next_step_preference"),   // how userA wants to continue
   userBConnectionReasons: text("user_b_connection_reasons").array(), // structured reasons from userB

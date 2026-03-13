@@ -48,7 +48,7 @@ Direct messaging is **not** the canonical continuation model for JoyJoin. The st
 2. **连接 tab** → captures **why** (structured reasons, optional) + **next-step preference** (optional)
 3. Optional lightweight event-level reason capture may appear immediately after the connection selection only if non-blocking
 
-See §1.7 Connection Feedback Flow for full documentation.
+See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 

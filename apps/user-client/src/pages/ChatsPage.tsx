@@ -10,12 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { convertToHongKongTime } from "@/lib/hongKongTime";
 
 interface MyConnection {
   id: string;
   eventId: string;
-  eventName?: string;
-  eventDate?: string;
+  eventType?: string | null;
+  eventDate?: string | null;   // ISO datetime string from server
   peerId: string;
   peerDisplayName: string;
   peerArchetype?: string;
@@ -47,6 +48,16 @@ const NEXT_STEP_OPTIONS = [
 
 const MAX_REASONS = 3;
 
+/** Formats event label using HK timezone (consistent with client helpers). */
+function formatEventLabel(eventType?: string | null, eventDate?: string | null): string | undefined {
+  if (!eventType) return undefined;
+  if (!eventDate) return eventType;
+  const hkDate = convertToHongKongTime(eventDate);
+  const month = hkDate.getUTCMonth() + 1;
+  const day = hkDate.getUTCDate();
+  return `${eventType} · ${month}月${day}日`;
+}
+
 /**
  * 连接 — Structured connections page.
  *
@@ -57,13 +68,12 @@ const MAX_REASONS = 3;
  */
 export default function ChatsPage() {
   const markAsRead = useMarkNotificationsAsRead();
-  const { toast } = useToast();
 
   useEffect(() => {
     markAsRead.mutate('chat');
   }, []);
 
-  const { data: myConnections, isLoading } = useQuery<MyConnection[]>({
+  const { data: myConnections = [], isLoading } = useQuery<MyConnection[]>({
     queryKey: ["/api/my-connections"],
   });
 
@@ -79,7 +89,7 @@ export default function ChatsPage() {
     );
   }
 
-  const hasConnections = myConnections && myConnections.length > 0;
+  const hasConnections = myConnections.length > 0;
 
   return (
     <div className="min-h-screen bg-[#fafaf8] pb-20 flex flex-col">
@@ -119,6 +129,28 @@ export default function ChatsPage() {
 
 // ── Connection Card ────────────────────────────────────────────────────────────
 
+/**
+ * Parses saved reasons back into { canonicalReasons, otherText }.
+ * The array stores canonical chip values; any element NOT in CONNECTION_REASON_OPTIONS
+ * is treated as the free-text supplement for "其他（可补充）".
+ */
+function parseSavedReasons(saved: string[] | null | undefined): {
+  canonicalReasons: string[];
+  otherText: string;
+} {
+  if (!saved || saved.length === 0) return { canonicalReasons: [], otherText: "" };
+  const canonicalReasons: string[] = [];
+  let otherText = "";
+  for (const r of saved) {
+    if (CONNECTION_REASON_OPTIONS.includes(r)) {
+      canonicalReasons.push(r);
+    } else {
+      otherText = r; // treat the non-option element as the free text supplement
+    }
+  }
+  return { canonicalReasons, otherText };
+}
+
 function ConnectionCard({
   connection,
   onFeedbackSaved,
@@ -128,13 +160,15 @@ function ConnectionCard({
 }) {
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
-  const [selectedReasons, setSelectedReasons] = useState<string[]>(
-    connection.connectionReasons ?? []
-  );
+
+  const { canonicalReasons: initReasons, otherText: initOtherText } =
+    parseSavedReasons(connection.connectionReasons);
+
+  const [selectedReasons, setSelectedReasons] = useState<string[]>(initReasons);
   const [nextStep, setNextStep] = useState<string>(
     connection.nextStepPreference ?? ""
   );
-  const [otherText, setOtherText] = useState("");
+  const [otherText, setOtherText] = useState(initOtherText);
 
   const hasOther = selectedReasons.includes("其他（可补充）");
 
@@ -151,10 +185,11 @@ function ConnectionCard({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const reasons = selectedReasons.slice();
+      // Always keep canonical chip strings; append free text as a separate element
+      // if "其他（可补充）" is selected and the user typed something.
+      const reasons = [...selectedReasons];
       if (hasOther && otherText.trim()) {
-        const idx = reasons.indexOf("其他（可补充）");
-        if (idx !== -1) reasons[idx] = `其他：${otherText.trim()}`;
+        reasons.push(otherText.trim());
       }
       return apiRequest("PATCH", `/api/connections/${connection.id}/feedback`, {
         connectionReasons: reasons,
@@ -173,13 +208,23 @@ function ConnectionCard({
 
   const copyWechat = async () => {
     if (!connection.peerWechatId) return;
-    await navigator.clipboard.writeText(connection.peerWechatId);
-    toast({ title: "微信号已复制" });
+    try {
+      await navigator.clipboard.writeText(connection.peerWechatId);
+      toast({ title: "微信号已复制" });
+    } catch {
+      toast({
+        title: "复制失败",
+        description: `请手动复制：${connection.peerWechatId}`,
+        variant: "destructive",
+      });
+    }
   };
 
   const hasSavedFeedback =
     (connection.connectionReasons?.length ?? 0) > 0 ||
     !!connection.nextStepPreference;
+
+  const eventLabel = formatEventLabel(connection.eventType, connection.eventDate);
 
   return (
     <motion.div
@@ -198,14 +243,15 @@ function ConnectionCard({
               {connection.peerArchetype}
             </Badge>
           )}
-          {connection.eventName && (
+          {eventLabel && (
             <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              来自：{connection.eventName}
+              来自：{eventLabel}
             </p>
           )}
         </div>
         {connection.peerWechatId && (
           <Button
+            type="button"
             variant="ghost"
             size="sm"
             onClick={copyWechat}
@@ -222,11 +268,16 @@ function ConnectionCard({
         <div className="px-4 pb-3 space-y-1">
           {(connection.connectionReasons?.length ?? 0) > 0 && (
             <div className="flex flex-wrap gap-1">
-              {connection.connectionReasons!.map((r) => (
+              {parseSavedReasons(connection.connectionReasons).canonicalReasons.map((r) => (
                 <Badge key={r} variant="outline" className="text-xs">
                   {r}
                 </Badge>
               ))}
+              {parseSavedReasons(connection.connectionReasons).otherText && (
+                <Badge variant="outline" className="text-xs">
+                  其他：{parseSavedReasons(connection.connectionReasons).otherText}
+                </Badge>
+              )}
             </div>
           )}
           {connection.nextStepPreference && (
@@ -239,6 +290,7 @@ function ConnectionCard({
 
       {/* Expand / collapse toggle */}
       <button
+        type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-label={expanded ? '收起连接详情' : (hasSavedFeedback ? '编辑连接记录' : '展开记录连接详情')}
         aria-expanded={expanded}
@@ -276,7 +328,9 @@ function ConnectionCard({
                     return (
                       <button
                         key={opt}
+                        type="button"
                         onClick={() => toggleReason(opt)}
+                        aria-pressed={isSelected}
                         className={`px-3 py-1.5 rounded-full text-xs border transition-all ${
                           isSelected
                             ? "bg-primary text-primary-foreground border-primary"
@@ -310,7 +364,9 @@ function ConnectionCard({
                   {NEXT_STEP_OPTIONS.map((opt) => (
                     <button
                       key={opt}
+                      type="button"
                       onClick={() => setNextStep((v) => (v === opt ? "" : opt))}
+                      aria-pressed={nextStep === opt}
                       className={`px-3 py-1.5 rounded-full text-xs border transition-all ${
                         nextStep === opt
                           ? "bg-primary text-primary-foreground border-primary"
@@ -325,6 +381,7 @@ function ConnectionCard({
 
               {/* Save button */}
               <Button
+                type="button"
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
                 size="sm"
