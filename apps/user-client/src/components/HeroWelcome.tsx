@@ -1,4 +1,5 @@
 import { MapPin } from "lucide-react";
+import { getHongKongDateForComparison } from "@/lib/hongKongTime";
 
 interface HeroWelcomeProps {
   userName?: string;
@@ -13,7 +14,7 @@ const areaDisplay = {
 };
 
 function getTimeGreeting(): { text: string; emoji: string } {
-  const h = parseInt(new Date().toLocaleString("en-US", { timeZone: "Asia/Hong_Kong", hour: "numeric", hour12: false }), 10);
+  const h = getHongKongDateForComparison(new Date()).getUTCHours();
   if (h >= 5 && h < 12) return { text: "早上好", emoji: "☀️" };
   if (h >= 12 && h < 14) return { text: "午安", emoji: "🌤️" };
   if (h >= 14 && h < 18) return { text: "下午好", emoji: "🌈" };

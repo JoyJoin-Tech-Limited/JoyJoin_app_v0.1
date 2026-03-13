@@ -141,7 +141,7 @@ export default function BlindBoxEventCard({
               data-testid={`card-blindbox-${id}`}
             >
               {/* Left accent bar — colour varies by event type */}
-              <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${
+              <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg pointer-events-none ${
                 isGirlsNight ? 'bg-pink-400' : eventType === '酒局' ? 'bg-amber-400' : 'bg-violet-500'
               }`} />
               <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full pointer-events-none" />
@@ -288,12 +288,12 @@ export default function BlindBoxEventCard({
                     </Tooltip>
                   )}
                 </div>
-                {/* Flip hint — shown only on first render, fades out */}
+                {/* Flip hint — pulses briefly, then stays subtle */}
                 <motion.div
                   className="flex items-center justify-center gap-1 mt-1"
                   initial={{ opacity: 0.8 }}
-                  animate={{ opacity: [0.8, 0.3, 0.8] }}
-                  transition={{ duration: 2.5, repeat: 2, ease: "easeInOut" }}
+                  animate={prefersReducedMotion ? { opacity: 0.8 } : { opacity: [0.8, 0.3, 0.8] }}
+                  transition={prefersReducedMotion ? { duration: 0 } : { duration: 2.5, repeat: 2, ease: "easeInOut" }}
                 >
                   <span className="text-[10px] text-muted-foreground/60 select-none">🎲 点击卡片查看盲盒玩法</span>
                 </motion.div>
