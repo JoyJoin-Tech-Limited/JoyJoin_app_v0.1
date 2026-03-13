@@ -18,7 +18,7 @@ interface NavItem {
   label: string;
   path: string;
   testId: string;
-  badgeCategory?: 'discover' | 'activities' | 'chat';
+  badgeCategory?: 'discover' | 'activities';
 }
 
 const sideNavItems: NavItem[] = [

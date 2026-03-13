@@ -87,6 +87,12 @@ type ConnectionItem = {
   } | null;
 };
 
+/**
+ * 连接 — Structured post-event connections page.
+ *
+ * This surface shows mutual post-event connections and any revealed
+ * WeChat contact IDs. It does not provide any in-app chat experience.
+ */
 export default function ConnectionsPage() {
   const { toast } = useToast();
   const [expandedId, setExpandedId] = useState<string | null>(null);

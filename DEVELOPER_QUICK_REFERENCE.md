@@ -191,8 +191,7 @@ These are commented out in schema but kept for backward compatibility.
 | `/` | DiscoverPage | Home - event pool discovery |
 | `/discover` | DiscoverPage | Same as home |
 | `/events` | EventsPage | My events (pending/matched/completed tabs) |
-| `/chats` | ChatsPage | Event group chat list |
-| `/chats/:eventId` | EventChatDetailPage | Group chat |
+| `/connections` | ConnectionsPage | Structured post-event connections |
 | `/profile` | ProfilePage | User profile |
 | `/rewards` | RewardsPage | XP, levels, coupons |
 | `/invite` | InvitePage | Invite friends |
