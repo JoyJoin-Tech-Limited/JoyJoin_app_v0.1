@@ -276,7 +276,7 @@ export default function WalletPage() {
                   </span>
                 </p>
                 <p className="text-xs opacity-70 mt-1">
-                  悦聚社交宝库 · 专属会员福利
+                  悦聚社交宝库 · 专属权益福利
                 </p>
               </div>
               <Wallet className="h-14 w-14 opacity-25" aria-hidden="true" />
