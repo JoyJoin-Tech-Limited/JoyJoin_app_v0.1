@@ -600,6 +600,11 @@ export const connections = pgTable("connections", {
   userBWechatId: varchar("user_b_wechat_id"),   // snapshot at reveal time
   revealedAt: timestamp("revealed_at"),
   createdAt: timestamp("created_at").defaultNow(),
+  // Optional enrichment: per-user lightweight connection feedback (stored on the initiating side record)
+  userAConnectionReasons: text("user_a_connection_reasons").array(), // structured reasons from userA
+  userANextStepPreference: varchar("user_a_next_step_preference"),   // how userA wants to continue
+  userBConnectionReasons: text("user_b_connection_reasons").array(), // structured reasons from userB
+  userBNextStepPreference: varchar("user_b_next_step_preference"),   // how userB wants to continue
 }, (table) => [
   unique("connections_event_pair_unique").on(table.eventId, table.userAId, table.userBId),
 ]);
@@ -1061,7 +1066,7 @@ export const eventTemplates = pgTable("event_templates", {
   maxParticipants: integer("max_participants").default(10),
   
   // Pricing (for future premium events)
-  customPrice: integer("custom_price"), // null = use default pricing (会员免费/非会员¥68)
+  customPrice: integer("custom_price"), // null = use default pricing (权益用户免费/标准价¥68)
   
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),

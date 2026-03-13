@@ -2832,6 +2832,166 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Connections endpoints ──────────────────────────────────────────────────
+
+  /**
+   * GET /api/my-connections
+   * Returns the authenticated user's mutual connections, enriched with peer
+   * display name, archetype, wechat id, and any saved connection feedback.
+   */
+  app.get('/api/my-connections', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+
+      type ConnRow = {
+        id: string;
+        eventId: string;
+        userAId: string;
+        userBId: string;
+        userAWechatId: string | null;
+        userBWechatId: string | null;
+        createdAt: Date | null;
+        userAConnectionReasons: string[] | null;
+        userANextStepPreference: string | null;
+        userBConnectionReasons: string[] | null;
+        userBNextStepPreference: string | null;
+      };
+
+      const rows: ConnRow[] = await db
+        .select({
+          id: connections.id,
+          eventId: connections.eventId,
+          userAId: connections.userAId,
+          userBId: connections.userBId,
+          userAWechatId: connections.userAWechatId,
+          userBWechatId: connections.userBWechatId,
+          createdAt: connections.createdAt,
+          userAConnectionReasons: connections.userAConnectionReasons,
+          userANextStepPreference: connections.userANextStepPreference,
+          userBConnectionReasons: connections.userBConnectionReasons,
+          userBNextStepPreference: connections.userBNextStepPreference,
+        })
+        .from(connections)
+        .where(and(
+          or(eq(connections.userAId, userId), eq(connections.userBId, userId)),
+          eq(connections.status, 'mutual'),
+        ))
+        .orderBy(desc(connections.createdAt))
+        .limit(50);
+
+      // Collect peer user ids to fetch display info
+      const peerIds: string[] = rows.map((r) => r.userAId === userId ? r.userBId : r.userAId);
+      const uniquePeerIds: string[] = Array.from(new Set(peerIds));
+
+      const peerRows = uniquePeerIds.length > 0
+        ? await db
+            .select({ id: users.id, displayName: users.displayName, archetype: users.archetype })
+            .from(users)
+            .where(inArray(users.id, uniquePeerIds))
+        : ([] as { id: string; displayName: string | null; archetype: string | null }[]);
+
+      const peerMap: Record<string, { id: string; displayName: string | null; archetype: string | null }> = {};
+      for (const u of peerRows) peerMap[u.id] = u;
+
+      // Collect event names
+      const eventIds: string[] = Array.from(new Set(rows.map((r) => r.eventId)));
+      const eventRows = eventIds.length > 0
+        ? await db
+            .select({ id: blindBoxEvents.id, eventType: blindBoxEvents.eventType, dateTime: blindBoxEvents.dateTime })
+            .from(blindBoxEvents)
+            .where(inArray(blindBoxEvents.id, eventIds))
+        : ([] as { id: string; eventType: string | null; dateTime: Date | null }[]);
+      const eventMap: Record<string, { id: string; eventType: string | null; dateTime: Date | null }> = {};
+      for (const e of eventRows) eventMap[e.id] = e;
+
+      const result = rows.map((r) => {
+        const isA = r.userAId === userId;
+        const peerId = isA ? r.userBId : r.userAId;
+        const peer = peerMap[peerId];
+        const evt = eventMap[r.eventId];
+        return {
+          id: r.id,
+          eventId: r.eventId,
+          eventName: evt ? `${evt.eventType}${evt.dateTime ? ` · ${new Date(evt.dateTime).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}` : ''}` : undefined,
+          peerId,
+          peerDisplayName: peer?.displayName ?? '连接用户',
+          peerArchetype: peer?.archetype ?? null,
+          peerWechatId: isA ? r.userBWechatId : r.userAWechatId,
+          connectionReasons: isA ? r.userAConnectionReasons : r.userBConnectionReasons,
+          nextStepPreference: isA ? r.userANextStepPreference : r.userBNextStepPreference,
+          createdAt: r.createdAt,
+        };
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching my connections:", error);
+      res.status(500).json({ message: "Failed to fetch connections" });
+    }
+  });
+
+  /**
+   * PATCH /api/connections/:connectionId/feedback
+   * Saves optional enrichment data (reasons + next-step) for a connection.
+   * Only the two parties in the connection can update their own feedback slot.
+   */
+  app.patch('/api/connections/:connectionId/feedback', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { connectionId } = req.params;
+      const { connectionReasons, nextStepPreference } = req.body;
+
+      const [conn] = await db
+        .select()
+        .from(connections)
+        .where(eq(connections.id, connectionId))
+        .limit(1);
+
+      if (!conn) {
+        return res.status(404).json({ message: "Connection not found" });
+      }
+
+      if (conn.userAId !== userId && conn.userBId !== userId) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      if (conn.status !== 'mutual') {
+        return res.status(400).json({ message: "Connection is not mutual" });
+      }
+
+      // Validate reasons (array of strings, max 3)
+      const reasonsInput: unknown = connectionReasons;
+      let reasons: string[] | null = null;
+      if (Array.isArray(reasonsInput)) {
+        reasons = reasonsInput.slice(0, 3).map(String);
+      } else if (reasonsInput === null || reasonsInput === undefined) {
+        reasons = null;
+      } else {
+        return res.status(400).json({ message: "connectionReasons must be an array" });
+      }
+
+      // Validate nextStepPreference
+      const nextStep = (typeof nextStepPreference === 'string' && nextStepPreference.trim())
+        ? nextStepPreference.trim()
+        : null;
+
+      const isA = conn.userAId === userId;
+      await db
+        .update(connections)
+        .set(
+          isA
+            ? { userAConnectionReasons: reasons, userANextStepPreference: nextStep }
+            : { userBConnectionReasons: reasons, userBNextStepPreference: nextStep }
+        )
+        .where(eq(connections.id, connectionId));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating connection feedback:", error);
+      res.status(500).json({ message: "Failed to update connection feedback" });
+    }
+  });
+
   app.get('/api/events/:eventId/feedback', isPhoneAuthenticated, async (req: any, res) => {
     try {
       const userId = req.session.userId;

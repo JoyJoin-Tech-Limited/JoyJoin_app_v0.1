@@ -1,9 +1,54 @@
 # JoyJoin (悦聚·Joy) - Product Requirements Document
 
-**Version:** 1.2  
-**Last Updated:** March 6, 2026  
+**Version:** 1.3  
+**Last Updated:** March 13, 2026  
 **Platform:** WeChat H5 Mini-App  
 **Target Market:** Hong Kong & Shenzhen  
+
+---
+
+## 🗺️ Product Canon & Terminology
+
+> **This section is authoritative.** When any older content in this document conflicts with the definitions below, the definitions below take precedence. Legacy wording in older sections is marked ⚠️ Legacy and must not be used in new copy, code, or communications.
+
+### Current Bottom Navigation (Canonical)
+
+| Position | Label | Route | Purpose |
+|----------|-------|-------|---------|
+| 1 | **发现** | `/` (Discover) | Discovery / recommendations |
+| 2 | **足迹** | `/my-journey` | Personal social journey & event history |
+| 3 | *(core action icon)* | smart-routed | Primary app action — join / track / engage |
+| 4 | **连接** | `/chats` | Structured connections and relationship meaning |
+| 5 | **我的** | `/profile` | Profile, account, settings |
+
+> **`圈子` is legacy wording** for the main nav tab 4. Use **`连接`** in all current and new copy.  
+> The center icon tab has no user-facing text label; helper copy should reference "core action" intent, not a generic page name.
+
+### Terminology: 权益 replaces 会员 / membership
+
+User-facing product copy must use the following compliant terms. Internal technical names (`subscription`, `subscriptions` table) may remain unchanged if a schema rename would be disproportionate.
+
+| ❌ Deprecated (user-facing) | ✅ Compliant (user-facing) |
+|-----------------------------|---------------------------|
+| 会员 / VIP会员 / 会员方案 | 权益 / 权益方案 |
+| 会员状态 | 权益状态 |
+| 开通会员 | 开通权益 |
+| 会员续费 | 续期 |
+| 月度会员 / 季度会员 | 月度权益方案 / 季度权益方案 |
+| 会员价 | 权益价 / 专享价 |
+| membership | 权益方案 (in user-facing text) |
+
+> New docs, UI copy, and notifications must not reintroduce `会员` or `membership` as user-facing product terms.
+
+### Connection Model (Canonical)
+
+Direct messaging is **not** the canonical continuation model for JoyJoin. The structured connection system is:
+
+1. **Post-event flow** → selects **who** (multi-select attendees, no per-person reasons required)
+2. **连接 tab** → captures **why** (structured reasons, optional) + **next-step preference** (optional)
+3. Optional lightweight event-level reason capture may appear immediately after the connection selection only if non-blocking
+
+See §1.7 Connection Feedback Flow for full documentation.
 
 ---
 
@@ -495,17 +540,19 @@ Display:
 
 ---
 
-### 1.5 Subscription & Payment System
+### 1.5 权益方案 & Payment System
 
 **File Location:** `client/src/pages/BlindBoxPaymentPage.tsx`
 
-#### Subscription Tiers
+> **Note on terminology:** User-facing copy uses `权益` / `权益方案`. Internal technical names (`subscription`, `subscriptions` table) remain unchanged. See §Product Canon for the full compliance terminology table.
 
-| Plan | Price | Duration | Benefits |
+#### 权益方案 Tiers
+
+| 方案 | Price | Duration | Benefits |
 |------|-------|----------|----------|
-| **月度会员** | ¥98 | 30 days | Unlimited blind box events, priority matching |
-| **季度会员** | ¥294 | 90 days | 15% discount, exclusive quarterly events |
-| **单次票** | ¥148 | Per event | No commitment, higher price |
+| **月度权益方案** | ¥98 | 30 days | Unlimited blind box events, priority matching |
+| **季度权益方案** | ¥294 | 90 days | 15% discount, exclusive quarterly events |
+| **单次票** | ¥148 | Per event | No commitment, standard price |
 
 #### Payment Integration - WeChat Pay
 
@@ -513,7 +560,7 @@ Display:
 
 **Payment Flow:**
 ```
-1. User selects subscription tier
+1. User selects 权益方案
    ↓
 2. Frontend POST /api/payments/create
    {
@@ -540,7 +587,7 @@ Display:
    - subscription.endDate = now + 30 days
    ↓
 8. WebSocket notification to user
-   "支付成功！会员已激活"
+   "支付成功！权益已激活"
 ```
 
 **Database Schema:**
@@ -593,7 +640,7 @@ async function checkExpiredSubscriptions() {
       .where(eq(subscriptions.id, sub.id));
     
     // Send notification
-    await notifyUser(sub.userId, '您的会员已过期');
+    await notifyUser(sub.userId, '您的权益已过期');
   }
 }
 ```
@@ -605,7 +652,7 @@ async function checkExpiredSubscriptions() {
 **Coupon Types:**
 - **Percentage Discount:** 20% off
 - **Fixed Amount:** ¥30 off
-- **Free Trial:** 7-day free membership
+- **Free Trial:** 7-day free 权益体验
 
 **Coupon Properties:**
 ```typescript
@@ -1058,33 +1105,36 @@ interface PrivacySettings {
 
 ### 1.9 Navigation & User Flow
 
-**File:** `client/src/App.tsx`
+**File:** `apps/user-client/src/App.tsx`, `apps/user-client/src/components/BottomNav.tsx`
 
 #### Bottom Navigation Bar (5 Tabs)
 
-```typescript
-1. 🏠 首页 (Home) → /
-   - Upcoming events
-   - Quick actions
-   
-2. 🎯 发现 (Discover) → /discover
-   - Browse blind box events
-   - Filter by theme, date, location
-   
-3. 📅 我的活动 (My Events) → /events
-   - Registered events
-   - Past events
-   - Event history
-   
-4. 💬 消息 (Messages) → /chats
-   - Event group chats
-   - Unread badge
-   
-5. 👤 我的 (Profile) → /profile
-   - User profile
-   - Settings
-   - Subscription status
+> **Current canonical navigation** (see §Product Canon for authoritative tab names).
+
 ```
+1. 🧭 发现 (Discover) → /
+   - Recommended events and pool registrations
+   - Browse blind box events
+
+2. 👣 足迹 (My Journey) → /my-journey
+   - Attended events and social timeline
+   - Personal social journey and memories
+
+3. ⭕ [Core Action Icon] (smart-routed)
+   - Primary action: routes contextually to today's event,
+     venue reveal, match-in-progress, or discover
+   - No static text label; dynamic label reflects current state
+
+4. 🔗 连接 (Connections) → /chats
+   - ⚠️ Old label was 圈子 — do not use 圈子 for this tab
+   - Structured mutual connections after post-event selection
+   - Optional per-connection feedback (reasons + next-step)
+
+5. 👤 我的 (Profile) → /profile
+   - User profile, settings, 权益状态
+```
+
+> ⚠️ **Legacy reference**: The old PRD documented a different nav (`首页 / 发现 / 我的活动 / 消息 / 我的`). That structure is deprecated. The tab formerly labelled `圈子` is now `连接`.
 
 #### Protected Routes
 
@@ -1114,7 +1164,63 @@ Public Routes:
 
 ---
 
-## 🛡️ Admin Portal Features
+### 1.10 Connection Feedback Flow
+
+> **This section documents the chosen product decision for the structured-connection model.**
+
+#### Design Philosophy
+
+JoyJoin uses a **two-phase connection model** that separates commitment (who) from meaning (why):
+
+| Phase | Location | What it captures | Required? |
+|-------|----------|-----------------|-----------|
+| **Post-event flow** | `EventFeedbackFlow.tsx` → `SelectConnectionsStep` | **Who** the user wants to continue with (multi-select) | Optional (skippable) |
+| **连接 tab** | `ChatsPage.tsx` per-connection card | **Why** the connection stood out + preferred next step | Optional enrichment |
+
+#### Post-Event Flow (SelectConnectionsStep)
+
+- Multi-select attendees — no per-person reasons required at this stage
+- Privacy-protected: peer doesn't know unless they reciprocate
+- Mutual match → WeChat ID exchanged
+
+#### 连接 Tab — Enrichment Feedback
+
+After a mutual connection is formed, the `连接` tab shows connection cards. Each card has an optional expandable panel for:
+
+**Connection Reasons** (multi-select, max 3):
+- `聊天很自然`
+- `价值观有共鸣`
+- `兴趣很投缘`
+- `幽默感很合拍`
+- `相处节奏很舒服`
+- `有被理解的感觉`
+- `当下状态很合适`
+- `想继续了解 Ta`
+- `想再一起参加活动`
+- `其他（可补充）` — triggers optional free text
+
+**Next-Step Preference** (single-select):
+- `微信聊聊`
+- `约喝咖啡`
+- `下次一起参加活动`
+- `保持关注，随缘`
+
+#### Storage
+
+Feedback is stored per-user-per-connection in the `connections` table:
+- `userAConnectionReasons` / `userBConnectionReasons` (text array)
+- `userANextStepPreference` / `userBNextStepPreference` (varchar)
+
+This is **enrichment data**, not gating. Connections work without feedback; feedback adds product intelligence and helps the user reflect on the connection.
+
+#### API
+
+- `GET /api/my-connections` — list user's mutual connections with peer info and saved feedback
+- `PATCH /api/connections/:id/feedback` — save optional reasons + next-step preference
+
+---
+
+
 
 **Access:** `https://joyjoin.app/admin` (Desktop-optimized)
 
@@ -2085,14 +2191,13 @@ Auto-Archive:
    - 24h before: "明天的活动别忘了！"
    - 2h before: "活动即将在2小时后开始"
 
-2. **Subscription Alerts**
-   - 7 days before expiry: "您的会员即将到期"
-   - On expiry: "会员已过期，续费享85折优惠"
+2. **权益状态提醒**
+   - 7 days before expiry: "您的权益即将到期"
+   - On expiry: "权益已到期，续期享85折优惠"
 
 3. **Social Updates**
-   - New direct message
    - Event chat mention
-   - New connection request
+   - New mutual connection
 
 **Admin Broadcast Notifications:**
 
@@ -2103,7 +2208,7 @@ Create Notification:
 
 1. Select Audience:
    - 全部用户 (All users)
-   - 活跃会员 (Active subscribers)
+   - 活跃权益用户 (Active subscribers)
    - 新用户 (Registered < 30 days)
    - 流失用户 (Inactive > 60 days)
    - 特定城市 (Hong Kong / Shenzhen)
