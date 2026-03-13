@@ -2912,7 +2912,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return {
           id: r.id,
           eventId: r.eventId,
-          eventName: evt ? `${evt.eventType}${evt.dateTime ? ` · ${new Date(evt.dateTime).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}` : ''}` : undefined,
+          // Return raw fields so the client can format using HK timezone helpers
+          eventType: evt?.eventType ?? null,
+          eventDate: evt?.dateTime ? evt.dateTime.toISOString() : null,
           peerId,
           peerDisplayName: peer?.displayName ?? '连接用户',
           peerArchetype: peer?.archetype ?? null,
@@ -2959,11 +2961,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Connection is not mutual" });
       }
 
-      // Validate reasons (array of strings, max 3)
+      // Validate reasons (array of strings, max 4 to allow 3 canonical chips + 1 free-text element)
       const reasonsInput: unknown = connectionReasons;
       let reasons: string[] | null = null;
       if (Array.isArray(reasonsInput)) {
-        reasons = reasonsInput.slice(0, 3).map(String);
+        reasons = reasonsInput.slice(0, 4).map(String);
       } else if (reasonsInput === null || reasonsInput === undefined) {
         reasons = null;
       } else {
