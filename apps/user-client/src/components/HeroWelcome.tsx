@@ -1,5 +1,4 @@
 import { MapPin } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 interface HeroWelcomeProps {
   userName?: string;
@@ -13,6 +12,15 @@ const areaDisplay = {
   "深圳": "南山区"
 };
 
+function getTimeGreeting(): { text: string; emoji: string } {
+  const h = parseInt(new Date().toLocaleString("en-US", { timeZone: "Asia/Hong_Kong", hour: "numeric", hour12: false }), 10);
+  if (h >= 5 && h < 12) return { text: "早上好", emoji: "☀️" };
+  if (h >= 12 && h < 14) return { text: "午安", emoji: "🌤️" };
+  if (h >= 14 && h < 18) return { text: "下午好", emoji: "🌈" };
+  if (h >= 18 && h < 22) return { text: "晚上好", emoji: "🌆" };
+  return { text: "夜深了", emoji: "🌙" };
+}
+
 export default function HeroWelcome({ 
   userName = "朋友", 
   selectedCity,
@@ -21,12 +29,18 @@ export default function HeroWelcome({
 }: HeroWelcomeProps) {
   const displayArea = selectedArea || areaDisplay[selectedCity];
   const displayLocation = `${selectedCity}•${displayArea}`;
+  const { text: timeGreeting, emoji: timeEmoji } = getTimeGreeting();
   
   return (
-    <div className="px-4 pt-4 pb-2 space-y-2">
+    <div className="relative overflow-hidden px-4 pt-4 pb-2">
+      {/* Ambient gradient blobs */}
+      <div className="absolute -top-6 -right-6 w-48 h-48 rounded-full bg-gradient-to-br from-violet-400/20 via-pink-300/15 to-transparent blur-2xl pointer-events-none" />
+      <div className="absolute bottom-0 -left-4 w-32 h-32 rounded-full bg-gradient-to-tr from-amber-300/15 to-transparent blur-2xl pointer-events-none" />
+
+      <div className="relative z-10 space-y-2">
       {/* 问候语 */}
       <h1 className="text-3xl font-bold font-brand" data-testid="text-hero-greeting">
-        Hi {userName} 👋
+        {timeGreeting}，{userName} {timeEmoji}
       </h1>
       
       {/* Slogan with 地点 Chip */}
@@ -55,6 +69,7 @@ export default function HeroWelcome({
       <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-hero-subtitle">
         AI 为你匹配 4–6 人小聚，轻松好聊，开心上桌
       </p>
+      </div>
     </div>
   );
 }

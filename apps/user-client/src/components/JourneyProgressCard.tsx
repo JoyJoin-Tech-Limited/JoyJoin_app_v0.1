@@ -8,11 +8,11 @@ import {
   Brain, 
   CalendarPlus,
   ArrowRight,
-  Sparkles,
   UserCircle,
   MessageCircle
 } from "lucide-react";
 import { Link } from "wouter";
+import xiaoyueAvatar from "@/assets/Xiao_Yue_Avatar-04.png";
 
 interface JourneyStep {
   id: string;
@@ -101,7 +101,11 @@ export default function JourneyProgressCard({
     <Card className="border-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" data-testid="card-journey-progress">
       <CardContent className="p-3">
         <div className="flex items-center gap-2 mb-2">
-          <Sparkles className="h-4 w-4 text-primary" />
+          <img
+            src={xiaoyueAvatar}
+            alt="小悦"
+            className="w-7 h-7 rounded-full object-cover object-top flex-shrink-0"
+          />
           <span className="font-semibold text-sm">你的悦聚·JoyJoin之旅</span>
           <span className="text-xs text-muted-foreground ml-auto">
             {displayCompleted}/{displayTotal} 已完成
