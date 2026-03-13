@@ -113,7 +113,7 @@ export default function FirstTimeRegistrationGuide({
             <RefreshCw className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
             <div className="text-xs text-muted-foreground">
               <span className="font-medium text-foreground">改签政策：</span>
-              活动前48小时可免费改签一次，24小时内仅限VIP会员改签
+              活动前48小时可免费改签一次，24小时内仅限已开通权益的用户改签
             </div>
           </div>
         </Card>
