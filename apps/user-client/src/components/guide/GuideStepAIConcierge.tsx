@@ -136,7 +136,7 @@ export function GuideStepAIConcierge({
         ))}
       </motion.div>
       
-      {/* 聊天气泡提示 */}
+      {/* 连接提示气泡 */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -144,7 +144,7 @@ export function GuideStepAIConcierge({
         className="mt-6 flex items-center gap-2 text-purple-600 dark:text-purple-400"
       >
         <MessageCircle className="w-5 h-5" />
-        <span className="text-sm font-medium">随时可以找我聊天哦~</span>
+        <span className="text-sm font-medium">随时可以找我连接哦~</span>
       </motion.div>
     </motion.div>
   );

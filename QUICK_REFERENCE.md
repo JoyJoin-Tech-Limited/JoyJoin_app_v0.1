@@ -129,25 +129,26 @@ draft → matching → registration_open → confirmed
 - **matching:** AI finding participants
 - **registration_open:** Accepting sign-ups
 - **confirmed:** Min attendees met, venue booked
-- **in_progress:** Event day (chat enabled)
+- **in_progress:** Event day (event coordination enabled)
 - **completed:** Feedback unlocked
 
 ---
 
-## 💬 Chat System
+## 💬 Event Coordination & Connections
 
-### Event Group Chat
+### Event Coordination Thread
 - **Access:** Payment completed + Event in_progress
-- **Real-time:** WebSocket (100ms latency)
-- **Features:** Mentions, typing indicators, read receipts
-- **File:** `client/src/pages/EventChatDetailPage.tsx`
+- **Polling:** 5-second refresh interval
+- **Features:** Participant updates, reporting
+- **File:** `apps/user-client/src/pages/EventCoordinationPage.tsx`
 
-### Direct Messages
-- **Removed:** In-app private/direct chat has been removed (PR 3 of 3).
-- **Canonical model:** Post-event mutual selection → structured `connections` record → WeChat contact reveal. No in-app private chat.
+### Connections (Post-Event)
+- Mutual selection: Both users must indicate interest
+- Triggered: Post-event interest matching
+- Access: Via `/connections` page
 
 ### Moderation
-- **Reports:** User-submitted + auto-flagged
+- **Reports:** User-submitted interaction reports
 - **Actions:** Delete, warn, mute (24h), ban
 - **Admin:** `/admin/moderation`
 
@@ -170,9 +171,9 @@ draft → matching → registration_open → confirmed
 | Matching Lab | `/admin/matching-lab` | Algorithm tuning |
 | Content | `/admin/content` | CMS (announcements) |
 | Notifications | `/admin/notifications` | Push broadcasts |
-| Moderation | `/admin/moderation` | Chat reports |
+| Moderation | `/admin/moderation` | Interaction reports |
 | Reports | `/admin/reports` | User reports |
-| Chat Logs | `/admin/chat-logs` | Audit trail |
+| Interaction Logs | `/admin/interaction-logs` | Audit trail |
 
 ---
 
@@ -243,7 +244,7 @@ POST /api/admin/notifications/broadcast    # Send notification
 5. **subscriptions** - Subscription records
 6. **payments** - Payment transactions
 7. **venues** - Partner venues
-8. **chat_messages** - Event group chat
+8. **chat_messages** - Event coordination records
 9. **event_templates** - Reusable configs
 10. **contents** - CMS content
 
@@ -255,18 +256,19 @@ POST /api/admin/notifications/broadcast    # Send notification
 
 ### User App
 ```typescript
-'chat_message'             // Real-time chat
-'event_updated'            // Event status change
-'new_connection'           // Connection request
-'subscription_activated'   // Payment confirmed
+// Actual WSEventType values from packages/shared/src/wsEvents.ts
+'POOL_MATCHED'               // Matched to event group
+'EVENT_STATUS_CHANGED'       // Event status update
+'EVENT_THEME_TITLE_REVEALED' // Blind box theme revealed
+'ATTENDANCE_STATUS_UPDATED'  // Attendee status change
 ```
 
 ### Admin
 ```typescript
-'new_user_registered'      // User signed up
-'payment_completed'        // Payment received
-'chat_report_filed'        // Message reported
-'event_filled'             // Event reached capacity
+'POOL_REGISTRATION_ADDED'    // New pool registration
+'EVENT_STATUS_CHANGED'       // Event status update
+'ADMIN_ACTION'               // Admin action broadcast
+'POOL_MATCHED'               // Group match completed
 ```
 
 **File:** `server/wsService.ts`
@@ -357,7 +359,7 @@ npm run dev
 - [x] Session-based authentication (7-day TTL)
 - [x] Admin role checking (`requireAdmin`)
 - [x] Payment webhook signature verification
-- [x] Chat message reporting system
+- [x] Interaction reporting system
 - [x] All moderation actions logged
 - [x] WebSocket auth via token
 - [x] SQL injection prevention (Drizzle ORM)
@@ -417,7 +419,7 @@ npm run db:push --force # Force sync (use carefully)
 - WAU (Weekly Active Users)
 - Subscription conversions
 - Churn rate
-- Chat reports count
+- Interaction reports count
 
 ### Monthly
 - MAU (Monthly Active Users)
@@ -459,7 +461,7 @@ npm run db:push --force # Force sync (use carefully)
 2. Complete personality test
 3. Register for event
 4. Make payment
-5. Send chat message
+5. Send coordination update
 6. Submit feedback
 7. Check admin portal
 

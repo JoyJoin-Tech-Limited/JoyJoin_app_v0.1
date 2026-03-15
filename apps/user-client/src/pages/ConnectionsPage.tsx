@@ -27,7 +27,7 @@ interface MyConnection {
 }
 
 const CONNECTION_REASON_OPTIONS = [
-  "聊天很自然",
+  "交流很自然",
   "价值观有共鸣",
   "兴趣很投缘",
   "幽默感很合拍",
@@ -40,7 +40,7 @@ const CONNECTION_REASON_OPTIONS = [
 ];
 
 const NEXT_STEP_OPTIONS = [
-  "微信聊聊",
+  "微信联系",
   "约喝咖啡",
   "下次一起参加活动",
   "保持关注，随缘",
@@ -59,7 +59,7 @@ function formatEventLabel(eventType?: string | null, eventDate?: string | null):
 }
 
 /**
- * 连接 — Structured post-event connections page.
+ * 连接 — Structured connections page.
  *
  * Connections are structured post-event mutual selections with WeChat contact reveal
  * (see the `connections` table; mutual selection via `/api/events/:eventId/feedback`).
@@ -71,7 +71,7 @@ export default function ConnectionsPage() {
 
   useEffect(() => {
     markAsRead.mutate('chat');
-  }, [markAsRead]);
+  }, []);
 
   const { data: myConnections = [], isLoading } = useQuery<MyConnection[]>({
     queryKey: ["/api/my-connections"],
@@ -266,23 +266,27 @@ function ConnectionCard({
       {/* Saved feedback summary (collapsed) */}
       {hasSavedFeedback && !expanded && (
         <div className="px-4 pb-3 space-y-1">
-          {(connection.connectionReasons?.length ?? 0) > 0 && (() => {
-            const saved = parseSavedReasons(connection.connectionReasons);
-            return (
-              <div className="flex flex-wrap gap-1">
-                {saved.canonicalReasons.map((r) => (
-                  <Badge key={r} variant="outline" className="text-xs">
-                    {r}
-                  </Badge>
-                ))}
-                {saved.otherText && (
-                  <Badge variant="outline" className="text-xs">
-                    其他：{saved.otherText}
-                  </Badge>
-                )}
-              </div>
-            );
-          })()}
+          {(connection.connectionReasons?.length ?? 0) > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {(() => {
+                const parsed = parseSavedReasons(connection.connectionReasons);
+                return (
+                  <>
+                    {parsed.canonicalReasons.map((r) => (
+                      <Badge key={r} variant="outline" className="text-xs">
+                        {r}
+                      </Badge>
+                    ))}
+                    {parsed.otherText && (
+                      <Badge variant="outline" className="text-xs">
+                        其他：{parsed.otherText}
+                      </Badge>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
           {connection.nextStepPreference && (
             <p className="text-xs text-muted-foreground">
               下一步：{connection.nextStepPreference}

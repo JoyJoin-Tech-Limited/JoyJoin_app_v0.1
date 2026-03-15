@@ -165,7 +165,7 @@ export default function AdminNotificationsPage() {
                     <SelectContent>
                       <SelectItem value="discover">发现</SelectItem>
                       <SelectItem value="activities">活动</SelectItem>
-                      <SelectItem value="chat">聊天</SelectItem>
+                      <SelectItem value="chat">连接</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
