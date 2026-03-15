@@ -49,7 +49,7 @@ export const appRoutes = {
   
   // 连接相关
   connections: '/connections',
-  eventChat: '/connections/:eventId',
+  connectionEventDetail: '/connections/:eventId',
   chatRegistration: '/chat-registration',
   
   // 破冰游戏

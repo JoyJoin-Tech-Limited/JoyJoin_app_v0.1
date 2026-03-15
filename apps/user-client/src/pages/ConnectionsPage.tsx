@@ -71,7 +71,7 @@ export default function ConnectionsPage() {
 
   useEffect(() => {
     markAsRead.mutate('chat');
-  }, []);
+  }, [markAsRead]);
 
   const { data: myConnections = [], isLoading } = useQuery<MyConnection[]>({
     queryKey: ["/api/my-connections"],
@@ -266,20 +266,23 @@ function ConnectionCard({
       {/* Saved feedback summary (collapsed) */}
       {hasSavedFeedback && !expanded && (
         <div className="px-4 pb-3 space-y-1">
-          {(connection.connectionReasons?.length ?? 0) > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {parseSavedReasons(connection.connectionReasons).canonicalReasons.map((r) => (
-                <Badge key={r} variant="outline" className="text-xs">
-                  {r}
-                </Badge>
-              ))}
-              {parseSavedReasons(connection.connectionReasons).otherText && (
-                <Badge variant="outline" className="text-xs">
-                  其他：{parseSavedReasons(connection.connectionReasons).otherText}
-                </Badge>
-              )}
-            </div>
-          )}
+          {(connection.connectionReasons?.length ?? 0) > 0 && (() => {
+            const saved = parseSavedReasons(connection.connectionReasons);
+            return (
+              <div className="flex flex-wrap gap-1">
+                {saved.canonicalReasons.map((r) => (
+                  <Badge key={r} variant="outline" className="text-xs">
+                    {r}
+                  </Badge>
+                ))}
+                {saved.otherText && (
+                  <Badge variant="outline" className="text-xs">
+                    其他：{saved.otherText}
+                  </Badge>
+                )}
+              </div>
+            );
+          })()}
           {connection.nextStepPreference && (
             <p className="text-xs text-muted-foreground">
               下一步：{connection.nextStepPreference}
