@@ -294,7 +294,7 @@ export default function EventCoordinationDetailPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="ml-2 flex-1">
-            <h1 className="font-semibold truncate">{event?.title || "活动互动"}</h1>
+            <h1 className="font-semibold truncate">{event?.title || "活动连接"}</h1>
           </div>
         </div>
         
@@ -341,9 +341,9 @@ export default function EventCoordinationDetailPage() {
                 <CardContent className="p-8 text-center space-y-4">
                   <Clock className="h-16 w-16 text-muted-foreground mx-auto" />
                   <div className="space-y-2">
-                    <h3 className="font-semibold text-lg">互动即将开放</h3>
+                    <h3 className="font-semibold text-lg">连接即将开放</h3>
                     <p className="text-sm text-muted-foreground">
-                      互动将在活动开始前24小时开放
+                      连接将在活动开始前24小时开放
                     </p>
                   </div>
                   <div className="pt-2">

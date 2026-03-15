@@ -107,8 +107,8 @@ export default function AdminInteractionLogsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">互动日志</h1>
-          <p className="text-muted-foreground mt-1">查看互动系统日志和错误记录</p>
+          <h1 className="text-3xl font-bold">连接日志</h1>
+          <p className="text-muted-foreground mt-1">查看连接系统日志和错误记录</p>
         </div>
         <Button
           variant="outline"
