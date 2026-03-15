@@ -233,7 +233,7 @@ export default function EventChatDetailPage() {
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={() => setLocation("/chats")}
+            onClick={() => setLocation("/connections")}
             data-testid="button-back"
           >
             <ArrowLeft className="h-5 w-5" />
