@@ -159,7 +159,7 @@ interface AuthState {
 ├─────────────────────────────────────────────────────────────────────┤
 │  /discover           → Event recommendations                        │
 │  /events             → My events                                    │
-│  /chats              → Event coordination and participant updates    │
+│  /connections        → Post-event connections hub                   │
 │  /profile            → Profile & settings                           │
 │  See "Main App Routes" section below                                │
 └─────────────────────────────────────────────────────────────────────┘
@@ -191,8 +191,8 @@ These are commented out in schema but kept for backward compatibility.
 | `/` | DiscoverPage | Home - event pool discovery |
 | `/discover` | DiscoverPage | Same as home |
 | `/events` | EventsPage | My events (pending/matched/completed tabs) |
-| `/chats` | ConnectionsPage | Post-event connections hub (alias: `/connections`) |
-| `/chats/:eventId` | EventCoordinationPage | Event coordination space (alias: `/connections/:eventId`) |
+| `/connections` | ConnectionsPage | Post-event connections hub (legacy alias: `/chats`) |
+| `/connections/:eventId` | EventCoordinationPage | Event coordination space (legacy alias: `/chats/:eventId`) |
 | `/profile` | ProfilePage | User profile |
 | `/rewards` | RewardsPage | XP, levels, coupons |
 | `/invite` | InvitePage | Invite friends |
@@ -610,12 +610,16 @@ overallScore =
 ### Event Types
 
 ```typescript
-type WebSocketEventType = 
-  | 'POOL_MATCHED'           // User matched to group
-  | 'EVENT_STATUS_CHANGED'   // Event status update
-  | 'NEW_MESSAGE'            // Coordination update received
-  | 'TYPING_INDICATOR'       // Active input state in coordination flow
-  | 'PAYMENT_STATUS';        // Payment confirmation
+// Actual WSEventType values (packages/shared/src/wsEvents.ts)
+type WSEventType =
+  | 'POOL_MATCHED'               // User matched to event group
+  | 'EVENT_STATUS_CHANGED'       // Event status update
+  | 'EVENT_THEME_TITLE_REVEALED' // Blind box theme revealed
+  | 'POOL_REGISTRATION_ADDED'    // New pool registration
+  | 'ATTENDANCE_STATUS_UPDATED'  // Attendee confirmed/late/absent
+  | 'ICEBREAKER_PHASE_CHANGE'    // Icebreaker session phase
+  | 'SOCIAL_PHASE_CHANGED'       // Social icebreaker phase
+  // ... and all ICEBREAKER_*, KING_GAME_*, SOCIAL_* event subtypes
 ```
 
 ### POOL_MATCHED Payload

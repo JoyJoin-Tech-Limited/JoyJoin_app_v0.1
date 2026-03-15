@@ -256,18 +256,19 @@ POST /api/admin/notifications/broadcast    # Send notification
 
 ### User App
 ```typescript
-'coordination_update'      // Event coordination update
-'event_updated'            // Event status change
-'new_connection'           // Connection request
-'subscription_activated'   // Payment confirmed
+// Actual WSEventType values from packages/shared/src/wsEvents.ts
+'POOL_MATCHED'               // Matched to event group
+'EVENT_STATUS_CHANGED'       // Event status update
+'EVENT_THEME_TITLE_REVEALED' // Blind box theme revealed
+'ATTENDANCE_STATUS_UPDATED'  // Attendee status change
 ```
 
 ### Admin
 ```typescript
-'new_user_registered'      // User signed up
-'payment_completed'        // Payment received
-'interaction_report_filed' // Message reported
-'event_filled'             // Event reached capacity
+'POOL_REGISTRATION_ADDED'    // New pool registration
+'EVENT_STATUS_CHANGED'       // Event status update
+'ADMIN_ACTION'               // Admin action broadcast
+'POOL_MATCHED'               // Group match completed
 ```
 
 **File:** `server/wsService.ts`
