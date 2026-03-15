@@ -1,5 +1,8 @@
-import { Compass, Footprints, Users, User } from "lucide-react";
 import { useLocation } from "wouter";
+import discoverIcon from "@/assets/tab-icons/发现 icon.svg";
+import journeyIcon from "@/assets/tab-icons/足迹 icon.svg";
+import connectIcon from "@/assets/tab-icons/连接 icon.svg";
+import profileIcon from "@/assets/tab-icons/我的 icon.svg";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
@@ -7,14 +10,14 @@ import { queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
 import joyJoinLogo from "@/assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi.png";
 import { getHongKongDateForComparison } from "@/lib/hongKongTime";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Constants
 const MS_PER_HOUR = 1000 * 60 * 60;
 const VENUE_UNLOCK_HOURS = 24;
 
 interface NavItem {
-  icon: any;
+  iconSrc?: string;
   label: string;
   path: string;
   testId: string;
@@ -46,7 +49,6 @@ export default function BottomNav() {
   const [location, setLocation] = useLocation();
   const { data: notificationCounts } = useNotificationCounts();
   const [showCenterBadge, setShowCenterBadge] = useState(false);
-  const prefersReducedMotion = useReducedMotion();
 
   // Fetch user data for smart routing
   const { data: poolRegistrations } = useQuery<Array<PoolRegistration>>({
@@ -218,36 +220,11 @@ export default function BottomNav() {
           data-testid="nav-center-button"
         >
           {/* Background circle with border */}
-          <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-violet-500 to-purple-700 border-[5px] border-background shadow-2xl shadow-violet-500/40 flex items-center justify-center">
-            {/* Animated outer glow ring — only when no active event */}
-            {!showCenterBadge && (
-              prefersReducedMotion ? (
-                <div className="absolute inset-0 rounded-full ring-2 ring-violet-400/40 pointer-events-none" />
-              ) : (
-                <motion.div
-                  className="absolute inset-0 rounded-full pointer-events-none"
-                  style={{ boxShadow: "0 0 0 0 rgba(139, 92, 246, 0.7)" }}
-                  animate={{ boxShadow: ["0 0 0 0px rgba(139,92,246,0.5)", "0 0 0 10px rgba(139,92,246,0)"] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-                />
-              )
-            )}
-            {/* Active pulse ring — shown when there's pending/matched activity */}
-            {showCenterBadge && (
-              prefersReducedMotion ? (
-                <div className="absolute inset-0 rounded-full ring-2 ring-violet-400 pointer-events-none" />
-              ) : (
-                <motion.div
-                  className="absolute inset-0 rounded-full ring-2 ring-violet-400 pointer-events-none"
-                  animate={{ scale: [1, 1.12, 1], opacity: [1, 0.4, 1] }}
-                  transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                />
-              )
-            )}
+          <div className="relative h-20 w-20 rounded-full bg-background border-[3px] border-border shadow-xl flex items-center justify-center">
             <img 
               src={joyJoinLogo} 
               alt="JoyJoin" 
-              className="h-12 w-12 object-contain"
+              className="h-[62px] w-[62px] object-contain"
             />
             {/* Notification badge/pulse */}
             {showCenterBadge && (
@@ -304,7 +281,11 @@ export default function BottomNav() {
                 />
               )}
               <div className="relative h-5 w-5 z-10">
-                <item.icon className={`h-5 w-5 ${isActive ? "fill-primary/20" : ""}`} />
+                <img
+                  src={item.iconSrc}
+                  alt={item.label}
+                  className={`h-5 w-5 object-contain transition-all duration-200 ${isActive ? "opacity-100" : "opacity-40"}`}
+                />
                 {showBadge && (
                   <Badge 
                     className="absolute -top-2 -right-2 h-[18px] min-w-[18px] px-1.5 flex items-center justify-center text-[11px] font-semibold bg-primary text-primary-foreground animate-pulse pointer-events-none"
@@ -351,7 +332,11 @@ export default function BottomNav() {
                 />
               )}
               <div className="relative h-5 w-5 z-10">
-                <item.icon className={`h-5 w-5 ${isActive ? "fill-primary/20" : ""}`} />
+                <img
+                  src={item.iconSrc}
+                  alt={item.label}
+                  className={`h-5 w-5 object-contain transition-all duration-200 ${isActive ? "opacity-100" : "opacity-40"}`}
+                />
                 {showBadge && (
                   <Badge 
                     className="absolute -top-2 -right-2 h-[18px] min-w-[18px] px-1.5 flex items-center justify-center text-[11px] font-semibold bg-primary text-primary-foreground animate-pulse pointer-events-none"
