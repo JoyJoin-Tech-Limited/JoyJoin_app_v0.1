@@ -17,13 +17,13 @@ type EventWithParticipants = Event & {
 };
 
 /**
- * 聊天 — Event group chat list.
+ * 活动连接 — Event coordination list.
  *
  * In-app private/direct messaging has been removed. This page shows event
- * group chats only. Connections are made via post-event mutual selection
+ * coordination threads only. Connections are made via post-event mutual selection
  * with WeChat contact reveal (connection-first model).
  */
-export default function ChatsPage() {
+export default function EventCoordinationListPage() {
   const [, setLocation] = useLocation();
   const markAsRead = useMarkNotificationsAsRead();
 
@@ -72,7 +72,7 @@ export default function ChatsPage() {
   if (isLoadingEvents) {
     return (
       <div className="min-h-screen bg-background pb-16 flex flex-col">
-        <MobileHeader title="聊天" />
+        <MobileHeader title="活动连接" />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
             <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
@@ -88,16 +88,16 @@ export default function ChatsPage() {
 
   return (
     <div className="min-h-screen bg-background pb-16">
-      <MobileHeader title="聊天" />
+      <MobileHeader title="活动连接" />
 
       {!hasGroupChats ? (
         <div className="px-4 py-4">
           <Card className="border shadow-sm">
             <CardContent className="p-8 text-center">
               <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">暂无聊天</h3>
+              <h3 className="font-semibold mb-2">暂无活动连接</h3>
               <p className="text-sm text-muted-foreground">
-                参加活动后，群聊将在活动开始前24小时开放
+                参加活动后，连接将在活动开始前24小时开放
               </p>
             </CardContent>
           </Card>
@@ -122,12 +122,12 @@ export default function ChatsPage() {
                 {isLocked ? (
                   <div className="bg-muted text-muted-foreground px-4 py-2.5 flex items-center gap-2">
                     <Lock className="h-4 w-4 flex-shrink-0" />
-                    <span className="text-base font-bold">聊天 {countdown} 开放</span>
+                    <span className="text-base font-bold">连接 {countdown} 开放</span>
                   </div>
                 ) : (
                   <div className="bg-primary text-primary-foreground px-4 py-2 flex items-center gap-2">
                     <MessageSquare className="h-4 w-4 flex-shrink-0" />
-                    <span className="font-semibold text-sm">聊天已开放</span>
+                    <span className="font-semibold text-sm">连接已开放</span>
                     {isPast && (
                       <Badge variant="secondary" className="ml-auto text-[10px] h-5 bg-primary-foreground/20 border-0">
                         已结束

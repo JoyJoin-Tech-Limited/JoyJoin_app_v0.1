@@ -159,7 +159,7 @@ interface AuthState {
 ├─────────────────────────────────────────────────────────────────────┤
 │  /discover           → Event recommendations                        │
 │  /events             → My events                                    │
-│  /chats              → Event group chats                            │
+│  /connections        → Post-event connections hub                   │
 │  /profile            → Profile & settings                           │
 │  See "Main App Routes" section below                                │
 └─────────────────────────────────────────────────────────────────────┘
@@ -191,8 +191,8 @@ These are commented out in schema but kept for backward compatibility.
 | `/` | DiscoverPage | Home - event pool discovery |
 | `/discover` | DiscoverPage | Same as home |
 | `/events` | EventsPage | My events (pending/matched/completed tabs) |
-| `/chats` | ChatsPage | Event group chat list |
-| `/chats/:eventId` | EventChatDetailPage | Group chat |
+| `/connections` | ConnectionsPage | Post-event connections hub (legacy alias: `/chats`) |
+| `/connections/:eventId` | EventCoordinationPage | Event coordination space (legacy alias: `/chats/:eventId`) |
 | `/profile` | ProfilePage | User profile |
 | `/rewards` | RewardsPage | XP, levels, coupons |
 | `/invite` | InvitePage | Invite friends |
@@ -532,11 +532,11 @@ interface TraitSpectrumProps {
 
 ### XiaoyueChatBubble
 
-AI mascot chat bubble with multiple poses.
+AI mascot guidance bubble with multiple poses.
 
 ```typescript
 interface XiaoyueChatBubbleProps {
-  content: string;           // Message content
+  content: string;           // Guidance content
   pose?: 'default' | 'thinking' | 'casual' | 'excited';
   isLoading?: boolean;       // Show loading state
   loadingText?: string;      // Loading message
@@ -554,7 +554,7 @@ interface XiaoyueChatBubbleProps {
 | `PoolRegistrationCard.tsx` | Registration status display |
 | `ProfileSpotlight.tsx` | Tablemate profile drawer |
 | `JoyOrbit.tsx` | Full-screen group member orbital |
-| `ConversationTopicsCard.tsx` | AI-generated icebreakers |
+| `ConversationTopicsCard.tsx` | AI-generated icebreaker prompts for in-event engagement |
 | `MatchCelebrationOverlay.tsx` | Match reveal animation |
 
 ---
@@ -610,12 +610,16 @@ overallScore =
 ### Event Types
 
 ```typescript
-type WebSocketEventType = 
-  | 'POOL_MATCHED'           // User matched to group
-  | 'EVENT_STATUS_CHANGED'   // Event status update
-  | 'NEW_MESSAGE'            // Chat message received
-  | 'TYPING_INDICATOR'       // User typing in chat
-  | 'PAYMENT_STATUS';        // Payment confirmation
+// Actual WSEventType values (packages/shared/src/wsEvents.ts)
+type WSEventType =
+  | 'POOL_MATCHED'               // User matched to event group
+  | 'EVENT_STATUS_CHANGED'       // Event status update
+  | 'EVENT_THEME_TITLE_REVEALED' // Blind box theme revealed
+  | 'POOL_REGISTRATION_ADDED'    // New pool registration
+  | 'ATTENDANCE_STATUS_UPDATED'  // Attendee confirmed/late/absent
+  | 'ICEBREAKER_PHASE_CHANGE'    // Icebreaker session phase
+  | 'SOCIAL_PHASE_CHANGED'       // Social icebreaker phase
+  // ... and all ICEBREAKER_*, KING_GAME_*, SOCIAL_* event subtypes
 ```
 
 ### POOL_MATCHED Payload
@@ -655,7 +659,7 @@ interface PoolMatchedData {
 | `eventPoolGroups` | Matched groups |
 | `events` | Confirmed events |
 | `eventAttendees` | Event participants |
-| `chatMessages` | Event group chat messages |
+| `chatMessages` | Event coordination message records |
 | `invitations` | Referral tracking |
 | `userCoupons` | Discount coupons |
 | `subscriptions` | Premium subscriptions |
@@ -684,8 +688,8 @@ npm run db:studio      # Open Drizzle Studio GUI
 |---------|---------|
 | `xiaoyueAnalysisService.ts` | Personality analysis |
 | `matchExplanationService.ts` | Match explanations |
-| `icebreakerAIService.ts` | Conversation topics |
-| `conversationTopicsService.ts` | Group icebreakers |
+| `icebreakerAIService.ts` | Icebreaker prompt generation |
+| `conversationTopicsService.ts` | Group engagement prompts |
 | `eventThemeTitleGenerator.ts` | AI-powered event theme title generation for pool groups |
 
 ### Team Name Generation Flow
