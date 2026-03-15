@@ -176,6 +176,6 @@ export const BAR_OPTIONS = {
   musicPreference: [
     { value: "live", label: "现场Live", emoji: "🎸" },
     { value: "dj", label: "DJ打碟", emoji: "🎧" },
-    { value: "quiet", label: "安静聊天", emoji: "💬" }
+    { value: "quiet", label: "安静交流", emoji: "💬" }
   ]
 };
