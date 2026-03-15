@@ -27,7 +27,7 @@ interface MyConnection {
 }
 
 const CONNECTION_REASON_OPTIONS = [
-  "聊天很自然",
+  "交流很自然",
   "价值观有共鸣",
   "兴趣很投缘",
   "幽默感很合拍",
@@ -40,7 +40,7 @@ const CONNECTION_REASON_OPTIONS = [
 ];
 
 const NEXT_STEP_OPTIONS = [
-  "微信聊聊",
+  "微信联系",
   "约喝咖啡",
   "下次一起参加活动",
   "保持关注，随缘",
@@ -66,7 +66,7 @@ function formatEventLabel(eventType?: string | null, eventDate?: string | null):
  * This page shows your mutual connections and lets you optionally record why a connection
  * stood out and how you'd like to continue it.
  */
-export default function ChatsPage() {
+export default function ConnectionsPage() {
   const markAsRead = useMarkNotificationsAsRead();
 
   useEffect(() => {

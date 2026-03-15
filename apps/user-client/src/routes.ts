@@ -47,9 +47,11 @@ export const appRoutes = {
   blindBoxConfirmation: '/blindbox/confirmation',
   blindBoxEventDetail: '/blind-box-events/:eventId',
   
-  // 聊天相关
+  // 互动/连接相关 (/chats 和 /chats/:eventId 作为向后兼容别名保留)
   chats: '/chats',
+  connections: '/connections',
   eventChat: '/chats/:eventId',
+  eventCoordination: '/connections/:eventId',
   chatRegistration: '/chat-registration',
   
   // 破冰游戏

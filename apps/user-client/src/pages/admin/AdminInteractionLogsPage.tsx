@@ -21,7 +21,7 @@ import {
 import { AlertCircle, RefreshCw, FileText, AlertTriangle, Info, XCircle } from "lucide-react";
 import { format } from "date-fns";
 
-interface ChatLog {
+interface InteractionLog {
   id: string;
   eventType: string;
   eventId?: string;
@@ -33,7 +33,7 @@ interface ChatLog {
   createdAt: string;
 }
 
-interface ChatLogStats {
+interface InteractionLogStats {
   total: number;
   info: number;
   warning: number;
@@ -46,13 +46,13 @@ const severityConfig: Record<string, { label: string; icon: any; variant: "defau
   error: { label: "错误", icon: XCircle, variant: "destructive" },
 };
 
-export default function AdminChatLogsPage() {
+export default function AdminInteractionLogsPage() {
   const [eventIdFilter, setEventIdFilter] = useState("");
   const [userIdFilter, setUserIdFilter] = useState("");
   const [severityFilter, setSeverityFilter] = useState<string>("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [selectedLog, setSelectedLog] = useState<ChatLog | null>(null);
+  const [selectedLog, setSelectedLog] = useState<InteractionLog | null>(null);
 
   const buildQueryParams = () => {
     const params: any = {};
@@ -64,11 +64,11 @@ export default function AdminChatLogsPage() {
     return params;
   };
 
-  const { data: stats } = useQuery<ChatLogStats>({
+  const { data: stats } = useQuery<InteractionLogStats>({
     queryKey: ["/api/admin/chat-logs/stats"],
   });
 
-  const { data: logs = [], isLoading, isError, error, refetch } = useQuery<ChatLog[]>({
+  const { data: logs = [], isLoading, isError, error, refetch } = useQuery<InteractionLog[]>({
     queryKey: ["/api/admin/chat-logs", buildQueryParams()],
     retry: 2,
   });
@@ -107,8 +107,8 @@ export default function AdminChatLogsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">聊天日志</h1>
-          <p className="text-muted-foreground mt-1">查看聊天系统日志和错误记录</p>
+          <h1 className="text-3xl font-bold">互动日志</h1>
+          <p className="text-muted-foreground mt-1">查看互动系统日志和错误记录</p>
         </div>
         <Button
           variant="outline"
