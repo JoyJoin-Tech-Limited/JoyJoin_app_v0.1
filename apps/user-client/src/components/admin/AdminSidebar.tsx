@@ -105,7 +105,7 @@ const analyticsItems = [
     icon: MessageSquareWarning,
   },
   {
-    title: "聊天日志",
+    title: "互动日志",
     url: "/admin/chat-logs",
     icon: FileText,
   },

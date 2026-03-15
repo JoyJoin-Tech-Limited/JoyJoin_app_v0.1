@@ -73,7 +73,7 @@ export default function BottomNav() {
       const prefetchQueries = [
         ['/api/my-events'],           // EventsPage
         ['/api/my-pool-registrations'], // EventsPage
-        ['/api/events/joined'],        // ChatsPage
+        ['/api/events/joined'],        // ConnectionsPage
         ['/api/auth/user'],            // ProfilePage (auth state)
       ];
 
