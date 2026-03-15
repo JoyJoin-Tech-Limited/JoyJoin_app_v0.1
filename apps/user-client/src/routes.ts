@@ -51,7 +51,6 @@ export const appRoutes = {
   chats: '/chats',
   connections: '/connections',
   eventChat: '/chats/:eventId',
-  connectionEventDetail: '/connections/:eventId',
   eventCoordination: '/connections/:eventId',
   chatRegistration: '/chat-registration',
   
