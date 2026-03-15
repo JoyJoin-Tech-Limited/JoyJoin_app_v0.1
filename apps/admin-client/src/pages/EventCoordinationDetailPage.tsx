@@ -112,7 +112,7 @@ function groupMessagesByDate(messages: Array<ChatMessage & { user: User }>) {
   return groups;
 }
 
-export default function EventChatDetailPage() {
+export default function EventCoordinationDetailPage() {
   const { eventId } = useParams();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -294,7 +294,7 @@ export default function EventChatDetailPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="ml-2 flex-1">
-            <h1 className="font-semibold truncate">{event?.title || "活动聊天"}</h1>
+            <h1 className="font-semibold truncate">{event?.title || "活动互动"}</h1>
           </div>
         </div>
         
@@ -341,9 +341,9 @@ export default function EventChatDetailPage() {
                 <CardContent className="p-8 text-center space-y-4">
                   <Clock className="h-16 w-16 text-muted-foreground mx-auto" />
                   <div className="space-y-2">
-                    <h3 className="font-semibold text-lg">群聊即将开放</h3>
+                    <h3 className="font-semibold text-lg">互动即将开放</h3>
                     <p className="text-sm text-muted-foreground">
-                      群聊将在活动开始前24小时开放
+                      互动将在活动开始前24小时开放
                     </p>
                   </div>
                   <div className="pt-2">
@@ -355,7 +355,7 @@ export default function EventChatDetailPage() {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground pt-4">
-                    届时你可以和其他参与者提前认识，聊聊期待～
+                    届时你可以和其他参与者提前认识
                   </p>
                 </CardContent>
               </Card>
@@ -535,7 +535,7 @@ export default function EventChatDetailPage() {
                   </TooltipProvider>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    <p className="text-sm">还没有消息，开始聊天吧！</p>
+                    <p className="text-sm">还没有消息，快来打个招呼吧！</p>
                   </div>
                 )}
                 <div ref={messagesEndRef} />

@@ -24,8 +24,8 @@ import EssentialDataPage from "@/pages/EssentialDataPage";
 import ExtendedDataPage from "@/pages/ExtendedDataPage";
 import DiscoverPage from "@/pages/DiscoverPage";
 import EventsPage from "@/pages/EventsPage";
-import ChatsPage from "@/pages/ChatsPage";
-import EventChatDetailPage from "@/pages/EventChatDetailPage";
+import ConnectionsPage from "@/pages/ConnectionsPage";
+import EventCoordinationPage from "@/pages/EventCoordinationPage";
 import ProfilePage from "@/pages/ProfilePage";
 import EditProfilePage from "@/pages/EditProfilePage";
 import EditBasicInfoPage from "@/pages/EditBasicInfoPage";
@@ -207,8 +207,10 @@ function AuthenticatedRouter() {
           <Route path="/icebreaker/:sessionId" component={IcebreakerSessionPage} />
           <Route path="/icebreaker-game" component={IcebreakerGamePage} />
           <Route path="/events" component={EventsPage} />
-          <Route path="/chats" component={ChatsPage} />
-          <Route path="/chats/:eventId" component={EventChatDetailPage} />
+          <Route path="/chats" component={ConnectionsPage} />
+          <Route path="/connections" component={ConnectionsPage} />
+          <Route path="/chats/:eventId" component={EventCoordinationPage} />
+          <Route path="/connections/:eventId" component={EventCoordinationPage} />
           <Route path="/profile" component={ProfilePage} />
           <Route path="/rewards" component={RewardsPage} />
           <Route path="/profile/edit" component={EditProfilePage} />
