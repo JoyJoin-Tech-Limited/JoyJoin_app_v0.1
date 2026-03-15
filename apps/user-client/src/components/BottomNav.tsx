@@ -324,7 +324,9 @@ export default function BottomNav() {
 
         {/* Right side items */}
         {sideNavItems.slice(2).map((item) => {
-          const isActive = location === item.path;
+          const isActive = item.path === '/connections'
+            ? location.startsWith('/connections')
+            : location === item.path;
           const badgeCount = item.badgeCategory && notificationCounts 
             ? notificationCounts[item.badgeCategory] 
             : 0;
