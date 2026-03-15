@@ -46,7 +46,7 @@ const matchingItems = [
 const safetyItems = [
   { title: "反馈管理", url: "/admin/feedback", icon: MessageSquare },
   { title: "举报审核", url: "/admin/moderation", icon: Flag },
-  { title: "互动日志", url: "/admin/interaction-logs", icon: FileText },
+  { title: "连接日志", url: "/admin/interaction-logs", icon: FileText },
 ];
 
 const contentRevenueItems = [
