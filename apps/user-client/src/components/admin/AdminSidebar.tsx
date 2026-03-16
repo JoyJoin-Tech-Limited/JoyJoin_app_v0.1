@@ -53,6 +53,7 @@ const primaryNavItems = [
       "/admin/reports",
       "/admin/chat-logs",
       "/admin/feedback",
+      "/admin/interaction-logs",
     ],
   },
   {
