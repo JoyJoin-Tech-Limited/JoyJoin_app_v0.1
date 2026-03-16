@@ -48,7 +48,7 @@ export default function TransitionOverlay({
           style={{
             backdropFilter: "blur(16px)",
             WebkitBackdropFilter: "blur(16px)",
-            backgroundColor: "rgba(0, 0, 0, 0.35)",
+            backgroundColor: "hsl(var(--primary) / 0.12)",
           }}
           aria-live="polite"
           aria-atomic="true"
@@ -68,24 +68,34 @@ export default function TransitionOverlay({
                     opacity: { duration: 0.25 },
                   }
             }
-            className="mx-8 px-10 py-9 text-center"
+            className="relative mx-8 px-10 py-9 text-center"
             style={{
-              borderRadius: 30,
-              background: "rgba(255, 255, 255, 0.18)",
-              border: "1px solid rgba(255, 255, 255, 0.25)",
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
+              borderRadius: 24,
+              background: "hsl(var(--card))",
               boxShadow:
-                "0 24px 64px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.12)",
+                "0 24px 64px rgba(0, 0, 0, 0.12), 0 0 0 1px hsl(var(--border))",
             }}
           >
+            {/* Brand gradient accent stripe at the top of the card */}
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 2,
+                background: "linear-gradient(90deg, #FF6B9D, #A86BFF)",
+                borderRadius: "24px 24px 0 0",
+              }}
+            />
+            <p className="text-3xl mb-2">✨</p>
             <p
-              className="text-4xl font-black leading-tight mb-2"
-              style={{ color: "#1C1C1E" }}
+              className="text-4xl font-black leading-tight mb-2 text-foreground"
             >
               一半啦！
             </p>
-            <p className="text-base font-medium" style={{ color: "#8E8E93" }}>
+            <p className="text-base font-medium text-muted-foreground">
               你的隐藏人格正在浮现...
             </p>
           </motion.div>
