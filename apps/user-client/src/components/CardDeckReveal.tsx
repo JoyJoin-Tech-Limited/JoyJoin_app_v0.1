@@ -11,6 +11,69 @@ import {
   type SparkPrediction,
 } from "@/lib/attendeeAnalytics";
 
+// ── Per-archetype visual lookup maps ─────────────────────────────────────────
+
+const ARCHETYPE_BACK_GRADIENTS: Record<string, string> = {
+  '开心柯基': 'linear-gradient(135deg, #EAB308, #F97316, #EF4444)',
+  '太阳鸡':   'linear-gradient(135deg, #F59E0B, #EAB308, #F97316)',
+  '夸夸豚':   'linear-gradient(135deg, #06B6D4, #3B82F6, #6366F1)',
+  '机智狐':   'linear-gradient(135deg, #F97316, #EF4444, #EC4899)',
+  '淡定海豚': 'linear-gradient(135deg, #3B82F6, #6366F1, #A855F7)',
+  '织网蛛':   'linear-gradient(135deg, #A855F7, #EC4899, #D946EF)',
+  '暖心熊':   'linear-gradient(135deg, #F43F5E, #EC4899, #EF4444)',
+  '灵感章鱼': 'linear-gradient(135deg, #8B5CF6, #A855F7, #6366F1)',
+  '沉思猫头鹰': 'linear-gradient(135deg, #64748B, #6B7280, #71717A)',
+  '定心大象': 'linear-gradient(135deg, #10B981, #059669, #047857)',
+  '稳如龟':   'linear-gradient(135deg, #10B981, #14B8A6, #0D9488)',
+  '隐身猫':   'linear-gradient(135deg, #6366F1, #4F46E5, #4338CA)',
+};
+const FALLBACK_BACK_GRADIENT = 'linear-gradient(135deg, #4C1D95, #7C3AED)';
+
+const ARCHETYPE_GLOW: Record<string, string> = {
+  '开心柯基': 'rgba(249,115,22,0.50)',
+  '太阳鸡':   'rgba(245,158,11,0.50)',
+  '夸夸豚':   'rgba(6,182,212,0.50)',
+  '机智狐':   'rgba(239,68,68,0.50)',
+  '淡定海豚': 'rgba(59,130,246,0.50)',
+  '织网蛛':   'rgba(168,85,247,0.50)',
+  '暖心熊':   'rgba(244,63,94,0.50)',
+  '灵感章鱼': 'rgba(139,92,246,0.50)',
+  '沉思猫头鹰': 'rgba(100,116,139,0.40)',
+  '定心大象': 'rgba(16,185,129,0.45)',
+  '稳如龟':   'rgba(16,185,129,0.45)',
+  '隐身猫':   'rgba(99,102,241,0.45)',
+};
+
+const ARCHETYPE_ACCENT_HEX: Record<string, string> = {
+  '开心柯基': '#F97316',
+  '太阳鸡':   '#F59E0B',
+  '夸夸豚':   '#06B6D4',
+  '机智狐':   '#EF4444',
+  '淡定海豚': '#3B82F6',
+  '织网蛛':   '#A855F7',
+  '暖心熊':   '#F43F5E',
+  '灵感章鱼': '#8B5CF6',
+  '沉思猫头鹰': '#64748B',
+  '定心大象': '#10B981',
+  '稳如龟':   '#10B981',
+  '隐身猫':   '#6366F1',
+};
+
+const ARCHETYPE_BORDER_RGB: Record<string, string> = {
+  '开心柯基': '249,115,22',
+  '太阳鸡':   '245,158,11',
+  '夸夸豚':   '6,182,212',
+  '机智狐':   '239,68,68',
+  '淡定海豚': '59,130,246',
+  '织网蛛':   '168,85,247',
+  '暖心熊':   '244,63,94',
+  '灵感章鱼': '139,92,246',
+  '沉思猫头鹰': '100,116,139',
+  '定心大象': '16,185,129',
+  '稳如龟':   '16,185,129',
+  '隐身猫':   '99,102,241',
+};
+
 export interface SquadMember {
   userId: string;
   displayName: string;
@@ -108,6 +171,23 @@ function MemberCard({
 }: MemberCardProps) {
   const archetypeImage = getArchetypeImage(member.archetype);
   const config = member.archetype ? archetypeConfig[member.archetype] : undefined;
+
+  // ── Per-archetype visual tokens ───────────────────────────────────────────
+  const cardBackGradient = (member.archetype && ARCHETYPE_BACK_GRADIENTS[member.archetype])
+    ? ARCHETYPE_BACK_GRADIENTS[member.archetype]
+    : FALLBACK_BACK_GRADIENT;
+
+  const cardGlow = (member.archetype && ARCHETYPE_GLOW[member.archetype])
+    ? ARCHETYPE_GLOW[member.archetype]
+    : 'rgba(124,58,237,0.45)';
+
+  const archetypeAccentHex = (member.archetype && ARCHETYPE_ACCENT_HEX[member.archetype])
+    ? ARCHETYPE_ACCENT_HEX[member.archetype]
+    : '#7C3AED';
+
+  const archetypeBorderRgb = (member.archetype && ARCHETYPE_BORDER_RGB[member.archetype])
+    ? ARCHETYPE_BORDER_RGB[member.archetype]
+    : '124,58,237';
 
   // ── Memoised analytics – prevents 60fps drops during 3D spring animations ──
   const sparks = useMemo<SparkPrediction[]>(() => {
@@ -210,14 +290,58 @@ function MemberCard({
             WebkitBackfaceVisibility: "hidden",
             transform: "rotateY(180deg)",
             borderRadius: 14,
-            background: "linear-gradient(135deg, #4C1D95, #7C3AED)",
+            background: cardBackGradient,
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 6px 20px rgba(124,58,237,0.45)",
+            gap: 6,
+            boxShadow: `0 6px 20px ${cardGlow}`,
+            border: "1.5px solid rgba(255,255,255,0.15)",
+            overflow: "hidden",
           }}
         >
-          <Sparkles className="h-9 w-9 text-white/80" aria-hidden="true" />
+          {/* Blurred silhouette — teases the character without full reveal */}
+          {archetypeImage && (
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                pointerEvents: "none",
+              }}
+            >
+              <img
+                src={archetypeImage}
+                alt=""
+                style={{
+                  width: 72,
+                  height: 72,
+                  objectFit: "contain",
+                  opacity: 0.18,
+                  filter: "blur(3px) saturate(0)",
+                  transform: "scale(1.1)",
+                }}
+              />
+            </div>
+          )}
+          {/* Foreground icon — sits above silhouette */}
+          <Sparkles className="h-8 w-8 text-white/75 relative z-10" aria-hidden="true" />
+          <p
+            style={{
+              fontSize: 9,
+              color: "rgba(255,255,255,0.6)",
+              fontWeight: 500,
+              letterSpacing: "0.04em",
+              position: "relative",
+              zIndex: 10,
+            }}
+          >
+            点击翻开
+          </p>
         </div>
 
         {/* ── Card Front ── */}
@@ -228,163 +352,324 @@ function MemberCard({
             backfaceVisibility: "hidden",
             WebkitBackfaceVisibility: "hidden",
             borderRadius: 14,
-            boxShadow: "0 6px 20px rgba(0,0,0,0.14)",
+            boxShadow: `0 6px 24px ${cardGlow}`,
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
-            alignItems: "center",
-            padding: "10px 8px 8px",
-            background: "var(--background)",
+            border: `1.5px solid rgba(${archetypeBorderRgb}, 0.35)`,
+            background: "white",
+            colorScheme: "light",
           }}
         >
-          {/* ── Collapsed View ── */}
-
-          {/* Avatar / Archetype image — strictly getArchetypeImage, no photos */}
-          <div className="flex items-center justify-center mb-1.5">
-            {archetypeImage ? (
-              <img
-                src={archetypeImage}
-                alt={member.archetype}
-                style={{ width: 48, height: 48, objectFit: "contain" }}
-              />
-            ) : (
-              <Sparkles className="h-10 w-10 text-primary" aria-hidden="true" />
-            )}
+          {/* ── Header Band (gradient top) ── */}
+          <div
+            aria-hidden="true"
+            style={{
+              flexShrink: 0,
+              height: 76,
+              background: cardBackGradient,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              paddingBottom: 6,
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            {/* Archetype image — centred, slightly overflows downward for depth */}
+            <div style={{ position: "relative", zIndex: 2 }}>
+              {archetypeImage ? (
+                <img
+                  src={archetypeImage}
+                  alt={member.archetype ?? ""}
+                  style={{
+                    width: 52,
+                    height: 52,
+                    objectFit: "contain",
+                    filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.25))",
+                    marginBottom: -8,
+                  }}
+                />
+              ) : (
+                <Sparkles className="h-10 w-10 text-white/90" aria-hidden="true" />
+              )}
+            </div>
           </div>
 
-          {/* Name */}
-          <p className="text-sm font-bold text-foreground text-center leading-tight truncate w-full">
-            {member.displayName}
-          </p>
-
-          {/* Social Tag (replaces generic archetype/industry label) */}
-          {socialTagText && (
-            <p className="text-[10px] text-primary font-medium mt-0.5 text-center truncate w-full px-1">
-              {socialTagText}
-            </p>
-          )}
-
-          {/* Micro-traits: 2 capsule tags from archetype config */}
-          {config?.traits && config.traits.length > 0 && (
-            <div className="flex flex-wrap gap-0.5 justify-center mt-1">
-              {config.traits.slice(0, 2).map((trait, i) => (
-                <span
-                  key={i}
-                  className="text-[8px] px-1 py-0.5 rounded-full bg-primary/10 text-primary font-medium"
-                >
-                  {trait}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Social Energy Bar */}
-          {config?.energyLevel !== undefined && <EnergyBar level={config.energyLevel} />}
-
-          {/* ── Expanded View ── */}
-          {isSelected && (
-            <motion.div
-              className="w-full mt-2 space-y-1.5 overflow-y-auto"
-              style={{ maxHeight: 170 }}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={
-                prefersReducedMotion ? { duration: 0 } : { delay: 0.15, duration: 0.25 }
-              }
+          {/* ── Body (white) ── */}
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              padding: "10px 8px 8px",
+              overflow: "hidden",
+            }}
+          >
+            {/* Name */}
+            <p
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "#111827",
+                textAlign: "center",
+                lineHeight: 1.2,
+                marginTop: 4,
+                width: "100%",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
             >
-              {/* The Magic Connection — Our Sparks (契合点) */}
-              {isUserLoading ? (
-                // Loading placeholder while auth user is being fetched
-                <div className="text-center px-1 py-2 rounded-lg border border-dashed border-border/40">
-                  <motion.p
-                    className="text-[9px] text-muted-foreground"
-                    animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 1.2, repeat: Infinity }}
+              {member.displayName}
+            </p>
+
+            {/* Social Tag */}
+            {socialTagText && (
+              <p
+                style={{
+                  fontSize: 10,
+                  color: archetypeAccentHex,
+                  fontWeight: 600,
+                  marginTop: 2,
+                  textAlign: "center",
+                  width: "100%",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  paddingInline: 4,
+                }}
+              >
+                {socialTagText}
+              </p>
+            )}
+
+            {/* Micro-traits */}
+            {config?.traits && config.traits.length > 0 && (
+              <div style={{ display: "flex", gap: 2, flexWrap: "wrap", justifyContent: "center", marginTop: 4 }}>
+                {config.traits.slice(0, 2).map((trait, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      fontSize: 8,
+                      padding: "1px 5px",
+                      borderRadius: 999,
+                      background: `rgba(${archetypeBorderRgb}, 0.12)`,
+                      color: archetypeAccentHex,
+                      fontWeight: 600,
+                    }}
                   >
-                    正在计算契合点…
-                  </motion.p>
-                </div>
-              ) : sortedSparks.length > 0 ? (
-                <div className="space-y-1">
-                  {sortedSparks.slice(0, 5).map((spark, i) => (
-                    <div
-                      key={i}
-                      className={
+                    {trait}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Social Energy Bar */}
+            {config?.energyLevel !== undefined && <EnergyBar level={config.energyLevel} />}
+
+            {/* Rarity dots — subtle preview of spark quality when collapsed */}
+            {isFlipped && !isSelected && sortedSparks.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  gap: 3,
+                  justifyContent: "center",
+                  marginTop: 4,
+                }}
+                aria-hidden="true"
+              >
+                {sortedSparks.slice(0, 3).map((spark, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: "50%",
+                      background:
                         spark.rarity === "epic"
-                          ? "flex items-center gap-1 px-1.5 py-1 rounded-lg border border-amber-400/70 bg-amber-50 dark:bg-amber-900/20"
+                          ? "#F59E0B"
                           : spark.rarity === "rare"
-                          ? "flex items-center gap-1 px-1.5 py-1 rounded-lg border border-violet-300/60 bg-violet-50 dark:bg-violet-900/20"
-                          : "flex items-center gap-1 px-1.5 py-1 rounded-lg border border-border/40 bg-muted/40"
-                      }
-                    >
-                      {spark.rarity === "epic" && (
-                        <motion.span
-                          className="text-amber-500 text-[10px] shrink-0"
-                          aria-hidden="true"
-                          animate={{ opacity: [0.6, 1, 0.6] }}
-                          transition={{ duration: 1.5, repeat: Infinity }}
-                        >
-                          ✨
-                        </motion.span>
-                      )}
-                      {spark.rarity === "rare" && (
-                        <span className="text-violet-500 text-[10px] shrink-0" aria-hidden="true">💫</span>
-                      )}
-                      <span
-                        className={`text-[9px] font-medium leading-tight ${
-                          spark.rarity === "epic"
-                            ? "text-amber-700 dark:text-amber-300"
-                            : spark.rarity === "rare"
-                            ? "text-violet-700 dark:text-violet-300"
-                            : "text-foreground/80"
-                        }`}
-                      >
-                        {spark.text}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                // Graceful empty state
-                <div className="text-center px-1 py-2 rounded-lg border border-dashed border-border/50">
-                  <p className="text-[9px] font-medium text-foreground/70">
-                    充满未知的神秘缘分{" "}
-                    <span aria-hidden="true">🎭</span>
-                  </p>
-                  <p className="text-[8px] text-muted-foreground mt-0.5 leading-snug">
-                    AI也无法预测你们会碰撞出什么火花，这正是盲盒的魅力。
-                  </p>
-                </div>
-              )}
-
-              {/* Icebreaker Hook (破冰雷达) */}
-              {icebreakerText && (
-                <div className="flex items-start gap-1">
-                  <MessageCircle
-                    className="h-3 w-3 text-primary mt-0.5 shrink-0"
-                    aria-hidden="true"
+                          ? "#7C3AED"
+                          : "#D1D5DB",
+                      display: "inline-block",
+                    }}
                   />
-                  <p className="text-[9px] text-muted-foreground leading-snug">
-                    {icebreakerText}
+                ))}
+                {sortedSparks.length > 3 && (
+                  <span style={{ fontSize: 7, color: "#9CA3AF", lineHeight: "5px" }}>+{sortedSparks.length - 3}</span>
+                )}
+              </div>
+            )}
+
+            {/* ── Expanded View ── */}
+            {isSelected && (
+              <motion.div
+                className="w-full mt-2 space-y-1.5 overflow-y-auto"
+                style={{ maxHeight: 170 }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={
+                  prefersReducedMotion ? { duration: 0 } : { delay: 0.15, duration: 0.25 }
+                }
+              >
+                {/* The Magic Connection — Our Sparks (契合点) */}
+                {isUserLoading ? (
+                  // Loading placeholder while auth user is being fetched
+                  <div className="text-center px-1 py-2 rounded-lg border border-dashed border-border/40">
+                    <motion.p
+                      className="text-[9px] text-muted-foreground"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1.2, repeat: Infinity }}
+                    >
+                      正在计算契合点…
+                    </motion.p>
+                  </div>
+                ) : sortedSparks.length > 0 ? (
+                  <div className="space-y-1">
+                    {sortedSparks.slice(0, 5).map((spark, i) => (
+                      spark.rarity === "epic" ? (
+                        <div
+                          key={i}
+                          className="joyjoin-holo-epic"
+                          style={{
+                            position: "relative",
+                            overflow: "hidden",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                            padding: "4px 6px",
+                            borderRadius: 8,
+                            border: "1px solid rgba(245,158,11,0.70)",
+                            background: "linear-gradient(135deg, #FEF3C7, #FDE68A)",
+                          }}
+                        >
+                          <motion.span
+                            style={{ fontSize: 10, color: "#F59E0B", flexShrink: 0 }}
+                            aria-hidden="true"
+                            animate={{ opacity: [0.6, 1, 0.6] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                          >
+                            ✨
+                          </motion.span>
+                          <span style={{ fontSize: 9, fontWeight: 600, color: "#92400E", lineHeight: 1.3 }}>
+                            {spark.text}
+                          </span>
+                          {/* Rarity corner mark */}
+                          <span
+                            style={{
+                              position: "absolute",
+                              top: 2,
+                              right: 3,
+                              fontSize: 7,
+                              color: "rgba(245,158,11,0.8)",
+                              fontWeight: 700,
+                              lineHeight: 1,
+                            }}
+                            aria-hidden="true"
+                          >
+                            ★
+                          </span>
+                        </div>
+                      ) : spark.rarity === "rare" ? (
+                        <div
+                          key={i}
+                          style={{
+                            position: "relative",
+                            overflow: "hidden",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                            padding: "4px 6px",
+                            borderRadius: 8,
+                            border: "1px solid rgba(139,92,246,0.50)",
+                            background: "linear-gradient(135deg, #EDE9FE, #DDD6FE)",
+                          }}
+                        >
+                          <span style={{ fontSize: 10, color: "#7C3AED", flexShrink: 0 }} aria-hidden="true">💫</span>
+                          <span style={{ fontSize: 9, fontWeight: 500, color: "#4C1D95", lineHeight: 1.3 }}>
+                            {spark.text}
+                          </span>
+                          <span
+                            style={{
+                              position: "absolute",
+                              top: 2,
+                              right: 3,
+                              fontSize: 7,
+                              color: "rgba(139,92,246,0.7)",
+                              fontWeight: 700,
+                              lineHeight: 1,
+                            }}
+                            aria-hidden="true"
+                          >
+                            ◆
+                          </span>
+                        </div>
+                      ) : (
+                        <div
+                          key={i}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                            padding: "4px 6px",
+                            borderRadius: 8,
+                            border: "1px solid rgba(0,0,0,0.08)",
+                            background: "rgba(0,0,0,0.03)",
+                          }}
+                        >
+                          <span style={{ fontSize: 8, color: "#9CA3AF", flexShrink: 0 }} aria-hidden="true">·</span>
+                          <span style={{ fontSize: 9, color: "rgba(17,24,39,0.75)", lineHeight: 1.3 }}>
+                            {spark.text}
+                          </span>
+                        </div>
+                      )
+                    ))}
+                  </div>
+                ) : (
+                  // Graceful empty state
+                  <div className="text-center px-1 py-2 rounded-lg border border-dashed border-border/50">
+                    <p className="text-[9px] font-medium text-foreground/70">
+                      充满未知的神秘缘分{" "}
+                      <span aria-hidden="true">🎭</span>
+                    </p>
+                    <p className="text-[8px] text-muted-foreground mt-0.5 leading-snug">
+                      AI也无法预测你们会碰撞出什么火花，这正是盲盒的魅力。
+                    </p>
+                  </div>
+                )}
+
+                {/* Icebreaker Hook (破冰雷达) */}
+                {icebreakerText && (
+                  <div className="flex items-start gap-1">
+                    <MessageCircle
+                      className="h-3 w-3 text-primary mt-0.5 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <p className="text-[9px] text-muted-foreground leading-snug">
+                      {icebreakerText}
+                    </p>
+                  </div>
+                )}
+
+                {/* Core Contribution */}
+                {config?.coreContributions && (
+                  <p className="text-[9px] text-center text-foreground/70 font-medium">
+                    <span aria-hidden="true">🎯</span> {config.coreContributions}
                   </p>
-                </div>
-              )}
+                )}
 
-              {/* Core Contribution */}
-              {config?.coreContributions && (
-                <p className="text-[9px] text-center text-foreground/70 font-medium">
-                  <span aria-hidden="true">🎯</span> {config.coreContributions}
-                </p>
-              )}
-
-              {/* Style Quote */}
-              {config?.styleQuote && (
-                <p className="text-[8px] text-muted-foreground text-center italic leading-snug px-1">
-                  "{config.styleQuote}"
-                </p>
-              )}
-            </motion.div>
-          )}
+                {/* Style Quote */}
+                {config?.styleQuote && (
+                  <p className="text-[8px] text-muted-foreground text-center italic leading-snug px-1">
+                    "{config.styleQuote}"
+                  </p>
+                )}
+              </motion.div>
+            )}
+          </div>
         </div>
       </div>
     </motion.div>
@@ -489,6 +774,25 @@ export default function CardDeckReveal({
 
   return (
     <div className="relative flex items-end justify-center" style={{ height: DECK_CONTAINER_HEIGHT }}>
+      <style>{`
+        @keyframes joyjoin-holo-sheen {
+          0%   { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
+        .joyjoin-holo-epic {
+          background: linear-gradient(
+            105deg,
+            transparent 35%,
+            rgba(255, 255, 255, 0.22) 50%,
+            transparent 65%
+          );
+          background-size: 200% 100%;
+          animation: joyjoin-holo-sheen 2.8s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .joyjoin-holo-epic { animation: none; }
+        }
+      `}</style>
       {members.map((member, idx) => (
         <MemberCard
           key={member.userId}
