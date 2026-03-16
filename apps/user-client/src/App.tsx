@@ -232,6 +232,7 @@ function AuthenticatedRouter() {
           <Route path="/event/:id" component={EventDetailPage} />
           <Route path="/invite" component={InvitePage} />
           <Route path="/personality-test" component={PersonalityTestPageV4} />
+          <Route path="/personality-test/auth-gate" component={WeChatAuthGatePage} />
           <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
           <Route path="/personality-test/results" component={PersonalityTestResultPage} />
           <Route component={NotFound} />

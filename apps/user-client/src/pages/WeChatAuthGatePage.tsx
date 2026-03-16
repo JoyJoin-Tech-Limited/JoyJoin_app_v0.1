@@ -2,24 +2,35 @@
  * WeChatAuthGatePage
  *
  * Premium minimalist WeChat auth gate shown after the user completes
- * Personality Test V4 but before they can view their results.
+ * Personality Test V4 and before they can save their results.
  *
  * Design philosophy: "One screen. One truth. One tap. Premium is restraint."
+ *
+ * Behaviour:
+ * - Authenticated users are immediately redirected to /personality-test/results.
+ * - Tapping the WeChat button logs in inline (forwarding pre-signup answers) then
+ *   navigates to the server-calculated nextStep.
+ * - Tapping "先不看了" navigates to /personality-test/results anyway — results are
+ *   still viewable without logging in; they just won't be saved to the account.
  *
  * Route: /personality-test/auth-gate
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
+import type { AuthUser } from "@/hooks/useAuth";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { archetypeAvatars } from "@/lib/archetypeAvatars";
 import { haptics } from "@/lib/haptics";
+import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const PRESIGNUP_SESSION_KEY = "joyjoin_v4_assessment_session";
+const PRESIGNUP_ANSWERS_KEY = "joyjoin_v4_presignup_answers";
 
 /**
  * Archetype → representative hex colour used for the subtle radial glow.
@@ -64,8 +75,10 @@ export default function WeChatAuthGatePage() {
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
   const prefersReducedMotion = useReducedMotion();
+  const { toast } = useToast();
 
   const [archetype, setArchetype] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Read archetype from localStorage on mount
   useEffect(() => {
@@ -104,10 +117,82 @@ export default function WeChatAuthGatePage() {
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
-  const handleLogin = () => {
+  const handleLogin = useCallback(async () => {
+    if (isLoggingIn) return;
     haptics.medium();
-    setLocation('/login');
-  };
+    setIsLoggingIn(true);
+
+    try {
+      // Read pre-signup answers from localStorage so they are forwarded with login
+      let testAnswers: unknown[] = [];
+      const answersRaw = localStorage.getItem(PRESIGNUP_ANSWERS_KEY);
+      if (answersRaw) {
+        try {
+          const parsed = JSON.parse(answersRaw);
+          testAnswers = Array.isArray(parsed) ? parsed : [];
+        } catch {
+          // Fall back to empty array — server handles missing answers gracefully
+        }
+      }
+
+      // In WeChat Mini Program use wx.login(); fall back to mock code in web/dev
+      let code: string;
+      const wxGlobal = (window as any).wx;
+      if (typeof wxGlobal !== 'undefined' && wxGlobal?.login) {
+        const loginResult = await new Promise<any>((resolve, reject) => {
+          wxGlobal.login({
+            success: resolve,
+            fail: (err: any) => reject(new Error(err.errMsg || 'wx.login failed')),
+          });
+        });
+        code = loginResult.code;
+      } else {
+        const uuid = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
+        code = `wechat_test_${uuid}`;
+      }
+
+      const response = await fetch('/api/auth/wechat/login-with-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, testAnswers }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: '登录失败' }));
+        throw new Error(errorData.error || '登录失败');
+      }
+
+      await response.json();
+
+      // Clear anonymous assessment data
+      localStorage.removeItem(PRESIGNUP_ANSWERS_KEY);
+      localStorage.removeItem(PRESIGNUP_SESSION_KEY);
+      localStorage.removeItem('joyjoin_synced_session_id');
+      localStorage.removeItem('joyjoin_synced_answer_count');
+
+      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+
+      toast({ title: "登录成功", description: "正在为你准备个性化匹配..." });
+
+      // Navigate to server-calculated nextStep
+      const updatedUser = await queryClient.fetchQuery({ queryKey: ['/api/auth/user'] }) as AuthUser;
+      const nextPath = updatedUser?.nextStep === 'discover' ? '/discover'
+        : updatedUser?.nextStep === 'guide' ? '/guide'
+        : updatedUser?.nextStep === 'extended-data' ? '/onboarding/extended'
+        : updatedUser?.nextStep === 'profile-review' ? '/onboarding/review'
+        : '/onboarding/setup';
+
+      setTimeout(() => setLocation(nextPath), 500);
+    } catch (error) {
+      toast({
+        title: "登录失败",
+        description: error instanceof Error ? error.message : "请稍后重试",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoggingIn(false);
+    }
+  }, [isLoggingIn, setLocation, toast]);
 
   const handleSkip = () => {
     setLocation('/personality-test/results');
@@ -141,24 +226,27 @@ export default function WeChatAuthGatePage() {
       )}
 
       <div
-        className="h-screen w-full overflow-hidden bg-[#FAFAF8] dark:bg-[#111111] flex flex-col items-center justify-center px-6"
+        className="relative h-screen w-full overflow-hidden bg-[#FAFAF8] dark:bg-[#111111] flex flex-col items-center justify-center px-6"
         style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* ── Avatar hero block ─────────────────────────────────────────── */}
         <motion.div
-          className="flex flex-col items-center"
+          className="relative flex flex-col items-center"
           {...(prefersReducedMotion ? {} : {
             initial: { opacity: 0, scale: 0.92 },
             animate: { opacity: 1, scale: 1 },
             transition: { duration: 0.3, ease: 'easeOut' },
           })}
         >
-          {/* Radial glow — archetype colour at ~8% opacity */}
+          {/* Radial glow — archetype colour at ~8% opacity, centred behind avatar */}
           <div
             className="absolute pointer-events-none"
             style={{
               width: 400,
               height: 400,
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
               background: `radial-gradient(circle 200px at center, ${glowColor}15, transparent)`,
             }}
             aria-hidden="true"
@@ -235,14 +323,19 @@ export default function WeChatAuthGatePage() {
           {/* WeChat login button — hero element */}
           <button
             onClick={handleLogin}
-            className="w-full h-[64px] bg-[#07C160] rounded-2xl flex items-center justify-center text-lg font-bold text-white active:scale-[0.97] transition-transform duration-100 select-none"
+            disabled={isLoggingIn}
+            className="w-full h-[64px] bg-[#07C160] rounded-2xl flex items-center justify-center text-lg font-bold text-white active:scale-[0.97] transition-transform duration-100 select-none disabled:opacity-70"
             style={{ WebkitTapHighlightColor: 'transparent' }}
           >
-            <WeChatIcon />
+            {isLoggingIn ? (
+              <div className="w-5 h-5 rounded-full border-2 border-white/40 border-t-white animate-spin mr-2" />
+            ) : (
+              <WeChatIcon />
+            )}
             微信登录 · 揭开结果
           </button>
 
-          {/* Skip link — intentionally subdued */}
+          {/* Skip link — intentionally subdued; users can still view results without saving */}
           <button
             onClick={handleSkip}
             className="text-sm text-muted-foreground bg-transparent border-0 cursor-pointer select-none"
