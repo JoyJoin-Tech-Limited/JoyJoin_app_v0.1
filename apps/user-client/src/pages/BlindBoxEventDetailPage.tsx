@@ -595,7 +595,7 @@ export default function BlindBoxEventDetailPage() {
           const phase = getEventPhase(event.dateTime);
           const phaseLabels = {
             started:  { label: '🎲 活动进行中 🎉', subtitle: 'AI主持·5个环节·90分钟' },
-            revealed: { label: '查看场地 📍',       subtitle: '场地已揭晓，点击查看' },
+            revealed: { label: '破冰话题已解锁 ✨',   subtitle: '场地已揭晓，点击查看专属话题' },
             waiting:  { label: '等待揭晓中…',        subtitle: '为你们准备的破冰话题' },
           } as const;
           const { label: ctaLabel, subtitle: ctaSubtitle } = phaseLabels[phase];
