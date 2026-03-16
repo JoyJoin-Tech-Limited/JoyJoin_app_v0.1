@@ -66,11 +66,12 @@ export default function BlindBoxEventDetailPage() {
 
   const { data: event, isLoading } = useQuery<BlindBoxEvent>({
     queryKey: ["/api/blind-box-events", eventId],
-    refetchInterval: (() => {
-      if (!event?.dateTime) return 30_000;
-      const msUntilEvent = new Date(event.dateTime).getTime() - Date.now();
+    refetchInterval: (query) => {
+      const data = query.state.data as BlindBoxEvent | undefined;
+      if (!data?.dateTime) return 30_000;
+      const msUntilEvent = new Date(data.dateTime).getTime() - Date.now();
       return msUntilEvent > 0 && msUntilEvent <= 5 * 60 * 1000 ? 1_000 : 30_000;
-    })(),
+    },
   });
 
   // Use reveal status to determine if match details should be shown
