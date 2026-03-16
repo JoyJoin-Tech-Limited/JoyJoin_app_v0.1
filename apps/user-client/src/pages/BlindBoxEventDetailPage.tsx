@@ -360,7 +360,9 @@ export default function BlindBoxEventDetailPage() {
     // Convert to total minutes
     const totalMinutes = Math.floor(diff / (1000 * 60));
 
-    if (totalMinutes === 0) return "活动进行中";
+    if (totalMinutes === 0) {
+      return isMatchedOrCompleted ? "即将开场" : "即将开始";
+    }
     
     if (totalMinutes >= 60) {
       const totalHours = Math.ceil(diff / (1000 * 60 * 60));
