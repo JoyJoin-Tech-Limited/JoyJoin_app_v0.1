@@ -37,34 +37,125 @@ When this file conflicts with inline code comments, older documentation in `docs
 ---
 
 ## Tech Stack
-- List the technologies used in the project.
+
+**Monorepo structure** (npm workspaces):
+- `apps/user-client` — React 18 + TypeScript + Vite (user-facing PWA)
+- `apps/admin-client` — React 18 + TypeScript + Vite (admin portal, deployed to admin.yuejuapp.com)
+- `apps/server` — Node.js + Express.js + TypeScript (API server)
+- `packages/shared` — Shared TypeScript types, schemas, personality engine
+
+**Frontend:** React 18, TypeScript, Vite, Wouter, TanStack Query v5, shadcn/ui, Tailwind CSS, Framer Motion, Recharts  
+**Backend:** Node.js, Express.js, TypeScript, Drizzle ORM, PostgreSQL (Neon serverless)  
+**Auth:** WeChat OAuth2 (primary), Phone/SMS (legacy fallback), PostgreSQL session store  
+**Real-time:** WebSocket (`ws` library), 3–5 second polling fallback  
+**Payments:** WeChat Pay JSAPI + webhook
 
 ## Build Commands
-- Provide the commands needed to build the project.
+
+```bash
+npm install          # Install all workspace dependencies
+npm run dev          # Start dev server on http://localhost:5000
+npm run build        # Build all workspaces for production
+npm run db:push      # Sync Drizzle schema to database
+npm run db:push --force  # Force sync (use carefully)
+```
 
 ## Project Structure
-- Describe the structure of the project, including key directories.
+
+```
+/
+├── apps/
+│   ├── user-client/src/
+│   │   ├── pages/          # Page components (PersonalityTestPageV4, DiscoverPage, etc.)
+│   │   ├── components/     # Shared UI components (BottomNav, AttendeePreviewCard, etc.)
+│   │   ├── hooks/          # Custom hooks (useAuth, useWeChatLogin, useSocialIcebreaker)
+│   │   └── lib/            # Utilities (archetypes.ts, queryClient.ts, hongKongTime.ts)
+│   ├── admin-client/src/   # Admin portal (separate deployment)
+│   └── server/src/
+│       ├── routes.ts       # All API route registrations
+│       ├── wechatAuth.ts   # WeChat auth endpoints
+│       ├── poolMatchingService.ts  # 7-dimension matching algorithm
+│       └── socialIcebreakerAIService.ts
+└── packages/
+    └── shared/src/
+        ├── schema.ts       # Drizzle DB schema (source of truth)
+        └── personality/    # Adaptive engine, V2 matcher, archetype names
+```
 
 ## Code Conventions
-- Outline the coding standards and conventions followed in the project.
+
+- **TypeScript strict mode** — no `any` without justification
+- **Server-driven navigation** — always use `nextStep` from `/api/auth/user`, never reconstruct onboarding state client-side
+- **Query keys** — use array format `['/api/endpoint']` matching the URL path
+- **File naming** — PascalCase for components/pages, camelCase for hooks/utilities
+- **Chinese UI copy** — all user-facing strings in Simplified Chinese; use `权益` not `会员` in user-facing copy
+- **Monorepo imports** — use `@/` alias for same-workspace imports; use `packages/shared` imports for cross-workspace types
 
 ## Key Systems
-- Detail the key systems in the application.
+
+1. **Onboarding Flow** — state-driven via `nextStep` from server; see Onboarding Flow Architecture section
+2. **Personality Test V4** — 8–16 adaptive questions, anonymous pre-auth; see `PersonalityTestPageV4.tsx`
+3. **Pool Matching** — 7-dimension weighted scoring; see `poolMatchingService.ts`
+4. **Social Icebreaker** — primary in-event multi-phase session; see `docs/icebreaker-system.md`
+5. **WeChat Auth** — Mini Program `wx.login()` + OAuth2 web flow; see `wechatAuth.ts`
+6. **BottomNav Smart Routing** — center button dynamically routes based on user's current activity state
 
 ## CI/CD Pipeline
-- Explain how the continuous integration and deployment processes are structured.
+
+- Deployment is via Replit (development) and production server
+- `npm run build` produces `dist/` for both client workspaces
+- Database migrations: `npm run db:push` (Drizzle schema push, no migration files)
+- Admin portal deployed separately to `admin.yuejuapp.com`
+- Caddy reverse proxy routes `/api/*` to the backend; all other paths to `user-client`
 
 ## Security Guidelines
-- List the security measures and best practices to follow.
+
+- Use `requireAdmin` middleware on all `/api/admin/*` routes
+- WeChat webhook: always verify signature before processing payment callbacks
+- Session cookies: `httpOnly: true`, `secure: true` in production
+- Never expose `WECHAT_SECRET` or `SESSION_SECRET` in client-side code
+- SQL injection prevention: use Drizzle ORM parameterized queries (never raw string interpolation)
+- User-facing copy: never use `会员`/`VIP`/`membership` — use `权益` (see PRD §Product Canon)
 
 ## Contribution Guidelines
-- Provide guidelines for contributing to the project.
+
+1. Pull latest code and check recent changes in `replit.md`
+2. For onboarding changes: read the full **Onboarding Flow Architecture** section before touching `App.tsx`
+3. For matching algorithm changes: test in `/admin/matching-lab` before deploying
+4. Update this file (`copilot-instructions.md`) if architectural decisions change
+5. Update `PRODUCT_REQUIREMENTS.md` if product behaviour changes
+6. Do not add new CTAs to ⚠️ Legacy components (`IcebreakerToolkit`, `GuidePage`)
 
 ## Debugging Tips
-- Offer tips for debugging issues within the application.
+
+**WeChat auth not working:**
+- In development, `wx.login()` is not available — the server accepts `wechat_test_<uuid>` mock codes automatically
+- In staging/production browser, `useWeChatLogin` redirects to `/api/auth/wechat/oauth/start`
+- Check `WECHAT_APPID`, `WECHAT_SECRET`, `APP_URL` env vars
+
+**Onboarding stuck in a loop:**
+- Check `nextStep` value in `/api/auth/user` response
+- Verify the relevant completion flag is being set server-side (not just client-side)
+- Check `AuthenticatedRouter` switch cases in `App.tsx`
+
+**Pool matching produces no groups:**
+- Verify users pass hard constraints (budget, gender, industry restrictions)
+- Check minimum group size (`minGroupSize` default 4)
+- Review pair scores — need avgScore ≥ 60 to add to group
+
+**Admin portal not loading:**
+- Admin routes in user-client redirect to `admin.yuejuapp.com`
+- Start admin-client separately with `npm run dev` in `apps/admin-client`
 
 ## Key Documentation
-- Reference essential documentation related to the project.
+
+1. **`.github/copilot-instructions.md`** (this file) — Authoritative source of truth for active architecture
+2. **`PRODUCT_REQUIREMENTS.md`** — Full PRD (v1.3, last updated March 2026)
+3. **`DEVELOPER_QUICK_REFERENCE.md`** — Monorepo-aware developer quick reference
+4. **`QUICK_REFERENCE.md`** — ⚠️ Older reference, partially outdated; prefer DEVELOPER_QUICK_REFERENCE for file paths
+5. **`docs/onboarding-flow.md`** — Detailed onboarding flow documentation
+6. **`docs/icebreaker-system.md`** — Social Icebreaker full technical reference
+7. **`replit.md`** — Project architecture + history of recent changes
 
 ### Onboarding Flow Architecture
 
@@ -99,6 +190,15 @@ All post-authentication routing is controlled by `nextStep` from the `/api/auth/
 
 > **Note on Registration**: The legacy AI Chat Registration step (`DuolingoOnboardingPage`) has been removed from the active onboarding flow. The `/onboarding` path now aliases/renders the V4 personality test (`PersonalityTestPageV4`) directly at `/onboarding` rather than redirecting to `/personality-test`. Any reference to this step in older code or documentation is legacy and should be treated as such.
 
+> **Additional `nextStep` values** handled by `AuthenticatedRouter` in `App.tsx` but **not listed in the table above** (because they are legacy/fallback, not active onboarding steps):
+>
+> | `nextStep` value | Behaviour in `AuthenticatedRouter` |
+> |-----------------|-------------------------------------|
+> | `'onboarding'` | ⚠️ Legacy fallback — redirects to `/personality-test` |
+> | `'personality-test'` | Allows personality test + setup routes to render (used during post-auth pre-essential-data state) |
+>
+> These values are returned by the server for edge-case user states. They are not distinct steps in the first-time user onboarding sequence.
+
 #### Server-Driven Navigation (Scope B1)
 
 **Prefer `nextStep` over client-side onboarding calculations:**
@@ -132,6 +232,10 @@ The `/api/auth/user` endpoint returns:
 | `profileEssentialComplete` | `boolean` | Essential data complete (displayName, gender, currentCity) |
 | `profileExtendedComplete` | `boolean` | Profile enrichment flag based on `educationLevel` + `industryNicheLabel\|industryCategoryLabel` + `hometownRegionCity` (not the interests carousel / `/onboarding/extended` step) |
 | `hasSeenGuide` | `boolean` | Guide viewed (server-persisted) |
+
+> **Note on `profileExtendedComplete` vs `hasCompletedInterestsCarousel`:** These are two different things.
+> - `hasCompletedInterestsCarousel` (`boolean`, `users` table DB column) — set to `true` when the user completes the `/onboarding/extended` interests carousel step.
+> - `profileExtendedComplete` (computed, returned by `/api/auth/user`) — server-validates that `educationLevel` + `industryNicheLabel|industryCategoryLabel` + `hometownRegionCity` are present. This is **not** the same as `hasCompletedInterestsCarousel`. A user can have `hasCompletedInterestsCarousel = true` but `profileExtendedComplete = false` if they skipped education/industry fields.
 | `hasSeenProfileReview` | `boolean` | Profile review viewed (server-persisted) |
 | `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
 
@@ -154,6 +258,15 @@ The guide is **server-persisted** but **currently conditional** in routing: `Aut
 - `apps/user-client/src/pages/ExtendedDataPage.tsx` — Interests carousel
 - `apps/user-client/src/pages/FinalProfileReviewPage.tsx` — Profile preview and review
 - `apps/user-client/src/pages/LoginPage.tsx` — WeChat 微信授权登入
+- `apps/user-client/src/pages/GuidePage.tsx` — ⚠️ **Deprecated** (2026-02-16). Replaced by inline coach marks. The `/guide` route still renders this page for backward compatibility but `nextStep === 'guide'` routes directly to `DiscoverPage`. Do not add new features here.
+- `apps/user-client/src/pages/ProfileSetupPage.tsx` — ⚠️ **Unused** — imported in `App.tsx` but not routed. Candidate for removal.
+
+#### Admin Portal Deployment Note
+
+The admin portal (`apps/admin-client`) is deployed as a **separate application** at `https://admin.yuejuapp.com`. All `/admin/*` routes in `apps/user-client/src/App.tsx` unconditionally redirect to that subdomain. Admin pages are **not** served by the user client build. This means:
+- Admin routes from `PRODUCT_REQUIREMENTS.md §2.*` refer to `admin.yuejuapp.com/*` routes
+- The `apps/admin-client` workspace must be built and deployed separately
+- In local development, run `apps/admin-client` on a separate port
 
 ## Onboarding Data Model
 
@@ -692,6 +805,7 @@ const { state, isHost, startSession, fetchTopics, advancePhase,
 **Full reference:** `docs/icebreaker-system.md`
 
 ## Recent Major Changes
+- Documentation gaps fixed (2026-03-16): QUICK_REFERENCE.md updated to V4 archetypes + WeChat-first auth + monorepo paths; PRD §1.1 updated to WeChat-first primary flow; Copilot Instructions stub sections filled in; admin subdomain deployment documented.
 - Social Icebreaker established as the primary in-event flow (2026-03-06); IcebreakerToolkit demoted to legacy.
 - Onboarding flow updated to state-driven, conditional architecture: personality test runs anonymously before WeChat sign-up; `FinalProfileReviewPage` added as active step; AI Chat Registration removed; guide step now conditional (renders Discover directly).
 - Interests carousel for enhanced user engagement.
