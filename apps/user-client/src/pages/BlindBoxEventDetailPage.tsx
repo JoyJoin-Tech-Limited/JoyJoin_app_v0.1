@@ -560,12 +560,12 @@ export default function BlindBoxEventDetailPage() {
               }>}
               matchExplanation={event.matchExplanation || undefined}
               currentUser={{
-                interests: user?.interestsDeep || user?.interestsRankedTop3 || [],
-                educationLevel: user?.educationLevel || undefined,
+                interests: (user?.interestsDeep?.length ? user.interestsDeep : user?.interestsRankedTop3) ?? [],
+                educationLevel: user?.educationLevel ?? undefined,
                 age: user?.birthdate ? calculateAge(user.birthdate) : undefined,
-                gender: user?.gender || undefined,
-                relationshipStatus: user?.relationshipStatus || undefined,
-                hometownRegionCity: user?.hometownRegionCity || undefined,
+                gender: user?.gender ?? undefined,
+                relationshipStatus: user?.relationshipStatus ?? undefined,
+                hometownRegionCity: user?.hometownRegionCity ?? undefined,
               }}
             />
           ) : (
