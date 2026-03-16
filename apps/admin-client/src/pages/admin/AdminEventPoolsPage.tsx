@@ -202,6 +202,14 @@ type CityFilter = "all" | "深圳" | "香港";
 type WaitingFilter = "all" | "hasWaiting" | "noWaiting";
 type EventsFilter = "all" | "hasEvents" | "noEvents";
 
+// Capacity fill thresholds for visual indicator
+const FILL_THRESHOLD_GREEN = 80;   // >= 80% fill is healthy (green)
+const FILL_THRESHOLD_AMBER = 50;   // >= 50% fill is moderate (amber), < 50% is low (red)
+
+// Match score color thresholds
+const MATCH_SCORE_GREEN = 80;
+const MATCH_SCORE_AMBER = 60;
+
 export default function AdminEventPoolsPage() {
   // ====== 过滤状态 ======
   const [cityFilter, setCityFilter] = useState<CityFilter>("all");
@@ -1207,7 +1215,7 @@ export default function AdminEventPoolsPage() {
                             {reg.matchScore !== null && reg.matchScore !== undefined && (
                               <Badge
                                 variant="outline"
-                                className={`text-xs ${reg.matchScore >= 80 ? 'text-green-700 border-green-300' : reg.matchScore >= 60 ? 'text-amber-700 border-amber-300' : 'text-red-700 border-red-300'}`}
+                                className={`text-xs ${reg.matchScore >= MATCH_SCORE_GREEN ? 'text-green-700 border-green-300' : reg.matchScore >= MATCH_SCORE_AMBER ? 'text-amber-700 border-amber-300' : 'text-red-700 border-red-300'}`}
                               >
                                 匹配分: {reg.matchScore}
                               </Badge>
@@ -1342,7 +1350,7 @@ export default function AdminEventPoolsPage() {
                                             {reg.matchScore !== null && reg.matchScore !== undefined && (
                                               <Badge
                                                 variant="outline"
-                                                className={`text-[10px] h-4 ${reg.matchScore >= 80 ? 'text-green-700' : reg.matchScore >= 60 ? 'text-amber-700' : 'text-red-700'}`}
+                                                className={`text-[10px] h-4 ${reg.matchScore >= MATCH_SCORE_GREEN ? 'text-green-700' : reg.matchScore >= MATCH_SCORE_AMBER ? 'text-amber-700' : 'text-red-700'}`}
                                               >
                                                 {reg.matchScore}
                                               </Badge>
@@ -1361,7 +1369,7 @@ export default function AdminEventPoolsPage() {
                           <div className="mb-2">
                             <div className="w-full bg-muted rounded-full h-2">
                               <div
-                                className={`h-2 rounded-full ${fillPercent >= 80 ? 'bg-green-500' : fillPercent >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                className={`h-2 rounded-full ${fillPercent >= FILL_THRESHOLD_GREEN ? 'bg-green-500' : fillPercent >= FILL_THRESHOLD_AMBER ? 'bg-amber-500' : 'bg-red-500'}`}
                                 style={{ width: `${fillPercent}%` }}
                               />
                             </div>
@@ -1388,7 +1396,7 @@ export default function AdminEventPoolsPage() {
                                 {m.matchScore !== null && m.matchScore !== undefined && (
                                   <Badge
                                     variant="outline"
-                                    className={`text-[10px] h-4 ml-1 ${m.matchScore >= 80 ? 'text-green-700 border-green-300' : m.matchScore >= 60 ? 'text-amber-700 border-amber-300' : 'text-red-700 border-red-300'}`}
+                                    className={`text-[10px] h-4 ml-1 ${m.matchScore >= MATCH_SCORE_GREEN ? 'text-green-700 border-green-300' : m.matchScore >= MATCH_SCORE_AMBER ? 'text-amber-700 border-amber-300' : 'text-red-700 border-red-300'}`}
                                   >
                                     {m.matchScore}
                                   </Badge>

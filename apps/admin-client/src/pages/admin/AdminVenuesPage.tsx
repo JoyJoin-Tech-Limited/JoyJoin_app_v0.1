@@ -848,13 +848,13 @@ export default function AdminVenuesPage() {
       barThemes: venue.barThemes || [],
       alcoholOptions: venue.alcoholOptions || [],
       vibeDescriptor: venue.vibeDescriptor || "",
-      partnerCompanyName: (venue as any).partnerCompanyName || "",
-      businessLicenseNo: (venue as any).businessLicenseNo || "",
-      partnerEmail: (venue as any).partnerEmail || "",
-      bankAccountInfo: (venue as any).bankAccountInfo || "",
-      contractStartDate: (venue as any).contractStartDate || "",
-      contractEndDate: (venue as any).contractEndDate || "",
-      onboardingStatus: (venue as any).onboardingStatus || "draft",
+      partnerCompanyName: venue.partnerCompanyName || "",
+      businessLicenseNo: venue.businessLicenseNo || "",
+      partnerEmail: venue.partnerEmail || "",
+      bankAccountInfo: venue.bankAccountInfo || "",
+      contractStartDate: venue.contractStartDate || "",
+      contractEndDate: venue.contractEndDate || "",
+      onboardingStatus: venue.onboardingStatus || "draft",
     });
     setShowEditDialog(true);
   };
@@ -1226,7 +1226,15 @@ export default function AdminVenuesPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredVenues.map((venue) => (
+          {filteredVenues.map((venue) => {
+            const onboardingStatus = venue.onboardingStatus;
+            const onboardingStatusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className: string }> = {
+              draft: { label: "草稿", variant: "secondary", className: "text-muted-foreground" },
+              pending_review: { label: "待审核", variant: "outline", className: "border-amber-400 text-amber-700" },
+              suspended: { label: "已暂停", variant: "destructive", className: "" },
+            };
+            const statusConfig = onboardingStatus && onboardingStatus !== 'active' ? onboardingStatusConfig[onboardingStatus] : null;
+            return (
             <Card key={venue.id} data-testid={`card-venue-${venue.id}`}>
               <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-3">
                 <div className="flex-1 min-w-0">
@@ -1242,12 +1250,12 @@ export default function AdminVenuesPage() {
                   <Badge variant="secondary">已停用</Badge>
                 )}
                 {/* Onboarding status badge */}
-                {(venue as any).onboardingStatus && (venue as any).onboardingStatus !== 'active' && (
+                {statusConfig && (
                   <Badge
-                    variant={(venue as any).onboardingStatus === 'pending_review' ? 'outline' : (venue as any).onboardingStatus === 'suspended' ? 'destructive' : 'secondary'}
-                    className={`text-xs ${(venue as any).onboardingStatus === 'pending_review' ? 'border-amber-400 text-amber-700' : (venue as any).onboardingStatus === 'draft' ? 'text-muted-foreground' : ''}`}
+                    variant={statusConfig.variant}
+                    className={`text-xs ${statusConfig.className}`}
                   >
-                    {(venue as any).onboardingStatus === 'draft' ? '草稿' : (venue as any).onboardingStatus === 'pending_review' ? '待审核' : '已暂停'}
+                    {statusConfig.label}
                   </Badge>
                 )}
               </CardHeader>
@@ -1278,10 +1286,10 @@ export default function AdminVenuesPage() {
                 </div>
 
                 {/* Partner info if available */}
-                {((venue as any).partnerCompanyName || (venue as any).contractEndDate) && (
+                {(venue.partnerCompanyName || venue.contractEndDate) && (
                   <div className="text-xs text-muted-foreground mt-1 pt-1 border-t">
-                    {(venue as any).partnerCompanyName && <div>🏢 {(venue as any).partnerCompanyName}</div>}
-                    {(venue as any).contractEndDate && <div>合同到期: {(venue as any).contractEndDate}</div>}
+                    {venue.partnerCompanyName && <div>🏢 {venue.partnerCompanyName}</div>}
+                    {venue.contractEndDate && <div>合同到期: {venue.contractEndDate}</div>}
                   </div>
                 )}
 
@@ -1362,7 +1370,8 @@ export default function AdminVenuesPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 
