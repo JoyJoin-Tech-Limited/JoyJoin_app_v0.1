@@ -62,9 +62,16 @@ export default function BlindBoxEventDetailPage() {
   const [hasAutoShownIcebreaker, setHasAutoShownIcebreaker] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [supportCardOpen, setSupportCardOpen] = useState(true);
+  const [icebreakerError, setIcebreakerError] = useState<string | null>(null);
 
   const { data: event, isLoading } = useQuery<BlindBoxEvent>({
     queryKey: ["/api/blind-box-events", eventId],
+    refetchInterval: (query) => {
+      const data = query.state.data as BlindBoxEvent | undefined;
+      if (!data?.dateTime) return 30_000;
+      const msUntilEvent = new Date(data.dateTime).getTime() - Date.now();
+      return msUntilEvent > 0 && msUntilEvent <= 5 * 60 * 1000 ? 1_000 : 30_000;
+    },
   });
 
   // Use reveal status to determine if match details should be shown
@@ -348,21 +355,28 @@ export default function BlindBoxEventDetailPage() {
     return `${month}月${day}日 ${weekday} ${hours}:${minutes}`;
   };
 
-  const getCountdown = (dateTime: Date) => {
+  const getCountdown = (dateTime: Date, status?: string) => {
     const now = new Date();
     const eventDate = new Date(dateTime);
     const diff = eventDate.getTime() - now.getTime();
     
     if (diff <= 0) return "活动进行中";
     
-    // Convert to total hours (including days converted to hours)
+    const isMatchedOrCompleted = status === "matched" || status === "completed";
+    const label = isMatchedOrCompleted ? "距开场" : "报名截止";
+
+    // Convert to total minutes
     const totalMinutes = Math.floor(diff / (1000 * 60));
+
+    if (totalMinutes === 0) {
+      return isMatchedOrCompleted ? "即将开场" : "即将开始";
+    }
     
     if (totalMinutes >= 60) {
       const totalHours = Math.ceil(diff / (1000 * 60 * 60));
-      return `报名截止 · ${totalHours}小时`;
+      return `${label} · ${totalHours}小时`;
     } else {
-      return `报名截止 · ${totalMinutes}分钟`;
+      return `${label} · ${totalMinutes}分钟`;
     }
   };
 
@@ -377,14 +391,21 @@ export default function BlindBoxEventDetailPage() {
   };
 
   const handleNavigation = () => {
-    if (event.restaurantLat && event.restaurantLng) {
-      const restaurantName = encodeURIComponent(event.restaurantName || '目的地');
-      
-      // 深圳使用高德地图，香港使用Google Maps
-      if (event.city === '深圳') {
+    const hasCoords = event.restaurantLat && event.restaurantLng;
+    const restaurantName = encodeURIComponent(event.restaurantName || '目的地');
+    const queryParts = [event.restaurantName, event.restaurantAddress].filter(Boolean).join(' ');
+
+    if (event.city === '深圳') {
+      if (hasCoords) {
         window.open(`https://uri.amap.com/navigation?to=${event.restaurantLng},${event.restaurantLat},${restaurantName}&mode=car&coordinate=gaode`, '_blank');
-      } else {
+      } else if (queryParts) {
+        window.open(`https://uri.amap.com/search?query=${encodeURIComponent(queryParts)}&city=深圳`, '_blank');
+      }
+    } else {
+      if (hasCoords) {
         window.open(`https://www.google.com/maps/dir/?api=1&destination=${event.restaurantLat},${event.restaurantLng}`, '_blank');
+      } else if (queryParts) {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryParts)}`, '_blank');
       }
     }
   };
@@ -448,7 +469,7 @@ export default function BlindBoxEventDetailPage() {
               <p className="text-sm text-muted-foreground">{formatDateTime(event.dateTime)}</p>
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-primary" />
-                <span className="font-medium text-primary">{getCountdown(event.dateTime)}</span>
+                <span className="font-medium text-primary">{getCountdown(event.dateTime, event.status)}</span>
               </div>
             </div>
 
@@ -578,58 +599,70 @@ export default function BlindBoxEventDetailPage() {
         ) : null}
 
         {/* 小悦话题入口按钮 (仅已匹配或已完成显示) */}
-        {(event.status === "matched" || event.status === "completed") && eventId && (
-          <>
-            <button
-              onClick={async () => {
-                const hasStarted = new Date() >= new Date(event.dateTime);
-                if (hasStarted) {
-                  try {
-                    const response = await fetch(`/api/events/${eventId}/session`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                    });
-                    if (!response.ok) {
-                      console.error('[BlindBox] Failed to get icebreaker session', response.statusText);
-                      return;
+        {(event.status === "matched" || event.status === "completed") && eventId && (() => {
+          const phase = getEventPhase(event.dateTime);
+          const phaseLabels = {
+            started:  { label: '🎲 活动进行中 🎉', subtitle: 'AI主持·5个环节·90分钟' },
+            revealed: { label: '破冰话题已解锁 ✨',   subtitle: '场地已揭晓，点击查看专属话题' },
+            waiting:  { label: '等待揭晓中…',        subtitle: '为你们准备的破冰话题' },
+          } as const;
+          const { label: ctaLabel, subtitle: ctaSubtitle } = phaseLabels[phase];
+          return (
+            <>
+              <button
+                onClick={async () => {
+                  setIcebreakerError(null);
+                  if (phase === "started") {
+                    try {
+                      const response = await fetch(`/api/events/${eventId}/session`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                      });
+                      if (!response.ok) {
+                        setIcebreakerError("无法开始破冰体验，请稍后再试");
+                        return;
+                      }
+                      const data = await response.json();
+                      const sessionId = data?.sessionId;
+                      if (!sessionId) {
+                        setIcebreakerError("无法开始破冰体验，请稍后再试");
+                        return;
+                      }
+                      setLocation(`/icebreaker/${sessionId}?mode=social&eventId=${eventId}`);
+                    } catch (error) {
+                      console.error('[BlindBox] Error starting icebreaker session', error);
+                      setIcebreakerError("无法开始破冰体验，请稍后再试");
                     }
-                    const data = await response.json();
-                    const sessionId = data?.sessionId;
-                    if (!sessionId) {
-                      console.error('[BlindBox] Missing sessionId in response', data);
-                      return;
-                    }
-                    setLocation(`/icebreaker/${sessionId}?mode=social&eventId=${eventId}`);
-                  } catch (error) {
-                    console.error('[BlindBox] Error starting icebreaker session', error);
+                  } else {
+                    setIcebreakerSheetOpen(true);
                   }
-                } else {
-                  setIcebreakerSheetOpen(true);
-                }
-              }}
-              className="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-600 rounded-xl p-4 transition-all active:scale-[0.98] shadow-lg"
-              data-testid="button-open-icebreaker"
-            >
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 border-2 border-white/30">
-                  <AvatarFallback className="bg-white/20 text-white text-sm font-medium">
-                    小悦
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 text-left">
-                  <p className="text-white font-semibold text-sm">
-                    {new Date() >= new Date(event.dateTime) ? '🎲 开始破冰体验' : '查看小悦精选话题'}
-                  </p>
-                  <p className="text-white/70 text-xs">
-                    {new Date() >= new Date(event.dateTime) ? 'AI主持·5个环节·90分钟' : '为你们准备的破冰话题'}
-                  </p>
+                }}
+                className="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-600 rounded-xl p-4 transition-all active:scale-[0.98] shadow-lg"
+                data-testid="button-open-icebreaker"
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10 border-2 border-white/30">
+                    <AvatarFallback className="bg-white/20 text-white text-sm font-medium">
+                      小悦
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 text-left">
+                    <p className="text-white font-semibold text-sm">
+                      {ctaLabel}
+                    </p>
+                    <p className="text-white/70 text-xs">
+                      {ctaSubtitle}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 text-white/80">
+                    <Sparkles className="h-4 w-4" />
+                    <ChevronRight className="h-4 w-4" />
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 text-white/80">
-                  <Sparkles className="h-4 w-4" />
-                  <ChevronRight className="h-4 w-4" />
-                </div>
-              </div>
-            </button>
+              </button>
+              {icebreakerError && (
+                <p className="text-sm text-destructive mt-2">{icebreakerError}</p>
+              )}
             
             <IcebreakerCardsSheet
               open={icebreakerSheetOpen}
@@ -639,40 +672,7 @@ export default function BlindBoxEventDetailPage() {
               isGirlsNight={event.isGirlsNight || false}
             />
           </>
-        )}
-
-        {/* 破冰卡牌游戏入口 (仅活动开始后显示) */}
-        {(event.status === "matched" || event.status === "completed") && eventId && (() => {
-          // Client-side time check: event has started
-          const now = new Date();
-          const eventTime = new Date(event.dateTime);
-          const hasEventStarted = now >= eventTime;
-          
-          return hasEventStarted ? (
-            <button
-              onClick={() => {
-                setLocation(`/icebreaker-game?eventId=${eventId}`);
-              }}
-              className="w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-500 hover:from-emerald-700 hover:via-teal-700 hover:to-cyan-600 rounded-xl p-4 transition-all active:scale-[0.98] shadow-lg"
-              data-testid="button-open-card-game"
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                  <Sparkles className="h-6 w-6 text-white" />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="text-white font-semibold text-sm">开始破冰卡牌游戏</p>
-                  <p className="text-white/70 text-xs">AI 为你们定制的互动卡牌</p>
-                </div>
-                <div className="flex items-center gap-1 text-white/80">
-                  <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
-                    新
-                  </Badge>
-                  <ChevronRight className="h-4 w-4" />
-                </div>
-              </div>
-            </button>
-          ) : null;
+          );
         })()}
 
         {/* VIP一键再约 (仅已完成活动显示) */}
