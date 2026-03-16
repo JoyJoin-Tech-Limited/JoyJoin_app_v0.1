@@ -64,9 +64,14 @@ const primaryNavItems = [
 ];
 
 function isNavItemActive(location: string, match: string[]): boolean {
-  return match.some(
-    (path) => location === path || location.startsWith(path + "/")
-  );
+  return match.some((path) => {
+    if (path === "/admin") {
+      // Treat the bare /admin path as an exact match only
+      return location === "/admin";
+    }
+
+    return location === path || location.startsWith(path + "/");
+  });
 }
 
 export function AdminSidebar() {
