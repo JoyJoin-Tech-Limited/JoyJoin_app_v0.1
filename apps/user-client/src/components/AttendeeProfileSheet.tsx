@@ -28,7 +28,6 @@ export default function AttendeeProfileSheet({
   onOpenChange,
 }: AttendeeProfileSheetProps) {
   const sparks = generateSparkPredictions(currentUser, attendee)
-    .slice()
     .sort((a, b) => (rarityOrder[a.rarity] ?? 2) - (rarityOrder[b.rarity] ?? 2));
 
   const archetypeImage = attendee.archetype ? getArchetypeImage(attendee.archetype) : null;

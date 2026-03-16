@@ -39,7 +39,7 @@ export function getEventCountdown(targetTime: Date | string, label?: string): st
 
   const prefix = label ? `${label} · ` : "";
 
-  if (days > 0) return `${prefix}${days}天${remainingHours}小时`;
+  if (days > 0) return `${prefix}${days}天${remainingHours > 0 ? remainingHours + "小时" : ""}`;
   if (hours > 0) return `${prefix}${hours}小时`;
   return `${prefix}${minutes}分钟`;
 }
