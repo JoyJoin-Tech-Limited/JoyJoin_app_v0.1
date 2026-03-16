@@ -582,12 +582,12 @@ export default function BlindBoxEventDetailPage() {
               }>}
               matchExplanation={event.matchExplanation || undefined}
               currentUser={{
-                interests: ["film_entertainment", "travel_exploration"], // Default interests
-                educationLevel: user?.educationLevel || "Master's",
+                interests: (user?.interestsDeep?.length ? user.interestsDeep : user?.interestsRankedTop3) ?? [],
+                educationLevel: user?.educationLevel ?? undefined,
                 age: user?.birthdate ? calculateAge(user.birthdate) : undefined,
-                gender: user?.gender || undefined,
-                relationshipStatus: user?.relationshipStatus || "Single",
-                hometownRegionCity: user?.hometownRegionCity || undefined,
+                gender: user?.gender ?? undefined,
+                relationshipStatus: user?.relationshipStatus ?? undefined,
+                hometownRegionCity: user?.hometownRegionCity ?? undefined,
               }}
             />
           ) : (
