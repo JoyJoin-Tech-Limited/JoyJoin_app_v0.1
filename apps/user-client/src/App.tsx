@@ -19,6 +19,7 @@ import MobileLandingPage from "@/pages/MobileLandingPage";
 // InterestsTopicsPage and EditInterestsPage moved to _backup_modules/interests-topics-legacy/ (2026-01-19)
 import PersonalityTestPageV4 from "@/pages/PersonalityTestPageV4";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
+import WeChatAuthGatePage from "@/pages/WeChatAuthGatePage";
 import ProfileSetupPage from "@/pages/ProfileSetupPage";
 import EssentialDataPage from "@/pages/EssentialDataPage";
 import ExtendedDataPage from "@/pages/ExtendedDataPage";
@@ -131,6 +132,7 @@ function AuthenticatedRouter() {
       return (
         <Switch>
           <Route path="/personality-test" component={PersonalityTestPageV4} />
+          <Route path="/personality-test/auth-gate" component={WeChatAuthGatePage} />
           <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
           <Route path="/personality-test/results" component={PersonalityTestResultPage} />
           <Route path="*" component={RedirectToPersonalityTest} />
@@ -141,6 +143,7 @@ function AuthenticatedRouter() {
       return (
         <Switch>
           <Route path="/personality-test" component={PersonalityTestPageV4} />
+          <Route path="/personality-test/auth-gate" component={WeChatAuthGatePage} />
           <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
           <Route path="/personality-test/results" component={PersonalityTestResultPage} />
           <Route path="/onboarding/setup" component={EssentialDataPage} />
@@ -229,6 +232,7 @@ function AuthenticatedRouter() {
           <Route path="/event/:id" component={EventDetailPage} />
           <Route path="/invite" component={InvitePage} />
           <Route path="/personality-test" component={PersonalityTestPageV4} />
+          <Route path="/personality-test/auth-gate" component={WeChatAuthGatePage} />
           <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
           <Route path="/personality-test/results" component={PersonalityTestResultPage} />
           <Route component={NotFound} />
@@ -283,6 +287,7 @@ function Router() {
       <Switch>
         {/* Anonymous personality test (Option B: Post-Test Signup Flow - 2026-02-04) */}
         <Route path="/personality-test" component={PersonalityTestPageV4} />
+        <Route path="/personality-test/auth-gate" component={WeChatAuthGatePage} />
         <Route path="/personality-test/results" component={PersonalityTestResultPage} />
         <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
         
