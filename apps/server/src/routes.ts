@@ -10710,24 +10710,24 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
-  // ============ CHAT LOGS ROUTES ============
+  // ============ INTERACTION LOGS ROUTES ============
   
-  // POST /api/chat-logs - Internal logging endpoint
-  app.post("/api/chat-logs", async (req, res) => {
+  // POST /api/interaction-logs - Internal logging endpoint
+  app.post("/api/interaction-logs", async (req, res) => {
     try {
       const validatedData = insertChatLogSchema.parse(req.body);
       
-      const log = await storage.createChatLog(validatedData);
+      const log = await storage.createInteractionLog(validatedData);
       
       res.json(log);
     } catch (error: any) {
-      console.error("Error creating chat log:", error);
+      console.error("Error creating interaction log:", error);
       res.status(400).json({ message: error.message || "Failed to create log" });
     }
   });
 
-  // GET /api/admin/chat-logs - Admin queries logs with filters
-  app.get("/api/admin/chat-logs", requireAdmin, async (req, res) => {
+  // GET /api/admin/interaction-logs - Admin queries logs with filters
+  app.get("/api/admin/interaction-logs", requireAdmin, async (req, res) => {
     try {
       const { eventId, userId, severity, startDate, endDate } = req.query;
       
@@ -10738,23 +10738,23 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       if (startDate) filters.startDate = new Date(startDate as string);
       if (endDate) filters.endDate = new Date(endDate as string);
       
-      const logs = await storage.getChatLogs(filters);
+      const logs = await storage.getInteractionLogs(filters);
       
       res.json(logs);
     } catch (error: any) {
-      console.error("Error fetching chat logs:", error);
+      console.error("Error fetching interaction logs:", error);
       res.status(500).json({ message: "Failed to fetch logs" });
     }
   });
 
-  // GET /api/admin/chat-logs/stats - Admin gets log statistics
-  app.get("/api/admin/chat-logs/stats", requireAdmin, async (req, res) => {
+  // GET /api/admin/interaction-logs/stats - Admin gets log statistics
+  app.get("/api/admin/interaction-logs/stats", requireAdmin, async (req, res) => {
     try {
-      const stats = await storage.getChatLogStats();
+      const stats = await storage.getInteractionLogStats();
       
       res.json(stats);
     } catch (error: any) {
-      console.error("Error fetching chat log stats:", error);
+      console.error("Error fetching interaction log stats:", error);
       res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
