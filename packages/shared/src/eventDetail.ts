@@ -45,15 +45,50 @@ export function getEventCountdown(targetTime: Date | string, label?: string): st
 }
 
 /**
- * Formats a datetime for display in Chinese locale.
+ * Formats a datetime for display in Chinese locale, pinned to Hong Kong time (UTC+8).
  */
 export function formatEventDateTime(dateTime: Date | string): string {
   const date = new Date(dateTime);
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-  const weekday = weekdays[date.getDay()];
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  return `${month}月${day}日 ${weekday} ${hours}:${minutes}`;
+
+  const formatter = new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Hong_Kong",
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(date);
+
+  let month = "";
+  let day = "";
+  let weekday = "";
+  let hour = "";
+  let minute = "";
+
+  for (const part of parts) {
+    switch (part.type) {
+      case "month":
+        month = part.value;
+        break;
+      case "day":
+        day = part.value;
+        break;
+      case "weekday":
+        weekday = part.value;
+        break;
+      case "hour":
+        hour = part.value;
+        break;
+      case "minute":
+        minute = part.value;
+        break;
+      default:
+        break;
+    }
+  }
+
+  return `${month}月${day}日 ${weekday} ${hour}:${minute}`;
 }
