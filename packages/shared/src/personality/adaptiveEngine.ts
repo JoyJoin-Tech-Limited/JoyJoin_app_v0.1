@@ -129,7 +129,7 @@ export interface EngineState {
   questionHistory: AnsweredQuestion[];
   config: AssessmentConfig;
   detectedCohort?: CohortType;
-  traitScoreHistory?: Record<TraitKey, number[]>;
+  traitScoreHistory: Record<TraitKey, number[]>;
 }
 
 export function initializeEngineState(config?: Partial<AssessmentConfig>): EngineState {
