@@ -240,7 +240,7 @@ export default function AdminEventsPage() {
       selectedLanguages: [],
       selectedTasteIntensity: [],
       selectedCuisines: [],
-      autoMatch: true,
+      autoMatch: false,
     },
   });
 
@@ -768,6 +768,9 @@ export default function AdminEventsPage() {
                         <FormLabel>自动匹配模式</FormLabel>
                         <p className="text-xs text-muted-foreground">
                           开启后，可以在匹配页面一键从池子中按偏好/人数匹配用户。
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          关闭时，管理员需手动触发匹配；建议先人工审核报名后再开启自动匹配
                         </p>
                       </div>
                       <FormControl>
