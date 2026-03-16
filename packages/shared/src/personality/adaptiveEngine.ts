@@ -839,9 +839,7 @@ export function calculateValidityScore(state: EngineState): number {
   }
 
   // Check 2: Low trait differentiation — stdev of normalized trait scores < 8
-  const traitValues = (Object.keys(state.traitConfidences) as TraitKey[]).map(
-    t => state.traitConfidences[t].score
-  );
+  const traitValues = ALL_TRAITS.map(trait => state.traitConfidences[trait].score);
   if (traitValues.length > 0) {
     const mean = traitValues.reduce((sum, v) => sum + v, 0) / traitValues.length;
     const variance = traitValues.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / traitValues.length;
