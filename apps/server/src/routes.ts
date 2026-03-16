@@ -9815,7 +9815,50 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
-  // Finance - Get statistics
+  // Confirm attendance for a pool group
+  app.post("/api/pool-groups/:groupId/confirm-attendance", requireAuth, async (req, res) => {
+    try {
+      const groupId = req.params.groupId;
+      const session = req.session as any;
+      const userId = session?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Verify the user is a member of this group
+      const userRegistration = await db.query.eventPoolRegistrations.findFirst({
+        where: (regs: any, { eq, and }: any) =>
+          and(eq(regs.assignedGroupId, groupId), eq(regs.userId, userId)),
+      });
+
+      if (!userRegistration) {
+        return res.status(403).json({ message: "You are not a member of this group" });
+      }
+
+      // Look up the event pool to find a linked blind box event
+      const group = await db.query.eventPoolGroups.findFirst({
+        where: (groups: any, { eq }: any) => eq(groups.id, groupId),
+      });
+
+      let blindBoxEventId: string | null = null;
+      if (group?.poolId) {
+        const linkedEvent = await db
+          .select({ id: blindBoxEvents.id })
+          .from(blindBoxEvents)
+          .where(eq(blindBoxEvents.eventPoolId, group.poolId))
+          .limit(1);
+        if (linkedEvent.length > 0) {
+          blindBoxEventId = linkedEvent[0].id;
+        }
+      }
+
+      res.json({ success: true, blindBoxEventId });
+    } catch (error) {
+      console.error("Error confirming pool group attendance:", error);
+      res.status(500).json({ message: "Failed to confirm attendance" });
+    }
+  });
   app.get("/api/admin/finance/stats", requireAdmin, async (req, res) => {
     try {
       const stats = await storage.getFinanceStats();

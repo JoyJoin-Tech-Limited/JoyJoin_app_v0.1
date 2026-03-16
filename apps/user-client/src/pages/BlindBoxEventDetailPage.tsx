@@ -10,6 +10,7 @@ import { ArrowLeft, Clock, MapPin, DollarSign, Users, Navigation, AlertCircle, S
 import type { BlindBoxEvent, Venue, VenueDeal } from "@shared/schema";
 import { getCurrencySymbol } from "@/lib/currency";
 import { calculateAge } from "@shared/utils";
+import { getEventPhase } from "@shared/eventDetail";
 import { getUserAllInterests } from "@/lib/userFieldMappings";
 import IcebreakerCardsSheet from "@/components/IcebreakerCardsSheet";
 import PostMatchEventCard from "@/components/PostMatchEventCard";
