@@ -144,6 +144,11 @@ export default function MatchingStatusPage() {
   const { data: poolStats } = useQuery<PoolStats>({
     queryKey: ["/api/event-pools", registration?.poolId, "group-fill"],
     enabled: !!registration?.poolId,
+    refetchInterval: (() => {
+      if (!registration?.poolDateTime) return 30_000;
+      const msUntilEvent = new Date(registration.poolDateTime).getTime() - Date.now();
+      return msUntilEvent > 0 && msUntilEvent <= 5 * 60 * 1000 ? 1_000 : 30_000;
+    })(),
   });
 
   // Fetch group members when matched
