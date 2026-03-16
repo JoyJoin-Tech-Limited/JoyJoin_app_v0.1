@@ -36,8 +36,8 @@ interface InteractionLog {
 interface InteractionLogStats {
   total: number;
   info: number;
-  warning: number;
-  error: number;
+  warnings: number;
+  errors: number;
 }
 
 const severityConfig: Record<string, { label: string; icon: any; variant: "default" | "secondary" | "destructive" }> = {
@@ -54,22 +54,23 @@ export default function AdminInteractionLogsPage() {
   const [endDate, setEndDate] = useState("");
   const [selectedLog, setSelectedLog] = useState<InteractionLog | null>(null);
 
-  const buildQueryParams = () => {
-    const params: any = {};
-    if (eventIdFilter) params.eventId = eventIdFilter;
-    if (userIdFilter) params.userId = userIdFilter;
-    if (severityFilter && severityFilter !== "all") params.severity = severityFilter;
-    if (startDate) params.startDate = startDate;
-    if (endDate) params.endDate = endDate;
-    return params;
-  };
-
   const { data: stats } = useQuery<InteractionLogStats>({
-    queryKey: ["/api/admin/chat-logs/stats"],
+    queryKey: ["/api/admin/interaction-logs/stats"],
   });
 
   const { data: logs = [], isLoading, isError, error, refetch } = useQuery<InteractionLog[]>({
-    queryKey: ["/api/admin/chat-logs", buildQueryParams()],
+    queryKey: ["/api/admin/interaction-logs", eventIdFilter, userIdFilter, severityFilter, startDate, endDate],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (eventIdFilter) params.append("eventId", eventIdFilter);
+      if (userIdFilter) params.append("userId", userIdFilter);
+      if (severityFilter && severityFilter !== "all") params.append("severity", severityFilter);
+      if (startDate) params.append("startDate", startDate);
+      if (endDate) params.append("endDate", endDate);
+      const response = await fetch(`/api/admin/interaction-logs?${params}`, { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
     retry: 2,
   });
 
@@ -160,7 +161,7 @@ export default function AdminInteractionLogsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">警告</p>
-                  <p className="text-2xl font-bold" data-testid="stat-warning">{stats.warning}</p>
+                  <p className="text-2xl font-bold" data-testid="stat-warning">{stats.warnings}</p>
                 </div>
               </div>
             </CardContent>
@@ -174,7 +175,7 @@ export default function AdminInteractionLogsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">错误</p>
-                  <p className="text-2xl font-bold" data-testid="stat-error">{stats.error}</p>
+                  <p className="text-2xl font-bold" data-testid="stat-error">{stats.errors}</p>
                 </div>
               </div>
             </CardContent>

@@ -175,7 +175,7 @@ export default function EventCoordinationDetailPage() {
       
       // Log message send failure
       try {
-        await apiRequest("POST", "/api/chat-logs", {
+        await apiRequest("POST", "/api/interaction-logs", {
           eventType: "message_failed",
           eventId: eventId,
           userId: currentUser?.id,
