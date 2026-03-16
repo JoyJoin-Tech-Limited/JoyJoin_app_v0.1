@@ -402,7 +402,7 @@ export default function PersonalityTestPageV4() {
           console.error('[PersonalityTestPageV4] Failed to save checkpoint:', e);
         }
         
-        setLocation('/personality-test/results');
+        setLocation('/personality-test/auth-gate');
       })();
     }
   }, [isComplete, result, setLocation, saveCheckpoint]);
@@ -438,7 +438,7 @@ export default function PersonalityTestPageV4() {
 
   useEffect(() => {
     if (isInitialized && isComplete) {
-      setLocation("/personality-test/results");
+      setLocation("/personality-test/auth-gate");
     }
   }, [isInitialized, isComplete, setLocation]);
 
