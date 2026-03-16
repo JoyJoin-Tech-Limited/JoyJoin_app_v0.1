@@ -1,5 +1,9 @@
 # JoyJoin Quick Reference Guide
 
+> ⚠️ **SUPPLEMENTARY REFERENCE ONLY** — Some sections of this file are outdated.  
+> For active development, always use **`DEVELOPER_QUICK_REFERENCE.md`** (canonical, up-to-date) and **`PRODUCT_REQUIREMENTS.md`** (authoritative PRD).  
+> **Never base code or copy decisions solely on this file.** Sections marked ⚠️ are known to be outdated.
+
 **For rapid onboarding and daily development reference**
 
 ---
