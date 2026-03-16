@@ -13,7 +13,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import BottomNav from "@/components/BottomNav";
 import CardDeckReveal, { type SquadMember } from "@/components/CardDeckReveal";
 import { useAuth } from "@/hooks/useAuth";
 import { calculateAge } from "@/lib/userFieldMappings";
@@ -98,8 +97,9 @@ const MOCK_SQUAD: SquadMember[] = [
   },
 ];
 
-// Action zone sits above BottomNav; aligns with standard bottom spacing (~64px / pb-16)
-const ACTION_ZONE_BOTTOM = 64;
+// Action zone sits at the bottom; uses safe-area-inset-bottom so it clears
+// the device home indicator without leaving the old BottomNav-sized gap.
+const ACTION_ZONE_BOTTOM_STYLE = "calc(env(safe-area-inset-bottom, 0px) + 16px)";
 
 export default function SquadUnboxingFlow() {
   const [, setLocation] = useLocation();
@@ -341,7 +341,7 @@ export default function SquadUnboxingFlow() {
         {showActionZone && (
           <motion.div
             className="fixed left-0 right-0 px-5 flex flex-col gap-3"
-            style={{ bottom: ACTION_ZONE_BOTTOM }}
+            style={{ bottom: ACTION_ZONE_BOTTOM_STYLE }}
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}
@@ -367,7 +367,6 @@ export default function SquadUnboxingFlow() {
         )}
       </AnimatePresence>
 
-      {/* ── Skip Confirmation Dialog ── */}
       <AlertDialog open={showSkipDialog} onOpenChange={setShowSkipDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -396,8 +395,6 @@ export default function SquadUnboxingFlow() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <BottomNav />
     </div>
   );
 }
