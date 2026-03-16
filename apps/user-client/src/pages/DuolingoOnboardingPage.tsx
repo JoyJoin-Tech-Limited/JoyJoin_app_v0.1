@@ -72,7 +72,7 @@ interface V4AnchorQuestion {
 }
 
 const ONBOARDING_QUESTIONS_COUNT = 8;
-const AUTO_ADVANCE_DELAY_MS = 600;
+const AUTO_ADVANCE_DELAY_MS = 900;
 const AUTO_ADVANCE_DELAY_REDUCED_MOTION_MS = 100;
 
 function stripEmoji(text: string): string {
@@ -942,9 +942,8 @@ export default function DuolingoOnboardingPage() {
             <MobileActionBar>
               <Button 
                 size="lg"
-                className="w-full h-14 text-lg rounded-2xl"
+                className={cn("w-full h-14 text-lg rounded-2xl", !currentAnswer && "opacity-40")}
                 onClick={handleNext}
-                disabled={!currentAnswer}
                 data-testid="button-continue"
               >
                 继续
