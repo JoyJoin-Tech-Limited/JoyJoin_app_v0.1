@@ -147,7 +147,7 @@ export default function MeetYourTable({
                 key={attendee.userId}
                 role="button"
                 tabIndex={0}
-                onClick={() => setSelectedAttendee(attendee)}
+                onClickCapture={(e) => { e.stopPropagation(); setSelectedAttendee(attendee); }}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedAttendee(attendee); } }}
                 className="cursor-pointer"
               >
