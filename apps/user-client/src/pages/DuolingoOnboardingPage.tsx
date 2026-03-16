@@ -942,8 +942,17 @@ export default function DuolingoOnboardingPage() {
             <MobileActionBar>
               <Button 
                 size="lg"
-                className={cn("w-full h-14 text-lg rounded-2xl", !currentAnswer && "opacity-40")}
-                onClick={handleNext}
+                className={cn(
+                  "w-full h-14 text-lg rounded-2xl",
+                  (!currentAnswer || isAutoAdvancing) && "opacity-40 cursor-not-allowed"
+                )}
+                disabled={!currentAnswer || isAutoAdvancing}
+                onClick={() => {
+                  if (!currentAnswer || isAutoAdvancing) {
+                    return;
+                  }
+                  handleNext();
+                }}
                 data-testid="button-continue"
               >
                 继续
