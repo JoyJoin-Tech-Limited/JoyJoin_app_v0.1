@@ -13,7 +13,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import BottomNav from "@/components/BottomNav";
 import CardDeckReveal, { type SquadMember } from "@/components/CardDeckReveal";
 import { useAuth } from "@/hooks/useAuth";
 import { calculateAge } from "@/lib/userFieldMappings";
@@ -98,7 +97,7 @@ const MOCK_SQUAD: SquadMember[] = [
   },
 ];
 
-// Action zone sits above BottomNav; aligns with standard bottom spacing (~64px / pb-16)
+// Action zone sits at the bottom; provides safe spacing above device home indicator
 const ACTION_ZONE_BOTTOM = 64;
 
 export default function SquadUnboxingFlow() {
@@ -367,7 +366,6 @@ export default function SquadUnboxingFlow() {
         )}
       </AnimatePresence>
 
-      {/* ── Skip Confirmation Dialog ── */}
       <AlertDialog open={showSkipDialog} onOpenChange={setShowSkipDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -396,8 +394,6 @@ export default function SquadUnboxingFlow() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <BottomNav />
     </div>
   );
 }

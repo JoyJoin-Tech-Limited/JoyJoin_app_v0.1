@@ -4,8 +4,8 @@ import { storage } from "./storage";
 // 简化的验证码存储（生产环境应使用Redis）
 const verificationCodes = new Map<string, { code: string; expiresAt: number }>();
 
-// 🎯 DEMO MODE: 万能验证码，方便演示
-const DEMO_CODE = "666666";
+// 🎯 DEMO MODE: 万能验证码，方便演示（仅非生产环境启用）
+const DEMO_CODE = process.env.NODE_ENV !== 'production' ? "666666" : null;
 
 // 生成6位数验证码
 function generateCode(): string {
@@ -17,7 +17,7 @@ export function validateVerificationCode(phoneNumber: string, code: string) {
   if (!phoneNumber || !code) {
     return { ok: false, message: 'Phone number and code are required' };
   }
-  if (code === DEMO_CODE) {
+  if (DEMO_CODE && code === DEMO_CODE) {
     return { ok: true, demo: true };
   }
   const storedData = verificationCodes.get(phoneNumber);
@@ -165,11 +165,14 @@ export function setupPhoneAuth(app: Express) {
         userId = newUser.id;
         isNewUser = true;
         
-        // 🎯 DEMO MODE: 为新用户创建演示数据
+        // 🎯 DEMO MODE: 为新用户创建演示数据（仅非生产环境）
         // 如果使用的是演示验证码666666，只创建基础账号让用户测试注册流程
         // 否则创建完整演示数据
-        const isUsingDemoCode = code === DEMO_CODE;
-        if (!isUsingDemoCode) {
+        // Note: DEMO_CODE is null in production, so isUsingDemoCode is always false there.
+        // The NODE_ENV guard is still required to prevent createDemoDataForUser from running
+        // in production (isUsingDemoCode being false does NOT skip the call).
+        const isUsingDemoCode = DEMO_CODE !== null && code === DEMO_CODE;
+        if (process.env.NODE_ENV !== 'production' && !isUsingDemoCode) {
           await createDemoDataForUser(userId);
         }
       }
