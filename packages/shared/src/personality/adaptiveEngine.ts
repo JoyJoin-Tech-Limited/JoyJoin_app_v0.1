@@ -179,9 +179,10 @@ export function processAnswer(
   newState.traitScores = { ...state.traitScores };
   newState.traitSampleCounts = { ...state.traitSampleCounts };
   newState.traitConfidences = { ...state.traitConfidences };
-  newState.traitScoreHistory = state.traitScoreHistory
-    ? { A: [...state.traitScoreHistory.A], C: [...state.traitScoreHistory.C], E: [...state.traitScoreHistory.E], O: [...state.traitScoreHistory.O], X: [...state.traitScoreHistory.X], P: [...state.traitScoreHistory.P] }
-    : { A: [], C: [], E: [], O: [], X: [], P: [] };
+  newState.traitScoreHistory = ALL_TRAITS.reduce((acc, trait) => {
+    acc[trait] = state.traitScoreHistory ? [...state.traitScoreHistory[trait]] : [];
+    return acc;
+  }, {} as Record<TraitKey, number[]>);
   
   for (const [trait, score] of Object.entries(option.traitScores) as [TraitKey, number][]) {
     if (score !== undefined && score !== 0) {
