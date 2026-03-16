@@ -347,21 +347,26 @@ export default function BlindBoxEventDetailPage() {
     return `${month}月${day}日 ${weekday} ${hours}:${minutes}`;
   };
 
-  const getCountdown = (dateTime: Date) => {
+  const getCountdown = (dateTime: Date, status?: string) => {
     const now = new Date();
     const eventDate = new Date(dateTime);
     const diff = eventDate.getTime() - now.getTime();
     
     if (diff <= 0) return "活动进行中";
     
-    // Convert to total hours (including days converted to hours)
+    const isMatchedOrCompleted = status === "matched" || status === "completed";
+    const label = isMatchedOrCompleted ? "距开场" : "报名截止";
+
+    // Convert to total minutes
     const totalMinutes = Math.floor(diff / (1000 * 60));
+
+    if (totalMinutes === 0) return "活动进行中";
     
     if (totalMinutes >= 60) {
       const totalHours = Math.ceil(diff / (1000 * 60 * 60));
-      return `报名截止 · ${totalHours}小时`;
+      return `${label} · ${totalHours}小时`;
     } else {
-      return `报名截止 · ${totalMinutes}分钟`;
+      return `${label} · ${totalMinutes}分钟`;
     }
   };
 
@@ -447,7 +452,7 @@ export default function BlindBoxEventDetailPage() {
               <p className="text-sm text-muted-foreground">{formatDateTime(event.dateTime)}</p>
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-primary" />
-                <span className="font-medium text-primary">{getCountdown(event.dateTime)}</span>
+                <span className="font-medium text-primary">{getCountdown(event.dateTime, event.status)}</span>
               </div>
             </div>
 
@@ -639,40 +644,6 @@ export default function BlindBoxEventDetailPage() {
             />
           </>
         )}
-
-        {/* 破冰卡牌游戏入口 (仅活动开始后显示) */}
-        {(event.status === "matched" || event.status === "completed") && eventId && (() => {
-          // Client-side time check: event has started
-          const now = new Date();
-          const eventTime = new Date(event.dateTime);
-          const hasEventStarted = now >= eventTime;
-          
-          return hasEventStarted ? (
-            <button
-              onClick={() => {
-                setLocation(`/icebreaker-game?eventId=${eventId}`);
-              }}
-              className="w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-500 hover:from-emerald-700 hover:via-teal-700 hover:to-cyan-600 rounded-xl p-4 transition-all active:scale-[0.98] shadow-lg"
-              data-testid="button-open-card-game"
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                  <Sparkles className="h-6 w-6 text-white" />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="text-white font-semibold text-sm">开始破冰卡牌游戏</p>
-                  <p className="text-white/70 text-xs">AI 为你们定制的互动卡牌</p>
-                </div>
-                <div className="flex items-center gap-1 text-white/80">
-                  <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
-                    新
-                  </Badge>
-                  <ChevronRight className="h-4 w-4" />
-                </div>
-              </div>
-            </button>
-          ) : null;
-        })()}
 
         {/* VIP一键再约 (仅已完成活动显示) */}
         {event.status === "completed" && eventId && (
