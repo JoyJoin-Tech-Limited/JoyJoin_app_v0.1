@@ -372,14 +372,22 @@ export default function BlindBoxEventDetailPage() {
   };
 
   const handleNavigation = () => {
-    if (event.restaurantLat && event.restaurantLng) {
-      const restaurantName = encodeURIComponent(event.restaurantName || '目的地');
-      
-      // 深圳使用高德地图，香港使用Google Maps
-      if (event.city === '深圳') {
+    const hasCoords = event.restaurantLat && event.restaurantLng;
+
+    if (event.city === '深圳') {
+      if (hasCoords) {
+        const restaurantName = encodeURIComponent(event.restaurantName || '目的地');
         window.open(`https://uri.amap.com/navigation?to=${event.restaurantLng},${event.restaurantLat},${restaurantName}&mode=car&coordinate=gaode`, '_blank');
       } else {
+        const query = encodeURIComponent(`${event.restaurantName || ''} ${event.restaurantAddress || ''}`.trim());
+        window.open(`https://uri.amap.com/search?query=${query}&city=深圳`, '_blank');
+      }
+    } else {
+      if (hasCoords) {
         window.open(`https://www.google.com/maps/dir/?api=1&destination=${event.restaurantLat},${event.restaurantLng}`, '_blank');
+      } else {
+        const query = encodeURIComponent(`${event.restaurantName || ''} ${event.restaurantAddress || ''}`.trim());
+        window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
       }
     }
   };

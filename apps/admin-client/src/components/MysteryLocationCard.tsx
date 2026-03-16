@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Lock, Sparkles } from "lucide-react";
 import { useRevealStatus } from "@/hooks/useRevealStatus";
+import { REVEAL_THRESHOLD_HOURS, formatEventDateTime } from "@shared/eventDetail";
 
 interface MysteryLocationCardProps {
   eventDateTime: Date | string;
@@ -15,6 +16,9 @@ export default function MysteryLocationCard({
   district 
 }: MysteryLocationCardProps) {
   const { countdown, isRevealed } = useRevealStatus(eventDateTime);
+
+  const revealTime = new Date(new Date(eventDateTime).getTime() - REVEAL_THRESHOLD_HOURS * 60 * 60 * 1000);
+  const isRevealAlreadyPast = revealTime <= new Date();
 
   if (isRevealed) {
     return null;
@@ -64,6 +68,11 @@ export default function MysteryLocationCard({
               <p className="text-xs text-muted-foreground">
                 {countdown}后解锁具体位置
               </p>
+              {!isRevealAlreadyPast && (
+                <p className="text-xs text-muted-foreground">
+                  预计揭晓时间：{formatEventDateTime(revealTime)}
+                </p>
+              )}
               {(city || district) && (
                 <p className="text-xs text-muted-foreground/80">
                   范围：{city}{district ? `·${district}` : ""}
