@@ -6,6 +6,35 @@
 
 ---
 
+## ⚠️ CANONICAL RULE: Always Use Active Flow — Never Reference Legacy
+
+> **This rule applies to ALL contributors: human engineers, AI coding agents, and documentation authors.**
+
+**When writing code, copy, documentation, or making any implementation decision:**
+
+- ✅ Base everything on the **current, active codebase** — routes, components, schemas, and API endpoints that exist and are actively used.
+- ✅ Check this file (`DEVELOPER_QUICK_REFERENCE.md`) and `PRODUCT_REQUIREMENTS.md` § *Product Canon & Terminology* for the authoritative active-flow reference.
+- ❌ **Never** refer to, reintroduce, or base decisions on **legacy flows, deprecated components, old routes, or removed features** — even if they appear in older git history, archived docs, or comments marked "TODO: restore".
+- ❌ **Never** treat `QUICK_REFERENCE.md` (the older file) as authoritative — it is a supplementary reference only and some sections are outdated. `DEVELOPER_QUICK_REFERENCE.md` supersedes it.
+- ❌ **Never** use deprecated terminology from §*Product Canon* — see `PRODUCT_REQUIREMENTS.md` for the current canonical terms.
+
+### What counts as "legacy" (do not use)?
+- The **14-archetype V1/V2 system** (火花塞, 探索者, 故事家…) — replaced by the **12-archetype V4 system**
+- The **`/chats` event-chat/group-chat surface** — replaced by `/connections` (structured mutual connections)
+- Any **direct-message (DM) UI or API** — removed; the product does not have in-app private messaging
+- The **`圈子`** nav label — replaced by `连接`
+- **`会员 / VIP会员`** user-facing copy — replaced by `权益`
+- Any reference to the **`shared/` root folder** as the import source — use `packages/shared/src/` instead
+- The **`/guide` page** as a core onboarding step — it is deprecated; onboarding flows through `/onboarding/setup` and `/onboarding/extended`
+- **Demo code `666666`** and `createDemoDataForUser` in production — gated on `NODE_ENV !== 'production'`
+
+### If you are unsure whether something is active or legacy:
+1. Check whether the file/route/component is imported and used in `App.tsx` or an active page.
+2. Check `PRODUCT_REQUIREMENTS.md` § *Product Canon & Terminology*.
+3. If still unsure, flag for human review rather than guessing.
+
+---
+
 ## Quick Start
 
 ### Prerequisites
@@ -802,11 +831,14 @@ const mutation = useMutation({
 
 ## Quick Links
 
-| Resource | Location |
-|----------|----------|
-| Product Requirements | `PRODUCT_REQUIREMENTS.md` |
-| Design Guidelines | `design_guidelines.md` |
-| API Routes | `apps/server/src/routes.ts` |
-| Database Schema | `packages/shared/src/schema.ts` |
-| Archetype Data | `packages/shared/src/personality/archetypeRegistry.ts` |
-| Changelog | `CHANGELOG_24H.md` |
+| Resource | Location | Notes |
+|----------|----------|-------|
+| Product Canon & Active Terminology | `PRODUCT_REQUIREMENTS.md` § Product Canon | **Authoritative — always use this** |
+| Active Flow Reference | `DEVELOPER_QUICK_REFERENCE.md` (this file) | **Primary dev reference** |
+| Product Requirements | `PRODUCT_REQUIREMENTS.md` | Full PRD |
+| Design Guidelines | `design_guidelines.md` | - |
+| API Routes | `apps/server/src/routes.ts` | - |
+| Database Schema | `packages/shared/src/schema.ts` | - |
+| Archetype Data | `packages/shared/src/personality/archetypeRegistry.ts` | - |
+| Changelog | `CHANGELOG_24H.md` | - |
+| Supplementary (outdated sections) | `QUICK_REFERENCE.md` | ⚠️ Supplementary only — not authoritative |
