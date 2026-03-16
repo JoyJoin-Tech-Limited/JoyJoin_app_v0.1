@@ -543,7 +543,7 @@ function MemberCard({
                             padding: "4px 6px",
                             borderRadius: 8,
                             border: "1px solid rgba(245,158,11,0.70)",
-                            background: "linear-gradient(135deg, #FEF3C7, #FDE68A)",
+                            backgroundColor: "#FEF3C7",
                           }}
                         >
                           <motion.span
