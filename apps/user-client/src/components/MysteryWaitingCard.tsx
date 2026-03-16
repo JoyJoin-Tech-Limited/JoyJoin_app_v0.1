@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { HelpCircle, Sparkles, Clock } from "lucide-react";
 import { useRevealStatus } from "@/hooks/useRevealStatus";
+import { REVEAL_THRESHOLD_HOURS, formatEventDateTime } from "@shared/eventDetail";
 
 interface MysteryWaitingCardProps {
   eventDateTime: Date | string;
@@ -18,6 +19,9 @@ const MYSTERY_PLACEHOLDERS = [
 
 export default function MysteryWaitingCard({ eventDateTime, participantCount = 4 }: MysteryWaitingCardProps) {
   const { countdown, countdownMessage, precision, isRevealed } = useRevealStatus(eventDateTime);
+
+  const revealTime = new Date(new Date(eventDateTime).getTime() - REVEAL_THRESHOLD_HOURS * 60 * 60 * 1000);
+  const isRevealAlreadyPast = revealTime <= new Date();
 
   if (isRevealed) {
     return null;
@@ -105,6 +109,17 @@ export default function MysteryWaitingCard({ eventDateTime, participantCount = 4
               <Sparkles className="h-3 w-3 text-primary" />
               <span>神秘小伙伴正在等待揭晓</span>
             </motion.div>
+
+            {!isRevealAlreadyPast && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.1 }}
+                className="text-xs text-muted-foreground text-center"
+              >
+                预计揭晓时间：{formatEventDateTime(revealTime)}
+              </motion.div>
+            )}
           </div>
         </div>
       </CardContent>
