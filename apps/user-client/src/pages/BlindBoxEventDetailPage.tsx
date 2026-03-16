@@ -11,6 +11,8 @@ import type { BlindBoxEvent, Venue, VenueDeal } from "@shared/schema";
 import { getCurrencySymbol } from "@/lib/currency";
 import { calculateAge } from "@shared/utils";
 import { getEventPhase } from "@shared/eventDetail";
+import { getUserAllInterests } from "@/lib/userFieldMappings";
+import IcebreakerCardsSheet from "@/components/IcebreakerCardsSheet";
 import PostMatchEventCard from "@/components/PostMatchEventCard";
 import ReunionButton from "@/components/ReunionButton";
 import MatchRevealAnimation from "@/components/MatchRevealAnimation";
@@ -535,12 +537,12 @@ export default function BlindBoxEventDetailPage() {
               }>}
               matchExplanation={event.matchExplanation || undefined}
               currentUser={{
-                interests: (user?.interestsDeep?.length ? user.interestsDeep : user?.interestsRankedTop3) ?? [],
-                educationLevel: user?.educationLevel ?? undefined,
+                interests: getUserAllInterests(user) ?? [],
+                educationLevel: user?.educationLevel || undefined,
                 age: user?.birthdate ? calculateAge(user.birthdate) : undefined,
-                gender: user?.gender ?? undefined,
-                relationshipStatus: user?.relationshipStatus ?? undefined,
-                hometownRegionCity: user?.hometownRegionCity ?? undefined,
+                gender: user?.gender || undefined,
+                relationshipStatus: user?.relationshipStatus || undefined,
+                hometownRegionCity: user?.hometownRegionCity || undefined,
               }}
             />
           ) : (
