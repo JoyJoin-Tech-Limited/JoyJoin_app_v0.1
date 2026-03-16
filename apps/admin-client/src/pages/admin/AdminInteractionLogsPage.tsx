@@ -65,11 +65,11 @@ export default function AdminInteractionLogsPage() {
   };
 
   const { data: stats } = useQuery<InteractionLogStats>({
-    queryKey: ["/api/admin/chat-logs/stats"],
+    queryKey: ["/api/admin/interaction-logs/stats"],
   });
 
   const { data: logs = [], isLoading, isError, error, refetch } = useQuery<InteractionLog[]>({
-    queryKey: ["/api/admin/chat-logs", buildQueryParams()],
+    queryKey: ["/api/admin/interaction-logs", buildQueryParams()],
     retry: 2,
   });
 

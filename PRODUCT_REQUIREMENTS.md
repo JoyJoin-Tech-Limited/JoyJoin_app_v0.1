@@ -792,7 +792,7 @@ CREATE TABLE chat_reports (
 
 **Chat Logging System:**
 
-**File:** `client/src/pages/admin/AdminChatLogsPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminInteractionLogsPage.tsx`
 
 ```sql
 CREATE TABLE chat_logs (
@@ -3059,7 +3059,7 @@ export function useWebSocket() {
 - `GET /api/admin/feedbacks/stats` - Aggregate stats
 - `GET /api/admin/moderation/reports` - Chat reports
 - `PATCH /api/admin/moderation/reports/:id` - Take action
-- `GET /api/admin/chat-logs` - Query chat logs
+- `GET /api/admin/interaction-logs` - Query interaction/connection logs
 - `GET /api/admin/contents` - CMS content list
 - `POST /api/admin/contents` - Create content
 - `POST /api/admin/notifications/broadcast` - Send notification
@@ -3498,7 +3498,7 @@ CREATE TABLE event_pool_groups (
 | **Content Management** | ✅ Complete | `AdminContentPage.tsx` | CMS for announcements |
 | **Notification System** | ✅ Complete | `AdminNotificationsPage.tsx` | Broadcast |
 | **Moderation System** | ✅ Complete | `AdminModerationPage.tsx`, `AdminReportsPage.tsx` | Report handling |
-| **Chat Logs** | ✅ Complete | `AdminChatLogsPage.tsx` | Audit trail |
+| **Interaction Logs** | ✅ Complete | `AdminInteractionLogsPage.tsx` | Audit trail |
 | **Data Insights** | ✅ Complete | `AdminDataInsightsPage.tsx` | 7 analytics modules |
 | **Feedback Management** | ✅ Complete | `AdminFeedbackPage.tsx` | Review interface |
 | **WebSocket Sync** | ✅ Complete | `wsService.ts`, `useWebSocket.ts` | Bidirectional |
@@ -3585,7 +3585,7 @@ joyjoin/
 │   │   │   ├── AdminNotificationsPage.tsx
 │   │   │   ├── AdminModerationPage.tsx
 │   │   │   ├── AdminReportsPage.tsx
-│   │   │   └── AdminChatLogsPage.tsx
+│   │   │   └── AdminInteractionLogsPage.tsx
 │   │   ├── RegistrationPage.tsx      # Phone auth
 │   │   ├── PersonalityTestPage.tsx   # 10 questions
 │   │   ├── PersonalityTestResultPage.tsx

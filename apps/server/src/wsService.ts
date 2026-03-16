@@ -91,7 +91,7 @@ class WebSocketService {
         console.error('[WS] WebSocket error:', error);
         
         // Log WebSocket error
-        fetch(`http://localhost:${process.env.PORT || '5001'}/api/v1/chat-logs`, {
+        fetch(`http://localhost:${process.env.PORT || '5001'}/api/v1/interaction-logs`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -325,7 +325,7 @@ class WebSocketService {
     console.log('[WS] Client disconnected');
     
     // Log disconnection (fire and forget with proper error handling)
-    fetch(`http://localhost:${process.env.PORT || '5001'}/api/v1/chat-logs`, {
+    fetch(`http://localhost:${process.env.PORT || '5001'}/api/v1/interaction-logs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
