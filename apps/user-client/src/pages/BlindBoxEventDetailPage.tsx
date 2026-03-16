@@ -561,7 +561,7 @@ export default function BlindBoxEventDetailPage() {
               }>}
               matchExplanation={event.matchExplanation || undefined}
               currentUser={{
-                interests: getUserAllInterests(user),
+                interests: getUserAllInterests(user) ?? [],
                 educationLevel: user?.educationLevel || undefined,
                 age: user?.birthdate ? calculateAge(user.birthdate) : undefined,
                 gender: user?.gender || undefined,
