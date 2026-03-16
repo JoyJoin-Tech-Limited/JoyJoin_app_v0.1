@@ -17,13 +17,15 @@ import CardDeckReveal, { type SquadMember } from "@/components/CardDeckReveal";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { calculateAge as calculateAgeFromBirthdate } from "@shared/utils";
 import {
   calculateAge,
   getUserAllInterests,
   getUserPrimaryInterests,
   getUserTopicAvoidances,
 } from "@/lib/userFieldMappings";
-import { generateSparkPredictions, type UserContext, type AttendeeData } from "@/lib/attendeeAnalytics";
+import { generateSparkPredictions, type UserContext } from "@/lib/attendeeAnalytics";
 
 // Safe wrapper around the Web Vibration API
 const hapticVibrate = (pattern: number | number[]) => {
@@ -36,6 +38,26 @@ type FlowState = "ready" | "shaking" | "revealed";
 
 // Shared JoyJoin gradient used across box and buttons in this flow
 const JOYJOIN_GRADIENT = "linear-gradient(135deg, #4C1D95, #7C3AED)";
+
+interface PoolGroupMember {
+  userId: string;
+  displayName: string;
+  archetype?: string | null;
+  topInterests?: string[] | null;
+  /** API returns users.birthdate — a date string, not a numeric age */
+  age?: string | null;
+  industryNicheLabel?: string | null;
+  industryCategoryLabel?: string | null;
+  ageVisible?: string | null;
+  industryVisible?: string | null;
+  gender?: string | null;
+  educationLevel?: string | null;
+  hometownRegionCity?: string | null;
+  hometownAffinityOptin?: boolean | null;
+  educationVisible?: string | null;
+  relationshipStatus?: string | null;
+  intent?: string[] | null;
+}
 
 interface PoolGroupResponse {
   group: {
@@ -58,7 +80,7 @@ interface PoolGroupResponse {
     district: string | null;
     dateTime: string;
   };
-  members: AttendeeData[];
+  members: PoolGroupMember[];
 }
 
 // Action zone sits at the bottom; uses safe-area-inset-bottom so it clears
@@ -89,43 +111,48 @@ export default function SquadUnboxingFlow() {
     enabled: !!groupId,
   });
 
+  const { toast } = useToast();
+
   // Confirm attendance mutation
   const confirmAttendanceMutation = useMutation({
     mutationFn: () =>
-      apiRequest("POST", "/api/squad/confirm-attendance", { groupId }),
-    onSuccess: () => {
-      if (data?.group.finalDateTime && data?.group.venueName) {
-        setLocation(`/blind-box-events/${data.pool.id}`);
+      apiRequest("POST", `/api/pool-groups/${groupId}/confirm-attendance`, {}),
+    onSuccess: async (res) => {
+      const body = await res.json() as { success: boolean; blindBoxEventId: string | null };
+      if (body.blindBoxEventId) {
+        setLocation(`/blind-box-events/${body.blindBoxEventId}`);
       } else {
-        setLocation("/");
+        setLocation(`/pool-groups/${groupId}`);
       }
     },
     onError: () => {
-      // Even on error, navigate home so user isn't stuck
-      setLocation("/");
+      toast({
+        title: "确认失败",
+        description: "无法确认出席，请稍后重试。",
+        variant: "destructive",
+      });
     },
   });
 
   // Map API members → SquadMember[] for CardDeckReveal
+  // The API returns age as users.birthdate (a string) and industry as industryNicheLabel/industryCategoryLabel.
+  // Normalise both fields here so spark predictions work correctly.
   const squadMembers = useMemo<SquadMember[]>(() => {
     if (!data?.members) return [];
     return data.members.map((m) => ({
       userId: m.userId,
       displayName: m.displayName,
-      archetype: m.archetype,
-      age: m.age,
-      gender: m.gender,
-      educationLevel: m.educationLevel,
-      topInterests: m.topInterests,
-      primaryInterests: m.primaryInterests,
-      industry: m.industry,
-      relationshipStatus: m.relationshipStatus,
-      children: m.children,
-      hometownRegionCity: m.hometownRegionCity,
-      hometownAffinityOptin: m.hometownAffinityOptin,
-      studyLocale: m.studyLocale,
-      overseasRegions: m.overseasRegions,
-      languagesComfort: m.languagesComfort,
+      archetype: m.archetype ?? undefined,
+      // Compute numeric age from birthdate string; undefined if absent
+      age: m.age ? calculateAgeFromBirthdate(m.age) : undefined,
+      gender: m.gender ?? undefined,
+      educationLevel: m.educationLevel ?? undefined,
+      topInterests: m.topInterests ?? undefined,
+      // industry is not returned directly — use the most-specific label available
+      industry: m.industryNicheLabel ?? m.industryCategoryLabel ?? undefined,
+      relationshipStatus: m.relationshipStatus ?? undefined,
+      hometownRegionCity: m.hometownRegionCity ?? undefined,
+      hometownAffinityOptin: m.hometownAffinityOptin ?? undefined,
     }));
   }, [data]);
 
@@ -149,16 +176,15 @@ export default function SquadUnboxingFlow() {
     };
   }, [user]);
 
-  // Derive compatibility stats from real group data
+  // Derive compatibility percent from the server-calculated group score.
+  // Per-member `compatibilityScore` is not returned by this API so we only
+  // use the group-level matchScore, defaulting to 0 when absent.
   const squadCompatibilityPercent = useMemo(() => {
-    // Use server-calculated group score if available
     if (data?.group.matchScore !== null && data?.group.matchScore !== undefined) {
       return Math.round(data.group.matchScore);
     }
-    const scores = squadMembers.map((m) => m.compatibilityScore ?? 0).filter(Boolean);
-    if (scores.length === 0) return 0;
-    return Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
-  }, [data, squadMembers]);
+    return 0;
+  }, [data]);
 
   // Aggregate total sparks across the whole squad (for dynamic FOMO modal)
   const totalSquadSparks = useMemo(() => {
@@ -170,12 +196,10 @@ export default function SquadUnboxingFlow() {
         archetype: member.archetype,
         age: member.age,
         topInterests: member.topInterests,
-        primaryInterests: member.primaryInterests,
         educationLevel: member.educationLevel,
         industry: member.industry,
         gender: member.gender,
         relationshipStatus: member.relationshipStatus,
-        children: member.children,
         hometownRegionCity: member.hometownRegionCity,
         hometownAffinityOptin: member.hometownAffinityOptin,
       });
