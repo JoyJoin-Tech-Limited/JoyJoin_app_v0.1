@@ -74,7 +74,7 @@ export default function SquadUnboxingFlow() {
 
   // Redirect immediately if there's no groupId in the URL
   useEffect(() => {
-    if (groupId === undefined || groupId === null || groupId === "") {
+    if (!groupId) {
       setLocation("/discover");
     }
   }, [groupId, setLocation]);
@@ -151,7 +151,10 @@ export default function SquadUnboxingFlow() {
 
   // Derive compatibility stats from real group data
   const squadCompatibilityPercent = useMemo(() => {
-    if (data?.group.matchScore != null) return Math.round(data.group.matchScore);
+    // Use server-calculated group score if available
+    if (data?.group.matchScore !== null && data?.group.matchScore !== undefined) {
+      return Math.round(data.group.matchScore);
+    }
     const scores = squadMembers.map((m) => m.compatibilityScore ?? 0).filter(Boolean);
     if (scores.length === 0) return 0;
     return Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
