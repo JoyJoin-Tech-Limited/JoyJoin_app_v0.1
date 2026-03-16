@@ -116,7 +116,7 @@ JoyJoin is an AI-powered social networking platform that connects individuals lo
 
 ### Key Value Propositions
 
-- **AI-Driven Matching:** 14 personality archetypes with 5-dimensional compatibility scoring
+- **AI-Driven Matching:** 12 personality archetypes (V4 animal system) with 7-dimensional pool compatibility scoring
 - **Micro-Event Format:** Small group sizes (5-10 people) for meaningful interactions
 - **Blind Box Experience:** Gamified event discovery with surprise reveals
 - **In-Event Social Experience:** Social Icebreaker multi-phase group facilitation (热身 → 挑战 → 侦探 → 回顾) as the core in-event engagement tool
@@ -163,23 +163,42 @@ Foster meaningful local connections through AI-powered matching that understands
 
 ### 1. User Onboarding & Registration
 
-**File Location:** `client/src/pages/RegistrationPage.tsx`, `client/src/pages/ProfileSetupPage.tsx`
+**File Location:** `apps/user-client/src/pages/PersonalityTestPageV4.tsx` (primary entry point), `apps/user-client/src/pages/EssentialDataPage.tsx`, `apps/user-client/src/pages/LoginPage.tsx`
 
-#### 1.1 Phone Authentication
+#### 1.1 Authentication — WeChat-First (Current)
+
+> **⚠️ Legacy section below:** The Phone Authentication flow (SMS verification → Profile Setup) was the original registration method. It has been superseded by the WeChat-first pre-test-signup flow (implemented 2026-02-04). The phone auth endpoints remain available as a fallback on `LoginPage`.
+
+**Current Primary User Journey:**
+```
+LandingPage → /personality-test (anonymous V4 test) 
+→ PersonalityTestResultPage (archetype reveal) 
+→ 微信一键登录 (WeChat login CTA, shown after 3 seconds)
+→ POST /api/auth/wechat/login-with-test (creates account + saves test results)
+→ /onboarding/setup (EssentialDataPage — new users only)
+→ /onboarding/extended (ExtendedDataPage)
+→ /onboarding/review (FinalProfileReviewPage)
+→ /discover
+```
+
+**WeChat Auth Endpoints:**
+- `POST /api/auth/wechat/login-with-test` — New user sign-up with personality test answers
+- `POST /api/auth/wechat/login` — Returning user login (no test answers)
+- `GET /api/auth/wechat/oauth/start` — Browser OAuth2 web flow (staging/production browser)
+- `GET /api/auth/wechat/oauth/callback` — OAuth2 callback handler
+
+**Session:** 7-day persistent login via PostgreSQL session store
+
+---
+
+#### 1.1b Phone Authentication ⚠️ Legacy Fallback
+
 - **Method:** SMS verification (6-digit code)
-- **Session:** 7-day persistent login
-- **Database:** PostgreSQL session store
-- **Security:** Bcrypt password hashing
-
-**User Journey:**
-```
-Landing Page → Phone Number Entry → SMS Code Verification → Profile Setup
-```
-
-**API Endpoints:**
-- `POST /api/phone/register` - Send SMS code
-- `POST /api/phone/verify` - Verify code and create session
-- `POST /api/phone/login` - Existing user login
+- **Status:** Available as a fallback on `/login` (`LoginPage.tsx`), not shown in new-user onboarding
+- **API Endpoints:**
+  - `POST /api/phone/register` - Send SMS code
+  - `POST /api/phone/verify` - Verify code and create session
+  - `POST /api/phone/login` - Existing user login
 
 #### 1.2 Multi-Step Profile Setup
 
@@ -399,7 +418,7 @@ WHERE id = user_id;
 
 ### 1.4 Event Discovery & Blind Box System
 
-**File Location:** `client/src/pages/DiscoverPage.tsx`, `client/src/pages/BlindBoxEventDetailPage.tsx`
+**File Location:** `apps/user-client/src/pages/DiscoverPage.tsx`, `apps/user-client/src/pages/BlindBoxEventDetailPage.tsx`
 
 #### Event Types
 
@@ -490,7 +509,7 @@ User Actions:
 
 #### Two-Part Match Scoring System
 
-**Frontend Component:** `client/src/components/MatchScoreDisplay.tsx`
+**Frontend Component:** `apps/user-client/src/components/MatchScoreDisplay.tsx`
 
 **Group Chemistry Score (群体化学反应):**
 ```typescript
@@ -525,7 +544,7 @@ Visual:
 
 #### AttendeePreviewCard Component
 
-**File:** `client/src/components/AttendeePreviewCard.tsx`
+**File:** `apps/user-client/src/components/AttendeePreviewCard.tsx`
 
 ```typescript
 Display:
@@ -542,7 +561,7 @@ Display:
 
 ### 1.5 权益方案 & Payment System
 
-**File Location:** `client/src/pages/BlindBoxPaymentPage.tsx`
+**File Location:** `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`
 
 > **Note on terminology:** User-facing copy uses `权益` / `权益方案`. Internal technical names (`subscription`, `subscriptions` table) remain unchanged. See §Product Canon for the full compliance terminology table.
 
@@ -690,7 +709,7 @@ Response:
 
 ### 1.6 Chat System
 
-**File Location:** `client/src/pages/EventChatDetailPage.tsx`, `client/src/pages/DirectChatPage.tsx`
+**File Location:** `apps/user-client/src/pages/EventCoordinationPage.tsx` (current), `apps/user-client/src/pages/ChatsPage.tsx`
 
 #### Event Group Chat
 
@@ -752,7 +771,7 @@ wsService.broadcastToEvent(eventId, message);
 
 #### Chat Moderation System
 
-**File:** `client/src/pages/admin/AdminModerationPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminModerationPage.tsx`
 
 **User Reporting:**
 ```typescript
@@ -792,7 +811,7 @@ CREATE TABLE chat_reports (
 
 **Chat Logging System:**
 
-**File:** `client/src/pages/admin/AdminChatLogsPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminInteractionLogsPage.tsx`
 
 ```sql
 CREATE TABLE chat_logs (
@@ -850,7 +869,7 @@ Full system documentation: `docs/icebreaker-system.md`
 
 > **Note:** Previously numbered 1.7. Renumbered to 1.8 to accommodate the new §1.7 In-Event Social Experience section.
 
-**File Location:** `client/src/pages/EventFeedbackFlow.tsx`, `client/src/pages/DeepFeedbackFlow.tsx`
+**File Location:** `apps/user-client/src/pages/EventFeedbackFlow.tsx`, `apps/user-client/src/pages/DeepFeedbackFlow.tsx`
 
 #### Two-Tier Feedback Architecture
 
@@ -870,7 +889,7 @@ Appears immediately after event ends (status: "completed")
 
 **Step 2: Connection Radar (连接雷达图)**
 
-**Component:** `client/src/components/feedback/ConnectionRadar.tsx`
+**Component:** `apps/user-client/src/components/feedback/ConnectionRadar.tsx`
 
 4-dimensional assessment (0-10 scale):
 ```typescript
@@ -1150,7 +1169,6 @@ Protected Routes:
   - /blind-box/:id/payment
   - /chats
   - /chats/event/:id
-  - /chats/direct/:threadId
   - /profile
   - /personality-test/results
   - /feedback/:eventId
@@ -1161,6 +1179,10 @@ Public Routes:
   - /register
   - /personality-test (can be taken before full registration)
 ```
+
+> **Note:** `/chats/direct/:threadId` has been removed (DM system removed). The `连接` tab at `/connections` shows structured post-event connections. Event coordination is at `/event-coordination/:groupId`.
+
+> **Note on admin routes:** All `/admin/*` routes in the user client redirect to `https://admin.yuejuapp.com`. The admin portal is a separate deployment (`apps/admin-client`).
 
 ---
 
@@ -1915,7 +1937,7 @@ When admin cancels event:
 
 ### 2.7 Matching Lab (算法调优实验室)
 
-**File:** `client/src/pages/admin/AdminMatchingLabPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminMatchingLabPage.tsx`
 
 #### Purpose
 
@@ -2257,7 +2279,7 @@ Create Notification:
 
 ### 2.10 Moderation System (Content & User Reports)
 
-**File:** `client/src/pages/admin/AdminModerationPage.tsx`, `client/src/pages/admin/AdminReportsPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminModerationPage.tsx`, `apps/admin-client/src/pages/admin/AdminReportsPage.tsx`
 
 #### Chat Moderation Queue
 
@@ -2351,7 +2373,7 @@ onNewMessage((message) => {
 
 #### User Report Management
 
-**File:** `client/src/pages/admin/AdminReportsPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminReportsPage.tsx`
 
 **Report Types:**
 - 🚫 不当行为 (Inappropriate behavior) - At events
@@ -2398,7 +2420,7 @@ Metrics:
 
 ### 2.11 Data Insights Dashboard (运营决策指挥中心)
 
-**File:** `client/src/pages/admin/AdminDataInsightsPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminDataInsightsPage.tsx`
 
 #### Purpose
 
@@ -2663,15 +2685,15 @@ Optimization Opportunities:
 
 ```typescript
 1. Overall Distribution
-   Pie Chart (example data - legacy names):
-   - 连接者: 18.5%
-   - 探索者: 16.2%
-   - 故事家: 14.8%
-   - 火花塞: 13.1%
-   - 肯定者: 12.3%
-   - 氛围组: 10.7%
-   - 协调者: 9.4%
-   - 挑战者: 5.0%
+   Pie Chart (example data — production system uses current 12 archetypes):
+   - 暖心熊: 18.5%
+   - 沉思猫头鹰: 16.2%
+   - 夸夸豚: 14.8%
+   - 开心柯基: 13.1%
+   - 太阳鸡: 12.3%
+   - 机智狐: 10.7%
+   - 淡定海豚: 9.4%
+   - 其他 (4 archetypes): 5.0%
    
 2. Archetype Engagement
    - Highest retention: 连接者 (28% at 6 months)
@@ -2962,8 +2984,8 @@ export function useWebSocket() {
 - Express Session (authentication)
 
 **Authentication:**
-- Phone number + SMS verification
-- bcrypt password hashing
+- WeChat OAuth2 (primary): Mini Program `wx.login()` + Official Account OAuth2 web flow
+- Phone number + SMS verification (legacy fallback)
 - PostgreSQL session store (7-day persistence)
 
 **Payment:**
