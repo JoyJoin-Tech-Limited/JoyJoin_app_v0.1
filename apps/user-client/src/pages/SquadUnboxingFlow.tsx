@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useLocation } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { Sparkles, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,8 +16,15 @@ import {
 import BottomNav from "@/components/BottomNav";
 import CardDeckReveal, { type SquadMember } from "@/components/CardDeckReveal";
 import { useAuth } from "@/hooks/useAuth";
-import { calculateAge } from "@/lib/userFieldMappings";
-import { generateSparkPredictions, type UserContext } from "@/lib/attendeeAnalytics";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import {
+  calculateAge,
+  getUserAllInterests,
+  getUserPrimaryInterests,
+  getUserTopicAvoidances,
+} from "@/lib/userFieldMappings";
+import { generateSparkPredictions, type UserContext, type AttendeeData } from "@/lib/attendeeAnalytics";
 
 // Safe wrapper around the Web Vibration API
 const hapticVibrate = (pattern: number | number[]) => {
@@ -31,91 +38,104 @@ type FlowState = "ready" | "shaking" | "revealed";
 // Shared JoyJoin gradient used across box and buttons in this flow
 const JOYJOIN_GRADIENT = "linear-gradient(135deg, #4C1D95, #7C3AED)";
 
-// Mock squad data — replace with real API data when available.
-// TODO: integrate with POST /api/squad/confirm-attendance and add loading/error states.
-// Fields beyond displayName/archetype/topInterests are included so that
-// generateSparkPredictions can produce meaningful sparks during local dev/demo.
-const MOCK_SQUAD: SquadMember[] = [
-  {
-    userId: "u1",
-    displayName: "小雅",
-    archetype: "开心柯基",
-    age: 26,
-    gender: "Woman",
-    educationLevel: "Master's",
-    topInterests: ["旅行", "美食", "摄影"],
-    primaryInterests: ["travel_exploration", "food_dining", "photography"],
-    industry: "创意设计",
-    relationshipStatus: "Single",
-    hometownRegionCity: "成都",
-    matchReason: "你们都热爱探索新事物，话题永远聊不完",
-    compatibilityScore: 92,
-  },
-  {
-    userId: "u2",
-    displayName: "志明",
-    archetype: "机智狐",
-    age: 28,
-    gender: "Man",
-    educationLevel: "Bachelor's",
-    topInterests: ["科技", "阅读", "音乐"],
-    primaryInterests: ["technology", "reading_books", "music_concerts"],
-    industry: "科技互联网",
-    relationshipStatus: "Single",
-    hometownRegionCity: "上海",
-    matchReason: "理性与感性的碰撞，能激发彼此的新想法",
-    compatibilityScore: 88,
-  },
-  {
-    userId: "u3",
-    displayName: "晓晴",
-    archetype: "暖心熊",
-    age: 25,
-    gender: "Woman",
-    educationLevel: "Master's",
-    topInterests: ["艺术", "健身", "美食"],
-    primaryInterests: ["art_culture", "fitness_health", "food_dining"],
-    industry: "教育培训",
-    relationshipStatus: "Single",
-    hometownRegionCity: "北京",
-    matchReason: "暖意十足，是整桌的情绪担当",
-    compatibilityScore: 85,
-  },
-  {
-    userId: "u4",
-    displayName: "铭轩",
-    archetype: "淡定海豚",
-    age: 29,
-    gender: "Man",
-    educationLevel: "Bachelor's",
-    topInterests: ["旅行", "游戏", "电影"],
-    primaryInterests: ["travel_exploration", "gaming", "film_entertainment"],
-    industry: "金融投资",
-    relationshipStatus: "Single",
-    hometownRegionCity: "广州",
-    matchReason: "沉稳又幽默，气氛冷场时总能救场",
-    compatibilityScore: 83,
-  },
-];
+interface PoolGroupResponse {
+  group: {
+    id: string;
+    groupNumber: number;
+    memberCount: number;
+    matchScore: number | null;
+    matchExplanation: string | null;
+    venueName: string | null;
+    venueAddress: string | null;
+    finalDateTime: string | null;
+    status: string;
+  };
+  pool: {
+    id: string;
+    title: string;
+    description: string | null;
+    eventType: string;
+    city: string;
+    district: string | null;
+    dateTime: string;
+  };
+  members: AttendeeData[];
+}
 
 // Action zone sits above BottomNav; aligns with standard bottom spacing (~64px / pb-16)
 const ACTION_ZONE_BOTTOM = 64;
 
 export default function SquadUnboxingFlow() {
   const [, setLocation] = useLocation();
+  const { groupId } = useParams();
   const [flowState, setFlowState] = useState<FlowState>("ready");
   const [showActionZone, setShowActionZone] = useState(false);
   const [showSkipDialog, setShowSkipDialog] = useState(false);
+
+  // Redirect immediately if there's no groupId in the URL
+  useEffect(() => {
+    if (groupId === undefined || groupId === null || groupId === "") {
+      setLocation("/discover");
+    }
+  }, [groupId, setLocation]);
 
   // Fetch current user — `useAuth` uses the cached `/api/auth/user` query,
   // which fires independently from squad data so there is no sequential waterfall.
   const { user, isLoading: isUserLoading } = useAuth();
 
+  // Fetch real group data from the API
+  const { data, isLoading: isGroupLoading } = useQuery<PoolGroupResponse>({
+    queryKey: ["/api/pool-groups", groupId],
+    enabled: !!groupId,
+  });
+
+  // Confirm attendance mutation
+  const confirmAttendanceMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("POST", "/api/squad/confirm-attendance", { groupId }),
+    onSuccess: () => {
+      if (data?.group.finalDateTime && data?.group.venueName) {
+        setLocation(`/blind-box-events/${data.pool.id}`);
+      } else {
+        setLocation("/");
+      }
+    },
+    onError: () => {
+      // Even on error, navigate home so user isn't stuck
+      setLocation("/");
+    },
+  });
+
+  // Map API members → SquadMember[] for CardDeckReveal
+  const squadMembers = useMemo<SquadMember[]>(() => {
+    if (!data?.members) return [];
+    return data.members.map((m) => ({
+      userId: m.userId,
+      displayName: m.displayName,
+      archetype: m.archetype,
+      age: m.age,
+      gender: m.gender,
+      educationLevel: m.educationLevel,
+      topInterests: m.topInterests,
+      primaryInterests: m.primaryInterests,
+      industry: m.industry,
+      relationshipStatus: m.relationshipStatus,
+      children: m.children,
+      hometownRegionCity: m.hometownRegionCity,
+      hometownAffinityOptin: m.hometownAffinityOptin,
+      studyLocale: m.studyLocale,
+      overseasRegions: m.overseasRegions,
+      languagesComfort: m.languagesComfort,
+    }));
+  }, [data]);
+
   // Build UserContext from auth user for spark-prediction engine
   const currentUser = useMemo<UserContext | undefined>(() => {
     if (!user) return undefined;
     return {
-      interests: user.interestsDeep ?? undefined,
+      interests: getUserAllInterests(user),
+      primaryInterests: getUserPrimaryInterests(user),
+      topicAvoidances: getUserTopicAvoidances(user),
       educationLevel: user.educationLevel ?? undefined,
       industry: user.industryCategoryLabel ?? user.industryCategory ?? undefined,
       age: user.birthdate ? calculateAge(user.birthdate) : undefined,
@@ -124,20 +144,23 @@ export default function SquadUnboxingFlow() {
       relationshipStatus: user.relationshipStatus ?? undefined,
       hometownRegionCity: user.hometownRegionCity ?? undefined,
       hometownAffinityOptin: user.hometownAffinityOptin ?? undefined,
+      seniority: user.seniority ?? undefined,
+      studyLocale: user.studyLocale ?? undefined,
     };
   }, [user]);
 
-  // Derive compatibility stats dynamically from squad data
+  // Derive compatibility stats from real group data
   const squadCompatibilityPercent = useMemo(() => {
-    const scores = MOCK_SQUAD.map((m) => m.compatibilityScore ?? 0).filter(Boolean);
+    if (data?.group.matchScore != null) return Math.round(data.group.matchScore);
+    const scores = squadMembers.map((m) => m.compatibilityScore ?? 0).filter(Boolean);
     if (scores.length === 0) return 0;
     return Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
-  }, []);
+  }, [data, squadMembers]);
 
   // Aggregate total sparks across the whole squad (for dynamic FOMO modal)
   const totalSquadSparks = useMemo(() => {
     if (!currentUser) return 0;
-    return MOCK_SQUAD.reduce((total, member) => {
+    return squadMembers.reduce((total, member) => {
       const sparks = generateSparkPredictions(currentUser, {
         userId: member.userId,
         displayName: member.displayName,
@@ -155,7 +178,7 @@ export default function SquadUnboxingFlow() {
       });
       return total + sparks.length;
     }, 0);
-  }, [currentUser]);
+  }, [currentUser, squadMembers]);
 
   // Shaking → revealed transition after 1.5s
   useEffect(() => {
@@ -178,8 +201,7 @@ export default function SquadUnboxingFlow() {
   };
 
   const handleConfirmAttendance = () => {
-    // TODO: call POST /api/squad/confirm-attendance before navigating
-    setLocation("/");
+    confirmAttendanceMutation.mutate();
   };
 
   const handleSkip = () => {
@@ -207,6 +229,32 @@ export default function SquadUnboxingFlow() {
       ? "正在开盒"
       : "桌友卡片已揭晓";
 
+  // Derive event type label for header
+  const eventTypeLabel = data?.pool.eventType === "bar" ? "酒局" : "饭局";
+
+  // Loading state
+  if (isGroupLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-muted-foreground">加载中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error / not-found state
+  if (!isGroupLoading && !data) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">小组不存在</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col pb-16">
       {/* Screen-reader announcement of state changes */}
@@ -216,9 +264,9 @@ export default function SquadUnboxingFlow() {
 
       {/* Header */}
       <div className="px-5 pt-12 pb-4">
-        <h1 className="text-2xl font-bold text-foreground">你的饭局桌友 🎉</h1>
+        <h1 className="text-2xl font-bold text-foreground">你的{eventTypeLabel}桌友 🎉</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {squadCompatibilityPercent}% 匹配度 · {MOCK_SQUAD.length}人同桌
+          {squadMembers.length}人同桌 · {squadCompatibilityPercent}% 匹配度
         </p>
       </div>
 
@@ -261,7 +309,7 @@ export default function SquadUnboxingFlow() {
 
               <div className="text-center space-y-2">
                 <p className="text-base font-semibold text-foreground">盲盒已就绪</p>
-                <p className="text-sm text-muted-foreground">为你匹配了 {MOCK_SQUAD.length} 位桌友</p>
+                <p className="text-sm text-muted-foreground">为你匹配了 {squadMembers.length} 位桌友</p>
               </div>
 
               <Button
@@ -325,7 +373,7 @@ export default function SquadUnboxingFlow() {
                   : "点击卡片查看详情 ✨"}
               </p>
               <CardDeckReveal
-                members={MOCK_SQUAD}
+                members={squadMembers}
                 currentUser={currentUser}
                 isUserLoading={isUserLoading}
                 onAllRevealed={handleAllRevealed}
@@ -352,9 +400,10 @@ export default function SquadUnboxingFlow() {
               className="w-full h-14 text-base font-bold rounded-2xl shadow-lg"
               style={{ background: JOYJOIN_GRADIENT }}
               onClick={handleConfirmAttendance}
+              disabled={confirmAttendanceMutation.isPending}
               data-testid="button-confirm-attendance"
             >
-              确认出席 🎉
+              {confirmAttendanceMutation.isPending ? "确认中…" : "确认出席 🎉"}
             </Button>
             <button
               className="text-sm text-muted-foreground text-center py-2 hover:text-foreground transition-colors"

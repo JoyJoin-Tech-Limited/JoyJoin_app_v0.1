@@ -10,6 +10,7 @@ import { ArrowLeft, Clock, MapPin, DollarSign, Users, Navigation, AlertCircle, S
 import type { BlindBoxEvent, Venue, VenueDeal } from "@shared/schema";
 import { getCurrencySymbol } from "@/lib/currency";
 import { calculateAge } from "@shared/utils";
+import { getUserAllInterests } from "@/lib/userFieldMappings";
 import IcebreakerCardsSheet from "@/components/IcebreakerCardsSheet";
 import PostMatchEventCard from "@/components/PostMatchEventCard";
 import ReunionButton from "@/components/ReunionButton";
@@ -560,11 +561,11 @@ export default function BlindBoxEventDetailPage() {
               }>}
               matchExplanation={event.matchExplanation || undefined}
               currentUser={{
-                interests: ["film_entertainment", "travel_exploration"], // Default interests
-                educationLevel: user?.educationLevel || "Master's",
+                interests: getUserAllInterests(user),
+                educationLevel: user?.educationLevel || undefined,
                 age: user?.birthdate ? calculateAge(user.birthdate) : undefined,
                 gender: user?.gender || undefined,
-                relationshipStatus: user?.relationshipStatus || "Single",
+                relationshipStatus: user?.relationshipStatus || undefined,
                 hometownRegionCity: user?.hometownRegionCity || undefined,
               }}
             />
