@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Clock, MapPin, DollarSign, Users, Navigation, AlertCircle, Sparkles, ChevronRight, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, DollarSign, Users, Navigation, AlertCircle, Sparkles, CheckCircle2 } from "lucide-react";
 import type { BlindBoxEvent, Venue, VenueDeal } from "@shared/schema";
 import { getCurrencySymbol } from "@/lib/currency";
 import { calculateAge } from "@shared/utils";
@@ -59,8 +59,6 @@ export default function BlindBoxEventDetailPage() {
   const [showAnimation, setShowAnimation] = useState(false);
   const [animationDecisionMade, setAnimationDecisionMade] = useState(false);
   const [allowReplay, setAllowReplay] = useState(false);
-  const [icebreakerSheetOpen, setIcebreakerSheetOpen] = useState(false);
-  const [hasAutoShownIcebreaker, setHasAutoShownIcebreaker] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [supportCardOpen, setSupportCardOpen] = useState(true);
   const [icebreakerError, setIcebreakerError] = useState<string | null>(null);
@@ -225,50 +223,6 @@ export default function BlindBoxEventDetailPage() {
       console.debug('Image preload failed (non-critical):', err)
     );
   }, []);
-
-  // Smart timing: Auto-show icebreaker sheet 1 hour before event
-  useEffect(() => {
-    if (!event?.dateTime || event.status !== "matched") return;
-    
-    // Check localStorage first to prevent any duplicate logic
-    const autoShownKey = `icebreaker_auto_shown_${eventId}`;
-    const hasShownBefore = localStorage.getItem(autoShownKey);
-    
-    if (hasShownBefore || hasAutoShownIcebreaker) {
-      if (!hasAutoShownIcebreaker) {
-        setHasAutoShownIcebreaker(true);
-      }
-      return;
-    }
-    
-    const eventTime = new Date(event.dateTime).getTime();
-    const now = Date.now();
-    const oneHourBefore = eventTime - (60 * 60 * 1000);
-    const threeHoursBefore = eventTime - (3 * 60 * 60 * 1000);
-    
-    // Only auto-show if within 1 hour before event and not past event time
-    if (now >= oneHourBefore && now < eventTime) {
-      // Delay slightly to not interrupt page load
-      const timer = setTimeout(() => {
-        setIcebreakerSheetOpen(true);
-        setHasAutoShownIcebreaker(true);
-        localStorage.setItem(autoShownKey, "true");
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-    
-    // If between 3 hours and 1 hour before, show a toast reminder (only once per session)
-    if (now >= threeHoursBefore && now < oneHourBefore) {
-      const toastShownKey = `icebreaker_toast_shown_${eventId}`;
-      if (!sessionStorage.getItem(toastShownKey)) {
-        toast({
-          title: "小悦提醒",
-          description: "活动即将开始，查看小悦为你们准备的话题吧",
-        });
-        sessionStorage.setItem(toastShownKey, "true");
-      }
-    }
-  }, [event?.dateTime, event?.status, eventId, hasAutoShownIcebreaker, toast]);
 
   // WebSocket实时更新订阅（仅订阅当前活动）
   useEffect(() => {
@@ -599,21 +553,15 @@ export default function BlindBoxEventDetailPage() {
           )
         ) : null}
 
-        {/* 小悦话题入口按钮 (仅已匹配或已完成显示) */}
+        {/* 小悦话题入口 (仅已匹配或已完成显示) */}
         {(event.status === "matched" || event.status === "completed") && eventId && (() => {
           const phase = getEventPhase(event.dateTime);
-          const phaseLabels = {
-            started:  { label: '🎲 活动进行中 🎉', subtitle: 'AI主持·5个环节·90分钟' },
-            revealed: { label: '破冰话题已解锁 ✨',   subtitle: '场地已揭晓，点击查看专属话题' },
-            waiting:  { label: '等待揭晓中…',        subtitle: '为你们准备的破冰话题' },
-          } as const;
-          const { label: ctaLabel, subtitle: ctaSubtitle } = phaseLabels[phase];
-          return (
-            <>
-              <button
-                onClick={async () => {
-                  setIcebreakerError(null);
-                  if (phase === "started") {
+          if (phase === "started") {
+            return (
+              <>
+                <button
+                  onClick={async () => {
+                    setIcebreakerError(null);
                     try {
                       const response = await fetch(`/api/events/${eventId}/session`, {
                         method: 'POST',
@@ -634,45 +582,51 @@ export default function BlindBoxEventDetailPage() {
                       console.error('[BlindBox] Error starting icebreaker session', error);
                       setIcebreakerError("无法开始破冰体验，请稍后再试");
                     }
-                  } else {
-                    setIcebreakerSheetOpen(true);
-                  }
-                }}
-                className="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-600 rounded-xl p-4 transition-all active:scale-[0.98] shadow-lg"
-                data-testid="button-open-icebreaker"
-              >
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10 border-2 border-white/30">
-                    <AvatarFallback className="bg-white/20 text-white text-sm font-medium">
-                      小悦
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 text-left">
-                    <p className="text-white font-semibold text-sm">
-                      {ctaLabel}
-                    </p>
-                    <p className="text-white/70 text-xs">
-                      {ctaSubtitle}
-                    </p>
+                  }}
+                  className="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-600 rounded-xl p-4 transition-all active:scale-[0.98] shadow-lg"
+                  data-testid="button-open-icebreaker"
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10 border-2 border-white/30">
+                      <AvatarFallback className="bg-white/20 text-white text-sm font-medium">
+                        小悦
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 text-left">
+                      <p className="text-white font-semibold text-sm">🎲 活动进行中 🎉</p>
+                      <p className="text-white/70 text-xs">AI主持·5个环节·90分钟</p>
+                    </div>
+                    <div className="flex items-center gap-1 text-white/80">
+                      <Sparkles className="h-4 w-4" />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 text-white/80">
-                    <Sparkles className="h-4 w-4" />
-                    <ChevronRight className="h-4 w-4" />
-                  </div>
+                </button>
+                {icebreakerError && (
+                  <p className="text-sm text-destructive mt-2">{icebreakerError}</p>
+                )}
+              </>
+            );
+          }
+          return (
+            <div
+              className="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500 rounded-xl p-4 shadow-lg"
+              data-testid="card-icebreaker-teaser"
+            >
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 border-2 border-white/30">
+                  <AvatarFallback className="bg-white/20 text-white text-sm font-medium">
+                    小悦
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 text-left">
+                  <p className="text-white font-semibold text-sm">AI破冰环节已就绪</p>
+                  <p className="text-white/70 text-xs">到场签到后，小悦将为你们定制专属破冰体验</p>
                 </div>
-              </button>
-              {icebreakerError && (
-                <p className="text-sm text-destructive mt-2">{icebreakerError}</p>
-              )}
-            
-            <IcebreakerCardsSheet
-              open={icebreakerSheetOpen}
-              onOpenChange={setIcebreakerSheetOpen}
-              eventId={eventId}
-              eventType={event.eventType as "饭局" | "酒局" | "其他"}
-              isGirlsNight={event.isGirlsNight || false}
-            />
-          </>
+                <div className="flex items-center gap-1 text-white/80">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+              </div>
+            </div>
           );
         })()}
 
