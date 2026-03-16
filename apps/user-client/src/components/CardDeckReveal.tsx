@@ -549,8 +549,8 @@ function MemberCard({
                           <motion.span
                             style={{ fontSize: 10, color: "#F59E0B", flexShrink: 0 }}
                             aria-hidden="true"
-                            animate={{ opacity: [0.6, 1, 0.6] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
+                            animate={prefersReducedMotion ? undefined : { opacity: [0.6, 1, 0.6] }}
+                            transition={prefersReducedMotion ? undefined : { duration: 1.5, repeat: Infinity }}
                           >
                             ✨
                           </motion.span>
