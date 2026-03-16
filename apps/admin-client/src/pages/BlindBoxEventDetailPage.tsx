@@ -344,20 +344,30 @@ export default function BlindBoxEventDetailPage() {
     return `${month}月${day}日 ${weekday} ${hours}:${minutes}`;
   };
 
-  const getCountdown = (dateTime: Date) => {
+  const getCountdown = (dateTime: Date, status?: string) => {
     const now = new Date();
     const eventDate = new Date(dateTime);
     const diff = eventDate.getTime() - now.getTime();
     
     if (diff <= 0) return "活动进行中";
     
+    const isMatchedOrCompleted = status === "matched" || status === "completed";
+    const label = isMatchedOrCompleted ? "距开场" : "报名截止";
+
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const totalMinutes = Math.floor(diff / (1000 * 60));
+
+    if (totalMinutes === 0) {
+      return isMatchedOrCompleted ? "即将开场" : "即将开始";
+    }
     
     if (days > 0) {
-      return `还剩 ${days}天 ${hours}小时`;
+      return `${label} · ${days}天 ${hours}小时`;
+    } else if (hours > 0) {
+      return `${label} · ${hours}小时`;
     } else {
-      return `还剩 ${hours}小时`;
+      return `${label} · ${totalMinutes}分钟`;
     }
   };
 
@@ -372,14 +382,21 @@ export default function BlindBoxEventDetailPage() {
   };
 
   const handleNavigation = () => {
-    if (event.restaurantLat && event.restaurantLng) {
-      const restaurantName = encodeURIComponent(event.restaurantName || '目的地');
-      
-      // 深圳使用高德地图，香港使用Google Maps
-      if (event.city === '深圳') {
+    const hasCoords = event.restaurantLat && event.restaurantLng;
+    const restaurantName = encodeURIComponent(event.restaurantName || '目的地');
+    const queryParts = [event.restaurantName, event.restaurantAddress].filter(Boolean).join(' ');
+
+    if (event.city === '深圳') {
+      if (hasCoords) {
         window.open(`https://uri.amap.com/navigation?to=${event.restaurantLng},${event.restaurantLat},${restaurantName}&mode=car&coordinate=gaode`, '_blank');
-      } else {
+      } else if (queryParts) {
+        window.open(`https://uri.amap.com/search?query=${encodeURIComponent(queryParts)}&city=深圳`, '_blank');
+      }
+    } else {
+      if (hasCoords) {
         window.open(`https://www.google.com/maps/dir/?api=1&destination=${event.restaurantLat},${event.restaurantLng}`, '_blank');
+      } else if (queryParts) {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryParts)}`, '_blank');
       }
     }
   };
@@ -443,7 +460,7 @@ export default function BlindBoxEventDetailPage() {
               <p className="text-sm text-muted-foreground">{formatDateTime(event.dateTime)}</p>
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-primary" />
-                <span className="font-medium text-primary">{getCountdown(event.dateTime)}</span>
+                <span className="font-medium text-primary">{getCountdown(event.dateTime, event.status)}</span>
               </div>
             </div>
 

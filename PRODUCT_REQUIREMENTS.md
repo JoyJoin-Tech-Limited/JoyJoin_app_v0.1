@@ -9,6 +9,16 @@
 
 ## 🗺️ Product Canon & Terminology
 
+> ### ⚠️ MANDATORY RULE FOR ALL CONTRIBUTORS
+>
+> **All code, copy, documentation, and implementation decisions MUST be based on the active, current flow described in this document.**
+>
+> - ❌ Never reference, reintroduce, or copy-paste from legacy flows, removed features, old routes, or deprecated components — even if they appear in git history, archived docs (`archived/`), or inline `TODO` comments.
+> - ❌ Never treat `QUICK_REFERENCE.md` as authoritative — use `DEVELOPER_QUICK_REFERENCE.md` and this document (`PRODUCT_REQUIREMENTS.md`) instead.
+> - ✅ When in doubt about whether a pattern/term/route is active, check the canonical nav table below and §*Product Canon* before implementing.
+>
+> This rule applies to human engineers **and** AI coding agents.
+
 > **This section is authoritative.** When any older content in this document conflicts with the definitions below, the definitions below take precedence. Legacy wording in older sections is marked ⚠️ Legacy and must not be used in new copy, code, or communications.
 
 ### Current Bottom Navigation (Canonical)
