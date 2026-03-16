@@ -358,7 +358,9 @@ export default function BlindBoxEventDetailPage() {
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const totalMinutes = Math.floor(diff / (1000 * 60));
 
-    if (totalMinutes === 0) return "活动进行中";
+    if (totalMinutes === 0) {
+      return isMatchedOrCompleted ? "即将开场" : "即将开始";
+    }
     
     if (days > 0) {
       return `${label} · ${days}天 ${hours}小时`;
