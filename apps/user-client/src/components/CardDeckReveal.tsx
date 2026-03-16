@@ -23,7 +23,7 @@ const ARCHETYPE_BACK_GRADIENTS: Record<string, string> = {
   '暖心熊':   'linear-gradient(135deg, #F43F5E, #EC4899, #EF4444)',
   '灵感章鱼': 'linear-gradient(135deg, #8B5CF6, #A855F7, #6366F1)',
   '沉思猫头鹰': 'linear-gradient(135deg, #64748B, #6B7280, #71717A)',
-  '定心大象': 'linear-gradient(135deg, #10B981, #059669, #047857)',
+  '定心大象': 'linear-gradient(135deg, #64748B, #6B7280, #71717A)',
   '稳如龟':   'linear-gradient(135deg, #10B981, #14B8A6, #0D9488)',
   '隐身猫':   'linear-gradient(135deg, #6366F1, #4F46E5, #4338CA)',
 };
@@ -39,7 +39,7 @@ const ARCHETYPE_GLOW: Record<string, string> = {
   '暖心熊':   'rgba(244,63,94,0.50)',
   '灵感章鱼': 'rgba(139,92,246,0.50)',
   '沉思猫头鹰': 'rgba(100,116,139,0.40)',
-  '定心大象': 'rgba(16,185,129,0.45)',
+  '定心大象': 'rgba(100,116,139,0.40)',
   '稳如龟':   'rgba(16,185,129,0.45)',
   '隐身猫':   'rgba(99,102,241,0.45)',
 };
