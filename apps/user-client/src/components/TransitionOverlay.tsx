@@ -89,7 +89,7 @@ export default function TransitionOverlay({
                 borderRadius: "24px 24px 0 0",
               }}
             />
-            <p className="text-3xl mb-2">✨</p>
+            <p className="text-3xl mb-2" aria-hidden="true">✨</p>
             <p
               className="text-4xl font-black leading-tight mb-2 text-foreground"
             >
