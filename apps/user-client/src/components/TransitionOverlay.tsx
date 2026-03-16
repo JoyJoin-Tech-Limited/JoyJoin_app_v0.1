@@ -71,6 +71,7 @@ export default function TransitionOverlay({
             className="relative mx-8 px-10 py-9 text-center"
             style={{
               borderRadius: 24,
+              overflow: "hidden",
               background: "hsl(var(--card))",
               boxShadow:
                 "0 24px 64px rgba(0, 0, 0, 0.12), 0 0 0 1px hsl(var(--border))",
@@ -86,7 +87,6 @@ export default function TransitionOverlay({
                 right: 0,
                 height: 2,
                 background: "linear-gradient(90deg, #FF6B9D, #A86BFF)",
-                borderRadius: "24px 24px 0 0",
               }}
             />
             <p className="text-3xl mb-2" aria-hidden="true">✨</p>
