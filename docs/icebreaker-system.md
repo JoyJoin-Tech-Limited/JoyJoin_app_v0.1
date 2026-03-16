@@ -33,7 +33,7 @@
 > (retained for backward compatibility only)
 
 > ✅ **REMOVED — IcebreakerCardsSheet:**
-> Pre-event topic preview sheet (GET /api/icebreakers/curated) has been deleted.
+> Pre-event topic preview sheet (GET /api/icebreakers/curated/:eventId) has been deleted.
 > The pre-event 小悦 button in BlindBoxEventDetailPage now shows a static teaser card.
 > The live WarmupPhase (Social Icebreaker) is the sole topic browsing experience.
 ```
@@ -44,23 +44,23 @@
 
 ### ADR-001: IcebreakerCardsSheet Removed (2026-03-16)
 
-**Decision:** `IcebreakerCardsSheet` and the `GET /api/icebreakers/curated` endpoint have been deleted.
+**Decision:** `IcebreakerCardsSheet` and the `GET /api/icebreakers/curated/:eventId` endpoint have been deleted.
 
 **Context:** Three separate icebreaker surfaces existed:
-- **Surface A** (`IcebreakerCardsSheet`): Pre-event bottom sheet, passive carousel, `CuratedTopic[]` from `/api/icebreakers/curated`, based on all `matchedAttendees`
+- **Surface A** (`IcebreakerCardsSheet`): Pre-event bottom sheet, passive carousel, `CuratedTopic[]` from `/api/icebreakers/curated/:eventId`, based on all `matchedAttendees`
 - **Surface B** (`IcebreakerToolkit`): Full-screen session tool, `TopicCard[]` + games, legacy
 - **Surface C** (`SocialIcebreakerOrchestrator` / `WarmupPhase`): Live session, mood-filtered `SocialTopic[]`, host-driven, checked-in users only — **the primary flow**
 
 **Problem:** Surface A duplicated Surface C's purpose (show 小悦-curated topics to the group) but was worse in every dimension: static, single-player, disconnected from the live session, based on pre-checkin attendee list, and using a different data model (`CuratedTopic` vs `SocialTopic`).
 
-**Resolution:** Surface A deleted. The pre-event 小悦 button in `BlindBoxEventDetailPage` (both user and admin clients) now renders a non-interactive static teaser card ("AI破冰环节已就绪 / 到场签到后，小悦将为你们定制专属破冰体验") when the event has not yet started. When the event starts, the button navigates directly to `IcebreakerSessionPage` as before.
+**Resolution:** Surface A deleted. The pre-event 小悦 button in `BlindBoxEventDetailPage` (both user and admin clients) now renders a non-interactive static teaser card ("AI破冰环节已就绪 / 到场签到后，小悦将为你们定制专属破冰体验") when the event has not yet started. When the event starts, the button navigates directly to `IcebreakerSessionPage` as before — in both the user client and the admin client.
 
 **Files deleted:**
 - `apps/user-client/src/components/IcebreakerCardsSheet.tsx`
 - `apps/admin-client/src/components/IcebreakerCardsSheet.tsx`
 
 **Endpoint removed:**
-- `GET /api/icebreakers/curated`
+- `GET /api/icebreakers/curated/:eventId`
 
 ---
 

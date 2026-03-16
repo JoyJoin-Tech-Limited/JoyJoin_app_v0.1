@@ -10,6 +10,7 @@ import { ArrowLeft, Clock, MapPin, DollarSign, Users, Phone, Navigation, AlertCi
 import type { BlindBoxEvent, Venue, VenueDeal } from "@shared/schema";
 import { getCurrencySymbol } from "@/lib/currency";
 import { calculateAge } from "@shared/utils";
+import { getEventPhase } from "@shared/eventDetail";
 import PostMatchEventCard from "@/components/PostMatchEventCard";
 import ReunionButton from "@/components/ReunionButton";
 import MatchRevealAnimation from "@/components/MatchRevealAnimation";
@@ -55,6 +56,7 @@ export default function BlindBoxEventDetailPage() {
   const [animationDecisionMade, setAnimationDecisionMade] = useState(false);
   const [allowReplay, setAllowReplay] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [icebreakerError, setIcebreakerError] = useState<string | null>(null);
 
   const { data: event, isLoading } = useQuery<BlindBoxEvent>({
     queryKey: ["/api/blind-box-events", eventId],
@@ -543,27 +545,81 @@ export default function BlindBoxEventDetailPage() {
         ) : null}
 
         {/* 小悦话题入口 (仅已匹配或已完成显示) */}
-        {(event.status === "matched" || event.status === "completed") && eventId && (
-          <div
-            className="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500 rounded-xl p-4 shadow-lg"
-            data-testid="card-icebreaker-teaser"
-          >
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 border-2 border-white/30">
-                <AvatarFallback className="bg-white/20 text-white text-sm font-medium">
-                  小悦
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 text-left">
-                <p className="text-white font-semibold text-sm">AI破冰环节已就绪</p>
-                <p className="text-white/70 text-xs">到场签到后，小悦将为你们定制专属破冰体验</p>
-              </div>
-              <div className="flex items-center gap-1 text-white/80">
-                <Sparkles className="h-4 w-4" />
+        {(event.status === "matched" || event.status === "completed") && eventId && (() => {
+          const phase = getEventPhase(event.dateTime);
+          if (phase === "started") {
+            return (
+              <>
+                <button
+                  onClick={async () => {
+                    setIcebreakerError(null);
+                    try {
+                      const response = await fetch(`/api/events/${eventId}/session`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                      });
+                      if (!response.ok) {
+                        setIcebreakerError("无法开始破冰体验，请稍后再试");
+                        return;
+                      }
+                      const data = await response.json();
+                      const sessionId = data?.sessionId;
+                      if (!sessionId) {
+                        setIcebreakerError("无法开始破冰体验，请稍后再试");
+                        return;
+                      }
+                      setLocation(`/icebreaker/${sessionId}?mode=social&eventId=${eventId}`);
+                    } catch (error) {
+                      console.error('[Admin BlindBox] Error starting icebreaker session', error);
+                      setIcebreakerError("无法开始破冰体验，请稍后再试");
+                    }
+                  }}
+                  className="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-600 rounded-xl p-4 transition-all active:scale-[0.98] shadow-lg"
+                  data-testid="button-open-icebreaker"
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10 border-2 border-white/30">
+                      <AvatarFallback className="bg-white/20 text-white text-sm font-medium">
+                        小悦
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 text-left">
+                      <p className="text-white font-semibold text-sm">🎲 活动进行中 🎉</p>
+                      <p className="text-white/70 text-xs">AI主持·5个环节·90分钟</p>
+                    </div>
+                    <div className="flex items-center gap-1 text-white/80">
+                      <Sparkles className="h-4 w-4" />
+                    </div>
+                  </div>
+                </button>
+                {icebreakerError && (
+                  <p className="text-sm text-destructive mt-2">{icebreakerError}</p>
+                )}
+              </>
+            );
+          }
+          return (
+            <div
+              className="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500 rounded-xl p-4 shadow-lg"
+              data-testid="card-icebreaker-teaser"
+            >
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 border-2 border-white/30">
+                  <AvatarFallback className="bg-white/20 text-white text-sm font-medium">
+                    小悦
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 text-left">
+                  <p className="text-white font-semibold text-sm">AI破冰环节已就绪</p>
+                  <p className="text-white/70 text-xs">到场签到后，小悦将为你们定制专属破冰体验</p>
+                </div>
+                <div className="flex items-center gap-1 text-white/80">
+                  <Sparkles className="h-4 w-4" />
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* VIP一键再约 (仅已完成活动显示) */}
         {event.status === "completed" && eventId && (
