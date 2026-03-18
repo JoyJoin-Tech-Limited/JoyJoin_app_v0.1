@@ -63,7 +63,7 @@ export interface UserWithProfile {
   barBudgetRange: string[] | null;  // 酒局预算（每杯）
   preferredLanguages: string[] | null;
   eventIntent: string[] | null;  // ✅ RENAMED from socialGoals - 本次活动社交目的
-  profileIntent: string[] | null;  // 用户档案默认社交偏好（fallback）
+  userIntent: string[] | null;   // 用户档案默认社交偏好（fallback when eventIntent empty）
   cuisinePreferences: string[] | null;
   dietaryRestrictions: string[] | null;
   tasteIntensity: string[] | null;
@@ -297,17 +297,18 @@ function calculateLanguageScore(user1: UserWithProfile, user2: UserWithProfile):
 }
 
 /**
- * Resolve effective intent for matching.
- * Priority: event-level intent → profile-level intent → "flexible" default
+ * Get effective intent for matching with fallback chain:
+ * 1. Event-specific intent (eventIntent from registration)
+ * 2. User's global profile intent (users.intent)
+ * 3. No-intent fallback (empty array = flexible / no preference)
  */
 function getEffectiveIntent(user: UserWithProfile): string[] {
-  if (user.eventIntent && user.eventIntent.length > 0) {
-    return user.eventIntent;
-  }
-  if (user.profileIntent && user.profileIntent.length > 0) {
-    return user.profileIntent;
-  }
-  return ["flexible"];
+  const isValidIntent = (v: unknown): v is string[] => Array.isArray(v) && (v as string[]).length > 0;
+  if (isValidIntent(user.eventIntent)) return user.eventIntent;
+  if (isValidIntent(user.userIntent)) return user.userIntent;
+  // No explicit intent provided: treat as no preference (empty list),
+  // so intent scoring can fall back to the neutral/default score.
+  return [];
 }
 
 /**
@@ -348,9 +349,12 @@ function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile
   
   // ❌ REMOVED: Cuisine preferences and taste intensity (饭局 food preferences deprecated)
   
-  // 社交目的兼容性（两种活动都使用）
-  const goals1 = getEffectiveIntent(user1);
-  const goals2 = getEffectiveIntent(user2);
+  // 社交目的兼容性（两种活动都使用）- fallback chain applied
+  // Note: Treat "flexible" as neutral (no strong intent); do not let it create a perfect match.
+  const goals1Raw = getEffectiveIntent(user1);
+  const goals2Raw = getEffectiveIntent(user2);
+  const goals1 = goals1Raw.filter(g => g !== "flexible");
+  const goals2 = goals2Raw.filter(g => g !== "flexible");
   if (goals1.length > 0 && goals2.length > 0) {
     const goalsOverlap = goals1.filter(g => goals2.includes(g)).length;
     score += (goalsOverlap / Math.max(goals1.length, goals2.length)) * 100;
@@ -648,7 +652,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       budgetRange: eventPoolRegistrations.budgetRange,
       preferredLanguages: eventPoolRegistrations.preferredLanguages,
       eventIntent: eventPoolRegistrations.eventIntent,
-      profileIntent: users.intent,
+      userIntent: users.intent,
       cuisinePreferences: eventPoolRegistrations.cuisinePreferences,
       dietaryRestrictions: eventPoolRegistrations.dietaryRestrictions,
       tasteIntensity: eventPoolRegistrations.tasteIntensity,
