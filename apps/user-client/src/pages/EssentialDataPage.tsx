@@ -9,7 +9,7 @@ import { SegmentedProgress } from "@/components/ui/progress-segmented";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { type WorkMode } from "@shared/constants";
+import { INDUSTRY_OPTIONS, type WorkMode, INTENT_OPTIONS as SHARED_INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION, type IntentIconHint } from "@shared/constants";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BirthDatePicker } from "@/components/BirthDatePicker";
@@ -92,17 +92,15 @@ const RELATIONSHIP_OPTIONS = [
   { value: "prefer_not_say", label: "不想说" },
 ];
 
-// Main intent options with icons and descriptions
-const INTENT_OPTIONS = [
-  { value: "friends", label: "交新朋友", subtitle: "认识有趣的人", icon: Users },
-  { value: "networking", label: "拓展人脉", subtitle: "扩大社交圈", icon: Network },
-  { value: "discussion", label: "深度交流", subtitle: "走心的对话", icon: MessageCircle },
-  { value: "fun", label: "轻松娱乐", subtitle: "开心就好", icon: PartyPopper },
-  { value: "romance", label: "浪漫邂逅", subtitle: "遇见心动", icon: Heart },
-];
-
-// Special "flexible" option - mutually exclusive with others
-const FLEXIBLE_OPTION = { value: "flexible", label: "随缘", subtitle: "交给小悦推荐", icon: Shuffle };
+// Icon map for intent options (keyed by IntentIconHint from shared constants — type-safe)
+const INTENT_ICON_MAP: Record<IntentIconHint, React.ComponentType<{ className?: string }>> = {
+  "Users": Users,
+  "Network": Network,
+  "MessageCircle": MessageCircle,
+  "PartyPopper": PartyPopper,
+  "Heart": Heart,
+  "Shuffle": Shuffle,
+};
 
 const EDUCATION_OPTIONS = [
   { value: "high_school", label: "高中及以下" },
@@ -166,7 +164,7 @@ const STEP_CONFIG = [
     mascotMessage: "最后一个问题！选完之后我就知道该把你安排在哪桌了 😏",
     mascotMood: "excited" as XiaoyueMood,
     type: "multiSelect" as const,
-    options: INTENT_OPTIONS,
+    options: SHARED_INTENT_OPTIONS,
   },
 ];
 
@@ -968,8 +966,8 @@ export default function EssentialDataPage() {
                 <div className="space-y-4">
                   {/* Main intent options - 2 column grid with icons */}
                   <div className="grid grid-cols-2 gap-3">
-                    {INTENT_OPTIONS.map((opt, index) => {
-                      const Icon = opt.icon;
+                    {SHARED_INTENT_OPTIONS.map((opt, index) => {
+                      const Icon = INTENT_ICON_MAP[opt.iconHint] ?? Users;
                       const isSelected = intent.includes(opt.value);
                       const isDisabled = isFlexibleSelected;
                       
@@ -1108,10 +1106,10 @@ export default function EssentialDataPage() {
                         "font-bold text-sm",
                         isFlexibleSelected ? "text-purple-700 dark:text-purple-300" : "text-foreground"
                       )}>
-                        {FLEXIBLE_OPTION.label}
+                        {INTENT_FLEXIBLE_OPTION.label}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {FLEXIBLE_OPTION.subtitle}
+                        {INTENT_FLEXIBLE_OPTION.subtitle}
                       </p>
                       <p className="text-xs text-muted-foreground/70 mt-0.5">
                         (我都感兴趣，帮我安排)

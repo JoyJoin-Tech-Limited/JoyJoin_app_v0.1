@@ -16,6 +16,7 @@ import { chemistryMatrix } from './archetypeChemistry';
 import { db } from './db';
 import { eventPoolGroups } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS } from '@shared/constants';
 
 // Configure DeepSeek client with 10-second timeout
 const deepseekClient = new OpenAI({
@@ -96,9 +97,16 @@ export interface MatchMember {
   archetype: string | null;
   secondaryArchetype?: string | null;
   interestsTop?: string[] | null;
-  industry?: string | null;
+  industry?: string | null;           // Display label (e.g. "科技互联网")
   hometown?: string | null;
   socialStyle?: string | null;
+  // Enriched fields for connection point detection
+  educationLevel?: string | null;
+  relationshipStatus?: string | null;
+  workMode?: string | null;
+  industryCategory?: string | null;   // Category code for matching (e.g. "tech")
+  industryCategoryLabel?: string | null; // Human-readable label for display (e.g. "科技互联网")
+  interestsWithHeat?: Array<{ topicId: string; heatLevel: number }> | null;
 }
 
 export interface MatchExplanation {
@@ -379,19 +387,104 @@ function findSharedInterests(
 }
 
 /**
+ * 获取工作模式的中文标签（使用共享常量 WORK_MODE_LABELS）
+ */
+function getWorkModeLabel(mode: string): string {
+  return WORK_MODE_LABELS[mode as keyof typeof WORK_MODE_LABELS] || mode;
+}
+
+/**
+ * 找出两个用户在热度达标兴趣上的深度重叠
+ */
+function findDeepInterestOverlap(
+  interestsA: Array<{ topicId: string; heatLevel: number }> | null | undefined,
+  interestsB: Array<{ topicId: string; heatLevel: number }> | null | undefined,
+  minHeatLevel: number
+): { count: number; topics: string[] } {
+  if (!interestsA || !interestsB) return { count: 0, topics: [] };
+  const deepA = new Set(
+    interestsA.filter(i => i.heatLevel >= minHeatLevel).map(i => i.topicId)
+  );
+  const overlap = interestsB.filter(
+    i => i.heatLevel >= minHeatLevel && deepA.has(i.topicId)
+  );
+  return { count: overlap.length, topics: overlap.map(i => i.topicId) };
+}
+
+/**
  * 找出连接点（同乡、同行业等）
  */
 function findConnectionPoints(member1: MatchMember, member2: MatchMember): string[] {
   const points: string[] = [];
-  
+
   if (member1.hometown && member2.hometown && member1.hometown === member2.hometown) {
     points.push(`同乡（${member1.hometown}）`);
   }
-  
+
   if (member1.industry && member2.industry && member1.industry === member2.industry) {
     points.push(`同行业（${member1.industry}）`);
   }
-  
+
+  // Same education level
+  if (member1.educationLevel && member2.educationLevel &&
+      member1.educationLevel === member2.educationLevel) {
+    points.push(`同学历（${member1.educationLevel}）`);
+  }
+
+  // Same relationship status — use shared RELATIONSHIP_MATCH_LABELS for display text
+  if (member1.relationshipStatus && member2.relationshipStatus &&
+      member1.relationshipStatus === member2.relationshipStatus &&
+      member1.relationshipStatus !== "不透露") {
+    const label = RELATIONSHIP_MATCH_LABELS[member1.relationshipStatus];
+    if (label) {
+      points.push(label.text);
+    }
+  }
+
+  // Same work mode AND same industry category (rare compound)
+  // Match on category code; display using the human-readable label
+  if (member1.workMode && member2.workMode &&
+      member1.workMode === member2.workMode &&
+      member1.industryCategory && member2.industryCategory &&
+      member1.industryCategory === member2.industryCategory) {
+    const displayLabel = member1.industryCategoryLabel || member1.industryCategory;
+    points.push(`同在${displayLabel}·${getWorkModeLabel(member1.workMode)}`);
+  }
+
+  // Archetype checks
+  if (member1.archetype && member2.archetype) {
+    if (member1.archetype === member2.archetype) {
+      // Exact same archetype (epic)
+      points.push(`同款人格（${member1.archetype}）`);
+    } else {
+      // Complementary archetype (chemistry score > 85)
+      const chemScore = getChemistryScore(member1.archetype, member2.archetype);
+      if (chemScore > 85) {
+        points.push(`性格互补（${member1.archetype}×${member2.archetype}）`);
+      }
+    }
+  }
+
+  // Compound epic: same hometown + same industry category (老乡+同行 bonus)
+  // Match on category code; display using the human-readable label
+  if (member1.hometown && member2.hometown &&
+      member1.hometown === member2.hometown &&
+      member1.industryCategory && member2.industryCategory &&
+      member1.industryCategory === member2.industryCategory) {
+    const displayLabel = member1.industryCategoryLabel || member1.industryCategory;
+    points.push(`老乡+同行（${member1.hometown}·${displayLabel}）`);
+  }
+
+  // Deep interest overlap (≥3 interests at heat level ≥ 2)
+  const deepOverlap = findDeepInterestOverlap(
+    member1.interestsWithHeat,
+    member2.interestsWithHeat,
+    2
+  );
+  if (deepOverlap.count >= 3) {
+    points.push(`深度同好（${deepOverlap.count}个共同深度兴趣）`);
+  }
+
   return points;
 }
 

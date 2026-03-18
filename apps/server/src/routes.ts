@@ -15,6 +15,7 @@ import { broadcastEventStatusChanged, broadcastAdminAction, broadcastAttendanceS
 import { matchEventPool, saveMatchResults } from "./poolMatchingService";
 import { ARCHETYPE_NAMES } from "./archetypeConfig";
 import type { ArchetypeName } from "./archetypeConfig";
+import { enrichProfileFromRegistration } from "./lib/profileEnrichment";
 
 type Traits = {
   affinity: number;
@@ -8974,6 +8975,16 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         // Error logged, operation continues
       });
 
+      // Silently backfill empty profile fields from registration data (fire-and-forget)
+      enrichProfileFromRegistration({
+        userId: registration.userId,
+        eventIntent: registration.eventIntent ?? undefined,
+        preferredLanguages: registration.preferredLanguages ?? undefined,
+      }).catch((err: any) => {
+        // Log but don't fail the registration
+        console.error("[profileEnrichment] Failed to enrich profile:", err);
+      });
+
       res.json(registration);
     } catch (error: any) {
       console.error("Error registering for event pool:", error);
@@ -10999,17 +11010,42 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       });
 
       const { matchExplanationService } = await import('./matchExplanationService');
-      
-      const matchMembers = members.map((m: any) => ({
-        userId: m.id,
-        displayName: m.displayName || '神秘嘉宾',
-        archetype: m.archetype,
-        secondaryArchetype: m.secondaryArchetype,
-        interestsTop: m.interestsTop,
-        industry: m.industry,
-        hometown: m.hometownRegionCity,
-        socialStyle: m.socialStyle,
-      }));
+
+      // Load user interests (with heat levels) for deep interest overlap detection
+      const memberInterestsRows = await db.query.userInterests.findMany({
+        where: sql`${userInterests.userId} = ANY(${memberIds})`,
+      }) as Array<{
+        userId: string;
+        selections: Array<{ topicId: string; level?: number | null }> | null;
+      }>;
+      const interestsByUserId = new Map(
+        memberInterestsRows.map((row) => [row.userId, row] as const)
+      );
+
+      const matchMembers = members.map((m: any) => {
+        const interestRow = interestsByUserId.get(m.id);
+        const interestsWithHeat = interestRow?.selections
+          ? (interestRow.selections as Array<{ topicId: string; level: number }>).map(
+              (s) => ({ topicId: s.topicId, heatLevel: s.level ?? 1 })
+            )
+          : null;
+        return {
+          userId: m.id,
+          displayName: m.displayName || '神秘嘉宾',
+          archetype: m.archetype,
+          secondaryArchetype: m.secondaryArchetype,
+          interestsTop: m.interestsTop,
+          industry: m.industryNicheLabel || m.industryCategoryLabel,
+          hometown: m.hometownRegionCity,
+          socialStyle: m.socialStyle,
+          educationLevel: m.educationLevel,
+          relationshipStatus: m.relationshipStatus,
+          workMode: m.workMode,
+          industryCategory: m.industryCategory,
+          industryCategoryLabel: m.industryCategoryLabel,
+          interestsWithHeat,
+        };
+      });
 
       // Get event pool info for event type
       const pool = await db.query.eventPools.findFirst({
@@ -11077,16 +11113,21 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       });
 
       const { matchExplanationService } = await import('./matchExplanationService');
-      
+
       const matchMembers = members.map((m: any) => ({
         userId: m.id,
         displayName: m.displayName || '神秘嘉宾',
         archetype: m.archetype,
         secondaryArchetype: m.secondaryArchetype,
         interestsTop: m.interestsTop,
-        industry: m.industry,
+        industry: m.industryNicheLabel || m.industryCategoryLabel,
         hometown: m.hometownRegionCity,
         socialStyle: m.socialStyle,
+        educationLevel: m.educationLevel,
+        relationshipStatus: m.relationshipStatus,
+        workMode: m.workMode,
+        industryCategory: m.industryCategory,
+        industryCategoryLabel: m.industryCategoryLabel,
       }));
 
       // Get event pool info for event type
@@ -11145,17 +11186,42 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       });
 
       const { matchExplanationService } = await import('./matchExplanationService');
-      
-      const matchMembers = members.map((m: any) => ({
-        userId: m.id,
-        displayName: m.displayName || '神秘嘉宾',
-        archetype: m.archetype,
-        secondaryArchetype: m.secondaryArchetype,
-        interestsTop: m.interestsTop,
-        industry: m.industry,
-        hometown: m.hometownRegionCity,
-        socialStyle: m.socialStyle,
-      }));
+
+      // Load user interests (with heat levels) for deep interest overlap detection
+      const memberInterestsRows = await db.query.userInterests.findMany({
+        where: sql`${userInterests.userId} = ANY(${memberIds})`,
+      }) as Array<{
+        userId: string;
+        selections: Array<{ topicId: string; level?: number | null }> | null;
+      }>;
+      const interestsByUserId = new Map(
+        memberInterestsRows.map((row) => [row.userId, row] as const)
+      );
+
+      const matchMembers = members.map((m: any) => {
+        const interestRow = interestsByUserId.get(m.id);
+        const interestsWithHeat = interestRow?.selections
+          ? (interestRow.selections as Array<{ topicId: string; level: number }>).map(
+              (s) => ({ topicId: s.topicId, heatLevel: s.level ?? 1 })
+            )
+          : null;
+        return {
+          userId: m.id,
+          displayName: m.displayName || '神秘嘉宾',
+          archetype: m.archetype,
+          secondaryArchetype: m.secondaryArchetype,
+          interestsTop: m.interestsTop,
+          industry: m.industryNicheLabel || m.industryCategoryLabel,
+          hometown: m.hometownRegionCity,
+          socialStyle: m.socialStyle,
+          educationLevel: m.educationLevel,
+          relationshipStatus: m.relationshipStatus,
+          workMode: m.workMode,
+          industryCategory: m.industryCategory,
+          industryCategoryLabel: m.industryCategoryLabel,
+          interestsWithHeat,
+        };
+      });
 
       const groupAnalysis = await matchExplanationService.generateGroupAnalysis(
         eventId,
@@ -11382,9 +11448,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           archetype: m.archetype,
           secondaryArchetype: m.secondaryArchetype,
           interestsTop: m.interestsTop,
-          industry: m.industry,
+          industry: m.industryNicheLabel || m.industryCategoryLabel,
           hometown: m.hometownRegionCity,
           socialStyle: m.socialStyle,
+          educationLevel: m.educationLevel,
+          relationshipStatus: m.relationshipStatus,
+          workMode: m.workMode,
+          industryCategory: m.industryCategory,
+          industryCategoryLabel: m.industryCategoryLabel,
         }));
 
         const analysis = await matchExplanationService.generateGroupAnalysis(

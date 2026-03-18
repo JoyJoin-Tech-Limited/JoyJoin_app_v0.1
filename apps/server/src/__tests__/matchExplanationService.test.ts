@@ -36,6 +36,11 @@ describe('matchExplanationService', () => {
     industry: '互联网',
     hometown: '深圳',
     socialStyle: '外向活泼',
+    educationLevel: '硕士',
+    relationshipStatus: '单身',
+    workMode: 'employed',
+    industryCategory: 'tech',
+    industryCategoryLabel: '科技互联网',
   };
 
   const mockMember2: MatchMember = {
@@ -47,6 +52,11 @@ describe('matchExplanationService', () => {
     industry: '互联网',
     hometown: '深圳',
     socialStyle: '温和内敛',
+    educationLevel: '硕士',
+    relationshipStatus: '单身',
+    workMode: 'employed',
+    industryCategory: 'tech',
+    industryCategoryLabel: '科技互联网',
   };
 
   const mockMember3: MatchMember = {
@@ -114,6 +124,103 @@ describe('matchExplanationService', () => {
     it('should find industry connection', () => {
       const points = matchExplanationService.findConnectionPoints(mockMember1, mockMember2);
       expect(points).toContain('同行业（互联网）');
+    });
+
+    it('should find same education level connection', () => {
+      const points = matchExplanationService.findConnectionPoints(mockMember1, mockMember2);
+      expect(points).toContain('同学历（硕士）');
+    });
+
+    it('should find same relationship status connection', () => {
+      const points = matchExplanationService.findConnectionPoints(mockMember1, mockMember2);
+      expect(points.some(p => p.includes('单身'))).toBe(true);
+    });
+
+    it('should find same work mode + industry category compound connection', () => {
+      const points = matchExplanationService.findConnectionPoints(mockMember1, mockMember2);
+      expect(points).toContain('同在科技互联网·在职人士');
+    });
+
+    it('should find compound hometown + industry epic connection', () => {
+      const points = matchExplanationService.findConnectionPoints(mockMember1, mockMember2);
+      expect(points).toContain('老乡+同行（深圳·科技互联网）');
+    });
+
+    it('should find exact archetype match (epic)', () => {
+      const sameArchetypeMember: MatchMember = {
+        userId: 'user-same',
+        displayName: '小克',
+        archetype: '开心柯基',
+      };
+      const points = matchExplanationService.findConnectionPoints(mockMember1, sameArchetypeMember);
+      expect(points.some(p => p.includes('同款人格') && p.includes('开心柯基'))).toBe(true);
+    });
+
+    it('should find deep interest overlap when ≥3 high-heat interests match', () => {
+      const memberA: MatchMember = {
+        userId: 'user-a',
+        displayName: '甲',
+        archetype: '开心柯基',
+        interestsWithHeat: [
+          { topicId: 'topic1', heatLevel: 2 },
+          { topicId: 'topic2', heatLevel: 3 },
+          { topicId: 'topic3', heatLevel: 2 },
+          { topicId: 'topic4', heatLevel: 1 },
+        ],
+      };
+      const memberB: MatchMember = {
+        userId: 'user-b',
+        displayName: '乙',
+        archetype: '暖心熊',
+        interestsWithHeat: [
+          { topicId: 'topic1', heatLevel: 3 },
+          { topicId: 'topic2', heatLevel: 2 },
+          { topicId: 'topic3', heatLevel: 2 },
+          { topicId: 'topic5', heatLevel: 3 },
+        ],
+      };
+      const points = matchExplanationService.findConnectionPoints(memberA, memberB);
+      expect(points.some(p => p.includes('深度同好'))).toBe(true);
+    });
+
+    it('should NOT show deep interest overlap when fewer than 3 high-heat interests match', () => {
+      const memberA: MatchMember = {
+        userId: 'user-a',
+        displayName: '甲',
+        archetype: '开心柯基',
+        interestsWithHeat: [
+          { topicId: 'topic1', heatLevel: 2 },
+          { topicId: 'topic2', heatLevel: 2 },
+        ],
+      };
+      const memberB: MatchMember = {
+        userId: 'user-b',
+        displayName: '乙',
+        archetype: '暖心熊',
+        interestsWithHeat: [
+          { topicId: 'topic1', heatLevel: 2 },
+          { topicId: 'topic2', heatLevel: 2 },
+        ],
+      };
+      const points = matchExplanationService.findConnectionPoints(memberA, memberB);
+      expect(points.some(p => p.includes('深度同好'))).toBe(false);
+    });
+
+    it('should NOT show relationship connection when status is 不透露', () => {
+      const memberPrivate: MatchMember = {
+        userId: 'user-private',
+        displayName: '私密',
+        archetype: null,
+        relationshipStatus: '不透露',
+      };
+      const memberPrivate2: MatchMember = {
+        userId: 'user-private2',
+        displayName: '私密2',
+        archetype: null,
+        relationshipStatus: '不透露',
+      };
+      const points = matchExplanationService.findConnectionPoints(memberPrivate, memberPrivate2);
+      expect(points.some(p => p.includes('不透露'))).toBe(false);
     });
 
     it('should return empty array when no connections', () => {
