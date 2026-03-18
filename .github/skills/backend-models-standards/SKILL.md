@@ -38,7 +38,8 @@ This Skill provides GitHub Copilot with specific guidance on how to adhere to co
 ## Required Fields
 
 **Timestamps on every model:**
-```python
+_Example below is ORM-agnostic pseudocode; in this repo, adapt it to TypeScript + Drizzle (see `packages/shared/src/schema.ts`)._
+```pseudo
 created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 ```
