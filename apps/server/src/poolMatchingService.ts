@@ -41,7 +41,9 @@ import { generateAndSaveEventTheme } from "./eventThemeGeneratorService";
 import { generateEventThemeTitle } from "./services/eventThemeTitleGenerator";
 
 /**
- * Map Chinese life stage labels (from AI inference) to workMode enum values
+ * Map Chinese life stage labels (from AI inference) to workMode enum values.
+ * Used in future AI-assisted label normalisation when raw AI text must be
+ * converted to a structured workMode enum before scoring.
  */
 const LIFE_STAGE_TO_WORK_MODE: Record<string, string> = {
   '学生党': 'student',
@@ -431,6 +433,9 @@ function calculateHometownAffinityScore(user1: UserWithProfile, user2: UserWithP
  * This is ASYMMETRIC. A student wanting to meet a founder ≠ a founder wanting to meet a student.
  * We average both directions for the pair score.
  */
+/** Neutral score returned when a user has no workMode set (neither a boost nor a penalty). */
+const NEUTRAL_LIFE_STAGE_SCORE = 50;
+
 const LIFE_STAGE_AFFINITY: Record<string, Record<string, number>> = {
   //                       founder  self_emp  employed  student  transition  caregiver  successor
   founder:           { founder: 90, self_employed: 80, employed: 60, student: 40, transitioning: 70, caregiver_retired: 30, successor: 80 },
@@ -448,10 +453,10 @@ const LIFE_STAGE_AFFINITY: Record<string, Record<string, number>> = {
  * Intent modulation: networking boosts cross-stage affinity, fun dampens it.
  */
 function calculateLifeStageAffinity(user1: UserWithProfile, user2: UserWithProfile): number {
-  if (!user1.workMode || !user2.workMode) return 50; // neutral default
+  if (!user1.workMode || !user2.workMode) return NEUTRAL_LIFE_STAGE_SCORE;
 
-  const baseForward = LIFE_STAGE_AFFINITY[user1.workMode]?.[user2.workMode] ?? 50;
-  const baseReverse = LIFE_STAGE_AFFINITY[user2.workMode]?.[user1.workMode] ?? 50;
+  const baseForward = LIFE_STAGE_AFFINITY[user1.workMode]?.[user2.workMode] ?? NEUTRAL_LIFE_STAGE_SCORE;
+  const baseReverse = LIFE_STAGE_AFFINITY[user2.workMode]?.[user1.workMode] ?? NEUTRAL_LIFE_STAGE_SCORE;
 
   // Intent modulation: networking intent amplifies cross-stage affinity
   const intent1 = getEffectiveIntent(user1);
