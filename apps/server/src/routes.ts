@@ -8980,9 +8980,6 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         userId: registration.userId,
         eventIntent: registration.eventIntent ?? undefined,
         preferredLanguages: registration.preferredLanguages ?? undefined,
-        alcoholComfort: req.body.alcoholComfort ?? undefined,
-        budgetRange: req.body.budgetRange?.[0] ?? undefined,
-        barThemePreferences: req.body.barThemes ?? undefined,
       }).catch((err: any) => {
         // Log but don't fail the registration
         console.error("[profileEnrichment] Failed to enrich profile:", err);
