@@ -262,6 +262,16 @@ export default function EssentialDataPage() {
   const [showManualIndustry, setShowManualIndustry] = useState(false);
   // Enhancement 5: direction tracking for step number ticker
   const directionRef = useRef<1 | -1>(1);
+  // Auto-advance for single-select steps (2 & 3)
+  const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
+  const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup auto-advance timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
+    };
+  }, []);
 
   // Load cached progress (Phase 0: Fix #11 - Error handling)
   useEffect(() => {
@@ -458,6 +468,22 @@ export default function EssentialDataPage() {
 
   // Check if "flexible" is selected
   const isFlexibleSelected = intent.includes("flexible");
+
+  // Auto-advance handler for single-select steps (2 & 3)
+  const handleSingleSelect = (setter: (val: string) => void, value: string) => {
+    setter(value);
+    haptics.light();
+
+    // Cancel any pending auto-advance
+    if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
+
+    setIsAutoAdvancing(true);
+    autoAdvanceTimerRef.current = setTimeout(() => {
+      setIsAutoAdvancing(false);
+      directionRef.current = 1;
+      setCurrentStep(prev => prev + 1);
+    }, 500);
+  };
 
   const handleNext = () => {
     if (!canProceed()) return;
@@ -853,7 +879,8 @@ export default function EssentialDataPage() {
               {(currentStep === 2 || currentStep === 3) && stepConfig.options && (
                 <div className={cn(
                   "grid gap-3",
-                  currentStep === 2 ? "grid-cols-2" : "grid-cols-1"
+                  currentStep === 2 ? "grid-cols-2" : "grid-cols-1",
+                  isAutoAdvancing && "pointer-events-none"
                 )}>
                   {stepConfig.options.map(opt => {
                     const value = currentStep === 2 ? relationshipStatus : education;
@@ -862,7 +889,7 @@ export default function EssentialDataPage() {
                       <TappableCard
                         key={opt.value}
                         selected={value === opt.value}
-                        onClick={() => setValue(opt.value)}
+                        onClick={() => handleSingleSelect(setValue, opt.value)}
                         className="p-4"
                       >
                         <span className="text-base font-semibold">{opt.label}</span>
@@ -1163,7 +1190,7 @@ export default function EssentialDataPage() {
           <Button 
             className="w-full h-12 rounded-xl text-base font-bold shadow-lg bg-gradient-to-r from-[#FF6B9D] to-[#A86BFF] hover:from-[#e55f8e] hover:to-[#9257e6] transition-all duration-200 border-0"
             onClick={handleNext}
-            disabled={!canProceed() || saveMutation.isPending}
+            disabled={!canProceed() || saveMutation.isPending || isAutoAdvancing}
             data-testid="button-next"
           >
             {saveMutation.isPending ? (
