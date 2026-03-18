@@ -21,6 +21,7 @@ export interface AttendeeData {
   birthdate?: string;
   industry?: string;
   industryCategory?: string;
+  industryCategoryLabel?: string;
   ageVisible?: boolean;
   industryVisible?: boolean;
   gender?: string;
@@ -263,6 +264,7 @@ export interface UserContext {
   archetype?: string;
   workMode?: string;
   industryCategory?: string;
+  industryCategoryLabel?: string;
   intent?: string[]; // Event-specific intent (aligned with User.intent)
   matchedBefore?: string[]; // Array of user IDs previously matched with
   // New fields from AI chat registration
@@ -298,6 +300,7 @@ export interface SparkPredictionContext {
   userArchetype?: string;
   userWorkMode?: string;
   userIndustryCategory?: string;
+  userIndustryCategoryLabel?: string;
   userIntent?: string[]; // Event-specific intent (aligned with User.intent)
   userMatchedBefore?: string[]; // Array of user IDs previously matched with
   // New fields from AI chat registration
@@ -395,6 +398,7 @@ function userContextToSparkContext(ctx: UserContext): SparkPredictionContext {
     userArchetype: ctx.archetype,
     userWorkMode: ctx.workMode,
     userIndustryCategory: ctx.industryCategory,
+    userIndustryCategoryLabel: ctx.industryCategoryLabel,
     userIntent: ctx.intent,
     userMatchedBefore: ctx.matchedBefore,
     userCuisinePreference: ctx.cuisinePreference,
@@ -1142,11 +1146,17 @@ export function generateSparkPredictions(
       ctx.userIndustryCategory && attendee.industryCategory &&
       ctx.userIndustryCategory === attendee.industryCategory) {
     const modeLabel = WORK_MODE_LABELS[ctx.userWorkMode as keyof typeof WORK_MODE_LABELS] || ctx.userWorkMode;
-    const displayIndustry = ctx.userIndustry || attendee.industry || ctx.userIndustryCategory;
-    predictions.push({
-      text: `同在${displayIndustry}·${modeLabel}`,
-      rarity: 'rare',
-    });
+    const displayIndustry =
+      ctx.userIndustry ||
+      ctx.userIndustryCategoryLabel ||
+      attendee.industry ||
+      attendee.industryCategoryLabel;
+    if (displayIndustry) {
+      predictions.push({
+        text: `同在${displayIndustry}·${modeLabel}`,
+        rarity: 'rare',
+      });
+    }
   }
 
   // ✨ NEW: V4 archetype exact match or complementary check
@@ -1172,11 +1182,17 @@ export function generateSparkPredictions(
       ctx.userHometownRegionCity === attendee.hometownRegionCity &&
       ctx.userIndustryCategory && attendee.industryCategory &&
       ctx.userIndustryCategory === attendee.industryCategory) {
-    const displayIndustry = ctx.userIndustry || attendee.industry || ctx.userIndustryCategory;
-    predictions.push({
-      text: `老乡+同行（${ctx.userHometownRegionCity}·${displayIndustry}）`,
-      rarity: 'epic',
-    });
+    const displayIndustry =
+      ctx.userIndustry ||
+      ctx.userIndustryCategoryLabel ||
+      attendee.industry ||
+      attendee.industryCategoryLabel;
+    if (displayIndustry) {
+      predictions.push({
+        text: `老乡+同行（${ctx.userHometownRegionCity}·${displayIndustry}）`,
+        rarity: 'epic',
+      });
+    }
   }
 
   // Sort by rarity (epic > rare > common) and return top 10
