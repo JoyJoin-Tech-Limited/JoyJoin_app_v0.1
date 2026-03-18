@@ -40,22 +40,22 @@ import { assignVenuesToGroups, saveVenueAssignments } from "./venueAssignmentSer
 import { generateAndSaveEventTheme } from "./eventThemeGeneratorService";
 import { generateEventThemeTitle } from "./services/eventThemeTitleGenerator";
 
-/**
- * Map Chinese life stage labels (from AI inference) to workMode enum values.
- * Used in future AI-assisted label normalisation when raw AI text must be
- * converted to a structured workMode enum before scoring.
- */
-const LIFE_STAGE_TO_WORK_MODE: Record<string, string> = {
-  '学生党': 'student',
-  '职场新人': 'employed',
-  '职场老手': 'employed',
-  '创业中': 'founder',
-  '自由职业': 'self_employed',
-  '退休享乐': 'caregiver_retired',
-  '全职爸妈': 'caregiver_retired',
-  '准备继承家业': 'successor',
-  '接班人': 'successor',
-};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export interface UserWithProfile {
   userId: string;
