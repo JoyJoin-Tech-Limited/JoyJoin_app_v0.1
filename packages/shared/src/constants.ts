@@ -180,3 +180,21 @@ export const CONNECTION_POINT_TIER_CONFIG = {
   rare: { label: "稀有契合", color: "#8B5CF6", bgColor: "#EDE9FE" },
   epic: { label: "史诗契合", color: "#F59E0B", bgColor: "#FEF3C7" },
 } as const;
+
+// Rarity tiers for education levels (common → epic, higher degree = rarer)
+export const EDUCATION_LEVEL_RARITY: Record<string, ConnectionPointTier> = {
+  "高中及以下": "common",
+  "大专": "common",
+  "本科": "common",
+  "职业培训": "common",
+  "硕士": "rare",
+  "博士": "epic",
+};
+
+// Chinese display labels for relationship status match descriptions
+export const RELATIONSHIP_MATCH_LABELS: Record<string, { text: string; tier: ConnectionPointTier }> = {
+  "单身": { text: "同为单身贵族", tier: "common" },
+  "恋爱中": { text: "都在甜蜜恋爱中", tier: "common" },
+  "已婚/伴侣": { text: "同为有伴一族", tier: "common" },
+  "离异": { text: "都经历过婚姻", tier: "common" },
+};

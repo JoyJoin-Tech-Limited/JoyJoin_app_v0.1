@@ -11175,12 +11175,12 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const memberInterestsRows = await db.query.userInterests.findMany({
         where: sql`${userInterests.userId} = ANY(${memberIds})`,
       });
-      const interestsByUserIdBlindBox = new Map(
+      const interestsByUserId = new Map(
         memberInterestsRows.map((row: any) => [row.userId, row])
       );
 
       const matchMembers = members.map((m: any) => {
-        const interestRow = interestsByUserIdBlindBox.get(m.id);
+        const interestRow = interestsByUserId.get(m.id);
         const interestsWithHeat = interestRow?.selections
           ? (interestRow.selections as Array<{ topicId: string; level: number }>).map(
               (s) => ({ topicId: s.topicId, heatLevel: s.level ?? 1 })

@@ -1,4 +1,10 @@
 import { getArchetypeCompatibility } from '@/lib/archetypeCompatibility';
+import {
+  WORK_MODE_LABELS,
+  EDUCATION_LEVEL_RARITY,
+  RELATIONSHIP_MATCH_LABELS,
+} from '@shared/constants';
+import type { ConnectionPointTier } from '@shared/constants';
 
 export interface AttendeeData {
   userId: string;
@@ -1104,14 +1110,6 @@ export function generateSparkPredictions(
   // ✨ NEW: Same education level using current Chinese schema values
   if (ctx.userEducationLevel && attendee.educationLevel &&
       ctx.userEducationLevel === attendee.educationLevel) {
-    const educationRarity: Record<string, RarityLevel> = {
-      "博士": "epic",
-      "硕士": "rare",
-      "本科": "common",
-      "大专": "common",
-      "高中及以下": "common",
-      "职业培训": "common",
-    };
     // Avoid duplicate if already pushed by legacy Priority 5
     const alreadyPushed = predictions.some(p =>
       p.text.includes("博士") || p.text.includes("硕士") || p.text.includes("学历")
@@ -1119,7 +1117,7 @@ export function generateSparkPredictions(
     if (!alreadyPushed) {
       predictions.push({
         text: `同为${ctx.userEducationLevel}学历`,
-        rarity: educationRarity[ctx.userEducationLevel] ?? 'common',
+        rarity: (EDUCATION_LEVEL_RARITY[ctx.userEducationLevel] ?? 'common') as RarityLevel,
       });
     }
   }
@@ -1128,19 +1126,13 @@ export function generateSparkPredictions(
   if (ctx.userRelationshipStatus && attendee.relationshipStatus &&
       ctx.userRelationshipStatus === attendee.relationshipStatus &&
       ctx.userRelationshipStatus !== "不透露") {
-    const relLabels: Record<string, { text: string; rarity: RarityLevel }> = {
-      "单身": { text: "同为单身贵族", rarity: 'common' },
-      "恋爱中": { text: "都在甜蜜恋爱中", rarity: 'common' },
-      "已婚/伴侣": { text: "同为有伴一族", rarity: 'common' },
-      "离异": { text: "都经历过婚姻", rarity: 'common' },
-    };
     // Avoid duplicate from legacy Priority 4
     const alreadyPushed = predictions.some(p =>
       p.text.includes("单身") || p.text.includes("伴侣") || p.text.includes("有伴") || p.text.includes("恋爱")
     );
-    const label = relLabels[ctx.userRelationshipStatus];
-    if (label && !alreadyPushed) {
-      predictions.push(label);
+    const entry = RELATIONSHIP_MATCH_LABELS[ctx.userRelationshipStatus];
+    if (entry && !alreadyPushed) {
+      predictions.push({ text: entry.text, rarity: entry.tier as RarityLevel });
     }
   }
 
@@ -1149,15 +1141,7 @@ export function generateSparkPredictions(
       ctx.userWorkMode === attendee.workMode &&
       ctx.userIndustry && attendee.industry &&
       ctx.userIndustry === attendee.industry) {
-    const workModeLabels: Record<string, string> = {
-      founder: "创始人/合伙人",
-      self_employed: "自由职业",
-      employed: "在职人士",
-      student: "学生/实习",
-      transitioning: "职业过渡期",
-      caregiver_retired: "家庭为主",
-    };
-    const modeLabel = workModeLabels[ctx.userWorkMode] || ctx.userWorkMode;
+    const modeLabel = WORK_MODE_LABELS[ctx.userWorkMode as keyof typeof WORK_MODE_LABELS] || ctx.userWorkMode;
     predictions.push({
       text: `同在${ctx.userIndustry}·${modeLabel}`,
       rarity: 'rare',

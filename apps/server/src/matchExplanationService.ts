@@ -16,6 +16,7 @@ import { chemistryMatrix } from './archetypeChemistry';
 import { db } from './db';
 import { eventPoolGroups } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { WORK_MODE_LABELS } from '@shared/constants';
 
 // Configure DeepSeek client with 10-second timeout
 const deepseekClient = new OpenAI({
@@ -385,7 +386,7 @@ function findSharedInterests(
 }
 
 /**
- * 获取感情状态的中文标签
+ * 获取感情状态的中文标签（用于连接点描述）
  */
 function getRelationshipLabel(status: string): string {
   const labels: Record<string, string> = {
@@ -394,24 +395,15 @@ function getRelationshipLabel(status: string): string {
     "已婚/伴侣": "有伴侣",
     "离异": "离异了",
     "丧偶": "丧偶",
-    "不透露": "不透露",
   };
   return labels[status] || status;
 }
 
 /**
- * 获取工作模式的中文标签
+ * 获取工作模式的中文标签（使用共享常量 WORK_MODE_LABELS）
  */
 function getWorkModeLabel(mode: string): string {
-  const labels: Record<string, string> = {
-    founder: "创始人/合伙人",
-    self_employed: "自由职业",
-    employed: "在职人士",
-    student: "学生/实习",
-    transitioning: "职业过渡期",
-    caregiver_retired: "家庭为主",
-  };
-  return labels[mode] || mode;
+  return WORK_MODE_LABELS[mode as keyof typeof WORK_MODE_LABELS] || mode;
 }
 
 /**
@@ -482,12 +474,11 @@ function findConnectionPoints(member1: MatchMember, member2: MatchMember): strin
     }
   }
 
-  // Compound epic: same hometown + same industry category
+  // Compound epic: same hometown + same industry category (老乡+同行 bonus)
   if (member1.hometown && member2.hometown &&
       member1.hometown === member2.hometown &&
       member1.industryCategory && member2.industryCategory &&
       member1.industryCategory === member2.industryCategory) {
-    // Only add if not already covered by individual points above
     points.push(`老乡+同行（${member1.hometown}·${member1.industryCategory}）`);
   }
 
