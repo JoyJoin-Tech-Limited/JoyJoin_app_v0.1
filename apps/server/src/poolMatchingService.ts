@@ -498,10 +498,8 @@ function calculateBackgroundScore(user1: UserWithProfile, user2: UserWithProfile
   // Hometown affinity: 0-100 (only when both opted in)
   if (user1.hometownAffinityOptin && user2.hometownAffinityOptin) {
     const hometownScore = calculateHometownAffinityScore(user1, user2);
-    if (hometownScore > 0) {
-      score += hometownScore;
-      factors++;
-    }
+    score += hometownScore;
+    factors++;
   }
 
   // Education diversity: different = 60, same = 30
