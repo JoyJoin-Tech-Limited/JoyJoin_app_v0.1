@@ -3,6 +3,10 @@ import { cn } from "@/lib/utils";
 import { Sparkles } from "lucide-react";
 import { haptics } from "@/lib/haptics";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { AutoAdvanceRing } from "@/components/AutoAdvanceRing";
+
+// Stable no-op used as fallback for onAutoAdvanceComplete to avoid new function instances on each render
+const NOOP = () => {};
 
 export interface SelectionOption {
   value: string;
@@ -16,6 +20,12 @@ interface SelectionListProps {
   onSelect: (value: string | string[]) => void;
   multiSelect?: boolean;
   className?: string;
+  /** Whether the auto-advance countdown ring is active on the selected option */
+  autoAdvanceActive?: boolean;
+  /** Duration of the countdown ring in milliseconds */
+  autoAdvanceDuration?: number;
+  /** Called when the countdown ring completes */
+  onAutoAdvanceComplete?: () => void;
 }
 
 /**
@@ -37,6 +47,9 @@ export function SelectionList({
   onSelect,
   multiSelect = false,
   className,
+  autoAdvanceActive = false,
+  autoAdvanceDuration = 1200,
+  onAutoAdvanceComplete,
 }: SelectionListProps) {
   const prefersReducedMotion = useReducedMotion();
   const handleSelect = (value: string) => {
@@ -122,13 +135,22 @@ export function SelectionList({
             </div>
             
             {isSelected(option.value) ? (
-              <motion.div
-                initial={{ scale: 0, rotate: -45 }}
-                animate={{ scale: 1, rotate: 0 }}
-                className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/30"
-              >
-                <Sparkles className="w-4 h-4 text-primary-foreground" />
-              </motion.div>
+              <div className="relative shrink-0">
+                <motion.div
+                  initial={{ scale: 0, rotate: -45 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30"
+                >
+                  <Sparkles className="w-4 h-4 text-primary-foreground" />
+                </motion.div>
+                <AutoAdvanceRing
+                  active={autoAdvanceActive}
+                  duration={autoAdvanceDuration}
+                  size={28}
+                  onComplete={onAutoAdvanceComplete ?? NOOP}
+                  className="absolute inset-0"
+                />
+              </div>
             ) : (
               <div className="w-7 h-7 rounded-full border-2 border-muted/50 flex-shrink-0" />
             )}

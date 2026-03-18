@@ -260,6 +260,10 @@ export default function PersonalityTestPageV4() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [selectedOption, setSelectedOption] = useState<string | undefined>();
+  const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
+  const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Stable ref to the latest handleSubmitAnswer to avoid stale closures in setTimeout
+  const handleSubmitAnswerRef = useRef<(() => Promise<void>) | null>(null);
   const { saveCheckpoint } = useOnboardingCheckpoint();
   const [showMilestoneReward, setShowMilestoneReward] = useState(false);
   const milestoneShownRef = useRef(false); // Track if milestone has been shown
@@ -410,11 +414,32 @@ export default function PersonalityTestPageV4() {
   const handleSelectOption = useCallback((value: string | string[]) => {
     const next = Array.isArray(value) ? value[0] : value;
     setSelectedOption(next);
+
+    // Cancel any pending auto-advance timer
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+
+    // Start a new auto-advance countdown (ring handles visual feedback)
+    setIsAutoAdvancing(true);
+    autoAdvanceTimerRef.current = setTimeout(() => {
+      setIsAutoAdvancing(false);
+      autoAdvanceTimerRef.current = null;
+      handleSubmitAnswerRef.current?.();
+    }, 1200);
   }, []);
 
   const handleSubmitAnswer = useCallback(async () => {
     if (!currentQuestion || !selectedOption) return;
-    
+
+    // Cancel auto-advance when manually submitting to prevent double-advance
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    setIsAutoAdvancing(false);
+
     haptics.medium();
     const selectedOpt = currentQuestion.options.find(o => o.value === selectedOption);
     await submitAnswer(currentQuestion.id, selectedOption, selectedOpt?.traitScores || {});
@@ -422,11 +447,30 @@ export default function PersonalityTestPageV4() {
     setSelectedOption(undefined);
   }, [currentQuestion, selectedOption, submitAnswer, answeredCount, estimatedRemaining, currentMatches]);
 
+  // Keep handleSubmitAnswerRef current so the setTimeout closure always calls the latest version
+  useEffect(() => {
+    handleSubmitAnswerRef.current = handleSubmitAnswer;
+  }, [handleSubmitAnswer]);
 
+  // Cleanup auto-advance timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleSkipQuestion = useCallback(async () => {
     if (!currentQuestion || !canSkip) return;
-    
+
+    // Cancel auto-advance when skipping
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    setIsAutoAdvancing(false);
+
     const success = await skipQuestion(currentQuestion.id);
     if (success) {
       setSelectedOption(undefined);
@@ -566,6 +610,12 @@ export default function PersonalityTestPageV4() {
         remaining={estimatedRemaining}
         progress={progressPercentage}
         onBack={() => {
+          // Cancel any pending auto-advance before navigating away
+          if (autoAdvanceTimerRef.current) {
+            clearTimeout(autoAdvanceTimerRef.current);
+            autoAdvanceTimerRef.current = null;
+          }
+          setIsAutoAdvancing(false);
           // Since /onboarding is merged into /personality-test, go back to landing
           setLocation('/');
         }}
@@ -614,12 +664,17 @@ export default function PersonalityTestPageV4() {
           </div>
           
           <div className="flex-1 flex flex-col justify-center py-1 min-h-0">
-            <div className="max-h-[70vh] overflow-y-auto pb-20 md:pb-10 -mx-4 px-4">
+            <div className={cn(
+              "max-h-[70vh] overflow-y-auto pb-20 md:pb-10 -mx-4 px-4",
+              isAutoAdvancing && "pointer-events-none"
+            )}>
               <SelectionList
                 options={optionsForList}
                 selected={selectedOption}
                 onSelect={handleSelectOption}
                 className="grid grid-cols-1 gap-3 sm:grid-cols-2 !space-y-0"
+                autoAdvanceActive={isAutoAdvancing && !prefersReducedMotion}
+                autoAdvanceDuration={1200}
               />
             </div>
           </div>
@@ -628,7 +683,7 @@ export default function PersonalityTestPageV4() {
             <div className="space-y-3">
               <StickyCTAButton
                 onClick={handleSubmitAnswer}
-                disabled={!selectedOption || isSubmitting || isSkipping}
+                disabled={!selectedOption || isSubmitting || isSkipping || isAutoAdvancing}
                 isLoading={isSubmitting}
                 data-testid="button-submit-answer"
               >
