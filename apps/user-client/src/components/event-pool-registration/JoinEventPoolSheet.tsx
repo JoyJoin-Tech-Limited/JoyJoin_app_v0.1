@@ -66,11 +66,11 @@ export default function JoinEventPoolSheet({
     if (open && user) {
       // Set default districts based on event area
       // Map area name (e.g., "南山区") to cluster id (e.g., "nanshan")
-      const cluster = shenzhenClusters.find(c => 
+      const cluster = shenzhenClusters.find(c =>
         c.displayName === poolData.area || c.name === poolData.area
       );
       const defaultDistricts = cluster ? cluster.districts.map(d => d.id) : [];
-      
+
       // Set default languages from user profile (deprecated field, using empty array)
       const userLanguages: string[] = [];
 
@@ -84,11 +84,21 @@ export default function JoinEventPoolSheet({
       if (user.intent && user.intent.length > 0 && currentGoals.length === 0) {
         updates.socialGoals = user.intent;
         setIsPrefilledFromProfile(true);
+      } else {
+        // Ensure banner state is cleared when we decide not to prefill
+        setIsPrefilledFromProfile(false);
       }
 
       updatePreferences(updates);
     }
-  }, [open, user, poolData.area]);
+  }, [open, user, poolData.area, preferences.socialGoals]);
+
+  // Reset prefill flag when the sheet closes so each session starts clean
+  useEffect(() => {
+    if (!open) {
+      setIsPrefilledFromProfile(false);
+    }
+  }, [open]);
 
   // Show mascot during step transitions
   useEffect(() => {
