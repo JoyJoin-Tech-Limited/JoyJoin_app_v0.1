@@ -3,6 +3,8 @@
  * Utilities for profile completeness calculation and label getters
  */
 
+import { getIntentLabel as sharedGetIntentLabel, getIntentEmoji as sharedGetIntentEmoji } from "@shared/constants";
+
 export interface UserProfile {
   displayName?: string;
   gender?: string;
@@ -70,33 +72,24 @@ export function getEducationLabel(education: string): string {
 }
 
 /**
- * Get intent label
+ * Get intent label (delegates to shared constants)
  */
 export function getIntentLabel(intent: string): string {
-  const labels: Record<string, string> = {
-    friends: "交新朋友",
-    networking: "拓展人脉",
-    discussion: "深度交流",
-    fun: "轻松娱乐",
-    romance: "浪漫邂逅",
-    flexible: "随缘",
-  };
-  return labels[intent] || intent;
+  return sharedGetIntentLabel(intent);
 }
 
 /**
- * Get intent icon
+ * Get intent emoji (delegates to shared constants)
+ */
+export function getIntentEmoji(intent: string): string {
+  return sharedGetIntentEmoji(intent);
+}
+
+/**
+ * @deprecated Use `getIntentEmoji` instead. Returns an emoji string, not an icon component.
  */
 export function getIntentIcon(intent: string): string {
-  const icons: Record<string, string> = {
-    friends: "👥",
-    networking: "🌐",
-    discussion: "💬",
-    fun: "🎉",
-    romance: "💝",
-    flexible: "🎲",
-  };
-  return icons[intent] || "✨";
+  return sharedGetIntentEmoji(intent);
 }
 
 /**

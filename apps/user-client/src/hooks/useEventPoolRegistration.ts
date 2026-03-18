@@ -1,9 +1,13 @@
-import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { haptics } from "@/lib/haptics";
 import { confettiPresets } from "@/lib/confetti-utils";
+
+interface UserProfile {
+  intent?: string[];
+}
 
 interface EventPreferences {
   eventType: "饭局" | "酒局";
@@ -39,6 +43,12 @@ export function useEventPoolRegistration({
     districts: [],
     languages: [],
   });
+  const [isPrefilledFromProfile, setIsPrefilledFromProfile] = useState(false);
+  // Track whether the initial draft/pre-fill check on mount is done
+  const initializedRef = useRef(false);
+
+  // Fetch user profile to pre-fill social goals
+  const { data: user } = useQuery<UserProfile>({ queryKey: ["/api/auth/user"] });
 
   // Auto-save to localStorage, debounced on preference changes
   useEffect(() => {
@@ -60,22 +70,36 @@ export function useEventPoolRegistration({
     };
   }, [preferences, poolId]);
 
-  // Restore draft on mount
+  // On mount: restore draft if one exists; otherwise pre-fill from profile intent.
+  // Uses a ref to ensure this initialisation runs only once, avoiding a race
+  // condition between the draft-restore and profile-prefill logic.
   useEffect(() => {
+    if (initializedRef.current) return;
+    if (user === undefined) return; // Wait for user query to resolve
+    initializedRef.current = true;
+
     const draft = localStorage.getItem(`draft-${poolId}`);
     if (draft) {
       try {
         const parsed = JSON.parse(draft);
         setPreferences({ ...parsed, eventType }); // Ensure eventType is current
-        toast({ 
+        toast({
           title: "已恢复草稿",
-          description: "继续之前的填写"
+          description: "继续之前的填写",
         });
+        return; // Draft takes priority — skip profile pre-fill
       } catch (e) {
         console.error("Failed to parse draft:", e);
       }
     }
-  }, [poolId, eventType, toast]);
+
+    // No draft: pre-fill social goals from profile intent if available
+    if (user?.intent && user.intent.length > 0) {
+      setPreferences(prev => ({ ...prev, socialGoals: user.intent as string[] }));
+      setIsPrefilledFromProfile(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, poolId]);
 
   // Auto-advance Step 1 → Step 2 after budget selection
   useEffect(() => {
@@ -148,6 +172,15 @@ export function useEventPoolRegistration({
 
   const updatePreferences = (updates: Partial<EventPreferences>) => {
     setPreferences(prev => ({ ...prev, ...updates }));
+    // If user manually changes social goals, it's no longer a profile pre-fill
+    if ("socialGoals" in updates) {
+      setIsPrefilledFromProfile(false);
+    }
+  };
+
+  const clearPrefill = () => {
+    setPreferences(prev => ({ ...prev, socialGoals: [] }));
+    setIsPrefilledFromProfile(false);
   };
 
   const saveDraft = () => {
@@ -172,5 +205,7 @@ export function useEventPoolRegistration({
     registerMutation,
     saveDraft,
     isFormValid,
+    isPrefilledFromProfile,
+    clearPrefill,
   };
 }

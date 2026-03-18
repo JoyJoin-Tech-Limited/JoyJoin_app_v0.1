@@ -1,41 +1,22 @@
+import { INTENT_OPTIONS } from "@shared/constants";
+
+// UI-specific extras for socialGoals cards (color for gradient backgrounds, description for card copy)
+const SOCIAL_GOAL_EXTRAS: Record<string, { color: string; description: string }> = {
+  friends:    { color: "from-blue-500/10",   description: "认识志同道合的新朋友" },
+  networking: { color: "from-purple-500/10", description: "建立职业社交网络" },
+  discussion: { color: "from-green-500/10",  description: "进行有意义的深度对话" },
+  fun:        { color: "from-yellow-500/10", description: "享受轻松愉快的时光" },
+  romance:    { color: "from-pink-500/10",   description: "寻找浪漫的可能" },
+};
+
 export const SHARED_OPTIONS = {
-  socialGoals: [
-    { 
-      value: "friends", 
-      label: "交新朋友", 
-      emoji: "🤝", 
-      color: "from-blue-500/10",
-      description: "认识志同道合的新朋友"
-    },
-    { 
-      value: "networking", 
-      label: "拓展人脉", 
-      emoji: "💼", 
-      color: "from-purple-500/10",
-      description: "建立职业社交网络"
-    },
-    { 
-      value: "discussion", 
-      label: "深度交流", 
-      emoji: "💭", 
-      color: "from-green-500/10",
-      description: "进行有意义的深度对话"
-    },
-    { 
-      value: "fun", 
-      label: "轻松娱乐", 
-      emoji: "🎉", 
-      color: "from-yellow-500/10",
-      description: "享受轻松愉快的时光"
-    },
-    { 
-      value: "romance", 
-      label: "浪漫邂逅", 
-      emoji: "💕", 
-      color: "from-pink-500/10",
-      description: "寻找浪漫的可能"
-    }
-  ],
+  socialGoals: INTENT_OPTIONS.map(o => ({
+    value: o.value,
+    label: o.label,
+    emoji: o.emoji,
+    color: SOCIAL_GOAL_EXTRAS[o.value]?.color ?? "from-gray-500/10",
+    description: SOCIAL_GOAL_EXTRAS[o.value]?.description ?? o.subtitle,
+  })),
   languages: [
     { value: "粤语", label: "粤语", flag: "🇭🇰" },
     { value: "普通话", label: "普通话", flag: "🇨🇳" },
