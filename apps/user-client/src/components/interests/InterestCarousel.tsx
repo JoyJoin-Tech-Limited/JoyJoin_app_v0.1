@@ -588,7 +588,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
             category={category}
             selections={selections}
             onTopicTap={handleTopicTap}
-            archetypeId={user?.archetype}
+            archetypeId={user?.archetype || user?.primaryArchetype}
             ref={(el) => {
               categoryRefs.current[category.id] = el;
             }}
