@@ -15,19 +15,23 @@ export type EducationLevel = typeof EDUCATION_LEVEL_OPTIONS[number];
 export const SENIORITY_OPTIONS = ["实习生", "初级", "中级", "高级", "资深", "创始人", "高管"] as const;
 export type Seniority = typeof SENIORITY_OPTIONS[number];
 
-// Work mode options (new standardized occupation system)
-export const WORK_MODE_OPTIONS = ["founder", "self_employed", "employed", "student", "transitioning", "caregiver_retired"] as const;
+// Work mode options (new standardized occupation system) — also used as 人生阶段 (life stage)
+export const WORK_MODE_OPTIONS = ["founder", "self_employed", "employed", "student", "transitioning", "caregiver_retired", "successor"] as const;
 export type WorkMode = typeof WORK_MODE_OPTIONS[number];
 
-// Work mode display labels (Chinese)
+// Work mode display labels (Chinese) — 人生阶段 framing
 export const WORK_MODE_LABELS: Record<WorkMode, string> = {
-  founder: "创始人/合伙人",
+  founder: "创业中",
   self_employed: "自由职业",
-  employed: "在职人士",
-  student: "学生/实习",
-  transitioning: "职业过渡期",
+  employed: "在职",
+  student: "学生",
+  transitioning: "探索期",
   caregiver_retired: "家庭为主",
+  successor: "准备继承家业",
 };
+
+// Alias for convenience — same as WORK_MODE_LABELS
+export const LIFE_STAGE_LABELS = WORK_MODE_LABELS;
 
 // Work mode descriptions (Chinese)
 export const WORK_MODE_DESCRIPTIONS: Record<WorkMode, string> = {
@@ -35,8 +39,9 @@ export const WORK_MODE_DESCRIPTIONS: Record<WorkMode, string> = {
   self_employed: "独立工作，灵活接活",
   employed: "在企业、机构或组织任职",
   student: "在读、实习或Gap中",
-  transitioning: "求职中、休整、转型、预备接班",
+  transitioning: "求职中、休整、转型中",
   caregiver_retired: "全职家长、照顾家人、退休、在家躺平",
+  successor: "家族企业接班、二代培养",
 };
 
 // Relationship status options
