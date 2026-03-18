@@ -16,6 +16,16 @@ interface EnrichmentResult {
   fieldsSkipped: string[];
 }
 
+// Allowed intent codes, must stay in sync with registerUserSchema.intent enum
+const ALLOWED_EVENT_INTENTS = new Set<string>([
+  "networking",
+  "friends",
+  "discussion",
+  "fun",
+  "romance",
+  "flexible",
+]);
+
 type UserProfileUpdates = Partial<Pick<typeof users.$inferInsert, "intent">>;
 
 /** Returns true when an array field is absent or empty. */
@@ -46,8 +56,15 @@ export async function enrichProfileFromRegistration(
 
   // Intent: only fill if profile intent is empty/null
   if (data.eventIntent?.length) {
-    if (isArrayFieldEmpty(user.intent)) {
-      updates.intent = data.eventIntent;
+    const validEventIntents = data.eventIntent.filter((intent) =>
+      ALLOWED_EVENT_INTENTS.has(intent)
+    );
+
+    if (validEventIntents.length === 0) {
+      // Registration provided only invalid values; do not update profile intent
+      result.fieldsSkipped.push("intent");
+    } else if (isArrayFieldEmpty(user.intent)) {
+      updates.intent = validEventIntents;
       result.fieldsUpdated.push("intent");
     } else {
       result.fieldsSkipped.push("intent");
