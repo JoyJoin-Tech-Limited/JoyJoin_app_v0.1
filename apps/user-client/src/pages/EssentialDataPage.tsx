@@ -196,21 +196,26 @@ function TappableCard({
   onClick, 
   children,
   className,
+  disabled,
 }: { 
   selected: boolean; 
   onClick: () => void; 
   children: React.ReactNode;
   className?: string;
+  disabled?: boolean;
 }) {
   return (
     <motion.button
       type="button"
       onClick={onClick}
+      disabled={disabled}
+      aria-disabled={disabled}
       className={cn(
         "w-full p-4 rounded-xl border-2 text-left transition-all duration-200 min-h-[48px]",
         selected 
           ? "border-primary bg-primary/10 shadow-md shadow-primary/10" 
           : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary/50",
+        disabled && "opacity-60 cursor-not-allowed",
         className
       )}
       whileTap={{ scale: 0.97 }}
@@ -269,7 +274,10 @@ export default function EssentialDataPage() {
   // Cleanup auto-advance timer on unmount
   useEffect(() => {
     return () => {
-      if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -475,18 +483,37 @@ export default function EssentialDataPage() {
     haptics.light();
 
     // Cancel any pending auto-advance
-    if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
 
+    // Capture the step at selection time so the callback won't fire on the wrong step
+    const stepAtSelection = currentStep;
     setIsAutoAdvancing(true);
     autoAdvanceTimerRef.current = setTimeout(() => {
+      autoAdvanceTimerRef.current = null;
       setIsAutoAdvancing(false);
-      directionRef.current = 1;
-      setCurrentStep(prev => prev + 1);
+      // Only advance if the user is still on the step that triggered the timer
+      setCurrentStep(prev => {
+        if (prev !== stepAtSelection) return prev;
+        directionRef.current = 1;
+        return prev + 1;
+      });
     }, 500);
   };
 
   const handleNext = () => {
     if (!canProceed()) return;
+    // Guard against double-advance during auto-advance window
+    if (isAutoAdvancing) {
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
+      setIsAutoAdvancing(false);
+      return;
+    }
 
     // Haptic feedback
     haptics.medium();
@@ -879,8 +906,7 @@ export default function EssentialDataPage() {
               {(currentStep === 2 || currentStep === 3) && stepConfig.options && (
                 <div className={cn(
                   "grid gap-3",
-                  currentStep === 2 ? "grid-cols-2" : "grid-cols-1",
-                  isAutoAdvancing && "pointer-events-none"
+                  currentStep === 2 ? "grid-cols-2" : "grid-cols-1"
                 )}>
                   {stepConfig.options.map(opt => {
                     const value = currentStep === 2 ? relationshipStatus : education;
@@ -890,6 +916,7 @@ export default function EssentialDataPage() {
                         key={opt.value}
                         selected={value === opt.value}
                         onClick={() => handleSingleSelect(setValue, opt.value)}
+                        disabled={isAutoAdvancing}
                         className="p-4"
                       >
                         <span className="text-base font-semibold">{opt.label}</span>
