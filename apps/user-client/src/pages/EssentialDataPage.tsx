@@ -129,60 +129,60 @@ const BIRTH_YEARS = Array.from({ length: 50 }, (_, i) => {
 const STEP_CONFIG = [
   {
     id: "displayName",
-    title: "选择你的昵称",
+    title: "大家怎么称呼你？",
     subtitle: "这是大家在活动中看到的名字",
-    mascotMessage: "嘿！先给自己取个响亮的名字吧~ 后面我会根据你的性格和兴趣，为你生成专属的社交印象标签哦！✨",
+    mascotMessage: "嘿！给自己起个响亮的名字吧，活动中大家会这么叫你~ ✨",
     mascotMood: "excited" as XiaoyueMood,
     type: "input" as const,
   },
   {
     id: "genderBirthday",
-    title: "选择出生日期",
+    title: "基本信息",
     subtitle: "帮助匹配更合适的活动",
-    mascotMessage: "简单两步，帮你找到更合适的朋友！",
+    mascotMessage: "帮你找到年龄相近、聊得来的朋友！",
     mascotMood: "pointing" as XiaoyueMood,
     type: "dual" as const,
   },
   {
     id: "relationshipStatus",
-    title: "你的感情状态？",
+    title: "目前的感情状态？",
     subtitle: "推荐更适合你的社交场景",
-    mascotMessage: "这个信息只用于精准匹配哦~",
+    mascotMessage: "小悦会根据这个推荐最合适你的社交场景 🤫",
     mascotMood: "normal" as XiaoyueMood,
     type: "select" as const,
     options: RELATIONSHIP_OPTIONS,
   },
   {
     id: "education",
-    title: "你的教育背景？",
+    title: "最高学历？",
     subtitle: "匹配相似背景的伙伴",
-    mascotMessage: "不管什么学历，都能找到志同道合的人！",
+    mascotMessage: "只是帮你匹配聊得来的人，不是相亲网站哈 😄",
     mascotMood: "pointing" as XiaoyueMood,
     type: "select" as const,
     options: EDUCATION_OPTIONS,
   },
   {
     id: "workIndustry",
-    title: "你在哪个行业工作？",
+    title: "你做什么工作？",
     subtitle: "用于兴趣推荐和同行匹配",
-    mascotMessage: "可能会遇到同行前辈或者跨界伙伴哦！",
+    mascotMessage: "说不定能遇到同行大佬，或者完全不同领域的有趣灵魂！",
     mascotMood: "excited" as XiaoyueMood,
     type: "select" as const,
     options: INDUSTRY_OPTIONS,
   },
   {
     id: "location",
-    title: "你的家乡和常驻城市？",
+    title: "你从哪来，在哪混？",
     subtitle: "老乡见老乡，两眼泪汪汪",
-    mascotMessage: "说不定能遇到老乡呢！",
+    mascotMessage: "老乡见老乡，配桌优先排！🏠",
     mascotMood: "excited" as XiaoyueMood,
     type: "dualCity" as const,
   },
   {
     id: "intent",
-    title: "你想通过悦聚收获什么？",
-    subtitle: "告诉我你的目标，我帮你精准匹配！",
-    mascotMessage: "告诉我你的目标，我帮你精准匹配！最后一步啦！",
+    title: "这次聚会，你最想……",
+    subtitle: "选得越准，同桌的人越对味",
+    mascotMessage: "最后一个问题！选完之后我就知道该把你安排在哪桌了 😏",
     mascotMood: "excited" as XiaoyueMood,
     type: "multiSelect" as const,
     options: INTENT_OPTIONS,
@@ -196,21 +196,26 @@ function TappableCard({
   onClick, 
   children,
   className,
+  disabled,
 }: { 
   selected: boolean; 
   onClick: () => void; 
   children: React.ReactNode;
   className?: string;
+  disabled?: boolean;
 }) {
   return (
     <motion.button
       type="button"
       onClick={onClick}
+      disabled={disabled}
+      aria-disabled={disabled}
       className={cn(
         "w-full p-4 rounded-xl border-2 text-left transition-all duration-200 min-h-[48px]",
         selected 
           ? "border-primary bg-primary/10 shadow-md shadow-primary/10" 
           : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary/50",
+        disabled && "opacity-60 cursor-not-allowed",
         className
       )}
       whileTap={{ scale: 0.97 }}
@@ -262,6 +267,19 @@ export default function EssentialDataPage() {
   const [showManualIndustry, setShowManualIndustry] = useState(false);
   // Enhancement 5: direction tracking for step number ticker
   const directionRef = useRef<1 | -1>(1);
+  // Auto-advance for single-select steps (2 & 3)
+  const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
+  const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup auto-advance timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // Load cached progress (Phase 0: Fix #11 - Error handling)
   useEffect(() => {
@@ -459,8 +477,43 @@ export default function EssentialDataPage() {
   // Check if "flexible" is selected
   const isFlexibleSelected = intent.includes("flexible");
 
+  // Auto-advance handler for single-select steps (2 & 3)
+  const handleSingleSelect = (setter: (val: string) => void, value: string) => {
+    setter(value);
+    haptics.light();
+
+    // Cancel any pending auto-advance
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+
+    // Capture the step at selection time so the callback won't fire on the wrong step
+    const stepAtSelection = currentStep;
+    setIsAutoAdvancing(true);
+    autoAdvanceTimerRef.current = setTimeout(() => {
+      autoAdvanceTimerRef.current = null;
+      setIsAutoAdvancing(false);
+      // Only advance if the user is still on the step that triggered the timer
+      setCurrentStep(prev => {
+        if (prev !== stepAtSelection) return prev;
+        directionRef.current = 1;
+        return prev + 1;
+      });
+    }, 500);
+  };
+
   const handleNext = () => {
     if (!canProceed()) return;
+    // Guard against double-advance during auto-advance window
+    if (isAutoAdvancing) {
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
+      setIsAutoAdvancing(false);
+      return;
+    }
 
     // Haptic feedback
     haptics.medium();
@@ -862,7 +915,8 @@ export default function EssentialDataPage() {
                       <TappableCard
                         key={opt.value}
                         selected={value === opt.value}
-                        onClick={() => setValue(opt.value)}
+                        onClick={() => handleSingleSelect(setValue, opt.value)}
+                        disabled={isAutoAdvancing}
                         className="p-4"
                       >
                         <span className="text-base font-semibold">{opt.label}</span>
@@ -1137,7 +1191,7 @@ export default function EssentialDataPage() {
                           animate={{ opacity: 1, y: 0 }}
                           className="text-sm font-medium text-green-600 dark:text-green-400"
                         >
-                          🎉 太棒了！已选够3个，匹配会更精准哦
+                          🎉 完美！小悦已经知道该帮你找什么样的人了
                         </motion.p>
                       )}
                     </motion.div>
@@ -1163,7 +1217,7 @@ export default function EssentialDataPage() {
           <Button 
             className="w-full h-12 rounded-xl text-base font-bold shadow-lg bg-gradient-to-r from-[#FF6B9D] to-[#A86BFF] hover:from-[#e55f8e] hover:to-[#9257e6] transition-all duration-200 border-0"
             onClick={handleNext}
-            disabled={!canProceed() || saveMutation.isPending}
+            disabled={!canProceed() || saveMutation.isPending || isAutoAdvancing}
             data-testid="button-next"
           >
             {saveMutation.isPending ? (

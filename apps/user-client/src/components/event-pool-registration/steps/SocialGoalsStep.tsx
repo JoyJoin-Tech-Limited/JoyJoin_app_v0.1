@@ -25,6 +25,11 @@ export default function SocialGoalsStep({
   const isFlexibleMode = selectedGoals.includes("flexible");
 
   const handleToggleGoal = (goalValue: string) => {
+    // Any manual change clears the pre-filled state
+    if (isPrefilledFromProfile && onClearPrefill) {
+      onClearPrefill();
+    }
+
     if (goalValue === "flexible") {
       // Toggle flexible mode
       if (isFlexibleMode) {
@@ -69,12 +74,25 @@ export default function SocialGoalsStep({
         </p>
       </div>
 
-      {/* Pre-fill from profile indicator */}
-      {isPrefilledFromProfile && (
-        <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2 flex items-center gap-1.5">
-          <span>💡</span>
-          <span>已沿用你的默认社交偏好 · <button type="button" className="underline" onClick={onClearPrefill}>为这次活动重新选</button></span>
-        </div>
+      {/* Pre-filled indicator */}
+      {isPrefilledFromProfile && selectedGoals.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between gap-2 text-xs text-muted-foreground bg-primary/5 border border-primary/15 rounded-lg px-3 py-2"
+        >
+          <span>✨ 已沿用你的默认社交偏好，精准度翻倍！</span>
+          <button
+            type="button"
+            onClick={() => {
+              onSelectGoals([]);
+              if (onClearPrefill) onClearPrefill();
+            }}
+            className="text-primary underline shrink-0"
+          >
+            重新选择
+          </button>
+        </motion.div>
       )}
 
       {/* Flexible Mode Toggle */}
