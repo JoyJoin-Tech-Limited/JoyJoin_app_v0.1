@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
-import { Sliders, TestTube2, Zap, Save, RotateCcw, Play, Users } from "lucide-react";
+import { Sliders, TestTube2, Zap, Save, RotateCcw, Play, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -85,6 +85,7 @@ export default function AdminMatchingLabPage() {
   const [config, setConfig] = useState<MatchingConfig>(DEFAULT_CONFIG);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
   const { toast } = useToast();
 
   // 加载当前配置
@@ -496,52 +497,86 @@ export default function AdminMatchingLabPage() {
               <CardContent className="space-y-4">
                 {/* 整体指标 */}
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-3 rounded-lg bg-muted">
-                    <div className="text-2xl font-bold text-primary" data-testid="text-avg-chemistry">
+                  <div className={`text-center p-3 rounded-lg ${testResult.metrics.avgChemistryScore >= 80 ? 'bg-green-50 text-green-700' : testResult.metrics.avgChemistryScore >= 60 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>
+                    <div className="text-2xl font-bold" data-testid="text-avg-chemistry">
                       {testResult.metrics.avgChemistryScore}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">化学反应</div>
+                    <div className="text-xs mt-1">化学反应</div>
                   </div>
-                  <div className="text-center p-3 rounded-lg bg-muted">
-                    <div className="text-2xl font-bold text-primary" data-testid="text-avg-diversity">
+                  <div className={`text-center p-3 rounded-lg ${testResult.metrics.avgDiversityScore >= 80 ? 'bg-green-50 text-green-700' : testResult.metrics.avgDiversityScore >= 60 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>
+                    <div className="text-2xl font-bold" data-testid="text-avg-diversity">
                       {testResult.metrics.avgDiversityScore}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">多样性</div>
+                    <div className="text-xs mt-1">多样性</div>
                   </div>
-                  <div className="text-center p-3 rounded-lg bg-muted">
-                    <div className="text-2xl font-bold text-primary" data-testid="text-overall-quality">
+                  <div className={`text-center p-3 rounded-lg ${testResult.metrics.overallMatchQuality >= 80 ? 'bg-green-50 text-green-700' : testResult.metrics.overallMatchQuality >= 60 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>
+                    <div className="text-2xl font-bold" data-testid="text-overall-quality">
                       {testResult.metrics.overallMatchQuality}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">整体质量</div>
+                    <div className="text-xs mt-1">整体质量</div>
                   </div>
                 </div>
 
                 <Separator />
 
                 {/* 各组详情 */}
-                <ScrollArea className="h-[200px]">
+                <ScrollArea className="h-[300px]">
                   <div className="space-y-3">
                     {testResult.groups.map((group, idx) => (
                       <div
                         key={group.groupId}
-                        className="p-3 rounded-lg border"
+                        className="rounded-lg border"
                         data-testid={`group-result-${idx}`}
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-semibold">小组 {idx + 1}</span>
-                            <Badge variant="outline">{group.userIds.length}人</Badge>
+                        <button
+                          type="button"
+                          className="w-full p-3 text-left cursor-pointer hover:bg-muted/50 rounded-lg"
+                          onClick={() => setExpandedGroupId(expandedGroupId === group.groupId ? null : group.groupId)}
+                          data-testid={`group-expand-${idx}`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-semibold">小组 {idx + 1}</span>
+                              <Badge variant="outline">{group.userIds.length}人</Badge>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="text-sm">
+                                <span className="text-muted-foreground">总分 </span>
+                                <span className="font-semibold">{group.overallScore}</span>
+                              </div>
+                              {expandedGroupId === group.groupId ? (
+                                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </div>
                           </div>
-                          <div className="text-sm">
-                            <span className="text-muted-foreground">总分 </span>
-                            <span className="font-semibold">{group.overallScore}</span>
+                          <div className="flex gap-4 text-xs text-muted-foreground">
+                            <div>化学: {group.avgChemistryScore}</div>
+                            <div>多样: {group.diversityScore}</div>
                           </div>
-                        </div>
-                        <div className="flex gap-4 text-xs text-muted-foreground">
-                          <div>化学: {group.avgChemistryScore}</div>
-                          <div>多样: {group.diversityScore}</div>
-                        </div>
+                        </button>
+
+                        {/* 成员详情展开区 */}
+                        {expandedGroupId === group.groupId && group.users && group.users.length > 0 && (
+                          <div className="border-t px-3 pb-3 space-y-2 pt-2">
+                            <div className="text-xs text-muted-foreground mb-1 font-medium">▼ 成员列表（组级得分仅供参考）</div>
+                            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground pb-1">
+                              <span>组化学: <strong>{group.avgChemistryScore}</strong></span>
+                              <span>组多样性: <strong>{group.diversityScore}</strong></span>
+                              <span>组总分: <strong>{group.overallScore}</strong></span>
+                            </div>
+                            {group.users.map((user) => (
+                              <div key={user.id} className="rounded-md bg-muted/40 px-3 py-2 text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{user.displayName || user.firstName || "未命名"}</span>
+                                  {user.archetype && <Badge variant="outline" className="text-[10px] h-4">{user.archetype}</Badge>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
