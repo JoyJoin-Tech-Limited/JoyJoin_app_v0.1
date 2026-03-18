@@ -609,6 +609,8 @@ async function calculateGroupPairScore(members: UserWithProfile[]): Promise<numb
  * Evaluates diversity across industries, genders, archetypes, and life stages
  */
 function calculateGroupDiversity(members: UserWithProfile[]): number {
+  if (members.length === 0) return 0;
+
   const uniqueIndustries = new Set(members.map((m) => m.industryNiche).filter(Boolean)).size;
   const uniqueGenders = new Set(members.map((m) => m.gender).filter(Boolean)).size;
   const uniqueArchetypes = new Set(members.map((m) => m.archetype).filter(Boolean)).size;
@@ -622,7 +624,8 @@ function calculateGroupDiversity(members: UserWithProfile[]): number {
     (uniqueArchetypes / maxDiversity) * 25 +
     (uniqueLifeStages / maxDiversity) * 25;
 
-  return Math.round(diversityScore * 100);
+  // Clamp to [0, 100] to avoid any floating point drift
+  return Math.round(Math.max(0, Math.min(100, diversityScore)));
 }
 
 /**
