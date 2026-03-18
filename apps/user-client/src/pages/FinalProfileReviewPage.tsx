@@ -15,12 +15,14 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
 import { SpiralWaveAnimation } from "@/components/SpiralWaveAnimation";
 import { ProfilePortraitCard } from "@/components/ProfilePortraitCard";
 import { useOnboardingAnalytics } from "@/hooks/useOnboardingAnalytics"; // Phase 2
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { archetypeConfig } from "@/lib/archetypes";
+import { getArchetypeAvatar } from "@/lib/archetypeAdapter";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type Phase = "analyzing" | "complete";
 
@@ -96,6 +98,14 @@ export default function FinalProfileReviewPage() {
     }
   };
 
+  // Derive archetype nickname for the personalized CTA
+  const archetypeName: string | undefined = user?.archetype || user?.primaryArchetype;
+  const archetypeNickname: string = archetypeName
+    ? (archetypeConfig[archetypeName]?.nickname || archetypeName)
+    : "你";
+  const archetypeAvatarUrl: string = archetypeName ? getArchetypeAvatar(archetypeName) : "";
+  const archetypeIcon: string = archetypeName ? (archetypeConfig[archetypeName]?.icon || "✨") : "✨";
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 via-pink-50 to-white">
       <AnimatePresence mode="wait">
@@ -115,7 +125,7 @@ export default function FinalProfileReviewPage() {
               transition={{ delay: 0.5, duration: 0.6 }}
             >
               <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                AI 正在生成你的用户画像
+                小悦正在分析你的社交DNA……
               </h2>
             </motion.div>
 
@@ -150,23 +160,60 @@ export default function FinalProfileReviewPage() {
             }}
           >
             <ProfilePortraitCard />
-            
-            {/* Fixed bottom CTA */}
-            <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent pb-[calc(1rem+env(safe-area-inset-bottom))] pt-6 px-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.4 }}
-            >
-              <Button
-                size="lg"
-                className="w-full max-w-md mx-auto h-14 text-lg rounded-2xl bg-gradient-to-r from-[#FF6B9D] to-[#A86BFF] hover:from-[#e55f8e] hover:to-[#9257e6] flex"
-                onClick={handleContinue}
+
+            {/* Post-reveal archetype CTA — staggered 3-beat entrance */}
+            <div className="px-6 pb-[calc(2rem+env(safe-area-inset-bottom))] mt-6 text-center space-y-3">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="flex justify-center"
               >
-                继续
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </motion.div>
+                <div className="rounded-full bg-gradient-to-br from-purple-100 to-pink-100 p-1">
+                  <Avatar className="w-16 h-16 bg-transparent">
+                    {archetypeAvatarUrl ? (
+                      <AvatarImage
+                        src={archetypeAvatarUrl}
+                        alt={archetypeName || "头像"}
+                        className="object-contain p-1"
+                      />
+                    ) : (
+                      <AvatarFallback className="text-3xl bg-gradient-to-br from-purple-100 to-pink-100">
+                        {archetypeIcon}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6, duration: 0.5 }}
+                className="space-y-1"
+              >
+                <p className="text-sm text-muted-foreground">
+                  有人正在等一个像你这样的
+                </p>
+                <p className="text-lg font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                  「{archetypeNickname}」
+                </p>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.9, duration: 0.4 }}
+              >
+                <Button
+                  size="lg"
+                  className="w-full max-w-md mx-auto h-14 text-lg rounded-2xl bg-gradient-to-r from-[#FF6B9D] to-[#A86BFF] hover:from-[#e55f8e] hover:to-[#9257e6]"
+                  onClick={handleContinue}
+                >
+                  去看看谁在等我 →
+                </Button>
+              </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

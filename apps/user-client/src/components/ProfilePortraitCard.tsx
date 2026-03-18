@@ -6,7 +6,7 @@
  * - Industry L1→L2→L3 hierarchy
  * - Personality traits with radar chart
  * - Interest map with heat-based category distribution and top priorities
- * - CTA to discover page
+ * - Match Power preview (connection point tier breakdown)
  */
 
 import { useMemo } from "react";
@@ -17,7 +17,6 @@ import {
   MapPin, 
   Briefcase, 
   GraduationCap, 
-  Sparkles, 
   Users,
   TrendingUp,
   ChevronRight,
@@ -226,6 +225,36 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
     };
   }, [interestsData]);
 
+  // Calculate match power — how many connection point types the profile can generate
+  const matchPower = useMemo(() => {
+    let commonCount = 0;
+    let rareCount = 0;
+    let epicCount = 0;
+
+    // Common: city, industry, education
+    if (user?.currentCity) commonCount++;
+    if (user?.industryCategory || user?.industryCategoryLabel) commonCount++;
+    if (user?.educationLevel) commonCount++;
+
+    // Rare: complementary archetype chemistry + hometown affinity
+    if (archetype) rareCount++; // 性格互补
+    if (user?.hometownAffinityOptin && (user?.hometownRegionCity || user?.hometown)) {
+      rareCount++; // 老乡（需开启同乡匹配）
+    }
+
+    // Epic: exact archetype match + deep shared interests (level ≥ 2)
+    if (archetype) epicCount++; // 同款人格
+    const hasHighHeatInterests = interestsData?.selections?.some((s: { level: number }) => s.level >= 2);
+    if (hasHighHeatInterests) epicCount++; // 深度同好
+
+    return {
+      connectionPointCount: commonCount + rareCount + epicCount,
+      commonCount,
+      rareCount,
+      epicCount,
+    };
+  }, [user, archetype, interestsData]);
+
   // Top 2 traits
   const topTraits = useMemo(() => {
     if (!assessment) return [];
@@ -404,12 +433,9 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
                     <span className="font-semibold">{profileCompletion}%</span>
                   </div>
                   <Progress value={profileCompletion} className="h-2" />
-                  {profileCompletion < 100 && (
-                    <div className="flex items-center gap-1 text-xs text-purple-600">
-                      <Sparkles className="w-3 h-3" />
-                      <span>补全资料可解锁「VIP匹配」优先权</span>
-                    </div>
-                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    你的资料已经能产生 {matchPower.connectionPointCount} 种契合点
+                  </p>
                 </div>
               </div>
             </div>
@@ -617,20 +643,33 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
         </motion.div>
       )}
 
-      {/* 4. CTA Button */}
-      <motion.div variants={itemVariants} className="space-y-2 text-center">
-        <Button
-          size="lg"
-          className="w-full h-14 text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transition-all"
-          onClick={() => setLocation("/discover")}
-        >
-          <span className="mr-2">🎲</span>
-          开始探索盲盒活动
-        </Button>
-        <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-          <Sparkles className="w-4 h-4" />
-          已为你匹配 37 场合适的小聚
-        </p>
+      {/* 4. Match Power Preview */}
+      <motion.div variants={itemVariants}>
+        <Card className="border-purple-100 bg-gradient-to-br from-white to-purple-50/30">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-muted-foreground">你的资料匹配力</span>
+              <span className="text-xs text-primary font-semibold">{matchPower.connectionPointCount} 种契合点</span>
+            </div>
+            <div className="flex gap-1.5 flex-wrap">
+              {matchPower.commonCount > 0 && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                  普通 ×{matchPower.commonCount}
+                </span>
+              )}
+              {matchPower.rareCount > 0 && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-600">
+                  稀有 ×{matchPower.rareCount}
+                </span>
+              )}
+              {matchPower.epicCount > 0 && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
+                  史诗 ×{matchPower.epicCount}
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
     </motion.div>
   );

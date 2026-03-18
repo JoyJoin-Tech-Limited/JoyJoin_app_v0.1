@@ -9,7 +9,7 @@ import { SegmentedProgress } from "@/components/ui/progress-segmented";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { INDUSTRY_OPTIONS, type WorkMode } from "@shared/constants";
+import { INDUSTRY_OPTIONS, type WorkMode, INTENT_OPTIONS as SHARED_INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION, type IntentIconHint } from "@shared/constants";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BirthDatePicker } from "@/components/BirthDatePicker";
@@ -92,17 +92,15 @@ const RELATIONSHIP_OPTIONS = [
   { value: "prefer_not_say", label: "不想说" },
 ];
 
-// Main intent options with icons and descriptions
-const INTENT_OPTIONS = [
-  { value: "friends", label: "交新朋友", subtitle: "认识有趣的人", icon: Users },
-  { value: "networking", label: "拓展人脉", subtitle: "扩大社交圈", icon: Network },
-  { value: "discussion", label: "深度交流", subtitle: "走心的对话", icon: MessageCircle },
-  { value: "fun", label: "轻松娱乐", subtitle: "开心就好", icon: PartyPopper },
-  { value: "romance", label: "浪漫邂逅", subtitle: "遇见心动", icon: Heart },
-];
-
-// Special "flexible" option - mutually exclusive with others
-const FLEXIBLE_OPTION = { value: "flexible", label: "随缘", subtitle: "交给小悦推荐", icon: Shuffle };
+// Icon map for intent options (keyed by IntentIconHint from shared constants — type-safe)
+const INTENT_ICON_MAP: Record<IntentIconHint, React.ComponentType<{ className?: string }>> = {
+  "Users": Users,
+  "Network": Network,
+  "MessageCircle": MessageCircle,
+  "PartyPopper": PartyPopper,
+  "Heart": Heart,
+  "Shuffle": Shuffle,
+};
 
 const EDUCATION_OPTIONS = [
   { value: "high_school", label: "高中及以下" },
@@ -130,7 +128,7 @@ const STEP_CONFIG = [
   {
     id: "displayName",
     title: "大家怎么称呼你？",
-    subtitle: "这是你在小聚活动中显示的名字",
+    subtitle: "这是大家在活动中看到的名字",
     mascotMessage: "嘿！给自己起个响亮的名字吧，活动中大家会这么叫你~ ✨",
     mascotMood: "excited" as XiaoyueMood,
     type: "input" as const,
@@ -138,8 +136,8 @@ const STEP_CONFIG = [
   {
     id: "genderBirthday",
     title: "基本信息",
-    subtitle: "帮你找到年龄相近、聊得来的朋友",
-    mascotMessage: "简单两步，帮你找到更合适的朋友！",
+    subtitle: "帮助匹配更合适的活动",
+    mascotMessage: "帮你找到年龄相近、聊得来的朋友！",
     mascotMood: "pointing" as XiaoyueMood,
     type: "dual" as const,
   },
@@ -173,7 +171,7 @@ const STEP_CONFIG = [
   {
     id: "location",
     title: "你从哪来，在哪混？",
-    subtitle: "老乡配桌优先排",
+    subtitle: "老乡见老乡，两眼泪汪汪",
     mascotMessage: "老乡见老乡，配桌优先排！🏠",
     mascotMood: "excited" as XiaoyueMood,
     type: "dualCity" as const,
@@ -185,7 +183,7 @@ const STEP_CONFIG = [
     mascotMessage: "最后一个问题！选完之后我就知道该把你安排在哪桌了 😏",
     mascotMood: "excited" as XiaoyueMood,
     type: "multiSelect" as const,
-    options: INTENT_OPTIONS,
+    options: SHARED_INTENT_OPTIONS,
   },
 ];
 
@@ -196,21 +194,26 @@ function TappableCard({
   onClick, 
   children,
   className,
+  disabled,
 }: { 
   selected: boolean; 
   onClick: () => void; 
   children: React.ReactNode;
   className?: string;
+  disabled?: boolean;
 }) {
   return (
     <motion.button
       type="button"
       onClick={onClick}
+      disabled={disabled}
+      aria-disabled={disabled}
       className={cn(
         "w-full p-4 rounded-xl border-2 text-left transition-all duration-200 min-h-[48px]",
         selected 
           ? "border-primary bg-primary/10 shadow-md shadow-primary/10" 
           : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary/50",
+        disabled && "opacity-60 cursor-not-allowed",
         className
       )}
       whileTap={{ scale: 0.97 }}
@@ -262,6 +265,19 @@ export default function EssentialDataPage() {
   const [showManualIndustry, setShowManualIndustry] = useState(false);
   // Enhancement 5: direction tracking for step number ticker
   const directionRef = useRef<1 | -1>(1);
+  // Auto-advance for single-select steps (2 & 3)
+  const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
+  const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup auto-advance timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // Load cached progress (Phase 0: Fix #11 - Error handling)
   useEffect(() => {
@@ -459,8 +475,43 @@ export default function EssentialDataPage() {
   // Check if "flexible" is selected
   const isFlexibleSelected = intent.includes("flexible");
 
+  // Auto-advance handler for single-select steps (2 & 3)
+  const handleSingleSelect = (setter: (val: string) => void, value: string) => {
+    setter(value);
+    haptics.light();
+
+    // Cancel any pending auto-advance
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+
+    // Capture the step at selection time so the callback won't fire on the wrong step
+    const stepAtSelection = currentStep;
+    setIsAutoAdvancing(true);
+    autoAdvanceTimerRef.current = setTimeout(() => {
+      autoAdvanceTimerRef.current = null;
+      setIsAutoAdvancing(false);
+      // Only advance if the user is still on the step that triggered the timer
+      setCurrentStep(prev => {
+        if (prev !== stepAtSelection) return prev;
+        directionRef.current = 1;
+        return prev + 1;
+      });
+    }, 500);
+  };
+
   const handleNext = () => {
     if (!canProceed()) return;
+    // Guard against double-advance during auto-advance window
+    if (isAutoAdvancing) {
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
+      setIsAutoAdvancing(false);
+      return;
+    }
 
     // Haptic feedback
     haptics.medium();
@@ -862,7 +913,8 @@ export default function EssentialDataPage() {
                       <TappableCard
                         key={opt.value}
                         selected={value === opt.value}
-                        onClick={() => setValue(opt.value)}
+                        onClick={() => handleSingleSelect(setValue, opt.value)}
+                        disabled={isAutoAdvancing}
                         className="p-4"
                       >
                         <span className="text-base font-semibold">{opt.label}</span>
@@ -950,8 +1002,8 @@ export default function EssentialDataPage() {
                 <div className="space-y-4">
                   {/* Main intent options - 2 column grid with icons */}
                   <div className="grid grid-cols-2 gap-3">
-                    {INTENT_OPTIONS.map((opt, index) => {
-                      const Icon = opt.icon;
+                    {SHARED_INTENT_OPTIONS.map((opt, index) => {
+                      const Icon = INTENT_ICON_MAP[opt.iconHint] ?? Users;
                       const isSelected = intent.includes(opt.value);
                       const isDisabled = isFlexibleSelected;
                       
@@ -1090,10 +1142,10 @@ export default function EssentialDataPage() {
                         "font-bold text-sm",
                         isFlexibleSelected ? "text-purple-700 dark:text-purple-300" : "text-foreground"
                       )}>
-                        {FLEXIBLE_OPTION.label}
+                        {INTENT_FLEXIBLE_OPTION.label}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {FLEXIBLE_OPTION.subtitle}
+                        {INTENT_FLEXIBLE_OPTION.subtitle}
                       </p>
                       <p className="text-xs text-muted-foreground/70 mt-0.5">
                         (我都感兴趣，帮我安排)
@@ -1163,7 +1215,7 @@ export default function EssentialDataPage() {
           <Button 
             className="w-full h-12 rounded-xl text-base font-bold shadow-lg bg-gradient-to-r from-[#FF6B9D] to-[#A86BFF] hover:from-[#e55f8e] hover:to-[#9257e6] transition-all duration-200 border-0"
             onClick={handleNext}
-            disabled={!canProceed() || saveMutation.isPending}
+            disabled={!canProceed() || saveMutation.isPending || isAutoAdvancing}
             data-testid="button-next"
           >
             {saveMutation.isPending ? (

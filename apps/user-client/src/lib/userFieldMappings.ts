@@ -2,6 +2,8 @@
  * User field Chinese mappings for displaying demographic information
  */
 
+import { getIntentLabel, INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION } from "@shared/constants";
+
 export const genderMap: Record<string, string> = {
   "Woman": "女",
   "Man": "男",
@@ -53,23 +55,15 @@ export const childrenMap: Record<string, string> = {
   "Prefer not to say": "不便透露",
 };
 
-export const intentMap: Record<string, string> = {
-  "networking": "拓展人脉",
-  "friends": "交朋友",
-  "discussion": "深度讨论",
-  "fun": "娱乐放松",
-  "romance": "浪漫社交",
-  "flexible": "随缘",
-};
+// Intent label map derived from shared constants (for backward compatibility)
+export const intentMap: Record<string, string> = Object.fromEntries(
+  [...INTENT_OPTIONS.map(o => [o.value, o.label]), [INTENT_FLEXIBLE_OPTION.value, INTENT_FLEXIBLE_OPTION.label]]
+);
 
-// Intent options with descriptions for selection UI
+// Intent options derived from shared constants (with descriptions for selection UI)
 export const intentOptions = [
-  { value: "networking", label: "拓展人脉", description: "结识专业人士，扩大社交圈" },
-  { value: "friends", label: "交朋友", description: "寻找志同道合的朋友" },
-  { value: "discussion", label: "深度讨论", description: "交流想法，深入探讨话题" },
-  { value: "fun", label: "娱乐放松", description: "轻松愉快，享受社交时光" },
-  { value: "romance", label: "浪漫社交", description: "认识潜在的恋爱对象" },
-  { value: "flexible", label: "随缘", description: "对所有活动类型保持开放" },
+  ...INTENT_OPTIONS.map(o => ({ value: o.value, label: o.label, description: o.subtitle })),
+  { value: INTENT_FLEXIBLE_OPTION.value, label: INTENT_FLEXIBLE_OPTION.label, description: INTENT_FLEXIBLE_OPTION.description },
 ] as const;
 
 /**
@@ -150,9 +144,9 @@ export function getIntentDisplay(intent: string | string[] | null | undefined): 
   if (!intent) return "";
   if (Array.isArray(intent)) {
     if (intent.length === 0) return "";
-    return intent.map(i => intentMap[i] || i).join("、");
+    return intent.map(i => getIntentLabel(i)).join("、");
   }
-  return intentMap[intent] || intent;
+  return getIntentLabel(intent);
 }
 
 /**
