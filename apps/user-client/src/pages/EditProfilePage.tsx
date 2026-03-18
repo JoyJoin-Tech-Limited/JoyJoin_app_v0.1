@@ -251,13 +251,13 @@ export default function EditProfilePage() {
         },
         {
           id: "intent",
-          title: "活动意图",
+          title: "社交偏好",
           icon: <Target className="h-4 w-4" />,
           path: "/profile/edit/intent",
           fields: [
-            { label: "默认活动意图", value: user.intent ? getIntentDisplay(user.intent) : null },
+            { label: "默认社交偏好", value: user.intent ? getIntentDisplay(user.intent) : null },
           ],
-          hint: "影响活动匹配，加入活动时可调整",
+          hint: "这是你的默认偏好，每次报名时可临时调整",
         },
       ],
     },
