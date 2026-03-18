@@ -350,8 +350,11 @@ function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile
   // ❌ REMOVED: Cuisine preferences and taste intensity (饭局 food preferences deprecated)
   
   // 社交目的兼容性（两种活动都使用）- fallback chain applied
-  const goals1 = getEffectiveIntent(user1);
-  const goals2 = getEffectiveIntent(user2);
+  // Note: Treat "flexible" as neutral (no strong intent); do not let it create a perfect match.
+  const goals1Raw = getEffectiveIntent(user1);
+  const goals2Raw = getEffectiveIntent(user2);
+  const goals1 = goals1Raw.filter(g => g !== "flexible");
+  const goals2 = goals2Raw.filter(g => g !== "flexible");
   if (goals1.length > 0 && goals2.length > 0) {
     const goalsOverlap = goals1.filter(g => goals2.includes(g)).length;
     score += (goalsOverlap / Math.max(goals1.length, goals2.length)) * 100;
