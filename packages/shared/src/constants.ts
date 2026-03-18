@@ -138,16 +138,56 @@ export type IndustryOption = typeof INDUSTRY_OPTIONS[number];
 
 // Intent/Social Goals options
 export const INTENT_OPTIONS = [
-  { value: "friends", label: "交新朋友", subtitle: "认识有趣的人" },
-  { value: "networking", label: "拓展人脉", subtitle: "扩大社交圈" },
-  { value: "discussion", label: "深度交流", subtitle: "走心的对话" },
-  { value: "fun", label: "轻松娱乐", subtitle: "开心就好" },
-  { value: "romance", label: "浪漫邂逅", subtitle: "遇见心动" },
+  { value: "friends", label: "交新朋友", subtitle: "认识有趣的人", emoji: "👋", iconHint: "Users" },
+  { value: "networking", label: "拓展人脉", subtitle: "扩大社交圈", emoji: "🤝", iconHint: "Network" },
+  { value: "discussion", label: "深度交流", subtitle: "走心的对话", emoji: "💬", iconHint: "MessageCircle" },
+  { value: "fun", label: "轻松娱乐", subtitle: "开心就好", emoji: "🎉", iconHint: "PartyPopper" },
+  { value: "romance", label: "浪漫邂逅", subtitle: "遇见心动", emoji: "💕", iconHint: "Heart" },
 ] as const;
 
 export const INTENT_FLEXIBLE_OPTION = {
   value: "flexible",
   label: "随缘",
   subtitle: "交给小悦推荐",
+  emoji: "🎲",
+  iconHint: "Shuffle",
   description: "我都感兴趣，帮我安排"
 } as const;
+
+// Derived type for all valid intent values
+export type IntentValue = typeof INTENT_OPTIONS[number]["value"] | typeof INTENT_FLEXIBLE_OPTION["value"];
+
+// Derived type for valid iconHint strings
+export type IntentIconHint = typeof INTENT_OPTIONS[number]["iconHint"] | typeof INTENT_FLEXIBLE_OPTION["iconHint"];
+
+// All valid intent values for validation (strongly typed)
+export const ALL_INTENT_VALUES: readonly IntentValue[] = [
+  ...INTENT_OPTIONS.map(o => o.value),
+  INTENT_FLEXIBLE_OPTION.value,
+];
+
+// O(1) lookup map built once from the canonical list
+const _ALL_INTENT_ENTRIES: ReadonlyArray<{
+  value: string;
+  label: string;
+  subtitle: string;
+  emoji: string;
+}> = [
+  ...INTENT_OPTIONS,
+  INTENT_FLEXIBLE_OPTION,
+];
+
+const _INTENT_MAP: Record<string, { label: string; subtitle: string; emoji: string }> =
+  Object.fromEntries(_ALL_INTENT_ENTRIES.map(o => [o.value, { label: o.label, subtitle: o.subtitle, emoji: o.emoji }]));
+
+export function getIntentLabel(value: string): string {
+  return _INTENT_MAP[value]?.label ?? value;
+}
+
+export function getIntentEmoji(value: string): string {
+  return _INTENT_MAP[value]?.emoji ?? "🎯";
+}
+
+export function getIntentSubtitle(value: string): string {
+  return _INTENT_MAP[value]?.subtitle ?? "";
+}
