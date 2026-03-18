@@ -1,3 +1,5 @@
+import { getArchetypeCompatibility } from '@/lib/archetypeCompatibility';
+
 export interface AttendeeData {
   userId: string;
   displayName: string;
@@ -253,6 +255,8 @@ export interface UserContext {
   hometownRegionCity?: string;
   hometownAffinityOptin?: boolean;
   archetype?: string;
+  workMode?: string;
+  industryCategory?: string;
   intent?: string[]; // Event-specific intent (aligned with User.intent)
   matchedBefore?: string[]; // Array of user IDs previously matched with
   // New fields from AI chat registration
@@ -286,6 +290,8 @@ export interface SparkPredictionContext {
   userHometownRegionCity?: string;
   userHometownAffinityOptin?: boolean;
   userArchetype?: string;
+  userWorkMode?: string;
+  userIndustryCategory?: string;
   userIntent?: string[]; // Event-specific intent (aligned with User.intent)
   userMatchedBefore?: string[]; // Array of user IDs previously matched with
   // New fields from AI chat registration
@@ -381,6 +387,8 @@ function userContextToSparkContext(ctx: UserContext): SparkPredictionContext {
     userHometownRegionCity: ctx.hometownRegionCity,
     userHometownAffinityOptin: ctx.hometownAffinityOptin,
     userArchetype: ctx.archetype,
+    userWorkMode: ctx.workMode,
+    userIndustryCategory: ctx.industryCategory,
     userIntent: ctx.intent,
     userMatchedBefore: ctx.matchedBefore,
     userCuisinePreference: ctx.cuisinePreference,
@@ -1093,6 +1101,98 @@ export function generateSparkPredictions(
     }
   }
   
+  // ✨ NEW: Same education level using current Chinese schema values
+  if (ctx.userEducationLevel && attendee.educationLevel &&
+      ctx.userEducationLevel === attendee.educationLevel) {
+    const educationRarity: Record<string, RarityLevel> = {
+      "博士": "epic",
+      "硕士": "rare",
+      "本科": "common",
+      "大专": "common",
+      "高中及以下": "common",
+      "职业培训": "common",
+    };
+    // Avoid duplicate if already pushed by legacy Priority 5
+    const alreadyPushed = predictions.some(p =>
+      p.text.includes("博士") || p.text.includes("硕士") || p.text.includes("学历")
+    );
+    if (!alreadyPushed) {
+      predictions.push({
+        text: `同为${ctx.userEducationLevel}学历`,
+        rarity: educationRarity[ctx.userEducationLevel] ?? 'common',
+      });
+    }
+  }
+
+  // 💫 NEW: Same relationship status using current Chinese schema values
+  if (ctx.userRelationshipStatus && attendee.relationshipStatus &&
+      ctx.userRelationshipStatus === attendee.relationshipStatus &&
+      ctx.userRelationshipStatus !== "不透露") {
+    const relLabels: Record<string, { text: string; rarity: RarityLevel }> = {
+      "单身": { text: "同为单身贵族", rarity: 'common' },
+      "恋爱中": { text: "都在甜蜜恋爱中", rarity: 'common' },
+      "已婚/伴侣": { text: "同为有伴一族", rarity: 'common' },
+      "离异": { text: "都经历过婚姻", rarity: 'common' },
+    };
+    // Avoid duplicate from legacy Priority 4
+    const alreadyPushed = predictions.some(p =>
+      p.text.includes("单身") || p.text.includes("伴侣") || p.text.includes("有伴") || p.text.includes("恋爱")
+    );
+    const label = relLabels[ctx.userRelationshipStatus];
+    if (label && !alreadyPushed) {
+      predictions.push(label);
+    }
+  }
+
+  // 🤝 NEW: Same work mode + same industry (rare compound)
+  if (ctx.userWorkMode && attendee.workMode &&
+      ctx.userWorkMode === attendee.workMode &&
+      ctx.userIndustry && attendee.industry &&
+      ctx.userIndustry === attendee.industry) {
+    const workModeLabels: Record<string, string> = {
+      founder: "创始人/合伙人",
+      self_employed: "自由职业",
+      employed: "在职人士",
+      student: "学生/实习",
+      transitioning: "职业过渡期",
+      caregiver_retired: "家庭为主",
+    };
+    const modeLabel = workModeLabels[ctx.userWorkMode] || ctx.userWorkMode;
+    predictions.push({
+      text: `同在${ctx.userIndustry}·${modeLabel}`,
+      rarity: 'rare',
+    });
+  }
+
+  // ✨ NEW: V4 archetype exact match or complementary check
+  if (ctx.userArchetype && attendee.archetype) {
+    if (ctx.userArchetype === attendee.archetype) {
+      predictions.push({
+        text: `同款人格（${ctx.userArchetype}）`,
+        rarity: 'epic',
+      });
+    } else {
+      const compatScore = getArchetypeCompatibility(ctx.userArchetype, attendee.archetype);
+      if (compatScore > 85) {
+        predictions.push({
+          text: `性格互补（${ctx.userArchetype}×${attendee.archetype}）`,
+          rarity: 'rare',
+        });
+      }
+    }
+  }
+
+  // 🔥 NEW: Compound epic — same hometown + same industry
+  if (ctx.userHometownRegionCity && attendee.hometownRegionCity &&
+      ctx.userHometownRegionCity === attendee.hometownRegionCity &&
+      ctx.userIndustry && attendee.industry &&
+      ctx.userIndustry === attendee.industry) {
+    predictions.push({
+      text: `老乡+同行（${ctx.userHometownRegionCity}·${ctx.userIndustry}）`,
+      rarity: 'epic',
+    });
+  }
+
   // Sort by rarity (epic > rare > common) and return top 10
   const rarityWeight: Record<RarityLevel, number> = { epic: 3, rare: 2, common: 1 };
   predictions.sort((a, b) => rarityWeight[b.rarity] - rarityWeight[a.rarity]);

@@ -151,3 +151,32 @@ export const INTENT_FLEXIBLE_OPTION = {
   subtitle: "交给小悦推荐",
   description: "我都感兴趣，帮我安排"
 } as const;
+
+// ============ 契合点系统 ============
+
+export const CONNECTION_POINT_TYPES = {
+  // Common tier (frequently matched)
+  SAME_CITY: { id: "same_city", label: "同城", emoji: "🏙️", tier: "common" as const },
+  SAME_INDUSTRY: { id: "same_industry", label: "同行", emoji: "💼", tier: "common" as const },
+  SAME_EDUCATION: { id: "same_education", label: "同学历", emoji: "🎓", tier: "common" as const },
+  SAME_RELATIONSHIP: { id: "same_relationship", label: "同状态", emoji: "💫", tier: "common" as const },
+
+  // Rare tier (less frequent, higher value)
+  SAME_HOMETOWN: { id: "same_hometown", label: "老乡", emoji: "🏠", tier: "rare" as const },
+  SAME_ARCHETYPE_BAND: { id: "same_archetype_band", label: "同频", emoji: "🎵", tier: "rare" as const },
+  SAME_WORK_INDUSTRY: { id: "same_work_industry", label: "同领域同模式", emoji: "🤝", tier: "rare" as const },
+  COMPLEMENTARY_ARCHETYPE: { id: "complementary_archetype", label: "性格互补", emoji: "🧩", tier: "rare" as const },
+
+  // Epic tier (very rare, highest value)
+  EXACT_ARCHETYPE: { id: "exact_archetype", label: "同款人格", emoji: "✨", tier: "epic" as const },
+  HOMETOWN_INDUSTRY_COMPOUND: { id: "hometown_industry", label: "老乡+同行", emoji: "🔥", tier: "epic" as const },
+  DEEP_INTEREST_OVERLAP: { id: "deep_interest_overlap", label: "深度同好", emoji: "💎", tier: "epic" as const },
+} as const;
+
+export type ConnectionPointTier = "common" | "rare" | "epic";
+
+export const CONNECTION_POINT_TIER_CONFIG = {
+  common: { label: "普通契合", color: "#6B7280", bgColor: "#F3F4F6" },
+  rare: { label: "稀有契合", color: "#8B5CF6", bgColor: "#EDE9FE" },
+  epic: { label: "史诗契合", color: "#F59E0B", bgColor: "#FEF3C7" },
+} as const;
