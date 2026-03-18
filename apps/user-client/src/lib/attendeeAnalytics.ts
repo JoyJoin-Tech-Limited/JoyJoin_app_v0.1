@@ -4,7 +4,6 @@ import {
   EDUCATION_LEVEL_RARITY,
   RELATIONSHIP_MATCH_LABELS,
 } from '@shared/constants';
-import type { ConnectionPointTier } from '@shared/constants';
 
 export interface AttendeeData {
   userId: string;
@@ -21,6 +20,7 @@ export interface AttendeeData {
   age?: number;
   birthdate?: string;
   industry?: string;
+  industryCategory?: string;
   ageVisible?: boolean;
   industryVisible?: boolean;
   gender?: string;
@@ -1139,11 +1139,12 @@ export function generateSparkPredictions(
   // 🤝 NEW: Same work mode + same industry (rare compound)
   if (ctx.userWorkMode && attendee.workMode &&
       ctx.userWorkMode === attendee.workMode &&
-      ctx.userIndustry && attendee.industry &&
-      ctx.userIndustry === attendee.industry) {
+      ctx.userIndustryCategory && attendee.industryCategory &&
+      ctx.userIndustryCategory === attendee.industryCategory) {
     const modeLabel = WORK_MODE_LABELS[ctx.userWorkMode as keyof typeof WORK_MODE_LABELS] || ctx.userWorkMode;
+    const displayIndustry = ctx.userIndustry || attendee.industry || ctx.userIndustryCategory;
     predictions.push({
-      text: `同在${ctx.userIndustry}·${modeLabel}`,
+      text: `同在${displayIndustry}·${modeLabel}`,
       rarity: 'rare',
     });
   }
@@ -1169,10 +1170,11 @@ export function generateSparkPredictions(
   // 🔥 NEW: Compound epic — same hometown + same industry
   if (ctx.userHometownRegionCity && attendee.hometownRegionCity &&
       ctx.userHometownRegionCity === attendee.hometownRegionCity &&
-      ctx.userIndustry && attendee.industry &&
-      ctx.userIndustry === attendee.industry) {
+      ctx.userIndustryCategory && attendee.industryCategory &&
+      ctx.userIndustryCategory === attendee.industryCategory) {
+    const displayIndustry = ctx.userIndustry || attendee.industry || ctx.userIndustryCategory;
     predictions.push({
-      text: `老乡+同行（${ctx.userHometownRegionCity}·${ctx.userIndustry}）`,
+      text: `老乡+同行（${ctx.userHometownRegionCity}·${displayIndustry}）`,
       rarity: 'epic',
     });
   }

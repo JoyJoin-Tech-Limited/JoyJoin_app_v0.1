@@ -40,6 +40,7 @@ describe('matchExplanationService', () => {
     relationshipStatus: '单身',
     workMode: 'employed',
     industryCategory: 'tech',
+    industryCategoryLabel: '科技互联网',
   };
 
   const mockMember2: MatchMember = {
@@ -55,6 +56,7 @@ describe('matchExplanationService', () => {
     relationshipStatus: '单身',
     workMode: 'employed',
     industryCategory: 'tech',
+    industryCategoryLabel: '科技互联网',
   };
 
   const mockMember3: MatchMember = {
@@ -136,12 +138,12 @@ describe('matchExplanationService', () => {
 
     it('should find same work mode + industry category compound connection', () => {
       const points = matchExplanationService.findConnectionPoints(mockMember1, mockMember2);
-      expect(points.some(p => p.includes('tech') && p.includes('在职人士'))).toBe(true);
+      expect(points).toContain('同在科技互联网·在职人士');
     });
 
     it('should find compound hometown + industry epic connection', () => {
       const points = matchExplanationService.findConnectionPoints(mockMember1, mockMember2);
-      expect(points.some(p => p.includes('老乡') && p.includes('深圳'))).toBe(true);
+      expect(points).toContain('老乡+同行（深圳·科技互联网）');
     });
 
     it('should find exact archetype match (epic)', () => {
