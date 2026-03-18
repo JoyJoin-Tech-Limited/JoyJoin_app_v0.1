@@ -16,7 +16,7 @@ import { chemistryMatrix } from './archetypeChemistry';
 import { db } from './db';
 import { eventPoolGroups } from '@shared/schema';
 import { eq } from 'drizzle-orm';
-import { WORK_MODE_LABELS } from '@shared/constants';
+import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS } from '@shared/constants';
 
 // Configure DeepSeek client with 10-second timeout
 const deepseekClient = new OpenAI({
@@ -97,14 +97,15 @@ export interface MatchMember {
   archetype: string | null;
   secondaryArchetype?: string | null;
   interestsTop?: string[] | null;
-  industry?: string | null;
+  industry?: string | null;           // Display label (e.g. "科技互联网")
   hometown?: string | null;
   socialStyle?: string | null;
   // Enriched fields for connection point detection
   educationLevel?: string | null;
   relationshipStatus?: string | null;
   workMode?: string | null;
-  industryCategory?: string | null;
+  industryCategory?: string | null;   // Category code for matching (e.g. "tech")
+  industryCategoryLabel?: string | null; // Human-readable label for display (e.g. "科技互联网")
   interestsWithHeat?: Array<{ topicId: string; heatLevel: number }> | null;
 }
 
@@ -386,20 +387,6 @@ function findSharedInterests(
 }
 
 /**
- * 获取感情状态的中文标签（用于连接点描述）
- */
-function getRelationshipLabel(status: string): string {
-  const labels: Record<string, string> = {
-    "单身": "是单身",
-    "恋爱中": "在恋爱",
-    "已婚/伴侣": "有伴侣",
-    "离异": "离异了",
-    "丧偶": "丧偶",
-  };
-  return labels[status] || status;
-}
-
-/**
  * 获取工作模式的中文标签（使用共享常量 WORK_MODE_LABELS）
  */
 function getWorkModeLabel(mode: string): string {
@@ -412,8 +399,7 @@ function getWorkModeLabel(mode: string): string {
 function findDeepInterestOverlap(
   interestsA: Array<{ topicId: string; heatLevel: number }> | null | undefined,
   interestsB: Array<{ topicId: string; heatLevel: number }> | null | undefined,
-  minHeatLevel: number,
-  minCount: number
+  minHeatLevel: number
 ): { count: number; topics: string[] } {
   if (!interestsA || !interestsB) return { count: 0, topics: [] };
   const deepA = new Set(
@@ -445,19 +431,24 @@ function findConnectionPoints(member1: MatchMember, member2: MatchMember): strin
     points.push(`同学历（${member1.educationLevel}）`);
   }
 
-  // Same relationship status
+  // Same relationship status — use shared RELATIONSHIP_MATCH_LABELS for display text
   if (member1.relationshipStatus && member2.relationshipStatus &&
       member1.relationshipStatus === member2.relationshipStatus &&
       member1.relationshipStatus !== "不透露") {
-    points.push(`都${getRelationshipLabel(member1.relationshipStatus)}`);
+    const label = RELATIONSHIP_MATCH_LABELS[member1.relationshipStatus];
+    if (label) {
+      points.push(label.text);
+    }
   }
 
   // Same work mode AND same industry category (rare compound)
+  // Match on category code; display using the human-readable label
   if (member1.workMode && member2.workMode &&
       member1.workMode === member2.workMode &&
       member1.industryCategory && member2.industryCategory &&
       member1.industryCategory === member2.industryCategory) {
-    points.push(`同在${member1.industryCategory}·${getWorkModeLabel(member1.workMode)}`);
+    const displayLabel = member1.industryCategoryLabel || member1.industryCategory;
+    points.push(`同在${displayLabel}·${getWorkModeLabel(member1.workMode)}`);
   }
 
   // Archetype checks
@@ -475,19 +466,20 @@ function findConnectionPoints(member1: MatchMember, member2: MatchMember): strin
   }
 
   // Compound epic: same hometown + same industry category (老乡+同行 bonus)
+  // Match on category code; display using the human-readable label
   if (member1.hometown && member2.hometown &&
       member1.hometown === member2.hometown &&
       member1.industryCategory && member2.industryCategory &&
       member1.industryCategory === member2.industryCategory) {
-    points.push(`老乡+同行（${member1.hometown}·${member1.industryCategory}）`);
+    const displayLabel = member1.industryCategoryLabel || member1.industryCategory;
+    points.push(`老乡+同行（${member1.hometown}·${displayLabel}）`);
   }
 
   // Deep interest overlap (≥3 interests at heat level ≥ 2)
   const deepOverlap = findDeepInterestOverlap(
     member1.interestsWithHeat,
     member2.interestsWithHeat,
-    2,
-    3
+    2
   );
   if (deepOverlap.count >= 3) {
     points.push(`深度同好（${deepOverlap.count}个共同深度兴趣）`);

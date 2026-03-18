@@ -197,4 +197,5 @@ export const RELATIONSHIP_MATCH_LABELS: Record<string, { text: string; tier: Con
   "恋爱中": { text: "都在甜蜜恋爱中", tier: "common" },
   "已婚/伴侣": { text: "同为有伴一族", tier: "common" },
   "离异": { text: "都经历过婚姻", tier: "common" },
+  "丧偶": { text: "都经历过失去伴侣", tier: "common" },
 };
