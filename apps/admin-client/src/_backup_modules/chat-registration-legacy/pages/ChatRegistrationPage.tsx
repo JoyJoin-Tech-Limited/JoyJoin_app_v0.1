@@ -1,3 +1,15 @@
+/**
+ * @deprecated HISTORICAL BACKUP — DO NOT USE
+ *
+ * ⚠️  This file is NOT part of the active codebase.  It is retained as a
+ * historical reference only.  The AI chat registration flow was retired in
+ * January 2026 and replaced by the server-driven V4 personality-test
+ * onboarding flow.
+ *
+ * See `apps/user-client/src/App.tsx` and `docs/onboarding-flow.md` for the
+ * current active onboarding architecture.
+ */
+
 import { useState, useRef, useEffect, useMemo, memo, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";

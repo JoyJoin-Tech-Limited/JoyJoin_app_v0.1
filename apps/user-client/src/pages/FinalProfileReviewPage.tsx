@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { archetypeConfig } from "@/lib/archetypes";
 import { getArchetypeAvatar } from "@/lib/archetypeAdapter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import type { AuthUser } from "@/hooks/useAuth";
 
 type Phase = "analyzing" | "complete";
 
@@ -84,10 +85,24 @@ export default function FinalProfileReviewPage() {
       // Invalidate auth user query to get updated nextStep
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
-      // Warm the cache so the Discover page loads instantly after navigation
-      await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] });
+      // Fetch the refreshed user state so we can navigate via server-computed nextStep.
+      const updatedUser = await queryClient.fetchQuery<AuthUser>({ queryKey: ["/api/auth/user"] });
       
-      setLocation('/discover');
+      // Resolve destination from server nextStep.
+      // 'guide' is deprecated — the server still emits it for legacy users, but
+      // the client treats it identically to 'discover'.
+      const nextStep = updatedUser?.nextStep;
+      const NEXT_STEP_TO_PATH: Record<string, string> = {
+        'discover':      '/discover',
+        'guide':         '/discover',       // deprecated step — maps to discover
+        'profile-review':'/onboarding/review',
+        'extended-data': '/onboarding/extended',
+        'essential-data':'/onboarding/setup',
+        'personality-test':'/personality-test',
+      };
+      const destination = (nextStep && NEXT_STEP_TO_PATH[nextStep]) ?? '/discover';
+      
+      setLocation(destination);
     } catch (error) {
       console.error("Error completing profile review:", error);
       toast({

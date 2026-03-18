@@ -1,6 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import type { User } from "@shared/schema";
 
+/**
+ * Admin-client auth hook.
+ *
+ * NOTE: This hook still uses legacy boolean flags (`needsRegistration`,
+ * `needsInterestsTopics`, `needsPersonalityTest`) to derive onboarding state.
+ * The user-client has been updated to use the server-calculated `nextStep`
+ * field from `/api/auth/user` instead.  This hook should be updated to follow
+ * the same pattern when the admin-client is next refactored.
+ *
+ * Legacy field reference:
+ * - `needsRegistration`  → server now uses `nextStep = 'onboarding' | 'personality-test'`
+ * - `needsInterestsTopics` → replaced by `nextStep = 'extended-data'`
+ * - `needsPersonalityTest` → replaced by `nextStep = 'personality-test'`
+ * - `needsProfileSetup`  → always false here; replaced by `nextStep = 'essential-data'`
+ */
 export function useAuth() {
   const { data: user, isLoading, isError } = useQuery<User>({
     queryKey: ["/api/auth/user"],
