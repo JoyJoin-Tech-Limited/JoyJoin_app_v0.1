@@ -138,16 +138,45 @@ export type IndustryOption = typeof INDUSTRY_OPTIONS[number];
 
 // Intent/Social Goals options
 export const INTENT_OPTIONS = [
-  { value: "friends", label: "交新朋友", subtitle: "认识有趣的人" },
-  { value: "networking", label: "拓展人脉", subtitle: "扩大社交圈" },
-  { value: "discussion", label: "深度交流", subtitle: "走心的对话" },
-  { value: "fun", label: "轻松娱乐", subtitle: "开心就好" },
-  { value: "romance", label: "浪漫邂逅", subtitle: "遇见心动" },
+  { value: "friends", label: "交新朋友", subtitle: "认识有趣的人", emoji: "👋", iconHint: "Users" },
+  { value: "networking", label: "拓展人脉", subtitle: "扩大社交圈", emoji: "🤝", iconHint: "Network" },
+  { value: "discussion", label: "深度交流", subtitle: "走心的对话", emoji: "💬", iconHint: "MessageCircle" },
+  { value: "fun", label: "轻松娱乐", subtitle: "开心就好", emoji: "🎉", iconHint: "PartyPopper" },
+  { value: "romance", label: "浪漫邂逅", subtitle: "遇见心动", emoji: "💕", iconHint: "Heart" },
 ] as const;
 
 export const INTENT_FLEXIBLE_OPTION = {
   value: "flexible",
   label: "随缘",
   subtitle: "交给小悦推荐",
+  emoji: "🎲",
+  iconHint: "Shuffle",
   description: "我都感兴趣，帮我安排"
 } as const;
+
+// Derived type for all valid intent values
+export type IntentValue = typeof INTENT_OPTIONS[number]["value"] | typeof INTENT_FLEXIBLE_OPTION["value"];
+
+// All valid intent values for validation
+export const ALL_INTENT_VALUES: readonly string[] = [
+  ...INTENT_OPTIONS.map(o => o.value),
+  INTENT_FLEXIBLE_OPTION.value,
+];
+
+export function getIntentLabel(value: string): string {
+  if (value === INTENT_FLEXIBLE_OPTION.value) return INTENT_FLEXIBLE_OPTION.label;
+  const found = INTENT_OPTIONS.find(o => o.value === value);
+  return found?.label ?? value;
+}
+
+export function getIntentEmoji(value: string): string {
+  if (value === INTENT_FLEXIBLE_OPTION.value) return INTENT_FLEXIBLE_OPTION.emoji;
+  const found = INTENT_OPTIONS.find(o => o.value === value);
+  return found?.emoji ?? "🎯";
+}
+
+export function getIntentSubtitle(value: string): string {
+  if (value === INTENT_FLEXIBLE_OPTION.value) return INTENT_FLEXIBLE_OPTION.subtitle;
+  const found = INTENT_OPTIONS.find(o => o.value === value);
+  return found?.subtitle ?? "";
+}
