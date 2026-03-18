@@ -5,10 +5,6 @@ import { eq } from "drizzle-orm";
 interface RegistrationData {
   userId: string;
   eventIntent?: string[];
-  preferredLanguages?: string[];
-  alcoholComfort?: string;
-  budgetRange?: string;
-  barThemePreferences?: string[];
 }
 
 interface EnrichmentResult {
