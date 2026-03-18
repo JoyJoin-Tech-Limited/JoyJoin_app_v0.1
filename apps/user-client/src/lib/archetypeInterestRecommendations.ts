@@ -11,8 +11,9 @@
  * Archetype keys match the `archetype` field on the `users` table (simplified Chinese).
  * Topic IDs match the `id` field in `apps/user-client/src/data/interestCarouselData.ts`.
  */
+import type { ArchetypeName } from '@shared/personality/archetypeNames';
 
-export const ARCHETYPE_INTEREST_RECOMMENDATIONS: Record<string, string[]> = {
+export const ARCHETYPE_INTEREST_RECOMMENDATIONS = {
   // 开心柯基 – High-energy social spark (X:95, P:85)
   "开心柯基": [
     "culture_standup",    // 🎤 脱口秀 – natural performer
@@ -120,7 +121,7 @@ export const ARCHETYPE_INTEREST_RECOMMENDATIONS: Record<string, string[]> = {
     "culture_movies",        // 🎬 影视内容 – immersive escape
     "philosophy_minimalism", // 🍃 极简生活 – minimal social overhead
   ],
-};
+} as const satisfies Record<ArchetypeName, readonly string[]>;
 
 /**
  * Returns true if the given topic is recommended for the user's archetype.
@@ -131,7 +132,8 @@ export function isRecommendedForArchetype(
   archetypeId: string | undefined | null
 ): boolean {
   if (!archetypeId) return false;
-  const recommendations = ARCHETYPE_INTEREST_RECOMMENDATIONS[archetypeId];
+  const recommendations =
+    ARCHETYPE_INTEREST_RECOMMENDATIONS[archetypeId as ArchetypeName];
   if (!recommendations) return false;
   return recommendations.includes(topicId);
 }
@@ -142,5 +144,5 @@ export function isRecommendedForArchetype(
  */
 export function getRecommendedTopics(archetypeId: string | undefined | null): string[] {
   if (!archetypeId) return [];
-  return ARCHETYPE_INTEREST_RECOMMENDATIONS[archetypeId] ?? [];
+  return ARCHETYPE_INTEREST_RECOMMENDATIONS[archetypeId as ArchetypeName] ?? [];
 }
