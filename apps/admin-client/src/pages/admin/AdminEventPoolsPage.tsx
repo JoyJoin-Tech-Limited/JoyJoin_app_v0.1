@@ -412,9 +412,9 @@ export default function AdminEventPoolsPage() {
   const addMemberMutation = useMutation({
     mutationFn: ({ poolId, groupId, registrationId }: { poolId: string; groupId: string; registrationId: string }) =>
       apiRequest("POST", `/api/admin/event-pools/${poolId}/groups/${groupId}/add-member`, { registrationId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/event-pools", selectedPool?.id, "registrations"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/event-pools", selectedPool?.id, "groups"] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/event-pools", variables.poolId, "registrations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/event-pools", variables.poolId, "groups"] });
       setAddMemberGroupId(null);
       toast({ title: "添加成功", description: "用户已加入小组" });
     },
@@ -1329,9 +1329,10 @@ export default function AdminEventPoolsPage() {
                                   ) : (
                                     <div className="space-y-1 max-h-48 overflow-y-auto">
                                       {pendingUnassigned.map((reg) => (
-                                        <button
+                                        <Button
                                           key={reg.id}
-                                          className="w-full text-left rounded px-2 py-1.5 hover:bg-muted flex items-center justify-between gap-2"
+                                          variant="ghost"
+                                          className="w-full justify-between h-auto px-2 py-1.5 font-normal"
                                           onClick={() => {
                                             addMemberMutation.mutate({
                                               poolId: selectedPool!.id,
@@ -1340,7 +1341,7 @@ export default function AdminEventPoolsPage() {
                                             });
                                           }}
                                         >
-                                          <span className="font-medium truncate">
+                                          <span className="font-medium truncate text-left">
                                             {reg.userName || `${reg.userFirstName ?? ""} ${reg.userLastName ?? ""}`.trim() || "匿名用户"}
                                           </span>
                                           <div className="flex items-center gap-1 shrink-0">
@@ -1356,7 +1357,7 @@ export default function AdminEventPoolsPage() {
                                               </Badge>
                                             )}
                                           </div>
-                                        </button>
+                                        </Button>
                                       ))}
                                     </div>
                                   )}

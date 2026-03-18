@@ -1782,7 +1782,7 @@ export default function AdminVenuesPage() {
                 <Label className="text-xs">合作状态</Label>
                 <Select
                   value={formData.onboardingStatus}
-                  onValueChange={(v) => setFormData({ ...formData, onboardingStatus: v as any })}
+                  onValueChange={(v) => setFormData({ ...formData, onboardingStatus: v as NonNullable<Venue['onboardingStatus']> })}
                 >
                   <SelectTrigger className="w-full" data-testid="select-onboarding-status">
                     <SelectValue />
@@ -2216,7 +2216,7 @@ export default function AdminVenuesPage() {
                 <Label className="text-xs">合作状态</Label>
                 <Select
                   value={formData.onboardingStatus}
-                  onValueChange={(v) => setFormData({ ...formData, onboardingStatus: v as any })}
+                  onValueChange={(v) => setFormData({ ...formData, onboardingStatus: v as NonNullable<Venue['onboardingStatus']> })}
                 >
                   <SelectTrigger className="w-full" data-testid="select-edit-onboarding-status">
                     <SelectValue />
