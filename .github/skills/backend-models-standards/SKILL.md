@@ -20,7 +20,7 @@ description: Define database models with clear naming, appropriate data types, c
 - When balancing normalization with query performance needs
 - When defining model methods or scopes for common queries
 
-This Skill provides Claude Code with specific guidance on how to adhere to coding standards as they relate to how it should handle backend models.
+This Skill provides GitHub Copilot with specific guidance on how to adhere to coding standards as they relate to how it should handle backend models.
 
 ## Naming Conventions
 
