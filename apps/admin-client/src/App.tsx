@@ -4,16 +4,13 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
 import LoginPage from "@/pages/LoginPage";
-// RegistrationPage removed - use ChatRegistrationPage instead
-// import RegistrationPage from "@/pages/RegistrationPage";
-// RegistrationMethodPage kept for internal reference only - not imported in user routes
-// ChatRegistrationPage moved to _backup_modules/chat-registration-legacy/ (2026-01-20) - no longer routed
-import InterestsTopicsPage from "@/pages/InterestsTopicsPage";
+// Legacy registration pages removed from active routing:
+//   - ChatRegistrationPage moved to _backup_modules/chat-registration-legacy/ (2026-01-20)
+//   - RegistrationMethodPage moved to _backup_modules/legacy-registration-pages/ (2026-03-18)
+//   - RegistrationPage removed (2026-01-20)
 import PersonalityTestPage from "@/pages/PersonalityTestPage";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
-import ProfileSetupPage from "@/pages/ProfileSetupPage";
 import DiscoverPage from "@/pages/DiscoverPage";
 import EventsPage from "@/pages/EventsPage";
 import EventCoordinationListPage from "@/pages/EventCoordinationListPage";
@@ -44,86 +41,13 @@ import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import NotFound from "@/pages/not-found";
 import LevelUpProvider from "@/components/LevelUpProvider";
 
-function RedirectToRegistration() {
-  const [, setLocation] = useLocation();
-  useEffect(() => {
-    setLocation("/registration");
-  }, [setLocation]);
-  return null;
-}
-
-function RedirectToInterestsTopics() {
-  const [, setLocation] = useLocation();
-  useEffect(() => {
-    setLocation("/interests-topics");
-  }, [setLocation]);
-  return null;
-}
-
-function RedirectToPersonalityTest() {
-  const [, setLocation] = useLocation();
-  useEffect(() => {
-    setLocation("/personality-test");
-  }, [setLocation]);
-  return null;
-}
-
-function RedirectToSetup() {
-  const [, setLocation] = useLocation();
-  useEffect(() => {
-    setLocation("/onboarding/setup");
-  }, [setLocation]);
-  return null;
-}
-
 function AuthenticatedRouter() {
-  const { user, needsRegistration, needsInterestsTopics, needsPersonalityTest, needsProfileSetup } = useAuth();
+  const { user } = useAuth();
   const [location] = useLocation();
 
   // Admin routes - separate from user flow
   if (user?.isAdmin && location.startsWith("/admin")) {
     return <AdminLayout />;
-  }
-
-  if (needsRegistration) {
-    return (
-      <Switch>
-        {/* ChatRegistrationPage moved to _backup_modules (2026-01-20) - routes disabled */}
-        {/* <Route path="/registration" component={ChatRegistrationPage} /> */}
-        {/* <Route path="/registration/chat" component={ChatRegistrationPage} /> */}
-        {/* 保留表单注册供内部测试使用 - RegistrationPage removed (2026-01-20) */}
-        {/* <Route path="/registration/form" component={RegistrationPage} /> */}
-        <Route path="*" component={RedirectToRegistration} />
-      </Switch>
-    );
-  }
-
-  if (needsInterestsTopics) {
-    return (
-      <Switch>
-        <Route path="/interests-topics" component={InterestsTopicsPage} />
-        <Route path="*" component={RedirectToInterestsTopics} />
-      </Switch>
-    );
-  }
-
-  if (needsPersonalityTest) {
-    return (
-      <Switch>
-        <Route path="/personality-test" component={PersonalityTestPage} />
-        <Route path="/personality-test/results" component={PersonalityTestResultPage} />
-        <Route path="*" component={RedirectToPersonalityTest} />
-      </Switch>
-    );
-  }
-
-  if (needsProfileSetup) {
-    return (
-      <Switch>
-        <Route path="/onboarding/setup" component={ProfileSetupPage} />
-        <Route path="*" component={RedirectToSetup} />
-      </Switch>
-    );
   }
 
   return (
@@ -149,9 +73,6 @@ function AuthenticatedRouter() {
       <Route path="/profile/edit/personal" component={EditPersonalPage} />
       <Route path="/profile/edit/intent" component={EditIntentPage} />
       <Route path="/profile/edit/interests" component={EditInterestsPage} />
-      {/* Route /profile/edit/social removed - unused fields (2026-01-23) */}
-      {/* ChatRegistrationPage route disabled (2026-01-20) */}
-      {/* <Route path="/registration/chat" component={ChatRegistrationPage} /> */}
       <Route path="/event/:id" component={EventDetailPage} />
       <Route path="/invite" component={InvitePage} />
       <Route path="/personality-test" component={PersonalityTestPage} />
@@ -206,18 +127,7 @@ function Router() {
 
   // Regular user routes
   if (!isAuthenticated) {
-    return (
-      <Switch>
-        {/* ChatRegistrationPage moved to _backup_modules (2026-01-20) - routes disabled */}
-        {/* <Route path="/registration" component={ChatRegistrationPage} /> */}
-        {/* <Route path="/registration/chat" component={ChatRegistrationPage} /> */}
-        {/* <Route path="/register" component={ChatRegistrationPage} /> */}
-        {/* 保留表单注册供内部测试使用 - RegistrationPage removed, commented out */}
-        {/* <Route path="/registration/form" component={RegistrationPage} /> */}
-        {/* All other routes show login page */}
-        <Route path="*" component={LoginPage} />
-      </Switch>
-    );
+    return <Route path="*" component={LoginPage} />;
   }
 
   return <AuthenticatedRouter />;

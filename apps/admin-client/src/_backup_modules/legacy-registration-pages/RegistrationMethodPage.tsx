@@ -1,3 +1,16 @@
+/**
+ * @deprecated LEGACY — DO NOT USE IN ACTIVE CODE
+ *
+ * This file was the legacy registration method selection page, offering routes to:
+ *   - /registration/chat  (AI chat registration — decommissioned 2026-01-20)
+ *   - /registration/form  (Form registration — decommissioned 2026-01-20)
+ *
+ * These routes and the underlying pages no longer exist in the active codebase.
+ * This file was moved to _backup_modules on 2026-03-18.
+ *
+ * The current onboarding flow is server-driven via `nextStep` from /api/auth/user.
+ * See apps/admin-client/src/App.tsx → AuthenticatedRouter for active routing.
+ */
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";

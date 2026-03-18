@@ -8,7 +8,7 @@ import GamificationCard from "@/components/GamificationCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target, RefreshCw, MessageCircle, Star, ChevronDown, Dna, Briefcase, Globe, Users, Coffee } from "lucide-react";
+import { Edit, LogOut, Shield, HelpCircle, Sparkles, Heart, Quote, Target, RefreshCw, Star, ChevronDown, Dna, Briefcase, Globe, Users, Coffee } from "lucide-react";
 import { getInsightCategoryConfig, INSIGHT_CONFIDENCE_THRESHOLD, INSIGHT_DISPLAY_LIMIT } from "@/lib/insightCategoryConfig";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
@@ -243,17 +243,6 @@ export default function ProfilePage() {
                     )}
                   </p>
                 </div>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full"
-                  onClick={() => setLocation('/registration/chat?mode=enrichment')}
-                  data-testid="button-chat-with-xiaoyue"
-                >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  和小悦聊聊，补充资料
-                </Button>
               </CardContent>
             </Card>
           );
