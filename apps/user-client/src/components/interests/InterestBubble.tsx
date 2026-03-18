@@ -8,9 +8,10 @@ interface InterestBubbleProps {
   level: HeatLevel;
   onTap: () => void;
   className?: string;
+  isRecommended?: boolean;
 }
 
-export function InterestBubble({ topic, level, onTap, className }: InterestBubbleProps) {
+export function InterestBubble({ topic, level, onTap, className, isRecommended }: InterestBubbleProps) {
   const prefersReducedMotion = useReducedMotion();
 
   const getHeatStyles = () => {
@@ -144,6 +145,16 @@ export function InterestBubble({ topic, level, onTap, className }: InterestBubbl
         <div className="absolute -top-1 -right-1 text-xs leading-none">
           {styles.badgeEmoji}
         </div>
+      )}
+
+      {/* Archetype recommendation hint – only shown when topic is unselected */}
+      {isRecommended && level === 0 && (
+        <span
+          aria-label="推荐话题"
+          className="absolute -top-1.5 -right-1.5 text-[9px] bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium whitespace-nowrap z-10 leading-tight"
+        >
+          ✨ 推荐
+        </span>
       )}
 
       {/* Emoji - larger for better visibility */}
