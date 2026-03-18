@@ -99,6 +99,12 @@ export interface MatchMember {
   industry?: string | null;
   hometown?: string | null;
   socialStyle?: string | null;
+  // Enriched fields for connection point detection
+  educationLevel?: string | null;
+  relationshipStatus?: string | null;
+  workMode?: string | null;
+  industryCategory?: string | null;
+  interestsWithHeat?: Array<{ topicId: string; heatLevel: number }> | null;
 }
 
 export interface MatchExplanation {
@@ -379,19 +385,123 @@ function findSharedInterests(
 }
 
 /**
+ * 获取感情状态的中文标签
+ */
+function getRelationshipLabel(status: string): string {
+  const labels: Record<string, string> = {
+    "单身": "是单身",
+    "恋爱中": "在恋爱",
+    "已婚/伴侣": "有伴侣",
+    "离异": "离异了",
+    "丧偶": "丧偶",
+    "不透露": "不透露",
+  };
+  return labels[status] || status;
+}
+
+/**
+ * 获取工作模式的中文标签
+ */
+function getWorkModeLabel(mode: string): string {
+  const labels: Record<string, string> = {
+    founder: "创始人/合伙人",
+    self_employed: "自由职业",
+    employed: "在职人士",
+    student: "学生/实习",
+    transitioning: "职业过渡期",
+    caregiver_retired: "家庭为主",
+  };
+  return labels[mode] || mode;
+}
+
+/**
+ * 找出两个用户在热度达标兴趣上的深度重叠
+ */
+function findDeepInterestOverlap(
+  interestsA: Array<{ topicId: string; heatLevel: number }> | null | undefined,
+  interestsB: Array<{ topicId: string; heatLevel: number }> | null | undefined,
+  minHeatLevel: number,
+  minCount: number
+): { count: number; topics: string[] } {
+  if (!interestsA || !interestsB) return { count: 0, topics: [] };
+  const deepA = new Set(
+    interestsA.filter(i => i.heatLevel >= minHeatLevel).map(i => i.topicId)
+  );
+  const overlap = interestsB.filter(
+    i => i.heatLevel >= minHeatLevel && deepA.has(i.topicId)
+  );
+  return { count: overlap.length, topics: overlap.map(i => i.topicId) };
+}
+
+/**
  * 找出连接点（同乡、同行业等）
  */
 function findConnectionPoints(member1: MatchMember, member2: MatchMember): string[] {
   const points: string[] = [];
-  
+
   if (member1.hometown && member2.hometown && member1.hometown === member2.hometown) {
     points.push(`同乡（${member1.hometown}）`);
   }
-  
+
   if (member1.industry && member2.industry && member1.industry === member2.industry) {
     points.push(`同行业（${member1.industry}）`);
   }
-  
+
+  // Same education level
+  if (member1.educationLevel && member2.educationLevel &&
+      member1.educationLevel === member2.educationLevel) {
+    points.push(`同学历（${member1.educationLevel}）`);
+  }
+
+  // Same relationship status
+  if (member1.relationshipStatus && member2.relationshipStatus &&
+      member1.relationshipStatus === member2.relationshipStatus &&
+      member1.relationshipStatus !== "不透露") {
+    points.push(`都${getRelationshipLabel(member1.relationshipStatus)}`);
+  }
+
+  // Same work mode AND same industry category (rare compound)
+  if (member1.workMode && member2.workMode &&
+      member1.workMode === member2.workMode &&
+      member1.industryCategory && member2.industryCategory &&
+      member1.industryCategory === member2.industryCategory) {
+    points.push(`同在${member1.industryCategory}·${getWorkModeLabel(member1.workMode)}`);
+  }
+
+  // Archetype checks
+  if (member1.archetype && member2.archetype) {
+    if (member1.archetype === member2.archetype) {
+      // Exact same archetype (epic)
+      points.push(`同款人格（${member1.archetype}）`);
+    } else {
+      // Complementary archetype (chemistry score > 85)
+      const chemScore = getChemistryScore(member1.archetype, member2.archetype);
+      if (chemScore > 85) {
+        points.push(`性格互补（${member1.archetype}×${member2.archetype}）`);
+      }
+    }
+  }
+
+  // Compound epic: same hometown + same industry category
+  if (member1.hometown && member2.hometown &&
+      member1.hometown === member2.hometown &&
+      member1.industryCategory && member2.industryCategory &&
+      member1.industryCategory === member2.industryCategory) {
+    // Only add if not already covered by individual points above
+    points.push(`老乡+同行（${member1.hometown}·${member1.industryCategory}）`);
+  }
+
+  // Deep interest overlap (≥3 interests at heat level ≥ 2)
+  const deepOverlap = findDeepInterestOverlap(
+    member1.interestsWithHeat,
+    member2.interestsWithHeat,
+    2,
+    3
+  );
+  if (deepOverlap.count >= 3) {
+    points.push(`深度同好（${deepOverlap.count}个共同深度兴趣）`);
+  }
+
   return points;
 }
 
