@@ -15,6 +15,7 @@ import { broadcastEventStatusChanged, broadcastAdminAction, broadcastAttendanceS
 import { matchEventPool, saveMatchResults } from "./poolMatchingService";
 import { ARCHETYPE_NAMES } from "./archetypeConfig";
 import type { ArchetypeName } from "./archetypeConfig";
+import { enrichProfileFromRegistration } from "./lib/profileEnrichment";
 
 type Traits = {
   affinity: number;
@@ -8972,6 +8973,16 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
       scanPoolAndMatch(poolId, "realtime", "user_registration").catch((err: any) =>  {
         console.error(`[Realtime Matching] Scan failed after registration:`, err);
         // Error logged, operation continues
+      });
+
+      // Silently backfill empty profile fields from registration data (fire-and-forget)
+      enrichProfileFromRegistration({
+        userId: registration.userId,
+        eventIntent: registration.eventIntent ?? undefined,
+        preferredLanguages: registration.preferredLanguages ?? undefined,
+      }).catch((err: any) => {
+        // Log but don't fail the registration
+        console.error("[profileEnrichment] Failed to enrich profile:", err);
       });
 
       res.json(registration);
