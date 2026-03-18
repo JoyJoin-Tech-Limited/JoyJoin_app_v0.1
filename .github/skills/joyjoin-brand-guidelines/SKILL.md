@@ -1,6 +1,6 @@
 ---
 name: joyjoin-brand-guidelines
-description: Apply JoyJoin brand guidelines across UI, marketing, social, offline, and motion design. Use this skill when work must stay consistent with JoyJoin's visual identity, emotional tone, and brand system.
+description: Apply JoyJoin brand guidelines across UI, marketing, social, offline, and motion design. Use this skill when work must stay consistent with JoyJoin’s visual identity, emotional tone, and brand system.
 license: See repository license information.
 ---
 
@@ -139,7 +139,7 @@ Motion should feel:
 Prefer soft easing, calm transitions, and polished reveals.
 Avoid loud, bouncy, or distracting animation.
 
-## Do / Don't
+## Do / Don’t
 
 ### Do
 - keep the brand warm and human
@@ -148,7 +148,7 @@ Avoid loud, bouncy, or distracting animation.
 - let premium quality come from restraint and polish
 - reinforce surprise, warmth, and connection
 
-### Don't
+### Don’t
 - make it look corporate or enterprise
 - use harsh contrast or aggressive visual effects
 - overuse colors or mascots
