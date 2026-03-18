@@ -846,21 +846,7 @@ export function generateSparkPredictions(
   
   // Priority 6.9: Life stage/transition detection - RARE/EPIC
   // Prefer explicit workMode; fall back to inferring from age/children/seniority data
-  const detectLifeStage = (age?: number, children?: string, seniority?: string, relationshipStatus?: string, workMode?: string): string | null => {
-    // Prefer explicit workMode over inference
-    if (workMode) {
-      const workModeToStage: Record<string, string> = {
-        founder: 'entrepreneur',
-        self_employed: 'freelancer',
-        employed: 'career_prime',
-        student: 'early_career',
-        transitioning: 'career_transition',
-        caregiver_retired: 'empty_nester',
-        successor: 'successor',
-      };
-      return workModeToStage[workMode] || null;
-    }
-
+  const detectLifeStage = (age?: number, children?: string, seniority?: string, relationshipStatus?: string): string | null => {
     if (children === "Expecting") return "expecting_parent";
     if (children === "0-5") return "new_parent";
     if (children === "6-12") return "school_age_parent";
@@ -881,15 +867,13 @@ export function generateSparkPredictions(
     ctx.userAge, 
     ctx.userChildren, 
     ctx.userSeniority,
-    ctx.userRelationshipStatus,
-    ctx.userWorkMode
+    ctx.userRelationshipStatus
   );
   const attendeeStage = detectLifeStage(
     attendee.age, 
     attendee.children, 
     attendee.seniority,
-    attendee.relationshipStatus,
-    attendee.workMode
+    attendee.relationshipStatus
   );
   
   if (userStage && attendeeStage && userStage === attendeeStage) {
