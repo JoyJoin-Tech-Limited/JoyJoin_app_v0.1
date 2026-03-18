@@ -1,15 +1,20 @@
 /**
- * useOnboardingRoute - Client-side routing logic for onboarding flow
- * 
- * Single source of truth for determining the correct route based on user state.
- * Eliminates race conditions by using pure function logic.
- * 
- * Route Order:
- * 1. /personality-test - Combined registration & V4 adaptive assessment
- * 2. /onboarding/setup - Essential data (7 steps)
- * 3. /onboarding/extended - Interest carousel
- * 4. /onboarding/review - Profile preview
- * 5. /discover - Main app
+ * useOnboardingRoute — LEGACY ADAPTER (fallback only)
+ *
+ * ⚠️  This hook is NOT the active source of truth for onboarding navigation.
+ *
+ * Authoritative routing is handled in `App.tsx` via the server-calculated
+ * `nextStep` field returned by `/api/auth/user`.  The `AuthenticatedRouter`
+ * switch in `App.tsx` should be consulted for the real routing logic.
+ *
+ * This file is retained as a thin compatibility shim for any legacy callers.
+ * New code MUST use `user.nextStep` from `useAuth()` rather than importing
+ * `calculateOnboardingRoute` or `useOnboardingRoute`.
+ *
+ * Do NOT add new onboarding routing logic here.
+ *
+ * Historical note: This was previously treated as the single source of truth
+ * before server-driven navigation was introduced in Feb 2026 (B1).
  */
 
 import { useMemo } from "react";
@@ -24,7 +29,12 @@ export type OnboardingRoute =
   | '/discover';
 
 /**
- * Calculate the current route a user should be on based on their state
+ * @deprecated Prefer `user.nextStep` from `useAuth()` for all routing decisions.
+ *
+ * This function reconstructs the onboarding route from per-field booleans on
+ * the user object.  It may diverge from the server's `nextStep` if the server
+ * adds or reorders steps.  Use it only as a last-resort fallback when
+ * `nextStep` is unavailable.
  */
 export function calculateOnboardingRoute(user: AuthUser | undefined): OnboardingRoute {
   // Not authenticated -> login
@@ -65,7 +75,8 @@ export function calculateOnboardingRoute(user: AuthUser | undefined): Onboarding
 }
 
 /**
- * Hook to get the current onboarding route and user data
+ * @deprecated Use `useAuth().nextStep` for routing. This hook is a legacy
+ * adapter kept only for backward compatibility.
  */
 export function useOnboardingRoute() {
   const { user, isLoading, isAuthenticated } = useAuth();

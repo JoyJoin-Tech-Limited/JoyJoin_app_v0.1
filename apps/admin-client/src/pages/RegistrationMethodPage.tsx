@@ -1,3 +1,20 @@
+/**
+ * @deprecated LEGACY — RegistrationMethodPage
+ *
+ * ⚠️  This page is NOT part of the current active onboarding flow.
+ *
+ * The registration methods offered here ("和小悦聊聊", "快速填写") have been
+ * retired.  The current onboarding entry point is the V4 Personality Test at
+ * `/personality-test` followed by the server-driven `nextStep` flow.
+ *
+ * This file is retained as a historical reference only.  It is NOT imported
+ * into any active route in App.tsx.  Do not add new CTAs or re-route users
+ * here.  Do not restore the `/registration/chat` or `/registration/form`
+ * routes without a deliberate product decision.
+ *
+ * Moved to backup context: 2026-01-20
+ */
+
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";

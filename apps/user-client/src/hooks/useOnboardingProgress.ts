@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useAuth } from "./useAuth";
+import { useAuth, type NextStepType } from "./useAuth";
 
 /**
  * 注册引导进度状态
@@ -41,23 +41,51 @@ const STEP_ORDER: OnboardingStep[] = [
 ];
 
 /**
+ * Map server-returned nextStep to the local OnboardingStep type.
+ * 'guide' and 'discover' both mean onboarding is complete.
+ * 'onboarding' is a legacy fallback value that maps to 'registration'.
+ */
+function nextStepToOnboardingStep(nextStep: NextStepType | undefined): OnboardingStep {
+  switch (nextStep) {
+    case 'onboarding':       return 'registration';
+    case 'personality-test': return 'personality-test';
+    case 'essential-data':   return 'essential-data';
+    case 'extended-data':    return 'extended-data';
+    case 'profile-review':   return 'profile-review';
+    case 'guide':            // guide is deprecated; treat as complete
+    case 'discover':         return 'complete';
+    default:                 return 'complete';
+  }
+}
+
+/**
  * 注册引导进度管理 Hook
- * 
- * 集中管理用户在注册流程中的进度状态
- * 基于 useAuth 返回的用户状态计算
+ *
+ * Derives the current onboarding step primarily from the server-calculated
+ * `nextStep` returned by `/api/auth/user`, so it always matches the router in
+ * `App.tsx`. Legacy per-field booleans are kept only to populate the `steps`
+ * completion map (for display purposes) and as a fallback when the user object
+ * is not yet loaded.
  */
 export function useOnboardingProgress(): OnboardingProgress {
-  const { user, needsRegistration, needsPersonalityTest, needsProfileSetup } = useAuth();
+  const { user, nextStep, profileExtendedComplete } = useAuth();
   
   const progress = useMemo(() => {
+    // --- Completion flags (for display / steps map) ---
     const hasCompletedRegistration = user?.hasCompletedRegistration ?? false;
     const hasCompletedPersonalityTest = user?.hasCompletedPersonalityTest ?? false;
-    const hasCompletedEssentialData = !!(user?.displayName && user?.gender && user?.currentCity);
-    const hasCompletedExtendedData = !!(user?.intent || user?.hasCompletedInterestsCarousel);
-    
-    // Use server-persisted flags instead of localStorage
+    // Use server-computed `profileEssentialComplete` when available; fall back
+    // to field-presence heuristic so the steps map stays accurate.
+    const hasCompletedEssentialData =
+      user?.profileEssentialComplete ??
+      !!(user?.displayName && user?.gender && user?.currentCity);
+    // Use server-computed `profileExtendedComplete` (or the canonical flag) —
+    // do NOT mix in `intent` field presence, which is not a completion signal.
+    const hasCompletedExtendedData =
+      profileExtendedComplete ??
+      (user?.hasCompletedInterestsCarousel ?? false);
     const hasSeenProfileReview = user?.hasSeenProfileReview ?? false;
-    
+
     const steps = {
       registration: hasCompletedRegistration,
       personalityTest: hasCompletedPersonalityTest,
@@ -65,26 +93,15 @@ export function useOnboardingProgress(): OnboardingProgress {
       extendedData: hasCompletedExtendedData,
       profileReview: hasSeenProfileReview,
     };
-    
-    // Calculate current step
-    let currentStep: OnboardingStep = 'complete';
-    if (needsRegistration) {
-      currentStep = 'registration';
-    } else if (needsPersonalityTest) {
-      currentStep = 'personality-test';
-    } else if (needsProfileSetup) {
-      currentStep = 'essential-data';
-    } else if (!hasCompletedExtendedData) {
-      currentStep = 'extended-data';
-    } else if (!hasSeenProfileReview) {
-      currentStep = 'profile-review';
-    }
-    
+
+    // --- Current step: always derived from server nextStep (source of truth) ---
+    const currentStep: OnboardingStep = nextStepToOnboardingStep(nextStep);
+
     // Calculate progress
     const currentIndex = STEP_ORDER.indexOf(currentStep);
     const totalSteps = STEP_ORDER.length - 1; // 不包括 'complete'
     const progressPercent = Math.round((currentIndex / totalSteps) * 100);
-    
+
     return {
       currentStep,
       totalSteps,
@@ -92,7 +109,7 @@ export function useOnboardingProgress(): OnboardingProgress {
       isComplete: currentStep === 'complete',
       steps,
     };
-  }, [user, needsRegistration, needsPersonalityTest, needsProfileSetup]);
+  }, [user, nextStep, profileExtendedComplete]);
   
   return progress;
 }

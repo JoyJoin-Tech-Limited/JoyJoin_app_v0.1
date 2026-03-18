@@ -1,46 +1,52 @@
-# Legacy Chat Registration System - BACKUP
+# Legacy Chat Registration System — HISTORICAL BACKUP ONLY
+
+> ⚠️  **DO NOT USE** — These files are NOT active runtime code.  They exist
+> purely as a historical reference.  The onboarding flow has moved to a
+> server-driven `nextStep` architecture; all routing is handled by the
+> `AuthenticatedRouter` switch in `apps/user-client/src/App.tsx`.
 
 ## What is this?
 
-This folder contains the **legacy AI chat-based registration system (小悦对话注册)** that has been replaced by the new **DuolingoOnboardingPage** flow. These files are kept as backup for potential rollback or reference purposes.
+This folder contains the **legacy AI chat-based registration system
+(小悦对话注册)** that has been retired.  It is kept for historical reference
+only.
 
 ## System Overview
 
-### Legacy System (THIS FOLDER)
+### This folder (HISTORICAL — do not use)
 - **AI Chat Interface** - Conversational registration with Xiaoyue AI
-- **Multiple Modes** - Express, Standard, Deep, and Enrichment modes
-- **Used in**: ChatRegistrationPage
-- **Status**: ❌ DEPRECATED - No longer in active use
+- **Status**: ❌ DEPRECATED — Not routed, not imported, not in active use
 
-### Active System (Current)
-- **Duolingo-style Onboarding** - Step-by-step questionnaire flow
-- **Used in**: DuolingoOnboardingPage
-- **Location**: `apps/user-client/src/pages/DuolingoOnboardingPage.tsx`
-- **Status**: ✅ ACTIVE
+### Active system (current)
+The active onboarding flow is a **server-driven, state-based sequence**:
+1. **V4 Personality Test** (`/personality-test`) — anonymous pre-auth
+2. **WeChat Auth** — happens after test, at `PersonalityTestResultPage`
+3. **Essential Data** (`/onboarding/setup`) — `EssentialDataPage`
+4. **Extended Data** (`/onboarding/extended`) — `ExtendedDataPage` (interest carousel)
+5. **Profile Review** (`/onboarding/review`) — `FinalProfileReviewPage`
+6. **Discover** (`/discover`) — onboarding complete
 
-## Why was this moved?
+Navigation between steps is controlled by `nextStep` returned from
+`GET /api/auth/user`.  See `apps/user-client/src/App.tsx`
+(`AuthenticatedRouter`) and `docs/onboarding-flow.md` for the authoritative
+reference.
 
-1. **Simpler User Flow**: The Duolingo-style onboarding provides a clearer, more structured experience
-2. **Code Organization**: The chat registration is no longer routed in App.tsx but files remained in active directories
-3. **Development Clarity**: Prevent confusion about which registration system is currently active
+Note: `DuolingoOnboardingPage` (mentioned in earlier version of this README)
+was also retired — it is no longer an active step.
 
 ## Files in this backup
 
 ### Pages
-- `ChatRegistrationPage.tsx` - AI chat registration interface (user-client)
-- `ChatRegistrationPage.tsx` - AI chat registration interface (admin-client)
+- `ChatRegistrationPage.tsx` — AI chat registration (user-client)
+- `ChatRegistrationPage.tsx` — AI chat registration (admin-client backup)
 
-## When/If to restore
+## Restore considerations
 
-### Restore if:
-- User testing shows preference for conversational onboarding
-- Product team decides to revert to AI chat-based registration
-- Need to support both flows simultaneously
+Only restore these files if the product team explicitly decides to reintroduce
+conversational registration.  This would require significant re-integration
+work given the current server-driven architecture.
 
-### How to restore:
-1. Copy files back to `apps/user-client/src/pages/` and `apps/admin-client/src/pages/`
-2. Update `App.tsx` routing to include chat registration routes
-3. Test the full flow end-to-end
+---
+*Originally moved to backup: 2026-01-20*
+*README updated to reflect current architecture: 2026-03-18*
 
-## Moved On
-2026-01-20 - Moved to backup as part of onboarding flow cleanup

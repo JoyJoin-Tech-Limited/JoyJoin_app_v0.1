@@ -143,7 +143,8 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 **After Completion:**
 - `hasSeenProfileReview = true`
-- Navigate to `/discover`
+- Server recalculates `nextStep`; client fetches refreshed user state and navigates
+  via `nextStep` (typically resolves to `discover`; `guide` is deprecated — see below)
 
 ---
 
@@ -154,6 +155,8 @@ await fetch('/api/auth/wechat/login-with-test', {
 **User State:** Onboarding complete
 
 > **Note:** The 3-step guide (`/guide`) that previously preceded the Discover page was deprecated on 2026-02-16. Its content has been replaced by inline coach marks (`CoachMarkBanner`, `XiaoyueFAB`, `ProfileCompletionNudge`) on the Discover page itself.
+>
+> The server may still emit `nextStep = 'guide'` for users created before the deprecation who have `hasSeenGuide = false`. The `AuthenticatedRouter` in `App.tsx` treats `guide` identically to `discover` — both render `DiscoverPage`. Client code should never navigate to `/guide` as an active destination.
 
 ---
 
@@ -165,12 +168,14 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 | Field | Type | Description |
 |------|------|-------------|
-| `nextStep` | `string` | Server-calculated next route: `onboarding`, `personality-test`, `essential-data`, `extended-data`, `profile-review`, `discover`. Note: the server may still return `guide` for users with `hasSeenGuide = false` (backward compat); the client ignores `guide` and treats it as `discover`. |
+| `nextStep` | `string` | Server-calculated next route. Possible values: `onboarding` (legacy fallback → routes to `/personality-test`), `personality-test`, `essential-data`, `extended-data`, `profile-review`, `guide` (deprecated, see below), `discover`. |
 | `profileEssentialComplete` | `boolean` | Essential data complete (displayName, gender, currentCity) |
-| `profileExtendedComplete` | `boolean` | Extended data complete (interests) |
-| `hasSeenGuide` | `boolean` | Legacy field — guide step removed from onboarding flow (2026-02-16); retained on server for backward compatibility |
+| `profileExtendedComplete` | `boolean` | Extended data complete (educationLevel + industry + hometown) |
+| `hasSeenGuide` | `boolean` | Legacy field — guide step removed from onboarding flow (2026-02-16); retained on server for backward compatibility. The server may still emit `nextStep = 'guide'` for users with `hasSeenGuide = false`. The client treats this identically to `discover`. |
 | `hasSeenProfileReview` | `boolean` | Profile review viewed (server-persisted) |
 | `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
+
+> **`guide` handling**: `nextStep = 'guide'` is emitted for users whose `hasSeenGuide` flag is `false`.  The `AuthenticatedRouter` in `App.tsx` maps `guide` to the same routes as `discover` (inline coach marks replaced the dedicated `/guide` page in Feb 2026).  When navigating after profile review, client code should map both `guide` and `discover` to `/discover`.  The `/guide` route is kept for backward compatibility but is not an active onboarding destination.
 
 ### API Endpoints
 

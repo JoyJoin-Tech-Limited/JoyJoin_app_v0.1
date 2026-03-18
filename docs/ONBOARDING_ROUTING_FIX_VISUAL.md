@@ -1,5 +1,15 @@
 # Onboarding Routing Fix - Visual Summary
 
+> **📦 HISTORICAL RECORD** — This document illustrates the before/after state
+> of the routing fix applied on 2026-02-10.  It is kept as an audit trail only.
+> The current architecture is described in `docs/onboarding-flow.md` and
+> `.github/copilot-instructions.md`.
+>
+> Key difference from this diagram: `guide` step is now treated as equivalent
+> to `discover` in the router (inline coach marks replaced the guide page on
+> 2026-02-16).  Profile review navigation now follows the server-returned
+> `nextStep` rather than hardcoding `/discover`.
+
 ## Before Fix (Broken State)
 
 ```

@@ -1,5 +1,13 @@
 # Onboarding Routing Fix - Implementation Summary
 
+> **📦 HISTORICAL RECORD** — This document describes changes made on 2026-02-10
+> (PR `copilot/fix-routing-issues-onboarding`).  It is kept as an audit trail
+> only.  The onboarding architecture has continued to evolve since then.  For
+> the current authoritative description see:
+> - `docs/onboarding-flow.md`
+> - `apps/user-client/src/App.tsx` (`AuthenticatedRouter`)
+> - `.github/copilot-instructions.md` (Onboarding Flow Architecture section)
+
 **Date:** 2026-02-10  
 **PR:** copilot/fix-routing-issues-onboarding  
 **Status:** ✅ Complete

@@ -44,14 +44,26 @@ import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import NotFound from "@/pages/not-found";
 import LevelUpProvider from "@/components/LevelUpProvider";
 
+/**
+ * @deprecated RedirectToRegistration — legacy redirect; no active route at /registration.
+ * The registration routes (/registration, /registration/chat, /registration/form)
+ * were removed in 2026-01-20 when AI-chat registration was retired.
+ * Kept only because needsRegistration may still be truthy for edge-case user states.
+ * New users should reach the personality test via /personality-test.
+ */
 function RedirectToRegistration() {
   const [, setLocation] = useLocation();
   useEffect(() => {
-    setLocation("/registration");
+    // Fall back to personality test since /registration no longer exists.
+    setLocation("/personality-test");
   }, [setLocation]);
   return null;
 }
 
+/**
+ * @deprecated RedirectToInterestsTopics — legacy redirect; InterestsTopicsPage
+ * was replaced by the Interest Carousel in ExtendedDataPage (2026-01-19).
+ */
 function RedirectToInterestsTopics() {
   const [, setLocation] = useLocation();
   useEffect(() => {
@@ -77,6 +89,10 @@ function RedirectToSetup() {
 }
 
 function AuthenticatedRouter() {
+  // NOTE: This admin-client still uses legacy boolean flags (needsRegistration,
+  // needsInterestsTopics, etc.) from its own useAuth hook.  The user-client has
+  // been updated to use server-driven `nextStep` instead.  When this client is
+  // updated, the server-driven model should be adopted here too.
   const { user, needsRegistration, needsInterestsTopics, needsPersonalityTest, needsProfileSetup } = useAuth();
   const [location] = useLocation();
 
@@ -85,19 +101,23 @@ function AuthenticatedRouter() {
     return <AdminLayout />;
   }
 
+  // Legacy registration guard — no active /registration route exists any more.
+  // Users who still have hasCompletedRegistration=false will be redirected to
+  // /personality-test (the current onboarding entry point).
   if (needsRegistration) {
     return (
       <Switch>
-        {/* ChatRegistrationPage moved to _backup_modules (2026-01-20) - routes disabled */}
-        {/* <Route path="/registration" component={ChatRegistrationPage} /> */}
-        {/* <Route path="/registration/chat" component={ChatRegistrationPage} /> */}
-        {/* 保留表单注册供内部测试使用 - RegistrationPage removed (2026-01-20) */}
-        {/* <Route path="/registration/form" component={RegistrationPage} /> */}
+        {/* All legacy registration routes removed (2026-01-20). */}
+        {/* Redirect to personality test instead. */}
         <Route path="*" component={RedirectToRegistration} />
       </Switch>
     );
   }
 
+  // Legacy interests-topics guard — InterestsTopicsPage was replaced by the
+  // Interest Carousel in ExtendedDataPage (2026-01-19).  This branch is
+  // retained for users who have hasCompletedInterestsTopics=false but should
+  // be unreachable for new users.
   if (needsInterestsTopics) {
     return (
       <Switch>
