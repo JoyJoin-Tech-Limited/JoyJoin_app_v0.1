@@ -63,6 +63,7 @@ export interface UserWithProfile {
   barBudgetRange: string[] | null;  // 酒局预算（每杯）
   preferredLanguages: string[] | null;
   eventIntent: string[] | null;  // ✅ RENAMED from socialGoals - 本次活动社交目的
+  userIntent: string[] | null;   // 用户档案默认社交偏好（fallback when eventIntent empty）
   cuisinePreferences: string[] | null;
   dietaryRestrictions: string[] | null;
   tasteIntensity: string[] | null;
@@ -296,6 +297,19 @@ function calculateLanguageScore(user1: UserWithProfile, user2: UserWithProfile):
 }
 
 /**
+ * Get effective intent for matching with fallback chain:
+ * 1. Event-specific intent (eventIntent from registration)
+ * 2. User's global profile intent (users.intent)
+ * 3. "flexible" as ultimate fallback
+ */
+function getEffectiveIntent(user: UserWithProfile): string[] {
+  const isValidIntent = (v: unknown): v is string[] => Array.isArray(v) && (v as string[]).length > 0;
+  if (isValidIntent(user.eventIntent)) return user.eventIntent;
+  if (isValidIntent(user.userIntent)) return user.userIntent;
+  return ["flexible"];
+}
+
+/**
  * 计算活动偏好兼容性 (0-100)
  * ✅ UPDATED: Removed budget (now L1 hard constraint) and food preferences (deprecated)
  * Only score: eventIntent overlap + barThemes/alcoholComfort for 酒局
@@ -333,9 +347,9 @@ function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile
   
   // ❌ REMOVED: Cuisine preferences and taste intensity (饭局 food preferences deprecated)
   
-  // 社交目的兼容性（两种活动都使用）
-  const goals1 = user1.eventIntent || [];
-  const goals2 = user2.eventIntent || [];
+  // 社交目的兼容性（两种活动都使用）- fallback chain applied
+  const goals1 = getEffectiveIntent(user1);
+  const goals2 = getEffectiveIntent(user2);
   if (goals1.length > 0 && goals2.length > 0) {
     const goalsOverlap = goals1.filter(g => goals2.includes(g)).length;
     score += (goalsOverlap / Math.max(goals1.length, goals2.length)) * 100;
@@ -633,6 +647,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       budgetRange: eventPoolRegistrations.budgetRange,
       preferredLanguages: eventPoolRegistrations.preferredLanguages,
       eventIntent: eventPoolRegistrations.eventIntent,
+      userIntent: users.intent,
       cuisinePreferences: eventPoolRegistrations.cuisinePreferences,
       dietaryRestrictions: eventPoolRegistrations.dietaryRestrictions,
       tasteIntensity: eventPoolRegistrations.tasteIntensity,

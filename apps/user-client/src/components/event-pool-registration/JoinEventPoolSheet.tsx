@@ -59,6 +59,8 @@ export default function JoinEventPoolSheet({
     },
   });
 
+  const [isPrefilledFromProfile, setIsPrefilledFromProfile] = useState(false);
+
   // Initialize smart defaults
   useEffect(() => {
     if (open && user) {
@@ -72,10 +74,19 @@ export default function JoinEventPoolSheet({
       // Set default languages from user profile (deprecated field, using empty array)
       const userLanguages: string[] = [];
 
-      updatePreferences({
+      const updates: Parameters<typeof updatePreferences>[0] = {
         districts: defaultDistricts,
         languages: userLanguages,
-      });
+      };
+
+      // Pre-fill social goals from user's profile intent (only when no selection yet)
+      const currentGoals = preferences.socialGoals || [];
+      if (user.intent && user.intent.length > 0 && currentGoals.length === 0) {
+        updates.socialGoals = user.intent;
+        setIsPrefilledFromProfile(true);
+      }
+
+      updatePreferences(updates);
     }
   }, [open, user, poolData.area]);
 
@@ -173,6 +184,8 @@ export default function JoinEventPoolSheet({
                       selectedGoals={preferences.socialGoals || []}
                       onSelectGoals={(goals) => updatePreferences({ socialGoals: goals })}
                       registrationCount={poolData.registrationCount}
+                      isPrefilledFromProfile={isPrefilledFromProfile}
+                      onClearPrefill={() => setIsPrefilledFromProfile(false)}
                     />
                   )}
 
