@@ -300,13 +300,15 @@ function calculateLanguageScore(user1: UserWithProfile, user2: UserWithProfile):
  * Get effective intent for matching with fallback chain:
  * 1. Event-specific intent (eventIntent from registration)
  * 2. User's global profile intent (users.intent)
- * 3. "flexible" as ultimate fallback
+ * 3. No-intent fallback (empty array = flexible / no preference)
  */
 function getEffectiveIntent(user: UserWithProfile): string[] {
   const isValidIntent = (v: unknown): v is string[] => Array.isArray(v) && (v as string[]).length > 0;
   if (isValidIntent(user.eventIntent)) return user.eventIntent;
   if (isValidIntent(user.userIntent)) return user.userIntent;
-  return ["flexible"];
+  // No explicit intent provided: treat as no preference (empty list),
+  // so intent scoring can fall back to the neutral/default score.
+  return [];
 }
 
 /**
