@@ -238,7 +238,9 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
 
     // Rare: complementary archetype chemistry + hometown affinity
     if (archetype) rareCount++; // 性格互补
-    if (user?.hometownRegionCity || user?.hometown) rareCount++; // 老乡
+    if (user?.hometownAffinityOptin && (user?.hometownRegionCity || user?.hometown)) {
+      rareCount++; // 老乡（需开启同乡匹配）
+    }
 
     // Epic: exact archetype match + deep shared interests (level ≥ 2)
     if (archetype) epicCount++; // 同款人格
