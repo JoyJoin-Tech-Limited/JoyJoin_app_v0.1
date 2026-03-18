@@ -11003,9 +11003,12 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       // Load user interests (with heat levels) for deep interest overlap detection
       const memberInterestsRows = await db.query.userInterests.findMany({
         where: sql`${userInterests.userId} = ANY(${memberIds})`,
-      });
+      }) as Array<{
+        userId: string;
+        selections: Array<{ topicId: string; level?: number | null }> | null;
+      }>;
       const interestsByUserId = new Map(
-        memberInterestsRows.map((row: any) => [row.userId, row])
+        memberInterestsRows.map((row) => [row.userId, row] as const)
       );
 
       const matchMembers = members.map((m: any) => {
@@ -11021,13 +11024,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           archetype: m.archetype,
           secondaryArchetype: m.secondaryArchetype,
           interestsTop: m.interestsTop,
-          industry: m.industry,
+          industry: m.industryNicheLabel || m.industryCategoryLabel,
           hometown: m.hometownRegionCity,
           socialStyle: m.socialStyle,
           educationLevel: m.educationLevel,
           relationshipStatus: m.relationshipStatus,
           workMode: m.workMode,
           industryCategory: m.industryCategory,
+          industryCategoryLabel: m.industryCategoryLabel,
           interestsWithHeat,
         };
       });
@@ -11105,13 +11109,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         archetype: m.archetype,
         secondaryArchetype: m.secondaryArchetype,
         interestsTop: m.interestsTop,
-        industry: m.industry,
+        industry: m.industryNicheLabel || m.industryCategoryLabel,
         hometown: m.hometownRegionCity,
         socialStyle: m.socialStyle,
         educationLevel: m.educationLevel,
         relationshipStatus: m.relationshipStatus,
         workMode: m.workMode,
         industryCategory: m.industryCategory,
+        industryCategoryLabel: m.industryCategoryLabel,
       }));
 
       // Get event pool info for event type
@@ -11174,9 +11179,12 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       // Load user interests (with heat levels) for deep interest overlap detection
       const memberInterestsRows = await db.query.userInterests.findMany({
         where: sql`${userInterests.userId} = ANY(${memberIds})`,
-      });
+      }) as Array<{
+        userId: string;
+        selections: Array<{ topicId: string; level?: number | null }> | null;
+      }>;
       const interestsByUserId = new Map(
-        memberInterestsRows.map((row: any) => [row.userId, row])
+        memberInterestsRows.map((row) => [row.userId, row] as const)
       );
 
       const matchMembers = members.map((m: any) => {
@@ -11192,13 +11200,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           archetype: m.archetype,
           secondaryArchetype: m.secondaryArchetype,
           interestsTop: m.interestsTop,
-          industry: m.industry,
+          industry: m.industryNicheLabel || m.industryCategoryLabel,
           hometown: m.hometownRegionCity,
           socialStyle: m.socialStyle,
           educationLevel: m.educationLevel,
           relationshipStatus: m.relationshipStatus,
           workMode: m.workMode,
           industryCategory: m.industryCategory,
+          industryCategoryLabel: m.industryCategoryLabel,
           interestsWithHeat,
         };
       });
@@ -11428,13 +11437,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           archetype: m.archetype,
           secondaryArchetype: m.secondaryArchetype,
           interestsTop: m.interestsTop,
-          industry: m.industry,
+          industry: m.industryNicheLabel || m.industryCategoryLabel,
           hometown: m.hometownRegionCity,
           socialStyle: m.socialStyle,
           educationLevel: m.educationLevel,
           relationshipStatus: m.relationshipStatus,
           workMode: m.workMode,
           industryCategory: m.industryCategory,
+          industryCategoryLabel: m.industryCategoryLabel,
         }));
 
         const analysis = await matchExplanationService.generateGroupAnalysis(
