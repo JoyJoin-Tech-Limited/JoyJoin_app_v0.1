@@ -487,9 +487,10 @@ export default function EssentialDataPage() {
           occupationId,
           workMode,
         };
-        // Preserve relationshipStatus if previously set via cache (from a prior onboarding attempt
-        // before this field was moved to Edit Profile). It is no longer collected in this flow,
-        // so we only write it when it already has a value to avoid overwriting existing DB data.
+        // Preserve relationshipStatus if it was restored from localStorage cache (from a prior
+        // onboarding attempt before this field was moved to Edit Profile). It is no longer
+        // collected in this flow, so we only write it when it already has a value to avoid
+        // overwriting existing DB data with an empty string.
         if (relationshipStatus) profileData.relationshipStatus = relationshipStatus;
         
         // Age validation (Phase 0: Fix #8) - Client-side pre-check

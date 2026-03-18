@@ -51,8 +51,6 @@ export default function JoinEventPoolSheet({
     registerMutation,
     saveDraft,
     isFormValid,
-    isPrefilledFromProfile,
-    clearPrefill,
   } = useEventPoolRegistration({
     poolId: poolData.poolId,
     eventType: poolData.eventType,
