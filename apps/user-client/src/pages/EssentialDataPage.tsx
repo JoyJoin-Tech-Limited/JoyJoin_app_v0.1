@@ -258,8 +258,13 @@ export default function EssentialDataPage() {
         }
         
         if (Date.now() - state.timestamp < 24 * 60 * 60 * 1000) {
-          const clampedStep = Math.min(state.currentStep, TOTAL_STEPS - 1);
-          if (clampedStep !== state.currentStep) {
+          // Safely clamp restored step to valid range [0, TOTAL_STEPS - 1]
+          const rawStep =
+            typeof state.currentStep === "number" && Number.isFinite(state.currentStep)
+              ? state.currentStep
+              : 0;
+          const clampedStep = Math.min(Math.max(0, rawStep), TOTAL_STEPS - 1);
+          if (clampedStep !== rawStep) {
             toast({
               title: "进度已调整",
               description: "填写流程已更新，已为你定位到最近的步骤",
