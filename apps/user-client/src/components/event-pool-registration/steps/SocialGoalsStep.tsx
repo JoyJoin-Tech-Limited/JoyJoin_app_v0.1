@@ -1,10 +1,11 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import SocialGoalCard from "../shared/SocialGoalCard";
 import { SHARED_OPTIONS } from "@/lib/event-pool-options";
+import { getMatchPreviewCopy } from "@/lib/matchPreviewCopy";
 
 interface SocialGoalsStepProps {
   selectedGoals: string[];
@@ -23,6 +24,10 @@ export default function SocialGoalsStep({
 }: SocialGoalsStepProps) {
   const { toast } = useToast();
   const isFlexibleMode = selectedGoals.includes("flexible");
+  const matchPreview = useMemo(
+    () => getMatchPreviewCopy(selectedGoals),
+    [selectedGoals]
+  );
 
   const handleToggleGoal = (goalValue: string) => {
     // Any manual change clears the pre-filled state
@@ -61,8 +66,6 @@ export default function SocialGoalsStep({
       }
     }
   };
-
-  const estimatedMatches = Math.min(Math.floor(registrationCount / 2), 10);
 
   return (
     <div className="space-y-6">
@@ -133,23 +136,18 @@ export default function SocialGoalsStep({
       )}
 
       {/* Match Preview Card */}
-      {(selectedGoals.length > 0 || isFlexibleMode) && (
+      {selectedGoals.length > 0 && (
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-lg p-4 border border-green-500/20"
+          transition={{ duration: 0.3 }}
+          className="bg-primary/5 rounded-xl px-4 py-3"
         >
-          <div className="flex items-start gap-3">
-            <div className="text-2xl">✨</div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold mb-1">预计匹配</p>
-              <p className="text-xs text-muted-foreground">
-                当前已有 {registrationCount} 人报名，预计可匹配{" "}
-                <Badge variant="secondary" className="mx-1">
-                  {estimatedMatches}+
-                </Badge>
-                位志同道合的朋友
-              </p>
+          <div className="flex items-start gap-2">
+            <span className="text-lg">{matchPreview.emoji}</span>
+            <div>
+              <p className="text-sm font-medium text-foreground">{matchPreview.title}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{matchPreview.subtitle}</p>
             </div>
           </div>
         </motion.div>
