@@ -138,16 +138,66 @@ export type IndustryOption = typeof INDUSTRY_OPTIONS[number];
 
 // Intent/Social Goals options
 export const INTENT_OPTIONS = [
-  { value: "friends", label: "交新朋友", subtitle: "认识有趣的人" },
-  { value: "networking", label: "拓展人脉", subtitle: "扩大社交圈" },
-  { value: "discussion", label: "深度交流", subtitle: "走心的对话" },
-  { value: "fun", label: "轻松娱乐", subtitle: "开心就好" },
-  { value: "romance", label: "浪漫邂逅", subtitle: "遇见心动" },
+  { value: "friends", label: "交新朋友", subtitle: "认识有趣的人", emoji: "👋", iconHint: "Users" },
+  { value: "networking", label: "拓展人脉", subtitle: "扩大社交圈", emoji: "🤝", iconHint: "Network" },
+  { value: "discussion", label: "深度交流", subtitle: "走心的对话", emoji: "💬", iconHint: "MessageCircle" },
+  { value: "fun", label: "轻松娱乐", subtitle: "开心就好", emoji: "🎉", iconHint: "PartyPopper" },
+  { value: "romance", label: "浪漫邂逅", subtitle: "遇见心动", emoji: "💕", iconHint: "Heart" },
 ] as const;
 
 export const INTENT_FLEXIBLE_OPTION = {
   value: "flexible",
   label: "随缘",
   subtitle: "交给小悦推荐",
+  emoji: "🎲",
+  iconHint: "Shuffle",
   description: "我都感兴趣，帮我安排"
 } as const;
+
+// ============ 契合点系统 ============
+
+export const CONNECTION_POINT_TYPES = {
+  // Common tier (frequently matched)
+  SAME_CITY: { id: "same_city", label: "同城", emoji: "🏙️", tier: "common" as const },
+  SAME_INDUSTRY: { id: "same_industry", label: "同行", emoji: "💼", tier: "common" as const },
+  SAME_EDUCATION: { id: "same_education", label: "同学历", emoji: "🎓", tier: "common" as const },
+  SAME_RELATIONSHIP: { id: "same_relationship", label: "同状态", emoji: "💫", tier: "common" as const },
+
+  // Rare tier (less frequent, higher value)
+  SAME_HOMETOWN: { id: "same_hometown", label: "老乡", emoji: "🏠", tier: "rare" as const },
+  SAME_ARCHETYPE_BAND: { id: "same_archetype_band", label: "同频", emoji: "🎵", tier: "rare" as const },
+  SAME_WORK_INDUSTRY: { id: "same_work_industry", label: "同领域同模式", emoji: "🤝", tier: "rare" as const },
+  COMPLEMENTARY_ARCHETYPE: { id: "complementary_archetype", label: "性格互补", emoji: "🧩", tier: "rare" as const },
+
+  // Epic tier (very rare, highest value)
+  EXACT_ARCHETYPE: { id: "exact_archetype", label: "同款人格", emoji: "✨", tier: "epic" as const },
+  HOMETOWN_INDUSTRY_COMPOUND: { id: "hometown_industry", label: "老乡+同行", emoji: "🔥", tier: "epic" as const },
+  DEEP_INTEREST_OVERLAP: { id: "deep_interest_overlap", label: "深度同好", emoji: "💎", tier: "epic" as const },
+} as const;
+
+export type ConnectionPointTier = "common" | "rare" | "epic";
+
+export const CONNECTION_POINT_TIER_CONFIG = {
+  common: { label: "普通契合", color: "#6B7280", bgColor: "#F3F4F6" },
+  rare: { label: "稀有契合", color: "#8B5CF6", bgColor: "#EDE9FE" },
+  epic: { label: "史诗契合", color: "#F59E0B", bgColor: "#FEF3C7" },
+} as const;
+
+// Rarity tiers for education levels (common → epic, higher degree = rarer)
+export const EDUCATION_LEVEL_RARITY: Record<string, ConnectionPointTier> = {
+  "高中及以下": "common",
+  "大专": "common",
+  "本科": "common",
+  "职业培训": "common",
+  "硕士": "rare",
+  "博士": "epic",
+};
+
+// Chinese display labels for relationship status match descriptions
+export const RELATIONSHIP_MATCH_LABELS: Record<string, { text: string; tier: ConnectionPointTier }> = {
+  "单身": { text: "同为单身贵族", tier: "common" },
+  "恋爱中": { text: "都在甜蜜恋爱中", tier: "common" },
+  "已婚/伴侣": { text: "同为有伴一族", tier: "common" },
+  "离异": { text: "都经历过婚姻", tier: "common" },
+  "丧偶": { text: "都经历过失去伴侣", tier: "common" },
+};
