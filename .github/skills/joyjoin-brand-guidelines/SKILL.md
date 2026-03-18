@@ -1,7 +1,7 @@
 ---
 name: joyjoin-brand-guidelines
 description: Apply JoyJoin brand guidelines across UI, marketing, social, offline, and motion design. Use this skill when work must stay consistent with JoyJoin's visual identity, emotional tone, and brand system.
-license: Complete terms in LICENSE.txt
+license: See repository license information.
 ---
 
 Use this skill for any JoyJoin design task that must follow the brand system clearly and consistently.
