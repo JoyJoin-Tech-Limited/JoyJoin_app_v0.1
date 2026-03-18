@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useOnboardingAnalytics } from "@/hooks/useOnboardingAnalytics"; // Phase 2
+import { useAuth } from "@/hooks/useAuth";
 import { CategoryPage } from "./CategoryPage";
 import {
   INTEREST_CATEGORIES,
@@ -61,6 +62,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
   const analytics = useOnboardingAnalytics('extended-data'); // Phase 2: Analytics tracking
+  const { user } = useAuth();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const headerRef = useRef<HTMLDivElement>(null);
@@ -586,6 +588,7 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
             category={category}
             selections={selections}
             onTopicTap={handleTopicTap}
+            archetypeId={user?.archetype}
             ref={(el) => {
               categoryRefs.current[category.id] = el;
             }}
