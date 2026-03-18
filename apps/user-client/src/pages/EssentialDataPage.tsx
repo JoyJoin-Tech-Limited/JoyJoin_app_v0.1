@@ -130,7 +130,7 @@ const STEP_CONFIG = [
   {
     id: "displayName",
     title: "大家怎么称呼你？",
-    subtitle: "这是你在小聚活动中显示的名字",
+    subtitle: "这是大家在活动中看到的名字",
     mascotMessage: "嘿！给自己起个响亮的名字吧，活动中大家会这么叫你~ ✨",
     mascotMood: "excited" as XiaoyueMood,
     type: "input" as const,
@@ -138,8 +138,8 @@ const STEP_CONFIG = [
   {
     id: "genderBirthday",
     title: "基本信息",
-    subtitle: "帮你找到年龄相近、聊得来的朋友",
-    mascotMessage: "简单两步，帮你找到更合适的朋友！",
+    subtitle: "帮助匹配更合适的活动",
+    mascotMessage: "帮你找到年龄相近、聊得来的朋友！",
     mascotMood: "pointing" as XiaoyueMood,
     type: "dual" as const,
   },
@@ -173,7 +173,7 @@ const STEP_CONFIG = [
   {
     id: "location",
     title: "你从哪来，在哪混？",
-    subtitle: "老乡配桌优先排",
+    subtitle: "老乡见老乡，两眼泪汪汪",
     mascotMessage: "老乡见老乡，配桌优先排！🏠",
     mascotMood: "excited" as XiaoyueMood,
     type: "dualCity" as const,
