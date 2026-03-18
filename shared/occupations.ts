@@ -36,8 +36,8 @@ export interface Occupation {
   };
 }
 
-// 工作身份/模式
-export type WorkMode = "founder" | "self_employed" | "employed" | "student" | "transitioning" | "caregiver_retired";
+// 工作身份/模式 — 人生阶段 (life stage)
+export type WorkMode = "founder" | "self_employed" | "employed" | "student" | "transitioning" | "caregiver_retired" | "successor";
 
 export interface WorkModeOption {
   value: WorkMode;
@@ -46,12 +46,13 @@ export interface WorkModeOption {
 }
 
 export const WORK_MODES: WorkModeOption[] = [
-  { value: "founder", label: "创始人/合伙人", description: "创业中，自己当老板" },
+  { value: "founder", label: "创业中", description: "创业中，自己当老板" },
   { value: "self_employed", label: "自由职业", description: "独立工作，灵活接活" },
-  { value: "employed", label: "在职人士", description: "在企业、机构或组织任职" },
-  { value: "student", label: "学生/实习", description: "在读、实习或Gap中" },
-  { value: "transitioning", label: "职业过渡期", description: "求职中、休整、转型、预备接班" },
+  { value: "employed", label: "在职", description: "在企业、机构或组织任职" },
+  { value: "student", label: "学生", description: "在读、实习或Gap中" },
+  { value: "transitioning", label: "探索期", description: "求职中、休整、转型中" },
   { value: "caregiver_retired", label: "家庭为主", description: "全职家长、照顾家人、退休、在家躺平" },
+  { value: "successor", label: "准备继承家业", description: "家族企业接班、二代培养" },
 ];
 
 // 18个行业分类
@@ -778,12 +779,13 @@ export const OCCUPATION_STATS = {
 
 // 工作身份标签映射
 export const WORK_MODE_TO_LABEL: Record<WorkMode, string> = {
-  founder: "创始人",
+  founder: "创业中",
   self_employed: "自由职业",
   employed: "在职",
-  student: "学生/实习",
-  transitioning: "过渡期",
+  student: "学生",
+  transitioning: "探索期",
   caregiver_retired: "家庭为主",
+  successor: "准备继承家业",
 };
 
 // 获取用户职业显示标签（组合职业+身份）

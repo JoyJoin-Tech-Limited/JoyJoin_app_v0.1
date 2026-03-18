@@ -863,7 +863,7 @@ export function generateSparkPredictions(
   }
   
   // Priority 6.9: Life stage/transition detection - RARE/EPIC
-  // Auto-detect from existing age, children, seniority data
+  // Prefer explicit workMode; fall back to inferring from age/children/seniority data
   const detectLifeStage = (age?: number, children?: string, seniority?: string, relationshipStatus?: string): string | null => {
     if (children === "Expecting") return "expecting_parent";
     if (children === "0-5") return "new_parent";
@@ -902,10 +902,13 @@ export function generateSparkPredictions(
       "teen_parent": { text: "都在应对青春期挑战", rarity: 'rare' },
       "empty_nester": { text: "孩子都已独立", rarity: 'rare' },
       "entrepreneur": { text: "都在创业路上", rarity: 'epic' },
+      "freelancer": { text: "都是自由职业者", rarity: 'rare' },
       "early_career": { text: "都在职场起步期", rarity: 'common' },
       "career_prime": { text: "都处于事业黄金期", rarity: 'rare' },
+      "career_transition": { text: "都在探索新方向", rarity: 'rare' },
       "established_professional": { text: "都是资深职场人", rarity: 'rare' },
-      "single_professional": { text: "都是独立职场人", rarity: 'common' }
+      "single_professional": { text: "都是独立职场人", rarity: 'common' },
+      "successor": { text: "都在准备继承家族事业", rarity: 'epic' },
     };
     
     if (stageLabels[userStage]) {
