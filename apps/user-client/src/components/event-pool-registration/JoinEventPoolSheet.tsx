@@ -51,6 +51,8 @@ export default function JoinEventPoolSheet({
     registerMutation,
     saveDraft,
     isFormValid,
+    isPrefilledFromProfile,
+    clearPrefill,
   } = useEventPoolRegistration({
     poolId: poolData.poolId,
     eventType: poolData.eventType,
@@ -173,6 +175,8 @@ export default function JoinEventPoolSheet({
                       selectedGoals={preferences.socialGoals || []}
                       onSelectGoals={(goals) => updatePreferences({ socialGoals: goals })}
                       registrationCount={poolData.registrationCount}
+                      isPrefilledFromProfile={isPrefilledFromProfile}
+                      onClearPrefill={clearPrefill}
                     />
                   )}
 

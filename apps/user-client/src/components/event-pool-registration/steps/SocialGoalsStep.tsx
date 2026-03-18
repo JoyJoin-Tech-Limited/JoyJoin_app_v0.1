@@ -10,12 +10,16 @@ interface SocialGoalsStepProps {
   selectedGoals: string[];
   onSelectGoals: (goals: string[]) => void;
   registrationCount?: number;
+  isPrefilledFromProfile?: boolean;
+  onClearPrefill?: () => void;
 }
 
 export default function SocialGoalsStep({
   selectedGoals,
   onSelectGoals,
   registrationCount = 0,
+  isPrefilledFromProfile = false,
+  onClearPrefill,
 }: SocialGoalsStepProps) {
   const { toast } = useToast();
   const isFlexibleMode = selectedGoals.includes("flexible");
@@ -59,11 +63,19 @@ export default function SocialGoalsStep({
     <div className="space-y-6">
       {/* Title */}
       <div>
-        <h2 className="text-xl font-bold mb-2">你的社交目标</h2>
+        <h2 className="text-xl font-bold mb-2">这次想怎么玩？</h2>
         <p className="text-sm text-muted-foreground">
-          选择你参加活动的主要目的（可多选）
+          小悦会根据你选的，帮你凑一桌最聊得来的人
         </p>
       </div>
+
+      {/* Pre-fill from profile indicator */}
+      {isPrefilledFromProfile && (
+        <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2 flex items-center gap-1.5">
+          <span>💡</span>
+          <span>已沿用你的默认社交偏好 · <button type="button" className="underline" onClick={onClearPrefill}>为这次活动重新选</button></span>
+        </div>
+      )}
 
       {/* Flexible Mode Toggle */}
       <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
@@ -72,7 +84,7 @@ export default function SocialGoalsStep({
             随缘模式
           </Label>
           <p className="text-xs text-muted-foreground mt-1">
-            让AI根据整体情况智能匹配
+            什么人都想认识，小悦帮你惊喜搭配 ✨
           </p>
         </div>
         <Switch
