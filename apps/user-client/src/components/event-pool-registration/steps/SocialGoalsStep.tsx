@@ -59,9 +59,9 @@ export default function SocialGoalsStep({
     <div className="space-y-6">
       {/* Title */}
       <div>
-        <h2 className="text-xl font-bold mb-2">你的社交目标</h2>
+        <h2 className="text-xl font-bold mb-2">这次想怎么玩？</h2>
         <p className="text-sm text-muted-foreground">
-          选择你参加活动的主要目的（可多选）
+          小悦会根据你选的，帮你凑一桌最聊得来的人
         </p>
       </div>
 
@@ -72,7 +72,7 @@ export default function SocialGoalsStep({
             随缘模式
           </Label>
           <p className="text-xs text-muted-foreground mt-1">
-            让AI根据整体情况智能匹配
+            什么人都想认识，小悦帮你惊喜搭配 ✨
           </p>
         </div>
         <Switch
