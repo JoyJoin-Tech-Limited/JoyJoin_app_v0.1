@@ -9,7 +9,7 @@ import { SegmentedProgress } from "@/components/ui/progress-segmented";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { INDUSTRY_OPTIONS, type WorkMode, INTENT_OPTIONS as SHARED_INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION } from "@shared/constants";
+import { INDUSTRY_OPTIONS, type WorkMode, INTENT_OPTIONS as SHARED_INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION, type IntentIconHint } from "@shared/constants";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BirthDatePicker } from "@/components/BirthDatePicker";
@@ -92,8 +92,8 @@ const RELATIONSHIP_OPTIONS = [
   { value: "prefer_not_say", label: "不想说" },
 ];
 
-// Icon map for intent options (keyed by iconHint string from shared constants)
-const INTENT_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+// Icon map for intent options (keyed by IntentIconHint from shared constants — type-safe)
+const INTENT_ICON_MAP: Record<IntentIconHint, React.ComponentType<{ className?: string }>> = {
   "Users": Users,
   "Network": Network,
   "MessageCircle": MessageCircle,
