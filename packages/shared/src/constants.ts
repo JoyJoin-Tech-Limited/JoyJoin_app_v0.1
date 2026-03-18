@@ -157,26 +157,37 @@ export const INTENT_FLEXIBLE_OPTION = {
 // Derived type for all valid intent values
 export type IntentValue = typeof INTENT_OPTIONS[number]["value"] | typeof INTENT_FLEXIBLE_OPTION["value"];
 
-// All valid intent values for validation
-export const ALL_INTENT_VALUES: readonly string[] = [
+// Derived type for valid iconHint strings
+export type IntentIconHint = typeof INTENT_OPTIONS[number]["iconHint"] | typeof INTENT_FLEXIBLE_OPTION["iconHint"];
+
+// All valid intent values for validation (strongly typed)
+export const ALL_INTENT_VALUES: readonly IntentValue[] = [
   ...INTENT_OPTIONS.map(o => o.value),
   INTENT_FLEXIBLE_OPTION.value,
 ];
 
+// O(1) lookup map built once from the canonical list
+const _ALL_INTENT_ENTRIES: ReadonlyArray<{
+  value: string;
+  label: string;
+  subtitle: string;
+  emoji: string;
+}> = [
+  ...INTENT_OPTIONS,
+  INTENT_FLEXIBLE_OPTION,
+];
+
+const _INTENT_MAP: Record<string, { label: string; subtitle: string; emoji: string }> =
+  Object.fromEntries(_ALL_INTENT_ENTRIES.map(o => [o.value, { label: o.label, subtitle: o.subtitle, emoji: o.emoji }]));
+
 export function getIntentLabel(value: string): string {
-  if (value === INTENT_FLEXIBLE_OPTION.value) return INTENT_FLEXIBLE_OPTION.label;
-  const found = INTENT_OPTIONS.find(o => o.value === value);
-  return found?.label ?? value;
+  return _INTENT_MAP[value]?.label ?? value;
 }
 
 export function getIntentEmoji(value: string): string {
-  if (value === INTENT_FLEXIBLE_OPTION.value) return INTENT_FLEXIBLE_OPTION.emoji;
-  const found = INTENT_OPTIONS.find(o => o.value === value);
-  return found?.emoji ?? "🎯";
+  return _INTENT_MAP[value]?.emoji ?? "🎯";
 }
 
 export function getIntentSubtitle(value: string): string {
-  if (value === INTENT_FLEXIBLE_OPTION.value) return INTENT_FLEXIBLE_OPTION.subtitle;
-  const found = INTENT_OPTIONS.find(o => o.value === value);
-  return found?.subtitle ?? "";
+  return _INTENT_MAP[value]?.subtitle ?? "";
 }

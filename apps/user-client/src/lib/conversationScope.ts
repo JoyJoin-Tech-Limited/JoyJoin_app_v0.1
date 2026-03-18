@@ -8,7 +8,7 @@
  * 3. 碎嘴系统按阶段匹配触发器
  */
 
-import { ALL_INTENT_VALUES } from "@shared/constants";
+import { ALL_INTENT_VALUES, getIntentLabel } from "@shared/constants";
 
 export type AnswerType = 'text' | 'selection' | 'multiselect' | 'date' | 'number' | 'boolean' | 'freeform';
 
@@ -173,7 +173,7 @@ export const CONVERSATION_STEPS: ConversationStep[] = [
     targetField: 'intent',
     label: '社交目的',
     expectedTypes: ['selection', 'freeform'],
-    validOptions: [...ALL_INTENT_VALUES],
+    validOptions: [...ALL_INTENT_VALUES, ...ALL_INTENT_VALUES.map(v => getIntentLabel(v))],
     examples: ['想认识新朋友', '拓展一下圈子', '找有共同爱好的人'],
     fallbackPrompt: '来这里主要是想？',
     isRequired: true,

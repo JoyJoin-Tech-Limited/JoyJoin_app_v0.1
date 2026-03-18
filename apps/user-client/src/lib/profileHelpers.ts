@@ -79,7 +79,14 @@ export function getIntentLabel(intent: string): string {
 }
 
 /**
- * Get intent icon emoji (delegates to shared constants)
+ * Get intent emoji (delegates to shared constants)
+ */
+export function getIntentEmoji(intent: string): string {
+  return sharedGetIntentEmoji(intent);
+}
+
+/**
+ * @deprecated Use `getIntentEmoji` instead. Returns an emoji string, not an icon component.
  */
 export function getIntentIcon(intent: string): string {
   return sharedGetIntentEmoji(intent);
