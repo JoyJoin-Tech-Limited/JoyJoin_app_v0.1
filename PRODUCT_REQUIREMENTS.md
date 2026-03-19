@@ -3274,7 +3274,7 @@ function calculateGroupDiversity(group) {
   // All 4 dimensions contribute equally (25% each)
   const uniqueIndustries = new Set(group.map(u => u.industryNiche)).size;
   const uniqueGenders    = new Set(group.map(u => u.gender)).size;
-  const uniqueArchetypes = new Set(group.map(u => u.primaryArchetype)).size;
+  const uniqueArchetypes = new Set(group.map(u => u.archetype)).size;
   const uniqueLifeStages = new Set(group.map(u => u.workMode)).size; // 人生阶段 (PR #312)
 
   return (
