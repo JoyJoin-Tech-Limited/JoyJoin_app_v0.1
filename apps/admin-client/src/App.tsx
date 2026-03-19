@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import LoginPage from "@/pages/LoginPage";
+import { useEffect } from "react";
 // Legacy registration pages removed from active routing:
 //   - ChatRegistrationPage moved to _backup_modules/chat-registration-legacy/ (2026-01-20)
 //   - RegistrationMethodPage moved to _backup_modules/legacy-registration-pages/ (2026-03-18)
@@ -41,6 +42,16 @@ import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import NotFound from "@/pages/not-found";
 import LevelUpProvider from "@/components/LevelUpProvider";
 
+function Redirect({ to }: { to: string }) {
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    setLocation(to);
+  }, [setLocation, to]);
+
+  return null;
+}
+
 function AuthenticatedRouter() {
   const { user } = useAuth();
   const [location] = useLocation();
@@ -54,6 +65,12 @@ function AuthenticatedRouter() {
     <Switch>
       <Route path="/" component={DiscoverPage} />
       <Route path="/discover" component={DiscoverPage} />
+      <Route path="/registration">
+        {() => <Redirect to="/" />}
+      </Route>
+      <Route path="/registration/method">
+        {() => <Redirect to="/" />}
+      </Route>
       <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
       <Route path="/blindbox/payment" component={BlindBoxPaymentPage} />
       <Route path="/blindbox/confirmation" component={BlindBoxConfirmationPage} />
