@@ -3,18 +3,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ChevronLeft, Briefcase, Info } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-
-const WORK_MODE_LABELS: Record<string, string> = {
-  employed: "受雇",
-  founder: "创始人",
-  self_employed: "自由职业",
-  student: "学生",
-};
+import { WORK_MODE_TO_LABEL } from "@shared/occupations";
 
 const workSchema = z.object({
   workVisibility: z.enum(["hide_all", "show_industry_only"]).optional(),
@@ -31,9 +26,16 @@ export default function EditWorkPage() {
   const form = useForm<WorkForm>({
     resolver: zodResolver(workSchema),
     defaultValues: {
-      workVisibility: user?.workVisibility || "show_industry_only",
+      workVisibility: "show_industry_only",
     },
   });
+
+  // Reset form with server-loaded value once user data is available
+  useEffect(() => {
+    if (user?.workVisibility) {
+      form.reset({ workVisibility: user.workVisibility });
+    }
+  }, [user?.workVisibility, form]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: WorkForm) => {
@@ -56,12 +58,13 @@ export default function EditWorkPage() {
     updateMutation.mutate(data);
   };
 
-  // Derive the current industry display label from structured classification fields
-  const industryDisplay = user?.industryNicheLabel
-    ? `${user.industryCategoryLabel} · ${user.industryNicheLabel}`
-    : user?.industryCategoryLabel || user?.workMode
-      ? WORK_MODE_LABELS[user.workMode] || user.workMode
-      : null;
+  // Build the full 3-tier industry label from structured classification fields
+  const industryParts = [
+    user?.industryCategoryLabel,
+    user?.industrySegmentLabel,
+    user?.industryNicheLabel,
+  ].filter(Boolean);
+  const industryDisplay = industryParts.length > 0 ? industryParts.join(" · ") : null;
 
   if (isLoading || !user) {
     return (
@@ -102,12 +105,17 @@ export default function EditWorkPage() {
           >
             <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
             <span className="font-medium">
-              {industryDisplay || <span className="text-muted-foreground">未设置</span>}
+              {industryDisplay
+                ? industryDisplay
+                : user?.workMode && WORK_MODE_TO_LABEL[user.workMode as keyof typeof WORK_MODE_TO_LABEL]
+                  ? <span className="text-muted-foreground">{WORK_MODE_TO_LABEL[user.workMode as keyof typeof WORK_MODE_TO_LABEL]}</span>
+                  : <span className="text-muted-foreground">未设置</span>
+              }
             </span>
           </div>
           <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
             <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-            行业分类在注册时通过三级行业体系设置，如需更新请重新完成职业信息步骤。
+            行业分类在注册时通过三级行业体系自动设定，暂不支持在此处单独修改。
           </p>
         </div>
 
