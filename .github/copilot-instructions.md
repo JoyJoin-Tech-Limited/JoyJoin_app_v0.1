@@ -449,39 +449,33 @@ activeAssessmentSessionId: string | null;
 - **Interest Fields Removed**: `interestsTop`, `primaryInterests`, `topicsHappy`, `topicsAvoid` moved to `user_interests` table (old fields deprecated but not dropped).
 - **Language Selection**: No longer collected in onboarding (moved to event pool registration).
 
-## Updated Pool Matching Algorithm (7-Dimension Weighted Scoring)
+## Updated Pool Matching Algorithm (Active 6-Dimension Pair-Score Model)
 
 ### Algorithm Overview
 
 **Location**: `apps/server/src/poolMatchingService.ts`
 
-The matching algorithm calculates compatibility between users using **7 weighted dimensions**:
+The matching algorithm calculates compatibility between users using **6 weighted dimensions**:
 
 ```typescript
-// 7-Dimension Matching Weights (when hometown enabled)
+// ✅ ACTIVE Pair-Score Weights (6 dimensions)
 {
-  chemistry: 0.30,      // Personality compatibility (30%)
-  interest: 0.30,       // Interest overlap (30%)
-  language: 0.15,       // Language communication (15%)
-  preference: 0.15,     // Event preferences (15%)
-  hometown: 0.05,       // Hometown affinity (5%)
-  background: 0.05,     // Background diversity (5%)
-}
-
-// When hometown disabled, weights rebalance:
-{
-  chemistry: 0.35,      // +5%
-  interest: 0.35,       // +5%
-  language: 0.15,       // unchanged
-  preference: 0.15,     // unchanged
-  hometown: 0,          // disabled
-  background: 0,        // disabled
+  chemistry:           0.28,  // 性格化学反应 28% — archetype chemistry matrix
+  interest:            0.28,  // 兴趣重叠度   28% — heat-weighted Jaccard (user_interests table)
+  socialAffinity:      0.20,  // 社交同频度   20% — life stage + education affinity + hometown (opt-in)
+  backgroundDiversity: 0.15,  // 背景多样性   15% — industry + gender diversity
+  preference:          0.05,  // 活动偏好      5% — event intent / bar preferences
+  language:            0.04,  // 语言沟通      4% — common languages
 }
 ```
 
+**Why Language (4%) and Preference (5%) are reduced:**
+- Language: 普通话覆盖率高，区分力有限，保留为轻量兼容信号
+- Preference: 现有酒吧/饭店场景分化有限，保留为轻量场景适配信号
+
 ### Dimension Details
 
-#### 1. Chemistry Score (30%) - `calculateChemistryScore()`
+#### 1. Chemistry Score (28%) - `calculateChemistryScore()`
 
 Based on archetype compatibility matrix from `archetypeChemistry.ts`:
 
@@ -499,7 +493,7 @@ chemistry =
 - **60-74**: Good interaction (🌤️适宜)
 - **45-59**: Medium compatibility (❄️冷淡)
 
-#### 2. Interest Score (30%) - `calculateInterestScoreAsync()`
+#### 2. Interest Score (28%) - `calculateInterestScoreAsync()`
 
 Uses `user_interests` table with **heat-weighted matching**:
 
@@ -516,14 +510,32 @@ else: +3
 finalScore = min(100, baseScore + heatBonus)
 ```
 
-#### 3. Language Score (15%) - `calculateLanguageScore()`
+#### 3. Social Affinity Score (20%) - `calculateSocialAffinityScore()`
 
-```typescript
-if (commonLanguages > 0): 100
-else: 30  // No common language penalty
-```
+**同频信号** — same/nearby values → higher score. Unweighted mean of active sub-factors:
 
-#### 4. Preference Score (15%) - `calculatePreferenceScore()`
+- **Life stage affinity** (`calculateLifeStageAffinity()`):  
+  Uses asymmetric `LIFE_STAGE_AFFINITY` 7×7 matrix, averaged both directions.  
+  Intent modulation: networking boosts cross-stage affinity, fun dampens it.  
+  Stored field: `workMode` — user-facing concept: 人生阶段 / life stage.
+
+- **Education affinity** (`calculateEducationAffinityScore()`):  
+  Ordinal-distance-based: same level = 100, distance 1 = 75, distance 2 = 50, distance 3+ = 25.  
+  **This is an AFFINITY signal, not diversity** — nearby education levels score better.  
+  `职业培训` and `大专` share the same ordinal (parallel vocational tracks).
+
+- **Hometown affinity** (`calculateHometownAffinityScore()`):  
+  Only applies when both users opted in (`hometownAffinityOptin = true`).
+
+#### 4. Background Diversity Score (15%) - `calculateBackgroundDiversityScore()`
+
+**多样性信号** — different values → higher score. Unweighted mean of:
+
+- **Industry diversity**: different industry niche = 70, same = 30
+- **Gender diversity**: different gender = 70, same = 30
+- **Education is NOT included here** — it belongs to Social Affinity.
+
+#### 5. Preference Score (5%) - `calculatePreferenceScore()`
 
 For **饭局** (dinner):
 - Event intent overlap
@@ -533,30 +545,21 @@ For **酒局** (bar):
 - Alcohol comfort overlap
 - Event intent overlap
 
-**Note**: Budget is now a **hard constraint** (L1 filter), not scored here.
+**Note**: Budget is a **hard constraint** (L1 filter), not scored here.
 
-#### 5. Hometown Score (5%) - `calculateHometownAffinityScore()`
-
-Only applies if **both users opted in**:
+#### 6. Language Score (4%) - `calculateLanguageScore()`
 
 ```typescript
-if (sameCity): 100      // 老乡！(epic)
-if (sameProvince): 70   // Same province (rare)
-else: 0                 // No bonus
+if (commonLanguages > 0): 100
+else: 30  // No common language penalty
 ```
 
-#### 6. Background Diversity (5%) - `calculateDiversityScore()`
+### Matrix Distinction
 
-Encourages diverse groups:
-
-```typescript
-diversityPoints = 
-  (differentIndustry ? 40 : 0) +
-  (differentEducation ? 30 : 0) +
-  (differentGender ? 30 : 0)
-
-score = min(100, diversityPoints)
-```
+| Matrix | File | Structure | Notes |
+|--------|------|-----------|-------|
+| **Chemistry Matrix** | `archetypeChemistry.ts` | 12×12 archetype compatibility | Symmetric, scores 0–100 |
+| **Life Stage Affinity Matrix** | `LIFE_STAGE_AFFINITY` in `poolMatchingService.ts` | 7×7 workMode affinity | Asymmetric; pair score = average(forward, reverse) |
 
 ### Group Formation Algorithm
 
@@ -583,7 +586,7 @@ score = min(100, diversityPoints)
 
 4. Group Scoring
    ├─> avgPairScore (60%)
-   ├─> diversityScore (25%)
+   ├─> groupDiversity (25%) — industries, genders, archetypes, life stages
    ├─> energyBalance (15%)
    └─> overallScore = weighted sum
 
@@ -617,17 +620,19 @@ energyBalance =
 
 1. ✅ **Budget moved to L1 hard constraint** (was soft constraint)
 2. ✅ **Removed food preferences from scoring** (cuisine, dietary, taste) — still collected for restaurant matching but not used in compatibility scoring
-3. ✅ **Increased interest weight** from 20% → 30%
-4. ✅ **Decreased hometown weight** from 10% → 5%
-5. ✅ **Added heat-weighted interest matching** (level 2/3 bonus)
-6. ✅ **Removed emotional score** (was hardcoded 70, not used)
-7. ✅ **Interests now from `user_interests` table** (not `interestsTop` field)
+3. ✅ **Split background into Social Affinity (20%) and Background Diversity (15%)**
+4. ✅ **Education is now affinity, not diversity** — ordinal-distance scoring; same/nearby level = higher score
+5. ✅ **Language reduced** from 12% → 4% (limited differentiating power in practice)
+6. ✅ **Preference reduced** from 15% → 5% (limited differentiating power in current venue constraints)
+7. ✅ **Heat-weighted interest matching** (level 2/3 bonus)
+8. ✅ **Interests now from `user_interests` table** (not `interestsTop` field)
 
 ### Debugging Tips
 
 **Poor match scores:**
 - Check `CHEMISTRY_MATRIX` values in `archetypeChemistry.ts`
 - Verify `user_interests` table has data (not empty `selections`)
+- Check `LIFE_STAGE_AFFINITY` matrix and `workMode` fields
 - Check if hometown affinity is enabled for both users
 
 **No matches formed:**
