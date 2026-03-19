@@ -1,3 +1,13 @@
+/**
+ * @deprecated LEGACY — DO NOT USE IN ACTIVE CODE
+ *
+ * This file is a backup of the AI chat-based registration system (小悦对话注册).
+ * It was moved to _backup_modules on 2026-01-20 and is NO LONGER part of the active
+ * onboarding flow. The current flow uses server-driven `nextStep` via /api/auth/user.
+ *
+ * DO NOT import, route to, or extend this file for new features.
+ * It is retained only as historical reference / potential rollback material.
+ */
 import { useState, useRef, useEffect, useMemo, memo, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";

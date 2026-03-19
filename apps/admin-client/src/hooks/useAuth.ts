@@ -19,10 +19,5 @@ export function useAuth() {
     user: isError ? undefined : user,
     isLoading: actualIsLoading,
     isAuthenticated,
-    needsRegistration: user && !user.hasCompletedRegistration,
-    needsInterestsTopics: user && user.hasCompletedRegistration && !user.hasCompletedInterestsTopics,
-    needsPersonalityTest: user && user.hasCompletedRegistration && user.hasCompletedInterestsTopics && !user.hasCompletedPersonalityTest,
-    // ProfileSetup no longer needed - displayName collected during registration
-    needsProfileSetup: false,
   };
 }
