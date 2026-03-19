@@ -121,6 +121,14 @@ export const users = pgTable("users", {
   interestsDeep: text("interests_deep").array(), // 深度兴趣（AI对话收集的更详细兴趣描述，语义描述，不含遥测数据）
   interestsTelemetry: jsonb("interests_telemetry"), // 兴趣滑动遥测数据 { version: string, events: [{interestId, choice, reactionTimeMs, timestamp}] }
   
+  // ========== Post-onboarding Profile Enrichment Fields (2026-03) ==========
+  // Collected via Discover-page "Complete Your Profile" card after onboarding.
+  // These reduce friction at event registration by saving reusable defaults.
+  bio: varchar("bio", { length: 100 }), // Short one-liner / intro (enforced at 100 chars in the client)
+  preferredLanguages: text("preferred_languages").array(), // Profile-level language preferences: ["中文（国语）", "英语"]
+  dietaryRestrictions: text("dietary_restrictions").array(), // Dietary needs: ["素食", "不吃辣", "清真"]
+  // ========== END Post-onboarding Profile Enrichment Fields ==========
+
   // Registration fields - Social & Venue Preferences (collected via AI chat)
   socialStyle: varchar("social_style"), // DEPRECATED - Not used in matching algorithm
   icebreakerRole: varchar("icebreaker_role"), // DEPRECATED - Not used in matching algorithm
@@ -668,6 +676,10 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   icebreakerRole: true,
   workVisibility: true,
   wechatContactId: true,
+  // Post-onboarding enrichment fields
+  bio: true,
+  preferredLanguages: true,
+  dietaryRestrictions: true,
 }).partial();
 
 export const updatePersonalitySchema = createInsertSchema(users).pick({

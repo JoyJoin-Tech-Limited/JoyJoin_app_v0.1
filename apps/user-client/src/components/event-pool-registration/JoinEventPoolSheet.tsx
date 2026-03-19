@@ -71,13 +71,19 @@ export default function JoinEventPoolSheet({
       );
       const defaultDistricts = cluster ? cluster.districts.map(d => d.id) : [];
 
-      // Set default languages from user profile (deprecated field, using empty array)
-      const userLanguages: string[] = [];
+      // Set default languages from user profile (preferredLanguages field)
+      const userLanguages: string[] = user.preferredLanguages ?? [];
 
       const updates: Parameters<typeof updatePreferences>[0] = {
         districts: defaultDistricts,
         languages: userLanguages,
       };
+
+      // Pre-fill dietary restrictions from user profile (only when no selection yet)
+      const currentDietary = preferences.dietary || [];
+      if ((user.dietaryRestrictions ?? []).length > 0 && currentDietary.length === 0) {
+        updates.dietary = user.dietaryRestrictions!;
+      }
 
       // Pre-fill social goals from user's profile intent (only when no selection yet)
       const currentGoals = preferences.socialGoals || [];
@@ -204,7 +210,7 @@ export default function JoinEventPoolSheet({
                       <SmartDefaultsStep
                         eventType={poolData.eventType}
                         eventArea={poolData.area}
-                        userLanguages={[]}
+                        userLanguages={user?.preferredLanguages ?? []}
                         selectedDistricts={preferences.districts || []}
                         selectedLanguages={preferences.languages || []}
                         onUpdateDistricts={(districts) => updatePreferences({ districts })}
