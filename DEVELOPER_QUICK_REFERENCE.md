@@ -607,12 +607,53 @@ Stage 2: AI Matching
 
 ### Matching Algorithm Formula
 
+**Pair Scoring (배pair compatibility 0-100):**
+
 ```typescript
-overallScore = 
-  avgPairScore × 0.60 +      // Average pairwise compatibility
-  groupDiversity × 0.25 +    // Archetype diversity bonus
-  energyBalance × 0.15;      // Energy level balance
+pairScore =
+  chemistry  × 0.28 +   // 性格化学反应 28% — archetype chemistry matrix
+  interest   × 0.28 +   // 兴趣重叠 28% — heat-weighted Jaccard similarity
+  preference × 0.15 +   // 活动偏好 15% — event intent + bar preferences
+  language   × 0.12 +   // 语言沟通 12% — shared language
+  background × 0.17;    // 背景评估 17% — see Background Score below
 ```
+
+**Background Score (17% of pair score) — unified signal:**
+
+```
+background = avg of active sub-factors:
+  • Industry diversity      — different niche = 70, same = 30
+  • Life-stage affinity     — asymmetric 7×7 matrix (workMode), averaged forward+reverse
+  • Hometown affinity       — only when both opted in (same city=100, same province=70)
+  • Education affinity      — ordinal proximity (同频度), NOT diversity reward
+                              gap 0→100, gap 1→80, gap 2→60, gap 3→40, gap 4→20
+  • Gender diversity        — different = 60, same = 30
+```
+
+> ⚠️ **Education is an AFFINITY (同频度) signal, not a diversity reward.** Closer education levels score higher. This uses `EDU_ORDINAL` from `packages/shared/src/constants.ts`. See `calculateEducationAffinityScore()` in `poolMatchingService.ts`.
+
+**Life-Stage Affinity Matrix (asymmetric 7×7):**
+
+```
+workMode values: founder | self_employed | employed | student | transitioning | caregiver_retired | successor
+
+Example asymmetries (how much row WANTS to meet column):
+  founder → founder: 90,  founder → student: 40,  student → founder: 80
+  successor → successor: 90
+```
+
+Pair score uses `(forward + reverse) / 2` (averaged both directions).
+
+**Group Scoring:**
+
+```typescript
+overallScore =
+  avgPairScore   × 0.60 +   // Average pairwise compatibility
+  diversityScore × 0.25 +   // Group diversity: industry + gender + archetype + life-stage
+  energyBalance  × 0.15;    // Communication balance (沟通平衡) — archetype energy distribution
+```
+
+> Note: The `energyBalance` dimension is also referred to as "沟通平衡" (communication balance) in product copy, as it measures social tempo rather than raw archetype energy.
 
 ### Temperature Levels
 

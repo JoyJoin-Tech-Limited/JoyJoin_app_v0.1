@@ -16,6 +16,9 @@ interface PoolGroupResponse {
     groupNumber: number;
     memberCount: number;
     matchScore: number | null;
+    avgPairScore: number | null;
+    diversityScore: number | null;
+    energyBalance: number | null;
     matchExplanation: string | null;
     venueName: string | null;
     venueAddress: string | null;
@@ -161,6 +164,35 @@ export default function PoolGroupDetailPage() {
                 </Badge>
               )}
             </div>
+
+            {/* 算法得分明细 (管理员洞察) */}
+            {(group.avgPairScore || group.diversityScore || group.energyBalance) && (
+              <div className="pt-2 border-t">
+                <div className="text-xs text-muted-foreground mb-2 font-medium">算法得分明细</div>
+                <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                  <div className="bg-muted/40 rounded p-1.5">
+                    <div className="font-semibold text-sm">{group.avgPairScore ?? '–'}</div>
+                    <div className="text-muted-foreground">配对均分</div>
+                    <div className="text-[10px] text-muted-foreground">×60%</div>
+                  </div>
+                  <div className="bg-muted/40 rounded p-1.5">
+                    <div className="font-semibold text-sm">{group.diversityScore ?? '–'}</div>
+                    <div className="text-muted-foreground">多样性</div>
+                    <div className="text-[10px] text-muted-foreground">×25%</div>
+                  </div>
+                  <div className="bg-muted/40 rounded p-1.5">
+                    <div className="font-semibold text-sm">{group.energyBalance ?? '–'}</div>
+                    <div className="text-muted-foreground">沟通平衡</div>
+                    <div className="text-[10px] text-muted-foreground">×15%</div>
+                  </div>
+                  <div className="bg-primary/10 rounded p-1.5">
+                    <div className="font-bold text-sm text-primary">{group.matchScore ?? '–'}</div>
+                    <div className="text-muted-foreground">综合分</div>
+                    <div className="text-[10px] text-muted-foreground">总分</div>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
