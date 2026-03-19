@@ -9,6 +9,7 @@ import InviteFriendCard from "@/components/InviteFriendCard";
 import JourneyProgressCard from "@/components/JourneyProgressCard";
 import EventPoolDetailDrawer from "@/components/EventPoolDetailDrawer";
 import { CoachMarkBanner, ProfileCompletionNudge, XiaoyueFAB, PulsingIndicator } from "@/components/coach-marks";
+import { ProfileEnrichmentCard } from "@/components/ProfileEnrichmentCard";
 import { Sparkles } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -367,6 +368,11 @@ export default function DiscoverPage() {
               onSelectEvent={handleSelectEvent}
             />
           </div>
+        )}
+
+        {/* Profile Enrichment Card - post-onboarding "Complete Your Profile" surface */}
+        {isAuthenticated && user && (
+          <ProfileEnrichmentCard user={user} />
         )}
         
         {/* Coach Mark: Profile Completion Nudge */}
