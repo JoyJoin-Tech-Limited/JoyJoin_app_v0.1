@@ -81,14 +81,14 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 **1. Temperature Concept System** 🌡️
 - Dual-temperature visualization: Social Energy (社交能量) + Chemistry Reaction (化学反应温度)
-- 14 archetypes mapped to 0-100 energy scale
+- 12 archetypes mapped to 0-100 energy scale
 - Visual emoji indicators: 🔥 炽热 (≥85) | 🌡️ 温暖 (70-84) | 🌤️ 适宜 (55-69) | ❄️ 冷淡 (<55)
 - Prevents unbalanced groups (all high-energy or all low-energy)
 
 **2. Matching Algorithm Fix** 🔧
 - Corrected critical diversity double-counting bug
-- Updated scoring formula: **60% pair compatibility + 25% diversity + 15% energy balance**
-- Clarified pair score components: chemistry (37.5%) + interest (31.25%) + preference (25%) + language (18.75%)
+- Updated group scoring formula: **60% pair compatibility + 25% diversity + 15% energy balance**
+- Current pair score uses 7-dimension weighted model; see §*Updated Pool Matching Algorithm* for current weights
 
 **3. Real-time Dynamic Matching System** ⚡
 - Three-tier threshold system with time decay algorithm
@@ -131,7 +131,7 @@ JoyJoin is an AI-powered social networking platform that connects individuals lo
 - **Blind Box Experience:** Gamified event discovery with surprise reveals
 - **In-Event Social Experience:** Social Icebreaker multi-phase group facilitation (热身 → 挑战 → 侦探 → 回顾) as the core in-event engagement tool
 - **Data-Driven Insights:** Comprehensive feedback system to refine matching algorithms
-- **Subscription Model:** ¥98/month or ¥294/3-month with WeChat Pay integration
+- **权益 (Membership Benefits) System:** ¥98/month or ¥294/3-month 权益方案 with WeChat Pay integration (user-facing copy must use `权益`, not `会员`)
 
 ---
 
@@ -211,6 +211,8 @@ LandingPage → /personality-test (anonymous V4 test)
   - `POST /api/phone/login` - Existing user login
 
 #### 1.2 Multi-Step Profile Setup
+
+> ⚠️ **Legacy reference:** This section documents the original multi-step profile setup flow. The current onboarding flow is described in §1.1 (WeChat-first post-test signup). The current onboarding sequence is: anonymous personality test → WeChat login → Essential Data (`/onboarding/setup`) → Extended Data (`/onboarding/extended`) → Profile Review (`/onboarding/review`) → Discover.
 
 **Step 1: Basic Information**
 - Full Name (Chinese/English)

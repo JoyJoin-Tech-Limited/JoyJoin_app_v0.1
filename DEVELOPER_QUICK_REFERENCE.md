@@ -25,7 +25,7 @@
 - The **`圈子`** nav label — replaced by `连接`
 - **`会员 / VIP会员`** user-facing copy — replaced by `权益`
 - Any reference to the **`shared/` root folder** as the import source — use `packages/shared/src/` instead
-- The **`/guide` page** as a core onboarding step — it is deprecated; onboarding flows through `/onboarding/setup` and `/onboarding/extended`
+- The **`/guide` page** as a core onboarding step — it is deprecated; the active onboarding steps after WeChat login are `/onboarding/setup`, `/onboarding/extended`, and `/onboarding/review`, then directly to `/discover`
 - **Demo code `666666`** and `createDemoDataForUser` in production — gated on `NODE_ENV !== 'production'`
 
 ### If you are unsure whether something is active or legacy:
@@ -179,7 +179,7 @@ interface AuthState {
 │                    Authenticated - Optional Extended Data           │
 ├─────────────────────────────────────────────────────────────────────┤
 │  /onboarding/extended → ExtendedDataPage (Interest Carousel only)   │
-│  *                   → Can skip to /guide or /discover              │
+│  *                   → Redirects to /onboarding/review             │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                     ▼ (Complete)
