@@ -1,5 +1,16 @@
 # Onboarding Routing Fix - Implementation Summary
 
+> 📜 **HISTORICAL DOCUMENT — For Reference Only**
+>
+> This document describes the routing fix implemented on 2026-02-10 that added `extended-data` and `profile-review` steps to the server-side `nextStep` enum and switched to fully server-driven onboarding navigation. The changes described here are **complete and in production**.
+>
+> For the **current active onboarding architecture**, refer to:
+> - `docs/onboarding-flow.md` — full flow documentation
+> - `DEVELOPER_QUICK_REFERENCE.md` — developer reference
+> - `.github/copilot-instructions.md` → Onboarding Flow Architecture section
+
+---
+
 **Date:** 2026-02-10  
 **PR:** copilot/fix-routing-issues-onboarding  
 **Status:** ✅ Complete
@@ -25,12 +36,14 @@ The server's `nextStep` enum only knew 5 steps (`onboarding`, `personality-test`
 1. Added `EXTENDED_DATA: 'extended-data'` and `PROFILE_REVIEW: 'profile-review'` to `NextStep` constant
 2. Updated server-side `nextStep` calculation to properly sequence all 7 steps:
    ```typescript
+   // NOTE: hasCompletedRegistration / 'onboarding' step was subsequently removed
+   // from the active flow. See docs/onboarding-flow.md for the current sequence.
    if (!user.hasCompletedRegistration) nextStep = 'onboarding';
    else if (!user.hasCompletedPersonalityTest) nextStep = 'personality-test';
    else if (!profileEssentialComplete) nextStep = 'essential-data';
    else if (!user.hasCompletedInterestsCarousel) nextStep = 'extended-data';
    else if (!user.hasSeenProfileReview) nextStep = 'profile-review';
-   else if (!user.hasSeenGuide) nextStep = 'guide';
+   else if (!user.hasSeenGuide) nextStep = 'guide'; // guide step later deprecated 2026-02-16
    else nextStep = 'discover';
    ```
 3. Added dedicated router cases with proper redirect components:
@@ -157,14 +170,16 @@ Based on code review feedback:
 
 ## Updated Flow Sequence
 
+> ⚠️ **Note:** Step 2 below (AI Chat Registration) was subsequently **removed** from the active onboarding flow. The current active sequence skips that step entirely — see `docs/onboarding-flow.md` for the current flow.
+
 ```
 1. Login/Landing
-2. AI Chat Registration (/onboarding) → hasCompletedRegistration
+2. ~~AI Chat Registration (/onboarding) → hasCompletedRegistration~~ [REMOVED — legacy, no longer active]
 3. Personality Test V4 (/personality-test) → hasCompletedPersonalityTest
 4. Essential Data (/onboarding/setup) → profileEssentialComplete
 5. Extended Data (/onboarding/extended) → hasCompletedInterestsCarousel
-6. Profile Review (/onboarding/review) → hasSeenProfileReview [NEW]
-7. Guide (/guide) → hasSeenGuide
+6. Profile Review (/onboarding/review) → hasSeenProfileReview [added by this fix]
+7. ~~Guide (/guide) → hasSeenGuide~~ [subsequently deprecated 2026-02-16]
 8. Discover Page (/discover) → Complete!
 ```
 
