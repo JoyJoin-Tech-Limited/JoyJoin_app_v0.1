@@ -124,9 +124,11 @@ export const users = pgTable("users", {
   // ========== Post-onboarding Profile Enrichment Fields (2026-03) ==========
   // Collected via Discover-page "Complete Your Profile" card after onboarding.
   // These reduce friction at event registration by saving reusable defaults.
-  bio: varchar("bio", { length: 100 }), // Short one-liner / intro (enforced at 100 chars in the client)
+  bio: varchar("bio", { length: 100 }), // Short one-liner / intro / tagline (enforced at 100 chars in the client)
   preferredLanguages: text("preferred_languages").array(), // Profile-level language preferences: ["中文（国语）", "英语"]
   dietaryRestrictions: text("dietary_restrictions").array(), // Dietary needs: ["素食", "不吃辣", "清真"]
+  // Primary vibe enrichment: preferred table/group atmosphere
+  tableVibePreference: varchar("table_vibe_preference", { length: 30 }), // Preferred table atmosphere: "light_fun" | "natural_chat" | "deep_talk"
   // ========== END Post-onboarding Profile Enrichment Fields ==========
 
   // Registration fields - Social & Venue Preferences (collected via AI chat)
@@ -680,6 +682,8 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   bio: true,
   preferredLanguages: true,
   dietaryRestrictions: true,
+  tableVibePreference: true,
+  hometownAffinityOptin: true,
 }).partial();
 
 export const updatePersonalitySchema = createInsertSchema(users).pick({
