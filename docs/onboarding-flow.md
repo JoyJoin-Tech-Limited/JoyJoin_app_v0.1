@@ -165,7 +165,7 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 | Field | Type | Description |
 |------|------|-------------|
-| `nextStep` | `string` | Server-calculated next route. Active values: `personality-test`, `essential-data`, `extended-data`, `profile-review`, `discover`. Legacy/fallback values: `onboarding` (routes to `/personality-test`), `guide` (treated as `discover` by the client — guide step removed 2026-02-16). |
+| `nextStep` | `string` | Server-calculated next route. Active values: `personality-test`, `essential-data`, `extended-data`, `profile-review`, `discover`. Legacy/fallback values: `onboarding` (routes to `/personality-test`), `guide` (legacy; in `AuthenticatedRouter` this falls through to the `discover` case; the `/guide` route and `GuidePage` are kept for backward compatibility). |
 | `profileEssentialComplete` | `boolean` | Essential data complete (displayName, gender, currentCity) |
 | `profileExtendedComplete` | `boolean` | Extended data complete (education + industry labels + hometown) |
 | `hasSeenGuide` | `boolean` | Legacy field — guide step removed from onboarding flow (2026-02-16); retained on server for backward compatibility |
