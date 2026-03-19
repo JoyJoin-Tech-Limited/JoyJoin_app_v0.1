@@ -607,12 +607,32 @@ Stage 2: AI Matching
 
 ### Matching Algorithm Formula
 
-```typescript
-overallScore = 
-  avgPairScore × 0.60 +      // Average pairwise compatibility
-  groupDiversity × 0.25 +    // Archetype diversity bonus
-  energyBalance × 0.15;      // Energy level balance
+**Pair Scoring** (always active — 5 dimensions):
+
 ```
+├── Chemistry (archetype):          28%
+├── Interest (topics + heat):       28%
+├── Language:                       12%
+├── Preference (intent + bar):      15%
+└── Background (unified):           17%
+    ├── Industry diversity:         ~30% of background
+    ├── Life stage affinity:        ~30% of background  (workMode / 人生阶段, added PR #312)
+    ├── Hometown affinity:          ~20% of background  (when both opted in)
+    └── Education diversity:        ~20% of background
+```
+
+**Group Scoring:**
+
+```typescript
+overallScore =
+  avgPairScore         × 0.60 +   // Average pairwise compatibility
+  groupDiversityScore  × 0.25 +   // Industry + Gender + Archetype + Life Stage (25% each)
+  communicationBalance × 0.15;    // Avg pairwise language score (replaces energy balance)
+```
+
+> **Note:** There are two separate matrix concepts in the codebase:
+> - **Archetype chemistry matrix** (`archetypeChemistry.ts`) — 12×12 personality compatibility
+> - **Life stage affinity matrix** (`LIFE_STAGE_AFFINITY` in `poolMatchingService.ts`) — 7×7 asymmetric `workMode` / 人生阶段 compatibility, introduced PR #312
 
 ### Temperature Levels
 
