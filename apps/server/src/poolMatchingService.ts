@@ -935,7 +935,7 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
       memberCount: group.members.length,
       avgChemistryScore: group.avgPairScore,
       diversityScore: group.diversityScore,
-      energyBalance: group.communicationBalance,
+      communicationBalance: group.communicationBalance,
       overallScore: group.overallScore,
       temperatureLevel: group.temperatureLevel,
       matchExplanation: group.explanation,

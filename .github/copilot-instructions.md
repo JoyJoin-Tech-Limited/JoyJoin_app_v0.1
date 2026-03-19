@@ -550,7 +550,7 @@ background =
 - Added in **PR #312**
 - **7×7 asymmetric matrix**: row = user A's life stage, column = user B's life stage → score 0-100 for how much A wants to meet B
 - **Pair score** = average of both directions: `(LIFE_STAGE_AFFINITY[a][b] + LIFE_STAGE_AFFINITY[b][a]) / 2`
-- 7 life stages: `employed`, `founder`, `student`, `freelancer`, `creative`, `explorer`, `successor`
+- 7 life stages: `founder`, `self_employed`, `employed`, `student`, `transitioning`, `caregiver_retired`, `successor`
 
 ---
 
