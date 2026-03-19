@@ -88,7 +88,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 **2. Matching Algorithm Fix** 🔧
 - Corrected critical diversity double-counting bug
 - Updated group scoring formula: **60% pair compatibility + 25% diversity + 15% energy balance**
-- Current pair score uses 7-dimension weighted model; see §*Updated Pool Matching Algorithm* for current weights
+- Current pair score uses 7-dimension weighted model; see `apps/server/src/poolMatchingService.ts` for current weights
 
 **3. Real-time Dynamic Matching System** ⚡
 - Three-tier threshold system with time decay algorithm
