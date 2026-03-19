@@ -608,6 +608,15 @@ overallScore =
 🌤️ 适宜 (Mild):   overallScore 55-69
 ❄️ 冷淡 (Cold):   overallScore < 55
 ```
+workMode: founder | self_employed | employed | student | transitioning | caregiver_retired | successor
+
+Asymmetric — how much row-person WANTS to meet column-person:
+  founder → founder: 90,  founder → student: 40,  student → founder: 80
+  successor → successor: 90,  caregiver_retired → caregiver_retired: 60
+```
+
+Intent modulation: networking intent boosts cross-stage affinity (×1.2); fun intent dampens it (×0.7).
+Pair score uses `(forward + reverse) / 2` (averaged both directions).
 
 ---
 
@@ -619,7 +628,7 @@ overallScore =
 1. Hard Constraint Filtering
    ├─> Gender restriction
    ├─> Industry restrictions
-   ├─> Education restrictions
+   ├─> Education level restrictions (pool.educationLevelRestrictions)
    ├─> Age range (min/max)
    └─> Budget (L1 hard constraint)
 
@@ -668,6 +677,7 @@ overallScore =
 - Check `CHEMISTRY_MATRIX` values in `archetypeChemistry.ts`
 - Verify `user_interests` table has data (not empty `selections`)
 - Check if hometown affinity is enabled for both users
+- Check `EDU_ORDINAL` in `packages/shared/src/constants.ts` if education affinity seems off
 
 **No matches formed:**
 - Verify users pass hard constraints (budget, gender, industry)

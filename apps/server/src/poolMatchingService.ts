@@ -32,6 +32,7 @@ import {
 } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { calculateAge } from "@shared/utils";
+import { EDU_ORDINAL } from "@shared/constants";
 import { wsService } from "./wsService";
 import type { PoolMatchedData } from "@shared/wsEvents";
 import { chemistryMatrix as CHEMISTRY_MATRIX } from "./archetypeChemistry";
@@ -476,6 +477,34 @@ function calculateLifeStageAffinity(user1: UserWithProfile, user2: UserWithProfi
 }
 
 /**
+ * Calculate education affinity score (同频度) between two users (0-100).
+ * Uses ordinal proximity: same or nearby education levels score higher;
+ * large gaps score lower. This is a same-frequency AFFINITY signal,
+ * NOT a diversity reward — closer levels = better score.
+ *
+ * Ordinal scale (from EDU_ORDINAL in @shared/constants):
+ *   高中及以下=1, 大专/职业培训=2, 本科=3, 硕士=4, 博士=5
+ *
+ * Score mapping: 100 - gap * 20
+ *   gap 0 (same level)  → 100
+ *   gap 1 (e.g. 本科↔硕士) → 80
+ *   gap 2 (e.g. 大专↔硕士)  → 60
+ *   gap 3 (e.g. 高中↔博士)  → 40
+ *   gap 4 (max distance)    → 20
+ *
+ * Returns null if either label is missing or unmapped — caller must omit
+ * this factor from the average (do NOT substitute a neutral 50).
+ */
+export function calculateEducationAffinityScore(edu1: string | null, edu2: string | null): number | null {
+  if (!edu1 || !edu2) return null; // missing data — skip factor
+  const ord1 = EDU_ORDINAL[edu1];
+  const ord2 = EDU_ORDINAL[edu2];
+  if (ord1 === undefined || ord2 === undefined) return null; // unknown label — skip factor
+  const gap = Math.abs(ord1 - ord2);
+  return Math.max(20, 100 - gap * 20);
+}
+
+/**
  * Calculate unified background score (0-100)
  * Fixed-weight breakdown:
  *   Industry diversity:  30% (different = 70, same = 30)
@@ -521,9 +550,11 @@ function calculateBackgroundScore(user1: UserWithProfile, user2: UserWithProfile
 
 /**
  * Calculate background diversity score (0-100)
- * Different industry, education, gender = higher score (encourages diversity)
- * ✅ UPDATED: Use industryNiche from 3-tier classification
+ * Evaluates diversity across industries and gender at the pair level.
+ * ✅ UPDATED: Use industryNiche from 3-tier classification.
  * Note: Used for group-level diversity; pair-level uses calculateBackgroundScore instead.
+ * Note: Education is NO LONGER a diversity dimension — it is an affinity signal handled
+ * by calculateEducationAffinityScore() inside calculateBackgroundScore().
  */
 function calculateDiversityScore(user1: UserWithProfile, user2: UserWithProfile): number {
   let diversityPoints = 0;
@@ -531,11 +562,6 @@ function calculateDiversityScore(user1: UserWithProfile, user2: UserWithProfile)
   // Different industry +40 (primary diversity dimension)
   if (user1.industryNiche && user2.industryNiche && user1.industryNiche !== user2.industryNiche) {
     diversityPoints += 40;
-  }
-
-  // Different education level +30
-  if (user1.educationLevel && user2.educationLevel && user1.educationLevel !== user2.educationLevel) {
-    diversityPoints += 30;
   }
 
   // Different gender +30
@@ -554,7 +580,7 @@ function calculateDiversityScore(user1: UserWithProfile, user2: UserWithProfile)
  * - Interest (兴趣重叠): 28%
  * - Preference (活动偏好): 15%
  * - Language (语言沟通): 12%
- * - Background (背景评估 — 含人生阶段亲和力 + 同乡 + 行业/学历/性别多样性): 17% (ALWAYS ACTIVE)
+ * - Background (背景评估 — 含人生阶段亲和力 + 同乡 + 行业多样性 + 学历亲和度[同频度] + 性别多样性): 17% (ALWAYS ACTIVE)
  */
 async function calculatePairScore(user1: UserWithProfile, user2: UserWithProfile): Promise<number> {
   const chemistry = calculateChemistryScore(user1, user2);
@@ -563,7 +589,7 @@ async function calculatePairScore(user1: UserWithProfile, user2: UserWithProfile
   const preference = calculatePreferenceScore(user1, user2);
 
   // ✅ UPDATED: Unified background score (includes industry diversity, life stage affinity,
-  // hometown when opted in, education diversity, gender diversity). ALWAYS ACTIVE at 17%.
+  // hometown when opted in, education affinity [同频度 — NOT diversity], gender diversity). ALWAYS ACTIVE at 17%.
   const background = calculateBackgroundScore(user1, user2);
 
   const weights = {

@@ -9228,7 +9228,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   app.get("/api/pool-groups/:groupId", requireAuth, async (req, res) => {
     try {
       const groupId = req.params.groupId;
-      const userId = (req.user as User).id;
+      const userId = (req.session as any).userId as string;
 
       // Get group info
       const group = await db.query.eventPoolGroups.findFirst({
@@ -9292,6 +9292,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           groupNumber: group.groupNumber,
           memberCount: group.memberCount,
           matchScore: group.overallScore,
+          avgPairScore: group.avgChemistryScore, // stored as avgChemistryScore in DB (= avgPairScore)
+          diversityScore: group.diversityScore,
+          energyBalance: group.energyBalance,
           matchExplanation: group.matchExplanation,
           venueName: group.venueName,
           venueAddress: group.venueAddress,

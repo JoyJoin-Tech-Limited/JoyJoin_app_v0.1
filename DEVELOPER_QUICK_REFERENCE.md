@@ -629,6 +629,25 @@ overallScore =
   groupDiversityScore  × 0.25 +   // Industry + Gender + Archetype + Life Stage (25% each)
   communicationBalance × 0.15;    // Avg pairwise language score (replaces energy balance)
 ```
+workMode values: founder | self_employed | employed | student | transitioning | caregiver_retired | successor
+
+Example asymmetries (how much row WANTS to meet column):
+  founder → founder: 90,  founder → student: 40,  student → founder: 80
+  successor → successor: 90
+```
+
+Pair score uses `(forward + reverse) / 2` (averaged both directions).
+
+**Group Scoring:**
+
+```typescript
+overallScore =
+  avgPairScore   × 0.60 +   // Average pairwise compatibility
+  diversityScore × 0.25 +   // Group diversity: industry + gender + archetype + life-stage
+  energyBalance  × 0.15;    // Communication balance (沟通平衡) — archetype energy distribution
+```
+
+> Note: The `energyBalance` dimension is also referred to as "沟通平衡" (communication balance) in product copy, as it measures social tempo rather than raw archetype energy.
 
 > **Note:** There are two separate matrix concepts in the codebase:
 > - **Archetype chemistry matrix** (`archetypeChemistry.ts`) — 12×12 personality compatibility
