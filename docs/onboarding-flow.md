@@ -159,15 +159,15 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 ## Server-Driven Navigation (Scope B1)
 
-> **New Addition**: `/api/auth/user` now returns server-calculated navigation state.
+> All post-authentication routing uses server-calculated `nextStep` from `/api/auth/user`. Do not reconstruct onboarding progress client-side.
 
 ### Response Fields
 
 | Field | Type | Description |
 |------|------|-------------|
-| `nextStep` | `string` | Server-calculated next route: `onboarding`, `personality-test`, `essential-data`, `extended-data`, `profile-review`, `discover`. Note: the server may still return `guide` for users with `hasSeenGuide = false` (backward compat); the client ignores `guide` and treats it as `discover`. |
+| `nextStep` | `string` | Server-calculated next route. Active values: `personality-test`, `essential-data`, `extended-data`, `profile-review`, `discover`. Legacy/fallback values: `onboarding` (routes to `/personality-test`), `guide` (legacy; in `AuthenticatedRouter` this falls through to the `discover` case; the `/guide` route and `GuidePage` are kept for backward compatibility). |
 | `profileEssentialComplete` | `boolean` | Essential data complete (displayName, gender, currentCity) |
-| `profileExtendedComplete` | `boolean` | Extended data complete (interests) |
+| `profileExtendedComplete` | `boolean` | Server-computed profile enrichment flag: `true` when education + industry labels + hometown are present. Note: this is **separate** from the interests carousel completion flag (`hasCompletedInterestsCarousel`). |
 | `hasSeenGuide` | `boolean` | Legacy field — guide step removed from onboarding flow (2026-02-16); retained on server for backward compatibility |
 | `hasSeenProfileReview` | `boolean` | Profile review viewed (server-persisted) |
 | `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
@@ -228,7 +228,7 @@ These fields remain in the database schema for backward compatibility but are no
 ### State Management
 - `hasCompletedPersonalityTest`: Set after WeChat login with test results
 - `hasCompletedEssentialData`: Set after essential data submission
-- `hasCompletedExtendedData`: Set after interest carousel (or skip)
+- `hasCompletedInterestsCarousel`: Set after interests carousel (`/onboarding/extended`) is completed or skipped
 
 ---
 

@@ -1,5 +1,16 @@
 # Migration Guide: Post-Test Signup Flow (2026-02-04)
 
+> 📜 **HISTORICAL DOCUMENT — For Reference Only**
+>
+> This document describes the migration that introduced the anonymous-test-first, WeChat post-test signup flow (implemented 2026-02-04). The changes described here are **complete and in production**. This document is retained as a historical implementation record.
+>
+> For the **current active onboarding architecture**, refer to:
+> - `docs/onboarding-flow.md` — full flow documentation
+> - `DEVELOPER_QUICK_REFERENCE.md` — developer reference
+> - `.github/copilot-instructions.md` → Onboarding Flow Architecture section
+
+---
+
 ## What Changed
 
 ### Before (Old Flow)
