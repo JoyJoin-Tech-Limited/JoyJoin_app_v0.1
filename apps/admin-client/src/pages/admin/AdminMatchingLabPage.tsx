@@ -231,6 +231,101 @@ export default function AdminMatchingLabPage() {
         <p className="text-muted-foreground mt-1">调整AI匹配算法参数和测试场景</p>
       </div>
 
+      {/* Active Factor Structure — full-width info card */}
+      <Card data-testid="card-active-factor-structure">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Zap className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>当前配对因子结构（Active Pair-Score Model）</CardTitle>
+              <CardDescription>
+                poolMatchingService.ts 中实际运行的 6 维度权重——此卡为只读参考，修改需更新服务端代码。
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Chemistry */}
+            <div className="rounded-lg border p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">性格化学反应</span>
+                <Badge>28%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">原型兼容性矩阵（Chemistry Matrix）</p>
+            </div>
+            {/* Interest */}
+            <div className="rounded-lg border p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">兴趣重叠度</span>
+                <Badge>28%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">Heat 加权 Jaccard 相似度（user_interests 表）</p>
+            </div>
+            {/* Social Affinity */}
+            <div className="rounded-lg border p-3 space-y-1 bg-blue-50/50 border-blue-200">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">社交同频度</span>
+                <Badge variant="secondary">20%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                同频信号（相似 → 高分）：人生阶段亲和力（workMode / LIFE_STAGE_AFFINITY 矩阵）
+                + 学历同频度（学历接近 = 高分，非多样性奖励）
+                + 同乡亲和力（双方启用时）
+              </p>
+            </div>
+            {/* Background Diversity */}
+            <div className="rounded-lg border p-3 space-y-1 bg-orange-50/50 border-orange-200">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">背景多样性</span>
+                <Badge variant="secondary">15%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                多样性信号（不同 → 高分）：行业多样性 + 性别多样性。
+                <span className="font-medium text-orange-700"> 注：学历已移至社交同频，不再作为多样性维度。</span>
+              </p>
+            </div>
+            {/* Preference */}
+            <div className="rounded-lg border p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">活动偏好</span>
+                <Badge variant="outline">5%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                社交目的 + 酒局主题/饮酒程度（低权重：现有酒吧/饭店场景分化力有限）
+              </p>
+            </div>
+            {/* Language */}
+            <div className="rounded-lg border p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">语言沟通</span>
+                <Badge variant="outline">4%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                共同语言覆盖（低权重：普通话普及率高，区分度有限）
+              </p>
+            </div>
+          </div>
+          <Separator className="my-4" />
+          <div className="grid gap-3 sm:grid-cols-2 text-xs text-muted-foreground">
+            <div>
+              <p className="font-semibold text-foreground mb-1">矩阵说明</p>
+              <ul className="space-y-0.5 list-disc list-inside">
+                <li><span className="font-medium">原型兼容性矩阵</span>：archetypeChemistry.ts — 12×12，分数 0–100</li>
+                <li><span className="font-medium">人生阶段亲和力矩阵</span>：LIFE_STAGE_AFFINITY（7×7，非对称，双向平均）</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground mb-1">小组综合得分</p>
+              <p>avgPairScore × 60% + groupDiversity × 25% + energyBalance × 15%</p>
+              <p className="mt-1">groupDiversity 维度：行业 + 性别 + 原型 + 人生阶段（均为多样性信号）</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 md:grid-cols-2">
         {/* 左侧：算法权重配置 */}
         <div className="space-y-6">
