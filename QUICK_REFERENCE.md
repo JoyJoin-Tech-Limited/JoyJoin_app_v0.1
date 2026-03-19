@@ -82,20 +82,31 @@ npm run dev              # Start on http://localhost:5000
 
 ---
 
-## 🔀 7-Dimension Pool Matching Algorithm
+## 🔀 Pool Matching Algorithm
 
-> ⚠️ The "5-dimensional" algorithm described in older docs referred to the blind-box event matcher. The **current** matching algorithm for event pools uses 7 dimensions.
+**Pair Scoring** (5 dimensions, always active):
+```
+├── Chemistry (archetype):          28%   // archetypeChemistry.ts
+├── Interest (topics + heat):       28%   // user_interests table, heat-weighted Jaccard
+├── Language:                       12%   // common languages
+├── Preference (intent + bar):      15%   // dining/bar event preferences
+└── Background (unified):           17%   // explicit fixed-weight sub-score
+    ├── Industry diversity:         ~30%
+    ├── Life stage affinity:        ~30%  (workMode / 人生阶段, PR #312)
+    ├── Hometown affinity:          ~20%  (when both opted in)
+    └── Education diversity:        ~20%
+```
 
-**Default Weights (hometown enabled):**
+> **Note:** There are two distinct matrix concepts:
+> - **Archetype chemistry matrix** (`archetypeChemistry.ts`) — 12×12 archetype ↔ archetype compatibility
+> - **Life stage affinity matrix** (`LIFE_STAGE_AFFINITY` in `poolMatchingService.ts`) — 7×7 asymmetric `workMode` / 人生阶段 matrix (added PR #312)
+
+**Group Scoring:**
 ```typescript
-{
-  chemistry: 30%,     // Archetype compatibility matrix
-  interest: 30%,      // Heat-weighted Jaccard similarity (user_interests table)
-  language: 15%,      // Common languages
-  preference: 15%,    // Event-specific preferences (dining/bar intent)
-  hometown: 5%,       // Hometown affinity (opt-in only)
-  background: 5%,     // Background diversity (industry/education/gender)
-}
+overallScore =
+  avgPairScore         × 0.60 +
+  groupDiversityScore  × 0.25 +   // Industry + Gender + Archetype + Life Stage (25% each)
+  communicationBalance × 0.15;    // Avg pairwise language score
 ```
 
 **File:** `apps/server/src/poolMatchingService.ts`
