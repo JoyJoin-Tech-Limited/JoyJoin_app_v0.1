@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -215,8 +214,10 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
   };
 
   // ── Visibility guard ──────────────────────────────────────────────────────
+  // Hide only on explicit dismiss. Filled items remain editable so the card
+  // should persist until the user actively closes it.
 
-  if (dismissed || filledCount === totalCount) return null;
+  if (dismissed) return null;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -272,12 +273,11 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => !item.filled && openFlow(item.id)}
-                      disabled={item.filled}
+                      onClick={() => openFlow(item.id)}
                       className={cn(
                         "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all",
                         item.filled
-                          ? "bg-primary/5 cursor-default"
+                          ? "bg-primary/5 hover:bg-primary/10 active:scale-[0.98]"
                           : "bg-muted/40 hover:bg-muted/70 active:scale-[0.98]"
                       )}
                     >
@@ -324,7 +324,7 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
                         )}
                       </div>
 
-                      {/* Trailing icon */}
+                      {/* Trailing icon — checkmark for filled (editable), chevron for unfilled */}
                       {item.filled ? (
                         <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
                       ) : (
@@ -372,8 +372,8 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
               </span>
             </div>
 
-            {/* Suggestion chips */}
-            <div className="flex flex-wrap gap-1.5">
+            {/* Suggestion chips — use <button> for keyboard/screen-reader accessibility */}
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="快速填写示例">
               {[
                 "爱探索小众餐厅 🍜",
                 "职场故事一箩筐 💼",
@@ -381,21 +381,21 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
                 "深度聊天爱好者 💬",
                 "宝藏推荐机器人 🗺️",
               ].map((s) => (
-                <Badge
+                <button
                   key={s}
-                  variant="outline"
-                  className="cursor-pointer text-xs hover:bg-muted transition-colors py-1 px-2"
+                  type="button"
                   onClick={() => setDraftBio(removeTrailingEmoji(s))}
+                  className="inline-flex items-center rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
                 >
                   {s}
-                </Badge>
+                </button>
               ))}
             </div>
 
             <Button
               className="w-full mt-1"
               onClick={handleSaveBio}
-              disabled={isPending || !draftBio.trim()}
+              disabled={isPending}
             >
               {isPending ? "保存中…" : "保存"}
             </Button>
@@ -412,7 +412,7 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
           <SheetHeader className="mb-4 text-left">
             <SheetTitle className="text-lg font-bold">语言习惯</SheetTitle>
             <p className="text-sm text-muted-foreground">
-              选择你最顺畅的沟通语言，小悦会优先为你匹配语言契合的桌友
+              选择你最常用的沟通语言，报名时自动带入，省去重复填写
             </p>
           </SheetHeader>
 
@@ -423,11 +423,12 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
                 return (
                   <button
                     key={opt.value}
+                    type="button"
                     onClick={() =>
                       setDraftLanguages(toggleChip(draftLanguages, opt.value))
                     }
                     className={cn(
-                      "px-4 py-2 rounded-full text-sm font-medium border transition-all",
+                      "px-4 py-2 rounded-full text-sm font-medium border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       selected
                         ? "bg-primary text-primary-foreground border-primary shadow-sm"
                         : "bg-background text-foreground border-border hover:border-primary/50"
@@ -440,13 +441,13 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              这些偏好会作为默认值预填到未来的报名表，随时可以修改
+              报名活动时会自动预填这些选项，随时可以修改
             </p>
 
             <Button
               className="w-full"
               onClick={handleSaveLanguages}
-              disabled={isPending || draftLanguages.length === 0}
+              disabled={isPending}
             >
               {isPending ? "保存中…" : "保存"}
             </Button>
@@ -463,7 +464,7 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
           <SheetHeader className="mb-4 text-left">
             <SheetTitle className="text-lg font-bold">饮食偏好</SheetTitle>
             <p className="text-sm text-muted-foreground">
-              省去每次报名时重复填写，主办方也能提前为你做好安排
+              报名饭局时自动带入，省去重复填写
             </p>
           </SheetHeader>
 
@@ -474,6 +475,7 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
                 return (
                   <button
                     key={opt.value}
+                    type="button"
                     onClick={() => {
                       if (opt.value === DIETARY_NO_REQUIREMENT) {
                         // Toggle "no requirement" exclusively: selecting it clears all others
@@ -491,7 +493,7 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
                       }
                     }}
                     className={cn(
-                      "px-4 py-2 rounded-full text-sm font-medium border transition-all",
+                      "px-4 py-2 rounded-full text-sm font-medium border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       selected
                         ? "bg-primary text-primary-foreground border-primary shadow-sm"
                         : "bg-background text-foreground border-border hover:border-primary/50"
@@ -510,7 +512,7 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
             <Button
               className="w-full"
               onClick={handleSaveDietary}
-              disabled={isPending || draftDietary.length === 0}
+              disabled={isPending}
             >
               {isPending ? "保存中…" : "保存"}
             </Button>
