@@ -121,6 +121,14 @@ export const users = pgTable("users", {
   interestsDeep: text("interests_deep").array(), // 深度兴趣（AI对话收集的更详细兴趣描述，语义描述，不含遥测数据）
   interestsTelemetry: jsonb("interests_telemetry"), // 兴趣滑动遥测数据 { version: string, events: [{interestId, choice, reactionTimeMs, timestamp}] }
   
+  // ========== Post-onboarding Profile Enrichment Fields (2026-03) ==========
+  // Collected via Discover-page "Complete Your Profile" card after onboarding.
+  // These reduce friction at event registration by saving reusable defaults.
+  bio: varchar("bio", { length: 100 }), // Short one-liner / intro (enforced at 100 chars in the client)
+  preferredLanguages: text("preferred_languages").array(), // Profile-level language preferences: ["中文（国语）", "英语"]
+  dietaryRestrictions: text("dietary_restrictions").array(), // Dietary needs: ["素食", "不吃辣", "清真"]
+  // ========== END Post-onboarding Profile Enrichment Fields ==========
+
   // Registration fields - Social & Venue Preferences (collected via AI chat)
   socialStyle: varchar("social_style"), // DEPRECATED - Not used in matching algorithm
   icebreakerRole: varchar("icebreaker_role"), // DEPRECATED - Not used in matching algorithm
@@ -415,7 +423,7 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   memberCount: integer("member_count").default(0),
   avgChemistryScore: integer("avg_chemistry_score"), // 平均化学反应分数
   diversityScore: integer("diversity_score"), // 多样性分数
-  energyBalance: integer("energy_balance"), // 能量平衡分数
+  communicationBalance: integer("energy_balance"), // 沟通平衡分数（原energy_balance列，现用于存储语言沟通兼容性分数）
   genderBalanceScore: integer("gender_balance_score"), // 性别平衡分数（0-100）
   overallScore: integer("overall_score"), // 综合分数
   temperatureLevel: varchar("temperature_level"), // 化学反应温度等级: fire | warm | mild | cold
@@ -668,6 +676,10 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   icebreakerRole: true,
   workVisibility: true,
   wechatContactId: true,
+  // Post-onboarding enrichment fields
+  bio: true,
+  preferredLanguages: true,
+  dietaryRestrictions: true,
 }).partial();
 
 export const updatePersonalitySchema = createInsertSchema(users).pick({

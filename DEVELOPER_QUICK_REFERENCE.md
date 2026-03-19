@@ -607,33 +607,27 @@ Stage 2: AI Matching
 
 ### Matching Algorithm Formula
 
-**Pair Scoring (pair compatibility 0-100):**
+**Pair Scoring** (always active — 5 dimensions):
+
+```
+├── Chemistry (archetype):          28%
+├── Interest (topics + heat):       28%
+├── Language:                       12%
+├── Preference (intent + bar):      15%
+└── Background (unified):           17%
+    ├── Industry diversity:         ~30% of background
+    ├── Life stage affinity:        ~30% of background  (workMode / 人生阶段, added PR #312)
+    ├── Hometown affinity:          ~20% of background  (when both opted in)
+    └── Education diversity:        ~20% of background
+```
+
+**Group Scoring:**
 
 ```typescript
-pairScore =
-  chemistry  × 0.28 +   // 性格化学反应 28% — archetype chemistry matrix
-  interest   × 0.28 +   // 兴趣重叠 28% — heat-weighted Jaccard similarity
-  preference × 0.15 +   // 活动偏好 15% — event intent + bar preferences
-  language   × 0.12 +   // 语言沟通 12% — shared language
-  background × 0.17;    // 背景评估 17% — see Background Score below
-```
-
-**Background Score (17% of pair score) — unified signal:**
-
-```
-background = avg of active sub-factors:
-  • Industry diversity      — different niche = 70, same = 30
-  • Life-stage affinity     — asymmetric 7×7 matrix (workMode), averaged forward+reverse
-  • Hometown affinity       — only when both opted in (same city=100, same province=70)
-  • Education affinity      — ordinal proximity (同频度), NOT diversity reward
-                              gap 0→100, gap 1→80, gap 2→60, gap 3→40, gap 4→20
-  • Gender diversity        — different = 60, same = 30
-```
-
-> ⚠️ **Education is an AFFINITY (同频度) signal, not a diversity reward.** Closer education levels score higher. This uses `EDU_ORDINAL` from `packages/shared/src/constants.ts`. See `calculateEducationAffinityScore()` in `poolMatchingService.ts`.
-
-**Life-Stage Affinity Matrix (asymmetric 7×7):**
-
+overallScore =
+  avgPairScore         × 0.60 +   // Average pairwise compatibility
+  groupDiversityScore  × 0.25 +   // Industry + Gender + Archetype + Life Stage (25% each)
+  communicationBalance × 0.15;    // Avg pairwise language score (replaces energy balance)
 ```
 workMode values: founder | self_employed | employed | student | transitioning | caregiver_retired | successor
 
@@ -654,6 +648,10 @@ overallScore =
 ```
 
 > Note: The `energyBalance` dimension is also referred to as "沟通平衡" (communication balance) in product copy, as it measures social tempo rather than raw archetype energy.
+
+> **Note:** There are two separate matrix concepts in the codebase:
+> - **Archetype chemistry matrix** (`archetypeChemistry.ts`) — 12×12 personality compatibility
+> - **Life stage affinity matrix** (`LIFE_STAGE_AFFINITY` in `poolMatchingService.ts`) — 7×7 asymmetric `workMode` / 人生阶段 compatibility, introduced PR #312
 
 ### Temperature Levels
 
