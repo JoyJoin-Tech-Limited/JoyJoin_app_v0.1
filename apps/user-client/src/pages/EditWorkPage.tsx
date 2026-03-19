@@ -4,31 +4,23 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Briefcase, Info } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
+const WORK_MODE_LABELS: Record<string, string> = {
+  employed: "受雇",
+  founder: "创始人",
+  self_employed: "自由职业",
+  student: "学生",
+};
 
 const workSchema = z.object({
-  industry: z.string().optional(),
-  roleTitleShort: z.string().optional(),
   workVisibility: z.enum(["hide_all", "show_industry_only"]).optional(),
 });
 
 type WorkForm = z.infer<typeof workSchema>;
-
-const industryOptions = [
-  "大厂", "金融", "科技初创", "AI/ML", "跨境电商", "投资",
-  "咨询", "消费品", "艺术/设计", "教育", "医疗", "政府/公共", "其他"
-];
 
 export default function EditWorkPage() {
   const [, setLocation] = useLocation();
@@ -39,8 +31,6 @@ export default function EditWorkPage() {
   const form = useForm<WorkForm>({
     resolver: zodResolver(workSchema),
     defaultValues: {
-      industry: user?.industry || "",
-      roleTitleShort: user?.roleTitleShort || "",
       workVisibility: user?.workVisibility || "show_industry_only",
     },
   });
@@ -63,14 +53,15 @@ export default function EditWorkPage() {
   });
 
   const onSubmit = (data: WorkForm) => {
-    // Clean up empty strings - send undefined instead of empty string for optional fields
-    const cleanedData = {
-      ...data,
-      industry: data.industry && data.industry.trim() !== '' ? data.industry : undefined,
-      roleTitleShort: data.roleTitleShort && data.roleTitleShort.trim() !== '' ? data.roleTitleShort : undefined,
-    };
-    updateMutation.mutate(cleanedData);
+    updateMutation.mutate(data);
   };
+
+  // Derive the current industry display label from structured classification fields
+  const industryDisplay = user?.industryNicheLabel
+    ? `${user.industryCategoryLabel} · ${user.industryNicheLabel}`
+    : user?.industryCategoryLabel || user?.workMode
+      ? WORK_MODE_LABELS[user.workMode] || user.workMode
+      : null;
 
   if (isLoading || !user) {
     return (
@@ -102,39 +93,22 @@ export default function EditWorkPage() {
 
       {/* Content */}
       <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-6 max-w-2xl mx-auto pb-24">
-        {/* Industry */}
+        {/* Current industry classification — read-only */}
         <div className="space-y-2">
-          <Label>行业</Label>
-          <div className="space-y-3 mt-2">
-            {industryOptions.map((ind) => (
-              <button
-                key={ind}
-                type="button"
-                onClick={() => form.setValue("industry", ind)}
-                className={`
-                  w-full px-5 py-4 text-left rounded-lg border transition-all text-base
-                  ${form.watch("industry") === ind
-                    ? 'border-primary bg-primary/5 text-primary' 
-                    : 'border-border hover-elevate active-elevate-2'
-                  }
-                `}
-                data-testid={`button-industry-${ind}`}
-              >
-                {ind}
-              </button>
-            ))}
+          <Label>当前行业</Label>
+          <div
+            className="flex items-center gap-3 px-4 py-3 rounded-lg border bg-muted/40 text-sm"
+            data-testid="display-industry"
+          >
+            <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="font-medium">
+              {industryDisplay || <span className="text-muted-foreground">未设置</span>}
+            </span>
           </div>
-        </div>
-
-        {/* Role Title */}
-        <div className="space-y-2">
-          <Label htmlFor="roleTitleShort">职位</Label>
-          <Input
-            id="roleTitleShort"
-            placeholder="例如：产品经理、软件工程师等"
-            {...form.register("roleTitleShort")}
-            data-testid="input-roleTitleShort"
-          />
+          <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+            <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            行业分类在注册时通过三级行业体系设置，如需更新请重新完成职业信息步骤。
+          </p>
         </div>
 
         {/* Work Visibility */}
