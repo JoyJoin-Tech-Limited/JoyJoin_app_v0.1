@@ -9227,7 +9227,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   app.get("/api/pool-groups/:groupId", requireAuth, async (req, res) => {
     try {
       const groupId = req.params.groupId;
-      const userId = (req.user as User).id;
+      const userId = (req.session as any).userId as string;
 
       // Get group info
       const group = await db.query.eventPoolGroups.findFirst({

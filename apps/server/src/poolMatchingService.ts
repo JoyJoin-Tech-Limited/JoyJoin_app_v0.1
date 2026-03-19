@@ -492,13 +492,14 @@ function calculateLifeStageAffinity(user1: UserWithProfile, user2: UserWithProfi
  *   gap 3 (e.g. 高中↔博士)  → 40
  *   gap 4 (max distance)    → 20
  *
- * Unknown / unmapped labels → 50 (neutral, skipped in averaging).
+ * Returns null if either label is missing or unmapped — caller must omit
+ * this factor from the average (do NOT substitute a neutral 50).
  */
-export function calculateEducationAffinityScore(edu1: string | null, edu2: string | null): number {
-  if (!edu1 || !edu2) return 50; // neutral — no data, skip
+export function calculateEducationAffinityScore(edu1: string | null, edu2: string | null): number | null {
+  if (!edu1 || !edu2) return null; // missing data — skip factor
   const ord1 = EDU_ORDINAL[edu1];
   const ord2 = EDU_ORDINAL[edu2];
-  if (ord1 === undefined || ord2 === undefined) return 50; // unknown label — fail safe
+  if (ord1 === undefined || ord2 === undefined) return null; // unknown label — skip factor
   const gap = Math.abs(ord1 - ord2);
   return Math.max(20, 100 - gap * 20);
 }
@@ -534,9 +535,10 @@ function calculateBackgroundScore(user1: UserWithProfile, user2: UserWithProfile
   }
 
   // Education affinity (同频度): ordinal proximity — closer levels score higher
-  // Uses calculateEducationAffinityScore() — NOT a diversity reward
-  if (user1.educationLevel && user2.educationLevel) {
-    score += calculateEducationAffinityScore(user1.educationLevel, user2.educationLevel);
+  // Returns null when label is missing/unknown — factor is omitted from average in that case
+  const eduScore = calculateEducationAffinityScore(user1.educationLevel, user2.educationLevel);
+  if (eduScore !== null) {
+    score += eduScore;
     factors++;
   }
 

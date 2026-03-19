@@ -47,10 +47,10 @@ interface UsersResponse {
 interface MatchGroup {
   groupId: string;
   userIds: string[];
-  avgPairScore: number;
+  avgPairScore?: number;
   avgChemistryScore: number;
   diversityScore: number;
-  energyBalance: number;
+  energyBalance?: number;
   overallScore: number;
   users: User[];
 }
@@ -267,7 +267,7 @@ export default function AdminMatchingLabPage() {
             <div className="bg-white rounded-lg p-2 border">
               <div className="text-xl font-bold text-amber-600">17%</div>
               <div className="text-muted-foreground text-xs mt-1">背景评估</div>
-              <div className="text-[10px] text-muted-foreground">人生阶段亲和 + 学历亲和 + 行业多样 + 同乡</div>
+              <div className="text-[10px] text-muted-foreground">人生阶段亲和 + 学历亲和 + 行业多样 + 性别多样 + 同乡</div>
             </div>
           </div>
           <div className="mt-3 pt-3 border-t text-xs text-muted-foreground space-y-1">

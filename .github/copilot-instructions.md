@@ -564,6 +564,7 @@ Pair score uses `(forward + reverse) / 2` (averaged both directions).
 1. Hard Constraint Filtering
    ├─> Gender restriction
    ├─> Industry restrictions
+   ├─> Education level restrictions (pool.educationLevelRestrictions)
    ├─> Age range (min/max)
    └─> Budget (L1 hard constraint)
 

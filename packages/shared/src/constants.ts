@@ -15,9 +15,9 @@ export type EducationLevel = typeof EDUCATION_LEVEL_OPTIONS[number];
  * Ordinal proximity mapping for education affinity scoring (同频度).
  * Used by calculateEducationAffinityScore() to measure same-frequency closeness.
  * 职业培训 is treated as ordinal 2 (same tier as 大专) as it is a non-linear vocational track.
- * Labels not in this map are treated as unknown → neutral score (50).
+ * Labels not in this map are treated as unknown → factor skipped in background score average.
  */
-export const EDU_ORDINAL: Record<string, number> = {
+export const EDU_ORDINAL: Partial<Record<EducationLevel, number>> = {
   "高中及以下": 1,
   "大专": 2,
   "职业培训": 2,  // vocational track, same tier as 大专
