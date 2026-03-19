@@ -47,8 +47,10 @@ interface UsersResponse {
 interface MatchGroup {
   groupId: string;
   userIds: string[];
+  avgPairScore: number;
   avgChemistryScore: number;
   diversityScore: number;
+  energyBalance: number;
   overallScore: number;
   users: User[];
 }
@@ -230,6 +232,51 @@ export default function AdminMatchingLabPage() {
         <h1 className="text-3xl font-bold" data-testid="text-page-title">匹配实验室</h1>
         <p className="text-muted-foreground mt-1">调整AI匹配算法参数和测试场景</p>
       </div>
+
+      {/* 活跃算法公式说明 */}
+      <Card className="border-blue-200 bg-blue-50/50" data-testid="card-active-formula">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Zap className="h-4 w-4 text-blue-600" />
+            当前活跃算法公式（仅供参考，非可调权重）
+          </CardTitle>
+          <CardDescription>配对分数 = 以下5个维度的加权平均</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-center text-sm">
+            <div className="bg-white rounded-lg p-2 border">
+              <div className="text-xl font-bold text-purple-600">28%</div>
+              <div className="text-muted-foreground text-xs mt-1">性格化学反应</div>
+              <div className="text-[10px] text-muted-foreground">原型兼容矩阵</div>
+            </div>
+            <div className="bg-white rounded-lg p-2 border">
+              <div className="text-xl font-bold text-green-600">28%</div>
+              <div className="text-muted-foreground text-xs mt-1">兴趣重叠</div>
+              <div className="text-[10px] text-muted-foreground">热度加权匹配</div>
+            </div>
+            <div className="bg-white rounded-lg p-2 border">
+              <div className="text-xl font-bold text-orange-600">15%</div>
+              <div className="text-muted-foreground text-xs mt-1">活动偏好</div>
+              <div className="text-[10px] text-muted-foreground">社交目的 + 酒局偏好</div>
+            </div>
+            <div className="bg-white rounded-lg p-2 border">
+              <div className="text-xl font-bold text-blue-600">12%</div>
+              <div className="text-muted-foreground text-xs mt-1">语言沟通</div>
+              <div className="text-[10px] text-muted-foreground">共同语言</div>
+            </div>
+            <div className="bg-white rounded-lg p-2 border">
+              <div className="text-xl font-bold text-amber-600">17%</div>
+              <div className="text-muted-foreground text-xs mt-1">背景评估</div>
+              <div className="text-[10px] text-muted-foreground">人生阶段亲和 + 学历亲和 + 行业多样 + 同乡</div>
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t text-xs text-muted-foreground space-y-1">
+            <div><span className="font-medium">组分数</span> = 配对均分×60% + 多样性×25% + 沟通平衡×15%</div>
+            <div><span className="font-medium">学历</span>：亲和度信号（同频度），非多样性奖励 — 相近学历得分更高</div>
+            <div><span className="font-medium">人生阶段</span>：非对称亲和矩阵（7×7），取双向均值</div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* 左侧：算法权重配置 */}
@@ -553,8 +600,9 @@ export default function AdminMatchingLabPage() {
                             </div>
                           </div>
                           <div className="flex gap-4 text-xs text-muted-foreground">
-                            <div>化学: {group.avgChemistryScore}</div>
+                            <div>配对: {group.avgPairScore ?? group.avgChemistryScore}</div>
                             <div>多样: {group.diversityScore}</div>
+                            <div>平衡: {group.energyBalance ?? '–'}</div>
                           </div>
                         </button>
 
@@ -563,8 +611,10 @@ export default function AdminMatchingLabPage() {
                           <div className="border-t px-3 pb-3 space-y-2 pt-2">
                             <div className="text-xs text-muted-foreground mb-1 font-medium">▼ 成员列表（组级得分仅供参考）</div>
                             <div className="flex flex-wrap gap-2 text-xs text-muted-foreground pb-1">
+                              <span>配对均分: <strong>{group.avgPairScore ?? '–'}</strong></span>
                               <span>组化学: <strong>{group.avgChemistryScore}</strong></span>
                               <span>组多样性: <strong>{group.diversityScore}</strong></span>
+                              <span>沟通平衡: <strong>{group.energyBalance ?? '–'}</strong></span>
                               <span>组总分: <strong>{group.overallScore}</strong></span>
                             </div>
                             {group.users.map((user) => (
