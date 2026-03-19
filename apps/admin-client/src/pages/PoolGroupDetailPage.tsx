@@ -166,7 +166,7 @@ export default function PoolGroupDetailPage() {
             </div>
 
             {/* 算法得分明细 (管理员洞察) */}
-            {(group.avgPairScore || group.diversityScore || group.energyBalance) && (
+            {(group.avgPairScore != null || group.diversityScore != null || group.energyBalance != null) && (
               <div className="pt-2 border-t">
                 <div className="text-xs text-muted-foreground mb-2 font-medium">算法得分明细</div>
                 <div className="grid grid-cols-4 gap-2 text-center text-xs">

@@ -607,7 +607,7 @@ Stage 2: AI Matching
 
 ### Matching Algorithm Formula
 
-**Pair Scoring (배pair compatibility 0-100):**
+**Pair Scoring (pair compatibility 0-100):**
 
 ```typescript
 pairScore =
