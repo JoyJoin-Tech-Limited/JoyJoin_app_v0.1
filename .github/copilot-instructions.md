@@ -95,7 +95,7 @@ npm run db:push --force  # Force sync (use carefully)
 
 1. **Onboarding Flow** — state-driven via `nextStep` from server; see Onboarding Flow Architecture section
 2. **Personality Test V4** — 8–16 adaptive questions, anonymous pre-auth; see `PersonalityTestPageV4.tsx`
-3. **Pool Matching** — 7-dimension weighted scoring; see `poolMatchingService.ts`
+3. **Pool Matching** — 5-dimension pair scoring + group scoring; see `poolMatchingService.ts`
 4. **Social Icebreaker** — primary in-event multi-phase session; see `docs/icebreaker-system.md`
 5. **WeChat Auth** — Mini Program `wx.login()` + OAuth2 web flow; see `wechatAuth.ts`
 6. **BottomNav Smart Routing** — center button dynamically routes based on user's current activity state
@@ -449,57 +449,51 @@ activeAssessmentSessionId: string | null;
 - **Interest Fields Removed**: `interestsTop`, `primaryInterests`, `topicsHappy`, `topicsAvoid` moved to `user_interests` table (old fields deprecated but not dropped).
 - **Language Selection**: No longer collected in onboarding (moved to event pool registration).
 
-## Updated Pool Matching Algorithm (7-Dimension Weighted Scoring)
+## Updated Pool Matching Algorithm (Latest — Pair + Group Scoring)
 
 ### Algorithm Overview
 
 **Location**: `apps/server/src/poolMatchingService.ts`
 
-The matching algorithm calculates compatibility between users using **7 weighted dimensions**:
+The matching algorithm is a **5-dimension pair scoring model** (hometown folded into background) with a separate **3-factor group scoring formula**.
 
-```typescript
-// 7-Dimension Matching Weights (when hometown enabled)
-{
-  chemistry: 0.30,      // Personality compatibility (30%)
-  interest: 0.30,       // Interest overlap (30%)
-  language: 0.15,       // Language communication (15%)
-  preference: 0.15,     // Event preferences (15%)
-  hometown: 0.05,       // Hometown affinity (5%)
-  background: 0.05,     // Background diversity (5%)
-}
+> **Two distinct matrix concepts exist in the codebase — do not confuse them:**
+> 1. **Archetype chemistry matrix** (`apps/server/src/archetypeChemistry.ts`) — 12×12 compatibility scores between personality archetypes.
+> 2. **Life stage affinity matrix** (`LIFE_STAGE_AFFINITY` in `poolMatchingService.ts`) — 7×7 asymmetric matrix scoring how much a person in one life stage wants to meet someone in another. Introduced in PR #312 alongside `workMode` / 人生阶段 support.
 
-// When hometown disabled, weights rebalance:
-{
-  chemistry: 0.35,      // +5%
-  interest: 0.35,       // +5%
-  language: 0.15,       // unchanged
-  preference: 0.15,     // unchanged
-  hometown: 0,          // disabled
-  background: 0,        // disabled
-}
+---
+
+### Pair Scoring (always active)
+
+```
+PAIR SCORING (always active):
+├── Chemistry (archetype):          28%
+├── Interest (topics + heat):       28%
+├── Language:                       12%
+├── Preference (intent + bar):      15%
+└── Background (unified):           17%
+    ├── Industry diversity:         ~30% of background
+    ├── Life stage affinity:        ~30% of background  (workMode / 人生阶段)
+    ├── Hometown affinity:          ~20% of background  (when both opted in; redistributed otherwise)
+    └── Education diversity:        ~20% of background
 ```
 
-### Dimension Details
+#### 1. Chemistry Score (28%) — `calculateChemistryScore()`
 
-#### 1. Chemistry Score (30%) - `calculateChemistryScore()`
-
-Based on archetype compatibility matrix from `archetypeChemistry.ts`:
+Based on the **archetype chemistry matrix** from `archetypeChemistry.ts`:
 
 ```typescript
 // Primary archetype (70%) + Cross chemistry (30%)
-chemistry = 
+chemistry =
   (primary1 × primary2) * 0.70 +
   (primary1 × secondary2) * 0.15 +
   (secondary1 × primary2) * 0.15
 ```
 
-**Chemistry Matrix**: 12×12 matrix with scores 0-100
-- **90-100**: Perfect match, sparks fly (🔥炽热)
-- **75-89**: Highly compatible (🌡️温暖)
-- **60-74**: Good interaction (🌤️适宜)
-- **45-59**: Medium compatibility (❄️冷淡)
+**Chemistry Matrix** (`apps/server/src/archetypeChemistry.ts`): 12×12 matrix, scores 0-100.
+Canonical source of truth: `packages/shared/src/personality/archetypeCompatibility.ts`.
 
-#### 2. Interest Score (30%) - `calculateInterestScoreAsync()`
+#### 2. Interest Score (28%) — `calculateInterestScoreAsync()`
 
 Uses `user_interests` table with **heat-weighted matching**:
 
@@ -516,47 +510,106 @@ else: +3
 finalScore = min(100, baseScore + heatBonus)
 ```
 
-#### 3. Language Score (15%) - `calculateLanguageScore()`
+#### 3. Language Score (12%) — `calculateLanguageScore()`
 
 ```typescript
 if (commonLanguages > 0): 100
 else: 30  // No common language penalty
 ```
 
-#### 4. Preference Score (15%) - `calculatePreferenceScore()`
+#### 4. Preference Score (15%) — `calculatePreferenceScore()`
 
-For **饭局** (dinner):
-- Event intent overlap
+For **饭局** (dinner): event intent overlap.
+For **酒局** (bar): bar themes + alcohol comfort + event intent overlap.
 
-For **酒局** (bar):
-- Bar themes overlap
-- Alcohol comfort overlap
-- Event intent overlap
+**Note**: Budget is a **hard constraint** (L1 filter), not scored here.
 
-**Note**: Budget is now a **hard constraint** (L1 filter), not scored here.
+#### 5. Background Score (17%, always active) — `calculateBackgroundScore()`
 
-#### 5. Hometown Score (5%) - `calculateHometownAffinityScore()`
-
-Only applies if **both users opted in**:
+Unified fixed-weight background score. **Gender is not part of pair-level background** — gender diversity is captured at the group level only.
 
 ```typescript
-if (sameCity): 100      // 老乡！(epic)
-if (sameProvince): 70   // Same province (rare)
-else: 0                 // No bonus
+// Hometown opted in (all 4 factors):
+background =
+  industryScore  * 0.30 +   // Different industry = 70, same = 30
+  lifeStageScore * 0.30 +   // LIFE_STAGE_AFFINITY matrix (see below)
+  hometownScore  * 0.20 +   // calculateHometownAffinityScore()
+  educationScore * 0.20     // Different education = 60, same = 30
+
+// Hometown NOT opted in (redistribute hometown 20% to industry + life stage):
+background =
+  industryScore  * 0.40 +
+  lifeStageScore * 0.40 +
+  educationScore * 0.20
 ```
 
-#### 6. Background Diversity (5%) - `calculateDiversityScore()`
+##### Life Stage Affinity Matrix (`LIFE_STAGE_AFFINITY`)
 
-Encourages diverse groups:
+- Canonical field: **`workMode`** (stored on `users` table)
+- User-facing label: **人生阶段** (life stage)
+- Added in **PR #312**
+- **7×7 asymmetric matrix**: row = user A's life stage, column = user B's life stage → score 0-100 for how much A wants to meet B
+- **Pair score** = average of both directions: `(LIFE_STAGE_AFFINITY[a][b] + LIFE_STAGE_AFFINITY[b][a]) / 2`
+- 7 life stages: `founder`, `self_employed`, `employed`, `student`, `transitioning`, `caregiver_retired`, `successor`
+
+---
+
+### Group Scoring
+
+```
+GROUP SCORING:
+├── Avg Pair Score:                 60%  (average of all pairwise scores)
+├── Group Diversity:                25%
+│   ├── Industry:                   25%  of diversity
+│   ├── Gender:                     25%  of diversity
+│   ├── Archetype:                  25%  of diversity
+│   └── Life Stage (人生阶段):       25%  of diversity  (added PR #312)
+└── Communication Balance:          15%  (replaces former energy balance)
+    └── Average pairwise language score across all member pairs
+```
+
+#### Group Diversity — `calculateGroupDiversity()`
+
+Each of the 4 dimensions contributes 25 points to a 0-100 score:
 
 ```typescript
-diversityPoints = 
-  (differentIndustry ? 40 : 0) +
-  (differentEducation ? 30 : 0) +
-  (differentGender ? 30 : 0)
-
-score = min(100, diversityPoints)
+diversityScore =
+  (uniqueIndustries / memberCount) * 25 +
+  (uniqueGenders    / memberCount) * 25 +
+  (uniqueArchetypes / memberCount) * 25 +
+  (uniqueLifeStages / memberCount) * 25   // workMode / 人生阶段
 ```
+
+#### Communication Balance (15%) — `calculateCommunicationBalance()`
+
+Replaces the former `energyBalance` / energy balance metric. Measures how well the group can communicate across language preferences.
+
+```typescript
+// Average pairwise language score across all member pairs
+communicationBalance = mean(calculateLanguageScore(memberI, memberJ) for all i < j)
+```
+
+> **Note**: The `energy_balance` database column in `event_pool_groups` now stores `communicationBalance` values. The TypeScript field is `communicationBalance`; the DB column remains `energy_balance` for backward compatibility.
+
+#### Overall Group Score
+
+```typescript
+overallScore =
+  avgPairScore         * 0.60 +
+  groupDiversityScore  * 0.25 +
+  communicationBalance * 0.15
+```
+
+#### Temperature Classification
+
+```
+🔥 炽热 (Fire):   overallScore ≥ 85
+🌡️ 温暖 (Warm):   overallScore 70-84
+🌤️ 适宜 (Mild):   overallScore 55-69
+❄️ 冷淡 (Cold):   overallScore < 55
+```
+
+---
 
 ### Group Formation Algorithm
 
@@ -583,8 +636,8 @@ score = min(100, diversityPoints)
 
 4. Group Scoring
    ├─> avgPairScore (60%)
-   ├─> diversityScore (25%)
-   ├─> energyBalance (15%)
+   ├─> groupDiversityScore (25%)
+   ├─> communicationBalance (15%)
    └─> overallScore = weighted sum
 
 5. Temperature Classification
@@ -594,34 +647,20 @@ score = min(100, diversityPoints)
    └─> <55: ❄️ Cold (冷淡)
 ```
 
-### Energy Balance Score
+---
 
-**Purpose**: Ensure groups have balanced social energy (not all high or all low)
-
-```typescript
-// Ideal average energy: 50-70
-// Ideal stdDev: <15
-
-energyBalance = 
-  avgEnergyScore * 0.6 +
-  stdDevScore * 0.4
-```
-
-**Archetype Energy Values** (from `ARCHETYPE_ENERGY`):
-- 开心柯基: 95 (Very High)
-- 太阳鸡: 90 (Very High)
-- 隐身猫: 30 (Very Low)
-- 稳如龟: 38 (Low)
-
-### Key Changes from Previous Version
+### Key Changes Summary
 
 1. ✅ **Budget moved to L1 hard constraint** (was soft constraint)
-2. ✅ **Removed food preferences from scoring** (cuisine, dietary, taste) — still collected for restaurant matching but not used in compatibility scoring
-3. ✅ **Increased interest weight** from 20% → 30%
-4. ✅ **Decreased hometown weight** from 10% → 5%
-5. ✅ **Added heat-weighted interest matching** (level 2/3 bonus)
-6. ✅ **Removed emotional score** (was hardcoded 70, not used)
-7. ✅ **Interests now from `user_interests` table** (not `interestsTop` field)
+2. ✅ **Removed food preferences from scoring** (cuisine, dietary, taste)
+3. ✅ **Pair weights updated**: chemistry 28%, interest 28%, language 12%, preference 15%, background 17%
+4. ✅ **Background score unified and explicit**: industry 30% + life stage 30% + hometown 20% + education 20%
+5. ✅ **Gender removed from pair-level background** (remains in group diversity)
+6. ✅ **Life stage affinity added** (PR #312): 7×7 asymmetric `LIFE_STAGE_AFFINITY` matrix via `workMode` / 人生阶段
+7. ✅ **Life stage added to group diversity** as 4th dimension (25% each: industry / gender / archetype / life stage)
+8. ✅ **Energy balance replaced by communication balance** (avg pairwise language score)
+9. ✅ **Heat-weighted interest matching** (level 2/3 bonus)
+10. ✅ **Interests from `user_interests` table** (not `interestsTop` field)
 
 ### Debugging Tips
 
@@ -635,10 +674,9 @@ energyBalance =
 - Check minimum group size (`minGroupSize` default 4)
 - Review pair scores (need avgScore ≥ 60 to add to group)
 
-**Energy imbalance:**
-- Check archetype distribution (avoid all high-energy or all low-energy)
-- Review `ARCHETYPE_ENERGY` values
-- Target groups with avgEnergy 50-70, stdDev <15
+**Low communication balance:**
+- Check `preferredLanguages` in event pool registrations
+- Members with no shared language get a pairwise language score of 30
 
 ## Attendee Card System
 

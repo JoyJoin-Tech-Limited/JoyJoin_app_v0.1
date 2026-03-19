@@ -423,7 +423,7 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   memberCount: integer("member_count").default(0),
   avgChemistryScore: integer("avg_chemistry_score"), // 平均化学反应分数
   diversityScore: integer("diversity_score"), // 多样性分数
-  energyBalance: integer("energy_balance"), // 能量平衡分数
+  communicationBalance: integer("energy_balance"), // 沟通平衡分数（原energy_balance列，现用于存储语言沟通兼容性分数）
   genderBalanceScore: integer("gender_balance_score"), // 性别平衡分数（0-100）
   overallScore: integer("overall_score"), // 综合分数
   temperatureLevel: varchar("temperature_level"), // 化学反应温度等级: fire | warm | mild | cold
