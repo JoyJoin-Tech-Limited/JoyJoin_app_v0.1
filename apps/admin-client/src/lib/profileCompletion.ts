@@ -4,19 +4,26 @@ export interface ProfileCompletionResult {
   missingFields: string[];
 }
 
+interface FieldCheck {
+  key: string;
+  label: string;
+  isArray?: boolean;
+  isBool?: boolean;
+}
+
 export function calculateProfileCompletion(user: any): ProfileCompletionResult {
   if (!user) return { percentage: 0, stars: 0, missingFields: [] };
   
-  const fieldsToCheck = [
+  const fieldsToCheck: FieldCheck[] = [
     { key: 'displayName', label: '昵称' },
     { key: 'gender', label: '性别' },
     { key: 'birthdate', label: '出生日期' },
     { key: 'currentCity', label: '城市' },
-    { key: 'occupation', label: '职业' },
-    { key: 'topInterests', label: '兴趣爱好', isArray: true },
+    { key: 'occupationId', label: '职业' },
+    { key: 'hasCompletedPersonalityTest', label: '人格测试', isBool: true },
     { key: 'educationLevel', label: '学历' },
-    { key: 'relationshipStatus', label: '感情状态' },
-    { key: 'intent', label: '社交意向' },
+    { key: 'hasCompletedInterestsCarousel', label: '兴趣偏好', isBool: true },
+    { key: 'intent', label: '社交意向', isArray: true },
   ];
   
   let filledCount = 0;
@@ -26,7 +33,9 @@ export function calculateProfileCompletion(user: any): ProfileCompletionResult {
     const value = user[field.key];
     const isFilled = field.isArray 
       ? Array.isArray(value) && value.length > 0
-      : value !== undefined && value !== null && value !== '';
+      : field.isBool
+        ? value === true
+        : value !== undefined && value !== null && value !== '';
     
     if (isFilled) {
       filledCount++;
