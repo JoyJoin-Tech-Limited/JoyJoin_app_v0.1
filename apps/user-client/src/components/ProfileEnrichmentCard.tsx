@@ -54,6 +54,9 @@ import type { AuthUser } from "@/hooks/useAuth";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
+// New key (v2) so users who dismissed the old card (bio/languages/dietary) will
+// see this revamped vibe-focused card. This is intentional: the content is
+// substantially different and warrants re-engagement.
 const DISMISS_KEY = "joyjoin_profile_enrichment_v2_dismissed";
 
 const TAGLINE_MAX_LENGTH = 100;
