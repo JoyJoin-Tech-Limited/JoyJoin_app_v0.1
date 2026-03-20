@@ -568,29 +568,6 @@ function calculateBackgroundDiversityScore(user1: UserWithProfile, user2: UserWi
 }
 
 /**
- * Calculate background diversity score (0-100)
- * Different industry, gender = higher score (encourages diversity)
- * ✅ UPDATED: Use industryNiche from 3-tier classification
- * ✅ UPDATED: Education removed — education is an AFFINITY signal, not a diversity dimension.
- * Note: Used for group-level diversity; pair-level uses calculateBackgroundDiversityScore instead.
- */
-function calculateDiversityScore(user1: UserWithProfile, user2: UserWithProfile): number {
-  let diversityPoints = 0;
-
-  // Different industry (primary diversity dimension)
-  if (user1.industryNiche && user2.industryNiche && user1.industryNiche !== user2.industryNiche) {
-    diversityPoints += 50;
-  }
-
-  // Different gender
-  if (user1.gender && user2.gender && user1.gender !== user2.gender) {
-    diversityPoints += 50;
-  }
-
-  return Math.min(diversityPoints, 100);
-}
-
-/**
  * 计算两个用户的配对兼容性分数 (0-100)
  * 
  * ✅ ACTIVE 匹配权重配置 (6维度):
