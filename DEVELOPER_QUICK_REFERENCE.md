@@ -646,6 +646,12 @@ overallScore =
   energyBalance × 0.15;      // Communication/energy balance
 ```
 
+> Note: The `energyBalance` dimension is also referred to as "沟通平衡" (communication balance) in product copy, as it measures social tempo rather than raw archetype energy.
+
+> **Note:** There are two separate matrix concepts in the codebase:
+> - **Archetype chemistry matrix** (`archetypeChemistry.ts`) — 12×12 personality compatibility
+> - **Life stage affinity matrix** (`LIFE_STAGE_AFFINITY` in `poolMatchingService.ts`) — 7×7 asymmetric `workMode` / 人生阶段 compatibility, introduced PR #312
+
 ### Temperature Levels
 
 ```typescript

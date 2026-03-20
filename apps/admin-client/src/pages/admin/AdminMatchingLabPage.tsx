@@ -68,8 +68,10 @@ interface UsersResponse {
 interface MatchGroup {
   groupId: string;
   userIds: string[];
+  avgPairScore?: number;
   avgChemistryScore: number;
   diversityScore: number;
+  energyBalance?: number;
   overallScore: number;
   users: User[];
 }
@@ -684,8 +686,9 @@ export default function AdminMatchingLabPage() {
                             </div>
                           </div>
                           <div className="flex gap-4 text-xs text-muted-foreground">
-                            <div>化学: {group.avgChemistryScore}</div>
+                            <div>配对: {group.avgPairScore ?? group.avgChemistryScore}</div>
                             <div>多样: {group.diversityScore}</div>
+                            <div>平衡: {group.energyBalance ?? '–'}</div>
                           </div>
                         </button>
 
@@ -694,8 +697,10 @@ export default function AdminMatchingLabPage() {
                           <div className="border-t px-3 pb-3 space-y-2 pt-2">
                             <div className="text-xs text-muted-foreground mb-1 font-medium">▼ 成员列表（组级得分仅供参考）</div>
                             <div className="flex flex-wrap gap-2 text-xs text-muted-foreground pb-1">
+                              <span>配对均分: <strong>{group.avgPairScore ?? '–'}</strong></span>
                               <span>组化学: <strong>{group.avgChemistryScore}</strong></span>
                               <span>组多样性: <strong>{group.diversityScore}</strong></span>
+                              <span>沟通平衡: <strong>{group.energyBalance ?? '–'}</strong></span>
                               <span>组总分: <strong>{group.overallScore}</strong></span>
                             </div>
                             {group.users.map((user) => (

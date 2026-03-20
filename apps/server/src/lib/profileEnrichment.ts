@@ -5,6 +5,8 @@ import { eq } from "drizzle-orm";
 interface RegistrationData {
   userId: string;
   eventIntent?: string[];
+  preferredLanguages?: string[];
+  dietaryRestrictions?: string[];
 }
 
 interface EnrichmentResult {
@@ -22,7 +24,9 @@ const ALLOWED_EVENT_INTENTS = new Set<string>([
   "flexible",
 ]);
 
-type UserProfileUpdates = Partial<Pick<typeof users.$inferInsert, "intent">>;
+type UserProfileUpdates = Partial<
+  Pick<typeof users.$inferInsert, "intent" | "preferredLanguages" | "dietaryRestrictions">
+>;
 
 /** Returns true when an array field is absent or empty. */
 function isArrayFieldEmpty(value: string[] | null | undefined): boolean {
@@ -43,6 +47,8 @@ export async function enrichProfileFromRegistration(
     where: eq(users.id, data.userId),
     columns: {
       intent: true,
+      preferredLanguages: true,
+      dietaryRestrictions: true,
     },
   });
 
@@ -64,6 +70,26 @@ export async function enrichProfileFromRegistration(
       result.fieldsUpdated.push("intent");
     } else {
       result.fieldsSkipped.push("intent");
+    }
+  }
+
+  // preferredLanguages: only fill if profile field is empty/null (save time on re-registration)
+  if (data.preferredLanguages?.length) {
+    if (isArrayFieldEmpty(user.preferredLanguages)) {
+      updates.preferredLanguages = data.preferredLanguages;
+      result.fieldsUpdated.push("preferredLanguages");
+    } else {
+      result.fieldsSkipped.push("preferredLanguages");
+    }
+  }
+
+  // dietaryRestrictions: only fill if profile field is empty/null
+  if (data.dietaryRestrictions?.length) {
+    if (isArrayFieldEmpty(user.dietaryRestrictions)) {
+      updates.dietaryRestrictions = data.dietaryRestrictions;
+      result.fieldsUpdated.push("dietaryRestrictions");
+    } else {
+      result.fieldsSkipped.push("dietaryRestrictions");
     }
   }
 

@@ -570,7 +570,6 @@ export default function AdminUsersPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1.5">
-                      <OnboardingStep done={userDetail.onboarding.hasCompletedRegistration} label="账号已激活" />
                       <OnboardingStep done={userDetail.onboarding.hasCompletedPersonalityTest} label="人格测试完成" />
                       <OnboardingStep done={userDetail.onboarding.profileEssentialComplete} label="基本资料完成" />
                       <OnboardingStep done={userDetail.onboarding.hasCompletedInterestsCarousel} label="兴趣偏好完成" />
