@@ -50,6 +50,7 @@ import {
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { RELATIONSHIP_STATUS_OPTIONS } from "@shared/constants";
 import type { AuthUser } from "@/hooks/useAuth";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -85,13 +86,8 @@ const VIBE_OPTIONS = [
 
 type TableVibeValue = typeof VIBE_OPTIONS[number]["value"];
 
-// Relationship status options (private, planning context)
-const RELATIONSHIP_OPTIONS = [
-  { value: "单身", label: "单身" },
-  { value: "恋爱中", label: "恋爱中" },
-  { value: "已婚/伴侣", label: "已婚/伴侣" },
-  { value: "不透露", label: "不透露" },
-] as const;
+// Relationship status options are sourced from @shared/constants (RELATIONSHIP_STATUS_OPTIONS)
+// to stay in sync with the full set supported by the schema (including 离异, 丧偶).
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -416,7 +412,7 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
                             <EnrichmentRow
                               icon={<Heart className="h-4 w-4" />}
                               label="感情状态"
-                              sublabel="仅用于活动规划参考，不公开显示"
+                              sublabel="用于匹配和契合点，不会出现在公开主页"
                               filled={false}
                               onClick={() => openFlow("relationshipStatus")}
                             />
@@ -610,21 +606,21 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
           <SheetHeader className="mb-5 text-left">
             <SheetTitle className="text-lg font-bold">感情状态</SheetTitle>
             <p className="text-sm text-muted-foreground">
-              选填 · 仅用于活动规划参考，不会公开显示给其他人
+              选填 · 用于活动匹配和同桌契合点，不会出现在公开个人主页
             </p>
           </SheetHeader>
 
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
-              {RELATIONSHIP_OPTIONS.map((opt) => {
-                const isSelected = draftRelationship === opt.value;
+              {RELATIONSHIP_STATUS_OPTIONS.map((value) => {
+                const isSelected = draftRelationship === value;
                 return (
                   <button
-                    key={opt.value}
+                    key={value}
                     type="button"
                     onClick={() =>
                       setDraftRelationship(
-                        isSelected ? "" : opt.value
+                        isSelected ? "" : value
                       )
                     }
                     className={cn(
@@ -634,7 +630,7 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
                         : "bg-background text-foreground border-border hover:border-primary/50"
                     )}
                   >
-                    {opt.label}
+                    {value}
                   </button>
                 );
               })}
