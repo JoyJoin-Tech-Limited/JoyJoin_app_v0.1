@@ -174,15 +174,25 @@ export const INTENT_FLEXIBLE_OPTION = {
   description: "我都感兴趣，帮我安排"
 } as const;
 
-/**
- * Returns the display label for an intent value.
- * Falls back to the raw value if not found.
- */
-export function getIntentLabel(value: string): string {
-  const option = INTENT_OPTIONS.find(o => o.value === value);
-  if (option) return option.label;
-  if (value === INTENT_FLEXIBLE_OPTION.value) return INTENT_FLEXIBLE_OPTION.label;
-  return value;
+/** Union of all valid icon hint strings used by intent options. */
+export type IntentIconHint = typeof INTENT_OPTIONS[number]["iconHint"] | typeof INTENT_FLEXIBLE_OPTION["iconHint"];
+
+/** All valid intent values (including flexible). */
+export const ALL_INTENT_VALUES = [
+  ...INTENT_OPTIONS.map((o) => o.value),
+  INTENT_FLEXIBLE_OPTION.value,
+] as const;
+
+/** Returns the Chinese display label for a given intent value. */
+export function getIntentLabel(intent: string): string {
+  const all = [...INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION];
+  return all.find((o) => o.value === intent)?.label ?? intent;
+}
+
+/** Returns the emoji for a given intent value. */
+export function getIntentEmoji(intent: string): string {
+  const all = [...INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION];
+  return all.find((o) => o.value === intent)?.emoji ?? "🎯";
 }
 
 // ============ 契合点系统 ============
