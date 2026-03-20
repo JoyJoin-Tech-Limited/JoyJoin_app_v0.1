@@ -29,8 +29,11 @@ export type OnboardingRoute =
  * Convert a server-calculated nextStep value to a concrete route path.
  * This is the primary routing function and should be preferred over
  * calculateOnboardingRoute whenever nextStep is available.
+ *
+ * Requires a known NextStepType. Handle undefined/null at the call site
+ * (e.g. redirect to /login if no auth state is available).
  */
-export function nextStepToRoute(nextStep: NextStepType | undefined): OnboardingRoute {
+export function nextStepToRoute(nextStep: NextStepType): OnboardingRoute {
   switch (nextStep) {
     case 'onboarding':
     case 'personality-test':

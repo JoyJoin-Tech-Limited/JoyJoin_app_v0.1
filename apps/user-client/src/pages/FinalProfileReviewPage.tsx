@@ -85,12 +85,18 @@ export default function FinalProfileReviewPage() {
       
       // Fetch refreshed auth state to read the server-calculated nextStep.
       // Invalidate first so we always get a fresh response (not a stale cache hit).
+      // The default queryFn returns null on 401, so type accordingly and handle that case.
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      const updatedUser = await queryClient.fetchQuery<AuthUser>({ queryKey: ["/api/auth/user"] });
+      const updatedUser = await queryClient.fetchQuery<AuthUser | null>({ queryKey: ["/api/auth/user"] });
       
-      // Navigate based on server truth; fall back to /discover for safety.
-      const destination = nextStepToRoute(updatedUser?.nextStep);
-      setLocation(destination);
+      if (!updatedUser?.nextStep) {
+        // Session expired or auth state unavailable — redirect to login for safety.
+        setLocation('/login');
+        return;
+      }
+
+      // Navigate based on refreshed server truth.
+      setLocation(nextStepToRoute(updatedUser.nextStep));
     } catch (error) {
       console.error("Error completing profile review:", error);
       toast({
