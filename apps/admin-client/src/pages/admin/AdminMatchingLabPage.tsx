@@ -26,6 +26,27 @@ interface MatchingConfig {
   isActive: boolean;
 }
 
+interface ActivePairScoreModel {
+  chemistryWeight: number;
+  interestWeight: number;
+  languageWeight: number;
+  preferenceWeight: number;
+  hometownWeight: number;
+  backgroundWeight: number;
+  groupScoreWeights: {
+    avgPairScore: number;
+    groupDiversity: number;
+    energyBalance: number;
+  };
+}
+
+const formatPercent = (weight?: number): string => {
+  if (weight === undefined || weight === null || Number.isNaN(weight)) {
+    return "—";
+  }
+  return `${Math.round(weight * 100)}%`;
+};
+
 interface User {
   id: string;
   firstName: string | null;
@@ -216,6 +237,17 @@ export default function AdminMatchingLabPage() {
     setSelectedUserIds(shuffled.slice(0, count).map(u => u.id));
   };
 
+  const { data: activePairModel } = useQuery<ActivePairScoreModel>({
+    queryKey: ["/api/admin/matching/active-pair-model"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/matching/active-pair-model");
+      if (!res.ok) {
+        throw new Error("Failed to load active pair model");
+      }
+      return res.json();
+    },
+  });
+
   if (configLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -252,7 +284,7 @@ export default function AdminMatchingLabPage() {
             <div className="rounded-lg border p-3 space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold">性格化学反应</span>
-                <Badge>28%</Badge>
+                <Badge>{formatPercent(activePairModel?.chemistryWeight)}</Badge>
               </div>
               <p className="text-xs text-muted-foreground">原型兼容性矩阵（Chemistry Matrix）</p>
             </div>
@@ -319,7 +351,11 @@ export default function AdminMatchingLabPage() {
             </div>
             <div>
               <p className="font-semibold text-foreground mb-1">小组综合得分</p>
-              <p>avgPairScore × 60% + groupDiversity × 25% + energyBalance × 15%</p>
+              <p>
+                avgPairScore × {formatPercent(activePairModel?.groupScoreWeights?.avgPairScore)} +{" "}
+                groupDiversity × {formatPercent(activePairModel?.groupScoreWeights?.groupDiversity)} +{" "}
+                energyBalance × {formatPercent(activePairModel?.groupScoreWeights?.energyBalance)}
+              </p>
               <p className="mt-1">groupDiversity 维度：行业 + 性别 + 原型 + 人生阶段（均为多样性信号）</p>
             </div>
           </div>
