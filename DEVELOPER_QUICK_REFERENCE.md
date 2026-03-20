@@ -607,12 +607,50 @@ Stage 2: AI Matching
 
 ### Matching Algorithm Formula
 
+#### Pair Compatibility Score (6 Dimensions)
+
+```typescript
+// ✅ ACTIVE weights (poolMatchingService.ts)
+pairScore =
+  chemistry           × 0.28 +   // 性格化学反应 — archetype chemistry matrix
+  interest            × 0.28 +   // 兴趣重叠度  — heat-weighted Jaccard (user_interests table)
+  socialAffinity      × 0.20 +   // 社交同频度  — life stage + education affinity + hometown (opt-in)
+  backgroundDiversity × 0.15 +   // 背景多样性  — industry + gender diversity
+  preference          × 0.05 +   // 活动偏好    — event intent / bar preferences (light signal)
+  language            × 0.04;    // 语言沟通    — common languages (light signal)
+```
+
+**Note — Language (4%):** 普通话覆盖率高，区分力有限，保留为轻量兼容信号。  
+**Note — Preference (5%):** 目前酒吧/饭店场景分化有限，保留为轻量场景适配信号。
+
+#### Social Affinity (社交同频度) — same-frequency signals
+- **Life stage affinity** (`workMode` / `LIFE_STAGE_AFFINITY` matrix — asymmetric 7×7, averaged both directions)
+- **Education affinity** (学历同频度 — ordinal-distance-based; same/nearby levels score higher, NOT a diversity reward)
+- **Hometown affinity** (同乡亲和力 — only when both users opted in)
+
+#### Background Diversity (背景多样性) — diversity signals
+- **Industry diversity** (行业多样性 — different niche = higher score)
+- **Gender diversity** (性别多样性 — different gender = higher score)
+- Education is NOT included here; it is an affinity signal.
+
+#### Matrix Distinction
+- **Chemistry Matrix** (`archetypeChemistry.ts`): 12×12 archetype compatibility, scores 0–100
+- **Life Stage Affinity Matrix** (`LIFE_STAGE_AFFINITY`, `poolMatchingService.ts`): 7×7 workMode affinity, asymmetric, averaged forward + reverse for pair score
+
+#### Group Overall Score
+
 ```typescript
 overallScore = 
   avgPairScore × 0.60 +      // Average pairwise compatibility
-  groupDiversity × 0.25 +    // Archetype diversity bonus
-  energyBalance × 0.15;      // Energy level balance
+  groupDiversity × 0.25 +    // Group diversity (industries, genders, archetypes, life stages)
+  energyBalance × 0.15;      // Communication/energy balance
 ```
+
+> Note: The `energyBalance` dimension is also referred to as "沟通平衡" (communication balance) in product copy, as it measures social tempo rather than raw archetype energy.
+
+> **Note:** There are two separate matrix concepts in the codebase:
+> - **Archetype chemistry matrix** (`archetypeChemistry.ts`) — 12×12 personality compatibility
+> - **Life stage affinity matrix** (`LIFE_STAGE_AFFINITY` in `poolMatchingService.ts`) — 7×7 asymmetric `workMode` / 人生阶段 compatibility, introduced PR #312
 
 ### Temperature Levels
 
