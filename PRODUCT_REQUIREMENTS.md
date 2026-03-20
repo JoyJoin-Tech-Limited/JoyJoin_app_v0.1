@@ -87,8 +87,8 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 **2. Matching Algorithm Fix** 🔧
 - Corrected critical diversity double-counting bug
-- Updated group scoring formula: **60% pair compatibility + 25% diversity + 15% communication balance**
-- Current pair score: chemistry 28% + interest 28% + background 17% + preference 15% + language 12%; see `apps/server/src/poolMatchingService.ts`
+- Updated group scoring formula: **60% pair compatibility + 25% diversity + 15% energy balance**
+- Current pair score uses 6-dimension weighted model (Chemistry 28%, Interest 28%, Social Affinity 20%, Background Diversity 15%, Preference 5%, Language 4%); see `apps/server/src/poolMatchingService.ts` for active implementation
 
 **3. Real-time Dynamic Matching System** ⚡
 - Three-tier threshold system with time decay algorithm
@@ -540,12 +540,13 @@ Visual:
 ```typescript
 Calculation:
   - User's average match with all other attendees
-  - 5-dimensional scoring:
-    * Personality (40%): Based on 14×14 chemistry matrix
-    * Interests (25%): Jaccard similarity of interest tags
-    * Background (15%): Education/career alignment
-    * Conversation (10%): Openness + Extraversion scores
-    * Intent (10%): Event participation motivation
+  - 6-dimensional scoring (active model):
+    * Chemistry (28%): Archetype chemistry matrix
+    * Interest (28%): Heat-weighted Jaccard similarity (user_interests table)
+    * Social Affinity (20%): Life stage + education affinity + hometown (opt-in)
+    * Background Diversity (15%): Industry + gender diversity
+    * Preference (5%): Event intent / bar preferences (light signal)
+    * Language (4%): Common languages (light signal)
   - Range: 75-98%
 
 Visual:
