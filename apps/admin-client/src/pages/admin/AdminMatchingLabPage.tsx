@@ -26,6 +26,27 @@ interface MatchingConfig {
   isActive: boolean;
 }
 
+interface ActivePairScoreModel {
+  chemistryWeight: number;
+  interestWeight: number;
+  languageWeight: number;
+  preferenceWeight: number;
+  hometownWeight: number;
+  backgroundWeight: number;
+  groupScoreWeights: {
+    avgPairScore: number;
+    groupDiversity: number;
+    energyBalance: number;
+  };
+}
+
+const formatPercent = (weight?: number): string => {
+  if (weight === undefined || weight === null || Number.isNaN(weight)) {
+    return "—";
+  }
+  return `${Math.round(weight * 100)}%`;
+};
+
 interface User {
   id: string;
   firstName: string | null;
@@ -218,6 +239,17 @@ export default function AdminMatchingLabPage() {
     setSelectedUserIds(shuffled.slice(0, count).map(u => u.id));
   };
 
+  const { data: activePairModel } = useQuery<ActivePairScoreModel>({
+    queryKey: ["/api/admin/matching/active-pair-model"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/matching/active-pair-model");
+      if (!res.ok) {
+        throw new Error("Failed to load active pair model");
+      }
+      return res.json();
+    },
+  });
+
   if (configLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -233,47 +265,101 @@ export default function AdminMatchingLabPage() {
         <p className="text-muted-foreground mt-1">调整AI匹配算法参数和测试场景</p>
       </div>
 
-      {/* 活跃算法公式说明 */}
-      <Card className="border-blue-200 bg-blue-50/50" data-testid="card-active-formula">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Zap className="h-4 w-4 text-blue-600" />
-            当前活跃算法公式（仅供参考，非可调权重）
-          </CardTitle>
-          <CardDescription>配对分数 = 以下5个维度的加权平均</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-center text-sm">
-            <div className="bg-white rounded-lg p-2 border">
-              <div className="text-xl font-bold text-purple-600">28%</div>
-              <div className="text-muted-foreground text-xs mt-1">性格化学反应</div>
-              <div className="text-[10px] text-muted-foreground">原型兼容矩阵</div>
+      {/* Active Factor Structure — full-width info card */}
+      <Card data-testid="card-active-factor-structure">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Zap className="h-5 w-5 text-primary" />
             </div>
-            <div className="bg-white rounded-lg p-2 border">
-              <div className="text-xl font-bold text-green-600">28%</div>
-              <div className="text-muted-foreground text-xs mt-1">兴趣重叠</div>
-              <div className="text-[10px] text-muted-foreground">热度加权匹配</div>
-            </div>
-            <div className="bg-white rounded-lg p-2 border">
-              <div className="text-xl font-bold text-orange-600">15%</div>
-              <div className="text-muted-foreground text-xs mt-1">活动偏好</div>
-              <div className="text-[10px] text-muted-foreground">社交目的 + 酒局偏好</div>
-            </div>
-            <div className="bg-white rounded-lg p-2 border">
-              <div className="text-xl font-bold text-blue-600">12%</div>
-              <div className="text-muted-foreground text-xs mt-1">语言沟通</div>
-              <div className="text-[10px] text-muted-foreground">共同语言</div>
-            </div>
-            <div className="bg-white rounded-lg p-2 border">
-              <div className="text-xl font-bold text-amber-600">17%</div>
-              <div className="text-muted-foreground text-xs mt-1">背景评估</div>
-              <div className="text-[10px] text-muted-foreground">人生阶段亲和 + 学历亲和 + 行业多样 + 性别多样 + 同乡</div>
+            <div>
+              <CardTitle>当前配对因子结构（Active Pair-Score Model）</CardTitle>
+              <CardDescription>
+                poolMatchingService.ts 中实际运行的 6 维度权重——此卡为只读参考，修改需更新服务端代码。
+              </CardDescription>
             </div>
           </div>
-          <div className="mt-3 pt-3 border-t text-xs text-muted-foreground space-y-1">
-            <div><span className="font-medium">组分数</span> = 配对均分×60% + 多样性×25% + 沟通平衡×15%</div>
-            <div><span className="font-medium">学历</span>：亲和度信号（同频度），非多样性奖励 — 相近学历得分更高</div>
-            <div><span className="font-medium">人生阶段</span>：非对称亲和矩阵（7×7），取双向均值</div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Chemistry */}
+            <div className="rounded-lg border p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">性格化学反应</span>
+                <Badge>{formatPercent(activePairModel?.chemistryWeight)}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">原型兼容性矩阵（Chemistry Matrix）</p>
+            </div>
+            {/* Interest */}
+            <div className="rounded-lg border p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">兴趣重叠度</span>
+                <Badge>28%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">Heat 加权 Jaccard 相似度（user_interests 表）</p>
+            </div>
+            {/* Social Affinity */}
+            <div className="rounded-lg border p-3 space-y-1 bg-blue-50/50 border-blue-200">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">社交同频度</span>
+                <Badge variant="secondary">20%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                同频信号（相似 → 高分）：人生阶段亲和力（workMode / LIFE_STAGE_AFFINITY 矩阵）
+                + 学历同频度（学历接近 = 高分，非多样性奖励）
+                + 同乡亲和力（双方启用时）
+              </p>
+            </div>
+            {/* Background Diversity */}
+            <div className="rounded-lg border p-3 space-y-1 bg-orange-50/50 border-orange-200">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">背景多样性</span>
+                <Badge variant="secondary">15%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                多样性信号（不同 → 高分）：行业多样性 + 性别多样性。
+                <span className="font-medium text-orange-700"> 注：学历已移至社交同频，不再作为多样性维度。</span>
+              </p>
+            </div>
+            {/* Preference */}
+            <div className="rounded-lg border p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">活动偏好</span>
+                <Badge variant="outline">5%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                社交目的 + 酒局主题/饮酒程度（低权重：现有酒吧/饭店场景分化力有限）
+              </p>
+            </div>
+            {/* Language */}
+            <div className="rounded-lg border p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">语言沟通</span>
+                <Badge variant="outline">4%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                共同语言覆盖（低权重：普通话普及率高，区分度有限）
+              </p>
+            </div>
+          </div>
+          <Separator className="my-4" />
+          <div className="grid gap-3 sm:grid-cols-2 text-xs text-muted-foreground">
+            <div>
+              <p className="font-semibold text-foreground mb-1">矩阵说明</p>
+              <ul className="space-y-0.5 list-disc list-inside">
+                <li><span className="font-medium">原型兼容性矩阵</span>：archetypeChemistry.ts — 12×12，分数 0–100</li>
+                <li><span className="font-medium">人生阶段亲和力矩阵</span>：LIFE_STAGE_AFFINITY（7×7，非对称，双向平均）</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground mb-1">小组综合得分</p>
+              <p>
+                avgPairScore × {formatPercent(activePairModel?.groupScoreWeights?.avgPairScore)} +{" "}
+                groupDiversity × {formatPercent(activePairModel?.groupScoreWeights?.groupDiversity)} +{" "}
+                energyBalance × {formatPercent(activePairModel?.groupScoreWeights?.energyBalance)}
+              </p>
+              <p className="mt-1">groupDiversity 维度：行业 + 性别 + 原型 + 人生阶段（均为多样性信号）</p>
+            </div>
           </div>
         </CardContent>
       </Card>

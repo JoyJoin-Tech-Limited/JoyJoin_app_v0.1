@@ -6,12 +6,13 @@
  * 
  * 匹配逻辑：
  * 1. 硬约束过滤：检查用户是否符合活动池的硬性限制（性别、行业、年龄等）
- * 2. 软约束评分：基于5个维度计算用户之间的匹配分数
- *    - Personality Chemistry (性格兼容性): 28%
- *    - Interest Overlap (兴趣重叠度): 28%
- *    - Background Score (背景评估 — 行业多样性 + 人生阶段亲和力 + 同乡 + 学历): 17% (ALWAYS ACTIVE)
- *    - Conversation Compatibility (语言沟通): 12%
- *    - Event Preferences (活动偏好: 社交目的 + 酒局偏好): 15%
+ * 2. 软约束评分：基于6个维度计算用户之间的配对兼容性分数
+ *    - Chemistry     (性格化学反应):  28%  — 原型兼容性矩阵
+ *    - Interest      (兴趣重叠度):    28%  — Heat 加权 Jaccard 相似度
+ *    - Social Affinity (社交同频度):  20%  — 人生阶段亲和力 + 学历同频 + 同乡亲和（可选）
+ *    - Background Diversity (背景多样性): 15% — 行业多样性 + 性别多样性
+ *    - Preference    (活动偏好):       5%  — 社交目的 + 酒局偏好（低权重：场景分化力有限）
+ *    - Language      (语言沟通):       4%  — 语言共同覆盖（低权重：普通话普及率高，区分度低）
  * 3. 智能分组：使用贪婪+优化算法形成高质量小组
  */
 
@@ -97,7 +98,7 @@ export interface UserWithProfile {
 
 export interface MatchGroup {
   members: UserWithProfile[];
-  avgPairScore: number;  // 平均配对兼容性分数（chemistry + interest + preference + language）
+  avgPairScore: number;  // 平均配对兼容性分数（chemistry + interest + socialAffinity + backgroundDiversity + preference + language）
   avgChemistryScore: number;  // 平均化学反应分数
   diversityScore: number;  // 小组多样性分数
   communicationBalance: number;  // 沟通平衡分数（0-100，评估小组语言沟通兼容性）
@@ -477,110 +478,107 @@ function calculateLifeStageAffinity(user1: UserWithProfile, user2: UserWithProfi
 }
 
 /**
- * Calculate education affinity score (同频度) between two users (0-100).
- * Uses ordinal proximity: same or nearby education levels score higher;
- * large gaps score lower. This is a same-frequency AFFINITY signal,
- * NOT a diversity reward — closer levels = better score.
- *
- * Ordinal scale (from EDU_ORDINAL in @shared/constants):
- *   高中及以下=1, 大专/职业培训=2, 本科=3, 硕士=4, 博士=5
- *
- * Score mapping: 100 - gap * 20
- *   gap 0 (same level)  → 100
- *   gap 1 (e.g. 本科↔硕士) → 80
- *   gap 2 (e.g. 大专↔硕士)  → 60
- *   gap 3 (e.g. 高中↔博士)  → 40
- *   gap 4 (max distance)    → 20
- *
- * Returns null if either label is missing or unmapped — caller must omit
- * this factor from the average (do NOT substitute a neutral 50).
+ * Education level ordinal mapping for proximity-based affinity scoring.
+ * Closer ordinal values → higher affinity score (同频).
+ * 职业培训 and 大专 share ordinal 1 as parallel vocational/associate tracks at the same level.
  */
-export function calculateEducationAffinityScore(edu1: string | null, edu2: string | null): number | null {
-  if (!edu1 || !edu2) return null; // missing data — skip factor
-  const ord1 = EDU_ORDINAL[edu1];
-  const ord2 = EDU_ORDINAL[edu2];
-  if (ord1 === undefined || ord2 === undefined) return null; // unknown label — skip factor
-  const gap = Math.abs(ord1 - ord2);
-  return Math.max(20, 100 - gap * 20);
+const EDUCATION_ORDINAL: Record<string, number> = {
+  "高中及以下": 0,
+  "职业培训": 1,
+  "大专": 1,   // parallel vocational track — same level as 职业培训
+  "本科": 2,
+  "硕士": 3,
+  "博士": 4,
+};
+
+/**
+ * Calculate education affinity score (0-100).
+ * AFFINITY model: same or nearby education level = higher score (学历同频度).
+ * This is NOT a diversity signal — closer levels score better.
+ */
+function calculateEducationAffinityScore(edu1: string, edu2: string): number {
+  const ord1 = EDUCATION_ORDINAL[edu1] ?? -1;
+  const ord2 = EDUCATION_ORDINAL[edu2] ?? -1;
+  if (ord1 === -1 || ord2 === -1) return 50; // unknown level → neutral
+  const distance = Math.abs(ord1 - ord2);
+  if (distance === 0) return 100;
+  if (distance === 1) return 75;
+  if (distance === 2) return 50;
+  return 25; // distance >= 3
 }
 
 /**
- * Calculate unified background score (0-100)
- * Fixed-weight breakdown:
- *   Industry diversity:  30% (different = 70, same = 30)
- *   Life stage affinity: 30% (asymmetric LIFE_STAGE_AFFINITY matrix via workMode / 人生阶段)
- *   Hometown affinity:   20% when both opted in; redistributed to industry+life stage when not
- *   Education diversity: 20% (different = 60, same = 30)
- * Note: Gender is no longer part of pair-level background; it is captured in group diversity.
+ * Calculate Social Affinity score (0-100) — 社交同频度
+ * Captures same-frequency / resonance-style signals:
+ *   - Life stage affinity (人生阶段亲和力, from LIFE_STAGE_AFFINITY matrix)
+ *   - Education affinity (学历同频度, ordinal-distance-based — NOT diversity)
+ *   - Hometown affinity (同乡亲和力, only when both opted in)
  */
-function calculateBackgroundScore(user1: UserWithProfile, user2: UserWithProfile): number {
-  // Use neutral defaults when data is missing
-  const industryScore = (user1.industryNiche && user2.industryNiche)
-    ? (user1.industryNiche !== user2.industryNiche ? 70 : 30)
-    : 50;
+function calculateSocialAffinityScore(user1: UserWithProfile, user2: UserWithProfile): number {
+  let score = 0;
+  let factors = 0;
 
-  const lifeStageScore = (user1.workMode && user2.workMode)
-    ? calculateLifeStageAffinity(user1, user2)
-    : 50;
+  // Life stage affinity: 0-100 (from LIFE_STAGE_AFFINITY matrix)
+  if (user1.workMode && user2.workMode) {
+    score += calculateLifeStageAffinity(user1, user2);
+    factors++;
+  }
 
-  const educationScore = (user1.educationLevel && user2.educationLevel)
-    ? (user1.educationLevel !== user2.educationLevel ? 60 : 30)
-    : 50;
+  // Education affinity: 0-100 (ordinal proximity, same level = 100)
+  if (user1.educationLevel && user2.educationLevel) {
+    score += calculateEducationAffinityScore(user1.educationLevel, user2.educationLevel);
+    factors++;
+  }
 
-  const hometownOptedIn = user1.hometownAffinityOptin && user2.hometownAffinityOptin;
-
-  if (hometownOptedIn) {
-    // All 4 factors: industry 30% + life stage 30% + hometown 20% + education 20%
-    const hometownScore = calculateHometownAffinityScore(user1, user2);
-    return Math.round(
-      industryScore  * 0.30 +
-      lifeStageScore * 0.30 +
-      hometownScore  * 0.20 +
-      educationScore * 0.20
-    );
-  } else {
-    // Hometown not opted in: redistribute its 20% equally to industry and life stage
-    return Math.round(
-      industryScore  * 0.40 +
-      lifeStageScore * 0.40 +
-      educationScore * 0.20
-    );
+  // Hometown affinity: 0-100 (only when both opted in)
+  if (user1.hometownAffinityOptin && user2.hometownAffinityOptin) {
+    score += calculateHometownAffinityScore(user1, user2);
+    factors++;
   }
 }
 
 /**
- * Calculate background diversity score (0-100)
- * Evaluates diversity across industries and gender at the pair level.
- * ✅ UPDATED: Use industryNiche from 3-tier classification.
- * Note: Used for group-level diversity; pair-level uses calculateBackgroundScore instead.
- * Note: Education is NO LONGER a diversity dimension — it is an affinity signal handled
- * by calculateEducationAffinityScore() inside calculateBackgroundScore().
+ * Calculate Background Diversity score (0-100) — 背景多样性
+ * Captures diversity-oriented dimensions (different background = higher score):
+ *   - Industry diversity (行业多样性)
+ *   - Gender diversity (性别多样性)
+ * Note: Education is an AFFINITY signal (see calculateSocialAffinityScore), not diversity.
  */
-function calculateDiversityScore(user1: UserWithProfile, user2: UserWithProfile): number {
-  let diversityPoints = 0;
+const DIVERSITY_DIFFERENT_SCORE = 70;
+const DIVERSITY_SAME_SCORE = 30;
 
-  // Different industry +40 (primary diversity dimension)
-  if (user1.industryNiche && user2.industryNiche && user1.industryNiche !== user2.industryNiche) {
-    diversityPoints += 40;
+function calculateBackgroundDiversityScore(user1: UserWithProfile, user2: UserWithProfile): number {
+  let score = 0;
+  let factors = 0;
+
+  // Industry diversity: different industry = higher score
+  if (user1.industryNiche && user2.industryNiche) {
+    score += user1.industryNiche !== user2.industryNiche ? DIVERSITY_DIFFERENT_SCORE : DIVERSITY_SAME_SCORE;
+    factors++;
   }
 
-  // Different gender +30
-  if (user1.gender && user2.gender && user1.gender !== user2.gender) {
-    diversityPoints += 30;
+  // Gender diversity: different gender = higher score
+  if (user1.gender && user2.gender) {
+    score += user1.gender !== user2.gender ? DIVERSITY_DIFFERENT_SCORE : DIVERSITY_SAME_SCORE;
+    factors++;
   }
 
-  return Math.min(diversityPoints, 100);
+  return factors > 0 ? Math.round(score / factors) : 50;
 }
 
 /**
  * 计算两个用户的配对兼容性分数 (0-100)
  * 
- * 匹配权重配置:
- * - Chemistry (性格化学反应): 28%
- * - Interest (兴趣重叠): 28%
- * - Preference (活动偏好): 15%
- * - Language (语言沟通): 12%
- * - Background (背景评估 — 含人生阶段亲和力 + 同乡 + 行业多样性 + 学历亲和度[同频度] + 性别多样性): 17% (ALWAYS ACTIVE)
+ * ✅ ACTIVE 匹配权重配置 (6维度):
+ * - Chemistry          (性格化学反应):  28%  — 原型兼容性矩阵
+ * - Interest           (兴趣重叠度):    28%  — Heat 加权 Jaccard 相似度
+ * - Social Affinity    (社交同频度):    20%  — 人生阶段亲和力 + 学历同频 + 同乡亲和（可选）
+ * - Background Diversity (背景多样性): 15%  — 行业多样性 + 性别多样性
+ * - Preference         (活动偏好):       5%  — 社交目的 + 酒局偏好
+ * - Language           (语言沟通):       4%  — 语言共同覆盖
+ * 
+ * Note — Language (4%): 普通话覆盖率高，语言维度区分力有限，保留为轻量兼容信号。
+ * Note — Preference (5%): 目前酒吧/饭店活动场景分化有限，保留为轻量场景适配信号。
  */
 async function calculatePairScore(user1: UserWithProfile, user2: UserWithProfile): Promise<number> {
   const chemistry = calculateChemistryScore(user1, user2);
@@ -588,31 +586,35 @@ async function calculatePairScore(user1: UserWithProfile, user2: UserWithProfile
   const language = calculateLanguageScore(user1, user2);
   const preference = calculatePreferenceScore(user1, user2);
 
-  // ✅ UPDATED: Unified background score (includes industry diversity, life stage affinity,
-  // hometown when opted in, education affinity [同频度 — NOT diversity], gender diversity). ALWAYS ACTIVE at 17%.
-  const background = calculateBackgroundScore(user1, user2);
+  // Social Affinity: life stage affinity + education affinity + hometown (when opted in)
+  const socialAffinity = calculateSocialAffinityScore(user1, user2);
+
+  // Background Diversity: industry diversity + gender diversity
+  const backgroundDiversity = calculateBackgroundDiversityScore(user1, user2);
 
   const weights = {
-    chemistry: 0.28,    // 性格兼容性 28%
-    interest: 0.28,     // 兴趣重叠 28%
-    language: 0.12,     // 语言沟通 12%
-    preference: 0.15,   // 活动偏好 15%
-    background: 0.17,   // 背景评估 17% (ALWAYS ACTIVE — hometown folded in)
+    chemistry:           0.28,  // 性格化学反应 28%
+    interest:            0.28,  // 兴趣重叠度 28%
+    socialAffinity:      0.20,  // 社交同频度 20%
+    backgroundDiversity: 0.15,  // 背景多样性 15%
+    preference:          0.05,  // 活动偏好 5%
+    language:            0.04,  // 语言沟通 4%
   };
 
   const totalScore =
-    chemistry * weights.chemistry +
-    interest * weights.interest +
-    language * weights.language +
-    preference * weights.preference +
-    background * weights.background;
+    chemistry           * weights.chemistry +
+    interest            * weights.interest +
+    socialAffinity      * weights.socialAffinity +
+    backgroundDiversity * weights.backgroundDiversity +
+    preference          * weights.preference +
+    language            * weights.language;
 
   return Math.round(totalScore);
 }
 
 /**
  * 计算小组内所有成员的平均配对兼容性分数
- * 包含：chemistry + interest + preference + language（不含diversity）
+ * 包含所有6个维度：chemistry + interest + socialAffinity + backgroundDiversity + preference + language
  */
 async function calculateGroupPairScore(members: UserWithProfile[]): Promise<number> {
   if (members.length < 2) return 0;

@@ -82,34 +82,37 @@ npm run dev              # Start on http://localhost:5000
 
 ---
 
-## 🔀 Pool Matching Algorithm
+## 🔀 Pool Matching Algorithm — Active Pair-Score Model (6 Dimensions)
 
-**Pair Scoring** (5 dimensions, always active):
-```
-├── Chemistry (archetype):          28%   // archetypeChemistry.ts
-├── Interest (topics + heat):       28%   // user_interests table, heat-weighted Jaccard
-├── Language:                       12%   // common languages
-├── Preference (intent + bar):      15%   // dining/bar event preferences
-└── Background (unified):           17%   // explicit fixed-weight sub-score
-    ├── Industry diversity:         ~30%
-    ├── Life stage affinity:        ~30%  (workMode / 人生阶段, PR #312)
-    ├── Hometown affinity:          ~20%  (when both opted in)
-    └── Education diversity:        ~20%
-```
-
-> **Note:** There are two distinct matrix concepts:
-> - **Archetype chemistry matrix** (`archetypeChemistry.ts`) — 12×12 archetype ↔ archetype compatibility
-> - **Life stage affinity matrix** (`LIFE_STAGE_AFFINITY` in `poolMatchingService.ts`) — 7×7 asymmetric `workMode` / 人生阶段 matrix (added PR #312)
-
-**Group Scoring:**
+**Active weights** (`apps/server/src/poolMatchingService.ts`):
 ```typescript
-overallScore =
-  avgPairScore         × 0.60 +
-  groupDiversityScore  × 0.25 +   // Industry + Gender + Archetype + Life Stage (25% each)
-  communicationBalance × 0.15;    // Avg pairwise language score
+{
+  chemistry:           28%,  // 性格化学反应 — archetype chemistry matrix
+  interest:            28%,  // 兴趣重叠度  — heat-weighted Jaccard (user_interests table)
+  socialAffinity:      20%,  // 社交同频度  — life stage + education affinity + hometown (opt-in)
+  backgroundDiversity: 15%,  // 背景多样性  — industry + gender diversity
+  preference:           5%,  // 活动偏好    — event intent / bar preferences (light signal)
+  language:             4%,  // 语言沟通    — common languages (light signal)
+}
 ```
 
-**File:** `apps/server/src/poolMatchingService.ts`
+**Social Affinity (同频信号 — same/nearby = higher score):**
+- Life stage affinity (`workMode` / `LIFE_STAGE_AFFINITY` matrix)
+- Education affinity (学历同频度 — ordinal distance; same level = 100, NOT diversity)
+- Hometown affinity (opt-in only)
+
+**Background Diversity (多样性信号 — different = higher score):**
+- Industry diversity + Gender diversity
+- Education is NOT here — it is an affinity signal.
+
+**Why Language and Preference are reduced:**
+- Language (4%): 普通话普及率高，区分力有限
+- Preference (5%): 现有酒吧/饭店场景分化有限
+
+**Group Overall Score:**
+```
+overallScore = avgPairScore × 60% + groupDiversity × 25% + energyBalance × 15%
+```
 
 **Test in Admin:** `/admin/matching-lab`
 
