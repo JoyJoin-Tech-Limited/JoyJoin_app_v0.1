@@ -102,7 +102,7 @@ npm run dev              # Start on http://localhost:5000
 - Hometown affinity (opt-in only)
 
 **Background Diversity (多样性信号 — different = higher score):**
-- Industry diversity | Gender diversity
+- Industry diversity + Gender diversity
 - Education is NOT here — it is an affinity signal.
 
 **Why Language and Preference are reduced:**
