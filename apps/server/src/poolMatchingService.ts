@@ -517,7 +517,7 @@ function calculateSocialAffinityScore(user1: UserWithProfile, user2: UserWithPro
   let score = 0;
   let factors = 0;
 
-  // Life stage affinity: 0-100 (from aspiration matrix)
+  // Life stage affinity: 0-100 (from LIFE_STAGE_AFFINITY matrix)
   if (user1.workMode && user2.workMode) {
     score += calculateLifeStageAffinity(user1, user2);
     factors++;
