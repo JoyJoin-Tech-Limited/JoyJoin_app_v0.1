@@ -23,6 +23,8 @@ import { useToast } from "@/hooks/use-toast";
 import { archetypeConfig } from "@/lib/archetypes";
 import { getArchetypeAvatar } from "@/lib/archetypeAdapter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { nextStepToRoute } from "@/hooks/useOnboardingRoute";
+import type { AuthUser } from "@/hooks/useAuth";
 
 type Phase = "analyzing" | "complete";
 
@@ -81,13 +83,20 @@ export default function FinalProfileReviewPage() {
       // Mark profile review as seen on server
       await apiRequest("POST", "/api/profile-review/complete");
       
-      // Invalidate auth user query to get updated nextStep
+      // Fetch refreshed auth state to read the server-calculated nextStep.
+      // Invalidate first so we always get a fresh response (not a stale cache hit).
+      // The default queryFn returns null on 401, so type accordingly and handle that case.
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      const updatedUser = await queryClient.fetchQuery<AuthUser | null>({ queryKey: ["/api/auth/user"] });
       
-      // Warm the cache so the Discover page loads instantly after navigation
-      await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] });
-      
-      setLocation('/discover');
+      if (!updatedUser?.nextStep) {
+        // Session expired or auth state unavailable — redirect to login for safety.
+        setLocation('/login');
+        return;
+      }
+
+      // Navigate based on refreshed server truth.
+      setLocation(nextStepToRoute(updatedUser.nextStep));
     } catch (error) {
       console.error("Error completing profile review:", error);
       toast({

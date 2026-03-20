@@ -11,6 +11,21 @@ export type Gender = typeof GENDER_OPTIONS[number];
 export const EDUCATION_LEVEL_OPTIONS = ["高中及以下", "大专", "本科", "硕士", "博士", "职业培训"] as const;
 export type EducationLevel = typeof EDUCATION_LEVEL_OPTIONS[number];
 
+/**
+ * Ordinal proximity mapping for education affinity scoring (同频度).
+ * Used by calculateEducationAffinityScore() to measure same-frequency closeness.
+ * 职业培训 is treated as ordinal 2 (same tier as 大专) as it is a non-linear vocational track.
+ * Labels not in this map are treated as unknown → factor skipped in background score average.
+ */
+export const EDU_ORDINAL: Partial<Record<EducationLevel, number>> = {
+  "高中及以下": 1,
+  "大专": 2,
+  "职业培训": 2,  // vocational track, same tier as 大专
+  "本科": 3,
+  "硕士": 4,
+  "博士": 5,
+};
+
 // Seniority options (deprecated - use WORK_MODE_OPTIONS)
 export const SENIORITY_OPTIONS = ["实习生", "初级", "中级", "高级", "资深", "创始人", "高管"] as const;
 export type Seniority = typeof SENIORITY_OPTIONS[number];

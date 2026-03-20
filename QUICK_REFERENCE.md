@@ -82,23 +82,37 @@ npm run dev              # Start on http://localhost:5000
 
 ---
 
-## 🔀 7-Dimension Pool Matching Algorithm
+## 🔀 Pool Matching Algorithm — Active Pair-Score Model (6 Dimensions)
 
-> ⚠️ The "5-dimensional" algorithm described in older docs referred to the blind-box event matcher. The **current** matching algorithm for event pools uses 7 dimensions.
-
-**Default Weights (hometown enabled):**
+**Active weights** (`apps/server/src/poolMatchingService.ts`):
 ```typescript
 {
-  chemistry: 30%,     // Archetype compatibility matrix
-  interest: 30%,      // Heat-weighted Jaccard similarity (user_interests table)
-  language: 15%,      // Common languages
-  preference: 15%,    // Event-specific preferences (dining/bar intent)
-  hometown: 5%,       // Hometown affinity (opt-in only)
-  background: 5%,     // Background diversity (industry/education/gender)
+  chemistry:           28%,  // 性格化学反应 — archetype chemistry matrix
+  interest:            28%,  // 兴趣重叠度  — heat-weighted Jaccard (user_interests table)
+  socialAffinity:      20%,  // 社交同频度  — life stage + education affinity + hometown (opt-in)
+  backgroundDiversity: 15%,  // 背景多样性  — industry + gender diversity
+  preference:           5%,  // 活动偏好    — event intent / bar preferences (light signal)
+  language:             4%,  // 语言沟通    — common languages (light signal)
 }
 ```
 
-**File:** `apps/server/src/poolMatchingService.ts`
+**Social Affinity (同频信号 — same/nearby = higher score):**
+- Life stage affinity (`workMode` / `LIFE_STAGE_AFFINITY` matrix)
+- Education affinity (学历同频度 — ordinal distance; same level = 100, NOT diversity)
+- Hometown affinity (opt-in only)
+
+**Background Diversity (多样性信号 — different = higher score):**
+- Industry diversity + Gender diversity
+- Education is NOT here — it is an affinity signal.
+
+**Why Language and Preference are reduced:**
+- Language (4%): 普通话普及率高，区分力有限
+- Preference (5%): 现有酒吧/饭店场景分化有限
+
+**Group Overall Score:**
+```
+overallScore = avgPairScore × 60% + groupDiversity × 25% + energyBalance × 15%
+```
 
 **Test in Admin:** `/admin/matching-lab`
 
