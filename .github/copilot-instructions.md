@@ -95,7 +95,7 @@ npm run db:push --force  # Force sync (use carefully)
 
 1. **Onboarding Flow** — state-driven via `nextStep` from server; see Onboarding Flow Architecture section
 2. **Personality Test V4** — 8–16 adaptive questions, anonymous pre-auth; see `PersonalityTestPageV4.tsx`
-3. **Pool Matching** — 7-dimension weighted scoring; see `poolMatchingService.ts`
+3. **Pool Matching** — 5-dimension pair scoring + group scoring; see `poolMatchingService.ts`
 4. **Social Icebreaker** — primary in-event multi-phase session; see `docs/icebreaker-system.md`
 5. **WeChat Auth** — Mini Program `wx.login()` + OAuth2 web flow; see `wechatAuth.ts`
 6. **BottomNav Smart Routing** — center button dynamically routes based on user's current activity state
@@ -477,21 +477,20 @@ The matching algorithm calculates compatibility between users using **6 weighted
 
 #### 1. Chemistry Score (28%) - `calculateChemistryScore()`
 
-Based on archetype compatibility matrix from `archetypeChemistry.ts`:
+#### 1. Chemistry Score (28%) — `calculateChemistryScore()`
+
+Based on the **archetype chemistry matrix** from `archetypeChemistry.ts`:
 
 ```typescript
 // Primary archetype (70%) + Cross chemistry (30%)
-chemistry = 
+chemistry =
   (primary1 × primary2) * 0.70 +
   (primary1 × secondary2) * 0.15 +
   (secondary1 × primary2) * 0.15
 ```
 
-**Chemistry Matrix**: 12×12 matrix with scores 0-100
-- **90-100**: Perfect match, sparks fly (🔥炽热)
-- **75-89**: Highly compatible (🌡️温暖)
-- **60-74**: Good interaction (🌤️适宜)
-- **45-59**: Medium compatibility (❄️冷淡)
+**Chemistry Matrix** (`apps/server/src/archetypeChemistry.ts`): 12×12 matrix, scores 0-100.
+Canonical source of truth: `packages/shared/src/personality/archetypeCompatibility.ts`.
 
 #### 2. Interest Score (28%) - `calculateInterestScoreAsync()`
 
@@ -537,13 +536,9 @@ finalScore = min(100, baseScore + heatBonus)
 
 #### 5. Preference Score (5%) - `calculatePreferenceScore()`
 
-For **饭局** (dinner):
-- Event intent overlap
+#### Group Diversity — `calculateGroupDiversity()`
 
-For **酒局** (bar):
-- Bar themes overlap
-- Alcohol comfort overlap
-- Event intent overlap
+Each of the 4 dimensions contributes 25 points to a 0-100 score:
 
 **Note**: Budget is a **hard constraint** (L1 filter), not scored here.
 
@@ -561,6 +556,11 @@ else: 30  // No common language penalty
 | **Chemistry Matrix** | `archetypeChemistry.ts` | 12×12 archetype compatibility | Symmetric, scores 0–100 |
 | **Life Stage Affinity Matrix** | `LIFE_STAGE_AFFINITY` in `poolMatchingService.ts` | 7×7 workMode affinity | Asymmetric; pair score = average(forward, reverse) |
 
+Intent modulation: networking intent boosts cross-stage affinity (×1.2); fun intent dampens it (×0.7).
+Pair score uses `(forward + reverse) / 2` (averaged both directions).
+
+---
+
 ### Group Formation Algorithm
 
 **Location**: `matchEventPool()` function
@@ -569,7 +569,7 @@ else: 30  // No common language penalty
 1. Hard Constraint Filtering
    ├─> Gender restriction
    ├─> Industry restrictions
-   ├─> Education restrictions
+   ├─> Education level restrictions (pool.educationLevelRestrictions)
    ├─> Age range (min/max)
    └─> Budget (L1 hard constraint)
 
@@ -597,26 +597,9 @@ else: 30  // No common language penalty
    └─> <55: ❄️ Cold (冷淡)
 ```
 
-### Energy Balance Score
+---
 
-**Purpose**: Ensure groups have balanced social energy (not all high or all low)
-
-```typescript
-// Ideal average energy: 50-70
-// Ideal stdDev: <15
-
-energyBalance = 
-  avgEnergyScore * 0.6 +
-  stdDevScore * 0.4
-```
-
-**Archetype Energy Values** (from `ARCHETYPE_ENERGY`):
-- 开心柯基: 95 (Very High)
-- 太阳鸡: 90 (Very High)
-- 隐身猫: 30 (Very Low)
-- 稳如龟: 38 (Low)
-
-### Key Changes from Previous Version
+### Key Changes Summary
 
 1. ✅ **Budget moved to L1 hard constraint** (was soft constraint)
 2. ✅ **Removed food preferences from scoring** (cuisine, dietary, taste) — still collected for restaurant matching but not used in compatibility scoring
@@ -634,16 +617,16 @@ energyBalance =
 - Verify `user_interests` table has data (not empty `selections`)
 - Check `LIFE_STAGE_AFFINITY` matrix and `workMode` fields
 - Check if hometown affinity is enabled for both users
+- Check `EDU_ORDINAL` in `packages/shared/src/constants.ts` if education affinity seems off
 
 **No matches formed:**
 - Verify users pass hard constraints (budget, gender, industry)
 - Check minimum group size (`minGroupSize` default 4)
 - Review pair scores (need avgScore ≥ 60 to add to group)
 
-**Energy imbalance:**
-- Check archetype distribution (avoid all high-energy or all low-energy)
-- Review `ARCHETYPE_ENERGY` values
-- Target groups with avgEnergy 50-70, stdDev <15
+**Low communication balance:**
+- Check `preferredLanguages` in event pool registrations
+- Members with no shared language get a pairwise language score of 30
 
 ## Attendee Card System
 

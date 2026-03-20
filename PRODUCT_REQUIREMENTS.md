@@ -3036,7 +3036,7 @@ export function useWebSocket() {
 17. **notifications** - Push notification records
 18. **event_pools** - Admin-created blind box event pools
 19. **event_pool_registrations** - User registrations with soft preferences
-20. **event_pool_groups** - Matched groups (v1.1: added `energyBalance`, `temperatureLevel`)
+20. **event_pool_groups** - Matched groups (v1.1: added `communicationBalance` stored as `energy_balance`, `temperatureLevel`)
 21. **matching_thresholds** - Configurable matching parameters (NEW v1.1)
 22. **pool_matching_logs** - Matching decision history (NEW v1.1)
 23. **invitations** - User invitation records
@@ -3270,56 +3270,55 @@ function calculatePairScore(user1, user2, reg1, reg2) {
   return chemistry * 0.375 + interest * 0.3125 + preference * 0.25 + language * 0.1875;
 }
 
-// Group Diversity Score (群体多样性) - Separate calculation
+// Group Diversity Score (群体多样性) — 4 equal dimensions
 function calculateGroupDiversity(group) {
-  // Diversity metrics (only counted ONCE at group level)
-  const uniqueIndustries = new Set(group.map(u => u.industry)).size;
-  const uniqueEducation = new Set(group.map(u => u.educationLevel)).size;
-  const uniqueArchetypes = new Set(group.map(u => u.primaryArchetype)).size;
-  
-  const industryDiversity = (uniqueIndustries / group.length) * 100;
-  const educationDiversity = (uniqueEducation / group.length) * 100;
-  const archetypeDiversity = (uniqueArchetypes / group.length) * 100;
-  
-  return (industryDiversity + educationDiversity + archetypeDiversity) / 3;
+  // All 4 dimensions contribute equally (25% each)
+  const uniqueIndustries = new Set(group.map(u => u.industryNiche)).size;
+  const uniqueGenders    = new Set(group.map(u => u.gender)).size;
+  const uniqueArchetypes = new Set(group.map(u => u.archetype)).size;
+  const uniqueLifeStages = new Set(group.map(u => u.workMode)).size; // 人生阶段 (PR #312)
+
+  return (
+    (uniqueIndustries / group.length) * 25 +
+    (uniqueGenders    / group.length) * 25 +
+    (uniqueArchetypes / group.length) * 25 +
+    (uniqueLifeStages / group.length) * 25
+  );
 }
 
-// Energy Balance Score (能量平衡度) - NEW in v1.1
-function calculateEnergyBalance(group) {
-  // Map each archetype to energy level (0-100 scale)
-  const energyLevels = group.map(u => ARCHETYPE_ENERGY[u.primaryArchetype]);
-  const avgEnergy = mean(energyLevels);
-  const stdDev = standardDeviation(energyLevels);
-  
-  // Ideal: average energy 50-70, low standard deviation
-  const avgScore = avgEnergy >= 50 && avgEnergy <= 70 ? 100 : 
-                   Math.max(0, 100 - Math.abs(avgEnergy - 60) * 2);
-  const harmonyScore = Math.max(0, 100 - stdDev * 3);
-  
-  return (avgScore + harmonyScore) / 2;
+// Communication Balance Score (沟通平衡度) — replaces former energy balance
+function calculateCommunicationBalance(group) {
+  // Average pairwise language score across all member pairs
+  let total = 0, pairs = 0;
+  for (let i = 0; i < group.length; i++) {
+    for (let j = i + 1; j < group.length; j++) {
+      total += calculateLanguageScore(group[i], group[j]);
+      pairs++;
+    }
+  }
+  return pairs > 0 ? total / pairs : 50;
 }
 
-// Overall Group Score (综合分数) - UPDATED FORMULA
+// Overall Group Score (综合分数) — latest formula
 function formOptimalGroups(pool) {
   // For each candidate group:
-  const avgPairScore = mean(allPairScores); // Average compatibility
-  const groupDiversity = calculateGroupDiversity(group); // Background richness
-  const energyBalance = calculateEnergyBalance(group); // Energy harmony
-  
-  // New weighted formula (changed from 70/30 to 60/25/15)
-  const overallScore = 
-    avgPairScore * 0.6 +      // Pair compatibility (similarity)
-    groupDiversity * 0.25 +   // Group diversity (richness)
-    energyBalance * 0.15;     // Energy balance (harmony)
-  
+  const avgPairScore         = mean(allPairScores);              // Average compatibility
+  const groupDiversity       = calculateGroupDiversity(group);   // Background richness
+  const communicationBalance = calculateCommunicationBalance(group); // Language compatibility
+
+  const overallScore =
+    avgPairScore         * 0.60 +  // Pair compatibility (similarity)
+    groupDiversity       * 0.25 +  // Group diversity (richness)
+    communicationBalance * 0.15;   // Communication balance (harmony)
+
   return overallScore;
 }
 ```
 
 **Conceptual Clarity:**
 - **Pair Compatibility** (60%): Do members get along? (similarity)
-- **Group Diversity** (25%): Is the group interesting? (richness)
-- **Energy Balance** (15%): Is the energy level balanced? (harmony)
+- **Group Diversity** (25%): Is the group interesting? (richness — industry / gender / archetype / life stage)
+- **Communication Balance** (15%): Can the group communicate? (language harmony)
 
 **Anti-Repetition System:**
 
@@ -3379,29 +3378,26 @@ const ARCHETYPE_ENERGY = {
 };
 ```
 
-**Energy Balance Calculation:**
+**Communication Balance Calculation** (replaced former energy balance):
 
 ```typescript
-function calculateEnergyBalance(group) {
-  const energyLevels = group.map(user => ARCHETYPE_ENERGY[user.primaryArchetype]);
-  const avgEnergy = mean(energyLevels);
-  const stdDev = standardDeviation(energyLevels);
-  
-  // Ideal: Average energy 50-70 (balanced, not too high or too low)
-  const avgScore = (avgEnergy >= 50 && avgEnergy <= 70) ? 100 : 
-                   Math.max(0, 100 - Math.abs(avgEnergy - 60) * 2);
-  
-  // Ideal: Low standard deviation (harmony, not too much variance)
-  const harmonyScore = Math.max(0, 100 - stdDev * 3);
-  
-  return (avgScore + harmonyScore) / 2;
+// Average pairwise language score across all member pairs
+function calculateCommunicationBalance(group) {
+  let total = 0, pairs = 0;
+  for (let i = 0; i < group.length; i++) {
+    for (let j = i + 1; j < group.length; j++) {
+      total += calculateLanguageScore(group[i], group[j]);
+      pairs++;
+    }
+  }
+  return pairs > 0 ? Math.round(total / pairs) : 50;
 }
 ```
 
 **Why This Matters:**
-- Prevents all-高能量 groups (exhausting, chaotic)
-- Prevents all-低能量 groups (awkward silences, low engagement)
-- Creates balanced social dynamics with natural conversation flow
+- Ensures the group can actually communicate across language preferences
+- Pairs with a common language score 100; pairs with no common language score 30
+- Low score indicates a multilingual barrier risk in the group
 
 **2. Chemistry Reaction Temperature (化学反应温度)**
 
@@ -3456,17 +3452,17 @@ toast({
 **Group Explanation Text:**
 ```typescript
 function generateGroupExplanation(group, scores) {
-  const energyDesc = scores.energyBalance >= 70 ? 
-    "小组能量分布均衡，既有活跃的引导者，也有善于倾听的成员" :
-    "小组能量较为集中，建议适当调整互动节奏";
-    
+  const commDesc = scores.communicationBalance >= 70 ?
+    "小组成员语言沟通兼容性强，交流顺畅" :
+    "小组成员语言偏好有所差异，建议活动中多用共同语言";
+
   const tempDesc = scores.temperatureLevel === "🔥 炽热" ?
     "这是一个化学反应极强的小组！" :
     scores.temperatureLevel === "🌡️ 温暖" ?
     "这个小组有很好的匹配度" :
     "这个小组有一定的匹配度";
-    
-  return `${tempDesc} ${energyDesc}`;
+
+  return `${tempDesc} ${commDesc}`;
 }
 ```
 
@@ -3478,16 +3474,16 @@ CREATE TABLE event_pool_groups (
   id VARCHAR PRIMARY KEY,
   pool_id VARCHAR REFERENCES event_pools(id),
   group_number INTEGER,
-  
+
   -- Existing scores
   avg_pair_score INTEGER,      -- Average pairwise compatibility
   diversity_score INTEGER,      -- Group background diversity
   overall_score INTEGER,        -- Final weighted score
-  
-  -- NEW in v1.1
-  energy_balance INTEGER,       -- Social energy harmony score (0-100)
-  temperature_level VARCHAR,    -- Visual indicator: "🔥 炽热", "🌡️ 温暖", etc.
-  
+
+  -- communication balance (stored in energy_balance column for backward compatibility)
+  energy_balance INTEGER,       -- Communication balance score (0-100) — formerly energy balance
+  temperature_level VARCHAR,    -- Visual indicator: "fire", "warm", "mild", "cold"
+
   created_at TIMESTAMP DEFAULT NOW()
 );
 ```
