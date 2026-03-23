@@ -96,9 +96,9 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 **Required Fields (5 steps):**
 1. Display Name
-2. Gender + Birth Year + Relationship Status
-3. Education Level + Industry (3-tier) + Occupation + Work Mode
-4. Hometown + Current City
+2. Gender + Birthday (Birth Year)
+3. Professional Profile: Education Level + Industry (3-tier) + Occupation + Work Mode
+4. Location: Current City (required) + Hometown (optional)
 5. Intent / Social Goals (multi-select — sourced from shared constants in `packages/shared/src/constants/intentOptions.ts`, see PR #299)
 
 > Intent options are defined as a **single source of truth** in `packages/shared/src/constants/intentOptions.ts`. Do **not** hardcode intent option arrays in individual components — import from shared constants.
