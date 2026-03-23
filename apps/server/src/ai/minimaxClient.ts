@@ -12,8 +12,8 @@
 
 import OpenAI from 'openai';
 
-export const MINIMAX_DEFAULT_MODEL = process.env.MINIMAX_MODEL ?? 'MiniMax-Text-01';
-const MINIMAX_BASE_URL = process.env.MINIMAX_BASE_URL ?? 'https://api.minimax.chat/v1';
+export const MINIMAX_DEFAULT_MODEL = process.env.MINIMAX_MODEL || 'MiniMax-Text-01';
+const MINIMAX_BASE_URL = process.env.MINIMAX_BASE_URL || 'https://api.minimax.chat/v1';
 
 /**
  * Returns true when a MiniMax API key is present in the environment.
