@@ -1,35 +1,41 @@
 /**
- * MiniMax AI Client
+ * MiniMax AI client — Phase 2 hybrid rollout
  *
- * Provides an OpenAI-compatible client for the MiniMax API.
- * Credentials are read from environment variables:
- *   MINIMAX_API_KEY   — required to enable MiniMax
- *   MINIMAX_BASE_URL  — optional override (defaults to https://api.minimax.io/v1)
- *   MINIMAX_MODEL     — optional model name override (defaults to MiniMax-Text-01)
+ * Uses the MiniMax OpenAI-compatible endpoint so the rest of the codebase
+ * can treat it identically to the existing DeepSeek client.
+ *
+ * Env vars:
+ *   MINIMAX_API_KEY   — required to enable MiniMax routing
+ *   MINIMAX_BASE_URL  — defaults to https://api.minimax.chat/v1
+ *   MINIMAX_MODEL     — defaults to MiniMax-Text-01
  */
 
 import OpenAI from 'openai';
 
-const MINIMAX_DEFAULT_BASE_URL = 'https://api.minimax.io/v1';
-export const MINIMAX_DEFAULT_MODEL = 'MiniMax-Text-01';
-
-const apiKey = process.env.MINIMAX_API_KEY;
-const baseURL = process.env.MINIMAX_BASE_URL || MINIMAX_DEFAULT_BASE_URL;
+export const MINIMAX_DEFAULT_MODEL = process.env.MINIMAX_MODEL || 'MiniMax-Text-01';
+const MINIMAX_BASE_URL = process.env.MINIMAX_BASE_URL || 'https://api.minimax.chat/v1';
 
 /**
- * OpenAI-compatible MiniMax client.
- * Will be `null` when MINIMAX_API_KEY is not configured.
- * No warning is emitted here; the router logs a warning only when a
- * MiniMax-routed function is actually requested with no key configured.
+ * Returns true when a MiniMax API key is present in the environment.
+ * Use this before attempting a MiniMax call.
  */
-export const minimaxClient: OpenAI | null = apiKey
-  ? new OpenAI({ apiKey, baseURL })
-  : null;
+export function isMinimaxEnabled(): boolean {
+  return Boolean(process.env.MINIMAX_API_KEY);
+}
 
 /**
- * Returns the MiniMax model name to use.
- * Reads MINIMAX_MODEL env var, falling back to the default.
+ * Lazily-created MiniMax client (OpenAI-compatible).
+ * Returns null when MINIMAX_API_KEY is not configured.
  */
-export function getMinimaxModel(): string {
-  return process.env.MINIMAX_MODEL || MINIMAX_DEFAULT_MODEL;
+let _minimaxClient: OpenAI | null = null;
+
+export function getMinimaxClient(): OpenAI | null {
+  if (!process.env.MINIMAX_API_KEY) return null;
+  if (!_minimaxClient) {
+    _minimaxClient = new OpenAI({
+      apiKey: process.env.MINIMAX_API_KEY,
+      baseURL: MINIMAX_BASE_URL,
+    });
+  }
+  return _minimaxClient;
 }

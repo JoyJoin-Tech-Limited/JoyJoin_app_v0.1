@@ -1,119 +1,94 @@
 /**
- * Social Icebreaker Model Router
+ * Social AI model router — Phase 2 hybrid rollout
  *
- * Determines which AI provider (MiniMax or DeepSeek) handles each
- * Social Icebreaker function.  The default mode is "hybrid":
- *   - High-emotion/generative functions → MiniMax
- *   - Structural/game functions         → DeepSeek
+ * Routes social-experience AI calls to MiniMax when configured, falling
+ * back to DeepSeek for resilience.  All caller code should go through
+ * `callSocialAI` instead of instantiating provider clients directly.
  *
- * Override the mode globally with the SOCIAL_AI_PROVIDER env var:
- *   SOCIAL_AI_PROVIDER=hybrid    (default)
- *   SOCIAL_AI_PROVIDER=deepseek  (all functions use DeepSeek)
- *   SOCIAL_AI_PROVIDER=minimax   (all functions use MiniMax if available)
+ * Provider priority:
+ *   1. MiniMax  (if MINIMAX_API_KEY is set)
+ *   2. DeepSeek (always available as fallback)
  */
 
 import OpenAI from 'openai';
-import { minimaxClient, getMinimaxModel } from './minimaxClient';
+import { getMinimaxClient, MINIMAX_DEFAULT_MODEL, isMinimaxEnabled } from './minimaxClient';
 
-const DEEPSEEK_BASE_URL = 'https://api.deepseek.com';
-const DEEPSEEK_MODEL = 'deepseek-chat';
+// DeepSeek client — lazy-initialized so the module can load safely even when
+// DEEPSEEK_API_KEY is not set (e.g. MiniMax-only envs).  The dummy key
+// follows the same pattern used by other services in this codebase.
+let _deepseekClient: OpenAI | null = null;
 
-const deepseekClient = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: DEEPSEEK_BASE_URL,
-});
-
-// ─── Provider Types ─────────────────────────────────────────────────────────
-
-export type AIProvider = 'minimax' | 'deepseek';
-
-export type SocialAIFunction =
-  | 'generateWarmupTopics'
-  | 'generateMicroChallenges'
-  | 'generateLieDetectiveStatements'
-  | 'generateXiaoYueComment'
-  | 'generateRecapSummary'
-  | 'generatePersonalityDiceChallenges';
-
-// ─── Routing Table ───────────────────────────────────────────────────────────
-
-/**
- * Declares which provider each function prefers in hybrid mode.
- * Functions marked 'minimax' fall back to DeepSeek when MiniMax is unavailable.
- */
-const HYBRID_ROUTING: Record<SocialAIFunction, AIProvider> = {
-  // High-emotion / brand-voice functions → MiniMax
-  generateWarmupTopics: 'minimax',
-  generateXiaoYueComment: 'minimax',
-  generateRecapSummary: 'minimax',
-  generateLieDetectiveStatements: 'minimax',
-  // Structural / game functions → DeepSeek
-  generateMicroChallenges: 'deepseek',
-  generatePersonalityDiceChallenges: 'deepseek',
-};
-
-// ─── Valid provider modes ────────────────────────────────────────────────────
-
-const VALID_MODES = new Set(['hybrid', 'deepseek', 'minimax'] as const);
-type ProviderMode = 'hybrid' | 'deepseek' | 'minimax';
-
-function resolveMode(): ProviderMode {
-  const raw = process.env.SOCIAL_AI_PROVIDER;
-  if (!raw) return 'hybrid';
-  if (VALID_MODES.has(raw as ProviderMode)) return raw as ProviderMode;
-  console.warn(
-    `[SocialModelRouter] Unrecognized SOCIAL_AI_PROVIDER="${raw}". ` +
-      'Valid values: hybrid | deepseek | minimax. Defaulting to hybrid.'
-  );
-  return 'hybrid';
+function getDeepseekClient(): OpenAI {
+  if (!_deepseekClient) {
+    _deepseekClient = new OpenAI({
+      apiKey: process.env.DEEPSEEK_API_KEY || 'dummy-key-for-fallback',
+      baseURL: 'https://api.deepseek.com',
+    });
+  }
+  return _deepseekClient;
 }
 
-// ─── Public API ──────────────────────────────────────────────────────────────
+export interface SocialAICallParams {
+  messages: OpenAI.Chat.ChatCompletionMessageParam[];
+  temperature?: number;
+  max_tokens?: number;
+  /** Tag shown in logs (e.g. 'conversationTopics', 'welcomeMessage') */
+  callerTag: string;
+}
 
-export interface RoutedClient {
-  client: OpenAI;
-  model: string;
-  provider: AIProvider;
+export interface SocialAICallResult {
+  content: string;
+  provider: 'minimax' | 'deepseek';
+  latencyMs: number;
 }
 
 /**
- * Returns the AI client and model to use for a given Social Icebreaker function.
- *
- * Resolution order:
- * 1. If SOCIAL_AI_PROVIDER=deepseek → always return DeepSeek.
- * 2. If SOCIAL_AI_PROVIDER=minimax  → return MiniMax if available, else DeepSeek.
- * 3. Default (hybrid)               → follow HYBRID_ROUTING; fall back to DeepSeek
- *    when the preferred provider is MiniMax but MINIMAX_API_KEY is not set.
+ * Calls the preferred social AI provider and returns the response text.
+ * Automatically falls back to DeepSeek if MiniMax is unavailable or fails.
  */
-export function getClientForFunction(fn: SocialAIFunction): RoutedClient {
-  const mode = resolveMode();
+export async function callSocialAI(
+  params: SocialAICallParams
+): Promise<SocialAICallResult> {
+  const { messages, temperature = 0.8, max_tokens = 600, callerTag } = params;
 
-  if (mode === 'deepseek') {
-    return { client: deepseekClient, model: DEEPSEEK_MODEL, provider: 'deepseek' };
-  }
-
-  if (mode === 'minimax') {
-    if (minimaxClient) {
-      return { client: minimaxClient, model: getMinimaxModel(), provider: 'minimax' };
+  if (isMinimaxEnabled()) {
+    const minimax = getMinimaxClient()!;
+    const start = Date.now();
+    try {
+      const response = await minimax.chat.completions.create({
+        model: MINIMAX_DEFAULT_MODEL,
+        messages,
+        temperature,
+        max_tokens,
+      });
+      const latencyMs = Date.now() - start;
+      const content = response.choices[0]?.message?.content ?? '';
+      console.log(`[socialAI] ${callerTag} provider=minimax latency=${latencyMs}ms`);
+      return { content, provider: 'minimax', latencyMs };
+    } catch (err) {
+      const latencyMs = Date.now() - start;
+      console.warn(
+        `[socialAI] ${callerTag} minimax failed after ${latencyMs}ms, falling back to deepseek:`,
+        err
+      );
     }
-    console.warn(
-      `[SocialModelRouter] ${fn}: SOCIAL_AI_PROVIDER=minimax but MINIMAX_API_KEY is not set; ` +
-        'falling back to DeepSeek.'
-    );
-    return { client: deepseekClient, model: DEEPSEEK_MODEL, provider: 'deepseek' };
   }
 
-  // hybrid mode
-  const preferred = HYBRID_ROUTING[fn];
-  if (preferred === 'minimax') {
-    if (minimaxClient) {
-      return { client: minimaxClient, model: getMinimaxModel(), provider: 'minimax' };
-    }
-    console.warn(
-      `[SocialModelRouter] ${fn}: preferred provider=minimax but MINIMAX_API_KEY is not set; ` +
-        'falling back to DeepSeek.'
+  // DeepSeek fallback
+  if (!process.env.DEEPSEEK_API_KEY) {
+    throw new Error(
+      `[socialAI] ${callerTag}: MiniMax unavailable and DEEPSEEK_API_KEY is not set — cannot complete request`
     );
   }
-
-  return { client: deepseekClient, model: DEEPSEEK_MODEL, provider: 'deepseek' };
+  const start = Date.now();
+  const response = await getDeepseekClient().chat.completions.create({
+    model: 'deepseek-chat',
+    messages,
+    temperature,
+    max_tokens,
+  });
+  const latencyMs = Date.now() - start;
+  const content = response.choices[0]?.message?.content ?? '';
+  console.log(`[socialAI] ${callerTag} provider=deepseek latency=${latencyMs}ms`);
+  return { content, provider: 'deepseek', latencyMs };
 }
