@@ -401,7 +401,8 @@ const newScore = Math.max(10, Math.min(100, currentMatrixScore + delta));
 | File | Purpose | Tier |
 |------|---------|------|
 | `packages/shared/src/atmospherePrediction.ts` | Rule-based atmosphere prediction | 1 |
-| `packages/shared/src/personality/archetypeCompatibility.ts` | Chemistry matrix (static, source of truth) | 1, 3 |
+| `packages/shared/src/personality/archetypeCompatibility.ts` | Chemistry matrix (static, shared reference data for clients & analytics) | 1, 3 |
+| `apps/server/src/archetypeChemistry.ts` | Live chemistry matrix used at match time (`chemistryMatrix` for scoring & explanations) | 1, 2 |
 | `apps/server/src/poolMatchingService.ts` | Core matching algorithm — `matchEventPool()`, `calculateGroupPairScore()`, `calculateGroupDiversity()` | 1, 2 |
 | `apps/server/src/matchExplanationService.ts` | DeepSeek pair explanations + icebreakers — `generateGroupAnalysis()`, `generateIceBreakers()`, `generatePairExplanation()` | 2 |
 | `apps/server/src/services/eventThemeTitleGenerator.ts` | AI event theme title generation | 2 |
