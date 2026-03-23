@@ -1,4 +1,3 @@
-import OpenAI from 'openai';
 import type {
   SocialTopic,
   MicroChallenge,
@@ -6,11 +5,7 @@ import type {
   AtmosphereMood,
   PersonalityDiceChallenge,
 } from '@shared/socialIcebreaker';
-
-const deepseekClient = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: 'https://api.deepseek.com',
-});
+import { getClientForFunction } from './ai/socialModelRouter';
 
 // ============ CURATED FALLBACK CONTENT ============
 
@@ -142,6 +137,8 @@ export async function generateWarmupTopics(params: {
     emotional: '情感',
   };
 
+  const { client, model, provider } = getClientForFunction('generateWarmupTopics');
+  const t0 = Date.now();
   try {
     const prompt = `你是社交破冰专家小悦。请为一个${params.eventType}活动（${params.participantCount}人）生成5个${moodMap[params.mood]}类型的破冰话题。
     
@@ -156,8 +153,8 @@ ${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join
 
 直接返回JSON数组，不要其他内容。`;
 
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const response = await client.chat.completions.create({
+      model,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.9,
       max_tokens: 500,
@@ -168,10 +165,12 @@ ${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join
 
     const parsed = JSON.parse(content);
     if (Array.isArray(parsed) && parsed.length > 0) {
+      console.log(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${Date.now() - t0}ms`);
       return parsed.slice(0, 5);
     }
+    console.warn(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${Date.now() - t0}ms: invalid response shape, using fallback`);
   } catch (error) {
-    console.error('[SocialIcebreakerAI] generateWarmupTopics error:', error);
+    console.error(`[SocialIcebreakerAI] generateWarmupTopics error provider=${provider} latency=${Date.now() - t0}ms:`, error);
   }
 
   return getFallbackTopics(params.mood);
@@ -195,6 +194,8 @@ export async function generateMicroChallenges(params: {
   participantCount: number;
   completedChallengeIds?: string[];
 }): Promise<MicroChallenge[]> {
+  const { client, model, provider } = getClientForFunction('generateMicroChallenges');
+  const t0 = Date.now();
   try {
     const prompt = `你是社交破冰专家小悦。请为一个${params.eventType}活动（${params.participantCount}人）生成3个有趣的微挑战。
 
@@ -208,8 +209,8 @@ export async function generateMicroChallenges(params: {
 
 直接返回JSON数组，不要其他内容。`;
 
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const response = await client.chat.completions.create({
+      model,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.8,
       max_tokens: 400,
@@ -220,10 +221,12 @@ export async function generateMicroChallenges(params: {
 
     const parsed = JSON.parse(content);
     if (Array.isArray(parsed) && parsed.length > 0) {
+      console.log(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${Date.now() - t0}ms`);
       return parsed.slice(0, 3);
     }
+    console.warn(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${Date.now() - t0}ms: invalid response shape, using fallback`);
   } catch (error) {
-    console.error('[SocialIcebreakerAI] generateMicroChallenges error:', error);
+    console.error(`[SocialIcebreakerAI] generateMicroChallenges error provider=${provider} latency=${Date.now() - t0}ms:`, error);
   }
 
   return getFallbackChallenges(params.completedChallengeIds);
@@ -242,6 +245,8 @@ export async function generateLieDetectiveStatements(params: {
   archetype?: string;
   interests?: string[];
 }): Promise<LieDetectiveStatement[]> {
+  const { client, model, provider } = getClientForFunction('generateLieDetectiveStatements');
+  const t0 = Date.now();
   try {
     const context = [
       params.archetype ? `性格类型：${params.archetype}` : '',
@@ -264,8 +269,8 @@ ${context ? `关于这个人的信息：\n${context}` : ''}
 
 直接返回JSON数组，确保只有一个isLie为true。`;
 
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const response = await client.chat.completions.create({
+      model,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.9,
       max_tokens: 300,
@@ -280,10 +285,12 @@ ${context ? `关于这个人的信息：\n${context}` : ''}
       parsed.length === 3 &&
       parsed.filter((s: LieDetectiveStatement) => s.isLie).length === 1
     ) {
+      console.log(`[SocialIcebreakerAI] generateLieDetectiveStatements provider=${provider} latency=${Date.now() - t0}ms`);
       return parsed;
     }
+    console.warn(`[SocialIcebreakerAI] generateLieDetectiveStatements provider=${provider} latency=${Date.now() - t0}ms: invalid response shape (expected 3 items with exactly 1 lie), using fallback`);
   } catch (error) {
-    console.error('[SocialIcebreakerAI] generateLieDetectiveStatements error:', error);
+    console.error(`[SocialIcebreakerAI] generateLieDetectiveStatements error provider=${provider} latency=${Date.now() - t0}ms:`, error);
   }
 
   return getRandomFallbackStatements();
@@ -325,6 +332,8 @@ export async function generateXiaoYueComment(params: {
     return phaseComments[params.event];
   }
 
+  const { client, model, provider } = getClientForFunction('generateXiaoYueComment');
+  const t0 = Date.now();
   try {
     const prompt = `你是社交破冰助手小悦。请为以下场景生成一句简短的主持评语（20-30字）：
 - 当前阶段：${params.phase}
@@ -333,17 +342,18 @@ ${params.context ? `- 上下文：${params.context}` : ''}
 
 要求：温暖有趣，有主持人的活力，可以加emoji。直接返回评语文本，不要其他内容。`;
 
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const response = await client.chat.completions.create({
+      model,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.8,
       max_tokens: 100,
     });
 
     const content = response.choices[0]?.message?.content?.trim();
+    console.log(`[SocialIcebreakerAI] generateXiaoYueComment provider=${provider} latency=${Date.now() - t0}ms`);
     return content || '继续加油，破冰进行中！✨';
   } catch (error) {
-    console.error('[SocialIcebreakerAI] generateXiaoYueComment error:', error);
+    console.error(`[SocialIcebreakerAI] generateXiaoYueComment error provider=${provider} latency=${Date.now() - t0}ms:`, error);
     return '继续加油，破冰进行中！✨';
   }
 }
@@ -355,6 +365,8 @@ export async function generateRecapSummary(params: {
   lieDetectiveHighlights?: string[];
   durationMinutes: number;
 }): Promise<{ headline: string; moments: string[]; closingLine: string }> {
+  const { client, model, provider } = getClientForFunction('generateRecapSummary');
+  const t0 = Date.now();
   try {
     const prompt = `你是社交破冰助手小悦。请为今晚的活动生成一个温馨的总结：
 
@@ -373,8 +385,8 @@ ${params.lieDetectiveHighlights?.length ? `谎言侦探亮点：${params.lieDete
 
 直接返回JSON，不要其他内容。`;
 
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const response = await client.chat.completions.create({
+      model,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.8,
       max_tokens: 300,
@@ -385,10 +397,12 @@ ${params.lieDetectiveHighlights?.length ? `谎言侦探亮点：${params.lieDete
 
     const parsed = JSON.parse(content);
     if (parsed.headline && parsed.moments && parsed.closingLine) {
+      console.log(`[SocialIcebreakerAI] generateRecapSummary provider=${provider} latency=${Date.now() - t0}ms`);
       return parsed;
     }
+    console.warn(`[SocialIcebreakerAI] generateRecapSummary provider=${provider} latency=${Date.now() - t0}ms: invalid response shape, using fallback`);
   } catch (error) {
-    console.error('[SocialIcebreakerAI] generateRecapSummary error:', error);
+    console.error(`[SocialIcebreakerAI] generateRecapSummary error provider=${provider} latency=${Date.now() - t0}ms:`, error);
   }
 
   return getDefaultRecap(params);
@@ -459,6 +473,8 @@ export async function generatePersonalityDiceChallenges(participants: Array<{
     };
   });
 
+  const { client, model, provider } = getClientForFunction('generatePersonalityDiceChallenges');
+  const t0 = Date.now();
   try {
     const participantList = participants.map(p => ({
       displayName: p.displayName,
@@ -477,8 +493,8 @@ ${JSON.stringify(participantList, null, 2)}
 
 直接返回JSON数组，不要其他内容。`;
 
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const response = await client.chat.completions.create({
+      model,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.85,
       max_tokens: 400,
@@ -489,6 +505,7 @@ ${JSON.stringify(participantList, null, 2)}
 
     const parsed = JSON.parse(content);
     if (Array.isArray(parsed) && parsed.length === participants.length) {
+      console.log(`[SocialIcebreakerAI] generatePersonalityDiceChallenges provider=${provider} latency=${Date.now() - t0}ms`);
       return participants.map((p, i) => ({
         userId: p.userId,
         displayName: p.displayName,
@@ -500,8 +517,9 @@ ${JSON.stringify(participantList, null, 2)}
         difficulty: parsed[i].difficulty || fallbacks[i].difficulty,
       }));
     }
+    console.warn(`[SocialIcebreakerAI] generatePersonalityDiceChallenges provider=${provider} latency=${Date.now() - t0}ms: invalid response shape (expected ${participants.length} items), using fallback`);
   } catch (error) {
-    console.error('[SocialIcebreakerAI] generatePersonalityDiceChallenges error:', error);
+    console.error(`[SocialIcebreakerAI] generatePersonalityDiceChallenges error provider=${provider} latency=${Date.now() - t0}ms:`, error);
   }
 
   return fallbacks;
