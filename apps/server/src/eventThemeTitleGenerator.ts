@@ -1,7 +1,7 @@
 /**
  * Event Theme Title Generator Service
  * 
- * AI-powered event theme title generation for event pool groups using DeepSeek API.
+ * AI-powered event theme title generation for event pool groups.
  * Generates creative, culturally-relevant Chinese event theme titles based on member
  * archetypes, interests, and event context.
  * 
@@ -10,6 +10,8 @@
  * - Content safety filtering
  * - Graceful fallback to templates
  * - AI usage tracking
+ *
+ * Provider: MiniMax (hybrid) when configured, DeepSeek otherwise.
  */
 
 import OpenAI from 'openai';
@@ -17,10 +19,12 @@ import { db } from './db';
 import { eventPoolGroups, users, userInterests } from '@shared/schema';
 import { eq, inArray } from 'drizzle-orm';
 import type { MatchGroup } from './poolMatchingService';
+import { getMiniMaxClient, MINIMAX_MODEL } from './ai/minimaxClient';
+import { getEventThemeTitleProvider, isProviderAvailable, type AIProvider } from './ai/creativeModelRouter';
 
-// Validate API key at module initialization
-if (!process.env.DEEPSEEK_API_KEY) {
-  console.warn('⚠️ DEEPSEEK_API_KEY environment variable is not set. Event theme title generation will use fallback mode.');
+// Validate API keys at module initialization
+if (!process.env.DEEPSEEK_API_KEY && !process.env.MINIMAX_API_KEY) {
+  console.warn('⚠️ Neither DEEPSEEK_API_KEY nor MINIMAX_API_KEY is set. Event theme title generation will use fallback mode.');
 }
 
 const deepseekClient = new OpenAI({
@@ -28,7 +32,30 @@ const deepseekClient = new OpenAI({
   baseURL: 'https://api.deepseek.com',
 });
 
-const DEEPSEEK_TIMEOUT_MS = parseInt(process.env.DEEPSEEK_TIMEOUT_MS || '5000', 10);
+/**
+ * Returns the active AI client and model for event theme title generation based on provider routing.
+ */
+function getEventThemeTitleAIClient(): { client: OpenAI; model: string; provider: AIProvider } {
+  const provider = getEventThemeTitleProvider();
+
+  if (provider === 'minimax') {
+    const minimaxClient = getMiniMaxClient();
+    if (minimaxClient) {
+      return { client: minimaxClient, model: MINIMAX_MODEL, provider: 'minimax' };
+    }
+    console.warn('[EventThemeTitleGen] MiniMax provider selected but MINIMAX_API_KEY not set, falling back to DeepSeek');
+  }
+
+  return { client: deepseekClient, model: 'deepseek-chat', provider: 'deepseek' };
+}
+
+const AI_TIMEOUT_MS = parseInt(
+  process.env.AI_TIMEOUT_MS ||
+  process.env.DEEPSEEK_TIMEOUT_MS ||
+  process.env.MINIMAX_TIMEOUT_MS ||
+  '5000',
+  10
+);
 const ENABLE_EVENT_THEME_TITLE_GENERATION = process.env.ENABLE_EVENT_THEME_TITLE_GENERATION !== 'false';
 const AI_USAGE_TRACKING_ENABLED = process.env.AI_USAGE_TRACKING_ENABLED !== 'false';
 
@@ -115,13 +142,15 @@ export async function generateAndAssignEventThemeTitle(
     // Try AI generation first
     let result: EventThemeTitleResult | null = null;
     
-    if (process.env.DEEPSEEK_API_KEY) {
+    const { provider: effectiveProvider } = getEventThemeTitleAIClient();
+
+    if (isProviderAvailable(effectiveProvider)) {
       try {
         result = await generateEventThemeTitleWithAI(context);
         
         if (result && validateEventThemeTitleResult(result)) {
           const duration = Date.now() - startTime;
-          console.log(`[AI] Event theme title generated in ${duration}ms`);
+          console.log(`[EventThemeTitleGen] provider=${effectiveProvider} latency=${duration}ms success=true`);
           console.log(`[EventThemeTitleGen] ✅ ${result.themeEmoji} ${result.eventThemeTitle}`);
           
           // Save to database (FIXED: aligning with actual schema field names)
@@ -184,18 +213,21 @@ export async function generateAndAssignEventThemeTitle(
 }
 
 /**
- * Generate event theme title using DeepSeek AI (with timeout protection)
+ * Generate event theme title using the hybrid AI provider (with timeout protection).
  */
 async function generateEventThemeTitleWithAI(context: EventThemeTitleContext): Promise<EventThemeTitleResult | null> {
   const prompt = buildEventThemeTitlePrompt(context);
 
+  // Resolve provider and client via shared helper
+  const { client, model } = getEventThemeTitleAIClient();
+
   // Timeout protection
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), DEEPSEEK_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
   try {
-    const completion = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const completion = await client.chat.completions.create({
+      model,
       messages: [
         {
           role: 'system',
@@ -217,7 +249,7 @@ async function generateEventThemeTitleWithAI(context: EventThemeTitleContext): P
 
     const content = completion.choices[0]?.message?.content;
     if (!content) {
-      throw new Error('Empty response from DeepSeek');
+      throw new Error('Empty response from AI provider');
     }
 
     const parsed = JSON.parse(content);
@@ -234,7 +266,7 @@ async function generateEventThemeTitleWithAI(context: EventThemeTitleContext): P
     clearTimeout(timeoutId);
     
     if (error instanceof Error && error.name === 'AbortError') {
-      console.warn('[AI] Request timeout after', DEEPSEEK_TIMEOUT_MS, 'ms');
+      console.warn('[EventThemeTitleGen] Request timeout after', AI_TIMEOUT_MS, 'ms');
     }
     
     throw error;

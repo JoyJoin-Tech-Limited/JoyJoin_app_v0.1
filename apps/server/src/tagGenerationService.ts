@@ -8,20 +8,42 @@
  * 
  * Tag Format: <Descriptor>·<Archetype Nickname>
  * Example: "数据拓荒人·巷口密探"
+ *
+ * Provider: MiniMax (hybrid) when configured, DeepSeek otherwise.
  */
 
 import OpenAI from 'openai';
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry';
+import { getMiniMaxClient, MINIMAX_MODEL } from './ai/minimaxClient';
+import { getTagGenerationProvider, isProviderAvailable, type AIProvider } from './ai/creativeModelRouter';
 
 // Validate API key at module initialization
-if (!process.env.DEEPSEEK_API_KEY) {
-  console.warn('DEEPSEEK_API_KEY environment variable is not set. Tag generation will use fallback mode.');
+if (!process.env.DEEPSEEK_API_KEY && !process.env.MINIMAX_API_KEY) {
+  console.warn('[TagGeneration] Neither DEEPSEEK_API_KEY nor MINIMAX_API_KEY is set. Tag generation will use fallback mode.');
 }
 
 const deepseekClient = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY || 'dummy-key-for-fallback',
   baseURL: 'https://api.deepseek.com',
 });
+
+/**
+ * Returns the active AI client and model for tag generation based on provider routing.
+ */
+function getTagAIClient(): { client: OpenAI; model: string; provider: AIProvider } {
+  const provider = getTagGenerationProvider();
+
+  if (provider === 'minimax') {
+    const minimaxClient = getMiniMaxClient();
+    if (minimaxClient) {
+      return { client: minimaxClient, model: MINIMAX_MODEL, provider: 'minimax' };
+    }
+    // MiniMax not configured — fall through to DeepSeek
+    console.warn('[TagGeneration] MiniMax provider selected but MINIMAX_API_KEY not set, falling back to DeepSeek');
+  }
+
+  return { client: deepseekClient, model: 'deepseek-chat', provider: 'deepseek' };
+}
 
 export interface TagGenerationInput {
   archetype: string;
@@ -69,19 +91,21 @@ function validateTag(tag: GeneratedTag): boolean {
 }
 
 /**
- * Generate social tags using DeepSeek AI
+ * Generate social tags using the hybrid AI provider (MiniMax or DeepSeek).
  */
 export async function generateSocialTags(input: TagGenerationInput): Promise<TagGenerationResult> {
-  // Check if API key is available
-  if (!process.env.DEEPSEEK_API_KEY) {
-    console.warn('DEEPSEEK_API_KEY not available, using fallback tags');
+  const { client, model, provider } = getTagAIClient();
+
+  // Check if the effective AI provider is available
+  if (!isProviderAvailable(provider)) {
+    console.warn('[TagGeneration] No AI provider configured, using fallback tags');
     return { tags: generateFallbackTags(input), isFallback: true };
   }
 
   // Get archetype info
   const archetypeData = archetypeRegistry[input.archetype];
   if (!archetypeData) {
-    console.warn(`Unknown archetype: ${input.archetype}, using fallback`);
+    console.warn(`[TagGeneration] Unknown archetype: ${input.archetype}, using fallback`);
     return { tags: generateFallbackTags(input), isFallback: true };
   }
 
@@ -132,9 +156,11 @@ ${JSON.stringify(userProfile, null, 2)}
 
 请生成3个独特的社交标签。`;
 
+  const startTime = Date.now();
+
   try {
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const response = await client.chat.completions.create({
+      model,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -144,9 +170,11 @@ ${JSON.stringify(userProfile, null, 2)}
       response_format: { type: 'json_object' },
     });
 
+    const durationMs = Date.now() - startTime;
     const content = response.choices[0]?.message?.content;
+
     if (!content) {
-      console.warn('DeepSeek returned empty response, using fallback');
+      console.warn(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=false (empty response), using fallback`);
       return { tags: generateFallbackTags(input), isFallback: true };
     }
 
@@ -155,8 +183,7 @@ ${JSON.stringify(userProfile, null, 2)}
     try {
       parsed = JSON.parse(content);
     } catch (parseError) {
-      console.error('Failed to parse DeepSeek response as JSON:', parseError);
-      console.error('Response content:', content);
+      console.error(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=false (parse error):`, parseError);
       return { tags: generateFallbackTags(input), isFallback: true };
     }
 
@@ -166,7 +193,7 @@ ${JSON.stringify(userProfile, null, 2)}
     const validTags = tags.filter(validateTag);
     
     if (validTags.length === 0) {
-      console.warn('All generated tags failed validation, using fallback');
+      console.warn(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=false (all tags failed validation), using fallback`);
       return { tags: generateFallbackTags(input), isFallback: true };
     }
 
@@ -177,12 +204,16 @@ ${JSON.stringify(userProfile, null, 2)}
       const existingTags = new Set(validTags.map(t => t.fullTag));
       const uniqueFallbackTags = fallbackTags.filter(t => !existingTags.has(t.fullTag));
       const combinedTags = [...validTags, ...uniqueFallbackTags.slice(0, 2 - validTags.length)];
+      console.log(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=partial (supplemented with fallback)`);
       return { tags: combinedTags, isFallback: true };
     }
 
+    console.log(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=true`);
+
     return { tags: validTags.slice(0, 3), isFallback: false };
   } catch (error) {
-    console.error('Error generating tags with DeepSeek:', error);
+    const durationMs = Date.now() - startTime;
+    console.error(`[TagGeneration] provider=${provider} error after ${durationMs}ms:`, error);
     return { tags: generateFallbackTags(input), isFallback: true };
   }
 }
