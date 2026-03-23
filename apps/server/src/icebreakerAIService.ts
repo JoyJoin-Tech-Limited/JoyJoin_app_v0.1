@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
+import { callSocialAI } from './ai/socialModelRouter';
 
+// DeepSeek client retained for non-social functions (e.g. recommendGameForParticipants)
 const deepseekClient = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
   baseURL: 'https://api.deepseek.com',
@@ -70,18 +72,16 @@ ${eventTitle ? `活动：${eventTitle}` : ''}
 请生成一段欢迎语。`;
 
   try {
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const { content } = await callSocialAI({
       messages: [
         { role: 'system', content: WELCOME_PROMPT },
-        { role: 'user', content: userPrompt }
+        { role: 'user', content: userPrompt },
       ],
       temperature: 0.8,
       max_tokens: 150,
+      callerTag: 'welcomeMessage',
     });
-
-    const content = response.choices[0]?.message?.content?.trim();
-    return content || getDefaultWelcome(participants);
+    return content.trim() || getDefaultWelcome(participants);
   } catch (error) {
     console.error('AI welcome message error:', error);
     return getDefaultWelcome(participants);
@@ -107,18 +107,16 @@ ${gamesPlayed?.length ? `玩过的游戏：${gamesPlayed.slice(0, 3).join('、')
 请生成一段结束语。`;
 
   try {
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const { content } = await callSocialAI({
       messages: [
         { role: 'system', content: CLOSING_PROMPT },
-        { role: 'user', content: userPrompt }
+        { role: 'user', content: userPrompt },
       ],
       temperature: 0.8,
       max_tokens: 150,
+      callerTag: 'closingMessage',
     });
-
-    const content = response.choices[0]?.message?.content?.trim();
-    return content || getDefaultClosing(durationMinutes);
+    return content.trim() || getDefaultClosing(durationMinutes);
   } catch (error) {
     console.error('AI closing message error:', error);
     return getDefaultClosing(durationMinutes);
