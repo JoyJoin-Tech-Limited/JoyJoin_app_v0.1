@@ -21,6 +21,8 @@ vi.mock('../minimaxClient', () => ({
   getMinimaxClient: vi.fn(() => ({
     chat: { completions: { create: mockMinimaxCreate } },
   })),
+  getMinimaxModel: () => 'minimax-m2.7',
+  minimaxClient: null,
   MINIMAX_DEFAULT_MODEL: 'minimax-m2.7',
 }));
 
