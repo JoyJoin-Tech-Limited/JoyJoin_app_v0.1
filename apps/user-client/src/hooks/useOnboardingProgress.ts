@@ -68,7 +68,7 @@ function nextStepToOnboardingStep(nextStep: NextStepType | undefined): Onboardin
  * is not yet loaded.
  */
 export function useOnboardingProgress(): OnboardingProgress {
-  const { user, nextStep, profileExtendedComplete } = useAuth();
+  const { user, nextStep } = useAuth();
   
   const progress = useMemo(() => {
     // --- Completion flags (for display / steps map) ---
@@ -79,11 +79,13 @@ export function useOnboardingProgress(): OnboardingProgress {
     const hasCompletedEssentialData =
       user?.profileEssentialComplete ??
       !!(user?.displayName && user?.gender && user?.currentCity);
-    // Use server-computed `profileExtendedComplete` (or the canonical flag) —
-    // do NOT mix in `intent` field presence, which is not a completion signal.
-    const hasCompletedExtendedData =
-      profileExtendedComplete ??
-      (user?.hasCompletedInterestsCarousel ?? false);
+    // Extended-data step (interests carousel) completion is keyed off
+    // `hasCompletedInterestsCarousel` only. `profileExtendedComplete` is a
+    // separate profile-quality indicator and must not be used here, otherwise
+    // users who fill education/industry/hometown via profile edit could appear
+    // to have completed the extended-data onboarding step when they haven't
+    // done the carousel.
+    const hasCompletedExtendedData = user?.hasCompletedInterestsCarousel ?? false;
     const hasSeenProfileReview = user?.hasSeenProfileReview ?? false;
 
     const steps = {
@@ -109,7 +111,7 @@ export function useOnboardingProgress(): OnboardingProgress {
       isComplete: currentStep === 'complete',
       steps,
     };
-  }, [user, nextStep, profileExtendedComplete]);
+  }, [user, nextStep]);
   
   return progress;
 }
