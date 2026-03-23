@@ -9,7 +9,7 @@ import { SegmentedProgress } from "@/components/ui/progress-segmented";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { INDUSTRY_OPTIONS, type WorkMode } from "@shared/constants";
+import { INDUSTRY_OPTIONS, type WorkMode, INTENT_OPTIONS as SHARED_INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION, type IntentIconHint } from "@shared/constants";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BirthDatePicker } from "@/components/BirthDatePicker";
@@ -92,17 +92,15 @@ const RELATIONSHIP_OPTIONS = [
   { value: "prefer_not_say", label: "不想说" },
 ];
 
-// Main intent options with icons and descriptions
-const INTENT_OPTIONS = [
-  { value: "friends", label: "交新朋友", subtitle: "认识有趣的人", icon: Users },
-  { value: "networking", label: "拓展人脉", subtitle: "扩大社交圈", icon: Network },
-  { value: "discussion", label: "深度交流", subtitle: "走心的对话", icon: MessageCircle },
-  { value: "fun", label: "轻松娱乐", subtitle: "开心就好", icon: PartyPopper },
-  { value: "romance", label: "浪漫邂逅", subtitle: "遇见心动", icon: Heart },
-];
-
-// Special "flexible" option - mutually exclusive with others
-const FLEXIBLE_OPTION = { value: "flexible", label: "随缘", subtitle: "交给小悦推荐", icon: Shuffle };
+// Icon map for intent options (keyed by IntentIconHint from shared constants — type-safe)
+const INTENT_ICON_MAP: Record<IntentIconHint, React.ComponentType<{ className?: string }>> = {
+  "Users": Users,
+  "Network": Network,
+  "MessageCircle": MessageCircle,
+  "PartyPopper": PartyPopper,
+  "Heart": Heart,
+  "Shuffle": Shuffle,
+};
 
 const EDUCATION_OPTIONS = [
   { value: "high_school", label: "高中及以下" },
@@ -129,63 +127,44 @@ const BIRTH_YEARS = Array.from({ length: 50 }, (_, i) => {
 const STEP_CONFIG = [
   {
     id: "displayName",
-    title: "选择你的昵称",
+    title: "大家怎么称呼你？",
     subtitle: "这是大家在活动中看到的名字",
-    mascotMessage: "嘿！先给自己取个响亮的名字吧~ 后面我会根据你的性格和兴趣，为你生成专属的社交印象标签哦！✨",
+    mascotMessage: "嘿！给自己起个响亮的名字吧，活动中大家会这么叫你~ ✨",
     mascotMood: "excited" as XiaoyueMood,
     type: "input" as const,
   },
   {
     id: "genderBirthday",
-    title: "选择出生日期",
+    title: "基本信息",
     subtitle: "帮助匹配更合适的活动",
-    mascotMessage: "简单两步，帮你找到更合适的朋友！",
+    mascotMessage: "帮你找到年龄相近、聊得来的朋友！",
     mascotMood: "pointing" as XiaoyueMood,
     type: "dual" as const,
   },
   {
-    id: "relationshipStatus",
-    title: "你的感情状态？",
-    subtitle: "推荐更适合你的社交场景",
-    mascotMessage: "这个信息只用于精准匹配哦~",
-    mascotMood: "normal" as XiaoyueMood,
-    type: "select" as const,
-    options: RELATIONSHIP_OPTIONS,
-  },
-  {
-    id: "education",
-    title: "你的教育背景？",
-    subtitle: "匹配相似背景的伙伴",
-    mascotMessage: "不管什么学历，都能找到志同道合的人！",
+    id: "professionalProfile",
+    title: "你的职业身份",
+    subtitle: "学历+行业一起搞定",
+    mascotMessage: "学历+行业一起搞定，说不定能遇到同行大佬！",
     mascotMood: "pointing" as XiaoyueMood,
-    type: "select" as const,
-    options: EDUCATION_OPTIONS,
-  },
-  {
-    id: "workIndustry",
-    title: "你在哪个行业工作？",
-    subtitle: "用于兴趣推荐和同行匹配",
-    mascotMessage: "可能会遇到同行前辈或者跨界伙伴哦！",
-    mascotMood: "excited" as XiaoyueMood,
-    type: "select" as const,
-    options: INDUSTRY_OPTIONS,
+    type: "dual" as const,
   },
   {
     id: "location",
-    title: "你的家乡和常驻城市？",
+    title: "你从哪来，在哪混？",
     subtitle: "老乡见老乡，两眼泪汪汪",
-    mascotMessage: "说不定能遇到老乡呢！",
+    mascotMessage: "老乡见老乡，配桌优先排！🏠",
     mascotMood: "excited" as XiaoyueMood,
     type: "dualCity" as const,
   },
   {
     id: "intent",
-    title: "你想通过悦聚收获什么？",
-    subtitle: "告诉我你的目标，我帮你精准匹配！",
-    mascotMessage: "告诉我你的目标，我帮你精准匹配！最后一步啦！",
+    title: "这次聚会，你最想……",
+    subtitle: "选得越准，同桌的人越对味",
+    mascotMessage: "最后一个问题！选完之后我就知道该把你安排在哪桌了 😏",
     mascotMood: "excited" as XiaoyueMood,
     type: "multiSelect" as const,
-    options: INTENT_OPTIONS,
+    options: SHARED_INTENT_OPTIONS,
   },
 ];
 
@@ -196,21 +175,26 @@ function TappableCard({
   onClick, 
   children,
   className,
+  disabled,
 }: { 
   selected: boolean; 
   onClick: () => void; 
   children: React.ReactNode;
   className?: string;
+  disabled?: boolean;
 }) {
   return (
     <motion.button
       type="button"
       onClick={onClick}
+      disabled={disabled}
+      aria-disabled={disabled}
       className={cn(
         "w-full p-4 rounded-xl border-2 text-left transition-all duration-200 min-h-[48px]",
         selected 
           ? "border-primary bg-primary/10 shadow-md shadow-primary/10" 
           : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary/50",
+        disabled && "opacity-60 cursor-not-allowed",
         className
       )}
       whileTap={{ scale: 0.97 }}
@@ -259,7 +243,6 @@ export default function EssentialDataPage() {
   const [intent, setIntent] = useState<string[]>([]);
   const [preFlexibleIntent, setPreFlexibleIntent] = useState<string[]>([]); // Phase 0: Fix #9
   const [showCelebration, setShowCelebration] = useState(false);
-  const [showManualIndustry, setShowManualIndustry] = useState(false);
   // Enhancement 5: direction tracking for step number ticker
   const directionRef = useRef<1 | -1>(1);
 
@@ -275,7 +258,20 @@ export default function EssentialDataPage() {
         }
         
         if (Date.now() - state.timestamp < 24 * 60 * 60 * 1000) {
-          setCurrentStep(state.currentStep);
+          // Safely clamp restored step to valid range [0, TOTAL_STEPS - 1]
+          const rawStep =
+            typeof state.currentStep === "number" && Number.isFinite(state.currentStep)
+              ? state.currentStep
+              : 0;
+          const clampedStep = Math.min(Math.max(0, rawStep), TOTAL_STEPS - 1);
+          if (clampedStep !== rawStep) {
+            toast({
+              title: "进度已调整",
+              description: "填写流程已更新，已为你定位到最近的步骤",
+              variant: "default",
+            });
+          }
+          setCurrentStep(clampedStep);
           setDisplayName(state.data.displayName || "");
           setGender(state.data.gender || "");
           setBirthYear(state.data.birthYear || "");
@@ -420,11 +416,9 @@ export default function EssentialDataPage() {
     switch (currentStep) {
       case 0: return displayName.trim().length >= 2;
       case 1: return gender && (birthDate?.year || birthYear);
-      case 2: return relationshipStatus;
-      case 3: return education;
-      case 4: return industryCategory && industrySegmentNew; // FIXED: use correct field name
-      case 5: return hometown && currentCity;
-      case 6: return intent.length >= 1;
+      case 2: return education && industryCategory && industrySegmentNew;
+      case 3: return currentCity; // hometown is optional
+      case 4: return intent.length >= 1;
       default: return false;
     }
   };
@@ -476,7 +470,6 @@ export default function EssentialDataPage() {
         const profileData: any = {
           displayName,
           gender,
-          relationshipStatus,
           education,
           workIndustry,
           hometown,
@@ -497,6 +490,11 @@ export default function EssentialDataPage() {
           occupationId,
           workMode,
         };
+        // Preserve relationshipStatus if it was restored from localStorage cache (from a prior
+        // onboarding attempt before this field was moved to Edit Profile). It is no longer
+        // collected in this flow, so we only write it when it already has a value to avoid
+        // overwriting existing DB data with an empty string.
+        if (relationshipStatus) profileData.relationshipStatus = relationshipStatus;
         
         // Age validation (Phase 0: Fix #8) - Client-side pre-check
         let calculatedAge = 0;
@@ -849,86 +847,94 @@ export default function EssentialDataPage() {
                 </div>
               )}
 
-              {/* Step 2-4: Single select */}
-              {(currentStep === 2 || currentStep === 3) && stepConfig.options && (
-                <div className={cn(
-                  "grid gap-3",
-                  currentStep === 2 ? "grid-cols-2" : "grid-cols-1"
-                )}>
-                  {stepConfig.options.map(opt => {
-                    const value = currentStep === 2 ? relationshipStatus : education;
-                    const setValue = currentStep === 2 ? setRelationshipStatus : setEducation;
-                    return (
-                      <TappableCard
-                        key={opt.value}
-                        selected={value === opt.value}
-                        onClick={() => setValue(opt.value)}
-                        className="p-4"
-                      >
-                        <span className="text-base font-semibold">{opt.label}</span>
-                      </TappableCard>
-                    );
-                  })}
-                </div>
-              )}
-
-              {currentStep === 4 && (
-                <div className="space-y-4">
-                  {/* EnhancedOccupationSelector - Combines occupation & industry with AI */}
-                  <div>
-                    <label className="block text-base font-semibold mb-3 text-center">职业与行业信息</label>
-                    <EnhancedOccupationSelector
-                      selectedOccupationId={occupationId}
-                      selectedWorkMode={workMode as WorkMode | null}
-                      socialIntent={intent[0] || "flexible"}
-                      industryCategory={industryCategory}
-                      industrySegment={industrySegmentNew}
-                      industryNiche={industryNiche}
-                      onOccupationChange={(id, industryId) => {
-                        setOccupationId(id);
-                        // industryId is the old-style single industry field, we can ignore it now
-                        // as the AI will infer the three-tier classification
-                      }}
-                      onWorkModeChange={(mode) => setWorkMode(mode)}
-                      onIndustryChange={(categoryId, segmentId, nicheId, labels) => {
-                        setIndustryCategory(categoryId);
-                        setIndustrySegmentNew(segmentId);
-                        setIndustryNiche(nicheId || "");
-                        
-                        if (labels) {
-                          setIndustryCategoryLabel(labels.category);
-                          setIndustrySegmentLabel(labels.segment);
-                          setIndustryNicheLabel(labels.niche || "");
-                          
-                          // Also update legacy workIndustry field for backward compatibility
-                          const pathParts = [
-                            labels.category,
-                            labels.segment,
-                            labels.niche
-                          ].filter(Boolean);
-                          setWorkIndustry(pathParts.join(" > "));
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Step 5: Hometown + Current City */}
-              {currentStep === 5 && (
+              {/* Step 2: Professional Profile (Education + Industry combined) */}
+              {currentStep === 2 && (
                 <div className="space-y-6">
-                  <div>
-                    <label className="block text-base font-semibold mb-3 text-center">家乡</label>
-                    <Input
-                      value={hometown}
-                      onChange={(e) => setHometown(e.target.value)}
-                      placeholder="例如：湖南长沙"
-                      className="h-12 text-base text-center rounded-xl"
-                      data-testid="input-hometown"
-                    />
+                  {/* Education section */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-muted-foreground">最高学历</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {EDUCATION_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            haptics.light();
+                            setEducation(opt.value);
+                          }}
+                          className={cn(
+                            "px-4 py-3 rounded-xl border text-sm transition-all",
+                            education === opt.value
+                              ? "border-primary bg-primary/10 text-primary font-medium"
+                              : "border-border bg-background hover:border-primary/50"
+                          )}
+                          data-testid={`card-education-${opt.value}`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-base font-semibold mb-3 text-center">常驻城市</label>
+
+                  {/* Divider */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border/50" />
+                    </div>
+                  </div>
+
+                  {/* Industry section - only show after education is selected */}
+                  {education && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-3"
+                    >
+                      <label className="text-sm font-medium text-muted-foreground">所在行业</label>
+                      <EnhancedOccupationSelector
+                        selectedOccupationId={occupationId}
+                        selectedWorkMode={workMode as WorkMode | null}
+                        socialIntent={intent[0] || "flexible"}
+                        industryCategory={industryCategory}
+                        industrySegment={industrySegmentNew}
+                        industryNiche={industryNiche}
+                        onOccupationChange={(id, _industryId) => {
+                          setOccupationId(id);
+                        }}
+                        onWorkModeChange={(mode) => setWorkMode(mode)}
+                        onIndustryChange={(categoryId, segmentId, nicheId, labels) => {
+                          setIndustryCategory(categoryId);
+                          setIndustrySegmentNew(segmentId);
+                          setIndustryNiche(nicheId || "");
+
+                          if (labels) {
+                            setIndustryCategoryLabel(labels.category);
+                            setIndustrySegmentLabel(labels.segment);
+                            setIndustryNicheLabel(labels.niche || "");
+
+                            // Also update legacy workIndustry field for backward compatibility
+                            const pathParts = [
+                              labels.category,
+                              labels.segment,
+                              labels.niche
+                            ].filter(Boolean);
+                            setWorkIndustry(pathParts.join(" > "));
+                          }
+                        }}
+                      />
+                    </motion.div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 3: Hometown + Current City */}
+              {currentStep === 3 && (
+                <div className="space-y-6">
+                  {/* City - Required */}
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-muted-foreground text-center">
+                      常驻城市 <span className="text-destructive">*</span>
+                    </label>
                     <div className="grid grid-cols-3 gap-3">
                       {CITY_OPTIONS.map(city => (
                         <TappableCard
@@ -942,16 +948,31 @@ export default function EssentialDataPage() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Hometown - Optional */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-muted-foreground">家乡</label>
+                      <span className="text-xs text-muted-foreground">选填 · 填了能遇到老乡</span>
+                    </div>
+                    <Input
+                      value={hometown}
+                      onChange={(e) => setHometown(e.target.value)}
+                      placeholder="例如：湖南长沙"
+                      className="h-12 text-base text-center rounded-xl"
+                      data-testid="input-hometown"
+                    />
+                  </div>
                 </div>
               )}
 
-              {/* Step 6: Intent (multiSelect) - Duolingo Style */}
-              {currentStep === 6 && (
+              {/* Step 4: Intent (multiSelect) - Duolingo Style */}
+              {currentStep === 4 && (
                 <div className="space-y-4">
                   {/* Main intent options - 2 column grid with icons */}
                   <div className="grid grid-cols-2 gap-3">
-                    {INTENT_OPTIONS.map((opt, index) => {
-                      const Icon = opt.icon;
+                    {SHARED_INTENT_OPTIONS.map((opt, index) => {
+                      const Icon = INTENT_ICON_MAP[opt.iconHint] ?? Users;
                       const isSelected = intent.includes(opt.value);
                       const isDisabled = isFlexibleSelected;
                       
@@ -1090,10 +1111,10 @@ export default function EssentialDataPage() {
                         "font-bold text-sm",
                         isFlexibleSelected ? "text-purple-700 dark:text-purple-300" : "text-foreground"
                       )}>
-                        {FLEXIBLE_OPTION.label}
+                        {INTENT_FLEXIBLE_OPTION.label}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {FLEXIBLE_OPTION.subtitle}
+                        {INTENT_FLEXIBLE_OPTION.subtitle}
                       </p>
                       <p className="text-xs text-muted-foreground/70 mt-0.5">
                         (我都感兴趣，帮我安排)
@@ -1137,7 +1158,7 @@ export default function EssentialDataPage() {
                           animate={{ opacity: 1, y: 0 }}
                           className="text-sm font-medium text-green-600 dark:text-green-400"
                         >
-                          🎉 太棒了！已选够3个，匹配会更精准哦
+                          🎉 完美！小悦已经知道该帮你找什么样的人了
                         </motion.p>
                       )}
                     </motion.div>

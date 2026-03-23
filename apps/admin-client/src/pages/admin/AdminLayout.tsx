@@ -64,7 +64,6 @@ export default function AdminLayout() {
               <Route path="/admin/notifications" component={AdminNotificationsPage} />
               <Route path="/admin/moderation" component={AdminModerationPage} />
               <Route path="/admin/reports" component={AdminReportsPage} />
-              <Route path="/admin/chat-logs" component={AdminInteractionLogsPage} />
               <Route path="/admin/interaction-logs" component={AdminInteractionLogsPage} />
               <Route path="/admin/matching" component={AdminMatchingLabPage} />
               <Route path="/admin/matching-config" component={AdminMatchingConfigPage} />

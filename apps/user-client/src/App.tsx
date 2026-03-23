@@ -41,6 +41,7 @@ function ChatEventRedirect({ params }: { params: { eventId: string } }) {
 // InterestsTopicsPage and EditInterestsPage moved to _backup_modules/interests-topics-legacy/ (2026-01-19)
 import PersonalityTestPageV4 from "@/pages/PersonalityTestPageV4";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
+import WeChatAuthGatePage from "@/pages/WeChatAuthGatePage";
 import ProfileSetupPage from "@/pages/ProfileSetupPage";
 import EssentialDataPage from "@/pages/EssentialDataPage";
 import ExtendedDataPage from "@/pages/ExtendedDataPage";
@@ -85,8 +86,10 @@ import CommunityJoinPage from "@/pages/CommunityJoinPage";
 import WalletPage from "@/pages/WalletPage";
 import FAQPage from "@/pages/FAQPage";
 import TermsPage from "@/pages/TermsPage";
+import { ADMIN_PORTAL_URL } from "@/config/admin";
 
 preloadXiaoyueImages();
+
 
 function RedirectToPersonalityTest() {
   const [, setLocation] = useLocation();
@@ -153,6 +156,7 @@ function AuthenticatedRouter() {
       return (
         <Switch>
           <Route path="/personality-test" component={PersonalityTestPageV4} />
+          <Route path="/personality-test/auth-gate" component={WeChatAuthGatePage} />
           <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
           <Route path="/personality-test/results" component={PersonalityTestResultPage} />
           <Route path="*" component={RedirectToPersonalityTest} />
@@ -163,6 +167,7 @@ function AuthenticatedRouter() {
       return (
         <Switch>
           <Route path="/personality-test" component={PersonalityTestPageV4} />
+          <Route path="/personality-test/auth-gate" component={WeChatAuthGatePage} />
           <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
           <Route path="/personality-test/results" component={PersonalityTestResultPage} />
           <Route path="/onboarding/setup" component={EssentialDataPage} />
@@ -229,10 +234,10 @@ function AuthenticatedRouter() {
           <Route path="/icebreaker/:sessionId" component={IcebreakerSessionPage} />
           <Route path="/icebreaker-game" component={IcebreakerGamePage} />
           <Route path="/events" component={EventsPage} />
-          <Route path="/chats" component={ChatsRedirect} />
           <Route path="/connections" component={ConnectionsPage} />
-          <Route path="/chats/:eventId" component={ChatEventRedirect} />
+          <Route path="/chats" component={ConnectionsPage} />
           <Route path="/connections/:eventId" component={EventCoordinationPage} />
+          <Route path="/chats/:eventId" component={EventCoordinationPage} />
           <Route path="/profile" component={ProfilePage} />
           <Route path="/rewards" component={RewardsPage} />
           <Route path="/profile/edit" component={EditProfilePage} />
@@ -251,6 +256,7 @@ function AuthenticatedRouter() {
           <Route path="/event/:id" component={EventDetailPage} />
           <Route path="/invite" component={InvitePage} />
           <Route path="/personality-test" component={PersonalityTestPageV4} />
+          <Route path="/personality-test/auth-gate" component={WeChatAuthGatePage} />
           <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
           <Route path="/personality-test/results" component={PersonalityTestResultPage} />
           <Route component={NotFound} />
@@ -266,12 +272,8 @@ function Router() {
   // Admin routes - unconditional redirect to dedicated admin subdomain.
   // Must be before any isLoading / isAuthenticated checks so there is no
   // fallback path that lets user-client render admin UI.
-  if (location.startsWith("/admin/login")) {
-    window.location.replace("https://admin.yuejuapp.com/login");
-    return null;
-  }
   if (location.startsWith("/admin")) {
-    window.location.replace("https://admin.yuejuapp.com");
+    window.location.replace(`${ADMIN_PORTAL_URL}/login`);
     return null;
   }
 
@@ -305,6 +307,7 @@ function Router() {
       <Switch>
         {/* Anonymous personality test (Option B: Post-Test Signup Flow - 2026-02-04) */}
         <Route path="/personality-test" component={PersonalityTestPageV4} />
+        <Route path="/personality-test/auth-gate" component={WeChatAuthGatePage} />
         <Route path="/personality-test/results" component={PersonalityTestResultPage} />
         <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
         

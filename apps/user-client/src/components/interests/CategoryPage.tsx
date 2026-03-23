@@ -1,15 +1,37 @@
-import { forwardRef } from "react";
+import { forwardRef, useMemo } from "react";
 import { InterestBubble } from "./InterestBubble";
 import type { InterestCategory, HeatLevel } from "@/data/interestCarouselData";
+import { isRecommendedForArchetype } from "@/lib/archetypeInterestRecommendations";
 
 interface CategoryPageProps {
   category: InterestCategory;
   selections: Record<string, HeatLevel>;
   onTopicTap: (topicId: string) => void;
+  archetypeId?: string | null;
 }
 
 export const CategoryPage = forwardRef<HTMLDivElement, CategoryPageProps>(
-  ({ category, selections, onTopicTap }, ref) => {
+  ({ category, selections, onTopicTap, archetypeId }, ref) => {
+    // Pre-compute which topics are recommended (O(n) once per category render).
+    // The Set is reused both for sorting and for rendering badges, avoiding
+    // redundant array searches.
+    const { sortedTopics, recommendedIds } = useMemo(() => {
+      if (!archetypeId) {
+        return { sortedTopics: category.topics, recommendedIds: new Set<string>() };
+      }
+      const ids = new Set(
+        category.topics
+          .filter((t) => isRecommendedForArchetype(t.id, archetypeId))
+          .map((t) => t.id)
+      );
+      const sorted = [...category.topics].sort((a, b) => {
+        const aRec = ids.has(a.id) ? 0 : 1;
+        const bRec = ids.has(b.id) ? 0 : 1;
+        return aRec - bRec;
+      });
+      return { sortedTopics: sorted, recommendedIds: ids };
+    }, [category.topics, archetypeId]);
+
     return (
       <div className="w-full" ref={ref} id={`category-panel-${category.id}`}>
         {/* Category header - not sticky, just a regular header */}
@@ -33,12 +55,13 @@ export const CategoryPage = forwardRef<HTMLDivElement, CategoryPageProps>(
           role="group"
           aria-label={`${category.name} 兴趣选项`}
         >
-          {category.topics.map((topic) => (
+          {sortedTopics.map((topic) => (
             <InterestBubble
               key={topic.id}
               topic={topic}
               level={selections[topic.id] || 0}
               onTap={() => onTopicTap(topic.id)}
+              isRecommended={recommendedIds.has(topic.id)}
             />
           ))}
         </div>

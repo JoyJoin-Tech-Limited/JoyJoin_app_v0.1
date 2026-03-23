@@ -19,6 +19,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Form,
   FormControl,
   FormField,
@@ -35,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Users, Eye, MapPin, Clock, Store, Copy, Check, Pencil } from "lucide-react";
+import { Calendar, Users, Eye, MapPin, Clock, Store, Copy, Check, Pencil, UserPlus, ChevronDown } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -197,6 +202,14 @@ type CityFilter = "all" | "深圳" | "香港";
 type WaitingFilter = "all" | "hasWaiting" | "noWaiting";
 type EventsFilter = "all" | "hasEvents" | "noEvents";
 
+// Capacity fill thresholds for visual indicator
+const FILL_THRESHOLD_GREEN = 80;   // >= 80% fill is healthy (green)
+const FILL_THRESHOLD_AMBER = 50;   // >= 50% fill is moderate (amber), < 50% is low (red)
+
+// Match score color thresholds
+const MATCH_SCORE_GREEN = 80;
+const MATCH_SCORE_AMBER = 60;
+
 export default function AdminEventPoolsPage() {
   // ====== 过滤状态 ======
   const [cityFilter, setCityFilter] = useState<CityFilter>("all");
@@ -209,6 +222,8 @@ export default function AdminEventPoolsPage() {
   const [selectedPool, setSelectedPool] = useState<EventPool | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [copiedPoolId, setCopiedPoolId] = useState<string | null>(null);
+  // 手动添加用户弹出层
+  const [addMemberGroupId, setAddMemberGroupId] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -392,6 +407,21 @@ export default function AdminEventPoolsPage() {
       createPoolMutation.mutate(payload);
     }
   };
+
+  // 手动添加用户到小组
+  const addMemberMutation = useMutation({
+    mutationFn: ({ poolId, groupId, registrationId }: { poolId: string; groupId: string; registrationId: string }) =>
+      apiRequest("POST", `/api/admin/event-pools/${poolId}/groups/${groupId}/add-member`, { registrationId }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/event-pools", variables.poolId, "registrations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/event-pools", variables.poolId, "groups"] });
+      setAddMemberGroupId(null);
+      toast({ title: "添加成功", description: "用户已加入小组" });
+    },
+    onError: () => {
+      toast({ title: "该功能即将上线", description: "手动添加用户功能暂未开放，敬请期待", variant: "destructive" });
+    },
+  });
 
   const handleViewDetails = (pool: EventPool) => {
     setSelectedPool(pool);
@@ -1181,21 +1211,31 @@ export default function AdminEventPoolsPage() {
                               }`.trim() ||
                               "匿名用户"}
                           </div>
-                          <Badge
-                            variant={
-                              reg.matchStatus === "pending"
-                                ? "secondary"
+                          <div className="flex items-center gap-2">
+                            {reg.matchScore !== null && reg.matchScore !== undefined && (
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${reg.matchScore >= MATCH_SCORE_GREEN ? 'text-green-700 border-green-300' : reg.matchScore >= MATCH_SCORE_AMBER ? 'text-amber-700 border-amber-300' : 'text-red-700 border-red-300'}`}
+                              >
+                                匹配分: {reg.matchScore}
+                              </Badge>
+                            )}
+                            <Badge
+                              variant={
+                                reg.matchStatus === "pending"
+                                  ? "secondary"
+                                  : reg.matchStatus === "matched"
+                                  ? "default"
+                                  : "outline"
+                              }
+                            >
+                              {reg.matchStatus === "pending"
+                                ? "等待匹配"
                                 : reg.matchStatus === "matched"
-                                ? "default"
-                                : "outline"
-                            }
-                          >
-                            {reg.matchStatus === "pending"
-                              ? "等待匹配"
-                              : reg.matchStatus === "matched"
-                              ? "已分配小组"
-                              : reg.matchStatus}
-                          </Badge>
+                                ? "已分配小组"
+                                : reg.matchStatus}
+                            </Badge>
+                          </div>
                         </div>
                         <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                           {reg.userGender && <span>性别：{reg.userGender}</span>}
@@ -1239,63 +1279,159 @@ export default function AdminEventPoolsPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {safeGroups.map((group) => (
-                      <div
-                        key={group.id}
-                        className="rounded-md border px-3 py-2 text-xs"
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="font-medium">
-                            第 {group.groupNumber} 组 · 共{" "}
-                            {group.members.length} 人
+                    {safeGroups.map((group, groupIdx) => {
+                      const maxSize = selectedPool?.maxGroupSize ?? 6;
+                      const fillPercent = Math.min(100, (group.members.length / maxSize) * 100);
+                      const vacantSeats = Math.max(0, maxSize - group.members.length);
+                      // Pending registrations not yet in any group
+                      const pendingUnassigned = safeRegistrations.filter(
+                        r => (r.matchStatus === "pending" || r.matchStatus === "等待匹配") && !r.assignedGroupId
+                      );
+                      return (
+                        <div
+                          key={group.id}
+                          className="rounded-md border px-3 py-2 text-xs"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="font-medium">
+                              第 {group.groupNumber} 组 · 共{" "}
+                              {group.members.length} 人
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {group.status && (
+                                <Badge variant="outline">{group.status}</Badge>
+                              )}
+                              {/* 手动添加用户按钮 */}
+                              <Popover
+                                open={addMemberGroupId === group.id}
+                                onOpenChange={(open) => setAddMemberGroupId(open ? group.id : null)}
+                              >
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 text-xs gap-1"
+                                    data-testid={`button-add-member-${groupIdx}`}
+                                  >
+                                    <UserPlus className="h-3 w-3" />
+                                    手动添加用户
+                                    <ChevronDown className="h-3 w-3" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-72 p-2" align="end">
+                                  <div className="text-xs font-medium mb-2 text-muted-foreground">
+                                    从等待中用户选择加入此组
+                                  </div>
+                                  {pendingUnassigned.length === 0 ? (
+                                    <div className="text-xs text-muted-foreground py-2 text-center">
+                                      暂无等待匹配的用户
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                                      {pendingUnassigned.map((reg) => (
+                                        <Button
+                                          key={reg.id}
+                                          variant="ghost"
+                                          className="w-full justify-between h-auto px-2 py-1.5 font-normal"
+                                          onClick={() => {
+                                            addMemberMutation.mutate({
+                                              poolId: selectedPool!.id,
+                                              groupId: group.id,
+                                              registrationId: reg.id,
+                                            });
+                                          }}
+                                        >
+                                          <span className="font-medium truncate text-left">
+                                            {reg.userName || `${reg.userFirstName ?? ""} ${reg.userLastName ?? ""}`.trim() || "匿名用户"}
+                                          </span>
+                                          <div className="flex items-center gap-1 shrink-0">
+                                            {reg.userArchetype && (
+                                              <Badge variant="outline" className="text-[10px] h-4">{reg.userArchetype}</Badge>
+                                            )}
+                                            {reg.matchScore !== null && reg.matchScore !== undefined && (
+                                              <Badge
+                                                variant="outline"
+                                                className={`text-[10px] h-4 ${reg.matchScore >= MATCH_SCORE_GREEN ? 'text-green-700' : reg.matchScore >= MATCH_SCORE_AMBER ? 'text-amber-700' : 'text-red-700'}`}
+                                              >
+                                                {reg.matchScore}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        </Button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </PopoverContent>
+                              </Popover>
+                            </div>
                           </div>
-                          {group.status && (
-                            <Badge variant="outline">{group.status}</Badge>
+
+                          {/* 容量填充条 */}
+                          <div className="mb-2">
+                            <div className="w-full bg-muted rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full ${fillPercent >= FILL_THRESHOLD_GREEN ? 'bg-green-500' : fillPercent >= FILL_THRESHOLD_AMBER ? 'bg-amber-500' : 'bg-red-500'}`}
+                                style={{ width: `${fillPercent}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {group.members.length}/{maxSize} 人
+                              {vacantSeats > 0 && <span className="text-amber-600 ml-1">({vacantSeats} 空位)</span>}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            {group.members.map((m) => (
+                              <span
+                                key={m.registrationId}
+                                className="rounded bg-muted px-2 py-1 flex items-center gap-1"
+                              >
+                                {m.userName ||
+                                  `${m.userFirstName ?? ""} ${
+                                    m.userLastName ?? ""
+                                  }`.trim() ||
+                                  "匿名用户"}
+                                {m.userArchetype
+                                  ? ` · ${m.userArchetype}`
+                                  : ""}
+                                {m.matchScore !== null && m.matchScore !== undefined && (
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-[10px] h-4 ml-1 ${m.matchScore >= MATCH_SCORE_GREEN ? 'text-green-700 border-green-300' : m.matchScore >= MATCH_SCORE_AMBER ? 'text-amber-700 border-amber-300' : 'text-red-700 border-red-300'}`}
+                                  >
+                                    {m.matchScore}
+                                  </Badge>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                          
+                          {/* Venue Assignment Display */}
+                          {group.venueName ? (
+                            <div className="mt-2 pt-2 border-t">
+                              <div className="flex items-center gap-2">
+                                <Store className="h-3 w-3 text-muted-foreground" />
+                                <span className="font-medium text-green-600">
+                                  已分配: {group.venueName}
+                                </span>
+                              </div>
+                              {group.venueAddress && (
+                                <div className="flex items-center gap-2 mt-1 text-muted-foreground">
+                                  <MapPin className="h-3 w-3" />
+                                  <span className="text-xs">{group.venueAddress}</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="mt-2 pt-2 border-t">
+                              <Badge variant="secondary" className="text-xs">
+                                未分配场地
+                              </Badge>
+                            </div>
                           )}
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          {group.members.map((m) => (
-                            <span
-                              key={m.registrationId}
-                              className="rounded bg-muted px-2 py-1"
-                            >
-                              {m.userName ||
-                                `${m.userFirstName ?? ""} ${
-                                  m.userLastName ?? ""
-                                }`.trim() ||
-                                "匿名用户"}
-                              {m.userArchetype
-                                ? ` · ${m.userArchetype}`
-                                : ""}
-                            </span>
-                          ))}
-                        </div>
-                        
-                        {/* Venue Assignment Display */}
-                        {group.venueName ? (
-                          <div className="mt-2 pt-2 border-t">
-                            <div className="flex items-center gap-2">
-                              <Store className="h-3 w-3 text-muted-foreground" />
-                              <span className="font-medium text-green-600">
-                                已分配: {group.venueName}
-                              </span>
-                            </div>
-                            {group.venueAddress && (
-                              <div className="flex items-center gap-2 mt-1 text-muted-foreground">
-                                <MapPin className="h-3 w-3" />
-                                <span className="text-xs">{group.venueAddress}</span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="mt-2 pt-2 border-t">
-                            <Badge variant="secondary" className="text-xs">
-                              未分配场地
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

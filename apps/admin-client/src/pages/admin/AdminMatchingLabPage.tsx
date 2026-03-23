@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
-import { Sliders, TestTube2, Zap, Save, RotateCcw, Play, Users } from "lucide-react";
+import { Sliders, TestTube2, Zap, Save, RotateCcw, Play, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -25,6 +25,27 @@ interface MatchingConfig {
   minChemistryScore: number;
   isActive: boolean;
 }
+
+interface ActivePairScoreModel {
+  chemistryWeight: number;
+  interestWeight: number;
+  languageWeight: number;
+  preferenceWeight: number;
+  hometownWeight: number;
+  backgroundWeight: number;
+  groupScoreWeights: {
+    avgPairScore: number;
+    groupDiversity: number;
+    energyBalance: number;
+  };
+}
+
+const formatPercent = (weight?: number): string => {
+  if (weight === undefined || weight === null || Number.isNaN(weight)) {
+    return "—";
+  }
+  return `${Math.round(weight * 100)}%`;
+};
 
 interface User {
   id: string;
@@ -47,8 +68,10 @@ interface UsersResponse {
 interface MatchGroup {
   groupId: string;
   userIds: string[];
+  avgPairScore?: number;
   avgChemistryScore: number;
   diversityScore: number;
+  energyBalance?: number;
   overallScore: number;
   users: User[];
 }
@@ -85,6 +108,7 @@ export default function AdminMatchingLabPage() {
   const [config, setConfig] = useState<MatchingConfig>(DEFAULT_CONFIG);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
   const { toast } = useToast();
 
   // 加载当前配置
@@ -215,6 +239,17 @@ export default function AdminMatchingLabPage() {
     setSelectedUserIds(shuffled.slice(0, count).map(u => u.id));
   };
 
+  const { data: activePairModel } = useQuery<ActivePairScoreModel>({
+    queryKey: ["/api/admin/matching/active-pair-model"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/matching/active-pair-model");
+      if (!res.ok) {
+        throw new Error("Failed to load active pair model");
+      }
+      return res.json();
+    },
+  });
+
   if (configLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -229,6 +264,105 @@ export default function AdminMatchingLabPage() {
         <h1 className="text-3xl font-bold" data-testid="text-page-title">匹配实验室</h1>
         <p className="text-muted-foreground mt-1">调整AI匹配算法参数和测试场景</p>
       </div>
+
+      {/* Active Factor Structure — full-width info card */}
+      <Card data-testid="card-active-factor-structure">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Zap className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>当前配对因子结构（Active Pair-Score Model）</CardTitle>
+              <CardDescription>
+                poolMatchingService.ts 中实际运行的 6 维度权重——此卡为只读参考，修改需更新服务端代码。
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Chemistry */}
+            <div className="rounded-lg border p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">性格化学反应</span>
+                <Badge>{formatPercent(activePairModel?.chemistryWeight)}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">原型兼容性矩阵（Chemistry Matrix）</p>
+            </div>
+            {/* Interest */}
+            <div className="rounded-lg border p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">兴趣重叠度</span>
+                <Badge>28%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">Heat 加权 Jaccard 相似度（user_interests 表）</p>
+            </div>
+            {/* Social Affinity */}
+            <div className="rounded-lg border p-3 space-y-1 bg-blue-50/50 border-blue-200">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">社交同频度</span>
+                <Badge variant="secondary">20%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                同频信号（相似 → 高分）：人生阶段亲和力（workMode / LIFE_STAGE_AFFINITY 矩阵）
+                + 学历同频度（学历接近 = 高分，非多样性奖励）
+                + 同乡亲和力（双方启用时）
+              </p>
+            </div>
+            {/* Background Diversity */}
+            <div className="rounded-lg border p-3 space-y-1 bg-orange-50/50 border-orange-200">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">背景多样性</span>
+                <Badge variant="secondary">15%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                多样性信号（不同 → 高分）：行业多样性 + 性别多样性。
+                <span className="font-medium text-orange-700"> 注：学历已移至社交同频，不再作为多样性维度。</span>
+              </p>
+            </div>
+            {/* Preference */}
+            <div className="rounded-lg border p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">活动偏好</span>
+                <Badge variant="outline">5%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                社交目的 + 酒局主题/饮酒程度（低权重：现有酒吧/饭店场景分化力有限）
+              </p>
+            </div>
+            {/* Language */}
+            <div className="rounded-lg border p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">语言沟通</span>
+                <Badge variant="outline">4%</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                共同语言覆盖（低权重：普通话普及率高，区分度有限）
+              </p>
+            </div>
+          </div>
+          <Separator className="my-4" />
+          <div className="grid gap-3 sm:grid-cols-2 text-xs text-muted-foreground">
+            <div>
+              <p className="font-semibold text-foreground mb-1">矩阵说明</p>
+              <ul className="space-y-0.5 list-disc list-inside">
+                <li><span className="font-medium">原型兼容性矩阵</span>：archetypeChemistry.ts — 12×12，分数 0–100</li>
+                <li><span className="font-medium">人生阶段亲和力矩阵</span>：LIFE_STAGE_AFFINITY（7×7，非对称，双向平均）</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground mb-1">小组综合得分</p>
+              <p>
+                avgPairScore × {formatPercent(activePairModel?.groupScoreWeights?.avgPairScore)} +{" "}
+                groupDiversity × {formatPercent(activePairModel?.groupScoreWeights?.groupDiversity)} +{" "}
+                energyBalance × {formatPercent(activePairModel?.groupScoreWeights?.energyBalance)}
+              </p>
+              <p className="mt-1">groupDiversity 维度：行业 + 性别 + 原型 + 人生阶段（均为多样性信号）</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* 左侧：算法权重配置 */}
@@ -496,52 +630,89 @@ export default function AdminMatchingLabPage() {
               <CardContent className="space-y-4">
                 {/* 整体指标 */}
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-3 rounded-lg bg-muted">
-                    <div className="text-2xl font-bold text-primary" data-testid="text-avg-chemistry">
+                  <div className={`text-center p-3 rounded-lg ${testResult.metrics.avgChemistryScore >= 80 ? 'bg-green-50 text-green-700' : testResult.metrics.avgChemistryScore >= 60 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>
+                    <div className="text-2xl font-bold" data-testid="text-avg-chemistry">
                       {testResult.metrics.avgChemistryScore}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">化学反应</div>
+                    <div className="text-xs mt-1">化学反应</div>
                   </div>
-                  <div className="text-center p-3 rounded-lg bg-muted">
-                    <div className="text-2xl font-bold text-primary" data-testid="text-avg-diversity">
+                  <div className={`text-center p-3 rounded-lg ${testResult.metrics.avgDiversityScore >= 80 ? 'bg-green-50 text-green-700' : testResult.metrics.avgDiversityScore >= 60 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>
+                    <div className="text-2xl font-bold" data-testid="text-avg-diversity">
                       {testResult.metrics.avgDiversityScore}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">多样性</div>
+                    <div className="text-xs mt-1">多样性</div>
                   </div>
-                  <div className="text-center p-3 rounded-lg bg-muted">
-                    <div className="text-2xl font-bold text-primary" data-testid="text-overall-quality">
+                  <div className={`text-center p-3 rounded-lg ${testResult.metrics.overallMatchQuality >= 80 ? 'bg-green-50 text-green-700' : testResult.metrics.overallMatchQuality >= 60 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>
+                    <div className="text-2xl font-bold" data-testid="text-overall-quality">
                       {testResult.metrics.overallMatchQuality}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">整体质量</div>
+                    <div className="text-xs mt-1">整体质量</div>
                   </div>
                 </div>
 
                 <Separator />
 
                 {/* 各组详情 */}
-                <ScrollArea className="h-[200px]">
+                <ScrollArea className="h-[300px]">
                   <div className="space-y-3">
                     {testResult.groups.map((group, idx) => (
                       <div
                         key={group.groupId}
-                        className="p-3 rounded-lg border"
+                        className="rounded-lg border"
                         data-testid={`group-result-${idx}`}
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-semibold">小组 {idx + 1}</span>
-                            <Badge variant="outline">{group.userIds.length}人</Badge>
+                        <button
+                          type="button"
+                          className="w-full p-3 text-left cursor-pointer hover:bg-muted/50 rounded-lg"
+                          onClick={() => setExpandedGroupId(expandedGroupId === group.groupId ? null : group.groupId)}
+                          data-testid={`group-expand-${idx}`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-semibold">小组 {idx + 1}</span>
+                              <Badge variant="outline">{group.userIds.length}人</Badge>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="text-sm">
+                                <span className="text-muted-foreground">总分 </span>
+                                <span className="font-semibold">{group.overallScore}</span>
+                              </div>
+                              {expandedGroupId === group.groupId ? (
+                                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </div>
                           </div>
-                          <div className="text-sm">
-                            <span className="text-muted-foreground">总分 </span>
-                            <span className="font-semibold">{group.overallScore}</span>
+                          <div className="flex gap-4 text-xs text-muted-foreground">
+                            <div>配对: {group.avgPairScore ?? group.avgChemistryScore}</div>
+                            <div>多样: {group.diversityScore}</div>
+                            <div>平衡: {group.energyBalance ?? '–'}</div>
                           </div>
-                        </div>
-                        <div className="flex gap-4 text-xs text-muted-foreground">
-                          <div>化学: {group.avgChemistryScore}</div>
-                          <div>多样: {group.diversityScore}</div>
-                        </div>
+                        </button>
+
+                        {/* 成员详情展开区 */}
+                        {expandedGroupId === group.groupId && group.users && group.users.length > 0 && (
+                          <div className="border-t px-3 pb-3 space-y-2 pt-2">
+                            <div className="text-xs text-muted-foreground mb-1 font-medium">▼ 成员列表（组级得分仅供参考）</div>
+                            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground pb-1">
+                              <span>配对均分: <strong>{group.avgPairScore ?? '–'}</strong></span>
+                              <span>组化学: <strong>{group.avgChemistryScore}</strong></span>
+                              <span>组多样性: <strong>{group.diversityScore}</strong></span>
+                              <span>沟通平衡: <strong>{group.energyBalance ?? '–'}</strong></span>
+                              <span>组总分: <strong>{group.overallScore}</strong></span>
+                            </div>
+                            {group.users.map((user) => (
+                              <div key={user.id} className="rounded-md bg-muted/40 px-3 py-2 text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{user.displayName || user.firstName || "未命名"}</span>
+                                  {user.archetype && <Badge variant="outline" className="text-[10px] h-4">{user.archetype}</Badge>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

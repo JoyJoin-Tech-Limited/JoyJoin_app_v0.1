@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ADMIN_PORTAL_URL } from "@/config/admin";
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
@@ -23,7 +24,8 @@ export default function AdminLoginPage() {
     queryKey: ['/api/auth/user'],
     queryFn: async () => {
       try {
-        return await apiRequest("GET", "/api/auth/user");
+        const res = await apiRequest("GET", "/api/auth/user");
+        return await res.json();
       } catch {
         return null;
       }
@@ -33,7 +35,7 @@ export default function AdminLoginPage() {
 
   useEffect(() => {
     if (user && (user as any).isAdmin) {
-      window.location.href = "https://admin.yuejuapp.com";
+      window.location.href = `${ADMIN_PORTAL_URL}/login`;
     }
   }, [user]);
 
@@ -80,7 +82,7 @@ export default function AdminLoginPage() {
       
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       setTimeout(() => {
-        window.location.href = "https://admin.yuejuapp.com";
+        window.location.href = `${ADMIN_PORTAL_URL}/login`;
       }, 500);
     },
     onError: (error: Error) => {
@@ -117,7 +119,7 @@ export default function AdminLoginPage() {
       
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       setTimeout(() => {
-        window.location.href = "https://admin.yuejuapp.com";
+        window.location.href = `${ADMIN_PORTAL_URL}/login`;
       }, 500);
     },
     onError: (error: Error) => {

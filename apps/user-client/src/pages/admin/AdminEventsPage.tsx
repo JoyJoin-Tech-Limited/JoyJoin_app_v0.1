@@ -107,6 +107,7 @@ const STATUS_MAP: Record<
 > = {
   pending_match: { label: "待匹配", variant: "secondary" },
   matched: { label: "已匹配", variant: "default" },
+  in_progress: { label: "进行中", variant: "default" },
   completed: { label: "已完成", variant: "outline" },
   canceled: { label: "已取消", variant: "destructive" },
 };
@@ -182,7 +183,7 @@ const createEventSchema = z.object({
 
 // =============== 组件 ===============
 
-type StatusFilter = "all" | "pending_match" | "matched" | "completed";
+type StatusFilter = "all" | "pending_match" | "matched" | "in_progress" | "completed";
 type CityFilter = "all" | "深圳" | "香港";
 type EventTypeFilter = "all" | "饭局" | "酒局" | "其他";
 type BudgetFilter = "all" | "150以下" | "150-200" | "200-300" | "300-500";
@@ -239,7 +240,7 @@ export default function AdminEventsPage() {
       selectedLanguages: [],
       selectedTasteIntensity: [],
       selectedCuisines: [],
-      autoMatch: true,
+      autoMatch: false,
     },
   });
 
@@ -768,6 +769,9 @@ export default function AdminEventsPage() {
                         <p className="text-xs text-muted-foreground">
                           开启后，可以在匹配页面一键从池子中按偏好/人数匹配用户。
                         </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          关闭时，管理员需手动触发匹配；建议先人工审核报名后再开启自动匹配
+                        </p>
                       </div>
                       <FormControl>
                         <Input
@@ -894,6 +898,7 @@ export default function AdminEventsPage() {
                 <SelectItem value="all">全部</SelectItem>
                 <SelectItem value="pending_match">待匹配</SelectItem>
                 <SelectItem value="matched">已匹配</SelectItem>
+                <SelectItem value="in_progress">进行中</SelectItem>
                 <SelectItem value="completed">已完成</SelectItem>
               </SelectContent>
             </Select>

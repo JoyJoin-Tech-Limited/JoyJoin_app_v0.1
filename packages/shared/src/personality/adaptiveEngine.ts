@@ -23,6 +23,12 @@ import { applyZScoreCapping, calculateSdiIndex, applySdiCorrection } from './tra
 // Default true - V2 matcher is now the standard algorithm for consistency
 export const ENABLE_MATCHER_V2_DEFAULT = true;
 
+// Validity score thresholds
+const ACQUIESCENCE_BIAS_THRESHOLD = 0.7;   // >70% same option → likely bias
+const ACQUIESCENCE_PENALTY = 0.25;
+const MIN_TRAIT_DIFFERENTIATION_STDEV = 8; // stdev < 8 → insufficient trait spread
+const LOW_DIFFERENTIATION_PENALTY = 0.20;
+
 // Development mode flag for conditional logging
 const IS_DEV = typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
 
@@ -123,6 +129,7 @@ export interface EngineState {
   questionHistory: AnsweredQuestion[];
   config: AssessmentConfig;
   detectedCohort?: CohortType;
+  traitScoreHistory: Record<TraitKey, number[]>;
 }
 
 export function initializeEngineState(config?: Partial<AssessmentConfig>): EngineState {
@@ -151,6 +158,7 @@ export function initializeEngineState(config?: Partial<AssessmentConfig>): Engin
     currentMatches: [],
     questionHistory: [],
     config: fullConfig,
+    traitScoreHistory: { A: [], C: [], E: [], O: [], X: [], P: [] },
   };
 }
 
@@ -171,11 +179,16 @@ export function processAnswer(
   newState.traitScores = { ...state.traitScores };
   newState.traitSampleCounts = { ...state.traitSampleCounts };
   newState.traitConfidences = { ...state.traitConfidences };
+  newState.traitScoreHistory = ALL_TRAITS.reduce((acc, trait) => {
+    acc[trait] = state.traitScoreHistory ? [...state.traitScoreHistory[trait]] : [];
+    return acc;
+  }, {} as Record<TraitKey, number[]>);
   
   for (const [trait, score] of Object.entries(option.traitScores) as [TraitKey, number][]) {
     if (score !== undefined && score !== 0) {
       newState.traitScores[trait] = (newState.traitScores[trait] || 0) + score;
       newState.traitSampleCounts[trait] = (newState.traitSampleCounts[trait] || 0) + 1;
+      newState.traitScoreHistory![trait].push(score);
     }
   }
   
@@ -186,7 +199,7 @@ export function processAnswer(
     const avgScore = rawScore / Math.max(1, sampleCount);
     const normalizedScore = normalizeTraitScore(avgScore);
     
-    const confidence = calculateTraitConfidence(sampleCount, rawScore);
+    const confidence = calculateTraitConfidence(sampleCount, rawScore, newState.traitScoreHistory![trait]);
     
     newState.traitConfidences[trait] = {
       trait,
@@ -223,10 +236,18 @@ export function processAnswer(
   return newState;
 }
 
-function calculateTraitConfidence(sampleCount: number, totalScore: number): number {
+function calculateTraitConfidence(sampleCount: number, totalScore: number, scoreHistory?: number[]): number {
   if (sampleCount === 0) return 0;
   
   const baseSampleWeight = Math.min(1, sampleCount / 4);
+  
+  if (scoreHistory && scoreHistory.length >= 2) {
+    const mean = scoreHistory.reduce((sum, s) => sum + s, 0) / scoreHistory.length;
+    // Sample variance (Bessel's correction, n-1); high variance → exp approaches 0 → lower bonus
+    const variance = scoreHistory.reduce((sum, s) => sum + Math.pow(s - mean, 2), 0) / (scoreHistory.length - 1);
+    const consistencyBonus = Math.min(0.3, Math.exp(-variance / 2) * 0.3);
+    return Math.min(1, baseSampleWeight * 0.8 + consistencyBonus);
+  }
   
   const scoreVariance = Math.abs(totalScore) / Math.max(1, sampleCount);
   const consistencyBonus = Math.min(0.2, scoreVariance * 0.05);
@@ -802,7 +823,33 @@ export function getPreSignupPreview(state: EngineState): {
 }
 
 export function calculateValidityScore(state: EngineState): number {
-  return 0.85;
+  let score = 1.0;
+
+  // Check 1: Acquiescence bias — if > 70% of answers share the same option value
+  if (state.questionHistory.length > 0) {
+    const optionCounts: Record<string, number> = {};
+    for (const answer of state.questionHistory) {
+      const opt = answer.selectedOption;
+      optionCounts[opt] = (optionCounts[opt] || 0) + 1;
+    }
+    const maxCount = Math.max(...Object.values(optionCounts));
+    if (maxCount / state.questionHistory.length > ACQUIESCENCE_BIAS_THRESHOLD) {
+      score -= ACQUIESCENCE_PENALTY;
+    }
+  }
+
+  // Check 2: Low trait differentiation — stdev of normalized trait scores < 8
+  const traitValues = ALL_TRAITS.map(trait => state.traitConfidences[trait].score);
+  if (traitValues.length > 0) {
+    const mean = traitValues.reduce((sum, v) => sum + v, 0) / traitValues.length;
+    const variance = traitValues.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / traitValues.length;
+    const stdev = Math.sqrt(variance);
+    if (stdev < MIN_TRAIT_DIFFERENTIATION_STDEV) {
+      score -= LOW_DIFFERENTIATION_PENALTY;
+    }
+  }
+
+  return Math.max(0, Math.min(1, score));
 }
 
 export interface FinalResultV2 {

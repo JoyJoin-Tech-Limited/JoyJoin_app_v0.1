@@ -15,6 +15,7 @@ import { broadcastEventStatusChanged, broadcastAdminAction, broadcastAttendanceS
 import { matchEventPool, saveMatchResults } from "./poolMatchingService";
 import { ARCHETYPE_NAMES } from "./archetypeConfig";
 import type { ArchetypeName } from "./archetypeConfig";
+import { enrichProfileFromRegistration } from "./lib/profileEnrichment";
 
 type Traits = {
   affinity: number;
@@ -5629,518 +5630,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Curated icebreakers based on event attendees' personalities and interests
-  app.get('/api/icebreakers/curated/:eventId', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const { eventId } = req.params;
-      const userId = req.session.userId;
-      
-      if (!eventId) {
-        return res.status(400).json({ message: "Event ID required" });
-      }
-
-      // Get the blind box event with match data
-      const event = await storage.getBlindBoxEventById(eventId, userId);
-      if (!event) {
-        return res.status(404).json({ message: "Event not found" });
-      }
-
-      // Get matched attendees from event
-      const matchedAttendees = (Array.isArray(event.matchedAttendees) ? event.matchedAttendees : []) as Array<{
-        userId?: string;
-        interests?: string[];
-        primaryInterests?: string[];
-        archetype?: string;
-      }>;
-      const attendeeCount = matchedAttendees.length;
-
-      // Collect interests from all attendees (check multiple possible field names)
-      const allInterests: string[] = [];
-      const allArchetypes: string[] = [];
-      
-      for (const attendee of matchedAttendees) {
-        // Check various interest field names for compatibility
-        const interests = attendee.interests || attendee.primaryInterests || [];
-        if (Array.isArray(interests)) {
-          allInterests.push(...interests);
-        }
-        if (attendee.archetype) {
-          allArchetypes.push(attendee.archetype);
-        }
-      }
-
-      // Find common interests (appear more than once)
-      const interestCounts: Record<string, number> = {};
-      for (const interest of allInterests) {
-        interestCounts[interest] = (interestCounts[interest] || 0) + 1;
-      }
-      const commonInterests = Object.entries(interestCounts)
-        .filter(([_, count]) => count > 1)
-        .sort((a, b) => b[1] - a[1])
-        .map(([interest]) => interest)
-        .slice(0, 5);
-
-      // Map interests to question categories (expanded from 21 to 55+ interests)
-      const interestToCategoryMap: Record<string, string[]> = {
-        // 旅行与户外 (travel)
-        "旅行": ["travel"],
-        "户外": ["travel", "passions"],
-        "露营": ["travel", "passions"],
-        "徒步": ["travel", "passions"],
-        "滑雪": ["travel", "passions"],
-        "潜水": ["travel", "passions"],
-        "冲浪": ["travel", "passions"],
-        "攀岩": ["travel", "passions"],
-        "骑行": ["travel", "passions"],
-        "自驾": ["travel"],
-        
-        // 美食与生活 (dining, city_life)
-        "美食": ["dining"],
-        "烹饪": ["dining"],
-        "咖啡": ["dining", "city_life"],
-        "烘焙": ["dining", "creativity"],
-        "调酒": ["dining", "city_life"],
-        "品酒": ["dining", "city_life"],
-        "茶道": ["dining", "personal"],
-        "探店": ["dining", "city_life"],
-        
-        // 艺术与创意 (creativity)
-        "摄影": ["creativity", "travel"],
-        "电影": ["creativity"],
-        "音乐": ["creativity"],
-        "阅读": ["creativity", "personal"],
-        "艺术": ["creativity"],
-        "时尚": ["creativity"],
-        "设计": ["creativity"],
-        "绘画": ["creativity"],
-        "手工": ["creativity"],
-        "写作": ["creativity", "personal"],
-        "追剧": ["creativity", "lighthearted"],
-        "综艺": ["lighthearted"],
-        "动漫": ["creativity", "passions"],
-        "播客": ["creativity", "innovation"],
-        
-        // 科技与创新 (innovation)
-        "科技": ["innovation"],
-        "创业": ["innovation", "personal"],
-        "投资": ["innovation", "personal"],
-        "数字营销": ["innovation"],
-        "自媒体": ["innovation", "creativity"],
-        "AI": ["innovation"],
-        "编程": ["innovation"],
-        "产品": ["innovation"],
-        "金融": ["innovation", "personal"],
-        
-        // 运动与健康 (passions)
-        "健身": ["passions"],
-        "瑜伽": ["passions", "personal"],
-        "运动": ["passions"],
-        "游戏": ["passions", "lighthearted"],
-        "桌游": ["passions", "lighthearted"],
-        "电竞": ["passions"],
-        "跑步": ["passions"],
-        "篮球": ["passions"],
-        "足球": ["passions"],
-        "网球": ["passions"],
-        "高尔夫": ["passions", "city_life"],
-        "舞蹈": ["passions", "creativity"],
-        "冥想": ["passions", "personal"],
-        
-        // 生活方式 (lighthearted, personal)
-        "宠物": ["lighthearted"],
-        "园艺": ["lighthearted", "personal"],
-        "钓鱼": ["lighthearted", "passions"],
-        "花艺": ["creativity", "lighthearted"],
-        "育儿": ["personal"],
-        "占星": ["lighthearted"],
-        "塔罗": ["lighthearted"],
-        
-        // 知识与思考 (personal, values)
-        "心理学": ["personal", "values"],
-        "哲学": ["values", "personal"],
-        "历史": ["personal", "creativity"],
-        "政治": ["values"],
-        "教育": ["personal", "values"],
-        "法律": ["innovation", "personal"],
-        "医学": ["innovation", "personal"],
-      };
-
-      // Build interest-to-category reverse mapping for smart reason generation
-      const categoryToInterests: Record<string, string[]> = {};
-      for (const [interest, categories] of Object.entries(interestToCategoryMap)) {
-        for (const cat of categories) {
-          if (!categoryToInterests[cat]) categoryToInterests[cat] = [];
-          categoryToInterests[cat].push(interest);
-        }
-      }
-
-      // Determine which categories to prioritize based on common interests
-      const prioritizedCategories: string[] = [];
-      const commonInterestsByCategory: Record<string, string[]> = {};
-      
-      for (const interest of commonInterests) {
-        const categories = interestToCategoryMap[interest];
-        if (categories) {
-          prioritizedCategories.push(...categories);
-          // Track which common interests map to which categories
-          for (const cat of categories) {
-            if (!commonInterestsByCategory[cat]) commonInterestsByCategory[cat] = [];
-            if (!commonInterestsByCategory[cat].includes(interest)) {
-              commonInterestsByCategory[cat].push(interest);
-            }
-          }
-        }
-      }
-
-      // Map category to difficulty
-      type DifficultyLevel = "easy" | "medium" | "deep";
-      const categoryDifficulty: Record<string, DifficultyLevel> = {
-        lighthearted: "easy",
-        dining: "easy",
-        city_life: "easy",
-        passions: "medium",
-        travel: "medium",
-        creativity: "medium",
-        innovation: "medium",
-        personal: "deep",
-        values: "deep",
-      };
-
-      // Category display names in Chinese
-      const categoryDisplayNames: Record<string, string> = {
-        lighthearted: "轻松话题",
-        dining: "美食话题",
-        city_life: "城市生活",
-        passions: "热爱话题",
-        travel: "旅行话题",
-        creativity: "创意话题",
-        innovation: "创新话题",
-        personal: "个人话题",
-        values: "价值话题",
-      };
-
-      // All available categories for full coverage - shuffled for fairness
-      const allCategories = Object.keys(icebreakerQuestions);
-      
-      // Build balanced category selection with weighted distribution
-      // Goal: Ensure all 9 categories get fair representation, not just lighthearted
-      const TARGET_TOPICS = 8;
-      const curatedTopics: { question: string; category: string; difficulty: DifficultyLevel; recommendReason: string }[] = [];
-      const usedQuestions = new Set<string>();
-      const categoryUsageCount: Record<string, number> = {};
-      
-      // Track which interests matched which categories for smart reason generation
-      const categoryToMatchedInterests: Record<string, string[]> = {};
-      
-      // Initialize category usage tracking
-      for (const cat of allCategories) {
-        categoryUsageCount[cat] = 0;
-      }
-
-      // Define balanced category pools for different difficulty levels
-      const easyCategories = ["lighthearted", "dining", "city_life"];
-      const mediumCategories = ["passions", "travel", "creativity", "innovation"];
-      const deepCategories = ["personal", "values"];
-      
-      // Target distribution: 2 easy, 4 medium, 2 deep = 8 topics
-      const targetDistribution = [
-        { pool: easyCategories, count: 2 },
-        { pool: mediumCategories, count: 4 },
-        { pool: deepCategories, count: 2 },
-      ];
-
-      // Generate smart recommend reason based on context
-      // Track ALL used reasons to avoid repetition within a batch
-      const usedReasons = new Set<string>();
-      
-      // All variants are complete sentences with subject/verb structure
-      const easyFallbackVariants = [
-        "小悦觉得这个话题很适合暖场",
-        "这是一个轻松愉快的开场话题",
-        "聊这个完全没压力，很适合破冰",
-        "小悦为你们挑了这个轻松话题",
-        "这个话题很适合刚认识的朋友聊",
-        "这是让气氛活跃起来的好话题",
-      ];
-      
-      const mediumFallbackVariants = [
-        "小悦觉得这个话题深度刚刚好",
-        "这是一个恰到好处的聊天话题",
-        "这个话题有趣又不会太深入",
-        "小悦为你们挑了这个适合畅聊的话题",
-        "这是一个很好的聊天素材",
-        "小悦觉得这个话题能让你们聊得开心",
-      ];
-      
-      const deepFallbackVariants = [
-        "小悦觉得这是加深了解的好机会",
-        "这是一个适合走心交流的话题",
-        "小悦为你们挑了这个深度话题",
-        "这是真诚分享彼此的好时刻",
-        "这个话题值得你们细细聊聊",
-        "小悦觉得这能帮你们更了解彼此",
-      ];
-      
-      const defaultFallbackVariants = [
-        "小悦为你们精心挑选了这个话题",
-        "这是今日特选的精彩话题",
-        "小悦觉得这个话题很适合你们",
-        "这是一个值得聊聊的话题",
-        "小悦为你们准备的交流话题",
-      ];
-      
-      // Category-specific full-sentence reason templates
-      const categoryReasonTemplates: Record<string, string[]> = {
-        "lighthearted": ["小悦觉得这个轻松话题很适合你们", "这是一个让氛围活跃的话题", "小悦为你们挑了这个开心话题"],
-        "dining": ["小悦觉得你们可以聊聊美食", "这是一个吃货必聊的话题", "小悦为你们挑了这个美食话题"],
-        "city_life": ["小悦觉得你们可以聊聊城市生活", "这是都市人很有共鸣的话题", "小悦为你们挑了这个城市话题"],
-        "passions": ["小悦觉得你们可以分享各自的热爱", "这是一个聊心头好的机会", "小悦为你们挑了这个兴趣话题"],
-        "travel": ["小悦觉得你们可以聊聊旅行", "这是一个关于远方的话题", "小悦为你们挑了这个旅行话题"],
-        "creativity": ["小悦觉得这个话题能激发创意", "这是一个脑洞时间的话题", "小悦为你们挑了这个创意话题"],
-        "innovation": ["小悦觉得你们可以聊聊新鲜事", "这是一个关于未来的话题", "小悦为你们挑了这个前沿话题"],
-        "personal": ["小悦觉得这能帮你们认识彼此", "这是一个自我探索的话题", "小悦为你们挑了这个了解话题"],
-        "values": ["小悦觉得这是深度交流的好机会", "这是一个关于价值观的话题", "小悦为你们挑了这个走心话题"],
-      };
-      
-      // Helper to pick an unused reason from variants
-      const pickUnusedReason = (variants: string[]): string => {
-        const unused = variants.filter((r: any) => !usedReasons.has(r));
-        if (unused.length > 0) {
-          const picked = unused[Math.floor(Math.random() * unused.length)];
-          usedReasons.add(picked);
-          return picked;
-        }
-        // All used, just pick random
-        return variants[Math.floor(Math.random() * variants.length)];
-      };
-      
-      // Archetype-based reason variants (all complete sentences)
-      const energeticEasyReasons = [
-        "你们中有活力型伙伴，这个话题很适合破冰",
-        "小悦觉得这个话题能让活力组合更嗨",
-        "有开心果在，这个话题能让气氛更活跃",
-      ];
-      const energeticMediumReasons = [
-        "你们是热闹组合，这个话题正适合",
-        "小悦觉得这个话题配你们的热闹氛围",
-        "有活力担当在，聊这个一定很开心",
-      ];
-      const warmMediumReasons = [
-        "你们中有暖心伙伴，这个话题很适合温馨交流",
-        "小悦觉得这个话题配你们的暖心氛围",
-        "有暖心担当在，聊这个会很舒服",
-      ];
-      const thoughtfulDeepReasons = [
-        "你们中有思考型伙伴，这个话题适合深聊",
-        "小悦觉得这个话题配你们的深度组合",
-        "有思考担当在，聊这个会很有收获",
-      ];
-      const warmDeepReasons = [
-        "你们是暖心组合，这个话题适合走心交流",
-        "小悦觉得这个话题能让你们真诚分享",
-        "有暖心担当在，聊这个会很真诚",
-      ];
-      
-      // Interest-based reason variants (templates with placeholder)
-      const interestReasonTemplates = [
-        (count: number, total: number, interest: string) => count === total ? `你们${total}人都爱${interest}，聊这个正合适` : `${count}人都喜欢${interest}，可以一起聊`,
-        (count: number, total: number, interest: string) => count === total ? `小悦发现你们都对${interest}感兴趣` : `小悦发现${count}位伙伴都喜欢${interest}`,
-        (count: number, total: number, interest: string) => count === total ? `你们的共同爱好${interest}，聊起来很有共鸣` : `${interest}是你们的共同话题`,
-      ];
-      let interestTemplateIndex = 0;
-      
-      const generateRecommendReason = (category: string, difficulty: DifficultyLevel, isPrioritized: boolean): string => {
-        // Priority 1: If this category was selected because of common interests
-        const matchedInterests = commonInterestsByCategory[category];
-        if (matchedInterests && matchedInterests.length > 0) {
-          const peopleWithInterest = Object.entries(interestCounts)
-            .filter(([interest]) => matchedInterests.includes(interest))
-            .reduce((max, [_, count]) => Math.max(max, count), 0);
-          
-          if (peopleWithInterest >= 2) {
-            const interestDisplay = matchedInterests[0];
-            // Use rotating templates to avoid repetition
-            const template = interestReasonTemplates[interestTemplateIndex % interestReasonTemplates.length];
-            interestTemplateIndex++;
-            const reason = template(peopleWithInterest, attendeeCount, interestDisplay);
-            usedReasons.add(reason);
-            return reason;
-          }
-          // Fallback for single-person interest match
-          const singleInterestReasons = [
-            `这个话题契合你们对${matchedInterests[0]}的兴趣`,
-            `小悦发现你们对${matchedInterests[0]}都有兴趣`,
-            `${matchedInterests[0]}相关的话题，很适合你们`,
-          ];
-          return pickUnusedReason(singleInterestReasons);
-        }
-        
-        // Priority 2: Based on archetype composition
-        const energeticArchetypes = allArchetypes.filter(a => 
-          a?.includes("开心柯基") || a?.includes("太阳鸡") || a?.includes("夸夸豚")
-        );
-        const warmArchetypes = allArchetypes.filter(a => 
-          a?.includes("暖心熊") || a?.includes("淡定海豚")
-        );
-        const thoughtfulArchetypes = allArchetypes.filter(a => 
-          a?.includes("沉思猫头鹰") || a?.includes("稳如龟")
-        );
-        
-        // Priority 3: Category-specific reasons (30% chance if no archetype match)
-        const categoryReasons = categoryReasonTemplates[category];
-        const useCategoryReason = categoryReasons && Math.random() < 0.3;
-        
-        if (difficulty === "easy") {
-          if (energeticArchetypes.length > 0) {
-            return pickUnusedReason(energeticEasyReasons);
-          }
-          if (useCategoryReason) {
-            return pickUnusedReason(categoryReasons);
-          }
-          return pickUnusedReason(easyFallbackVariants);
-        }
-        
-        if (difficulty === "medium") {
-          if (energeticArchetypes.length >= 2) {
-            return pickUnusedReason(energeticMediumReasons);
-          }
-          if (warmArchetypes.length > 0) {
-            return pickUnusedReason(warmMediumReasons);
-          }
-          if (useCategoryReason) {
-            return pickUnusedReason(categoryReasons);
-          }
-          return pickUnusedReason(mediumFallbackVariants);
-        }
-        
-        if (difficulty === "deep") {
-          if (thoughtfulArchetypes.length > 0) {
-            return pickUnusedReason(thoughtfulDeepReasons);
-          }
-          if (warmArchetypes.length >= 2) {
-            return pickUnusedReason(warmDeepReasons);
-          }
-          if (useCategoryReason) {
-            return pickUnusedReason(categoryReasons);
-          }
-          return pickUnusedReason(deepFallbackVariants);
-        }
-        
-        return pickUnusedReason(defaultFallbackVariants);
-      };
-
-      // Helper function to pick a question from a category
-      const pickFromCategory = (category: string, isPrioritized: boolean = false): boolean => {
-        const questions = icebreakerQuestions[category as keyof typeof icebreakerQuestions];
-        if (!questions || questions.length === 0) return false;
-        
-        const shuffled = [...questions].sort(() => Math.random() - 0.5);
-        const categoryInfo = categoryLabels[category] || { name: "话题", color: "gray" };
-        const difficulty = categoryDifficulty[category] || "medium";
-        
-        for (const q of shuffled) {
-          if (!usedQuestions.has(q)) {
-            usedQuestions.add(q);
-            curatedTopics.push({
-              question: q,
-              category: categoryInfo.name,
-              difficulty,
-              recommendReason: generateRecommendReason(category, difficulty, isPrioritized),
-            });
-            categoryUsageCount[category]++;
-            return true;
-          }
-        }
-        return false;
-      };
-
-      // First: If we have prioritized categories from common interests, use them first
-      if (prioritizedCategories.length > 0) {
-        const uniquePrioritized = [...new Set(prioritizedCategories)];
-        // Pick up to 3 topics from prioritized categories
-        let prioritizedCount = 0;
-        for (const category of uniquePrioritized) {
-          if (prioritizedCount >= 3) break;
-          if (pickFromCategory(category, true)) {
-            prioritizedCount++;
-          }
-        }
-      }
-
-      // Second: Fill remaining slots with balanced distribution
-      for (const { pool, count } of targetDistribution) {
-        // Shuffle the pool for randomness
-        const shuffledPool = [...pool].sort(() => Math.random() - 0.5);
-        let picked = 0;
-        
-        // Count how many we already have from this pool
-        for (const cat of pool) {
-          picked += categoryUsageCount[cat];
-        }
-        
-        // Pick remaining needed from this pool
-        for (const category of shuffledPool) {
-          if (picked >= count) break;
-          if (curatedTopics.length >= TARGET_TOPICS) break;
-          
-          // Avoid over-selecting from any single category
-          if (categoryUsageCount[category] >= 2) continue;
-          
-          if (pickFromCategory(category)) {
-            picked++;
-          }
-        }
-      }
-
-      // Third: If still under target, fill from any category (shuffled for fairness)
-      if (curatedTopics.length < TARGET_TOPICS) {
-        const shuffledAll = [...allCategories].sort(() => Math.random() - 0.5);
-        for (const category of shuffledAll) {
-          if (curatedTopics.length >= TARGET_TOPICS) break;
-          // Max 2 per category to ensure diversity
-          if (categoryUsageCount[category] >= 2) continue;
-          pickFromCategory(category);
-        }
-      }
-
-      // Sort by difficulty: easy -> medium -> deep
-      const difficultyOrder: Record<DifficultyLevel, number> = { easy: 0, medium: 1, deep: 2 };
-      curatedTopics.sort((a, b) => difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty]);
-
-      // Generate atmosphere prediction based on archetypes
-      let atmosphereType = "balanced";
-      let atmosphereTitle = "温馨愉快的氛围";
-      let atmosphereDescription = "这群伙伴的组合会带来有趣而深入的对话";
-      
-      if (allArchetypes.some(a => a?.includes("开心柯基") || a?.includes("太阳鸡"))) {
-        atmosphereType = "energetic";
-        atmosphereTitle = "活力四射的聚会";
-        atmosphereDescription = "有开心柯基或太阳鸡在，气氛一定很热闹！";
-      } else if (allArchetypes.some(a => a?.includes("暖心熊") || a?.includes("淡定海豚"))) {
-        atmosphereType = "warm";
-        atmosphereTitle = "温暖舒适的交流";
-        atmosphereDescription = "暖心熊和淡定海豚会让大家感到放松和被接纳";
-      }
-
-      res.json({
-        atmospherePrediction: {
-          type: atmosphereType,
-          title: atmosphereTitle,
-          description: atmosphereDescription,
-          energyScore: Math.min(100, 60 + attendeeCount * 5),
-          highlight: commonInterests.length > 0 ? `共同兴趣：${commonInterests.slice(0, 2).join("、")}` : "期待有趣的对话！",
-          suggestedTopics: curatedTopics.slice(0, 3).map(t => t.question),
-        },
-        curatedTopics,
-        isArchitectCurated: true,
-        commonInterests: commonInterests.length > 0 ? commonInterests : undefined,
-      });
-    } catch (error) {
-      console.error("Error fetching curated icebreakers:", error);
-      res.status(500).json({ message: "Failed to fetch curated icebreakers" });
-    }
-  });
-
   // AI-powered topic recommendations for icebreaker toolkit
   app.post('/api/icebreaker/ai-topics', isPhoneAuthenticated, async (req: any, res) => {
     try {
@@ -9486,6 +8975,17 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         // Error logged, operation continues
       });
 
+      // Silently backfill empty profile fields from registration data (fire-and-forget)
+      enrichProfileFromRegistration({
+        userId: registration.userId,
+        eventIntent: registration.eventIntent ?? undefined,
+        preferredLanguages: registration.preferredLanguages ?? undefined,
+        dietaryRestrictions: registration.dietaryRestrictions ?? undefined,
+      }).catch((err: any) => {
+        // Log but don't fail the registration
+        console.error("[profileEnrichment] Failed to enrich profile:", err);
+      });
+
       res.json(registration);
     } catch (error: any) {
       console.error("Error registering for event pool:", error);
@@ -9728,7 +9228,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   app.get("/api/pool-groups/:groupId", requireAuth, async (req, res) => {
     try {
       const groupId = req.params.groupId;
-      const userId = (req.user as User).id;
+      const userId = (req.session as any).userId as string;
 
       // Get group info
       const group = await db.query.eventPoolGroups.findFirst({
@@ -9792,6 +9292,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           groupNumber: group.groupNumber,
           memberCount: group.memberCount,
           matchScore: group.overallScore,
+          avgPairScore: group.avgChemistryScore, // stored as avgChemistryScore in DB (= avgPairScore)
+          diversityScore: group.diversityScore,
+          energyBalance: group.energyBalance,
           matchExplanation: group.matchExplanation,
           venueName: group.venueName,
           venueAddress: group.venueAddress,
@@ -9815,7 +9318,50 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
-  // Finance - Get statistics
+  // Confirm attendance for a pool group
+  app.post("/api/pool-groups/:groupId/confirm-attendance", requireAuth, async (req, res) => {
+    try {
+      const groupId = req.params.groupId;
+      const session = req.session as any;
+      const userId = session?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Verify the user is a member of this group
+      const userRegistration = await db.query.eventPoolRegistrations.findFirst({
+        where: (regs: any, { eq, and }: any) =>
+          and(eq(regs.assignedGroupId, groupId), eq(regs.userId, userId)),
+      });
+
+      if (!userRegistration) {
+        return res.status(403).json({ message: "You are not a member of this group" });
+      }
+
+      // Look up the event pool to find a linked blind box event
+      const group = await db.query.eventPoolGroups.findFirst({
+        where: (groups: any, { eq }: any) => eq(groups.id, groupId),
+      });
+
+      let blindBoxEventId: string | null = null;
+      if (group?.poolId) {
+        const linkedEvent = await db
+          .select({ id: blindBoxEvents.id })
+          .from(blindBoxEvents)
+          .where(eq(blindBoxEvents.eventPoolId, group.poolId))
+          .limit(1);
+        if (linkedEvent.length > 0) {
+          blindBoxEventId = linkedEvent[0].id;
+        }
+      }
+
+      res.json({ success: true, blindBoxEventId });
+    } catch (error) {
+      console.error("Error confirming pool group attendance:", error);
+      res.status(500).json({ message: "Failed to confirm attendance" });
+    }
+  });
   app.get("/api/admin/finance/stats", requireAdmin, async (req, res) => {
     try {
       const stats = await storage.getFinanceStats();
@@ -10710,24 +10256,24 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
-  // ============ CHAT LOGS ROUTES ============
+  // ============ INTERACTION LOGS ROUTES ============
   
-  // POST /api/chat-logs - Internal logging endpoint
-  app.post("/api/chat-logs", async (req, res) => {
+  // POST /api/interaction-logs - Internal logging endpoint
+  app.post("/api/interaction-logs", async (req, res) => {
     try {
       const validatedData = insertChatLogSchema.parse(req.body);
       
-      const log = await storage.createChatLog(validatedData);
+      const log = await storage.createInteractionLog(validatedData);
       
       res.json(log);
     } catch (error: any) {
-      console.error("Error creating chat log:", error);
+      console.error("Error creating interaction log:", error);
       res.status(400).json({ message: error.message || "Failed to create log" });
     }
   });
 
-  // GET /api/admin/chat-logs - Admin queries logs with filters
-  app.get("/api/admin/chat-logs", requireAdmin, async (req, res) => {
+  // GET /api/admin/interaction-logs - Admin queries logs with filters
+  app.get("/api/admin/interaction-logs", requireAdmin, async (req, res) => {
     try {
       const { eventId, userId, severity, startDate, endDate } = req.query;
       
@@ -10738,23 +10284,23 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       if (startDate) filters.startDate = new Date(startDate as string);
       if (endDate) filters.endDate = new Date(endDate as string);
       
-      const logs = await storage.getChatLogs(filters);
+      const logs = await storage.getInteractionLogs(filters);
       
       res.json(logs);
     } catch (error: any) {
-      console.error("Error fetching chat logs:", error);
+      console.error("Error fetching interaction logs:", error);
       res.status(500).json({ message: "Failed to fetch logs" });
     }
   });
 
-  // GET /api/admin/chat-logs/stats - Admin gets log statistics
-  app.get("/api/admin/chat-logs/stats", requireAdmin, async (req, res) => {
+  // GET /api/admin/interaction-logs/stats - Admin gets log statistics
+  app.get("/api/admin/interaction-logs/stats", requireAdmin, async (req, res) => {
     try {
-      const stats = await storage.getChatLogStats();
+      const stats = await storage.getInteractionLogStats();
       
       res.json(stats);
     } catch (error: any) {
-      console.error("Error fetching chat log stats:", error);
+      console.error("Error fetching interaction log stats:", error);
       res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
@@ -11468,17 +11014,42 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       });
 
       const { matchExplanationService } = await import('./matchExplanationService');
-      
-      const matchMembers = members.map((m: any) => ({
-        userId: m.id,
-        displayName: m.displayName || '神秘嘉宾',
-        archetype: m.archetype,
-        secondaryArchetype: m.secondaryArchetype,
-        interestsTop: m.interestsTop,
-        industry: m.industry,
-        hometown: m.hometownRegionCity,
-        socialStyle: m.socialStyle,
-      }));
+
+      // Load user interests (with heat levels) for deep interest overlap detection
+      const memberInterestsRows = await db.query.userInterests.findMany({
+        where: sql`${userInterests.userId} = ANY(${memberIds})`,
+      }) as Array<{
+        userId: string;
+        selections: Array<{ topicId: string; level?: number | null }> | null;
+      }>;
+      const interestsByUserId = new Map(
+        memberInterestsRows.map((row) => [row.userId, row] as const)
+      );
+
+      const matchMembers = members.map((m: any) => {
+        const interestRow = interestsByUserId.get(m.id);
+        const interestsWithHeat = interestRow?.selections
+          ? (interestRow.selections as Array<{ topicId: string; level: number }>).map(
+              (s) => ({ topicId: s.topicId, heatLevel: s.level ?? 1 })
+            )
+          : null;
+        return {
+          userId: m.id,
+          displayName: m.displayName || '神秘嘉宾',
+          archetype: m.archetype,
+          secondaryArchetype: m.secondaryArchetype,
+          interestsTop: m.interestsTop,
+          industry: m.industryNicheLabel || m.industryCategoryLabel,
+          hometown: m.hometownRegionCity,
+          socialStyle: m.socialStyle,
+          educationLevel: m.educationLevel,
+          relationshipStatus: m.relationshipStatus,
+          workMode: m.workMode,
+          industryCategory: m.industryCategory,
+          industryCategoryLabel: m.industryCategoryLabel,
+          interestsWithHeat,
+        };
+      });
 
       // Get event pool info for event type
       const pool = await db.query.eventPools.findFirst({
@@ -11546,16 +11117,21 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       });
 
       const { matchExplanationService } = await import('./matchExplanationService');
-      
+
       const matchMembers = members.map((m: any) => ({
         userId: m.id,
         displayName: m.displayName || '神秘嘉宾',
         archetype: m.archetype,
         secondaryArchetype: m.secondaryArchetype,
         interestsTop: m.interestsTop,
-        industry: m.industry,
+        industry: m.industryNicheLabel || m.industryCategoryLabel,
         hometown: m.hometownRegionCity,
         socialStyle: m.socialStyle,
+        educationLevel: m.educationLevel,
+        relationshipStatus: m.relationshipStatus,
+        workMode: m.workMode,
+        industryCategory: m.industryCategory,
+        industryCategoryLabel: m.industryCategoryLabel,
       }));
 
       // Get event pool info for event type
@@ -11614,17 +11190,42 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       });
 
       const { matchExplanationService } = await import('./matchExplanationService');
-      
-      const matchMembers = members.map((m: any) => ({
-        userId: m.id,
-        displayName: m.displayName || '神秘嘉宾',
-        archetype: m.archetype,
-        secondaryArchetype: m.secondaryArchetype,
-        interestsTop: m.interestsTop,
-        industry: m.industry,
-        hometown: m.hometownRegionCity,
-        socialStyle: m.socialStyle,
-      }));
+
+      // Load user interests (with heat levels) for deep interest overlap detection
+      const memberInterestsRows = await db.query.userInterests.findMany({
+        where: sql`${userInterests.userId} = ANY(${memberIds})`,
+      }) as Array<{
+        userId: string;
+        selections: Array<{ topicId: string; level?: number | null }> | null;
+      }>;
+      const interestsByUserId = new Map(
+        memberInterestsRows.map((row) => [row.userId, row] as const)
+      );
+
+      const matchMembers = members.map((m: any) => {
+        const interestRow = interestsByUserId.get(m.id);
+        const interestsWithHeat = interestRow?.selections
+          ? (interestRow.selections as Array<{ topicId: string; level: number }>).map(
+              (s) => ({ topicId: s.topicId, heatLevel: s.level ?? 1 })
+            )
+          : null;
+        return {
+          userId: m.id,
+          displayName: m.displayName || '神秘嘉宾',
+          archetype: m.archetype,
+          secondaryArchetype: m.secondaryArchetype,
+          interestsTop: m.interestsTop,
+          industry: m.industryNicheLabel || m.industryCategoryLabel,
+          hometown: m.hometownRegionCity,
+          socialStyle: m.socialStyle,
+          educationLevel: m.educationLevel,
+          relationshipStatus: m.relationshipStatus,
+          workMode: m.workMode,
+          industryCategory: m.industryCategory,
+          industryCategoryLabel: m.industryCategoryLabel,
+          interestsWithHeat,
+        };
+      });
 
       const groupAnalysis = await matchExplanationService.generateGroupAnalysis(
         eventId,
@@ -11851,9 +11452,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           archetype: m.archetype,
           secondaryArchetype: m.secondaryArchetype,
           interestsTop: m.interestsTop,
-          industry: m.industry,
+          industry: m.industryNicheLabel || m.industryCategoryLabel,
           hometown: m.hometownRegionCity,
           socialStyle: m.socialStyle,
+          educationLevel: m.educationLevel,
+          relationshipStatus: m.relationshipStatus,
+          workMode: m.workMode,
+          industryCategory: m.industryCategory,
+          industryCategoryLabel: m.industryCategoryLabel,
         }));
 
         const analysis = await matchExplanationService.generateGroupAnalysis(

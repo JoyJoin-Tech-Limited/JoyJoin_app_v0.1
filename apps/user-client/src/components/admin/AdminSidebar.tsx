@@ -1,28 +1,15 @@
 import {
   LayoutDashboard,
   Users,
-  CreditCard,
-  Tag,
-  MapPin,
   Layers,
-  DollarSign,
-  BarChart3,
-  FileText,
+  Shield,
   Bell,
-  Flag,
-  FlaskConical,
-  MessageSquareWarning,
-  MessageSquare,
-  Settings,
-  ScrollText,
-  Brain,
 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -30,106 +17,62 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
 
-const menuItems = [
+const primaryNavItems = [
   {
-    title: "数据看板",
+    title: "总览",
     url: "/admin/dashboard",
     icon: LayoutDashboard,
+    match: ["/admin", "/admin/dashboard"],
   },
   {
-    title: "用户管理",
+    title: "用户与资料",
     url: "/admin/users",
     icon: Users,
+    match: ["/admin/users"],
   },
   {
-    title: "订阅管理",
-    url: "/admin/subscriptions",
-    icon: CreditCard,
-  },
-  {
-    title: "定价管理",
-    url: "/admin/pricing",
-    icon: DollarSign,
-  },
-  {
-    title: "优惠券",
-    url: "/admin/coupons",
-    icon: Tag,
-  },
-  {
-    title: "场地管理",
-    url: "/admin/venues",
-    icon: MapPin,
-  },
-  {
-    title: "活动池管理",
+    title: "活动与匹配",
     url: "/admin/event-pools",
     icon: Layers,
+    match: [
+      "/admin/event-pools",
+      "/admin/events",
+      "/admin/venues",
+      "/admin/templates",
+      "/admin/matching",
+      "/admin/matching-config",
+      "/admin/matching-logs",
+    ],
   },
   {
-    title: "财务管理",
-    url: "/admin/finance",
-    icon: DollarSign,
+    title: "社区安全",
+    url: "/admin/moderation",
+    icon: Shield,
+    match: [
+      "/admin/moderation",
+      "/admin/reports",
+      "/admin/feedback",
+      "/admin/interaction-logs",
+    ],
+  },
+  {
+    title: "内容与通知",
+    url: "/admin/content",
+    icon: Bell,
+    match: ["/admin/content", "/admin/notifications", "/admin/insights"],
   },
 ];
 
-const analyticsItems = [
-  {
-    title: "数据洞察",
-    url: "/admin/insights",
-    icon: BarChart3,
-  },
-  {
-    title: "反馈管理",
-    url: "/admin/feedback",
-    icon: MessageSquare,
-  },
-  {
-    title: "内容管理",
-    url: "/admin/content",
-    icon: FileText,
-  },
-  {
-    title: "通知推送",
-    url: "/admin/notifications",
-    icon: Bell,
-  },
-  {
-    title: "举报审核",
-    url: "/admin/moderation",
-    icon: Flag,
-  },
-  {
-    title: "举报管理",
-    url: "/admin/reports",
-    icon: MessageSquareWarning,
-  },
-  {
-    title: "互动日志",
-    url: "/admin/interaction-logs",
-    icon: FileText,
-  },
-  {
-    title: "匹配实验室",
-    url: "/admin/matching",
-    icon: FlaskConical,
-  },
-  {
-    title: "匹配配置",
-    url: "/admin/matching-config",
-    icon: Settings,
-  },
-  {
-    title: "匹配日志",
-    url: "/admin/matching-logs",
-    icon: ScrollText,
-  },
-  {
-    title: "小悦进化",
-    url: "/admin/evolution",
-    icon: Brain,
-  },
-];
+function isNavItemActive(location: string, match: string[]): boolean {
+  return match.some((path) => {
+    if (path === "/admin") {
+      // Treat the bare /admin path as an exact match only
+      return location === "/admin";
+    }
+
+    return location === path || location.startsWith(path + "/");
+  });
+}
 
 export function AdminSidebar() {
   const [location] = useLocation();
@@ -149,36 +92,13 @@ export function AdminSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>核心管理</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
+              {primaryNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
-                    isActive={location === item.url}
-                    data-testid={`nav-${item.title}`}
-                  >
-                    <Link href={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>数据与优化</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {analyticsItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === item.url}
+                    isActive={isNavItemActive(location, item.match)}
                     data-testid={`nav-${item.title}`}
                   >
                     <Link href={item.url}>

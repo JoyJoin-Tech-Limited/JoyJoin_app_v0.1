@@ -1,5 +1,9 @@
 # JoyJoin Quick Reference Guide
 
+> ⚠️ **SUPPLEMENTARY REFERENCE ONLY** — Some sections of this file are outdated.  
+> For active development, always use **`DEVELOPER_QUICK_REFERENCE.md`** (canonical, up-to-date) and **`PRODUCT_REQUIREMENTS.md`** (authoritative PRD).  
+> **Never base code or copy decisions solely on this file.** Sections marked ⚠️ are known to be outdated.
+
 **For rapid onboarding and daily development reference**
 
 ---
@@ -16,10 +20,13 @@ npm run dev              # Start on http://localhost:5000
 
  
 
-### Test User Flow
-1. Go to `/register`
-2. Enter any phone (SMS bypassed in dev)
-3. Complete profile → Take personality test → Browse events
+### Test User Flow (WeChat-first, V4 personality system)
+1. Go to `/` — lands on `LandingPage`
+2. Navigate to `/personality-test` — complete V4 adaptive test **anonymously** (8–16 questions)
+3. On the results page, tap "微信一键登录" — WeChat auth creates your account
+4. Complete onboarding: Essential Data → Extended Data → Profile Review → Discover
+
+> **Dev shortcut**: `LoginPage` at `/login` includes a "Quick Tester Bypass" panel (visible only when `NODE_ENV=development`) that lets you log in as pre-seeded test users without WeChat.
 
 ---
 
@@ -27,67 +34,85 @@ npm run dev              # Start on http://localhost:5000
 
 | File | Purpose | Lines |
 |------|---------|-------|
-| `server/routes.ts` | All API endpoints | 3,400+ |
-| `shared/schema.ts` | Database schema | 3,000+ |
-| `server/userMatchingService.ts` | Matching algorithm | 500+ |
+| `apps/server/src/routes.ts` | All API endpoints | 3,400+ |
+| `packages/shared/src/schema.ts` | Database schema | 3,000+ |
+| `apps/server/src/poolMatchingService.ts` | Pool matching algorithm (7-dimension) | 500+ |
 | `apps/user-client/src/pages/PersonalityTestPageV4.tsx` | V4 adaptive test | 500+ |
 | `apps/admin-client/src/pages/admin/AdminDataInsightsPage.tsx` | Analytics dashboard | 800+ |
-| `server/paymentService.ts` | WeChat Pay integration | 300 |
-| `server/wsService.ts` | WebSocket real-time sync | 250 |
+| `apps/server/src/paymentService.ts` | WeChat Pay integration | 300 |
+| `apps/server/src/wsService.ts` | WebSocket real-time sync | 250 |
 | `apps/user-client/src/lib/archetypes.ts` | 12 archetype configs | 200+ |
-| `replit.md` | Project architecture | - |
 | `PRODUCT_REQUIREMENTS.md` | Full PRD | 2,000+ |
+| `DEVELOPER_QUICK_REFERENCE.md` | Dev-focused quick reference | - |
 
 ---
 
-## 🎭 14 Personality Archetypes
+## 🎭 12 Personality Archetypes (V4 System)
 
-### 8 Core (Mapped in Test)
-1. 🙌 **火花塞 (Spark Plug)** - Energizer, icebreaker
-2. 🧭 **探索者 (Explorer)** - Curious, deep thinker
-3. 📖 **故事家 (Storyteller)** - Shares experiences
-4. ⚡ **挑战者 (Challenger)** - Critical thinker, debater
-5. 🤝 **连接者 (Connector)** - Social bridge
-6. 🎯 **协调者 (Coordinator)** - Mediator
-7. 🎭 **氛围组 (Vibe Keeper)** - Humor, energy
-8. 🌟 **肯定者 (Affirmer)** - Encourager, supporter
+> ⚠️ **The 14-archetype list (火花塞, 探索者, 故事家…) is LEGACY (V1/V2 system)**. Do not use it in new code, copy, or documentation.
 
-### 6 Extended (Configured, Not Mapped)
-9. 🦉 智者 (Sage)
-10. 🛡️ 守护者 (Guardian)
-11. 🌈 梦想家 (Dreamer)
-12. 🎨 艺术家 (Artist)
-13. 📋 组织者 (Organizer)
-14. 🔧 实干家 (Pragmatist)
+**Current production archetypes** (`packages/shared/src/personality/archetypeNames.ts`):
 
----
-
-## 🧮 Personality Test Quick Facts
-
-- **Questions:** 10 total
-  - 6 single-choice (2 points)
-  - 4 dual-choice (2 + 1 points)
-- **Max Score:** 24 points distributed
-- **Calculation:** Highest score = Primary, 2nd = Secondary
-- **6 Dimensions:** Affinity, Openness, Conscientiousness, Emotional Stability, Extraversion, Positivity
-- **Blending:** 70% Primary + 30% Secondary
+| # | Emoji | Name | Trait Highlights |
+|---|-------|------|-----------------|
+| 1 | 🐕 | 开心柯基 (Happy Corgi) | X=95, P=85 — High energy socializer |
+| 2 | 🐓 | 太阳鸡 (Sun Chicken) | P=92, X=78 — Optimistic motivator |
+| 3 | 🐬 | 夸夸豚 (Praise Dolphin) | A=95, X=82 — Warmhearted encourager |
+| 4 | 🦊 | 机智狐 (Clever Fox) | O=92, X=78 — Creative problem-solver |
+| 5 | 🐬 | 淡定海豚 (Calm Dolphin) | E=85, C=70 — Balanced mediator |
+| 6 | 🕷️ | 织网蛛 (Weaver Spider) | C=85, E=65 — Detail-oriented planner |
+| 7 | 🐻 | 暖心熊 (Warm Bear) | A=90, E=80 — Empathetic supporter |
+| 8 | 🐙 | 灵感章鱼 (Inspiration Octopus) | O=95, P=70 — Innovative ideator |
+| 9 | 🦉 | 沉思猫头鹰 (Contemplative Owl) | O=88, C=80 — Analytical thinker |
+| 10 | 🐘 | 定心大象 (Grounded Elephant) | C=90, E=86 — Stable anchor |
+| 11 | 🐢 | 稳如龟 (Steady Turtle) | E=85, C=80 — Reliable introvert |
+| 12 | 🐱 | 隐身猫 (Invisible Cat) | E=80, X=20 — Reserved observer |
 
 ---
 
-## 🔀 5-Dimensional Matching Algorithm
+## 🧮 Personality Test Quick Facts (V4)
 
-**Default Weights:**
+- **Questions:** 8–16 adaptive (not fixed at 10)
+- **Question bank:** 60 questions across 3 levels (L1 Anchor, L2 Adaptive, L3 Disambiguation)
+- **Stops when:** All 6 trait confidences ≥ 0.7 OR 16 questions reached
+- **6 Dimensions (ACOEXP):** Affinity (A), Conscientiousness (C), Openness (O), Emotional Stability (E), Extraversion (X), Positivity (P)
+- **Algorithm:** V2 Matcher — weighted Manhattan distance with asymmetric penalties
+- **Result:** Single decisive archetype match (no blending formula — blending was removed in V4)
+- **File:** `apps/user-client/src/pages/PersonalityTestPageV4.tsx`
+
+---
+
+## 🔀 Pool Matching Algorithm — Active Pair-Score Model (6 Dimensions)
+
+**Active weights** (`apps/server/src/poolMatchingService.ts`):
 ```typescript
 {
-  personality: 40%,    // Chemistry matrix score
-  interests: 25%,      // Jaccard similarity of tags
-  background: 15%,     // Education/career alignment
-  conversation: 10%,   // Openness + Extraversion
-  intent: 10%          // Why they joined
+  chemistry:           28%,  // 性格化学反应 — archetype chemistry matrix
+  interest:            28%,  // 兴趣重叠度  — heat-weighted Jaccard (user_interests table)
+  socialAffinity:      20%,  // 社交同频度  — life stage + education affinity + hometown (opt-in)
+  backgroundDiversity: 15%,  // 背景多样性  — industry + gender diversity
+  preference:           5%,  // 活动偏好    — event intent / bar preferences (light signal)
+  language:             4%,  // 语言沟通    — common languages (light signal)
 }
 ```
 
-**File:** `server/userMatchingService.ts`
+**Social Affinity (同频信号 — same/nearby = higher score):**
+- Life stage affinity (`workMode` / `LIFE_STAGE_AFFINITY` matrix)
+- Education affinity (学历同频度 — ordinal distance; same level = 100, NOT diversity)
+- Hometown affinity (opt-in only)
+
+**Background Diversity (多样性信号 — different = higher score):**
+- Industry diversity + Gender diversity
+- Education is NOT here — it is an affinity signal.
+
+**Why Language and Preference are reduced:**
+- Language (4%): 普通话普及率高，区分力有限
+- Preference (5%): 现有酒吧/饭店场景分化有限
+
+**Group Overall Score:**
+```
+overallScore = avgPairScore × 60% + groupDiversity × 25% + energyBalance × 15%
+```
 
 **Test in Admin:** `/admin/matching-lab`
 
@@ -112,7 +137,7 @@ User clicks pay → Backend creates payment record
 → WebSocket notifies user
 ```
 
-**File:** `server/paymentService.ts`
+**File:** `apps/server/src/paymentService.ts`
 
 ---
 
@@ -143,8 +168,9 @@ draft → matching → registration_open → confirmed
 - **File:** `apps/user-client/src/pages/EventCoordinationPage.tsx`
 
 ### Connections (Post-Event)
-- **Model:** Post-event mutual selection → structured `connections` record → WeChat contact reveal. No in-app private messaging.
-- **File:** `apps/user-client/src/pages/ConnectionsPage.tsx`
+- Mutual selection: Both users must indicate interest
+- Triggered: Post-event interest matching
+- Access: Via `/connections` page
 
 ### Moderation
 - **Reports:** User-submitted interaction reports
@@ -154,6 +180,8 @@ draft → matching → registration_open → confirmed
 ---
 
 ## 📈 Admin Portal Pages (18)
+
+> **Deployment note:** The admin portal is a **separate deployment** at `https://admin.yuejuapp.com` (the `apps/admin-client` workspace). Routes in `apps/user-client/src/App.tsx` redirect all `/admin/*` paths to that subdomain. Admin pages listed below are served by the admin client, not the user client.
 
 | Page | Route | Purpose |
 |------|-------|---------|
@@ -178,7 +206,7 @@ draft → matching → registration_open → confirmed
 
 ## 🎯 Data Insights Modules (7)
 
-**File:** `client/src/pages/admin/AdminDataInsightsPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminDataInsightsPage.tsx`
 
 1. **User Scale** - Total users, DAU/MAU, acquisition funnel
 2. **Business Health** - MRR, ARR, churn rate, LTV
@@ -192,7 +220,16 @@ draft → matching → registration_open → confirmed
 
 ## 🔗 Key API Endpoints
 
-### User Authentication
+### User Authentication (Primary — WeChat)
+```
+POST /api/auth/wechat/login-with-test   # WeChat login (new users with personality test answers)
+POST /api/auth/wechat/login             # WeChat login (returning users, no test answers)
+GET  /api/auth/wechat/oauth/start       # WeChat OAuth2 web flow start (browser/staging)
+GET  /api/auth/wechat/oauth/callback    # WeChat OAuth2 web flow callback
+```
+
+### User Authentication (Legacy — Phone/SMS)
+> ⚠️ Legacy fallback. Phone auth is available on `LoginPage` but is not the primary flow.
 ```
 POST /api/phone/register        # Send SMS
 POST /api/phone/verify          # Verify code
@@ -230,7 +267,7 @@ POST /api/admin/matching/test              # Test matching
 POST /api/admin/notifications/broadcast    # Send notification
 ```
 
-**Full list:** See `server/routes.ts`
+**Full list:** See `apps/server/src/routes.ts`
 
 ---
 
@@ -247,54 +284,54 @@ POST /api/admin/notifications/broadcast    # Send notification
 9. **event_templates** - Reusable configs
 10. **contents** - CMS content
 
-**Full schema:** See `shared/schema.ts`
+**Full schema:** See `packages/shared/src/schema.ts`
 
 ---
 
 ## 🌐 WebSocket Messages
 
 ```typescript
-// See packages/shared/src/wsEvents.ts for the full WSEventType union
-type WSEventType =
-  | 'EVENT_UPDATED'   // Event metadata or status changed
-  | 'POOL_MATCHED'    // Matching run completed; pool produced groups
-  | 'USER_JOINED'     // User connected/joined a room or pool
-  // ...other events defined in packages/shared/src/wsEvents.ts
+// Actual WSEventType values from packages/shared/src/wsEvents.ts
+'POOL_MATCHED'               // Matched to event group
+'EVENT_STATUS_CHANGED'       // Event status update
+'EVENT_THEME_TITLE_REVEALED' // Blind box theme revealed
+'ATTENDANCE_STATUS_UPDATED'  // Attendee status change
 ```
 
-**File:** `apps/server/src/wsService.ts` (server-side usage)
+### Admin
+```typescript
+'POOL_REGISTRATION_ADDED'    // New pool registration
+'EVENT_STATUS_CHANGED'       // Event status update
+'ADMIN_ACTION'               // Admin action broadcast
+'POOL_MATCHED'               // Group match completed
 ```
+
+**File:** `apps/server/src/wsService.ts`
 
 ---
 
 ## 🛠️ Common Dev Tasks
 
 ### Add New API Endpoint
-
----
-
-## 🛠️ Common Dev Tasks
-
-### Add New API Endpoint
-1. Edit `server/routes.ts`
+1. Edit `apps/server/src/routes.ts`
 2. Add route handler
-3. Update storage if needed (`server/storage.ts`)
+3. Update storage if needed (`apps/server/src/storage.ts`)
 4. Test with frontend
 
 ### Add New Admin Page
-1. Create `client/src/pages/admin/AdminXyzPage.tsx`
-2. Add route to `client/src/App.tsx`
+1. Create `apps/admin-client/src/pages/admin/AdminXyzPage.tsx`
+2. Add route to `apps/admin-client/src/App.tsx`
 3. Add to AdminSidebar navigation
 4. Protect with `requireAdmin` middleware
 
 ### Modify Database Schema
-1. Edit `shared/schema.ts`
+1. Edit `packages/shared/src/schema.ts`
 2. Run `npm run db:push` (or `--force` if needed)
 3. Update TypeScript types if needed
 4. Test migrations
 
 ### Update Matching Algorithm
-1. Edit `server/userMatchingService.ts`
+1. Edit `apps/server/src/poolMatchingService.ts`
 2. Adjust weights or chemistry matrix
 3. Test in Matching Lab (`/admin/matching-lab`)
 4. Deploy gradually (A/B test)
@@ -352,7 +389,8 @@ npm run dev
 
 ## 🔐 Security Checklist
 
-- [x] Phone auth with SMS verification
+- [x] WeChat OAuth2 authentication (primary — Mini Program wx.login() + OAuth2 web flow)
+- [x] Phone auth with SMS verification (legacy fallback)
 - [x] bcrypt password hashing
 - [x] Session-based authentication (7-day TTL)
 - [x] Admin role checking (`requireAdmin`)
@@ -372,6 +410,11 @@ DATABASE_URL=postgresql://...
 
 # Session
 SESSION_SECRET=random_secret_here
+
+# WeChat Auth (primary auth method)
+WECHAT_APPID=wx...
+WECHAT_SECRET=...
+APP_URL=https://yuejuapp.com   # Public-facing origin for OAuth2 redirect_uri
 
 # WeChat Pay
 WECHAT_PAY_APP_ID=wx...
@@ -439,7 +482,7 @@ npm run db:push --force # Force sync (use carefully)
 **Components:**
 - Radix UI primitives
 - shadcn/ui prebuilt components
-- Custom components in `client/src/components/`
+- Custom components in `apps/user-client/src/components/`
 
 **Icons:**
 - lucide-react (UI icons)
@@ -467,10 +510,10 @@ npm run db:push --force # Force sync (use carefully)
 
 ## 📚 Documentation Hierarchy
 
-1. **This file (QUICK_REFERENCE.md)** - Quick lookups
-2. **PRODUCT_REQUIREMENTS.md** - Full detailed PRD (50+ pages)
-3. **replit.md** - Project architecture + history
-4. **Inline code comments** - Implementation details
+1. **DEVELOPER_QUICK_REFERENCE.md** — Current, monorepo-aware quick reference (use this for active dev)
+2. **This file (QUICK_REFERENCE.md)** ⚠️ — Older reference; some sections may be outdated. See ⚠️ markers.
+3. **PRODUCT_REQUIREMENTS.md** — Full detailed PRD (50+ pages)
+4. **Inline code comments** — Implementation details
 
 ---
 
@@ -523,6 +566,6 @@ npm run db:push --force # Force sync (use carefully)
 
 ---
 
-**Last updated:** November 14, 2025  
-**Version:** 1.0  
-**Pairs with:** PRODUCT_REQUIREMENTS.md
+**Last updated:** March 16, 2026  
+**Version:** 2.0 (updated to reflect monorepo + V4 personality + WeChat-first auth)  
+**Pairs with:** PRODUCT_REQUIREMENTS.md, DEVELOPER_QUICK_REFERENCE.md
