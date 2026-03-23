@@ -266,10 +266,10 @@ export async function generateIceBreakers(
 
 ### 4.1 What Exists Today
 
-**Legacy flow (blind-box events):** `apps/server/src/dynamicWeights.ts`
+**Legacy flow (blind-box-style events):** `apps/server/src/dynamicWeights.ts`
 - Gradient descent weight update on each feedback submission
 - Fields updated: `energyWeight`, `interestWeight`, `backgroundWeight`, `personalityWeight`
-- Triggered by: `POST /api/blind-box-events/:id/feedback`
+- Currently invoked from: `POST /api/events/:eventId/feedback` (see `apps/server/src/routes.ts`)
 
 **Pool flow:** `apps/server/src/matchingWeightsService.ts`
 - Status: Implemented in isolation, **not yet wired** to any API endpoint
