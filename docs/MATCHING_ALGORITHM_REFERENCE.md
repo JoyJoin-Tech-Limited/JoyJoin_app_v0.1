@@ -277,8 +277,9 @@ Matches event-level preferences from registration:
 #### 3.2.6 Language Score (语言沟通) — 4%
 
 - Uses `preferredLanguages` from event pool registration
-- Common language overlap → higher score
-- Ensures group members can communicate effectively
+- Binary scoring: any shared language → 100; no overlap → 30; one/both missing → 70 (default)
+- **Scope: pair-level only.** Language is intentionally kept as a lightweight pair signal (4%). Group-level social dynamics are captured by Energy Balance (§4.1) which uses archetype energy, not language.
+- Low discriminative power in current Mandarin-dominant pools — retained as a safety net for genuine multilingual mismatches.
 
 ---
 
@@ -293,7 +294,7 @@ Matches event-level preferences from registration:
 overallScore = round(
   avgPairScore         × 0.60 +   // Pair compatibility (similarity)
   diversityScore       × 0.25 +   // Group diversity (richness)
-  communicationBalance × 0.15     // Language compatibility (harmony)
+  communicationBalance × 0.15     // Energy balance (social dynamics harmony)
 )
 ```
 
@@ -309,12 +310,36 @@ diversityScore =
 // Clamped to [0, 100]
 ```
 
-#### Communication Balance Score
+#### Energy Balance Score (能量平衡)
 
-Average pairwise language score across all group members:
+Measures whether the group has a healthy distribution of social energy levels, using
+`ARCHETYPE_ENERGY` constants from `apps/server/src/archetypeChemistry.ts`.
+
+Two equally-weighted components:
+
+| Component | Ideal | Penalty |
+|-----------|-------|---------|
+| **avgScore** — mean energy of group | 50–70 (energised but not chaotic) | −2 pts per unit outside ideal band |
+| **harmonyScore** — energy std deviation | stdDev ≤ 20 (natural mix) — no penalty | −2.5 pts per SD unit beyond 20 |
+
 ```typescript
-communicationBalance = mean(languageScore(i, j) for all i < j pairs)
+// Energy lookup (from ARCHETYPE_ENERGY in archetypeChemistry.ts):
+// 开心柯基: 95, 太阳鸡: 90, 夸夸豚: 85, 机智狐: 82,
+// 淡定海豚: 75, 织网蛛: 72, 暖心熊: 70, 灵感章鱼: 68,
+// 沉思猫头鹰: 55, 定心大象: 52, 稳如龟: 38, 隐身猫: 30
+
+avgScore     = avgEnergy in [50,70] ? 100 : max(0, 100 − |avgEnergy − nearest boundary| × 2)
+harmonyPenalty = max(0, stdDev − 20)   // no penalty for natural spread (stdDev ≤ 20)
+harmonyScore = max(0, 100 − harmonyPenalty × 2.5)
+energyBalance = round((avgScore + harmonyScore) / 2)
 ```
+
+**Why this matters:**
+- All-high-energy groups (4× 开心柯基/太阳鸡): exhausting, loud, everyone talking at once
+- All-low-energy groups (4× 稳如龟/隐身猫): awkward silences, low engagement
+- Ideal mix: 1–2 energisers (开心柯基/太阳鸡) + 2–3 mid-range + 1 anchor (定心大象/稳如龟)
+
+> **DB note:** Stored in `event_pool_groups.energy_balance` (integer column). The TypeScript interface field `communicationBalance` maps to this column — the name is a legacy alias from a prior renaming.
 
 ### 4.2 Algorithm Steps
 
@@ -356,7 +381,7 @@ interface MatchGroup {
   avgPairScore: number;         // Mean of all pair compatibility scores
   avgChemistryScore: number;    // Mean of chemistry sub-scores only
   diversityScore: number;       // Group diversity (4-axis)
-  communicationBalance: number; // Language compatibility
+  communicationBalance: number; // Energy balance score (0-100) — social energy distribution health
   overallScore: number;         // Weighted composite (60/25/15)
   temperatureLevel: string;     // Qualitative label from overallScore
 }
@@ -395,11 +420,26 @@ Final pair score = `(matrix[a][b] + matrix[b][a]) / 2`
 
 ### 5.3 Archetype Energy Levels
 
-Used for group energy balance assessment:
-```typescript
-ARCHETYPE_ENERGY: Record<ArchetypeName, number>  // 0–100 scale
-// 开心柯基 ≈ 90, 太阳鸡 ≈ 88, ..., 隐身猫 ≈ 20
-```
+**Source:** `ARCHETYPE_ENERGY` constant in `apps/server/src/archetypeChemistry.ts`  
+**Used by:** `calculateEnergyBalance()` in `poolMatchingService.ts` — feeds the 15% group-level energy balance component of `overallScore`
+
+| Archetype | Energy | Band |
+|-----------|--------|------|
+| 开心柯基 | 95 | Very High |
+| 太阳鸡 | 90 | Very High |
+| 夸夸豚 | 85 | High |
+| 机智狐 | 82 | High |
+| 淡定海豚 | 75 | Medium-High |
+| 织网蛛 | 72 | Medium-High |
+| 暖心熊 | 70 | Medium |
+| 灵感章鱼 | 68 | Medium |
+| 沉思猫头鹰 | 55 | Low-Medium |
+| 定心大象 | 52 | Low-Medium |
+| 稳如龟 | 38 | Low |
+| 隐身猫 | 30 | Very Low |
+
+Ideal group mean energy: **50–70** (balanced, energised but not chaotic).  
+Default fallback when archetype is missing: **60** (mid-range neutral).
 
 ---
 
@@ -449,3 +489,6 @@ Current hard constraints include:
 | **Life stage** | User's `workMode` value — the "人生阶段" used in social affinity scoring |
 | **Hard constraint** | Pre-filter rule that excludes a user from a pool entirely (e.g. budget mismatch) |
 | **Soft signal** | Scoring dimension that influences rank but never blocks a match (e.g. language, preference) |
+| **communicationBalance** | Field name in `MatchGroup` interface and DB alias for `energy_balance` column. Currently stores the Energy Balance score (social energy distribution) — name is a legacy alias. |
+| **energyBalance** | Group-level score (0–100) measuring health of social energy distribution using `ARCHETYPE_ENERGY`. Replaces the former language-based `communicationBalance` calculation. |
+| **ARCHETYPE_ENERGY** | Constant in `archetypeChemistry.ts` mapping all 12 archetypes to social energy levels (30–95). Used by `calculateEnergyBalance()`. |
