@@ -435,7 +435,7 @@ INSERT INTO assessment_sessions (
   phase,
   current_question_index,
   trait_scores,  -- { A: 60, C: 50, E: 60, O: 65, X: 95, P: 85 }
-  trait_confidences,  -- { A: { score: 60, confidence: 0.85, sampleCount: 8, variance: 0.12, validityScore: 0.91 }, ... }
+  trait_confidences,  -- { A: { score: 60, confidence: 0.85, sampleCount: 8 }, ... }
   top_archetypes,  -- [{ archetype: '开心柯基', score: 85, confidence: 0.82 }, ...]
   algorithm_version,  -- 'v2'
   match_details_json,  -- V2 Matcher results with trait deltas
