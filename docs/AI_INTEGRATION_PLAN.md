@@ -89,7 +89,7 @@ export interface AtmospherePrediction {
 
 ### 2.3 Planned: AI-Enriched Vibe Scoring in Group Formation
 
-**Concept:** Before `formOptimalGroups()` finalises group assignments, an AI model evaluates candidate group compositions and adds a **vibeScore** on top of the existing `overallScore`. This vibeScore captures qualitative patterns the rule engine misses — e.g. "this mix of archetypes historically generates great conversations about food culture" based on feedback patterns.
+**Concept:** Before `matchEventPool()` finalises group assignments, an AI model evaluates candidate group compositions and adds a **vibeScore** on top of the existing `overallScore`. This vibeScore captures qualitative patterns the rule engine misses — e.g. "this mix of archetypes historically generates great conversations about food culture" based on feedback patterns.
 
 **Proposed integration point:** `apps/server/src/poolMatchingService.ts` — inside `matchEventPool()`, after `calculateGroupPairScore()` and `calculateGroupDiversity()` are computed, before final group selection.
 
