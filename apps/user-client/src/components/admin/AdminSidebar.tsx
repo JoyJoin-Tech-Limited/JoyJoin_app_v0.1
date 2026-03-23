@@ -106,7 +106,7 @@ const analyticsItems = [
   },
   {
     title: "互动日志",
-    url: "/admin/chat-logs",
+    url: "/admin/interaction-logs",
     icon: FileText,
   },
   {
