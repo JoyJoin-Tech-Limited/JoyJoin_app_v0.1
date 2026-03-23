@@ -73,7 +73,9 @@ export default function EditWorkPage() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: WorkForm) => {
-      return await apiRequest("PATCH", "/api/profile", data);
+      // `roleTitleShort` is deprecated in the active schema; strip it before sending.
+      const { roleTitleShort: _roleTitleShort, ...payload } = data;
+      return await apiRequest("PATCH", "/api/profile", payload);
     },
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
