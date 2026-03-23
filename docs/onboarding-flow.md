@@ -103,7 +103,7 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 > Intent options are defined as a **single source of truth** in `packages/shared/src/constants.ts` (`INTENT_OPTIONS`, `INTENT_FLEXIBLE_OPTION`, `getIntentLabel`). Do **not** hardcode intent option arrays in individual components — import from these shared constants.
 
-> Valid work modes include: `employee`, `freelancer`, `entrepreneur`, `student`, `successor` (added 2026-03-18 for family business succession contexts).
+> Valid `workMode` enum values (from `packages/shared/src/constants.ts`) are: `founder`, `self_employed`, `employed`, `student`, `transitioning`, `caregiver_retired`, `successor`（家族企业接班场景）. UI 文案可以对应为：创业者（founder）、自雇 / 自由职业（self_employed）、受薪上班族（employed）、学生（student）、职业过渡中（transitioning）、全职照护 / 退休（caregiver_retired）、家族企业接班人（successor）。
 
 > All copy uses a conversational **Xiaoyue dialogue tone** (not form labels). See PR #301/#302 for the overhaul.
 
