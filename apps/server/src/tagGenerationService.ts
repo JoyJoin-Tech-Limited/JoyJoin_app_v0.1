@@ -15,7 +15,7 @@
 import OpenAI from 'openai';
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry';
 import { getMiniMaxClient, MINIMAX_MODEL } from './ai/minimaxClient';
-import { getTagGenerationProvider, isProviderAvailable } from './ai/creativeModelRouter';
+import { getTagGenerationProvider, isProviderAvailable, type AIProvider } from './ai/creativeModelRouter';
 
 // Validate API key at module initialization
 if (!process.env.DEEPSEEK_API_KEY && !process.env.MINIMAX_API_KEY) {
@@ -30,7 +30,7 @@ const deepseekClient = new OpenAI({
 /**
  * Returns the active AI client and model for tag generation based on provider routing.
  */
-function getTagAIClient(): { client: OpenAI; model: string; provider: string } {
+function getTagAIClient(): { client: OpenAI; model: string; provider: AIProvider } {
   const provider = getTagGenerationProvider();
 
   if (provider === 'minimax') {
@@ -96,8 +96,8 @@ function validateTag(tag: GeneratedTag): boolean {
 export async function generateSocialTags(input: TagGenerationInput): Promise<TagGenerationResult> {
   const { client, model, provider } = getTagAIClient();
 
-  // Check if any AI key is available
-  if (!isProviderAvailable(getTagGenerationProvider())) {
+  // Check if the effective AI provider is available
+  if (!isProviderAvailable(provider)) {
     console.warn('[TagGeneration] No AI provider configured, using fallback tags');
     return { tags: generateFallbackTags(input), isFallback: true };
   }
@@ -174,18 +174,16 @@ ${JSON.stringify(userProfile, null, 2)}
     const content = response.choices[0]?.message?.content;
 
     if (!content) {
-      console.warn(`[TagGeneration] provider=${provider} returned empty response (${durationMs}ms), using fallback`);
+      console.warn(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=false (empty response), using fallback`);
       return { tags: generateFallbackTags(input), isFallback: true };
     }
-
-    console.log(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=true`);
 
     // Parse JSON with specific error handling
     let parsed;
     try {
       parsed = JSON.parse(content);
     } catch (parseError) {
-      console.error(`[TagGeneration] provider=${provider} failed to parse JSON:`, parseError);
+      console.error(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=false (parse error):`, parseError);
       return { tags: generateFallbackTags(input), isFallback: true };
     }
 
@@ -195,7 +193,7 @@ ${JSON.stringify(userProfile, null, 2)}
     const validTags = tags.filter(validateTag);
     
     if (validTags.length === 0) {
-      console.warn(`[TagGeneration] provider=${provider} all tags failed validation, using fallback`);
+      console.warn(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=false (all tags failed validation), using fallback`);
       return { tags: generateFallbackTags(input), isFallback: true };
     }
 
@@ -206,8 +204,11 @@ ${JSON.stringify(userProfile, null, 2)}
       const existingTags = new Set(validTags.map(t => t.fullTag));
       const uniqueFallbackTags = fallbackTags.filter(t => !existingTags.has(t.fullTag));
       const combinedTags = [...validTags, ...uniqueFallbackTags.slice(0, 2 - validTags.length)];
+      console.log(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=partial (supplemented with fallback)`);
       return { tags: combinedTags, isFallback: true };
     }
+
+    console.log(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=true`);
 
     return { tags: validTags.slice(0, 3), isFallback: false };
   } catch (error) {
