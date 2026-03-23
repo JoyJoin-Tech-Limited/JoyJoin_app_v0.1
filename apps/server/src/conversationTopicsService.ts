@@ -1,9 +1,4 @@
-import OpenAI from 'openai';
-
-const deepseekClient = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: 'https://api.deepseek.com',
-});
+import { callSocialAI } from './ai/socialModelRouter';
 
 export interface ParticipantProfile {
   displayName: string;
@@ -61,10 +56,6 @@ export async function generateConversationTopics(
   participants: ParticipantProfile[],
   eventType?: string
 ): Promise<ConversationTopicsResponse> {
-  if (!process.env.DEEPSEEK_API_KEY) {
-    return getDefaultTopics(participants);
-  }
-
   if (participants.length < 2) {
     return getDefaultTopics(participants);
   }
@@ -97,18 +88,16 @@ ${eventType ? `活动类型：${eventType}` : ''}
 请生成3-5个适合这群人的话题建议。`;
 
   try {
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const { content } = await callSocialAI({
       messages: [
         { role: 'system', content: CONVERSATION_TOPICS_PROMPT },
-        { role: 'user', content: userPrompt }
+        { role: 'user', content: userPrompt },
       ],
       temperature: 0.8,
       max_tokens: 600,
+      callerTag: 'conversationTopics',
     });
 
-    const content = response.choices[0]?.message?.content || '';
-    
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('Invalid response format');
