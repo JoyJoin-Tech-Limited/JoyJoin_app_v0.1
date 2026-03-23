@@ -772,12 +772,12 @@ npm run db:studio      # Open Drizzle Studio GUI
 ### Event Theme Title Generation Flow
 
 1. **Pool Matching Completes** → `POOL_MATCHED` WebSocket event sent (fast)
-2. **Async Generation** → `eventThemeGenerator.ts` generates creative event theme title (1–3 s)
+2. **Async Generation** → `eventThemeTitleGenerator.ts` generates creative event theme title (1–3 s)
 3. **Theme Title Revealed** → `EVENT_THEME_TITLE_REVEALED` WebSocket event sent
 4. **Fallback Protection** → Template-based titles if AI fails/times out
 
 **Configuration:**
-- `ENABLE_TEAM_NAME_GENERATION` - Enable/disable feature (default: true)
+- `ENABLE_EVENT_THEME_TITLE_GENERATION` - Enable/disable feature (default: true)
 - `DEEPSEEK_TIMEOUT_MS` - AI request timeout (default: 5000ms)
 - Content safety filtering blocks inappropriate content
 
