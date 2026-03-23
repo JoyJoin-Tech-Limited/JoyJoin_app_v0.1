@@ -64,8 +64,10 @@ import CommunityJoinPage from "@/pages/CommunityJoinPage";
 import WalletPage from "@/pages/WalletPage";
 import FAQPage from "@/pages/FAQPage";
 import TermsPage from "@/pages/TermsPage";
+import { ADMIN_PORTAL_URL } from "@/config/admin";
 
 preloadXiaoyueImages();
+
 
 function RedirectToPersonalityTest() {
   const [, setLocation] = useLocation();
@@ -248,12 +250,8 @@ function Router() {
   // Admin routes - unconditional redirect to dedicated admin subdomain.
   // Must be before any isLoading / isAuthenticated checks so there is no
   // fallback path that lets user-client render admin UI.
-  if (location.startsWith("/admin/login")) {
-    window.location.replace("https://admin.yuejuapp.com/login");
-    return null;
-  }
   if (location.startsWith("/admin")) {
-    window.location.replace("https://admin.yuejuapp.com");
+    window.location.replace(`${ADMIN_PORTAL_URL}/login`);
     return null;
   }
 
