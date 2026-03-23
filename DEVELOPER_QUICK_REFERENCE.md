@@ -182,7 +182,15 @@ interface AuthState {
 │  *                   → Redirects to /onboarding/review             │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
-                    ▼ (Complete)
+                    ▼ (After Extended Data)
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Authenticated - Profile Review                   │
+├─────────────────────────────────────────────────────────────────────┤
+│  /onboarding/review  → FinalProfileReviewPage                       │
+│  *                   → Redirects to /onboarding/review             │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                    ▼ (hasSeenProfileReview = true)
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         FULL ACCESS                                 │
 ├─────────────────────────────────────────────────────────────────────┤
@@ -201,6 +209,8 @@ interface AuthState {
 3. **WeChat Authentication:** Silent login with test result linking via `POST /api/auth/wechat/login-with-test`
 4. **Simplified Extended Data:** Only Interest Carousel (removed 5 deprecated fields)
 5. **Value-First Approach:** Users see their archetype before committing to signup
+6. **Profile Review Step:** New `/onboarding/review` (`FinalProfileReviewPage`) inserted between Extended Data and Discover; gated by `hasSeenProfileReview` (server-persisted); marked complete via `POST /api/profile-review/complete`
+7. **Guide Deprecated (2026-02-16):** `/guide` page removed from active onboarding; `hasSeenGuide` retained for backward compat
 
 ### Deprecated Fields
 
@@ -759,12 +769,12 @@ npm run db:studio      # Open Drizzle Studio GUI
 | `conversationTopicsService.ts` | Group engagement prompts |
 | `eventThemeTitleGenerator.ts` | AI-powered event theme title generation for pool groups |
 
-### Team Name Generation Flow
+### Event Theme Title Generation Flow
 
 1. **Pool Matching Completes** → `POOL_MATCHED` WebSocket event sent (fast)
-2. **Async Generation** → AI generates creative team name (1-3s)
-3. **Team Name Revealed** → `TEAM_NAME_REVEALED` WebSocket event sent
-4. **Fallback Protection** → Template-based names if AI fails/times out
+2. **Async Generation** → `eventThemeGenerator.ts` generates creative event theme title (1–3 s)
+3. **Theme Title Revealed** → `EVENT_THEME_TITLE_REVEALED` WebSocket event sent
+4. **Fallback Protection** → Template-based titles if AI fails/times out
 
 **Configuration:**
 - `ENABLE_TEAM_NAME_GENERATION` - Enable/disable feature (default: true)

@@ -75,9 +75,36 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Nov 18-20, 2025)
+## 🆕 Recent Updates (Last updated: 2026-03-23)
 
-### Major Feature Releases
+### 2026 Milestones
+
+**8. Value-First Onboarding Flow** 🚀 *(2026-02-04)*
+- WeChat-first, post-test signup replaces phone-first registration
+- Anonymous personality test before login; test answers linked on WeChat auth via `POST /api/auth/wechat/login-with-test`
+- Deprecated onboarding fields: `languagesComfort`, `activityTimePreference`, `socialFrequency`, `groupSizeComfort`, `hometownCountry`
+
+**9. Server-Driven Navigation (Scope B1)** 🧭 *(2026-02-04)*
+- All post-auth routing uses `nextStep` from `GET /api/auth/user`; no client-side onboarding progress reconstruction
+- New `useAuth` fields: `nextStep`, `profileEssentialComplete`, `profileExtendedComplete`, `activeAssessmentSessionId`
+
+**10. Profile Review Step** 🪞 *(2026-02-04)*
+- New onboarding step: `/onboarding/review` (`FinalProfileReviewPage`) between Extended Data and Discover
+- Server field `hasSeenProfileReview`; marked complete via `POST /api/profile-review/complete`
+
+**11. Guide Page Deprecated** 🗑️ *(2026-02-16)*
+- `/guide` step removed from onboarding; `hasSeenGuide` retained on server for backward compatibility
+- Guide content replaced by inline coach marks (`CoachMarkBanner`, `XiaoyueFAB`, `ProfileCompletionNudge`) on Discover page
+
+**12. Life Stage Affinity Matrix** 🤝 *(PR #312)*
+- Added `LIFE_STAGE_AFFINITY` (7×7 asymmetric `workMode` matrix) to `poolMatchingService.ts`
+- Clarified distinction: affinity signals (education, hometown, life stage) vs. diversity signals (industry, gender)
+
+**13. Social Icebreaker — Primary In-Event Flow** 🧊 *(added §1.7)*
+- `/icebreaker/:sessionId` (`IcebreakerSessionPage`) is now the canonical in-event experience
+- Phases: 热身 → 挑战 → 侦探 → 回顾; full reference in `docs/icebreaker-system.md`
+
+### 2025 Milestones (Nov 18-20, 2025)
 
 **1. Temperature Concept System** 🌡️
 - Dual-temperature visualization: Social Energy (社交能量) + Chemistry Reaction (化学反应温度)
@@ -248,7 +275,7 @@ LandingPage → /personality-test (anonymous V4 test)
 
 #### Architecture Overview
 
-**Last Updated:** 2026-02-04 (V4 System)
+**Last Updated:** 2026-03-23 (V4 System)
 
 **12 Personality Archetypes** (Production):
 
@@ -408,7 +435,7 @@ INSERT INTO assessment_sessions (
   phase,
   current_question_index,
   trait_scores,  -- { A: 60, C: 50, E: 60, O: 65, X: 95, P: 85 }
-  trait_confidences,  -- { A: { score: 60, confidence: 0.85, sampleCount: 8 }, ... }
+  trait_confidences,  -- { A: { score: 60, confidence: 0.85, sampleCount: 8, variance: 0.12, validityScore: 0.91 }, ... }
   top_archetypes,  -- [{ archetype: '开心柯基', score: 85, confidence: 0.82 }, ...]
   algorithm_version,  -- 'v2'
   match_details_json,  -- V2 Matcher results with trait deltas
