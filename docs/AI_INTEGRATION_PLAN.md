@@ -162,7 +162,7 @@ matchEventPool() → group formed → predictAtmosphere(archetypes) → store in
 Capabilities:
 - `generatePairExplanation(member1, member2)` — DeepSeek call, 50-80 Chinese chars, warm tone, explains why two people may connect
 - `generateGroupAnalysis(groupId, members, eventType)` — orchestrates pair explanations + icebreakers, caches to `eventPoolGroups.pairExplanationsCache` (JSONB) and `eventPoolGroups.iceBreakersCache` (JSONB)
-- `generateIceBreakers(members, eventType)` — generates 5-8 tailored conversation starters
+- `generateIceBreakers(members, eventType)` — generates 3-5 tailored conversation starters
 
 **Router bypass note:** The client fetches AI explanations via:
 ```
