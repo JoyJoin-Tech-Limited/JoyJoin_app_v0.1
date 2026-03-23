@@ -253,23 +253,23 @@ POST /api/admin/notifications/broadcast    # Send notification
 
 ## 🌐 WebSocket Messages
 
-### User App
 ```typescript
-'coordination_update'      // Event coordination update
-'event_updated'            // Event status change
-'new_connection'           // Connection request
-'subscription_activated'   // Payment confirmed
+// See packages/shared/src/wsEvents.ts for the full WSEventType union
+type WSEventType =
+  | 'EVENT_UPDATED'   // Event metadata or status changed
+  | 'POOL_MATCHED'    // Matching run completed; pool produced groups
+  | 'USER_JOINED'     // User connected/joined a room or pool
+  // ...other events defined in packages/shared/src/wsEvents.ts
 ```
 
-### Admin
-```typescript
-'new_user_registered'      // User signed up
-'payment_completed'        // Payment received
-'interaction_report_filed' // Message reported
-'event_filled'             // Event reached capacity
+**File:** `apps/server/src/wsService.ts` (server-side usage)
 ```
 
-**File:** `server/wsService.ts`
+---
+
+## 🛠️ Common Dev Tasks
+
+### Add New API Endpoint
 
 ---
 
