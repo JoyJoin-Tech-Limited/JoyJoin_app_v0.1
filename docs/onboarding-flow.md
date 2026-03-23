@@ -99,9 +99,9 @@ await fetch('/api/auth/wechat/login-with-test', {
 2. Gender + Birthday (Birth Year)
 3. Professional Profile: Education Level + Industry (3-tier) + Occupation + Work Mode
 4. Location: Current City (required) + Hometown (optional)
-5. Intent / Social Goals (multi-select — sourced from shared constants in `packages/shared/src/constants/intentOptions.ts`, see PR #299)
+5. Intent / Social Goals (multi-select — sourced from shared constants in `packages/shared/src/constants.ts` via `INTENT_OPTIONS` / `INTENT_FLEXIBLE_OPTION` / `getIntentLabel`, see PR #299)
 
-> Intent options are defined as a **single source of truth** in `packages/shared/src/constants/intentOptions.ts`. Do **not** hardcode intent option arrays in individual components — import from shared constants.
+> Intent options are defined as a **single source of truth** in `packages/shared/src/constants.ts` (`INTENT_OPTIONS`, `INTENT_FLEXIBLE_OPTION`, `getIntentLabel`). Do **not** hardcode intent option arrays in individual components — import from these shared constants.
 
 > Valid work modes include: `employee`, `freelancer`, `entrepreneur`, `student`, `successor` (added 2026-03-18 for family business succession contexts).
 
