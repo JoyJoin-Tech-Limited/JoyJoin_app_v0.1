@@ -52,7 +52,6 @@ export const appRoutes = {
   connections: '/connections',
   eventChat: '/chats/:eventId',
   eventCoordination: '/connections/:eventId',
-  chatRegistration: '/chat-registration',
   
   // 破冰游戏
   icebreaker: '/icebreaker/:sessionId',
