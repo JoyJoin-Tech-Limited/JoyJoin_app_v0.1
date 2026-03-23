@@ -514,12 +514,14 @@ User opens /personality-test (unauthenticated)
          ↓
    On WeChat login:
    POST /api/auth/wechat/login-with-test
-   POST /api/assessment/v4/:sessionId/link-user
+   { code, testAnswers: [...] }
          ↓
 ┌────────────────────────┐
-│ Link session to user   │
-│ - phase → 'post_signup'│
-│ - userId = new user    │
+│ processTestAnswers()   │
+│ - creates session row  │
+│ - links userId         │
+│ - phase → 'completed'  │
+│ - hasCompletedTest=true│
 └────────────────────────┘
 ```
 
@@ -559,10 +561,18 @@ GET /api/personality-test/results?sessionId={id}
 
 The V4 assessment runs **before** WeChat login. The anonymous flow differs from the authenticated flow:
 
-1. **Session creation**: `assessment_session` created with `userId = null`, `phase = 'pre_signup'`
-2. **Answer storage**: Answers stored both in `assessment_answers` table and `localStorage` (`joyjoin_v4_presignup_answers`) as backup
-3. **Results display**: `PersonalityTestResultPage` shows archetype result and WeChat login CTA after 3 seconds
-4. **Post-auth processing**: After WeChat login, the client calls:
+1. **Session creation (client-side)**: A logical assessment session is started in the client with a generated `sessionId` and `phase = 'pre_signup'`. No `assessment_session` row is written to the database yet.
+2. **Answer storage (client-only pre-auth)**: While unauthenticated, answers are stored only in `localStorage` (`joyjoin_v4_presignup_answers`) alongside the anonymous `sessionId`.
+3. **Results display**: `PersonalityTestResultPage` shows the archetype result and WeChat login CTA after 3 seconds, based on the client-side engine state.
+4. **Post-auth processing**: After WeChat login, `PersonalityTestResultPage` calls:
+   ```
+   POST /api/auth/wechat/login-with-test
+   { code, testAnswers: [...] }
+   ```
+   The server authenticates the user and calls `processTestAnswers()` with the provided answers, which writes the `assessment_session` row with the authenticated `userId`, sets `phase = 'completed'`, and sets `hasCompletedPersonalityTest = true`.
+5. **Session ID persistence**: The anonymous `sessionId` is stored in `localStorage` so it survives the WeChat OAuth redirect and can be passed to `login-with-test`.
+
+> **Note**: `POST /api/assessment/v4/:sessionId/link-user` is a separate endpoint used by `useAdaptiveAssessment` for in-progress session recovery (e.g. a user who started a post-auth test session and then navigated away). It is **not** called in the primary `PersonalityTestResultPage` sign-up flow.
 
 > **Note**: For returning users who skip the pre-auth test and log in directly, the server returns `nextStep = 'personality-test'` if `hasCompletedPersonalityTest = false`, routing them to complete the test post-auth.
 
