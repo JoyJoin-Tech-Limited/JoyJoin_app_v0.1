@@ -610,12 +610,8 @@ overallScore =
 ### Event Types
 
 ```typescript
-type WebSocketEventType = 
-  | 'POOL_MATCHED'           // User matched to group
-  | 'EVENT_STATUS_CHANGED'   // Event status update
-  | 'NEW_MESSAGE'            // Coordination update received
-  | 'TYPING_INDICATOR'       // Active input state in coordination flow
-  | 'PAYMENT_STATUS';        // Payment confirmation
+type WebSocketEventType = WSEventType;
+// See `packages/shared/src/wsEvents.ts` for the authoritative union.
 ```
 
 ### POOL_MATCHED Payload
