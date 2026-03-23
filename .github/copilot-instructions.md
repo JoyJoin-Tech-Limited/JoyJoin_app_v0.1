@@ -74,7 +74,7 @@ npm run db:push --force  # Force sync (use carefully)
 │   └── server/src/
 │       ├── routes.ts       # All API route registrations
 │       ├── wechatAuth.ts   # WeChat auth endpoints
-│       ├── poolMatchingService.ts  # 7-dimension matching algorithm
+│       ├── poolMatchingService.ts  # 6-dimension pair-score matching algorithm
 │       └── socialIcebreakerAIService.ts
 └── packages/
     └── shared/src/
@@ -95,7 +95,7 @@ npm run db:push --force  # Force sync (use carefully)
 
 1. **Onboarding Flow** — state-driven via `nextStep` from server; see Onboarding Flow Architecture section
 2. **Personality Test V4** — 8–16 adaptive questions, anonymous pre-auth; see `PersonalityTestPageV4.tsx`
-3. **Pool Matching** — 5-dimension pair scoring + group scoring; see `poolMatchingService.ts`
+3. **Pool Matching** — 6-dimension pair scoring + group scoring; see `poolMatchingService.ts`
 4. **Social Icebreaker** — primary in-event multi-phase session; see `docs/icebreaker-system.md`
 5. **WeChat Auth** — Mini Program `wx.login()` + OAuth2 web flow; see `wechatAuth.ts`
 6. **BottomNav Smart Routing** — center button dynamically routes based on user's current activity state
@@ -232,12 +232,12 @@ The `/api/auth/user` endpoint returns:
 | `profileEssentialComplete` | `boolean` | Essential data complete (displayName, gender, currentCity) |
 | `profileExtendedComplete` | `boolean` | Profile enrichment flag based on `educationLevel` + `industryNicheLabel\|industryCategoryLabel` + `hometownRegionCity` (not the interests carousel / `/onboarding/extended` step) |
 | `hasSeenGuide` | `boolean` | Guide viewed (server-persisted) |
+| `hasSeenProfileReview` | `boolean` | Profile review viewed (server-persisted) |
+| `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
 
 > **Note on `profileExtendedComplete` vs `hasCompletedInterestsCarousel`:** These are two different things.
 > - `hasCompletedInterestsCarousel` (`boolean`, `users` table DB column) — set to `true` when the user completes the `/onboarding/extended` interests carousel step.
 > - `profileExtendedComplete` (computed, returned by `/api/auth/user`) — server-validates that `educationLevel` + `industryNicheLabel|industryCategoryLabel` + `hometownRegionCity` are present. This is **not** the same as `hasCompletedInterestsCarousel`. A user can have `hasCompletedInterestsCarousel = true` but `profileExtendedComplete = false` if they skipped education/industry fields.
-| `hasSeenProfileReview` | `boolean` | Profile review viewed (server-persisted) |
-| `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
 
 #### Guide System
 
