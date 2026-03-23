@@ -113,20 +113,21 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 ---
 
-### Step 4: Extended Data Collection (Optional)
+### Step 4: Extended Data Collection
 
 **Route:** `/onboarding/extended`
 
-**User State:** Can skip entirely
+**User State:** Must complete (no skip path)
 
 **What's Collected:**
 - **ONLY Interest Carousel**
   - 56 topics across 8 categories
   - Multi-tap heat level (0/5/15/25)
   - Includes topic avoidances
+  - Minimum 3 selections required (enforced on both client and server: `POST /api/user/interests` returns 400 if `totalSelections < 3`)
 - **Archetype-based recommendation hints** are shown alongside interest topics — the carousel displays personalised suggestions based on the user's archetype result from Step 1 (PR #309).
 
-**After Completion/Skip:**
+**After Completion:**
 - `hasCompletedInterestsCarousel = true` (server-persisted; this is the canonical step-completion signal)
 - Redirect to `/onboarding/review`
 
