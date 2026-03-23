@@ -6,9 +6,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import LoginPage from "@/pages/LoginPage";
 import { useEffect } from "react";
-// Legacy registration pages removed from active routing:
-//   - ChatRegistrationPage moved to _backup_modules/chat-registration-legacy/ (2026-01-20)
-//   - RegistrationMethodPage moved to _backup_modules/legacy-registration-pages/ (2026-03-18)
+// Legacy registration pages removed:
+//   - ChatRegistrationPage removed (2026-01-20)
+//   - RegistrationMethodPage removed (2026-03-18)
 //   - RegistrationPage removed (2026-01-20)
 import PersonalityTestPage from "@/pages/PersonalityTestPage";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
