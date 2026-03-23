@@ -16,6 +16,28 @@ import MobileLandingPage from "@/pages/MobileLandingPage";
 // import RegistrationPage from "@/pages/RegistrationPage";
 // RegistrationMethodPage kept for internal reference only - not imported in user routes
 // ChatRegistrationPage moved to _backup_modules/chat-registration-legacy/ (2026-01-20) - no longer routed
+
+// Backward-compatible redirects: /chats → /connections
+function ChatsRedirect() {
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    setLocation("/connections");
+  }, [setLocation]);
+
+  return null;
+}
+
+// Backward-compatible redirects: /chats/:eventId → /connections/:eventId
+function ChatEventRedirect({ params }: { params: { eventId: string } }) {
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    setLocation(`/connections/${params.eventId}`);
+  }, [params.eventId, setLocation]);
+
+  return null;
+}
 // InterestsTopicsPage and EditInterestsPage moved to _backup_modules/interests-topics-legacy/ (2026-01-19)
 import PersonalityTestPageV4 from "@/pages/PersonalityTestPageV4";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";

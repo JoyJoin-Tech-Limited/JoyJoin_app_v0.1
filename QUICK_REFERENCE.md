@@ -290,7 +290,6 @@ POST /api/admin/notifications/broadcast    # Send notification
 
 ## 🌐 WebSocket Messages
 
-### User App
 ```typescript
 // Actual WSEventType values from packages/shared/src/wsEvents.ts
 'POOL_MATCHED'               // Matched to event group
