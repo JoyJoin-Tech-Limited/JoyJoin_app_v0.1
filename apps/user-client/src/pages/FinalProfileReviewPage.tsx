@@ -86,7 +86,7 @@ export default function FinalProfileReviewPage() {
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
       // Fetch the refreshed user state so we can navigate via server-computed nextStep.
-      const updatedUser = await queryClient.fetchQuery<AuthUser>({ queryKey: ["/api/auth/user"] });
+      const updatedUser = await queryClient.fetchQuery<AuthUser | null>({ queryKey: ["/api/auth/user"] });
       
       // Resolve destination from server nextStep.
       // 'guide' is deprecated — the server still emits it for legacy users, but
