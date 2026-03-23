@@ -12,7 +12,7 @@ import { DynamicAccentProvider } from "@/contexts/DynamicAccentContext";
 import LoginPage from "@/pages/LoginPage";
 import LandingPage from "@/pages/LandingPage";
 import MobileLandingPage from "@/pages/MobileLandingPage";
-// RegistrationPage removed - using ChatRegistrationPage instead
+// RegistrationPage removed (legacy registration flow deprecated)
 // import RegistrationPage from "@/pages/RegistrationPage";
 // RegistrationMethodPage kept for internal reference only - not imported in user routes
 // ChatRegistrationPage removed (2026-01-20) - was no longer routed
