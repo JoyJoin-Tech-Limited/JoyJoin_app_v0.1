@@ -693,7 +693,8 @@ function calculateEnergyBalance(members: UserWithProfile[]): number {
   // stdDev of ~20 is natural (mix of archetypes); >35 is tension-inducing
   const variance = energyLevels.reduce((sum, e) => sum + Math.pow(e - avgEnergy, 2), 0) / energyLevels.length;
   const stdDev = Math.sqrt(variance);
-  const harmonyScore = Math.max(0, 100 - stdDev * 2.5);
+  const harmonyPenalty = Math.max(0, stdDev - 20); // only penalise variance beyond the "natural" level
+  const harmonyScore = Math.max(0, 100 - harmonyPenalty * 2.5);
 
   return Math.round((avgScore + harmonyScore) / 2);
 }
