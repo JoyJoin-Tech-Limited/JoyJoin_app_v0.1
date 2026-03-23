@@ -16,16 +16,11 @@ export const MINIMAX_DEFAULT_MODEL = 'MiniMax-Text-01';
 const apiKey = process.env.MINIMAX_API_KEY;
 const baseURL = process.env.MINIMAX_BASE_URL || MINIMAX_DEFAULT_BASE_URL;
 
-if (!apiKey) {
-  console.warn(
-    '[MiniMax] MINIMAX_API_KEY is not set. ' +
-      'Social Icebreaker functions routed to MiniMax will fall back to DeepSeek.'
-  );
-}
-
 /**
  * OpenAI-compatible MiniMax client.
  * Will be `null` when MINIMAX_API_KEY is not configured.
+ * No warning is emitted here; the router logs a warning only when a
+ * MiniMax-routed function is actually requested with no key configured.
  */
 export const minimaxClient: OpenAI | null = apiKey
   ? new OpenAI({ apiKey, baseURL })
