@@ -15,7 +15,7 @@ import MobileLandingPage from "@/pages/MobileLandingPage";
 // RegistrationPage removed - using ChatRegistrationPage instead
 // import RegistrationPage from "@/pages/RegistrationPage";
 // RegistrationMethodPage kept for internal reference only - not imported in user routes
-// ChatRegistrationPage moved to _backup_modules/chat-registration-legacy/ (2026-01-20) - no longer routed
+// ChatRegistrationPage removed (2026-01-20) - was no longer routed
 
 // Backward-compatible redirects: /chats → /connections
 function ChatsRedirect() {
@@ -38,7 +38,7 @@ function ChatEventRedirect({ params }: { params: { eventId: string } }) {
 
   return null;
 }
-// InterestsTopicsPage and EditInterestsPage moved to _backup_modules/interests-topics-legacy/ (2026-01-19)
+// InterestsTopicsPage and EditInterestsPage removed (2026-01-19) - legacy interests flow
 import PersonalityTestPageV4 from "@/pages/PersonalityTestPageV4";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
 import WeChatAuthGatePage from "@/pages/WeChatAuthGatePage";
