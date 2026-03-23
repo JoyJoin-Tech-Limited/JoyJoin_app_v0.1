@@ -689,8 +689,8 @@ function calculateEnergyBalance(members: UserWithProfile[]): number {
     avgScore = Math.max(0, 100 - distFromIdeal * 2);
   }
 
-  // harmonyScore: penalise extreme std deviation
-  // stdDev of ~20 is natural (mix of archetypes); >35 is tension-inducing
+  // harmonyScore: no penalty for natural stdDev (≤20); penalise only variance beyond that threshold
+  // stdDev of ~20 is expected in a well-mixed group; >40 starts to cause real tension
   const variance = energyLevels.reduce((sum, e) => sum + Math.pow(e - avgEnergy, 2), 0) / energyLevels.length;
   const stdDev = Math.sqrt(variance);
   const harmonyPenalty = Math.max(0, stdDev - 20); // only penalise variance beyond the "natural" level
