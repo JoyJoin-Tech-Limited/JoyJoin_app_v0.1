@@ -112,7 +112,7 @@ const adjustedOverallScore = vibeScore != null
   : overallScore;
 ```
 
-**Why 10% initially:** The existing `overallScore` formula (60% pair compatibility + 25% diversity + 15% energy balance) is already well-calibrated. AI vibe scoring adds a soft qualitative layer — it should nudge, not dominate. The weight can increase as the model accumulates feedback validation.
+**Why 10% initially:** The existing `overallScore` formula (60% pair compatibility + 25% diversity + 15% communication balance / language compatibility) is already well-calibrated. AI vibe scoring adds a soft qualitative layer — it should nudge, not dominate. The weight can increase as the model accumulates feedback validation.
 
 **AI model options (in order of preference):**
 1. **DeepSeek call** — extend `matchExplanationService.ts` with a new `predictGroupVibeScore(members: MatchMember[]): Promise<number>` function using the existing DeepSeek client, with archetype compositions + shared interests as context
