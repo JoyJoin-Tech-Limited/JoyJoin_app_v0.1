@@ -1,6 +1,7 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import GroupSummaryCard from "./GroupSummaryCard";
 import UserConnectionCard from "./UserConnectionCard";
+import AttendeeProfileSheet from "./AttendeeProfileSheet";
 import { generateSparkPredictions, normalizeInterestName, type AttendeeData, type UserContext } from "@/lib/attendeeAnalytics";
 
 interface MeetYourTableProps {
@@ -13,6 +14,7 @@ export default function MeetYourTable({
   currentUser,
 }: MeetYourTableProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [selectedAttendee, setSelectedAttendee] = useState<AttendeeData | null>(null);
 
   if (!attendees || attendees.length === 0) {
     return null;
@@ -141,15 +143,32 @@ export default function MeetYourTable({
             });
 
             return (
-              <UserConnectionCard
+              <div
                 key={attendee.userId}
-                attendee={attendee}
-                connectionTags={connectionTags}
-              />
+                role="button"
+                tabIndex={0}
+                onClickCapture={(e) => { e.stopPropagation(); setSelectedAttendee(attendee); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedAttendee(attendee); } }}
+                className="cursor-pointer"
+              >
+                <UserConnectionCard
+                  attendee={attendee}
+                  connectionTags={connectionTags}
+                />
+              </div>
             );
           })}
         </div>
       </div>
+
+      {selectedAttendee && (
+        <AttendeeProfileSheet
+          attendee={selectedAttendee}
+          currentUser={currentUser}
+          open={!!selectedAttendee}
+          onOpenChange={(open) => { if (!open) setSelectedAttendee(null); }}
+        />
+      )}
     </div>
   );
 }

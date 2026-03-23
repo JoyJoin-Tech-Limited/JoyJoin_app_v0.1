@@ -90,6 +90,14 @@ interface Venue {
   barThemes: string[] | null;
   alcoholOptions: string[] | null;
   vibeDescriptor: string | null;
+  // Partner onboarding fields (optional)
+  partnerCompanyName?: string | null;
+  businessLicenseNo?: string | null;
+  partnerEmail?: string | null;
+  bankAccountInfo?: string | null;
+  contractStartDate?: string | null;
+  contractEndDate?: string | null;
+  onboardingStatus?: 'draft' | 'pending_review' | 'active' | 'suspended' | null;
 }
 
 const VENUE_TYPES = [
@@ -251,6 +259,14 @@ export default function AdminVenuesPage() {
     barThemes: [] as string[],
     alcoholOptions: [] as string[],
     vibeDescriptor: "",
+    // 合作伙伴字段
+    partnerCompanyName: "",
+    businessLicenseNo: "",
+    partnerEmail: "",
+    bankAccountInfo: "",
+    contractStartDate: "",
+    contractEndDate: "",
+    onboardingStatus: "draft" as "draft" | "pending_review" | "active" | "suspended",
   });
 
   const { toast } = useToast();
@@ -747,6 +763,13 @@ export default function AdminVenuesPage() {
       barThemes: [],
       alcoholOptions: [],
       vibeDescriptor: "",
+      partnerCompanyName: "",
+      businessLicenseNo: "",
+      partnerEmail: "",
+      bankAccountInfo: "",
+      contractStartDate: "",
+      contractEndDate: "",
+      onboardingStatus: "draft",
     });
   };
 
@@ -792,6 +815,13 @@ export default function AdminVenuesPage() {
       barThemes: formData.barThemes.length > 0 ? formData.barThemes : undefined,
       alcoholOptions: formData.alcoholOptions.length > 0 ? formData.alcoholOptions : undefined,
       vibeDescriptor: formData.vibeDescriptor || undefined,
+      partnerCompanyName: formData.partnerCompanyName || undefined,
+      businessLicenseNo: formData.businessLicenseNo || undefined,
+      partnerEmail: formData.partnerEmail || undefined,
+      bankAccountInfo: formData.bankAccountInfo || undefined,
+      contractStartDate: formData.contractStartDate || undefined,
+      contractEndDate: formData.contractEndDate || undefined,
+      onboardingStatus: formData.onboardingStatus || undefined,
     });
   };
 
@@ -818,6 +848,13 @@ export default function AdminVenuesPage() {
       barThemes: venue.barThemes || [],
       alcoholOptions: venue.alcoholOptions || [],
       vibeDescriptor: venue.vibeDescriptor || "",
+      partnerCompanyName: venue.partnerCompanyName || "",
+      businessLicenseNo: venue.businessLicenseNo || "",
+      partnerEmail: venue.partnerEmail || "",
+      bankAccountInfo: venue.bankAccountInfo || "",
+      contractStartDate: venue.contractStartDate || "",
+      contractEndDate: venue.contractEndDate || "",
+      onboardingStatus: venue.onboardingStatus || "draft",
     });
     setShowEditDialog(true);
   };
@@ -859,6 +896,13 @@ export default function AdminVenuesPage() {
         barThemes: formData.barThemes.length > 0 ? formData.barThemes : null,
         alcoholOptions: formData.alcoholOptions.length > 0 ? formData.alcoholOptions : null,
         vibeDescriptor: formData.vibeDescriptor || null,
+        partnerCompanyName: formData.partnerCompanyName || null,
+        businessLicenseNo: formData.businessLicenseNo || null,
+        partnerEmail: formData.partnerEmail || null,
+        bankAccountInfo: formData.bankAccountInfo || null,
+        contractStartDate: formData.contractStartDate || null,
+        contractEndDate: formData.contractEndDate || null,
+        onboardingStatus: formData.onboardingStatus || null,
       },
     });
   };
@@ -1182,7 +1226,15 @@ export default function AdminVenuesPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredVenues.map((venue) => (
+          {filteredVenues.map((venue) => {
+            const onboardingStatus = venue.onboardingStatus;
+            const onboardingStatusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className: string }> = {
+              draft: { label: "草稿", variant: "secondary", className: "text-muted-foreground" },
+              pending_review: { label: "待审核", variant: "outline", className: "border-amber-400 text-amber-700" },
+              suspended: { label: "已暂停", variant: "destructive", className: "" },
+            };
+            const statusConfig = onboardingStatus && onboardingStatus !== 'active' ? onboardingStatusConfig[onboardingStatus] : null;
+            return (
             <Card key={venue.id} data-testid={`card-venue-${venue.id}`}>
               <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-3">
                 <div className="flex-1 min-w-0">
@@ -1196,6 +1248,15 @@ export default function AdminVenuesPage() {
                   <Badge className="bg-green-500">活跃</Badge>
                 ) : (
                   <Badge variant="secondary">已停用</Badge>
+                )}
+                {/* Onboarding status badge */}
+                {statusConfig && (
+                  <Badge
+                    variant={statusConfig.variant}
+                    className={`text-xs ${statusConfig.className}`}
+                  >
+                    {statusConfig.label}
+                  </Badge>
                 )}
               </CardHeader>
               <CardContent className="space-y-3">
@@ -1223,6 +1284,14 @@ export default function AdminVenuesPage() {
                     <span className="font-medium">¥{(venue.totalCommission || 0).toLocaleString()}</span>
                   </div>
                 </div>
+
+                {/* Partner info if available */}
+                {(venue.partnerCompanyName || venue.contractEndDate) && (
+                  <div className="text-xs text-muted-foreground mt-1 pt-1 border-t">
+                    {venue.partnerCompanyName && <div>🏢 {venue.partnerCompanyName}</div>}
+                    {venue.contractEndDate && <div>合同到期: {venue.contractEndDate}</div>}
+                  </div>
+                )}
 
                 {venue.tags && venue.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1">
@@ -1301,7 +1370,8 @@ export default function AdminVenuesPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -1634,6 +1704,97 @@ export default function AdminVenuesPage() {
                 rows={3}
                 data-testid="input-notes"
               />
+            </div>
+
+            {/* 合作伙伴信息 (可选) */}
+            <div className="space-y-2 border rounded-lg p-4 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <Label className="font-medium text-sm">🤝 合作伙伴信息 <span className="text-muted-foreground font-normal">(可选)</span></Label>
+                <Badge variant="outline" className="text-xs">非必填</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">以下信息可在合作深入后补充，当前阶段非必填</p>
+
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="partnerCompanyName" className="text-xs">合作公司名称</Label>
+                  <Input
+                    id="partnerCompanyName"
+                    placeholder="合作方法人公司名称"
+                    value={formData.partnerCompanyName}
+                    onChange={(e) => setFormData({ ...formData, partnerCompanyName: e.target.value })}
+                    data-testid="input-partner-company"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="businessLicenseNo" className="text-xs">营业执照号</Label>
+                  <Input
+                    id="businessLicenseNo"
+                    placeholder="统一社会信用代码"
+                    value={formData.businessLicenseNo}
+                    onChange={(e) => setFormData({ ...formData, businessLicenseNo: e.target.value })}
+                    data-testid="input-business-license"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="partnerEmail" className="text-xs">合作联系邮箱</Label>
+                  <Input
+                    id="partnerEmail"
+                    type="email"
+                    placeholder="合同/佣金往来邮箱"
+                    value={formData.partnerEmail}
+                    onChange={(e) => setFormData({ ...formData, partnerEmail: e.target.value })}
+                    data-testid="input-partner-email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bankAccountInfo" className="text-xs">银行账户信息</Label>
+                  <Input
+                    id="bankAccountInfo"
+                    placeholder="用于佣金结算的银行账号"
+                    value={formData.bankAccountInfo}
+                    onChange={(e) => setFormData({ ...formData, bankAccountInfo: e.target.value })}
+                    data-testid="input-bank-account"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contractStartDate" className="text-xs">合同开始日期</Label>
+                  <Input
+                    id="contractStartDate"
+                    type="date"
+                    value={formData.contractStartDate}
+                    onChange={(e) => setFormData({ ...formData, contractStartDate: e.target.value })}
+                    data-testid="input-contract-start"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contractEndDate" className="text-xs">合同结束日期</Label>
+                  <Input
+                    id="contractEndDate"
+                    type="date"
+                    value={formData.contractEndDate}
+                    onChange={(e) => setFormData({ ...formData, contractEndDate: e.target.value })}
+                    data-testid="input-contract-end"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <Label className="text-xs">合作状态</Label>
+                <Select
+                  value={formData.onboardingStatus}
+                  onValueChange={(v) => setFormData({ ...formData, onboardingStatus: v as NonNullable<Venue['onboardingStatus']> })}
+                >
+                  <SelectTrigger className="w-full" data-testid="select-onboarding-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">草稿 (初步接洽)</SelectItem>
+                    <SelectItem value="pending_review">待审核 (材料提交中)</SelectItem>
+                    <SelectItem value="active">正式合作</SelectItem>
+                    <SelectItem value="suspended">已暂停</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
@@ -1977,6 +2138,97 @@ export default function AdminVenuesPage() {
                 rows={3}
                 data-testid="input-edit-notes"
               />
+            </div>
+
+            {/* 合作伙伴信息 (可选) */}
+            <div className="space-y-2 border rounded-lg p-4 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <Label className="font-medium text-sm">🤝 合作伙伴信息 <span className="text-muted-foreground font-normal">(可选)</span></Label>
+                <Badge variant="outline" className="text-xs">非必填</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">以下信息可在合作深入后补充，当前阶段非必填</p>
+
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-partnerCompanyName" className="text-xs">合作公司名称</Label>
+                  <Input
+                    id="edit-partnerCompanyName"
+                    placeholder="合作方法人公司名称"
+                    value={formData.partnerCompanyName}
+                    onChange={(e) => setFormData({ ...formData, partnerCompanyName: e.target.value })}
+                    data-testid="input-edit-partner-company"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-businessLicenseNo" className="text-xs">营业执照号</Label>
+                  <Input
+                    id="edit-businessLicenseNo"
+                    placeholder="统一社会信用代码"
+                    value={formData.businessLicenseNo}
+                    onChange={(e) => setFormData({ ...formData, businessLicenseNo: e.target.value })}
+                    data-testid="input-edit-business-license"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-partnerEmail" className="text-xs">合作联系邮箱</Label>
+                  <Input
+                    id="edit-partnerEmail"
+                    type="email"
+                    placeholder="合同/佣金往来邮箱"
+                    value={formData.partnerEmail}
+                    onChange={(e) => setFormData({ ...formData, partnerEmail: e.target.value })}
+                    data-testid="input-edit-partner-email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-bankAccountInfo" className="text-xs">银行账户信息</Label>
+                  <Input
+                    id="edit-bankAccountInfo"
+                    placeholder="用于佣金结算的银行账号"
+                    value={formData.bankAccountInfo}
+                    onChange={(e) => setFormData({ ...formData, bankAccountInfo: e.target.value })}
+                    data-testid="input-edit-bank-account"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-contractStartDate" className="text-xs">合同开始日期</Label>
+                  <Input
+                    id="edit-contractStartDate"
+                    type="date"
+                    value={formData.contractStartDate}
+                    onChange={(e) => setFormData({ ...formData, contractStartDate: e.target.value })}
+                    data-testid="input-edit-contract-start"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-contractEndDate" className="text-xs">合同结束日期</Label>
+                  <Input
+                    id="edit-contractEndDate"
+                    type="date"
+                    value={formData.contractEndDate}
+                    onChange={(e) => setFormData({ ...formData, contractEndDate: e.target.value })}
+                    data-testid="input-edit-contract-end"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <Label className="text-xs">合作状态</Label>
+                <Select
+                  value={formData.onboardingStatus}
+                  onValueChange={(v) => setFormData({ ...formData, onboardingStatus: v as NonNullable<Venue['onboardingStatus']> })}
+                >
+                  <SelectTrigger className="w-full" data-testid="select-edit-onboarding-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">草稿 (初步接洽)</SelectItem>
+                    <SelectItem value="pending_review">待审核 (材料提交中)</SelectItem>
+                    <SelectItem value="active">正式合作</SelectItem>
+                    <SelectItem value="suspended">已暂停</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 

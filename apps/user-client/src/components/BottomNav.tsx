@@ -25,10 +25,10 @@ interface NavItem {
 }
 
 const sideNavItems: NavItem[] = [
-  { iconSrc: discoverIcon, label: "发现", path: "/", testId: "nav-discover", badgeCategory: 'discover' },
-  { iconSrc: journeyIcon, label: "足迹", path: "/my-journey", testId: "nav-journey", badgeCategory: 'activities' },
-  { iconSrc: connectIcon, label: "连接", path: "/chats", testId: "nav-chats", badgeCategory: 'chat' },
-  { iconSrc: profileIcon, label: "我的", path: "/profile", testId: "nav-profile" }
+  { icon: Compass, label: "发现", path: "/", testId: "nav-discover", badgeCategory: 'discover' },
+  { icon: Footprints, label: "足迹", path: "/my-journey", testId: "nav-journey", badgeCategory: 'activities' },
+  { icon: Users, label: "连接", path: "/connections", testId: "nav-connections", badgeCategory: 'chat' },
+  { icon: User, label: "我的", path: "/profile", testId: "nav-profile" }
 ];
 
 interface PoolRegistration {
@@ -305,7 +305,9 @@ export default function BottomNav() {
 
         {/* Right side items */}
         {sideNavItems.slice(2).map((item) => {
-          const isActive = location === item.path;
+          const isActive = item.path === '/connections'
+            ? location.startsWith('/connections')
+            : location === item.path;
           const badgeCount = item.badgeCategory && notificationCounts 
             ? notificationCounts[item.badgeCategory] 
             : 0;

@@ -6,12 +6,13 @@
  * 
  * 匹配逻辑：
  * 1. 硬约束过滤：检查用户是否符合活动池的硬性限制（性别、行业、年龄等）
- * 2. 软约束评分：基于5个维度计算用户之间的匹配分数
- *    - Personality Chemistry (性格兼容性)
- *    - Interest Overlap (兴趣重叠度)
- *    - Background Diversity (背景多样性)
- *    - Conversation Compatibility (语言沟通)
- *    - Event Preferences (活动偏好: 预算、饮食、社交目的)
+ * 2. 软约束评分：基于6个维度计算用户之间的配对兼容性分数
+ *    - Chemistry     (性格化学反应):  28%  — 原型兼容性矩阵
+ *    - Interest      (兴趣重叠度):    28%  — Heat 加权 Jaccard 相似度
+ *    - Social Affinity (社交同频度):  20%  — 人生阶段亲和力 + 学历同频 + 同乡亲和（可选）
+ *    - Background Diversity (背景多样性): 15% — 行业多样性 + 性别多样性
+ *    - Preference    (活动偏好):       5%  — 社交目的 + 酒局偏好（低权重：场景分化力有限）
+ *    - Language      (语言沟通):       4%  — 语言共同覆盖（低权重：普通话普及率高，区分度低）
  * 3. 智能分组：使用贪婪+优化算法形成高质量小组
  */
 
@@ -32,13 +33,31 @@ import {
 } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { calculateAge } from "@shared/utils";
+import { EDU_ORDINAL } from "@shared/constants";
 import { wsService } from "./wsService";
 import type { PoolMatchedData } from "@shared/wsEvents";
-import { chemistryMatrix as CHEMISTRY_MATRIX, ARCHETYPE_ENERGY } from "./archetypeChemistry";
+import { chemistryMatrix as CHEMISTRY_MATRIX } from "./archetypeChemistry";
 import type { ArchetypeName } from "./archetypeConfig";
 import { assignVenuesToGroups, saveVenueAssignments } from "./venueAssignmentService";
 import { generateAndSaveEventTheme } from "./eventThemeGeneratorService";
 import { generateEventThemeTitle } from "./services/eventThemeTitleGenerator";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export interface UserWithProfile {
   userId: string;
@@ -54,6 +73,7 @@ export interface UserWithProfile {
   educationLevel: string | null;
   archetype: string | null;
   secondaryArchetype: string | null;
+  workMode: string | null;  // 人生阶段 ('founder' | 'employed' | 'student' | 'successor' | etc.)
   // ❌ REMOVED: interestsTop - now use getUserInterests() to fetch from user_interests table
   hometown: string | null;  // 家乡（用于同乡亲和力）
   hometownAffinityOptin: boolean;  // 是否启用同乡匹配加分
@@ -63,6 +83,7 @@ export interface UserWithProfile {
   barBudgetRange: string[] | null;  // 酒局预算（每杯）
   preferredLanguages: string[] | null;
   eventIntent: string[] | null;  // ✅ RENAMED from socialGoals - 本次活动社交目的
+  userIntent: string[] | null;   // 用户档案默认社交偏好（fallback when eventIntent empty）
   cuisinePreferences: string[] | null;
   dietaryRestrictions: string[] | null;
   tasteIntensity: string[] | null;
@@ -77,11 +98,11 @@ export interface UserWithProfile {
 
 export interface MatchGroup {
   members: UserWithProfile[];
-  avgPairScore: number;  // 平均配对兼容性分数（chemistry + interest + preference + language）
+  avgPairScore: number;  // 平均配对兼容性分数（chemistry + interest + socialAffinity + backgroundDiversity + preference + language）
   avgChemistryScore: number;  // 平均化学反应分数
   diversityScore: number;  // 小组多样性分数
-  energyBalance: number;  // 能量平衡分数（0-100，评估小组社交能量的平衡度）
-  overallScore: number;  // 综合分数 = avgPairScore × 0.6 + diversityScore × 0.25 + energyBalance × 0.15
+  communicationBalance: number;  // 沟通平衡分数（0-100，评估小组语言沟通兼容性）
+  overallScore: number;  // 综合分数 = avgPairScore × 0.6 + diversityScore × 0.25 + communicationBalance × 0.15
   temperatureLevel: string;  // 化学反应温度等级：fire(🔥炽热85+) | warm(🌡️温暖70-84) | mild(🌤️适宜55-69) | cold(❄️冷淡<55)
   explanation: string;
 }
@@ -296,6 +317,21 @@ function calculateLanguageScore(user1: UserWithProfile, user2: UserWithProfile):
 }
 
 /**
+ * Get effective intent for matching with fallback chain:
+ * 1. Event-specific intent (eventIntent from registration)
+ * 2. User's global profile intent (users.intent)
+ * 3. No-intent fallback (empty array = flexible / no preference)
+ */
+function getEffectiveIntent(user: UserWithProfile): string[] {
+  const isValidIntent = (v: unknown): v is string[] => Array.isArray(v) && (v as string[]).length > 0;
+  if (isValidIntent(user.eventIntent)) return user.eventIntent;
+  if (isValidIntent(user.userIntent)) return user.userIntent;
+  // No explicit intent provided: treat as no preference (empty list),
+  // so intent scoring can fall back to the neutral/default score.
+  return [];
+}
+
+/**
  * 计算活动偏好兼容性 (0-100)
  * ✅ UPDATED: Removed budget (now L1 hard constraint) and food preferences (deprecated)
  * Only score: eventIntent overlap + barThemes/alcoholComfort for 酒局
@@ -333,9 +369,12 @@ function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile
   
   // ❌ REMOVED: Cuisine preferences and taste intensity (饭局 food preferences deprecated)
   
-  // 社交目的兼容性（两种活动都使用）
-  const goals1 = user1.eventIntent || [];
-  const goals2 = user2.eventIntent || [];
+  // 社交目的兼容性（两种活动都使用）- fallback chain applied
+  // Note: Treat "flexible" as neutral (no strong intent); do not let it create a perfect match.
+  const goals1Raw = getEffectiveIntent(user1);
+  const goals2Raw = getEffectiveIntent(user2);
+  const goals1 = goals1Raw.filter(g => g !== "flexible");
+  const goals2 = goals2Raw.filter(g => g !== "flexible");
   if (goals1.length > 0 && goals2.length > 0) {
     const goalsOverlap = goals1.filter(g => goals2.includes(g)).length;
     score += (goalsOverlap / Math.max(goals1.length, goals2.length)) * 100;
@@ -390,98 +429,192 @@ function calculateHometownAffinityScore(user1: UserWithProfile, user2: UserWithP
 }
 
 /**
- * Calculate background diversity score (0-100)
- * Different industry, education, gender = higher score (encourages diversity)
- * ✅ UPDATED: Use industryNiche from 3-tier classification
+ * 人生阶段 Aspiration Affinity Matrix (7×7)
+ * Score 0-100: How much person in row WANTS to meet person in column
+ * 
+ * This is ASYMMETRIC. A student wanting to meet a founder ≠ a founder wanting to meet a student.
+ * We average both directions for the pair score.
  */
-function calculateDiversityScore(user1: UserWithProfile, user2: UserWithProfile): number {
-  let diversityPoints = 0;
-  
-  // Different industry +40 (primary diversity dimension)
-  // ✅ UPDATED: Use industryNiche from 3-tier classification
-  if (user1.industryNiche && user2.industryNiche && user1.industryNiche !== user2.industryNiche) {
-    diversityPoints += 40;
+/** Neutral score returned when a user has no workMode set (neither a boost nor a penalty). */
+const NEUTRAL_LIFE_STAGE_SCORE = 50;
+
+const LIFE_STAGE_AFFINITY: Record<string, Record<string, number>> = {
+  //                       founder  self_emp  employed  student  transition  caregiver  successor
+  founder:           { founder: 90, self_employed: 80, employed: 60, student: 40, transitioning: 70, caregiver_retired: 30, successor: 80 },
+  self_employed:     { founder: 85, self_employed: 70, employed: 55, student: 35, transitioning: 60, caregiver_retired: 40, successor: 55 },
+  employed:          { founder: 75, self_employed: 65, employed: 50, student: 30, transitioning: 45, caregiver_retired: 35, successor: 50 },
+  student:           { founder: 80, self_employed: 60, employed: 70, student: 40, transitioning: 35, caregiver_retired: 20, successor: 45 },
+  transitioning:     { founder: 85, self_employed: 75, employed: 60, student: 40, transitioning: 50, caregiver_retired: 40, successor: 55 },
+  caregiver_retired: { founder: 40, self_employed: 55, employed: 50, student: 30, transitioning: 45, caregiver_retired: 60, successor: 35 },
+  successor:         { founder: 85, self_employed: 50, employed: 55, student: 45, transitioning: 55, caregiver_retired: 35, successor: 90 },
+};
+
+/**
+ * 计算人生阶段亲和力分数 (0-100)
+ * Uses asymmetric aspiration matrix averaged both directions.
+ * Intent modulation: networking boosts cross-stage affinity, fun dampens it.
+ */
+function calculateLifeStageAffinity(user1: UserWithProfile, user2: UserWithProfile): number {
+  if (!user1.workMode || !user2.workMode) return NEUTRAL_LIFE_STAGE_SCORE;
+
+  const baseForward = LIFE_STAGE_AFFINITY[user1.workMode]?.[user2.workMode] ?? NEUTRAL_LIFE_STAGE_SCORE;
+  const baseReverse = LIFE_STAGE_AFFINITY[user2.workMode]?.[user1.workMode] ?? NEUTRAL_LIFE_STAGE_SCORE;
+
+  // Intent modulation: networking intent amplifies cross-stage affinity
+  const intent1 = getEffectiveIntent(user1);
+  const intent2 = getEffectiveIntent(user2);
+
+  const user1NetworkingBoost = intent1.includes('networking') ? 1.2 : 1.0;
+  const user2NetworkingBoost = intent2.includes('networking') ? 1.2 : 1.0;
+
+  // Fun intent dampens career-stage sensitivity
+  const user1FunDampen = intent1.includes('fun') ? 0.7 : 1.0;
+  const user2FunDampen = intent2.includes('fun') ? 0.7 : 1.0;
+
+  const forward = Math.min(baseForward * user1NetworkingBoost * user1FunDampen, 100);
+  const reverse = Math.min(baseReverse * user2NetworkingBoost * user2FunDampen, 100);
+
+  return Math.round((forward + reverse) / 2);
+}
+
+/**
+ * Education level ordinal mapping for proximity-based affinity scoring.
+ * Closer ordinal values → higher affinity score (同频).
+ * 职业培训 and 大专 share ordinal 1 as parallel vocational/associate tracks at the same level.
+ */
+const EDUCATION_ORDINAL: Record<string, number> = {
+  "高中及以下": 0,
+  "职业培训": 1,
+  "大专": 1,   // parallel vocational track — same level as 职业培训
+  "本科": 2,
+  "硕士": 3,
+  "博士": 4,
+};
+
+/**
+ * Calculate education affinity score (0-100).
+ * AFFINITY model: same or nearby education level = higher score (学历同频度).
+ * This is NOT a diversity signal — closer levels score better.
+ */
+function calculateEducationAffinityScore(edu1: string, edu2: string): number {
+  const ord1 = EDUCATION_ORDINAL[edu1] ?? -1;
+  const ord2 = EDUCATION_ORDINAL[edu2] ?? -1;
+  if (ord1 === -1 || ord2 === -1) return 50; // unknown level → neutral
+  const distance = Math.abs(ord1 - ord2);
+  if (distance === 0) return 100;
+  if (distance === 1) return 75;
+  if (distance === 2) return 50;
+  return 25; // distance >= 3
+}
+
+/**
+ * Calculate Social Affinity score (0-100) — 社交同频度
+ * Captures same-frequency / resonance-style signals:
+ *   - Life stage affinity (人生阶段亲和力, from LIFE_STAGE_AFFINITY matrix)
+ *   - Education affinity (学历同频度, ordinal-distance-based — NOT diversity)
+ *   - Hometown affinity (同乡亲和力, only when both opted in)
+ */
+function calculateSocialAffinityScore(user1: UserWithProfile, user2: UserWithProfile): number {
+  let score = 0;
+  let factors = 0;
+
+  // Life stage affinity: 0-100 (from LIFE_STAGE_AFFINITY matrix)
+  if (user1.workMode && user2.workMode) {
+    score += calculateLifeStageAffinity(user1, user2);
+    factors++;
   }
-  
-  // Different education level +30 (replaces seniority, maintains 3-tier scoring)
-  if (user1.educationLevel && user2.educationLevel && user1.educationLevel !== user2.educationLevel) {
-    diversityPoints += 30;
+
+  // Education affinity: 0-100 (ordinal proximity, same level = 100)
+  if (user1.educationLevel && user2.educationLevel) {
+    score += calculateEducationAffinityScore(user1.educationLevel, user2.educationLevel);
+    factors++;
   }
-  
-  // Different gender +30 (balanced weight)
-  if (user1.gender && user2.gender && user1.gender !== user2.gender) {
-    diversityPoints += 30;
+
+  // Hometown affinity: 0-100 (only when both opted in)
+  if (user1.hometownAffinityOptin && user2.hometownAffinityOptin) {
+    score += calculateHometownAffinityScore(user1, user2);
+    factors++;
   }
-  
-  return Math.min(diversityPoints, 100);
+}
+
+/**
+ * Calculate Background Diversity score (0-100) — 背景多样性
+ * Captures diversity-oriented dimensions (different background = higher score):
+ *   - Industry diversity (行业多样性)
+ *   - Gender diversity (性别多样性)
+ * Note: Education is an AFFINITY signal (see calculateSocialAffinityScore), not diversity.
+ */
+const DIVERSITY_DIFFERENT_SCORE = 70;
+const DIVERSITY_SAME_SCORE = 30;
+
+function calculateBackgroundDiversityScore(user1: UserWithProfile, user2: UserWithProfile): number {
+  let score = 0;
+  let factors = 0;
+
+  // Industry diversity: different industry = higher score
+  if (user1.industryNiche && user2.industryNiche) {
+    score += user1.industryNiche !== user2.industryNiche ? DIVERSITY_DIFFERENT_SCORE : DIVERSITY_SAME_SCORE;
+    factors++;
+  }
+
+  // Gender diversity: different gender = higher score
+  if (user1.gender && user2.gender) {
+    score += user1.gender !== user2.gender ? DIVERSITY_DIFFERENT_SCORE : DIVERSITY_SAME_SCORE;
+    factors++;
+  }
+
+  return factors > 0 ? Math.round(score / factors) : 50;
 }
 
 /**
  * 计算两个用户的配对兼容性分数 (0-100)
  * 
- * 7维度匹配权重配置 (经专家验证):
- * - Chemistry (性格化学反应): 30%
- * - Interest (兴趣重叠): 20%
- * - Conversation/Language (语言沟通): 15%
- * - Hometown (同乡亲和力): 8-12% (动态，仅当双方启用时)
- * - Preferences (活动偏好): 15%
- * - Background (背景多样性): 5% (在小组层面单独加权)
- * - Emotional (情绪匹配): 5% (预留)
+ * ✅ ACTIVE 匹配权重配置 (6维度):
+ * - Chemistry          (性格化学反应):  28%  — 原型兼容性矩阵
+ * - Interest           (兴趣重叠度):    28%  — Heat 加权 Jaccard 相似度
+ * - Social Affinity    (社交同频度):    20%  — 人生阶段亲和力 + 学历同频 + 同乡亲和（可选）
+ * - Background Diversity (背景多样性): 15%  — 行业多样性 + 性别多样性
+ * - Preference         (活动偏好):       5%  — 社交目的 + 酒局偏好
+ * - Language           (语言沟通):       4%  — 语言共同覆盖
  * 
- * 注意：diversity在小组层面单独计算，不在配对层面重复计算
+ * Note — Language (4%): 普通话覆盖率高，语言维度区分力有限，保留为轻量兼容信号。
+ * Note — Preference (5%): 目前酒吧/饭店活动场景分化有限，保留为轻量场景适配信号。
  */
 async function calculatePairScore(user1: UserWithProfile, user2: UserWithProfile): Promise<number> {
   const chemistry = calculateChemistryScore(user1, user2);
   const interest = await calculateInterestScoreAsync(user1.userId, user2.userId);
   const language = calculateLanguageScore(user1, user2);
   const preference = calculatePreferenceScore(user1, user2);
-  const hometown = calculateHometownAffinityScore(user1, user2);
-  
-  // 判断是否启用同乡匹配（双方都启用）
-  const hometownEnabled = user1.hometownAffinityOptin && user2.hometownAffinityOptin;
-  
-  // ✅ UPDATED: Rebalanced matching weights (removed emotional, increased interest/eventIntent)
-  // Same preference is now "eventIntent" which includes bar preferences for 酒局
-  // 同乡匹配启用时，hometown占5%（reduced from 10%）
-  // 同乡匹配未启用时，权重重新分配到chemistry和interest
-  const weights = hometownEnabled ? {
-    chemistry: 0.30,    // 性格兼容性 30% (unchanged)
-    interest: 0.30,     // 兴趣重叠 30% (+10% from 20%)
-    language: 0.15,     // 语言沟通 15% (unchanged)
-    preference: 0.15,   // 活动偏好 15% (eventIntent + barThemes/alcoholComfort) (+5% from 10%)
-    hometown: 0.05,     // 同乡亲和力 5% (-5% from 10%)
-    background: 0.05,   // 背景评估 5% (unchanged)
-    // ❌ REMOVED: emotional (was 10%, redistributed)
-  } : {
-    chemistry: 0.35,    // 性格兼容性 35% (+5% when hometown disabled)
-    interest: 0.35,     // 兴趣重叠 35% (+5% when hometown disabled)
-    language: 0.15,     // 语言沟通 15% (unchanged)
-    preference: 0.15,   // 活动偏好 15% (eventIntent + barThemes/alcoholComfort)
-    hometown: 0,        // 同乡亲和力 0%
-    background: 0,      // 背景评估 0% (removed when hometown disabled, -5%)
-    // ❌ REMOVED: emotional
+
+  // Social Affinity: life stage affinity + education affinity + hometown (when opted in)
+  const socialAffinity = calculateSocialAffinityScore(user1, user2);
+
+  // Background Diversity: industry diversity + gender diversity
+  const backgroundDiversity = calculateBackgroundDiversityScore(user1, user2);
+
+  const weights = {
+    chemistry:           0.28,  // 性格化学反应 28%
+    interest:            0.28,  // 兴趣重叠度 28%
+    socialAffinity:      0.20,  // 社交同频度 20%
+    backgroundDiversity: 0.15,  // 背景多样性 15%
+    preference:          0.05,  // 活动偏好 5%
+    language:            0.04,  // 语言沟通 4%
   };
-  
-  // 背景多样性分数（鼓励不同背景的人配对）
-  const backgroundScore = calculateDiversityScore(user1, user2);
-  
-  // ❌ REMOVED: emotionalScore (hardcoded 70, not used)
-  
-  const totalScore = 
-    chemistry * weights.chemistry +
-    interest * weights.interest +
-    language * weights.language +
-    preference * weights.preference +
-    hometown * weights.hometown +
-    backgroundScore * weights.background;
-    // ❌ REMOVED: emotionalScore * weights.emotional
-  
+
+  const totalScore =
+    chemistry           * weights.chemistry +
+    interest            * weights.interest +
+    socialAffinity      * weights.socialAffinity +
+    backgroundDiversity * weights.backgroundDiversity +
+    preference          * weights.preference +
+    language            * weights.language;
+
   return Math.round(totalScore);
 }
 
 /**
  * 计算小组内所有成员的平均配对兼容性分数
- * 包含：chemistry + interest + preference + language（不含diversity）
+ * 包含所有6个维度：chemistry + interest + socialAffinity + backgroundDiversity + preference + language
  */
 async function calculateGroupPairScore(members: UserWithProfile[]): Promise<number> {
   if (members.length < 2) return 0;
@@ -501,78 +634,47 @@ async function calculateGroupPairScore(members: UserWithProfile[]): Promise<numb
 
 /**
  * Calculate group diversity score
- * Evaluates diversity across industries, genders, and archetypes
+ * Evaluates diversity across industries, genders, archetypes, and life stages
  */
 function calculateGroupDiversity(members: UserWithProfile[]): number {
+  if (members.length === 0) return 0;
+
   const uniqueIndustries = new Set(members.map((m) => m.industryNiche).filter(Boolean)).size;
   const uniqueGenders = new Set(members.map((m) => m.gender).filter(Boolean)).size;
   const uniqueArchetypes = new Set(members.map((m) => m.archetype).filter(Boolean)).size;
-  
-  // Normalize to 0-100
-  // Weights redistributed after removing seniority
-  // Each dimension contributes: industry 33 points, gender 33 points, archetype 34 points (total 100)
+  const uniqueLifeStages = new Set(members.map((m) => m.workMode).filter(Boolean)).size; // 人生阶段
+
+  // Normalize to 0-100, each of 4 dimensions contributes 25 points
   const maxDiversity = members.length;
-  const diversityScore = 
-    (uniqueIndustries / maxDiversity) * 33 +
-    (uniqueGenders / maxDiversity) * 33 +
-    (uniqueArchetypes / maxDiversity) * 34;
-  
-  return Math.round(diversityScore * 100);
+  const diversityScore =
+    (uniqueIndustries / maxDiversity) * 25 +
+    (uniqueGenders / maxDiversity) * 25 +
+    (uniqueArchetypes / maxDiversity) * 25 +
+    (uniqueLifeStages / maxDiversity) * 25;
+
+  // Clamp to [0, 100] to avoid any floating point drift
+  return Math.round(Math.max(0, Math.min(100, diversityScore)));
 }
 
 /**
- * 计算小组的能量平衡分数 (0-100)
- * 理想的小组应该有平衡的能量分布：
- * - 平均能量在50-70之间（既不全是高能量，也不全是低能量）
- * - 标准差越小越好（成员之间能量差异不能太大）
+ * 计算小组的沟通兼容性分数 (0-100)
+ * 评估小组成员之间的语言沟通兼容性，确保小组内大多数成员能有效交流。
+ * 分数 = 组内所有配对的平均语言兼容分数。
  */
-function calculateEnergyBalance(members: UserWithProfile[]): number {
-  if (members.length === 0) return 0;
-  
-  // 1. 获取每个成员的能量值
-  const energyLevels = members.map((m) => {
-    const archetype = (m.archetype || "暖心熊") as ArchetypeName;
-    return ARCHETYPE_ENERGY[archetype] || 50;
-  });
-  
-  // 2. 计算平均能量
-  const avgEnergy = energyLevels.reduce((sum, e) => sum + e, 0) / energyLevels.length;
-  
-  // 3. 计算标准差
-  const variance = energyLevels.reduce((sum, e) => sum + Math.pow(e - avgEnergy, 2), 0) / energyLevels.length;
-  const stdDev = Math.sqrt(variance);
-  
-  // 4. 评分逻辑
-  // 4.1 平均能量得分：目标范围50-70，越接近越好
-  let avgEnergyScore = 0;
-  if (avgEnergy >= 50 && avgEnergy <= 70) {
-    avgEnergyScore = 100; // 理想范围
-  } else if (avgEnergy >= 40 && avgEnergy < 50) {
-    avgEnergyScore = 80 + (avgEnergy - 40) * 2; // 40-49: 80-100分
-  } else if (avgEnergy > 70 && avgEnergy <= 80) {
-    avgEnergyScore = 100 - (avgEnergy - 70); // 70-80: 100-90分
-  } else if (avgEnergy >= 30 && avgEnergy < 40) {
-    avgEnergyScore = 60 + (avgEnergy - 30) * 2; // 30-39: 60-80分
-  } else if (avgEnergy > 80 && avgEnergy <= 90) {
-    avgEnergyScore = 90 - (avgEnergy - 80) * 2; // 80-90: 90-70分
-  } else {
-    avgEnergyScore = Math.max(0, 100 - Math.abs(avgEnergy - 60) * 2); // 其他范围递减
+function calculateCommunicationBalance(members: UserWithProfile[]): number {
+  if (members.length < 2) return 50;
+
+  let totalScore = 0;
+  let pairCount = 0;
+
+  for (let i = 0; i < members.length; i++) {
+    for (let j = i + 1; j < members.length; j++) {
+      totalScore += calculateLanguageScore(members[i], members[j]);
+      pairCount++;
+    }
   }
-  
-  // 4.2 标准差得分：标准差越小越好（目标<15）
-  let stdDevScore = 0;
-  if (stdDev <= 15) {
-    stdDevScore = 100;
-  } else if (stdDev <= 25) {
-    stdDevScore = 100 - (stdDev - 15) * 4; // 15-25: 100-60分
-  } else {
-    stdDevScore = Math.max(0, 60 - (stdDev - 25) * 2); // >25: 递减
-  }
-  
-  // 5. 综合得分：平均能量60% + 标准差40%
-  const balanceScore = Math.round(avgEnergyScore * 0.6 + stdDevScore * 0.4);
-  
-  return balanceScore;
+
+  return pairCount > 0 ? Math.round(totalScore / pairCount) : 50;
 }
 
 /**
@@ -606,7 +708,7 @@ function generateGroupExplanation(group: MatchGroup): string {
   const industries = group.members.map(m => m.industryNicheLabel || m.industryCategoryLabel || "未知").filter((v, i, a) => a.indexOf(v) === i);
   const tempEmoji = getTemperatureEmoji(group.temperatureLevel);
   
-  return `${tempEmoji} 这个小组有${group.members.length}位成员，包含${archetypes.length}种人格类型（${archetypes.join("、")}），来自${industries.length}个行业。配对兼容性${group.avgPairScore}分，多样性${group.diversityScore}分，能量平衡${group.energyBalance}分，综合匹配度${group.overallScore}分。`;
+  return `${tempEmoji} 这个小组有${group.members.length}位成员，包含${archetypes.length}种人格类型（${archetypes.join("、")}），来自${industries.length}个行业。配对兼容性${group.avgPairScore}分，多样性${group.diversityScore}分，沟通兼容性${group.communicationBalance}分，综合匹配度${group.overallScore}分。`;
 }
 
 /**
@@ -633,6 +735,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       budgetRange: eventPoolRegistrations.budgetRange,
       preferredLanguages: eventPoolRegistrations.preferredLanguages,
       eventIntent: eventPoolRegistrations.eventIntent,
+      userIntent: users.intent,
       cuisinePreferences: eventPoolRegistrations.cuisinePreferences,
       dietaryRestrictions: eventPoolRegistrations.dietaryRestrictions,
       tasteIntensity: eventPoolRegistrations.tasteIntensity,
@@ -645,6 +748,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       educationLevel: users.educationLevel,
       archetype: users.archetype,
       secondaryArchetype: users.secondaryArchetype,
+      workMode: users.workMode,  // 人生阶段 for matching
       hometown: users.hometownRegionCity,
       hometownAffinityOptin: users.hometownAffinityOptin,
       eventType: eventPools.eventType,
@@ -790,8 +894,8 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     if (groupMembers.length >= minGroupSize) {
       const avgPairScore = await calculateGroupPairScore(groupMembers);
       const diversity = calculateGroupDiversity(groupMembers);
-      const energyBalance = calculateEnergyBalance(groupMembers);
-      const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (energyBalance * 0.15));
+      const communicationBalance = calculateCommunicationBalance(groupMembers);
+      const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (communicationBalance * 0.15));
       const temperatureLevel = getTemperatureLevel(overall);
       
       const group: MatchGroup = {
@@ -799,7 +903,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
         avgPairScore: avgPairScore,
         avgChemistryScore: avgPairScore, // Same as avgPairScore for now
         diversityScore: diversity,
-        energyBalance: energyBalance,
+        communicationBalance: communicationBalance,
         overallScore: overall,
         temperatureLevel: temperatureLevel,
         explanation: ""
@@ -859,7 +963,7 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
       memberCount: group.members.length,
       avgChemistryScore: group.avgPairScore,
       diversityScore: group.diversityScore,
-      energyBalance: group.energyBalance,
+      communicationBalance: group.communicationBalance,
       overallScore: group.overallScore,
       temperatureLevel: group.temperatureLevel,
       matchExplanation: group.explanation,

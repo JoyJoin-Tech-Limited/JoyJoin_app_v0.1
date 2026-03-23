@@ -106,16 +106,16 @@ export default function EditIntentPage() {
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <h1 className="ml-2 text-lg font-semibold">活动意图</h1>
+          <h1 className="ml-2 text-lg font-semibold">社交偏好</h1>
         </div>
       </div>
 
       {/* Content */}
       <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-6 max-w-2xl mx-auto pb-24">
         <div className="space-y-2">
-          <Label>默认活动意图 *</Label>
+          <Label>默认社交偏好 *</Label>
           <p className="text-xs text-muted-foreground mb-2">
-            你参加活动的主要目的是什么？这是默认设置，加入活动时可以调整
+            你参加活动的主要目的是什么？这是你的默认偏好，每次报名时可临时调整
           </p>
           <div className="space-y-3 mt-2">
             {intentOptions.map((option) => {

@@ -147,6 +147,102 @@ export default function AdminDashboard() {
         <p className="text-muted-foreground">核心业务指标概览</p>
       </div>
 
+      {/* 运营健康记分卡 */}
+      {stats && (
+        <Card className="mb-6" data-testid="card-ops-scorecard">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              🏥 运营健康记分卡
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              {/* 用户增长健康度 */}
+              {(() => {
+                const v = stats.userGrowth ?? 0;
+                const color = v > 5 ? "text-green-700 bg-green-50" : v >= 0 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
+                const dot = v > 5 ? "🟢" : v >= 0 ? "🟡" : "🔴";
+                return (
+                  <div className={`rounded-lg px-3 py-2 text-center ${color}`} data-testid="scorecard-user-growth">
+                    <div className="text-lg">{dot}</div>
+                    <div className="text-xs font-medium mt-0.5">用户增长健康度</div>
+                    <div className="text-sm font-bold">{v}%</div>
+                  </div>
+                );
+              })()}
+              {/* 匹配满意度 */}
+              {(() => {
+                const v = stats.weeklyMatchingSatisfaction ?? 0;
+                const color = v >= 80 ? "text-green-700 bg-green-50" : v >= 70 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
+                const dot = v >= 80 ? "🟢" : v >= 70 ? "🟡" : "🔴";
+                return (
+                  <div className={`rounded-lg px-3 py-2 text-center ${color}`} data-testid="scorecard-matching-satisfaction">
+                    <div className="text-lg">{dot}</div>
+                    <div className="text-xs font-medium mt-0.5">匹配满意度</div>
+                    <div className="text-sm font-bold">{v}%</div>
+                  </div>
+                );
+              })()}
+              {/* 低分匹配数 */}
+              {(() => {
+                const v = stats.lowScoringMatches ?? 0;
+                const color = v === 0 ? "text-green-700 bg-green-50" : v <= 3 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
+                const dot = v === 0 ? "🟢" : v <= 3 ? "🟡" : "🔴";
+                return (
+                  <div className={`rounded-lg px-3 py-2 text-center ${color}`} data-testid="scorecard-low-matches">
+                    <div className="text-lg">{dot}</div>
+                    <div className="text-xs font-medium mt-0.5">低分匹配数</div>
+                    <div className="text-sm font-bold">{v} 个</div>
+                  </div>
+                );
+              })()}
+              {/* 活跃会员转化率 */}
+              {(() => {
+                const ratio = stats.totalUsers > 0 ? (stats.subscribedUsers / stats.totalUsers) * 100 : 0;
+                const color = ratio > 15 ? "text-green-700 bg-green-50" : ratio >= 5 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
+                const dot = ratio > 15 ? "🟢" : ratio >= 5 ? "🟡" : "🔴";
+                return (
+                  <div className={`rounded-lg px-3 py-2 text-center ${color}`} data-testid="scorecard-conversion-rate">
+                    <div className="text-lg">{dot}</div>
+                    <div className="text-xs font-medium mt-0.5">活跃会员转化率</div>
+                    <div className="text-sm font-bold">{ratio.toFixed(1)}%</div>
+                  </div>
+                );
+              })()}
+              {/* 资料完整度 */}
+              {(() => {
+                const cs = stats.completenessStats;
+                const highQualityUsers = cs ? (cs.star4 + cs.star5) : 0;
+                const totalWithData = cs ? (cs.star1 + cs.star2 + cs.star3 + cs.star4 + cs.star5) : 0;
+                const ratio = totalWithData > 0 ? (highQualityUsers / totalWithData) * 100 : 0;
+                const color = ratio > 50 ? "text-green-700 bg-green-50" : ratio >= 30 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
+                const dot = ratio > 50 ? "🟢" : ratio >= 30 ? "🟡" : "🔴";
+                return (
+                  <div className={`rounded-lg px-3 py-2 text-center ${color}`} data-testid="scorecard-profile-richness">
+                    <div className="text-lg">{dot}</div>
+                    <div className="text-xs font-medium mt-0.5">资料完整度</div>
+                    <div className="text-sm font-bold">{ratio.toFixed(0)}%</div>
+                  </div>
+                );
+              })()}
+              {/* 本月活动密度 */}
+              {(() => {
+                const v = stats.eventsThisMonth ?? 0;
+                const color = v >= 10 ? "text-green-700 bg-green-50" : v >= 5 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
+                const dot = v >= 10 ? "🟢" : v >= 5 ? "🟡" : "🔴";
+                return (
+                  <div className={`rounded-lg px-3 py-2 text-center ${color}`} data-testid="scorecard-event-density">
+                    <div className="text-lg">{dot}</div>
+                    <div className="text-xs font-medium mt-0.5">本月活动密度</div>
+                    <div className="text-sm font-bold">{v} 场</div>
+                  </div>
+                );
+              })()}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {statCards.map((stat) => (
           <Card key={stat.title} data-testid={`stat-card-${stat.title}`}>

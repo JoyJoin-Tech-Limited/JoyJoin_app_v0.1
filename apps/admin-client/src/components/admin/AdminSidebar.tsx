@@ -35,6 +35,7 @@ const coreOpsItems = [
   { title: "数据看板", url: "/admin/dashboard", icon: LayoutDashboard },
   { title: "用户管理", url: "/admin/users", icon: Users },
   { title: "活动池管理", url: "/admin/event-pools", icon: Layers },
+  { title: "场地管理", url: "/admin/venues", icon: MapPin },
 ];
 
 const matchingItems = [
@@ -46,14 +47,13 @@ const matchingItems = [
 const safetyItems = [
   { title: "反馈管理", url: "/admin/feedback", icon: MessageSquare },
   { title: "举报审核", url: "/admin/moderation", icon: Flag },
-  { title: "互动日志", url: "/admin/interaction-logs", icon: FileText },
+  { title: "连接日志", url: "/admin/interaction-logs", icon: FileText },
 ];
 
 const contentRevenueItems = [
   { title: "数据洞察", url: "/admin/insights", icon: BarChart3 },
   { title: "内容管理", url: "/admin/content", icon: FileText },
   { title: "通知推送", url: "/admin/notifications", icon: Bell },
-  { title: "场地管理", url: "/admin/venues", icon: MapPin },
   { title: "活动管理", url: "/admin/events", icon: CalendarDays },
   { title: "订阅管理", url: "/admin/subscriptions", icon: CreditCard },
   { title: "定价管理", url: "/admin/pricing", icon: DollarSign },

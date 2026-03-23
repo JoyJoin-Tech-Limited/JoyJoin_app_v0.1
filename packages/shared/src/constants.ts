@@ -11,23 +11,42 @@ export type Gender = typeof GENDER_OPTIONS[number];
 export const EDUCATION_LEVEL_OPTIONS = ["高中及以下", "大专", "本科", "硕士", "博士", "职业培训"] as const;
 export type EducationLevel = typeof EDUCATION_LEVEL_OPTIONS[number];
 
+/**
+ * Ordinal proximity mapping for education affinity scoring (同频度).
+ * Used by calculateEducationAffinityScore() to measure same-frequency closeness.
+ * 职业培训 is treated as ordinal 2 (same tier as 大专) as it is a non-linear vocational track.
+ * Labels not in this map are treated as unknown → factor skipped in background score average.
+ */
+export const EDU_ORDINAL: Partial<Record<EducationLevel, number>> = {
+  "高中及以下": 1,
+  "大专": 2,
+  "职业培训": 2,  // vocational track, same tier as 大专
+  "本科": 3,
+  "硕士": 4,
+  "博士": 5,
+};
+
 // Seniority options (deprecated - use WORK_MODE_OPTIONS)
 export const SENIORITY_OPTIONS = ["实习生", "初级", "中级", "高级", "资深", "创始人", "高管"] as const;
 export type Seniority = typeof SENIORITY_OPTIONS[number];
 
-// Work mode options (new standardized occupation system)
-export const WORK_MODE_OPTIONS = ["founder", "self_employed", "employed", "student", "transitioning", "caregiver_retired"] as const;
+// Work mode options (new standardized occupation system) — also used as 人生阶段 (life stage)
+export const WORK_MODE_OPTIONS = ["founder", "self_employed", "employed", "student", "transitioning", "caregiver_retired", "successor"] as const;
 export type WorkMode = typeof WORK_MODE_OPTIONS[number];
 
-// Work mode display labels (Chinese)
+// Work mode display labels (Chinese) — 人生阶段 framing
 export const WORK_MODE_LABELS: Record<WorkMode, string> = {
-  founder: "创始人/合伙人",
+  founder: "创业中",
   self_employed: "自由职业",
-  employed: "在职人士",
-  student: "学生/实习",
-  transitioning: "职业过渡期",
+  employed: "在职",
+  student: "学生",
+  transitioning: "探索期",
   caregiver_retired: "家庭为主",
+  successor: "准备继承家业",
 };
+
+// Alias for convenience — same as WORK_MODE_LABELS
+export const LIFE_STAGE_LABELS = WORK_MODE_LABELS;
 
 // Work mode descriptions (Chinese)
 export const WORK_MODE_DESCRIPTIONS: Record<WorkMode, string> = {
@@ -35,8 +54,9 @@ export const WORK_MODE_DESCRIPTIONS: Record<WorkMode, string> = {
   self_employed: "独立工作，灵活接活",
   employed: "在企业、机构或组织任职",
   student: "在读、实习或Gap中",
-  transitioning: "求职中、休整、转型、预备接班",
+  transitioning: "求职中、休整、转型中",
   caregiver_retired: "全职家长、照顾家人、退休、在家躺平",
+  successor: "家族企业接班、二代培养",
 };
 
 // Relationship status options
@@ -138,16 +158,87 @@ export type IndustryOption = typeof INDUSTRY_OPTIONS[number];
 
 // Intent/Social Goals options
 export const INTENT_OPTIONS = [
-  { value: "friends", label: "交新朋友", subtitle: "认识有趣的人" },
-  { value: "networking", label: "拓展人脉", subtitle: "扩大社交圈" },
-  { value: "discussion", label: "深度交流", subtitle: "走心的对话" },
-  { value: "fun", label: "轻松娱乐", subtitle: "开心就好" },
-  { value: "romance", label: "浪漫邂逅", subtitle: "遇见心动" },
+  { value: "friends", label: "交新朋友", subtitle: "认识有趣的人", emoji: "👋", iconHint: "Users" },
+  { value: "networking", label: "拓展人脉", subtitle: "扩大社交圈", emoji: "🤝", iconHint: "Network" },
+  { value: "discussion", label: "深度交流", subtitle: "走心的对话", emoji: "💬", iconHint: "MessageCircle" },
+  { value: "fun", label: "轻松娱乐", subtitle: "开心就好", emoji: "🎉", iconHint: "PartyPopper" },
+  { value: "romance", label: "浪漫邂逅", subtitle: "遇见心动", emoji: "💕", iconHint: "Heart" },
 ] as const;
 
 export const INTENT_FLEXIBLE_OPTION = {
   value: "flexible",
   label: "随缘",
   subtitle: "交给小悦推荐",
+  emoji: "🎲",
+  iconHint: "Shuffle",
   description: "我都感兴趣，帮我安排"
 } as const;
+
+/** Union of all valid icon hint strings used by intent options. */
+export type IntentIconHint = typeof INTENT_OPTIONS[number]["iconHint"] | typeof INTENT_FLEXIBLE_OPTION["iconHint"];
+
+/** All valid intent values (including flexible). */
+export const ALL_INTENT_VALUES = [
+  ...INTENT_OPTIONS.map((o) => o.value),
+  INTENT_FLEXIBLE_OPTION.value,
+] as const;
+
+/** Returns the Chinese display label for a given intent value. */
+export function getIntentLabel(intent: string): string {
+  const all = [...INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION];
+  return all.find((o) => o.value === intent)?.label ?? intent;
+}
+
+/** Returns the emoji for a given intent value. */
+export function getIntentEmoji(intent: string): string {
+  const all = [...INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION];
+  return all.find((o) => o.value === intent)?.emoji ?? "🎯";
+}
+
+// ============ 契合点系统 ============
+
+export const CONNECTION_POINT_TYPES = {
+  // Common tier (frequently matched)
+  SAME_CITY: { id: "same_city", label: "同城", emoji: "🏙️", tier: "common" as const },
+  SAME_INDUSTRY: { id: "same_industry", label: "同行", emoji: "💼", tier: "common" as const },
+  SAME_EDUCATION: { id: "same_education", label: "同学历", emoji: "🎓", tier: "common" as const },
+  SAME_RELATIONSHIP: { id: "same_relationship", label: "同状态", emoji: "💫", tier: "common" as const },
+
+  // Rare tier (less frequent, higher value)
+  SAME_HOMETOWN: { id: "same_hometown", label: "老乡", emoji: "🏠", tier: "rare" as const },
+  SAME_ARCHETYPE_BAND: { id: "same_archetype_band", label: "同频", emoji: "🎵", tier: "rare" as const },
+  SAME_WORK_INDUSTRY: { id: "same_work_industry", label: "同领域同模式", emoji: "🤝", tier: "rare" as const },
+  COMPLEMENTARY_ARCHETYPE: { id: "complementary_archetype", label: "性格互补", emoji: "🧩", tier: "rare" as const },
+
+  // Epic tier (very rare, highest value)
+  EXACT_ARCHETYPE: { id: "exact_archetype", label: "同款人格", emoji: "✨", tier: "epic" as const },
+  HOMETOWN_INDUSTRY_COMPOUND: { id: "hometown_industry", label: "老乡+同行", emoji: "🔥", tier: "epic" as const },
+  DEEP_INTEREST_OVERLAP: { id: "deep_interest_overlap", label: "深度同好", emoji: "💎", tier: "epic" as const },
+} as const;
+
+export type ConnectionPointTier = "common" | "rare" | "epic";
+
+export const CONNECTION_POINT_TIER_CONFIG = {
+  common: { label: "普通契合", color: "#6B7280", bgColor: "#F3F4F6" },
+  rare: { label: "稀有契合", color: "#8B5CF6", bgColor: "#EDE9FE" },
+  epic: { label: "史诗契合", color: "#F59E0B", bgColor: "#FEF3C7" },
+} as const;
+
+// Rarity tiers for education levels (common → epic, higher degree = rarer)
+export const EDUCATION_LEVEL_RARITY: Record<string, ConnectionPointTier> = {
+  "高中及以下": "common",
+  "大专": "common",
+  "本科": "common",
+  "职业培训": "common",
+  "硕士": "rare",
+  "博士": "epic",
+};
+
+// Chinese display labels for relationship status match descriptions
+export const RELATIONSHIP_MATCH_LABELS: Record<string, { text: string; tier: ConnectionPointTier }> = {
+  "单身": { text: "同为单身贵族", tier: "common" },
+  "恋爱中": { text: "都在甜蜜恋爱中", tier: "common" },
+  "已婚/伴侣": { text: "同为有伴一族", tier: "common" },
+  "离异": { text: "都经历过婚姻", tier: "common" },
+  "丧偶": { text: "都经历过失去伴侣", tier: "common" },
+};

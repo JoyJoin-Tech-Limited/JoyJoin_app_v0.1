@@ -9,6 +9,16 @@
 
 ## 🗺️ Product Canon & Terminology
 
+> ### ⚠️ MANDATORY RULE FOR ALL CONTRIBUTORS
+>
+> **All code, copy, documentation, and implementation decisions MUST be based on the active, current flow described in this document.**
+>
+> - ❌ Never reference, reintroduce, or copy-paste from legacy flows, removed features, old routes, or deprecated components — even if they appear in git history, archived docs (`archived/`), or inline `TODO` comments.
+> - ❌ Never treat `QUICK_REFERENCE.md` as authoritative — use `DEVELOPER_QUICK_REFERENCE.md` and this document (`PRODUCT_REQUIREMENTS.md`) instead.
+> - ✅ When in doubt about whether a pattern/term/route is active, check the canonical nav table below and §*Product Canon* before implementing.
+>
+> This rule applies to human engineers **and** AI coding agents.
+
 > **This section is authoritative.** When any older content in this document conflicts with the definitions below, the definitions below take precedence. Legacy wording in older sections is marked ⚠️ Legacy and must not be used in new copy, code, or communications.
 
 ### Current Bottom Navigation (Canonical)
@@ -71,14 +81,14 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 **1. Temperature Concept System** 🌡️
 - Dual-temperature visualization: Social Energy (社交能量) + Chemistry Reaction (化学反应温度)
-- 14 archetypes mapped to 0-100 energy scale
+- 12 archetypes mapped to 0-100 energy scale
 - Visual emoji indicators: 🔥 炽热 (≥85) | 🌡️ 温暖 (70-84) | 🌤️ 适宜 (55-69) | ❄️ 冷淡 (<55)
 - Prevents unbalanced groups (all high-energy or all low-energy)
 
 **2. Matching Algorithm Fix** 🔧
 - Corrected critical diversity double-counting bug
-- Updated scoring formula: **60% pair compatibility + 25% diversity + 15% energy balance**
-- Clarified pair score components: chemistry (37.5%) + interest (31.25%) + preference (25%) + language (18.75%)
+- Updated group scoring formula: **60% pair compatibility + 25% diversity + 15% energy balance**
+- Current pair score uses 6-dimension weighted model (Chemistry 28%, Interest 28%, Social Affinity 20%, Background Diversity 15%, Preference 5%, Language 4%); see `apps/server/src/poolMatchingService.ts` for active implementation
 
 **3. Real-time Dynamic Matching System** ⚡
 - Three-tier threshold system with time decay algorithm
@@ -116,12 +126,12 @@ JoyJoin is an AI-powered social networking platform that connects individuals lo
 
 ### Key Value Propositions
 
-- **AI-Driven Matching:** 14 personality archetypes with 5-dimensional compatibility scoring
+- **AI-Driven Matching:** 12 personality archetypes (V4 animal system) with 7-dimensional pool compatibility scoring
 - **Micro-Event Format:** Small group sizes (5-10 people) for meaningful interactions
 - **Blind Box Experience:** Gamified event discovery with surprise reveals
 - **In-Event Social Experience:** Social Icebreaker multi-phase group facilitation (热身 → 挑战 → 侦探 → 回顾) as the core in-event engagement tool
 - **Data-Driven Insights:** Comprehensive feedback system to refine matching algorithms
-- **Subscription Model:** ¥98/month or ¥294/3-month with WeChat Pay integration
+- **权益 (Membership Benefits) System:** ¥98/month or ¥294/3-month 权益方案 with WeChat Pay integration (user-facing copy must use `权益`, not `会员`)
 
 ---
 
@@ -163,25 +173,46 @@ Foster meaningful local connections through AI-powered matching that understands
 
 ### 1. User Onboarding & Registration
 
-**File Location:** `client/src/pages/RegistrationPage.tsx`, `client/src/pages/ProfileSetupPage.tsx`
+**File Location:** `apps/user-client/src/pages/PersonalityTestPageV4.tsx` (primary entry point), `apps/user-client/src/pages/EssentialDataPage.tsx`, `apps/user-client/src/pages/LoginPage.tsx`
 
-#### 1.1 Phone Authentication
+#### 1.1 Authentication — WeChat-First (Current)
+
+> **⚠️ Legacy section below:** The Phone Authentication flow (SMS verification → Profile Setup) was the original registration method. It has been superseded by the WeChat-first pre-test-signup flow (implemented 2026-02-04). The phone auth endpoints remain available as a fallback on `LoginPage`.
+
+**Current Primary User Journey:**
+```
+LandingPage → /personality-test (anonymous V4 test) 
+→ PersonalityTestResultPage (archetype reveal) 
+→ 微信一键登录 (WeChat login CTA, shown after 3 seconds)
+→ POST /api/auth/wechat/login-with-test (creates account + saves test results)
+→ /onboarding/setup (EssentialDataPage — new users only)
+→ /onboarding/extended (ExtendedDataPage)
+→ /onboarding/review (FinalProfileReviewPage)
+→ /discover
+```
+
+**WeChat Auth Endpoints:**
+- `POST /api/auth/wechat/login-with-test` — New user sign-up with personality test answers
+- `POST /api/auth/wechat/login` — Returning user login (no test answers)
+- `GET /api/auth/wechat/oauth/start` — Browser OAuth2 web flow (staging/production browser)
+- `GET /api/auth/wechat/oauth/callback` — OAuth2 callback handler
+
+**Session:** 7-day persistent login via PostgreSQL session store
+
+---
+
+#### 1.1b Phone Authentication ⚠️ Legacy Fallback
+
 - **Method:** SMS verification (6-digit code)
-- **Session:** 7-day persistent login
-- **Database:** PostgreSQL session store
-- **Security:** Bcrypt password hashing
-
-**User Journey:**
-```
-Landing Page → Phone Number Entry → SMS Code Verification → Profile Setup
-```
-
-**API Endpoints:**
-- `POST /api/phone/register` - Send SMS code
-- `POST /api/phone/verify` - Verify code and create session
-- `POST /api/phone/login` - Existing user login
+- **Status:** Available as a fallback on `/login` (`LoginPage.tsx`), not shown in new-user onboarding
+- **API Endpoints:**
+  - `POST /api/phone/register` - Send SMS code
+  - `POST /api/phone/verify` - Verify code and create session
+  - `POST /api/phone/login` - Existing user login
 
 #### 1.2 Multi-Step Profile Setup
+
+> ⚠️ **Legacy reference:** This section documents the original multi-step profile setup flow. The current onboarding flow is described in §1.1 (WeChat-first post-test signup). The current onboarding sequence is: anonymous personality test → WeChat login → Essential Data (`/onboarding/setup`) → Extended Data (`/onboarding/extended`) → Profile Review (`/onboarding/review`) → Discover.
 
 **Step 1: Basic Information**
 - Full Name (Chinese/English)
@@ -399,7 +430,7 @@ WHERE id = user_id;
 
 ### 1.4 Event Discovery & Blind Box System
 
-**File Location:** `client/src/pages/DiscoverPage.tsx`, `client/src/pages/BlindBoxEventDetailPage.tsx`
+**File Location:** `apps/user-client/src/pages/DiscoverPage.tsx`, `apps/user-client/src/pages/BlindBoxEventDetailPage.tsx`
 
 #### Event Types
 
@@ -490,7 +521,7 @@ User Actions:
 
 #### Two-Part Match Scoring System
 
-**Frontend Component:** `client/src/components/MatchScoreDisplay.tsx`
+**Frontend Component:** `apps/user-client/src/components/MatchScoreDisplay.tsx`
 
 **Group Chemistry Score (群体化学反应):**
 ```typescript
@@ -509,12 +540,13 @@ Visual:
 ```typescript
 Calculation:
   - User's average match with all other attendees
-  - 5-dimensional scoring:
-    * Personality (40%): Based on 14×14 chemistry matrix
-    * Interests (25%): Jaccard similarity of interest tags
-    * Background (15%): Education/career alignment
-    * Conversation (10%): Openness + Extraversion scores
-    * Intent (10%): Event participation motivation
+  - 6-dimensional scoring (active model):
+    * Chemistry (28%): Archetype chemistry matrix
+    * Interest (28%): Heat-weighted Jaccard similarity (user_interests table)
+    * Social Affinity (20%): Life stage + education affinity + hometown (opt-in)
+    * Background Diversity (15%): Industry + gender diversity
+    * Preference (5%): Event intent / bar preferences (light signal)
+    * Language (4%): Common languages (light signal)
   - Range: 75-98%
 
 Visual:
@@ -525,7 +557,7 @@ Visual:
 
 #### AttendeePreviewCard Component
 
-**File:** `client/src/components/AttendeePreviewCard.tsx`
+**File:** `apps/user-client/src/components/AttendeePreviewCard.tsx`
 
 ```typescript
 Display:
@@ -542,7 +574,7 @@ Display:
 
 ### 1.5 权益方案 & Payment System
 
-**File Location:** `client/src/pages/BlindBoxPaymentPage.tsx`
+**File Location:** `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`
 
 > **Note on terminology:** User-facing copy uses `权益` / `权益方案`. Internal technical names (`subscription`, `subscriptions` table) remain unchanged. See §Product Canon for the full compliance terminology table.
 
@@ -690,7 +722,7 @@ Response:
 
 ### 1.6 Chat System
 
-**File Location:** `client/src/pages/EventChatDetailPage.tsx`, `client/src/pages/DirectChatPage.tsx`
+**File Location:** `apps/user-client/src/pages/EventCoordinationPage.tsx` (current), `apps/user-client/src/pages/ChatsPage.tsx`
 
 #### Event Group Chat
 
@@ -752,7 +784,7 @@ wsService.broadcastToEvent(eventId, message);
 
 #### Chat Moderation System
 
-**File:** `client/src/pages/admin/AdminModerationPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminModerationPage.tsx`
 
 **User Reporting:**
 ```typescript
@@ -792,7 +824,7 @@ CREATE TABLE chat_reports (
 
 **Chat Logging System:**
 
-**File:** `client/src/pages/admin/AdminChatLogsPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminInteractionLogsPage.tsx`
 
 ```sql
 CREATE TABLE chat_logs (
@@ -850,7 +882,7 @@ Full system documentation: `docs/icebreaker-system.md`
 
 > **Note:** Previously numbered 1.7. Renumbered to 1.8 to accommodate the new §1.7 In-Event Social Experience section.
 
-**File Location:** `client/src/pages/EventFeedbackFlow.tsx`, `client/src/pages/DeepFeedbackFlow.tsx`
+**File Location:** `apps/user-client/src/pages/EventFeedbackFlow.tsx`, `apps/user-client/src/pages/DeepFeedbackFlow.tsx`
 
 #### Two-Tier Feedback Architecture
 
@@ -870,7 +902,7 @@ Appears immediately after event ends (status: "completed")
 
 **Step 2: Connection Radar (连接雷达图)**
 
-**Component:** `client/src/components/feedback/ConnectionRadar.tsx`
+**Component:** `apps/user-client/src/components/feedback/ConnectionRadar.tsx`
 
 4-dimensional assessment (0-10 scale):
 ```typescript
@@ -1150,7 +1182,6 @@ Protected Routes:
   - /blind-box/:id/payment
   - /chats
   - /chats/event/:id
-  - /chats/direct/:threadId
   - /profile
   - /personality-test/results
   - /feedback/:eventId
@@ -1161,6 +1192,10 @@ Public Routes:
   - /register
   - /personality-test (can be taken before full registration)
 ```
+
+> **Note:** `/chats/direct/:threadId` has been removed (DM system removed). The `连接` tab at `/connections` shows structured post-event connections. Event coordination is at `/event-coordination/:groupId`.
+
+> **Note on admin routes:** All `/admin/*` routes in the user client redirect to `https://admin.yuejuapp.com`. The admin portal is a separate deployment (`apps/admin-client`).
 
 ---
 
@@ -1915,7 +1950,7 @@ When admin cancels event:
 
 ### 2.7 Matching Lab (算法调优实验室)
 
-**File:** `client/src/pages/admin/AdminMatchingLabPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminMatchingLabPage.tsx`
 
 #### Purpose
 
@@ -2257,7 +2292,7 @@ Create Notification:
 
 ### 2.10 Moderation System (Content & User Reports)
 
-**File:** `client/src/pages/admin/AdminModerationPage.tsx`, `client/src/pages/admin/AdminReportsPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminModerationPage.tsx`, `apps/admin-client/src/pages/admin/AdminReportsPage.tsx`
 
 #### Chat Moderation Queue
 
@@ -2351,7 +2386,7 @@ onNewMessage((message) => {
 
 #### User Report Management
 
-**File:** `client/src/pages/admin/AdminReportsPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminReportsPage.tsx`
 
 **Report Types:**
 - 🚫 不当行为 (Inappropriate behavior) - At events
@@ -2398,7 +2433,7 @@ Metrics:
 
 ### 2.11 Data Insights Dashboard (运营决策指挥中心)
 
-**File:** `client/src/pages/admin/AdminDataInsightsPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminDataInsightsPage.tsx`
 
 #### Purpose
 
@@ -2663,15 +2698,15 @@ Optimization Opportunities:
 
 ```typescript
 1. Overall Distribution
-   Pie Chart (example data - legacy names):
-   - 连接者: 18.5%
-   - 探索者: 16.2%
-   - 故事家: 14.8%
-   - 火花塞: 13.1%
-   - 肯定者: 12.3%
-   - 氛围组: 10.7%
-   - 协调者: 9.4%
-   - 挑战者: 5.0%
+   Pie Chart (example data — production system uses current 12 archetypes):
+   - 暖心熊: 18.5%
+   - 沉思猫头鹰: 16.2%
+   - 夸夸豚: 14.8%
+   - 开心柯基: 13.1%
+   - 太阳鸡: 12.3%
+   - 机智狐: 10.7%
+   - 淡定海豚: 9.4%
+   - 其他 (4 archetypes): 5.0%
    
 2. Archetype Engagement
    - Highest retention: 连接者 (28% at 6 months)
@@ -2962,8 +2997,8 @@ export function useWebSocket() {
 - Express Session (authentication)
 
 **Authentication:**
-- Phone number + SMS verification
-- bcrypt password hashing
+- WeChat OAuth2 (primary): Mini Program `wx.login()` + Official Account OAuth2 web flow
+- Phone number + SMS verification (legacy fallback)
 - PostgreSQL session store (7-day persistence)
 
 **Payment:**
@@ -3001,7 +3036,7 @@ export function useWebSocket() {
 17. **notifications** - Push notification records
 18. **event_pools** - Admin-created blind box event pools
 19. **event_pool_registrations** - User registrations with soft preferences
-20. **event_pool_groups** - Matched groups (v1.1: added `energyBalance`, `temperatureLevel`)
+20. **event_pool_groups** - Matched groups (v1.1: added `communicationBalance` stored as `energy_balance`, `temperatureLevel`)
 21. **matching_thresholds** - Configurable matching parameters (NEW v1.1)
 22. **pool_matching_logs** - Matching decision history (NEW v1.1)
 23. **invitations** - User invitation records
@@ -3059,7 +3094,7 @@ export function useWebSocket() {
 - `GET /api/admin/feedbacks/stats` - Aggregate stats
 - `GET /api/admin/moderation/reports` - Chat reports
 - `PATCH /api/admin/moderation/reports/:id` - Take action
-- `GET /api/admin/chat-logs` - Query chat logs
+- `GET /api/admin/interaction-logs` - Query interaction/connection logs
 - `GET /api/admin/contents` - CMS content list
 - `POST /api/admin/contents` - Create content
 - `POST /api/admin/notifications/broadcast` - Send notification
@@ -3235,56 +3270,55 @@ function calculatePairScore(user1, user2, reg1, reg2) {
   return chemistry * 0.375 + interest * 0.3125 + preference * 0.25 + language * 0.1875;
 }
 
-// Group Diversity Score (群体多样性) - Separate calculation
+// Group Diversity Score (群体多样性) — 4 equal dimensions
 function calculateGroupDiversity(group) {
-  // Diversity metrics (only counted ONCE at group level)
-  const uniqueIndustries = new Set(group.map(u => u.industry)).size;
-  const uniqueEducation = new Set(group.map(u => u.educationLevel)).size;
-  const uniqueArchetypes = new Set(group.map(u => u.primaryArchetype)).size;
-  
-  const industryDiversity = (uniqueIndustries / group.length) * 100;
-  const educationDiversity = (uniqueEducation / group.length) * 100;
-  const archetypeDiversity = (uniqueArchetypes / group.length) * 100;
-  
-  return (industryDiversity + educationDiversity + archetypeDiversity) / 3;
+  // All 4 dimensions contribute equally (25% each)
+  const uniqueIndustries = new Set(group.map(u => u.industryNiche)).size;
+  const uniqueGenders    = new Set(group.map(u => u.gender)).size;
+  const uniqueArchetypes = new Set(group.map(u => u.archetype)).size;
+  const uniqueLifeStages = new Set(group.map(u => u.workMode)).size; // 人生阶段 (PR #312)
+
+  return (
+    (uniqueIndustries / group.length) * 25 +
+    (uniqueGenders    / group.length) * 25 +
+    (uniqueArchetypes / group.length) * 25 +
+    (uniqueLifeStages / group.length) * 25
+  );
 }
 
-// Energy Balance Score (能量平衡度) - NEW in v1.1
-function calculateEnergyBalance(group) {
-  // Map each archetype to energy level (0-100 scale)
-  const energyLevels = group.map(u => ARCHETYPE_ENERGY[u.primaryArchetype]);
-  const avgEnergy = mean(energyLevels);
-  const stdDev = standardDeviation(energyLevels);
-  
-  // Ideal: average energy 50-70, low standard deviation
-  const avgScore = avgEnergy >= 50 && avgEnergy <= 70 ? 100 : 
-                   Math.max(0, 100 - Math.abs(avgEnergy - 60) * 2);
-  const harmonyScore = Math.max(0, 100 - stdDev * 3);
-  
-  return (avgScore + harmonyScore) / 2;
+// Communication Balance Score (沟通平衡度) — replaces former energy balance
+function calculateCommunicationBalance(group) {
+  // Average pairwise language score across all member pairs
+  let total = 0, pairs = 0;
+  for (let i = 0; i < group.length; i++) {
+    for (let j = i + 1; j < group.length; j++) {
+      total += calculateLanguageScore(group[i], group[j]);
+      pairs++;
+    }
+  }
+  return pairs > 0 ? total / pairs : 50;
 }
 
-// Overall Group Score (综合分数) - UPDATED FORMULA
+// Overall Group Score (综合分数) — latest formula
 function formOptimalGroups(pool) {
   // For each candidate group:
-  const avgPairScore = mean(allPairScores); // Average compatibility
-  const groupDiversity = calculateGroupDiversity(group); // Background richness
-  const energyBalance = calculateEnergyBalance(group); // Energy harmony
-  
-  // New weighted formula (changed from 70/30 to 60/25/15)
-  const overallScore = 
-    avgPairScore * 0.6 +      // Pair compatibility (similarity)
-    groupDiversity * 0.25 +   // Group diversity (richness)
-    energyBalance * 0.15;     // Energy balance (harmony)
-  
+  const avgPairScore         = mean(allPairScores);              // Average compatibility
+  const groupDiversity       = calculateGroupDiversity(group);   // Background richness
+  const communicationBalance = calculateCommunicationBalance(group); // Language compatibility
+
+  const overallScore =
+    avgPairScore         * 0.60 +  // Pair compatibility (similarity)
+    groupDiversity       * 0.25 +  // Group diversity (richness)
+    communicationBalance * 0.15;   // Communication balance (harmony)
+
   return overallScore;
 }
 ```
 
 **Conceptual Clarity:**
 - **Pair Compatibility** (60%): Do members get along? (similarity)
-- **Group Diversity** (25%): Is the group interesting? (richness)
-- **Energy Balance** (15%): Is the energy level balanced? (harmony)
+- **Group Diversity** (25%): Is the group interesting? (richness — industry / gender / archetype / life stage)
+- **Communication Balance** (15%): Can the group communicate? (language harmony)
 
 **Anti-Repetition System:**
 
@@ -3344,29 +3378,26 @@ const ARCHETYPE_ENERGY = {
 };
 ```
 
-**Energy Balance Calculation:**
+**Communication Balance Calculation** (replaced former energy balance):
 
 ```typescript
-function calculateEnergyBalance(group) {
-  const energyLevels = group.map(user => ARCHETYPE_ENERGY[user.primaryArchetype]);
-  const avgEnergy = mean(energyLevels);
-  const stdDev = standardDeviation(energyLevels);
-  
-  // Ideal: Average energy 50-70 (balanced, not too high or too low)
-  const avgScore = (avgEnergy >= 50 && avgEnergy <= 70) ? 100 : 
-                   Math.max(0, 100 - Math.abs(avgEnergy - 60) * 2);
-  
-  // Ideal: Low standard deviation (harmony, not too much variance)
-  const harmonyScore = Math.max(0, 100 - stdDev * 3);
-  
-  return (avgScore + harmonyScore) / 2;
+// Average pairwise language score across all member pairs
+function calculateCommunicationBalance(group) {
+  let total = 0, pairs = 0;
+  for (let i = 0; i < group.length; i++) {
+    for (let j = i + 1; j < group.length; j++) {
+      total += calculateLanguageScore(group[i], group[j]);
+      pairs++;
+    }
+  }
+  return pairs > 0 ? Math.round(total / pairs) : 50;
 }
 ```
 
 **Why This Matters:**
-- Prevents all-高能量 groups (exhausting, chaotic)
-- Prevents all-低能量 groups (awkward silences, low engagement)
-- Creates balanced social dynamics with natural conversation flow
+- Ensures the group can actually communicate across language preferences
+- Pairs with a common language score 100; pairs with no common language score 30
+- Low score indicates a multilingual barrier risk in the group
 
 **2. Chemistry Reaction Temperature (化学反应温度)**
 
@@ -3421,17 +3452,17 @@ toast({
 **Group Explanation Text:**
 ```typescript
 function generateGroupExplanation(group, scores) {
-  const energyDesc = scores.energyBalance >= 70 ? 
-    "小组能量分布均衡，既有活跃的引导者，也有善于倾听的成员" :
-    "小组能量较为集中，建议适当调整互动节奏";
-    
+  const commDesc = scores.communicationBalance >= 70 ?
+    "小组成员语言沟通兼容性强，交流顺畅" :
+    "小组成员语言偏好有所差异，建议活动中多用共同语言";
+
   const tempDesc = scores.temperatureLevel === "🔥 炽热" ?
     "这是一个化学反应极强的小组！" :
     scores.temperatureLevel === "🌡️ 温暖" ?
     "这个小组有很好的匹配度" :
     "这个小组有一定的匹配度";
-    
-  return `${tempDesc} ${energyDesc}`;
+
+  return `${tempDesc} ${commDesc}`;
 }
 ```
 
@@ -3443,16 +3474,16 @@ CREATE TABLE event_pool_groups (
   id VARCHAR PRIMARY KEY,
   pool_id VARCHAR REFERENCES event_pools(id),
   group_number INTEGER,
-  
+
   -- Existing scores
   avg_pair_score INTEGER,      -- Average pairwise compatibility
   diversity_score INTEGER,      -- Group background diversity
   overall_score INTEGER,        -- Final weighted score
-  
-  -- NEW in v1.1
-  energy_balance INTEGER,       -- Social energy harmony score (0-100)
-  temperature_level VARCHAR,    -- Visual indicator: "🔥 炽热", "🌡️ 温暖", etc.
-  
+
+  -- communication balance (stored in energy_balance column for backward compatibility)
+  energy_balance INTEGER,       -- Communication balance score (0-100) — formerly energy balance
+  temperature_level VARCHAR,    -- Visual indicator: "fire", "warm", "mild", "cold"
+
   created_at TIMESTAMP DEFAULT NOW()
 );
 ```
@@ -3498,7 +3529,7 @@ CREATE TABLE event_pool_groups (
 | **Content Management** | ✅ Complete | `AdminContentPage.tsx` | CMS for announcements |
 | **Notification System** | ✅ Complete | `AdminNotificationsPage.tsx` | Broadcast |
 | **Moderation System** | ✅ Complete | `AdminModerationPage.tsx`, `AdminReportsPage.tsx` | Report handling |
-| **Chat Logs** | ✅ Complete | `AdminChatLogsPage.tsx` | Audit trail |
+| **Interaction Logs** | ✅ Complete | `AdminInteractionLogsPage.tsx` | Audit trail |
 | **Data Insights** | ✅ Complete | `AdminDataInsightsPage.tsx` | 7 analytics modules |
 | **Feedback Management** | ✅ Complete | `AdminFeedbackPage.tsx` | Review interface |
 | **WebSocket Sync** | ✅ Complete | `wsService.ts`, `useWebSocket.ts` | Bidirectional |
@@ -3585,7 +3616,7 @@ joyjoin/
 │   │   │   ├── AdminNotificationsPage.tsx
 │   │   │   ├── AdminModerationPage.tsx
 │   │   │   ├── AdminReportsPage.tsx
-│   │   │   └── AdminChatLogsPage.tsx
+│   │   │   └── AdminInteractionLogsPage.tsx
 │   │   ├── RegistrationPage.tsx      # Phone auth
 │   │   ├── PersonalityTestPage.tsx   # 10 questions
 │   │   ├── PersonalityTestResultPage.tsx

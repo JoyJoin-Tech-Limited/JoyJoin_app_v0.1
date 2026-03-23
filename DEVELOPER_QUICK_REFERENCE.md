@@ -6,6 +6,35 @@
 
 ---
 
+## ⚠️ CANONICAL RULE: Always Use Active Flow — Never Reference Legacy
+
+> **This rule applies to ALL contributors: human engineers, AI coding agents, and documentation authors.**
+
+**When writing code, copy, documentation, or making any implementation decision:**
+
+- ✅ Base everything on the **current, active codebase** — routes, components, schemas, and API endpoints that exist and are actively used.
+- ✅ Check this file (`DEVELOPER_QUICK_REFERENCE.md`) and `PRODUCT_REQUIREMENTS.md` § *Product Canon & Terminology* for the authoritative active-flow reference.
+- ❌ **Never** refer to, reintroduce, or base decisions on **legacy flows, deprecated components, old routes, or removed features** — even if they appear in older git history, archived docs, or comments marked "TODO: restore".
+- ❌ **Never** treat `QUICK_REFERENCE.md` (the older file) as authoritative — it is a supplementary reference only and some sections are outdated. `DEVELOPER_QUICK_REFERENCE.md` supersedes it.
+- ❌ **Never** use deprecated terminology from §*Product Canon* — see `PRODUCT_REQUIREMENTS.md` for the current canonical terms.
+
+### What counts as "legacy" (do not use)?
+- The **14-archetype V1/V2 system** (火花塞, 探索者, 故事家…) — replaced by the **12-archetype V4 system**
+- The **`/chats` event-chat/group-chat surface** — replaced by `/connections` (structured mutual connections)
+- Any **direct-message (DM) UI or API** — removed; the product does not have in-app private messaging
+- The **`圈子`** nav label — replaced by `连接`
+- **`会员 / VIP会员`** user-facing copy — replaced by `权益`
+- Any reference to the **`shared/` root folder** as the import source — use `packages/shared/src/` instead
+- The **`/guide` page** as a core onboarding step — it is deprecated; the active onboarding steps after WeChat login are `/onboarding/setup`, `/onboarding/extended`, and `/onboarding/review`, then directly to `/discover`
+- **Demo code `666666`** and `createDemoDataForUser` in production — gated on `NODE_ENV !== 'production'`
+
+### If you are unsure whether something is active or legacy:
+1. Check whether the file/route/component is imported and used in `App.tsx` or an active page.
+2. Check `PRODUCT_REQUIREMENTS.md` § *Product Canon & Terminology*.
+3. If still unsure, flag for human review rather than guessing.
+
+---
+
 ## Quick Start
 
 ### Prerequisites
@@ -150,7 +179,7 @@ interface AuthState {
 │                    Authenticated - Optional Extended Data           │
 ├─────────────────────────────────────────────────────────────────────┤
 │  /onboarding/extended → ExtendedDataPage (Interest Carousel only)   │
-│  *                   → Can skip to /guide or /discover              │
+│  *                   → Redirects to /onboarding/review             │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                     ▼ (Complete)
@@ -159,7 +188,7 @@ interface AuthState {
 ├─────────────────────────────────────────────────────────────────────┤
 │  /discover           → Event recommendations                        │
 │  /events             → My events                                    │
-│  /chats              → Event coordination and participant updates     │
+│  /connections        → Post-event connections hub                   │
 │  /profile            → Profile & settings                           │
 │  See "Main App Routes" section below                                │
 └─────────────────────────────────────────────────────────────────────┘
@@ -191,8 +220,8 @@ These are commented out in schema but kept for backward compatibility.
 | `/` | DiscoverPage | Home - event pool discovery |
 | `/discover` | DiscoverPage | Same as home |
 | `/events` | EventsPage | My events (pending/matched/completed tabs) |
-| `/chats` | ConnectionsPage | Post-event connections hub (alias: `/connections`) |
-| `/chats/:eventId` | EventCoordinationPage | Event coordination space (alias: `/connections/:eventId`) |
+| `/connections` | ConnectionsPage | Post-event connections hub (legacy alias: `/chats`) |
+| `/connections/:eventId` | EventCoordinationPage | Event coordination space (legacy alias: `/chats/:eventId`) |
 | `/profile` | ProfilePage | User profile |
 | `/rewards` | RewardsPage | XP, levels, coupons |
 | `/invite` | InvitePage | Invite friends |
@@ -578,12 +607,50 @@ Stage 2: AI Matching
 
 ### Matching Algorithm Formula
 
+#### Pair Compatibility Score (6 Dimensions)
+
+```typescript
+// ✅ ACTIVE weights (poolMatchingService.ts)
+pairScore =
+  chemistry           × 0.28 +   // 性格化学反应 — archetype chemistry matrix
+  interest            × 0.28 +   // 兴趣重叠度  — heat-weighted Jaccard (user_interests table)
+  socialAffinity      × 0.20 +   // 社交同频度  — life stage + education affinity + hometown (opt-in)
+  backgroundDiversity × 0.15 +   // 背景多样性  — industry + gender diversity
+  preference          × 0.05 +   // 活动偏好    — event intent / bar preferences (light signal)
+  language            × 0.04;    // 语言沟通    — common languages (light signal)
+```
+
+**Note — Language (4%):** 普通话覆盖率高，区分力有限，保留为轻量兼容信号。  
+**Note — Preference (5%):** 目前酒吧/饭店场景分化有限，保留为轻量场景适配信号。
+
+#### Social Affinity (社交同频度) — same-frequency signals
+- **Life stage affinity** (`workMode` / `LIFE_STAGE_AFFINITY` matrix — asymmetric 7×7, averaged both directions)
+- **Education affinity** (学历同频度 — ordinal-distance-based; same/nearby levels score higher, NOT a diversity reward)
+- **Hometown affinity** (同乡亲和力 — only when both users opted in)
+
+#### Background Diversity (背景多样性) — diversity signals
+- **Industry diversity** (行业多样性 — different niche = higher score)
+- **Gender diversity** (性别多样性 — different gender = higher score)
+- Education is NOT included here; it is an affinity signal.
+
+#### Matrix Distinction
+- **Chemistry Matrix** (`archetypeChemistry.ts`): 12×12 archetype compatibility, scores 0–100
+- **Life Stage Affinity Matrix** (`LIFE_STAGE_AFFINITY`, `poolMatchingService.ts`): 7×7 workMode affinity, asymmetric, averaged forward + reverse for pair score
+
+#### Group Overall Score
+
 ```typescript
 overallScore = 
   avgPairScore × 0.60 +      // Average pairwise compatibility
-  groupDiversity × 0.25 +    // Archetype diversity bonus
-  energyBalance × 0.15;      // Energy level balance
+  groupDiversity × 0.25 +    // Group diversity (industries, genders, archetypes, life stages)
+  energyBalance × 0.15;      // Communication/energy balance
 ```
+
+> Note: The `energyBalance` dimension is also referred to as "沟通平衡" (communication balance) in product copy, as it measures social tempo rather than raw archetype energy.
+
+> **Note:** There are two separate matrix concepts in the codebase:
+> - **Archetype chemistry matrix** (`archetypeChemistry.ts`) — 12×12 personality compatibility
+> - **Life stage affinity matrix** (`LIFE_STAGE_AFFINITY` in `poolMatchingService.ts`) — 7×7 asymmetric `workMode` / 人生阶段 compatibility, introduced PR #312
 
 ### Temperature Levels
 
@@ -610,8 +677,16 @@ overallScore =
 ### Event Types
 
 ```typescript
-type WebSocketEventType = WSEventType;
-// See `packages/shared/src/wsEvents.ts` for the authoritative union.
+// Actual WSEventType values (packages/shared/src/wsEvents.ts)
+type WSEventType =
+  | 'POOL_MATCHED'               // User matched to event group
+  | 'EVENT_STATUS_CHANGED'       // Event status update
+  | 'EVENT_THEME_TITLE_REVEALED' // Blind box theme revealed
+  | 'POOL_REGISTRATION_ADDED'    // New pool registration
+  | 'ATTENDANCE_STATUS_UPDATED'  // Attendee confirmed/late/absent
+  | 'ICEBREAKER_PHASE_CHANGE'    // Icebreaker session phase
+  | 'SOCIAL_PHASE_CHANGED'       // Social icebreaker phase
+  // ... and all ICEBREAKER_*, KING_GAME_*, SOCIAL_* event subtypes
 ```
 
 ### POOL_MATCHED Payload
@@ -794,11 +869,14 @@ const mutation = useMutation({
 
 ## Quick Links
 
-| Resource | Location |
-|----------|----------|
-| Product Requirements | `PRODUCT_REQUIREMENTS.md` |
-| Design Guidelines | `design_guidelines.md` |
-| API Routes | `apps/server/src/routes.ts` |
-| Database Schema | `packages/shared/src/schema.ts` |
-| Archetype Data | `packages/shared/src/personality/archetypeRegistry.ts` |
-| Changelog | `CHANGELOG_24H.md` |
+| Resource | Location | Notes |
+|----------|----------|-------|
+| Product Canon & Active Terminology | `PRODUCT_REQUIREMENTS.md` § Product Canon | **Authoritative — always use this** |
+| Active Flow Reference | `DEVELOPER_QUICK_REFERENCE.md` (this file) | **Primary dev reference** |
+| Product Requirements | `PRODUCT_REQUIREMENTS.md` | Full PRD |
+| Design Guidelines | `design_guidelines.md` | - |
+| API Routes | `apps/server/src/routes.ts` | - |
+| Database Schema | `packages/shared/src/schema.ts` | - |
+| Archetype Data | `packages/shared/src/personality/archetypeRegistry.ts` | - |
+| Changelog | `CHANGELOG_24H.md` | - |
+| Supplementary (outdated sections) | `QUICK_REFERENCE.md` | ⚠️ Supplementary only — not authoritative |

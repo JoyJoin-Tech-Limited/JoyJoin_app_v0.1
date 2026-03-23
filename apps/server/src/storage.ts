@@ -251,10 +251,10 @@ export interface IStorage {
   updateChatReport(id: string, updates: { status?: string; reviewedBy?: string; reviewNotes?: string; actionTaken?: string }): Promise<ChatReport>;
   getChatReportContext(messageId: string, eventId?: string, threadId?: string): Promise<Array<ChatMessage & { user: User }>>;
 
-  // Chat Log operations
-  createChatLog(data: InsertChatLog): Promise<ChatLog>;
-  getChatLogs(filters?: { eventId?: string; userId?: string; severity?: string; startDate?: Date; endDate?: Date }): Promise<ChatLog[]>;
-  getChatLogStats(): Promise<{ total: number; errors: number; warnings: number; info: number }>;
+  // Interaction Log operations
+  createInteractionLog(data: InsertChatLog): Promise<ChatLog>;
+  getInteractionLogs(filters?: { eventId?: string; userId?: string; severity?: string; startDate?: Date; endDate?: Date }): Promise<ChatLog[]>;
+  getInteractionLogStats(): Promise<{ total: number; errors: number; warnings: number; info: number }>;
 
   // Admin Content Management operations
   getAllContents(type?: string): Promise<any[]>;
@@ -3317,14 +3317,14 @@ export class DatabaseStorage implements IStorage {
     return result.map((r: any) => ({ ...r.message, user: r.user }));
   }
 
-  // ============ CHAT LOG OPERATIONS ============
+  // ============ INTERACTION LOG OPERATIONS ============
 
-  async createChatLog(data: InsertChatLog): Promise<ChatLog> {
+  async createInteractionLog(data: InsertChatLog): Promise<ChatLog> {
     const [log] = await db.insert(chatLogs).values(data).returning();
     return log;
   }
 
-  async getChatLogs(filters?: { eventId?: string; userId?: string; severity?: string; startDate?: Date; endDate?: Date }): Promise<ChatLog[]> {
+  async getInteractionLogs(filters?: { eventId?: string; userId?: string; severity?: string; startDate?: Date; endDate?: Date }): Promise<ChatLog[]> {
     const conditions = [];
 
     if (filters?.eventId) {
@@ -3350,7 +3350,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(chatLogs.createdAt));
   }
 
-  async getChatLogStats(): Promise<{ total: number; errors: number; warnings: number; info: number }> {
+  async getInteractionLogStats(): Promise<{ total: number; errors: number; warnings: number; info: number }> {
     const result = await db.execute(sql`
       SELECT 
         COUNT(*) as total,

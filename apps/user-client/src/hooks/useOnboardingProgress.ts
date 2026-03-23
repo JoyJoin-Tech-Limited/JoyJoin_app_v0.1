@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useAuth } from "./useAuth";
+import { useAuth, type NextStepType } from "./useAuth";
 
 /**
  * 注册引导进度状态
@@ -41,23 +41,50 @@ const STEP_ORDER: OnboardingStep[] = [
 ];
 
 /**
+ * Map server-driven nextStep to the equivalent OnboardingStep for progress display.
+ * This is the primary source of truth for the current step.
+ */
+function nextStepToOnboardingStep(nextStep: NextStepType): OnboardingStep {
+  switch (nextStep) {
+    case 'onboarding':
+      return 'registration';
+    case 'personality-test':
+      return 'personality-test';
+    case 'essential-data':
+      return 'essential-data';
+    case 'extended-data':
+      return 'extended-data';
+    case 'profile-review':
+      return 'profile-review';
+    case 'guide':
+    case 'discover':
+    default:
+      return 'complete';
+  }
+}
+
+/**
  * 注册引导进度管理 Hook
- * 
- * 集中管理用户在注册流程中的进度状态
- * 基于 useAuth 返回的用户状态计算
+ *
+ * Derives onboarding progress from the server-calculated `nextStep` returned by
+ * `/api/auth/user`. The legacy boolean reconstruction is kept only as an explicit
+ * fallback for the rare case where `nextStep` is absent.
  */
 export function useOnboardingProgress(): OnboardingProgress {
   const { user, needsRegistration, needsPersonalityTest, needsProfileSetup } = useAuth();
   
   const progress = useMemo(() => {
+    // --- Completion signals (server-owned flags preferred) ---
     const hasCompletedRegistration = user?.hasCompletedRegistration ?? false;
     const hasCompletedPersonalityTest = user?.hasCompletedPersonalityTest ?? false;
-    const hasCompletedEssentialData = !!(user?.displayName && user?.gender && user?.currentCity);
-    const hasCompletedExtendedData = !!(user?.intent || user?.hasCompletedInterestsCarousel);
-    
-    // Use server-persisted flags instead of localStorage
+    // Prefer server-computed flag; fall back to field-presence check only if unavailable.
+    const hasCompletedEssentialData =
+      user?.profileEssentialComplete ?? !!(user?.displayName && user?.gender && user?.currentCity);
+    // Use dedicated server flag; avoid mixing semantic field presence (e.g. `intent`)
+    // with onboarding completion.
+    const hasCompletedExtendedData = user?.hasCompletedInterestsCarousel ?? false;
     const hasSeenProfileReview = user?.hasSeenProfileReview ?? false;
-    
+
     const steps = {
       registration: hasCompletedRegistration,
       personalityTest: hasCompletedPersonalityTest,
@@ -65,21 +92,27 @@ export function useOnboardingProgress(): OnboardingProgress {
       extendedData: hasCompletedExtendedData,
       profileReview: hasSeenProfileReview,
     };
-    
-    // Calculate current step
-    let currentStep: OnboardingStep = 'complete';
-    if (needsRegistration) {
-      currentStep = 'registration';
-    } else if (needsPersonalityTest) {
-      currentStep = 'personality-test';
-    } else if (needsProfileSetup) {
-      currentStep = 'essential-data';
-    } else if (!hasCompletedExtendedData) {
-      currentStep = 'extended-data';
-    } else if (!hasSeenProfileReview) {
-      currentStep = 'profile-review';
+
+    // --- Primary: derive currentStep from server-calculated nextStep ---
+    let currentStep: OnboardingStep;
+    if (user?.nextStep) {
+      currentStep = nextStepToOnboardingStep(user.nextStep);
+    } else {
+      // Fallback: reconstruct from local booleans (used only when nextStep is absent).
+      currentStep = 'complete';
+      if (needsRegistration) {
+        currentStep = 'registration';
+      } else if (needsPersonalityTest) {
+        currentStep = 'personality-test';
+      } else if (needsProfileSetup) {
+        currentStep = 'essential-data';
+      } else if (!hasCompletedExtendedData) {
+        currentStep = 'extended-data';
+      } else if (!hasSeenProfileReview) {
+        currentStep = 'profile-review';
+      }
     }
-    
+
     // Calculate progress
     const currentIndex = STEP_ORDER.indexOf(currentStep);
     const totalSteps = STEP_ORDER.length - 1; // 不包括 'complete'

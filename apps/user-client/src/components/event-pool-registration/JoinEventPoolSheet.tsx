@@ -59,25 +59,52 @@ export default function JoinEventPoolSheet({
     },
   });
 
+  const [isPrefilledFromProfile, setIsPrefilledFromProfile] = useState(false);
+
   // Initialize smart defaults
   useEffect(() => {
     if (open && user) {
       // Set default districts based on event area
       // Map area name (e.g., "南山区") to cluster id (e.g., "nanshan")
-      const cluster = shenzhenClusters.find(c => 
+      const cluster = shenzhenClusters.find(c =>
         c.displayName === poolData.area || c.name === poolData.area
       );
       const defaultDistricts = cluster ? cluster.districts.map(d => d.id) : [];
-      
-      // Set default languages from user profile (deprecated field, using empty array)
-      const userLanguages: string[] = [];
 
-      updatePreferences({
+      // Set default languages from user profile (preferredLanguages field)
+      const userLanguages: string[] = user.preferredLanguages ?? [];
+
+      const updates: Parameters<typeof updatePreferences>[0] = {
         districts: defaultDistricts,
         languages: userLanguages,
-      });
+      };
+
+      // Pre-fill dietary restrictions from user profile (only when no selection yet)
+      const currentDietary = preferences.dietary || [];
+      if ((user.dietaryRestrictions ?? []).length > 0 && currentDietary.length === 0) {
+        updates.dietary = user.dietaryRestrictions!;
+      }
+
+      // Pre-fill social goals from user's profile intent (only when no selection yet)
+      const currentGoals = preferences.socialGoals || [];
+      if (user.intent && user.intent.length > 0 && currentGoals.length === 0) {
+        updates.socialGoals = user.intent;
+        setIsPrefilledFromProfile(true);
+      } else {
+        // Ensure banner state is cleared when we decide not to prefill
+        setIsPrefilledFromProfile(false);
+      }
+
+      updatePreferences(updates);
     }
-  }, [open, user, poolData.area]);
+  }, [open, user, poolData.area, preferences.socialGoals]);
+
+  // Reset prefill flag when the sheet closes so each session starts clean
+  useEffect(() => {
+    if (!open) {
+      setIsPrefilledFromProfile(false);
+    }
+  }, [open]);
 
   // Show mascot during step transitions
   useEffect(() => {
@@ -173,6 +200,8 @@ export default function JoinEventPoolSheet({
                       selectedGoals={preferences.socialGoals || []}
                       onSelectGoals={(goals) => updatePreferences({ socialGoals: goals })}
                       registrationCount={poolData.registrationCount}
+                      isPrefilledFromProfile={isPrefilledFromProfile}
+                      onClearPrefill={() => setIsPrefilledFromProfile(false)}
                     />
                   )}
 
@@ -181,7 +210,7 @@ export default function JoinEventPoolSheet({
                       <SmartDefaultsStep
                         eventType={poolData.eventType}
                         eventArea={poolData.area}
-                        userLanguages={[]}
+                        userLanguages={user?.preferredLanguages ?? []}
                         selectedDistricts={preferences.districts || []}
                         selectedLanguages={preferences.languages || []}
                         onUpdateDistricts={(districts) => updatePreferences({ districts })}

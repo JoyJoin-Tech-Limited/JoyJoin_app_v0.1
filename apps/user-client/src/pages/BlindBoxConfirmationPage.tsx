@@ -217,7 +217,7 @@ export default function BlindBoxConfirmationPage() {
                 <div className="flex-1">
                   <h3 className="font-semibold text-sm mb-1">活动前48小时</h3>
                   <p className="text-xs text-muted-foreground">
-                    系统将推送活动详情（地点、成员信息、互动群）
+                    系统将推送活动详情（地点、成员信息、连接群）
                   </p>
                 </div>
               </div>

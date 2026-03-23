@@ -17,7 +17,7 @@ const IMPROVEMENT_OPTIONS = [
   { id: "matching", label: "更精准的匹配算法", icon: Target, description: "提升桌友匹配度" },
   { id: "icebreaker", label: "更有趣的破冰环节", icon: Dice5, description: "快速打开话题" },
   { id: "venue", label: "更舒适的活动场地", icon: Home, description: "提升环境体验" },
-  { id: "theme", label: "更明确的主题引导", icon: BookOpen, description: "让互动更有方向" },
+  { id: "theme", label: "更明确的主题引导", icon: BookOpen, description: "让连接更有方向" },
   { id: "timing", label: "优化活动时间安排", icon: Clock, description: "更合理的时长" },
   { id: "food", label: "更好的餐饮选择", icon: UtensilsCrossed, description: "提升用餐体验" },
 ];
