@@ -2,6 +2,7 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import socialIcebreakerRoutes from "./routes/socialIcebreaker";
+import ttsRoutes from "./routes/tts";
 import { storage } from "./storage";
 import { matchIndustryFromText } from "./inference/industryOntology";
 import { INDUSTRY_OPTIONS } from "@shared/constants";
@@ -13033,6 +13034,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   app.use('/api/social-icebreaker', isPhoneAuthenticated, socialIcebreakerRoutes);
+  app.use('/api/tts', isPhoneAuthenticated, ttsRoutes);
 
   // ============ Pre-event Attendance (Blind Box) ============
 

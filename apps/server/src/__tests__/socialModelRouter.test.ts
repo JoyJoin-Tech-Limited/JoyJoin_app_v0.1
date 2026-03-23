@@ -24,8 +24,16 @@ vi.mock('../ai/minimaxClient', () => ({
       ? ({ __isMinimax: true } as unknown as OpenAI)
       : null;
   },
-  getMinimaxModel: () => process.env.MINIMAX_MODEL || 'MiniMax-Text-01',
-  MINIMAX_DEFAULT_MODEL: 'MiniMax-Text-01',
+  getMinimaxModel: () => process.env.MINIMAX_MODEL || 'minimax-m2.7',
+  getMinimaxClient: (): OpenAI | null => {
+    return process.env.MINIMAX_API_KEY
+      ? ({ __isMinimax: true } as unknown as OpenAI)
+      : null;
+  },
+  isMinimaxEnabled: (): boolean => {
+    return Boolean(process.env.MINIMAX_API_KEY);
+  },
+  MINIMAX_DEFAULT_MODEL: 'minimax-m2.7',
 }));
 
 // Import AFTER the mocks are registered (vi.mock calls are hoisted by Vitest)
@@ -185,12 +193,12 @@ describe('socialModelRouter', () => {
   });
 
   describe('model name resolution', () => {
-    it('uses MiniMax-Text-01 model by default', () => {
+    it('uses minimax-m2.7 model by default', () => {
       setEnv({ MINIMAX_API_KEY: 'sk-minimax-test' });
 
       const result = getClientForFunction('generateWarmupTopics');
       expect(result.provider).toBe('minimax');
-      expect(result.model).toBe('MiniMax-Text-01');
+      expect(result.model).toBe('minimax-m2.7');
     });
 
     it('uses deepseek-chat model for DeepSeek functions', () => {
