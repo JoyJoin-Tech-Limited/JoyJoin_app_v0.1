@@ -36,7 +36,7 @@ import { calculateAge } from "@shared/utils";
 import { EDU_ORDINAL } from "@shared/constants";
 import { wsService } from "./wsService";
 import type { PoolMatchedData } from "@shared/wsEvents";
-import { chemistryMatrix as CHEMISTRY_MATRIX } from "./archetypeChemistry";
+import { chemistryMatrix as CHEMISTRY_MATRIX, ARCHETYPE_ENERGY } from "./archetypeChemistry";
 import type { ArchetypeName } from "./archetypeConfig";
 import { assignVenuesToGroups, saveVenueAssignments } from "./venueAssignmentService";
 import { generateAndSaveEventTheme } from "./eventThemeGeneratorService";
@@ -101,7 +101,7 @@ export interface MatchGroup {
   avgPairScore: number;  // 平均配对兼容性分数（chemistry + interest + socialAffinity + backgroundDiversity + preference + language）
   avgChemistryScore: number;  // 平均化学反应分数
   diversityScore: number;  // 小组多样性分数
-  communicationBalance: number;  // 沟通平衡分数（0-100，评估小组语言沟通兼容性）
+  communicationBalance: number;  // 能量平衡分数（0-100，评估小组社交能量分布的健康程度，来自ARCHETYPE_ENERGY）
   overallScore: number;  // 综合分数 = avgPairScore × 0.6 + diversityScore × 0.25 + communicationBalance × 0.15
   temperatureLevel: string;  // 化学反应温度等级：fire(🔥炽热85+) | warm(🌡️温暖70-84) | mild(🌤️适宜55-69) | cold(❄️冷淡<55)
   explanation: string;
@@ -657,24 +657,45 @@ function calculateGroupDiversity(members: UserWithProfile[]): number {
 }
 
 /**
- * 计算小组的沟通兼容性分数 (0-100)
- * 评估小组成员之间的语言沟通兼容性，确保小组内大多数成员能有效交流。
- * 分数 = 组内所有配对的平均语言兼容分数。
+ * Calculate group energy balance score (0-100)
+ * Evaluates whether the group has a healthy mix of social energy levels.
+ * 
+ * Two components (equal weight):
+ *   1. avgScore     — penalises groups where mean energy is too high (>70, chaotic) or too low (<50, silent)
+ *   2. harmonyScore — penalises high energy variance (all same energy = can be boring; extreme spread = tension)
+ * 
+ * Ideal group: mean energy 50–70, moderate variance (some high + some low = natural dynamic)
+ * 
+ * Source for energy values: ARCHETYPE_ENERGY in apps/server/src/archetypeChemistry.ts
+ * DB column: energy_balance (integer) in event_pool_groups table
  */
-function calculateCommunicationBalance(members: UserWithProfile[]): number {
+function calculateEnergyBalance(members: UserWithProfile[]): number {
   if (members.length < 2) return 50;
 
-  let totalScore = 0;
-  let pairCount = 0;
+  // Look up energy for each member's primary archetype; default to 60 (mid) if unknown
+  const energyLevels = members.map(m => 
+    ARCHETYPE_ENERGY[m.archetype as keyof typeof ARCHETYPE_ENERGY] ?? 60
+  );
 
-  for (let i = 0; i < members.length; i++) {
-    for (let j = i + 1; j < members.length; j++) {
-      totalScore += calculateLanguageScore(members[i], members[j]);
-      pairCount++;
-    }
+  const avgEnergy = energyLevels.reduce((sum, e) => sum + e, 0) / energyLevels.length;
+
+  // avgScore: ideal band is 50–70 (balanced but energised)
+  // Outside this band: linearly penalise at 2pts per unit away from nearest boundary
+  let avgScore: number;
+  if (avgEnergy >= 50 && avgEnergy <= 70) {
+    avgScore = 100;
+  } else {
+    const distFromIdeal = avgEnergy < 50 ? 50 - avgEnergy : avgEnergy - 70;
+    avgScore = Math.max(0, 100 - distFromIdeal * 2);
   }
 
-  return pairCount > 0 ? Math.round(totalScore / pairCount) : 50;
+  // harmonyScore: penalise extreme std deviation
+  // stdDev of ~20 is natural (mix of archetypes); >35 is tension-inducing
+  const variance = energyLevels.reduce((sum, e) => sum + Math.pow(e - avgEnergy, 2), 0) / energyLevels.length;
+  const stdDev = Math.sqrt(variance);
+  const harmonyScore = Math.max(0, 100 - stdDev * 2.5);
+
+  return Math.round((avgScore + harmonyScore) / 2);
 }
 
 /**
@@ -708,7 +729,7 @@ function generateGroupExplanation(group: MatchGroup): string {
   const industries = group.members.map(m => m.industryNicheLabel || m.industryCategoryLabel || "未知").filter((v, i, a) => a.indexOf(v) === i);
   const tempEmoji = getTemperatureEmoji(group.temperatureLevel);
   
-  return `${tempEmoji} 这个小组有${group.members.length}位成员，包含${archetypes.length}种人格类型（${archetypes.join("、")}），来自${industries.length}个行业。配对兼容性${group.avgPairScore}分，多样性${group.diversityScore}分，沟通兼容性${group.communicationBalance}分，综合匹配度${group.overallScore}分。`;
+  return `${tempEmoji} 这个小组有${group.members.length}位成员，包含${archetypes.length}种人格类型（${archetypes.join("、")}），来自${industries.length}个行业。配对兼容性${group.avgPairScore}分，多样性${group.diversityScore}分，能量平衡${group.communicationBalance}分，综合匹配度${group.overallScore}分。`;
 }
 
 /**
@@ -894,7 +915,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     if (groupMembers.length >= minGroupSize) {
       const avgPairScore = await calculateGroupPairScore(groupMembers);
       const diversity = calculateGroupDiversity(groupMembers);
-      const communicationBalance = calculateCommunicationBalance(groupMembers);
+      const communicationBalance = calculateEnergyBalance(groupMembers);
       const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (communicationBalance * 0.15));
       const temperatureLevel = getTemperatureLevel(overall);
       
