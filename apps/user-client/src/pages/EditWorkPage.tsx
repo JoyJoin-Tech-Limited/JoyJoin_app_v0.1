@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { ChevronLeft } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-
+import { useEffect } from "react";
 // Industry category options aligned with the 3-tier taxonomy (Layer 1 categories).
 // These ids/labels mirror INDUSTRY_TAXONOMY in packages/shared/src/industryTaxonomy.ts.
 const INDUSTRY_CATEGORY_OPTIONS: Array<{ id: string; label: string; icon: string }> = [
@@ -59,6 +59,17 @@ export default function EditWorkPage() {
       workVisibility: user?.workVisibility || "show_industry_only",
     },
   });
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      form.reset({
+        industryCategory: user.industryCategory || "",
+        industryCategoryLabel: user.industryCategoryLabel || "",
+        roleTitleShort: user.roleTitleShort || "",
+        workVisibility: user.workVisibility || "show_industry_only",
+      });
+    }
+  }, [user, isLoading, form]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: WorkForm) => {
