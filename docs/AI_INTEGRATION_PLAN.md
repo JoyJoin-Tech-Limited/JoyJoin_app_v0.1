@@ -185,7 +185,7 @@ GET /api/blind-box-events/:eventId/match-explanations
 ```
 See: `apps/user-client/src/hooks/useInviteData.ts::useMatchExplanations()`
 
-This route bypasses the pool group lookup — it serves explanations keyed by `blindBoxEventId`, not `groupId`. This means `generateGroupAnalysis` must be triggered as a side-effect during pool matching (inside `poolMatchingService.ts::matchEventPool()` or the post-match save step), **not** lazily on client request. The current implementation pre-generates and caches during matching. Maintain this pattern for all new AI generation.
+This route bypasses the pool group lookup — it serves explanations keyed by `blindBoxEventId`, not `groupId`. In the current implementation, `poolMatchingService.ts::matchEventPool()` does **not** call `generateGroupAnalysis()`. Instead, the `/api/blind-box-events/:eventId/match-explanations` route lazily calls `matchExplanationService.generateGroupAnalysis()` on demand when the client requests explanations, and that service is responsible for persisting/caching results to the `eventPoolGroups` JSONB fields for subsequent requests. New AI generation for match explanations should follow this lazy, on-request pattern unless there is a strong reason to pre-compute during matching.
 
 **Event Theme Generator:** `apps/server/src/services/eventThemeTitleGenerator.ts`  
 **Caller:** `generateAndSaveEventTheme()` in `apps/server/src/eventThemeGeneratorService.ts`  
