@@ -123,7 +123,22 @@ const adjustedOverallScore = vibeScore != null
 ```typescript
 const vibePrompt = `你是社交氛围分析专家。请预测以下${members.length}人组合的社交氛围质量分数（0-100）。
 成员组合：
-${members.map(m => `- 原型: ${m.archetype}, 兴趣: ${m.interestsTop?.slice(0,3).join('、') || '未知'}, 行业: ${m.industry || '未知'}`).join('\n')}
+${members
+  .map(m => {
+    // 注意：这里的兴趣来自 user_interests 表（预先查询并挂载到 m.userInterests）
+    const topFromPriorities =
+      m.userInterests?.topPriorities?.slice(0, 3).map(t => t.label) ?? [];
+    const topFromSelections =
+      topFromPriorities.length > 0
+        ? topFromPriorities
+        : m.userInterests?.selections?.slice(0, 3).map(s => s.label) ?? [];
+    const interestDisplay =
+      topFromSelections.length > 0 ? topFromSelections.join('、') : '未知';
+    return `- 原型: ${m.archetype}, 兴趣: ${interestDisplay}, 行业: ${
+      m.industry || '未知'
+    }`;
+  })
+  .join('\n')}
 化学反应矩阵均分: ${avgChemistryScore}
 能量方差: ${energyVariance}
 请只返回一个0-100的整数分数，不要解释。`;
