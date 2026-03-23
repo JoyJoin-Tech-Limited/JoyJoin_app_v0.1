@@ -11,7 +11,7 @@
  */
 
 import OpenAI from 'openai';
-import { getMinimaxClient, MINIMAX_DEFAULT_MODEL, isMinimaxEnabled } from './minimaxClient';
+import { minimaxClient, getMinimaxModel, getMinimaxClient, MINIMAX_DEFAULT_MODEL, isMinimaxEnabled } from './minimaxClient';
 
 // DeepSeek client — lazy-initialized so the module can load safely even when
 // DEEPSEEK_API_KEY is not set (e.g. MiniMax-only envs).  The dummy key
@@ -26,6 +26,73 @@ function getDeepseekClient(): OpenAI {
     });
   }
   return _deepseekClient;
+}
+
+// Social functions that are routed to MiniMax in hybrid mode
+type SocialFunction =
+  | 'generateWarmupTopics'
+  | 'generateXiaoYueComment'
+  | 'generateRecapSummary'
+  | 'generateLieDetectiveStatements'
+  | 'generateMicroChallenges'
+  | 'generatePersonalityDiceChallenges';
+
+const MINIMAX_DESIGNATED_FUNCTIONS = new Set<SocialFunction>([
+  'generateWarmupTopics',
+  'generateXiaoYueComment',
+  'generateRecapSummary',
+  'generateLieDetectiveStatements',
+]);
+
+type ProviderMode = 'hybrid' | 'deepseek' | 'minimax';
+
+function resolveMode(): ProviderMode {
+  const raw = process.env.SOCIAL_AI_PROVIDER;
+  if (!raw || raw === 'hybrid') return 'hybrid';
+  if (raw === 'deepseek') return 'deepseek';
+  if (raw === 'minimax') return 'minimax';
+  console.warn(`[socialAI] Unrecognized SOCIAL_AI_PROVIDER="${raw}", defaulting to hybrid`);
+  return 'hybrid';
+}
+
+export interface ClientSelection {
+  client: OpenAI;
+  model: string;
+  provider: 'minimax' | 'deepseek';
+}
+
+/**
+ * Returns the appropriate AI client, model, and provider for a given social function.
+ * Respects SOCIAL_AI_PROVIDER env var (hybrid | minimax | deepseek) with automatic
+ * fallback to DeepSeek when MiniMax is not configured.
+ */
+export function getClientForFunction(fn: SocialFunction): ClientSelection {
+  const mode = resolveMode();
+  // minimaxClient is accessed each time so tests can control it via env
+  const mmClient = minimaxClient;
+
+  if (mode === 'deepseek') {
+    return { client: getDeepseekClient(), model: 'deepseek-chat', provider: 'deepseek' };
+  }
+
+  if (mode === 'minimax') {
+    if (!mmClient) {
+      console.warn('[socialAI] SOCIAL_AI_PROVIDER=minimax but MINIMAX_API_KEY is not set, falling back to deepseek');
+      return { client: getDeepseekClient(), model: 'deepseek-chat', provider: 'deepseek' };
+    }
+    return { client: mmClient, model: getMinimaxModel(), provider: 'minimax' };
+  }
+
+  // hybrid mode (default)
+  if (MINIMAX_DESIGNATED_FUNCTIONS.has(fn)) {
+    if (!mmClient) {
+      console.warn(`[socialAI] ${fn}: MINIMAX_API_KEY is not set, falling back to deepseek`);
+      return { client: getDeepseekClient(), model: 'deepseek-chat', provider: 'deepseek' };
+    }
+    return { client: mmClient, model: getMinimaxModel(), provider: 'minimax' };
+  }
+
+  return { client: getDeepseekClient(), model: 'deepseek-chat', provider: 'deepseek' };
 }
 
 export interface SocialAICallParams {

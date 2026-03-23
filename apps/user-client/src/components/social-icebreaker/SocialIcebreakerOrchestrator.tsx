@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Volume2, VolumeX } from 'lucide-react';
 import { useSocialIcebreaker } from '@/hooks/useSocialIcebreaker';
+import { useXiaoyueTTS } from '@/hooks/useXiaoyueTTS';
 import { PhaseProgressBar } from './PhaseProgressBar';
 import { WarmupPhase } from './warmup/WarmupPhase';
 import { MoodVoteOverlay } from './warmup/MoodVoteOverlay';
@@ -32,6 +33,19 @@ const PHASE_COMPLETION_LABELS: Partial<Record<SocialIcebreakerPhase, string>> = 
   warmup: '🌅 热身结束啦，今晚的开场感觉如何？',
   micro_challenge: '⚡ 挑战完成！大家玩得开心吗？',
   lie_detective: '🕵️ 侦探游戏结束！今晚气氛怎么样？',
+};
+
+type PhaseStartTTSConfig = {
+  text: string;
+  emotion: 'warm' | 'excited' | 'playful' | 'happy' | 'neutral';
+  callerTag: string;
+};
+
+const PHASE_START_TTS: Partial<Record<SocialIcebreakerPhase, PhaseStartTTSConfig>> = {
+  warmup: { text: '欢迎来到今晚的破冰时间！先从轻松的话题暖暖场吧 🌅', emotion: 'warm', callerTag: 'phase_warmup_start' },
+  micro_challenge: { text: '热身完毕！接下来是微挑战环节，大家准备好了吗？⚡', emotion: 'excited', callerTag: 'phase_micro_challenge_start' },
+  lie_detective: { text: '侦探们，仔细听每一句话，找出谎言！🕵️', emotion: 'playful', callerTag: 'phase_lie_detective_start' },
+  recap: { text: '今晚的破冰之旅圆满结束！✨', emotion: 'warm', callerTag: 'phase_recap_start' },
 };
 
 function getTransitionType(
@@ -71,6 +85,8 @@ export function SocialIcebreakerOrchestrator({
     completeDiceChallenge,
     isAdvancing,
   } = useSocialIcebreaker({ sessionId, userId, displayName, eventType });
+
+  const { speak, isMuted, toggleMute } = useXiaoyueTTS();
 
   const [showPulseCheck, setShowPulseCheck] = useState(false);
   const [showTransition, setShowTransition] = useState(false);
@@ -135,9 +151,14 @@ export function SocialIcebreakerOrchestrator({
         setShowTransition(true);
         if (navigator.vibrate) navigator.vibrate(200);
       }
+      // Speak phase announcement (non-blocking, TTS failure is gracefully ignored)
+      const ttsConfig = PHASE_START_TTS[to];
+      if (ttsConfig) {
+        void speak(ttsConfig.text, { emotion: ttsConfig.emotion, callerTag: ttsConfig.callerTag });
+      }
     }
     setPreviousPhase(state.currentPhase);
-  }, [state?.currentPhase]);
+  }, [state?.currentPhase]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePulseSubmit = async (vibe: 1 | 2 | 3) => {
     try {
@@ -226,6 +247,15 @@ export function SocialIcebreakerOrchestrator({
           <span>你是主持人</span>
         </div>
       )}
+
+      {/* Mute toggle button */}
+      <button
+        onClick={toggleMute}
+        className="absolute top-16 left-4 z-20 p-2 rounded-full bg-black/10 dark:bg-white/10 text-foreground/60 hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
+        aria-label={isMuted ? '取消静音' : '静音'}
+      >
+        {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+      </button>
 
       {/* Progress bar */}
       <PhaseProgressBar
