@@ -21,7 +21,9 @@ vi.mock('../minimaxClient', () => ({
   getMinimaxClient: vi.fn(() => ({
     chat: { completions: { create: mockMinimaxCreate } },
   })),
-  MINIMAX_DEFAULT_MODEL: 'MiniMax-Text-01',
+  getMinimaxModel: () => 'minimax-m2.7',
+  minimaxClient: null,
+  MINIMAX_DEFAULT_MODEL: 'minimax-m2.7',
 }));
 
 vi.mock('openai', () => ({
@@ -94,7 +96,7 @@ describe('callSocialAI', () => {
 
       expect(mockMinimaxCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'MiniMax-Text-01',
+          model: 'minimax-m2.7',
           temperature: 0.5,
           max_tokens: 200,
         })
