@@ -88,6 +88,10 @@ export function SocialIcebreakerOrchestrator({
 
   const { speak, isMuted, toggleMute } = useXiaoyueTTS();
 
+  // Keep a stable ref to speak so the phase-change effect doesn't need it as a dep
+  const speakRef = useRef(speak);
+  speakRef.current = speak;
+
   const [showPulseCheck, setShowPulseCheck] = useState(false);
   const [showTransition, setShowTransition] = useState(false);
   const [transitionType, setTransitionType] = useState<TransitionType | null>(null);
@@ -154,11 +158,11 @@ export function SocialIcebreakerOrchestrator({
       // Speak phase announcement (non-blocking, TTS failure is gracefully ignored)
       const ttsConfig = PHASE_START_TTS[to];
       if (ttsConfig) {
-        void speak(ttsConfig.text, { emotion: ttsConfig.emotion, callerTag: ttsConfig.callerTag });
+        void speakRef.current(ttsConfig.text, { emotion: ttsConfig.emotion, callerTag: ttsConfig.callerTag });
       }
     }
     setPreviousPhase(state.currentPhase);
-  }, [state?.currentPhase]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state?.currentPhase]);
 
   const handlePulseSubmit = async (vibe: 1 | 2 | 3) => {
     try {

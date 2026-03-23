@@ -22,6 +22,12 @@ const TTS_MODEL_HD = 'speech-2.8-hd';  // Cinematic/high-quality calls
 // This can be overridden via env var once a cloned voice is available
 const XIAOYUE_VOICE_ID = process.env.MINIMAX_XIAOYUE_VOICE_ID || 'Bowen_new';
 
+// Short phrases (e.g. fixed phase announcements) are cached to avoid re-billing on repeats
+const CACHE_THRESHOLD_CHARS = 60;
+
+// Fallback duration estimate when the API doesn't return audio_length
+const MS_PER_CHAR_ESTIMATE = 150;
+
 export type TTSQuality = 'turbo' | 'hd';
 
 export interface TTSRequest {
@@ -148,12 +154,12 @@ export async function synthesiseSpeech(req: TTSRequest): Promise<TTSResult | nul
 
     const audioBuffer = Buffer.from(hexAudio, 'hex');
     const audioBase64 = audioBuffer.toString('base64');
-    const durationEstimateMs: number = data?.extra_info?.audio_length ?? Math.ceil(req.text.length * 150);
+    const durationEstimateMs: number = data?.extra_info?.audio_length ?? Math.ceil(req.text.length * MS_PER_CHAR_ESTIMATE);
 
     const result: TTSResult = { audioBase64, durationEstimateMs, model, latencyMs };
 
-    // Cache fixed/short phrases only (under 60 chars — likely phase announcements)
-    if (req.text.length < 60) {
+    // Cache fixed/short phrases only (phase announcements and similar short fixed lines)
+    if (req.text.length < CACHE_THRESHOLD_CHARS) {
       _ttsCache.set(key, result);
     }
 

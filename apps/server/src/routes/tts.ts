@@ -3,6 +3,8 @@ import { synthesiseSpeech, isTTSEnabled } from '../ai/minimaxTTSService';
 
 const router = Router();
 
+const MAX_TTS_TEXT_LENGTH = 500;
+
 /**
  * POST /api/tts/synthesise
  *
@@ -29,8 +31,8 @@ router.post('/synthesise', async (req, res) => {
     return;
   }
 
-  if (text.length > 500) {
-    res.status(400).json({ error: 'text too long (max 500 chars)' });
+  if (text.length > MAX_TTS_TEXT_LENGTH) {
+    res.status(400).json({ error: `text too long (max ${MAX_TTS_TEXT_LENGTH} chars)` });
     return;
   }
 
