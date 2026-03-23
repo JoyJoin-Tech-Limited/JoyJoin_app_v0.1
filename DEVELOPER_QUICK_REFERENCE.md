@@ -179,7 +179,7 @@ interface AuthState {
 │                    Authenticated - Optional Extended Data           │
 ├─────────────────────────────────────────────────────────────────────┤
 │  /onboarding/extended → ExtendedDataPage (Interest Carousel only)   │
-│  *                   → Redirects to /onboarding/review             │
+│  *                   → Redirects to /onboarding/extended           │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                     ▼ (After Extended Data)
