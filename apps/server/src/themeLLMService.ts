@@ -2,7 +2,8 @@
  * Theme LLM Service
  * 主题LLM服务
  * 
- * Handles DeepSeek integration for event theme generation with validation and retry logic
+ * Handles AI generation for event themes with validation and retry logic.
+ * Provider: MiniMax (hybrid) when configured, DeepSeek otherwise.
  */
 
 import OpenAI from 'openai';
@@ -12,10 +13,12 @@ import type {
   ValidationResult 
 } from '@shared/types/eventTheme';
 import { getEnergyLabel, getEnergyEmoji } from './themeScoringService';
+import { getMiniMaxClient, MINIMAX_MODEL } from './ai/minimaxClient';
+import { getThemeLLMProvider, isProviderAvailable } from './ai/creativeModelRouter';
 
-// Validate API key at module initialization
-if (!process.env.DEEPSEEK_API_KEY) {
-  console.warn('DEEPSEEK_API_KEY environment variable is not set. Theme generation will use fallback mode.');
+// Validate API keys at module initialization
+if (!process.env.DEEPSEEK_API_KEY && !process.env.MINIMAX_API_KEY) {
+  console.warn('[ThemeLLM] Neither DEEPSEEK_API_KEY nor MINIMAX_API_KEY is set. Theme generation will use fallback mode.');
 }
 
 const deepseekClient = new OpenAI({
@@ -24,6 +27,23 @@ const deepseekClient = new OpenAI({
   timeout: 10000, // 10 second timeout to prevent hanging
   maxRetries: 2,  // Max 2 retries on network errors
 });
+
+/**
+ * Returns the active AI client and model for theme generation based on provider routing.
+ */
+function getThemeAIClient(): { client: OpenAI; model: string; provider: string } {
+  const provider = getThemeLLMProvider();
+
+  if (provider === 'minimax') {
+    const minimaxClient = getMiniMaxClient();
+    if (minimaxClient) {
+      return { client: minimaxClient, model: MINIMAX_MODEL, provider: 'minimax' };
+    }
+    console.warn('[ThemeLLM] MiniMax provider selected but MINIMAX_API_KEY not set, falling back to DeepSeek');
+  }
+
+  return { client: deepseekClient, model: 'deepseek-chat', provider: 'deepseek' };
+}
 
 /**
  * System Prompt (~800 tokens)
@@ -268,8 +288,8 @@ export function validateTheme(
 }
 
 /**
- * Generate theme using DeepSeek with retry logic
- * Max 3 attempts with fallback
+ * Generate theme using the hybrid AI provider (MiniMax or DeepSeek) with retry logic.
+ * Max 3 attempts with fallback.
  */
 export async function generateThemeWithLLM(
   input: ThemeLLMInput,
@@ -280,9 +300,11 @@ export async function generateThemeWithLLM(
   attempt: number;
   validationErrors: string[];
 }> {
-  // Check if API key is available
-  if (!process.env.DEEPSEEK_API_KEY) {
-    console.warn('DEEPSEEK_API_KEY not available, using fallback');
+  const { client, model, provider } = getThemeAIClient();
+
+  // Check if any AI key is available for the resolved provider
+  if (!isProviderAvailable(getThemeLLMProvider())) {
+    console.warn('[ThemeLLM] No AI provider configured, using fallback');
     return {
       theme: generateFallbackTheme(input),
       usedFallback: true,
@@ -295,10 +317,11 @@ export async function generateThemeWithLLM(
     try {
       const userPrompt = buildUserPrompt(input);
       
-      console.log(`[ThemeLLM] Attempt ${attempt} - Generating theme...`);
+      console.log(`[ThemeLLM] provider=${provider} attempt=${attempt} - Generating theme...`);
+      const startTime = Date.now();
       
-      const response = await deepseekClient.chat.completions.create({
-        model: 'deepseek-chat',
+      const response = await client.chat.completions.create({
+        model,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userPrompt },
@@ -307,10 +330,11 @@ export async function generateThemeWithLLM(
         max_tokens: 300,
         response_format: { type: 'json_object' },
       });
-      
+
+      const durationMs = Date.now() - startTime;
       const content = response.choices[0]?.message?.content;
       if (!content) {
-        console.warn(`[ThemeLLM] Attempt ${attempt} - No content in response`);
+        console.warn(`[ThemeLLM] provider=${provider} attempt=${attempt} - No content in response (${durationMs}ms)`);
         continue;
       }
       
@@ -320,7 +344,7 @@ export async function generateThemeWithLLM(
       const validation = validateTheme(parsed, input);
       
       if (validation.valid) {
-        console.log(`[ThemeLLM] Attempt ${attempt} - Success!`);
+        console.log(`[ThemeLLM] provider=${provider} attempt=${attempt} latency=${durationMs}ms success=true`);
         
         // Build full EventTheme with reasoning
         const fullTheme: EventTheme = {
@@ -339,7 +363,7 @@ export async function generateThemeWithLLM(
           validationErrors: validation.warnings,
         };
       } else {
-        console.warn(`[ThemeLLM] Attempt ${attempt} - Validation failed:`, validation.errors);
+        console.warn(`[ThemeLLM] provider=${provider} attempt=${attempt} - Validation failed:`, validation.errors);
         
         if (attempt === maxAttempts) {
           // Last attempt failed, use fallback
@@ -355,7 +379,7 @@ export async function generateThemeWithLLM(
         // (could add validation feedback to prompt here)
       }
     } catch (error) {
-      console.error(`[ThemeLLM] Attempt ${attempt} - Error:`, error);
+      console.error(`[ThemeLLM] provider=${provider} attempt=${attempt} - Error:`, error);
       
       if (attempt === maxAttempts) {
         return {
